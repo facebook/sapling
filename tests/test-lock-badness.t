@@ -56,10 +56,12 @@ One process waiting for another
   > EOF
   $ echo b > b/b
   $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleepone" > stdout &
-  $ hg -R b up -q --config hooks.pre-update="python:`pwd`/hooks.py:sleephalf"
-  waiting for lock on working directory of b held by '*:*' (glob)
-  got lock after ? seconds (glob)
+  $ hg -R b up -q --config hooks.pre-update="python:`pwd`/hooks.py:sleephalf" \
+  > > preup 2>&1
   $ wait
+  $ cat preup
+  waiting for lock on working directory of b held by '*:*' (glob)
+  got lock after * seconds (glob)
   $ cat stdout
   adding b
 
