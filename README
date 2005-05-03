@@ -69,6 +69,10 @@ Importing patches:
 
 Network support (highly experimental):
 
+ # pull the self-hosting hg repo
+ foo$ hg init
+ foo$ hg merge http://selenic.com/hg/
+
  # export your .hg directory as a directory on your webserver
  foo$ ln -s .hg ~/public_html/hg-linux 
 
@@ -76,5 +80,10 @@ Network support (highly experimental):
  bar$ hg merge http://foo/~user/hg-linux
 
  This is just a proof of concept of grabbing byte ranges, and is not
- expected to perform well.
+ expected to perform well. Fixing this needs some pipelining to reduce
+ the number of round trips. See zsync for a similar approach.
+
+ Another approach which does perform well right now is to use rsync.
+ Simply rsync the remote repo to a read-only local copy and then do a
+ local pull.
 
