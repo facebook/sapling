@@ -1,0 +1,159 @@
+Some notes about Mercurial's design
+
+Revlogs:
+
+The fundamental storage type in Mercurial is a "revlog". A revlog is
+the set of all revisions to a file. Each revision is either stored
+compressed in its entirety or as a compressed binary delta against the
+previous version. The decision of when to store a full version is made
+based on how much data would be needed to reconstruct the file. This
+lets us ensure that we never need to read huge amounts of data to
+reconstruct a file, regardless of how many revisions of it we store.
+
+In fact, we should always be able to do it with a single read,
+provided we know when and where to read. This is where the index comes
+in. Each revlog has an index containing a special hash (nodeid) of the
+text, hashes for its parents, and where and how much of the revlog
+data we need to read to reconstruct it. Thus, with one read of the
+index and one read of the data, we can reconstruct any version in time
+proportional to the file size.
+
+Similarly, revlogs and their indices are append-only. This means that
+adding a new version is also O(1) seeks.
+
+Generally revlogs are used to represent revisions of files, but they
+also are used to represent manifests and changesets.
+
+Manifests:
+
+A manifest is simply a list of all files in a given revision of a
+project along with the nodeids of the corresponding file revisions. So
+grabbing a given version of the project means simply looking up its
+manifest and reconstruction all the file revisions pointed to by it.
+
+Changesets:
+
+A changeset is a list of all files changed in a check-in along with a
+change description and some metadata like user and date. It also
+contains a nodeid to the relevent revision of the manifest. Changesets
+and manifests are one-to-one, but contain different data for
+convenience.
+
+Nodeids:
+
+Nodeids are unique ids that are used to represent the contents of a
+file AND its position in the project history. That is, if you change a
+file and then change it back, the result will have a different nodeid
+because it has different history. This is accomplished by including
+the parents of a given revision's nodeids with the revision's text
+when calculating the hash.
+
+Graph merging:
+
+Nodeids are implemented as they are to simplify merging. Merging a
+pair of directed acyclic graphs (aka "the family tree" of the file
+history) requires some method of determining if nodes in different
+graphs correspond. Simply comparing the contents of the node (by
+comparing text of given revisions or their hashes) can get confused by
+identical revisions in the tree.
+
+The nodeid approach makes it trivial - the hash uniquely describes a
+revision's contents and its graph position relative to the root, so
+merge is simply checking whether each nodeid in graph A is in the hash
+table of graph B. If not, we pull them in, adding them sequentially to
+the revlog.
+
+Graph resolving:
+
+Mercurial does branching by copying (or COWing) a repository and thus
+keeps everything nice and linear within a repository. However, when a
+merge of repositories (a "pull") is done, we may often have two head
+revisions in a given graph. To keep things simple, Mercurial forces
+the head revisions to be merged.
+
+It first finds the closest common ancestor of the two heads. If one is
+a child of the other, it becomes the new head. Otherwise, we call out
+to a user-specified 3-way merge tool.
+
+Merging files, manifests, and changesets:
+
+We begin by comparing changeset DAGs, pulling all nodes we don't have
+in our DAG from the other repository. As we do so, we collect a list
+of changed files to merge.
+
+Then for each file, we perform a graph merge and resolve as above.
+It's important to merge files using per-file DAGs rather than just
+changeset level DAGs as this diagram illustrates: 
+
+M   M1   M2
+
+AB
+ |`-------v     M2 clones M
+aB       AB     file A is change in mainline
+ |`---v  AB'    file B is changed in M2
+ |   aB / |     M1 clones M
+ |   ab/  |     M1 changes B
+ |   ab'  |     M1 merges from M2, changes to B conflict
+ |    |  A'B'   M2 changes A
+  `---+--.|
+      |  a'B'   M2 merges from mainline, changes to A conflict
+      `--.|
+         ???    depending on which ancestor we choose, we will have
+	        to redo A hand-merge, B hand-merge, or both
+                but if we look at the files independently, everything
+		is fine
+
+After we've merged files, we merge the manifest log DAG and resolve
+additions and deletions. Then we are ready to resolve the changeset
+DAG - if our merge required any changes (the new head is not a
+decendent of our tip), we must create a new changeset describing all
+of the changes needed to merge it into the tip.
+
+Merge performance:
+
+The I/O operations for performing a merge are O(changed files), not
+O(total changes) and in many cases, we needn't even unpack the deltas
+to add them to our repository (though this optimization isn't
+necessary).
+
+Rollback:
+
+Rollback is not yet implemented, but will be easy to add. When
+performing a commit or a merge, we order things so that the changeset
+entry gets added last. We keep a transaction log of the name of each
+file and its length prior to the transaction. On abort, we simply
+truncate each file to its prior length. This is one of the nice
+properties of the append-only structure of the revlogs.
+
+Remote access:
+
+Mercurial currently supports pulling from "serverless" repositories.
+Simply making the repo directory accessibly via the web and pointing
+hg at it can accomplish a pull. This is relatively bandwidth efficient
+but no effort has been spent on pipelining, so it won't work
+especially well over LAN yet.
+
+It's also quite amenable to rsync, if you don't mind keeping an intact
+copy of the master around locally.
+
+Also note the append-only and ordering properties of the commit
+guarantee that readers will always see a repository in a consistent
+state and no special locking is necessary. As there is generally only
+one writer to an hg repository, there is in fact no exclusion
+implemented yet. 
+
+
+Some comparisons to git:
+
+Most notably, Mercurial uses delta compression and repositories
+created with it will grow much more slowly over time. This also allows
+it to be much more bandwidth efficient. I expect repos sizes and sync
+speeds to be similar to or better than BK, given the use of binary diffs.
+
+Mercurial is roughly the same performance as git and is faster in
+others as it keeps around more metadata. One example is listing and
+retrieving past versions of a file, which it can do without reading
+all the changesets. This metadata will also allow it to perform better
+merges as described above.
+
+

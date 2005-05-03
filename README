@@ -1,0 +1,80 @@
+Setting up Mercurial in your home directory:
+
+ Note: Debian fails to include bits of distutils, you'll need
+ python-dev to install. Alternately, shove everything somewhere in
+ your path.
+
+ $ tar xvzf mercurial-<ver>.tar.gz
+ $ cd mercurial-<ver>
+ $ python setup.py install --home ~
+ $ export PYTHONPATH=${HOME}/lib/python  # add this to your .bashrc
+ $ export HGMERGE=tkmerge                # customize this
+ $ hg                                    # test installation, show help
+
+ If you get complaints about missing modules, you probably haven't set
+ PYTHONPATH correctly.
+
+ You may also want to install psyco, the python specializing compiler.
+ It makes commits more than twice as fast. The relevant Debian package
+ is python-psyco
+
+Setting up a Mercurial project:
+
+ $ cd linux/
+ $ hg init         # creates .hg
+ $ hg status       # show changes between repo and working dir
+ $ hg diff         # generate a unidiff
+ $ hg addremove    # add all unknown files and remove all missing files
+ $ hg commit       # commit all changes, edit changelog entry
+
+ Mercurial will look for a file named .hgignore in the root of your
+ repository contains a set of regular expressions to ignore in file
+ paths.
+
+Mercurial commands:
+
+ $ hg history          # show changesets
+ $ hg log Makefile     # show commits per file
+ $ hg checkout         # check out the tip revision
+ $ hg checkout <hash>  # check out a specified changeset
+ $ hg add foo          # add a new file for the next commit
+ $ hg remove bar       # mark a file as removed
+ $ hg verify           # check repo integrity
+
+Branching and merging:
+
+ $ cd ..
+ $ mkdir linux-work
+ $ cd linux-work
+ $ hg branch ../linux        # create a new branch
+ $ hg checkout               # populate the working directory
+ $ <make changes>
+ $ hg commit
+ $ cd ../linux
+ $ hg merge ../linux-work    # pull changesets from linux-work
+
+Importing patches:
+
+ Fast:
+ $ patch < ../p/foo.patch
+ $ hg addremove
+ $ hg commit
+
+ Faster:
+ $ patch < ../p/foo.patch
+ $ hg commit `lsdiff -p1 ../p/foo.patch`
+
+ Fastest:
+ $ cat ../p/patchlist | xargs hg import -p1 -b ../p 
+
+Network support (highly experimental):
+
+ # export your .hg directory as a directory on your webserver
+ foo$ ln -s .hg ~/public_html/hg-linux 
+
+ # merge changes from a remote machine
+ bar$ hg merge http://foo/~user/hg-linux
+
+ This is just a proof of concept of grabbing byte ranges, and is not
+ expected to perform well.
+

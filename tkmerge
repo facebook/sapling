@@ -1,0 +1,2 @@
+merge $1 $3 $2 || tkdiff -conflict $1 -o $1
+
