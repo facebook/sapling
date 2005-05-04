@@ -220,19 +220,37 @@ elif cmd == "verify":
         nodes = {"\0"*20: 1}
         for i in range(fl.count()):
             n = fl.node(i)
+
             if n not in filenodes[f]:
                 print "%s:%s not in manifests" % (f, hg.hex(n))
-            if fl.linkrev(n) not in filelinkrevs[f]:
+            else:
+                del filenodes[f][n]
+
+            flr = fl.linkrev(n)
+            if flr not in filelinkrevs[f]:
                 print "%s:%s points to unexpected changeset rev %d" \
                       % (f, hg.hex(n), fl.linkrev(n))
+            else:
+                filelinkrevs[f].remove(flr)
+
+            # verify contents
             t = fl.read(n)
+
+            # verify parents
             (p1, p2) = fl.parents(n)
             if p1 not in nodes:
                 print "%s:%s unknown parent 1 %s" % (f, hg.hex(n), hg.hex(p1))
             if p2 not in nodes:
                 print "file %s:%s unknown parent %s" % (f, hg.hex(n), hg.hex(p1))
-
             nodes[n] = 1
+
+        # cross-check
+        for flr in filelinkrevs[f]:
+            print "changeset rev %d not in %s" % (flr, f)
+            
+        for node in filenodes[f]:
+            print "node %s in manifests not in %s" % (hg.hex(n), f)
+
 
     print "%d files, %d changesets, %d total revisions" % (files, changesets,
                                                            revisions)
