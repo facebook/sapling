@@ -18,6 +18,26 @@ except:
 import sys, os
 from mercurial import hg, mdiff, fancyopts
 
+def help():
+        print """\
+ commands:
+
+ init                  create a new repository in this directory
+ branch <path>         create a branch of <path> in this directory
+ merge <path>          merge changes from <path> into local repository
+ checkout [changeset]  checkout the latest or given changeset
+ status                show new, missing, and changed files in working dir
+ add [files...]        add the given files in the next commit
+ remove [files...]     remove the given files in the next commit
+ addremove             add all new files, delete all missing files
+ commit                commit all changes to the repository
+ history               show changeset history
+ log <file>            show revision history of a single file
+ dump <file> [rev]     dump the latest or given revision of a file
+ dumpmanifest [rev]    dump the latest or given revision of the manifest
+"""
+
+
 options = {}
 opts = [('v', 'verbose', None, 'verbose'),
         ('d', 'debug', None, 'debug')]
@@ -39,8 +59,15 @@ if cmd == "init":
 elif cmd == "branch" or cmd == "clone":
     os.system("cp -al %s/.hg .hg" % args[0])
     sys.exit(0)
+elif cmd == "help":
+    help()
+    sys.exit(0)
 else:
-    repo = hg.repository(ui=ui)
+    try:
+        repo = hg.repository(ui=ui)
+    except:
+        print "Unable to open repository"
+        sys.exit(0)
 
 if cmd == "checkout" or cmd == "co":
     node = repo.changelog.tip()
@@ -256,24 +283,6 @@ elif cmd == "verify":
                                                            revisions)
     
 else:
-    if cmd != "help":
-        print "unknown command\n"
-
-    print """\
- commands:
-
- init                  create a new repository in this directory
- branch <path>         create a branch of <path> in this directory
- merge <path>          merge changes from <path> into local repository
- checkout [changeset]  checkout the latest or given changeset
- status                show new, missing, and changed files in working dir
- add [files...]        add the given files in the next commit
- remove [files...]     remove the given files in the next commit
- addremove             add all new files, delete all missing files
- commit                commit all changes to the repository
- history               show changeset history
- log <file>            show revision history of a single file
- dump <file> [rev]     dump the latest or given revision of a file
- dumpmanifest [rev]    dump the latest or given revision of the manifest
-"""
+    print "unknown command\n"
+    help()
     sys.exit(1)
