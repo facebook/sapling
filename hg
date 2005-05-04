@@ -44,7 +44,12 @@ else:
 
 if cmd == "checkout" or cmd == "co":
     node = repo.changelog.tip()
-    if len(args): rev = int(args[0])
+    if len(args):
+        if len(args[0]) < 40:
+            rev = int(args[0])
+            node = repo.changelog.node(rev)
+        else:
+            node = args[0]
     repo.checkout(node)
 
 elif cmd == "add":
@@ -123,7 +128,7 @@ elif cmd == "history":
         print "manifest: %4d:%s" % (repo.manifest.rev(changes[0]),
                                     hg.hex(changes[0]))
         print "user:", changes[1]
-        print "files:", len(changes[3])
+        print "files:", " ".join(changes[3])
         print "description:"
         print changes[4]
 
@@ -218,8 +223,8 @@ elif cmd == "verify":
             if n not in filenodes[f]:
                 print "%s:%s not in manifests" % (f, hg.hex(n))
             if fl.linkrev(n) not in filelinkrevs[f]:
-                print "%s:%s points to unknown changeset %s" \
-                      % (f, hg.hex(n), hg.hex(fl.changeset(n)))
+                print "%s:%s points to unexpected changeset rev %d" \
+                      % (f, hg.hex(n), fl.linkrev(n))
             t = fl.read(n)
             (p1, p2) = fl.parents(n)
             if p1 not in nodes:
