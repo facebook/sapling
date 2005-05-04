@@ -233,9 +233,10 @@ elif cmd == "verify":
                                                            revisions)
     
 else:
-    print """\
-unknown command
+    if cmd != "help":
+        print "unknown command\n"
 
+    print """\
  commands:
 
  init                  create a new repository in this directory
