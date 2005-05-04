@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import sys, struct, sha, socket, os, time, base64, re, urllib2, binascii
+import urllib
 from mercurial import byterange
 from mercurial.transaction import *
 from mercurial.revlog import *
@@ -211,9 +212,11 @@ class dircache:
 def opener(base):
     p = base
     def o(path, mode="r"):
-        f = os.path.join(p, path)
         if p[:7] == "http://":
+            f = os.path.join(p, urllib.quote(path))
             return httprangereader(f)
+
+        f = os.path.join(p, path)
 
         if mode != "r" and os.path.isfile(f):
             s = os.stat(f)
