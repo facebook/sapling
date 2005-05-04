@@ -26,6 +26,7 @@ class transaction:
 
     def __del__(self):
         if self.entries: self.abort()
+        self.close()
 
     def add(self, file, offset):
         self.entries.append((file, offset))
@@ -47,11 +48,6 @@ class transaction:
             self.opener(f, "a").truncate(o)
 
         self.entries = []
-
-        try:
-            os.unlink(self.journal)
-            self.file.close()
-        except: pass
 
         print "rollback completed"
         
