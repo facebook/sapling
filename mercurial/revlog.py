@@ -8,7 +8,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import zlib, struct, sha, binascii, os, tempfile
+import zlib, struct, sha, os, tempfile
 from mercurial import mdiff
 
 def compress(text):
@@ -51,7 +51,9 @@ class revlog:
     def node(self, rev): return rev < 0 and nullid or self.index[rev][6]
     def rev(self, node): return self.nodemap[node]
     def linkrev(self, node): return self.index[self.nodemap[node]][3]
-    def parents(self, node): return self.index[self.nodemap[node]][4:6]
+    def parents(self, node):
+        if node == nullid: return (nullid, nullid)
+        return self.index[self.nodemap[node]][4:6]
 
     def start(self, rev): return self.index[rev][0]
     def length(self, rev): return self.index[rev][1]
