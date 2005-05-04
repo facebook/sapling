@@ -1,0 +1,5 @@
+include hg
+recursive-include mercurial *.py
+include tkmerge
+include *.txt
+include README
