@@ -63,8 +63,8 @@ class revlog:
     def revisions(self, list):
         # this can be optimized to do spans, etc
         # be stupid for now
-        for r in list:
-            yield self.revision(r)
+        for node in list:
+            yield self.revision(node)
 
     def diff(self, a, b):
         return mdiff.textdiff(a, b)
@@ -151,9 +151,9 @@ class revlog:
         self.nodemap[node] = n
         entry = struct.pack(indexformat, *e)
 
-        transaction.add(self.datafile, e[0])
+        transaction.add(self.datafile, e[0] - 1)
         self.opener(self.datafile, "a").write(data)
-        transaction.add(self.indexfile, n * len(entry))
+        transaction.add(self.indexfile, (n + 1) * len(entry) - 1)
         self.opener(self.indexfile, "a").write(entry)
 
         self.cache = (node, n, text)
