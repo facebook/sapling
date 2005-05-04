@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import sys, struct, sha, socket, os, time, base64, re, urllib2
+import sys, struct, sha, socket, os, time, base64, re, urllib2, binascii
 from mercurial import byterange
 from mercurial.transaction import *
 from mercurial.revlog import *
@@ -255,8 +255,8 @@ class repository:
         if not self.remote:
             self.dircache = dircache(self.opener)
             try:
-                self.current = bin(self.open("current").read())
-            except:
+                self.current = bin(self.opener("current").read())
+            except IOError:
                 self.current = None
 
     def setcurrent(self, node):
@@ -477,12 +477,12 @@ class repository:
     def diffdir(self, path):
         dc = self.dircache.copy()
         changed = []
+        mf = {}
         added = []
 
-        mmap = {}
         if self.current:
             change = self.changelog.read(self.current)
-            mmap = self.manifest.read(change[0])
+            mf = self.manifest.read(change[0])
 
         for dir, subdirs, files in os.walk(self.root):
             d = dir[len(self.root)+1:]
@@ -499,7 +499,7 @@ class repository:
                         changed.append(fn)
                     elif c[0] != s.st_mode or c[2] != s.st_mtime:
                         t1 = file(fn).read()
-                        t2 = self.file(fn).revision(mmap[fn])
+                        t2 = self.file(fn).revision(mf[fn])
                         if t1 != t2:
                             changed.append(fn)
                 else:
