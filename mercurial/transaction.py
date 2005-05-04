@@ -26,7 +26,8 @@ class transaction:
 
     def __del__(self):
         if self.entries: self.abort()
-        self.close()
+        try: os.unlink(self.journal)
+        except: pass
 
     def add(self, file, offset):
         self.entries.append((file, offset))
