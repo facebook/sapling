@@ -269,7 +269,8 @@ class repository:
             try:
                 l = open(os.path.join(self.root, ".hgignore")).readlines()
                 for pat in l:
-                    self.ignorelist.append(re.compile(pat[:-1]))
+                    if pat != "\n":
+                        self.ignorelist.append(re.compile(pat[:-1]))
             except IOError: pass
         for pat in self.ignorelist:
             if pat.search(f): return True
