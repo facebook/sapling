@@ -137,9 +137,10 @@ class changelog(revlog):
         pass
 
 class dircache:
-    def __init__(self, opener):
+    def __init__(self, opener, ui):
         self.opener = opener
         self.dirty = 0
+        self.ui = ui
         self.map = None
     def __del__(self):
         if self.dirty: self.write()
@@ -190,8 +191,11 @@ class dircache:
         self.read()
         self.dirty = 1
         for f in files:
-            try: del self.map[f]
-            except KeyError: pass
+            try:
+                del self.map[f]
+            except KeyError:
+                self.ui.warn("Not in dircache: %s\n" % f)
+                pass
 
     def clear(self):
         self.map = {}
@@ -256,7 +260,7 @@ class repository:
         self.ignorelist = None
 
         if not self.remote:
-            self.dircache = dircache(self.opener)
+            self.dircache = dircache(self.opener, ui)
             try:
                 self.current = bin(self.opener("current").read())
             except IOError:
@@ -399,6 +403,7 @@ class repository:
         if co == cn: cn = -1
 
         edittext = "\n"+"".join(["HG: changed %s\n" % f for f in new])
+        edittext += "".join(["HG: removed %s\n" % f for f in remove])
         edittext = self.ui.edit(edittext)
         n = self.changelog.add(node, new, edittext, tr, co, cn)
 
