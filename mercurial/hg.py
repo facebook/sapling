@@ -190,8 +190,8 @@ class dircache:
         self.read()
         self.dirty = 1
         for f in files:
-            try: del self[f]
-            except: pass
+            try: del self.map[f]
+            except KeyError: pass
 
     def clear(self):
         self.map = {}
