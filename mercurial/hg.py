@@ -289,18 +289,19 @@ class repository:
         tr = self.transaction()
         changed = {}
         new = {}
-        nextrev = seqrev = self.changelog.count()
+        seqrev = self.changelog.count()
+        # some magic to allow fiddling in nested scope
+        nextrev = [seqrev]
 
         # helpers for back-linking file revisions to local changeset
         # revisions so we can immediately get to changeset from annotate
         def accumulate(text):
-            n = nextrev
             # track which files are added in which changeset and the
             # corresponding _local_ changeset revision
             files = self.changelog.extract(text)[3]
             for f in files:
-                changed.setdefault(f, []).append(n)
-            n += 1
+                changed.setdefault(f, []).append(nextrev[0])
+            nextrev[0] += 1
 
         def seq(start):
             while 1:
