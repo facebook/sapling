@@ -408,7 +408,7 @@ class repository:
 
         tr.close()
 
-    def commit(self, update = None, parent, text = ""):
+    def commit(self, parent, update = None, text = ""):
         tr = self.transaction()
         
         try:
