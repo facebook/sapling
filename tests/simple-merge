@@ -1,0 +1,22 @@
+set -ex
+export EDITOR=true
+rm -rf test branch
+
+mkdir test
+cd test
+echo foo>foo
+hg init
+hg addremove
+hg commit
+hg verify
+cd ..
+
+cp -a test branch
+cd branch
+echo bar>>foo
+hg commit
+
+cd ../test
+hg merge ../branch
+hg verify
+

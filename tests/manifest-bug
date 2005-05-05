@@ -1,0 +1,42 @@
+#!/bin/sh -x
+
+set +e
+
+BASE=foo.base
+BR1=foo.br1
+BR2=foo.br2
+BR2_1=foo.br2_1
+
+mkdir $BASE
+cd $BASE
+hg init
+echo test > file
+hg add file
+EDITOR="echo 'initial commit' > " hg commit
+cd ..
+
+mkdir $BR1
+cd $BR1
+hg branch ../$BASE
+hg checkout
+echo test > file1
+hg addremove
+EDITOR="echo side commit >" hg commit
+cd ..
+
+mkdir $BR2
+cd $BR2
+hg branch ../$BASE
+hg checkout
+echo yet more >> file2
+hg addremove
+EDITOR="echo second update >" hg commit
+cd ..
+
+mkdir $BR2_1
+cd $BR2_1
+hg branch ../$BR2
+hg checkout
+EDITOR="echo commit merge >" hg merge ../$BR1
+
+hg checkout

@@ -1,0 +1,86 @@
+set -e
+set -x
+
+# skip commit logs
+export HGMERGE=tkmerge
+export EDITOR=true
+
+rm -rf m m1 m2
+mkdir m
+cd m
+
+echo "m     this  that"
+echo "this" > a
+echo "that" > b
+hg init
+hg addremove
+hg commit
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
+
+cd ..
+echo "m2    this  that "
+mkdir m2
+cd m2
+hg branch ../m
+hg checkout
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
+
+cd ../m
+echo "m     this1 that "
+echo "this1" > a
+hg commit
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
+
+cd ..
+echo "m1    this1 that "
+mkdir m1
+cd m1
+hg branch ../m
+hg checkout
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
+
+cd ../m1
+echo "m1    this1 that1"
+echo "that1" > b
+hg commit
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
+
+cd ../m2
+echo "m2    this  that2"
+echo "that2" > b
+hg commit
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
+
+cd ../m1
+echo "m1:m2 this1 that1 that2"
+hg merge ../m2 # b should conflict, a should be fine
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
+
+cd ../m2
+echo "m2    this2 that2"
+echo "this2" > a
+hg commit
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
+
+cd ../m2
+echo "m2:m this12 that2"
+hg merge ../m # a should conflict, b should be fine
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
+
+# now here's the interesting bit
+# if we choose ancestor by file, no conflicts
+# otherwise we've got two equally close ancestors, each with a conflict
+# if we go back to the root, we'll have both conflicts again
+echo "m2:m1 this12 that12"
+hg merge ../m1 # should be clean
+echo "a:" `hg dump a` "b:" `hg dump b`
+echo
