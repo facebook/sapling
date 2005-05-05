@@ -112,7 +112,7 @@ elif cmd == "import" or cmd == "patch":
         repo.commit(files)
 
 elif cmd == "status":
-    (c, a, d) = repo.diffdir(repo.root)
+    (c, a, d) = repo.diffdir(repo.root, repo.current)
     for f in c: print "C", f
     for f in a: print "?", f
     for f in d: print "R", f
@@ -123,7 +123,7 @@ elif cmd == "diff":
         change = repo.changelog.read(repo.current)
         mmap = repo.manifest.read(change[0])
 
-    (c, a, d) = repo.diffdir(repo.root)
+    (c, a, d) = repo.diffdir(repo.root, repo.current)
 
     if args:
         nc = [ x for x in c if x in args ]
@@ -151,7 +151,7 @@ elif cmd == "diff":
         sys.stdout.write(mdiff.unidiff(to, tn, f))
 
 elif cmd == "addremove":
-    (c, a, d) = repo.diffdir(repo.root)
+    (c, a, d) = repo.diffdir(repo.root, repo.current)
     repo.add(a)
     repo.remove(d)
     

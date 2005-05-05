@@ -408,7 +408,7 @@ class repository:
 
         tr.close()
 
-    def commit(self, update = None, text = ""):
+    def commit(self, update = None, parent, text = ""):
         tr = self.transaction()
         
         try:
@@ -419,7 +419,7 @@ class repository:
             remove = []
 
         if update == None:
-            update = self.diffdir(self.root)[0]
+            update = self.diffdir(self.root, parent)[0]
 
         # check in files
         new = {}
@@ -484,15 +484,24 @@ class repository:
         self.dircache.clear()
         self.dircache.update(l)
 
-    def diffdir(self, path):
-        dc = self.dircache.copy()
+    def diffdir(self, path, changeset):
         changed = []
         mf = {}
         added = []
 
-        if self.current:
-            change = self.changelog.read(self.current)
+        if changeset:
+            change = self.changelog.read(changeset)
             mf = self.manifest.read(change[0])
+
+        if changeset == self.current:
+            dc = self.dircache.copy()
+        else:
+            dc = dict.fromkeys(mf)
+
+        def fcmp(fn):
+            t1 = file(fn).read()
+            t2 = self.file(fn).revision(mf[fn])
+            return cmp(t1, t2)
 
         for dir, subdirs, files in os.walk(self.root):
             d = dir[len(self.root)+1:]
@@ -505,12 +514,13 @@ class repository:
                 if fn in dc:
                     c = dc[fn]
                     del dc[fn]
+                    if not c:
+                        if fcmp(fn):
+                            changed.append(fn)
                     if c[1] != s.st_size:
                         changed.append(fn)
                     elif c[0] != s.st_mode or c[2] != s.st_mtime:
-                        t1 = file(fn).read()
-                        t2 = self.file(fn).revision(mf[fn])
-                        if t1 != t2:
+                        if fcmp(fn):
                             changed.append(fn)
                 else:
                     if self.ignore(fn): continue
