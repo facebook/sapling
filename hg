@@ -38,6 +38,24 @@ def help():
  diff [files...]       diff working directory (or selected files)
 """
 
+def diffdir(node, files = None):
+    (c, a, d) = repo.diffdir(repo.root, node)
+
+    if args:
+        nc = [ x for x in c if x in args ]
+        na = [ x for x in a if x in args ]
+        nd = [ x for x in d if x in args ]
+        for arg in args:
+            if not os.path.isdir(arg): continue
+            if arg[-1] != os.sep: arg += os.sep
+            nc += [ x for x in c if x.startswith(arg) ]
+            na += [ x for x in a if x.startswith(arg) ]
+            nd += [ x for x in d if x.startswith(arg) ]
+        (c, a, d) = (nc, na, nd)
+
+    return (c, a, d)
+    
+
 options = {}
 opts = [('v', 'verbose', None, 'verbose'),
         ('d', 'debug', None, 'debug')]
@@ -88,9 +106,9 @@ elif cmd == "remove" or cmd == "rm" or cmd == "del" or cmd == "delete":
 elif cmd == "commit" or cmd == "checkin" or cmd == "ci":
     if 1:
         if len(args) > 0:
-            repo.commit(args)
+            repo.commit(repo.current, args)
         else:
-            repo.commit()
+            repo.commit(repo.current)
 
 elif cmd == "import" or cmd == "patch":
     ioptions = {}
@@ -112,30 +130,18 @@ elif cmd == "import" or cmd == "patch":
         repo.commit(files)
 
 elif cmd == "status":
-    (c, a, d) = repo.diffdir(repo.root, repo.current)
+    (c, a, d) = diffdir(repo.current)
     for f in c: print "C", f
     for f in a: print "?", f
     for f in d: print "R", f
 
 elif cmd == "diff":
+    (c, a, d) = diffdir(repo.current, args)
+
     mmap = {}
     if repo.current:
         change = repo.changelog.read(repo.current)
         mmap = repo.manifest.read(change[0])
-
-    (c, a, d) = repo.diffdir(repo.root, repo.current)
-
-    if args:
-        nc = [ x for x in c if x in args ]
-        na = [ x for x in a if x in args ]
-        nd = [ x for x in d if x in args ]
-        for arg in args:
-            if not os.path.isdir(arg): continue
-            if arg[-1] != os.sep: arg += os.sep
-            nc += [ x for x in c if x.startswith(arg) ]
-            na += [ x for x in a if x.startswith(arg) ]
-            nd += [ x for x in d if x.startswith(arg) ]
-        (c, a, d) = (nc, na, nd)
 
     for f in c:
         to = repo.file(f).read(mmap[f])
