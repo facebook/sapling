@@ -37,7 +37,6 @@ def help():
  dumpmanifest [rev]    dump the latest or given revision of the manifest
 """
 
-
 options = {}
 opts = [('v', 'verbose', None, 'verbose'),
         ('d', 'debug', None, 'debug')]
@@ -155,6 +154,8 @@ elif cmd == "history":
         print "manifest: %4d:%s" % (repo.manifest.rev(changes[0]),
                                     hg.hex(changes[0]))
         print "user:", changes[1]
+        print "date:", time.asctime(
+            time.localtime(float(changes[2].split(' ')[0])))
         print "files:", " ".join(changes[3])
         print "description:"
         print changes[4]
