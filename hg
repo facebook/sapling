@@ -35,6 +35,7 @@ def help():
  log <file>            show revision history of a single file
  dump <file> [rev]     dump the latest or given revision of a file
  dumpmanifest [rev]    dump the latest or given revision of the manifest
+ diff [files...]       diff working directory (or selected files)
 """
 
 options = {}
@@ -123,6 +124,19 @@ elif cmd == "diff":
         mmap = repo.manifest.read(change[0])
 
     (c, a, d) = repo.diffdir(repo.root)
+
+    if args:
+        nc = [ x for x in c if x in args ]
+        na = [ x for x in a if x in args ]
+        nd = [ x for x in d if x in args ]
+        for arg in args:
+            if not os.path.isdir(arg): continue
+            if arg[-1] != os.sep: arg += os.sep
+            nc += [ x for x in c if x.startswith(arg) ]
+            na += [ x for x in a if x.startswith(arg) ]
+            nd += [ x for x in d if x.startswith(arg) ]
+        (c, a, d) = (nc, na, nd)
+
     for f in c:
         to = repo.file(f).read(mmap[f])
         tn = file(f).read()
