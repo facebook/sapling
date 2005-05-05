@@ -39,7 +39,7 @@ class revlog:
             i = self.opener(self.indexfile).read()
             s = struct.calcsize(indexformat)
             for f in range(0, len(i), s):
-                # offset, size, base, linkrev, p1, p2, nodeid, changeset
+                # offset, size, base, linkrev, p1, p2, nodeid
                 e = struct.unpack(indexformat, i[f:f + s])
                 self.nodemap[e[6]] = n
                 self.index.append(e)
@@ -48,7 +48,7 @@ class revlog:
 
     def tip(self): return self.node(len(self.index) - 1)
     def count(self): return len(self.index)
-    def node(self, rev): return rev < 0 and nullid or self.index[rev][6]
+    def node(self, rev): return (rev < 0) and nullid or self.index[rev][6]
     def rev(self, node): return self.nodemap[node]
     def linkrev(self, node): return self.index[self.nodemap[node]][3]
     def parents(self, node):
@@ -103,8 +103,8 @@ class revlog:
             last = last + s
 
         (p1, p2) = self.parents(node)
-        if self.node(rev) != hash(text, p1, p2):
-            raise "Consistency check failed on %s:%d" % (self.datafile, rev)
+        if node != hash(text, p1, p2):
+            raise "integrity check failed on %s:%d" % (self.datafile, rev)
 
         self.cache = (node, rev, text)
         return text  
@@ -123,14 +123,6 @@ class revlog:
             start = self.start(self.base(t))
             end = self.end(t)
             prev = self.revision(self.tip())
-            if 0:
-                dd = self.diff(prev, text)
-                tt = self.patch(prev, dd)
-                if tt != text:
-                    print prev
-                    print text
-                    print tt
-                    raise "diff+patch failed"
             data = compress(self.diff(prev, text))
 
         # full versions are inserted when the needed deltas
@@ -151,9 +143,9 @@ class revlog:
         self.nodemap[node] = n
         entry = struct.pack(indexformat, *e)
 
-        transaction.add(self.datafile, e[0] - 1)
+        transaction.add(self.datafile, e[0])
         self.opener(self.datafile, "a").write(data)
-        transaction.add(self.indexfile, (n + 1) * len(entry) - 1)
+        transaction.add(self.indexfile, (n + 1) * len(entry))
         self.opener(self.indexfile, "a").write(entry)
 
         self.cache = (node, n, text)
