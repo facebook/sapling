@@ -80,8 +80,8 @@ class manifest(revlog):
             return self.mapcache[1]
         text = self.revision(node)
         map = {}
-        self.listcache = text.splitlines(1)
-        for l in self.listcache:
+        self.listcache = (text, text.splitlines(1))
+        for l in self.listcache[1]:
             (f, n) = l.split('\0')
             map[f] = bin(n[:40])
         self.mapcache = (node, map)
@@ -89,8 +89,8 @@ class manifest(revlog):
 
     def diff(self, a, b):
         # this is sneaky, as we're not actually using a and b
-        if self.listcache:
-            return mdiff.diff(self.listcache, self.addlist, 1)
+        if self.listcache and len(self.listcache[0]) == len(a):
+            return mdiff.diff(self.listcache[1], self.addlist, 1)
         else:
             return mdiff.diff(a, b)
 
@@ -103,7 +103,7 @@ class manifest(revlog):
 
         n = self.addrevision(text, transaction, link, p1, p2)
         self.mapcache = (n, map)
-        self.listcache = self.addlist
+        self.listcache = (text, self.addlist)
 
         return n
 
@@ -403,7 +403,6 @@ class repository:
         if co == cn: cn = -1
 
         edittext = "\n"+"".join(["HG: changed %s\n" % f for f in new])
-        edittext += "".join(["HG: removed %s\n" % f for f in remove])
         edittext = self.ui.edit(edittext)
         n = self.changelog.add(node, new, edittext, tr, co, cn)
 
@@ -446,6 +445,7 @@ class repository:
         new.sort()
 
         edittext = text + "\n"+"".join(["HG: changed %s\n" % f for f in new])
+        edittext += "".join(["HG: removed %s\n" % f for f in remove])
         edittext = self.ui.edit(edittext)
 
         n = self.changelog.add(mnode, new, edittext, tr)
