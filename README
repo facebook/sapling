@@ -72,6 +72,7 @@ Network support (highly experimental):
  # pull the self-hosting hg repo
  foo$ hg init
  foo$ hg merge http://selenic.com/hg/
+ foo$ hg checkout  # hg co works too
 
  # export your .hg directory as a directory on your webserver
  foo$ ln -s .hg ~/public_html/hg-linux 
