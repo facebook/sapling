@@ -531,6 +531,27 @@ class repository:
 
         return (changed, added, deleted)
 
+    def diffrevs(self, node1, node2):
+        changed, added = [], [], []
+
+        change = self.changelog.read(node1)
+        mf1 = self.manifest.read(change[0])
+        change = self.changelog.read(revs[1])
+        mf2 = self.manifest.read(change[0])
+
+        for fn in mf2:
+            if mf1.has_key(fn):
+                if mf1[fn] != mf2[fn]:
+                    changed.append(fn)
+                del mf1[fn]
+            else:
+                added.append(fn)
+                
+        deleted = mf1.keys()
+        deleted.sort()
+    
+        return (changed, added, deleted)
+
     def add(self, list):
         self.dircache.taint(list)
 
