@@ -517,7 +517,7 @@ class repository:
                     if not c:
                         if fcmp(fn):
                             changed.append(fn)
-                    if c[1] != s.st_size:
+                    elif c[1] != s.st_size:
                         changed.append(fn)
                     elif c[0] != s.st_mode or c[2] != s.st_mtime:
                         if fcmp(fn):
@@ -532,11 +532,11 @@ class repository:
         return (changed, added, deleted)
 
     def diffrevs(self, node1, node2):
-        changed, added = [], [], []
+        changed, added = [], []
 
         change = self.changelog.read(node1)
         mf1 = self.manifest.read(change[0])
-        change = self.changelog.read(revs[1])
+        change = self.changelog.read(node2)
         mf2 = self.manifest.read(change[0])
 
         for fn in mf2:

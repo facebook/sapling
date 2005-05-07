@@ -38,23 +38,13 @@ def help():
  diff [files...]       diff working directory (or selected files)
 """
 
-def diffdir(node, files = None):
-    (c, a, d) = repo.diffdir(repo.root, node)
+def filterfiles(list, files):
+    l = [ x for x in list if x in files ]
 
-    if args:
-        nc = [ x for x in c if x in args ]
-        na = [ x for x in a if x in args ]
-        nd = [ x for x in d if x in args ]
-        for arg in args:
-            if not os.path.isdir(arg): continue
-            if arg[-1] != os.sep: arg += os.sep
-            nc += [ x for x in c if x.startswith(arg) ]
-            na += [ x for x in a if x.startswith(arg) ]
-            nd += [ x for x in d if x.startswith(arg) ]
-        (c, a, d) = (nc, na, nd)
-
-    return (c, a, d)
-    
+    for f in files:
+        if f[-1] != os.sep: f += os.sep
+        l += [ x for x in list if x.startswith(f) ]
+    return l
 
 options = {}
 opts = [('v', 'verbose', None, 'verbose'),
@@ -130,26 +120,52 @@ elif cmd == "import" or cmd == "patch":
         repo.commit(files)
 
 elif cmd == "status":
-    (c, a, d) = diffdir(repo.current)
+    (c, a, d) = repo.diffdir(repo.root, repo.current)
     for f in c: print "C", f
     for f in a: print "?", f
     for f in d: print "R", f
 
 elif cmd == "diff":
-    (c, a, d) = diffdir(repo.current, args)
+    doptions = {}
+    revs = [repo.current]
 
-    mmap = {}
-    if repo.current:
-        change = repo.changelog.read(repo.current)
-        mmap = repo.manifest.read(change[0])
+    if args:
+        opts = [('r', 'revision', [], 'revision')]
+        args = fancyopts.fancyopts(args, opts, doptions,
+                                   'hg diff [options] [files]')
+        # revs = [ repo.lookup(x) for x in doptions['revision'] ]
+        revs = [hg.bin(x) for x in doptions['revision']]
+    
+    if len(revs) > 2:
+        print "too many revisions to diff"
+        sys.exit(1)
+    elif len(revs) == 2:
+        change = repo.changelog.read(revs[1])
+        mmap2 = repo.manifest.read(change[0])
+        (c, a, d) = repo.diffrevs(revs[0], revs[1])
+        def read(f): return repo.file(f).read(mmap2[f])
+    else:
+        if len(revs) < 1:
+            if not repo.current:
+                sys.exit(0)
+        (c, a, d) = repo.diffdir(repo.root, revs[0])
+        def read(f): return file(f).read()
+
+    change = repo.changelog.read(revs[0])
+    mmap = repo.manifest.read(change[0])
+
+    if args:
+        c = filterfiles(c, args)
+        a = filterfiles(a, args)
+        d = filterfiles(d, args)
 
     for f in c:
         to = repo.file(f).read(mmap[f])
-        tn = file(f).read()
+        tn = read(f)
         sys.stdout.write(mdiff.unidiff(to, tn, f))
     for f in a:
         to = ""
-        tn = file(f).read()
+        tn = read(f)
         sys.stdout.write(mdiff.unidiff(to, tn, f))
     for f in d:
         to = repo.file(f).read(mmap[f])
