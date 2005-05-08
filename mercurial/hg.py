@@ -5,14 +5,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import sys, struct, sha, socket, os, time, base64, re, urllib2, binascii
+import sys, struct, sha, socket, os, time, base64, re, urllib2
 import urllib
 from mercurial import byterange
 from mercurial.transaction import *
 from mercurial.revlog import *
-
-def hex(node): return binascii.hexlify(node)
-def bin(node): return binascii.unhexlify(node)
 
 class filelog(revlog):
     def __init__(self, opener, path):
@@ -112,6 +109,8 @@ class changelog(revlog):
         revlog.__init__(self, opener, "00changelog.i", "00changelog.d")
 
     def extract(self, text):
+        if not text:
+            return (nullid, "", 0, [], "")
         last = text.index("\n\n")
         desc = text[last + 2:]
         l = text[:last].splitlines()
