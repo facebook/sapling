@@ -163,7 +163,7 @@ class revlog:
 
         transaction.add(self.datafile, e[0])
         self.opener(self.datafile, "a").write(data)
-        transaction.add(self.indexfile, (n + 1) * len(entry))
+        transaction.add(self.indexfile, n * len(entry))
         self.opener(self.indexfile, "a").write(entry)
 
         self.cache = (node, n, text)
