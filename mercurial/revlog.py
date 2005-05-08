@@ -8,8 +8,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import zlib, struct, sha, os, tempfile
+import zlib, struct, sha, os, tempfile, binascii
 from mercurial import mdiff
+
+def hex(node): return binascii.hexlify(node)
+def bin(node): return binascii.unhexlify(node)
 
 def compress(text):
     return zlib.compress(text)
@@ -32,7 +35,7 @@ class revlog:
         self.index = []
         self.opener = opener
         self.cache = None
-        self.nodemap = { -1: nullid, nullid: -1 }
+        self.nodemap = {nullid: -1}
         # read the whole index for now, handle on-demand later
         try:
             n = 0
@@ -60,6 +63,21 @@ class revlog:
     def end(self, rev): return self.start(rev) + self.length(rev)
     def base(self, rev): return self.index[rev][2]
 
+    def lookup(self, id):
+        try:
+            rev = int(id)
+            return self.node(rev)
+        except ValueError:
+            c = []
+            for n in self.nodemap:
+                if id in hex(n):
+                    c.append(n)
+            if len(c) > 1: raise KeyError("Ambiguous identifier")
+            if len(c) < 1: raise KeyError
+            return c[0]
+                
+        return None
+
     def revisions(self, list):
         # this can be optimized to do spans, etc
         # be stupid for now
@@ -73,7 +91,7 @@ class revlog:
         return mdiff.patch(text, patch)
 
     def revision(self, node):
-        if node is nullid: return ""
+        if node == nullid: return ""
         if self.cache and self.cache[0] == node: return self.cache[2]
 
         text = None
