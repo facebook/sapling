@@ -3,9 +3,10 @@ import difflib, struct
 from cStringIO import StringIO
 
 def unidiff(a, b, fn):
+    if not a and not b: return ""
     a = a.splitlines(1)
     b = b.splitlines(1)
-    l = difflib.unified_diff(a, b, fn, fn)
+    l = list(difflib.unified_diff(a, b, fn, fn))
     return "".join(l)
 
 def textdiff(a, b):
