@@ -112,12 +112,8 @@ else:
 
 if cmd == "checkout" or cmd == "co":
     node = repo.changelog.tip()
-    if len(args):
-        if len(args[0]) < 40:
-            rev = int(args[0])
-            node = repo.changelog.node(rev)
-        else:
-            node = args[0]
+    if args:
+        node = repo.changelog.lookup(args[0])
     repo.checkout(node)
 
 elif cmd == "add":
@@ -150,7 +146,7 @@ elif cmd == "import" or cmd == "patch":
         f = os.popen("lsdiff --strip %d %s" % (strip, pf))
         files = f.read().splitlines()
         f.close()
-        repo.commit(files)
+        repo.commit(repo.current, files)
 
 elif cmd == "status":
     (c, a, d) = repo.diffdir(repo.root, repo.current)
@@ -224,7 +220,7 @@ elif cmd == "dump":
     if args:
         r = repo.file(args[0])
         n = r.tip()
-        if len(args) > 1: n = hg.bin(args[1])
+        if len(args) > 1: n = r.lookup(args[1])
         sys.stdout.write(r.read(n))
     else:
         print "missing filename"
@@ -232,7 +228,7 @@ elif cmd == "dump":
 elif cmd == "dumpmanifest":
     n = repo.manifest.tip()
     if len(args) > 0:
-        n = hg.bin(args[0])
+        n = repo.manifest.lookup(args[0])
     m = repo.manifest.read(n)
     files = m.keys()
     files.sort()
