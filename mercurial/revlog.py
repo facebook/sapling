@@ -170,20 +170,38 @@ class revlog:
         return node
 
     def ancestor(self, a, b):
-        def expand(e1, e2, a1, a2):
-            ne = []
-            for n in e1:
-                (p1, p2) = self.parents(n)
-                if p1 in a2: return p1
-                if p2 in a2: return p2
-                if p1 != nullid and p1 not in a1:
-                    a1[p1] = 1
-                    ne.append(p1)
-                if p2 != nullid and p2 not in a1:
-                    a1[p2] = 1
-                    ne.append(p2)
-            return expand(e2, ne, a2, a1)
-        return expand([a], [b], {a:1}, {b:1})
+        def expand(list, map):
+            a = []
+            while list:
+                n = list.pop(0)
+                map[n] = 1
+                yield n
+                for p in self.parents(n):
+                    if p != nullid and p not in map:
+                        list.append(p)
+            yield nullid
+
+        amap = {}
+        bmap = {}
+        ag = expand([a], amap)
+        bg = expand([b], bmap)
+        adone = bdone = 0
+
+        while not adone or not bdone:
+            if not adone:
+                an = ag.next()
+                if an == nullid:
+                    adone = 1
+                elif an in bmap:
+                    return an
+            if not bdone:
+                bn = bg.next()
+                if bn == nullid:
+                    bdone = 1
+                elif bn in amap:
+                    return bn
+
+        return nullid
 
     def mergedag(self, other, transaction, linkseq, accumulate = None):
         """combine the nodes from other's DAG into ours"""
