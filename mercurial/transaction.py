@@ -17,6 +17,7 @@ class transaction:
     def __init__(self, opener, journal):
         self.opener = opener
         self.entries = []
+        self.map = {}
         self.journal = journal
 
         # abort here if the journal already exists
@@ -30,7 +31,9 @@ class transaction:
         except: pass
 
     def add(self, file, offset):
+        if file in self.map: return
         self.entries.append((file, offset))
+        self.map[file] = 1
         # add enough data to the journal to do the truncate
         self.file.write("%s\0%d\n" % (file, offset))
         self.file.flush()
