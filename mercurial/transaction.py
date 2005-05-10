@@ -22,7 +22,9 @@ class transaction:
 
         # abort here if the journal already exists
         if os.path.exists(self.journal):
-            raise "Journal already exists!"
+            print "journal already exists, recovering"
+            self.recover()
+
         self.file = open(self.journal, "w")
 
     def __del__(self):
@@ -59,4 +61,5 @@ class transaction:
         for l in open(self.journal).readlines():
             f, o = l.split('\0')
             self.opener(f, "a").truncate(int(o))
+        os.unlink(self.journal)
 
