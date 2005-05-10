@@ -8,12 +8,13 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-# the psyco compiler makes commits about twice as fast
-try:
-    import psyco
-    psyco.full()
-except:
-    pass
+# the psyco compiler makes commits a bit faster
+# and makes changegroup merge about 20 times slower!
+# try:
+#    import psyco
+#    psyco.full()
+# except:
+#    pass
 
 import sys, os, time
 from mercurial import hg, mdiff, fancyopts
@@ -174,6 +175,15 @@ elif cmd == "export":
     node = repo.changelog.lookup(args[0])
     prev = repo.changelog.parents(node)[0]
     diff(None, prev, node)
+
+elif cmd == "debugchangegroup":
+    newer = repo.newer(repo.changelog.lookup(args[0]))
+    cg = repo.changegroup(newer)
+    sys.stdout.write(cg)
+
+elif cmd == "debugaddchangegroup":
+    data = sys.stdin.read()
+    repo.addchangegroup(data)
 
 elif cmd == "addremove":
     (c, a, d) = repo.diffdir(repo.root, repo.current)

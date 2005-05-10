@@ -559,6 +559,151 @@ class repository:
         for f in list:
             dl.write(f + "\n")
 
+    def newer(self, node):
+        nodes = []
+        for i in xrange(self.changelog.rev(node) + 1, self.changelog.count()):
+            nodes.append(self.changelog.node(i))
+
+        return nodes
+
+    def changegroup(self, nodes):
+        # construct the link map
+        linkmap = {}
+        for n in nodes:
+            linkmap[self.changelog.rev(n)] = n
+
+        # construct a list of all changed files
+        changed = {}
+        for n in nodes:
+            c = self.changelog.read(n)
+            for f in c[3]:
+                changed[f] = 1
+        changed = changed.keys()
+        changed.sort()
+
+        # the changegroup is changesets + manifests + all file revs
+        cg = []
+        revs = [ self.changelog.rev(n) for n in nodes ]
+
+        g = self.changelog.group(linkmap)
+        cg.append(g)
+        g = self.manifest.group(linkmap)
+        cg.append(g)
+
+        for f in changed:
+            g = self.file(f).group(linkmap)
+            if not g: raise "couldn't find change to %s" % f
+            l = struct.pack(">l", len(f))
+            cg += [l, f, g]
+
+        return compress("".join(cg))
+
+    def addchangegroup(self, data):
+        data = decompress(data)
+        def getlen(data, pos):
+            return struct.unpack(">l", data[pos:pos + 4])[0]
+        
+        tr = self.transaction()
+        simple = True
+
+        print "merging changesets"
+        # pull off the changeset group
+        l = getlen(data, 0)
+        csg = data[0:l]
+        pos = l
+        co = self.changelog.tip()
+        cn = self.changelog.addgroup(csg, lambda x: self.changelog.count(), tr)
+
+        print "merging manifests"
+        # pull off the manifest group
+        l = getlen(data, pos)
+        mfg = data[pos: pos + l]
+        pos += l
+        mo = self.manifest.tip()
+        mn = self.manifest.addgroup(mfg, lambda x: self.changelog.rev(x), tr)
+
+        # do we need a resolve?
+        if self.changelog.ancestor(co, cn) != co:
+            print "NEED RESOLVE"
+            simple = False
+            resolverev = self.changelog.count()
+
+        # process the files
+        print "merging files"
+        new = {}
+        while pos < len(data):
+            l = getlen(data, pos)
+            pos += 4
+            f = data[pos:pos + l]
+            pos += l
+
+            l = getlen(data, pos)
+            fg = data[pos: pos + l]
+            pos += l
+
+            fl = self.file(f)
+            o = fl.tip()
+            n = fl.addgroup(fg, lambda x: self.changelog.rev(x), tr)
+            if not simple:
+                new[fl] = fl.resolvedag(o, n, tr, resolverev)
+
+        # For simple merges, we don't need to resolve manifests or changesets
+        if simple:
+            tr.close()
+            return
+
+        # resolve the manifest to point to all the merged files
+        self.ui.status("resolving manifests\n")
+        ma = self.manifest.ancestor(mm, mo)
+        mmap = self.manifest.read(mm) # mine
+        omap = self.manifest.read(mo) # other
+        amap = self.manifest.read(ma) # ancestor
+        nmap = {}
+
+        for f, mid in mmap.iteritems():
+            if f in omap:
+                if mid != omap[f]: 
+                    nmap[f] = new.get(f, mid) # use merged version
+                else:
+                    nmap[f] = new.get(f, mid) # they're the same
+                del omap[f]
+            elif f in amap:
+                if mid != amap[f]: 
+                    pass # we should prompt here
+                else:
+                    pass # other deleted it
+            else:
+                nmap[f] = new.get(f, mid) # we created it
+                
+        del mmap
+
+        for f, oid in omap.iteritems():
+            if f in amap:
+                if oid != amap[f]:
+                    pass # this is the nasty case, we should prompt
+                else:
+                    pass # probably safe
+            else:
+                nmap[f] = new.get(f, oid) # remote created it
+
+        del omap
+        del amap
+
+        node = self.manifest.add(nmap, tr, resolverev, mm, mo)
+
+        # Now all files and manifests are merged, we add the changed files
+        # and manifest id to the changelog
+        self.ui.status("committing merge changeset\n")
+        new = new.keys()
+        new.sort()
+        if co == cn: cn = -1
+
+        edittext = "\n"+"".join(["HG: changed %s\n" % f for f in new])
+        edittext = self.ui.edit(edittext)
+        n = self.changelog.add(node, new, edittext, tr, co, cn)
+
+        tr.close()
+
 class ui:
     def __init__(self, verbose=False, debug=False):
         self.verbose = verbose
