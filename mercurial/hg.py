@@ -89,7 +89,7 @@ class manifest(revlog):
         if self.listcache and len(self.listcache[0]) == len(a):
             return mdiff.diff(self.listcache[1], self.addlist, 1)
         else:
-            return mdiff.diff(a, b)
+            return mdiff.textdiff(a, b)
 
     def add(self, map, transaction, link, p1=None, p2=None):
         files = map.keys()
