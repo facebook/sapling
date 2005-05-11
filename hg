@@ -20,7 +20,7 @@ import sys, os, time
 from mercurial import hg, mdiff, fancyopts
 
 def help():
-        print """\
+    print """\
  commands:
 
  init                  create a new repository in this directory
@@ -142,12 +142,18 @@ elif cmd == "import" or cmd == "patch":
 
     for patch in args:
         ui.status("applying %s\n" % patch)
-        pf = d + patch
+        pf = os.path.join(d, patch)
+
+	text = ""
+	for l in file(pf):
+            if l[:3] == "---": break
+	    text += l
+	    
         os.system("patch -p%d < %s > /dev/null" % (strip, pf))
         f = os.popen("lsdiff --strip %d %s" % (strip, pf))
         files = f.read().splitlines()
         f.close()
-        repo.commit(repo.current, files)
+        repo.commit(repo.current, files, text)
 
 elif cmd == "status":
     (c, a, d) = repo.diffdir(repo.root, repo.current)
