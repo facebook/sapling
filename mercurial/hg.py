@@ -124,8 +124,9 @@ class changelog(revlog):
         return self.extract(self.revision(node))
 
     def add(self, manifest, list, desc, transaction, p1=None, p2=None):
-        try: user = os.environ["HGUSER"]
-        except: user = os.environ["LOGNAME"] + '@' + socket.getfqdn()
+        user = (os.environ.get("HGUSER") or
+                os.environ.get("EMAIL") or
+                os.environ.get("LOGNAME", "unknown") + '@' + socket.getfqdn())
         date = "%d %d" % (time.time(), time.timezone)
         list.sort()
         l = [hex(manifest), user, date] + list + ["", desc]
