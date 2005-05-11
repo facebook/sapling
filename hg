@@ -155,7 +155,7 @@ elif cmd == "import" or cmd == "patch":
         if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
             raise "patch failed!"
         f = os.popen("lsdiff --strip %d %s" % (strip, pf))
-        files = map(lambda x: x.rstrip(), f.read().splitlines())
+        files = filter(map(lambda x: x.rstrip(), f.read().splitlines()))
         f.close()
         repo.commit(repo.current, files, text)
 
