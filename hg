@@ -133,12 +133,15 @@ elif cmd == "commit" or cmd == "checkin" or cmd == "ci":
 elif cmd == "import" or cmd == "patch":
     ioptions = {}
     opts = [('p', 'strip', 1, 'path strip'),
-            ('b', 'base', "", 'base path')]
+            ('b', 'base', "", 'base path'),
+            ('q', 'quiet', "", 'silence diff')
+            ]
     
     args = fancyopts.fancyopts(args, opts, ioptions,
                               'hg import [options] <patch names>')
     d = ioptions["base"]
     strip = ioptions["strip"]
+    quiet = ioptions["quiet"] and "> /dev/null" or ""
 
     for patch in args:
         ui.status("applying %s\n" % patch)
@@ -149,7 +152,8 @@ elif cmd == "import" or cmd == "patch":
             if l[:3] == "---": break
 	    text += l
 	    
-        os.system("patch -p%d < %s > /dev/null" % (strip, pf))
+        if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
+            raise "patch failed!"
         f = os.popen("lsdiff --strip %d %s" % (strip, pf))
         files = f.read().splitlines()
         f.close()
