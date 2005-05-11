@@ -1,3 +1,5 @@
+.*\.orig
+.*\.rej
 .*~
 .*pyc
 build/.*
