@@ -118,12 +118,11 @@ necessary).
 
 Rollback:
 
-Rollback is not yet implemented, but will be easy to add. When
-performing a commit or a merge, we order things so that the changeset
-entry gets added last. We keep a transaction log of the name of each
-file and its length prior to the transaction. On abort, we simply
-truncate each file to its prior length. This is one of the nice
-properties of the append-only structure of the revlogs.
+When performing a commit or a merge, we order things so that the
+changeset entry gets added last. We keep a transaction log of the name
+of each file touched and its length prior to the transaction. On
+abort, we simply truncate each file to its prior length. This is one
+of the nice properties of the append-only structure of the revlogs.
 
 Remote access:
 
