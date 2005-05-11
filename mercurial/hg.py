@@ -560,14 +560,97 @@ class repository:
         for f in list:
             dl.write(f + "\n")
 
-    def newer(self, node):
-        nodes = []
-        for i in xrange(self.changelog.rev(node) + 1, self.changelog.count()):
-            nodes.append(self.changelog.node(i))
+    def branches(self, nodes):
+        if not nodes: nodes = [self.changelog.tip()]
+        b = []
+        for n in nodes:
+            t = n
+            while n:
+                p = self.changelog.parents(n)
+                if p[1] != nullid or p[0] == nullid:
+                    b.append((t, n, p[0], p[1]))
+                    break
+                n = p[0]
+        return b
 
-        return nodes
+    def between(self, pairs):
+        r = []
 
-    def changegroup(self, nodes):
+        for top, bottom in pairs:
+            n, l, i = top, [], 0
+            f = 1
+
+            while n != bottom:
+                p = self.changelog.parents(n)[0]
+                if i == f:
+                    l.append(n) 
+                    f = f * 2
+                n = p
+                i += 1
+
+            r.append(l)
+
+        return r
+
+    def newer(self, nodes):
+        m = {}
+        nl = []
+        cl = self.changelog
+        t = l = cl.count()
+        for n in nodes:
+            l = min(l, cl.rev(n))
+            for p in cl.parents(n):
+                m[p] = 1
+
+        for i in xrange(l, t):
+            n = cl.node(i)
+            for p in cl.parents(n):
+                if p in m and n not in m:
+                    m[n] = 1
+                    nl.append(n)
+
+        return nl
+
+    def getchangegroup(self, remote):
+        tip = remote.branches([])
+        cl = self.changelog
+        unknown = tip
+        search = []
+        fetch = []
+
+        if tip[0] == self.changelog.tip():
+            return ""
+            
+        while unknown:
+            n = unknown.pop(0)
+            if n == nullid: break
+            if n[1] and cl.nodemap.has_key(n[1]): # do we know the base?
+                search.append(n) # schedule branch range for scanning
+            else:
+                for b in remote.branches([n[2], n[3]]):
+                    if cl.nodemap.has_key(b[0]):
+                        fetch.append(n[1]) # earliest unknown
+                    else:
+                        unknown.append(b)
+  
+        while search:
+            n = search.pop(0)
+            l = remote.between([(n[0], n[1])])[0]
+            p = n[0]
+            f = 1
+            for i in l + [n[1]]:
+                if self.changelog.nodemap.has_key(i):
+                    if f == 1:
+                        fetch.append(p)
+                    else:
+                        search.append((p, i))
+                p, f = i, f * 2
+
+        return remote.changegroup(fetch)
+    
+    def changegroup(self, basenodes):
+        nodes = self.newer(basenodes)
+
         # construct the link map
         linkmap = {}
         for n in nodes:
@@ -597,10 +680,9 @@ class repository:
             l = struct.pack(">l", len(f))
             cg += [l, f, g]
 
-        return compress("".join(cg))
+        return "".join(cg)
 
     def addchangegroup(self, data):
-        data = decompress(data)
         def getlen(data, pos):
             return struct.unpack(">l", data[pos:pos + 4])[0]
         

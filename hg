@@ -187,13 +187,23 @@ elif cmd == "export":
     diff(None, prev, node)
 
 elif cmd == "debugchangegroup":
-    newer = repo.newer(repo.changelog.lookup(args[0]))
+    newer = repo.newer(map(repo.changelog.lookup, args))
     cg = repo.changegroup(newer)
     sys.stdout.write(cg)
 
 elif cmd == "debugaddchangegroup":
     data = sys.stdin.read()
     repo.addchangegroup(data)
+
+elif cmd == "debuggetchangegroup":
+    if args:
+        other = hg.repository(ui, args[0])
+	print "building changegroup"
+        cg = repo.getchangegroup(other)
+	print "applying changegroup"
+	repo.addchangegroup(cg)
+    else:
+        print "missing source repository"
 
 elif cmd == "addremove":
     (c, a, d) = repo.diffdir(repo.root, repo.current)
