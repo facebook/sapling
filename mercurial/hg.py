@@ -33,7 +33,7 @@ class filelog(revlog):
         """resolve unmerged heads in our DAG"""
         if old == new: return None
         a = self.ancestor(old, new)
-        if old == a: return new
+        if old == a: return None
         return self.merge3(old, new, a, transaction, link)
 
     def merge3(self, my, other, base, transaction, link):
