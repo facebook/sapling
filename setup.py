@@ -8,11 +8,11 @@
 from distutils.core import setup
 
 setup(name='mercurial',
-            version='0.4d',
+            version='0.4e',
             author='Matt Mackall',
             author_email='mpm@selenic.com',
             url='http://selenic.com/mercurial',
             description='scalable distributed SCM',
             license='GNU GPL',
             packages=['mercurial'],
-            scripts=['hg'])
+            scripts=['hg', 'hgweb.py'])

@@ -6,7 +6,7 @@ Setting up Mercurial in your home directory:
 
  $ tar xvzf mercurial-<ver>.tar.gz
  $ cd mercurial-<ver>
- $ python setup.py install --home ~
+ $ python2.3 setup.py install --home ~
  $ export PYTHONPATH=${HOME}/lib/python  # add this to your .bashrc
  $ export HGMERGE=tkmerge                # customize this
  $ hg                                    # test installation, show help
@@ -14,16 +14,13 @@ Setting up Mercurial in your home directory:
  If you get complaints about missing modules, you probably haven't set
  PYTHONPATH correctly.
 
- You may also want to install psyco, the python specializing compiler.
- It makes commits more than twice as fast. The relevant Debian package
- is python-psyco
-
 Setting up a Mercurial project:
 
  $ cd linux/
  $ hg init         # creates .hg
  $ hg status       # show changes between repo and working dir
  $ hg diff         # generate a unidiff
+ $ hg export       # export a changeset as a diff
  $ hg addremove    # add all unknown files and remove all missing files
  $ hg commit       # commit all changes, edit changelog entry
 
@@ -67,7 +64,9 @@ Importing patches:
  Fastest:
  $ cat ../p/patchlist | xargs hg import -p1 -b ../p 
 
-Network support (highly experimental):
+Network support:
+
+ The simple way:
 
  # pull the self-hosting hg repo
  foo$ hg init
@@ -80,9 +79,20 @@ Network support (highly experimental):
  # merge changes from a remote machine
  bar$ hg merge http://foo/~user/hg-linux
 
- This is just a proof of concept of grabbing byte ranges, and is not
- expected to perform well. Fixing this needs some pipelining to reduce
- the number of round trips. See zsync for a similar approach.
+ The new, fast, experimental way:
+
+ # pull the self-hosting hg repo
+ foo$ hg init
+ foo$ hg merge hg://selenic.com/hg/
+ foo$ hg checkout  # hg co works too
+
+ # Set up the CGI server on your webserver
+ foo$ ln -s .hg ~/public_html/hg-linux/.hg
+ foo$ cp hgweb.py ~/public_html/hg-linux/index.cgi
+
+ # merge changes from a remote machine
+ bar$ hg merge hg://foo/~user/hg-linux
+
 
  Another approach which does perform well right now is to use rsync.
  Simply rsync the remote repo to a read-only local copy and then do a
