@@ -149,10 +149,10 @@ created with it will grow much more slowly over time. This also allows
 it to be much more bandwidth efficient. I expect repos sizes and sync
 speeds to be similar to or better than BK, given the use of binary diffs.
 
-Mercurial is roughly the same performance as git and is faster in
-others as it keeps around more metadata. One example is listing and
-retrieving past versions of a file, which it can do without reading
-all the changesets. This metadata will also allow it to perform better
-merges as described above.
+Mercurial is roughly the same performance as git in some areas and is
+faster in others as it keeps around more metadata. One example is
+listing and retrieving past versions of a file, which it can do
+without reading all the changesets. This metadata will also allow it
+to perform better merges as described above.
 
 
