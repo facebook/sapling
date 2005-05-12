@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # mercurial - a minimal scalable distributed SCM
-# v0.4d "oedipa maas"
+# v0.4e "sabina"
 #
 # Copyright 2005 Matt Mackall <mpm@selenic.com>
 #
@@ -147,11 +147,11 @@ elif cmd == "import" or cmd == "patch":
         ui.status("applying %s\n" % patch)
         pf = os.path.join(d, patch)
 
-	text = ""
-	for l in file(pf):
+        text = ""
+        for l in file(pf):
             if l[:3] == "---": break
-	    text += l
-	    
+            text += l
+
         if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
             raise "patch failed!"
         f = os.popen("lsdiff --strip %d %s" % (strip, pf))
@@ -188,22 +188,12 @@ elif cmd == "export":
 
 elif cmd == "debugchangegroup":
     newer = repo.newer(map(repo.changelog.lookup, args))
-    cg = repo.changegroup(newer)
-    sys.stdout.write(cg)
+    for chunk in repo.changegroup(newer):
+        sys.stdout.write(chunk)
 
 elif cmd == "debugaddchangegroup":
     data = sys.stdin.read()
     repo.addchangegroup(data)
-
-elif cmd == "debuggetchangegroup":
-    if args:
-        other = hg.repository(ui, args[0])
-	print "building changegroup"
-        cg = repo.getchangegroup(other)
-	print "applying changegroup"
-	repo.addchangegroup(cg)
-    else:
-        print "missing source repository"
 
 elif cmd == "addremove":
     (c, a, d) = repo.diffdir(repo.root, repo.current)
@@ -281,6 +271,15 @@ elif cmd == "debugindex":
             hg.hex(e[4][:5]), hg.hex(e[5][:5]), hg.hex(e[6][:5]))
 
 elif cmd == "merge":
+    if args:
+        other = hg.repository(ui, args[0])
+        print "retrieving changegroup"
+        cg = repo.getchangegroup(other)
+        repo.addchangegroup(cg)
+    else:
+        print "missing source repository"
+
+elif cmd == "debugoldmerge":
     if args:
         other = hg.repository(ui, args[0])
         repo.merge(other)
