@@ -1,0 +1,28 @@
+                    Mercurial      git                     BK (*)
+storage             revlog delta   compressed revisions    SCCS weave
+merge               file DAGs      changeset DAG           file DAGs?
+consistency         SHA1           SHA1                    CRC
+signable?           yes            yes                     no       
+
+retrieve file tip   O(1)           O(1)                    O(revs)
+add rev             O(1)           O(1)                    O(revs)
+find prev file rev  O(1)           O(changesets)           O(revs)
+annotate file       O(1)|O(revs)   O(changesets)           O(revs)
+find file changeset O(1)           O(changesets)           ?
+
+checkout            O(files)       O(files)                O(revs)?
+commit              O(changes)     O(changes)              ?
+                    6 patches/s    6 patches/s             slow
+diff working dir    O(changes)     O(changes)              ?
+                    < 1s           < 1s                    ?
+tree diff revs      O(changes)     O(changes)              ?
+                    < 1s           < 1s                    ?
+local clone         O(files)       O(revisions)            O(files)
+find remote csets   O(log new)     O(revisions)            ?
+pull remote csets   O(patch)       O(modified files)       O(patch)
+                    100 csets/s    8 csets/s               ?
+repo growth         O(patch)       O(revisions)            O(patch)
+ kernel history     250M?          3.5G?                   250M?
+lines of code       2500           6500 (+ cogito)         ??
+
+* I've never used BK so this is just guesses
