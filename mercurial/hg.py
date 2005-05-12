@@ -232,7 +232,7 @@ def opener(base):
 
     return o
 
-class repository:
+class localrepository:
     def __init__(self, ui, path=None, create=0):
         self.remote = 0
         if path and path[:7] == "http://":
@@ -612,15 +612,15 @@ class repository:
         return nl
 
     def getchangegroup(self, remote):
-        tip = remote.branches([])
+        tip = remote.branches([])[0]
         cl = self.changelog
-        unknown = tip
+        unknown = [tip]
         search = []
         fetch = []
 
         if tip[0] == self.changelog.tip():
-            return ""
-            
+            return None
+
         while unknown:
             n = unknown.pop(0)
             if n == nullid: break
@@ -640,7 +640,7 @@ class repository:
             f = 1
             for i in l + [n[1]]:
                 if self.changelog.nodemap.has_key(i):
-                    if f == 1:
+                    if f <= 4:
                         fetch.append(p)
                     else:
                         search.append((p, i))
@@ -666,25 +666,22 @@ class repository:
         changed.sort()
 
         # the changegroup is changesets + manifests + all file revs
-        cg = []
         revs = [ self.changelog.rev(n) for n in nodes ]
 
-        g = self.changelog.group(linkmap)
-        cg.append(g)
-        g = self.manifest.group(linkmap)
-        cg.append(g)
+        yield self.changelog.group(linkmap)
+        yield self.manifest.group(linkmap)
 
         for f in changed:
             g = self.file(f).group(linkmap)
             if not g: raise "couldn't find change to %s" % f
             l = struct.pack(">l", len(f))
-            cg += [l, f, g]
-
-        return "".join(cg)
+            yield "".join([l, f, g])
 
     def addchangegroup(self, data):
         def getlen(data, pos):
             return struct.unpack(">l", data[pos:pos + 4])[0]
+
+        if not data: return
         
         tr = self.transaction()
         simple = True
@@ -786,6 +783,41 @@ class repository:
         n = self.changelog.add(node, new, edittext, tr, co, cn)
 
         tr.close()
+
+class remoterepository:
+    def __init__(self, ui, path):
+        self.url = path.replace("hg://", "http://", 1)
+        self.ui = ui
+
+    def do_cmd(self, cmd, **args):
+        q = {"cmd": cmd}
+        q.update(args)
+        qs = urllib.urlencode(q)
+        cu = "%s?%s" % (self.url, qs)
+        return urllib.urlopen(cu).read()
+
+    def branches(self, nodes):
+        n = " ".join(map(hex, nodes))
+        d = self.do_cmd("branches", nodes=n)
+        br = [ map(bin, b.split(" ")) for b in d.splitlines() ]
+        return br
+
+    def between(self, pairs):
+        n = "\n".join(["-".join(map(hex, p)) for p in pairs])
+        d = self.do_cmd("between", pairs=n)
+        p = [ map(bin, l.split(" ")) for l in d.splitlines() ]
+        return p
+
+    def changegroup(self, nodes):
+        n = " ".join(map(hex, nodes))
+        d = self.do_cmd("changegroup", roots=n)
+        return zlib.decompress(d)
+
+def repository(ui, path=None, create=0):
+    if path and path[:5] == "hg://":
+        return remoterepository(ui, path)
+    else:
+        return localrepository(ui, path, create)
 
 class ui:
     def __init__(self, verbose=False, debug=False):
