@@ -10,7 +10,7 @@
 import cgitb
 cgitb.enable()
 
-import os, cgi, time, re, difflib
+import os, cgi, time, re, difflib, sys, zlib
 from mercurial import hg, mdiff
 
 repo_path = "."  # change as needed
@@ -24,8 +24,8 @@ def obfuscate(text):
         l.append('&#%d;' % ord(c))
     return ''.join(l)
 
-def httphdr():
-    print 'Content-type: text/html\n\n'
+def httphdr(type = "text/html"):
+    print 'Content-type: %s\n' % type
 
 def htmldoctype():
     print '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">'
@@ -44,13 +44,24 @@ def htmlhead(title):
     print '.atline { color: purple; }'
     print '</style>'
 
+def startpage(title):
+    httphdr()
+    htmldoctype()
+    htmlhead(title)
+    print '<BODY>'
+
+def endpage():
+    print '</BODY>'
+    print '</HTML>'
+
+
+
 def ent_change(repo, nodeid):
     changes = repo.changelog.read(nodeid)
     hn = hg.hex(nodeid)
     i = repo.changelog.rev(nodeid)
     (h1, h2) = [ hg.hex(x) for x in repo.changelog.parents(nodeid) ]
     datestr = time.asctime(time.gmtime(float(changes[2].split(' ')[0])))
-    mf = repo.manifest.read(changes[0])
     print '<table width="100%" border="1">'
     print '\t<tr><td valign="top" width="10%%">author:</td>' + \
             '<td valign="top" width="20%%">%s</td>' % (obfuscate(changes[1]), )
@@ -61,9 +72,7 @@ def ent_change(repo, nodeid):
     print '\t<tr><td>date:</td><td>%s UTC</td>' % (datestr, )
     print '\t\t<td valign="top">files:</td><td valign="top">'
     for f in changes[3]:
-        print '\t\t<a href="?cmd=file;nd=%s;fn=%s">%s</a>' % \
-                (hg.hex(mf[f]), f, f, ),
-        print '&nbsp;&nbsp;'
+        print '\t\t%s&nbsp;&nbsp;' % f
     print '\t</td></tr>'
 #    print '\t<tr><td>revision:</td><td colspan="3">%d:<a ' % (i, ) + \
 #            'href="?cmd=rev;nd=%s">%s</a></td></tr>' % (hn, hn, )
@@ -87,6 +96,8 @@ def ent_diff(a, b, fn):
     print '</pre>'
 
 def ent_checkin(repo, nodeid):
+    startpage("Mercurial Web")
+
     changes = repo.changelog.read(nodeid)
     hn = hg.hex(nodeid)
     i = repo.changelog.rev(nodeid)
@@ -135,18 +146,26 @@ def ent_checkin(repo, nodeid):
     for f in d:
         ent_diff(repo.file(f).read(mf2[f]), '', f)
 
+    endpage()
+
+
 def ent_file(repo, nodeid, fn):
     print '<div class="filename">%s (%s)</div>' % (fn, hg.hex(nodeid), )
     print '<pre>'
     print cgi.escape(repo.file(fn).read(nodeid))
     print '</pre>'
 
-httphdr()
-htmldoctype()
-htmlhead('Mercurial Web')
+def change_page():
+    startpage("Mercurial Web")
+    print '<table width="100%" align="center">'
+    for i in xrange(0, repo.changelog.count()):
+        n = repo.changelog.node(i)
+        print '<tr><td>'
+        ent_change(repo, n)
+        print '</td></th>'
 
-print '<BODY>'
-
+    print '</table>'
+    endpage()
 
 args = cgi.parse()
 
@@ -154,29 +173,55 @@ ui = hg.ui()
 repo = hg.repository(ui, repo_path)
 
 if not args.has_key('cmd'):
-    print '<table width="100%" align="center">'
-    for i in xrange(repo.changelog.count()-1, -1, -1):
-        n = repo.changelog.node(i)
-        print '<tr><td>'
-        ent_change(repo, n)
-        print '</td></th>'
-
-    print '</table>'
+    change_page()
+    
 elif args['cmd'][0] == 'chkin':
     if not args.has_key('nd'):
         print '<div class="errmsg">No Node!</div>'
     else:
         ent_checkin(repo, hg.bin(args['nd'][0]))
+
 elif args['cmd'][0] == 'file':
+    startpage("Mercurial Web")
+
     if not args.has_key('nd'):
         print '<div class="errmsg">No Node!</div>'
     elif not args.has_key('fn'):
         print '<div class="errmsg">No Filename!</div>'
     else:
         ent_file(repo, hg.bin(args['nd'][0]), args['fn'][0])
+    endpage()
+
+elif args['cmd'][0] == 'branches':
+    httphdr("text/plain")
+    nodes = []
+    if args.has_key('nodes'):
+        nodes = map(hg.bin, args['nodes'][0].split(" "))
+    for b in repo.branches(nodes):
+        print " ".join(map(hg.hex, b))
+
+elif args['cmd'][0] == 'between':
+    httphdr("text/plain")
+    nodes = []
+    if args.has_key('pairs'):
+        pairs = [ map(hg.bin, p.split("-"))
+                  for p in args['pairs'][0].split(" ") ]
+    for b in repo.between(pairs):
+        print " ".join(map(hg.hex, b))
+
+elif args['cmd'][0] == 'changegroup':
+    httphdr("application/hg-changegroup")
+    nodes = []
+    if args.has_key('roots'):
+        nodes = map(hg.bin, args['roots'][0].split(" "))
+
+    z = zlib.compressobj()
+    for chunk in repo.changegroup(nodes):
+        sys.stdout.write(z.compress(chunk))
+
+    sys.stdout.write(z.flush())
 
 else:
+    startpage("Mercurial Web Error")
     print '<div class="errmsg">unknown command: ', args['cmd'][0], '</div>'
-
-print '</BODY>'
-print '</HTML>'
+    endpage()
