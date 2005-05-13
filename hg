@@ -193,7 +193,17 @@ elif cmd == "diff":
 
 elif cmd == "export":
     node = repo.lookup(args[0])
-    prev = repo.changelog.parents(node)[0]
+    prev, other = repo.changelog.parents(node)
+    change = repo.changelog.read(node)
+    print "# HG changeset patch"
+    print "# User %s" % change[1]
+    print "# Node ID %s" % hg.hex(node)
+    print "# Parent  %s" % hg.hex(prev)
+    print
+    if other != hg.nullid:
+        print "# Parent  %s" % hg.hex(other)
+    print change[4]
+    
     diff(None, prev, node)
 
 elif cmd == "debugchangegroup":
