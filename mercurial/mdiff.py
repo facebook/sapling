@@ -2,11 +2,11 @@
 import difflib, struct
 from cStringIO import StringIO
 
-def unidiff(a, b, fn):
+def unidiff(a, ad, b, bd, fn):
     if not a and not b: return ""
     a = a.splitlines(1)
     b = b.splitlines(1)
-    l = list(difflib.unified_diff(a, b, fn, fn))
+    l = list(difflib.unified_diff(a, b, "a/" + fn, "b/" + fn, ad, bd))
     return "".join(l)
 
 def textdiff(a, b):
@@ -29,15 +29,11 @@ def sortdiff(a, b):
             la += 1
             lb += 1
 
-    si = lb
-    while lb < len(b):
-        lb += 1
-        yield "insert", la, la, si, lb
+    if lb < len(b):
+        yield "insert", la, la, lb, len(b)
 
-    si = la
-    while la < len(a):
-        la += 1
-        yield "delete", si, la, lb, lb
+    if la < len(a):
+        yield "delete", la, len(a), lb, lb
 
 def diff(a, b, sorted=0):
     bin = []
@@ -60,6 +56,7 @@ def patch(a, bin):
     last = pos = 0
     r = []
 
+    c = 0
     while pos < len(bin):
         p1, p2, l = struct.unpack(">lll", bin[pos:pos + 12])
         pos += 12
@@ -67,6 +64,7 @@ def patch(a, bin):
         r.append(bin[pos:pos + l])
         pos += l
         last = p2
+        c += 1
     r.append(a[last:])
 
     return "".join(r)

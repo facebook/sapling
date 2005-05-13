@@ -499,7 +499,7 @@ class localrepository:
             dc = dict.fromkeys(mf)
 
         def fcmp(fn):
-            t1 = file(fn).read()
+            t1 = file(os.path.join(self.root, fn)).read()
             t2 = self.file(fn).revision(mf[fn])
             return cmp(t1, t2)
 
@@ -509,7 +509,7 @@ class localrepository:
             
             for f in files:
                 fn = os.path.join(d, f)
-                try: s = os.stat(fn)
+                try: s = os.stat(os.path.join(self.root, fn))
                 except: continue
                 if fn in dc:
                     c = dc[fn]

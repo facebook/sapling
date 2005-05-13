@@ -114,7 +114,7 @@ class revlog:
             last = self.length(base)
             text = decompress(data[:last])
 
-        for r in range(base + 1, rev + 1):
+        for r in xrange(base + 1, rev + 1):
             s = self.length(r)
             b = decompress(data[last:last + s])
             text = self.patch(text, b)
@@ -138,14 +138,16 @@ class revlog:
         t = n - 1
 
         if n:
-            start = self.start(self.base(t))
+            base = self.base(t)
+            start = self.start(base)
             end = self.end(t)
             prev = self.revision(self.tip())
             data = compress(self.diff(prev, text))
+            dist = end - start + len(data)
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
-        if not n or (end + len(data) - start) > len(text) * 2:
+        if not n or dist > len(text) * 2:
             data = compress(text)
             base = n
         else:
