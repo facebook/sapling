@@ -258,6 +258,7 @@ class localrepository:
         self.manifest = manifest(self.opener)
         self.changelog = changelog(self.opener)
         self.ignorelist = None
+        self.tags = None
 
         if not self.remote:
             self.dircache = dircache(self.opener, ui)
@@ -274,7 +275,7 @@ class localrepository:
         if self.ignorelist is None:
             self.ignorelist = []
             try:
-                l = open(os.path.join(self.root, ".hgignore")).readlines()
+                l = open(os.path.join(self.root, ".hgignore"))
                 for pat in l:
                     if pat != "\n":
                         self.ignorelist.append(re.compile(pat[:-1]))
@@ -282,6 +283,21 @@ class localrepository:
         for pat in self.ignorelist:
             if pat.search(f): return True
         return False
+
+    def lookup(self, key):
+        if self.tags is None:
+            self.tags = {}
+            try:
+                fl = self.file(".hgtags")
+                for l in fl.revision(fl.tip()).splitlines():
+                    if l:
+                        n, k = l.split(" ")
+                        self.tags[k] = bin(n)
+            except KeyError: pass
+        try:
+            return self.tags[key]
+        except KeyError:
+            return self.changelog.lookup(key)
 
     def join(self, f):
         return os.path.join(self.path, f)

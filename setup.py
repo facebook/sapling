@@ -8,7 +8,7 @@
 from distutils.core import setup
 
 setup(name='mercurial',
-            version='0.4e',
+            version='0.4f',
             author='Matt Mackall',
             author_email='mpm@selenic.com',
             url='http://selenic.com/mercurial',

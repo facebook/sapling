@@ -37,6 +37,7 @@ Mercurial commands:
  $ hg add foo          # add a new file for the next commit
  $ hg remove bar       # mark a file as removed
  $ hg verify           # check repo integrity
+ $ hg tags             # show current tags
 
 Branching and merging:
 
@@ -92,7 +93,6 @@ Network support:
 
  # merge changes from a remote machine
  bar$ hg merge hg://foo/~user/hg-linux
-
 
  Another approach which does perform well right now is to use rsync.
  Simply rsync the remote repo to a read-only local copy and then do a

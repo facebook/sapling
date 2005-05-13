@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # mercurial - a minimal scalable distributed SCM
-# v0.4e "sabina"
+# v0.4f "jane dark"
 #
 # Copyright 2005 Matt Mackall <mpm@selenic.com>
 #
@@ -37,6 +37,7 @@ def help():
  dump <file> [rev]     dump the latest or given revision of a file
  dumpmanifest [rev]    dump the latest or given revision of the manifest
  diff [files...]       diff working directory (or selected files)
+ tags                  show current changeset tags
 """
 
 def filterfiles(list, files):
@@ -118,7 +119,7 @@ else:
 if cmd == "checkout" or cmd == "co":
     node = repo.changelog.tip()
     if args:
-        node = repo.changelog.lookup(args[0])
+        node = repo.lookup(args[0])
     repo.checkout(node)
 
 elif cmd == "add":
@@ -177,7 +178,7 @@ elif cmd == "diff":
         opts = [('r', 'revision', [], 'revision')]
         args = fancyopts.fancyopts(args, opts, doptions,
                                    'hg diff [options] [files]')
-        revs = map(lambda x: repo.changelog.lookup(x), doptions['revision'])
+        revs = map(lambda x: repo.lookup(x), doptions['revision'])
     
     if len(revs) > 2:
         print "too many revisions to diff"
@@ -191,12 +192,12 @@ elif cmd == "diff":
     diff(args, *revs)
 
 elif cmd == "export":
-    node = repo.changelog.lookup(args[0])
+    node = repo.lookup(args[0])
     prev = repo.changelog.parents(node)[0]
     diff(None, prev, node)
 
 elif cmd == "debugchangegroup":
-    newer = repo.newer(map(repo.changelog.lookup, args))
+    newer = repo.newer(map(repo.lookup, args))
     for chunk in repo.changegroup(newer):
         sys.stdout.write(chunk)
 
@@ -287,6 +288,17 @@ elif cmd == "merge":
         repo.addchangegroup(cg)
     else:
         print "missing source repository"
+
+elif cmd == "tags":
+    repo.lookup(0) # prime the cache
+    i = repo.tags.items()
+    i.sort()
+    for k, n in i:
+        try:
+            r = repo.changelog.rev(n)
+        except KeyError:
+            r = "?"
+        print "%-30s %5d:%s" % (k, repo.changelog.rev(n), hg.hex(n))
 
 elif cmd == "debugoldmerge":
     if args:

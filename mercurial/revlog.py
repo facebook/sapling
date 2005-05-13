@@ -73,7 +73,7 @@ class revlog:
                 if id in hex(n):
                     c.append(n)
             if len(c) > 1: raise KeyError("Ambiguous identifier")
-            if len(c) < 1: raise KeyError
+            if len(c) < 1: raise KeyError("No match found")
             return c[0]
                 
         return None
