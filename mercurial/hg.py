@@ -613,23 +613,24 @@ class localrepository:
 
     def getchangegroup(self, remote):
         tip = remote.branches([])[0]
-        cl = self.changelog
+        m = self.changelog.nodemap
         unknown = [tip]
         search = []
         fetch = []
 
-        if tip[0] == self.changelog.tip():
+        if tip[0] in m:
             return None
 
         while unknown:
             n = unknown.pop(0)
             if n == nullid: break
-            if n[1] and cl.nodemap.has_key(n[1]): # do we know the base?
+            if n[1] and n[1] in m: # do we know the base?
                 search.append(n) # schedule branch range for scanning
             else:
                 for b in remote.branches([n[2], n[3]]):
-                    if cl.nodemap.has_key(b[0]):
-                        fetch.append(n[1]) # earliest unknown
+                    if b[0] in m:
+                        if n[1] not in fetch:
+                            fetch.append(n[1]) # earliest unknown
                     else:
                         unknown.append(b)
   
@@ -639,12 +640,17 @@ class localrepository:
             p = n[0]
             f = 1
             for i in l + [n[1]]:
-                if self.changelog.nodemap.has_key(i):
+                if i in m:
                     if f <= 4:
                         fetch.append(p)
                     else:
                         search.append((p, i))
+                    break
                 p, f = i, f * 2
+
+        for f in fetch:
+            if f in m:
+                raise "already have", hex(f[:4])
 
         return remote.changegroup(fetch)
     
@@ -677,55 +683,63 @@ class localrepository:
             l = struct.pack(">l", len(f))
             yield "".join([l, f, g])
 
-    def addchangegroup(self, data):
-        def getlen(data, pos):
-            return struct.unpack(">l", data[pos:pos + 4])[0]
+    def addchangegroup(self, generator):
+        class genread:
+            def __init__(self, generator):
+                self.g = generator
+                self.buf = ""
+            def read(self, l):
+                while l > len(self.buf):
+                    try:
+                        self.buf += self.g.next()
+                    except StopIteration:
+                        break
+                d, self.buf = self.buf[:l], self.buf[l:]
+                return d
+                
+        if not generator: return
+        source = genread(generator)
 
-        if not data: return
-        
+        def getchunk(add = 0):
+            d = source.read(4)
+            if not d: return ""
+            l = struct.unpack(">l", d)[0]
+            return source.read(l - 4 + add)
+
         tr = self.transaction()
         simple = True
 
         print "merging changesets"
         # pull off the changeset group
-        l = getlen(data, 0)
-        csg = data[0:l]
-        pos = l
+        csg = getchunk()
         co = self.changelog.tip()
         cn = self.changelog.addgroup(csg, lambda x: self.changelog.count(), tr)
 
         print "merging manifests"
         # pull off the manifest group
-        l = getlen(data, pos)
-        mfg = data[pos: pos + l]
-        pos += l
+        mfg = getchunk()
         mo = self.manifest.tip()
-        mn = self.manifest.addgroup(mfg, lambda x: self.changelog.rev(x), tr)
+        mm = self.manifest.addgroup(mfg, lambda x: self.changelog.rev(x), tr)
 
         # do we need a resolve?
         if self.changelog.ancestor(co, cn) != co:
-            print "NEED RESOLVE"
             simple = False
             resolverev = self.changelog.count()
 
         # process the files
         print "merging files"
         new = {}
-        while pos < len(data):
-            l = getlen(data, pos)
-            pos += 4
-            f = data[pos:pos + l]
-            pos += l
-
-            l = getlen(data, pos)
-            fg = data[pos: pos + l]
-            pos += l
+        while 1:
+            f = getchunk(4)
+            if not f: break
+            fg = getchunk()
 
             fl = self.file(f)
             o = fl.tip()
             n = fl.addgroup(fg, lambda x: self.changelog.rev(x), tr)
             if not simple:
-                new[fl] = fl.resolvedag(o, n, tr, resolverev)
+                nn = fl.resolvedag(o, n, tr, resolverev)
+                if nn: new[f] = nn
 
         # For simple merges, we don't need to resolve manifests or changesets
         if simple:
@@ -794,24 +808,30 @@ class remoterepository:
         q.update(args)
         qs = urllib.urlencode(q)
         cu = "%s?%s" % (self.url, qs)
-        return urllib.urlopen(cu).read()
+        return urllib.urlopen(cu)
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
-        d = self.do_cmd("branches", nodes=n)
+        d = self.do_cmd("branches", nodes=n).read()
         br = [ map(bin, b.split(" ")) for b in d.splitlines() ]
         return br
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
-        d = self.do_cmd("between", pairs=n)
+        d = self.do_cmd("between", pairs=n).read()
         p = [ map(bin, l.split(" ")) for l in d.splitlines() ]
         return p
 
     def changegroup(self, nodes):
         n = " ".join(map(hex, nodes))
-        d = self.do_cmd("changegroup", roots=n)
-        return zlib.decompress(d)
+        zd = zlib.decompressobj()
+        f = self.do_cmd("changegroup", roots=n)
+        while 1:
+            d = f.read(4096)
+            if not d:
+                yield zd.flush()
+                break
+            yield zd.decompress(d)
 
 def repository(ui, path=None, create=0):
     if path and path[:5] == "hg://":

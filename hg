@@ -282,7 +282,7 @@ elif cmd == "debugindex":
 elif cmd == "merge":
     if args:
         other = hg.repository(ui, args[0])
-        print "retrieving changegroup"
+        print "requesting changegroup"
         cg = repo.getchangegroup(other)
         repo.addchangegroup(cg)
     else:

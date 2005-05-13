@@ -345,11 +345,10 @@ class revlog:
         # first delta is against its parent, which should be in our
         # log, the rest are against the previous delta.
 
-        if len(data) <= 4: return
+        if not data: return self.tip()
 
         # retrieve the parent revision of the delta chain
-        chain = data[28:48]
-        text = self.revision(chain)
+        chain = data[24:44]
 
         # track the base of the current delta log
         r = self.count()
@@ -370,7 +369,7 @@ class revlog:
         ifh = self.opener(self.indexfile, "a")
 
         # loop through our set of deltas
-        pos = 4
+        pos = 0
         while pos < len(data):
             l, node, p1, p2, cs = struct.unpack(">l20s20s20s20s",
                                                 data[pos:pos+84])
@@ -391,7 +390,7 @@ class revlog:
                 # flush our writes here so we can read it in revision
                 dfh.flush()
                 ifh.flush()
-                text = self.revision(self.node(t))
+                text = self.revision(chain)
                 text = self.patch(text, delta)
                 chk = self.addrevision(text, transaction, link, p1, p2)
                 if chk != node:
@@ -404,8 +403,7 @@ class revlog:
                 dfh.write(cdelta)
                 ifh.write(struct.pack(indexformat, *e))
 
-            t, r = r, r + 1
-            chain = prev
+            t, r, chain, prev = r, r + 1, node, node
             start = self.start(self.base(t))
             end = self.end(t)
 
