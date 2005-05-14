@@ -56,8 +56,7 @@ def endpage():
 
 
 
-def ent_change(repo, nodeid):
-    changes = repo.changelog.read(nodeid)
+def ent_change(repo, nodeid, changes):
     hn = hg.hex(nodeid)
     i = repo.changelog.rev(nodeid)
     (h1, h2) = [ hg.hex(x) for x in repo.changelog.parents(nodeid) ]
@@ -74,8 +73,8 @@ def ent_change(repo, nodeid):
     for f in changes[3]:
         print '\t\t%s&nbsp;&nbsp;' % f
     print '\t</td></tr>'
-#    print '\t<tr><td>revision:</td><td colspan="3">%d:<a ' % (i, ) + \
-#            'href="?cmd=rev;nd=%s">%s</a></td></tr>' % (hn, hn, )
+    print '\t<tr><td>revision:</td><td colspan="3">%d:<a ' % (i, ) + \
+            'href="?cmd=chkin;nd=%s">%s</a></td></tr>' % (hn, hn, )
     print '</table><br />'
 
 def ent_diff(a, b, fn):
@@ -108,11 +107,11 @@ def ent_checkin(repo, nodeid):
     mf = repo.manifest.read(changes[0])
     print '<table width="100%" border="1">'
     print '\t<tr><td>revision:</td><td colspan="3">%d:' % (i, ),
-    print '<a href="?cmd=rev;nd=%s">%s</a></td></tr>' % (hn, hn, )
+    print '<a href="?cmd=chkin;nd=%s">%s</a></td></tr>' % (hn, hn, )
     print '\t<tr><td>parent(s):</td><td colspan="3">%d:' % (i1, )
-    print '<a href="?cmd=rev;nd=%s">%s</a>' % (h1, h1, ),
+    print '<a href="?cmd=chkin;nd=%s">%s</a>' % (h1, h1, ),
     if i2 != -1:
-        print '&nbsp;&nbsp;%d:<a href="?cmd=rev;nd=%s">%s</a>' % \
+        print '&nbsp;&nbsp;%d:<a href="?cmd=chkin;nd=%s">%s</a>' % \
                 (i2, h2, h2, ),
     else:
         print '&nbsp;&nbsp;%d:%s' % (i2, h2, ),
@@ -158,10 +157,14 @@ def ent_file(repo, nodeid, fn):
 def change_page():
     startpage("Mercurial Web")
     print '<table width="100%" align="center">'
-    for i in xrange(0, repo.changelog.count()):
+    cl = []
+    for i in xrange(repo.changelog.count()):
         n = repo.changelog.node(i)
+        cl.append((n, repo.changelog.read(n)))
+    cl.reverse()
+    for n, ch in cl:
         print '<tr><td>'
-        ent_change(repo, n)
+        ent_change(repo, n, ch)
         print '</td></th>'
 
     print '</table>'
