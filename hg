@@ -290,11 +290,11 @@ elif cmd == "debughash":
 
 elif cmd == "debugindex":
     r = hg.revlog(open, args[0], "")
-    print "   rev    offset  length  base linkrev"+\
+    print "   rev    offset  length   base linkrev"+\
           " p1           p2           nodeid"
     for i in range(r.count()):
         e = r.index[i]
-        print "% 6d % 9d % 7d % 5d % 7d %s.. %s.. %s.." % (
+        print "% 6d % 9d % 7d % 6d % 7d %s.. %s.. %s.." % (
             i, e[0], e[1], e[2], e[3],
             hg.hex(e[4][:5]), hg.hex(e[5][:5]), hg.hex(e[6][:5]))
 
