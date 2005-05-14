@@ -41,7 +41,7 @@ class revlog:
             n = 0
             i = self.opener(self.indexfile).read()
             s = struct.calcsize(indexformat)
-            for f in range(0, len(i), s):
+            for f in xrange(0, len(i), s):
                 # offset, size, base, linkrev, p1, p2, nodeid
                 e = struct.unpack(indexformat, i[f:f + s])
                 self.nodemap[e[6]] = n
@@ -87,9 +87,6 @@ class revlog:
     def diff(self, a, b):
         return mdiff.textdiff(a, b)
 
-    def patch(self, text, patch):
-        return mdiff.patch(text, patch)
-
     def revision(self, node):
         if node == nullid: return ""
         if self.cache and self.cache[0] == node: return self.cache[2]
@@ -114,11 +111,13 @@ class revlog:
             last = self.length(base)
             text = decompress(data[:last])
 
+        bins = []
         for r in xrange(base + 1, rev + 1):
             s = self.length(r)
-            b = decompress(data[last:last + s])
-            text = self.patch(text, b)
+            bins.append(decompress(data[last:last + s]))
             last = last + s
+
+        text = mdiff.patches(text, bins)
 
         (p1, p2) = self.parents(node)
         if node != hash(text, p1, p2):
@@ -301,14 +300,12 @@ class revlog:
 
         # helper to reconstruct intermediate versions
         def construct(text, base, rev):
-            for r in range(base + 1, rev + 1):
-                b = decompress(chunks[r])
-                text = self.patch(text, b)
-            return text
+            bins = [decompress(chunks[r]) for r in xrange(base + 1, rev + 1)]
+            return mdiff.patches(text, bins)
 
         # build deltas
         deltas = []
-        for d in range(0, len(revs) - 1):
+        for d in xrange(0, len(revs) - 1):
             a, b = revs[d], revs[d + 1]
             n = self.node(b)
             
