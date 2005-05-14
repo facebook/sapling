@@ -136,6 +136,12 @@ elif cmd == "commit" or cmd == "checkin" or cmd == "ci":
             repo.commit(repo.current)
 
 elif cmd == "import" or cmd == "patch":
+    try:
+        import psyco
+        psyco.full()
+    except:
+        pass
+    
     ioptions = {}
     opts = [('p', 'strip', 1, 'path strip'),
             ('b', 'base', "", 'base path'),
@@ -154,14 +160,16 @@ elif cmd == "import" or cmd == "patch":
 
         text = ""
         for l in file(pf):
-            if l[:3] == "---": break
+            if l[:4] == "--- ": break
             text += l
 
-        if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
-            raise "patch failed!"
         f = os.popen("lsdiff --strip %d %s" % (strip, pf))
         files = filter(None, map(lambda x: x.rstrip(), f.read().splitlines()))
         f.close()
+
+        if files:
+            if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
+                raise "patch failed!"
         repo.commit(repo.current, files, text)
 
 elif cmd == "status":
