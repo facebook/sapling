@@ -116,6 +116,10 @@ else:
         print "Unable to open repository"
         sys.exit(0)
 
+relpath = None
+if os.getcwd() != repo.root:
+    relpath = os.getcwd()[len(repo.root) + 1: ]
+
 if cmd == "checkout" or cmd == "co":
     node = repo.changelog.tip()
     if args:
@@ -174,6 +178,9 @@ elif cmd == "import" or cmd == "patch":
 
 elif cmd == "status":
     (c, a, d) = repo.diffdir(repo.root, repo.current)
+    if relpath:
+        (c, a, d) = map(lambda x: filterfiles(x, [ relpath ]), (c, a, d))
+
     for f in c: print "C", f
     for f in a: print "?", f
     for f in d: print "R", f
@@ -192,8 +199,7 @@ elif cmd == "diff":
         print "too many revisions to diff"
         sys.exit(1)
 
-    if os.getcwd() != repo.root:
-        relpath = os.getcwd()[len(repo.root) + 1: ]
+    if relpath:
         if not args: args = [ relpath ]
         else: args = [ os.path.join(relpath, x) for x in args ]
 
@@ -248,7 +254,11 @@ elif cmd == "history":
         print changes[4]
 
 elif cmd == "log":
-    if args:
+
+    if len(args) == 1:
+        if relpath:
+            args[0] = os.path.join(relpath, args[0])
+
         r = repo.file(args[0])
         for i in range(r.count()):
             n = r.node(i)
@@ -261,6 +271,14 @@ elif cmd == "log":
             print "changeset: %4d:%s" % (cr, cn)
             print "parents:   %4d:%s" % (i1, h1)
             if i2: print "           %4d:%s" % (i2, h2)
+            changes = repo.changelog.read(repo.changelog.node(cr))
+            print "user: %s    date: %s" % (changes[1], time.asctime(
+                    time.localtime(float(changes[2].split(' ')[0]))))
+            print "description:"
+            print changes[4]
+            print
+    elif len(args) > 1:
+        print "too many args"
     else:
         print "missing filename"
 
