@@ -35,19 +35,28 @@ class revlog:
         self.index = []
         self.opener = opener
         self.cache = None
-        self.nodemap = {nullid: -1}
         # read the whole index for now, handle on-demand later
         try:
             n = 0
             i = self.opener(self.indexfile).read()
             s = struct.calcsize(indexformat)
+
+            # preallocate arrays
+            l = len(i)/s
+            self.index = [None] * l
+            m = [None] * l
+            
             for f in xrange(0, len(i), s):
                 # offset, size, base, linkrev, p1, p2, nodeid
                 e = struct.unpack(indexformat, i[f:f + s])
-                self.nodemap[e[6]] = n
-                self.index.append(e)
+                self.index[n] = e
+                m[n] = (e[6], n)
                 n += 1
-        except IOError: pass
+
+            self.nodemap = dict(m)
+        except IOError:
+            self.nodemap = {}
+        self.nodemap[nullid] = -1
 
     def tip(self): return self.node(len(self.index) - 1)
     def count(self): return len(self.index)
@@ -86,6 +95,9 @@ class revlog:
 
     def diff(self, a, b):
         return mdiff.textdiff(a, b)
+
+    def patches(self, t, pl):
+        return mdiff.patches(t, pl)
 
     def revision(self, node):
         if node == nullid: return ""
@@ -388,7 +400,7 @@ class revlog:
                 dfh.flush()
                 ifh.flush()
                 text = self.revision(chain)
-                text = self.patch(text, delta)
+                text = self.patches(text, [delta])
                 chk = self.addrevision(text, transaction, link, p1, p2)
                 if chk != node:
                     raise "consistency error adding group"
