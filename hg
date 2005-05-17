@@ -112,7 +112,7 @@ elif cmd == "help":
 else:
     try:
         repo = hg.repository(ui=ui)
-    except:
+    except IOError:
         print "Unable to open repository"
         sys.exit(0)
 
