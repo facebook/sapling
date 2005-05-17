@@ -82,7 +82,7 @@ class lazymap:
         self.p.load(pos)
     def __contains__(self, key):
         try:
-            self.p.map[key]
+            self[key]
             return True
         except KeyError:
             return False
@@ -434,6 +434,8 @@ class revlog:
         while pos < len(data):
             l, node, p1, p2, cs = struct.unpack(">l20s20s20s20s",
                                                 data[pos:pos+84])
+            if node in self.nodemap:
+                raise "already have %s" % hex(node[:4])
             link = linkmapper(cs)
             delta = data[pos + 84:pos + l]
             pos += l
