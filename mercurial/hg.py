@@ -692,7 +692,7 @@ class localrepository:
             f = 1
             for i in l + [n[1]]:
                 if i in m:
-                    if f <= 4:
+                    if f <= 2:
                         self.ui.debug("found new branch changeset %s\n" %
                                           short(p))
                         fetch.append(p)
