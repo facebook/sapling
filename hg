@@ -373,79 +373,119 @@ elif cmd == "verify":
     filenodes = {}
     manifestchangeset = {}
     changesets = revisions = files = 0
+    errors = 0
 
-    print "checking changesets"
+    ui.status("checking changesets\n")
     for i in range(repo.changelog.count()):
         changesets += 1
         n = repo.changelog.node(i)
-        changes = repo.changelog.read(n)
+        for p in repo.changelog.parents(n):
+            if p not in repo.changelog.nodemap:
+                ui.warn("changeset %s has unknown parent %s\n" %
+                        (hg.short(n), hg.short(p)))
+                errors += 1
+        try:
+            changes = repo.changelog.read(n)
+        except Error, inst:
+            ui.warn("unpacking changeset %s: %s\n" % (short(n), inst))
+            errors += 1
+            
         manifestchangeset[changes[0]] = n
         for f in changes[3]:
             revisions += 1
             filelinkrevs.setdefault(f, []).append(i)
 
-    print "checking manifests"
+    ui.status("checking manifests\n")
     for i in range(repo.manifest.count()):
         n = repo.manifest.node(i)
+        for p in repo.manifest.parents(n):
+            if p not in repo.manifest.nodemap:
+                ui.warn("manifest %s has unknown parent %s\n" %
+                        (hg.short(n), hg.short(p)))
+                errors += 1
         ca = repo.changelog.node(repo.manifest.linkrev(n))
         cc = manifestchangeset[n]
         if ca != cc:
-            print "manifest %s points to %s, not %s" % \
-                  (hg.hex(n), hg.hex(ca), hg.hex(cc))
-        m = repo.manifest.read(n)
+            ui.warn("manifest %s points to %s, not %s\n" %
+                    (hg.hex(n), hg.hex(ca), hg.hex(cc)))
+            errors += 1
+
+        try:
+            m = repo.manifest.read(n)
+        except Error, inst:
+            ui.warn("unpacking manifest %s: %s\n" % (hg.short(n), inst))
+            errors += 1
+            
         for f, fn in m.items():
             filenodes.setdefault(f, {})[fn] = 1
 
-    print "crosschecking files in changesets and manifests"
+    ui.status("crosschecking files in changesets and manifests\n")
     for f in filenodes:
         if f not in filelinkrevs:
-            print "file %s in manifest but not in changesets"
+            ui.warn("file %s in manifest but not in changesets\n" % f)
+            errors += 1
 
     for f in filelinkrevs:
         if f not in filenodes:
-            print "file %s in changeset but not in manifest"
+            ui.warn("file %s in changeset but not in manifest" % f)
+            errors += 1
 
-    print "checking files"
+    ui.status("checking files\n")
     for f in filenodes:
         files += 1
         fl = repo.file(f)
-        nodes = {"\0"*20: 1}
+        nodes = { hg.nullid: 1 }
         for i in range(fl.count()):
             n = fl.node(i)
 
             if n not in filenodes[f]:
-                print "%s:%s not in manifests" % (f, hg.hex(n))
+                ui.warn("%s:%s not in manifests\n" % (f, hg.short(n)))
+                errors += 1
             else:
                 del filenodes[f][n]
 
             flr = fl.linkrev(n)
             if flr not in filelinkrevs[f]:
-                print "%s:%s points to unexpected changeset rev %d" \
-                      % (f, hg.hex(n), fl.linkrev(n))
+                ui.warn("%s:%s points to unexpected changeset rev %d\n"
+                        % (f, hg.short(n), fl.linkrev(n)))
+                errors += 1
             else:
                 filelinkrevs[f].remove(flr)
 
             # verify contents
-            t = fl.read(n)
-
+            try:
+                t = fl.read(n)
+            except Error, inst:
+                ui.warn("unpacking file %s %s: %s\n" % (f, short(n), inst))
+                errors += 1
+            
             # verify parents
             (p1, p2) = fl.parents(n)
             if p1 not in nodes:
-                print "%s:%s unknown parent 1 %s" % (f, hg.hex(n), hg.hex(p1))
+                ui.warn("file %s:%s unknown parent 1 %s" %
+                        (f, hg.short(n), hg.short(p1)))
+                errors += 1
             if p2 not in nodes:
-                print "file %s:%s unknown parent %s" % (f, hg.hex(n), hg.hex(p1))
+                ui.warn("file %s:%s unknown parent 2 %s" %
+                        (f, hg.short(n), hg.short(p1)))
+                errors += 1
             nodes[n] = 1
 
         # cross-check
         for flr in filelinkrevs[f]:
-            print "changeset rev %d not in %s" % (flr, f)
+            ui.warn("changeset rev %d not in %s\n" % (flr, f))
+            errors += 1
             
         for node in filenodes[f]:
-            print "node %s in manifests not in %s" % (hg.hex(n), f)
+            ui.warn("node %s in manifests not in %s\n" % (hg.hex(n), f))
+            errors += 1
 
-
-    print "%d files, %d changesets, %d total revisions" % (files, changesets,
-                                                           revisions)
+    ui.status("%d files, %d changesets, %d total revisions\n" %
+              (files, changesets, revisions))
+    
+    if errors:
+        ui.warn("%d integrity errors encountered!\n")
+        sys.exit(1)
     
 else:
     print "unknown command\n"
