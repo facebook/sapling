@@ -78,7 +78,7 @@ class lazymap:
         self.p = parser
     def load(self, key):
         n = self.p.data.find(key)
-        if n < 0: raise KeyError(key)
+        if n < 0: raise KeyError("node " + hex(key))
         pos = n / self.p.s
         self.p.load(pos)
     def __contains__(self, key):
@@ -91,8 +91,11 @@ class lazymap:
         try:
             return self.p.map[key]
         except KeyError:
-            self.load(key)
-            return self.p.map[key]
+            try:
+                self.load(key)
+                return self.p.map[key]
+            except KeyError:
+                raise KeyError("node " + hex(key))
     def __setitem__(self, key, val):
         self.p.map[key] = val
 
