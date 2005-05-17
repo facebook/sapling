@@ -71,6 +71,9 @@ def patches(a, bins):
     bl = len(a) + pl
     tl = bl + bl + pl # enough for the patches and two working texts
     b1, b2 = 0, bl
+
+    if not tl: return a
+
     m = mmap.mmap(devzero.fileno(), tl, mmap.MAP_PRIVATE)
 
     # load our original text
