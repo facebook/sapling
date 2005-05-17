@@ -290,6 +290,11 @@ elif cmd == "history":
         print "description:"
         print changes[4]
 
+elif cmd == "tip":
+    n = repo.changelog.tip()
+    t = repo.changelog.rev(n)
+    ui.status("%d:%s\n" % (t, hg.hex(n)))
+
 elif cmd == "log":
     if args:
         r = repo.file(args[0])
