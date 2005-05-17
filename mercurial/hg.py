@@ -808,7 +808,8 @@ class localrepository:
         new.sort()
         if co == cn: cn = -1
 
-        edittext = "\n"+"".join(["HG: changed %s\n" % f for f in new])
+        edittext = "\nHG: merge resolve\n" + \
+                   "".join(["HG: changed %s\n" % f for f in new])
         edittext = self.ui.edit(edittext)
         n = self.changelog.add(node, new, edittext, tr, co, cn)
 
