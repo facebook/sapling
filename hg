@@ -38,6 +38,8 @@ def help():
  dumpmanifest [rev]    dump the latest or given revision of the manifest
  diff [files...]       diff working directory (or selected files)
  tags                  show current changeset tags
+ annotate [files...]   show changeset number per file line
+ blame [files...]      show commit user per file line
 """
 
 def filterfiles(list, files):

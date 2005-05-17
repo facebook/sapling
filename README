@@ -38,6 +38,8 @@ Mercurial commands:
  $ hg remove bar       # mark a file as removed
  $ hg verify           # check repo integrity
  $ hg tags             # show current tags
+ $ hg annotate [files] # show changeset numbers for each file line
+ $ hg blame [files]    # show commit users for each file line
 
 Branching and merging:
 
