@@ -67,7 +67,7 @@ static int gather(struct flist *dest, struct flist *src, int cut, int offset)
 
 	while (s != src->tail) {
 		if (s->start + offset >= cut)
-			goto exit; /* we've gone far enough */
+			break; /* we've gone far enough */
 
 		postend = offset + s->start + s->len;
 		if (postend <= cut) {
@@ -95,11 +95,10 @@ static int gather(struct flist *dest, struct flist *src, int cut, int offset)
 			s->len = s->len - l;
 			s->data = s->data + l;
 
-			goto exit;
+			break;
 		}
 	}
 
- exit:
 	dest->tail = d;
 	src->head = s;
 	return offset;
@@ -113,7 +112,7 @@ static int discard(struct flist *src, int cut, int offset)
 
 	while (s != src->tail) {
 		if (s->start + offset >= cut)
-			goto exit;
+			break;
 
 		postend = offset + s->start + s->len;
 		if (postend <= cut) {
@@ -133,11 +132,10 @@ static int discard(struct flist *src, int cut, int offset)
 			s->len = s->len - l;
 			s->data = s->data + l;
 
-			goto exit;
+			break;
 		}
 	}
 
- exit:
 	src->head = s;
 	return offset;
 }
