@@ -28,35 +28,87 @@ def hash(text, p1, p2):
 nullid = "\0" * 20
 indexformat = ">4l20s20s20s"
 
+class lazyparser:
+    def __init__(self, data):
+        self.data = data
+        self.s = struct.calcsize(indexformat)
+        self.l = len(data)/self.s
+        self.index = [None] * self.l
+        self.map = {nullid: -1}
+
+        if 0:
+            n = 0
+            i = self.data
+            s = struct.calcsize(indexformat)
+            for f in xrange(0, len(i), s):
+                # offset, size, base, linkrev, p1, p2, nodeid
+                e = struct.unpack(indexformat, i[f:f + s])
+                self.map[e[6]] = n
+                self.index.append(e)
+                n += 1
+
+    def load(self, pos):
+        block = pos / 1000
+        i = block * 1000
+        end = min(self.l, i + 1000)
+        while i < end:
+            d = self.data[i * self.s: (i + 1) * self.s]
+            e = struct.unpack(indexformat, d)
+            self.index[i] = e
+            self.map[e[6]] = i
+            i += 1
+        
+class lazyindex:
+    def __init__(self, parser):
+        self.p = parser
+    def __len__(self):
+        return len(self.p.index)
+    def __getitem__(self, pos):
+        i = self.p.index[pos]
+        if not i:
+            self.p.load(pos)
+            return self.p.index[pos]
+        return i
+    def append(self, e):
+        self.p.index.append(e)
+        
+class lazymap:
+    def __init__(self, parser):
+        self.p = parser
+    def load(self, key):
+        n = self.p.data.find(key)
+        if n < 0: raise KeyError(key)
+        pos = n / self.p.s
+        self.p.load(pos)
+    def __contains__(self, key):
+        try:
+            self.p.map[key]
+            return True
+        except KeyError:
+            return False
+    def __getitem__(self, key):
+        try:
+            return self.p.map[key]
+        except KeyError:
+            self.load(key)
+            return self.p.map[key]
+    def __setitem__(self, key, val):
+        self.p.map[key] = val
+
 class revlog:
     def __init__(self, opener, indexfile, datafile):
         self.indexfile = indexfile
         self.datafile = datafile
-        self.index = []
         self.opener = opener
         self.cache = None
         # read the whole index for now, handle on-demand later
         try:
-            n = 0
             i = self.opener(self.indexfile).read()
-            s = struct.calcsize(indexformat)
-
-            # preallocate arrays
-            l = len(i)/s
-            self.index = [None] * l
-            m = [None] * l
-            
-            for f in xrange(0, len(i), s):
-                # offset, size, base, linkrev, p1, p2, nodeid
-                e = struct.unpack(indexformat, i[f:f + s])
-                self.index[n] = e
-                m[n] = (e[6], n)
-                n += 1
-
-            self.nodemap = dict(m)
         except IOError:
-            self.nodemap = {}
-        self.nodemap[nullid] = -1
+            i = ""
+        parser = lazyparser(i)
+        self.index = lazyindex(parser)
+        self.nodemap = lazymap(parser)
 
     def tip(self): return self.node(len(self.index) - 1)
     def count(self): return len(self.index)
