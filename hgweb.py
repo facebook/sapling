@@ -40,6 +40,8 @@ class page:
         print 'table { font-size: 12px; }'
         print '.errmsg { font-size: 200%; color: red; }'
         print '.filename { font-size: 150%; color: purple; }'
+        print '.manifest { font-size: 150%; color: purple; }'
+        print '.filehist { font-size: 150%; color: purple; }'
         print '.plusline { color: green; }'
         print '.minusline { color: red; }'
         print '.atline { color: purple; }'
@@ -73,24 +75,53 @@ class errpage(page):
         page.__init__(self, title="Mercurial Web Error Page")
 
 class change_list(page):
+
+    numchanges = 50   # number of changes to show
+
     def __init__(self, repo, reponame):
         page.__init__(self)
         self.repo = repo
         print '<h3>Changes For: %s</h3>' % reponame
 
-    def content(self, start='tip', end='0', boundtype='rev'):
-        print '<table summary="" width="100%" align="center">'
+    def content(self, hi=None):
         cl = []
-        for i in xrange(self.repo.changelog.count()):
+        count = self.repo.changelog.count()
+        if not hi:
+            hi = count
+        elif hi < self.numchanges:
+            hi = self.numchanges
+
+        start = 0
+        if hi - self.numchanges >= 0:
+            start = hi - self.numchanges
+
+        nav = "Displaying Revisions: %d-%d" % (start, hi-1)
+        if start != 0:
+            nav = ('<a href="?cmd=changes;hi=%d">Previous %d</a>&nbsp;&nbsp;' \
+                    % (start, self.numchanges)) + nav
+        if hi != count:
+            if hi + self.numchanges <= count:
+                nav += '&nbsp;&nbsp;<a href="?cmd=changes;hi=%d">Next %d</a>' \
+                        % (hi + self.numchanges, self.numchanges)
+            else:
+                nav += '&nbsp;&nbsp;<a href="?cmd=changes">Next %d</a>' % \
+                        self.numchanges
+
+        print '<center>%s</center>' % nav
+
+        for i in xrange(start, hi):
             n = self.repo.changelog.node(i)
             cl.append((n, self.repo.changelog.read(n)))
         cl.reverse()
+
+        print '<table summary="" width="100%" align="center">'
         for n, ch in cl:
             print '<tr><td>'
             self.change_table(n, ch)
             print '</td></tr>'
-
         print '</table>'
+
+        print '<center>%s</center>' % nav
 
     def change_table(self, nodeid, changes):
         hn = hg.hex(nodeid)
@@ -196,14 +227,78 @@ class filepage(page):
         print cgi.escape(self.repo.file(self.fn).read(self.node))
         print '</pre>'
 
+class mfpage(page):
+    def __init__(self, repo, node):
+        page.__init__(self)
+        self.repo = repo
+        self.nodestr = node
+        self.node = hg.bin(node)
+
+    def content(self):
+        mf = self.repo.manifest.read(self.node)
+        fns = mf.keys()
+        fns.sort()
+        print '<div class="manifest">Manifest (%s)</div>' % self.nodestr
+        for f in fns:
+            print '<a href="?cmd=file;fn=%s;nd=%s">%s</a><br />' % \
+                    (f, hg.hex(mf[f]), f)
+
+class histpage(page):
+    def __init__(self, repo, fn):
+        page.__init__(self)
+        self.repo = repo
+        self.fn = fn
+
+    def content(self):
+        print '<div class="filehist">File History: %s</div>' % self.fn
+        r = self.repo.file(self.fn)
+        print '<br />'
+        print '<table summary="" width="100%" align="center">'
+        for i in xrange(r.count()-1, -1, -1):
+            n = r.node(i)
+            (p1, p2) = r.parents(n)
+            (h, h1, h2) = map(hg.hex, (n, p1, p2))
+            (i1, i2) = map(r.rev, (p1, p2))
+            ci = r.linkrev(n)
+            cn = self.repo.changelog.node(ci)
+            cs = hg.hex(cn)
+            changes = self.repo.changelog.read(cn)
+            print '<tr><td>'
+            self.hist_ent(i, h, i1, h1, i2, h2, ci, cs, changes)
+            print '</tr></td>'
+        print '</table>'
+
+    def hist_ent(self, revi, revs, p1i, p1s, p2i, p2s, ci, cs, changes):
+        datestr = time.asctime(time.gmtime(float(changes[2].split(' ')[0])))
+        print '<table summary="" width="100%" border="1">'
+        print '\t<tr><td valign="top" width="10%">author:</td>' + \
+                '<td valign="top" width="20%%">%s</td>' % \
+                (obfuscate(changes[1]), )
+        print '\t\t<td valign="top" width="10%">description:</td>' + \
+                '<td width="60%">' + \
+                '<a href="?cmd=chkin;nd=%s">%s</a></td></tr>' % \
+                (cs, nl2br(cgi.escape(changes[4])), )
+        print '\t<tr><td>date:</td><td>%s UTC</td>' % (datestr, )
+        print '\t\t<td>revision:</td><td>%d:<a ' % (revi, ) + \
+                'href="?cmd=file;cs=%s;fn=%s">%s</a></td></tr>' % \
+                (cs, self.fn, revs )
+        print '\t<tr><td>parent(s):</td><td colspan="3">%d:' % (p1i, )
+        print '<a href="?cmd=file;nd=%s;fn=%s">%s</a>' % (p1s, self.fn, p1s, ),
+        if p2i != -1:
+            print '&nbsp;&nbsp;%d:<a href="?cmd=file;nd=%s;fn=%s">%s</a>' % \
+                    (p2i, p2s, self.fn, p2s ),
+        print '</td></tr>'
+        print '</table><br />'
+
 args = cgi.parse()
 
 ui = hg.ui()
 repo = hg.repository(ui, repo_path)
 
-if not args.has_key('cmd'):
+if not args.has_key('cmd') or args['cmd'][0] == 'changes':
     page = change_list(repo, 'Mercurial')
-    page.content()
+    hi = args.get('hi', ( repo.changelog.count(), ))
+    page.content(hi = int(hi[0]))
     page.endpage()
     
 elif args['cmd'][0] == 'chkin':
@@ -225,6 +320,24 @@ elif args['cmd'][0] == 'file':
             page = filepage(repo, args['fn'][0], node=args['nd'][0])
         else:
             page = filepage(repo, args['fn'][0], cs=args['cs'][0])
+        page.content()
+    page.endpage()
+
+elif args['cmd'][0] == 'mf':
+    if not args.has_key('nd'):
+        page = errpage()
+        print '<div class="errmsg">No Node!</div>'
+    else:
+        page = mfpage(repo, args['nd'][0])
+        page.content()
+    page.endpage()
+
+elif args['cmd'][0] == 'hist':
+    if not args.has_key('fn'):
+        page = errpage()
+        print '<div class="errmsg">No Filename!</div>'
+    else:
+        page = histpage(repo, args['fn'][0])
         page.content()
     page.endpage()
 
