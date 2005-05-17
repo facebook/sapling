@@ -101,7 +101,7 @@ class manifest(revlog):
 
     def read(self, node):
         if self.mapcache and self.mapcache[0] == node:
-            return self.mapcache[1]
+            return self.mapcache[1].copy()
         text = self.revision(node)
         map = {}
         self.listcache = (text, text.splitlines(1))
@@ -402,9 +402,9 @@ class localrepository:
 
         # resolve the manifest to point to all the merged files
         self.ui.status("resolving manifests\n")
-        mmap = self.manifest.read(mm) # mine
         omap = self.manifest.read(mo) # other
         amap = self.manifest.read(ma) # ancestor
+        mmap = self.manifest.read(mm) # mine
         nmap = {}
 
         for f, mid in mmap.iteritems():
@@ -776,8 +776,8 @@ class localrepository:
         self.ui.status("merging manifests\n")
         # pull off the manifest group
         mfg = getchunk()
-        mo = self.manifest.tip()
-        mm = self.manifest.addgroup(mfg, lambda x: self.changelog.rev(x), tr)
+        mm = self.manifest.tip()
+        mo = self.manifest.addgroup(mfg, lambda x: self.changelog.rev(x), tr)
 
         # do we need a resolve?
         if self.changelog.ancestor(co, cn) != co:
@@ -797,45 +797,57 @@ class localrepository:
             n = fl.addgroup(fg, lambda x: self.changelog.rev(x), tr)
             if not simple:
                 nn = fl.resolvedag(o, n, tr, resolverev)
-                if nn: new[f] = nn
+                if nn:
+                    self.ui.note("merged %s\n", f)
+                    new[f] = nn
 
         # For simple merges, we don't need to resolve manifests or changesets
         if simple:
+            self.ui.debug("simple merge, skipping resolve\n")
             tr.close()
             return
 
         # resolve the manifest to point to all the merged files
         self.ui.status("resolving manifests\n")
         ma = self.manifest.ancestor(mm, mo)
-        mmap = self.manifest.read(mm) # mine
         omap = self.manifest.read(mo) # other
         amap = self.manifest.read(ma) # ancestor
+        mmap = self.manifest.read(mm) # mine
+        self.ui.debug("ancestor %s local %s other %s\n" %
+                      (short(ma), short(mm), short(mo)))
         nmap = {}
 
         for f, mid in mmap.iteritems():
             if f in omap:
-                if mid != omap[f]: 
+                if mid != omap[f]:
+                    self.ui.debug("%s versions differ\n" % f)
+                    if f in new: self.ui.note("%s updated in resolve\n" % f)
                     nmap[f] = new.get(f, mid) # use merged version
                 else:
-                    nmap[f] = new.get(f, mid) # they're the same
+                    nmap[f] = mid # keep ours
                 del omap[f]
             elif f in amap:
-                if mid != amap[f]: 
+                if mid != amap[f]:
+                    self.ui.debug("local changed %s which other deleted\n" % f)
                     pass # we should prompt here
                 else:
+                    self.ui.debug("other deleted %s\n" % f)
                     pass # other deleted it
             else:
-                nmap[f] = new.get(f, mid) # we created it
+                self.ui.debug("local created %s\n" %f)
+                nmap[f] = mid # we created it
                 
         del mmap
 
         for f, oid in omap.iteritems():
             if f in amap:
                 if oid != amap[f]:
+                    self.ui.debug("other changed %s which we deleted\n" % f)
                     pass # this is the nasty case, we should prompt
                 else:
                     pass # probably safe
             else:
+                self.ui.debug("remote created %s\n" % f)
                 nmap[f] = new.get(f, oid) # remote created it
 
         del omap
