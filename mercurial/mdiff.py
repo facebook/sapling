@@ -122,23 +122,10 @@ def patches(a, bins):
     return m[t[1]:t[1] + t[0]]
 
 def patch(a, bin):
-    last = pos = 0
-    r = []
+    return patches(a, [bin])
 
-    c = 0
-    while pos < len(bin):
-        p1, p2, l = struct.unpack(">lll", bin[pos:pos + 12])
-        pos += 12
-        r.append(a[last:p1])
-        r.append(bin[pos:pos + l])
-        pos += l
-        last = p2
-        c += 1
-    r.append(a[last:])
-
-    return "".join(r)
-
-
-
-
-
+try:
+    import mpatch
+    patches = mpatch.patches
+except:
+    pass

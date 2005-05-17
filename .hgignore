@@ -1,6 +1,7 @@
 .*\.orig
 .*\.rej
 .*~
+.*\.so
 .*pyc
 build/.*
 dist/
