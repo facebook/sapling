@@ -10,6 +10,7 @@ import urllib
 from mercurial import byterange
 from mercurial.transaction import *
 from mercurial.revlog import *
+from difflib import SequenceMatcher
 
 class filelog(revlog):
     def __init__(self, opener, path):
@@ -64,6 +65,32 @@ class filelog(revlog):
         """perform a merge and resolve resulting heads"""
         (o, n) = self.mergedag(other, transaction, linkseq)
         return self.resolvedag(o, n, transaction, link)
+
+    def annotate(self, node):
+        revs = []
+        while node != nullid:
+            revs.append(node)
+            node = self.parents(node)[0]
+        revs.reverse()
+        prev = []
+        annotate = []
+        for node in revs:
+            curr = self.read(node).splitlines(1)
+            linkrev = self.linkrev(node)
+            sm = SequenceMatcher(None, prev, curr)
+            offset = 0
+            for o, m, n, s, t in sm.get_opcodes():
+                if o in ('insert','replace'):
+                    annotate[m+offset:n+offset] = \
+                        [ (linkrev, l) for l in curr[s:t]]
+                    if o == 'insert':
+                        offset += m-n
+                elif o == 'delete':
+                    del annotate[m+offset:n+offset]
+                    offset -= m-n
+            assert len(annotate) == len(curr)
+            prev = curr
+        return annotate
 
 class manifest(revlog):
     def __init__(self, opener):

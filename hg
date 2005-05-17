@@ -199,6 +199,21 @@ elif cmd == "diff":
 
     diff(args, *revs)
 
+elif cmd == "annotate":
+    aoptions = {}
+    opts = [('r', 'revision', '', 'revision')]
+    args = fancyopts.fancyopts(args, opts, aoptions,
+                               'hg annotate [-r id] [files]')
+    if args:
+        node = repo.current
+        if aoptions['revision']:
+            node = repo.changelog.lookup(aoptions['revision'])
+        change = repo.changelog.read(node)
+        mmap = repo.manifest.read(change[0])
+        for f in args:
+            for n, l in repo.file(f).annotate(mmap[f]):
+                sys.stdout.write("%s: %s"%(n, l))
+
 elif cmd == "export":
     node = repo.lookup(args[0])
     prev, other = repo.changelog.parents(node)
