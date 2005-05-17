@@ -411,6 +411,8 @@ class revlog:
 
         # retrieve the parent revision of the delta chain
         chain = data[24:44]
+        if not chain in self.nodemap:
+            raise "unknown base %s" % short(chain[:4])
 
         # track the base of the current delta log
         r = self.count()
