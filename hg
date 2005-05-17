@@ -212,7 +212,32 @@ elif cmd == "annotate":
         mmap = repo.manifest.read(change[0])
         for f in args:
             for n, l in repo.file(f).annotate(mmap[f]):
-                sys.stdout.write("%s: %s"%(n, l))
+                sys.stdout.write("% 6s:%s"%(n, l))
+
+elif cmd == "blame":
+    aoptions = {}
+    opts = [('r', 'revision', '', 'revision')]
+    args = fancyopts.fancyopts(args, opts, aoptions,
+                               'hg blame [-r id] [files]')
+    if args:
+        bcache = {}
+        node = repo.current
+        if aoptions['revision']:
+            node = repo.changelog.lookup(aoptions['revision'])
+        change = repo.changelog.read(node)
+        mmap = repo.manifest.read(change[0])
+        for f in args:
+            for n, l in repo.file(f).annotate(mmap[f]):
+                try:
+                    name = bcache[n]
+                except KeyError:
+                    cl = repo.changelog.read(repo.changelog.node(n))
+                    name = cl[1]
+                    f = name.find('@')
+                    if f >= 0:
+                        name = name[:f]
+                    bcache[n] = name
+                sys.stdout.write("% 10s:%s"%(name, l))
 
 elif cmd == "export":
     node = repo.lookup(args[0])
