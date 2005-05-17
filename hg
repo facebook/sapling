@@ -89,7 +89,8 @@ def diff(files = None, node1 = None, node2 = None):
 
 options = {}
 opts = [('v', 'verbose', None, 'verbose'),
-        ('d', 'debug', None, 'debug')]
+        ('d', 'debug', None, 'debug'),
+        ('q', 'quiet', None, 'quiet')]
 
 args = fancyopts.fancyopts(sys.argv[1:], opts, options,
                            'hg [options] <command> [command options] [files]')
@@ -100,7 +101,7 @@ try:
 except:
     cmd = ""
 
-ui = hg.ui(options["verbose"], options["debug"])
+ui = hg.ui(options["verbose"], options["debug"], options["quiet"])
     
 if cmd == "init":
     repo = hg.repository(ui, ".", create=1)
@@ -115,7 +116,7 @@ else:
     try:
         repo = hg.repository(ui=ui)
     except IOError:
-        print "Unable to open repository"
+        ui.warn("Unable to open repository\n")
         sys.exit(0)
 
 if cmd == "checkout" or cmd == "co":
@@ -176,9 +177,9 @@ elif cmd == "import" or cmd == "patch":
 
 elif cmd == "status":
     (c, a, d) = repo.diffdir(repo.root, repo.current)
-    for f in c: print "C", f
-    for f in a: print "?", f
-    for f in d: print "R", f
+    for f in c: ui.status("C %s\n" % f)
+    for f in a: ui.status("? %s\n" % f)
+    for f in d: ui.status("R %s\n" % f)
 
 elif cmd == "diff":
     revs = []
@@ -191,7 +192,7 @@ elif cmd == "diff":
         revs = map(lambda x: repo.lookup(x), doptions['revision'])
     
     if len(revs) > 2:
-        print "too many revisions to diff"
+        self.ui.warn("too many revisions to diff\n")
         sys.exit(1)
 
     if os.getcwd() != repo.root:
@@ -343,7 +344,7 @@ elif cmd == "debugindex":
 elif cmd == "merge":
     if args:
         other = hg.repository(ui, args[0])
-        print "requesting changegroup"
+        ui.status("requesting changegroup")
         cg = repo.getchangegroup(other)
         repo.addchangegroup(cg)
     else:

@@ -468,6 +468,7 @@ class localrepository:
         new = {}
         linkrev = self.changelog.count()
         for f in update:
+            self.ui.note(f + "\n")
             try:
                 t = file(f).read()
             except IOError:
@@ -515,6 +516,7 @@ class localrepository:
         l.sort()
         stats = []
         for f in l:
+            self.ui.note(f + "\n")
             r = self.file(f)
             t = r.revision(mmap[f])
             try:
@@ -656,23 +658,29 @@ class localrepository:
 
     def getchangegroup(self, remote):
         tip = remote.branches([])[0]
+        self.ui.debug("remote tip branch is %s:%s\n" %
+                      (short(tip[0]), short(tip[1])))
         m = self.changelog.nodemap
         unknown = [tip]
         search = []
         fetch = []
 
         if tip[0] in m:
+            self.ui.note("nothing to do!\n")
             return None
 
         while unknown:
             n = unknown.pop(0)
             if n == nullid: break
             if n[1] and n[1] in m: # do we know the base?
+                self.ui.debug("found incomplete branch %s\n" % short(n[1]))
                 search.append(n) # schedule branch range for scanning
             else:
                 for b in remote.branches([n[2], n[3]]):
                     if b[0] in m:
                         if n[1] not in fetch:
+                            self.ui.debug("found new changeset %s\n" %
+                                          short(n[1]))
                             fetch.append(n[1]) # earliest unknown
                     else:
                         unknown.append(b)
@@ -685,15 +693,22 @@ class localrepository:
             for i in l + [n[1]]:
                 if i in m:
                     if f <= 4:
+                        self.ui.debug("found new branch changeset %s\n" %
+                                          short(p))
                         fetch.append(p)
                     else:
+                        self.ui.debug("narrowed branch search to %s:%s\n"
+                                      % (short(p), short(i)))
                         search.append((p, i))
                     break
                 p, f = i, f * 2
 
         for f in fetch:
             if f in m:
-                raise "already have", hex(f[:4])
+                raise "already have", short(f[:4])
+
+        self.ui.note("merging new changesets starting at " +
+                     " ".join([short(f) for f in fetch]) + "\n")
 
         return remote.changegroup(fetch)
     
@@ -752,13 +767,13 @@ class localrepository:
         tr = self.transaction()
         simple = True
 
-        print "merging changesets"
+        self.ui.status("merging changesets\n")
         # pull off the changeset group
         csg = getchunk()
         co = self.changelog.tip()
         cn = self.changelog.addgroup(csg, lambda x: self.changelog.count(), tr)
 
-        print "merging manifests"
+        self.ui.status("merging manifests\n")
         # pull off the manifest group
         mfg = getchunk()
         mo = self.manifest.tip()
@@ -770,7 +785,7 @@ class localrepository:
             resolverev = self.changelog.count()
 
         # process the files
-        print "merging files"
+        self.ui.status("merging files\n")
         new = {}
         while 1:
             f = getchunk(4)
@@ -848,6 +863,7 @@ class remoterepository:
         self.ui = ui
 
     def do_cmd(self, cmd, **args):
+        self.ui.debug("sending %s command\n" % cmd)
         q = {"cmd": cmd}
         q.update(args)
         qs = urllib.urlencode(q)
@@ -884,8 +900,10 @@ def repository(ui, path=None, create=0):
         return localrepository(ui, path, create)
 
 class ui:
-    def __init__(self, verbose=False, debug=False):
-        self.verbose = verbose
+    def __init__(self, verbose=False, debug=False, quiet=False):
+        self.quiet = quiet and not verbose and not debug
+        self.verbose = verbose or debug
+        self.debugflag = debug
     def write(self, *args):
         for a in args:
             sys.stdout.write(str(a))
@@ -896,13 +914,13 @@ class ui:
             if re.match(pat, r):
                 return r
     def status(self, *msg):
-        self.write(*msg)
+        if not self.quiet: self.write(*msg)
     def warn(self, msg):
         self.write(*msg)
     def note(self, msg):
         if self.verbose: self.write(*msg)
     def debug(self, msg):
-        if self.debug: self.write(*msg)
+        if self.debugflag: self.write(*msg)
     def edit(self, text):
         (fd, name) = tempfile.mkstemp("hg")
         f = os.fdopen(fd, "w")
