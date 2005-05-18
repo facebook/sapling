@@ -349,6 +349,19 @@ elif cmd == "debugindex":
             i, e[0], e[1], e[2], e[3],
             hg.hex(e[4][:5]), hg.hex(e[5][:5]), hg.hex(e[6][:5]))
 
+elif cmd == "debugindexdot":
+    if ".hg" not in args[0]:
+        args[0] = ".hg/data/" + repo.file(args[0]).encodepath(args[0]) + "i"
+
+    r = hg.revlog(open, args[0], "")
+    print "digraph G {"
+    for i in range(r.count()):
+        e = r.index[i]
+        print "\t%d -> %d" % (r.rev(e[4]), i)
+        if e[5] != hg.nullid:
+            print "\t%d -> %d" % (r.rev(e[5]), i)
+    print "}"
+
 elif cmd == "merge":
     if args:
         other = hg.repository(ui, args[0])
