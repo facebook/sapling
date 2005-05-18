@@ -433,7 +433,7 @@ elif cmd == "verify":
 
         try:
             m = repo.manifest.read(n)
-        except Error, inst:
+        except Exception, inst:
             ui.warn("unpacking manifest %s: %s\n" % (hg.short(n), inst))
             errors += 1
             
@@ -505,7 +505,7 @@ elif cmd == "verify":
               (files, changesets, revisions))
     
     if errors:
-        ui.warn("%d integrity errors encountered!\n")
+        ui.warn("%d integrity errors encountered!\n" % errors)
         sys.exit(1)
     
 else:
