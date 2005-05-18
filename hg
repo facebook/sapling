@@ -337,6 +337,9 @@ elif cmd == "debughash":
     print f.encodepath(args[0])
 
 elif cmd == "debugindex":
+    if ".hg" not in args[0]:
+        args[0] = ".hg/data/" + repo.file(args[0]).encodepath(args[0]) + "i"
+    
     r = hg.revlog(open, args[0], "")
     print "   rev    offset  length   base linkrev"+\
           " p1           p2           nodeid"
