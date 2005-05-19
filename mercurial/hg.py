@@ -728,6 +728,42 @@ class localrepository:
 
         tr.close()
 
+    def merge3(self, fl, fn, my, other, transaction, link):
+        """perform a 3-way merge and append the result"""
+        
+        def temp(prefix, node):
+            pre = "%s~%s." % (os.path.basename(fn), prefix)
+            (fd, name) = tempfile.mkstemp("", pre)
+            f = os.fdopen(fd, "w")
+            f.write(fl.revision(node))
+            f.close()
+            return name
+
+        base = fl.ancestor(my, other)
+        self.ui.note("resolving %s\n" % fn)
+        self.ui.debug("local %s remote %s ancestor %s\n" %
+                              (short(my), short(other), short(base)))
+
+        if my == base: 
+            text = fl.revision(other)
+        else:
+            a = temp("local", my)
+            b = temp("remote", other)
+            c = temp("parent", base)
+
+            cmd = os.environ["HGMERGE"]
+            self.ui.debug("invoking merge with %s\n" % cmd)
+            r = os.system("%s %s %s %s" % (cmd, a, b, c))
+            if r:
+                raise "Merge failed!"
+
+            text = open(a).read()
+            os.unlink(a)
+            os.unlink(b)
+            os.unlink(c)
+            
+        return fl.addrevision(text, transaction, link, my, other)
+
 class remoterepository:
     def __init__(self, ui, path):
         self.url = path.replace("hg://", "http://", 1)
