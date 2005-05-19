@@ -190,7 +190,8 @@ class revlog:
 
         (p1, p2) = self.parents(node)
         if node != hash(text, p1, p2):
-            raise "integrity check failed on %s:%d" % (self.datafile, rev)
+            raise IOError("integrity check failed on %s:%d"
+                          % (self.datafile, rev))
 
         self.cache = (node, rev, text)
         return text  
@@ -210,7 +211,10 @@ class revlog:
             start = self.start(base)
             end = self.end(t)
             prev = self.revision(self.tip())
-            data = compress(self.diff(prev, text))
+            d = self.diff(prev, text)
+            if self.patches(prev, [d]) != text:
+                raise AssertionError("diff failed")
+            data = compress(d)
             dist = end - start + len(data)
 
         # full versions are inserted when the needed deltas

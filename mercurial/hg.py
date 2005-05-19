@@ -78,7 +78,11 @@ class manifest(revlog):
     def diff(self, a, b):
         # this is sneaky, as we're not actually using a and b
         if self.listcache and len(self.listcache[0]) == len(a):
-            return mdiff.diff(self.listcache[1], self.addlist, 1)
+            d = mdiff.diff(self.listcache[1], self.addlist, 1)
+            if mdiff.patch(a, d) != b:
+                sys.stderr.write("*** sortdiff failed, falling back ***\n")
+                return mdiff.textdiff(a, b)
+            return d
         else:
             return mdiff.textdiff(a, b)
 
