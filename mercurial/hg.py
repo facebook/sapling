@@ -675,7 +675,7 @@ class localrepository:
         omap = self.manifest.read(mo) # other
         amap = self.manifest.read(ma) # ancestor
         mmap = self.manifest.read(mm) # mine
-        self.ui.debug("ancestor %s local %s other %s\n" %
+        self.ui.debug("ancestor %s local %s remote %s\n" %
                       (short(ma), short(mm), short(mo)))
         nmap = {}
 
@@ -691,8 +691,10 @@ class localrepository:
                 del omap[f]
             elif f in amap:
                 if mid != amap[f]:
-                    self.ui.debug("local changed %s which other deleted\n" % f)
-                    pass # we should prompt here
+                    r = self.ui.prompt(
+                        ("local changed %s which remote deleted\n" % f) +
+                        "(k)eep or (d)elete?", "[kd]", "k")
+                    if r == "k": nmap[f] = mid
                 else:
                     self.ui.debug("other deleted %s\n" % f)
                     pass # other deleted it
@@ -705,8 +707,10 @@ class localrepository:
         for f, oid in omap.iteritems():
             if f in amap:
                 if oid != amap[f]:
-                    self.ui.debug("other changed %s which we deleted\n" % f)
-                    pass # this is the nasty case, we should prompt
+                    r = self.ui.prompt(
+                        ("remote changed %s which local deleted\n" % f) +
+                        "(k)eep or (d)elete?", "[kd]", "k")
+                    if r == "k": nmap[f] = oid
                 else:
                     pass # probably safe
             else:
@@ -811,26 +815,33 @@ def repository(ui, path=None, create=0):
         return localrepository(ui, path, create)
 
 class ui:
-    def __init__(self, verbose=False, debug=False, quiet=False):
+    def __init__(self, verbose=False, debug=False, quiet=False,
+                 interactive=True):
         self.quiet = quiet and not verbose and not debug
         self.verbose = verbose or debug
         self.debugflag = debug
+        self.interactive = interactive
     def write(self, *args):
         for a in args:
             sys.stdout.write(str(a))
-    def prompt(self, msg, pat):
+    def readline(self):
+        return sys.stdin.readline()[:-1]
+    def prompt(self, msg, pat, default = "y"):
+        if not self.interactive: return default
         while 1:
-            sys.stdout.write(msg)
-            r = sys.stdin.readline()[:-1]
+            self.write(msg, " ")
+            r = self.readline()
             if re.match(pat, r):
                 return r
+            else:
+                self.write("unrecognized response\n")
     def status(self, *msg):
         if not self.quiet: self.write(*msg)
     def warn(self, msg):
         self.write(*msg)
-    def note(self, msg):
+    def note(self, *msg):
         if self.verbose: self.write(*msg)
-    def debug(self, msg):
+    def debug(self, *msg):
         if self.debugflag: self.write(*msg)
     def edit(self, text):
         (fd, name) = tempfile.mkstemp("hg")

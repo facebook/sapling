@@ -87,7 +87,9 @@ def diff(files = None, node1 = None, node2 = None):
 options = {}
 opts = [('v', 'verbose', None, 'verbose'),
         ('d', 'debug', None, 'debug'),
-        ('q', 'quiet', None, 'quiet')]
+        ('q', 'quiet', None, 'quiet'),
+        ('y', 'noninteractive', None, 'run non-interactively'),
+        ]
 
 args = fancyopts.fancyopts(sys.argv[1:], opts, options,
                            'hg [options] <command> [command options] [files]')
@@ -98,7 +100,8 @@ try:
 except:
     cmd = ""
 
-ui = hg.ui(options["verbose"], options["debug"], options["quiet"])
+ui = hg.ui(options["verbose"], options["debug"], options["quiet"],
+           not options["noninteractive"])
     
 if cmd == "init":
     repo = hg.repository(ui, ".", create=1)
@@ -347,6 +350,9 @@ elif cmd == "dumpmanifest":
 
     for f in files:
         print hg.hex(m[f]), f
+
+elif cmd == "debugprompt":
+    print ui.prompt(args[0], args[1], args[2])
 
 elif cmd == "debughash":
     f = repo.file(args[0])
