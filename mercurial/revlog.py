@@ -143,12 +143,6 @@ class revlog:
                 
         return None
 
-    def revisions(self, list):
-        # this can be optimized to do spans, etc
-        # be stupid for now
-        for node in list:
-            yield self.revision(node)
-
     def diff(self, a, b):
         return mdiff.textdiff(a, b)
 
@@ -272,34 +266,9 @@ class revlog:
 
         return nullid
 
-    def mergedag(self, other, transaction, linkseq, accumulate = None):
-        """combine the nodes from other's DAG into ours"""
-        old = self.tip()
-        i = self.count()
-        l = []
-
-        # merge the other revision log into our DAG
-        for r in range(other.count()):
-            id = other.node(r)
-            if id not in self.nodemap:
-                (xn, yn) = other.parents(id)
-                l.append((id, xn, yn))
-                self.nodemap[id] = i
-                i += 1
-
-        # merge node date for new nodes
-        r = other.revisions([e[0] for e in l])
-        for e in l:
-            t = r.next()
-            if accumulate: accumulate(t)
-            self.addrevision(t, transaction, linkseq.next(), e[1], e[2])
-
-        # return the unmerged heads for later resolving
-        return (old, self.tip())
-
     def group(self, linkmap):
         # given a list of changeset revs, return a set of deltas and
-        # metadata corresponding to nodes the first delta is
+        # metadata corresponding to nodes. the first delta is
         # parent(nodes[0]) -> nodes[0] the receiver is guaranteed to
         # have this parent as it has all history before these
         # changesets. parent is parent[0]
@@ -440,9 +409,9 @@ class revlog:
         while pos < len(data):
             l, node, p1, p2, cs = struct.unpack(">l20s20s20s20s",
                                                 data[pos:pos+84])
+            link = linkmapper(cs)
             if node in self.nodemap:
                 raise "already have %s" % hex(node[:4])
-            link = linkmapper(cs)
             delta = data[pos + 84:pos + l]
             pos += l
 
