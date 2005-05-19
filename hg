@@ -320,8 +320,9 @@ elif cmd == "log":
             print "parents:   %4d:%s" % (i1, h1)
             if i2: print "           %4d:%s" % (i2, h2)
             changes = repo.changelog.read(repo.changelog.node(cr))
-            print "user: %s    date: %s" % (changes[1], time.asctime(
-                    time.localtime(float(changes[2].split(' ')[0]))))
+            print "user: %s" % changes[1]
+            print "date: %s" % time.asctime(
+                time.localtime(float(changes[2].split(' ')[0]))))
             print "description:"
             print changes[4]
             print
