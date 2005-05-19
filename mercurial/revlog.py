@@ -87,6 +87,13 @@ class lazymap:
             return True
         except KeyError:
             return False
+    def __iter__(self):
+        for i in xrange(self.p.l):
+            try:
+                yield self.p.index[i][6]
+            except:
+                self.p.load(i)
+                yield self.p.index[i][6]
     def __getitem__(self, key):
         try:
             return self.p.map[key]
