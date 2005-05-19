@@ -72,14 +72,11 @@ def diff(files = None, node1 = None, node2 = None):
     date1 = date(change)
 
     if files:
-        (c, a, d) = map(lambda x: filterfiles(x, files), (c, a, d))
+        c = filterfiles(c, files)
+        d = filterfiles(d, files)
 
     for f in c:
         to = repo.file(f).read(mmap[f])
-        tn = read(f)
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
-    for f in a:
-        to = ""
         tn = read(f)
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
     for f in d:
@@ -322,7 +319,7 @@ elif cmd == "log":
             changes = repo.changelog.read(repo.changelog.node(cr))
             print "user: %s" % changes[1]
             print "date: %s" % time.asctime(
-                time.localtime(float(changes[2].split(' ')[0]))))
+                time.localtime(float(changes[2].split(' ')[0])))
             print "description:"
             print changes[4]
             print
