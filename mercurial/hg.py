@@ -294,7 +294,8 @@ class localrepository:
         return filelog(self.opener, f)
 
     def transaction(self):
-        return transaction(self.opener, self.join("journal"))
+        return transaction(self.opener, self.join("journal"),
+                           self.join("undo"))
 
     def commit(self, parent, update = None, text = ""):
         tr = self.transaction()

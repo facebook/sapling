@@ -14,16 +14,16 @@
 import os
 
 class transaction:
-    def __init__(self, opener, journal):
+    def __init__(self, opener, journal, after = None):
         self.opener = opener
+        self.after = after
         self.entries = []
         self.map = {}
         self.journal = journal
 
         # abort here if the journal already exists
         if os.path.exists(self.journal):
-            print "journal already exists, recovering"
-            self.recover()
+            raise "journal already exists!"
 
         self.file = open(self.journal, "w")
 
@@ -43,7 +43,10 @@ class transaction:
     def close(self):
         self.file.close()
         self.entries = []
-        os.unlink(self.journal)
+        if self.after:
+            os.rename(self.journal, self.after)
+        else:
+            os.unlink(self.journal)
 
     def abort(self):
         if not self.entries: return
