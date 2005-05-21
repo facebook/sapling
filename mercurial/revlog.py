@@ -16,10 +16,23 @@ def bin(node): return binascii.unhexlify(node)
 def short(node): return hex(node[:4])
 
 def compress(text):
-    return zlib.compress(text)
+    if not text: return text
+    if len(text) < 44:
+        if text[0] == '\0': return text
+        return 'u' + text
+    bin = zlib.compress(text)
+    if len(bin) > len(text):
+        if text[0] == '\0': return text
+        return 'u' + text
+    return bin
 
 def decompress(bin):
-    return zlib.decompress(bin)
+    if not bin: return bin
+    t = bin[0]
+    if t == '\0': return bin
+    if t == 'x': return zlib.decompress(bin)
+    if t == 'u': return bin[1:]
+    raise "unknown compression type %s" % t
 
 def hash(text, p1, p2):
     l = [p1, p2]
