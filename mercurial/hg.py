@@ -240,6 +240,7 @@ class localrepository:
             os.mkdir(self.join("data"))
 
         self.opener = opener(self.path)
+        self.fileopener = opener(self.join("data"))
         self.manifest = manifest(self.opener)
         self.changelog = changelog(self.opener)
         self.ignorelist = None
@@ -288,7 +289,7 @@ class localrepository:
         return os.path.join(self.path, f)
 
     def file(self, f):
-        return filelog(self.opener, f)
+        return filelog(self.fileopener, f)
 
     def transaction(self):
         return transaction(self.opener, self.join("journal"),
