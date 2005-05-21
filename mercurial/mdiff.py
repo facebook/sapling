@@ -1,5 +1,6 @@
 #!/usr/bin/python
-import difflib, struct, mmap, mpatchs
+import difflib, struct, mmap
+from mercurial.mpatch import *
 
 def unidiff(a, ad, b, bd, fn):
     if not a and not b: return ""
