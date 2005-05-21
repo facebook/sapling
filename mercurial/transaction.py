@@ -54,7 +54,10 @@ class transaction:
         print "transaction abort!"
 
         for f, o in self.entries:
-            self.opener(f, "a").truncate(o)
+            try:
+                self.opener(f, "a").truncate(o)
+            except:
+                print "failed to truncate", f
 
         self.entries = []
 
