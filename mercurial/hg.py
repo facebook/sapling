@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import sys, struct, sha, socket, os, time, base64, re, urllib2
+import sys, struct, sha, socket, os, time, re, urllib2
 import urllib
 from mercurial import byterange
 from mercurial.transaction import *
@@ -14,16 +14,7 @@ from difflib import SequenceMatcher
 
 class filelog(revlog):
     def __init__(self, opener, path):
-        s = self.encodepath(path)
-        revlog.__init__(self, opener, os.path.join("data", s + "i"),
-                        os.path.join("data", s))
-
-    def encodepath(self, path):
-        s = sha.sha(path).digest()
-        s = base64.encodestring(s)[:-3]
-        s = re.sub("\+", "%", s)
-        s = re.sub("/", "_", s)
-        return s
+        revlog.__init__(self, opener, path + ".i", path + ".d")
 
     def read(self, node):
         return self.revision(node)
@@ -210,11 +201,17 @@ def opener(base):
 
         f = os.path.join(p, path)
 
-        if mode != "r" and os.path.isfile(f):
-            s = os.stat(f)
-            if s.st_nlink > 1:
-                file(f + ".tmp", "w").write(file(f).read())
-                os.rename(f+".tmp", f)
+        if mode != "r":
+            try:
+                s = os.stat(f)
+            except OSError:
+                d = os.path.dirname(f)
+                if not os.path.isdir(d):
+                    os.makedirs(d)
+            else:
+                if s.st_nlink > 1:
+                    file(f + ".tmp", "w").write(file(f).read())
+                    os.rename(f+".tmp", f)
 
         return file(f, mode)
 
