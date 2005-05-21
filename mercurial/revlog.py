@@ -77,12 +77,11 @@ class lazyindex:
         self.p = parser
     def __len__(self):
         return len(self.p.index)
+    def load(self, pos):
+        self.p.load(pos)
+        return self.p.index[pos]
     def __getitem__(self, pos):
-        i = self.p.index[pos]
-        if not i:
-            self.p.load(pos)
-            return self.p.index[pos]
-        return i
+        return self.p.index[pos] or self.load(pos)
     def append(self, e):
         self.p.index.append(e)
         
