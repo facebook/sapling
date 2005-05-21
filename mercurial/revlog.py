@@ -188,6 +188,18 @@ class revlog:
     def patches(self, t, pl):
         return mdiff.patches(t, pl)
 
+    def delta(self, node):
+        r = self.rev(node)
+        b = self.base(r)
+        if r == b:
+            return self.diff(self.revision(self.node(r - 1)),
+                             self.revision(node))
+        else:
+            f = self.opener(self.datafile)
+            f.seek(self.start(r))
+            data = f.read(self.length(r))
+        return decompress(data)
+
     def revision(self, node):
         if node == nullid: return ""
         if self.cache and self.cache[0] == node: return self.cache[2]
