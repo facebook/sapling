@@ -124,14 +124,34 @@ class revlog:
         self.datafile = datafile
         self.opener = opener
         self.cache = None
-        # read the whole index for now, handle on-demand later
+
         try:
             i = self.opener(self.indexfile).read()
         except IOError:
             i = ""
-        parser = lazyparser(i)
-        self.index = lazyindex(parser)
-        self.nodemap = lazymap(parser)
+
+        if len(i) > 10000:
+            # big index, let's parse it on demand
+            parser = lazyparser(i)
+            self.index = lazyindex(parser)
+            self.nodemap = lazymap(parser)
+        else:
+            s = struct.calcsize(indexformat)
+            l = len(i) / s
+            self.index = [None] * l
+            m = [None] * l
+
+            n = 0
+            for f in xrange(0, len(i), s):
+                # offset, size, base, linkrev, p1, p2, nodeid
+                e = struct.unpack(indexformat, i[f:f + s])
+                m[n] = (e[6], n)
+                self.index[n] = e
+                n += 1
+
+            self.nodemap = dict(m)
+            self.nodemap[nullid] = -1
+            
 
     def tip(self): return self.node(len(self.index) - 1)
     def count(self): return len(self.index)
