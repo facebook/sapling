@@ -194,9 +194,9 @@ class revlog:
 
         text = None
         rev = self.rev(node)
-        base = self.base(rev)
-        start = self.start(base)
-        end = self.end(rev)
+        start, length, base, link, p1, p2, node = self.index[rev]
+        end = start + length
+        if base != rev: start = self.start(base)
 
         if self.cache and self.cache[1] >= base and self.cache[1] < rev:
             base = self.cache[1]
@@ -220,7 +220,6 @@ class revlog:
 
         text = mdiff.patches(text, bins)
 
-        (p1, p2) = self.parents(node)
         if node != hash(text, p1, p2):
             raise IOError("integrity check failed on %s:%d"
                           % (self.datafile, rev))
