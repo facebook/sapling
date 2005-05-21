@@ -310,6 +310,7 @@ class localrepository:
         # check in files
         new = {}
         linkrev = self.changelog.count()
+        update.sort()
         for f in update:
             self.ui.note(f + "\n")
             try:
