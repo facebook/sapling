@@ -50,17 +50,6 @@ class lazyparser:
         self.index = [None] * self.l
         self.map = {nullid: -1}
 
-        if 0:
-            n = 0
-            i = self.data
-            s = struct.calcsize(indexformat)
-            for f in xrange(0, len(i), s):
-                # offset, size, base, linkrev, p1, p2, nodeid
-                e = struct.unpack(indexformat, i[f:f + s])
-                self.map[e[6]] = n
-                self.index.append(e)
-                n += 1
-
     def load(self, pos):
         block = pos / 1000
         i = block * 1000
