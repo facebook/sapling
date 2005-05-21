@@ -295,7 +295,7 @@ elif cmd == "history":
         print "user:", changes[1]
         print "date:", time.asctime(
             time.localtime(float(changes[2].split(' ')[0])))
-        print "files:", " ".join(changes[3])
+        if ui.verbose: print "files:", " ".join(changes[3])
         print "description:"
         print changes[4]
 
