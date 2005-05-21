@@ -343,35 +343,26 @@ class localrepository:
         self.dircache.update(new)
         self.dircache.remove(remove)
 
-    def checkdir(self, path):
-        d = os.path.dirname(path)
-        if not d: return
-        if not os.path.isdir(d):
-            self.checkdir(d)
-            os.mkdir(d)
-
     def checkout(self, node):
         # checkout is really dumb at the moment
         # it ought to basically merge
         change = self.changelog.read(node)
-        mmap = self.manifest.read(change[0])
-
-        l = mmap.keys()
+        l = self.manifest.read(change[0]).items()
         l.sort()
-        stats = []
-        for f in l:
-            self.ui.note(f + "\n")
-            r = self.file(f)
-            t = r.revision(mmap[f])
+
+        for f,n in l:
+            if f[0] == "/": continue
+            self.ui.note(f, "\n")
+            t = self.file(f).revision(n)
             try:
                 file(f, "w").write(t)
-            except:
-                self.checkdir(f)
+            except IOError:
+                os.makedirs(os.path.dirname(f))
                 file(f, "w").write(t)
 
         self.setcurrent(node)
         self.dircache.clear()
-        self.dircache.update(l)
+        self.dircache.update([f for f,n in l])
 
     def diffdir(self, path, changeset):
         changed = []
