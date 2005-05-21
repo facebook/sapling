@@ -407,13 +407,6 @@ elif cmd == "tags":
             r = "?"
         print "%-30s %5d:%s" % (k, repo.changelog.rev(n), hg.hex(n))
 
-elif cmd == "debugoldmerge":
-    if args:
-        other = hg.repository(ui, args[0])
-        repo.merge(other)
-    else:
-        print "missing source repository"
-
 elif cmd == "verify":
     filelinkrevs = {}
     filenodes = {}
