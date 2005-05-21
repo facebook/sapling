@@ -213,7 +213,10 @@ elif cmd == "annotate":
     opts = [('r', 'revision', '', 'revision')]
     args = fancyopts.fancyopts(args, opts, aoptions,
                                'hg annotate [-r id] [files]')
+
     if args:
+        if relpath: args = [ os.path.join(relpath, x) for x in args ]
+
         node = repo.current
         if aoptions['revision']:
             node = repo.changelog.lookup(aoptions['revision'])
