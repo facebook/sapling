@@ -39,17 +39,25 @@ struct flist {
 
 static struct flist *lalloc(int size)
 {
-	struct flist *a;
+	struct flist *a = NULL;
 
 	a = malloc(sizeof(struct flist));
-	a->head = a->tail = a->base = malloc(sizeof(struct frag) * size);
+	if (a) {
+		a->base = malloc(sizeof(struct frag) * size);
+		if (!a->base)
+			free(a);
+		else
+			a->head = a->tail = a->base;
+	}
 	return a;
 }
 
 static void lfree(struct flist *a)
 {
-	free(a->base);
-	free(a);
+	if (a) {
+		free(a->base);
+		free(a);
+	}
 }
 
 static int lsize(struct flist *a)
@@ -144,33 +152,37 @@ static int discard(struct flist *src, int cut, int offset)
    this deletes a and b and returns the resultant list. */
 static struct flist *combine(struct flist *a, struct flist *b)
 {
-	struct flist *c;
-	struct frag *bh = b->head, *ct;
+	struct flist *c = NULL;
+	struct frag *bh, *ct;
 	int offset = 0, post;
 
-	c = lalloc((lsize(a) + lsize(b)) * 2);
+	if (a && b)
+		c = lalloc((lsize(a) + lsize(b)) * 2);
 
-	while (bh != b->tail) {
-		/* save old hunks */
-		offset = gather(c, a, bh->start, offset);
+	if (c) {
 
-		/* discard replaced hunks */
-		post = discard(a, bh->end, offset);
+		for (bh = b->head; bh != b->tail; bh++) {
+			/* save old hunks */
+			offset = gather(c, a, bh->start, offset);
 
-		/* insert new hunk */
-		ct = c->tail;
-		ct->start = bh->start - offset;
-		ct->end = bh->end - post;
-		ct->len = bh->len;
-		ct->data = bh->data;
-		c->tail++;
-		bh++;
-		offset = post;
+			/* discard replaced hunks */
+			post = discard(a, bh->end, offset);
+
+			/* insert new hunk */
+			ct = c->tail;
+			ct->start = bh->start - offset;
+			ct->end = bh->end - post;
+			ct->len = bh->len;
+			ct->data = bh->data;
+			c->tail++;
+			offset = post;
+		}
+
+		/* hold on to tail from a */
+		memcpy(c->tail, a->head, sizeof(struct frag) * lsize(a));
+		c->tail += lsize(a);
 	}
 
-	/* hold on to tail from a */
-	memcpy(c->tail, a->head, sizeof(struct frag) * lsize(a));
-	c->tail += lsize(a);
 	lfree(a);
 	lfree(b);
 	return c;
@@ -242,6 +254,8 @@ static struct flist *fold(PyObject *bins, int start, int end)
 	if (start + 1 == end) {
 		/* trivial case, output a decoded list */
 		PyObject *tmp = PyList_GetItem(bins, start);
+		if (!tmp)
+			return NULL;
 		return decode(PyString_AsString(tmp), PyString_Size(tmp));
 	}
 
@@ -259,7 +273,7 @@ patches(PyObject *self, PyObject *args)
 	char *in, *out;
 	int len, outlen;
 
-	if (!PyArg_ParseTuple(args, "OO:mpatch", &text, &bins))
+	if (!PyArg_ParseTuple(args, "SO:mpatch", &text, &bins))
 		return NULL;
 
 	len = PyList_Size(bins);
@@ -270,13 +284,18 @@ patches(PyObject *self, PyObject *args)
 	}
 
 	patch = fold(bins, 0, len);
+	if (!patch)
+		return PyErr_NoMemory();
+
 	outlen = calcsize(PyString_Size(text), patch);
 	result = PyString_FromStringAndSize(NULL, outlen);
-	in = PyString_AsString(text);
-	out = PyString_AsString(result);
-	apply(out, in, PyString_Size(text), patch);
-	lfree(patch);
+	if (result) {
+		in = PyString_AsString(text);
+		out = PyString_AsString(result);
+		apply(out, in, PyString_Size(text), patch);
+	}
 
+	lfree(patch);
 	return result;
 }
 
