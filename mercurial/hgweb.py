@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# hgweb.py - 0.1 - 9 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>
+# hgweb.py - 0.2 - 21 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>
 #    - web interface to a mercurial repository
 #
 # This software may be used and distributed according to the terms
@@ -12,8 +12,6 @@ cgitb.enable()
 
 import os, cgi, time, re, difflib, sys, zlib
 from mercurial import hg, mdiff
-
-repo_path = "."  # change as needed
 
 def nl2br(text):
     return re.sub('\n', '<br />', text)
@@ -290,88 +288,100 @@ class histpage(page):
         print '</td></tr>'
         print '</table><br />'
 
-args = cgi.parse()
+class hgweb:
+    repo_path = "."
+    numchanges = 50
 
-ui = hg.ui()
-repo = hg.repository(ui, repo_path)
+    def __init__(self):
+        pass
 
-if not args.has_key('cmd') or args['cmd'][0] == 'changes':
-    page = change_list(repo, 'Mercurial')
-    hi = args.get('hi', ( repo.changelog.count(), ))
-    page.content(hi = int(hi[0]))
-    page.endpage()
-    
-elif args['cmd'][0] == 'chkin':
-    if not args.has_key('nd'):
-        page = errpage()
-        print '<div class="errmsg">No Node!</div>'
-    else:
-        page = checkin(repo, args['nd'][0])
-        page.content()
-    page.endpage()
+    def run(self):
 
-elif args['cmd'][0] == 'file':
-    if not (args.has_key('nd') and args.has_key('fn')) and \
-            not (args.has_key('cs') and args.has_key('fn')):
-        page = errpage()
-        print '<div class="errmsg">Invalid Args!</div>'
-    else:
-        if args.has_key('nd'):
-            page = filepage(repo, args['fn'][0], node=args['nd'][0])
+        args = cgi.parse()
+
+        ui = hg.ui()
+        repo = hg.repository(ui, self.repo_path)
+
+        if not args.has_key('cmd') or args['cmd'][0] == 'changes':
+            page = change_list(repo, 'Mercurial')
+            hi = args.get('hi', ( repo.changelog.count(), ))
+            page.content(hi = int(hi[0]))
+            page.endpage()
+            
+        elif args['cmd'][0] == 'chkin':
+            if not args.has_key('nd'):
+                page = errpage()
+                print '<div class="errmsg">No Node!</div>'
+            else:
+                page = checkin(repo, args['nd'][0])
+                page.content()
+            page.endpage()
+
+        elif args['cmd'][0] == 'file':
+            if not (args.has_key('nd') and args.has_key('fn')) and \
+                    not (args.has_key('cs') and args.has_key('fn')):
+                page = errpage()
+                print '<div class="errmsg">Invalid Args!</div>'
+            else:
+                if args.has_key('nd'):
+                    page = filepage(repo, args['fn'][0], node=args['nd'][0])
+                else:
+                    page = filepage(repo, args['fn'][0], cs=args['cs'][0])
+                page.content()
+            page.endpage()
+
+        elif args['cmd'][0] == 'mf':
+            if not args.has_key('nd'):
+                page = errpage()
+                print '<div class="errmsg">No Node!</div>'
+            else:
+                page = mfpage(repo, args['nd'][0])
+                page.content()
+            page.endpage()
+
+        elif args['cmd'][0] == 'hist':
+            if not args.has_key('fn'):
+                page = errpage()
+                print '<div class="errmsg">No Filename!</div>'
+            else:
+                page = histpage(repo, args['fn'][0])
+                page.content()
+            page.endpage()
+
+        elif args['cmd'][0] == 'branches':
+            httphdr("text/plain")
+            nodes = []
+            if args.has_key('nodes'):
+                nodes = map(hg.bin, args['nodes'][0].split(" "))
+            for b in repo.branches(nodes):
+                print " ".join(map(hg.hex, b))
+
+        elif args['cmd'][0] == 'between':
+            httphdr("text/plain")
+            nodes = []
+            if args.has_key('pairs'):
+                pairs = [ map(hg.bin, p.split("-"))
+                          for p in args['pairs'][0].split(" ") ]
+            for b in repo.between(pairs):
+                print " ".join(map(hg.hex, b))
+
+        elif args['cmd'][0] == 'changegroup':
+            httphdr("application/hg-changegroup")
+            nodes = []
+            if args.has_key('roots'):
+                nodes = map(hg.bin, args['roots'][0].split(" "))
+
+            z = zlib.compressobj()
+            for chunk in repo.changegroup(nodes):
+                sys.stdout.write(z.compress(chunk))
+
+            sys.stdout.write(z.flush())
+
         else:
-            page = filepage(repo, args['fn'][0], cs=args['cs'][0])
-        page.content()
-    page.endpage()
+            page = errpage()
+            print '<div class="errmsg">unknown command: %s</div>' % \
+                    cgi.escape(args['cmd'][0])
+            page.endpage()
 
-elif args['cmd'][0] == 'mf':
-    if not args.has_key('nd'):
-        page = errpage()
-        print '<div class="errmsg">No Node!</div>'
-    else:
-        page = mfpage(repo, args['nd'][0])
-        page.content()
-    page.endpage()
-
-elif args['cmd'][0] == 'hist':
-    if not args.has_key('fn'):
-        page = errpage()
-        print '<div class="errmsg">No Filename!</div>'
-    else:
-        page = histpage(repo, args['fn'][0])
-        page.content()
-    page.endpage()
-
-elif args['cmd'][0] == 'branches':
-    httphdr("text/plain")
-    nodes = []
-    if args.has_key('nodes'):
-        nodes = map(hg.bin, args['nodes'][0].split(" "))
-    for b in repo.branches(nodes):
-        print " ".join(map(hg.hex, b))
-
-elif args['cmd'][0] == 'between':
-    httphdr("text/plain")
-    nodes = []
-    if args.has_key('pairs'):
-        pairs = [ map(hg.bin, p.split("-"))
-                  for p in args['pairs'][0].split(" ") ]
-    for b in repo.between(pairs):
-        print " ".join(map(hg.hex, b))
-
-elif args['cmd'][0] == 'changegroup':
-    httphdr("application/hg-changegroup")
-    nodes = []
-    if args.has_key('roots'):
-        nodes = map(hg.bin, args['roots'][0].split(" "))
-
-    z = zlib.compressobj()
-    for chunk in repo.changegroup(nodes):
-        sys.stdout.write(z.compress(chunk))
-
-    sys.stdout.write(z.flush())
-
-else:
-    page = errpage()
-    print '<div class="errmsg">unknown command: %s</div>' % \
-            cgi.escape(args['cmd'][0])
-    page.endpage()
+if __name__ == "__main__":
+    hgweb().run()
