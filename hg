@@ -454,13 +454,17 @@ elif cmd == "verify":
             errors += 1
 
         try:
-            m = repo.manifest.read(n)
+            delta = mdiff.patchtext(repo.manifest.delta(n))
+        except KeyboardInterrupt:
+            print "aborted"
+            sys.exit(0)
         except Exception, inst:
             ui.warn("unpacking manifest %s: %s\n" % (hg.short(n), inst))
             errors += 1
             
-        for f, fn in m.items():
-            filenodes.setdefault(f, {})[fn] = 1
+        ff = [ l.split('\0') for l in delta.splitlines() ]
+        for f, fn in ff:
+            filenodes.setdefault(f, {})[hg.bin(fn)] = 1
 
     ui.status("crosschecking files in changesets and manifests\n")
     for f in filenodes:
@@ -470,11 +474,14 @@ elif cmd == "verify":
 
     for f in filelinkrevs:
         if f not in filenodes:
-            ui.warn("file %s in changeset but not in manifest" % f)
+            ui.warn("file %s in changeset but not in manifest\n" % f)
             errors += 1
 
     ui.status("checking files\n")
-    for f in filenodes:
+    ff = filenodes.keys()
+    ff.sort()
+    for f in ff:
+        if f == "/dev/null": continue
         files += 1
         fl = repo.file(f)
         nodes = { hg.nullid: 1 }
@@ -482,7 +489,8 @@ elif cmd == "verify":
             n = fl.node(i)
 
             if n not in filenodes[f]:
-                ui.warn("%s:%s not in manifests\n" % (f, hg.short(n)))
+                ui.warn("%s: %d:%s not in manifests\n" % (f, i, hg.short(n)))
+                print len(filenodes[f].keys()), fl.count(), f
                 errors += 1
             else:
                 del filenodes[f][n]
