@@ -38,22 +38,18 @@ class filelog(revlog):
         revs.reverse()
         prev = []
         annotate = []
+        
         for node in revs:
             curr = self.read(node).splitlines(1)
             linkrev = self.linkrev(node)
             sm = SequenceMatcher(None, prev, curr)
-            offset = 0
+            new = []
             for o, m, n, s, t in sm.get_opcodes():
-                if o in ('insert','replace'):
-                    annotate[m+offset:n+offset] = \
-                        [ (linkrev, l) for l in curr[s:t]]
-                    if o == 'insert':
-                        offset += m-n
-                elif o == 'delete':
-                    del annotate[m+offset:n+offset]
-                    offset -= m-n
-            assert len(annotate) == len(curr)
-            prev = curr
+                if o == 'equal':
+                    new += annotate[m:n]
+                else:
+                    new += [(linkrev, l) for l in curr[s:t]]
+            annotate, prev = new, curr
         return annotate
 
 class manifest(revlog):
