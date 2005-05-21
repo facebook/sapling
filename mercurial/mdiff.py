@@ -53,6 +53,16 @@ def diff(a, b, sorted=0):
 
     return "".join(bin)
 
+def patchtext(bin):
+    pos = 0
+    t = []
+    while pos < len(bin):
+        p1, p2, l = struct.unpack(">lll", bin[pos:pos + 12])
+        pos += 12
+        t.append(bin[pos:pos + l])
+        pos += l
+    return "".join(t)
+
 # This attempts to apply a series of patches in time proportional to
 # the total size of the patches, rather than patches * len(text). This
 # means rather than shuffling strings around, we shuffle around
