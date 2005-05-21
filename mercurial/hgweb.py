@@ -138,7 +138,7 @@ class change_list(page):
         print self.tmpl.do_page('change_table.tmpl', 
                 author=obfuscate(changes[1]),
                 desc=nl2br(cgi.escape(changes[4])), date=datestr, 
-                files=''.join(files), revnum=i, revnode=hn)
+                files=' '.join(files), revnum=i, revnode=hn)
 
 class checkin(page):
     def __init__(self, repo, tmpl_dir, nodestr):
@@ -168,7 +168,8 @@ class checkin(page):
                 p1num=i1, p1node=h1, p2num=i2, p2node=h2, p2link=p2link,
                 mfnum=self.repo.manifest.rev(changes[0]), 
                 mfnode=hg.hex(changes[0]), author=obfuscate(changes[1]),
-                desc=nl2br(cgi.escape(changes[4])), date=datestr)
+                desc=nl2br(cgi.escape(changes[4])), date=datestr,
+                files=' '.join(files))
 
         (c, a, d) = self.repo.diffrevs(parents[0], self.node)
         change = self.repo.changelog.read(parents[0])
