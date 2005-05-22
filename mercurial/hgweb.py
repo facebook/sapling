@@ -25,26 +25,32 @@ def obfuscate(text):
 def httphdr(type):
     print 'Content-type: %s\n' % type
 
+def write(*things):
+    for thing in things:
+        if hasattr(thing, "__iter__"):
+            for part in thing:
+                write(part)
+        else:
+            sys.stdout.write(str(thing))
+
 class template:
     def __init__(self, tmpl_dir):
         self.tmpl_dir = tmpl_dir
     def do_page(self, tmpl_fn, **map):
-        out = []
         txt = file(os.path.join(self.tmpl_dir, tmpl_fn)).read()
         while txt:
             m = re.search(r"#([a-zA-Z0-9]+)#", txt)
             if m:
-                out.append(txt[:m.start(0)])
+                yield txt[:m.start(0)]
                 v = map.get(m.group(1), "")
                 if callable(v):
-                   for y in v(**map): out.append(y)
+                   for y in v(**map): yield y
                 else:
-                   out.append(str(v))
+                   yield v
                 txt = txt[m.end(0):]
             else:
-                out.append(txt)
+                yield txt
                 txt = ''
-        return ''.join(out)
 
 class page:
     def __init__(self, tmpl_dir = "", type="text/html", title="Mercurial Web", 
@@ -52,7 +58,7 @@ class page:
         self.tmpl = template(tmpl_dir)
 
         print 'Content-type: %s; charset=%s\n' % (type, charset)
-        print self.tmpl.do_page('htmlstart.tmpl', title = title)
+        write(self.tmpl.do_page('htmlstart.tmpl', title = title))
 
     def endpage(self):
         print '</BODY>'
@@ -84,7 +90,7 @@ class change_list(page):
         page.__init__(self, tmpl_dir)
         self.repo = repo
         self.numchanges = numchanges
-        print self.tmpl.do_page('changestitle.tmpl', reponame=reponame)
+        write(self.tmpl.do_page('changestitle.tmpl', reponame=reponame))
 
     def content(self, hi=None):
         cl = []
@@ -135,10 +141,10 @@ class change_list(page):
         for f in changes[3]:
             files.append('<a href="?cmd=file;cs=%s;fn=%s">%s</a>&nbsp;&nbsp;' \
                 % (hn, f, cgi.escape(f)))
-        print self.tmpl.do_page('change_table.tmpl', 
+        write(self.tmpl.do_page('change_table.tmpl',
                 author=obfuscate(changes[1]),
                 desc=nl2br(cgi.escape(changes[4])), date=datestr, 
-                files=' '.join(files), revnum=i, revnode=hn)
+                files=' '.join(files), revnum=i, revnode=hn))
 
 class checkin(page):
     def __init__(self, repo, tmpl_dir, nodestr):
@@ -164,12 +170,12 @@ class checkin(page):
         if i2 != -1:
             p2link = '<a href="?cmd=chkin;nd=%s">%s</a>' % (h2, h2)
 
-        print self.tmpl.do_page('checkin.tmpl', revnum=i, revnode=self.nodestr,
+        write(self.tmpl.do_page('checkin.tmpl', revnum=i, revnode=self.nodestr,
                 p1num=i1, p1node=h1, p2num=i2, p2node=h2, p2link=p2link,
                 mfnum=self.repo.manifest.rev(changes[0]), 
                 mfnode=hg.hex(changes[0]), author=obfuscate(changes[1]),
                 desc=nl2br(cgi.escape(changes[4])), date=datestr,
-                files=' '.join(files))
+                files=' '.join(files)))
 
         (c, a, d) = self.repo.diffrevs(parents[0], self.node)
         change = self.repo.changelog.read(parents[0])
@@ -215,9 +221,9 @@ class mfpage(page):
         mf = self.repo.manifest.read(self.node)
         fns = mf.keys()
         fns.sort()
-        print self.tmpl.do_page('mftitle.tmpl', node = self.nodestr)
+        write(self.tmpl.do_page('mftitle.tmpl', node = self.nodestr))
         for f in fns:
-            print self.tmpl.do_page('mfentry.tmpl', fn=f, node=hg.hex(mf[f]))
+            write(self.tmpl.do_page('mfentry.tmpl', fn=f, node=hg.hex(mf[f])))
 
 class histpage(page):
     def __init__(self, repo, tmpl_dir, fn):
@@ -250,10 +256,10 @@ class histpage(page):
         if i2 != -1:
             p2entry = '&nbsp;&nbsp;%d:<a href="?cmd=file;nd=%s;fn=%s">%s</a>' \
                     % (i2, h2, self.fn, h2 ),
-        print self.tmpl.do_page('hist_ent.tmpl', author=obfuscate(changes[1]),
+        write(self.tmpl.do_page('hist_ent.tmpl', author=obfuscate(changes[1]),
                 csnode=cs, desc=nl2br(cgi.escape(changes[4])), 
                 date = datestr, fn=self.fn, revnode=h, p1num = i1,
-                p1node=h1, p2entry=p2entry)
+                p1node=h1, p2entry=p2entry))
                 
 class hgweb:
     repo_path = "."
