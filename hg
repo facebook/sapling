@@ -65,6 +65,7 @@ def diff(files = None, node1 = None, node2 = None):
         if not node1:
             node1 = repo.current
         (c, a, d) = repo.diffdir(repo.root, node1)
+        a = [] # ignore unknown files in repo, by popular request
         def read(f): return file(os.path.join(repo.root, f)).read()
 
     change = repo.changelog.read(node1)
@@ -72,11 +73,14 @@ def diff(files = None, node1 = None, node2 = None):
     date1 = date(change)
 
     if files:
-        c = filterfiles(c, files)
-        d = filterfiles(d, files)
+        c, a, d = map(lambda x: filterfiles(x, files), (c, a, d))
 
     for f in c:
         to = repo.file(f).read(mmap[f])
+        tn = read(f)
+        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
+    for f in a:
+        to = ""
         tn = read(f)
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
     for f in d:
