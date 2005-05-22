@@ -76,7 +76,9 @@ def diff(files = None, node1 = None, node2 = None):
         c, a, d = map(lambda x: filterfiles(x, files), (c, a, d))
 
     for f in c:
-        to = repo.file(f).read(mmap[f])
+        to = ""
+        if mmap.has_key(f):
+            to = repo.file(f).read(mmap[f])
         tn = read(f)
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
     for f in a:
