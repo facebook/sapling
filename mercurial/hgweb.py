@@ -82,8 +82,8 @@ class page:
         print '</pre>'
 
 class errpage(page):
-    def __init__(self):
-        page.__init__(self, title="Mercurial Web Error Page")
+    def __init__(self, tmpl_dir):
+        page.__init__(self, tmpl_dir, title="Mercurial Web Error Page")
 
 class change_list(page):
     def __init__(self, repo, tmpl_dir, reponame, numchanges = 50):
@@ -204,10 +204,30 @@ class filepage(page):
         print '<div class="filename">%s (%s)</div>' % \
                 (cgi.escape(self.fn), self.nodestr, )
         print '<a href="?cmd=hist;fn=%s">history</a><br />' % self.fn
+        print '<a href="?cmd=ann;fn=%s;nd=%s">annotate</a><br />' % \
+                (self.fn, self.nodestr)
 
     def content(self):
         print '<pre>'
         print cgi.escape(self.repo.file(self.fn).read(self.node))
+        print '</pre>'
+
+class annpage(page):
+    def __init__(self, repo, tmpl_dir, fn, node):
+        page.__init__(self, tmpl_dir)
+        self.repo = repo
+        self.fn = fn
+        self.nodestr = node
+        self.node = hg.bin(node)
+        print '<div class="annotation">Annotated: %s (%s)</div>' % \
+                (cgi.escape(self.fn), self.nodestr, )
+
+    def content(self):
+        print '<pre>'
+        for n, l in self.repo.file(self.fn).annotate(self.node):
+            cnode = self.repo.changelog.lookup(n)
+            write(self.tmpl.do_page('annline.tmpl', cnode=hg.hex(cnode),
+                    cnum='% 6s' % n, fn=self.fn, line=cgi.escape(l[:-1])))
         print '</pre>'
 
 class mfpage(page):
@@ -285,7 +305,7 @@ class hgweb:
             
         elif args['cmd'][0] == 'chkin':
             if not args.has_key('nd'):
-                page = errpage()
+                page = errpage(self.tmpl_dir)
                 print '<div class="errmsg">No Node!</div>'
             else:
                 page = checkin(repo, self.tmpl_dir, args['nd'][0])
@@ -295,7 +315,7 @@ class hgweb:
         elif args['cmd'][0] == 'file':
             if not (args.has_key('nd') and args.has_key('fn')) and \
                     not (args.has_key('cs') and args.has_key('fn')):
-                page = errpage()
+                page = errpage(self.tmpl_dir)
                 print '<div class="errmsg">Invalid Args!</div>'
             else:
                 if args.has_key('nd'):
@@ -309,7 +329,7 @@ class hgweb:
 
         elif args['cmd'][0] == 'mf':
             if not args.has_key('nd'):
-                page = errpage()
+                page = errpage(self.tmpl_dir)
                 print '<div class="errmsg">No Node!</div>'
             else:
                 page = mfpage(repo, self.tmpl_dir, args['nd'][0])
@@ -318,10 +338,23 @@ class hgweb:
 
         elif args['cmd'][0] == 'hist':
             if not args.has_key('fn'):
-                page = errpage()
+                page = errpage(self.tmpl_dir)
                 print '<div class="errmsg">No Filename!</div>'
             else:
                 page = histpage(repo, self.tmpl_dir, args['fn'][0])
+                page.content()
+            page.endpage()
+
+        elif args['cmd'][0] == 'ann':
+            if not args.has_key('fn'):
+                page = errpage(self.tmpl_dir)
+                print '<div class="errmsg">No Filename!</div>'
+            elif not args.has_key('nd'):
+                page = errpage(self.tmpl_dir)
+                print '<div class="errmsg">No Node!</div>'
+            else:
+                page = annpage(repo, self.tmpl_dir, args['fn'][0], 
+                        args['nd'][0])
                 page.content()
             page.endpage()
 
@@ -355,7 +388,7 @@ class hgweb:
             sys.stdout.write(z.flush())
 
         else:
-            page = errpage()
+            page = errpage(self.tmpl_dir)
             print '<div class="errmsg">unknown command: %s</div>' % \
                     cgi.escape(args['cmd'][0])
             page.endpage()
