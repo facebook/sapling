@@ -1,7 +1,7 @@
 header = header.tmpl
 footer = footer.tmpl
 changelog = changelog.tmpl
-naventry = "<a href="?cmd=changelog;pos=#rev#">#rev#</a> "
+naventry = "<a href="?cmd=changelog;rev=#rev#">#rev#</a> "
 filedifflink = "<a href="?cmd=filediff;node=#node#;file=#file#">#file#</a> "
 filenodelink = "<a href="?cmd=file;filenode=#filenode#;file=#file#">#file#</a> "
 fileellipses = "..."
@@ -21,7 +21,7 @@ difflineplus = "<span class=plusline>#line#</span>"
 difflineminus = "<span class=minusline>#line#</span>"
 difflineat = "<span class=atline>#line#</span>"
 diffline = "#line#"
-changelogparent = "<tr><td align=right>parent:&nbsp;</td><td><a href="?cmd=changeset;node=#node">#rev#:#node#</a></td></tr>"
+changelogparent = "<tr><td align=right>parent:&nbsp;</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
 changesetparent = "<tr><td class=metatag>parent:</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
 filerevparent = "<tr><td class=metatag>parent:</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
 fileannotateparent = "<tr><td class=metatag>parent:</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
