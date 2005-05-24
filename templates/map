@@ -8,20 +8,20 @@ fileellipses = "..."
 changelogentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
-manifestdirentry = "<div class=parity#parity#><a href="?cmd=manifest;manifest=#manifest#;path=#path#">#basename#/</a><br /></div>"
-manifestfileentry = "<div class=parity#parity#><a href="?cmd=file;filenode=#filenode#;file=#file#">#basename#</a><br /></div>"
+manifestdirentry = "<div class="parity#parity#"><a href="?cmd=manifest;manifest=#manifest#;path=#path#">#basename#/</a><br /></div>"
+manifestfileentry = "<div class="parity#parity#"><a href="?cmd=file;filenode=#filenode#;file=#file#">#basename#</a><br /></div>"
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
-fileline = "<div class=parity#parity#><span class=lineno>#linenumber# </span>#line#</div>"
+fileline = "<div class="parity#parity#"><span class="lineno">#linenumber# </span>#line#</div>"
 filelogentry = filelogentry.tmpl
-annotateline = "<tr class=parity#parity#><td class=annotate><a href="?cmd=changeset;node=#node#">#author#@#rev#</a></td><td><pre>#line#</pre></td></tr>"
-difflineplus = "<span class=plusline>#line#</span>"
-difflineminus = "<span class=minusline>#line#</span>"
-difflineat = "<span class=atline>#line#</span>"
+annotateline = "<tr class="parity#parity#"><td class="annotate"><a href="?cmd=changeset;node=#node#">#author#@#rev#</a></td><td><pre>#line#</pre></td></tr>"
+difflineplus = "<span class="plusline">#line#</span>"
+difflineminus = "<span class="minusline">#line#</span>"
+difflineat = "<span class="atline">#line#</span>"
 diffline = "#line#"
-changelogparent = "<tr><td align=right>parent:&nbsp;</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
-changesetparent = "<tr><td class=metatag>parent:</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
-filerevparent = "<tr><td class=metatag>parent:</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
-fileannotateparent = "<tr><td class=metatag>parent:</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
+changelogparent = "<tr><td align="right">parent:&nbsp;</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
+changesetparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
+filerevparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
+fileannotateparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>"
