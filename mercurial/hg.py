@@ -64,7 +64,7 @@ class manifest(revlog):
 
     def diff(self, a, b):
         # this is sneaky, as we're not actually using a and b
-        if self.listcache and len(self.listcache[0]) == len(a):
+        if self.listcache and self.addlist and self.listcache[0] == a:
             d = mdiff.diff(self.listcache[1], self.addlist, 1)
             if mdiff.patch(a, d) != b:
                 sys.stderr.write("*** sortdiff failed, falling back ***\n")
@@ -83,6 +83,7 @@ class manifest(revlog):
         n = self.addrevision(text, transaction, link, p1, p2)
         self.mapcache = (n, map)
         self.listcache = (text, self.addlist)
+        self.addlist = None
 
         return n
 
