@@ -14,7 +14,9 @@ from difflib import SequenceMatcher
 
 class filelog(revlog):
     def __init__(self, opener, path):
-        revlog.__init__(self, opener, path + ".i", path + ".d")
+        revlog.__init__(self, opener,
+                        os.path.join("data", path + ".i"),
+                        os.path.join("data", path + ".d"))
 
     def read(self, node):
         return self.revision(node)
@@ -241,7 +243,6 @@ class localrepository:
             os.mkdir(self.join("data"))
 
         self.opener = opener(self.path)
-        self.fileopener = opener(self.join("data"))
         self.manifest = manifest(self.opener)
         self.changelog = changelog(self.opener)
         self.ignorelist = None
@@ -290,7 +291,7 @@ class localrepository:
         return os.path.join(self.path, f)
 
     def file(self, f):
-        return filelog(self.fileopener, f)
+        return filelog(self.opener, f)
 
     def transaction(self):
         return transaction(self.opener, self.join("journal"),
