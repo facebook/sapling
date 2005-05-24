@@ -16,4 +16,4 @@ setup(name='mercurial',
       license='GNU GPL',
       packages=['mercurial'],
       ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c'])],
-      scripts=['hg', 'hgweb.py'])
+      scripts=['hg'])
