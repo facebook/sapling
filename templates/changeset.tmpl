@@ -1,42 +1,39 @@
-Content-type: text/html
-
-<html>
+#header#
+<title>#repo#: changeset #node#</title>
+</head>
 <body>
+
+<div class=buttons>
 <a href="?cmd=changelog&pos=#rev#">changelog</a>
 <a href="?cmd=manifest;manifest=#manifest#;path=/">manifest</a>
+</div>
 
 <h2>changeset: #shortdesc#</h2>
 
 <table>
 <tr>
- <td align=right>revision:</td>
+ <td class=metatag>revision:</td>
  <td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>
+#parent1#
+#parent2#
 <tr>
- <td align=right>parent:</td>
- <td><a href="?cmd=changeset;node=#p1#">#p1rev#:#p1#</a></td></tr>
-<tr>
- <td align=right>parent:</td>
- <td><a href="?cmd=changeset;node=#p2#">#p2rev#:#p2#</a></td></tr>
-<tr>
- <td align=right>manifest:</td>
+ <td class=metatag>manifest:</td>
  <td><a href="?cmd=manifest;manifest=#manifest#;path=/">#rev#:#manifest#</a></td></tr>
 <tr>
- <td align=right>author:</td>
+ <td class=metatag>author:</td>
  <td>#author#</td></tr>
 <tr>
- <td align=right>date:</td>
+ <td class=metatag>date:</td>
  <td>#date#</td></tr>
 <tr>
- <td align=right valign=top>files:</td>
+ <td class=metatag valign=top>files:</td>
  <td>#files#</td></tr>
 <tr>
- <td align=right valign=top>description:</td>
+ <td class=metatag valign=top>description:</td>
  <td>#desc#</td></tr>
 </table>
 
-<hr />
-
-<pre>
+<pre class=parity0>
 #diff#
 </pre>
 

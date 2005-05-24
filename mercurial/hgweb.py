@@ -122,6 +122,10 @@ class hgweb:
         if len(files) > self.maxfiles:
             yield self.t("fileellipses")
 
+    def parent(self, t1, node, rev):
+        if node != hex(nullid):
+            yield self.t(t1, node = node, rev = rev)
+
     def diff(self, node1, node2, files):
         def filterfiles(list, files):
             l = [ x for x in list if x in files ]
@@ -169,6 +173,12 @@ class hgweb:
             tn = ""
             yield prettyprint(mdiff.unidiff(to, date1, tn, date2, f))
 
+    def header(self):
+        yield self.t("header", repo = self.reponame)
+
+    def footer(self):
+        yield self.t("footer", repo = self.reponame)
+
     def changelog(self, pos=None):
         def changenav():
             def seq(factor = 1):
@@ -191,6 +201,7 @@ class hgweb:
             yield self.t("naventry", rev = count - 1)
 
         def changelist():
+            parity = (start - end) & 1
             cl = self.repo.changelog
             l = [] # build a list in forward order for efficiency
             for i in range(start, end + 1):
@@ -202,9 +213,14 @@ class hgweb:
 
                 l.insert(0, self.t(
                     'changelogentry',
+                    parity = parity,
                     author = obfuscate(changes[1]),
                     shortdesc = cgi.escape(changes[4].splitlines()[0]),
                     age = age(t),
+                    parent1 = self.parent("changelogparent",
+                                          hex(p1), cl.rev(p1)),
+                    parent2 = self.parent("changelogparent",
+                                          hex(p2), cl.rev(p2)),
                     p1 = hex(p1), p2 = hex(p2),
                     p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                     manifest = hex(changes[0]),
@@ -213,6 +229,7 @@ class hgweb:
                     files = self.listfilediffs(changes[3], n),
                     rev = i,
                     node = hn))
+                parity = 1 - parity
 
             yield l
 
@@ -222,8 +239,12 @@ class hgweb:
         start = max(0, pos - self.maxchanges)
         end = min(count - 1, start + self.maxchanges)
 
-        yield self.t('changelog', repo = self.reponame, changenav = changenav,
-                     rev = pos, changesets = count, changelist = changelist)
+        yield self.t('changelog',
+                     header = self.header(),
+                     footer = self.footer(),
+                     repo = self.reponame,
+                     changenav = changenav,
+                     rev = pos, changesets = count, entries = changelist)
 
     def changeset(self, nodeid):
         n = bin(nodeid)
@@ -243,10 +264,17 @@ class hgweb:
             yield self.diff(p1, n, changes[3])
 
         yield self.t('changeset',
+                     header = self.header(),
+                     footer = self.footer(),
+                     repo = self.reponame,
                      diff = diff,
                      rev = cl.rev(n),
                      node = nodeid,
                      shortdesc = cgi.escape(changes[4].splitlines()[0]),
+                     parent1 = self.parent("changesetparent",
+                                           hex(p1), cl.rev(p1)),
+                     parent2 = self.parent("changesetparent",
+                                           hex(p2), cl.rev(p2)),
                      p1 = hex(p1), p2 = hex(p2),
                      p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                      manifest = hex(changes[0]),
@@ -262,6 +290,8 @@ class hgweb:
 
         def entries():
             l = []
+            parity = (count - 1) & 1
+            
             for i in range(count):
 
                 n = fl.node(i)
@@ -272,6 +302,7 @@ class hgweb:
                 t = float(cs[2].split(' ')[0])
 
                 l.insert(0, self.t("filelogentry",
+                                   parity = parity,
                                    filenode = hex(n),
                                    filerev = i,
                                    file = f,
@@ -282,10 +313,14 @@ class hgweb:
                                    shortdesc = cgi.escape(cs[4].splitlines()[0]),
                                    p1 = hex(p1), p2 = hex(p2),
                                    p1rev = fl.rev(p1), p2rev = fl.rev(p2)))
+                parity = 1 - parity
 
             yield l
 
         yield self.t("filelog",
+                     header = self.header(),
+                     footer = self.footer(),
+                     repo = self.reponame,
                      file = f,
                      filenode = filenode,
                      entries = entries)
@@ -301,11 +336,21 @@ class hgweb:
         p1, p2 = fl.parents(n)
         t = float(cs[2].split(' ')[0])
         mfn = cs[0]
+
+        def lines():
+            for l, t in enumerate(text.splitlines(1)):
+                yield self.t("fileline",
+                             line = t,
+                             linenumber = "% 6d" % (l + 1),
+                             parity = l & 1)
         
         yield self.t("filerevision", file = f,
+                     header = self.header(),
+                     footer = self.footer(),
+                     repo = self.reponame,
                      filenode = node,
                      path = up(f),
-                     text = text,
+                     text = lines(),
                      rev = changerev,
                      node = hex(cn),
                      manifest = hex(mfn),
@@ -313,6 +358,10 @@ class hgweb:
                      age = age(t),
                      date = time.asctime(time.gmtime(t)),
                      shortdesc = cgi.escape(cs[4].splitlines()[0]),
+                     parent1 = self.parent("filerevparent",
+                                           hex(p1), fl.rev(p1)),
+                     parent2 = self.parent("filerevparent",
+                                           hex(p2), fl.rev(p2)),
                      p1 = hex(p1), p2 = hex(p2),
                      p1rev = fl.rev(p1), p2rev = fl.rev(p2))
 
@@ -332,6 +381,8 @@ class hgweb:
         mfn = cs[0]
 
         def annotate():
+            parity = 1
+            last = None
             for r, l in fl.annotate(n):
                 try:
                     cnode = ncache[r]
@@ -348,7 +399,12 @@ class hgweb:
                         name = name[:f]
                     bcache[r] = name
 
+                if last != cnode:
+                    parity = 1 - parity
+                    last = cnode
+
                 yield self.t("annotateline",
+                             parity = parity,
                              node = hex(cnode),
                              rev = r,
                              author = name,
@@ -356,6 +412,9 @@ class hgweb:
                              line = cgi.escape(l))
 
         yield self.t("fileannotate",
+                     header = self.header(),
+                     footer = self.footer(),
+                     repo = self.reponame,
                      file = f,
                      filenode = node,
                      annotate = annotate,
@@ -367,6 +426,10 @@ class hgweb:
                      age = age(t),
                      date = time.asctime(time.gmtime(t)),
                      shortdesc = cgi.escape(cs[4].splitlines()[0]),
+                     parent1 = self.parent("filerevparent",
+                                           hex(p1), fl.rev(p1)),
+                     parent2 = self.parent("filerevparent",
+                                           hex(p2), fl.rev(p2)),
                      p1 = hex(p1), p2 = hex(p2),
                      p1rev = fl.rev(p1), p2rev = fl.rev(p2))
 
@@ -375,10 +438,8 @@ class hgweb:
         rev = self.repo.manifest.rev(bin(mnode))
         node = self.repo.changelog.node(rev)
 
-        dirs = {}
         files = {}
-        short = {}
-
+ 
         p = path[1:]
         l = len(p)
 
@@ -388,37 +449,41 @@ class hgweb:
             remain = f[l:]
             if "/" in remain:
                 short = remain[:remain.find("/") + 1] # bleah
-                dirs[short] = 1
+                files[short] = (f, None)
             else:
                 short = os.path.basename(remain)
                 files[short] = (f, n)
 
-        def dirlist():
-            dl = dirs.keys()
-            dl.sort()
-            
-            for d in dl:
-                yield self.t("manifestdirentry",
-                             path = os.path.join(path, d),
-                             manifest = mnode, basename = d[:-1])
-
         def filelist():
+            parity = 0
             fl = files.keys()
             fl.sort()
             for f in fl:
                 full, fnode = files[f]
-                yield self.t("manifestfileentry",
-                             file = full, manifest = mnode, filenode = hex(fnode),
-                             basename = f)
+                if fnode:
+                    yield self.t("manifestfileentry",
+                                 file = full,
+                                 manifest = mnode,
+                                 filenode = hex(fnode),
+                                 parity = parity,
+                                 basename = f)
+                else:
+                    yield self.t("manifestdirentry",
+                                 parity = parity,
+                                 path = os.path.join(path, f),
+                                 manifest = mnode, basename = f[:-1])
+                parity = 1 - parity
 
         yield self.t("manifest",
+                     header = self.header(),
+                     footer = self.footer(),
+                     repo = self.reponame,
                      manifest = mnode,
                      rev = rev,
                      node = hex(node),
                      path = path,
                      up = up(path),
-                     dirs = dirlist,
-                     files = filelist)
+                     entries = filelist)
 
     def filediff(self, file, changeset):
         n = bin(changeset)
@@ -431,6 +496,9 @@ class hgweb:
             yield self.diff(p1, n, file)
 
         yield self.t("filediff",
+                     header = self.header(),
+                     footer = self.footer(),
+                     repo = self.reponame,
                      file = file,
                      filenode = hex(mf[file]),
                      node = changeset,
@@ -439,12 +507,7 @@ class hgweb:
                      p1rev = self.repo.changelog.rev(p1),
                      diff = diff)
                      
-    # header and footer, css
     # add tags to things
-    # show parents
-    # diff between rev and parent in changeset and file
-    # manifest links
-    # browse at top
     # tags -> list of changesets corresponding to tags
     # find tag, changeset, file
 

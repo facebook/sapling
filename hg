@@ -463,7 +463,7 @@ elif cmd == "verify":
         except Exception, inst:
             ui.warn("unpacking manifest %s: %s\n" % (hg.short(n), inst))
             errors += 1
-            
+
         ff = [ l.split('\0') for l in delta.splitlines() ]
         for f, fn in ff:
             filenodes.setdefault(f, {})[hg.bin(fn)] = 1

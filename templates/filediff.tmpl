@@ -1,30 +1,31 @@
-Content-type: text/html
-
-<html>
+#header#
+<title>#repo#: #file# diff</title>
+</head>
 <body>
+
+<div class=buttons>
 <a href="?cmd=changelog&rev=#rev#">changelog</a>
 <a href="?cmd=changeset&node=#node#">changeset</a>
 <a href="?cmd=file&file=#file#&filenode=#filenode#">file</a>
 <a href="?cmd=filelog&file=#file#&filenode=#filenode#">revisions</a>
 <a href="?cmd=annotate&file=#file#&filenode=#filenode#">annotate</a>
+</div>
 
 <h2>#file#</h2>
 
 <table>
 <tr>
- <td align=right>revision:</td>
+ <td class=metatag>revision:</td>
  <td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>
 <tr>
- <td align=right>parent:</td>
+ <td class=metatag>parent:</td>
  <td><a href="?cmd=changeset;node=#p1#">#p1rev#:#p1#</a></td></tr>
 </table>
 
-<hr />
-<pre>
+<pre class=parity0>
 #diff#
 </pre>
 
-</body>
-</html
+#footer#
 
 

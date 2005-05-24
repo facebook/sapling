@@ -1,19 +1,16 @@
-Content-Type: text/html
-
-<html>
+#header#
+<title>#repo#: manifest #manifest#</title>
+</head>
 <body>
 
+<div class=buttons>
 <a href="?cmd=changelog&rev=#rev#">changelog</a>
 <a href="?cmd=changeset&node=#node#">changeset</a>
+</div>
 
 <h2>manifest: #path#</h2>
-<p>(#rev#:#manifest#)</p>
 
-<p>
-<a href="?cmd=manifest;manifest=#manifest#;path=#up#">[up]</a><br />
-#dirs#</p>
+<div class=parity1><a href="?cmd=manifest;manifest=#manifest#;path=#up#">[up]</a><br /></div>
+#entries#
 
-<p>#files#</p>
-
-</body>
-</html>
+#footer#
