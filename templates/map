@@ -1,0 +1,20 @@
+changelog = changelog.tmpl
+naventry = "<a href="?cmd=changelog;pos=#rev#">#rev#</a> "
+filedifflink = "<a href="?cmd=filediff;node=#node#;file=#file#">#file#</a> "
+filenodelink = "<a href="?cmd=file;filenode=#filenode#;file=#file#">#file#</a> "
+fileellipses = "..."
+changelogentry = changelogentry.tmpl
+changeset = changeset.tmpl
+manifest = manifest.tmpl
+manifestdirentry = "<a href="?cmd=manifest;manifest=#manifest#;path=#path#">#basename#/</a><br />"
+manifestfileentry = "<a href="?cmd=file;filenode=#filenode#;file=#file#">#basename#</a><br /> "
+filerevision = filerevision.tmpl
+fileannotate = fileannotate.tmpl
+filediff = filediff.tmpl
+filelog = filelog.tmpl
+filelogentry = filelogentry.tmpl
+annotateline = "<tr><td align = right><a href="?cmd=changeset;node=#node#">#author#@#rev#</a>:</td><td><pre>#line#</pre></td></tr>"
+difflineplus = "<span class=plusline>#line#</span>"
+difflineminus = "<span class=minusline>#line#</span>"
+difflineat = "<span class=atline>#line#</span>"
+diffline = "#line#"
