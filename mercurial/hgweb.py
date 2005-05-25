@@ -516,8 +516,8 @@ class hgweb:
 
         if not args.has_key('cmd') or args['cmd'][0] == 'changelog':
             hi = self.repo.changelog.count()
-            if args.has_key('pos'):
-                hi = int(args['pos'][0])
+            if args.has_key('rev'):
+                hi = int(args['rev'][0])
 
             write(self.changelog(hi))
             

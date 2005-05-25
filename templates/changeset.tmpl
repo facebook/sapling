@@ -3,8 +3,8 @@
 </head>
 <body>
 
-<div class=buttons>
-<a href="?cmd=changelog&pos=#rev#">changelog</a>
+<div class="buttons">
+<a href="?cmd=changelog;rev=#rev#">changelog</a>
 <a href="?cmd=manifest;manifest=#manifest#;path=/">manifest</a>
 </div>
 
@@ -12,28 +12,28 @@
 
 <table>
 <tr>
- <td class=metatag>revision:</td>
+ <td class="metatag">revision:</td>
  <td><a href="?cmd=changeset;node=#node#">#rev#:#node#</a></td></tr>
 #parent1#
 #parent2#
 <tr>
- <td class=metatag>manifest:</td>
+ <td class="metatag">manifest:</td>
  <td><a href="?cmd=manifest;manifest=#manifest#;path=/">#rev#:#manifest#</a></td></tr>
 <tr>
- <td class=metatag>author:</td>
+ <td class="metatag">author:</td>
  <td>#author#</td></tr>
 <tr>
- <td class=metatag>date:</td>
+ <td class="metatag">date:</td>
  <td>#date#</td></tr>
 <tr>
- <td class=metatag valign=top>files:</td>
+ <td class="metatag" valign="top">files:</td>
  <td>#files#</td></tr>
 <tr>
- <td class=metatag valign=top>description:</td>
+ <td class="metatag" valign="top">description:</td>
  <td>#desc#</td></tr>
 </table>
 
-<pre class=parity0>
+<pre class="parity0">
 #diff#
 </pre>
 
