@@ -8,7 +8,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import zlib, struct, sha, os, tempfile, binascii
+import zlib, struct, sha, os, tempfile, binascii, heapq
 from mercurial import mdiff
 
 def hex(node): return binascii.hexlify(node)
@@ -276,38 +276,42 @@ class revlog:
         return node
 
     def ancestor(self, a, b):
-        def expand(list, map):
-            a = []
-            while list:
-                n = list.pop(0)
-                map[n] = 1
-                yield n
-                for p in self.parents(n):
-                    if p != nullid and p not in map:
-                        list.append(p)
-            yield nullid
+        # calculate the distance of every node from root
+        dist = {nullid: 0}
+        for i in xrange(self.count()):
+            n = self.node(i)
+            p1, p2 = self.parents(n)
+            dist[n] = max(dist[p1], dist[p2]) + 1
+        
+        # traverse ancestors in order of decreasing distance from root
+        def ancestors(node):
+            # we store negative distances because heap returns smallest member
+            h = [(-dist[node], node)]
+            seen = {}
+            earliest = self.count()
+            while h:
+                d, n = heapq.heappop(h)
+                r = self.rev(n)
+                if n not in seen:
+                    seen[n] = 1
+                    yield (-d, n)
+                    for p in self.parents(n):
+                        heapq.heappush(h, (-dist[p], p))
 
-        amap = {}
-        bmap = {}
-        ag = expand([a], amap)
-        bg = expand([b], bmap)
-        adone = bdone = 0
+        x = ancestors(a)
+        y = ancestors(b)
+        lx = x.next()
+        ly = y.next()
 
-        while not adone or not bdone:
-            if not adone:
-                an = ag.next()
-                if an == nullid:
-                    adone = 1
-                elif an in bmap:
-                    return an
-            if not bdone:
-                bn = bg.next()
-                if bn == nullid:
-                    bdone = 1
-                elif bn in amap:
-                    return bn
-
-        return nullid
+        # increment each ancestor list until it is closer to root than
+        # the other, or they match
+        while 1:
+            if lx == ly:
+                return lx[1]
+            elif lx < ly:
+                ly = y.next()
+            elif lx > ly:
+                lx = x.next()
 
     def group(self, linkmap):
         # given a list of changeset revs, return a set of deltas and
