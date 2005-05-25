@@ -509,6 +509,8 @@ class localrepository:
         unknown = [tip]
         search = []
         fetch = []
+        seen = {}
+        seenbranch = {}
 
         if tip[0] in m:
             self.ui.note("nothing to do!\n")
@@ -516,10 +518,18 @@ class localrepository:
 
         while unknown:
             n = unknown.pop(0)
+            seen[n[0]] = 1
+            
+            self.ui.debug("examining %s:%s\n" % (short(n[0]), short(n[1])))
             if n == nullid: break
+            if n in seenbranch:
+                self.ui.debug("branch already found\n")
+                continue
             if n[1] and n[1] in m: # do we know the base?
-                self.ui.debug("found incomplete branch %s\n" % short(n[1]))
+                self.ui.debug("found incomplete branch %s:%s\n"
+                              % (short(n[0]), short(n[1])))
                 search.append(n) # schedule branch range for scanning
+                seenbranch[n] = 1
             else:
                 if n[2] in m and n[3] in m:
                     if n[1] not in fetch:
@@ -527,9 +537,19 @@ class localrepository:
                                       short(n[1]))
                         fetch.append(n[1]) # earliest unknown
                         continue
-                for b in remote.branches([n[2], n[3]]):
-                    if b[0] not in m:
-                        unknown.append(b)
+
+                r = []
+                for a in n[2:4]:
+                    if a not in seen: r.append(a)
+                    
+                if r:
+                    self.ui.debug("requesting %s\n" %
+                                " ".join(map(short, r)))
+                    for b in remote.branches(r):
+                        self.ui.debug("received %s:%s\n" %
+                                      (short(b[0]), short(b[1])))
+                        if b[0] not in m and b[0] not in seen:
+                            unknown.append(b)
   
         while search:
             n = search.pop(0)
@@ -783,7 +803,7 @@ class remoterepository:
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
         d = self.do_cmd("branches", nodes=n).read()
-        br = [ map(bin, b.split(" ")) for b in d.splitlines() ]
+        br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
         return br
 
     def between(self, pairs):
