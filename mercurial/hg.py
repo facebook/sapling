@@ -298,8 +298,6 @@ class localrepository:
                            self.join("undo"))
 
     def commit(self, parent, update = None, text = ""):
-        tr = self.transaction()
-        
         try:
             remove = [ l[:-1] for l in self.opener("to-remove") ]
             os.unlink(self.join("to-remove"))
@@ -309,6 +307,12 @@ class localrepository:
 
         if update == None:
             update = self.diffdir(self.root, parent)[0]
+
+        if not update:
+            self.ui.status("nothing changed\n")
+            return
+
+        tr = self.transaction()
 
         # check in files
         new = {}
