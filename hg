@@ -431,7 +431,7 @@ elif cmd == "verify":
                 errors += 1
         try:
             changes = repo.changelog.read(n)
-        except Error, inst:
+        except Exception, inst:
             ui.warn("unpacking changeset %s: %s\n" % (short(n), inst))
             errors += 1
             
@@ -508,8 +508,8 @@ elif cmd == "verify":
             # verify contents
             try:
                 t = fl.read(n)
-            except Error, inst:
-                ui.warn("unpacking file %s %s: %s\n" % (f, short(n), inst))
+            except Exception, inst:
+                ui.warn("unpacking file %s %s: %s\n" % (f, hg.short(n), inst))
                 errors += 1
             
             # verify parents
