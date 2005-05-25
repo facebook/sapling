@@ -122,9 +122,9 @@ class hgweb:
         if len(files) > self.maxfiles:
             yield self.t("fileellipses")
 
-    def parent(self, t1, node, rev):
+    def parent(self, t1, node=nullid, rev=-1, **args):
         if node != hex(nullid):
-            yield self.t(t1, node = node, rev = rev)
+            yield self.t(t1, node = node, rev = rev, **args)
 
     def diff(self, node1, node2, files):
         def filterfiles(list, files):
@@ -359,9 +359,9 @@ class hgweb:
                      date = time.asctime(time.gmtime(t)),
                      shortdesc = cgi.escape(cs[4].splitlines()[0]),
                      parent1 = self.parent("filerevparent",
-                                           hex(p1), fl.rev(p1)),
+                                           hex(p1), fl.rev(p1), file=f),
                      parent2 = self.parent("filerevparent",
-                                           hex(p2), fl.rev(p2)),
+                                           hex(p2), fl.rev(p2), file=f),
                      p1 = hex(p1), p2 = hex(p2),
                      p1rev = fl.rev(p1), p2rev = fl.rev(p2))
 
@@ -426,10 +426,10 @@ class hgweb:
                      age = age(t),
                      date = time.asctime(time.gmtime(t)),
                      shortdesc = cgi.escape(cs[4].splitlines()[0]),
-                     parent1 = self.parent("filerevparent",
-                                           hex(p1), fl.rev(p1)),
-                     parent2 = self.parent("filerevparent",
-                                           hex(p2), fl.rev(p2)),
+                     parent1 = self.parent("fileannotateparent",
+                                           hex(p1), fl.rev(p1), file=f),
+                     parent2 = self.parent("fileannotateparent",
+                                           hex(p2), fl.rev(p2), file=f),
                      p1 = hex(p1), p2 = hex(p2),
                      p1rev = fl.rev(p1), p2rev = fl.rev(p2))
 
