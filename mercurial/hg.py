@@ -612,6 +612,7 @@ class localrepository:
 
         tr = self.transaction()
         simple = True
+        need = {}
 
         self.ui.status("adding changesets\n")
         # pull off the changeset group
@@ -634,9 +635,62 @@ class localrepository:
             simple = False
             resolverev = self.changelog.count()
 
+            # resolve the manifest to determine which files
+            # we care about merging
+            self.ui.status("resolving manifests\n")
+            ma = self.manifest.ancestor(mm, mo)
+            omap = self.manifest.read(mo) # other
+            amap = self.manifest.read(ma) # ancestor
+            mmap = self.manifest.read(mm) # mine
+            nmap = {}
+
+            self.ui.debug(" ancestor %s local %s remote %s\n" %
+                          (short(ma), short(mm), short(mo)))
+
+            for f, mid in mmap.iteritems():
+                if f in omap:
+                    if mid != omap[f]:
+                        self.ui.debug(" %s versions differ, do resolve\n" % f)
+                        need[f] = mid # use merged version or local version
+                    else:
+                        nmap[f] = mid # keep ours
+                    del omap[f]
+                elif f in amap:
+                    if mid != amap[f]:
+                        r = self.ui.prompt(
+                            (" local changed %s which remote deleted\n" % f) +
+                            "(k)eep or (d)elete?", "[kd]", "k")
+                        if r == "k": nmap[f] = mid
+                    else:
+                        self.ui.debug("other deleted %s\n" % f)
+                        pass # other deleted it
+                else:
+                    self.ui.debug("local created %s\n" %f)
+                    nmap[f] = mid # we created it
+
+            del mmap
+
+            for f, oid in omap.iteritems():
+                if f in amap:
+                    if oid != amap[f]:
+                        r = self.ui.prompt(
+                            ("remote changed %s which local deleted\n" % f) +
+                            "(k)eep or (d)elete?", "[kd]", "k")
+                        if r == "k": nmap[f] = oid
+                    else:
+                        pass # probably safe
+                else:
+                    self.ui.debug("remote created %s, do resolve\n" % f)
+                    need[f] = oid
+
+            del omap
+            del amap
+
+        new = need.keys()
+        new.sort()
+
         # process the files
         self.ui.status("adding files\n")
-        new = {}
         while 1:
             f = getchunk(4)
             if not f: break
@@ -645,11 +699,17 @@ class localrepository:
             fl = self.file(f)
             o = fl.tip()
             n = fl.addgroup(fg, lambda x: self.changelog.rev(x), tr)
-            if not simple:
-                if o == n: continue
-                # this file has changed between branches, so it must be
-                # represented in the merge changeset
-                new[f] = self.merge3(fl, f, o, n, tr, resolverev)
+            if f in need:
+                del need[f]
+                # manifest resolve determined we need to merge the tips
+                nmap[f] = self.merge3(fl, f, o, n, tr, resolverev)
+
+        if need:
+            # we need to do trivial merges on local files
+            for f in new:
+                if f not in need: continue
+                fl = self.file(f)
+                nmap[f] = self.merge3(fl, f, need[f], fl.tip(), tr, resolverev)
 
         # For simple merges, we don't need to resolve manifests or changesets
         if simple:
@@ -657,64 +717,11 @@ class localrepository:
             tr.close()
             return
 
-        # resolve the manifest to point to all the merged files
-        self.ui.status("resolving manifests\n")
-        ma = self.manifest.ancestor(mm, mo)
-        omap = self.manifest.read(mo) # other
-        amap = self.manifest.read(ma) # ancestor
-        mmap = self.manifest.read(mm) # mine
-        self.ui.debug("ancestor %s local %s remote %s\n" %
-                      (short(ma), short(mm), short(mo)))
-        nmap = {}
-
-        for f, mid in mmap.iteritems():
-            if f in omap:
-                if mid != omap[f]:
-                    self.ui.debug("%s versions differ\n" % f)
-                    if f in new: self.ui.debug("%s updated in resolve\n" % f)
-                    # use merged version or local version
-                    nmap[f] = new.get(f, mid)
-                else:
-                    nmap[f] = mid # keep ours
-                del omap[f]
-            elif f in amap:
-                if mid != amap[f]:
-                    r = self.ui.prompt(
-                        ("local changed %s which remote deleted\n" % f) +
-                        "(k)eep or (d)elete?", "[kd]", "k")
-                    if r == "k": nmap[f] = mid
-                else:
-                    self.ui.debug("other deleted %s\n" % f)
-                    pass # other deleted it
-            else:
-                self.ui.debug("local created %s\n" %f)
-                nmap[f] = mid # we created it
-                
-        del mmap
-
-        for f, oid in omap.iteritems():
-            if f in amap:
-                if oid != amap[f]:
-                    r = self.ui.prompt(
-                        ("remote changed %s which local deleted\n" % f) +
-                        "(k)eep or (d)elete?", "[kd]", "k")
-                    if r == "k": nmap[f] = oid
-                else:
-                    pass # probably safe
-            else:
-                self.ui.debug("remote created %s\n" % f)
-                nmap[f] = new.get(f, oid) # remote created it
-
-        del omap
-        del amap
-
         node = self.manifest.add(nmap, tr, resolverev, mm, mo)
 
         # Now all files and manifests are merged, we add the changed files
         # and manifest id to the changelog
         self.ui.status("committing merge changeset\n")
-        new = new.keys()
-        new.sort()
         if co == cn: cn = -1
 
         edittext = "\nHG: merge resolve\n" + \
