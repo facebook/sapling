@@ -36,10 +36,12 @@ def help():
  init                  create a new repository in this directory
  log <file>            show revision history of a single file
  merge <path>          merge changes from <path> into local repository
+ recover               rollback an interrupted transaction
  remove [files...]     remove the given files in the next commit
  serve                 export the repository via HTTP
  status                show new, missing, and changed files in working dir
  tags                  show current changeset tags
+ undo                  undo the last transaction
 """
 
 def filterfiles(list, files):
@@ -424,11 +426,9 @@ elif cmd == "tags":
         print "%-30s %5d:%s" % (k, repo.changelog.rev(n), hg.hex(n))
 
 elif cmd == "recover":
-    ui.status("rolling back any existing journal")
     repo.recover()
 
 elif cmd == "undo":
-    ui.status("rolling back previous transaction")
     repo.recover("undo")
 
 elif cmd == "verify":

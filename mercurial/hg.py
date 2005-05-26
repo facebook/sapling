@@ -300,7 +300,10 @@ class localrepository:
     def recover(self, f = "journal"):
         self.lock()
         if os.path.exists(self.join(f)):
+            self.ui.status("attempting to rollback %s information\n" % f)
             return rollback(self.opener, self.join(f))
+        else:
+            self.ui.warn("no %s information available\n" % f)
 
     def lock(self, wait = 1):
         try:
