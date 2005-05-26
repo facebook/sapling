@@ -25,3 +25,5 @@ changelogparent = "<tr><td align="right">parent:&nbsp;</td><td><a href="?cmd=cha
 changesetparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=changeset;node=#node#">#node#</a></td></tr>"
 filerevparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=file;file=#file#;filenode=#node#">#node#</a></td></tr>"
 fileannotateparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=annotate;file=#file#;filenode=#node#">#node#</a></td></tr>"
+tags = tags.tmpl
+tagentry = "<div class="parity#parity#"><tt>#node#</tt> <a href="?cmd=changeset;node=#node#">#tag#</a><br /></div>"

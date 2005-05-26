@@ -240,7 +240,9 @@ class hgweb:
 
             yield l
 
-        count = self.repo.changelog.count()
+        cl = self.repo.changelog
+        mf = cl.read(cl.tip())[0]
+        count = cl.count()
         pos = pos or count - 1
         end = min(pos, count - 1)
         start = max(0, pos - self.maxchanges)
@@ -251,6 +253,7 @@ class hgweb:
                      footer = self.footer(),
                      repo = self.reponame,
                      changenav = changenav,
+                     manifest = hex(mf),
                      rev = pos, changesets = count, entries = changelist)
 
     def changeset(self, nodeid):
@@ -492,6 +495,30 @@ class hgweb:
                      up = up(path),
                      entries = filelist)
 
+    def tags(self):
+        cl = self.repo.changelog
+        mf = cl.read(cl.tip())[0]
+
+        self.repo.lookup(0) # prime the cache
+        i = self.repo.tags.items()
+        i.sort()
+
+        def entries():
+            parity = 0
+            for k,n in i:
+                yield self.t("tagentry",
+                             parity = parity,
+                             tag = k,
+                             node = hex(n))
+                parity = 1 - parity
+
+        yield self.t("tags",
+                     header = self.header(),
+                     footer = self.footer(),
+                     repo = self.reponame,
+                     manifest = hex(mf),
+                     entries = entries)
+
     def filediff(self, file, changeset):
         n = bin(changeset)
         cl = self.repo.changelog
@@ -537,6 +564,9 @@ class hgweb:
 
         elif args['cmd'][0] == 'manifest':
             write(self.manifest(args['manifest'][0], args['path'][0]))
+
+        elif args['cmd'][0] == 'tags':
+            write(self.tags())
 
         elif args['cmd'][0] == 'filediff':
             write(self.filediff(args['file'][0], args['node'][0]))
