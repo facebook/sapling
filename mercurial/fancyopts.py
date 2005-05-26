@@ -1,6 +1,6 @@
 import sys, os, getopt
 
-def fancyopts(args, options, state, syntax=''):
+def fancyopts(args, options, state, syntax='', minlen = 0):
     long=[]
     short=''
     map={}
@@ -18,7 +18,7 @@ def fancyopts(args, options, state, syntax=''):
             if c: print '   %s' % c
         sys.exit(0)
 
-    if len(args) == 0:
+    if len(args) < minlen:
         help(state, None, args)
 
     options=[('h', 'help', help, 'Show usage info')] + options
