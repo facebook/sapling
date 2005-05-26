@@ -7,6 +7,11 @@ def unidiff(a, ad, b, bd, fn):
     a = a.splitlines(1)
     b = b.splitlines(1)
     l = list(difflib.unified_diff(a, b, "a/" + fn, "b/" + fn, ad, bd))
+
+    for ln in xrange(len(l)):
+        if l[ln][-1] != '\n':
+            l[ln] += "\n\ No newline at end of file\n"
+
     return "".join(l)
 
 def textdiff(a, b):
