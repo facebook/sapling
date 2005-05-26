@@ -7,7 +7,7 @@
 
 import sys, struct, sha, socket, os, time, re, urllib2
 import urllib
-from mercurial import byterange
+from mercurial import byterange, lock
 from mercurial.transaction import *
 from mercurial.revlog import *
 from difflib import SequenceMatcher
@@ -297,7 +297,17 @@ class localrepository:
         return transaction(self.opener, self.join("journal"),
                            self.join("undo"))
 
+    def lock(self, wait = 1):
+        try:
+            return lock.lock(self.join("lock"), 0)
+        except lock.LockHeld, inst:
+            if wait:
+                self.ui.warn("waiting for lock held by %s\n" % inst.args[0])
+                return lock.lock(self.join("lock"), wait)
+            raise inst
+
     def commit(self, parent, update = None, text = ""):
+        self.lock()
         try:
             remove = [ l[:-1] for l in self.opener("to-remove") ]
             os.unlink(self.join("to-remove"))
@@ -612,6 +622,7 @@ class localrepository:
             yield "".join([l, f, g])
 
     def addchangegroup(self, generator):
+        self.lock()
         class genread:
             def __init__(self, generator):
                 self.g = generator
