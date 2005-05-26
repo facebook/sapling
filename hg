@@ -37,6 +37,7 @@ def help():
  log <file>            show revision history of a single file
  merge <path>          merge changes from <path> into local repository
  remove [files...]     remove the given files in the next commit
+ serve                 export the repository via HTTP
  status                show new, missing, and changed files in working dir
  tags                  show current changeset tags
 """
@@ -548,6 +549,22 @@ elif cmd == "verify":
     if errors:
         ui.warn("%d integrity errors encountered!\n" % errors)
         sys.exit(1)
+
+elif cmd == "serve":
+    from mercurial import hgweb
+    
+    soptions = {}
+    opts = [('p', 'port', 8000, 'listen port'),
+            ('a', 'address', '', 'interface address'),
+            ('n', 'name', os.getcwd(), 'repository name'),
+            ('t', 'templates', "", 'template map')
+            ]
+    
+    args = fancyopts.fancyopts(args, opts, soptions,
+                              'hg serve [options]')
+
+    hgweb.server(repo.root, soptions["name"], soptions["templates"],
+                 soptions["address"], soptions["port"])
     
 else:
     print "unknown command\n"

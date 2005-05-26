@@ -578,5 +578,64 @@ class hgweb:
         else:
             write(self.t("error"))
 
-if __name__ == "__main__":
-    hgweb().run()
+def server(path, name, templates, address, port):
+
+    import BaseHTTPServer
+    import sys, os
+
+    class hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.do_hgweb()
+
+        def do_GET(self):
+            self.do_hgweb()
+
+        def do_hgweb(self):
+            query = ""
+            p = self.path.find("?")
+            if p:
+                query = self.path[p + 1:]
+                query = query.replace('+', ' ')
+        
+            env = {}
+            env['GATEWAY_INTERFACE'] = 'CGI/1.1'
+            env['REQUEST_METHOD'] = self.command
+            if query:
+                env['QUERY_STRING'] = query
+            host = self.address_string()
+            if host != self.client_address[0]:
+                env['REMOTE_HOST'] = host
+                env['REMOTE_ADDR'] = self.client_address[0]
+
+            if self.headers.typeheader is None:
+                env['CONTENT_TYPE'] = self.headers.type
+            else:
+                env['CONTENT_TYPE'] = self.headers.typeheader
+            length = self.headers.getheader('content-length')
+            if length:
+                env['CONTENT_LENGTH'] = length
+            accept = []
+            for line in self.headers.getallmatchingheaders('accept'):
+                if line[:1] in "\t\n\r ":
+                    accept.append(line.strip())
+                else:
+                    accept = accept + line[7:].split(',')
+            env['HTTP_ACCEPT'] = ','.join(accept)
+
+            os.environ.update(env)
+
+            save = sys.argv, sys.stdin, sys.stdout, sys.stderr
+            try:
+                sys.stdin = self.rfile
+                sys.stdout = self.wfile
+                sys.argv = ["hgweb.py"]
+                if '=' not in query:
+                    sys.argv.append(query)
+                self.send_response(200, "Script output follows")
+                hg.run()
+            finally:
+                sys.argv, sys.stdin, sys.stdout, sys.stderr = save
+
+    hg = hgweb(path, name, templates)
+    httpd = BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
+    httpd.serve_forever()
