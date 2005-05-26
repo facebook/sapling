@@ -15,15 +15,17 @@ import os
 
 class transaction:
     def __init__(self, opener, journal, after = None):
+        self.journal = None
+
+        # abort here if the journal already exists
+        if os.path.exists(journal):
+            raise "journal already exists - run hg recover"
+
         self.opener = opener
         self.after = after
         self.entries = []
         self.map = {}
         self.journal = journal
-
-        # abort here if the journal already exists
-        if os.path.exists(self.journal):
-            raise "journal already exists!"
 
         self.file = open(self.journal, "w")
 
@@ -63,9 +65,9 @@ class transaction:
 
         print "rollback completed"
         
-    def recover(self):
-        for l in open(self.journal).readlines():
-            f, o = l.split('\0')
-            self.opener(f, "a").truncate(int(o))
-        os.unlink(self.journal)
+def rollback(opener, file):
+    for l in open(file).readlines():
+        f, o = l.split('\0')
+        opener(f, "a").truncate(int(o))
+    os.unlink(file)
 

@@ -297,6 +297,11 @@ class localrepository:
         return transaction(self.opener, self.join("journal"),
                            self.join("undo"))
 
+    def recover(self, f = "journal"):
+        self.lock()
+        if os.path.exists(self.join(f)):
+            return rollback(self.opener, self.join(f))
+
     def lock(self, wait = 1):
         try:
             return lock.lock(self.join("lock"), 0)
