@@ -13,6 +13,11 @@ cgitb.enable()
 import os, cgi, time, re, difflib, sys, zlib
 from mercurial.hg import *
 
+def templatepath():
+    for f in "templates/map", "../templates/map":
+        p = os.path.join(os.path.dirname(__file__), f)
+        if os.path.isfile(p): return p
+
 def age(t):
     def plural(t, c):
         if c == 1: return t
@@ -102,7 +107,9 @@ class hgweb:
     maxchanges = 20
     maxfiles = 10
 
-    def __init__(self, path, name, templatemap):
+    def __init__(self, path, name, templatemap = ""):
+        templatemap = templatemap or templatepath()
+
         self.reponame = name
         self.repo = repository(ui(), path)
         self.t = templater(templatemap)
