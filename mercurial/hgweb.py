@@ -525,7 +525,10 @@ class hgweb:
             hi = self.repo.changelog.count()
             if args.has_key('rev'):
                 hi = args['rev'][0]
-                hi = self.repo.changelog.rev(self.repo.lookup(hi))
+                try:
+                    hi = self.repo.changelog.rev(self.repo.lookup(hi))
+                except KeyError:
+                    hi = self.repo.changelog.count()
 
             write(self.changelog(hi))
             
