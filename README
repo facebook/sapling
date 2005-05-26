@@ -20,9 +20,9 @@ Setting up a Mercurial project:
  $ hg init         # creates .hg
  $ hg status       # show changes between repo and working dir
  $ hg diff         # generate a unidiff
- $ hg export       # export a changeset as a diff
  $ hg addremove    # add all unknown files and remove all missing files
  $ hg commit       # commit all changes, edit changelog entry
+ $ hg export       # export a changeset as a diff
 
  Mercurial will look for a file named .hgignore in the root of your
  repository contains a set of regular expressions to ignore in file
@@ -33,13 +33,14 @@ Mercurial commands:
  $ hg history          # show changesets
  $ hg log Makefile     # show commits per file
  $ hg checkout         # check out the tip revision
- $ hg checkout <hash>  # check out a specified changeset
+ $ hg checkout <id>    # check out a specified changeset
+                       # IDs can be tags, revision numbers, or unique
+                       # subsets of changeset hash numbers
  $ hg add foo          # add a new file for the next commit
  $ hg remove bar       # mark a file as removed
  $ hg verify           # check repo integrity
  $ hg tags             # show current tags
  $ hg annotate [files] # show changeset numbers for each file line
- $ hg blame [files]    # show commit users for each file line
 
 Branching and merging:
 
@@ -69,34 +70,19 @@ Importing patches:
 
 Network support:
 
- The simple way:
-
  # pull the self-hosting hg repo
  foo$ hg init
  foo$ hg merge http://selenic.com/hg/
  foo$ hg checkout  # hg co works too
 
- # export your .hg directory as a directory on your webserver
- foo$ ln -s .hg ~/public_html/hg-linux 
-
+ # export your current repo via HTTP with browsable interface
+ foo$ hg serve -n "My repo" -p 80
+ 
  # merge changes from a remote machine
- bar$ hg merge http://foo/~user/hg-linux
+ bar$ hg merge hg://foo/
+ bar$ hg co        # checkout the result
 
- The new, fast, experimental way:
-
- # pull the self-hosting hg repo
- foo$ hg init
- foo$ hg merge hg://selenic.com/hg/
- foo$ hg checkout  # hg co works too
-
- # Set up the CGI server on your webserver
- foo$ ln -s .hg ~/public_html/hg-linux/.hg
- foo$ cp hgweb.py ~/public_html/hg-linux/index.cgi
-
- # merge changes from a remote machine
- bar$ hg merge hg://foo/~user/hg-linux
-
- Another approach which does perform well right now is to use rsync.
- Simply rsync the remote repo to a read-only local copy and then do a
- local pull.
+ # Set up a CGI server on your webserver
+ foo$ cp hgweb.cgi ~/public_html/hg-linux/index.cgi
+ foo$ emacs ~/public_html/hg-linux/index.cgi # adjust the defaults
 
