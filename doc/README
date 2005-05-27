@@ -1,0 +1,25 @@
+Files in this directory:
+
+README - this file
+hg.1.txt - asciidoc source for the files
+hg.1 - groff man page for hg
+hg.1.html - man page in html format
+
+How to generate the man page and html files
+
+For now we use asciidoc which is available at:
+
+http://www.methods.co.nz/asciidoc/
+
+the file hg.1.txt is the input file, to generate the man page:
+
+asciidoc.py -d manpage -b docbook hg.1.txt
+xmlto man hg.1.xml
+
+to display:
+
+groff -mandoc -Tascii hg.1 | more
+
+to create the html page (without stylesheets):
+
+asciidoc.py -b html hg.1.txt
