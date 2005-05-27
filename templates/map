@@ -1,7 +1,7 @@
 header = header.tmpl
 footer = footer.tmpl
 changelog = changelog.tmpl
-naventry = "<a href="?cmd=changelog;rev=#rev#">#rev#</a> "
+naventry = "<a href="?cmd=changelog;rev=#rev#">#label#</a> "
 filedifflink = "<a href="?cmd=filediff;node=#node#;file=#file#">#file#</a> "
 filenodelink = "<a href="?cmd=file;filenode=#filenode#;file=#file#">#file#</a> "
 fileellipses = "..."

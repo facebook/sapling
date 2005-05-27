@@ -199,22 +199,25 @@ class hgweb:
         def changenav():
             def seq(factor = 1):
                 yield 1 * factor
-                yield 2 * factor
-                yield 5 * factor
+                yield 3 * factor
+                #yield 5 * factor
                 for f in seq(factor * 10):
                     yield f
-                    
-            linear = range(0, count - 2, self.maxchanges)[0:8]
 
-            for i in linear:
-                yield self.t("naventry", rev = max(i, 1))
+            l = []
+            for f in seq():
+                if f < self.maxchanges / 2: continue
+                if f > count: break
+                r = "%d" % f
+                if pos + f < count - (f/2): l.append(("+" + r, pos + f))
+                if pos - f >= 0 + (f/2): l.insert(0, ("-" + r, pos - f))
 
-            for s in seq():
-                if s > count - 2: break
-                if s > linear[-1]:
-                    yield self.t("naventry", rev = s)
+            yield self.t("naventry", rev = 0, label="(0)")
                     
-            yield self.t("naventry", rev = count - 1)
+            for label, rev in l:
+                yield self.t("naventry", label = label, rev = rev)
+
+            yield self.t("naventry", rev = count - 1, label="tip")
 
         def changelist():
             parity = (start - end) & 1
