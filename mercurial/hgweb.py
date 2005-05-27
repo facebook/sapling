@@ -195,7 +195,7 @@ class hgweb:
     def footer(self):
         yield self.t("footer", repo = self.reponame)
 
-    def changelog(self, pos=None):
+    def changelog(self, pos):
         def changenav():
             def seq(factor = 1):
                 yield 1 * factor
@@ -255,7 +255,6 @@ class hgweb:
         cl = self.repo.changelog
         mf = cl.read(cl.tip())[0]
         count = cl.count()
-        pos = pos or count - 1
         end = min(pos, count - 1)
         start = max(0, pos - self.maxchanges)
         end = min(count - 1, start + self.maxchanges)
