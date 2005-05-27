@@ -808,7 +808,7 @@ class localrepository:
             os.unlink(b)
             os.unlink(c)
             
-        return fl.addrevision(text, transaction, link, my, other)
+        return fl.add(text, transaction, link, my, other)
 
 class remoterepository:
     def __init__(self, ui, path):
