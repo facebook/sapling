@@ -142,7 +142,16 @@ class hgweb:
                 l += [ x for x in list if x.startswith(f) ]
             return l
 
-        def prettyprint(diff):
+        parity = [0]
+        def diffblock(diff, f, fn):
+            yield self.t("diffblock",
+                         lines = prettyprintlines(diff),
+                         parity = parity[0],
+                         file = f,
+                         filenode = hex(fn))
+            parity[0] = 1 - parity[0]
+            
+        def prettyprintlines(diff):
             for l in diff.splitlines(1):
                 line = cgi.escape(l)
                 if line.startswith('+'):
@@ -170,15 +179,15 @@ class hgweb:
         for f in c:
             to = r.file(f).read(mmap1[f])
             tn = r.file(f).read(mmap2[f])
-            yield prettyprint(mdiff.unidiff(to, date1, tn, date2, f))
+            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
         for f in a:
             to = ""
             tn = r.file(f).read(mmap2[f])
-            yield prettyprint(mdiff.unidiff(to, date1, tn, date2, f))
+            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
         for f in d:
             to = r.file(f).read(mmap1[f])
             tn = ""
-            yield prettyprint(mdiff.unidiff(to, date1, tn, date2, f))
+            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
 
     def header(self):
         yield self.t("header", repo = self.reponame)
