@@ -406,6 +406,11 @@ elif cmd == "debugindexdot":
     print "}"
 
 elif cmd == "merge":
+    (c, a, d) = repo.diffdir(repo.root, repo.current)
+    if c:
+        ui.warn("aborting (outstanding changes in working directory)\n")
+        sys.exit(1)
+
     if args:
         other = hg.repository(ui, args[0])
         ui.status("requesting changegroup\n")
