@@ -512,7 +512,10 @@ class hgweb:
 
         self.repo.lookup(0) # prime the cache
         i = self.repo.tags.items()
-        i.sort()
+        n = [ (cl.rev(e[1]), e) for e in i ] # sort by revision
+        n.sort()
+        n.reverse()
+        i = [ e[1] for e in n ]
 
         def entries():
             parity = 0
