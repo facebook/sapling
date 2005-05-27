@@ -86,3 +86,7 @@ Network support:
  foo$ cp hgweb.cgi ~/public_html/hg-linux/index.cgi
  foo$ emacs ~/public_html/hg-linux/index.cgi # adjust the defaults
 
+ # Give symbolic names to repos
+ foo$ echo "main http://selenic.com/hg/" >> ~/.hgpaths # one pair per line
+ foo$ hg merge main
+ foo$ hg co
