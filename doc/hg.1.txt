@@ -52,9 +52,9 @@ revision::
 
 repository path::
     is either the pathname of a local repository of the URI of a remote
-    repository.  There are two available URI protocols, hg:// which is
-    fast and the http:// protocol which is much slower but does not require
-    python on the web host.
+    repository.  There are two available URI protocols, http:// which is
+    fast and the old-http:// protocol which is much slower but does not 
+    require python on the web host.
 
 COMMANDS
 --------
@@ -172,6 +172,11 @@ FILES
     this file contains changeset hash values and text tag names (one of each
     seperated by spaces) that correspond to tagged versions of the repository
     contents.
+
+ $HOME/.hgpaths::
+    this file contains a mapping from a symbolic name to a repository path
+    (which could be a local path or a remote URI), the format is 
+    <symbolic name> <repository path> with each mapping on a seperate line
 
 BUGS
 ----
