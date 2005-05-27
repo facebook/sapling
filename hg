@@ -20,7 +20,7 @@ import sys, os, time
 from mercurial import hg, mdiff, fancyopts
 
 def help():
-    print """\
+    ui.status("""\
  commands:
 
  add [files...]        add the given files in the next commit
@@ -42,7 +42,7 @@ def help():
  status                show new, missing, and changed files in working dir
  tags                  show current changeset tags
  undo                  undo the last transaction
-"""
+""")
 
 def filterfiles(list, files):
     l = [ x for x in list if x in files ]
@@ -372,13 +372,6 @@ elif cmd == "dumpmanifest":
     for f in files:
         print hg.hex(m[f]), f
 
-elif cmd == "debugprompt":
-    print ui.prompt(args[0], args[1], args[2])
-
-elif cmd == "debughash":
-    f = repo.file(args[0])
-    print f.encodepath(args[0])
-
 elif cmd == "debugindex":
     if ".hg" not in args[0]:
         args[0] = ".hg/data/" + repo.file(args[0]).encodepath(args[0]) + "i"
@@ -412,6 +405,17 @@ elif cmd == "merge":
         sys.exit(1)
 
     if args:
+        paths = {}
+        try:
+            pf = os.path.join(os.environ["HOME"], ".hgpaths")
+            for l in file(pf):
+                name, path = l.split()
+                paths[name] = path
+        except:
+            pass
+
+        if args[0] in paths: args[0] = paths[args[0]]
+        
         other = hg.repository(ui, args[0])
         ui.status("requesting changegroup\n")
         cg = repo.getchangegroup(other)
@@ -580,6 +584,6 @@ elif cmd == "serve":
                  soptions["address"], soptions["port"])
     
 else:
-    print "unknown command\n"
+    if cmd: ui.warn("unknown command\n\n")
     help()
     sys.exit(1)
