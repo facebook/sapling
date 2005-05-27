@@ -1,0 +1,197 @@
+HG(1)
+=====
+Matt Mackall <mpm@selenic.com>
+v0.5, 27 May 2005
+
+NAME
+----
+hg - command line interface to the Mercurial source code management system
+
+SYNOPSIS
+--------
+'hg' [-v -d -q -y] <command> [command options] [files]
+
+DESCRIPTION
+-----------
+The hg(1) command provides a command line interface to the Mercurial system.
+
+NOTE
+----
+Many of the hg commands are not yet subdirectory and/or working directory
+aware.  This means that some commands will only work in the top level 
+repository directory or will only accept paths and filenames relative to the
+top level.  Merges and commits, in particular, should be done in the
+top-level directory.
+
+OPTIONS
+-------
+--debug, -d::
+    enable debugging output
+
+--quiet, -q::
+    suppress output
+
+--verbose, -v::
+    enable additional output
+
+--noninteractive, -y::
+    do not prompt, assume 'yes' for any required answers
+
+COMMAND ELEMENTS
+----------------
+
+files ...::
+    indicates one or more filename or relative path filenames
+
+path::
+    indicates a path on the local machine
+
+revision::
+    indicates a changeset which can be specified as a changeset id (int),
+    a tag, or a unique substring of the changeset hash value
+
+repository path::
+    is either the pathname of a local repository of the URI of a remote
+    repository.  There are two available URI protocols, hg:// which is
+    fast and the http:// protocol which is much slower but does not require
+    python on the web host.
+
+COMMANDS
+--------
+add [files ...]::
+    add the given files to the repository.  Note that this just schedules the
+    files for addition at the next hg commit time.
+
+addremove::
+    add all new files and remove all missing files from the repository.  new
+    files are ignored if they match any of the patterns in .hgignore
+
+annotate [-r revision -u -n -c] [files ...]::
+    list the files with each line showing the revision id responsible 
+    for that line.  -u will add the author to the revision id, -c will
+    print the changeset hash, and -n will ...
+
+branch <path>::
+    create a new branch of the repository indicated by path in the current
+    directory.  Note that there should not be a repository already initialized
+    in the current directory
+
+checkout [revision]::
+    check out the indicated version of the repository into the working
+    directory.  Note that currently no merge occurs with changed files 
+    in the working dir.
+
+commit::
+    commit all changed files in the working dir to the repository.  This uses
+    the EDITOR environment variable to bring up an editor to add a commit
+    comment.
+
+diff [-r revision] [-r revision] [files ...]::
+    generate a unified diff of the indicated files.  If there are no 
+    revisions specified, the working directory file is compared to 
+    the tip, one revision specified indicates a comparison between the 
+    working directory file and the specified revision, two revisions 
+    compares the two versions specified.
+
+dump <file> [revision]::
+    print the indicated revision of the file
+
+dumpmanifest [revision]::
+    print the indicated revision of the manifest (list of version controlled
+    files)
+
+history::
+    print the revision history of the repository
+
+init::
+    initialize a repository in the current directory
+
+log <file>::
+    print the revision history of the specified file
+
+merge <repository path>::
+    pull any changes from the specified repository to the repository in the
+    current directory.  Use the value of the HGMERGE environment variable
+    as a program to resolve any merge conflicts between the two repositories.
+    An implicit commit is done at the end of this process if there were any
+    merge conflicts.  Note that merge does not yet merge with changed files
+    in the working dir.
+
+remove [files ...]::
+    schedule the indicated files for removal from the repository at the next
+    commit
+
+serve [-a addr -n name -p port -t templatedir]::
+    this will start an http server, by default on port 8000, that will 
+    allow browsing the repository using the hgweb interface and will allow 
+    merging from the repository.  -a sets the interface address, -p the 
+    port to listen on, -n the name of the repository and -t sets the 
+    location of the template directory.
+
+status::
+    list new, changed, and missing files in the working directory
+
+tags::
+    list the current tags
+
+ENVIRONMENT VARIABLES
+---------------------
+HGMERGE::
+    points to an executable to use for resolving merge conflicts, the
+    program will be executed with four arguments: local file, remote
+    file, ancestor file, and original filename.
+
+HGUSER::
+    this is the string used for the author value of a commit
+
+HG_OPTS::
+    this string is used for default arguments to hg
+
+PYTHONPATH::
+    this is used by Python to find imported modules and needs to be set
+    appropriately based on where mercurial is installed
+
+EMAIL::
+    if HGUSER is not set, this will be used next as the author value for
+    a commit
+
+LOGNAME::
+    if neither HGUSER nor EMAIL is set, LOGNAME will be used (with
+    '@hostname' appended) as the author value for a commit
+
+EDITOR::
+    this is the name of the editor to use when committing
+
+FILES
+-----
+ .hgignore::
+    this file contains regular expressions (one per line) that describe file
+    names that should be ignored by hg
+
+ .hgtags::
+    this file contains changeset hash values and text tag names (one of each
+    seperated by spaces) that correspond to tagged versions of the repository
+    contents.
+
+BUGS
+----
+Probably lots, please post them to the mailing list (See Resources below)
+when you find them.
+
+AUTHOR
+------
+Written by Matt Mackall <mpm@selenic.com>
+
+RESOURCES
+---------
+http://selenic.com/mercurial[Main Web Site]
+
+http://selenic.com/hg[Source code repository]
+
+http://selenic.com/mailman/listinfo/mercurial[Mailing list]
+
+COPYING
+-------
+Copyright (C) 2005 Matt Mackall.
+Free use of this software is granted under the terms of the GNU General
+Public License (GPL).
