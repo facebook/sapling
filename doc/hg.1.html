@@ -109,9 +109,9 @@ repository path
 <dd>
 
     is either the pathname of a local repository of the URI of a remote
-    repository.  There are two available URI protocols, hg:// which is
-    fast and the http:// protocol which is much slower but does not require
-    python on the web host.
+    repository.  There are two available URI protocols, http:// which is
+    fast and the old-http:// protocol which is much slower but does not
+    require python on the web host.
 
 </dd>
 </dl>
@@ -367,6 +367,16 @@ EDITOR
     contents.
 
 </dd>
+<dt>
+$HOME/.hgpaths
+</dt>
+<dd>
+
+    this file contains a mapping from a symbolic name to a repository path
+    (which could be a local path or a remote URI), the format is
+    &lt;symbolic name&gt; &lt;repository path&gt; with each mapping on a seperate line
+
+</dd>
 </dl>
 <hr />
 <h2>BUGS</h2>
@@ -401,7 +411,7 @@ Public License (GPL).
 <p></p>
 <hr /><p><small>
 Version 0.5<br />
-Last updated 27-May-2005 08:14:25 MDT
+Last updated 27-May-2005 15:07:30 MDT
 </small></p>
 </body>
 </html>
