@@ -79,7 +79,7 @@ Network support:
  foo$ hg serve -n "My repo" -p 80
  
  # merge changes from a remote machine
- bar$ hg merge hg://foo/
+ bar$ hg merge http://foo/
  bar$ hg co        # checkout the result
 
  # Set up a CGI server on your webserver

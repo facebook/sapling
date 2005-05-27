@@ -812,7 +812,7 @@ class localrepository:
 
 class remoterepository:
     def __init__(self, ui, path):
-        self.url = path.replace("hg://", "http://", 1)
+        self.url = path
         self.ui = ui
 
     def do_cmd(self, cmd, **args):
@@ -847,8 +847,12 @@ class remoterepository:
             yield zd.decompress(d)
 
 def repository(ui, path=None, create=0):
-    if path and path[:5] == "hg://":
+    if path and path[:7] == "http://":
         return remoterepository(ui, path)
+    if path and path[:5] == "hg://":
+        return remoterepository(ui, path.replace("hg://", "http://"))
+    if path and path[:11] == "old-http://":
+        return localrepository(ui, path.replace("old-http://", "http://"))
     else:
         return localrepository(ui, path, create)
 
