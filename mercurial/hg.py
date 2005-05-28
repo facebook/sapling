@@ -357,7 +357,8 @@ class localrepository:
         new = new.keys()
         new.sort()
 
-        edittext = text + "\n"+"".join(["HG: changed %s\n" % f for f in new])
+        edittext = text + "\n" + "HG: manifest hash %s\n" % hex(mnode)
+        edittext += "".join(["HG: changed %s\n" % f for f in new])
         edittext += "".join(["HG: removed %s\n" % f for f in remove])
         edittext = self.ui.edit(edittext)
 
@@ -768,6 +769,7 @@ class localrepository:
         if co == cn: cn = -1
 
         edittext = "\nHG: merge resolve\n" + \
+                   "HG: manifest hash %s\n" % hex(mnode) + \
                    "".join(["HG: changed %s\n" % f for f in new])
         edittext = self.ui.edit(edittext)
         n = self.changelog.add(node, new, edittext, tr, co, cn)
