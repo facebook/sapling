@@ -769,7 +769,7 @@ class localrepository:
         if co == cn: cn = -1
 
         edittext = "\nHG: merge resolve\n" + \
-                   "HG: manifest hash %s\n" % hex(mnode) + \
+                   "HG: manifest hash %s\n" % hex(node) + \
                    "".join(["HG: changed %s\n" % f for f in new])
         edittext = self.ui.edit(edittext)
         n = self.changelog.add(node, new, edittext, tr, co, cn)
@@ -834,7 +834,7 @@ class remoterepository:
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
         d = self.do_cmd("between", pairs=n).read()
-        p = [ map(bin, l.split(" ")) for l in d.splitlines() ]
+        p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
         return p
 
     def changegroup(self, nodes):
