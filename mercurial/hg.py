@@ -893,8 +893,9 @@ class ui:
         f.write(text)
         f.close()
 
-        editor = os.environ.get("EDITOR", "vi")
+        editor = os.environ.get("HGEDITOR") or os.environ.get("EDITOR", "vi")
         r = os.system("%s %s" % (editor, name))
+
         if r:
             raise "Edit failed!"
 
@@ -902,7 +903,6 @@ class ui:
         t = re.sub("(?m)^HG:.*\n", "", t)
 
         return t
-
     
 class httprangereader:
     def __init__(self, url):

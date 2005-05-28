@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# This is an example of using HGEDITOR to automate the signing of
+# commits and so on.
+
+MANIFEST=`grep '^HG: manifest hash' $1 | cut -b 19-`
+if grep -q "^HG: merge resolve" $1 ; then
+    # we don't sign merges
+    $EDITOR $1
+else
+    T=`mktemp`
+    CHANGED=`grep '^HG: changed' $1 | cut -b 13-`
+    # show a diff so writing commit comments is easier
+    hg diff $CHANGED >> $T
+    echo -e "\n\nmanifest hash: $MANIFEST" > $1
+    emacs -nw $T $1 
+    head -1 $1 > $T
+    echo >> $T
+    gpg -a -u $HGUSER -o - --clearsign $1 >> $T
+    mv $T $1
+fi
