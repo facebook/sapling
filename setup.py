@@ -16,7 +16,7 @@ class install_package_data(install_data):
         install_data.finalize_options(self)
 
 setup(name='mercurial',
-      version='0.4f',
+      version='0.5',
       author='Matt Mackall',
       author_email='mpm@selenic.com',
       url='http://selenic.com/mercurial',
