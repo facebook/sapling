@@ -637,6 +637,8 @@ class localrepository:
             yield "".join([l, f, g])
 
     def addchangegroup(self, generator):
+        changesets = files = revisions = 0
+
         self.lock()
         class genread:
             def __init__(self, generator):
@@ -674,11 +676,16 @@ class localrepository:
         co = self.changelog.tip()
         cn = self.changelog.addgroup(csg, report, tr)
 
+        revisions = self.changelog.rev(cn) - self.changelog.rev(co)
+        changesets = revisions
+
         self.ui.status("adding manifests\n")
         # pull off the manifest group
         mfg = getchunk()
         mm = self.manifest.tip()
         mo = self.manifest.addgroup(mfg, lambda x: self.changelog.rev(x), tr)
+
+        revisions += self.manifest.rev(mo) - self.manifest.rev(mm)
 
         # do we need a resolve?
         if self.changelog.ancestor(co, cn) != co:
@@ -749,6 +756,8 @@ class localrepository:
             fl = self.file(f)
             o = fl.tip()
             n = fl.addgroup(fg, lambda x: self.changelog.rev(x), tr)
+            revisions += fl.rev(n) - fl.rev(o)
+            files += 1
             if f in need:
                 del need[f]
                 # manifest resolve determined we need to merge the tips
@@ -760,14 +769,19 @@ class localrepository:
                 if f not in need: continue
                 fl = self.file(f)
                 nmap[f] = self.merge3(fl, f, need[f], fl.tip(), tr, resolverev)
+                revisions += 1
 
         # For simple merges, we don't need to resolve manifests or changesets
         if simple:
             self.ui.debug("simple merge, skipping resolve\n")
+            self.ui.status(("added %d changesets, %d files," +
+                           " and %d new revisions\n")
+                           % (changesets, files, revisions))
             tr.close()
             return
 
         node = self.manifest.add(nmap, tr, resolverev, mm, mo)
+        revisions += 1
 
         # Now all files and manifests are merged, we add the changed files
         # and manifest id to the changelog
@@ -779,6 +793,10 @@ class localrepository:
                    "".join(["HG: changed %s\n" % f for f in new])
         edittext = self.ui.edit(edittext)
         n = self.changelog.add(node, new, edittext, tr, co, cn)
+        revisions += 1
+
+        self.ui.status("added %d changesets, %d files, and %d new revisions\n"
+                       % (changesets, files, revisions))
 
         tr.close()
 
