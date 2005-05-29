@@ -525,15 +525,21 @@ class localrepository:
         return nl
 
     def getchangegroup(self, remote):
-        tip = remote.branches([])[0]
-        self.ui.debug("remote tip branch is %s:%s\n" %
-                      (short(tip[0]), short(tip[1])))
         m = self.changelog.nodemap
-        unknown = [tip]
         search = []
         fetch = []
         seen = {}
         seenbranch = {}
+        tip = remote.branches([])[0]
+        self.ui.debug("remote tip branch is %s:%s\n" %
+                      (short(tip[0]), short(tip[1])))
+
+        # if we have an empty repo, fetch everything
+        if self.changelog.tip() == nullid:
+            return remote.changegroup([nullid])
+
+        # otherwise, assume we're closer to the tip than the root
+        unknown = [tip]
 
         if tip[0] in m:
             self.ui.note("nothing to do!\n")
