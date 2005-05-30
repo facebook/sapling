@@ -218,7 +218,7 @@ class hgweb:
             for label, rev in l:
                 yield self.t("naventry", label = label, rev = rev)
 
-            yield self.t("naventry", rev = count - 1, label="tip")
+            yield self.t("naventry", label="tip")
 
         def changelist():
             parity = (start - end) & 1
