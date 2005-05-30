@@ -110,6 +110,10 @@ dumpmanifest [revision]
 print the indicated revision of the manifest (list of version controlled files)
 
 .TP
+export [revision]
+print the changeset header (author, changeset hash, parent, and commit comment) and the diffs for a particular revision\&.
+
+.TP
 history
 print the revision history of the repository
 
@@ -126,6 +130,10 @@ merge <repository path>
 pull any changes from the specified repository to the repository in the current directory\&. Use the value of the HGMERGE environment variable as a program to resolve any merge conflicts between the two repositories\&. An implicit commit is done at the end of this process if there were any merge conflicts\&. Note that merge does not yet merge with changed files in the working dir\&.
 
 .TP
+recover
+rollback an interrupted transaction
+
+.TP
 remove [files ...]
 schedule the indicated files for removal from the repository at the next commit
 
@@ -140,6 +148,10 @@ list new, changed, and missing files in the working directory
 .TP
 tags
 list the current tags
+
+.TP
+undo
+undo the last transaction
 
 .SH "ENVIRONMENT VARIABLES"
 

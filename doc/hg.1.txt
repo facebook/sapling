@@ -100,6 +100,10 @@ dumpmanifest [revision]::
     print the indicated revision of the manifest (list of version controlled
     files)
 
+export [revision]::
+    print the changeset header (author, changeset hash, parent, and commit
+    comment) and the diffs for a particular revision.
+
 history::
     print the revision history of the repository
 
@@ -117,6 +121,9 @@ merge <repository path>::
     merge conflicts.  Note that merge does not yet merge with changed files
     in the working dir.
 
+recover::
+    rollback an interrupted transaction
+
 remove [files ...]::
     schedule the indicated files for removal from the repository at the next
     commit
@@ -133,6 +140,9 @@ status::
 
 tags::
     list the current tags
+
+undo::
+    undo the last transaction
 
 ENVIRONMENT VARIABLES
 ---------------------

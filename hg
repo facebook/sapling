@@ -32,6 +32,7 @@ def help():
  diff [files...]       diff working directory (or selected files)
  dump <file> [rev]     dump the latest or given revision of a file
  dumpmanifest [rev]    dump the latest or given revision of the manifest
+ export <rev>          dump the changeset header and diffs for a revision
  history               show changeset history
  init                  create a new repository in this directory
  log <file>            show revision history of a single file
