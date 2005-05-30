@@ -40,7 +40,7 @@ def age(t):
 
     for t, s in scales:
         n = delta / s
-        if n >= 1: return fmt(t, n)
+        if n >= 2 or s == 1: return fmt(t, n)
 
 def nl2br(text):
     return text.replace('\n', '<br/>')
