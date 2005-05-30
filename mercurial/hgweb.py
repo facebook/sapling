@@ -113,6 +113,7 @@ class hgweb:
         self.reponame = name
         self.repo = repository(ui(), path)
         self.t = templater(templatemap)
+        self.viewonly = 0
 
     def date(self, cs):
         return time.asctime(time.gmtime(float(cs[2].split(' ')[0])))
@@ -614,6 +615,9 @@ class hgweb:
         elif args['cmd'][0] == 'changegroup':
             httphdr("application/hg-changegroup")
             nodes = []
+            if self.viewonly:
+                return
+
             if args.has_key('roots'):
                 nodes = map(bin, args['roots'][0].split(" "))
 
