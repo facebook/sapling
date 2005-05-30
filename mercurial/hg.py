@@ -291,6 +291,7 @@ class localrepository:
         return os.path.join(self.path, f)
 
     def file(self, f):
+        if f[0] == '/': f = f[1:]
         return filelog(self.opener, f)
 
     def transaction(self):
@@ -530,6 +531,8 @@ class localrepository:
         fetch = []
         seen = {}
         seenbranch = {}
+
+        self.ui.status("searching for changes\n")
         tip = remote.branches([])[0]
         self.ui.debug("remote tip branch is %s:%s\n" %
                       (short(tip[0]), short(tip[1])))
@@ -542,7 +545,7 @@ class localrepository:
         unknown = [tip]
 
         if tip[0] in m:
-            self.ui.note("nothing to do!\n")
+            self.ui.status("nothing to do!\n")
             return None
 
         while unknown:
@@ -627,14 +630,13 @@ class localrepository:
         # the changegroup is changesets + manifests + all file revs
         revs = [ self.changelog.rev(n) for n in nodes ]
 
-        yield self.changelog.group(linkmap)
-        yield self.manifest.group(linkmap)
-
+        for y in self.changelog.group(linkmap): yield y
+        for y in self.manifest.group(linkmap): yield y
         for f in changed:
+            yield struct.pack(">l", len(f) + 4) + f
             g = self.file(f).group(linkmap)
-            if not g: raise "couldn't find change to %s" % f
-            l = struct.pack(">l", len(f))
-            yield "".join([l, f, g])
+            for y in g:
+                yield y
 
     def addchangegroup(self, generator):
         changesets = files = revisions = 0
@@ -656,11 +658,18 @@ class localrepository:
         if not generator: return
         source = genread(generator)
 
-        def getchunk(add = 0):
+        def getchunk():
             d = source.read(4)
             if not d: return ""
             l = struct.unpack(">l", d)[0]
-            return source.read(l - 4 + add)
+            if l <= 4: return ""
+            return source.read(l - 4)
+
+        def getgroup():
+            while 1:
+                c = getchunk()
+                if not c: break
+                yield c
 
         tr = self.transaction()
         simple = True
@@ -671,21 +680,17 @@ class localrepository:
         def report(x):
             self.ui.debug("add changeset %s\n" % short(x))
             return self.changelog.count()
-            
-        csg = getchunk()
-        co = self.changelog.tip()
-        cn = self.changelog.addgroup(csg, report, tr)
 
-        revisions = self.changelog.rev(cn) - self.changelog.rev(co)
-        changesets = revisions
+        co = self.changelog.tip()
+        cn = self.changelog.addgroup(getgroup(), report, tr)
+
+        changesets = self.changelog.rev(cn) - self.changelog.rev(co)
 
         self.ui.status("adding manifests\n")
         # pull off the manifest group
-        mfg = getchunk()
         mm = self.manifest.tip()
-        mo = self.manifest.addgroup(mfg, lambda x: self.changelog.rev(x), tr)
-
-        revisions += self.manifest.rev(mo) - self.manifest.rev(mm)
+        mo = self.manifest.addgroup(getgroup(),
+                                    lambda x: self.changelog.rev(x), tr)
 
         # do we need a resolve?
         if self.changelog.ancestor(co, cn) != co:
@@ -749,13 +754,12 @@ class localrepository:
         # process the files
         self.ui.status("adding files\n")
         while 1:
-            f = getchunk(4)
+            f = getchunk()
             if not f: break
-            fg = getchunk()
             self.ui.debug("adding %s revisions\n" % f)
             fl = self.file(f)
             o = fl.tip()
-            n = fl.addgroup(fg, lambda x: self.changelog.rev(x), tr)
+            n = fl.addgroup(getgroup(), lambda x: self.changelog.rev(x), tr)
             revisions += fl.rev(n) - fl.rev(o)
             files += 1
             if f in need:
@@ -774,9 +778,9 @@ class localrepository:
         # For simple merges, we don't need to resolve manifests or changesets
         if simple:
             self.ui.debug("simple merge, skipping resolve\n")
-            self.ui.status(("added %d changesets, %d files," +
+            self.ui.status(("modified %d files, added %d changesets" +
                            " and %d new revisions\n")
-                           % (changesets, files, revisions))
+                           % (files, changesets, revisions))
             tr.close()
             return
 
@@ -865,12 +869,15 @@ class remoterepository:
         n = " ".join(map(hex, nodes))
         zd = zlib.decompressobj()
         f = self.do_cmd("changegroup", roots=n)
+        bytes = 0
         while 1:
             d = f.read(4096)
+            bytes += len(d)
             if not d:
                 yield zd.flush()
                 break
             yield zd.decompress(d)
+        self.ui.note("%d bytes of data transfered\n" % bytes)
 
 def repository(ui, path=None, create=0):
     if path and path[:7] == "http://":

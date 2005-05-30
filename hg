@@ -417,7 +417,6 @@ elif cmd == "merge":
         if args[0] in paths: args[0] = paths[args[0]]
         
         other = hg.repository(ui, args[0])
-        ui.status("requesting changegroup\n")
         cg = repo.getchangegroup(other)
         repo.addchangegroup(cg)
     else:

@@ -244,8 +244,6 @@ class revlog:
             end = self.end(t)
             prev = self.revision(self.tip())
             d = self.diff(prev, text)
-            if self.patches(prev, [d]) != text:
-                raise AssertionError("diff failed")
             data = compress(d)
             dist = end - start + len(data)
 
@@ -330,7 +328,9 @@ class revlog:
                 needed[i] = 1
 
         # if we don't have any revisions touched by these changesets, bail
-        if not revs: return struct.pack(">l", 0)
+        if not revs:
+            yield struct.pack(">l", 0)
+            return
 
         # add the parent of the first rev
         p = self.parents(self.node(revs[0]))[0]
@@ -352,25 +352,25 @@ class revlog:
         needed = needed.keys()
         needed.sort()
         spans = []
+        oo = -1
+        ol = 0
         for n in needed:
             if n < 0: continue
             o = self.start(n)
             l = self.length(n)
-            spans.append((o, l, [(n, l)]))
-
-        # merge spans
-        merge = [spans.pop(0)]
-        while spans:
-            e = spans.pop(0)
-            f = merge[-1]
-            if e[0] == f[0] + f[1]:
-                merge[-1] = (f[0], f[1] + e[1], f[2] + e[2])
+            if oo + ol == o: # can we merge with the previous?
+                nl = spans[-1][2]
+                nl.append((n, l))
+                ol += l
+                spans[-1] = (oo, ol, nl)
             else:
-                merge.append(e)
+                oo = o
+                ol = l
+                spans.append((oo, ol, [(n, l)]))
 
         # read spans in, divide up chunks
         chunks = {}
-        for span in merge:
+        for span in spans:
             # we reopen the file for each span to make http happy for now
             f = self.opener(self.datafile)
             f.seek(span[0])
@@ -379,12 +379,12 @@ class revlog:
             # divide up the span
             pos = 0
             for r, l in span[2]:
-                chunks[r] = data[pos: pos + l]
+                chunks[r] = decompress(data[pos: pos + l])
                 pos += l
 
         # helper to reconstruct intermediate versions
         def construct(text, base, rev):
-            bins = [decompress(chunks[r]) for r in xrange(base + 1, rev + 1)]
+            bins = [chunks[r] for r in xrange(base + 1, rev + 1)]
             return mdiff.patches(text, bins)
 
         # build deltas
@@ -392,11 +392,12 @@ class revlog:
         for d in xrange(0, len(revs) - 1):
             a, b = revs[d], revs[d + 1]
             n = self.node(b)
-            
+
+            # do we need to construct a new delta?
             if a + 1 != b or self.base(b) == b:
                 if a >= 0:
                     base = self.base(a)
-                    ta = decompress(chunks[self.base(a)])
+                    ta = chunks[self.base(a)]
                     ta = construct(ta, base, a)
                 else:
                     ta = ""
@@ -406,36 +407,30 @@ class revlog:
                     base = a
                     tb = ta
                 else:
-                    tb = decompress(chunks[self.base(b)])
+                    tb = chunks[self.base(b)]
                 tb = construct(tb, base, b)
                 d = self.diff(ta, tb)
             else:
-                d = decompress(chunks[b])
+                d = chunks[b]
 
             p = self.parents(n)
             meta = n + p[0] + p[1] + linkmap[self.linkrev(n)]
             l = struct.pack(">l", len(meta) + len(d) + 4)
-            deltas.append(l + meta + d)
+            yield l
+            yield meta
+            yield d
 
-        l = struct.pack(">l", sum(map(len, deltas)) + 4)
-        deltas.insert(0, l)
-        return "".join(deltas)
-        
-    def addgroup(self, data, linkmapper, transaction):
+        yield struct.pack(">l", 0)
+
+    def addgroup(self, revs, linkmapper, transaction):
         # given a set of deltas, add them to the revision log. the
         # first delta is against its parent, which should be in our
         # log, the rest are against the previous delta.
 
-        if not data: return self.tip()
-
-        # retrieve the parent revision of the delta chain
-        chain = data[24:44]
-        if not chain in self.nodemap:
-            raise "unknown base %s" % short(chain[:4])
-
         # track the base of the current delta log
         r = self.count()
         t = r - 1
+        node = nullid
         
         base = prev = -1
         start = end = 0
@@ -452,15 +447,19 @@ class revlog:
         ifh = self.opener(self.indexfile, "a")
 
         # loop through our set of deltas
-        pos = 0
-        while pos < len(data):
-            l, node, p1, p2, cs = struct.unpack(">l20s20s20s20s",
-                                                data[pos:pos+84])
+        chain = None
+        for chunk in revs:
+            node, p1, p2, cs = struct.unpack("20s20s20s20s", chunk[:80])
             link = linkmapper(cs)
             if node in self.nodemap:
                 raise "already have %s" % hex(node[:4])
-            delta = data[pos + 84:pos + l]
-            pos += l
+            delta = chunk[80:]
+
+            if not chain:
+                # retrieve the parent revision of the delta chain
+                chain = p1
+                if not chain in self.nodemap:
+                    raise "unknown base %s" % short(chain[:4])
 
             # full versions are inserted when the needed deltas become
             # comparable to the uncompressed text or when the previous
