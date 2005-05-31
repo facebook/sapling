@@ -24,26 +24,46 @@ class filelog(revlog):
         return self.addrevision(text, transaction, link, p1, p2)
 
     def annotate(self, node):
-        revs = []
-        while node != nullid:
-            revs.append(node)
-            node = self.parents(node)[0]
-        revs.reverse()
-        prev = []
-        annotate = []
-        
-        for node in revs:
-            curr = self.read(node).splitlines(1)
-            linkrev = self.linkrev(node)
-            sm = SequenceMatcher(None, prev, curr)
+
+        def decorate(text, rev):
+            return [(rev, l) for l in text.splitlines(1)]
+
+        def strip(annotation):
+            return [e[1] for e in annotation]
+
+        def pair(parent, child):
             new = []
+            sm = SequenceMatcher(None, strip(parent), strip(child))
             for o, m, n, s, t in sm.get_opcodes():
                 if o == 'equal':
-                    new += annotate[m:n]
+                    new += parent[m:n]
                 else:
-                    new += [(linkrev, l) for l in curr[s:t]]
-            annotate, prev = new, curr
-        return annotate
+                    new += child[s:t]
+            return new
+
+        needed = {}
+        visit = [node]
+        while visit:
+            n = visit.pop(0)
+            for p in self.parents(n):
+                if p not in needed:
+                    needed[p] = 1
+                    visit.append(p)
+
+        visit = needed.keys()
+        visit = [ (self.rev(n), n) for n in visit ]
+        visit.sort()
+        visit = [ p[1] for p in visit ]
+        hist = {}
+
+        for n in visit:
+            curr = decorate(self.read(n), self.linkrev(n))
+            for p in self.parents(n):
+                if p != nullid:
+                    curr = pair(hist[p], curr)
+            hist[n] = curr
+
+        return hist[n]
 
 class manifest(revlog):
     def __init__(self, opener):
