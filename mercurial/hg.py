@@ -41,6 +41,7 @@ class filelog(revlog):
                     new += child[s:t]
             return new
 
+        # find all ancestors
         needed = {}
         visit = [node]
         while visit:
@@ -49,7 +50,11 @@ class filelog(revlog):
                 if p not in needed:
                     needed[p] = 1
                     visit.append(p)
+                else:
+                    # count how many times we'll use this
+                    needed[p] += 1
 
+        # sort by revision which is a topological order
         visit = needed.keys()
         visit = [ (self.rev(n), n) for n in visit ]
         visit.sort()
@@ -61,6 +66,10 @@ class filelog(revlog):
             for p in self.parents(n):
                 if p != nullid:
                     curr = pair(hist[p], curr)
+                    # trim the history of unneeded revs
+                    needed[p] -= 1
+                    if not needed[p]:
+                        del hist[p]
             hist[n] = curr
 
         return hist[n]
