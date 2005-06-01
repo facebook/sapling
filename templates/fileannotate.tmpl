@@ -1,5 +1,5 @@
 #header#
-<title>#repo#: #file# annotate</title>
+<title>#repo|escape#: #file# annotate</title>
 </head>
 <body>
 
@@ -25,10 +25,10 @@
  <td><a href="?cmd=manifest;manifest=#manifest#;path=/">#manifest#</a></td></tr>
 <tr>
  <td class="metatag">author:</td>
- <td>#author#</td></tr>
+ <td>#author|obfuscate#</td></tr>
 <tr>
  <td class="metatag">date:</td>
- <td>#date#</td></tr>
+ <td>#date|date# (#date|age#) ago)</td></tr>
 </table>
 
 <br/>

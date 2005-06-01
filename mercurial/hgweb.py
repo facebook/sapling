@@ -14,9 +14,9 @@ import os, cgi, time, re, difflib, sys, zlib
 from mercurial.hg import *
 
 def templatepath():
-    for f in "templates/map", "../templates/map":
+    for f in "templates", "../templates":
         p = os.path.join(os.path.dirname(__file__), f)
-        if os.path.isfile(p): return p
+        if os.path.isdir(p): return p
 
 def age(t):
     def plural(t, c):
@@ -43,7 +43,7 @@ def age(t):
         if n >= 2 or s == 1: return fmt(t, n)
 
 def nl2br(text):
-    return text.replace('\n', '<br/>')
+    return text.replace('\n', '<br/>\n')
 
 def obfuscate(text):
     return ''.join([ '&#%d' % ord(c) for c in text ])
@@ -67,23 +67,31 @@ def write(*things):
         else:
             sys.stdout.write(str(thing))
 
-def template(tmpl, **map):
+def template(tmpl, filters = {}, **map):
     while tmpl:
-        m = re.search(r"#([a-zA-Z0-9]+)#", tmpl)
+        m = re.search(r"#([a-zA-Z0-9]+)((\|[a-zA-Z0-9]+)*)#", tmpl)
         if m:
             yield tmpl[:m.start(0)]
             v = map.get(m.group(1), "")
-            yield callable(v) and v() or v
+            v = callable(v) and v() or v
+
+            fl = m.group(2)
+            if fl:
+                for f in fl.split("|")[1:]:
+                    v = filters[f](v)
+                
+            yield v
             tmpl = tmpl[m.end(0):]
         else:
             yield tmpl
             return
 
 class templater:
-    def __init__(self, mapfile):
+    def __init__(self, mapfile, filters = {}):
         self.cache = {}
         self.map = {}
         self.base = os.path.dirname(mapfile)
+        self.filters = filters
         
         for l in file(mapfile):
             m = re.match(r'(\S+)\s*=\s*"(.*)"$', l)
@@ -101,19 +109,26 @@ class templater:
             tmpl = self.cache[t]
         except KeyError:
             tmpl = self.cache[t] = file(self.map[t]).read()
-        return template(tmpl, **map)
+        return template(tmpl, self.filters, **map)
         
 class hgweb:
     maxchanges = 20
     maxfiles = 10
 
-    def __init__(self, path, name, templatemap = ""):
-        templatemap = templatemap or templatepath()
-
+    def __init__(self, path, name, templates = ""):
+        self.templates = templates or templatepath()
         self.reponame = name
         self.repo = repository(ui(), path)
-        self.t = templater(templatemap)
         self.viewonly = 0
+
+        self.filters = {
+            "escape": cgi.escape,
+            "age": age,
+            "date": (lambda x: time.asctime(time.gmtime(x))),
+            "addbreaks": nl2br,
+            "obfuscate": obfuscate,
+            "firstline": (lambda x: x.splitlines(1)[0]),
+            }
 
     def date(self, cs):
         return time.asctime(time.gmtime(float(cs[2].split(' ')[0])))
@@ -154,15 +169,14 @@ class hgweb:
             
         def prettyprintlines(diff):
             for l in diff.splitlines(1):
-                line = cgi.escape(l)
-                if line.startswith('+'):
-                    yield self.t("difflineplus", line = line)
-                elif line.startswith('-'):
-                    yield self.t("difflineminus", line = line)
-                elif line.startswith('@'):
-                    yield self.t("difflineat", line = line)
+                if l.startswith('+'):
+                    yield self.t("difflineplus", line = l)
+                elif l.startswith('-'):
+                    yield self.t("difflineminus", line = l)
+                elif l.startswith('@'):
+                    yield self.t("difflineat", line = l)
                 else:
-                    yield self.t("diffline", line = line)
+                    yield self.t("diffline", line = l)
 
         r = self.repo
         cl = r.changelog
@@ -234,9 +248,7 @@ class hgweb:
                 l.insert(0, self.t(
                     'changelogentry',
                     parity = parity,
-                    author = obfuscate(changes[1]),
-                    shortdesc = cgi.escape(changes[4].splitlines()[0]),
-                    age = age(t),
+                    author = changes[1],
                     parent1 = self.parent("changelogparent",
                                           hex(p1), cl.rev(p1)),
                     parent2 = self.parent("changelogparent",
@@ -244,8 +256,8 @@ class hgweb:
                     p1 = hex(p1), p2 = hex(p2),
                     p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                     manifest = hex(changes[0]),
-                    desc = nl2br(cgi.escape(changes[4])),
-                    date = time.asctime(time.gmtime(t)),
+                    desc = changes[4],
+                    date = t,
                     files = self.listfilediffs(changes[3], n),
                     rev = i,
                     node = hn))
@@ -292,7 +304,6 @@ class hgweb:
                      diff = diff,
                      rev = cl.rev(n),
                      node = nodeid,
-                     shortdesc = cgi.escape(changes[4].splitlines()[0]),
                      parent1 = self.parent("changesetparent",
                                            hex(p1), cl.rev(p1)),
                      parent2 = self.parent("changesetparent",
@@ -300,9 +311,9 @@ class hgweb:
                      p1 = hex(p1), p2 = hex(p2),
                      p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                      manifest = hex(changes[0]),
-                     author = obfuscate(changes[1]),
-                     desc = nl2br(cgi.escape(changes[4])),
-                     date = time.asctime(time.gmtime(t)),
+                     author = changes[1],
+                     desc = changes[4],
+                     date = t,
                      files = files)
 
     def filelog(self, f, filenode):
@@ -329,10 +340,9 @@ class hgweb:
                                    filerev = i,
                                    file = f,
                                    node = hex(cn),
-                                   author = obfuscate(cs[1]),
-                                   age = age(t),
-                                   date = time.asctime(time.gmtime(t)),
-                                   shortdesc = cgi.escape(cs[4].splitlines()[0]),
+                                   author = cs[1],
+                                   date = t,
+                                   desc = cs[4],
                                    p1 = hex(p1), p2 = hex(p2),
                                    p1rev = fl.rev(p1), p2rev = fl.rev(p2)))
                 parity = 1 - parity
@@ -350,7 +360,7 @@ class hgweb:
     def filerevision(self, f, node):
         fl = self.repo.file(f)
         n = bin(node)
-        text = cgi.escape(fl.read(n))
+        text = fl.read(n)
         changerev = fl.linkrev(n)
         cl = self.repo.changelog
         cn = cl.node(changerev)
@@ -361,8 +371,7 @@ class hgweb:
 
         def lines():
             for l, t in enumerate(text.splitlines(1)):
-                yield self.t("fileline",
-                             line = t,
+                yield self.t("fileline", line = t,
                              linenumber = "% 6d" % (l + 1),
                              parity = l & 1)
         
@@ -376,17 +385,14 @@ class hgweb:
                      rev = changerev,
                      node = hex(cn),
                      manifest = hex(mfn),
-                     author = obfuscate(cs[1]),
-                     age = age(t),
-                     date = time.asctime(time.gmtime(t)),
-                     shortdesc = cgi.escape(cs[4].splitlines()[0]),
+                     author = cs[1],
+                     date = t,
                      parent1 = self.parent("filerevparent",
                                            hex(p1), fl.rev(p1), file=f),
                      parent2 = self.parent("filerevparent",
                                            hex(p2), fl.rev(p2), file=f),
                      p1 = hex(p1), p2 = hex(p2),
                      p1rev = fl.rev(p1), p2rev = fl.rev(p2))
-
 
     def fileannotate(self, f, node):
         bcache = {}
@@ -431,7 +437,7 @@ class hgweb:
                              rev = r,
                              author = name,
                              file = f,
-                             line = cgi.escape(l))
+                             line = l)
 
         yield self.t("fileannotate",
                      header = self.header(),
@@ -444,10 +450,8 @@ class hgweb:
                      rev = changerev,
                      node = hex(cn),
                      manifest = hex(mfn),
-                     author = obfuscate(cs[1]),
-                     age = age(t),
-                     date = time.asctime(time.gmtime(t)),
-                     shortdesc = cgi.escape(cs[4].splitlines()[0]),
+                     author = cs[1],
+                     date = t,
                      parent1 = self.parent("fileannotateparent",
                                            hex(p1), fl.rev(p1), file=f),
                      parent2 = self.parent("fileannotateparent",
@@ -562,6 +566,14 @@ class hgweb:
 
     def run(self):
         args = cgi.parse()
+
+        m = os.path.join(self.templates, "map")
+        if args.has_key('style'):
+            b = os.path.basename("map-" + args['style'][0])
+            p = os.path.join(self.templates, b)
+            if os.path.isfile(p): m = p
+            
+        self.t = templater(m, self.filters)
 
         if not args.has_key('cmd') or args['cmd'][0] == 'changelog':
             hi = self.repo.changelog.count()

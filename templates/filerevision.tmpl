@@ -1,5 +1,5 @@
 #header#
-<title>#repo#:#file#</title>
+<title>#repo|escape#:#file#</title>
 </head>
 <body>
 
@@ -10,6 +10,7 @@
 <a href="?cmd=manifest;manifest=#manifest#;path=#path#">manifest</a>
 <a href="?cmd=filelog;file=#file#;filenode=#filenode#">revisions</a>
 <a href="?cmd=annotate;file=#file#;filenode=#filenode#">annotate</a>
+<a href="?cmd=file;file=#file#;filenode=#filenode#;style=raw">raw</a>
 </div>
 
 <h2>#file# (revision #filenode#)</h2>
@@ -25,10 +26,10 @@
  <td><a href="?cmd=manifest;manifest=#manifest#;path=/">#manifest#</a></td></tr>
 <tr>
  <td class="metatag">author:</td>
- <td>#author#</td></tr>
+ <td>#author|obfuscate#</td></tr>
 <tr>
  <td class="metatag">date:</td>
- <td>#date#</td></tr>
+ <td>#date|date# (#date|age# ago)</td></tr>
 </table>
 
 <pre>
