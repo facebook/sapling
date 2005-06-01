@@ -12,6 +12,7 @@ cgitb.enable()
 
 import os, cgi, time, re, difflib, sys, zlib
 from mercurial.hg import *
+from mercurial.ui import *
 
 def templatepath():
     for f in "templates", "../templates":
