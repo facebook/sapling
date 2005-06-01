@@ -1,4 +1,4 @@
-import os, re, traceback, sys
+import os, re, traceback, sys, signal
 from mercurial import fancyopts, ui, hg
 
 class UnknownCommand(Exception): pass
@@ -159,6 +159,11 @@ def find(cmd):
 
     raise UnknownCommand(cmd)
 
+class SignalInterrupt(Exception): pass
+
+def catchterm(*args):
+    raise SignalInterrupt
+
 def dispatch(args):
     options = {}
     opts = [('v', 'verbose', None, 'verbose'),
@@ -181,6 +186,8 @@ def dispatch(args):
     # deal with unfound commands later
     i = find(cmd)
 
+    signal.signal(signal.SIGTERM, catchterm)
+
     cmdoptions = {}
     args = fancyopts.fancyopts(args, i[1], cmdoptions, i[2])
 
@@ -192,6 +199,8 @@ def dispatch(args):
 
     try:
         d()
+    except SignalInterrupt:
+        u.warn("killed!\n")
     except KeyboardInterrupt:
         u.warn("interrupted!\n")
     except TypeError, inst:
