@@ -17,7 +17,7 @@
 #    pass
 
 import sys, os, time
-from mercurial import hg, mdiff, fancyopts, ui
+from mercurial import hg, mdiff, fancyopts, ui, commands
 
 def help():
     ui.status("""\
@@ -92,6 +92,13 @@ def diff(files = None, node1 = None, node2 = None):
         to = repo.file(f).read(mmap[f])
         tn = ""
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
+
+
+try:
+    sys.exit(commands.dispatch(sys.argv[1:]))
+except commands.UnknownCommand:
+    # fall through
+    pass
 
 options = {}
 opts = [('v', 'verbose', None, 'verbose'),
@@ -242,59 +249,6 @@ elif cmd == "diff":
         else: args = [ os.path.join(relpath, x) for x in args ]
 
     diff(args, *revs)
-
-elif cmd == "annotate":
-    bcache = {}
-
-    def getnode(rev):
-        return hg.short(repo.changelog.node(rev))
-
-    def getname(rev):
-        try:
-            return bcache[rev]
-        except KeyError:
-            cl = repo.changelog.read(repo.changelog.node(rev))
-            name = cl[1]
-            f = name.find('@')
-            if f >= 0:
-                name = name[:f]
-            bcache[rev] = name
-            return name
-    
-    aoptions = {}
-    opts = [('r', 'revision', '', 'revision'),
-            ('u', 'user', None, 'show user'),
-            ('n', 'number', None, 'show revision number'),
-            ('c', 'changeset', None, 'show changeset')]
-
-    args = fancyopts.fancyopts(args, opts, aoptions,
-                               'hg annotate [-u] [-c] [-n] [-r id] [files]')
-
-    opmap = [['user', getname], ['number', str], ['changeset', getnode]]
-    if not aoptions['user'] and not aoptions['changeset']:
-        aoptions['number'] = 1
-
-    if args:
-        if relpath: args = [ os.path.join(relpath, x) for x in args ]
-        node = repo.current
-        if aoptions['revision']:
-            node = repo.changelog.lookup(aoptions['revision'])
-        change = repo.changelog.read(node)
-        mmap = repo.manifest.read(change[0])
-        maxuserlen = 0
-        maxchangelen = 0
-        for f in args:
-            lines = repo.file(f).annotate(mmap[f])
-            pieces = []
-
-            for o, f in opmap:
-                if aoptions[o]:
-                    l = [ f(n) for n,t in lines ]
-                    m = max(map(len, l))
-                    pieces.append([ "%*s" % (m, x) for x in l])
-
-            for p,l in zip(zip(*pieces), lines):
-                sys.stdout.write(" ".join(p) + ": " + l[1])
 
 elif cmd == "export":
     node = repo.lookup(args[0])
