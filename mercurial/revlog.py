@@ -8,7 +8,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import zlib, struct, sha, os, tempfile, binascii, heapq
+import zlib, struct, sha, binascii, heapq
 from mercurial import mdiff
 
 def hex(node): return binascii.hexlify(node)
