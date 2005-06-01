@@ -17,7 +17,7 @@
 #    pass
 
 import sys, os, time
-from mercurial import hg, mdiff, fancyopts
+from mercurial import hg, mdiff, fancyopts, ui
 
 def help():
     ui.status("""\
@@ -109,7 +109,7 @@ try:
 except:
     cmd = "help"
 
-ui = hg.ui(options["verbose"], options["debug"], options["quiet"],
+ui = ui.ui(options["verbose"], options["debug"], options["quiet"],
            not options["noninteractive"])
     
 if cmd == "init":
