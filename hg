@@ -107,7 +107,7 @@ try:
     cmd = args[0]
     args = args[1:]
 except:
-    cmd = ""
+    cmd = "help"
 
 ui = hg.ui(options["verbose"], options["debug"], options["quiet"],
            not options["noninteractive"])
