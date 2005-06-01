@@ -95,8 +95,8 @@ def undo(ui, repo, args):
 
 table = {
     "init": (init, [], 'hg init'),
-    "help": (help, [], 'hg init'),
-    "checkout|co": (checkout, [], 'hg init'),
+    "help": (help, [], 'hg help'),
+    "checkout|co": (checkout, [], 'hg checkout'),
     "ann|annotate": (annotate,
                      [('r', 'revision', '', 'revision'),
                       ('u', 'user', None, 'show user'),
