@@ -137,11 +137,13 @@ class changelog(revlog):
     def read(self, node):
         return self.extract(self.revision(node))
 
-    def add(self, manifest, list, desc, transaction, p1=None, p2=None):
-        user = (os.environ.get("HGUSER") or
+    def add(self, manifest, list, desc, transaction, p1=None, p2=None,
+                  user=None, date=None):
+        user = (user or
+                os.environ.get("HGUSER") or
                 os.environ.get("EMAIL") or
                 os.environ.get("LOGNAME", "unknown") + '@' + socket.getfqdn())
-        date = "%d %d" % (time.time(), time.timezone)
+        date = date or "%d %d" % (time.time(), time.timezone)
         list.sort()
         l = [hex(manifest), user, date] + list + ["", desc]
         text = "\n".join(l)
@@ -343,6 +345,30 @@ class localrepository:
                 self.ui.warn("waiting for lock held by %s\n" % inst.args[0])
                 return lock.lock(self.join("lock"), wait)
             raise inst
+
+    def rawcommit(self, files, text, user, date, p1=None, p2=None):
+        p1 = p1 or self.current or nullid
+        pchange = self.changelog.read(p1)
+        pmmap = self.manifest.read(pchange[0])
+        tr = self.transaction()
+        mmap = {}
+        linkrev = self.changelog.count()
+        for f in files:
+            try:
+                t = file(f).read()
+            except IOError:
+                self.ui.warn("Read file %s error, skipped\n" % f)
+                continue
+            r = self.file(f)
+            prev = pmmap.get(f, nullid)
+            mmap[f] = r.add(t, tr, linkrev, prev)
+
+        mnode = self.manifest.add(mmap, tr, linkrev, pchange[0])
+        n = self.changelog.add(mnode, files, text, tr, p1, p2, user ,date, )
+        tr.close()
+        self.setcurrent(n)
+        self.dircache.clear()
+        self.dircache.update(mmap)
 
     def commit(self, parent, update = None, text = ""):
         self.lock()

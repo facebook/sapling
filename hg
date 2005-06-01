@@ -150,7 +150,33 @@ elif cmd == "commit" or cmd == "checkin" or cmd == "ci":
             repo.commit(repo.current, args)
         else:
             repo.commit(repo.current)
-
+elif cmd == "rawcommit":
+    "raw commit interface"
+    rc = {}
+    opts = [('p', 'parent', [], 'parent'),
+            ('d', 'date', "", 'data'),
+            ('u', 'user', "", 'user'),
+            ('F', 'files', "", 'file list'),
+            ('t', 'text', "", 'commit text'),
+            ('l', 'logfile', "", 'commit text file')
+            ]
+    args = fancyopts.fancyopts(args, opts, rc,
+                               "hg rawcommit [options] files")
+    text = rc['text']
+    if not text and rc['logfile']:
+        try: text = open(rc['logfile']).read()
+        except IOError: pass
+    if not text and not rc['logfile']:
+        print "missing commit text"
+        sys.exit(0)
+    if rc['files']:
+        files = open(rc['files']).read().splitlines()
+    else:
+        files = args
+        
+    repo.rawcommit(files, text, rc['user'], rc['date'], *rc['parent'])
+    
+ 
 elif cmd == "import" or cmd == "patch":
     try:
         import psyco
