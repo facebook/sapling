@@ -119,21 +119,11 @@ except:
 ui = ui.ui(options["verbose"], options["debug"], options["quiet"],
            not options["noninteractive"])
     
-if cmd == "init":
-    repo = hg.repository(ui, ".", create=1)
+try:
+    repo = hg.repository(ui=ui)
+except IOError:
+    ui.warn("Unable to open repository\n")
     sys.exit(0)
-elif cmd == "branch" or cmd == "clone":
-    os.system("cp -al %s/.hg .hg" % args[0])
-    sys.exit(0)
-elif cmd == "help":
-    help()
-    sys.exit(0)
-else:
-    try:
-        repo = hg.repository(ui=ui)
-    except IOError:
-        ui.warn("Unable to open repository\n")
-        sys.exit(0)
 
 relpath = None
 if os.getcwd() != repo.root:
@@ -220,15 +210,6 @@ elif cmd == "import" or cmd == "patch":
             if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
                 raise "patch failed!"
         repo.commit(repo.current, files, text)
-
-elif cmd == "status":
-    (c, a, d) = repo.diffdir(repo.root, repo.current)
-    if relpath:
-        (c, a, d) = map(lambda x: filterfiles(x, [ relpath ]), (c, a, d))
-
-    for f in c: print "C", f
-    for f in a: print "?", f
-    for f in d: print "R", f
 
 elif cmd == "diff":
     revs = []

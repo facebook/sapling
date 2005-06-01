@@ -3,6 +3,20 @@ from mercurial import fancyopts, ui, hg
 
 class UnknownCommand(Exception): pass
 
+def filterfiles(list, files):
+    l = [ x for x in list if x in files ]
+
+    for f in files:
+        if f[-1] != os.sep: f += os.sep
+        l += [ x for x in list if x.startswith(f) ]
+    return l
+
+def relfilter(repo, args):
+    if os.getcwd() != repo.root:
+        p = os.getcwd()[len(repo.root) + 1: ]
+        return filterfiles(p, args)
+    return args
+
 def relpath(repo, args):
     if os.getcwd() != repo.root:
         p = os.getcwd()[len(repo.root) + 1: ]
@@ -48,6 +62,11 @@ def help(ui, cmd=None):
 def init(ui):
     """create a repository"""
     hg.repository(ui, ".", create=1)
+
+def branch(ui, path):
+    '''branch from a local repository'''
+    # this should eventually support remote repos
+    os.system("cp -al %s/.hg .hg" % path)
 
 def checkout(u, repo, changeset=None):
     '''checkout a given changeset or the current tip'''
@@ -98,11 +117,26 @@ def annotate(u, repo, *args, **ops):
         for p,l in zip(zip(*pieces), lines):
             u.write(" ".join(p) + ": " + l[1])
 
+def status(ui, repo):
+    '''show changed files in the working directory
+
+C = changed
+A = added
+R = removed
+? = not tracked'''
+    (c, a, d) = repo.diffdir(repo.root, repo.current)
+    (c, a, d) = map(lambda x: relfilter(repo, x), (c, a, d))
+
+    for f in c: print "C", f
+    for f in a: print "?", f
+    for f in d: print "R", f
+
 def undo(ui, repo):
     repo.undo()
 
 table = {
     "init": (init, [], 'hg init'),
+    "branch|clone": (branch, [], 'hg branch [path]'),
     "help": (help, [], 'hg help [command]'),
     "checkout|co": (checkout, [], 'hg checkout [changeset]'),
     "ann|annotate": (annotate,
@@ -111,6 +145,7 @@ table = {
                       ('n', 'number', None, 'show revision number'),
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
+    "status": (status, [], 'hg status'),
     "undo": (undo, [], 'hg undo'),
     }
 
