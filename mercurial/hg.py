@@ -329,13 +329,35 @@ class localrepository:
         return transaction(self.opener, self.join("journal"),
                            self.join("undo"))
 
-    def recover(self, f = "journal"):
+    def recover(self):
         self.lock()
-        if os.path.exists(self.join(f)):
-            self.ui.status("attempting to rollback %s information\n" % f)
-            return rollback(self.opener, self.join(f))
+        if os.path.exists(self.join("recover")):
+            self.ui.status("attempting to rollback interrupted transaction\n")
+            return rollback(self.opener, self.join("recover"))
         else:
-            self.ui.warn("no %s information available\n" % f)
+            self.ui.warn("no interrupted transaction available\n")
+
+    def undo(self):
+        self.lock()
+        if os.path.exists(self.join("undo")):
+            self.ui.status("attempting to rollback last transaction\n")
+            rollback(self.opener, self.join("undo"))
+            self.manifest = manifest(self.opener)
+            self.changelog = changelog(self.opener)
+
+            self.ui.status("discarding dircache\n")
+            node = self.changelog.tip()
+            mf = self.changelog.read(node)[0]
+            mm = self.manifest.read(mf)
+            f = mm.keys()
+            f.sort()
+
+            self.setcurrent(node)
+            self.dircache.clear()
+            self.dircache.taint(f)
+        
+        else:
+            self.ui.warn("no undo information available\n")
 
     def lock(self, wait = 1):
         try:
@@ -476,7 +498,7 @@ class localrepository:
                 if fn in dc:
                     c = dc[fn]
                     del dc[fn]
-                    if not c:
+                    if not c or c[1] < 0:
                         if fcmp(fn):
                             changed.append(fn)
                     elif c[1] != s.st_size:

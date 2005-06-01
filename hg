@@ -417,9 +417,6 @@ elif cmd == "tags":
 elif cmd == "recover":
     repo.recover()
 
-elif cmd == "undo":
-    repo.recover("undo")
-
 elif cmd == "verify":
     filelinkrevs = {}
     filenodes = {}

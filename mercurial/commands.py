@@ -90,6 +90,9 @@ def annotate(u, repo, args, **ops):
         for p,l in zip(zip(*pieces), lines):
             u.write(" ".join(p) + ": " + l[1])
 
+def undo(ui, repo, args):
+    repo.undo()
+
 table = {
     "init": (init, [], 'hg init'),
     "help": (help, [], 'hg init'),
@@ -100,6 +103,7 @@ table = {
                       ('n', 'number', None, 'show revision number'),
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
+    "undo": (undo, [], 'hg undo'),
     }
 
 norepo = "init branch help"
