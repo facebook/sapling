@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # An example CGI script to use hgweb, edit as necessary
 
