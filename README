@@ -1,14 +1,27 @@
-Setting up Mercurial in your home directory:
+Setting up Mercurial:
 
- Note: Debian fails to include bits of distutils, you'll need
- python-dev to install. Alternately, shove everything somewhere in
- your path.
+ Note: some distributions fails to include bits of distutils by
+ default, you'll need python-dev to install.
+
+ First, unpack the source:
 
  $ tar xvzf mercurial-<ver>.tar.gz
  $ cd mercurial-<ver>
- $ python2.3 setup.py install --home ~
+
+ Then to install:
+
+ $ python setup.py install   # change python to python2.3 if 2.2 is default
+
+ To install in your home directory (~/bin and ~/lib, actually), simply
+ run:
+
+ $ python2.3 setup.py install --home=~
  $ export PYTHONPATH=${HOME}/lib/python  # add this to your .bashrc
+ $ export PATH=${HOME}/bin:$PATH         # 
  $ export HGMERGE=tkmerge                # customize this
+
+ And finally:
+
  $ hg                                    # test installation, show help
 
  If you get complaints about missing modules, you probably haven't set
@@ -86,7 +99,12 @@ Network support:
  foo$ cp hgweb.cgi ~/public_html/hg-linux/index.cgi
  foo$ emacs ~/public_html/hg-linux/index.cgi # adjust the defaults
 
- # Give symbolic names to repos
- foo$ echo "main http://selenic.com/hg/" >> ~/.hgpaths # one pair per line
+Symbolic repository names:
+
+ Mercurial uses an optional file called ~/.hgpaths to track repo
+ locations symbolically. Simply add a line with the name, a space, and
+ a URL:
+
+ foo$ echo "main http://selenic.com/hg/" >> ~/.hgpaths
  foo$ hg merge main
  foo$ hg co
