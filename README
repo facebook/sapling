@@ -1,23 +1,26 @@
 Setting up Mercurial:
 
  Note: some distributions fails to include bits of distutils by
- default, you'll need python-dev to install.
+ default, you'll need python-dev to install. You'll also need a C
+ compiler and a 3-way merge tool like merge, tkdiff, or kdiff3.
 
  First, unpack the source:
 
  $ tar xvzf mercurial-<ver>.tar.gz
  $ cd mercurial-<ver>
 
- Then to install:
+ To install system-wide:
 
  $ python setup.py install   # change python to python2.3 if 2.2 is default
 
- To install in your home directory (~/bin and ~/lib, actually), simply
- run:
+ To install in your home directory (~/bin and ~/lib, actually), run:
 
  $ python2.3 setup.py install --home=~
  $ export PYTHONPATH=${HOME}/lib/python  # add this to your .bashrc
  $ export PATH=${HOME}/bin:$PATH         # 
+
+ You'll also need to set up a tool to handle three-way merges:
+
  $ export HGMERGE=tkmerge                # customize this
 
  And finally:
@@ -80,6 +83,14 @@ Importing patches:
 
  Fastest:
  $ cat ../p/patchlist | xargs hg import -p1 -b ../p 
+
+Exporting a patch:
+
+ (make changes)
+ $ hg commit
+ $ hg tip
+ 28237:747a537bd090880c29eae861df4d81b245aa0190
+ $ hg export 28237 > foo.patch    # export changeset 28237
 
 Network support:
 
