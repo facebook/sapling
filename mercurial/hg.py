@@ -42,7 +42,7 @@ class filelog(revlog):
             return new
 
         # find all ancestors
-        needed = {}
+        needed = {node:1}
         visit = [node]
         while visit:
             n = visit.pop(0)
