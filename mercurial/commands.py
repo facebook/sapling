@@ -1,4 +1,4 @@
-import os, re
+import os, re, traceback, sys
 from mercurial import fancyopts, ui, hg
 
 class UnknownCommand(Exception): pass
@@ -9,7 +9,17 @@ def relpath(repo, args):
         return [ os.path.join(p, x) for x in args ]
     return args
     
-def help(ui, args):
+def help(ui, cmd=None):
+    '''show help'''
+    if cmd:
+        try:
+            i = find(cmd)
+            ui.write("%s\n\n" % i[2])
+            ui.write(i[0].__doc__, "\n")
+        except UnknownCommand:
+            ui.warn("unknown command %s", cmd)
+        sys.exit(0)
+    
     ui.status("""\
  hg commands:
 
@@ -35,20 +45,18 @@ def help(ui, args):
  undo                  undo the last transaction
 """)
 
-def init(ui, args):
+def init(ui):
     """create a repository"""
     hg.repository(ui, ".", create=1)
 
-def checkout(u, repo, args):
+def checkout(u, repo, changeset=None):
+    '''checkout a given changeset or the current tip'''
     node = repo.changelog.tip()
-    if args:
-        node = repo.lookup(args[0])
+    if changeset:
+        node = repo.lookup(changeset)
     repo.checkout(node)
 
-def annotate(u, repo, args, **ops):
-    if not args:
-        return
-        
+def annotate(u, repo, *args, **ops):
     def getnode(rev):
         return hg.short(repo.changelog.node(rev))
 
@@ -90,13 +98,13 @@ def annotate(u, repo, args, **ops):
         for p,l in zip(zip(*pieces), lines):
             u.write(" ".join(p) + ": " + l[1])
 
-def undo(ui, repo, args):
+def undo(ui, repo):
     repo.undo()
 
 table = {
     "init": (init, [], 'hg init'),
-    "help": (help, [], 'hg help'),
-    "checkout|co": (checkout, [], 'hg checkout'),
+    "help": (help, [], 'hg help [command]'),
+    "checkout|co": (checkout, [], 'hg checkout [changeset]'),
     "ann|annotate": (annotate,
                      [('r', 'revision', '', 'revision'),
                       ('u', 'user', None, 'show user'),
@@ -107,6 +115,14 @@ table = {
     }
 
 norepo = "init branch help"
+
+def find(cmd):
+    i = None
+    for e in table.keys():
+        if re.match(e + "$", cmd):
+            return table[e]
+
+    raise UnknownCommand(cmd)
 
 def dispatch(args):
     options = {}
@@ -127,24 +143,27 @@ def dispatch(args):
     u = ui.ui(options["verbose"], options["debug"], options["quiet"],
            not options["noninteractive"])
 
-    i = None
-    for e in table.keys():
-        if re.match(e + "$", cmd):
-            i = table[e]
-
-    # deal with this internally later
-    if not i: raise UnknownCommand(cmd)
+    # deal with unfound commands later
+    i = find(cmd)
 
     cmdoptions = {}
     args = fancyopts.fancyopts(args, i[1], cmdoptions, i[2])
 
     if cmd not in norepo.split():
         repo = hg.repository(ui = u)
-        d = lambda: i[0](u, repo, args, **cmdoptions)
+        d = lambda: i[0](u, repo, *args, **cmdoptions)
     else:
-        d = lambda: i[0](u, args, **cmdoptions)
+        d = lambda: i[0](u, *args, **cmdoptions)
 
     try:
         d()
     except KeyboardInterrupt:
         u.warn("interrupted!\n")
+    except TypeError, inst:
+        # was this an argument error?
+        tb = traceback.extract_tb(sys.exc_info()[2])
+        if len(tb) > 2: # no
+            raise
+        u.warn("%s: invalid arguments\n" % i[0].__name__)
+        u.warn("syntax: %s\n" % i[2])
+        sys.exit(-1)
