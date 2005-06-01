@@ -933,14 +933,22 @@ class remoterepository:
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
         d = self.do_cmd("branches", nodes=n).read()
-        br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
-        return br
+        try:
+            br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
+            return br
+        except:
+            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
+            raise
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
         d = self.do_cmd("between", pairs=n).read()
-        p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
-        return p
+        try:
+            p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
+            return p
+        except:
+            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
+            raise
 
     def changegroup(self, nodes):
         n = " ".join(map(hex, nodes))
