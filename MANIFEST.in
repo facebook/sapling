@@ -5,7 +5,7 @@ include hgweb.cgi
 include hgeditor rewrite-log convert-repo
 include tests/*
 include *.txt
-include templates/map
+include templates/map templates/map-*[a-z]
 include templates/*.tmpl
 include doc/*
 include README

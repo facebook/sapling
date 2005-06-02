@@ -25,6 +25,8 @@ setup(name='mercurial',
       packages=['mercurial'],
       ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c'])],
       data_files=[('mercurial/templates',
-                   ['templates/map'] + glob.glob('templates/*.tmpl'))], 
+                   ['templates/map'] +
+                   glob.glob('templates/map-*') +
+                   glob.glob('templates/*.tmpl'))], 
       cmdclass = { 'install_data' : install_package_data },
       scripts=['hg'])
