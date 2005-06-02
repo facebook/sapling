@@ -129,12 +129,6 @@ relpath = None
 if os.getcwd() != repo.root:
     relpath = os.getcwd()[len(repo.root) + 1: ]
 
-if cmd == "checkout" or cmd == "co":
-    node = repo.changelog.tip()
-    if args:
-        node = repo.lookup(args[0])
-    repo.checkout(node)
-
 elif cmd == "add":
     repo.add(args)
 

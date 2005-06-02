@@ -68,8 +68,13 @@ def branch(ui, path):
     # this should eventually support remote repos
     os.system("cp -al %s/.hg .hg" % path)
 
-def checkout(u, repo, changeset=None):
+def checkout(ui, repo, changeset=None):
     '''checkout a given changeset or the current tip'''
+    (c, a, d) = repo.diffdir(repo.root, repo.current)
+    if c:
+        ui.warn("aborting (outstanding changes in working directory)\n")
+        sys.exit(1)
+
     node = repo.changelog.tip()
     if changeset:
         node = repo.lookup(changeset)
