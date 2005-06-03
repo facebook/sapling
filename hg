@@ -66,9 +66,8 @@ def diff(files = None, node1 = None, node2 = None):
     else:
         date2 = time.asctime()
         if not node1:
-            node1 = repo.current
+            node1 = repo.dirstate.parents()[0]
         (c, a, d, u) = repo.diffdir(repo.root, node1)
-        a = [] # ignore unknown files in repo, by popular request
         def read(f): return file(os.path.join(repo.root, f)).read()
 
     change = repo.changelog.read(node1)
@@ -139,9 +138,9 @@ elif cmd == "remove" or cmd == "rm" or cmd == "del" or cmd == "delete":
 elif cmd == "commit" or cmd == "checkin" or cmd == "ci":
     if 1:
         if len(args) > 0:
-            repo.commit(repo.current, args)
+            repo.commit(args)
         else:
-            repo.commit(repo.current)
+            repo.commit()
 elif cmd == "rawcommit":
     "raw commit interface"
     rc = {}
@@ -204,7 +203,7 @@ elif cmd == "import" or cmd == "patch":
         if files:
             if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
                 raise "patch failed!"
-        repo.commit(repo.current, files, text)
+        repo.commit(files, text)
 
 elif cmd == "diff":
     revs = []

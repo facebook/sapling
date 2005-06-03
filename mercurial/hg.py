@@ -155,6 +155,7 @@ class dirstate:
         self.dirty = 0
         self.ui = ui
         self.map = None
+        self.pl = None
 
     def __del__(self):
         if self.dirty:
@@ -171,6 +172,15 @@ class dirstate:
         if not self.map: self.read()
         return key in self.map
 
+    def parents(self):
+        if not self.pl:
+            self.read()
+        return self.pl
+
+    def setparents(self, p1, p2 = nullid):
+        self.dirty = 1
+        self.pl = p1, p2
+
     def state(self, key):
         try:
             return self[key][0]
@@ -181,11 +191,14 @@ class dirstate:
         if self.map is not None: return self.map
 
         self.map = {}
+        self.pl = [nullid, nullid]
         try:
             st = self.opener("dirstate").read()
         except: return
 
-        pos = 0
+        self.pl = [st[:20], st[20: 40]]
+
+        pos = 40
         while pos < len(st):
             e = struct.unpack(">cllll", st[pos:pos+17])
             l = e[4]
@@ -232,6 +245,7 @@ class dirstate:
 
     def write(self):
         st = self.opener("dirstate", "w")
+        st.write("".join(self.pl))
         for f, e in self.map.items():
             e = struct.pack(">cllll", e[0], e[1], e[2], e[3], len(f))
             st.write(e + f)
@@ -297,15 +311,7 @@ class localrepository:
 
         if not self.remote:
             self.dirstate = dirstate(self.opener, ui)
-            try:
-                self.current = bin(self.opener("current").read())
-            except IOError:
-                self.current = None
 
-    def setcurrent(self, node):
-        self.current = node
-        self.opener("current", "w").write(hex(node))
-      
     def ignore(self, f):
         if self.ignorelist is None:
             self.ignorelist = []
@@ -366,7 +372,7 @@ class localrepository:
             node = self.changelog.tip()
             f.sort()
 
-            self.setcurrent(node)
+            self.dirstate.setparents(node)
             self.dirstate.update(f, 'i')
         
         else:
@@ -486,7 +492,7 @@ class localrepository:
                 os.makedirs(os.path.dirname(f))
                 file(f, "w").write(t)
 
-        self.setcurrent(node)
+        self.dirstate.setparents(node)
         self.dirstate.clear()
         self.dirstate.update([f for f,n in l], "n")
 

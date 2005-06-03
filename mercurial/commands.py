@@ -102,7 +102,7 @@ def annotate(u, repo, *args, **ops):
         ops['number'] = 1
 
     args = relpath(repo, args)
-    node = repo.current
+    node = repo.dirstate.parents()[0]
     if ops['revision']:
         node = repo.changelog.lookup(ops['revision'])
     change = repo.changelog.read(node)
@@ -142,6 +142,17 @@ def heads(ui, repo):
         print "description:"
         print changes[4]
 
+def parents(ui, repo, node = None):
+    '''show the parents of the current working dir'''
+    if node:
+        p = repo.changelog.parents(repo.lookup(hg.bin(node)))
+    else:
+        p = repo.dirstate.parents()
+
+    for n in p:
+        if n != hg.nullid:
+            ui.write("%d:%s\n" % (repo.changelog.rev(n), hg.hex(n)))
+
 def status(ui, repo):
     '''show changed files in the working directory
 
@@ -172,6 +183,7 @@ table = {
                       ('n', 'number', None, 'show revision number'),
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
+    "parents": (parents, [], 'hg parents [node]'),
     "status": (status, [], 'hg status'),
     "undo": (undo, [], 'hg undo'),
     }
