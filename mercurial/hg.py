@@ -210,6 +210,7 @@ class dirstate:
     def update(self, files, state):
         ''' current states:
         n  normal
+        m  needs merging
         i  invalid
         r  marked for removal
         a  marked for addition'''
@@ -541,6 +542,8 @@ class localrepository:
                             added.append(fn)
                         elif fcmp(fn):
                             changed.append(fn)
+                    elif c[0] == 'm':
+                        changed.append(fn)
                     elif c[0] == 'a':
                         added.append(fn)
                     elif c[0] == 'r':
