@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import sys, struct, sha, socket, os, time, re, urllib2
+import sys, struct, sha, socket, os, time, re, urllib2, tempfile
 import urllib
 from mercurial import byterange, lock
 from mercurial.transaction import *
