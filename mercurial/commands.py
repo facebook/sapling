@@ -1,4 +1,4 @@
-import os, re, traceback, sys, signal
+import os, re, traceback, sys, signal, time
 from mercurial import fancyopts, ui, hg
 
 class UnknownCommand(Exception): pass
@@ -122,6 +122,26 @@ def annotate(u, repo, *args, **ops):
         for p,l in zip(zip(*pieces), lines):
             u.write(" ".join(p) + ": " + l[1])
 
+def heads(ui, repo):
+    '''show current repository heads'''
+    for n in repo.changelog.heads():
+        i = repo.changelog.rev(n)
+        changes = repo.changelog.read(n)
+        (p1, p2) = repo.changelog.parents(n)
+        (h, h1, h2) = map(hg.hex, (n, p1, p2))
+        (i1, i2) = map(repo.changelog.rev, (p1, p2))
+        print "rev:      %4d:%s" % (i, h)
+        print "parents:  %4d:%s" % (i1, h1)
+        if i2: print "          %4d:%s" % (i2, h2)
+        print "manifest: %4d:%s" % (repo.manifest.rev(changes[0]),
+                                    hg.hex(changes[0]))
+        print "user:", changes[1]
+        print "date:", time.asctime(
+            time.localtime(float(changes[2].split(' ')[0])))
+        if ui.verbose: print "files:", " ".join(changes[3])
+        print "description:"
+        print changes[4]
+
 def status(ui, repo):
     '''show changed files in the working directory
 
@@ -143,6 +163,7 @@ def undo(ui, repo):
 table = {
     "init": (init, [], 'hg init'),
     "branch|clone": (branch, [], 'hg branch [path]'),
+    "heads": (heads, [], 'hg heads'),
     "help": (help, [], 'hg help [command]'),
     "checkout|co": (checkout, [], 'hg checkout [changeset]'),
     "ann|annotate": (annotate,

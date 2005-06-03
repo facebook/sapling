@@ -156,6 +156,17 @@ class revlog:
     def end(self, rev): return self.start(rev) + self.length(rev)
     def base(self, rev): return self.index[rev][2]
 
+    def heads(self):
+        p = {}
+        h = []
+        for r in range(self.count() - 1, 0, -1):
+            n = self.node(r)
+            if n not in p:
+                h.append(n)
+            for pn in self.parents(n):
+                p[pn] = 1
+        return h
+    
     def lookup(self, id):
         try:
             rev = int(id)
