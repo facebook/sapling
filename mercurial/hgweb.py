@@ -608,6 +608,11 @@ class hgweb:
         elif args['cmd'][0] == 'filelog':
             write(self.filelog(args['file'][0], args['filenode'][0]))
 
+        elif args['cmd'][0] == 'heads':
+            httphdr("text/plain")
+            h = self.repo.heads()
+            sys.stdout.write(" ".join(map(hex, h)) + "\n")
+
         elif args['cmd'][0] == 'branches':
             httphdr("text/plain")
             nodes = []

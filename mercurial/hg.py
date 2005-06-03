@@ -594,6 +594,9 @@ class localrepository:
             else:
                 self.dirstate.update([f], "r")
 
+    def heads(self):
+        return self.changelog.heads()
+
     def branches(self, nodes):
         if not nodes: nodes = [self.changelog.tip()]
         b = []
@@ -659,22 +662,24 @@ class localrepository:
         seen = {}
         seenbranch = {}
 
-        self.ui.status("searching for changes\n")
-        tip = remote.branches([])[0]
-        self.ui.debug("remote tip branch is %s:%s\n" %
-                      (short(tip[0]), short(tip[1])))
-
         # if we have an empty repo, fetch everything
         if self.changelog.tip() == nullid:
+            self.ui.status("requesting all changes\n")
             return remote.changegroup([nullid])
 
         # otherwise, assume we're closer to the tip than the root
-        unknown = [tip]
+        self.ui.status("searching for changes\n")
+        heads = remote.heads()
+        unknown = []
+        for h in heads:
+            if h not in m:
+                unknown.append(h)
 
-        if tip[0] in m:
+        if not unknown:
             self.ui.status("nothing to do!\n")
             return None
-
+            
+        unknown = remote.branches(unknown)
         while unknown:
             n = unknown.pop(0)
             seen[n[0]] = 1
@@ -766,6 +771,77 @@ class localrepository:
                 yield y
 
     def addchangegroup(self, generator):
+
+        class genread:
+            def __init__(self, generator):
+                self.g = generator
+                self.buf = ""
+            def read(self, l):
+                while l > len(self.buf):
+                    try:
+                        self.buf += self.g.next()
+                    except StopIteration:
+                        break
+                d, self.buf = self.buf[:l], self.buf[l:]
+                return d
+                
+        def getchunk():
+            d = source.read(4)
+            if not d: return ""
+            l = struct.unpack(">l", d)[0]
+            if l <= 4: return ""
+            return source.read(l - 4)
+
+        def getgroup():
+            while 1:
+                c = getchunk()
+                if not c: break
+                yield c
+
+        def csmap(x):
+            self.ui.debug("add changeset %s\n" % short(x))
+            return self.changelog.count()
+
+        def revmap(x):
+            return self.changelog.rev(x)
+
+        if not generator: return
+        changesets = files = revisions = 0
+        self.lock()
+        source = genread(generator)
+        tr = self.transaction()
+
+        # pull off the changeset group
+        self.ui.status("adding changesets\n")
+        co = self.changelog.tip()
+        cn = self.changelog.addgroup(getgroup(), csmap, tr)
+        changesets = self.changelog.rev(cn) - self.changelog.rev(co)
+
+        # pull off the manifest group
+        self.ui.status("adding manifests\n")
+        mm = self.manifest.tip()
+        mo = self.manifest.addgroup(getgroup(), revmap, tr)
+
+        # process the files
+        self.ui.status("adding file revisions\n")
+        while 1:
+            f = getchunk()
+            if not f: break
+            self.ui.debug("adding %s revisions\n" % f)
+            fl = self.file(f)
+            o = fl.tip()
+            n = fl.addgroup(getgroup(), revmap, tr)
+            revisions += fl.rev(n) - fl.rev(o)
+            files += 1
+
+        self.ui.status(("modified %d files, added %d changesets" +
+                        " and %d new revisions\n")
+                       % (files, changesets, revisions))
+
+        tr.close()
+        return
+
+    def merge(self, generator):
         changesets = files = revisions = 0
 
         self.lock()
@@ -979,6 +1055,14 @@ class remoterepository:
         qs = urllib.urlencode(q)
         cu = "%s?%s" % (self.url, qs)
         return urllib.urlopen(cu)
+
+    def heads(self):
+        d = self.do_cmd("heads").read()
+        try:
+            return map(bin, d[:-1].split(" "))
+        except:
+            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
+            raise
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
