@@ -70,8 +70,8 @@ def branch(ui, path):
 
 def checkout(ui, repo, changeset=None):
     '''checkout a given changeset or the current tip'''
-    (c, a, d) = repo.diffdir(repo.root, repo.current)
-    if c:
+    (c, a, d, u) = repo.diffdir(repo.root, repo.current)
+    if c or a or d:
         ui.warn("aborting (outstanding changes in working directory)\n")
         sys.exit(1)
 
@@ -129,12 +129,13 @@ C = changed
 A = added
 R = removed
 ? = not tracked'''
-    (c, a, d) = repo.diffdir(repo.root, repo.current)
-    (c, a, d) = map(lambda x: relfilter(repo, x), (c, a, d))
+    (c, a, d, u) = repo.diffdir(repo.root, repo.current)
+    (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
     for f in c: print "C", f
-    for f in a: print "?", f
+    for f in a: print "A", f
     for f in d: print "R", f
+    for f in u: print "?", f
 
 def undo(ui, repo):
     repo.undo()

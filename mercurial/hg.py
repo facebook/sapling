@@ -149,57 +149,73 @@ class changelog(revlog):
         text = "\n".join(l)
         return self.addrevision(text, transaction, self.count(), p1, p2)
 
-class dircache:
+class dirstate:
     def __init__(self, opener, ui):
         self.opener = opener
         self.dirty = 0
         self.ui = ui
         self.map = None
+
     def __del__(self):
-        if self.dirty: self.write()
+        if self.dirty:
+            self.write()
+
     def __getitem__(self, key):
         try:
             return self.map[key]
         except TypeError:
             self.read()
             return self[key]
-        
+
+    def __contains__(self, key):
+        if not self.map: self.read()
+        return key in self.map
+
+    def state(self, key):
+        try:
+            return self[key][0]
+        except KeyError:
+            return "?"
+
     def read(self):
         if self.map is not None: return self.map
 
         self.map = {}
         try:
-            st = self.opener("dircache").read()
+            st = self.opener("dirstate").read()
         except: return
 
         pos = 0
         while pos < len(st):
-            e = struct.unpack(">llll", st[pos:pos+16])
-            l = e[3]
-            pos += 16
+            e = struct.unpack(">cllll", st[pos:pos+17])
+            l = e[4]
+            pos += 17
             f = st[pos:pos + l]
-            self.map[f] = e[:3]
+            self.map[f] = e[:4]
             pos += l
         
-    def update(self, files):
+    def update(self, files, state):
+        ''' current states:
+        n  normal
+        i  invalid
+        r  marked for removal
+        a  marked for addition'''
+
         if not files: return
         self.read()
         self.dirty = 1
         for f in files:
-            try:
-                s = os.stat(f)
-                self.map[f] = (s.st_mode, s.st_size, s.st_mtime)
-            except IOError:
-                self.remove(f)
+            if state == "r":
+                self.map[f] = ('r', 0, 0, 0)
+            else:
+                try:
+                    s = os.stat(f)
+                    self.map[f] = (state, s.st_mode, s.st_size, s.st_mtime)
+                except OSError:
+                    if state != "i": raise
+                    self.map[f] = ('r', 0, 0, 0)
 
-    def taint(self, files):
-        if not files: return
-        self.read()
-        self.dirty = 1
-        for f in files:
-            self.map[f] = (0, -1, 0)
-
-    def remove(self, files):
+    def forget(self, files):
         if not files: return
         self.read()
         self.dirty = 1
@@ -207,7 +223,7 @@ class dircache:
             try:
                 del self.map[f]
             except KeyError:
-                self.ui.warn("Not in dircache: %s\n" % f)
+                self.ui.warn("not in dirstate: %s!\n" % f)
                 pass
 
     def clear(self):
@@ -215,9 +231,9 @@ class dircache:
         self.dirty = 1
 
     def write(self):
-        st = self.opener("dircache", "w")
+        st = self.opener("dirstate", "w")
         for f, e in self.map.items():
-            e = struct.pack(">llll", e[0], e[1], e[2], len(f))
+            e = struct.pack(">cllll", e[0], e[1], e[2], e[3], len(f))
             st.write(e + f)
         self.dirty = 0
 
@@ -280,7 +296,7 @@ class localrepository:
         self.tags = None
 
         if not self.remote:
-            self.dircache = dircache(self.opener, ui)
+            self.dirstate = dirstate(self.opener, ui)
             try:
                 self.current = bin(self.opener("current").read())
             except IOError:
@@ -340,21 +356,18 @@ class localrepository:
     def undo(self):
         self.lock()
         if os.path.exists(self.join("undo")):
+            f = self.changelog.read(self.changelog.tip())[3]
             self.ui.status("attempting to rollback last transaction\n")
             rollback(self.opener, self.join("undo"))
             self.manifest = manifest(self.opener)
             self.changelog = changelog(self.opener)
 
-            self.ui.status("discarding dircache\n")
+            self.ui.status("discarding dirstate\n")
             node = self.changelog.tip()
-            mf = self.changelog.read(node)[0]
-            mm = self.manifest.read(mf)
-            f = mm.keys()
             f.sort()
 
             self.setcurrent(node)
-            self.dircache.clear()
-            self.dircache.taint(f)
+            self.dirstate.update(f, 'i')
         
         else:
             self.ui.warn("no undo information available\n")
@@ -389,22 +402,29 @@ class localrepository:
         n = self.changelog.add(mnode, files, text, tr, p1, p2, user ,date, )
         tr.close()
         self.setcurrent(n)
-        self.dircache.clear()
-        self.dircache.update(mmap)
+        self.dirstate.clear()
+        self.dirstate.update(mmap.keys(), "n")
 
-    def commit(self, parent, update = None, text = ""):
+    def commit(self, parent, files = None, text = ""):
         self.lock()
-        try:
-            remove = [ l[:-1] for l in self.opener("to-remove") ]
-            os.unlink(self.join("to-remove"))
 
-        except IOError:
-            remove = []
+        commit = []
+        remove = []
+        if files:
+            for f in files:
+                s = self.dirstate.state(f)
+                if s in 'cai':
+                    commit.append(f)
+                elif s == 'r':
+                    remove.append(f)
+                else:
+                    self.warn("%s not tracked!\n")
+        else:
+            (c, a, d, u) = self.diffdir(self.root, parent)
+            commit = c + a
+            remove = d
 
-        if update == None:
-            update = self.diffdir(self.root, parent)[0]
-
-        if not update:
+        if not commit and not remove:
             self.ui.status("nothing changed\n")
             return
 
@@ -413,14 +433,15 @@ class localrepository:
         # check in files
         new = {}
         linkrev = self.changelog.count()
-        update.sort()
-        for f in update:
+        commit.sort()
+        for f in commit:
             self.ui.note(f + "\n")
             try:
                 t = file(f).read()
             except IOError:
-                remove.append(f)
-                continue
+                self.warn("trouble committing %s!\n" % f)
+                raise
+
             r = self.file(f)
             new[f] = r.add(t, tr, linkrev)
 
@@ -444,8 +465,8 @@ class localrepository:
         tr.close()
 
         self.setcurrent(n)
-        self.dircache.update(new)
-        self.dircache.remove(remove)
+        self.dirstate.update(new, "n")
+        self.dirstate.forget(remove)
 
     def checkout(self, node):
         # checkout is really dumb at the moment
@@ -465,20 +486,21 @@ class localrepository:
                 file(f, "w").write(t)
 
         self.setcurrent(node)
-        self.dircache.clear()
-        self.dircache.update([f for f,n in l])
+        self.dirstate.clear()
+        self.dirstate.update([f for f,n in l], "n")
 
     def diffdir(self, path, changeset):
         changed = []
-        mf = {}
         added = []
+        unknown = []
+        mf = {}
 
         if changeset:
             change = self.changelog.read(changeset)
             mf = self.manifest.read(change[0])
 
         if changeset == self.current:
-            dc = self.dircache.copy()
+            dc = self.dirstate.copy()
         else:
             dc = dict.fromkeys(mf)
 
@@ -498,22 +520,31 @@ class localrepository:
                 if fn in dc:
                     c = dc[fn]
                     del dc[fn]
-                    if not c or c[1] < 0:
+                    if not c:
                         if fcmp(fn):
                             changed.append(fn)
-                    elif c[1] != s.st_size:
+                    if c[0] == 'i':
+                        if fn not in mf:
+                            added.append(fn)
+                        elif fcmp(fn):
+                            changed.append(fn)
+                    elif c[0] == 'a':
+                        added.append(fn)
+                    elif c[0] == 'r':
+                        unknown.append(fn)
+                    elif c[2] != s.st_size:
                         changed.append(fn)
-                    elif c[0] != s.st_mode or c[2] != s.st_mtime:
+                    elif c[1] != s.st_mode or c[3] != s.st_mtime:
                         if fcmp(fn):
                             changed.append(fn)
                 else:
                     if self.ignore(fn): continue
-                    added.append(fn)
+                    unknown.append(fn)
 
         deleted = dc.keys()
         deleted.sort()
 
-        return (changed, added, deleted)
+        return (changed, added, deleted, unknown)
 
     def diffrevs(self, node1, node2):
         changed, added = [], []
@@ -537,12 +568,31 @@ class localrepository:
         return (changed, added, deleted)
 
     def add(self, list):
-        self.dircache.taint(list)
+        for f in list:
+            p = os.path.join(self.root, f)
+            if not os.path.isfile(p):
+                self.ui.warn("%s does not exist!\n" % f)
+            elif self.dirstate.state(f) == 'n':
+                self.ui.warn("%s already tracked!\n" % f)
+            else:
+                self.dirstate.update([f], "a")
+
+    def forget(self, list):
+        for f in list:
+            if self.dirstate.state(f) not in 'ai':
+                self.ui.warn("%s not added!\n" % f)
+            else:
+                self.dirstate.forget([f])
 
     def remove(self, list):
-        dl = self.opener("to-remove", "a")
         for f in list:
-            dl.write(f + "\n")
+            p = os.path.join(self.root, f)
+            if os.path.isfile(p):
+                self.ui.warn("%s still exists!\n" % f)
+            elif f not in self.dirstate:
+                self.ui.warn("%s not tracked!\n" % f)
+            else:
+                self.dirstate.update([f], "r")
 
     def branches(self, nodes):
         if not nodes: nodes = [self.changelog.tip()]

@@ -67,7 +67,7 @@ def diff(files = None, node1 = None, node2 = None):
         date2 = time.asctime()
         if not node1:
             node1 = repo.current
-        (c, a, d) = repo.diffdir(repo.root, node1)
+        (c, a, d, u) = repo.diffdir(repo.root, node1)
         a = [] # ignore unknown files in repo, by popular request
         def read(f): return file(os.path.join(repo.root, f)).read()
 
@@ -79,9 +79,7 @@ def diff(files = None, node1 = None, node2 = None):
         c, a, d = map(lambda x: filterfiles(x, files), (c, a, d))
 
     for f in c:
-        to = ""
-        if mmap.has_key(f):
-            to = repo.file(f).read(mmap[f])
+        to = repo.file(f).read(mmap[f])
         tn = read(f)
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
     for f in a:
@@ -131,6 +129,9 @@ if os.getcwd() != repo.root:
 
 elif cmd == "add":
     repo.add(args)
+
+elif cmd == "forget":
+    repo.forget(args)
 
 elif cmd == "remove" or cmd == "rm" or cmd == "del" or cmd == "delete":
     repo.remove(args)
@@ -250,7 +251,7 @@ elif cmd == "debugaddchangegroup":
     repo.addchangegroup(data)
 
 elif cmd == "addremove":
-    (c, a, d) = repo.diffdir(repo.root, repo.current)
+    (c, a, d, u) = repo.diffdir(repo.root, repo.current)
     repo.add(a)
     repo.remove(d)
     
@@ -355,8 +356,8 @@ elif cmd == "debugindexdot":
     print "}"
 
 elif cmd == "merge":
-    (c, a, d) = repo.diffdir(repo.root, repo.current)
-    if c:
+    (c, a, d, u) = repo.diffdir(repo.root, repo.current)
+    if c or a or d:
         ui.warn("aborting (outstanding changes in working directory)\n")
         sys.exit(1)
 
