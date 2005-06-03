@@ -356,11 +356,6 @@ elif cmd == "debugindexdot":
     print "}"
 
 elif cmd == "merge":
-    (c, a, d, u) = repo.diffdir(repo.root, repo.current)
-    if c or a or d:
-        ui.warn("aborting (outstanding changes in working directory)\n")
-        sys.exit(1)
-
     if args:
         paths = {}
         try:
