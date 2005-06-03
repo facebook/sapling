@@ -426,7 +426,7 @@ class localrepository:
                 else:
                     self.warn("%s not tracked!\n")
         else:
-            (c, a, d, u) = self.diffdir(self.root, parent)
+            (c, a, d, u) = self.diffdir(self.root)
             commit = c + a
             remove = d
 
@@ -501,7 +501,7 @@ class localrepository:
         self.dirstate.clear()
         self.dirstate.update([f for f,n in l], "n")
 
-    def diffdir(self, path, changeset):
+    def diffdir(self, path, changeset = None):
         changed = []
         added = []
         unknown = []
@@ -510,11 +510,12 @@ class localrepository:
         if changeset:
             change = self.changelog.read(changeset)
             mf = self.manifest.read(change[0])
-
-        if changeset == self.current:
-            dc = self.dirstate.copy()
-        else:
             dc = dict.fromkeys(mf)
+        else:
+            changeset = self.dirstate.parents()[0]
+            change = self.changelog.read(changeset)
+            mf = self.manifest.read(change[0])
+            dc = self.dirstate.copy()
 
         def fcmp(fn):
             t1 = file(os.path.join(self.root, fn)).read()
@@ -535,7 +536,7 @@ class localrepository:
                     if not c:
                         if fcmp(fn):
                             changed.append(fn)
-                    if c[0] == 'i':
+                    elif c[0] == 'i':
                         if fn not in mf:
                             added.append(fn)
                         elif fcmp(fn):

@@ -250,7 +250,7 @@ elif cmd == "debugaddchangegroup":
     repo.addchangegroup(data)
 
 elif cmd == "addremove":
-    (c, a, d, u) = repo.diffdir(repo.root, repo.current)
+    (c, a, d, u) = repo.diffdir(repo.root)
     repo.add(a)
     repo.remove(d)
     
