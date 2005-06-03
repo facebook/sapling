@@ -858,174 +858,110 @@ class localrepository:
         tr.close()
         return
 
-    def merge(self, generator):
-        changesets = files = revisions = 0
-
-        self.lock()
-        class genread:
-            def __init__(self, generator):
-                self.g = generator
-                self.buf = ""
-            def read(self, l):
-                while l > len(self.buf):
-                    try:
-                        self.buf += self.g.next()
-                    except StopIteration:
-                        break
-                d, self.buf = self.buf[:l], self.buf[l:]
-                return d
-                
-        if not generator: return
-        source = genread(generator)
-
-        def getchunk():
-            d = source.read(4)
-            if not d: return ""
-            l = struct.unpack(">l", d)[0]
-            if l <= 4: return ""
-            return source.read(l - 4)
-
-        def getgroup():
-            while 1:
-                c = getchunk()
-                if not c: break
-                yield c
-
-        tr = self.transaction()
-        simple = True
-        need = {}
-
-        self.ui.status("adding changesets\n")
-        # pull off the changeset group
-        def report(x):
-            self.ui.debug("add changeset %s\n" % short(x))
-            return self.changelog.count()
-
-        co = self.changelog.tip()
-        cn = self.changelog.addgroup(getgroup(), report, tr)
-
-        changesets = self.changelog.rev(cn) - self.changelog.rev(co)
-
-        self.ui.status("adding manifests\n")
-        # pull off the manifest group
-        mm = self.manifest.tip()
-        mo = self.manifest.addgroup(getgroup(),
-                                    lambda x: self.changelog.rev(x), tr)
-
-        # do we need a resolve?
-        if self.changelog.ancestor(co, cn) != co:
-            simple = False
-            resolverev = self.changelog.count()
-
-            # resolve the manifest to determine which files
-            # we care about merging
-            self.ui.status("resolving manifests\n")
-            ma = self.manifest.ancestor(mm, mo)
-            omap = self.manifest.read(mo) # other
-            amap = self.manifest.read(ma) # ancestor
-            mmap = self.manifest.read(mm) # mine
-            nmap = {}
-
-            self.ui.debug(" ancestor %s local %s remote %s\n" %
-                          (short(ma), short(mm), short(mo)))
-
-            for f, mid in mmap.iteritems():
-                if f in omap:
-                    if mid != omap[f]:
-                        self.ui.debug(" %s versions differ, do resolve\n" % f)
-                        need[f] = mid # use merged version or local version
-                    else:
-                        nmap[f] = mid # keep ours
-                    del omap[f]
-                elif f in amap:
-                    if mid != amap[f]:
-                        r = self.ui.prompt(
-                            (" local changed %s which remote deleted\n" % f) +
-                            "(k)eep or (d)elete?", "[kd]", "k")
-                        if r == "k": nmap[f] = mid
-                    else:
-                        self.ui.debug("other deleted %s\n" % f)
-                        pass # other deleted it
-                else:
-                    self.ui.debug("local created %s\n" %f)
-                    nmap[f] = mid # we created it
-
-            del mmap
-
-            for f, oid in omap.iteritems():
-                if f in amap:
-                    if oid != amap[f]:
-                        r = self.ui.prompt(
-                            ("remote changed %s which local deleted\n" % f) +
-                            "(k)eep or (d)elete?", "[kd]", "k")
-                        if r == "k": nmap[f] = oid
-                    else:
-                        pass # probably safe
-                else:
-                    self.ui.debug("remote created %s, do resolve\n" % f)
-                    need[f] = oid
-
-            del omap
-            del amap
-
-        new = need.keys()
-        new.sort()
-
-        # process the files
-        self.ui.status("adding files\n")
-        while 1:
-            f = getchunk()
-            if not f: break
-            self.ui.debug("adding %s revisions\n" % f)
-            fl = self.file(f)
-            o = fl.tip()
-            n = fl.addgroup(getgroup(), lambda x: self.changelog.rev(x), tr)
-            revisions += fl.rev(n) - fl.rev(o)
-            files += 1
-            if f in need:
-                del need[f]
-                # manifest resolve determined we need to merge the tips
-                nmap[f] = self.merge3(fl, f, o, n, tr, resolverev)
-
-        if need:
-            # we need to do trivial merges on local files
-            for f in new:
-                if f not in need: continue
-                fl = self.file(f)
-                nmap[f] = self.merge3(fl, f, need[f], fl.tip(), tr, resolverev)
-                revisions += 1
-
-        # For simple merges, we don't need to resolve manifests or changesets
-        if simple:
-            self.ui.debug("simple merge, skipping resolve\n")
-            self.ui.status(("modified %d files, added %d changesets" +
-                           " and %d new revisions\n")
-                           % (files, changesets, revisions))
-            tr.close()
+    def resolve(self, node):
+        pl = self.dirstate.parents()
+        if pl[1] != nullid:
+            self.ui.warn("last merge not committed")
             return
 
-        node = self.manifest.add(nmap, tr, resolverev, mm, mo)
-        revisions += 1
+        p1, p2 = pl[0], node
+        m1n = self.changelog.read(p1)[0]
+        m2n = self.changelog.read(p2)[0]
+        man = self.manifest.ancestor(m1n, m2n)
+        m1 = self.manifest.read(m1n)
+        m2 = self.manifest.read(m2n)
+        ma = self.manifest.read(man)
 
-        # Now all files and manifests are merged, we add the changed files
-        # and manifest id to the changelog
-        self.ui.status("committing merge changeset\n")
-        if co == cn: cn = -1
+        (c, a, d, u) = self.diffdir(self.root)
 
-        edittext = "\nHG: merge resolve\n" + \
-                   "HG: manifest hash %s\n" % hex(node) + \
-                   "".join(["HG: changed %s\n" % f for f in new])
-        edittext = self.ui.edit(edittext)
-        n = self.changelog.add(node, new, edittext, tr, co, cn)
-        revisions += 1
+        # resolve the manifest to determine which files
+        # we care about merging
+        self.ui.status("resolving manifests\n")
+        self.ui.debug(" ancestor %s local %s remote %s\n" %
+                      (short(man), short(m1n), short(m2n)))
 
-        self.ui.status("added %d changesets, %d files, and %d new revisions\n"
-                       % (changesets, files, revisions))
+        merge = {}
+        get = {}
+        remove = []
 
-        tr.close()
+        # construct a working dir manifest
+        mw = m1.copy()
+        for f in a + c:
+            mw[f] = nullid
+        for f in d:
+            del mw[f]
 
-    def merge3(self, fl, fn, my, other, transaction, link):
-        """perform a 3-way merge and append the result"""
+        for f, n in mw.iteritems():
+            if f in m2:
+                if n != m2[f]:
+                    self.ui.debug(" %s versions differ, do resolve\n" % f)
+                    merge[f] = (m1.get(f, nullid), m2[f])
+                del m2[f]
+            elif f in ma:
+                if n != ma[f]:
+                    r = self.ui.prompt(
+                        (" local changed %s which remote deleted\n" % f) +
+                        "(k)eep or (d)elete?", "[kd]", "k")
+                    if r == "d":
+                        remove.append(f)
+                else:
+                    self.ui.debug("other deleted %s\n" % f)
+                    pass # other deleted it
+            else:
+                self.ui.debug("local created %s\n" %f)
+
+        for f, n in m2.iteritems():
+            if f in ma:
+                if n != ma[f]:
+                    r = self.ui.prompt(
+                        ("remote changed %s which local deleted\n" % f) +
+                        "(k)eep or (d)elete?", "[kd]", "k")
+                    if r == "d": remove.append(f)
+                else:
+                    pass # probably safe
+            else:
+                self.ui.debug("remote created %s, do resolve\n" % f)
+                get[f] = n
+
+        del mw, m1, m2, ma
+
+        self.dirstate.setparents(p1, p2)
+
+        # get the files we don't need to change
+        files = get.keys()
+        files.sort()
+        for f in files:
+            if f[0] == "/": continue
+            self.ui.note(f, "\n")
+            t = self.file(f).revision(get[f])
+            try:
+                file(f, "w").write(t)
+            except IOError:
+                os.makedirs(os.path.dirname(f))
+                file(f, "w").write(t)
+
+        # we have to remember what files we needed to get/change
+        # because any file that's different from either one of its
+        # parents must be in the changeset
+        self.dirstate.update(files, 'm')
+
+        # merge the tricky bits
+        files = merge.keys()
+        files.sort()
+        for f in files:
+            m, o = merge[f]
+            self.merge3(f, m, o)
+
+        # same here
+        self.dirstate.update(files, 'm')
+
+        for f in remove:
+            self.ui.note("removing %s\n" % f)
+            #os.unlink(f)
+        self.dirstate.update(remove, 'r')
+
+    def merge3(self, fn, my, other):
+        """perform a 3-way merge in the working directory"""
         
         def temp(prefix, node):
             pre = "%s~%s." % (os.path.basename(fn), prefix)
@@ -1035,30 +971,23 @@ class localrepository:
             f.close()
             return name
 
+        fl = self.file(fn)
         base = fl.ancestor(my, other)
+        a = fn
+        b = temp("other", other)
+        c = temp("base", base)
+
         self.ui.note("resolving %s\n" % fn)
-        self.ui.debug("local %s remote %s ancestor %s\n" %
-                              (short(my), short(other), short(base)))
+        self.ui.debug("file %s: other %s ancestor %s\n" %
+                              (fn, short(other), short(base)))
 
-        if my == base: 
-            text = fl.revision(other)
-        else:
-            a = temp("local", my)
-            b = temp("remote", other)
-            c = temp("parent", base)
+        cmd = os.environ["HGMERGE"]
+        r = os.system("%s %s %s %s %s" % (cmd, a, b, c, fn))
+        if r:
+            self.ui.warn("merging %s failed!\n" % f)
 
-            cmd = os.environ["HGMERGE"]
-            self.ui.debug("invoking merge with %s\n" % cmd)
-            r = os.system("%s %s %s %s %s" % (cmd, a, b, c, fn))
-            if r:
-                raise "Merge failed!"
-
-            text = open(a).read()
-            os.unlink(a)
-            os.unlink(b)
-            os.unlink(c)
-            
-        return fl.add(text, transaction, link, my, other)
+        os.unlink(b)
+        os.unlink(c)
 
 class remoterepository:
     def __init__(self, ui, path):

@@ -153,6 +153,14 @@ def parents(ui, repo, node = None):
         if n != hg.nullid:
             ui.write("%d:%s\n" % (repo.changelog.rev(n), hg.hex(n)))
 
+def resolve(ui, repo, node = None):
+    '''merge a given node or the current tip into the working dir'''
+    if not node:
+        node = repo.changelog.tip()
+    else:
+        node = repo.lookup(node)
+    repo.resolve(node)
+
 def status(ui, repo):
     '''show changed files in the working directory
 
@@ -184,6 +192,7 @@ table = {
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
     "parents": (parents, [], 'hg parents [node]'),
+    "resolve": (resolve, [], 'hg resolve [node]'),
     "status": (status, [], 'hg status'),
     "undo": (undo, [], 'hg undo'),
     }
