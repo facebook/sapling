@@ -413,9 +413,7 @@ class localrepository:
         self.dirstate.clear()
         self.dirstate.update(mmap.keys(), "n")
 
-    def commit(self, parent, files = None, text = ""):
-        self.lock()
-
+    def commit(self, files = None, text = ""):
         commit = []
         remove = []
         if files:
@@ -436,6 +434,11 @@ class localrepository:
             self.ui.status("nothing changed\n")
             return
 
+        p1, p2 = self.dirstate.parents()
+        c1 = self.changelog.read(p1)
+        c2 = self.changelog.read(p2)
+        m1 = self.manifest.read(c1[0])
+        m2 = self.manifest.read(c2[0])
         lock = self.lock()
         tr = self.transaction()
 
@@ -452,28 +455,28 @@ class localrepository:
                 raise
 
             r = self.file(f)
-            new[f] = r.add(t, tr, linkrev)
+            fp1 = m1.get(f, nullid)
+            fp2 = m2.get(f, nullid)
+            new[f] = r.add(t, tr, linkrev, fp1, fp2)
 
         # update manifest
-        mmap = self.manifest.read(self.manifest.tip())
-        mmap.update(new)
-        for f in remove:
-            del mmap[f]
-        mnode = self.manifest.add(mmap, tr, linkrev)
+        m1.update(new)
+        for f in remove: del m1[f]
+        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0])
 
         # add changeset
         new = new.keys()
         new.sort()
 
-        edittext = text + "\n" + "HG: manifest hash %s\n" % hex(mnode)
+        edittext = text + "\n" + "HG: manifest hash %s\n" % hex(mn)
         edittext += "".join(["HG: changed %s\n" % f for f in new])
         edittext += "".join(["HG: removed %s\n" % f for f in remove])
         edittext = self.ui.edit(edittext)
 
-        n = self.changelog.add(mnode, new, edittext, tr)
+        n = self.changelog.add(mn, new, edittext, tr, p1, p2)
         tr.close()
 
-        self.setcurrent(n)
+        self.dirstate.setparents(n)
         self.dirstate.update(new, "n")
         self.dirstate.forget(remove)
 
