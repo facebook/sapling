@@ -417,7 +417,6 @@ elif cmd == "verify":
             
         manifestchangeset[changes[0]] = n
         for f in changes[3]:
-            revisions += 1
             filelinkrevs.setdefault(f, []).append(i)
 
     ui.status("checking manifests\n")
@@ -468,6 +467,7 @@ elif cmd == "verify":
         fl = repo.file(f)
         nodes = { hg.nullid: 1 }
         for i in range(fl.count()):
+            revisions += 1
             n = fl.node(i)
 
             if n not in filenodes[f]:
@@ -505,10 +505,6 @@ elif cmd == "verify":
             nodes[n] = 1
 
         # cross-check
-        for flr in filelinkrevs[f]:
-            ui.warn("changeset rev %d not in %s\n" % (flr, f))
-            errors += 1
-            
         for node in filenodes[f]:
             ui.warn("node %s in manifests not in %s\n" % (hg.hex(n), f))
             errors += 1

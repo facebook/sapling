@@ -433,7 +433,7 @@ class revlog:
 
         yield struct.pack(">l", 0)
 
-    def addgroup(self, revs, linkmapper, transaction):
+    def addgroup(self, revs, linkmapper, transaction, unique = 0):
         # given a set of deltas, add them to the revision log. the
         # first delta is against its parent, which should be in our
         # log, the rest are against the previous delta.
@@ -463,7 +463,10 @@ class revlog:
             node, p1, p2, cs = struct.unpack("20s20s20s20s", chunk[:80])
             link = linkmapper(cs)
             if node in self.nodemap:
-                raise "already have %s" % hex(node[:4])
+                # this can happen if two branches make the same change
+                if unique:
+                    raise "already have %s" % hex(node[:4])
+                continue
             delta = chunk[80:]
 
             if not chain:

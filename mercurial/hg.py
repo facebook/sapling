@@ -814,7 +814,7 @@ class localrepository:
         # pull off the changeset group
         self.ui.status("adding changesets\n")
         co = self.changelog.tip()
-        cn = self.changelog.addgroup(getgroup(), csmap, tr)
+        cn = self.changelog.addgroup(getgroup(), csmap, tr, 1) # unique
         changesets = self.changelog.rev(cn) - self.changelog.rev(co)
 
         # pull off the manifest group
