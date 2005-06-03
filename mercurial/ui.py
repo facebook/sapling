@@ -30,7 +30,7 @@ class ui:
                 self.write("unrecognized response\n")
     def status(self, *msg):
         if not self.quiet: self.write(*msg)
-    def warn(self, msg):
+    def warn(self, *msg):
         self.write(*msg)
     def note(self, *msg):
         if self.verbose: self.write(*msg)
