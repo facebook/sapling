@@ -346,7 +346,7 @@ class localrepository:
                            self.join("undo"))
 
     def recover(self):
-        self.lock()
+        lock = self.lock()
         if os.path.exists(self.join("recover")):
             self.ui.status("attempting to rollback interrupted transaction\n")
             return rollback(self.opener, self.join("recover"))
@@ -354,7 +354,7 @@ class localrepository:
             self.ui.warn("no interrupted transaction available\n")
 
     def undo(self):
-        self.lock()
+        lock = self.lock()
         if os.path.exists(self.join("undo")):
             f = self.changelog.read(self.changelog.tip())[3]
             self.ui.status("attempting to rollback last transaction\n")
@@ -428,6 +428,7 @@ class localrepository:
             self.ui.status("nothing changed\n")
             return
 
+        lock = self.lock()
         tr = self.transaction()
 
         # check in files
@@ -807,8 +808,9 @@ class localrepository:
 
         if not generator: return
         changesets = files = revisions = 0
-        self.lock()
+
         source = genread(generator)
+        lock = self.lock()
         tr = self.transaction()
 
         # pull off the changeset group
