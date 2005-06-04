@@ -183,6 +183,22 @@ def diff(ui, repo, *files, **opts):
 
     dodiff(repo, files, *revs)
 
+def export(ui, repo, changeset):
+    node = repo.lookup(changeset)
+    prev, other = repo.changelog.parents(node)
+    change = repo.changelog.read(node)
+    print "# HG changeset patch"
+    print "# User %s" % change[1]
+    print "# Node ID %s" % hg.hex(node)
+    print "# Parent  %s" % hg.hex(prev)
+    print
+    if other != hg.nullid:
+        print "# Parent  %s" % hg.hex(other)
+    print change[4].rstrip()
+    print
+    
+    dodiff(repo, None, prev, node)
+
 def forget(ui, repo, file, *files):
     """don't add the specified files on the next commit"""
     repo.forget(relpath(repo, (file,) + files))
@@ -206,6 +222,56 @@ def heads(ui, repo):
         if ui.verbose: print "files:", " ".join(changes[3])
         print "description:"
         print changes[4]
+
+def history(ui, repo):
+    """show the changelog history"""
+    for i in range(repo.changelog.count()):
+        n = repo.changelog.node(i)
+        changes = repo.changelog.read(n)
+        (p1, p2) = repo.changelog.parents(n)
+        (h, h1, h2) = map(hg.hex, (n, p1, p2))
+        (i1, i2) = map(repo.changelog.rev, (p1, p2))
+        print "rev:      %4d:%s" % (i, h)
+        print "parents:  %4d:%s" % (i1, h1)
+        if i2: print "          %4d:%s" % (i2, h2)
+        print "manifest: %4d:%s" % (repo.manifest.rev(changes[0]),
+                                    hg.hex(changes[0]))
+        print "user:", changes[1]
+        print "date:", time.asctime(
+            time.localtime(float(changes[2].split(' ')[0])))
+        if ui.verbose: print "files:", " ".join(changes[3])
+        print "description:"
+        print changes[4]
+
+def patch(ui, repo, patches, opts):
+    """import an ordered set of patches"""
+    try:
+        import psyco
+        psyco.full()
+    except:
+        pass
+    
+    d = opts["base"]
+    strip = opts["strip"]
+    quiet = opts["quiet"] and "> /dev/null" or ""
+
+    for patch in patches:
+        ui.status("applying %s\n" % patch)
+        pf = os.path.join(d, patch)
+
+        text = ""
+        for l in file(pf):
+            if l[:4] == "--- ": break
+            text += l
+
+        f = os.popen("lsdiff --strip %d %s" % (strip, pf))
+        files = filter(None, map(lambda x: x.rstrip(), f.read().splitlines()))
+        f.close()
+
+        if files:
+            if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
+                raise "patch failed!"
+        repo.commit(files, text)
 
 def init(ui):
     """create a repository"""
@@ -245,6 +311,40 @@ def parents(ui, repo, node = None):
         if n != hg.nullid:
             ui.write("%d:%s\n" % (repo.changelog.rev(n), hg.hex(n)))
 
+def pull(ui, repo, source):
+    """pull changes from the specified source"""
+    paths = {}
+    try:
+        pf = os.path.expanduser("~/.hgpaths")
+        for l in file(pf):
+            name, path = l.split()
+            paths[name] = path
+    except IOError:
+        pass
+
+    if source in paths: source = paths[source]
+    
+    other = hg.repository(ui, source)
+    cg = repo.getchangegroup(other)
+    repo.addchangegroup(cg)
+
+def rawcommit(ui, repo, files, rc):
+    "raw commit interface"
+
+    text = rc['text']
+    if not text and rc['logfile']:
+        try: text = open(rc['logfile']).read()
+        except IOError: pass
+    if not text and not rc['logfile']:
+        print "missing commit text"
+        return 1
+
+    files = relpath(repo, files)
+    if rc['files']:
+        files += open(rc['files']).read().splitlines()
+        
+    repo.rawcommit(files, text, rc['user'], rc['date'], *rc['parent'])
+ 
 def recover(ui, repo):
     repo.recover()
 
@@ -303,12 +403,28 @@ table = {
     "commit|ci": (commit, [], 'hg commit [files]'),
     "diff": (diff, [('r', 'rev', [], 'revision')],
              'hg diff [-r A] [-r B] [files]'),
+    "export": (export, [], "hg export <changeset>"),
     "forget": (forget, [], "hg forget [files]"),
     "heads": (heads, [], 'hg heads'),
+    "history": (history, [], 'hg history'),
     "help": (help, [], 'hg help [command]'),
     "init": (init, [], 'hg init'),
     "log": (log, [], 'hg log <file>'),
     "parents": (parents, [], 'hg parents [node]'),
+    "patch|import": (patch,
+                     [('p', 'strip', 1, 'path strip'),
+                      ('b', 'base', "", 'base path'),
+                      ('q', 'quiet', "", 'silence diff')],
+                     "hg import [options] patches"),
+    "pull|merge": (pull, [], 'hg pull [source]'),
+    "rawcommit": (rawcommit,
+                  [('p', 'parent', [], 'parent'),
+                   ('d', 'date', "", 'data'),
+                   ('u', 'user', "", 'user'),
+                   ('F', 'files', "", 'file list'),
+                   ('t', 'text', "", 'commit text'),
+                   ('l', 'logfile', "", 'commit text file')],
+                  'hg rawcommit [options] [files]'),
     "recover": (recover, [], "hg recover"),
     "remove": (remove, [], "hg remove [files]"),
     "resolve": (resolve, [], 'hg resolve [node]'),
@@ -371,7 +487,7 @@ def dispatch(args):
         d = lambda: i[0](u, *args, **cmdoptions)
 
     try:
-        d()
+        return d()
     except SignalInterrupt:
         u.warn("killed!\n")
     except KeyboardInterrupt:

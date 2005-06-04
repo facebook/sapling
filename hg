@@ -16,54 +16,8 @@
 # except:
 #    pass
 
-import sys, os, time
+import sys
 from mercurial import hg, mdiff, fancyopts, ui, commands
-
-def filterfiles(list, files):
-    l = [ x for x in list if x in files ]
-
-    for f in files:
-        if f[-1] != os.sep: f += os.sep
-        l += [ x for x in list if x.startswith(f) ]
-    return l
-
-def diff(files = None, node1 = None, node2 = None):
-    def date(c):
-        return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
-
-    if node2:
-        change = repo.changelog.read(node2)
-        mmap2 = repo.manifest.read(change[0])
-        (c, a, d) = repo.diffrevs(node1, node2)
-        def read(f): return repo.file(f).read(mmap2[f])
-        date2 = date(change)
-    else:
-        date2 = time.asctime()
-        if not node1:
-            node1 = repo.dirstate.parents()[0]
-        (c, a, d, u) = repo.diffdir(repo.root, node1)
-        def read(f): return file(os.path.join(repo.root, f)).read()
-
-    change = repo.changelog.read(node1)
-    mmap = repo.manifest.read(change[0])
-    date1 = date(change)
-
-    if files:
-        c, a, d = map(lambda x: filterfiles(x, files), (c, a, d))
-
-    for f in c:
-        to = repo.file(f).read(mmap[f])
-        tn = read(f)
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
-    for f in a:
-        to = ""
-        tn = read(f)
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
-    for f in d:
-        to = repo.file(f).read(mmap[f])
-        tn = ""
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
-
 
 try:
     sys.exit(commands.dispatch(sys.argv[1:]))
@@ -96,90 +50,7 @@ except IOError:
     ui.warn("Unable to open repository\n")
     sys.exit(0)
 
-relpath = None
-if os.getcwd() != repo.root:
-    relpath = os.getcwd()[len(repo.root) + 1: ]
-
-elif cmd == "rawcommit":
-    "raw commit interface"
-    rc = {}
-    opts = [('p', 'parent', [], 'parent'),
-            ('d', 'date', "", 'data'),
-            ('u', 'user', "", 'user'),
-            ('F', 'files', "", 'file list'),
-            ('t', 'text', "", 'commit text'),
-            ('l', 'logfile', "", 'commit text file')
-            ]
-    args = fancyopts.fancyopts(args, opts, rc,
-                               "hg rawcommit [options] files")
-    text = rc['text']
-    if not text and rc['logfile']:
-        try: text = open(rc['logfile']).read()
-        except IOError: pass
-    if not text and not rc['logfile']:
-        print "missing commit text"
-        sys.exit(0)
-    if rc['files']:
-        files = open(rc['files']).read().splitlines()
-    else:
-        files = args
-        
-    repo.rawcommit(files, text, rc['user'], rc['date'], *rc['parent'])
-    
- 
-elif cmd == "import" or cmd == "patch":
-    try:
-        import psyco
-        psyco.full()
-    except:
-        pass
-    
-    ioptions = {}
-    opts = [('p', 'strip', 1, 'path strip'),
-            ('b', 'base', "", 'base path'),
-            ('q', 'quiet', "", 'silence diff')
-            ]
-    
-    args = fancyopts.fancyopts(args, opts, ioptions,
-                              'hg import [options] <patch names>')
-    d = ioptions["base"]
-    strip = ioptions["strip"]
-    quiet = ioptions["quiet"] and "> /dev/null" or ""
-
-    for patch in args:
-        ui.status("applying %s\n" % patch)
-        pf = os.path.join(d, patch)
-
-        text = ""
-        for l in file(pf):
-            if l[:4] == "--- ": break
-            text += l
-
-        f = os.popen("lsdiff --strip %d %s" % (strip, pf))
-        files = filter(None, map(lambda x: x.rstrip(), f.read().splitlines()))
-        f.close()
-
-        if files:
-            if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
-                raise "patch failed!"
-        repo.commit(files, text)
-
-elif cmd == "export":
-    node = repo.lookup(args[0])
-    prev, other = repo.changelog.parents(node)
-    change = repo.changelog.read(node)
-    print "# HG changeset patch"
-    print "# User %s" % change[1]
-    print "# Node ID %s" % hg.hex(node)
-    print "# Parent  %s" % hg.hex(prev)
-    print
-    if other != hg.nullid:
-        print "# Parent  %s" % hg.hex(other)
-    print change[4]
-    
-    diff(None, prev, node)
-
-elif cmd == "debugchangegroup":
+if cmd == "debugchangegroup":
     newer = repo.newer(map(repo.lookup, args))
     for chunk in repo.changegroup(newer):
         sys.stdout.write(chunk)
@@ -187,25 +58,6 @@ elif cmd == "debugchangegroup":
 elif cmd == "debugaddchangegroup":
     data = sys.stdin.read()
     repo.addchangegroup(data)
-
-elif cmd == "history":
-    for i in range(repo.changelog.count()):
-        n = repo.changelog.node(i)
-        changes = repo.changelog.read(n)
-        (p1, p2) = repo.changelog.parents(n)
-        (h, h1, h2) = map(hg.hex, (n, p1, p2))
-        (i1, i2) = map(repo.changelog.rev, (p1, p2))
-        print "rev:      %4d:%s" % (i, h)
-        print "parents:  %4d:%s" % (i1, h1)
-        if i2: print "          %4d:%s" % (i2, h2)
-        print "manifest: %4d:%s" % (repo.manifest.rev(changes[0]),
-                                    hg.hex(changes[0]))
-        print "user:", changes[1]
-        print "date:", time.asctime(
-            time.localtime(float(changes[2].split(' ')[0])))
-        if ui.verbose: print "files:", " ".join(changes[3])
-        print "description:"
-        print changes[4]
 
 elif cmd == "dump":
     if args:
@@ -252,25 +104,6 @@ elif cmd == "debugindexdot":
         if e[5] != hg.nullid:
             print "\t%d -> %d" % (r.rev(e[5]), i)
     print "}"
-
-elif cmd == "merge":
-    if args:
-        paths = {}
-        try:
-            pf = os.path.join(os.environ["HOME"], ".hgpaths")
-            for l in file(pf):
-                name, path = l.split()
-                paths[name] = path
-        except:
-            pass
-
-        if args[0] in paths: args[0] = paths[args[0]]
-        
-        other = hg.repository(ui, args[0])
-        cg = repo.getchangegroup(other)
-        repo.addchangegroup(cg)
-    else:
-        print "missing source repository"
 
 elif cmd == "tags":
     repo.lookup(0) # prime the cache
