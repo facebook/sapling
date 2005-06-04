@@ -571,6 +571,11 @@ def dispatch(args):
         u.warn("killed!\n")
     except KeyboardInterrupt:
         u.warn("interrupted!\n")
+    except IOError, inst:
+        if inst.errno == 32:
+            u.warn("broken pipe\n")
+        else:
+            raise
     except TypeError, inst:
         import traceback
         # was this an argument error?
