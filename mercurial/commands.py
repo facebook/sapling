@@ -75,7 +75,7 @@ def help(ui, cmd=None):
             ui.write("%s\n\n" % i[2])
             ui.write(i[0].__doc__, "\n")
         except UnknownCommand:
-            ui.warn("unknown command %s", cmd)
+            ui.warn("unknown command %s" % cmd)
         sys.exit(0)
     
     ui.status("""\
@@ -551,8 +551,12 @@ def dispatch(args):
     u = ui.ui(options["verbose"], options["debug"], options["quiet"],
            not options["noninteractive"])
 
-    # deal with unfound commands later
-    i = find(cmd)
+    try:
+        i = find(cmd)
+    except UnknownCommand:
+        u.warn("unknown command '%s'\n" % cmd)
+        help(u)
+        sys.exit(1)
 
     signal.signal(signal.SIGTERM, catchterm)
 
