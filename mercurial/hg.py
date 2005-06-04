@@ -354,6 +354,9 @@ class localrepository:
         return filelog(self.opener, f)
 
     def transaction(self):
+        # save dirstate for undo
+        ds = self.opener("dirstate").read()
+        self.opener("undo.dirstate", "w").write(ds)
         return transaction(self.opener, self.join("journal"),
                            self.join("undo"))
 
@@ -368,19 +371,11 @@ class localrepository:
     def undo(self):
         lock = self.lock()
         if os.path.exists(self.join("undo")):
-            f = self.changelog.read(self.changelog.tip())[3]
             self.ui.status("attempting to rollback last transaction\n")
             rollback(self.opener, self.join("undo"))
-            self.manifest = manifest(self.opener)
-            self.changelog = changelog(self.opener)
-
-            self.ui.status("discarding dirstate\n")
-            node = self.changelog.tip()
-            f.sort()
-
-            self.dirstate.setparents(node)
-            self.dirstate.update(f, 'i')
-        
+            self.dirstate = None
+            os.rename(self.join("undo.dirstate"), self.join("dirstate"))
+            self.dirstate = dirstate(self.opener, self.ui, self.root)
         else:
             self.ui.warn("no undo information available\n")
 
