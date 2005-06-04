@@ -21,6 +21,12 @@ if which merge > /dev/null ; then
 	exit 0
     fi
     cp $LOCAL.orig $LOCAL
+elif which diff3 > /dev/null ; then
+    if diff3 -m $LOCAL.orig $BASE $OTHER > $LOCAL ; then
+	# success
+	exit 0
+    fi
+    cp $LOCAL.orig $LOCAL
 fi
 
 # try using kdiff3, which is fairly nice
@@ -45,6 +51,13 @@ fi
 if which merge > /dev/null ; then
     echo "conflicts detected in $LOCAL"
     merge $LOCAL $BASE $OTHER 2>/dev/null || $EDITOR $LOCAL
+    exit 0
+fi
+
+if which diff3 > /dev/null ; then
+    echo "conflicts detected in $LOCAL"
+    diff3 -m $LOCAL.orig $BASE $OTHER > $LOCAL || $EDITOR $LOCAL
+    exit 0
 fi
 
 # attempt to manually merge with diff and patch
@@ -64,5 +77,3 @@ fi
 
 echo "hgmerge: unable to find merge, tkdiff, kdiff3, or diff+patch!"
 exit 1
-
-
