@@ -150,8 +150,9 @@ class changelog(revlog):
         return self.addrevision(text, transaction, self.count(), p1, p2)
 
 class dirstate:
-    def __init__(self, opener, ui):
+    def __init__(self, opener, ui, root):
         self.opener = opener
+        self.root = root
         self.dirty = 0
         self.ui = ui
         self.map = None
@@ -223,7 +224,7 @@ class dirstate:
                 self.map[f] = ('r', 0, 0, 0)
             else:
                 try:
-                    s = os.stat(f)
+                    s = os.stat(os.path.join(self.root, f))
                     self.map[f] = (state, s.st_mode, s.st_size, s.st_mtime)
                 except OSError:
                     if state != "i": raise
@@ -311,7 +312,7 @@ class localrepository:
         self.tags = None
 
         if not self.remote:
-            self.dirstate = dirstate(self.opener, ui)
+            self.dirstate = dirstate(self.opener, ui, self.root)
 
     def ignore(self, f):
         if self.ignorelist is None:
@@ -343,6 +344,9 @@ class localrepository:
 
     def join(self, f):
         return os.path.join(self.path, f)
+
+    def wjoin(self, f):
+        return os.path.join(self.root, f)
 
     def file(self, f):
         if f[0] == '/': f = f[1:]
@@ -420,12 +424,12 @@ class localrepository:
         if files:
             for f in files:
                 s = self.dirstate.state(f)
-                if s in 'cai':
+                if s in 'nmai':
                     commit.append(f)
                 elif s == 'r':
                     remove.append(f)
                 else:
-                    self.warn("%s not tracked!\n")
+                    self.ui.warn("%s not tracked!\n" % f)
         else:
             (c, a, d, u) = self.diffdir(self.root)
             commit = c + a
@@ -450,7 +454,7 @@ class localrepository:
         for f in commit:
             self.ui.note(f + "\n")
             try:
-                t = file(f).read()
+                t = file(self.wjoin(f)).read()
             except IOError:
                 self.warn("trouble committing %s!\n" % f)
                 raise
@@ -493,10 +497,10 @@ class localrepository:
             self.ui.note(f, "\n")
             t = self.file(f).revision(n)
             try:
-                file(f, "w").write(t)
+                file(self.wjoin(f), "w").write(t)
             except IOError:
                 os.makedirs(os.path.dirname(f))
-                file(f, "w").write(t)
+                file(self.wjoin(f), "w").write(t)
 
         self.dirstate.setparents(node)
         self.dirstate.clear()
@@ -519,7 +523,7 @@ class localrepository:
             dc = self.dirstate.copy()
 
         def fcmp(fn):
-            t1 = file(os.path.join(self.root, fn)).read()
+            t1 = file(self.wjoin(fn)).read()
             t2 = self.file(fn).revision(mf[fn])
             return cmp(t1, t2)
 
@@ -585,7 +589,7 @@ class localrepository:
 
     def add(self, list):
         for f in list:
-            p = os.path.join(self.root, f)
+            p = self.wjoin(f)
             if not os.path.isfile(p):
                 self.ui.warn("%s does not exist!\n" % f)
             elif self.dirstate.state(f) == 'n':
@@ -602,7 +606,7 @@ class localrepository:
 
     def remove(self, list):
         for f in list:
-            p = os.path.join(self.root, f)
+            p = self.wjoin(f)
             if os.path.isfile(p):
                 self.ui.warn("%s still exists!\n" % f)
             elif f not in self.dirstate:
@@ -935,10 +939,10 @@ class localrepository:
             self.ui.note(f, "\n")
             t = self.file(f).revision(get[f])
             try:
-                file(f, "w").write(t)
+                file(self.wjoin(f), "w").write(t)
             except IOError:
                 os.makedirs(os.path.dirname(f))
-                file(f, "w").write(t)
+                file(self.wjoin(f), "w").write(t)
 
         # we have to remember what files we needed to get/change
         # because any file that's different from either one of its
@@ -973,7 +977,7 @@ class localrepository:
 
         fl = self.file(fn)
         base = fl.ancestor(my, other)
-        a = fn
+        a = self.wjoin(fn)
         b = temp("other", other)
         c = temp("base", base)
 
