@@ -151,6 +151,12 @@ def branch(ui, path):
     # this should eventually support remote repos
     os.system("cp -al %s/.hg .hg" % path)
 
+def cat(ui, repo, file, rev = []):
+    r = repo.file(file)
+    n = r.tip()
+    if rev: n = r.lookup(rev)
+    sys.stdout.write(r.read(n))
+
 def checkout(ui, repo, changeset=None):
     '''checkout a given changeset or the current tip'''
     (c, a, d, u) = repo.diffdir(repo.root)
@@ -166,6 +172,35 @@ def checkout(ui, repo, changeset=None):
 def commit(ui, repo, *files):
     """commit the specified files or all outstanding changes"""
     repo.commit(relpath(repo, files))
+
+def debugaddchangegroup(ui, repo):
+    data = sys.stdin.read()
+    repo.addchangegroup(data)
+
+def debugchangegroup(ui, repo, roots):
+    newer = repo.newer(map(repo.lookup, roots))
+    for chunk in repo.changegroup(newer):
+        sys.stdout.write(chunk)
+
+def debugindex(ui, file):
+    r = hg.revlog(open, file, "")
+    print "   rev    offset  length   base linkrev"+\
+          " p1           p2           nodeid"
+    for i in range(r.count()):
+        e = r.index[i]
+        print "% 6d % 9d % 7d % 6d % 7d %s.. %s.. %s.." % (
+            i, e[0], e[1], e[2], e[3],
+            hg.hex(e[4][:5]), hg.hex(e[5][:5]), hg.hex(e[6][:5]))
+
+def debugindexdot(ui, file):
+    r = hg.revlog(open, file, "")
+    print "digraph G {"
+    for i in range(r.count()):
+        e = r.index[i]
+        print "\t%d -> %d" % (r.rev(e[4]), i)
+        if e[5] != hg.nullid:
+            print "\t%d -> %d" % (r.rev(e[5]), i)
+    print "}"
 
 def diff(ui, repo, *files, **opts):
     revs = []
@@ -300,6 +335,17 @@ def log(ui, repo, f):
         print changes[4].rstrip()
         print
 
+def manifest(ui, repo, rev = []):
+    n = repo.manifest.tip()
+    if rev:
+        n = repo.manifest.lookup(rev)
+    m = repo.manifest.read(n)
+    files = m.keys()
+    files.sort()
+
+    for f in files:
+        print hg.hex(m[f]), f
+
 def parents(ui, repo, node = None):
     '''show the parents of the current working dir'''
     if node:
@@ -381,6 +427,17 @@ def status(ui, repo):
     for f in d: print "R", f
     for f in u: print "?", f
 
+def tags(ui, repo):
+    repo.lookup(0) # prime the cache
+    i = repo.tags.items()
+    i.sort()
+    for k, n in i:
+        try:
+            r = repo.changelog.rev(n)
+        except KeyError:
+            r = "?"
+        print "%-30s %5d:%s" % (k, repo.changelog.rev(n), hg.hex(n))
+
 def tip(ui, repo):
     n = repo.changelog.tip()
     t = repo.changelog.rev(n)
@@ -403,8 +460,13 @@ table = {
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
     "branch|clone": (branch, [], 'hg branch [path]'),
+    "cat|dump": (cat, [], 'hg cat <file> [rev]'),
     "checkout|co": (checkout, [], 'hg checkout [changeset]'),
     "commit|ci": (commit, [], 'hg commit [files]'),
+    "debugaddchangegroup": (debugaddchangegroup, [], 'debugaddchangegroup'),
+    "debugchangegroup": (debugchangegroup, [], 'debugchangegroup [roots]'),
+    "debugindex": (debugindex, [], 'debugindex <file>'),
+    "debugindexdot": (debugindexdot, [], 'debugindexdot <file>'),
     "diff": (diff, [('r', 'rev', [], 'revision')],
              'hg diff [-r A] [-r B] [files]'),
     "export": (export, [], "hg export <changeset>"),
@@ -414,6 +476,7 @@ table = {
     "help": (help, [], 'hg help [command]'),
     "init": (init, [], 'hg init'),
     "log": (log, [], 'hg log <file>'),
+    "manifest|dumpmanifest": (manifest, [], 'hg manifest [rev]'),
     "parents": (parents, [], 'hg parents [node]'),
     "patch|import": (patch,
                      [('p', 'strip', 1, 'path strip'),
@@ -438,12 +501,13 @@ table = {
                       ('t', 'templates', "", 'template map')],
               "hg serve [options]"),
     "status": (status, [], 'hg status'),
+    "tags": (tags, [], 'hg tags'),
     "tip": (tip, [], 'hg tip'),
     "undo": (undo, [], 'hg undo'),
     "verify": (verify, [], 'hg verify'),
     }
 
-norepo = "init branch help"
+norepo = "init branch help debugindex debugindexdot"
 
 def find(cmd):
     i = None
