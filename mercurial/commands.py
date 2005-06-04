@@ -389,6 +389,10 @@ def tip(ui, repo):
 def undo(ui, repo):
     repo.undo()
 
+def verify(ui, repo):
+    """verify the integrity of the repository"""
+    return repo.verify()
+
 table = {
     "add": (add, [], "hg add [files]"),
     "addremove": (addremove, [], "hg addremove"),
@@ -436,6 +440,7 @@ table = {
     "status": (status, [], 'hg status'),
     "tip": (tip, [], 'hg tip'),
     "undo": (undo, [], 'hg undo'),
+    "verify": (verify, [], 'hg verify'),
     }
 
 norepo = "init branch help"

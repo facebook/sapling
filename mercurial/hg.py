@@ -993,6 +993,133 @@ class localrepository:
         os.unlink(b)
         os.unlink(c)
 
+    def verify(self):
+        filelinkrevs = {}
+        filenodes = {}
+        manifestchangeset = {}
+        changesets = revisions = files = 0
+        errors = 0
+
+        self.ui.status("checking changesets\n")
+        for i in range(self.changelog.count()):
+            changesets += 1
+            n = self.changelog.node(i)
+            for p in self.changelog.parents(n):
+                if p not in self.changelog.nodemap:
+                    self.ui.warn("changeset %s has unknown parent %s\n" %
+                                 (short(n), short(p)))
+                    errors += 1
+            try:
+                changes = self.changelog.read(n)
+            except Exception, inst:
+                self.ui.warn("unpacking changeset %s: %s\n" % (short(n), inst))
+                errors += 1
+
+            manifestchangeset[changes[0]] = n
+            for f in changes[3]:
+                filelinkrevs.setdefault(f, []).append(i)
+
+        self.ui.status("checking manifests\n")
+        for i in range(self.manifest.count()):
+            n = self.manifest.node(i)
+            for p in self.manifest.parents(n):
+                if p not in self.manifest.nodemap:
+                    self.ui.warn("manifest %s has unknown parent %s\n" %
+                            (short(n), short(p)))
+                    errors += 1
+            ca = self.changelog.node(self.manifest.linkrev(n))
+            cc = manifestchangeset[n]
+            if ca != cc:
+                self.ui.warn("manifest %s points to %s, not %s\n" %
+                        (hex(n), hex(ca), hex(cc)))
+                errors += 1
+
+            try:
+                delta = mdiff.patchtext(self.manifest.delta(n))
+            except KeyboardInterrupt:
+                print "aborted"
+                sys.exit(0)
+            except Exception, inst:
+                self.ui.warn("unpacking manifest %s: %s\n"
+                             % (short(n), inst))
+                errors += 1
+
+            ff = [ l.split('\0') for l in delta.splitlines() ]
+            for f, fn in ff:
+                filenodes.setdefault(f, {})[bin(fn)] = 1
+
+        self.ui.status("crosschecking files in changesets and manifests\n")
+        for f in filenodes:
+            if f not in filelinkrevs:
+                self.ui.warn("file %s in manifest but not in changesets\n" % f)
+                errors += 1
+
+        for f in filelinkrevs:
+            if f not in filenodes:
+                self.ui.warn("file %s in changeset but not in manifest\n" % f)
+                errors += 1
+
+        self.ui.status("checking files\n")
+        ff = filenodes.keys()
+        ff.sort()
+        for f in ff:
+            if f == "/dev/null": continue
+            files += 1
+            fl = self.file(f)
+            nodes = { nullid: 1 }
+            for i in range(fl.count()):
+                revisions += 1
+                n = fl.node(i)
+
+                if n not in filenodes[f]:
+                    self.ui.warn("%s: %d:%s not in manifests\n"
+                                 % (f, i, short(n)))
+                    print len(filenodes[f].keys()), fl.count(), f
+                    errors += 1
+                else:
+                    del filenodes[f][n]
+
+                flr = fl.linkrev(n)
+                if flr not in filelinkrevs[f]:
+                    self.ui.warn("%s:%s points to unexpected changeset %d\n"
+                            % (f, short(n), fl.linkrev(n)))
+                    errors += 1
+                else:
+                    filelinkrevs[f].remove(flr)
+
+                # verify contents
+                try:
+                    t = fl.read(n)
+                except Exception, inst:
+                    self.ui.warn("unpacking file %s %s: %s\n"
+                                 % (f, short(n), inst))
+                    errors += 1
+
+                # verify parents
+                (p1, p2) = fl.parents(n)
+                if p1 not in nodes:
+                    self.ui.warn("file %s:%s unknown parent 1 %s" %
+                            (f, short(n), short(p1)))
+                    errors += 1
+                if p2 not in nodes:
+                    self.ui.warn("file %s:%s unknown parent 2 %s" %
+                            (f, short(n), short(p1)))
+                    errors += 1
+                nodes[n] = 1
+
+            # cross-check
+            for node in filenodes[f]:
+                self.ui.warn("node %s in manifests not in %s\n"
+                             % (hex(n), f))
+                errors += 1
+
+        self.ui.status("%d files, %d changesets, %d total revisions\n" %
+                       (files, changesets, revisions))
+
+        if errors:
+            self.ui.warn("%d integrity errors encountered!\n" % errors)
+            return 1
+
 class remoterepository:
     def __init__(self, ui, path):
         self.url = path
