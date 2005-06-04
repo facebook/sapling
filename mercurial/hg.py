@@ -212,7 +212,6 @@ class dirstate:
         ''' current states:
         n  normal
         m  needs merging
-        i  invalid
         r  marked for removal
         a  marked for addition'''
 
@@ -223,12 +222,8 @@ class dirstate:
             if state == "r":
                 self.map[f] = ('r', 0, 0, 0)
             else:
-                try:
-                    s = os.stat(os.path.join(self.root, f))
-                    self.map[f] = (state, s.st_mode, s.st_size, s.st_mtime)
-                except OSError:
-                    if state != "i": raise
-                    self.map[f] = ('r', 0, 0, 0)
+                s = os.stat(os.path.join(self.root, f))
+                self.map[f] = (state, s.st_mode, s.st_size, s.st_mtime)
 
     def forget(self, files):
         if not files: return
@@ -536,11 +531,6 @@ class localrepository:
                     del dc[fn]
                     if not c:
                         if fcmp(fn):
-                            changed.append(fn)
-                    elif c[0] == 'i':
-                        if fn not in mf:
-                            added.append(fn)
-                        elif fcmp(fn):
                             changed.append(fn)
                     elif c[0] == 'm':
                         changed.append(fn)
