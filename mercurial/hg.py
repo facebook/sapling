@@ -5,9 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import sys, struct, sha, socket, os, time, re, urllib2, tempfile
-import urllib
-from mercurial import byterange, lock
+import sys, struct, os
+from mercurial import lock
 from mercurial.transaction import *
 from mercurial.revlog import *
 from difflib import SequenceMatcher
@@ -139,6 +138,7 @@ class changelog(revlog):
 
     def add(self, manifest, list, desc, transaction, p1=None, p2=None,
                   user=None, date=None):
+        import socket, time
         user = (user or
                 os.environ.get("HGUSER") or
                 os.environ.get("EMAIL") or
@@ -315,6 +315,7 @@ class localrepository:
             self.dirstate = dirstate(self.opener, ui, self.root)
 
     def ignore(self, f):
+        import re
         if self.ignorelist is None:
             self.ignorelist = []
             try:
@@ -966,6 +967,8 @@ class localrepository:
 
     def merge3(self, fn, my, other):
         """perform a 3-way merge in the working directory"""
+
+        import tempfile
         
         def temp(prefix, node):
             pre = "%s~%s." % (os.path.basename(fn), prefix)
@@ -1177,10 +1180,14 @@ class remoterepository:
 
 def repository(ui, path=None, create=0):
     if path and path[:7] == "http://":
+        import urllib, urllib2
         return remoterepository(ui, path)
     if path and path[:5] == "hg://":
+        import urllib, urllib2
         return remoterepository(ui, path.replace("hg://", "http://"))
     if path and path[:11] == "old-http://":
+        import urllib, urllib2
+        from mercurial import byterange
         return localrepository(ui, path.replace("old-http://", "http://"))
     else:
         return localrepository(ui, path, create)

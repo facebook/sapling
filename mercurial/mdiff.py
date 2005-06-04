@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import difflib, struct, mmap
+import difflib, struct
 from mercurial.mpatch import *
 
 def unidiff(a, ad, b, bd, fn):

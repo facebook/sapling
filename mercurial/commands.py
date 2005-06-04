@@ -1,4 +1,11 @@
-import os, re, traceback, sys, signal, time, mdiff
+# commands.py - command processing for mercurial
+#
+# Copyright 2005 Matt Mackall <mpm@selenic.com>
+#
+# This software may be used and distributed according to the terms
+# of the GNU General Public License, incorporated herein by reference.
+
+import os, re, sys, signal, time, mdiff
 from mercurial import fancyopts, ui, hg
 
 class UnknownCommand(Exception): pass
@@ -522,6 +529,9 @@ class SignalInterrupt(Exception): pass
 def catchterm(*args):
     raise SignalInterrupt
 
+def run():
+    sys.exit(dispatch(sys.argv[1:]))
+
 def dispatch(args):
     options = {}
     opts = [('v', 'verbose', None, 'verbose'),
@@ -562,6 +572,7 @@ def dispatch(args):
     except KeyboardInterrupt:
         u.warn("interrupted!\n")
     except TypeError, inst:
+        import traceback
         # was this an argument error?
         tb = traceback.extract_tb(sys.exc_info()[2])
         if len(tb) > 2: # no

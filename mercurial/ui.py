@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, tempfile, sys, re
+import os, sys, re
 
 class ui:
     def __init__(self, verbose=False, debug=False, quiet=False,
@@ -37,6 +37,7 @@ class ui:
     def debug(self, *msg):
         if self.debugflag: self.write(*msg)
     def edit(self, text):
+        import tempfile
         (fd, name) = tempfile.mkstemp("hg")
         f = os.fdopen(fd, "w")
         f.write(text)

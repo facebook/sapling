@@ -8,16 +8,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-# the psyco compiler makes commits a bit faster
-# and makes changegroup merge about 20 times slower!
-# try:
-#    import psyco
-#    psyco.full()
-# except:
-#    pass
-
-import sys
 from mercurial import commands
 
-sys.exit(commands.dispatch(sys.argv[1:]))
+commands.run()
 
