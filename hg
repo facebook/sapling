@@ -19,32 +19,6 @@
 import sys, os, time
 from mercurial import hg, mdiff, fancyopts, ui, commands
 
-def help():
-    ui.status("""\
- commands:
-
- add [files...]        add the given files in the next commit
- addremove             add all new files, delete all missing files
- annotate [files...]   show changeset number per file line
- branch <path>         create a branch of <path> in this directory
- checkout [changeset]  checkout the latest or given changeset
- commit                commit all changes to the repository
- diff [files...]       diff working directory (or selected files)
- dump <file> [rev]     dump the latest or given revision of a file
- dumpmanifest [rev]    dump the latest or given revision of the manifest
- export <rev>          dump the changeset header and diffs for a revision
- history               show changeset history
- init                  create a new repository in this directory
- log <file>            show revision history of a single file
- merge <path>          merge changes from <path> into local repository
- recover               rollback an interrupted transaction
- remove [files...]     remove the given files in the next commit
- serve                 export the repository via HTTP
- status                show new, missing, and changed files in working dir
- tags                  show current changeset tags
- undo                  undo the last transaction
-""")
-
 def filterfiles(list, files):
     l = [ x for x in list if x in files ]
 
@@ -126,21 +100,6 @@ relpath = None
 if os.getcwd() != repo.root:
     relpath = os.getcwd()[len(repo.root) + 1: ]
 
-elif cmd == "add":
-    repo.add(args)
-
-elif cmd == "forget":
-    repo.forget(args)
-
-elif cmd == "remove" or cmd == "rm" or cmd == "del" or cmd == "delete":
-    repo.remove(args)
-
-elif cmd == "commit" or cmd == "checkin" or cmd == "ci":
-    if 1:
-        if len(args) > 0:
-            repo.commit(args)
-        else:
-            repo.commit()
 elif cmd == "rawcommit":
     "raw commit interface"
     rc = {}
@@ -205,26 +164,6 @@ elif cmd == "import" or cmd == "patch":
                 raise "patch failed!"
         repo.commit(files, text)
 
-elif cmd == "diff":
-    revs = []
-
-    if args:
-        doptions = {}
-        opts = [('r', 'revision', [], 'revision')]
-        args = fancyopts.fancyopts(args, opts, doptions,
-                                   'hg diff [options] [files]')
-        revs = map(lambda x: repo.lookup(x), doptions['revision'])
-    
-    if len(revs) > 2:
-        self.ui.warn("too many revisions to diff\n")
-        sys.exit(1)
-
-    if relpath:
-        if not args: args = [ relpath ]
-        else: args = [ os.path.join(relpath, x) for x in args ]
-
-    diff(args, *revs)
-
 elif cmd == "export":
     node = repo.lookup(args[0])
     prev, other = repo.changelog.parents(node)
@@ -249,11 +188,6 @@ elif cmd == "debugaddchangegroup":
     data = sys.stdin.read()
     repo.addchangegroup(data)
 
-elif cmd == "addremove":
-    (c, a, d, u) = repo.diffdir(repo.root)
-    repo.add(a)
-    repo.remove(d)
-    
 elif cmd == "history":
     for i in range(repo.changelog.count()):
         n = repo.changelog.node(i)
@@ -272,41 +206,6 @@ elif cmd == "history":
         if ui.verbose: print "files:", " ".join(changes[3])
         print "description:"
         print changes[4]
-
-elif cmd == "tip":
-    n = repo.changelog.tip()
-    t = repo.changelog.rev(n)
-    ui.status("%d:%s\n" % (t, hg.hex(n)))
-
-elif cmd == "log":
-
-    if len(args) == 1:
-        if relpath:
-            args[0] = os.path.join(relpath, args[0])
-
-        r = repo.file(args[0])
-        for i in range(r.count()):
-            n = r.node(i)
-            (p1, p2) = r.parents(n)
-            (h, h1, h2) = map(hg.hex, (n, p1, p2))
-            (i1, i2) = map(r.rev, (p1, p2))
-            cr = r.linkrev(n)
-            cn = hg.hex(repo.changelog.node(cr))
-            print "rev:       %4d:%s" % (i, h)
-            print "changeset: %4d:%s" % (cr, cn)
-            print "parents:   %4d:%s" % (i1, h1)
-            if i2: print "           %4d:%s" % (i2, h2)
-            changes = repo.changelog.read(repo.changelog.node(cr))
-            print "user: %s" % changes[1]
-            print "date: %s" % time.asctime(
-                time.localtime(float(changes[2].split(' ')[0])))
-            print "description:"
-            print changes[4]
-            print
-    elif len(args) > 1:
-        print "too many args"
-    else:
-        print "missing filename"
 
 elif cmd == "dump":
     if args:
@@ -383,9 +282,6 @@ elif cmd == "tags":
         except KeyError:
             r = "?"
         print "%-30s %5d:%s" % (k, repo.changelog.rev(n), hg.hex(n))
-
-elif cmd == "recover":
-    repo.recover()
 
 elif cmd == "verify":
     filelinkrevs = {}
@@ -510,23 +406,6 @@ elif cmd == "verify":
         ui.warn("%d integrity errors encountered!\n" % errors)
         sys.exit(1)
 
-elif cmd == "serve":
-    from mercurial import hgweb
-    
-    soptions = {}
-    opts = [('p', 'port', 8000, 'listen port'),
-            ('a', 'address', '', 'interface address'),
-            ('n', 'name', os.getcwd(), 'repository name'),
-            ('t', 'templates', "", 'template map')
-            ]
-    
-    args = fancyopts.fancyopts(args, opts, soptions,
-                              'hg serve [options]')
-
-    hgweb.server(repo.root, soptions["name"], soptions["templates"],
-                 soptions["address"], soptions["port"])
-    
 else:
     if cmd: ui.warn("unknown command\n\n")
-    help()
     sys.exit(1)
