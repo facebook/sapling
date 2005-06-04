@@ -19,10 +19,6 @@ Setting up Mercurial:
  $ export PYTHONPATH=${HOME}/lib/python  # add this to your .bashrc
  $ export PATH=${HOME}/bin:$PATH         # 
 
- You'll also need to set up a tool to handle three-way merges:
-
- $ export HGMERGE=tkmerge                # customize this
-
  And finally:
 
  $ hg                                    # test installation, show help

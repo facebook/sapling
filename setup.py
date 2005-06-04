@@ -29,4 +29,4 @@ setup(name='mercurial',
                    glob.glob('templates/map-*') +
                    glob.glob('templates/*.tmpl'))], 
       cmdclass = { 'install_data' : install_package_data },
-      scripts=['hg'])
+      scripts=['hg', 'hgmerge'])
