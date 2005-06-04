@@ -159,7 +159,7 @@ class revlog:
     def heads(self):
         p = {}
         h = []
-        for r in range(self.count() - 1, 0, -1):
+        for r in range(self.count() - 1, -1, -1):
             n = self.node(r)
             if n not in p:
                 h.append(n)
