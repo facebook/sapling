@@ -354,7 +354,10 @@ class localrepository:
 
     def transaction(self):
         # save dirstate for undo
-        ds = self.opener("dirstate").read()
+        try:
+            ds = self.opener("dirstate").read()
+        except IOError:
+            ds = ""
         self.opener("undo.dirstate", "w").write(ds)
         
         return transaction.transaction(self.opener, self.join("journal"),
