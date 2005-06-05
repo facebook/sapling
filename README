@@ -34,7 +34,7 @@ Setting up a Mercurial project:
  $ hg diff         # generate a unidiff
  $ hg addremove    # add all unknown files and remove all missing files
  $ hg commit       # commit all changes, edit changelog entry
- $ hg export       # export a changeset as a diff
+ $ hg export <rev> # export a changeset as a diff
 
  Mercurial will look for a file named .hgignore in the root of your
  repository contains a set of regular expressions to ignore in file
@@ -44,8 +44,8 @@ Mercurial commands:
 
  $ hg history          # show changesets
  $ hg log Makefile     # show commits per file
- $ hg checkout         # check out the tip revision
- $ hg checkout <id>    # check out a specified changeset
+ $ hg update           # check out the tip revision
+ $ hg update <id>      # check out a specified changeset
                        # IDs can be tags, revision numbers, or unique
                        # subsets of changeset hash numbers
  $ hg add foo          # add a new file for the next commit
@@ -60,11 +60,13 @@ Branching and merging:
  $ mkdir linux-work
  $ cd linux-work
  $ hg branch ../linux        # create a new branch
- $ hg checkout               # populate the working directory
+ $ hg update                 # populate the working directory
  $ <make changes>
  $ hg commit
  $ cd ../linux
- $ hg merge ../linux-work    # pull changesets from linux-work
+ $ hg pull ../linux-work     # pull changesets from linux-work
+ $ hg update                 # merge the new tip from linux-work into
+                             # our working directory
 
 Importing patches:
 
@@ -92,15 +94,15 @@ Network support:
 
  # pull the self-hosting hg repo
  foo$ hg init
- foo$ hg merge http://selenic.com/hg/
- foo$ hg checkout  # hg co works too
+ foo$ hg pull http://selenic.com/hg/
+ foo$ hg update # hg co works too
 
  # export your current repo via HTTP with browsable interface
  foo$ hg serve -n "My repo" -p 80
  
  # merge changes from a remote machine
- bar$ hg merge http://foo/
- bar$ hg co        # checkout the result
+ bar$ hg pull http://foo/
+ bar$ hg co        # merge changes into your working directory
 
  # Set up a CGI server on your webserver
  foo$ cp hgweb.cgi ~/public_html/hg-linux/index.cgi
