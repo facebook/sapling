@@ -894,6 +894,7 @@ class localrepository:
                     self.ui.debug("working dir created %s, keeping\n" % f)
 
         for f, n in m2.iteritems():
+            if f[0] == "/": continue
             if f in ma and n != ma[f]:
                     r = self.ui.prompt(
                         ("remote changed %s which local deleted\n" % f) +
@@ -935,7 +936,7 @@ class localrepository:
         files = merge.keys()
         files.sort()
         for f in files:
-            self.status("mering %f\n" % f)
+            self.ui.status("merging %s\n" % f)
             m, o = merge[f]
             self.merge3(f, m, o)
             self.dirstate.update([f], 'm')
