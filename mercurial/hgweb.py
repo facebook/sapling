@@ -119,7 +119,8 @@ class hgweb:
     def __init__(self, path, name, templates = ""):
         self.templates = templates or templatepath()
         self.reponame = name
-        self.repo = repository(ui(), path)
+        self.path = path
+        self.mtime = -1
         self.viewonly = 0
 
         self.filters = {
@@ -130,6 +131,11 @@ class hgweb:
             "obfuscate": obfuscate,
             "firstline": (lambda x: x.splitlines(1)[0]),
             }
+
+    def refresh(self):
+        s = os.stat(os.path.join(self.path, ".hg", "00changelog.i"))
+        if s.st_mtime != self.mtime:
+            self.repo = repository(ui(), self.path)
 
     def date(self, cs):
         return time.asctime(time.gmtime(float(cs[2].split(' ')[0])))
@@ -566,6 +572,7 @@ class hgweb:
     # find tag, changeset, file
 
     def run(self):
+        self.refresh()
         args = cgi.parse()
 
         m = os.path.join(self.templates, "map")
