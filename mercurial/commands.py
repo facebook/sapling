@@ -104,7 +104,7 @@ def add(ui, repo, file, *files):
 def addremove(ui, repo):
     """add all new files, delete all missing files"""
     (c, a, d, u) = repo.diffdir(repo.root)
-    repo.add(a)
+    repo.add(u)
     repo.remove(d)
 
 def annotate(u, repo, file, *files, **ops):
