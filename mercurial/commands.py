@@ -5,8 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, re, sys, signal, time, mdiff
-from mercurial import fancyopts, ui, hg
+import os, re, sys, signal
+import fancyopts, ui, hg
+from demandload import *
+demandload(globals(), "mdiff time hgweb traceback")
 
 class UnknownCommand(Exception): pass
 
@@ -397,7 +399,6 @@ def remove(ui, repo, file, *files):
 
 def serve(ui, repo, **opts):
     """export the repository via HTTP"""
-    from mercurial import hgweb
     hgweb.server(repo.root, opts["name"], opts["templates"],
                  opts["address"], opts["port"])
     
@@ -594,7 +595,6 @@ def dispatch(args):
         else:
             raise
     except TypeError, inst:
-        import traceback
         # was this an argument error?
         tb = traceback.extract_tb(sys.exc_info()[2])
         if len(tb) > 2: # no
