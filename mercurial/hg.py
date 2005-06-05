@@ -327,11 +327,17 @@ class localrepository:
         if self.tags is None:
             self.tags = {}
             try:
+                # read each head of the tags file, ending with the tip
+                # and add each tag found to the map, with "newer" ones
+                # taking precedence
                 fl = self.file(".hgtags")
-                for l in fl.revision(fl.tip()).splitlines():
-                    if l:
-                        n, k = l.split(" ")
-                        self.tags[k] = bin(n)
+                h = fl.heads()
+                h.reverse()
+                for r in h:
+                    for l in fl.revision(r).splitlines():
+                        if l:
+                            n, k = l.split(" ")
+                            self.tags[k] = bin(n)
             except KeyError: pass
         try:
             return self.tags[key]
@@ -475,27 +481,6 @@ class localrepository:
         self.dirstate.setparents(n)
         self.dirstate.update(new, "n")
         self.dirstate.forget(remove)
-
-    def checkout(self, node):
-        # checkout is really dumb at the moment
-        # it ought to basically merge
-        change = self.changelog.read(node)
-        l = self.manifest.read(change[0]).items()
-        l.sort()
-
-        for f,n in l:
-            if f[0] == "/": continue
-            self.ui.note(f, "\n")
-            t = self.file(f).revision(n)
-            try:
-                file(self.wjoin(f), "w").write(t)
-            except IOError:
-                os.makedirs(os.path.dirname(f))
-                file(self.wjoin(f), "w").write(t)
-
-        self.dirstate.setparents(node)
-        self.dirstate.clear()
-        self.dirstate.update([f for f,n in l], "n")
 
     def diffdir(self, path, changeset = None):
         changed = []
@@ -848,10 +833,10 @@ class localrepository:
         tr.close()
         return
 
-    def resolve(self, node):
+    def update(self, node):
         pl = self.dirstate.parents()
         if pl[1] != nullid:
-            self.ui.warn("last merge not committed")
+            self.ui.warn("aborting: outstanding uncommitted merges\n")
             return
 
         p1, p2 = pl[0], node
@@ -866,7 +851,7 @@ class localrepository:
 
         # resolve the manifest to determine which files
         # we care about merging
-        self.ui.status("resolving manifests\n")
+        self.ui.note("resolving manifests\n")
         self.ui.debug(" ancestor %s local %s remote %s\n" %
                       (short(man), short(m1n), short(m2n)))
 
@@ -876,16 +861,20 @@ class localrepository:
 
         # construct a working dir manifest
         mw = m1.copy()
-        for f in a + c:
-            mw[f] = nullid
+        for f in a + c + u:
+            mw[f] = ""
         for f in d:
-            del mw[f]
+            if f in mw: del mw[f]
 
         for f, n in mw.iteritems():
             if f in m2:
                 if n != m2[f]:
-                    self.ui.debug(" %s versions differ, do resolve\n" % f)
-                    merge[f] = (m1.get(f, nullid), m2[f])
+                    a = ma.get(f, nullid)
+                    if n != a and m2[f] != a:
+                        self.ui.debug(" %s versions differ, do resolve\n" % f)
+                        merge[f] = (m1.get(f, nullid), m2[f])
+                    else:
+                        get[f] = m2[f]
                 del m2[f]
             elif f in ma:
                 if n != ma[f]:
@@ -896,24 +885,35 @@ class localrepository:
                         remove.append(f)
                 else:
                     self.ui.debug("other deleted %s\n" % f)
-                    pass # other deleted it
+                    remove.append(f) # other deleted it
             else:
-                self.ui.debug("local created %s\n" %f)
+                if n == m1.get(f, nullid): # same as parent
+                    self.ui.debug("remote deleted %s\n" % f)
+                    remove.append(f)
+                else:
+                    self.ui.debug("working dir created %s, keeping\n" % f)
 
         for f, n in m2.iteritems():
-            if f in ma:
-                if n != ma[f]:
+            if f in ma and n != ma[f]:
                     r = self.ui.prompt(
                         ("remote changed %s which local deleted\n" % f) +
                         "(k)eep or (d)elete?", "[kd]", "k")
                     if r == "d": remove.append(f)
-                else:
-                    pass # probably safe
             else:
-                self.ui.debug("remote created %s, do resolve\n" % f)
+                self.ui.debug("remote created %s\n" % f)
                 get[f] = n
 
         del mw, m1, m2, ma
+
+        if not merge:
+            # we don't need to do any magic, just jump to the new rev
+            mode = 'n'
+            p1, p2 = p2, nullid
+        else:
+            # we have to remember what files we needed to get/change
+            # because any file that's different from either one of its
+            # parents must be in the changeset
+            mode = 'm'
 
         self.dirstate.setparents(p1, p2)
 
@@ -929,26 +929,24 @@ class localrepository:
             except IOError:
                 os.makedirs(os.path.dirname(f))
                 file(self.wjoin(f), "w").write(t)
-
-        # we have to remember what files we needed to get/change
-        # because any file that's different from either one of its
-        # parents must be in the changeset
-        self.dirstate.update(files, 'm')
+            self.dirstate.update([f], mode)
 
         # merge the tricky bits
         files = merge.keys()
         files.sort()
         for f in files:
+            self.status("mering %f\n" % f)
             m, o = merge[f]
             self.merge3(f, m, o)
-
-        # same here
-        self.dirstate.update(files, 'm')
+            self.dirstate.update([f], 'm')
 
         for f in remove:
             self.ui.note("removing %s\n" % f)
-            #os.unlink(f)
-        self.dirstate.update(remove, 'r')
+            os.unlink(f)
+        if mode == 'n':
+            self.dirstate.forget(remove)
+        else:
+            self.dirstate.update(remove, 'r')
 
     def merge3(self, fn, my, other):
         """perform a 3-way merge in the working directory"""

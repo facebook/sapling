@@ -164,18 +164,6 @@ def cat(ui, repo, file, rev = []):
     if rev: n = r.lookup(rev)
     sys.stdout.write(r.read(n))
 
-def checkout(ui, repo, changeset=None):
-    '''checkout a given changeset or the current tip'''
-    (c, a, d, u) = repo.diffdir(repo.root)
-    if c or a or d:
-        ui.warn("aborting (outstanding changes in working directory)\n")
-        sys.exit(1)
-
-    node = repo.changelog.tip()
-    if changeset:
-        node = repo.lookup(changeset)
-    repo.checkout(node)
-
 def commit(ui, repo, *files):
     """commit the specified files or all outstanding changes"""
     repo.commit(relpath(repo, files))
@@ -405,14 +393,6 @@ def remove(ui, repo, file, *files):
     """remove the specified files on the next commit"""
     repo.remove(relpath(repo, (file,) + files))
 
-def resolve(ui, repo, node=None):
-    '''merge a given node or the current tip into the working dir'''
-    if not node:
-        node = repo.changelog.tip()
-    else:
-        node = repo.lookup(node)
-    repo.resolve(node)
-
 def serve(ui, repo, **opts):
     from mercurial import hgweb
     hgweb.server(repo.root, opts["name"], opts["templates"],
@@ -453,6 +433,22 @@ def tip(ui, repo):
 def undo(ui, repo):
     repo.undo()
 
+def update(ui, repo, node=None):
+    '''update or merge working directory
+
+    If there are no outstanding changes in the working directory and
+    there is a linear relationship between the current version and the
+    requested version, the result is the requested version.
+
+    Otherwise the result is a merge between the contents of the
+    current working directory and the requested version. Files that
+    changed between either parent are marked as changed for the next
+    commit and a commit must be performed before any further updates
+    are allowed.
+    '''
+    node = node and repo.lookup(node) or repo.changelog.tip()
+    repo.update(node)
+
 def verify(ui, repo):
     """verify the integrity of the repository"""
     return repo.verify()
@@ -468,7 +464,6 @@ table = {
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
     "branch|clone": (branch, [], 'hg branch [path]'),
     "cat|dump": (cat, [], 'hg cat <file> [rev]'),
-    "checkout|co": (checkout, [], 'hg checkout [changeset]'),
     "commit|ci": (commit, [], 'hg commit [files]'),
     "debugaddchangegroup": (debugaddchangegroup, [], 'debugaddchangegroup'),
     "debugchangegroup": (debugchangegroup, [], 'debugchangegroup [roots]'),
@@ -501,7 +496,6 @@ table = {
                   'hg rawcommit [options] [files]'),
     "recover": (recover, [], "hg recover"),
     "remove": (remove, [], "hg remove [files]"),
-    "resolve": (resolve, [], 'hg resolve [node]'),
     "serve": (serve, [('p', 'port', 8000, 'listen port'),
                       ('a', 'address', '', 'interface address'),
                       ('n', 'name', os.getcwd(), 'repository name'),
@@ -511,6 +505,7 @@ table = {
     "tags": (tags, [], 'hg tags'),
     "tip": (tip, [], 'hg tip'),
     "undo": (undo, [], 'hg undo'),
+    "update|up|checkout|co|resolve": (update, [], 'hg update [node]'),
     "verify": (verify, [], 'hg verify'),
     }
 
