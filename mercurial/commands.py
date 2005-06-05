@@ -68,7 +68,7 @@ def dodiff(repo, files = None, node1 = None, node2 = None):
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
     
 def help(ui, cmd=None):
-    '''show help'''
+    '''show help for a given command or all commands'''
     if cmd:
         try:
             i = find(cmd)
@@ -77,42 +77,38 @@ def help(ui, cmd=None):
         except UnknownCommand:
             ui.warn("unknown command %s" % cmd)
         sys.exit(0)
-    
-    ui.status("""\
- hg commands:
+    else:
+        ui.status('hg commands:\n\n')
 
- add [files...]        add the given files in the next commit
- addremove             add all new files, delete all missing files
- annotate [files...]   show changeset number per file line
- branch <path>         create a branch of <path> in this directory
- checkout [changeset]  checkout the latest or given changeset
- commit                commit all changes to the repository
- diff [files...]       diff working directory (or selected files)
- dump <file> [rev]     dump the latest or given revision of a file
- dumpmanifest [rev]    dump the latest or given revision of the manifest
- export <rev>          dump the changeset header and diffs for a revision
- history               show changeset history
- init                  create a new repository in this directory
- log <file>            show revision history of a single file
- merge <path>          merge changes from <path> into local repository
- recover               rollback an interrupted transaction
- remove [files...]     remove the given files in the next commit
- serve                 export the repository via HTTP
- status                show new, missing, and changed files in working dir
- tags                  show current changeset tags
- undo                  undo the last transaction
-""")
+        h = {}
+        for e in table.values():
+            f = e[0]
+            if f.__name__.startswith("debug"): continue
+            d = ""
+            if f.__doc__:
+                d = f.__doc__.splitlines(0)[0].rstrip()
+            h[f.__name__] = d
+
+        fns = h.keys()
+        fns.sort()
+        m = max(map(len, fns))
+        for f in fns:
+            ui.status(' %-*s   %s\n' % (m, f, h[f]))
+
+# Commands start here, listed alphabetically
 
 def add(ui, repo, file, *files):
     '''add the specified files on the next commit'''
     repo.add(relpath(repo, (file,) + files))
 
 def addremove(ui, repo):
+    """add all new files, delete all missing files"""
     (c, a, d, u) = repo.diffdir(repo.root)
     repo.add(a)
     repo.remove(d)
 
 def annotate(u, repo, file, *files, **ops):
+    """show changeset information per file line"""
     def getnode(rev):
         return hg.short(repo.changelog.node(rev))
 
@@ -159,6 +155,7 @@ def branch(ui, path):
     os.system("cp -al %s/.hg .hg" % path)
 
 def cat(ui, repo, file, rev = []):
+    """output the latest or given revision of a file"""
     r = repo.file(file)
     n = r.tip()
     if rev: n = r.lookup(rev)
@@ -198,6 +195,7 @@ def debugindexdot(ui, file):
     print "}"
 
 def diff(ui, repo, *files, **opts):
+    """diff working directory (or selected files)"""
     revs = []
     if opts['rev']:
         revs = map(lambda x: repo.lookup(x), opts['rev'])
@@ -214,6 +212,7 @@ def diff(ui, repo, *files, **opts):
     dodiff(repo, files, *revs)
 
 def export(ui, repo, changeset):
+    """dump the changeset header and diffs for a revision"""
     node = repo.lookup(changeset)
     prev, other = repo.changelog.parents(node)
     change = repo.changelog.read(node)
@@ -273,6 +272,57 @@ def history(ui, repo):
         print "description:"
         print changes[4]
 
+def init(ui):
+    """create a repository"""
+    hg.repository(ui, ".", create=1)
+
+def log(ui, repo, f):
+    """show the revision history of a single file"""
+    f = relpath(repo, [f])[0]
+
+    r = repo.file(f)
+    for i in range(r.count()):
+        n = r.node(i)
+        (p1, p2) = r.parents(n)
+        (h, h1, h2) = map(hg.hex, (n, p1, p2))
+        (i1, i2) = map(r.rev, (p1, p2))
+        cr = r.linkrev(n)
+        cn = hg.hex(repo.changelog.node(cr))
+        print "rev:       %4d:%s" % (i, h)
+        print "changeset: %4d:%s" % (cr, cn)
+        print "parents:   %4d:%s" % (i1, h1)
+        if i2: print "           %4d:%s" % (i2, h2)
+        changes = repo.changelog.read(repo.changelog.node(cr))
+        print "user: %s" % changes[1]
+        print "date: %s" % time.asctime(
+            time.localtime(float(changes[2].split(' ')[0])))
+        print "description:"
+        print changes[4].rstrip()
+        print
+
+def manifest(ui, repo, rev = []):
+    """output the latest or given revision of the project manifest"""
+    n = repo.manifest.tip()
+    if rev:
+        n = repo.manifest.lookup(rev)
+    m = repo.manifest.read(n)
+    files = m.keys()
+    files.sort()
+
+    for f in files:
+        print hg.hex(m[f]), f
+
+def parents(ui, repo, node = None):
+    '''show the parents of the current working dir'''
+    if node:
+        p = repo.changelog.parents(repo.lookup(hg.bin(node)))
+    else:
+        p = repo.dirstate.parents()
+
+    for n in p:
+        if n != hg.nullid:
+            ui.write("%d:%s\n" % (repo.changelog.rev(n), hg.hex(n)))
+
 def patch(ui, repo, patches, opts):
     """import an ordered set of patches"""
     try:
@@ -302,55 +352,6 @@ def patch(ui, repo, patches, opts):
             if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
                 raise "patch failed!"
         repo.commit(files, text)
-
-def init(ui):
-    """create a repository"""
-    hg.repository(ui, ".", create=1)
-
-def log(ui, repo, f):
-    f = relpath(repo, [f])[0]
-
-    r = repo.file(f)
-    for i in range(r.count()):
-        n = r.node(i)
-        (p1, p2) = r.parents(n)
-        (h, h1, h2) = map(hg.hex, (n, p1, p2))
-        (i1, i2) = map(r.rev, (p1, p2))
-        cr = r.linkrev(n)
-        cn = hg.hex(repo.changelog.node(cr))
-        print "rev:       %4d:%s" % (i, h)
-        print "changeset: %4d:%s" % (cr, cn)
-        print "parents:   %4d:%s" % (i1, h1)
-        if i2: print "           %4d:%s" % (i2, h2)
-        changes = repo.changelog.read(repo.changelog.node(cr))
-        print "user: %s" % changes[1]
-        print "date: %s" % time.asctime(
-            time.localtime(float(changes[2].split(' ')[0])))
-        print "description:"
-        print changes[4].rstrip()
-        print
-
-def manifest(ui, repo, rev = []):
-    n = repo.manifest.tip()
-    if rev:
-        n = repo.manifest.lookup(rev)
-    m = repo.manifest.read(n)
-    files = m.keys()
-    files.sort()
-
-    for f in files:
-        print hg.hex(m[f]), f
-
-def parents(ui, repo, node = None):
-    '''show the parents of the current working dir'''
-    if node:
-        p = repo.changelog.parents(repo.lookup(hg.bin(node)))
-    else:
-        p = repo.dirstate.parents()
-
-    for n in p:
-        if n != hg.nullid:
-            ui.write("%d:%s\n" % (repo.changelog.rev(n), hg.hex(n)))
 
 def pull(ui, repo, source):
     """pull changes from the specified source"""
@@ -387,6 +388,7 @@ def rawcommit(ui, repo, files, rc):
     repo.rawcommit(files, text, rc['user'], rc['date'], *rc['parent'])
  
 def recover(ui, repo):
+    """roll back an interrupted transaction"""
     repo.recover()
 
 def remove(ui, repo, file, *files):
@@ -394,6 +396,7 @@ def remove(ui, repo, file, *files):
     repo.remove(relpath(repo, (file,) + files))
 
 def serve(ui, repo, **opts):
+    """export the repository via HTTP"""
     from mercurial import hgweb
     hgweb.server(repo.root, opts["name"], opts["templates"],
                  opts["address"], opts["port"])
@@ -415,6 +418,7 @@ def status(ui, repo):
     for f in u: print "?", f
 
 def tags(ui, repo):
+    """list repository tags"""
     repo.lookup(0) # prime the cache
     i = repo.tags.items()
     i.sort()
@@ -426,11 +430,13 @@ def tags(ui, repo):
         print "%-30s %5d:%s" % (k, repo.changelog.rev(n), hg.hex(n))
 
 def tip(ui, repo):
+    """show the tip revision"""
     n = repo.changelog.tip()
     t = repo.changelog.rev(n)
     ui.status("%d:%s\n" % (t, hg.hex(n)))
 
 def undo(ui, repo):
+    """undo the last transaction"""
     repo.undo()
 
 def update(ui, repo, node=None):
@@ -452,6 +458,8 @@ def update(ui, repo, node=None):
 def verify(ui, repo):
     """verify the integrity of the repository"""
     return repo.verify()
+
+# Command options and aliases are listed here, alphabetically
 
 table = {
     "add": (add, [], "hg add [files]"),
