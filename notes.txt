@@ -63,23 +63,31 @@ merge is simply checking whether each nodeid in graph A is in the hash
 table of graph B. If not, we pull them in, adding them sequentially to
 the revlog.
 
-Graph resolving:
+Branching and merging:
 
-Mercurial does branching by copying (or COWing) a repository and thus
-keeps everything nice and linear within a repository. However, when a
-merge of repositories (a "pull") is done, we may often have two head
-revisions in a given graph. To keep things simple, Mercurial forces
-the head revisions to be merged.
+Everything in Mercurial is potentially a branch and every user
+effectively works in their own branch. When you do a checkout,
+Mercurial remembers what the parent changeset was and uses it for the
+next check in.
 
-It first finds the closest common ancestor of the two heads. If one is
-a child of the other, it becomes the new head. Otherwise, we call out
-to a user-specified 3-way merge tool.
+To do a merge of branches in Mercurial, you check out the heads of the
+two branches into the same working directory which causes a merge to
+be performed, and then check in the result once you're happy with it.
+The resulting checkin will have two parents.
 
-Merging files, manifests, and changesets:
+It decides when a merge is necessary by first determining if there are
+any uncommitted changes in the working directory. This effectively
+makes the working directory a branch off the checked in version it's
+based on. Then it also determines if the working directory is a direct
+ancestor or descendent of the second version we're attempting to
+checkout. If neither is true, we simply replace the working directory
+version with the new version. Otherwise we perform a merge between the
+two versions.
 
-We begin by comparing changeset DAGs, pulling all nodes we don't have
-in our DAG from the other repository. As we do so, we collect a list
-of changed files to merge.
+Merging files and manifests:
+
+We begin by comparing two versions manifests and deciding which files
+need to be added, deleted, and merged.
 
 Then for each file, we perform a graph merge and resolve as above.
 It's important to merge files using per-file DAGs rather than just
@@ -103,18 +111,8 @@ aB       AB     file A is change in mainline
                 but if we look at the files independently, everything
 		is fine
 
-After we've merged files, we merge the manifest log DAG and resolve
-additions and deletions. Then we are ready to resolve the changeset
-DAG - if our merge required any changes (the new head is not a
-decendent of our tip), we must create a new changeset describing all
-of the changes needed to merge it into the tip.
-
-Merge performance:
-
-The I/O operations for performing a merge are O(changed files), not
-O(total changes) and in many cases, we needn't even unpack the deltas
-to add them to our repository (though this optimization isn't
-necessary).
+The result is a merged version in the working directory, waiting for
+check-in.
 
 Rollback:
 
@@ -123,36 +121,26 @@ changeset entry gets added last. We keep a transaction log of the name
 of each file touched and its length prior to the transaction. On
 abort, we simply truncate each file to its prior length. This is one
 of the nice properties of the append-only structure of the revlogs.
+We can also reuse this journal for "undo".
 
-Remote access:
+Merging between repositories:
 
-Mercurial currently supports pulling from "serverless" repositories.
-Simply making the repo directory accessibly via the web and pointing
-hg at it can accomplish a pull. This is relatively bandwidth efficient
-but no effort has been spent on pipelining, so it won't work
-especially well over LAN yet.
+One of the key features of Mercurial is the ability to merge between
+independent repositories in a decentralized fashion. Each repository
+can act as a read-only server or a client. Clients operating by
+pulling all branches that it hasn't seen from the server and adding
+them into its graph. This is done in two steps: searching for new
+"roots" and pulling a "changegroup"
 
-It's also quite amenable to rsync, if you don't mind keeping an intact
-copy of the master around locally.
+Searching for new "roots" begins by finding all new heads and
+searching backwards from those heads to the first unknown nodes in
+their respective branches. These nodes are the 'roots' that are used
+to calculate the 'changegroup': the set of all changesets starting at
+those roots. Mercurial takes pains to make this search efficient in
+both bandwidth and round-trips.
 
-Also note the append-only and ordering properties of the commit
-guarantee that readers will always see a repository in a consistent
-state and no special locking is necessary. As there is generally only
-one writer to an hg repository, there is in fact no exclusion
-implemented yet. 
-
-
-Some comparisons to git:
-
-Most notably, Mercurial uses delta compression and repositories
-created with it will grow much more slowly over time. This also allows
-it to be much more bandwidth efficient. I expect repos sizes and sync
-speeds to be similar to or better than BK, given the use of binary diffs.
-
-Mercurial is roughly the same performance as git in some areas and is
-faster in others as it keeps around more metadata. One example is
-listing and retrieving past versions of a file, which it can do
-without reading all the changesets. This metadata will also allow it
-to perform better merges as described above.
-
-
+Once the roots are found, the changegroup can be transferred as a
+single streaming transfer. This is organized as an ordered set of
+deltas for changesets, manifests, and files. Large chunks of deltas
+can be directly added to the repository without unpacking so it's
+fairly fast.
