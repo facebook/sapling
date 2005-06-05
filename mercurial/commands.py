@@ -421,7 +421,17 @@ def tags(ui, repo):
     """list repository tags"""
     repo.lookup(0) # prime the cache
     i = repo.tags.items()
-    i.sort()
+    n = []
+    for e in i:
+        try:
+            l = repo.changelog.rev(e[1])
+        except KeyError:
+            l = -2
+        n.append((l, e))
+
+    n.sort()
+    n.reverse()
+    i = [ e[1] for e in n ]
     for k, n in i:
         try:
             r = repo.changelog.rev(n)
