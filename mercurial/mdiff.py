@@ -10,9 +10,23 @@ from mercurial.mpatch import *
 
 def unidiff(a, ad, b, bd, fn):
     if not a and not b: return ""
-    a = a.splitlines(1)
-    b = b.splitlines(1)
-    l = list(difflib.unified_diff(a, b, "a/" + fn, "b/" + fn, ad, bd))
+
+    if a == None:
+        b = b.splitlines(1)
+        l1 = "--- %s\t%s\n" % ("/dev/null", ad)
+        l2 = "+++ %s\t%s\n" % ("b/" + fn, bd)
+        l3 = "@@ -0,0 +1,%d @@\n" % len(b)
+        l = [l1, l2, l3] + ["+" + e for e in b]
+    elif b == None:
+        a = a.splitlines(1)
+        l1 = "--- %s\t%s\n" % ("a/" + fn, ad)
+        l2 = "+++ %s\t%s\n" % ("/dev/null", bd)
+        l3 = "@@ -1,%d +0,0 @@\n" % len(a)
+        l = [l1, l2, l3] + ["-" + e for e in a]
+    else:
+        a = a.splitlines(1)
+        b = b.splitlines(1)
+        l = list(difflib.unified_diff(a, b, "a/" + fn, "b/" + fn, ad, bd))
 
     for ln in xrange(len(l)):
         if l[ln][-1] != '\n':

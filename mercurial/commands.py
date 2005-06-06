@@ -61,12 +61,12 @@ def dodiff(repo, files = None, node1 = None, node2 = None):
         tn = read(f)
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
     for f in a:
-        to = ""
+        to = None
         tn = read(f)
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
     for f in d:
         to = repo.file(f).read(mmap[f])
-        tn = ""
+        tn = None
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
     
 def help(ui, cmd=None):
