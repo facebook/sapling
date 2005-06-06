@@ -203,12 +203,12 @@ class hgweb:
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
         for f in a:
-            to = ""
+            to = None
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
         for f in d:
             to = r.file(f).read(mmap1[f])
-            tn = ""
+            tn = None
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
 
     def header(self):
