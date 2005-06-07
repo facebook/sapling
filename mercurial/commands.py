@@ -77,7 +77,7 @@ def help(ui, cmd=None):
             ui.write("%s\n\n" % i[2])
             ui.write(i[0].__doc__, "\n")
         except UnknownCommand:
-            ui.warn("unknown command %s" % cmd)
+            ui.warn("hg: unknown command %s\n" % cmd)
         sys.exit(0)
     else:
         ui.status('hg commands:\n\n')
@@ -568,7 +568,7 @@ def dispatch(args):
     try:
         i = find(cmd)
     except UnknownCommand:
-        u.warn("unknown command '%s'\n" % cmd)
+        u.warn("hg: unknown command '%s'\n" % cmd)
         help(u)
         sys.exit(1)
 
