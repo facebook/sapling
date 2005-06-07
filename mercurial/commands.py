@@ -325,7 +325,7 @@ def parents(ui, repo, node = None):
         if n != hg.nullid:
             ui.write("%d:%s\n" % (repo.changelog.rev(n), hg.hex(n)))
 
-def patch(ui, repo, patches, opts):
+def patch(ui, repo, patches, **opts):
     """import an ordered set of patches"""
     try:
         import psyco
@@ -372,7 +372,7 @@ def pull(ui, repo, source):
     cg = repo.getchangegroup(other)
     repo.addchangegroup(cg)
 
-def rawcommit(ui, repo, files, rc):
+def rawcommit(ui, repo, files, **rc):
     "raw commit interface"
 
     text = rc['text']
