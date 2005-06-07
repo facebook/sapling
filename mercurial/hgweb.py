@@ -113,7 +113,7 @@ class templater:
         return template(tmpl, self.filters, **map)
         
 class hgweb:
-    maxchanges = 20
+    maxchanges = 10
     maxfiles = 10
 
     def __init__(self, path, name, templates = ""):
