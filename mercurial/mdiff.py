@@ -26,7 +26,10 @@ def unidiff(a, ad, b, bd, fn):
     else:
         a = a.splitlines(1)
         b = b.splitlines(1)
-        l = list(difflib.unified_diff(a, b, "a/" + fn, "b/" + fn, ad, bd))
+        l = list(difflib.unified_diff(a, b, "a/" + fn, "b/" + fn))
+        # difflib uses a space, rather than a tab
+        l[0] = l[0][:-2] + "\t" + ad + "\n"
+        l[1] = l[1][:-2] + "\t" + bd + "\n"
 
     for ln in xrange(len(l)):
         if l[ln][-1] != '\n':
