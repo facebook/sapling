@@ -662,10 +662,13 @@ def server(path, name, templates, address, port):
 
     class hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
         def do_POST(self):
-            self.do_hgweb()
+            try:
+                self.do_hgweb()
+            except socket.error, inst:
+                if inst.args[0] != 32: raise
 
         def do_GET(self):
-            self.do_hgweb()
+            self.do_POST()
 
         def do_hgweb(self):
             query = ""
