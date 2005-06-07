@@ -256,7 +256,7 @@ def heads(ui, repo):
 
 def history(ui, repo):
     """show the changelog history"""
-    for i in range(repo.changelog.count()):
+    for i in range(repo.changelog.count() - 1, -1, -1):
         n = repo.changelog.node(i)
         changes = repo.changelog.read(n)
         (p1, p2) = repo.changelog.parents(n)
@@ -283,7 +283,7 @@ def log(ui, repo, f):
     f = relpath(repo, [f])[0]
 
     r = repo.file(f)
-    for i in range(r.count()):
+    for i in range(r.count() - 1, -1, -1):
         n = r.node(i)
         (p1, p2) = r.parents(n)
         (h, h1, h2) = map(hg.hex, (n, p1, p2))
