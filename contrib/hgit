@@ -1,0 +1,243 @@
+#!/usr/bin/env python
+#
+# Minimal support for git commands on an hg repository
+#
+# Copyright 2005 Chris Mason <mason@suse.com>
+#
+# This software may be used and distributed according to the terms
+# of the GNU General Public License, incorporated herein by reference.
+
+import time, sys, signal
+from mercurial import hg, mdiff, fancyopts, commands, ui
+    
+def difftree(args, repo):
+    def __difftree(repo, files = None, node1 = None, node2 = None):
+	def date(c):
+	    return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
+
+	if node2:
+	    change = repo.changelog.read(node2)
+	    mmap2 = repo.manifest.read(change[0])
+	    (c, a, d) = repo.diffrevs(node1, node2)
+	    def read(f): return repo.file(f).read(mmap2[f])
+	    date2 = date(change)
+	else:
+	    date2 = time.asctime()
+	    (c, a, d, u) = repo.diffdir(repo.root, node1)
+	    if not node1:
+		node1 = repo.dirstate.parents()[0]
+	    def read(f): return file(os.path.join(repo.root, f)).read()
+
+	change = repo.changelog.read(node1)
+	mmap = repo.manifest.read(change[0])
+	date1 = date(change)
+	empty = "0" * 40;
+
+	if files:
+	    c, a, d = map(lambda x: filterfiles(files, x), (c, a, d))
+
+	for f in c:
+	    # TODO get file permissions
+	    print ":100664 100664 %s %s %s %s" % (hg.hex(mmap[f]), 
+	                                              hg.hex(mmap2[f]), f, f)
+	for f in a:
+	    print ":000000 100664 %s %s %s %s" % (empty, hg.hex(mmap2[f]), f, f)
+	for f in d:
+	    print ":100664 000000 %s %s %s %s" % (hg.hex(mmap[f]), empty, f, f)
+    ##
+
+    revs = []
+    if args:
+	doptions = {}
+	opts = [('p', 'patch', None, 'patch'),
+		('r', 'recursive', None, 'recursive')]
+	args = fancyopts.fancyopts(args, opts, doptions,
+                                   'hg diff-tree [options] sha1 sha1')
+
+    if len(args) < 2:
+	help()
+        sys.exit(1)
+    revs.append(repo.lookup(args[0]))
+    revs.append(repo.lookup(args[1]))
+    args = args[2:]
+    if doptions['patch']:
+	commands.dodiff(repo, args, *revs)
+    else:
+	__difftree(repo, args, *revs)
+
+def catcommit(repo, n, prefix):
+    nlprefix = '\n' + prefix;
+    changes = repo.changelog.read(n)
+    (p1, p2) = repo.changelog.parents(n)
+    (h, h1, h2) = map(hg.hex, (n, p1, p2))
+    (i1, i2) = map(repo.changelog.rev, (p1, p2))
+    print "tree %s" % (h)
+    if i1 != -1: print "%sparent %s" % (prefix, h1)
+    if i2 != -1: print "%sparent %s" % (prefix, h2)
+    date_ar = changes[2].split(' ')
+    date = int(float(date_ar[0]))
+    print "%sauthor <%s> %s %s" % (prefix, changes[1], date, date_ar[1])
+    print "%scommitter <%s> %s %s" % (prefix, changes[1], date, date_ar[1])
+    print prefix
+    if prefix != "":
+	print "%s%s" % (prefix, changes[4].replace('\n', nlprefix).strip())
+    else:
+	print changes[4]
+
+def catfile(args, ui, repo):
+    doptions = {}
+    opts = [('s', 'stdin', None, 'stdin')]
+    args = fancyopts.fancyopts(args, opts, doptions,
+			       'hg cat-file type sha1')
+
+    # in stdin mode, every line except the commit is prefixed with two
+    # spaces.  This way the our caller can find the commit without magic
+    # strings
+    #
+    prefix = ""
+    if doptions['stdin']:
+	try:
+	    (type, r) = raw_input().split(' ');
+	    prefix = "  "
+	except EOFError:
+	    return
+
+    else:
+	if len(args) < 2:
+	    help()
+	    sys.exit(1)
+        type = args[0]
+	r = args[1]
+
+    while r:
+	if type != "commit":
+	    sys.stderr.write("aborting hg cat-file only understands commits\n")
+	    sys.exit(1);
+	n = repo.changelog.lookup(r)
+	catcommit(repo, n, prefix)
+	if doptions['stdin']:
+	    try:
+		(type, r) = raw_input().split(' ');
+	    except EOFError:
+		break
+	else:
+	    break
+
+# git rev-tree is a confusing thing.  You can supply a number of
+# commit sha1s on the command line, and it walks the commit history
+# telling you which commits are reachable from the supplied ones via
+# a bitmask based on arg position.
+# you can specify a commit to stop at by starting the sha1 with ^
+def revtree(args, repo):
+    # calculate and return the reachability bitmask for sha
+    def is_reachable(ar, reachable, sha):
+	if len(ar) == 0:
+	    return 1
+	mask = 0
+	for i in range(len(ar)):
+	    if sha in reachable[i]:
+	        mask |= 1 << i
+
+	return mask
+
+    reachable = []
+    stop_sha1 = []
+    want_sha1 = []
+
+    # figure out which commits they are asking for and which ones they
+    # want us to stop on
+    for i in range(len(args)):
+        if args[i].count('^'):
+	    s = args[i].split('^')[1]
+	    stop_sha1.append(repo.changelog.lookup(s))
+	    want_sha1.append(s)
+	elif args[i] != 'HEAD':
+	    want_sha1.append(args[i])
+    # calculate the graph for the supplied commits
+    for i in range(len(want_sha1)):
+	reachable.append({});
+	n = repo.changelog.lookup(want_sha1[i]);
+	visit = [n];
+	reachable[i][n] = 1
+	while visit:
+	    n = visit.pop(0)
+	    if n in stop_sha1:
+		break
+	    for p in repo.changelog.parents(n):
+		if p not in reachable[i]:
+		    reachable[i][p] = 1
+		    visit.append(p)
+		if p in stop_sha1:
+		    break
+    # walk the repository looking for commits that are in our
+    # reachability graph
+    for i in range(repo.changelog.count()):
+	n = repo.changelog.node(i)
+	mask = is_reachable(want_sha1, reachable, n)
+	if mask:
+	    changes = repo.changelog.read(n)
+	    (p1, p2) = repo.changelog.parents(n)
+	    (h, h1, h2) = map(hg.hex, (n, p1, p2))
+	    (i1, i2) = map(repo.changelog.rev, (p1, p2))
+
+	    date = changes[2].split(' ')[0]
+	    print "%s %s:%s" % (date, h, mask),
+	    mask = is_reachable(want_sha1, reachable, p1)
+	    if i1 != -1 and mask > 0:
+		print "%s:%s " % (h1, mask),
+	    mask = is_reachable(want_sha1, reachable, p2)
+	    if i2 != -1 and mask > 0:
+		print "%s:%s " % (h2, mask),
+	    print ""
+
+# git rev-list tries to order things by date, and has the ability to stop
+# at a given commit without walking the whole repo.  TODO add the stop
+# parameter
+def revlist(args, repo):
+    doptions = {}
+    opts = [('c', 'commit', None, 'commit')]
+    args = fancyopts.fancyopts(args, opts, doptions,
+			       'hg rev-list')
+    for i in range(repo.changelog.count()):
+	n = repo.changelog.node(i)
+	print hg.hex(n)
+	if doptions['commit']:
+	    catcommit(repo, n, '  ')
+
+def catchterm(*args):
+    raise SignalInterrupt
+
+def help():
+    sys.stderr.write("commands:\n")
+    sys.stderr.write("  hgit cat-file [type] sha1\n")
+    sys.stderr.write("  hgit diff-tree [-p] [-r] sha1 sha1\n")
+    sys.stderr.write("  hgit rev-tree [sha1 ... [^stop sha1]]\n")
+    sys.stderr.write("  hgit rev-list [-c]\n")
+
+cmd = sys.argv[1]
+args = sys.argv[2:]
+u = ui.ui()
+signal.signal(signal.SIGTERM, catchterm)
+repo = hg.repository(ui = u)
+
+if cmd == "diff-tree":
+    difftree(args, repo)
+
+elif cmd == "cat-file":
+    catfile(args, ui, repo)
+
+elif cmd == "rev-tree":
+    revtree(args, repo)
+
+elif cmd == "rev-list":
+    revlist(args, repo)
+
+elif cmd == "help":
+    help()
+
+else:
+    if cmd: sys.stderr.write("unknown command\n\n")
+    help()
+    sys.exit(1)
+
+sys.exit(0)
