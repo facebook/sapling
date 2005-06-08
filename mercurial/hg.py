@@ -896,6 +896,8 @@ class localrepository:
 
         for f, n in mw.iteritems():
             if f in m2:
+                s = 0
+
                 if n != m2[f]:
                     a = ma.get(f, nullid)
                     if n != a and m2[f] != a:
@@ -906,9 +908,24 @@ class localrepository:
                         a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
                         mode = ((a^b) | (a^c)) ^ a
                         merge[f] = (m1.get(f, nullid), m2[f], mode)
+                        s = 1
                     elif m2[f] != a:
                         self.ui.debug(" remote %s is newer, get\n" % f)
                         get[f] = m2[f]
+                        s = 1
+
+                if not s and mfw[f] != mf2[f]:
+                    if force:
+                        self.ui.debug(" updating permissions for %s\n" % f)
+                        set_exec(self.wjoin(f), mf2[f])
+                    else:
+                        a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
+                        mode = ((a^b) | (a^c)) ^ a
+                        print a, b, c, mode
+                        if mode != b:
+                            self.ui.debug(" updating permissions for %s\n" % f)
+                            set_exec(self.wjoin(f), mode)
+
                 del m2[f]
             elif f in ma:
                 if not force and n != ma[f]:
