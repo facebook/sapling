@@ -1096,7 +1096,7 @@ class localrepository:
 
             ff = [ l.split('\0') for l in delta.splitlines() ]
             for f, fn in ff:
-                filenodes.setdefault(f, {})[bin(fn)] = 1
+                filenodes.setdefault(f, {})[bin(fn[:40])] = 1
 
         self.ui.status("crosschecking files in changesets and manifests\n")
         for f in filenodes:
