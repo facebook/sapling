@@ -5,15 +5,39 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, sys, re
+import os, sys, re, ConfigParser
 
 class ui:
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True):
-        self.quiet = quiet and not verbose and not debug
-        self.verbose = verbose or debug
-        self.debugflag = debug
-        self.interactive = interactive
+        self.cdata = ConfigParser.SafeConfigParser()
+        self.cdata.read(os.path.expanduser("~/.hgrc"))
+
+        self.quiet = self.configbool("ui", "quiet")
+        self.verbose = self.configbool("ui", "verbose")
+        self.debugflag = self.configbool("ui", "debug")
+        self.interactive = self.configbool("ui", "interactive", True)
+
+        self.quiet = (self.quiet or quiet) and not verbose and not debug
+        self.verbose = (self.verbose or verbose) or debug
+        self.debugflag = (self.debugflag or debug)
+        self.interactive = (self.interactive and interactive)
+
+    def config(self, section, val, default=None):
+        if self.cdata.has_option(section, val):
+            return self.cdata.get(section, val)
+        return default
+
+    def configbool(self, section, val, default=False):
+        if self.cdata.has_option(section, val):
+            return self.cdata.getboolean(section, val)
+        return default
+
+    def configitems(self, section):
+        if self.cdata.has_section(section):
+            return self.cdata.items(section)
+        return []
+
     def write(self, *args):
         for a in args:
             sys.stdout.write(str(a))
