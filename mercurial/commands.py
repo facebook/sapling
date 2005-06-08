@@ -57,7 +57,9 @@ def dodiff(repo, files = None, node1 = None, node2 = None):
         c, a, d = map(lambda x: filterfiles(files, x), (c, a, d))
 
     for f in c:
-        to = repo.file(f).read(mmap[f])
+        to = None
+        if f in mmap:
+            to = repo.file(f).read(mmap[f])
         tn = read(f)
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
     for f in a:
@@ -450,7 +452,7 @@ def undo(ui, repo):
     """undo the last transaction"""
     repo.undo()
 
-def update(ui, repo, node=None):
+def update(ui, repo, node=None, merge=False, clean=False):
     '''update or merge working directory
 
     If there are no outstanding changes in the working directory and
@@ -464,7 +466,7 @@ def update(ui, repo, node=None):
     are allowed.
     '''
     node = node and repo.lookup(node) or repo.changelog.tip()
-    repo.update(node)
+    return repo.update(node, allow=merge, force=clean)
 
 def verify(ui, repo):
     """verify the integrity of the repository"""
@@ -524,7 +526,12 @@ table = {
     "tags": (tags, [], 'hg tags'),
     "tip": (tip, [], 'hg tip'),
     "undo": (undo, [], 'hg undo'),
-    "update|up|checkout|co|resolve": (update, [], 'hg update [node]'),
+    "update|up|checkout|co|resolve": (update,
+                                      [('m', 'merge', None,
+                                        'allow merging of conflicts'),
+                                       ('C', 'clean', None,
+                                        'overwrite locally modified files')],
+                                       'hg update [options] [node]'),
     "verify": (verify, [], 'hg verify'),
     }
 
@@ -599,6 +606,7 @@ def dispatch(args):
         tb = traceback.extract_tb(sys.exc_info()[2])
         if len(tb) > 2: # no
             raise
+        raise
         u.warn("%s: invalid arguments\n" % i[0].__name__)
         u.warn("syntax: %s\n" % i[2])
         sys.exit(-1)

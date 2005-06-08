@@ -835,9 +835,9 @@ class localrepository:
         tr.close()
         return
 
-    def update(self, node):
+    def update(self, node, allow=False, force=False):
         pl = self.dirstate.parents()
-        if pl[1] != nullid:
+        if not force and pl[1] != nullid:
             self.ui.warn("aborting: outstanding uncommitted merges\n")
             return
 
@@ -880,7 +880,7 @@ class localrepository:
                         get[f] = m2[f]
                 del m2[f]
             elif f in ma:
-                if n != ma[f]:
+                if not force and n != ma[f]:
                     r = self.ui.prompt(
                         (" local changed %s which remote deleted\n" % f) +
                         "(k)eep or (d)elete?", "[kd]", "k")
@@ -898,22 +898,34 @@ class localrepository:
 
         for f, n in m2.iteritems():
             if f[0] == "/": continue
-            if f in ma and n != ma[f]:
-                    r = self.ui.prompt(
-                        ("remote changed %s which local deleted\n" % f) +
-                        "(k)eep or (d)elete?", "[kd]", "k")
-                    if r == "d": remove.append(f)
+            if not force and f in ma and n != ma[f]:
+                r = self.ui.prompt(
+                    ("remote changed %s which local deleted\n" % f) +
+                    "(k)eep or (d)elete?", "[kd]", "k")
+                if r == "d": remove.append(f)
             else:
                 self.ui.debug("remote created %s\n" % f)
                 get[f] = n
 
         del mw, m1, m2, ma
 
+        if force:
+            for f in merge:
+                get[f] = merge[f][1]
+            merge = {}
+
         if not merge:
             # we don't need to do any magic, just jump to the new rev
             mode = 'n'
             p1, p2 = p2, nullid
         else:
+            if not allow:
+                self.ui.status("the following files conflict:\n")
+                for f in merge:
+                    self.ui.status(" %s\n" % f)
+                self.ui.warn("aborting update due to conflicting files!\n")
+                self.ui.status("(use update -m to allow a merge)\n")
+                return 1
             # we have to remember what files we needed to get/change
             # because any file that's different from either one of its
             # parents must be in the changeset
@@ -976,7 +988,7 @@ class localrepository:
         cmd = os.environ.get("HGMERGE", "hgmerge")
         r = os.system("%s %s %s %s" % (cmd, a, b, c))
         if r:
-            self.ui.warn("merging %s failed!\n" % f)
+            self.ui.warn("merging %s failed!\n" % fn)
 
         os.unlink(b)
         os.unlink(c)
