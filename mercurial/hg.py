@@ -11,6 +11,15 @@ from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
 demandload(globals(), "tempfile byterange difflib")
 
+def is_exec(f):
+    return (os.stat(f).st_mode & 0100 != 0)
+
+def set_exec(f, mode):
+    s = os.stat(f).st_mode
+    if (s & 0100 != 0) == mode:
+        return
+    os.chmod(f, s & 0666 | (mode * 0111))
+
 class filelog(revlog):
     def __init__(self, opener, path):
         revlog.__init__(self, opener,
@@ -85,12 +94,19 @@ class manifest(revlog):
             return self.mapcache[1].copy()
         text = self.revision(node)
         map = {}
+        flag = {}
         self.listcache = (text, text.splitlines(1))
         for l in self.listcache[1]:
             (f, n) = l.split('\0')
             map[f] = bin(n[:40])
-        self.mapcache = (node, map)
+            flag[f] = (n[40:-1] == "x")
+        self.mapcache = (node, map, flag)
         return map
+
+    def readflags(self, node):
+        if self.mapcache or self.mapcache[0] != node:
+            self.read(node)
+        return self.mapcache[2]
 
     def diff(self, a, b):
         # this is sneaky, as we're not actually using a and b
@@ -103,11 +119,13 @@ class manifest(revlog):
         else:
             return mdiff.textdiff(a, b)
 
-    def add(self, map, transaction, link, p1=None, p2=None):
+    def add(self, map, flags, transaction, link, p1=None, p2=None):
         files = map.keys()
         files.sort()
 
-        self.addlist = ["%s\000%s\n" % (f, hex(map[f])) for f in files]
+        self.addlist = ["%s\000%s%s\n" %
+                        (f, hex(map[f]), flags[f] and "x" or '')
+                        for f in files]
         text = "".join(self.addlist)
 
         n = self.addrevision(text, transaction, link, p1, p2)
@@ -442,6 +460,7 @@ class localrepository:
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
         m1 = self.manifest.read(c1[0])
+        mf1 = self.manifest.readflags(c1[0])
         m2 = self.manifest.read(c2[0])
         lock = self.lock()
         tr = self.transaction()
@@ -453,7 +472,9 @@ class localrepository:
         for f in commit:
             self.ui.note(f + "\n")
             try:
-                t = file(self.wjoin(f)).read()
+                fp = self.wjoin(f)
+                mf1[f] = is_exec(fp)
+                t = file(fp).read()
             except IOError:
                 self.warn("trouble committing %s!\n" % f)
                 raise
@@ -466,7 +487,7 @@ class localrepository:
         # update manifest
         m1.update(new)
         for f in remove: del m1[f]
-        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0])
+        mn = self.manifest.add(m1, mf1, tr, linkrev, c1[0], c2[0])
 
         # add changeset
         new = new.keys()
@@ -525,7 +546,7 @@ class localrepository:
                         added.append(fn)
                     elif c[0] == 'r':
                         unknown.append(fn)
-                    elif c[2] != s.st_size:
+                    elif c[2] != s.st_size or (c[1] ^ s.st_mode) & 0100:
                         changed.append(fn)
                     elif c[1] != s.st_mode or c[3] != s.st_mtime:
                         if fcmp(fn):
@@ -846,8 +867,11 @@ class localrepository:
         m2n = self.changelog.read(p2)[0]
         man = self.manifest.ancestor(m1n, m2n)
         m1 = self.manifest.read(m1n)
+        mf1 = self.manifest.readflags(m1n)
         m2 = self.manifest.read(m2n)
+        mf2 = self.manifest.readflags(m2n)
         ma = self.manifest.read(man)
+        mfa = self.manifest.readflags(m2n)
 
         (c, a, d, u) = self.diffdir(self.root)
 
@@ -863,8 +887,10 @@ class localrepository:
 
         # construct a working dir manifest
         mw = m1.copy()
+        mfw = mf1.copy()
         for f in a + c + u:
             mw[f] = ""
+            mfw[f] = is_exec(self.wjoin(f))
         for f in d:
             if f in mw: del mw[f]
 
@@ -875,6 +901,11 @@ class localrepository:
                     if n != a and m2[f] != a:
                         self.ui.debug(" %s versions differ, resolve\n" % f)
                         merge[f] = (m1.get(f, nullid), m2[f])
+                        # merge executable bits
+                        # "if we changed or they changed, change in merge"
+                        a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
+                        mode = ((a^b) | (a^c)) ^ a
+                        merge[f] = (m1.get(f, nullid), m2[f], mode)
                     elif m2[f] != a:
                         self.ui.debug(" remote %s is newer, get\n" % f)
                         get[f] = m2[f]
@@ -939,12 +970,14 @@ class localrepository:
         for f in files:
             if f[0] == "/": continue
             self.ui.note("getting %s\n" % f)
-            t = self.file(f).revision(get[f])
+            t = self.file(f).read(get[f])
+            wp = self.wjoin(f)
             try:
-                file(self.wjoin(f), "w").write(t)
+                file(wp, "w").write(t)
             except IOError:
-                os.makedirs(os.path.dirname(f))
-                file(self.wjoin(f), "w").write(t)
+                os.makedirs(os.path.dirname(wp))
+                file(wp, "w").write(t)
+            set_exec(wp, mf2[f])
             self.dirstate.update([f], mode)
 
         # merge the tricky bits
@@ -952,8 +985,9 @@ class localrepository:
         files.sort()
         for f in files:
             self.ui.status("merging %s\n" % f)
-            m, o = merge[f]
+            m, o, flag = merge[f]
             self.merge3(f, m, o)
+            set_exec(wp, flag)
             self.dirstate.update([f], 'm')
 
         for f in remove:

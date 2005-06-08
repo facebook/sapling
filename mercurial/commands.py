@@ -310,11 +310,12 @@ def manifest(ui, repo, rev = []):
     if rev:
         n = repo.manifest.lookup(rev)
     m = repo.manifest.read(n)
+    mf = repo.manifest.readflags(n)
     files = m.keys()
     files.sort()
 
     for f in files:
-        print hg.hex(m[f]), f
+        ui.write("%40s %3s %s\n" % (hg.hex(m[f]), mf[f] and "755" or "644", f))
 
 def parents(ui, repo, node = None):
     '''show the parents of the current working dir'''
