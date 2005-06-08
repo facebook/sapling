@@ -1181,7 +1181,6 @@ proc gettreediffline {gdtf id} {
 	return
     }
     set file [lindex $line 5]
-    puts stderr "line $file\n"
     lappend treediffs($id) $file
 }
 
@@ -1221,7 +1220,7 @@ proc getblobdiffline {bdf id} {
 	return
     }
     $ctext conf -state normal
-    if {[regexp {^---[ \t]+([^/])*/(.*)} $line match s1 fname]} {
+    if {[regexp {^---[ \t]+([^/])*/([^\t]*)} $line match s0 fname]} {
 	# start of a new file
 	$ctext insert end "\n"
 	$ctext tag add $curdifftag $curtagstart end
