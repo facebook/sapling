@@ -44,9 +44,10 @@ static struct flist *lalloc(int size)
 	a = malloc(sizeof(struct flist));
 	if (a) {
 		a->base = malloc(sizeof(struct frag) * size);
-		if (!a->base)
+		if (!a->base) {
 			free(a);
-		else
+			a = NULL;
+		} else
 			a->head = a->tail = a->base;
 	}
 	return a;
