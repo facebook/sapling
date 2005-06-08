@@ -921,7 +921,6 @@ class localrepository:
                     else:
                         a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
                         mode = ((a^b) | (a^c)) ^ a
-                        print a, b, c, mode
                         if mode != b:
                             self.ui.debug(" updating permissions for %s\n" % f)
                             set_exec(self.wjoin(f), mode)
