@@ -23,7 +23,7 @@ def filterfiles(filters, files):
 def relfilter(repo, files):
     if os.getcwd() != repo.root:
         p = os.getcwd()[len(repo.root) + 1: ]
-        return filterfiles(p, files)
+        return filterfiles([p], files)
     return files
 
 def relpath(repo, args):
@@ -160,7 +160,7 @@ def branch(ui, path):
 
 def cat(ui, repo, file, rev = []):
     """output the latest or given revision of a file"""
-    r = repo.file(file)
+    r = repo.file(relpath(repo, [file])[0])
     n = r.tip()
     if rev: n = r.lookup(rev)
     sys.stdout.write(r.read(n))
