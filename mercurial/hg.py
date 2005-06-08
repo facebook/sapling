@@ -873,9 +873,10 @@ class localrepository:
                 if n != m2[f]:
                     a = ma.get(f, nullid)
                     if n != a and m2[f] != a:
-                        self.ui.debug(" %s versions differ, do resolve\n" % f)
+                        self.ui.debug(" %s versions differ, resolve\n" % f)
                         merge[f] = (m1.get(f, nullid), m2[f])
-                    else:
+                    elif m2[f] != a:
+                        self.ui.debug(" remote %s is newer, get\n" % f)
                         get[f] = m2[f]
                 del m2[f]
             elif f in ma:
@@ -925,7 +926,7 @@ class localrepository:
         files.sort()
         for f in files:
             if f[0] == "/": continue
-            self.ui.note(f, "\n")
+            self.ui.note("getting %s\n" % f)
             t = self.file(f).revision(get[f])
             try:
                 file(self.wjoin(f), "w").write(t)
