@@ -139,6 +139,9 @@ proc getallcommitline {commfd}  {
 	# this works around what is apparently a bug in Tcl...
 	fconfigure $commfd -blocking 1
 	if {![catch {close $commfd} err]} {
+	    if {$allcommitstate == "indent"} {
+		readonecommit $curcommitid $curcommit
+	    }
 	    after idle drawgraph
 	    return
 	}
@@ -1164,7 +1167,6 @@ proc gettreediffs {id} {
     set treepending $id
     set treediffs($id) {}
     set p [lindex $parents($id) 0]
-    puts stderr "hgit diff-tree -r $p $id"
     if [catch {set gdtf [open "|hgit diff-tree -r $p $id" r]}] return
     fconfigure $gdtf -blocking 0
     fileevent $gdtf readable "gettreediffline $gdtf $id"
