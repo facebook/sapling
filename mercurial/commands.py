@@ -361,13 +361,8 @@ def patch(ui, repo, patches, **opts):
 def pull(ui, repo, source):
     """pull changes from the specified source"""
     paths = {}
-    try:
-        pf = os.path.expanduser("~/.hgpaths")
-        for l in file(pf):
-            name, path = l.split()
+    for name, path in ui.configitems("paths"):
             paths[name] = path
-    except IOError:
-        pass
 
     if source in paths: source = paths[source]
     
