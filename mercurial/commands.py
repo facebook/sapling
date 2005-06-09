@@ -165,9 +165,14 @@ def cat(ui, repo, file, rev = []):
     if rev: n = r.lookup(rev)
     sys.stdout.write(r.read(n))
 
-def commit(ui, repo, *files):
+def commit(ui, repo, *files, **opts):
     """commit the specified files or all outstanding changes"""
-    repo.commit(relpath(repo, files))
+    text = opts['text']
+    if not text and opts['logfile']:
+        try: text = open(opts['logfile']).read()
+        except IOError: pass
+
+    repo.commit(relpath(repo, files), text)
 
 def debugaddchangegroup(ui, repo):
     data = sys.stdin.read()
@@ -481,7 +486,10 @@ table = {
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
     "branch|clone": (branch, [], 'hg branch [path]'),
     "cat|dump": (cat, [], 'hg cat <file> [rev]'),
-    "commit|ci": (commit, [], 'hg commit [files]'),
+    "commit|ci": (commit,
+                  [('t', 'text', "", 'commit text'),
+                   ('l', 'logfile', "", 'commit text file')],
+                  'hg commit [files]'),
     "debugaddchangegroup": (debugaddchangegroup, [], 'debugaddchangegroup'),
     "debugchangegroup": (debugchangegroup, [], 'debugchangegroup [roots]'),
     "debugindex": (debugindex, [], 'debugindex <file>'),
