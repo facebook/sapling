@@ -370,7 +370,7 @@ def patch(ui, repo, patch1, *patches, **opts):
     except:
         pass
 
-    patches = patch1 + patches
+    patches = (patch1,) + patches
     
     d = opts["base"]
     strip = opts["strip"]
