@@ -908,8 +908,10 @@ class localrepository:
             if f in m2:
                 s = 0
 
+                # are files different?
                 if n != m2[f]:
                     a = ma.get(f, nullid)
+                    # are both different from the ancestor?
                     if n != a and m2[f] != a:
                         self.ui.debug(" %s versions differ, resolve\n" % f)
                         merge[f] = (m1.get(f, nullid), m2[f])
@@ -919,7 +921,8 @@ class localrepository:
                         mode = ((a^b) | (a^c)) ^ a
                         merge[f] = (m1.get(f, nullid), m2[f], mode)
                         s = 1
-                    elif m2[f] != a:
+                    # is this an unmodified file or are we clobbering?
+                    elif mw[f] == m1[f] or force:
                         self.ui.debug(" remote %s is newer, get\n" % f)
                         get[f] = m2[f]
                         s = 1
