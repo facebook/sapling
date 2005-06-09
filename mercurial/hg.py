@@ -1000,7 +1000,7 @@ class localrepository:
             try:
                 self.wfile(f, "w").write(t)
             except IOError:
-                os.makedirs(os.path.dirname(wp))
+                os.makedirs(os.path.dirname(self.wjoin(f)))
                 self.wfile(f, "w").write(t)
             set_exec(self.wjoin(f), mf2[f])
             self.dirstate.update([f], mode)
@@ -1012,7 +1012,7 @@ class localrepository:
             self.ui.status("merging %s\n" % f)
             m, o, flag = merge[f]
             self.merge3(f, m, o)
-            set_exec(wp, flag)
+            set_exec(self.wjoin(f), flag)
             self.dirstate.update([f], 'm')
 
         for f in remove:
