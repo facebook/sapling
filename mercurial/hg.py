@@ -498,6 +498,9 @@ class localrepository:
         edittext += "".join(["HG: removed %s\n" % f for f in remove])
         edittext = self.ui.edit(edittext)
 
+        if not edittext:
+            return 1
+
         n = self.changelog.add(mn, new, edittext, tr, p1, p2)
         tr.close()
 
