@@ -77,6 +77,17 @@ def help(ui, cmd=None):
         try:
             i = find(cmd)
             ui.write("%s\n\n" % i[2])
+
+            if i[1]:
+                for s, l, d, c in i[1]:
+                    opt=' '
+                    if s: opt = opt + '-' + s + ' '
+                    if l: opt = opt + '--' + l + ' '
+                    if d: opt = opt + '(' + str(d) + ')'
+                    ui.write(opt, "\n")
+                    if c: ui.write('   %s\n' % c)
+                ui.write("\n")
+
             ui.write(i[0].__doc__, "\n")
         except UnknownCommand:
             ui.warn("hg: unknown command %s\n" % cmd)
@@ -603,7 +614,12 @@ def dispatch(args):
     signal.signal(signal.SIGTERM, catchterm)
 
     cmdoptions = {}
-    args = fancyopts.fancyopts(args, i[1], cmdoptions, i[2])
+    try:
+        args = fancyopts.fancyopts(args, i[1], cmdoptions, i[2])
+    except fancyopts.getopt.GetoptError, inst:
+        u.warn("hg %s: %s\n" % (cmd, inst))
+        help(u, cmd)
+        sys.exit(-1)
 
     if cmd not in norepo.split():
         repo = hg.repository(ui = u)
@@ -627,7 +643,8 @@ def dispatch(args):
         tb = traceback.extract_tb(sys.exc_info()[2])
         if len(tb) > 2: # no
             raise
-        raise
+        u.debug(inst, "\n")
         u.warn("%s: invalid arguments\n" % i[0].__name__)
-        u.warn("syntax: %s\n" % i[2])
+        help(u, cmd)
         sys.exit(-1)
+
