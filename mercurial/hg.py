@@ -18,7 +18,12 @@ def set_exec(f, mode):
     s = os.stat(f).st_mode
     if (s & 0100 != 0) == mode:
         return
-    os.chmod(f, s & 0666 | (mode * 0111))
+    if mode:
+        umask = os.umask(0)
+        os.umask(umask)
+        os.chmod(f, s | (s & 0444) >> 2 & ~umask)
+    else:
+        os.chmod(f, s & 0666)
 
 class filelog(revlog):
     def __init__(self, opener, path):
