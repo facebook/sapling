@@ -318,6 +318,7 @@ class localrepository:
             os.mkdir(self.join("data"))
 
         self.opener = opener(self.path)
+        self.wopener = opener(self.root)
         self.manifest = manifest(self.opener)
         self.changelog = changelog(self.opener)
         self.ignorelist = None
@@ -330,7 +331,7 @@ class localrepository:
         if self.ignorelist is None:
             self.ignorelist = []
             try:
-                l = open(os.path.join(self.root, ".hgignore"))
+                l = self.wfile(".hgignore")
                 for pat in l:
                     if pat != "\n":
                         self.ignorelist.append(re.compile(pat[:-1]))
@@ -369,6 +370,9 @@ class localrepository:
     def file(self, f):
         if f[0] == '/': f = f[1:]
         return filelog(self.opener, f)
+
+    def wfile(self, f, mode='r'):
+        return self.wopener(f, mode)
 
     def transaction(self):
         # save dirstate for undo
@@ -526,7 +530,7 @@ class localrepository:
             dc = self.dirstate.copy()
 
         def fcmp(fn):
-            t1 = file(self.wjoin(fn)).read()
+            t1 = self.wfile(fn).read()
             t2 = self.file(fn).revision(mf[fn])
             return cmp(t1, t2)
 
@@ -991,13 +995,12 @@ class localrepository:
             if f[0] == "/": continue
             self.ui.note("getting %s\n" % f)
             t = self.file(f).read(get[f])
-            wp = self.wjoin(f)
             try:
-                file(wp, "w").write(t)
+                self.wfile(f, "w").write(t)
             except IOError:
                 os.makedirs(os.path.dirname(wp))
-                file(wp, "w").write(t)
-            set_exec(wp, mf2[f])
+                self.wfile(f, "w").write(t)
+            set_exec(self.wjoin(f), mf2[f])
             self.dirstate.update([f], mode)
 
         # merge the tricky bits
