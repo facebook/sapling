@@ -279,7 +279,9 @@ def opener(base):
 
         f = os.path.join(p, path)
 
-        if mode != "r":
+        mode += "b" # for that other OS
+
+        if mode[0] != "r":
             try:
                 s = os.stat(f)
             except OSError:
