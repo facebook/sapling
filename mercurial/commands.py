@@ -362,13 +362,15 @@ def parents(ui, repo, node = None):
         if n != hg.nullid:
             ui.write("%d:%s\n" % (repo.changelog.rev(n), hg.hex(n)))
 
-def patch(ui, repo, patches, **opts):
+def patch(ui, repo, patch1, *patches, **opts):
     """import an ordered set of patches"""
     try:
         import psyco
         psyco.full()
     except:
         pass
+
+    patches = patch1 + patches
     
     d = opts["base"]
     strip = opts["strip"]
