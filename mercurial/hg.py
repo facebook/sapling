@@ -493,15 +493,16 @@ class localrepository:
         new = new.keys()
         new.sort()
 
-        edittext = text + "\n" + "HG: manifest hash %s\n" % hex(mn)
-        edittext += "".join(["HG: changed %s\n" % f for f in new])
-        edittext += "".join(["HG: removed %s\n" % f for f in remove])
-        edittext = self.ui.edit(edittext)
+        if not text:
+            edittext = "\n" + "HG: manifest hash %s\n" % hex(mn)
+            edittext += "".join(["HG: changed %s\n" % f for f in new])
+            edittext += "".join(["HG: removed %s\n" % f for f in remove])
+            edittext = self.ui.edit(edittext)
+            if not edittext.rstrip():
+                return 1
+            text = edittext
 
-        if not edittext:
-            return 1
-
-        n = self.changelog.add(mn, new, edittext, tr, p1, p2)
+        n = self.changelog.add(mn, new, text, tr, p1, p2)
         tr.close()
 
         self.dirstate.setparents(n)
