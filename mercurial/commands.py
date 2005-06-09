@@ -153,11 +153,6 @@ def annotate(u, repo, file, *files, **ops):
         for p,l in zip(zip(*pieces), lines):
             u.write(" ".join(p) + ": " + l[1])
 
-def branch(ui, path):
-    '''branch from a local repository'''
-    # this should eventually support remote repos
-    os.system("cp -al %s/.hg .hg" % path)
-
 def cat(ui, repo, file, rev = []):
     """output the latest or given revision of a file"""
     r = repo.file(relpath(repo, [file])[0])
@@ -281,10 +276,33 @@ def history(ui, repo):
         print "description:"
         print changes[4]
 
-def init(ui):
-    """create a repository"""
-    hg.repository(ui, ".", create=1)
+def init(ui, source=None):
+    """create a new repository or copy an existing one"""
 
+    if source:
+        paths = {}
+        for name, path in ui.configitems("paths"):
+            paths[name] = path
+
+        if source in paths: source = paths[source]
+
+        link = 0
+        if not source.startswith("http://"):
+            d1 = os.stat(os.getcwd()).st_dev
+            d2 = os.stat(source).st_dev
+            if d1 == d2: link = 1
+
+        if link:
+            ui.debug("copying by hardlink\n")
+            os.system("cp -al %s/.hg .hg" % source)
+        else:
+            repo = hg.repository(ui, ".", create=1)
+            other = hg.repository(ui, source)
+            cg = repo.getchangegroup(other)
+            repo.addchangegroup(cg)
+    else:
+        hg.repository(ui, ".", create=1)
+    
 def log(ui, repo, f):
     """show the revision history of a single file"""
     f = relpath(repo, [f])[0]
@@ -367,7 +385,7 @@ def pull(ui, repo, source):
     """pull changes from the specified source"""
     paths = {}
     for name, path in ui.configitems("paths"):
-            paths[name] = path
+        paths[name] = path
 
     if source in paths: source = paths[source]
     
@@ -484,7 +502,6 @@ table = {
                       ('n', 'number', None, 'show revision number'),
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
-    "branch|clone": (branch, [], 'hg branch [path]'),
     "cat|dump": (cat, [], 'hg cat <file> [rev]'),
     "commit|ci": (commit,
                   [('t', 'text', "", 'commit text'),
@@ -501,7 +518,7 @@ table = {
     "heads": (heads, [], 'hg heads'),
     "history": (history, [], 'hg history'),
     "help": (help, [], 'hg help [command]'),
-    "init": (init, [], 'hg init'),
+    "init": (init, [], 'hg init [url]'),
     "log": (log, [], 'hg log <file>'),
     "manifest|dumpmanifest": (manifest, [], 'hg manifest [rev]'),
     "parents": (parents, [], 'hg parents [node]'),
