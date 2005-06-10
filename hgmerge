@@ -11,6 +11,8 @@ LOCAL=$1
 BASE=$2
 OTHER=$3
 
+EDITOR="${EDITOR:-vi}"
+
 # Back up our file
 cp $LOCAL $LOCAL.orig
 
