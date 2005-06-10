@@ -595,6 +595,7 @@ def dispatch(args):
     opts = [('v', 'verbose', None, 'verbose'),
             ('d', 'debug', None, 'debug'),
             ('q', 'quiet', None, 'quiet'),
+            ('p', 'profile', None, 'profile'),
             ('y', 'noninteractive', None, 'run non-interactively'),
             ]
 
@@ -633,7 +634,18 @@ def dispatch(args):
         d = lambda: i[0](u, *args, **cmdoptions)
 
     try:
-        return d()
+        if options['profile']:
+            import hotshot, hotshot.stats
+            prof = hotshot.Profile("hg.prof")
+            r = prof.runcall(d)
+            prof.close()
+            stats = hotshot.stats.load("hg.prof")
+            stats.strip_dirs()
+            stats.sort_stats('time', 'calls')
+            stats.print_stats(40)
+            return r
+        else:
+            return d()
     except SignalInterrupt:
         u.warn("killed!\n")
     except KeyboardInterrupt:
