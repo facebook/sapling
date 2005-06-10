@@ -29,21 +29,23 @@ elif which diff3 > /dev/null ; then
     cp $LOCAL.orig $LOCAL
 fi
 
-# try using kdiff3, which is fairly nice
-if which kdiff3 > /dev/null ; then
-    if kdiff3 --auto $BASE $LOCAL $OTHER -o $LOCAL ; then
-	exit 0
-    else
-	exit 1
+if [ -n "$DISPLAY" ]; then
+    # try using kdiff3, which is fairly nice
+    if which kdiff3 > /dev/null ; then
+	if kdiff3 --auto $BASE $LOCAL $OTHER -o $LOCAL ; then
+	    exit 0
+	else
+	    exit 1
+	fi
     fi
-fi
 
-# try using tkdiff, which is a bit less sophisticated
-if which tkdiff > /dev/null ; then
-    if tkdiff $LOCAL $OTHER -a $BASE -o $LOCAL ; then
-	exit 0
-    else
-	exit 1
+    # try using tkdiff, which is a bit less sophisticated
+    if which tkdiff > /dev/null ; then
+	if tkdiff $LOCAL $OTHER -a $BASE -o $LOCAL ; then
+	    exit 0
+	else
+	    exit 1
+	fi
     fi
 fi
 
