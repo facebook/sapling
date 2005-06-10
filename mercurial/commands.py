@@ -388,6 +388,9 @@ def patch(ui, repo, patch1, *patches, **opts):
             if l[:4] == "--- ": break
             text += l
 
+        # make sure text isn't empty
+        if not text: text = "imported patch %s\n" % patch
+
         f = os.popen("lsdiff --strip %d %s" % (strip, pf))
         files = filter(None, map(lambda x: x.rstrip(), f.read().splitlines()))
         f.close()
