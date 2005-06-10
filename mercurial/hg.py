@@ -366,6 +366,7 @@ class localrepository:
                             self.tags[k] = bin(n)
             except KeyError: pass
         try:
+            if key == 'tip': return self.changelog.tip()
             return self.tags[key]
         except KeyError:
             return self.changelog.lookup(key)
