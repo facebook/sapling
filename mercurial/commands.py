@@ -306,6 +306,9 @@ def init(ui, source=None):
         if link:
             ui.debug("copying by hardlink\n")
             os.system("cp -al %s/.hg .hg" % source)
+            try:
+                os.remove(".hg/dirstate")
+            except: pass
         else:
             repo = hg.repository(ui, ".", create=1)
             other = hg.repository(ui, source)
