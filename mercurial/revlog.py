@@ -246,6 +246,9 @@ class revlog:
 
         node = hash(text, p1, p2)
 
+        if node in self.nodemap:
+            return node
+
         n = self.count()
         t = n - 1
 
