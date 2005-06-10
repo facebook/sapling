@@ -136,7 +136,7 @@ class manifest(revlog):
         text = "".join(self.addlist)
 
         n = self.addrevision(text, transaction, link, p1, p2)
-        self.mapcache = (n, map)
+        self.mapcache = (n, map, flags)
         self.listcache = (text, self.addlist)
         self.addlist = None
 
@@ -425,28 +425,34 @@ class localrepository:
     def rawcommit(self, files, text, user, date, p1=None, p2=None):
         p1 = p1 or self.dirstate.parents()[0] or nullid
         p2 = p2 or self.dirstate.parents()[1] or nullid
-        pchange = self.changelog.read(p1)
-        pmmap = self.manifest.read(pchange[0])
+        c1 = self.changelog.read(p1)
+        c2 = self.changelog.read(p2)
+        m1 = self.manifest.read(c1[0])
+        mf1 = self.manifest.readflags(c1[0])
+        m2 = self.manifest.read(c2[0])
+
         tr = self.transaction()
-        mmap = {}
+        mm = m1.copy()
+        mfm = mf1.copy()
         linkrev = self.changelog.count()
         for f in files:
             try:
-                t = file(f).read()
+                t = self.wfile(f).read()
+                tm = is_exec(self.wjoin(f))
+                r = self.file(f)
+                mfm[f] = tm
+                mm[f] = r.add(t, tr, linkrev,
+                              m1.get(f, nullid), m2.get(f, nullid))
             except IOError:
-                self.ui.warn("Read file %s error, skipped\n" % f)
-                continue
-            r = self.file(f)
-            # FIXME - need to find both parents properly
-            prev = pmmap.get(f, nullid)
-            mmap[f] = r.add(t, tr, linkrev, prev)
+                del mm[f]
+                del mfm[f]
 
-        mnode = self.manifest.add(mmap, tr, linkrev, pchange[0])
-        n = self.changelog.add(mnode, files, text, tr, p1, p2, user ,date, )
+        mnode = self.manifest.add(mm, mfm, tr, linkrev, c1[0], c2[0])
+        n = self.changelog.add(mnode, files, text, tr, p1, p2, user, date)
         tr.close()
         self.dirstate.setparents(p1, p2)
         self.dirstate.clear()
-        self.dirstate.update(mmap.keys(), "n")
+        self.dirstate.update(files, "n")
 
     def commit(self, files = None, text = ""):
         commit = []
@@ -1065,14 +1071,19 @@ class localrepository:
     def verify(self):
         filelinkrevs = {}
         filenodes = {}
-        manifestchangeset = {}
         changesets = revisions = files = 0
         errors = 0
 
+        seen = {}
         self.ui.status("checking changesets\n")
         for i in range(self.changelog.count()):
             changesets += 1
             n = self.changelog.node(i)
+            if n in seen:
+                self.ui.warn("duplicate changeset at revision %d\n" % i)
+                errors += 1
+            seen[n] = 1
+            
             for p in self.changelog.parents(n):
                 if p not in self.changelog.nodemap:
                     self.ui.warn("changeset %s has unknown parent %s\n" %
@@ -1084,24 +1095,23 @@ class localrepository:
                 self.ui.warn("unpacking changeset %s: %s\n" % (short(n), inst))
                 errors += 1
 
-            manifestchangeset[changes[0]] = n
             for f in changes[3]:
                 filelinkrevs.setdefault(f, []).append(i)
 
+        seen = {}
         self.ui.status("checking manifests\n")
         for i in range(self.manifest.count()):
             n = self.manifest.node(i)
+            if n in seen:
+                self.ui.warn("duplicate manifest at revision %d\n" % i)
+                errors += 1
+            seen[n] = 1
+            
             for p in self.manifest.parents(n):
                 if p not in self.manifest.nodemap:
                     self.ui.warn("manifest %s has unknown parent %s\n" %
                             (short(n), short(p)))
                     errors += 1
-            ca = self.changelog.node(self.manifest.linkrev(n))
-            cc = manifestchangeset[n]
-            if ca != cc:
-                self.ui.warn("manifest %s points to %s, not %s\n" %
-                        (hex(n), hex(ca), hex(cc)))
-                errors += 1
 
             try:
                 delta = mdiff.patchtext(self.manifest.delta(n))
@@ -1136,9 +1146,14 @@ class localrepository:
             files += 1
             fl = self.file(f)
             nodes = { nullid: 1 }
+            seen = {}
             for i in range(fl.count()):
                 revisions += 1
                 n = fl.node(i)
+
+                if n in seen:
+                    self.ui.warn("%s: duplicate revision %d\n" % (f, i))
+                    errors += 1
 
                 if n not in filenodes[f]:
                     self.ui.warn("%s: %d:%s not in manifests\n"
