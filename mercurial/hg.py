@@ -886,6 +886,7 @@ class localrepository:
             return
 
         p1, p2 = pl[0], node
+        pa = self.changelog.ancestor(p1, p2)
         m1n = self.changelog.read(p1)[0]
         m2n = self.changelog.read(p2)[0]
         man = self.manifest.ancestor(m1n, m2n)
@@ -907,6 +908,7 @@ class localrepository:
         merge = {}
         get = {}
         remove = []
+        mark = {}
 
         # construct a working dir manifest
         mw = m1.copy()
@@ -934,11 +936,15 @@ class localrepository:
                         mode = ((a^b) | (a^c)) ^ a
                         merge[f] = (m1.get(f, nullid), m2[f], mode)
                         s = 1
-                    # is this an unmodified file or are we clobbering?
-                    elif mw[f] == m1[f] or force:
+                    # are we clobbering?
+                    # is remote's version newer?
+                    # or are we going back in time?
+                    elif force or m2[f] != a or (p2 == pa and mw[f] == m1[f]):
                         self.ui.debug(" remote %s is newer, get\n" % f)
                         get[f] = m2[f]
                         s = 1
+                    else:
+                        mark[f] = 1
 
                 if not s and mfw[f] != mf2[f]:
                     if force:
@@ -950,7 +956,7 @@ class localrepository:
                         if mode != b:
                             self.ui.debug(" updating permissions for %s\n" % f)
                             set_exec(self.wjoin(f), mode)
-
+                            mark[f] = 1
                 del m2[f]
             elif f in ma:
                 if not force and n != ma[f]:
@@ -987,22 +993,28 @@ class localrepository:
                 get[f] = merge[f][1]
             merge = {}
 
-        if not merge:
+        if pa == p1 or pa == p2:
             # we don't need to do any magic, just jump to the new rev
             mode = 'n'
             p1, p2 = p2, nullid
         else:
             if not allow:
-                self.ui.status("the following files conflict:\n")
-                for f in merge:
-                    self.ui.status(" %s\n" % f)
-                self.ui.warn("aborting update due to conflicting files!\n")
-                self.ui.status("(use update -m to allow a merge)\n")
+                self.ui.status("this update spans a branch" +
+                               " affecting the following files:\n")
+                fl = merge.keys() + get.keys()
+                fl.sort()
+                for f in fl:
+                    cf = ""
+                    if f in merge: cf = " (resolve)"
+                    self.ui.status(" %s%s\n" % (f, cf))
+                self.ui.warn("aborting update spanning branches!\n")
+                self.ui.status("(use update -m to perform a branch merge)\n")
                 return 1
             # we have to remember what files we needed to get/change
             # because any file that's different from either one of its
             # parents must be in the changeset
             mode = 'm'
+            self.dirstate.update(mark.keys(), "m")
 
         self.dirstate.setparents(p1, p2)
 
