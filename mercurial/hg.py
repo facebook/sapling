@@ -219,6 +219,7 @@ class dirstate:
         self.pl = [nullid, nullid]
         try:
             st = self.opener("dirstate").read()
+            if not st: return
         except: return
 
         self.pl = [st[:20], st[20: 40]]
