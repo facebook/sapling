@@ -32,7 +32,7 @@ def relpath(repo, args):
         return [ os.path.normpath(os.path.join(p, x)) for x in args ]
     return args
 
-def dodiff(repo, files = None, node1 = None, node2 = None):
+def dodiff(repo, path, files = None, node1 = None, node2 = None):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
@@ -44,7 +44,7 @@ def dodiff(repo, files = None, node1 = None, node2 = None):
         date2 = date(change)
     else:
         date2 = time.asctime()
-        (c, a, d, u) = repo.diffdir(repo.root, node1)
+        (c, a, d, u) = repo.diffdir(path, node1)
         if not node1:
             node1 = repo.dirstate.parents()[0]
         def read(f): return file(os.path.join(repo.root, f)).read()
@@ -224,7 +224,7 @@ def diff(ui, repo, *files, **opts):
     else:
         files = relpath(repo, [""])
 
-    dodiff(repo, files, *revs)
+    dodiff(repo, os.getcwd(), files, *revs)
 
 def export(ui, repo, changeset):
     """dump the changeset header and diffs for a revision"""
@@ -241,7 +241,7 @@ def export(ui, repo, changeset):
     print change[4].rstrip()
     print
     
-    dodiff(repo, None, prev, node)
+    dodiff(repo, "", None, prev, node)
 
 def forget(ui, repo, file, *files):
     """don't add the specified files on the next commit"""
@@ -449,8 +449,8 @@ def status(ui, repo):
     A = added
     R = removed
     ? = not tracked'''
-    
-    (c, a, d, u) = repo.diffdir(repo.root)
+
+    (c, a, d, u) = repo.diffdir(os.getcwd())
     (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
     for f in c: print "C", f

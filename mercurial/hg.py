@@ -551,7 +551,7 @@ class localrepository:
             t2 = self.file(fn).revision(mf[fn])
             return cmp(t1, t2)
 
-        for dir, subdirs, files in os.walk(self.root):
+        for dir, subdirs, files in os.walk(path):
             d = dir[len(self.root)+1:]
             if ".hg" in subdirs: subdirs.remove(".hg")
             
