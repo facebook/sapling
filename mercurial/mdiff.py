@@ -43,25 +43,28 @@ def textdiff(a, b):
 
 def sortdiff(a, b):
     la = lb = 0
-    lena = len(a)
-    lenb = len(b)
+
     while 1:
-        am, bm, = la, lb
-        while lb < lenb and la < len and a[la] == b[lb] :
+        if la >= len(a) or lb >= len(b): break
+        if b[lb] < a[la]:
+            si = lb
+            while lb < len(b) and b[lb] < a[la] : lb += 1
+            yield "insert", la, la, si, lb
+        elif a[la] < b[lb]:
+            si = la
+            while la < len(a) and a[la] < b[lb]: la += 1
+            yield "delete", si, la, lb, lb
+        else:
             la += 1
             lb += 1
-        if la>am: yield (am, bm, la-am)
-        while lb < lenb and b[lb] < a[la]: lb += 1
-        if lb>=lenb: break
-        while la < lena and b[lb] > a[la]: la += 1
-        if la>=lena: break
-    yield (lena, lenb, 0)
+
+    if lb < len(b):
+        yield "insert", la, la, lb, len(b)
+
+    if la < len(a):
+        yield "delete", la, len(a), lb, lb
 
 def diff(a, b, sorted=0):
-    if not a:
-        s = "".join(b)
-        return s and (struct.pack(">lll", 0, 0, len(s)) + s)
-
     bin = []
     p = [0]
     for i in a: p.append(p[-1] + len(i))
@@ -73,16 +76,13 @@ def diff(a, b, sorted=0):
             print a, b
             raise
     else:
-        d = difflib.SequenceMatcher(None, a, b).get_matching_blocks()
-    la = 0
-    lb = 0
-    for am, bm, size in d:
-        s = "".join(b[lb:bm])
-        if am > la or s:
-            bin.append(struct.pack(">lll", p[la], p[am], len(s)) + s)
-        la = am + size
-        lb = bm + size
-    
+        d = difflib.SequenceMatcher(None, a, b).get_opcodes()
+
+    for o, m, n, s, t in d:
+        if o == 'equal': continue
+        s = "".join(b[s:t])
+        bin.append(struct.pack(">lll", p[m], p[n], len(s)) + s)
+
     return "".join(bin)
 
 def patchtext(bin):
