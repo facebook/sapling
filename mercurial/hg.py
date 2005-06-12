@@ -462,7 +462,7 @@ class localrepository:
         n = self.changelog.add(mnode, files, text, tr, p1, p2, user, date)
         tr.close()
 
-    def commit(self, files = None, text = ""):
+    def commit(self, files = None, text = "", user = None, date = None):
         commit = []
         remove = []
         if files:
@@ -529,7 +529,7 @@ class localrepository:
                 return 1
             text = edittext
 
-        n = self.changelog.add(mn, new, text, tr, p1, p2)
+        n = self.changelog.add(mn, new, text, tr, p1, p2, user, date)
         tr.close()
 
         self.dirstate.setparents(n)

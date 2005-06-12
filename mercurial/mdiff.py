@@ -67,7 +67,11 @@ def diff(a, b, sorted=0):
     for i in a: p.append(p[-1] + len(i))
 
     if sorted:
-        d = sortdiff(a, b)
+        try:
+            d = sortdiff(a, b)
+        except:
+            print a, b
+            raise
     else:
         d = difflib.SequenceMatcher(None, a, b).get_matching_blocks()
     la = 0

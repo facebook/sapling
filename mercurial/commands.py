@@ -178,7 +178,7 @@ def commit(ui, repo, *files, **opts):
         try: text = open(opts['logfile']).read()
         except IOError: pass
 
-    repo.commit(relpath(repo, files), text)
+    repo.commit(relpath(repo, files), text, opts['user'], opts['date'])
 
 def debugaddchangegroup(ui, repo):
     data = sys.stdin.read()
@@ -524,7 +524,9 @@ table = {
     "cat|dump": (cat, [], 'hg cat <file> [rev]'),
     "commit|ci": (commit,
                   [('t', 'text', "", 'commit text'),
-                   ('l', 'logfile', "", 'commit text file')],
+                   ('l', 'logfile', "", 'commit text file'),
+                   ('d', 'date', "", 'data'),
+                   ('u', 'user', "", 'user')],
                   'hg commit [files]'),
     "debugaddchangegroup": (debugaddchangegroup, [], 'debugaddchangegroup'),
     "debugchangegroup": (debugchangegroup, [], 'debugchangegroup [roots]'),
