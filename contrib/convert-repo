@@ -1,0 +1,210 @@
+#!/usr/bin/env python
+#
+# This is a generalized framework for converting between SCM
+# repository formats.
+#
+# In its current form, it's hardcoded to convert incrementally between
+# git and Mercurial.
+#
+# To use, you must first import the first git version into Mercurial,
+# and establish a mapping between the git commit hash and the hash in
+# Mercurial for that version. This mapping is kept in a simple text
+# file with lines like so:
+#
+# <git hash> <mercurial hash>
+#
+# To convert the rest of the repo, run:
+#
+# convert-repo <git-dir> <hg-dir> <mapfile>
+#
+# This updates the mapfile on each commit copied, so it can be
+# interrupted and can be run repeatedly to copy new commits.
+
+import sys, os, zlib, sha
+from mercurial import hg, ui
+
+class convert_git:
+    def __init__(self, path):
+        self.path = path
+
+    def getheads(self):
+        h = file(self.path + "/.git/HEAD").read()[:-1]
+        return [h]
+
+    def getfile(self, name, rev):
+        a = file(self.path + ("/.git/objects/%s/%s"
+                              % (rev[:2], rev[2:]))).read()
+        b = zlib.decompress(a)
+        if sha.sha(b).hexdigest() != rev: raise "bad hash"
+        head, text = b.split('\0', 1)
+        return text
+
+    def getchanges(self, version):
+        path = os.getcwd()
+        os.chdir(self.path)
+        fh = os.popen("git-diff-tree -m -r %s" % (version))
+        os.chdir(path)
+        
+        changes = []
+        for l in fh:
+            if "\t" not in l: continue
+            m, f = l[:-1].split("\t")
+            m = m.split()
+            h = m[3]
+            p = (m[1] == "100755")
+            changes.append((f, h, p))
+        return changes
+
+    def getcommit(self, version):
+        c = self.getfile("", version) # read the commit hash
+        end = c.find("\n\n")
+        message = c[end+2:]
+        l = c[:end].splitlines()
+        manifest = l[0].split()[1]
+        parents = []
+        for e in l[1:]:
+            n,v = e.split(" ", 1)
+            if n == "author":
+                p = v.split()
+                date = " ".join(p[-2:])
+                author = " ".join(p[:-2])
+                if author[0] == "<": author = author[1:-1]
+            if n == "parent": parents.append(v)
+        return (parents, author, date, message)
+
+class convert_mercurial:
+    def __init__(self, path):
+        self.path = path
+        u = ui.ui()
+        self.repo = hg.repository(u, path)
+
+    def getheads(self):
+        h = self.repo.changelog.heads()
+        h = [ hg.hex(x) for x in h ]
+        return h
+        
+    def putfile(self, f, e, data):
+        self.repo.wfile(f, "w").write(data)
+        hg.set_exec(self.repo.wjoin(f), e)
+
+    def delfile(self, f):
+        try:
+            os.unlink(self.repo.wjoin(f))
+            self.repo.remove([f])
+        except:
+            pass
+
+    def putcommit(self, files, parents, author, dest, text):
+        p1, p2 = "0"*40, "0"*40
+        if len(parents) > 0: p1 = parents[0]
+        if len(parents) > 1: p2 = parents[1]
+        if len(parents) > 2: raise "the dreaded octopus merge!"
+        self.repo.rawcommit(files, text, author, dest, 
+                            hg.bin(p1), hg.bin(p2))
+
+        return hg.hex(self.repo.changelog.tip())
+
+class convert:
+    def __init__(self, source, dest, mapfile):
+        self.source = source
+        self.dest = dest
+        self.mapfile = mapfile
+        self.commitcache = {}
+
+        self.map = {}
+        for l in file(self.mapfile):
+            sv, dv = l[:-1].split()
+            self.map[sv] = dv
+
+    def walktree(self, heads):
+        visit = heads
+        known = {}
+        parents = {}
+        while visit:
+            n = visit.pop(0)
+            if n in known or n in self.map: continue
+            known[n] = 1
+            self.commitcache[n] = self.source.getcommit(n)
+            cp = self.commitcache[n][0]
+            for p in cp:
+                parents.setdefault(n, []).append(p)
+                visit.append(p)
+
+        return parents
+
+    def toposort(self, parents):
+        visit = parents.keys()
+        seen = {}
+        children = {}
+        while visit:
+            n = visit.pop(0)
+            if n in seen: continue
+            seen[n] = 1
+            pc = 0
+            if n in parents:
+                for p in parents[n]:
+                    if p not in self.map: pc += 1
+                    visit.append(p)
+                    children.setdefault(p, []).append(n)
+            if not pc: root = n
+
+        s = []
+        removed = {}
+        visit = parents.keys()
+        while visit:
+            n = visit.pop(0)
+            if n in removed: continue
+            dep = 0
+            if n in parents:
+                for p in parents[n]:
+                    if p in self.map: continue
+                    if p not in removed:
+                        # we're still dependent
+                        visit.append(n)
+                        dep = 1
+                        break
+
+            if not dep:
+                # all n's parents are in the list
+                removed[n] = 1
+                s.append(n)
+                if n in children:
+                    for c in children[n]:
+                        visit.insert(0, c)
+
+        return s
+
+    def copy(self, rev):
+        p, a, d, t = self.commitcache[rev]
+        files = self.source.getchanges(rev)
+
+        for f,v,e in files:
+            try:
+                data = self.source.getfile(f, v)
+            except IOError, inst:
+                self.dest.delfile(f)
+            else:
+                self.dest.putfile(f, e, data)
+
+        r = [self.map[v] for v in p]
+        f = [f for f,v,e in files]
+        self.map[rev] = self.dest.putcommit(f, r, a, d, t)
+        file(self.mapfile, "a").write("%s %s\n" % (rev, self.map[rev]))
+
+    def convert(self):
+        heads = self.source.getheads()
+        parents = self.walktree(heads)
+        t = self.toposort(parents)
+        num = len(t)
+
+        for c in t:
+            num -= 1
+            if c in self.map: continue
+            desc = self.commitcache[c][3].splitlines()[0]
+            print num, desc
+            self.copy(c)
+
+gitpath, hgpath, mapfile = sys.argv[1:]
+
+c = convert(convert_git(gitpath), convert_mercurial(hgpath), mapfile)
+c.convert()
