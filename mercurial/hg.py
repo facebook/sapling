@@ -97,6 +97,7 @@ class manifest(revlog):
         revlog.__init__(self, opener, "00manifest.i", "00manifest.d")
 
     def read(self, node):
+        if node == nullid: return {} # don't upset local cache
         if self.mapcache and self.mapcache[0] == node:
             return self.mapcache[1].copy()
         text = self.revision(node)
@@ -111,6 +112,7 @@ class manifest(revlog):
         return map
 
     def readflags(self, node):
+        if node == nullid: return {} # don't upset local cache
         if self.mapcache or self.mapcache[0] != node:
             self.read(node)
         return self.mapcache[2]
