@@ -135,6 +135,7 @@ class hgweb:
     def refresh(self):
         s = os.stat(os.path.join(self.path, ".hg", "00changelog.i"))
         if s.st_mtime != self.mtime:
+            self.mtime = s.st_mtime
             self.repo = repository(ui(), self.path)
 
     def date(self, cs):
