@@ -43,17 +43,28 @@ nullid = "\0" * 20
 indexformat = ">4l20s20s20s"
 
 class lazyparser:
-    def __init__(self, data):
+    def __init__(self, data, revlog):
         self.data = data
         self.s = struct.calcsize(indexformat)
         self.l = len(data)/self.s
         self.index = [None] * self.l
         self.map = {nullid: -1}
+        self.all = 0
+        self.revlog = revlog
 
-    def load(self, pos):
-        block = pos / 1000
-        i = block * 1000
-        end = min(self.l, i + 1000)
+    def load(self, pos=None):
+        if self.all: return
+        if pos is not None:
+            block = pos / 1000
+            i = block * 1000
+            end = min(self.l, i + 1000)
+        else:
+            self.all = 1
+            i = 0
+            end = self.l
+            self.revlog.index = self.index
+            self.revlog.nodemap = self.map
+            
         while i < end:
             d = self.data[i * self.s: (i + 1) * self.s]
             e = struct.unpack(indexformat, d)
@@ -78,16 +89,14 @@ class lazymap:
     def __init__(self, parser):
         self.p = parser
     def load(self, key):
+        if self.p.all: return
         n = self.p.data.find(key)
         if n < 0: raise KeyError("node " + hex(key))
         pos = n / self.p.s
         self.p.load(pos)
     def __contains__(self, key):
-        try:
-            self[key]
-            return True
-        except KeyError:
-            return False
+        self.p.load()
+        return key in self.p.map
     def __iter__(self):
         for i in xrange(self.p.l):
             try:
@@ -121,7 +130,7 @@ class revlog:
 
         if len(i) > 10000:
             # big index, let's parse it on demand
-            parser = lazyparser(i)
+            parser = lazyparser(i, self)
             self.index = lazyindex(parser)
             self.nodemap = lazymap(parser)
         else:
