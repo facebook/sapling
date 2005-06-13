@@ -446,6 +446,7 @@ def push(ui, repo, dest):
     else:
         r = os.system(cmd)
         os.kill(child, signal.SIGTERM)
+        return r
 
 def rawcommit(ui, repo, files, **rc):
     "raw commit interface"
