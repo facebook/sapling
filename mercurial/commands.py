@@ -70,7 +70,58 @@ def dodiff(repo, path, files = None, node1 = None, node2 = None):
         to = repo.file(f).read(mmap[f])
         tn = None
         sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
-    
+
+def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
+    """show a single changeset or file revision"""
+    changelog = repo.changelog
+    if filelog:
+        log = filelog
+        filerev = rev
+        node = filenode = filelog.node(filerev)
+        changerev = filelog.linkrev(filenode)
+        changenode = changenode or changelog.node(changerev)
+    else:
+        changerev = rev
+        log = changelog
+        if changenode is None:
+            changenode = changelog.node(changerev)
+        elif not changerev:
+            rev = changerev = changelog.rev(changenode)
+        node = changenode
+
+    if ui.quiet:
+        ui.write("%d:%s\n" % (rev, hg.hex(node)))
+        return
+
+    changes = changelog.read(changenode)
+    description = changes[4].strip().splitlines()
+
+    parents = [(log.rev(parent), hg.hex(parent))
+               for parent in log.parents(node)
+               if ui.debugflag or parent != hg.nullid]
+    if not ui.debugflag and len(parents) == 1 and parents[0][0] == rev-1:
+        parents = []
+
+    if filelog:
+        ui.write("revision:    %d:%s\n" % (filerev, hg.hex(filenode)))
+        for parent in parents:
+            ui.write("parent:      %d:%s\n" % parent)
+        ui.status("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
+    else:
+        ui.write("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
+        for parent in parents:
+            ui.write("parent:      %d:%s\n" % parent)
+        ui.note("manifest:    %d:%s\n" % (repo.manifest.rev(changes[0]),
+                                          hg.hex(changes[0])))
+    ui.status("user:        %s\n" % changes[1])
+    ui.status("date:        %s\n" % time.asctime(
+        time.localtime(float(changes[2].split(' ')[0]))))
+    ui.note("files:       %s\n" % " ".join(changes[3]))
+    if description:
+        ui.status("description: %s\n" % description[0])
+        ui.note(''.join(["| %s\n" % line.rstrip() for line in description[1:]]))
+    ui.status("\n")
+
 def help(ui, cmd=None):
     '''show help for a given command or all commands'''
     if cmd:
@@ -248,44 +299,14 @@ def forget(ui, repo, file, *files):
     repo.forget(relpath(repo, (file,) + files))
 
 def heads(ui, repo):
-    '''show current repository heads'''
+    """show current repository heads"""
     for n in repo.changelog.heads():
-        i = repo.changelog.rev(n)
-        changes = repo.changelog.read(n)
-        (p1, p2) = repo.changelog.parents(n)
-        (h, h1, h2) = map(hg.hex, (n, p1, p2))
-        (i1, i2) = map(repo.changelog.rev, (p1, p2))
-        print "rev:      %4d:%s" % (i, h)
-        print "parents:  %4d:%s" % (i1, h1)
-        if i2: print "          %4d:%s" % (i2, h2)
-        print "manifest: %4d:%s" % (repo.manifest.rev(changes[0]),
-                                    hg.hex(changes[0]))
-        print "user:", changes[1]
-        print "date:", time.asctime(
-            time.localtime(float(changes[2].split(' ')[0])))
-        if ui.verbose: print "files:", " ".join(changes[3])
-        print "description:"
-        print changes[4]
+        show_changeset(ui, repo, changenode=n)
 
 def history(ui, repo):
     """show the changelog history"""
     for i in range(repo.changelog.count() - 1, -1, -1):
-        n = repo.changelog.node(i)
-        changes = repo.changelog.read(n)
-        (p1, p2) = repo.changelog.parents(n)
-        (h, h1, h2) = map(hg.hex, (n, p1, p2))
-        (i1, i2) = map(repo.changelog.rev, (p1, p2))
-        print "rev:      %4d:%s" % (i, h)
-        print "parents:  %4d:%s" % (i1, h1)
-        if i2: print "          %4d:%s" % (i2, h2)
-        print "manifest: %4d:%s" % (repo.manifest.rev(changes[0]),
-                                    hg.hex(changes[0]))
-        print "user:", changes[1]
-        print "date:", time.asctime(
-            time.localtime(float(changes[2].split(' ')[0])))
-        if ui.verbose: print "files:", " ".join(changes[3])
-        print "description:"
-        print changes[4]
+        show_changeset(ui, repo, rev=i)
 
 def init(ui, source=None):
     """create a new repository or copy an existing one"""
@@ -316,30 +337,14 @@ def init(ui, source=None):
             repo.addchangegroup(cg)
     else:
         hg.repository(ui, ".", create=1)
-    
+
 def log(ui, repo, f):
     """show the revision history of a single file"""
     f = relpath(repo, [f])[0]
 
     r = repo.file(f)
     for i in range(r.count() - 1, -1, -1):
-        n = r.node(i)
-        (p1, p2) = r.parents(n)
-        (h, h1, h2) = map(hg.hex, (n, p1, p2))
-        (i1, i2) = map(r.rev, (p1, p2))
-        cr = r.linkrev(n)
-        cn = hg.hex(repo.changelog.node(cr))
-        print "rev:       %4d:%s" % (i, h)
-        print "changeset: %4d:%s" % (cr, cn)
-        print "parents:   %4d:%s" % (i1, h1)
-        if i2: print "           %4d:%s" % (i2, h2)
-        changes = repo.changelog.read(repo.changelog.node(cr))
-        print "user: %s" % changes[1]
-        print "date: %s" % time.asctime(
-            time.localtime(float(changes[2].split(' ')[0])))
-        print "description:"
-        print changes[4].rstrip()
-        print
+        show_changeset(ui, repo, filelog=r, rev=i)
 
 def manifest(ui, repo, rev = []):
     """output the latest or given revision of the project manifest"""
@@ -363,7 +368,7 @@ def parents(ui, repo, node = None):
 
     for n in p:
         if n != hg.nullid:
-            ui.write("%d:%s\n" % (repo.changelog.rev(n), hg.hex(n)))
+            show_changeset(ui, repo, changenode=n)
 
 def patch(ui, repo, patch1, *patches, **opts):
     """import an ordered set of patches"""
@@ -519,8 +524,7 @@ def tags(ui, repo):
 def tip(ui, repo):
     """show the tip revision"""
     n = repo.changelog.tip()
-    t = repo.changelog.rev(n)
-    ui.status("%d:%s\n" % (t, hg.hex(n)))
+    show_changeset(ui, repo, changenode=n)
 
 def undo(ui, repo):
     """undo the last transaction"""
