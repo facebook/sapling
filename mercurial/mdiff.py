@@ -50,7 +50,7 @@ def sortdiff(a, b):
         am, bm, = la, lb
 
         # walk over matching lines
-        while lb < lenb and la < lenb and a[la] == b[lb] :
+        while lb < lenb and la < lena and a[la] == b[lb] :
             la += 1
             lb += 1
 
