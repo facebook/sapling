@@ -723,38 +723,49 @@ class localrepository:
         if not unknown:
             self.ui.status("nothing to do!\n")
             return None
-            
+
+        rep = {}
+        reqcnt = 0
+        
         unknown = remote.branches(unknown)
         while unknown:
-            n = unknown.pop(0)
-            seen[n[0]] = 1
-            
-            self.ui.debug("examining %s:%s\n" % (short(n[0]), short(n[1])))
-            if n == nullid: break
-            if n in seenbranch:
-                self.ui.debug("branch already found\n")
-                continue
-            if n[1] and n[1] in m: # do we know the base?
-                self.ui.debug("found incomplete branch %s:%s\n"
-                              % (short(n[0]), short(n[1])))
-                search.append(n) # schedule branch range for scanning
-                seenbranch[n] = 1
-            else:
-                if n[2] in m and n[3] in m:
-                    if n[1] not in fetch:
-                        self.ui.debug("found new changeset %s\n" %
-                                      short(n[1]))
-                        fetch.append(n[1]) # earliest unknown
-                        continue
+            r = []
+            while unknown:
+                n = unknown.pop(0)
+                if n[0] in seen:
+                    continue
+                seen[n[0]] = 1
 
-                r = []
-                for a in n[2:4]:
-                    if a not in seen: r.append(a)
-                    
-                if r:
-                    self.ui.debug("requesting %s\n" %
-                                " ".join(map(short, r)))
-                    for b in remote.branches(r):
+                self.ui.debug("examining %s:%s\n" % (short(n[0]), short(n[1])))
+                if n[0] == nullid:
+                    break
+                if n[1] in seenbranch:
+                    self.ui.debug("branch already found\n")
+                    continue
+                if n[1] and n[1] in m: # do we know the base?
+                    self.ui.debug("found incomplete branch %s:%s\n"
+                                  % (short(n[0]), short(n[1])))
+                    search.append(n) # schedule branch range for scanning
+                    seenbranch[n[1]] = 1
+                else:
+                    if n[1] not in seen and n[1] not in fetch:
+                        if n[2] in m and n[3] in m:
+                            self.ui.debug("found new changeset %s\n" %
+                                          short(n[1]))
+                            fetch.append(n[1]) # earliest unknown
+                            continue
+
+                    for a in n[2:4]:
+                        if a not in rep:
+                            r.append(a)
+                            rep[a] = 1
+
+            if r:
+                reqcnt += 1
+                self.ui.debug("request %d: %s\n" %
+                            (reqcnt, " ".join(map(short, r))))
+                for p in range(0, len(r), 10):
+                    for b in remote.branches(r[p:p+10]):
                         self.ui.debug("received %s:%s\n" %
                                       (short(b[0]), short(b[1])))
                         if b[0] not in m and b[0] not in seen:
@@ -762,6 +773,7 @@ class localrepository:
   
         while search:
             n = search.pop(0)
+            reqcnt += 1
             l = remote.between([(n[0], n[1])])[0]
             p = n[0]
             f = 1
@@ -784,6 +796,8 @@ class localrepository:
 
         self.ui.note("adding new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")
+
+        self.ui.debug("%d total queries\n" % reqcnt)
 
         return remote.changegroup(fetch)
     
