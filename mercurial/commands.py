@@ -8,7 +8,7 @@
 import os, re, sys, signal
 import fancyopts, ui, hg
 from demandload import *
-demandload(globals(), "mdiff time hgweb traceback")
+demandload(globals(), "mdiff time hgweb traceback random signal")
 
 class UnknownCommand(Exception): pass
 
@@ -412,6 +412,41 @@ def pull(ui, repo, source):
     cg = repo.getchangegroup(other)
     repo.addchangegroup(cg)
 
+def push(ui, repo, dest):
+    """push changes to the specified destination"""
+    paths = {}
+    for name, path in ui.configitems("paths"):
+        paths[name] = path
+
+    if dest in paths: dest = paths[dest]
+    
+    if not dest.startswith("ssh://"):
+        ui.warn("abort: can only push to ssh:// destinations currently\n")
+        return 1
+
+    m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?', dest)
+    if not m:
+        ui.warn("abort: couldn't parse destination %s\n" % dest)
+        return 1
+
+    user, host, port, path = map(m.group, (2, 3, 5, 7))
+    host = user and ("%s@%s" % (user, host)) or host
+    port = port and (" -p %s") % port or ""
+    path = path or ""
+
+    sport = random.randrange(30000, 60000)
+    cmd = "ssh %s%s -R %d:localhost:%d 'cd %s; hg pull http://localhost:%d/'"
+    cmd = cmd % (host, port, sport+1, sport, path, sport+1)
+
+    child = os.fork()
+    if not child:
+        sys.stdout = file("/dev/null", "w")
+        sys.stderr = sys.stdout
+        hgweb.server(repo.root, "pull", "", "localhost", sport)
+    else:
+        r = os.system(cmd)
+        os.kill(child, signal.SIGTERM)
+
 def rawcommit(ui, repo, files, **rc):
     "raw commit interface"
 
@@ -549,6 +584,7 @@ table = {
                       ('q', 'quiet', "", 'silence diff')],
                      "hg import [options] patches"),
     "pull|merge": (pull, [], 'hg pull [source]'),
+    "push": (push, [], 'hg push <destination>'),
     "rawcommit": (rawcommit,
                   [('p', 'parent', [], 'parent'),
                    ('d', 'date', "", 'data'),
