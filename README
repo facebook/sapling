@@ -59,7 +59,7 @@ Branching and merging:
  $ cd ..
  $ mkdir linux-work
  $ cd linux-work
- $ hg branch ../linux        # create a new branch
+ $ hg init ../linux          # create a new branch
  $ hg update                 # populate the working directory
  $ <make changes>
  $ hg commit
@@ -100,6 +100,9 @@ Network support:
  # export your current repo via HTTP with browsable interface
  foo$ hg serve -n "My repo" -p 80
  
+ # pushing changes to a remote repo with SSH
+ foo$ hg push ssh://user@example.com/~/hg/
+
  # merge changes from a remote machine
  bar$ hg pull http://foo/
  bar$ hg co        # merge changes into your working directory
@@ -110,10 +113,10 @@ Network support:
 
 Symbolic repository names:
 
- Mercurial uses an optional file called ~/.hgpaths to track repo
- locations symbolically. Simply add a line with the name, a space, and
- a URL:
+ Mercurial uses an options file called ~/.hgrc. To track locations
+ symbolically, add a section to it like this:
 
- foo$ echo "main http://selenic.com/hg/" >> ~/.hgpaths
- foo$ hg merge main
- foo$ hg co
+ [paths]
+ main = http://selenic.com/hg
+ hgweb = http://edge2.net/hg/hgweb/
+ hgdoc = http://edge2.net/hg/man/
