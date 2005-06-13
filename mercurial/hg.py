@@ -1228,6 +1228,36 @@ class remoterepository:
     def __init__(self, ui, path):
         self.url = path
         self.ui = ui
+        no_list = [ "localhost", "127.0.0.1" ]
+        host = ui.config("http_proxy", "host")
+        user = ui.config("http_proxy", "user")
+        passwd = ui.config("http_proxy", "passwd")
+        no = ui.config("http_proxy", "no")
+        if no:
+            no_list = no_list + no.split(",")
+            
+        no_proxy = 0
+        for h in no_list:
+            if (path.startswith("http://" + h + "/") or
+                path.startswith("http://" + h + ":") or
+                path == "http://" + h):
+                no_proxy = 1
+
+        # Note: urllib2 takes proxy values from the environment and those will
+        # take precedence
+
+        proxy_handler = urllib2.BaseHandler()
+        if host and not no_proxy:
+            proxy_handler = urllib2.ProxyHandler({"http" : "http://" + host})
+
+        authinfo = None
+        if user and passwd:
+            passmgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+            passmgr.add_password(None, host, user, passwd)
+            authinfo = urllib2.ProxyBasicAuthHandler(passmgr)
+
+        opener = urllib2.build_opener(proxy_handler, authinfo)
+        urllib2.install_opener(opener)
 
     def do_cmd(self, cmd, **args):
         self.ui.debug("sending %s command\n" % cmd)
@@ -1235,7 +1265,7 @@ class remoterepository:
         q.update(args)
         qs = urllib.urlencode(q)
         cu = "%s?%s" % (self.url, qs)
-        return urllib.urlopen(cu)
+        return urllib2.urlopen(cu)
 
     def heads(self):
         d = self.do_cmd("heads").read()

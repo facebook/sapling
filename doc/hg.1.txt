@@ -188,6 +188,22 @@ FILES
     (which could be a local path or a remote URI), the format is 
     <symbolic name> <repository path> with each mapping on a seperate line
 
+NON_TRANSPARENT PROXY SUPPORT
+-----
+
+    To access a mercurial repository through a proxy,
+    create a file $HOME/.hgrc in the following format:
+
+[http_proxy]
+host=myproxy:8080
+user=<username>
+passwd=<password>
+no=<localhost1>,<localhost2>,<localhost3>,...
+
+    "user","passwd" fields are used for authenticating proxies,
+    "no" is a comma-separated list of local host names
+    for which proxy must be bypassed.
+
 BUGS
 ----
 Probably lots, please post them to the mailing list (See Resources below)
