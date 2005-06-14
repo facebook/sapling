@@ -734,19 +734,18 @@ class localrepository:
                 n = unknown.pop(0)
                 if n[0] in seen:
                     continue
-                seen[n[0]] = 1
 
                 self.ui.debug("examining %s:%s\n" % (short(n[0]), short(n[1])))
                 if n[0] == nullid:
                     break
-                if n[1] in seenbranch:
+                if n in seenbranch:
                     self.ui.debug("branch already found\n")
                     continue
                 if n[1] and n[1] in m: # do we know the base?
                     self.ui.debug("found incomplete branch %s:%s\n"
                                   % (short(n[0]), short(n[1])))
                     search.append(n) # schedule branch range for scanning
-                    seenbranch[n[1]] = 1
+                    seenbranch[n] = 1
                 else:
                     if n[1] not in seen and n[1] not in fetch:
                         if n[2] in m and n[3] in m:
@@ -759,6 +758,8 @@ class localrepository:
                         if a not in rep:
                             r.append(a)
                             rep[a] = 1
+
+                seen[n[0]] = 1
 
             if r:
                 reqcnt += 1
@@ -775,9 +776,11 @@ class localrepository:
             n = search.pop(0)
             reqcnt += 1
             l = remote.between([(n[0], n[1])])[0]
+            l.append(n[1])
             p = n[0]
             f = 1
-            for i in l + [n[1]]:
+            for i in l:
+                self.ui.debug("narrowing %d:%d %s\n" % (f, len(l), short(i)))
                 if i in m:
                     if f <= 2:
                         self.ui.debug("found new branch changeset %s\n" %
