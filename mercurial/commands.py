@@ -81,8 +81,8 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
         changerev = filelog.linkrev(filenode)
         changenode = changenode or changelog.node(changerev)
     else:
-        changerev = rev
         log = changelog
+        changerev = rev
         if changenode is None:
             changenode = changelog.node(changerev)
         elif not changerev:
@@ -94,7 +94,6 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
         return
 
     changes = changelog.read(changenode)
-    description = changes[4].strip().splitlines()
 
     parents = [(log.rev(parent), hg.hex(parent))
                for parent in log.parents(node)
@@ -117,13 +116,14 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
     ui.status("date:        %s\n" % time.asctime(
         time.localtime(float(changes[2].split(' ')[0]))))
     ui.note("files:       %s\n" % " ".join(changes[3]))
+    description = changes[4].strip()
     if description:
         if ui.verbose:
             ui.status("description:\n")
-            ui.status(changes[4].strip())
-            ui.status("\n")
+            ui.status(description)
+            ui.status("\n\n")
         else:
-            ui.status("summary:     %s\n" % description[0])
+            ui.status("summary:     %s\n" % description.splitlines()[0])
     ui.status("\n")
 
 def help(ui, cmd=None):
