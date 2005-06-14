@@ -1,0 +1,45 @@
++ hg help
+hg commands:
+
+ add         add the specified files on the next commit
+ addremove   add all new files, delete all missing files
+ annotate    show changeset information per file line
+ cat         output the latest or given revision of a file
+ commit      commit the specified files or all outstanding changes
+ diff        diff working directory (or selected files)
+ export      dump the changeset header and diffs for a revision
+ forget      don't add the specified files on the next commit
+ heads       show current repository heads
+ help        show help for a given command or all commands
+ history     show the changelog history
+ init        create a new repository or copy an existing one
+ log         show the revision history of a single file
+ manifest    output the latest or given revision of the project manifest
+ parents     show the parents of the current working dir
+ patch       import an ordered set of patches
+ pull        pull changes from the specified source
+ push        push changes to the specified destination
+ rawcommit   raw commit interface
+ recover     roll back an interrupted transaction
+ remove      remove the specified files on the next commit
+ serve       export the repository via HTTP
+ status      show changed files in the working directory
+ tags        list repository tags
+ tip         show the tip revision
+ undo        undo the last transaction
+ update      update or merge working directory
+ verify      verify the integrity of the repository
++ hg add -h
+hg add: option -h not recognized
+hg add [files]
+
+add the specified files on the next commit
++ hg help diff
+hg diff [-r A] [-r B] [files]
+
+ -r --rev 
+   revision
+
+diff working directory (or selected files)
++ hg help foo
+hg: unknown command foo

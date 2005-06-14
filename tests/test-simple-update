@@ -1,22 +1,26 @@
+#!/bin/bash
+
 set -ex
-export EDITOR=true
-rm -rf test branch
 
 mkdir test
 cd test
 echo foo>foo
 hg init
 hg addremove
-hg commit
+hg commit -t "1"
 hg verify
 cd ..
 
-cp -a test branch
+mkdir branch
 cd branch
+hg init ../test
+hg co
 echo bar>>foo
-hg commit
+hg commit -t "2"
 
 cd ../test
-hg merge ../branch
+hg pull ../branch
 hg verify
-
+hg co
+cat foo
+hg manifest

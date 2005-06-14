@@ -1,0 +1,22 @@
++ mkdir t
++ cd t
++ hg init
++ echo a
++ hg add a
++ hg commit -t test -u test -d '0 0'
++ hg history
+changeset:   0:acb14030fe0a21b60322c440ad2d20cf7685a376
+user:        test
+date:        Wed Dec 31 16:00:00 1969
+summary:     test
+
++ hg manifest
+b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3 644 a
++ hg cat a
+a
++ hg verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
