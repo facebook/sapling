@@ -3,19 +3,40 @@
 # This is an example of using HGEDITOR to automate the signing of
 # commits and so on.
 
-MANIFEST=`grep '^HG: manifest hash' $1 | cut -b 19-`
-if grep -q "^HG: merge resolve" $1 ; then
+T1=""; T2=""
+cleanup_exit() {
+    rm -f "$T1" "$T2"
+    exit $1
+}
+
+case "${EDITOR:=vi}" in
+    emacs)
+        EDITOR="$EDITOR -nw"
+        ;;
+    gvim|vim)
+        EDITOR="$EDITOR -f -o"
+        ;;
+esac
+
+if grep -q "^HG: merge resolve" "$1" ; then
     # we don't sign merges
-    $EDITOR $1
+    exec $EDITOR "$1"
 else
-    T=`mktemp`
-    CHANGED=`grep '^HG: changed' $1 | cut -b 13-`
-    # show a diff so writing commit comments is easier
-    hg diff $CHANGED >> $T
-    echo -e "\n\nmanifest hash: $MANIFEST" > $1
-    emacs -nw $T $1 
-    head -1 $1 > $T
-    echo >> $T
-    gpg -a -u $HGUSER -o - --clearsign $1 >> $T
-    mv $T $1
+    T1=`mktemp`; T2=`mktemp`
+    MANIFEST=`grep '^HG: manifest hash' "$1" | cut -b 19-`
+
+    echo -e "\n\nmanifest hash: $MANIFEST" >> "$T1"
+    grep -vE '^(HG: manifest hash .*)?$' "$1" >> "$T1"
+    hg diff >> "$T2"
+
+    CHECKSUM=`md5sum "$T1"`
+    $EDITOR "$T1" "$T2" || cleanup_exit $?
+    echo "$CHECKSUM" | md5sum -c 2>/dev/null && cleanup_exit 0
+    {
+        head -1 "$T1"
+        echo
+        grep -v "^HG:" "$T1" | gpg -a -u "${HGUSER:-$EMAIL}" --clearsign
+    } > "$T2" && mv "$T2" "$1"
+    cleanup_exit $?
 fi
+
