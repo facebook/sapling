@@ -1,5 +1,10 @@
 A simple testing framework
 
+To run the tests, do:
+
+cd tests/
+./run-tests
+
 This finds all scripts in the test directory named test-* and executes
 them. The scripts can be either shell scripts or Python. Each test is
 run in a temporary directory that is removed when the test is complete.
@@ -24,4 +29,8 @@ writing tests:
 - diff will show the current time
 
   use hg diff | sed "s/\(\(---\|+++\).*\)\t.*/\1/" to strip dates
+
+- set -x and pipelines don't generate stable output
+
+  turn off set -x or break pipelines into pieces
 

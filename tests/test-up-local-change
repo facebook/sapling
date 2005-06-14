@@ -16,7 +16,8 @@ cd r2
 hg init ../r1
 hg up
 echo abc > a
-hg diff | sed "s/\(\(---\|+++\).*\)\t.*/\1/"
+hg diff > ../d
+sed "s/\(\(---\|+++\).*\)\t.*/\1/" < ../d
 
 cd ../r1
 echo b > b
@@ -31,5 +32,6 @@ hg -d up
 hg -d up -m
 hg parents
 hg -v history
-hg diff | sed "s/\(\(---\|+++\).*\)\t.*/\1/"
+hg diff > ../d
+sed "s/\(\(---\|+++\).*\)\t.*/\1/" < ../d
 
