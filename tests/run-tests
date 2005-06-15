@@ -28,6 +28,7 @@ for f in `ls test-* | grep -Ev "\.|~"` ; do
 	echo $f output changed:
 	diff -u $H/$f.out .out && true
 	cp .out $H/$f.err
+	fail=1
     fi
 
     cd $H
