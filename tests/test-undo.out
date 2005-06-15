@@ -1,0 +1,30 @@
++ mkdir t
++ cd t
++ hg init
++ echo a
++ hg add a
++ hg commit -t test -u test -d '0 0'
++ hg verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
++ hg parents
+changeset:   0:acb14030fe0a21b60322c440ad2d20cf7685a376
+user:        test
+date:        Wed Dec 31 16:00:00 1969
+summary:     test
+
++ hg status
++ hg undo
+attempting to rollback last transaction
++ hg verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+0 files, 0 changesets, 0 total revisions
++ hg parents
++ hg status
+A a
