@@ -204,6 +204,7 @@ class dirstate:
         self.ui = ui
         self.map = None
         self.pl = None
+        self.copies = {}
 
     def __del__(self):
         if self.dirty:
@@ -253,8 +254,19 @@ class dirstate:
             l = e[4]
             pos += 17
             f = st[pos:pos + l]
+            if '\0' in f: 
+                f, c = f.split('\0')
+                self.copies[f] = c
             self.map[f] = e[:4]
             pos += l
+
+    def copy(self, source, dest):
+        self.read()
+        self.dirty = 1
+        self.copies[dest] = source
+
+    def copied(self, file):
+        return self.copies.get(file, None)
         
     def update(self, files, state):
         ''' current states:
@@ -292,11 +304,14 @@ class dirstate:
         st = self.opener("dirstate", "w")
         st.write("".join(self.pl))
         for f, e in self.map.items():
+            c = self.copied(f)
+            if c:
+                f = f + "\0" + c
             e = struct.pack(">cllll", e[0], e[1], e[2], e[3], len(f))
             st.write(e + f)
         self.dirty = 0
 
-    def copy(self):
+    def dup(self):
         self.read()
         return self.map.copy()
 
@@ -556,10 +571,17 @@ class localrepository:
                 self.warn("trouble committing %s!\n" % f)
                 raise
 
+            meta = {}
+            cp = self.dirstate.copied(f)
+            if cp:
+                meta["copy"] = cp
+                meta["copyrev"] = hex(m1.get(cp, m2.get(cp, nullid)))
+                self.ui.debug(" %s: copy %s:%s\n" % (f, cp, meta["copyrev"])) 
+
             r = self.file(f)
             fp1 = m1.get(f, nullid)
             fp2 = m2.get(f, nullid)
-            new[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
+            new[f] = r.add(t, meta, tr, linkrev, fp1, fp2)
 
         # update manifest
         m1.update(new)
@@ -600,7 +622,7 @@ class localrepository:
             changeset = self.dirstate.parents()[0]
             change = self.changelog.read(changeset)
             mf = self.manifest.read(change[0])
-            dc = self.dirstate.copy()
+            dc = self.dirstate.dup()
 
         def fcmp(fn):
             t1 = self.wfile(fn).read()
@@ -688,6 +710,15 @@ class localrepository:
                 self.ui.warn("%s not tracked!\n" % f)
             else:
                 self.dirstate.update([f], "r")
+
+    def copy(self, source, dest):
+        p = self.wjoin(dest)
+        if not os.path.isfile(dest):
+            self.ui.warn("%s does not exist!\n" % dest)
+        else:
+            if self.dirstate.state(dest) == '?':
+                self.dirstate.update([dest], "a")
+            self.dirstate.copy(source, dest)
 
     def heads(self):
         return self.changelog.heads()

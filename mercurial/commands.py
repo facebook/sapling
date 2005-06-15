@@ -250,6 +250,10 @@ def commit(ui, repo, *files, **opts):
         addremove(ui, repo, *files)
     repo.commit(relpath(repo, files), text, opts['user'], opts['date'])
 
+def copy(ui, repo, source, dest):
+    """mark a file as copied or renamed for the next commit"""
+    return repo.copy(*relpath(repo, (source, dest)))
+
 def debugaddchangegroup(ui, repo):
     data = sys.stdin.read()
     repo.addchangegroup(data)
@@ -608,6 +612,7 @@ table = {
                    ('d', 'date', "", 'data'),
                    ('u', 'user', "", 'user')],
                   'hg commit [files]'),
+    "copy": (copy, [], 'hg copy <source> <dest>'),
     "debugaddchangegroup": (debugaddchangegroup, [], 'debugaddchangegroup'),
     "debugchangegroup": (debugchangegroup, [], 'debugchangegroup [roots]'),
     "debugindex": (debugindex, [], 'debugindex <file>'),
