@@ -440,13 +440,18 @@ def patch(ui, repo, patch1, *patches, **opts):
         # make sure text isn't empty
         if not text: text = "imported patch %s\n" % patch
 
-        f = os.popen("lsdiff --strip %d %s" % (strip, pf))
-        files = filter(None, map(lambda x: x.rstrip(), f.read().splitlines()))
+        f = os.popen("patch -p%d < %s" % (strip, pf))
+        files = []
+        for l in f.read().splitlines():
+            l.rstrip('\r\n');
+            if not quiet:
+                print l
+            if l[:14] == 'patching file ':
+                files.append(l[14:])
         f.close()
 
-        if files:
-            if os.system("patch -p%d < %s %s" % (strip, pf, quiet)):
-                raise "patch failed!"
+        if len(files) > 0:
+            addremove(ui, repo, *files)
         repo.commit(files, text)
 
 def pull(ui, repo, source="default"):
