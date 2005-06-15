@@ -113,7 +113,7 @@ class manifest(revlog):
 
     def readflags(self, node):
         if node == nullid: return {} # don't upset local cache
-        if self.mapcache or self.mapcache[0] != node:
+        if not self.mapcache or self.mapcache[0] != node:
             self.read(node)
         return self.mapcache[2]
 
