@@ -128,7 +128,7 @@ def catfile(args, ui, repo):
 # telling you which commits are reachable from the supplied ones via
 # a bitmask based on arg position.
 # you can specify a commit to stop at by starting the sha1 with ^
-def revtree(args, repo):
+def revtree(args, repo, full="tree", maxnr=0):
     # calculate and return the reachability bitmask for sha
     def is_reachable(ar, reachable, sha):
         if len(ar) == 0:
@@ -143,6 +143,7 @@ def revtree(args, repo):
     reachable = []
     stop_sha1 = []
     want_sha1 = []
+    count = 0
 
     # figure out which commits they are asking for and which ones they
     # want us to stop on
@@ -153,6 +154,7 @@ def revtree(args, repo):
             want_sha1.append(s)
         elif args[i] != 'HEAD':
             want_sha1.append(args[i])
+
     # calculate the graph for the supplied commits
     for i in range(len(want_sha1)):
         reachable.append({});
@@ -169,40 +171,53 @@ def revtree(args, repo):
                     visit.append(p)
                 if p in stop_sha1:
                     break
+
     # walk the repository looking for commits that are in our
     # reachability graph
-    for i in range(repo.changelog.count()):
+    for i in range(repo.changelog.count()-1, -1, -1):
         n = repo.changelog.node(i)
         mask = is_reachable(want_sha1, reachable, n)
         if mask:
-            changes = repo.changelog.read(n)
-            (p1, p2) = repo.changelog.parents(n)
-            (h, h1, h2) = map(hg.hex, (n, p1, p2))
-            (i1, i2) = map(repo.changelog.rev, (p1, p2))
+            if not full:
+                print hg.hex(n)
+            elif full is "commit":
+                print hg.hex(n)
+                catcommit(repo, n, '  ')
+            else:
+                changes = repo.changelog.read(n)
+                (p1, p2) = repo.changelog.parents(n)
+                (h, h1, h2) = map(hg.hex, (n, p1, p2))
+                (i1, i2) = map(repo.changelog.rev, (p1, p2))
 
-            date = changes[2].split(' ')[0]
-            print "%s %s:%s" % (date, h, mask),
-            mask = is_reachable(want_sha1, reachable, p1)
-            if i1 != -1 and mask > 0:
-                print "%s:%s " % (h1, mask),
-            mask = is_reachable(want_sha1, reachable, p2)
-            if i2 != -1 and mask > 0:
-                print "%s:%s " % (h2, mask),
-            print ""
+                date = changes[2].split(' ')[0]
+                print "%s %s:%s" % (date, h, mask),
+                mask = is_reachable(want_sha1, reachable, p1)
+                if i1 != -1 and mask > 0:
+                    print "%s:%s " % (h1, mask),
+                mask = is_reachable(want_sha1, reachable, p2)
+                if i2 != -1 and mask > 0:
+                    print "%s:%s " % (h2, mask),
+                print ""
+            if maxnr and count >= maxnr:
+                break
+            count += 1
 
 # git rev-list tries to order things by date, and has the ability to stop
 # at a given commit without walking the whole repo.  TODO add the stop
 # parameter
 def revlist(args, repo):
     doptions = {}
-    opts = [('c', 'commit', None, 'commit')]
+    opts = [('c', 'commit', None, 'commit'),
+            ('n', 'max-nr', 0, 'max-nr')]
     args = fancyopts.fancyopts(args, opts, doptions,
                                'hg rev-list')
-    for i in range(repo.changelog.count()):
-        n = repo.changelog.node(i)
-        print hg.hex(n)
-        if doptions['commit']:
-            catcommit(repo, n, '  ')
+    if doptions['commit']:
+        full = "commit"
+    else:
+        full = None
+    for i in range(1, len(args)):
+        args[i] = '^' + args[i]
+    revtree(args, repo, full, doptions['max-nr'])
 
 def catchterm(*args):
     raise SignalInterrupt
