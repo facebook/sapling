@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -x
+hg init
+echo "nothing" > a
+hg add a
+hg commit -t ancestor -u test -d "0 0"
+echo "something" > a
+hg commit -t branch1 -u test -d "0 0"
+hg co 0
+echo "something else" > a
+hg commit -t branch2 -u test -d "0 0"
+export HGMERGE=merge
+hg -d up -m 1
+hg id
+cat a | grep -v ">>>" | grep -v "<<<"
+hg status

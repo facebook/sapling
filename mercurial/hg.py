@@ -1118,8 +1118,8 @@ class localrepository:
         fl = self.file(fn)
         base = fl.ancestor(my, other)
         a = self.wjoin(fn)
-        b = temp("other", other)
-        c = temp("base", base)
+        b = temp("base", base)
+        c = temp("other", other)
 
         self.ui.note("resolving %s\n" % fn)
         self.ui.debug("file %s: other %s ancestor %s\n" %

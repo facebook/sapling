@@ -1,0 +1,32 @@
++ hg init
++ echo nothing
++ hg add a
++ hg commit -t ancestor -u test -d '0 0'
++ echo something
++ hg commit -t branch1 -u test -d '0 0'
++ hg co 0
++ echo 'something else'
++ hg commit -t branch2 -u test -d '0 0'
++ export HGMERGE=merge
++ HGMERGE=merge
++ hg -d up -m 1
+merge: warning: conflicts during merge
+resolving manifests
+ ancestor 1c6e5a12 local 35fedfab remote a5801785
+ a versions differ, resolve
+working dir created .out, keeping
+merging a
+resolving a
+file a: other d7250518 ancestor 68ba9db7
+merging a failed!
++ hg id
+32e80765+75234512+ tip
++ cat a
++ grep -v '>>>'
++ grep -v '<<<'
+something else
+=======
+something
++ hg status
+C a
+? .out
