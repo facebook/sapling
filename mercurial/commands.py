@@ -334,13 +334,20 @@ def init(ui, source=None):
             try:
                 os.remove(".hg/dirstate")
             except: pass
+
+            repo = hg.repository(ui, ".")
+
         else:
             repo = hg.repository(ui, ".", create=1)
             other = hg.repository(ui, source)
             cg = repo.getchangegroup(other)
             repo.addchangegroup(cg)
     else:
-        hg.repository(ui, ".", create=1)
+        repo = hg.repository(ui, ".", create=1)
+
+    f = repo.opener("hgrc", "w")
+    f.write("[paths]\n")
+    f.write("default = %s\n" % source)
 
 def log(ui, repo, f):
     """show the revision history of a single file"""
@@ -409,7 +416,7 @@ def patch(ui, repo, patch1, *patches, **opts):
                 raise "patch failed!"
         repo.commit(files, text)
 
-def pull(ui, repo, source):
+def pull(ui, repo, source="default"):
     """pull changes from the specified source"""
     paths = {}
     for name, path in ui.configitems("paths"):
