@@ -627,7 +627,7 @@ norepo = "init branch help debugindex debugindexdot"
 def find(cmd):
     i = None
     for e in table.keys():
-        if re.match(e + "$", cmd):
+        if re.match("(%s)$" % e, cmd):
             return table[e]
 
     raise UnknownCommand(cmd)
