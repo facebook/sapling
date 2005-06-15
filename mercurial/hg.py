@@ -334,7 +334,8 @@ class localrepository:
         self.manifest = manifest(self.opener)
         self.changelog = changelog(self.opener)
         self.ignorelist = None
-        self.tags = None
+        self.tagscache = None
+        self.nodetagscache = None
 
         if not self.remote:
             self.dirstate = dirstate(self.opener, ui, self.root)
@@ -355,9 +356,10 @@ class localrepository:
             if pat.search(f): return True
         return False
 
-    def lookup(self, key):
-        if self.tags is None:
-            self.tags = {}
+    def tags(self):
+        '''return a mapping of tag to node'''
+        if not self.tagscache: 
+            self.tagscache = {}
             try:
                 # read each head of the tags file, ending with the tip
                 # and add each tag found to the map, with "newer" ones
@@ -369,11 +371,35 @@ class localrepository:
                     for l in fl.revision(r).splitlines():
                         if l:
                             n, k = l.split(" ")
-                            self.tags[k] = bin(n)
+                            self.tagscache[k] = bin(n)
             except KeyError: pass
-            self.tags['tip'] = self.changelog.tip()
+            self.tagscache['tip'] = self.changelog.tip()
+
+        return self.tagscache
+
+    def tagslist(self):
+        '''return a list of tags ordered by revision'''
+        l = []
+        for t,n in self.tags().items():
+            try:
+                r = self.changelog.rev(n)
+            except:
+                r = -2 # sort to the beginning of the list if unknown
+            l.append((r,t,n))
+        l.sort()
+        return [(t,n) for r,t,n in l]
+
+    def nodetags(self, node):
+        '''return the tags associated with a node'''
+        if not self.nodetagscache:
+            self.nodetagscache = {}
+            for t,n in self.tags().items():
+                self.nodetagscache.setdefault(n,[]).append(t)
+        return self.nodetagscache.get(node, [])
+
+    def lookup(self, key):
         try:
-            return self.tags[key]
+            return self.tags()[key]
         except KeyError:
             return self.changelog.lookup(key)
 

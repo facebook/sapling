@@ -126,18 +126,6 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
             ui.status("summary:     %s\n" % description[0])
     ui.status("\n")
 
-def tags_load(repo):
-    repo.lookup(0) # prime the cache
-    i = repo.tags.items()
-    n = []
-    for e in i:
-        try:
-            l = repo.changelog.rev(e[1])
-        except KeyError:
-            l = -2
-        n.append((l, e))
-    return n
-
 def help(ui, cmd=None):
     '''show help for a given command or all commands'''
     if cmd:
@@ -328,17 +316,15 @@ def identify(ui, repo):
     """print information about the working copy"""
     (c, a, d, u) = repo.diffdir(repo.root)
     mflag = (c or a or d or u) and "+" or ""
-    parents = [parent for parent in repo.dirstate.parents()
-                      if parent != hg.nullid]
+    parents = [p for p in repo.dirstate.parents() if p != hg.nullid]
     if not parents:
-        ui.note("unknown\n")
+        ui.write("unknown\n")
         return
 
     tstring = ''
     if not ui.quiet:
-        taglist = [e[1] for e in tags_load(repo)]
-        tstring = " %s" % ' + '.join([e[0] for e in taglist
-                                      if e[0] != 'tip' and e[1] in parents])
+        tags = sum(map(repo.nodetags, parents), [])
+        tstring = " " + ' + '.join(tags)
 
     hexfunc = ui.verbose and hg.hex or hg.short
     pstring = '+'.join([hexfunc(parent) for parent in parents])
@@ -544,17 +530,15 @@ def status(ui, repo):
 
 def tags(ui, repo):
     """list repository tags"""
-    n = tags_load(repo)
-
-    n.sort()
-    n.reverse()
-    i = [ e[1] for e in n ]
-    for k, n in i:
+    
+    l = repo.tagslist()
+    l.reverse()
+    for t,n in l:
         try:
             r = repo.changelog.rev(n)
         except KeyError:
             r = "?"
-        print "%-30s %5d:%s" % (k, repo.changelog.rev(n), hg.hex(n))
+        print "%-30s %5d:%s" % (t, repo.changelog.rev(n), hg.hex(n))
 
 def tip(ui, repo):
     """show the tip revision"""

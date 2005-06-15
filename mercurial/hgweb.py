@@ -523,12 +523,8 @@ class hgweb:
         cl = self.repo.changelog
         mf = cl.read(cl.tip())[0]
 
-        self.repo.lookup(0) # prime the cache
-        i = self.repo.tags.items()
-        n = [ (cl.rev(e[1]), e) for e in i ] # sort by revision
-        n.sort()
-        n.reverse()
-        i = [ e[1] for e in n ]
+        i = self.repo.tagslist()
+        i.reverse()
 
         def entries():
             parity = 0
