@@ -58,14 +58,14 @@ def sortdiff(a, b):
             yield (am, bm, la - am) # return a match
 
         # skip mismatched lines from b
-        while lb < lenb and b[lb] < a[la]:
+        while la < lena and lb < lenb and b[lb] < a[la]:
             lb += 1
 
         if lb >= lenb:
             break
         
         # skip mismatched lines from a
-        while la < lena and b[lb] > a[la]:
+        while la < lena and lb < lenb and b[lb] > a[la]:
             la += 1
 
         if la >= lena:
