@@ -130,6 +130,7 @@ class hgweb:
             "addbreaks": nl2br,
             "obfuscate": obfuscate,
             "firstline": (lambda x: x.splitlines(1)[0]),
+            "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--")
             }
 
     def refresh(self):
@@ -376,13 +377,14 @@ class hgweb:
         p1, p2 = fl.parents(n)
         t = float(cs[2].split(' ')[0])
         mfn = cs[0]
+        self.repo.manifest.read(mfn)
 
         def lines():
             for l, t in enumerate(text.splitlines(1)):
                 yield self.t("fileline", line = t,
                              linenumber = "% 6d" % (l + 1),
                              parity = l & 1)
-        
+
         yield self.t("filerevision", file = f,
                      header = self.header(),
                      footer = self.footer(),
@@ -400,6 +402,7 @@ class hgweb:
                      parent2 = self.parent("filerevparent",
                                            hex(p2), fl.rev(p2), file=f),
                      p1 = hex(p1), p2 = hex(p2),
+                     permissions = self.repo.manifest.readflags(mfn)[f],
                      p1rev = fl.rev(p1), p2rev = fl.rev(p2))
 
     def fileannotate(self, f, node):
@@ -415,6 +418,7 @@ class hgweb:
         p1, p2 = fl.parents(n)
         t = float(cs[2].split(' ')[0])
         mfn = cs[0]
+        self.repo.manifest.read(mfn)
 
         def annotate():
             parity = 1
@@ -465,12 +469,14 @@ class hgweb:
                      parent2 = self.parent("fileannotateparent",
                                            hex(p2), fl.rev(p2), file=f),
                      p1 = hex(p1), p2 = hex(p2),
+                     permissions = self.repo.manifest.readflags(mfn)[f],
                      p1rev = fl.rev(p1), p2rev = fl.rev(p2))
 
     def manifest(self, mnode, path):
         mf = self.repo.manifest.read(bin(mnode))
         rev = self.repo.manifest.rev(bin(mnode))
         node = self.repo.changelog.node(rev)
+        mff=self.repo.manifest.readflags(bin(mnode))
 
         files = {}
  
@@ -500,7 +506,8 @@ class hgweb:
                                  manifest = mnode,
                                  filenode = hex(fnode),
                                  parity = parity,
-                                 basename = f)
+                                 basename = f, 
+                                 permissions = mff[full])
                 else:
                     yield self.t("manifestdirentry",
                                  parity = parity,

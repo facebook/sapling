@@ -8,8 +8,8 @@ fileellipses = "..."
 changelogentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
-manifestdirentry = "<div class="parity#parity#"><a href="?cmd=manifest;manifest=#manifest#;path=#path#">#basename#/</a><br /></div>"
-manifestfileentry = "<div class="parity#parity#"><a href="?cmd=file;filenode=#filenode#;file=#file#">#basename#</a><br /></div>"
+manifestdirentry = "<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td><a href="?cmd=manifest;manifest=#manifest#;path=#path#">#basename#/</a>"
+manifestfileentry = "<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td><a href="?cmd=file;filenode=#filenode#;file=#file#">#basename#</a>"
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
