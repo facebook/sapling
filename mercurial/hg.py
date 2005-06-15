@@ -34,8 +34,29 @@ class filelog(revlog):
                         os.path.join("data", path + ".d"))
 
     def read(self, node):
-        return self.revision(node)
-    def add(self, text, transaction, link, p1=None, p2=None):
+        t = self.revision(node)
+        if t[:2] != '\1\n':
+            return t
+        s = t.find('\1\n', 2)
+        return t[s+2:]
+
+    def readmeta(self, node):
+        t = self.revision(node)
+        if t[:2] != '\1\n':
+            return t
+        s = t.find('\1\n', 2)
+        mt = t[2:s]
+        for l in mt.splitlines():
+            k, v = l.split(": ", 1)
+            m[k] = v
+        return m
+
+    def add(self, text, meta, transaction, link, p1=None, p2=None):
+        if meta or text[:2] == '\1\n':
+            mt = ""
+            if meta:
+                mt = [ "%s: %s\n" % (k, v) for k,v in meta.items() ]
+            text = "\1\n" + "".join(mt) + "\1\n" + text
         return self.addrevision(text, transaction, link, p1, p2)
 
     def annotate(self, node):
@@ -475,7 +496,7 @@ class localrepository:
                 tm = is_exec(self.wjoin(f))
                 r = self.file(f)
                 mfm[f] = tm
-                mm[f] = r.add(t, tr, linkrev,
+                mm[f] = r.add(t, {}, tr, linkrev,
                               m1.get(f, nullid), m2.get(f, nullid))
                 self.dirstate.update([f], "n")
             except IOError:
@@ -538,7 +559,7 @@ class localrepository:
             r = self.file(f)
             fp1 = m1.get(f, nullid)
             fp2 = m2.get(f, nullid)
-            new[f] = r.add(t, tr, linkrev, fp1, fp2)
+            new[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
 
         # update manifest
         m1.update(new)
