@@ -330,6 +330,10 @@ def identify(ui, repo):
     mflag = (c or a or d or u) and "+" or ""
     parents = [parent for parent in repo.dirstate.parents()
                       if parent != hg.nullid]
+    if not parents:
+        ui.note("unknown\n")
+        return
+
     tstring = ''
     if not ui.quiet:
         taglist = [e[1] for e in tags_load(repo)]
