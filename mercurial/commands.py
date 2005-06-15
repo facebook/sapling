@@ -171,9 +171,22 @@ def add(ui, repo, file, *files):
     '''add the specified files on the next commit'''
     repo.add(relpath(repo, (file,) + files))
 
-def addremove(ui, repo):
+def addremove(ui, repo, *files):
     """add all new files, delete all missing files"""
-    (c, a, d, u) = repo.diffdir(repo.root)
+    if files:
+        files = relpath(repo, files)
+        d = []
+        u = []
+        for f in files:
+            p = repo.wjoin(f)
+            s = repo.dirstate.state(f)
+            isfile = os.path.isfile(p)
+            if s != 'r' and not isfile:
+                d.append(f)
+            elif s not in 'nmai' and isfile:
+                u.append(f)
+    else:
+        (c, a, d, u) = repo.diffdir(repo.root)
     repo.add(u)
     repo.remove(d)
 
@@ -573,7 +586,7 @@ def verify(ui, repo):
 
 table = {
     "add": (add, [], "hg add [files]"),
-    "addremove": (addremove, [], "hg addremove"),
+    "addremove": (addremove, [], "hg addremove [files]"),
     "ann|annotate": (annotate,
                      [('r', 'revision', '', 'revision'),
                       ('u', 'user', None, 'show user'),
