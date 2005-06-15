@@ -12,6 +12,7 @@ hg commands:
  heads       show current repository heads
  help        show help for a given command or all commands
  history     show the changelog history
+ identify    print information about the working copy
  init        create a new repository or copy an existing one
  log         show the revision history of a single file
  manifest    output the latest or given revision of the project manifest
@@ -58,6 +59,7 @@ hg commands:
  heads       show current repository heads
  help        show help for a given command or all commands
  history     show the changelog history
+ identify    print information about the working copy
  init        create a new repository or copy an existing one
  log         show the revision history of a single file
  manifest    output the latest or given revision of the project manifest
