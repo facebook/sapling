@@ -61,7 +61,7 @@ def difftree(args, repo):
     revs.append(repo.lookup(args[1]))
     args = args[2:]
     if doptions['patch']:
-        commands.dodiff(repo, args, *revs)
+        commands.dodiff(repo, "", args, *revs)
     else:
         __difftree(repo, args, *revs)
 
