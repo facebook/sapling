@@ -1024,8 +1024,7 @@ class localrepository:
                     remove.append(f) # other deleted it
             else:
                 if n == m1.get(f, nullid): # same as parent
-                    self.ui.debug("remote deleted %s\n" % f)
-                    remove.append(f)
+                    self.ui.debug("local created %s, keeping\n" % f)
                 else:
                     self.ui.debug("working dir created %s, keeping\n" % f)
 
