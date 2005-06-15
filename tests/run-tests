@@ -6,8 +6,8 @@ tests=0
 failed=0
 H=$PWD
 
-for f in `ls test-* | grep -Ev "\.|~"` ; do
-    echo -n "."
+function run_one
+{
     D=`mktemp -d`
     if [ "$D" == "" ] ; then
 	echo mktemp failed!
@@ -15,16 +15,18 @@ for f in `ls test-* | grep -Ev "\.|~"` ; do
 
     cd $D
     fail=0
+
     if ! $H/$f > .out 2>&1 ; then
 	echo $f failed with error code $?
 	fail=1
     fi
+
     if [ -s .out -a ! -r $H/$f.out ] ; then
 	echo $f generated unexpected output:
 	cat .out
 	cp .out $H/$f.err
 	fail=1
-    elif ! diff -u $H/$f.out .out > /dev/null ; then
+    elif [ -r $H/$f.out ] && ! diff -u $H/$f.out .out > /dev/null ; then
 	echo $f output changed:
 	diff -u $H/$f.out .out && true
 	cp .out $H/$f.err
@@ -33,8 +35,19 @@ for f in `ls test-* | grep -Ev "\.|~"` ; do
 
     cd $H
     rm -r $D
+    return $fail
+}
 
-    failed=$[$failed + $fail]
+TESTS=$@
+if [ "$TESTS" == "" ] ; then
+    TESTS=`ls test-* | grep -Ev "\.|~"`
+fi
+
+for f in $TESTS ; do
+    echo -n "."
+    if ! run_one $f ; then
+	failed=$[$failed + 1]
+    fi
     tests=$[$tests + 1]
 done
 
