@@ -246,6 +246,8 @@ def commit(ui, repo, *files, **opts):
         try: text = open(opts['logfile']).read()
         except IOError: pass
 
+    if opts['addremove']:
+        addremove(ui, repo, *files)
     repo.commit(relpath(repo, files), text, opts['user'], opts['date'])
 
 def debugaddchangegroup(ui, repo):
@@ -596,6 +598,7 @@ table = {
     "cat|dump": (cat, [], 'hg cat <file> [rev]'),
     "commit|ci": (commit,
                   [('t', 'text', "", 'commit text'),
+                   ('A', 'addremove', None, 'run add/remove during commit'),
                    ('l', 'logfile', "", 'commit text file'),
                    ('d', 'date', "", 'data'),
                    ('u', 'user', "", 'user')],
