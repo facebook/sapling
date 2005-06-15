@@ -232,8 +232,8 @@ class hgweb:
                 if f < self.maxchanges / 2: continue
                 if f > count: break
                 r = "%d" % f
-                if pos + f < count - (f/2): l.append(("+" + r, pos + f))
-                if pos - f >= 0 + (f/2): l.insert(0, ("-" + r, pos - f))
+                if pos + f < count: l.append(("+" + r, pos + f))
+                if pos - f >= 0: l.insert(0, ("-" + r, pos - f))
 
             yield self.t("naventry", rev = 0, label="(0)")
                     
@@ -246,7 +246,7 @@ class hgweb:
             parity = (start - end) & 1
             cl = self.repo.changelog
             l = [] # build a list in forward order for efficiency
-            for i in range(start, end + 1):
+            for i in range(start, end):
                 n = cl.node(i)
                 changes = cl.read(n)
                 hn = hex(n)
@@ -276,9 +276,9 @@ class hgweb:
         cl = self.repo.changelog
         mf = cl.read(cl.tip())[0]
         count = cl.count()
-        end = min(pos, count - 1)
-        start = max(0, pos - self.maxchanges)
-        end = min(count - 1, start + self.maxchanges)
+        start = max(0, pos - self.maxchanges + 1)
+        end = min(count, start + self.maxchanges)
+        pos = end - 1
 
         yield self.t('changelog',
                      header = self.header(),
@@ -581,13 +581,12 @@ class hgweb:
         self.t = templater(m, self.filters)
 
         if not args.has_key('cmd') or args['cmd'][0] == 'changelog':
-            hi = self.repo.changelog.count()
+            hi = self.repo.changelog.count() - 1
             if args.has_key('rev'):
                 hi = args['rev'][0]
                 try:
                     hi = self.repo.changelog.rev(self.repo.lookup(hi))
-                except KeyError:
-                    hi = self.repo.changelog.count()
+                except KeyError: pass
 
             write(self.changelog(hi))
             
