@@ -126,6 +126,18 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
             ui.status("summary:     %s\n" % description.splitlines()[0])
     ui.status("\n")
 
+def tags_load(repo):
+    repo.lookup(0) # prime the cache
+    i = repo.tags.items()
+    n = []
+    for e in i:
+        try:
+            l = repo.changelog.rev(e[1])
+        except KeyError:
+            l = -2
+        n.append((l, e))
+    return n
+
 def help(ui, cmd=None):
     '''show help for a given command or all commands'''
     if cmd:
@@ -312,6 +324,26 @@ def history(ui, repo):
     for i in range(repo.changelog.count() - 1, -1, -1):
         show_changeset(ui, repo, rev=i)
 
+def identify(ui, repo):
+    """print information about the working copy"""
+    (c, a, d, u) = repo.diffdir(repo.root)
+    mflag = (c or a or d or u) and "+" or ""
+    parents = [parent for parent in repo.dirstate.parents()
+                      if parent != hg.nullid]
+    if not parents:
+        ui.note("unknown\n")
+        return
+
+    tstring = ''
+    if not ui.quiet:
+        taglist = [e[1] for e in tags_load(repo)]
+        tstring = " %s" % ' + '.join([e[0] for e in taglist
+                                      if e[0] != 'tip' and e[1] in parents])
+
+    hexfunc = ui.verbose and hg.hex or hg.short
+    pstring = '+'.join([hexfunc(parent) for parent in parents])
+    ui.write("%s%s%s\n" % (pstring, mflag, tstring))
+
 def init(ui, source=None):
     """create a new repository or copy an existing one"""
 
@@ -334,13 +366,20 @@ def init(ui, source=None):
             try:
                 os.remove(".hg/dirstate")
             except: pass
+
+            repo = hg.repository(ui, ".")
+
         else:
             repo = hg.repository(ui, ".", create=1)
             other = hg.repository(ui, source)
             cg = repo.getchangegroup(other)
             repo.addchangegroup(cg)
     else:
-        hg.repository(ui, ".", create=1)
+        repo = hg.repository(ui, ".", create=1)
+
+    f = repo.opener("hgrc", "w")
+    f.write("[paths]\n")
+    f.write("default = %s\n" % source)
 
 def log(ui, repo, f):
     """show the revision history of a single file"""
@@ -409,7 +448,7 @@ def patch(ui, repo, patch1, *patches, **opts):
                 raise "patch failed!"
         repo.commit(files, text)
 
-def pull(ui, repo, source):
+def pull(ui, repo, source="default"):
     """pull changes from the specified source"""
     paths = {}
     for name, path in ui.configitems("paths"):
@@ -457,7 +496,7 @@ def push(ui, repo, dest):
         os.kill(child, signal.SIGTERM)
         return r
 
-def rawcommit(ui, repo, files, **rc):
+def rawcommit(ui, repo, flist, **rc):
     "raw commit interface"
 
     text = rc['text']
@@ -468,7 +507,7 @@ def rawcommit(ui, repo, files, **rc):
         print "missing commit text"
         return 1
 
-    files = relpath(repo, files)
+    files = relpath(repo, flist)
     if rc['files']:
         files += open(rc['files']).read().splitlines()
         
@@ -505,15 +544,7 @@ def status(ui, repo):
 
 def tags(ui, repo):
     """list repository tags"""
-    repo.lookup(0) # prime the cache
-    i = repo.tags.items()
-    n = []
-    for e in i:
-        try:
-            l = repo.changelog.rev(e[1])
-        except KeyError:
-            l = -2
-        n.append((l, e))
+    n = tags_load(repo)
 
     n.sort()
     n.reverse()
@@ -583,6 +614,7 @@ table = {
     "heads": (heads, [], 'hg heads'),
     "history": (history, [], 'hg history'),
     "help": (help, [], 'hg help [command]'),
+    "identify|id": (identify, [], 'hg identify'),
     "init": (init, [], 'hg init [url]'),
     "log": (log, [], 'hg log <file>'),
     "manifest|dumpmanifest": (manifest, [], 'hg manifest [rev]'),
@@ -627,7 +659,7 @@ norepo = "init branch help debugindex debugindexdot"
 def find(cmd):
     i = None
     for e in table.keys():
-        if re.match(e + "$", cmd):
+        if re.match("(%s)$" % e, cmd):
             return table[e]
 
     raise UnknownCommand(cmd)

@@ -338,6 +338,9 @@ class localrepository:
 
         if not self.remote:
             self.dirstate = dirstate(self.opener, ui, self.root)
+            try:
+                self.ui.readconfig(self.opener("hgrc"))
+            except IOError: pass
 
     def ignore(self, f):
         if self.ignorelist is None:

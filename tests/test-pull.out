@@ -1,0 +1,18 @@
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
+requesting all changes
+adding changesets
+adding manifests
+adding file revisions
+modified 1 files, added 1 changesets and 1 new revisions
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
+foo
+2ed2a3912a0b24502043eae84ee4b279c18b90dd 644 foo
+killed!

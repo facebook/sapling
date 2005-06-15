@@ -23,6 +23,9 @@ class ui:
         self.debugflag = (self.debugflag or debug)
         self.interactive = (self.interactive and interactive)
 
+    def readconfig(self, fp):
+        self.cdata.readfp(fp)
+
     def config(self, section, val, default=None):
         if self.cdata.has_option(section, val):
             return self.cdata.get(section, val)

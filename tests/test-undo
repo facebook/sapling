@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -x
+mkdir t
+cd t
+hg init
+echo a > a
+hg add a
+hg commit -t "test" -u test -d "0 0"
+hg verify
+hg parents
+hg status
+hg undo
+hg verify
+hg parents
+hg status

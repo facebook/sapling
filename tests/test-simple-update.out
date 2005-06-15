@@ -1,0 +1,38 @@
++ mkdir test
++ cd test
++ echo foo
++ hg init
++ hg addremove
++ hg commit -t 1
++ hg verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
++ cd ..
++ mkdir branch
++ cd branch
++ hg init ../test
++ hg co
++ echo bar
++ hg commit -t 2
++ cd ../test
++ hg pull ../branch
+searching for changes
+adding changesets
+adding manifests
+adding file revisions
+modified 1 files, added 1 changesets and 1 new revisions
++ hg verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 2 changesets, 2 total revisions
++ hg co
++ cat foo
+foo
+bar
++ hg manifest
+6f4310b00b9a147241b071a60c28a650827fb03d 644 foo
