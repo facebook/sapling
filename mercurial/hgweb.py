@@ -129,6 +129,7 @@ class hgweb:
             "date": (lambda x: time.asctime(time.gmtime(x))),
             "addbreaks": nl2br,
             "obfuscate": obfuscate,
+            "short": (lambda x: x[:12]),
             "firstline": (lambda x: x.splitlines(1)[0]),
             "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--")
             }

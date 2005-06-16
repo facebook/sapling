@@ -1,5 +1,5 @@
 #header#
-<title>#repo|escape#: changeset #node#</title>
+<title>#repo|escape#: changeset #node|short#</title>
 </head>
 <body>
 
@@ -15,12 +15,12 @@
 <table>
 <tr>
  <td class="metatag">changeset #rev#:</td>
- <td><a href="?cmd=changeset;node=#node#">#node#</a></td></tr>
+ <td><a href="?cmd=changeset;node=#node#">#node|short#</a></td></tr>
 #parent1#
 #parent2#
 <tr>
  <td class="metatag">manifest:</td>
- <td><a href="?cmd=manifest;manifest=#manifest#;path=/">#manifest#</a></td></tr>
+ <td><a href="?cmd=manifest;manifest=#manifest#;path=/">#manifest|short#</a></td></tr>
 <tr>
  <td class="metatag">author:</td>
  <td>#author|obfuscate#</td></tr>
