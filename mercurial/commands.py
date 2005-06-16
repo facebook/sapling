@@ -470,7 +470,7 @@ def pull(ui, repo, source="default"):
     cg = repo.getchangegroup(other)
     repo.addchangegroup(cg)
 
-def push(ui, repo, dest):
+def push(ui, repo, dest="default-push"):
     """push changes to the specified destination"""
     paths = {}
     for name, path in ui.configitems("paths"):
