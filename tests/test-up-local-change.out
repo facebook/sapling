@@ -28,16 +28,16 @@
 C a
 + hg -d up
 resolving manifests
- ancestor a0c8bcbb local a0c8bcbb remote 1165e8bd
+ ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
  a versions differ, resolve
 remote created b
 getting b
 merging a
 resolving a
-file a: other d730145a ancestor b789fdd9
+file a: other d730145abbf9 ancestor b789fdd96dc2
 + hg -d up -m
 resolving manifests
- ancestor 1165e8bd local 1165e8bd remote 1165e8bd
+ ancestor 1165e8bd193e local 1165e8bd193e remote 1165e8bd193e
 + hg parents
 changeset:   1:1e71731e6fbb5b35fae293120dea6964371c13c6
 user:        test

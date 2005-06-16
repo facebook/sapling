@@ -8,7 +8,7 @@ unknown
 + hg commit -t test -u test -d '0 0'
 + hg co
 + hg identify
-acb14030 tip
+acb14030fe0a tip
 ++ hg -q tip
 ++ cut -d : -f 2
 + T=acb14030fe0a21b60322c440ad2d20cf7685a376
@@ -21,15 +21,15 @@ acb14030fe0a21b60322c440ad2d20cf7685a376 first
 tip                                1:b9154636be938d3d431e75a7c906504a079bfe07
 first                              0:acb14030fe0a21b60322c440ad2d20cf7685a376
 + hg identify
-b9154636 tip
+b9154636be93 tip
 + echo bb
 + hg status
 C a
 + hg identify
-b9154636+ tip
+b9154636be93+ tip
 + hg co first
 + hg id
-acb14030+ first
+acb14030fe0a+ first
 + hg -v id
 acb14030fe0a21b60322c440ad2d20cf7685a376+ first
 + hg status
@@ -38,10 +38,10 @@ C a
 + hg add b
 + hg commit -t branch -u test -d '0 0'
 + hg id
-c8edf041 tip
+c8edf04160c7 tip
 + hg co -m 1
 + hg id
-c8edf041+b9154636+ tip
+c8edf04160c7+b9154636be93+ tip
 + hg status
 C a
 C .hgtags
