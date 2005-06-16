@@ -1,0 +1,49 @@
+General:
+- Better documentation
+- More regression tests
+- More specific try/except.
+- less code duplication, more code in the right places
+- python 2.2 support
+- better import support
+- export to git
+
+Core:
+- difflib creating/removing files (fixed except dates?)
+- directory foo.d or foo.i with existing file foo; hgweb.cgi.[di] and
+  apache
+- get various options from hgrc
+- allow full decimal (part of) hash
+  hg export 5005048662 -> OverflowError: long int too large to convert
+  to int
+- push support (hack exists)
+- hg over ssh://
+- commit mailinglist/trigger/hooks
+- fast diff extension
+
+Commands:
+- hg status <filename>: file rev, changeset rev, changed, added,
+  deleted, sha-1
+- select to pull a subset of the heads
+- commands.py: number of args too much magic (e.g. in patch())
+- link children in hgweb
+- adding a tag with "hg tag foobar"
+- automatic pull fallback to old-http://
+- hg init|pull http://example.com doesn't say that no repo was found
+- hg annotate -u and hgweb annotate with long $EMAIL
+- hg -v history doesn't show tkmerge as modified (removed).
+- hg import vs. hg patch in help etc. (import is a reserved python
+  word)
+- version reporting
+
+Web:
+- show tags in hgweb + hg history
+- show parent changeset number in hgweb
+- optionally only show merges (parent != changeset-1, etc.)
+- one hgweb with many repos (another script)
+- hgweb tip link too verbose
+- hgweb: deliver static files from .hg (e.g. favicon?)
+- hgweb personalization: timezone (display/change), display of
+  features
+- hg export 240 shows -tkmerge (good), hgweb does not (bad).
+
+(originally from a posting by Thomas Arendsen Hein)
