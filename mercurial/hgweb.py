@@ -173,7 +173,7 @@ class hgweb:
                          lines = prettyprintlines(diff),
                          parity = parity[0],
                          file = f,
-                         filenode = hex(fn))
+                         filenode = hex(fn or nullid))
             parity[0] = 1 - parity[0]
             
         def prettyprintlines(diff):
@@ -301,7 +301,7 @@ class hgweb:
         mf = self.repo.manifest.read(changes[0])
         for f in changes[3]:
             files.append(self.t("filenodelink",
-                                filenode = hex(mf[f]), file = f))
+                                filenode = hex(mf.get(f, nullid)), file = f))
 
         def diff():
             yield self.diff(p1, n, changes[3])
