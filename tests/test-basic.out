@@ -7,7 +7,7 @@
 + hg history
 changeset:   0:acb14030fe0a21b60322c440ad2d20cf7685a376
 user:        test
-date:        Wed Dec 31 16:00:00 1969
+date:        Thu Jan  1 00:00:00 1970
 summary:     test
 
 + hg manifest

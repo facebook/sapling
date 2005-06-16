@@ -9,13 +9,13 @@ hg init
 hg addremove
 hg commit -t "1"
 hg verify
-hg serve 2>/dev/null &
+hg serve -p 20059 2>/dev/null &
 C=$!
 cd ..
 
 mkdir copy
 cd copy
-hg init http://localhost:8000/
+hg init http://localhost:20059/
 hg verify
 hg co
 cat foo

@@ -8,6 +8,7 @@ H=$PWD
 
 function run_one
 {
+    export TZ=GMT
     D=`mktemp -d`
     if [ "$D" == "" ] ; then
 	echo mktemp failed!

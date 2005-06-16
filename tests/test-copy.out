@@ -15,19 +15,19 @@ b
 + hg history
 changeset:   1:3b5b84850bbed12e8ff8c1b87b32dc93c59ae6d8
 user:        test
-date:        Wed Dec 31 16:00:00 1969
+date:        Thu Jan  1 00:00:00 1970
 summary:     2
 
 changeset:   0:c19d34741b0a4ced8e4ba74bb834597d5193851e
 user:        test
-date:        Wed Dec 31 16:00:00 1969
+date:        Thu Jan  1 00:00:00 1970
 summary:     1
 
 + hg log a
 revision:    0:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 changeset:   0:c19d34741b0a4ced8e4ba74bb834597d5193851e
 user:        test
-date:        Wed Dec 31 16:00:00 1969
+date:        Thu Jan  1 00:00:00 1970
 summary:     1
 
 + hexdump -C .hg/data/b.d
