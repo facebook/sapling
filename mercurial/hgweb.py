@@ -562,7 +562,7 @@ class hgweb:
                      footer = self.footer(),
                      repo = self.reponame,
                      file = file,
-                     filenode = hex(mf[file]),
+                     filenode = hex(mf.get(file, nullid)),
                      node = changeset,
                      rev = self.repo.changelog.rev(n),
                      p1 = hex(p1),
