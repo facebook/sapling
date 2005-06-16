@@ -175,6 +175,19 @@ class revlog:
             for pn in self.parents(n):
                 p[pn] = 1
         return h
+
+    def children(self, node):
+        c = []
+        p = self.rev(node)
+        for r in range(p + 1, self.count()):
+            n = self.node(r)
+            for pn in self.parents(n):
+                if pn == p:
+                    c.append(p)
+                    continue
+                elif pn == nullid:
+                    continue
+        return c
     
     def lookup(self, id):
         try:
