@@ -9,7 +9,7 @@ import sys, struct, os
 from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
-demandload(globals(), "tempfile byterange difflib")
+demandload(globals(), "tempfile httprangereader difflib")
 
 def is_exec(f):
     return (os.stat(f).st_mode & 0100 != 0)
@@ -321,7 +321,7 @@ def opener(base):
     def o(path, mode="r"):
         if p[:7] == "http://":
             f = os.path.join(p, urllib.quote(path))
-            return httprangereader(f)
+            return httprangereader.httprangereader(f)
 
         f = os.path.join(p, path)
 
@@ -1416,18 +1416,3 @@ def repository(ui, path=None, create=0):
     else:
         return localrepository(ui, path, create)
 
-class httprangereader:
-    def __init__(self, url):
-        self.url = url
-        self.pos = 0
-    def seek(self, pos):
-        self.pos = pos
-    def read(self, bytes=None):
-        opener = urllib2.build_opener(byterange.HTTPRangeHandler())
-        urllib2.install_opener(opener)
-        req = urllib2.Request(self.url)
-        end = ''
-        if bytes: end = self.pos + bytes
-        req.add_header('Range', 'bytes=%d-%s' % (self.pos, end))
-        f = urllib2.urlopen(req)
-        return f.read()
