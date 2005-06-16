@@ -8,7 +8,7 @@
 import os, re, sys, signal
 import fancyopts, ui, hg
 from demandload import *
-demandload(globals(), "mdiff time hgweb traceback random signal")
+demandload(globals(), "mdiff time hgweb traceback random signal errno")
 
 class UnknownCommand(Exception): pass
 
@@ -743,7 +743,7 @@ def dispatch(args):
     except KeyboardInterrupt:
         u.warn("interrupted!\n")
     except IOError, inst:
-        if inst.errno == 32:
+        if inst.errno == errno.EPIPE:
             u.warn("broken pipe\n")
         else:
             raise
