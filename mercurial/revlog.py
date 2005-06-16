@@ -13,7 +13,7 @@ from mercurial import mdiff
 
 def hex(node): return binascii.hexlify(node)
 def bin(node): return binascii.unhexlify(node)
-def short(node): return hex(node[:4])
+def short(node): return hex(node[:6])
 
 def compress(text):
     if not text: return text
