@@ -325,10 +325,10 @@ class revlog:
             earliest = self.count()
             while h:
                 d, n = heapq.heappop(h)
-                r = self.rev(n)
                 if n not in seen:
                     seen[n] = 1
-                    yield (-d, n)
+                    r = self.rev(n)
+                    yield (-d, r, n)
                     for p in self.parents(n):
                         heapq.heappush(h, (-dist[p], p))
 
@@ -341,7 +341,7 @@ class revlog:
         # the other, or they match
         while 1:
             if lx == ly:
-                return lx[1]
+                return lx[2]
             elif lx < ly:
                 ly = y.next()
             elif lx > ly:
