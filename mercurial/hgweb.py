@@ -377,7 +377,6 @@ class hgweb:
         p1, p2 = fl.parents(n)
         t = float(cs[2].split(' ')[0])
         mfn = cs[0]
-        self.repo.manifest.read(mfn)
 
         def lines():
             for l, t in enumerate(text.splitlines(1)):
@@ -418,7 +417,6 @@ class hgweb:
         p1, p2 = fl.parents(n)
         t = float(cs[2].split(' ')[0])
         mfn = cs[0]
-        self.repo.manifest.read(mfn)
 
         def annotate():
             parity = 1
