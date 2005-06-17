@@ -108,6 +108,8 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
         ui.status("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
     else:
         ui.write("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
+        for tag in repo.nodetags(changenode):
+            ui.status("tag:         %s\n" % tag)
         for parent in parents:
             ui.write("parent:      %d:%s\n" % parent)
         ui.note("manifest:    %d:%s\n" % (repo.manifest.rev(changes[0]),
