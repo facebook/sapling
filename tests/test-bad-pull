@@ -1,0 +1,34 @@
+#!/bin/bash
+
+mkdir copy
+cd copy
+hg init http://localhost:20059/
+hg verify
+hg co
+cat foo
+hg manifest
+
+cat > dumb.py <<EOF
+import BaseHTTPServer, SimpleHTTPServer, signal
+
+def run(server_class=BaseHTTPServer.HTTPServer,
+        handler_class=SimpleHTTPServer.SimpleHTTPRequestHandler):
+    server_address = ('localhost', 20059)
+    httpd = server_class(server_address, handler_class)
+    httpd.serve_forever()
+
+signal.signal(signal.SIGTERM, lambda x: sys.exit(0))
+run()
+EOF
+
+python dumb.py 2>/dev/null &
+
+mkdir copy2
+cd copy2
+hg init http://localhost:20059/foo
+hg verify
+hg co
+cat foo
+hg manifest
+
+kill %1

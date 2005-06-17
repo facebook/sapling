@@ -1,0 +1,22 @@
+requesting all changes
+adding changesets
+abort: error 111: Connection refused
+transaction abort!
+rollback completed
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+0 files, 0 changesets, 0 total revisions
+cat: foo: No such file or directory
+requesting all changes
+adding changesets
+abort: HTTP Error 404: File not found
+transaction abort!
+rollback completed
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+0 files, 0 changesets, 0 total revisions
+cat: foo: No such file or directory

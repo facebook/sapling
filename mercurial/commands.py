@@ -752,7 +752,11 @@ def dispatch(args):
     except KeyboardInterrupt:
         u.warn("interrupted!\n")
     except IOError, inst:
-        if inst.errno == errno.EPIPE:
+        if hasattr(inst, "code"):
+            u.warn("abort: %s\n" % inst)
+        elif hasattr(inst, "reason"):
+            u.warn("abort: error %d: %s\n" % (inst.reason[0], inst.reason[1]))
+        elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
             u.warn("broken pipe\n")
         else:
             raise
