@@ -7,6 +7,7 @@ General:
 - better import support
 - export to git
 - Add standard files: AUTHORS, CREDITS, COPYING. ChangeLog? What else?
+- Code cleanup: apply http://python.org/peps/pep-0008.html
 
 Core:
 - difflib creating/removing files (fixed except dates: should be epoch)
@@ -30,11 +31,10 @@ Commands:
 - hg init|pull http://example.com doesn't say that no repo was found
 - hg annotate -u and hgweb annotate with long $EMAIL
 - hg -v history doesn't show tkmerge as modified (removed).
-- hg import vs. hg patch in help etc. (import is a reserved python
-  word)
+- hg import vs. hg patch in help etc., import is a reserved python
+  word, PEP8 mentions trailing underscore as a convention for this.
 - version reporting (hg --version / version.py / setup.py etc.)
 - hg pull default in a subdir doesn't work, if it is a relative path
-- show tags in hg history
 - optionally only show merges (two parents or parent != changeset-1, etc.)
 
 Web:
