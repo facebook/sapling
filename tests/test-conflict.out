@@ -21,9 +21,7 @@ file a: other d7250518cb1b ancestor 68ba9db7a9e4
 merging a failed!
 + hg id
 32e80765d7fe+75234512624c+ tip
-+ cat a
-+ grep -v '>>>'
-+ grep -v '<<<'
++ grep -Ev '>>>|<<<' a
 something else
 =======
 something

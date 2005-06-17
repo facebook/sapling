@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 mkdir test
 cd test
 echo foo>foo
@@ -10,7 +8,6 @@ hg addremove
 hg commit -t "1"
 hg verify
 hg serve -p 20059 2>/dev/null &
-C=$!
 cd ..
 
 mkdir copy
@@ -21,4 +18,4 @@ hg co
 cat foo
 hg manifest
 
-kill $C
+kill %hg

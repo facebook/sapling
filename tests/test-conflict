@@ -13,5 +13,5 @@ hg commit -t branch2 -u test -d "0 0"
 export HGMERGE=merge
 hg -d up -m 1
 hg id
-cat a | grep -v ">>>" | grep -v "<<<"
+grep -Ev ">>>|<<<" a
 hg status
