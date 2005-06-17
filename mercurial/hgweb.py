@@ -6,10 +6,6 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-# useful for debugging
-import cgitb
-cgitb.enable()
-
 import os, cgi, time, re, difflib, sys, zlib
 from mercurial.hg import *
 from mercurial.ui import *
