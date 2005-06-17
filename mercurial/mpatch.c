@@ -195,15 +195,17 @@ static struct flist *decode(char *bin, int len)
 	struct flist *l;
 	struct frag *lt;
 	char *end = bin + len;
+	char decode[12]; /* for dealing with alignment issues */
 
 	/* assume worst case size, we won't have many of these lists */
 	l = lalloc(len / 12);
 	lt = l->tail;
 
 	while (bin < end) {
-		lt->start = ntohl(*(uint32_t *)bin);
-		lt->end = ntohl(*(uint32_t *)(bin + 4));
-		lt->len = ntohl(*(uint32_t *)(bin + 8));
+		memcpy(decode, bin, 12);
+		lt->start = ntohl(*(uint32_t *)decode);
+		lt->end = ntohl(*(uint32_t *)(decode + 4));
+		lt->len = ntohl(*(uint32_t *)(decode + 8));
 		lt->data = bin + 12;
 		bin += 12 + lt->len;
 		lt++;
