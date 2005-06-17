@@ -32,7 +32,7 @@ def relpath(repo, args):
         return [ os.path.normpath(os.path.join(p, x)) for x in args ]
     return args
 
-def dodiff(repo, path, files = None, node1 = None, node2 = None):
+def dodiff(ui, repo, path, files = None, node1 = None, node2 = None):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
@@ -49,6 +49,12 @@ def dodiff(repo, path, files = None, node1 = None, node2 = None):
             node1 = repo.dirstate.parents()[0]
         def read(f): return file(os.path.join(repo.root, f)).read()
 
+    if ui.quiet:
+        r = None
+    else:
+        hexfunc = ui.verbose and hg.hex or hg.short
+        r = [hexfunc(node) for node in [node1, node2] if node]
+
     change = repo.changelog.read(node1)
     mmap = repo.manifest.read(change[0])
     date1 = date(change)
@@ -61,15 +67,15 @@ def dodiff(repo, path, files = None, node1 = None, node2 = None):
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
+        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f, r))
     for f in a:
         to = None
         tn = read(f)
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
+        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f, r))
     for f in d:
         to = repo.file(f).read(mmap[f])
         tn = None
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f))
+        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f, r))
 
 def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
     """show a single changeset or file revision"""
@@ -290,7 +296,7 @@ def diff(ui, repo, *files, **opts):
     revs = []
     if opts['rev']:
         revs = map(lambda x: repo.lookup(x), opts['rev'])
-    
+
     if len(revs) > 2:
         self.ui.warn("too many revisions to diff\n")
         sys.exit(1)
@@ -300,7 +306,7 @@ def diff(ui, repo, *files, **opts):
     else:
         files = relpath(repo, [""])
 
-    dodiff(repo, os.getcwd(), files, *revs)
+    dodiff(ui, repo, os.getcwd(), files, *revs)
 
 def export(ui, repo, changeset):
     """dump the changeset header and diffs for a revision"""
@@ -316,8 +322,8 @@ def export(ui, repo, changeset):
         print "# Parent  %s" % hg.hex(other)
     print change[4].rstrip()
     print
-    
-    dodiff(repo, "", None, prev, node)
+
+    dodiff(ui, repo, "", None, prev, node)
 
 def forget(ui, repo, file, *files):
     """don't add the specified files on the next commit"""

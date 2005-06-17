@@ -10,7 +10,7 @@
 import time, sys, signal
 from mercurial import hg, mdiff, fancyopts, commands, ui
     
-def difftree(args, repo):
+def difftree(args, ui, repo):
     def __difftree(repo, files = None, node1 = None, node2 = None):
         def date(c):
             return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
@@ -61,7 +61,7 @@ def difftree(args, repo):
     revs.append(repo.lookup(args[1]))
     args = args[2:]
     if doptions['patch']:
-        commands.dodiff(repo, "", args, *revs)
+        commands.dodiff(ui, repo, "", args, *revs)
     else:
         __difftree(repo, args, *revs)
 
@@ -236,10 +236,10 @@ signal.signal(signal.SIGTERM, catchterm)
 repo = hg.repository(ui = u)
 
 if cmd == "diff-tree":
-    difftree(args, repo)
+    difftree(args, u, repo)
 
 elif cmd == "cat-file":
-    catfile(args, ui, repo)
+    catfile(args, u, repo)
 
 elif cmd == "rev-tree":
     revtree(args, repo)

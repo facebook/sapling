@@ -8,7 +8,8 @@
 import difflib, struct
 from mercurial.mpatch import *
 
-def unidiff(a, ad, b, bd, fn):
+def unidiff(a, ad, b, bd, fn, r=None):
+
     if not a and not b: return ""
 
     if a == None:
@@ -35,6 +36,10 @@ def unidiff(a, ad, b, bd, fn):
     for ln in xrange(len(l)):
         if l[ln][-1] != '\n':
             l[ln] += "\n\ No newline at end of file\n"
+
+    if r:
+        l.insert(0, "diff %s %s\n" %
+                    (' '.join(["-r %s" % rev for rev in r]), fn))
 
     return "".join(l)
 
