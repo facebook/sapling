@@ -333,21 +333,24 @@ def history(ui, repo):
 
 def identify(ui, repo):
     """print information about the working copy"""
-    (c, a, d, u) = repo.diffdir(repo.root)
-    mflag = (c or a or d or u) and "+" or ""
     parents = [p for p in repo.dirstate.parents() if p != hg.nullid]
     if not parents:
         ui.write("unknown\n")
         return
 
-    tstring = ''
-    if not ui.quiet:
-        tags = sum(map(repo.nodetags, parents), [])
-        tstring = " " + ' + '.join(tags)
-
     hexfunc = ui.verbose and hg.hex or hg.short
-    pstring = '+'.join([hexfunc(parent) for parent in parents])
-    ui.write("%s%s%s\n" % (pstring, mflag, tstring))
+    (c, a, d, u) = repo.diffdir(repo.root)
+    output = ["%s%s" % ('+'.join([hexfunc(parent) for parent in parents]),
+                        (c or a or d) and "+" or "")]
+
+    if not ui.quiet:
+        # multiple tags for a single parent separated by '/'
+        parenttags = ['/'.join(tags)
+                      for tags in map(repo.nodetags, parents) if tags]
+        # tags for multiple parents separated by ' + '
+        output.append(' + '.join(parenttags))
+
+    ui.write("%s\n" % ' '.join(output))
 
 def init(ui, source=None):
     """create a new repository or copy an existing one"""
