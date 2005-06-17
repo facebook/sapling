@@ -406,8 +406,8 @@ class localrepository:
                 for r in h:
                     for l in fl.revision(r).splitlines():
                         if l:
-                            n, k = l.split(" ")
-                            self.tagscache[k] = bin(n)
+                            n, k = l.split(" ", 1)
+                            self.tagscache[k.strip()] = bin(n)
             except KeyError: pass
             self.tagscache['tip'] = self.changelog.tip()
 
