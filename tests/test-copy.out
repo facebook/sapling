@@ -14,6 +14,7 @@ b
  b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 + hg history
 changeset:   1:3b5b84850bbed12e8ff8c1b87b32dc93c59ae6d8
+tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     2

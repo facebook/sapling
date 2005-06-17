@@ -12,6 +12,7 @@ checking files
 1 files, 1 changesets, 1 total revisions
 + hg parents
 changeset:   0:acb14030fe0a21b60322c440ad2d20cf7685a376
+tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     test

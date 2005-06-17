@@ -40,12 +40,14 @@ resolving manifests
  ancestor 1165e8bd193e local 1165e8bd193e remote 1165e8bd193e
 + hg parents
 changeset:   1:1e71731e6fbb5b35fae293120dea6964371c13c6
+tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     2
 
 + hg -v history
 changeset:   1:1e71731e6fbb5b35fae293120dea6964371c13c6
+tag:         tip
 manifest:    1:1165e8bd193e17ad7d321d846fcf27ff3f412758
 user:        test
 date:        Thu Jan  1 00:00:00 1970
