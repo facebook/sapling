@@ -1,0 +1,12 @@
+#!/bin/sh -x
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+ls
+echo This is file b1 > b
+hg add b
+hg commit -t "commit #1" -d "0 0" -u user
+hg co 0
+# B should disappear
+ls
