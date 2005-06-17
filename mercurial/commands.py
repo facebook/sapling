@@ -384,12 +384,12 @@ def init(ui, source=None):
             other = hg.repository(ui, source)
             cg = repo.getchangegroup(other)
             repo.addchangegroup(cg)
+
+        f = repo.opener("hgrc", "w")
+        f.write("[paths]\n")
+        f.write("default = %s\n" % source)
     else:
         repo = hg.repository(ui, ".", create=1)
-
-    f = repo.opener("hgrc", "w")
-    f.write("[paths]\n")
-    f.write("default = %s\n" % source)
 
 def log(ui, repo, f):
     """show the revision history of a single file"""
