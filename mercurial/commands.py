@@ -354,7 +354,7 @@ def identify(ui, repo):
 
     ui.write("%s\n" % ' '.join(output))
 
-def init(ui, source=None):
+def init(ui, source=None, **opts):
     """create a new repository or copy an existing one"""
 
     if source:
@@ -388,6 +388,9 @@ def init(ui, source=None):
         f = repo.opener("hgrc", "w")
         f.write("[paths]\n")
         f.write("default = %s\n" % source)
+
+        if opts['update']:
+            update(ui, repo)
     else:
         repo = hg.repository(ui, ".", create=1)
 
@@ -630,7 +633,8 @@ table = {
     "history": (history, [], 'hg history'),
     "help": (help, [], 'hg help [command]'),
     "identify|id": (identify, [], 'hg identify'),
-    "init": (init, [], 'hg init [url]'),
+    "init": (init, [('u', 'update', None, 'update after init')],
+             'hg init [options] [url]'),
     "log": (log, [], 'hg log <file>'),
     "manifest|dumpmanifest": (manifest, [], 'hg manifest [rev]'),
     "parents": (parents, [], 'hg parents [node]'),
