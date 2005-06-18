@@ -1331,9 +1331,13 @@ class remoterepository:
         self.ui = ui
         no_list = [ "localhost", "127.0.0.1" ]
         host = ui.config("http_proxy", "host")
+        if host is None:
+            host = os.environ.get("http_proxy")
         user = ui.config("http_proxy", "user")
         passwd = ui.config("http_proxy", "passwd")
         no = ui.config("http_proxy", "no")
+        if no is None:
+            no = os.environ.get("no_proxy")
         if no:
             no_list = no_list + no.split(",")
             
@@ -1346,6 +1350,9 @@ class remoterepository:
 
         # Note: urllib2 takes proxy values from the environment and those will
         # take precedence
+        for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
+            if os.environ.has_key(env):
+                del os.environ[env]
 
         proxy_handler = urllib2.BaseHandler()
         if host and not no_proxy:
