@@ -1,4 +1,4 @@
-+ hg help
++ hg -q help
 hg commands:
 
  add         add the specified files on the next commit
@@ -45,7 +45,7 @@ hg diff [-r A] [-r B] [files]
 diff working directory (or selected files)
 + hg help foo
 hg: unknown command foo
-+ hg commands
++ hg -q commands
 hg: unknown command 'commands'
 hg commands:
 

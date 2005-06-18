@@ -8,7 +8,7 @@
 import os, re, sys, signal
 import fancyopts, ui, hg
 from demandload import *
-demandload(globals(), "mdiff time hgweb traceback random signal errno")
+demandload(globals(), "mdiff time hgweb traceback random signal errno version")
 
 class UnknownCommand(Exception): pass
 
@@ -134,6 +134,16 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
             ui.status("summary:     %s\n" % description.splitlines()[0])
     ui.status("\n")
 
+def show_version(ui):
+    """output version and copyright information"""
+    ui.write("Mercurial version %s\n" % version.get_version())
+    ui.status(
+        "\nCopyright (C) 2005 Matt Mackall <mpm@selenic.com>\n"
+        "This is free software; see the source for copying conditions. "
+        "There is NO\nwarranty; "
+        "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
+    )
+
 def help(ui, cmd=None):
     '''show help for a given command or all commands'''
     if cmd:
@@ -156,7 +166,10 @@ def help(ui, cmd=None):
             ui.warn("hg: unknown command %s\n" % cmd)
         sys.exit(0)
     else:
-        ui.status('hg commands:\n\n')
+        if not ui.quiet:
+            show_version(ui)
+            ui.write('\n')
+        ui.write('hg commands:\n\n')
 
         h = {}
         for e in table.values():
@@ -171,7 +184,7 @@ def help(ui, cmd=None):
         fns.sort()
         m = max(map(len, fns))
         for f in fns:
-            ui.status(' %-*s   %s\n' % (m, f, h[f]))
+            ui.write(' %-*s   %s\n' % (m, f, h[f]))
 
 # Commands start here, listed alphabetically
 
@@ -679,7 +692,7 @@ table = {
     "verify": (verify, [], 'hg verify'),
     }
 
-norepo = "init branch help debugindex debugindexdot"
+norepo = "init version help debugindex debugindexdot"
 
 def find(cmd):
     i = None
@@ -704,6 +717,7 @@ def dispatch(args):
             ('q', 'quiet', None, 'quiet'),
             ('p', 'profile', None, 'profile'),
             ('y', 'noninteractive', None, 'run non-interactively'),
+            ('', 'version', None, 'output version information and exit'),
             ]
 
     args = fancyopts.fancyopts(args, opts, options,
@@ -716,6 +730,10 @@ def dispatch(args):
 
     u = ui.ui(options["verbose"], options["debug"], options["quiet"],
            not options["noninteractive"])
+
+    if options["version"]:
+        show_version(u)
+        sys.exit(0)
 
     try:
         i = find(cmd)
