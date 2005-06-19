@@ -33,10 +33,10 @@ def write_version(version):
     f.write("version = %r\n" % version)
     f.close()
 
-def remember_version():
+def remember_version(version=None):
     """Store version information."""
     global remembered_version
-    if os.access(".hg", os.F_OK):
+    if not version and os.path.isdir(".hg"):
         f = os.popen("hg identify 2>/dev/null")  # use real hg installation
         ident = f.read()[:-1]
         if not f.close() and ident:
@@ -55,8 +55,9 @@ def remember_version():
                         break
             if modified:
                 version += time.strftime('+%Y%m%d')
-            remembered_version = True
-            write_version(version)
+    if version:
+        remembered_version = True
+        write_version(version)
 
 def forget_version():
     """Remove version information."""

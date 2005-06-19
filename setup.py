@@ -11,6 +11,9 @@ from distutils.command.install_data import install_data
 
 import mercurial.version
 
+# specify version string, otherwise 'hg identify' will be used:
+version = ''
+
 class install_package_data(install_data):
     def finalize_options(self):
         self.set_undefined_options('install',
@@ -18,7 +21,7 @@ class install_package_data(install_data):
         install_data.finalize_options(self)
 
 try:
-    mercurial.version.remember_version()
+    mercurial.version.remember_version(version)
     setup(name='mercurial',
         version=mercurial.version.get_version(),
         author='Matt Mackall',
