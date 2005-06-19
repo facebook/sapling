@@ -15,6 +15,7 @@ import re
 import time
 
 unknown_version = 'unknown'
+remembered_version = False
 
 def get_version():
     """Return version information if available."""
@@ -34,29 +35,31 @@ def write_version(version):
 
 def remember_version():
     """Store version information."""
-    f = os.popen("hg identify 2>/dev/null")  # use real hg installation
-    ident = f.read()[:-1]
-    if not f.close() and ident:
-        ids = ident.split(' ', 1)
-        version = ids.pop(0)
-        if version[-1] == '+':
-            version = version[:-1]
-            modified = True
-        else:
-            modified = False
-        if version.isalnum() and ids:
-            for tag in ids[0].split('/'):
-                # is a tag is suitable as a version number?
-                if re.match(r'^(\d+\.)+[\w.-]+$', tag):
-                    version = tag
-                    break
-        if modified:
-            version += time.strftime('+%Y%m%d')
-    else:
-        version = unknown_version
-    write_version(version)
+    global remembered_version
+    if os.access(".hg", os.F_OK):
+        f = os.popen("hg identify 2>/dev/null")  # use real hg installation
+        ident = f.read()[:-1]
+        if not f.close() and ident:
+            ids = ident.split(' ', 1)
+            version = ids.pop(0)
+            if version[-1] == '+':
+                version = version[:-1]
+                modified = True
+            else:
+                modified = False
+            if version.isalnum() and ids:
+                for tag in ids[0].split('/'):
+                    # is a tag is suitable as a version number?
+                    if re.match(r'^(\d+\.)+[\w.-]+$', tag):
+                        version = tag
+                        break
+            if modified:
+                version += time.strftime('+%Y%m%d')
+            remembered_version = True
+            write_version(version)
 
 def forget_version():
     """Remove version information."""
-    write_version(unknown_version)
+    if remembered_version:
+        write_version(unknown_version)
 
