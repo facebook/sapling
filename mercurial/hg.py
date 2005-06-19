@@ -1333,6 +1333,8 @@ class remoterepository:
         host = ui.config("http_proxy", "host")
         if host is None:
             host = os.environ.get("http_proxy")
+        if host and host.startswith('http://'):
+            host = host[7:]
         user = ui.config("http_proxy", "user")
         passwd = ui.config("http_proxy", "passwd")
         no = ui.config("http_proxy", "no")
