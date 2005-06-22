@@ -1,0 +1,48 @@
+#!/bin/sh -x
+
+mkdir t
+cd t
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+echo This is file b1 > b
+hg add b
+hg commit -t "commit #1" -d "0 0" -u user
+rm b
+hg update 0
+echo This is file b2 > b
+hg add b
+hg commit -t "commit #2" -d "0 0" -u user
+cd ..; /bin/rm -rf t
+
+mkdir t
+cd t
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+echo This is file b1 > b
+hg add b
+hg commit -t "commit #1" -d "0 0" -u user
+rm b
+hg update 0
+echo This is file b2 > b
+hg commit -A -t "commit #2" -d "0 0" -u user
+cd ..; /bin/rm -rf t
+
+mkdir t
+cd t
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+echo This is file b1 > b
+hg add b
+hg commit -t "commit #1" -d "0 0" -u user
+rm b
+hg remove b
+hg update 0
+echo This is file b2 > b
+hg commit -A -t "commit #2" -d "0 0" -u user
+cd ..; /bin/rm -rf t
