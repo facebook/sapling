@@ -354,8 +354,9 @@ class localrepository:
             if not path:
                 p = os.getcwd()
                 while not os.path.isdir(os.path.join(p, ".hg")):
+                    oldp = p
                     p = os.path.dirname(p)
-                    if p == "/": raise "No repo found"
+                    if p == oldp: raise "No repo found"
                 path = p
             self.path = os.path.join(path, ".hg")
 
