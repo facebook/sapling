@@ -12,8 +12,12 @@ export PYTHONPATH=$PWD/install/lib/python
 
 rm -rf install
 cd ..
-${PYTHON:-python} setup.py install --home=tests/install
+${PYTHON:-python} setup.py install --home=tests/install > tests/install.err
+if [ $? != 0 ] ; then
+    cat tests/install.err
+fi
 cd $H
+rm install.err
 
 function run_one
 {
