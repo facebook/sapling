@@ -6,6 +6,15 @@ tests=0
 failed=0
 H=$PWD
 
+TESTPATH=$PWD/install/bin
+export PATH=$TESTPATH:$PATH
+export PYTHONPATH=$PWD/install/lib/python
+
+rm -rf install
+cd ..
+${PYTHON:-python} setup.py install --home=tests/install
+cd $H
+
 function run_one
 {
     export TZ=GMT
@@ -44,6 +53,8 @@ if [ "$TESTS" == "" ] ; then
     TESTS=`ls test-* | grep -Ev "\.|~"`
 fi
 
+rm -f test-*.err
+
 for f in $TESTS ; do
     echo -n "."
     if ! run_one $f ; then
@@ -51,6 +62,8 @@ for f in $TESTS ; do
     fi
     tests=$[$tests + 1]
 done
+
+rm -rf install
 
 echo
 echo Ran $tests tests, $failed failed
