@@ -69,6 +69,12 @@ class convert_git:
                 date = " ".join(p[-2:])
                 author = " ".join(p[:-2])
                 if author[0] == "<": author = author[1:-1]
+            if n == "committer": 
+                p = v.split()
+                date = " ".join(p[-2:])
+                committer = " ".join(p[:-2])
+                if committer[0] == "<": committer = committer[1:-1]
+                message += "\ncommitter: %s %s\n" % (committer, date)
             if n == "parent": parents.append(v)
         return (parents, author, date, message)
 
@@ -95,14 +101,27 @@ class convert_mercurial:
             pass
 
     def putcommit(self, files, parents, author, dest, text):
-        p1, p2 = "0"*40, "0"*40
-        if len(parents) > 0: p1 = parents[0]
-        if len(parents) > 1: p2 = parents[1]
-        if len(parents) > 2: raise "the dreaded octopus merge!"
-        self.repo.rawcommit(files, text, author, dest, 
-                            hg.bin(p1), hg.bin(p2))
+        if not parents: parents = ["0" * 40]
+        if len(parents) < 2: parents.append("0" * 40)
 
-        return hg.hex(self.repo.changelog.tip())
+        seen = {}
+        pl = []
+        for p in parents:
+            if p not in seen:
+                pl.append(p)
+                seen[p] = 1
+        parents = pl
+
+        p2 = parents.pop(0)
+        c = self.repo.changelog.count()
+        while parents:
+            p1 = p2
+            p2 = parents.pop(0)
+            self.repo.rawcommit(files, text, author, dest, 
+                                hg.bin(p1), hg.bin(p2))
+            text = "(octopus merge fixup)\n"
+
+        return hg.hex(self.repo.changelog.node(c))
 
 class convert:
     def __init__(self, source, dest, mapfile):
