@@ -1092,9 +1092,11 @@ class localrepository:
                 del m2[f]
             elif f in ma:
                 if not force and n != ma[f]:
-                    r = self.ui.prompt(
-                        (" local changed %s which remote deleted\n" % f) +
-                        "(k)eep or (d)elete?", "[kd]", "k")
+                    r = ""
+                    if linear_path or allow:
+                        r = self.ui.prompt(
+                            (" local changed %s which remote deleted\n" % f) +
+                            "(k)eep or (d)elete?", "[kd]", "k")
                     if r == "d":
                         remove.append(f)
                 else:
@@ -1113,9 +1115,11 @@ class localrepository:
         for f, n in m2.iteritems():
             if f[0] == "/": continue
             if not force and f in ma and n != ma[f]:
-                r = self.ui.prompt(
-                    ("remote changed %s which local deleted\n" % f) +
-                    "(k)eep or (d)elete?", "[kd]", "k")
+                r = ""
+                if linear_path or allow:
+                    r = self.ui.prompt(
+                        ("remote changed %s which local deleted\n" % f) +
+                        "(k)eep or (d)elete?", "[kd]", "k")
                 if r == "d": remove.append(f)
             else:
                 self.ui.debug("remote created %s\n" % f)

@@ -1,0 +1,21 @@
+#!/bin/sh -x
+
+mkdir t
+cd t
+hg init
+echo This is file a1 > a
+echo This is file b1 > b
+hg add a b
+hg commit -t "commit #0" -d "0 0" -u user
+echo This is file b22 > b
+hg commit -t"comment #1" -d "0 0" -u user
+hg update 0
+rm b
+hg commit -A -t"comment #2" -d "0 0" -u user
+# in theory, we shouldn't need the "yes k" below, but it prevents
+# this test from hanging when "hg update" erroneously prompts the
+# user for "keep or delete"
+yes k | hg update 1
+# we exit with 0 to avoid the unavoidable SIGPIPE from above causing
+# us to fail this test
+exit 0

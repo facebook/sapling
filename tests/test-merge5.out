@@ -1,0 +1,18 @@
++ mkdir t
++ cd t
++ hg init
++ echo This is file a1
++ echo This is file b1
++ hg add a b
++ hg commit -t 'commit #0' -d '0 0' -u user
++ echo This is file b22
++ hg commit '-tcomment #1' -d '0 0' -u user
++ hg update 0
++ rm b
++ hg commit -A '-tcomment #2' -d '0 0' -u user
++ yes k
++ hg update 1
+this update spans a branch affecting the following files:
+aborting update spanning branches!
+(use update -m to perform a branch merge)
++ exit 0
