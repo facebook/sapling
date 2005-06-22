@@ -23,7 +23,8 @@ setup(name='mercurial',
       description='scalable distributed SCM',
       license='GNU GPL',
       packages=['mercurial'],
-      ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c'])],
+      ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
+                   Extension('mercurial.bdiff', ['mercurial/bdiff.c'])],
       data_files=[('mercurial/templates',
                    ['templates/map'] +
                    glob.glob('templates/map-*') +
