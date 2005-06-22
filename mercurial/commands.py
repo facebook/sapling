@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, re, sys, signal
-import fancyopts, ui, hg
+import fancyopts, ui, hg, util
 from demandload import *
 demandload(globals(), "mdiff time hgweb traceback random signal errno")
 
@@ -16,20 +16,20 @@ def filterfiles(filters, files):
     l = [ x for x in files if x in filters ]
 
     for t in filters:
-        if t and t[-1] != os.sep: t += os.sep
+        if t and t[-1] != "/": t += "/"
         l += [ x for x in files if x.startswith(t) ]
     return l
 
 def relfilter(repo, files):
     if os.getcwd() != repo.root:
         p = os.getcwd()[len(repo.root) + 1: ]
-        return filterfiles([p], files)
+        return filterfiles([util.pconvert(p)], files)
     return files
 
 def relpath(repo, args):
     if os.getcwd() != repo.root:
         p = os.getcwd()[len(repo.root) + 1: ]
-        return [ os.path.normpath(os.path.join(p, x)) for x in args ]
+        return [ util.pconvert(os.path.normpath(os.path.join(p, x))) for x in args ]
     return args
 
 def dodiff(ui, repo, path, files = None, node1 = None, node2 = None):

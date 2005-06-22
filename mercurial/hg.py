@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import sys, struct, os
+import util
 from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
@@ -389,7 +390,7 @@ class localrepository:
                 l = file(self.wjoin(".hgignore"))
                 for pat in l:
                     if pat != "\n":
-                        self.ignorelist.append(re.compile(pat[:-1]))
+                        self.ignorelist.append(re.compile(util.pconvert(pat[:-1])))
             except IOError: pass
         for pat in self.ignorelist:
             if pat.search(f): return True
@@ -639,7 +640,7 @@ class localrepository:
             if ".hg" in subdirs: subdirs.remove(".hg")
             
             for f in files:
-                fn = os.path.join(d, f)
+                fn = util.pconvert(os.path.join(d, f))
                 try: s = os.stat(os.path.join(self.root, fn))
                 except: continue
                 if fn in dc:
