@@ -2,10 +2,10 @@
 
 set -x
 
-hg help
+hg -q help
 hg add -h
 hg help diff
 hg help foo
-hg commands
+hg -q commands
 
 exit 0
