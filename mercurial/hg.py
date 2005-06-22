@@ -63,19 +63,16 @@ class filelog(revlog):
     def annotate(self, node):
 
         def decorate(text, rev):
-            return [(rev, l) for l in text.splitlines(1)]
-
-        def strip(annotation):
-            return "".join([e[1] for e in annotation])
+            return ([rev] * len(text.splitlines()), text)
 
         def pair(parent, child):
             new = []
             lb = 0
-            for a1, a2, b1, b2 in bdiff.blocks(strip(parent), strip(child)):
-                new += child[lb:b1]
-                new += parent[a1:a2]
+            for a1, a2, b1, b2 in bdiff.blocks(parent[1], child[1]):
+                new[lb:] = child[0][lb:b1]
+                new[b1:] = parent[0][a1:a2]
                 lb = b2
-            return new
+            return (new, child[1])
 
         # find all ancestors
         needed = {node:1}
@@ -108,7 +105,7 @@ class filelog(revlog):
                         del hist[p]
             hist[n] = curr
 
-        return hist[n]
+        return zip(hist[n][0], hist[n][1].splitlines(1))
 
 class manifest(revlog):
     def __init__(self, opener):
