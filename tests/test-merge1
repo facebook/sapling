@@ -1,0 +1,85 @@
+#!/bin/sh -x
+
+cat <<'EOF' > merge
+#!/bin/sh
+echo merging for `basename $1`
+EOF
+chmod +x merge
+
+mkdir t
+cd t
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+echo This is file b1 > b
+hg add b
+hg commit -t "commit #1" -d "0 0" -u user
+
+hg update 0
+echo This is file c1 > c
+hg add c
+hg commit -t "commit #2" -d "0 0" -u user
+echo This is file b1 > b
+env HGMERGE=../merge hg update -m 1
+# no merges expected
+cd ..; /bin/rm -rf t
+
+mkdir t
+cd t
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+echo This is file b1 > b
+hg add b
+hg commit -t "commit #1" -d "0 0" -u user
+
+hg update 0
+echo This is file c1 > c
+hg add c
+hg commit -t "commit #2" -d "0 0" -u user
+echo This is file b2 > b
+env HGMERGE=../merge hg update -m 1
+# merge of b expected
+cd ..; /bin/rm -rf t
+
+mkdir t
+cd t
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+echo This is file b1 > b
+hg add b
+hg commit -t "commit #1" -d "0 0" -u user
+echo This is file b22 > b
+hg commit -t "commit #2" -d "0 0" -u user
+hg update 1
+echo This is file c1 > c
+hg add c
+hg commit -t "commit #3" -d "0 0" -u user
+echo This is file b22 > b
+env HGMERGE=../merge hg update -m 2
+# no merges expected
+cd ..; /bin/rm -rf t
+
+mkdir t
+cd t
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+echo This is file b1 > b
+hg add b
+hg commit -t "commit #1" -d "0 0" -u user
+echo This is file b22 > b
+hg commit -t "commit #2" -d "0 0" -u user
+hg update 1
+echo This is file c1 > c
+hg add c
+hg commit -t "commit #3" -d "0 0" -u user
+echo This is file b33 > b
+env HGMERGE=../merge hg update -m 2
+# merge of b expected
+cd ..; /bin/rm -rf t

@@ -1035,6 +1035,15 @@ class localrepository:
             if f in m2:
                 s = 0
 
+                # is the wfile new since m1, and match m2?
+                if n not in m1:
+                    t1 = self.wfile(f).read()
+                    t2 = self.file(f).revision(m2[f])
+                    if cmp(t1, t2) == 0:
+                        mark[f] = 1
+                        n = m2[f]
+                    del t1, t2
+
                 # are files different?
                 if n != m2[f]:
                     a = ma.get(f, nullid)
