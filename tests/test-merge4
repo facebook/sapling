@@ -1,0 +1,17 @@
+#!/bin/sh -x
+
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+echo This is file b1 > b
+hg add b
+hg commit -t "commit #1" -d "0 0" -u user
+hg update 0
+echo This is file c1 > c
+hg add c
+hg commit -t "commit #2" -d "0 0" -u user
+hg update -m 1
+rm b
+echo This is file c22 > c
+hg commit -t "commit #3" -d "0 0" -u user

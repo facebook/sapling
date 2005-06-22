@@ -588,7 +588,9 @@ class localrepository:
 
         # update manifest
         m1.update(new)
-        for f in remove: del m1[f]
+        for f in remove:
+            if f in m1:
+                del m1[f]
         mn = self.manifest.add(m1, mf1, tr, linkrev, c1[0], c2[0])
 
         # add changeset
