@@ -1011,6 +1011,10 @@ class localrepository:
 
         (c, a, d, u) = self.diffdir(self.root)
 
+        # is this a jump, or a merge?  i.e. is there a linear path
+        # from p1 to p2?
+        linear_path = (pa == p1 or pa == p2)
+
         # resolve the manifest to determine which files
         # we care about merging
         self.ui.note("resolving manifests\n")
@@ -1030,6 +1034,14 @@ class localrepository:
             mfw[f] = is_exec(self.wjoin(f))
         for f in d:
             if f in mw: del mw[f]
+
+            # If we're jumping between revisions (as opposed to merging),
+            # and if neither the working directory nor the target rev has
+            # the file, then we need to remove it from the dirstate, to
+            # prevent the dirstate from listing the file when it is no
+            # longer in the manifest.
+            if linear_path and f not in m2:
+                self.dirstate.forget((f,))
 
         for f, n in mw.iteritems():
             if f in m2:
@@ -1117,7 +1129,7 @@ class localrepository:
                 get[f] = merge[f][1]
             merge = {}
 
-        if pa == p1 or pa == p2:
+        if linear_path:
             # we don't need to do any magic, just jump to the new rev
             mode = 'n'
             p1, p2 = p2, nullid
