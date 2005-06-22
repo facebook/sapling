@@ -520,7 +520,7 @@ def push(ui, repo, dest="default-push"):
         os.kill(child, signal.SIGTERM)
         return r
 
-def rawcommit(ui, repo, flist, **rc):
+def rawcommit(ui, repo, *flist, **rc):
     "raw commit interface"
 
     text = rc['text']
@@ -531,7 +531,7 @@ def rawcommit(ui, repo, flist, **rc):
         print "missing commit text"
         return 1
 
-    files = relpath(repo, flist)
+    files = relpath(repo, list(flist))
     if rc['files']:
         files += open(rc['files']).read().splitlines()
         
