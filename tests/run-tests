@@ -21,6 +21,7 @@ rm install.err
 
 function run_one
 {
+    rm -f $1.err
     export TZ=GMT
     D=`mktemp -d`
     if [ "$D" == "" ] ; then
@@ -30,20 +31,20 @@ function run_one
     cd $D
     fail=0
 
-    if ! $H/$f > .out 2>&1 ; then
-	echo $f failed with error code $?
+    if ! $H/$1 > .out 2>&1 ; then
+	echo $1 failed with error code $?
 	fail=1
     fi
 
-    if [ -s .out -a ! -r $H/$f.out ] ; then
-	echo $f generated unexpected output:
+    if [ -s .out -a ! -r $H/$1.out ] ; then
+	echo $1 generated unexpected output:
 	cat .out
-	cp .out $H/$f.err
+	cp .out $H/$1.err
 	fail=1
-    elif [ -r $H/$f.out ] && ! diff -u $H/$f.out .out > /dev/null ; then
-	echo $f output changed:
-	diff -u $H/$f.out .out && true
-	cp .out $H/$f.err
+    elif [ -r $H/$1.out ] && ! diff -u $H/$1.out .out > /dev/null ; then
+	echo $1 output changed:
+	diff -u $H/$1.out .out && true
+	cp .out $H/$1.err
 	fail=1
     fi
 
@@ -56,8 +57,6 @@ TESTS=$@
 if [ "$TESTS" == "" ] ; then
     TESTS=`ls test-* | grep -Ev "\.|~"`
 fi
-
-rm -f test-*.err
 
 for f in $TESTS ; do
     echo -n "."
