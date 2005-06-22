@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, time
+import util
 
 class LockHeld(Exception):
     pass
@@ -34,10 +35,10 @@ class lock:
     def trylock(self):
         pid = os.getpid()
         try:
-            os.symlink(str(pid), self.f)
+            util.makelock(str(pid), self.f)
             self.held = 1
         except:
-            raise LockHeld(os.readlink(self.f))
+            raise LockHeld(util.readlock(self.f))
 
     def release(self):
         if self.held:
