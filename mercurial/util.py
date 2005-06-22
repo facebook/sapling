@@ -7,6 +7,14 @@
 
 import os
 
+def rename(src, dst):
+    try:
+        os.rename(src, dst)
+    except:
+        os.unlink(dst)
+        os.rename(src, dst)
+
+# Platfor specific varients
 if os.name == 'nt':
     def pconvert(path):
         return path.replace("\\", "/")

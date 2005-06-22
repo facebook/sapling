@@ -12,6 +12,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os
+import util
 
 class transaction:
     def __init__(self, opener, journal, after = None):
@@ -46,7 +47,7 @@ class transaction:
         self.file.close()
         self.entries = []
         if self.after:
-            os.rename(self.journal, self.after)
+            util.rename(self.journal, self.after)
         else:
             os.unlink(self.journal)
 

@@ -338,7 +338,7 @@ def opener(base):
             else:
                 if s.st_nlink > 1:
                     file(f + ".tmp", "wb").write(file(f, "rb").read())
-                    os.rename(f+".tmp", f)
+                    util.rename(f+".tmp", f)
 
         return file(f, mode)
 
@@ -482,7 +482,7 @@ class localrepository:
             self.ui.status("attempting to rollback last transaction\n")
             transaction.rollback(self.opener, self.join("undo"))
             self.dirstate = None
-            os.rename(self.join("undo.dirstate"), self.join("dirstate"))
+            util.rename(self.join("undo.dirstate"), self.join("dirstate"))
             self.dirstate = dirstate(self.opener, self.ui, self.root)
         else:
             self.ui.warn("no undo information available\n")
