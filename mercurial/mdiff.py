@@ -5,8 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import difflib, struct
-from mercurial.mpatch import *
+import difflib, struct, bdiff
+from mpatch import *
 
 def unidiff(a, ad, b, bd, fn, r=None):
 
@@ -42,9 +42,6 @@ def unidiff(a, ad, b, bd, fn, r=None):
                     (' '.join(["-r %s" % rev for rev in r]), fn))
 
     return "".join(l)
-
-def textdiff(a, b):
-    return diff(a.splitlines(1), b.splitlines(1))
 
 def sortdiff(a, b):
     la = lb = 0
@@ -118,3 +115,7 @@ def patchtext(bin):
 
 def patch(a, bin):
     return patches(a, [bin])
+
+textdiff = bdiff.bdiff
+
+
