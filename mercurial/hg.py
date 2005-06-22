@@ -1052,7 +1052,7 @@ class localrepository:
                 s = 0
 
                 # is the wfile new since m1, and match m2?
-                if n not in m1:
+                if f not in m1:
                     t1 = self.wfile(f).read()
                     t2 = self.file(f).revision(m2[f])
                     if cmp(t1, t2) == 0:
