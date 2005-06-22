@@ -706,6 +706,9 @@ class localrepository:
             p = self.wjoin(f)
             if os.path.isfile(p):
                 self.ui.warn("%s still exists!\n" % f)
+            elif self.dirstate.state(f) == 'a':
+                self.ui.warn("%s never committed!\n" % f)
+                self.dirstate.forget(f)
             elif f not in self.dirstate:
                 self.ui.warn("%s not tracked!\n" % f)
             else:

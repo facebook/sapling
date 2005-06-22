@@ -1,0 +1,10 @@
+#!/bin/sh -x
+
+hg init
+echo This is file a1 > a
+hg add a
+hg commit -t "commit #0" -d "0 0" -u user
+touch b
+hg add b
+rm b
+hg commit -A -t"comment #1" -d "0 0" -u user
