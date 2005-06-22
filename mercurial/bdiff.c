@@ -239,7 +239,7 @@ static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 
 static PyObject *blocks(PyObject *self, PyObject *args)
 {
-	PyObject *sa, *sb, *rl, *m;
+	PyObject *sa, *sb, *rl = NULL, *m;
 	struct line *a, *b;
 	struct hunklist l;
 	struct hunk *h;
