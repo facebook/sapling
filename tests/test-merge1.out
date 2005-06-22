@@ -51,8 +51,12 @@ merging b
 + echo This is file c1
 + hg add c
 + hg commit -t 'commit #3' -d '0 0' -u user
++ cat b
+This is file b1
 + echo This is file b22
 + env HGMERGE=../merge hg update -m 2
+merging for b
+merging b
 + cd ..
 + /bin/rm -rf t
 + mkdir t

@@ -59,9 +59,10 @@ hg update 1
 echo This is file c1 > c
 hg add c
 hg commit -t "commit #3" -d "0 0" -u user
+cat b
 echo This is file b22 > b
 env HGMERGE=../merge hg update -m 2
-# no merges expected
+# merge expected!
 cd ..; /bin/rm -rf t
 
 mkdir t
