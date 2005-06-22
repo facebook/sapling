@@ -1,0 +1,53 @@
+pulling from ../test1
+requesting all changes
+adding changesets
+adding manifests
+adding file revisions
+modified 2 files, added 1 changesets and 2 new revisions
+(run 'hg update' to get a working copy)
+-rw-r--r--  1 oxymoron oxymoron 4 Jun 22 03:04 ../test1/a
+-rwxr-xr-x  1 oxymoron oxymoron 0 Jun 22 03:04 ../test2/a
+pulling from ../test2
+searching for changes
+adding changesets
+adding manifests
+adding file revisions
+modified 1 files, added 1 changesets and 1 new revisions
+(run 'hg update' to get a working copy)
+changeset:   2:3ef54330565526bebf37a0d9bf540c283fd133a1
+tag:         tip
+parent:      0:22a449e20da501ca558394c083ca470e9c81b9f7
+user:        test
+date:        Thu Jan  1 00:00:00 1970
+summary:     chmod +x a
+
+changeset:   1:c6ecefc45368ed556d965f1c1086c6561a8b2ac5
+user:        test
+date:        Thu Jan  1 00:00:00 1970
+summary:     a updated
+
+changeset:   2:3ef54330565526bebf37a0d9bf540c283fd133a1
+tag:         tip
+parent:      0:22a449e20da501ca558394c083ca470e9c81b9f7
+user:        test
+date:        Thu Jan  1 00:00:00 1970
+summary:     chmod +x a
+
+changeset:   1:c6ecefc45368ed556d965f1c1086c6561a8b2ac5
+user:        test
+date:        Thu Jan  1 00:00:00 1970
+summary:     a updated
+
+changeset:   0:22a449e20da501ca558394c083ca470e9c81b9f7
+user:        test
+date:        Thu Jan  1 00:00:00 1970
+summary:     added a b
+
+resolving manifests
+ ancestor f328b97f7c11 local e7f06daf1cdb remote 629f0b785e0e
+ a versions differ, resolve
+merging a
+resolving a
+file a: other 37c42bd6cc03 ancestor b80de5d13875
+-rwxr-xr-x
+-rwxr-xr-x

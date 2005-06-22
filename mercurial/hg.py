@@ -1007,7 +1007,7 @@ class localrepository:
         m2 = self.manifest.read(m2n)
         mf2 = self.manifest.readflags(m2n)
         ma = self.manifest.read(man)
-        mfa = self.manifest.readflags(m2n)
+        mfa = self.manifest.readflags(man)
 
         (c, a, d, u) = self.diffdir(self.root)
 
