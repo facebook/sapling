@@ -22,8 +22,6 @@ cd ../test1
 echo 123 >>a
 hg ci -t "a updated" -u test -d "0 0"
 
-ls -l ../test[12]/a
-
 hg merge ../test2
 hg heads
 hg history

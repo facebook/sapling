@@ -5,8 +5,6 @@ adding manifests
 adding file revisions
 modified 2 files, added 1 changesets and 2 new revisions
 (run 'hg update' to get a working copy)
--rw-r--r--  1 oxymoron oxymoron 4 Jun 22 03:04 ../test1/a
--rwxr-xr-x  1 oxymoron oxymoron 0 Jun 22 03:04 ../test2/a
 pulling from ../test2
 searching for changes
 adding changesets
