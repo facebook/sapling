@@ -569,7 +569,7 @@ class localrepository:
             try:
                 fp = self.wjoin(f)
                 mf1[f] = is_exec(fp)
-                t = self.wopener(f).read()
+                t = self.wfile(f).read()
             except IOError:
                 self.warn("trouble committing %s!\n" % f)
                 raise
