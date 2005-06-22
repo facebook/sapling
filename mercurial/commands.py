@@ -472,17 +472,27 @@ def patch(ui, repo, patch1, *patches, **opts):
             addremove(ui, repo, *files)
         repo.commit(files, text)
 
-def pull(ui, repo, source="default"):
+def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source"""
     paths = {}
     for name, path in ui.configitems("paths"):
         paths[name] = path
 
-    if source in paths: source = paths[source]
+    if source in paths:
+        source = paths[source]
+
+    ui.status('pulling from %s\n' % (source))
     
     other = hg.repository(ui, source)
     cg = repo.getchangegroup(other)
-    repo.addchangegroup(cg)
+    r = repo.addchangegroup(cg)
+    if cg and not r:
+        if opts['update']:
+            return update(ui, repo)
+	else:
+            ui.status("(run 'hg update' to get a working copy)\n")
+
+    return r
 
 def push(ui, repo, dest="default-push"):
     """push changes to the specified destination"""
@@ -678,7 +688,9 @@ table = {
                       ('b', 'base', "", 'base path'),
                       ('q', 'quiet', "", 'silence diff')],
                      "hg import [options] patches"),
-    "pull|merge": (pull, [], 'hg pull [source]'),
+    "pull|merge": (pull, 
+                  [('u', 'update', None, 'update working directory')],
+		  'hg pull [options] [source]'),
     "push": (push, [], 'hg push <destination>'),
     "rawcommit": (rawcommit,
                   [('p', 'parent', [], 'parent'),

@@ -19,11 +19,13 @@ checking files
 + hg commit -t 2
 + cd ../test
 + hg pull ../branch
+pulling from ../branch
 searching for changes
 adding changesets
 adding manifests
 adding file revisions
 modified 1 files, added 1 changesets and 1 new revisions
+(run 'hg update' to get a working copy)
 + hg verify
 checking changesets
 checking manifests
