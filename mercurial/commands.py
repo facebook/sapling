@@ -566,6 +566,35 @@ def status(ui, repo):
     for f in d: print "R", f
     for f in u: print "?", f
 
+def tag(ui, repo, name, rev = None, **opts):
+    """add a tag for the current tip or a given revision"""
+    
+    if name == "tip":
+	ui.warn("abort: 'tip' is a reserved name!\n")
+	return -1
+
+    (c, a, d, u) = repo.diffdir(repo.root)
+    for x in (c, a, d, u):
+	if ".hgtags" in x:
+	    ui.warn("abort: working copy of .hgtags is changed!\n")
+            ui.status("(please commit .hgtags manually)\n")
+	    return -1
+
+    if rev:
+        r = hg.hex(repo.lookup(rev))
+    else:
+        r = hg.hex(repo.changelog.tip())
+
+    add = 0
+    if not os.path.exists(repo.wjoin(".hgtags")): add = 1
+    repo.wfile(".hgtags", "a").write("%s %s\n" % (r, name))
+    if add: repo.add([".hgtags"])
+
+    if not opts['text']:
+        opts['text'] = "Added tag %s for changeset %s" % (name, r)
+
+    repo.commit([".hgtags"], opts['text'], opts['user'], opts['date'])
+
 def tags(ui, repo):
     """list repository tags"""
     
@@ -667,6 +696,10 @@ table = {
                       ('t', 'templates', "", 'template map')],
               "hg serve [options]"),
     "status": (status, [], 'hg status'),
+    "tag": (tag,  [('t', 'text', "", 'commit text'),
+                   ('d', 'date', "", 'date'),
+                   ('u', 'user', "", 'user')],
+            'hg tag [options] <name> [rev]'),
     "tags": (tags, [], 'hg tags'),
     "tip": (tip, [], 'hg tip'),
     "undo": (undo, [], 'hg undo'),
