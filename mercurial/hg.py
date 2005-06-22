@@ -10,7 +10,7 @@ import util
 from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
-demandload(globals(), "tempfile httprangereader difflib")
+demandload(globals(), "tempfile httprangereader bdiff")
 
 def is_exec(f):
     return (os.stat(f).st_mode & 0100 != 0)
@@ -66,16 +66,15 @@ class filelog(revlog):
             return [(rev, l) for l in text.splitlines(1)]
 
         def strip(annotation):
-            return [e[1] for e in annotation]
+            return "".join([e[1] for e in annotation])
 
         def pair(parent, child):
             new = []
-            sm = difflib.SequenceMatcher(None, strip(parent), strip(child))
-            for o, m, n, s, t in sm.get_opcodes():
-                if o == 'equal':
-                    new += parent[m:n]
-                else:
-                    new += child[s:t]
+            lb = 0
+            for a1, a2, b1, b2 in bdiff.blocks(strip(parent), strip(child)):
+                new += child[lb:b1]
+                new += parent[a1:a2]
+                lb = b2
             return new
 
         # find all ancestors
