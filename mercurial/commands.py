@@ -47,7 +47,7 @@ def dodiff(ui, repo, path, files = None, node1 = None, node2 = None):
         (c, a, d, u) = repo.diffdir(path, node1)
         if not node1:
             node1 = repo.dirstate.parents()[0]
-        def read(f): return file(os.path.join(repo.root, f)).read()
+        def read(f): return repo.wfile(f).read()
 
     if ui.quiet:
         r = None
@@ -272,7 +272,7 @@ def debugchangegroup(ui, repo, roots):
         sys.stdout.write(chunk)
 
 def debugindex(ui, file):
-    r = hg.revlog(open, file, "")
+    r = hg.revlog(hg.opener(""), file, "")
     print "   rev    offset  length   base linkrev"+\
           " p1           p2           nodeid"
     for i in range(r.count()):
@@ -282,7 +282,7 @@ def debugindex(ui, file):
             hg.hex(e[4][:5]), hg.hex(e[5][:5]), hg.hex(e[6][:5]))
 
 def debugindexdot(ui, file):
-    r = hg.revlog(open, file, "")
+    r = hg.revlog(hg.opener(""), file, "")
     print "digraph G {"
     for i in range(r.count()):
         e = r.index[i]

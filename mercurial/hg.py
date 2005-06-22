@@ -336,7 +336,7 @@ def opener(base):
                     os.makedirs(d)
             else:
                 if s.st_nlink > 1:
-                    file(f + ".tmp", "w").write(file(f).read())
+                    file(f + ".tmp", "wb").write(file(f, "rb").read())
                     os.rename(f+".tmp", f)
 
         return file(f, mode)
@@ -386,7 +386,7 @@ class localrepository:
         if self.ignorelist is None:
             self.ignorelist = []
             try:
-                l = self.wfile(".hgignore")
+                l = file(self.wjoin(".hgignore"))
                 for pat in l:
                     if pat != "\n":
                         self.ignorelist.append(re.compile(pat[:-1]))
@@ -569,7 +569,7 @@ class localrepository:
             try:
                 fp = self.wjoin(f)
                 mf1[f] = is_exec(fp)
-                t = file(fp).read()
+                t = self.wopener(f).read()
             except IOError:
                 self.warn("trouble committing %s!\n" % f)
                 raise
@@ -1198,7 +1198,7 @@ class localrepository:
         def temp(prefix, node):
             pre = "%s~%s." % (os.path.basename(fn), prefix)
             (fd, name) = tempfile.mkstemp("", pre)
-            f = os.fdopen(fd, "w")
+            f = os.fdopen(fd, "wb")
             f.write(fl.revision(node))
             f.close()
             return name
