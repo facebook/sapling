@@ -358,6 +358,9 @@ class localrepository:
                 path = p
             self.path = os.path.join(path, ".hg")
 
+            if not create and not os.path.isdir(self.path):
+                raise "repository %s not found" % self.path
+
         self.root = path
         self.ui = ui
 
