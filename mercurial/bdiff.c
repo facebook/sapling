@@ -30,7 +30,7 @@ static uint32_t htonl(uint32_t x)
 #endif
 
 struct line {
-	int h, len, n;
+	int h, len, n, e;
 	const char *l;
 };
 
@@ -69,7 +69,7 @@ int splitlines(const char *a, int len, struct line **lr)
 		h = *p + rol32(h, 7); /* a simple hash from GNU diff */
 		if (*p == '\n' || p == a + len - 1) {
 			l->len = p - b + 1;
-			l->h = h;
+			l->h = h * l->len;
 			l->l = b;
 			l->n = -1;
 			l++;
@@ -86,7 +86,7 @@ int splitlines(const char *a, int len, struct line **lr)
 
 int inline cmp(struct line *a, struct line *b)
 {
-	return a->len != b->len || memcmp(a->l, b->l, a->len);
+	return a->h != b->h || a->len != b->len || memcmp(a->l, b->l, a->len);
 }
 
 static int equatelines(struct line *a, int an, struct line *b, int bn)
@@ -118,7 +118,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 
 		/* add to the head of the equivalence class */
 		b[i].n = h[j];
-		b[i].h = j;
+		b[i].e = j;
 		h[j] = i;
 		l[j]++; /* keep track of popularity */
 	}
@@ -133,7 +133,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 			if (!cmp(a + i, b + h[j]))
 				break;
 
-		a[i].h = j; /* use equivalence class for quick compare */
+		a[i].e = j; /* use equivalence class for quick compare */
 		if(l[j] <= t)
 			a[i].n = h[j]; /* point to head of match list */
 		else
@@ -159,11 +159,11 @@ static int longest_match(struct line *a, struct line *b, int *jpos, int *jlen,
 		/* loop through all lines match a[i] in b */
 		for (; j != -1 && j < b2; j = b[j].n) {
 			/* does this extend an earlier match? */
-			if (i > a1 && j > b1 && jpos[j - 1] == i)
+			if (i > a1 && j > b1 && jpos[j - 1] == i - 1)
 				k = jlen[j - 1] + 1;
 			else
 				k = 1;
-			jpos[j] = i + 1;
+			jpos[j] = i;
 			jlen[j] = k;
 
 			/* best match so far? */
@@ -182,10 +182,10 @@ static int longest_match(struct line *a, struct line *b, int *jpos, int *jlen,
 
 	/* expand match to include neighboring popular lines */
 	while (mi - mb > a1 && mj - mb > b1 &&
-	       a[mi - mb - 1].h == b[mj - mb - 1].h)
+	       a[mi - mb - 1].e == b[mj - mb - 1].e)
 		mb++;
 	while (mi + mk < a2 && mj + mk < b2 &&
-	       a[mi + mk].h == b[mj + mk].h)
+	       a[mi + mk].e == b[mj + mk].e)
 		mk++;
 
 	*omi = mi - mb;
@@ -213,33 +213,84 @@ static void recurse(struct line *a, struct line *b, int *jpos, int *jlen,
 	recurse(a, b, jpos, jlen, i + k, a2, j + k, b2, l);
 }
 
-static PyObject *bdiff(PyObject *self, PyObject *args)
+static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 {
-	PyObject *sa, *sb, *result = NULL;
+	struct hunklist l;
+	int *jpos, *jlen, t;
+
+	/* allocate and fill arrays */
+	t = equatelines(a, an, b, bn);
+	jpos = calloc(bn, sizeof(int));
+	jlen = calloc(bn, sizeof(int));
+	l.head = l.base = malloc(sizeof(struct hunk) * ((an + bn) / 4 + 2));
+
+	if (jpos && jlen && l.base && t) {
+		/* generate the matching block list */
+		recurse(a, b, jpos, jlen, 0, an, 0, bn, &l);
+		l.head->a1 = an;
+		l.head->b1 = bn;
+		l.head++;
+	}
+
+	free(jpos);
+	free(jlen);
+	return l;
+}
+
+static PyObject *blocks(PyObject *self, PyObject *args)
+{
+	PyObject *sa, *sb, *rl, *m;
+	struct line *a, *b;
 	struct hunklist l;
 	struct hunk *h;
-	struct line *al, *bl;
-	char encode[12], *rb;
-	int an, bn, len = 0, t, la = 0, lb = 0, *jpos, *jlen;
+	int an, bn, pos = 0;
 
 	if (!PyArg_ParseTuple(args, "SS:bdiff", &sa, &sb))
 		return NULL;
 
-	/* allocate and fill arrays */
-	an = splitlines(PyString_AsString(sa), PyString_Size(sa), &al);
-	bn = splitlines(PyString_AsString(sb), PyString_Size(sb), &bl);
-	t = equatelines(al, an, bl, bn);
-	jpos = calloc(bn, sizeof(int));
-	jlen = calloc(bn, sizeof(int));
-	l.head = l.base = malloc(sizeof(struct hunk) * ((an + bn) / 4 + 2));
-	if (!al || !bl || !jpos || !jlen || !l.base || !t)
+	an = splitlines(PyString_AsString(sa), PyString_Size(sa), &a);
+	bn = splitlines(PyString_AsString(sb), PyString_Size(sb), &b);
+	if (!a || !b)
 		goto nomem;
 
-	/* generate the matching block list */
-	recurse(al, bl, jpos, jlen, 0, an, 0, bn, &l);
-	l.head->a1 = an;
-	l.head->b1 = bn;
-	l.head++;
+	l = diff(a, an, b, bn);
+	rl = PyList_New(l.head - l.base);
+	if (!l.head || !rl)
+		goto nomem;
+
+	for(h = l.base; h != l.head; h++) {
+		m = Py_BuildValue("iiii", h->a1, h->a2, h->b1, h->b2);
+		PyList_SetItem(rl, pos, m);
+		pos++;
+	}
+
+nomem:
+	free(a);
+	free(b);
+	free(l.base);
+	return rl ? rl : PyErr_NoMemory();
+}
+
+static PyObject *bdiff(PyObject *self, PyObject *args)
+{
+	PyObject *sa, *sb, *result = NULL;
+	struct line *al, *bl;
+	struct hunklist l;
+	struct hunk *h;
+	char encode[12], *rb;
+	int an, bn, len = 0, la = 0, lb = 0;
+
+	if (!PyArg_ParseTuple(args, "SS:bdiff", &sa, &sb))
+		return NULL;
+
+	an = splitlines(PyString_AsString(sa), PyString_Size(sa), &al);
+	bn = splitlines(PyString_AsString(sb), PyString_Size(sb), &bl);
+	if (!al || !bl)
+		goto nomem;
+
+	l = diff(al, an, bl, bn);
+	if (!l.head)
+		goto nomem;
 
 	/* calculate length of output */
 	for(h = l.base; h != l.head; h++) {
@@ -274,8 +325,6 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 nomem:
 	free(al);
 	free(bl);
-	free(jpos);
-	free(jlen);
 	free(l.base);
 	return result ? result : PyErr_NoMemory();
 }
@@ -284,6 +333,7 @@ static char mdiff_doc[] = "Efficient binary diff.";
 
 static PyMethodDef methods[] = {
 	{"bdiff", bdiff, METH_VARARGS, "calculate a binary diff\n"},
+	{"blocks", blocks, METH_VARARGS, "find a list of matching lines\n"},
 	{NULL, NULL}
 };
 
