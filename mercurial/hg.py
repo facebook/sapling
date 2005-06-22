@@ -1062,7 +1062,6 @@ class localrepository:
                     # are both different from the ancestor?
                     if n != a and m2[f] != a:
                         self.ui.debug(" %s versions differ, resolve\n" % f)
-                        merge[f] = (m1.get(f, nullid), m2[f])
                         # merge executable bits
                         # "if we changed or they changed, change in merge"
                         a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
