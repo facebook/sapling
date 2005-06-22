@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -e
+
+if test x"$1" != x ; then
+  cd $1
+fi
+
+if [ ! -d ".hg" ]; then
+    echo "${1:-.} is not a mercurial repository" 1>&2
+    echo "Aborting" 1>&2
+    exit 1
+fi
+if [ ! -d ".git" ]; then
+    mkdir -v ".git"
+fi
+if [ -e ".git/HEAD" ]; then
+    if [ ! -e ".git/HEAD.hg-viz-save" ]; then
+        mv -v ".git/HEAD" ".git/HEAD.hg-viz-save"
+    else
+        rm -vf ".git/HEAD"
+    fi
+fi
+hg history | head -1 | awk -F: '{print $3}' > .git/HEAD
+git-viz
+

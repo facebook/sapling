@@ -38,12 +38,12 @@ def difftree(args, ui, repo):
 
         for f in c:
             # TODO get file permissions
-            print ":100664 100664 %s %s %s %s" % (hg.hex(mmap[f]), 
+            print ":100664 100664 %s %s M\t%s\t%s" % (hg.hex(mmap[f]), 
                                                       hg.hex(mmap2[f]), f, f)
         for f in a:
-            print ":000000 100664 %s %s %s %s" % (empty, hg.hex(mmap2[f]), f, f)
+            print ":000000 100664 %s %s N\t%s\t%s" % (empty, hg.hex(mmap2[f]), f, f)
         for f in d:
-            print ":100664 000000 %s %s %s %s" % (hg.hex(mmap[f]), empty, f, f)
+            print ":100664 000000 %s %s D\t%s\t%s" % (hg.hex(mmap[f]), empty, f, f)
     ##
 
     revs = []

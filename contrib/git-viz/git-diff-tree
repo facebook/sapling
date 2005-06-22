@@ -1,0 +1,5 @@
+#!/bin/sh
+
+op=`basename $0 | sed -e 's/^git-//'`
+exec hgit $op "$@"
+
