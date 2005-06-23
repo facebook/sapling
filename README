@@ -1,3 +1,5 @@
+MERCURIAL QUICK-START
+
 Setting up Mercurial:
 
  Note: some distributions fails to include bits of distutils by
@@ -28,7 +30,7 @@ Setting up Mercurial:
 
 Setting up a Mercurial project:
 
- $ cd linux/
+ $ cd project/
  $ hg init         # creates .hg
  $ hg status       # show changes between repo and working dir
  $ hg diff         # generate a unidiff
@@ -42,6 +44,7 @@ Setting up a Mercurial project:
 
 Mercurial commands:
 
+ $ hg help [command]   # get online help
  $ hg history          # show changesets
  $ hg log Makefile     # show commits per file
  $ hg update           # check out the tip revision
@@ -65,7 +68,7 @@ Branching and merging:
  $ hg commit
  $ cd ../linux
  $ hg pull ../linux-work     # pull changesets from linux-work
- $ hg update                 # merge the new tip from linux-work into
+ $ hg update -m              # merge the new tip from linux-work into
                              # our working directory
 
 Importing patches:
@@ -92,7 +95,7 @@ Exporting a patch:
 
 Network support:
 
- # pull the self-hosting hg repo
+ # pull from the primary Mercurial repo
  foo$ hg init
  foo$ hg pull http://selenic.com/hg/
  foo$ hg update # hg co works too
@@ -105,11 +108,11 @@ Network support:
 
  # merge changes from a remote machine
  bar$ hg pull http://foo/
- bar$ hg co        # merge changes into your working directory
+ bar$ hg update -m        # merge changes into your working directory
 
  # Set up a CGI server on your webserver
- foo$ cp hgweb.cgi ~/public_html/hg-linux/index.cgi
- foo$ emacs ~/public_html/hg-linux/index.cgi # adjust the defaults
+ foo$ cp hgweb.cgi ~/public_html/hg/index.cgi
+ foo$ emacs ~/public_html/hg/index.cgi # adjust the defaults
 
 Symbolic repository names:
 
@@ -118,5 +121,4 @@ Symbolic repository names:
 
  [paths]
  main = http://selenic.com/hg
- hgweb = http://edge2.net/hg/hgweb/
- hgdoc = http://edge2.net/hg/man/
+ linux = http://www.kernel.org/hg/
