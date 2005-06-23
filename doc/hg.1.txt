@@ -1,11 +1,11 @@
 HG(1)
 =====
 Matt Mackall <mpm@selenic.com>
-v0.5, 27 May 2005
+v0.6, 27 May 2005
 
 NAME
 ----
-hg - command line interface to the Mercurial source code management system
+hg - Mercurial source code management system
 
 SYNOPSIS
 --------
@@ -15,16 +15,9 @@ DESCRIPTION
 -----------
 The hg(1) command provides a command line interface to the Mercurial system.
 
-NOTE
-----
-Many of the hg commands are not yet subdirectory and/or working directory
-aware.  This means that some commands will only work in the top level 
-repository directory or will only accept paths and filenames relative to the
-top level.  Merges and commits, in particular, should be done in the
-top-level directory.
-
 OPTIONS
 -------
+
 --debug, -d::
     enable debugging output
 
@@ -46,152 +39,278 @@ files ...::
 path::
     indicates a path on the local machine
 
-revision::
-    indicates a changeset which can be specified as a changeset id (int),
-    a tag, or a unique substring of the changeset hash value
+revision:: 
+    indicates a changeset which can be specified as a changeset revision
+    number, a tag, or a unique substring of the changeset hash value
 
 repository path::
     is either the pathname of a local repository of the URI of a remote
     repository.  There are two available URI protocols, http:// which is
     fast and the old-http:// protocol which is much slower but does not 
-    require python on the web host.
+    require a special server on the web host.
 
 COMMANDS
 --------
+
 add [files ...]::
-    add the given files to the repository.  Note that this just schedules the
+    Add the given files to the repository.  Note that this just schedules the
     files for addition at the next hg commit time.
 
 addremove::
-    add all new files and remove all missing files from the repository.  new
+    Add all new files and remove all missing files from the repository.  New
     files are ignored if they match any of the patterns in .hgignore
 
-annotate [-r revision -u -n -c] [files ...]::
-    list the files with each line showing the revision id responsible 
-    for that line.  -u will add the author to the revision id, -c will
-    print the changeset hash, and -n will ...
+annotate [-r <rev> -u -n -c] [files ...]::
+    List the files with each line showing the revision id responsible 
+    for that line. 
 
-branch <path>::
-    create a new branch of the repository indicated by path in the current
-    directory.  Note that there should not be a repository already initialized
-    in the current directory
+    options:
+    -r, --revision <rev>  annotate the specified revision
+    -u, --user            list the author
+    -c, --changeset       list the changeset
+    -n, --number          list the revision number (default)
 
-checkout [revision]::
-    check out the indicated version of the repository into the working
-    directory.  Note that currently no merge occurs with changed files 
-    in the working dir.
+cat <file> [revision]::
+    Output the given revision or tip of the specified file to stdout.
 
-commit::
+commit [-A -t -l <file> -t <text> -u <user> -d <datecode>] [files...]::
     commit all changed files in the working dir to the repository.  This uses
     the EDITOR environment variable to bring up an editor to add a commit
     comment.
 
+    Options:
+    
+    -A, --addremove       run addremove during commit
+    -t, --text <text>     use <text> as commit message
+    -l, --logfile <file>  read the commit message from the specified
+                          file
+    -d, --date <datecode> use the specified date code
+    -u, --user <user>     record commit as the specified user
+
+    aliases: ci
+
+copy <source> <dest>::
+    Mark a file as copied or renamed for the next commit.
+
 diff [-r revision] [-r revision] [files ...]::
-    generate a unified diff of the indicated files.  If there are no 
+    Generate a unified diff of the indicated files. If there are no 
     revisions specified, the working directory file is compared to 
     the tip, one revision specified indicates a comparison between the 
-    working directory file and the specified revision, two revisions 
+    working directory file and the specified revision, and two revisions 
     compares the two versions specified.
 
-dump <file> [revision]::
-    print the indicated revision of the file
-
-dumpmanifest [revision]::
-    print the indicated revision of the manifest (list of version controlled
-    files)
-
 export [revision]::
-    print the changeset header (author, changeset hash, parent, and commit
+    Print the changeset header (author, changeset hash, parent, and commit
     comment) and the diffs for a particular revision.
 
-history::
-    print the revision history of the repository
+forget [files]::
+    Undo an 'hg add' scheduled for the next commit.
 
-init::
-    initialize a repository in the current directory
+heads::
+    Show all changesets with no children. These are the "heads" of
+    development branches and are the usual targets for updates and merges.
+
+history::
+    Print the revision history of the repository. Use the -v switch
+    for more detail.
+
+identify::
+    Print a short identifier of the current state of the repo. This
+    includes one or two parent hash identifiers, followed by
+    a "+" if there are uncommitted changes in the working directory,
+    followed by a list of tags for this revision
+
+    aliases: id
+
+import [-p <n> -b <base> -q] <patches>::
+    Import the listed patches and commit them individually.
+
+    options:
+    -p, --strip <n>   directory strip option for patch
+    -b <path>         base directory to read patches from
+
+    aliases: patch
+
+init [-u] [source]::
+    Initialize a repository in the current directory.
+
+    If a source is specified, pull that source into the repository.
+    This source is added to .hg/hgrc as the default for future pulls
+    in this repository.
+
+    If the specified source is on the same filesystem, the repository
+    will be copied via hardlinks. This is the fastest and most
+    space-efficient mode of operation.
+
+    options:
+    -u, --update   update the working directory to match the tip
 
 log <file>::
-    print the revision history of the specified file
+    Print the revision history of the specified file.
 
-merge <repository path>::
+manifest [revision]::
+    Print the indicated revision of the manifest (list of version controlled
+    files)
+
+parents::
+    Print the working directory's parent revisions.
+
+pull <repository path>::
     pull any changes from the specified repository to the repository in the
-    current directory.  Use the value of the HGMERGE environment variable
-    as a program to resolve any merge conflicts between the two repositories.
-    An implicit commit is done at the end of this process if there were any
-    merge conflicts.  Note that merge does not yet merge with changed files
-    in the working dir.
+    current directory.
+
+    options:
+    -u, --update   update the working directory to tip after pull
+
+push <destination>::
+    Push changes from the local repository to the specified
+    destination. If the destination is local, this is identical to a
+    a pull in that directory from the current directory.
+
+    The other currently available push method is SSH. This requires an
+    accessible shell account on the destination machine and a copy of
+    hg in the remote path. Destinations are specified in the following
+    form:
+
+      ssh://[user@]host[:port]/path
+
+rawcommit [-p -d -u -F -t -l]::
+    Primarily useful for importing from other SCMs. 
 
 recover::
-    rollback an interrupted transaction
+    Recover from an interrupted commit or pull. This should only be
+    necessary when Mercurial suggests it.
 
 remove [files ...]::
     schedule the indicated files for removal from the repository at the next
     commit
+ 
+    aliases: rm
 
 serve [-a addr -n name -p port -t templatedir]::
-    this will start an http server, by default on port 8000, that will 
-    allow browsing the repository using the hgweb interface and will allow 
-    merging from the repository.  -a sets the interface address, -p the 
-    port to listen on, -n the name of the repository and -t sets the 
-    location of the template directory.
+    Start a local HTTP repository browser and pull server.
+
+    options:
+    -a, --address <addr> address to use
+    -p, --port <n>       port to use (default: 8000)
+    -n, --name <name>    name to show in web pages (default: working dir)
+    -t, --templatedir <path> web templates to use
 
 status::
-    list new, changed, and missing files in the working directory
+    Show changed files in the working directory.
+
+    C = changed
+    A = added
+    R = removed
+    ? = not tracked
+
+tag [-t <text> -d <datecode> -u <user>] <name> [revision]::
+    Add a tag <name> to the specified revision or the tip.
+
+    options:
+    -t, --text <text>     message for tag commit log entry
+    -d, --date <datecode> datecode for commit
+    -u, --user <user>     user for commit
 
 tags::
-    list the current tags
+    List the current tags.
+
+tip::
+    Show the tip revision
 
 undo::
-    undo the last transaction
+    Undo the last commit or pull transaction.
+
+update [-m -C] [revision]::
+    Update or merge the working directory to a specified revision.
+
+    If there are no outstanding changes in the working directory and
+    there is a linear relationship between the current version and the
+    requested version, the result is the requested version.
+
+    Otherwise the result is a merge between the contents of the
+    current working directory and the requested version. Files that
+    changed between either parent are marked as changed for the next
+    commit and a commit must be performed before any further updates
+    are allowed. Merging will not be performed without the -m flag.
+
+    The -C switch will tell Mercurial to forcibly update to the
+    specified version, adding, removing, and overwriting locally
+    changed fils as necessary.
+
+    options:
+    -m, --merge       allow merging of branches
+    -C, --clean       overwrite locally modified files
+
+    aliases: up checkout co
+
+verify::
+    Verify the integrity of the current repository.
+
+    This will perform an extensive check of the repository's
+    integrity, validating the hashes and checksums of each entry in
+    the changelog, manifest, and tracked files, as well as the
+    integrity of their crosslinks and indices.
+
 
 ENVIRONMENT VARIABLES
 ---------------------
+
 HGMERGE::
-    points to an executable to use for resolving merge conflicts, the
-    program will be executed with four arguments: local file, remote
-    file, ancestor file, and original filename.
+    An executable to use for resolving merge conflicts. The program ,
+    will be executed with three arguments: local file, remote file,
+    ancestor file.
+
+    The default program is "hgmerge", which is a shell script provided
+    by Mercurial with some sensible defaults.
 
 HGUSER::
-    this is the string used for the author value of a commit
-
-HG_OPTS::
-    this string is used for default arguments to hg
-
-PYTHONPATH::
-    this is used by Python to find imported modules and needs to be set
-    appropriately based on where mercurial is installed
+    This is the string used for the author of a commit.
 
 EMAIL::
-    if HGUSER is not set, this will be used next as the author value for
-    a commit
+    If HGUSER is not set, this will be used as the author for a commit.
 
 LOGNAME::
     if neither HGUSER nor EMAIL is set, LOGNAME will be used (with
-    '@hostname' appended) as the author value for a commit
+    '@hostname' appended) as the author value for a commit.
 
 EDITOR::
-    this is the name of the editor to use when committing
+    This is the name of the editor to use when committing. Defaults to 'vi'.
+
+PYTHONPATH::
+    This is used by Python to find imported modules and may need to be set
+    appropriately if Mercurial is not installed system-wide.
 
 FILES
 -----
  .hgignore::
-    this file contains regular expressions (one per line) that describe file
+    This file contains regular expressions (one per line) that describe file
     names that should be ignored by hg
 
  .hgtags::
-    this file contains changeset hash values and text tag names (one of each
+    This file contains changeset hash values and text tag names (one of each
     seperated by spaces) that correspond to tagged versions of the repository
     contents.
 
- $HOME/.hgpaths::
-    this file contains a mapping from a symbolic name to a repository path
-    (which could be a local path or a remote URI), the format is 
-    <symbolic name> <repository path> with each mapping on a seperate line
+ $HOME/.hgrc, .hg/hgrc::
+    This file contains defaults and configuration. Values in .hg/hgrc
+    override those in .hgrc.
+
+NAMED REPOSITORIES
+------------------
+
+    To give symbolic names to a repository, create a section in .hgrc
+    or .hg/hgrc containing assignments of names to paths.
+
+    Example:
+
+[paths]
+hg = http://selenic.com/hg
 
 NON_TRANSPARENT PROXY SUPPORT
------
+-----------------------------
 
-    To access a mercurial repository through a proxy,
+    To access a Mercurial repository through a proxy,
     create a file $HOME/.hgrc in the following format:
 
 [http_proxy]
