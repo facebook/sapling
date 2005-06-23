@@ -1,25 +1,25 @@
 Mercurial Frequently Asked Questions
+====================================
 
 Section 1: General Usage
 ------------------------
 
-Q. I did an 'hg pull' and my working directory is empty!
+.Q. I did an "hg pull" and my working directory is empty!
 
 There are two parts to Mercurial: the repository and the working
-directory. 'hg pull' pulls all new changes from a remote repository
+directory. "hg pull" pulls all new changes from a remote repository
 into the local one but doesn't alter the working directory.
 
 This keeps you from upsetting your work in progress, which may not be
 ready to merge with the new changes you've pulled and also allows you
 to manage merging more easily (see below about best practices).
 
-To update your working directory, run 'hg update'. If you're sure you
-want to update your working directory on a pull, you can also use 'hg
-pull -u'. This will refuse to merge or overwrite local changes.
+To update your working directory, run "hg update". If you're sure you
+want to update your working directory on a pull, you can also use "hg
+pull -u". This will refuse to merge or overwrite local changes.
 
 
-Q. What is the difference between revision numbers, changeset IDs,
-and tags?
+.Q. What are revision numbers, changeset IDs, and tags?
 
 Mercurial will generally allow you to refer to a revision in three
 ways: by revision number, by changeset ID, and by tag.
@@ -46,7 +46,7 @@ correspondence to a changeset ID. This lets you refer to revisions
 symbolically.
 
 
-Q. What are branches, heads, and the tip?
+.Q. What are branches, heads, and the tip?
 
 The central concept of Mercurial is branching. A 'branch' is simply
 an independent line of development. In most other version control
@@ -56,12 +56,12 @@ effectively works on a private branch and there is no internal concept
 of 'the main branch'.
 
 Thus Mercurial works hard to make repeated merging between branches
-easy. Simply run 'hg pull' and 'hg update -m' and commit the result.
+easy. Simply run "hg pull" and "hg update -m" and commit the result.
 
 'Heads' are simply the most recent commits on a branch. Technically,
 they are changesets which have no children. Merging is the process of
 joining points on two branches into one, usually at their current
-heads. Use 'hg heads' to find the heads in the current repository.
+heads. Use "hg heads" to find the heads in the current repository.
 
 The 'tip' is the most recently changed head, and also the highest
 numbered revision. If you have just made a commit, that commit will be
@@ -72,10 +72,10 @@ The 'tip' is the default revision for many commands such as update,
 and also functions as a special symbolic tag.
 
 
-Q. How does merging work?
+.Q. How does merging work?
 
 The merge process is simple. Usually you will want to merge the tip
-into your working directory. Thus you run 'hg update -m' and Mercurial
+into your working directory. Thus you run "hg update -m" and Mercurial
 will incorporate the changes from tip into your local changes.
 
 The first step of this process is tracing back through the history of
@@ -99,7 +99,7 @@ that would lose important history that will be needed for future
 merges.
 
 
-Q. How do tags work in Mercurial?
+.Q. How do tags work in Mercurial?
 
 Tags work slightly differently in Mercurial than most revision
 systems. The design attempts to meet the following requirements:
@@ -112,8 +112,8 @@ systems. The design attempts to meet the following requirements:
 Thus Mercurial stores tags as a file in the working dir. This file is
 called .hgtags and consists of a list of changeset IDs and their
 corresponding tags. To add a tag to the system, simply add a line to
-this file and then commit it for it to take effect. The 'hg tag'
-command will do this for you and 'hg tags' will show the currently
+this file and then commit it for it to take effect. The "hg tag"
+command will do this for you and "hg tags" will show the currently
 effective tags.
 
 Note that because tags refer to changeset IDs and the changeset ID is
@@ -121,13 +121,14 @@ effectively the sum of all the contents of the repository for that
 change, it is impossible in Mercurial to simultaneously commit and add
 a tag. Thus tagging a revision must be done as a second step.
 
-Q. How do tags work with multiple heads?
+
+.Q. How do tags work with multiple heads?
 
 The tags that are in effect at any given time are the tags specified
 in each head, with heads closer to the tip taking precedence.
 
 
-Q. What are some best practices for distributed development with Mercurial?
+.Q. What are some best practices for distributed development with Mercurial?
 
 First, merge often! This makes merging easier for everyone and you
 find out about conflicts (which are often rooted in incompatible
@@ -143,21 +144,21 @@ pull multiple copies over the network. No need to check files out here
 as you won't be changing them.
 
 The outgoing tree contains all the changes you intend for merger into
-upsteam. Publish this tree with 'hg serve' or hgweb.cgi or use 'hg
-push' to push it to another publicly availabe repository.
+upsteam. Publish this tree with 'hg serve" or hgweb.cgi or use 'hg
+push" to push it to another publicly availabe repository.
 
 Then, for each feature you work on, create a new tree. Commit early
 and commit often, merge with incoming regularly, and once you're
 satisfied with your feature, pull the changes into your outgoing tree.
 
 
-Q. How do I import from a repository created in a different SCM?
+.Q. How do I import from a repository created in a different SCM?
 
 Take a look at contrib/convert-repo. This is an extensible
 framework for converting between repository types.
 
 
-Q. What about Windows support?
+.Q. What about Windows support?
 
 Patches to support Windows are being actively integrated, a fully
 working Windows version is probably not far off
@@ -166,7 +167,7 @@ working Windows version is probably not far off
 Section 2: Technical
 --------------------
 
-Q. What limits does Mercurial have?
+.Q. What limits does Mercurial have?
 
 Mercurial currently assumes that single files, indices, and manifests
 can fit in memory for efficiency.
@@ -186,7 +187,7 @@ Mercurial is primarily developed for UNIX systems, so some UNIXisms
 may be present in ports.
 
 
-Q. How does signing work?
+.Q. How does signing work?
 
 Take a look at the hgeditor script for an example. The basic idea
 is to sign the manifest ID inside that changelog entry. The manifest
@@ -201,7 +202,7 @@ This manifest is hashed similarly to the file hashes, incorporating
 the hashes of the parent revisions.
 
 
-Q. What about hash collisions? What about weaknesses in SHA1?
+.Q. What about hash collisions? What about weaknesses in SHA1?
 
 The SHA1 hashes are large enough that the odds of accidental hash collision
 are negligible for projects that could be handled by the human race.
