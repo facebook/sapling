@@ -42,7 +42,7 @@ struct hunklist {
 	struct hunk *base, *head;
 };
 
-static inline uint32_t rol32(uint32_t word, unsigned int shift)
+static __inline uint32_t rol32(uint32_t word, unsigned int shift)
 {
         return (word << shift) | (word >> (32 - shift));
 }
