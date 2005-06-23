@@ -397,8 +397,13 @@ def import_(ui, repo, patch1, *patches, **opts):
             if not quiet:
                 print l
             if l[:14] == 'patching file ':
-                files.append(l[14:])
-        f.close()
+                pf = l[14:]
+                if pf not in files:
+                    files.append(pf)
+        patcherr = f.close()
+        if patcherr:
+            sys.stderr.write("patch failed")
+            sys.exit(1)
 
         if len(files) > 0:
             addremove(ui, repo, *files)
