@@ -13,7 +13,7 @@ mkdir test2
 cd test2
 
 hg init
-hg merge ../test1
+hg pull ../test1
 hg co
 chmod +x a
 hg ci -t "chmod +x a" -u test -d "0 0"
@@ -22,7 +22,7 @@ cd ../test1
 echo 123 >>a
 hg ci -t "a updated" -u test -d "0 0"
 
-hg merge ../test2
+hg pull ../test2
 hg heads
 hg history
 

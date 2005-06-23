@@ -14,11 +14,11 @@ hg commands:
  help        show help for a given command or all commands
  history     show the changelog history
  identify    print information about the working copy
+ import      import an ordered set of patches
  init        create a new repository or copy an existing one
  log         show the revision history of a single file
  manifest    output the latest or given revision of the project manifest
  parents     show the parents of the current working dir
- patch       import an ordered set of patches
  pull        pull changes from the specified source
  push        push changes to the specified destination
  rawcommit   raw commit interface
@@ -63,11 +63,11 @@ hg commands:
  help        show help for a given command or all commands
  history     show the changelog history
  identify    print information about the working copy
+ import      import an ordered set of patches
  init        create a new repository or copy an existing one
  log         show the revision history of a single file
  manifest    output the latest or given revision of the project manifest
  parents     show the parents of the current working dir
- patch       import an ordered set of patches
  pull        pull changes from the specified source
  push        push changes to the specified destination
  rawcommit   raw commit interface
