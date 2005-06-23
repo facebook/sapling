@@ -1,0 +1,33 @@
+#!/bin/sh -x
+hg -d init
+echo this is a1 > a
+hg -d add a
+hg -d commit -t0 -d "0 0" -u user
+echo this is b1 > b
+hg -d add b
+hg -d commit -t1 -d "0 0" -u user
+hg -d manifest 1
+echo this is c1 > c
+hg -d rawcommit -p 1 -d "0 0" -u user -t2 c
+hg -d manifest 2
+hg -d parents
+rm b
+hg -d rawcommit -p 2 -d "0 0" -u user -t3 b
+hg -d manifest 3
+hg -d parents
+echo this is a22 > a
+hg -d rawcommit -p 3 -d "0 0" -u user -t4 a
+hg -d manifest 4
+hg -d parents
+echo this is c22 > c
+hg -d rawcommit -p 1 -d "0 0" -u user -t5 c
+hg -d manifest 5
+hg -d parents
+# merge, but no files changed
+hg -d rawcommit -p 4 -p 5 -d "0 0" -u user -t6
+hg -d manifest 6
+hg -d parents
+# no changes what-so-ever
+hg -d rawcommit -p 6 -d "0 0" -u user -t7
+hg -d manifest 7
+hg -d parents

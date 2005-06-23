@@ -1,0 +1,113 @@
++ hg -d init
++ echo this is a1
++ hg -d add a
++ hg -d commit -t0 -d '0 0' -u user
+a
++ echo this is b1
++ hg -d add b
++ hg -d commit -t1 -d '0 0' -u user
+b
++ hg -d manifest 1
+05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
+54837d97f2932a8194e69745a280a2c11e61ff9c 644 b
++ echo this is c1
++ hg -d rawcommit -p 1 -d '0 0' -u user -t2 c
++ hg -d manifest 2
+05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
+54837d97f2932a8194e69745a280a2c11e61ff9c 644 b
+76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
++ hg -d parents
+changeset:   2:c4ef0ef0554dff3ceade68d75539e4f208a2be0a
+tag:         tip
+parent:      1:3cefbe5cc27b3a068b7a6899ddff22a9874a7e69
+parent:      -1:0000000000000000000000000000000000000000
+manifest:    2:f5d7a10be55c91e08fbd4f527ab313aff2761fc6
+user:        user
+date:        Thu Jan  1 00:00:00 1970
+files:       c
+description:
+2
+
++ rm b
++ hg -d rawcommit -p 2 -d '0 0' -u user -t3 b
++ hg -d manifest 3
+05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
+76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
++ hg -d parents
+changeset:   3:923669243607c26c4c8f0c11f48c1182ce1a7aff
+tag:         tip
+parent:      2:c4ef0ef0554dff3ceade68d75539e4f208a2be0a
+parent:      -1:0000000000000000000000000000000000000000
+manifest:    3:1102cb6dde652ec2ba8cc2777e464853afa67cef
+user:        user
+date:        Thu Jan  1 00:00:00 1970
+files:       b
+description:
+3
+
++ echo this is a22
++ hg -d rawcommit -p 3 -d '0 0' -u user -t4 a
++ hg -d manifest 4
+d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
+76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
++ hg -d parents
+changeset:   4:2361ec7b1da5142bce1285c50f3bb2960706263d
+tag:         tip
+parent:      3:923669243607c26c4c8f0c11f48c1182ce1a7aff
+parent:      -1:0000000000000000000000000000000000000000
+manifest:    4:cf4021621d6357e928385ffeee996f87c0bf991d
+user:        user
+date:        Thu Jan  1 00:00:00 1970
+files:       a
+description:
+4
+
++ echo this is c22
++ hg -d rawcommit -p 1 -d '0 0' -u user -t5 c
++ hg -d manifest 5
+05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
+54837d97f2932a8194e69745a280a2c11e61ff9c 644 b
+3570202ceac2b52517df64ebd0a062cb0d8fe33a 644 c
++ hg -d parents
+changeset:   4:2361ec7b1da5142bce1285c50f3bb2960706263d
+parent:      3:923669243607c26c4c8f0c11f48c1182ce1a7aff
+parent:      -1:0000000000000000000000000000000000000000
+manifest:    4:cf4021621d6357e928385ffeee996f87c0bf991d
+user:        user
+date:        Thu Jan  1 00:00:00 1970
+files:       a
+description:
+4
+
++ hg -d rawcommit -p 4 -p 5 -d '0 0' -u user -t6
++ hg -d manifest 6
+d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
+76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
++ hg -d parents
+changeset:   6:aaf55aee7b6249fd7d4ba295d98c4492ec2740d7
+tag:         tip
+parent:      4:2361ec7b1da5142bce1285c50f3bb2960706263d
+parent:      5:f8292b00383d88b470efcb2ea9c71409832ec9d6
+manifest:    6:71c4262e09a89666ee12a92fefa12085aad53243
+user:        user
+date:        Thu Jan  1 00:00:00 1970
+files:       
+description:
+6
+
++ hg -d rawcommit -p 6 -d '0 0' -u user -t7
++ hg -d manifest 7
+d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
+76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
++ hg -d parents
+changeset:   7:836ff890ac9ecb8c4b7c209b3e8b93f8805ca5f0
+tag:         tip
+parent:      6:aaf55aee7b6249fd7d4ba295d98c4492ec2740d7
+parent:      -1:0000000000000000000000000000000000000000
+manifest:    7:c15305fbac9dd3f49bffcc17d659b2d06d10b9a2
+user:        user
+date:        Thu Jan  1 00:00:00 1970
+files:       
+description:
+7
+
