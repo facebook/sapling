@@ -178,7 +178,7 @@ def help(ui, cmd=None):
             d = ""
             if f.__doc__:
                 d = f.__doc__.splitlines(0)[0].rstrip()
-            h[f.__name__] = d
+            h[f.__name__.rstrip("_")] = d
 
         fns = h.keys()
         fns.sort()
@@ -275,15 +275,6 @@ def copy(ui, repo, source, dest):
     """mark a file as copied or renamed for the next commit"""
     return repo.copy(*relpath(repo, (source, dest)))
 
-def debugaddchangegroup(ui, repo):
-    data = sys.stdin.read()
-    repo.addchangegroup(data)
-
-def debugchangegroup(ui, repo, roots):
-    newer = repo.newer(map(repo.lookup, roots))
-    for chunk in repo.changegroup(newer):
-        sys.stdout.write(chunk)
-
 def debugindex(ui, file):
     r = hg.revlog(hg.opener(""), file, "")
     print "   rev    offset  length   base linkrev"+\
@@ -373,6 +364,46 @@ def identify(ui, repo):
 
     ui.write("%s\n" % ' '.join(output))
 
+def import_(ui, repo, patch1, *patches, **opts):
+    """import an ordered set of patches"""
+    try:
+        import psyco
+        psyco.full()
+    except:
+        pass
+
+    patches = (patch1,) + patches
+    
+    d = opts["base"]
+    strip = opts["strip"]
+    quiet = ui.quiet and "> /dev/null" or ""
+
+    for patch in patches:
+        ui.status("applying %s\n" % patch)
+        pf = os.path.join(d, patch)
+
+        text = ""
+        for l in file(pf):
+            if l[:4] == "--- ": break
+            text += l
+
+        # make sure text isn't empty
+        if not text: text = "imported patch %s\n" % patch
+
+        f = os.popen("patch -p%d < %s" % (strip, pf))
+        files = []
+        for l in f.read().splitlines():
+            l.rstrip('\r\n');
+            if not quiet:
+                print l
+            if l[:14] == 'patching file ':
+                files.append(l[14:])
+        f.close()
+
+        if len(files) > 0:
+            addremove(ui, repo, *files)
+        repo.commit(files, text)
+
 def init(ui, source=None, **opts):
     """create a new repository or copy an existing one"""
 
@@ -444,46 +475,6 @@ def parents(ui, repo, node = None):
     for n in p:
         if n != hg.nullid:
             show_changeset(ui, repo, changenode=n)
-
-def patch(ui, repo, patch1, *patches, **opts):
-    """import an ordered set of patches"""
-    try:
-        import psyco
-        psyco.full()
-    except:
-        pass
-
-    patches = (patch1,) + patches
-    
-    d = opts["base"]
-    strip = opts["strip"]
-    quiet = opts["quiet"] and "> /dev/null" or ""
-
-    for patch in patches:
-        ui.status("applying %s\n" % patch)
-        pf = os.path.join(d, patch)
-
-        text = ""
-        for l in file(pf):
-            if l[:4] == "--- ": break
-            text += l
-
-        # make sure text isn't empty
-        if not text: text = "imported patch %s\n" % patch
-
-        f = os.popen("patch -p%d < %s" % (strip, pf))
-        files = []
-        for l in f.read().splitlines():
-            l.rstrip('\r\n');
-            if not quiet:
-                print l
-            if l[:14] == 'patching file ':
-                files.append(l[14:])
-        f.close()
-
-        if len(files) > 0:
-            addremove(ui, repo, *files)
-        repo.commit(files, text)
 
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source"""
@@ -664,13 +655,13 @@ def verify(ui, repo):
 table = {
     "add": (add, [], "hg add [files]"),
     "addremove": (addremove, [], "hg addremove [files]"),
-    "ann|annotate": (annotate,
+    "annotate": (annotate,
                      [('r', 'revision', '', 'revision'),
                       ('u', 'user', None, 'show user'),
                       ('n', 'number', None, 'show revision number'),
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
-    "cat|dump": (cat, [], 'hg cat <file> [rev]'),
+    "cat": (cat, [], 'hg cat <file> [rev]'),
     "commit|ci": (commit,
                   [('t', 'text', "", 'commit text'),
                    ('A', 'addremove', None, 'run add/remove during commit'),
@@ -679,8 +670,6 @@ table = {
                    ('u', 'user', "", 'user')],
                   'hg commit [files]'),
     "copy": (copy, [], 'hg copy <source> <dest>'),
-    "debugaddchangegroup": (debugaddchangegroup, [], 'debugaddchangegroup'),
-    "debugchangegroup": (debugchangegroup, [], 'debugchangegroup [roots]'),
     "debugindex": (debugindex, [], 'debugindex <file>'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot <file>'),
     "diff": (diff, [('r', 'rev', [], 'revision')],
@@ -691,17 +680,16 @@ table = {
     "history": (history, [], 'hg history'),
     "help": (help, [], 'hg help [command]'),
     "identify|id": (identify, [], 'hg identify'),
+    "import|patch": (import_,
+                     [('p', 'strip', 1, 'path strip'),
+                      ('b', 'base', "", 'base path')],
+                     "hg import [options] <patches>"),
     "init": (init, [('u', 'update', None, 'update after init')],
              'hg init [options] [url]'),
     "log": (log, [], 'hg log <file>'),
-    "manifest|dumpmanifest": (manifest, [], 'hg manifest [rev]'),
+    "manifest": (manifest, [], 'hg manifest [rev]'),
     "parents": (parents, [], 'hg parents [node]'),
-    "patch|import": (patch,
-                     [('p', 'strip', 1, 'path strip'),
-                      ('b', 'base', "", 'base path'),
-                      ('q', 'quiet', "", 'silence diff')],
-                     "hg import [options] patches"),
-    "pull|merge": (pull, 
+    "pull": (pull, 
                   [('u', 'update', None, 'update working directory')],
 		  'hg pull [options] [source]'),
     "push": (push, [], 'hg push <destination>'),
@@ -714,7 +702,7 @@ table = {
                    ('l', 'logfile', "", 'commit text file')],
                   'hg rawcommit [options] [files]'),
     "recover": (recover, [], "hg recover"),
-    "remove": (remove, [], "hg remove [files]"),
+    "remove|rm": (remove, [], "hg remove [files]"),
     "serve": (serve, [('p', 'port', 8000, 'listen port'),
                       ('a', 'address', '', 'interface address'),
                       ('n', 'name', os.getcwd(), 'repository name'),
@@ -728,12 +716,11 @@ table = {
     "tags": (tags, [], 'hg tags'),
     "tip": (tip, [], 'hg tip'),
     "undo": (undo, [], 'hg undo'),
-    "update|up|checkout|co|resolve": (update,
-                                      [('m', 'merge', None,
-                                        'allow merging of conflicts'),
-                                       ('C', 'clean', None,
-                                        'overwrite locally modified files')],
-                                       'hg update [options] [node]'),
+    "update|up|checkout|co":
+            (update,
+             [('m', 'merge', None, 'allow merging of conflicts'),
+              ('C', 'clean', None, 'overwrite locally modified files')],
+             'hg update [options] [node]'),
     "verify": (verify, [], 'hg verify'),
     }
 
