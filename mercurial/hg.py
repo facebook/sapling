@@ -12,22 +12,6 @@ from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
 demandload(globals(), "tempfile httprangereader bdiff")
 
-def is_exec(f):
-    return (os.stat(f).st_mode & 0100 != 0)
-
-def set_exec(f, mode):
-    s = os.stat(f).st_mode
-    if (s & 0100 != 0) == mode:
-        return
-    if mode:
-        # Turn on +x for every +r bit when making a file executable
-        # and obey umask.
-        umask = os.umask(0)
-        os.umask(umask)
-        os.chmod(f, s | (s & 0444) >> 2 & ~umask)
-    else:
-        os.chmod(f, s & 0666)
-
 class filelog(revlog):
     def __init__(self, opener, path):
         revlog.__init__(self, opener,
@@ -509,7 +493,7 @@ class localrepository:
         for f in files:
             try:
                 t = self.wfile(f).read()
-                tm = is_exec(self.wjoin(f))
+                tm = util.is_exec(self.wjoin(f), mfm.get(f, False))
                 r = self.file(f)
                 mfm[f] = tm
                 mm[f] = r.add(t, {}, tr, linkrev,
@@ -565,8 +549,7 @@ class localrepository:
         for f in commit:
             self.ui.note(f + "\n")
             try:
-                fp = self.wjoin(f)
-                mf1[f] = is_exec(fp)
+                mf1[f] = util.is_exec(self.wjoin(f), mf1.get(f, False))
                 t = self.wfile(f).read()
             except IOError:
                 self.warn("trouble committing %s!\n" % f)
@@ -1031,7 +1014,7 @@ class localrepository:
         mfw = mf1.copy()
         for f in a + c + u:
             mw[f] = ""
-            mfw[f] = is_exec(self.wjoin(f))
+            mfw[f] = util.is_exec(self.wjoin(f), mfw.get(f, False))
         for f in d:
             if f in mw: del mw[f]
 
@@ -1081,13 +1064,13 @@ class localrepository:
                 if not s and mfw[f] != mf2[f]:
                     if force:
                         self.ui.debug(" updating permissions for %s\n" % f)
-                        set_exec(self.wjoin(f), mf2[f])
+                        util.set_exec(self.wjoin(f), mf2[f])
                     else:
                         a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
                         mode = ((a^b) | (a^c)) ^ a
                         if mode != b:
                             self.ui.debug(" updating permissions for %s\n" % f)
-                            set_exec(self.wjoin(f), mode)
+                            util.set_exec(self.wjoin(f), mode)
                             mark[f] = 1
                 del m2[f]
             elif f in ma:
@@ -1169,7 +1152,7 @@ class localrepository:
             except IOError:
                 os.makedirs(os.path.dirname(self.wjoin(f)))
                 self.wfile(f, "w").write(t)
-            set_exec(self.wjoin(f), mf2[f])
+            util.set_exec(self.wjoin(f), mf2[f])
             self.dirstate.update([f], mode)
 
         # merge the tricky bits
@@ -1179,7 +1162,7 @@ class localrepository:
             self.ui.status("merging %s\n" % f)
             m, o, flag = merge[f]
             self.merge3(f, m, o)
-            set_exec(self.wjoin(f), flag)
+            util.set_exec(self.wjoin(f), flag)
             self.dirstate.update([f], 'm')
 
         for f in remove:

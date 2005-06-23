@@ -16,6 +16,12 @@ def rename(src, dst):
 
 # Platfor specific varients
 if os.name == 'nt':
+    def is_exec(f, last):
+        return last
+
+    def set_exec(f, mode):
+        pass
+    
     def pconvert(path):
         return path.replace("\\", "/")
 
@@ -27,6 +33,22 @@ if os.name == 'nt':
     def readlock(pathname):
         return file(pathname).read()
 else:
+    def is_exec(f, last):
+        return (os.stat(f).st_mode & 0100 != 0)
+
+    def set_exec(f, mode):
+        s = os.stat(f).st_mode
+        if (s & 0100 != 0) == mode:
+            return
+        if mode:
+            # Turn on +x for every +r bit when making a file executable
+            # and obey umask.
+            umask = os.umask(0)
+            os.umask(umask)
+            os.chmod(f, s | (s & 0444) >> 2 & ~umask)
+        else:
+            os.chmod(f, s & 0666)
+
     def pconvert(path):
         return path
 
