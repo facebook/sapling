@@ -477,19 +477,24 @@ class localrepository:
             raise inst
 
     def rawcommit(self, files, text, user, date, p1=None, p2=None):
-        p1 = p1 or self.dirstate.parents()[0] or nullid
-        p2 = p2 or self.dirstate.parents()[1] or nullid
+        orig_parent = self.dirstate.parents()[0] or nullid
+        p1 = (p1 and self.lookup(p1)) or self.dirstate.parents()[0] or nullid
+        p2 = (p2 and self.lookup(p2)) or self.dirstate.parents()[1] or nullid
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
         m1 = self.manifest.read(c1[0])
         mf1 = self.manifest.readflags(c1[0])
         m2 = self.manifest.read(c2[0])
 
+        if orig_parent == p1:
+            update_dirstate = 1
+        else:
+            update_dirstate = 0
+
         tr = self.transaction()
         mm = m1.copy()
         mfm = mf1.copy()
         linkrev = self.changelog.count()
-        self.dirstate.setparents(p1, p2)
         for f in files:
             try:
                 t = self.wfile(f).read()
@@ -498,12 +503,14 @@ class localrepository:
                 mfm[f] = tm
                 mm[f] = r.add(t, {}, tr, linkrev,
                               m1.get(f, nullid), m2.get(f, nullid))
-                self.dirstate.update([f], "n")
+                if update_dirstate:
+                    self.dirstate.update([f], "n")
             except IOError:
                 try:
                     del mm[f]
                     del mfm[f]
-                    self.dirstate.forget([f])
+                    if update_dirstate:
+                        self.dirstate.forget([f])
                 except:
                     # deleted from p2?
                     pass
@@ -511,6 +518,8 @@ class localrepository:
         mnode = self.manifest.add(mm, mfm, tr, linkrev, c1[0], c2[0])
         n = self.changelog.add(mnode, files, text, tr, p1, p2, user, date)
         tr.close()
+        if update_dirstate:
+            self.dirstate.setparents(n, nullid)
 
     def commit(self, files = None, text = "", user = None, date = None):
         commit = []
