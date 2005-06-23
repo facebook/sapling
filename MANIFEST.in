@@ -8,4 +8,5 @@ include *.txt
 include templates/map templates/map-*[a-z]
 include templates/*.tmpl
 include doc/*
+include contrib/* contrib/git-vis/*
 include README
