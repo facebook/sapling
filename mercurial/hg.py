@@ -478,8 +478,8 @@ class localrepository:
 
     def rawcommit(self, files, text, user, date, p1=None, p2=None):
         orig_parent = self.dirstate.parents()[0] or nullid
-        p1 = (p1 and self.lookup(p1)) or self.dirstate.parents()[0] or nullid
-        p2 = (p2 and self.lookup(p2)) or self.dirstate.parents()[1] or nullid
+        p1 = p1 or self.dirstate.parents()[0] or nullid
+        p2 = p2 or self.dirstate.parents()[1] or nullid
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
         m1 = self.manifest.read(c1[0])

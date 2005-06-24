@@ -553,7 +553,9 @@ def rawcommit(ui, repo, *flist, **rc):
     files = relpath(repo, list(flist))
     if rc['files']:
         files += open(rc['files']).read().splitlines()
-        
+
+    rc['parent'] = map(repo.lookup, rc['parent'])
+    
     repo.rawcommit(files, text, rc['user'], rc['date'], *rc['parent'])
  
 def recover(ui, repo):
