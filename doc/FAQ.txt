@@ -173,7 +173,34 @@ Patches to support Windows are being actively integrated, a fully
 working Windows version is probably not far off
 
 
-Section 2: Technical
+Section 2: Bugs and Features
+----------------------------
+
+.Q. I found a bug, what do I do?
+
+Report it to the mercurial mailing list, mercurial@selenic.com.
+
+
+.Q. What should I include in my bug report?
+
+Enough information to reproduce or diagnose the bug. If you can, try
+using the hg -v and hg -d switches to figure out exactly what
+Mercurial is doing.
+
+If you can reproduce the bug in a simple repository, that is very
+helpful. The best is to create a simple shell script to automate this
+process, which can then be added to our test suite.
+
+
+.Q. Can Mercurial do <x>?
+
+If you'd like to request a feature, send your request to
+mercurial@selenic.com. As Mercurial is still very new, there are
+certainly features it is missing and you can give up feedback on how
+best to implement them.
+
+
+Section 3: Technical
 --------------------
 
 .Q. What limits does Mercurial have?
