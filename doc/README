@@ -1,25 +1,21 @@
-Files in this directory:
+Mercurial's documentation is currently kept in ASCIIDOC format, which
+is a simple plain text format that's easy to read and edit. It's also
+convertible to a variety of other formats including standard UNIX man
+page format and HTML.
 
-README - this file
-hg.1.txt - asciidoc source for the files
-hg.1 - groff man page for hg
-hg.1.html - man page in html format
+To do this, you'll need to install ASCIIDOC:
 
-How to generate the man page and html files
+ http://www.methods.co.nz/asciidoc/
 
-For now we use asciidoc which is available at:
+To generate the man page:
 
-http://www.methods.co.nz/asciidoc/
+ asciidoc -d manpage -b docbook hg.1.txt
+ xmlto man hg.1.xml
 
-the file hg.1.txt is the input file, to generate the man page:
+To display:
 
-asciidoc.py -d manpage -b docbook hg.1.txt
-xmlto man hg.1.xml
+ groff -mandoc -Tascii hg.1 | more
 
-to display:
+To create the html page (without stylesheets):
 
-groff -mandoc -Tascii hg.1 | more
-
-to create the html page (without stylesheets):
-
-asciidoc.py -b html hg.1.txt
+ asciidoc -b html hg.1.txt
