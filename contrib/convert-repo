@@ -21,7 +21,7 @@
 # interrupted and can be run repeatedly to copy new commits.
 
 import sys, os, zlib, sha
-from mercurial import hg, ui
+from mercurial import hg, ui, util
 
 class convert_git:
     def __init__(self, path):
@@ -91,7 +91,7 @@ class convert_mercurial:
         
     def putfile(self, f, e, data):
         self.repo.wfile(f, "w").write(data)
-        hg.set_exec(self.repo.wjoin(f), e)
+        util.set_exec(self.repo.wjoin(f), e)
 
     def delfile(self, f):
         try:
