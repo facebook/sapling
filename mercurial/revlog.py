@@ -192,8 +192,9 @@ class revlog:
     def lookup(self, id):
         try:
             rev = int(id)
+            if str(rev) != id: raise "mismatch"
             return self.node(rev)
-        except ValueError:
+        except:
             c = []
             for n in self.nodemap:
                 if id in hex(n):
