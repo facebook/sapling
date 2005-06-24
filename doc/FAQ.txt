@@ -122,10 +122,19 @@ change, it is impossible in Mercurial to simultaneously commit and add
 a tag. Thus tagging a revision must be done as a second step.
 
 
+.Q. What if I want to just keep local tags?
+
+You can add a section called "[tags]" to your .hg/hgrc which contains
+a list of tag = changeset ID pairs. Unlike traditional tags, these are
+only visible in the local repository, but otherwise act just like
+normal tags.
+
+
 .Q. How do tags work with multiple heads?
 
 The tags that are in effect at any given time are the tags specified
-in each head, with heads closer to the tip taking precedence.
+in each head, with heads closer to the tip taking precedence. Local
+tags override all other tags.
 
 
 .Q. What are some best practices for distributed development with Mercurial?
@@ -187,19 +196,82 @@ Mercurial is primarily developed for UNIX systems, so some UNIXisms
 may be present in ports.
 
 
-.Q. How does signing work?
+.Q. How does Mercurial store its data?
 
-Take a look at the hgeditor script for an example. The basic idea
-is to sign the manifest ID inside that changelog entry. The manifest
-ID is a recursive hash of all of the files in the system and their
-complete history, and thus signing the manifest hash signs the entire
-project to that point.
+The fundamental storage type in Mercurial is a "revlog". A revlog is
+the set of all revisions of a named object. Each revision is either
+stored compressed in its entirety or as a compressed binary delta
+against the previous version. The decision of when to store a full
+version is made based on how much data would be needed to reconstruct
+the file. This lets us ensure that we never need to read huge amounts
+of data to reconstruct a object, regardless of how many revisions of it
+we store.
 
-More precisely: each file hash is an SHA1 hash of the contents of that
-file and the hashes of its parent revisions. The manifest contains a
-list of each file in the project along with its current file hash.
-This manifest is hashed similarly to the file hashes, incorporating
-the hashes of the parent revisions.
+In fact, we should always be able to do it with a single read,
+provided we know when and where to read. This is where the index comes
+in. Each revlog has an index containing a special hash (nodeid) of the
+text, hashes for its parents, and where and how much of the revlog
+data we need to read to reconstruct it. Thus, with one read of the
+index and one read of the data, we can reconstruct any version in time
+proportional to the object size.
+
+Similarly, revlogs and their indices are append-only. This means that
+adding a new version is also O(1) seeks.
+
+Revlogs are used to represent all revisions of files, manifests, and
+changesets. Compression for typical objects with lots of revisions can
+range from 100 to 1 for things like project makefiles to over 2000 to
+1 for objects like the manifest.
+
+
+.Q. How are manifests and changesets stored?
+
+A manifest is simply a list of all files in a given revision of a
+project along with the nodeids of the corresponding file revisions. So
+grabbing a given version of the project means simply looking up its
+manifest and reconstruction all the file revisions pointed to by it.
+
+A changeset is a list of all files changed in a check-in along with a
+change description and some metadata like user and date. It also
+contains a nodeid to the relevent revision of the manifest.
+
+
+.Q. How do Mercurial hashes get calculated?
+
+Mercurial hashes both the contents of an object and the hash of its
+parents to create an identifier that uniquely identifies an object's
+contents and history. This greatly simplifies merging of histories
+because it avoid graph cycles that can occur when a object is reverted
+to an earlier state.
+
+All file revisions have an associated hash value. These are listed in
+the manifest of a given project revision, and the manifest hash is
+listed in the changeset. The changeset hash is again a hash of the
+changeset contents and its parents, so it uniquely identifies the
+entire history of the project to that point.
+
+
+.Q. What checks are there on repository integrity?
+
+Every time a revlog object is retrieved, it is checked against its
+hash for integrity. It is also incidentally doublechecked by the
+Adler32 checksum used by the underlying zlib compression.
+
+Running 'hg verify' decompresses and reconstitutes each revision of
+each object in the repository and cross-checks all of the index
+metadata with those contents.
+
+But this alone is not enough to ensure that someone hasn't tampered
+with a repository. For that, you need cryptographic signing.
+
+
+.Q. How does signing work with Mercurial?
+
+Take a look at the hgeditor script for an example. The basic idea is
+to use GPG to sign the manifest ID inside that changelog entry. The
+manifest ID is a recursive hash of all of the files in the system and
+their complete history, and thus signing the manifest hash signs the
+entire project contents.
 
 
 .Q. What about hash collisions? What about weaknesses in SHA1?
@@ -213,3 +285,6 @@ becomes a realistic concern.
 Collisions with the "short hashes" are not a concern as they're always
 checked for ambiguity and are still long enough that they're not
 likely to happen for reasonably-sized projects (< 1M changes).
+
+
+
