@@ -394,6 +394,9 @@ class localrepository:
                             n, k = l.split(" ", 1)
                             self.tagscache[k.strip()] = bin(n)
             except KeyError: pass
+            for k, n in self.ui.configitems("tags"):
+                self.tagscache[k] = bin(n)
+                
             self.tagscache['tip'] = self.changelog.tip()
 
         return self.tagscache
