@@ -3,10 +3,10 @@ recursive-include mercurial *.py
 include tkmerge
 include hgweb.cgi
 include hgeditor rewrite-log convert-repo
-include tests/*
+include tests/README tests/run-tests tests/test-*[a-z] tests/*.out
 include *.txt
 include templates/map templates/map-*[a-z]
 include templates/*.tmpl
-include doc/*
+include doc/README doc/*.txt
 include contrib/* contrib/git-vis/*
 include README
