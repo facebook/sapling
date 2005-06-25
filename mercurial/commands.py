@@ -275,6 +275,43 @@ def copy(ui, repo, source, dest):
     """mark a file as copied or renamed for the next commit"""
     return repo.copy(*relpath(repo, (source, dest)))
 
+def debugcheckdirstate(ui, repo):
+    parent1, parent2 = repo.dirstate.parents()
+    dc = repo.dirstate.dup()
+    keys = dc.keys()
+    keys.sort()
+    m1n = repo.changelog.read(parent1)[0]
+    m2n = repo.changelog.read(parent2)[0]
+    m1 = repo.manifest.read(m1n)
+    m2 = repo.manifest.read(m2n)
+    errors = 0
+    for f in dc:
+        state = repo.dirstate.state(f)
+        if state in "nr" and f not in m1:
+            print "%s in state %s, but not listed in manifest1" % (f, state)
+            errors += 1
+        if state in "a" and f in m1:
+            print "%s in state %s, but also listed in manifest1" % (f, state)
+            errors += 1
+        if state in "m" and f not in m1 and f not in m2:
+            print "%s in state %s, but not listed in either manifest" % (f, state)
+            errors += 1
+    for f in m1:
+        state = repo.dirstate.state(f)
+        if state not in "nrm":
+            print "%s in manifest1, but listed as state %s" % (f, state)
+            errors += 1
+    if errors:
+        print ".hg/dirstate inconsistent with current parent's manifest, aborting"
+        sys.exit(1)
+
+def debugdumpdirstate(ui, repo):
+    dc = repo.dirstate.dup()
+    keys = dc.keys()
+    keys.sort()
+    for file in keys:
+        print "%s => %c" % (file, dc[file][0])
+
 def debugindex(ui, file):
     r = hg.revlog(hg.opener(""), file, "")
     print "   rev    offset  length   base linkrev"+\
@@ -677,6 +714,8 @@ table = {
                    ('u', 'user', "", 'user')],
                   'hg commit [files]'),
     "copy": (copy, [], 'hg copy <source> <dest>'),
+    "debugcheckdirstate": (debugcheckdirstate, [], 'debugcheckdirstate'),
+    "debugdumpdirstate": (debugdumpdirstate, [], 'debugdumpdirstate'),
     "debugindex": (debugindex, [], 'debugindex <file>'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot <file>'),
     "diff": (diff, [('r', 'rev', [], 'revision')],
