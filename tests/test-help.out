@@ -32,6 +32,7 @@ hg commands:
  undo        undo the last transaction
  update      update or merge working directory
  verify      verify the integrity of the repository
+ version     output version and copyright information
 + hg add -h
 hg add: option -h not recognized
 hg add [files]
@@ -81,4 +82,5 @@ hg commands:
  undo        undo the last transaction
  update      update or merge working directory
  verify      verify the integrity of the repository
+ version     output version and copyright information
 + exit 0

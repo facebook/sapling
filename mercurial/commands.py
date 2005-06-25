@@ -134,7 +134,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
             ui.status("summary:     %s\n" % description.splitlines()[0])
     ui.status("\n")
 
-def show_version(ui):
+def version(ui):
     """output version and copyright information"""
     ui.write("Mercurial version %s\n" % version.get_version())
     ui.status(
@@ -167,7 +167,7 @@ def help(ui, cmd=None):
         sys.exit(0)
     else:
         if not ui.quiet:
-            show_version(ui)
+            version(ui)
             ui.write('\n')
         ui.write('hg commands:\n\n')
 
@@ -767,6 +767,7 @@ table = {
               ('C', 'clean', None, 'overwrite locally modified files')],
              'hg update [options] [node]'),
     "verify": (verify, [], 'hg verify'),
+    "version": (version, [], 'hg version'),
     }
 
 norepo = "init version help debugindex debugindexdot"
@@ -809,7 +810,7 @@ def dispatch(args):
            not options["noninteractive"])
 
     if options["version"]:
-        show_version(u)
+        version(u)
         sys.exit(0)
 
     try:
