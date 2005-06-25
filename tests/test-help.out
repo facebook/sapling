@@ -24,6 +24,7 @@ hg commands:
  rawcommit   raw commit interface
  recover     roll back an interrupted transaction
  remove      remove the specified files on the next commit
+ root        print the root (top) of the current working dir
  serve       export the repository via HTTP
  status      show changed files in the working directory
  tag         add a tag for the current tip or a given revision
@@ -74,6 +75,7 @@ hg commands:
  rawcommit   raw commit interface
  recover     roll back an interrupted transaction
  remove      remove the specified files on the next commit
+ root        print the root (top) of the current working dir
  serve       export the repository via HTTP
  status      show changed files in the working directory
  tag         add a tag for the current tip or a given revision

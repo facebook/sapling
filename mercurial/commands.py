@@ -602,6 +602,10 @@ def remove(ui, repo, file, *files):
     """remove the specified files on the next commit"""
     repo.remove(relpath(repo, (file,) + files))
 
+def root(ui, repo):
+    """print the root (top) of the current working dir"""
+    ui.write(repo.root + "\n")
+
 def serve(ui, repo, **opts):
     """export the repository via HTTP"""
     hgweb.server(repo.root, opts["name"], opts["templates"],
@@ -748,6 +752,7 @@ table = {
                   'hg rawcommit [options] [files]'),
     "recover": (recover, [], "hg recover"),
     "remove|rm": (remove, [], "hg remove [files]"),
+    "root": (root, [], "hg root"),
     "serve": (serve, [('p', 'port', 8000, 'listen port'),
                       ('a', 'address', '', 'interface address'),
                       ('n', 'name', os.getcwd(), 'repository name'),
