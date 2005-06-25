@@ -98,6 +98,7 @@ class lazymap:
         self.p.load()
         return key in self.p.map
     def __iter__(self):
+        yield nullid
         for i in xrange(self.p.l):
             try:
                 yield self.p.index[i][6]
@@ -192,12 +193,14 @@ class revlog:
     def lookup(self, id):
         try:
             rev = int(id)
-            if str(rev) != id: raise "mismatch"
+            if str(rev) != id: raise ValueError
+            if rev < 0: rev = self.count() + rev
+            if rev < 0 or rev >= self.count: raise ValueError
             return self.node(rev)
-        except:
+        except (ValueError, OverflowError):
             c = []
             for n in self.nodemap:
-                if id in hex(n):
+                if hex(n).startswith(id):
                     c.append(n)
             if len(c) > 1: raise KeyError("Ambiguous identifier")
             if len(c) < 1: raise KeyError("No match found")
