@@ -16,6 +16,8 @@ def rename(src, dst):
 
 # Platfor specific varients
 if os.name == 'nt':
+    nulldev = 'NUL:'
+
     def is_exec(f, last):
         return last
 
@@ -32,7 +34,10 @@ if os.name == 'nt':
 
     def readlock(pathname):
         return file(pathname).read()
+
 else:
+    nulldev = '/dev/null'
+
     def is_exec(f, last):
         return (os.stat(f).st_mode & 0100 != 0)
 
@@ -57,5 +62,3 @@ else:
 
     def readlock(pathname):
         return os.readlink(pathname)
-
-

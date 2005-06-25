@@ -413,7 +413,6 @@ def import_(ui, repo, patch1, *patches, **opts):
     
     d = opts["base"]
     strip = opts["strip"]
-    quiet = ui.quiet and "> /dev/null" or ""
 
     for patch in patches:
         ui.status("applying %s\n" % patch)
