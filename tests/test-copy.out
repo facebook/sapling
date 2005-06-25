@@ -39,11 +39,11 @@ summary:     1
 00000040  0a                                                |.|
 00000041
 + hg cat b
-+ md5sum
-60b725f10c9c85c70d97880dfe8191b3  -
++ md5sum bsum
+60b725f10c9c85c70d97880dfe8191b3  bsum
 + hg cat a
-+ md5sum
-60b725f10c9c85c70d97880dfe8191b3  -
++ md5sum asum
+60b725f10c9c85c70d97880dfe8191b3  asum
 + hg verify
 checking changesets
 checking manifests

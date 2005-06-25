@@ -13,6 +13,8 @@ hg -d commit -t "2" -u test -d "0 0"
 hg history
 hg log a
 hexdump -C .hg/data/b.d
-hg cat b | md5sum
-hg cat a | md5sum
+hg cat b > bsum
+md5sum bsum
+hg cat a > asum
+md5sum asum
 hg verify
