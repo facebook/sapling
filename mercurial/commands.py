@@ -134,7 +134,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
             ui.status("summary:     %s\n" % description.splitlines()[0])
     ui.status("\n")
 
-def version(ui):
+def show_version(ui):
     """output version and copyright information"""
     ui.write("Mercurial version %s\n" % version.get_version())
     ui.status(
@@ -167,18 +167,22 @@ def help(ui, cmd=None):
         sys.exit(0)
     else:
         if not ui.quiet:
-            version(ui)
+            show_version(ui)
             ui.write('\n')
         ui.write('hg commands:\n\n')
 
         h = {}
-        for e in table.values():
-            f = e[0]
-            if f.__name__.startswith("debug"): continue
+        for c,e in table.items():
+            f = c
+            aliases = None
+            if "|" in f:
+                l = f.split("|")
+                f, aliases = l[0], l[1:]
+            if f.startswith("debug"): continue
             d = ""
-            if f.__doc__:
-                d = f.__doc__.splitlines(0)[0].rstrip()
-            h[f.__name__.rstrip("_")] = d
+            if e[0].__doc__:
+                d = e[0].__doc__.splitlines(0)[0].rstrip()
+            h[f] = d
 
         fns = h.keys()
         fns.sort()
@@ -772,7 +776,7 @@ table = {
               ('C', 'clean', None, 'overwrite locally modified files')],
              'hg update [options] [node]'),
     "verify": (verify, [], 'hg verify'),
-    "version": (version, [], 'hg version'),
+    "version": (show_version, [], 'hg version'),
     }
 
 norepo = "init version help debugindex debugindexdot"
@@ -815,7 +819,7 @@ def dispatch(args):
            not options["noninteractive"])
 
     if options["version"]:
-        version(u)
+        show_version(u)
         sys.exit(0)
 
     try:
