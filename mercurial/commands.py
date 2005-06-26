@@ -431,8 +431,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         files = []
         for l in f.read().splitlines():
             l.rstrip('\r\n');
-            if not quiet:
-                print l
+            ui.status("%s\n" % l)
             if l[:14] == 'patching file ':
                 pf = l[14:]
                 if pf not in files:
