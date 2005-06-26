@@ -195,7 +195,7 @@ class revlog:
             rev = int(id)
             if str(rev) != id: raise ValueError
             if rev < 0: rev = self.count() + rev
-            if rev < 0 or rev >= self.count: raise ValueError
+            if rev < 0 or rev >= self.count(): raise ValueError
             return self.node(rev)
         except (ValueError, OverflowError):
             c = []

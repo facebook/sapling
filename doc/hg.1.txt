@@ -1,7 +1,7 @@
 HG(1)
 =====
 Matt Mackall <mpm@selenic.com>
-v0.6, 27 May 2005
+v0.6, 24 Jun 2005
 
 NAME
 ----
@@ -39,14 +39,14 @@ files ...::
 path::
     indicates a path on the local machine
 
-revision:: 
+revision::
     indicates a changeset which can be specified as a changeset revision
     number, a tag, or a unique substring of the changeset hash value
 
 repository path::
     is either the pathname of a local repository of the URI of a remote
     repository.  There are two available URI protocols, http:// which is
-    fast and the old-http:// protocol which is much slower but does not 
+    fast and the old-http:// protocol which is much slower but does not
     require a special server on the web host.
 
 COMMANDS
@@ -61,8 +61,8 @@ addremove::
     files are ignored if they match any of the patterns in .hgignore
 
 annotate [-r <rev> -u -n -c] [files ...]::
-    List the files with each line showing the revision id responsible 
-    for that line. 
+    List the files with each line showing the revision id responsible
+    for that line.
 
     options:
     -r, --revision <rev>  annotate the specified revision
@@ -74,12 +74,12 @@ cat <file> [revision]::
     Output the given revision or tip of the specified file to stdout.
 
 commit [-A -t -l <file> -t <text> -u <user> -d <datecode>] [files...]::
-    commit all changed files in the working dir to the repository.  This uses
+    Commit all changed files in the working dir to the repository.  This uses
     the EDITOR environment variable to bring up an editor to add a commit
     comment.
 
     Options:
-    
+
     -A, --addremove       run addremove during commit
     -t, --text <text>     use <text> as commit message
     -l, --logfile <file>  read the commit message from the specified
@@ -93,10 +93,10 @@ copy <source> <dest>::
     Mark a file as copied or renamed for the next commit.
 
 diff [-r revision] [-r revision] [files ...]::
-    Generate a unified diff of the indicated files. If there are no 
-    revisions specified, the working directory file is compared to 
-    the tip, one revision specified indicates a comparison between the 
-    working directory file and the specified revision, and two revisions 
+    Generate a unified diff of the indicated files. If there are no
+    revisions specified, the working directory file is compared to
+    the tip, one revision specified indicates a comparison between the
+    working directory file and the specified revision, and two revisions
     compares the two versions specified.
 
 export [revision]::
@@ -118,7 +118,7 @@ identify::
     Print a short identifier of the current state of the repo. This
     includes one or two parent hash identifiers, followed by
     a "+" if there are uncommitted changes in the working directory,
-    followed by a list of tags for this revision
+    followed by a list of tags for this revision.
 
     aliases: id
 
@@ -150,13 +150,13 @@ log <file>::
 
 manifest [revision]::
     Print the indicated revision of the manifest (list of version controlled
-    files)
+    files).
 
 parents::
     Print the working directory's parent revisions.
 
 pull <repository path>::
-    pull any changes from the specified repository to the repository in the
+    Pull any changes from the specified repository to the repository in the
     current directory.
 
     options:
@@ -175,17 +175,20 @@ push <destination>::
       ssh://[user@]host[:port]/path
 
 rawcommit [-p -d -u -F -t -l]::
-    Primarily useful for importing from other SCMs. 
+    Primarily useful for importing from other SCMs.
 
 recover::
     Recover from an interrupted commit or pull. This should only be
     necessary when Mercurial suggests it.
 
 remove [files ...]::
-    schedule the indicated files for removal from the repository at the next
-    commit
- 
+    Schedule the indicated files for removal from the repository at the next
+    commit.
+
     aliases: rm
+
+root::
+    Print the root directory of the current repository.
 
 serve [-a addr -n name -p port -t templatedir]::
     Start a local HTTP repository browser and pull server.
@@ -213,10 +216,10 @@ tag [-t <text> -d <datecode> -u <user>] <name> [revision]::
     -u, --user <user>     user for commit
 
 tags::
-    List the current tags.
+    List the repository tags.
 
 tip::
-    Show the tip revision
+    Show the tip revision.
 
 undo::
     Undo the last commit or pull transaction.
@@ -256,6 +259,10 @@ verify::
 ENVIRONMENT VARIABLES
 ---------------------
 
+HGEDITOR::
+    This is the name of the editor to use when committing. Defaults to the
+    value of EDITOR.
+
 HGMERGE::
     An executable to use for resolving merge conflicts. The program ,
     will be executed with three arguments: local file, remote file,
@@ -271,11 +278,12 @@ EMAIL::
     If HGUSER is not set, this will be used as the author for a commit.
 
 LOGNAME::
-    if neither HGUSER nor EMAIL is set, LOGNAME will be used (with
+    If neither HGUSER nor EMAIL is set, LOGNAME will be used (with
     '@hostname' appended) as the author value for a commit.
 
 EDITOR::
-    This is the name of the editor to use when committing. Defaults to 'vi'.
+    This is the name of the editor used in the hgmerge script. It will be
+    used for commit messages, too, if HGEDITOR isn't set. Defaults to 'vi'.
 
 PYTHONPATH::
     This is used by Python to find imported modules and may need to be set
@@ -285,7 +293,7 @@ FILES
 -----
  .hgignore::
     This file contains regular expressions (one per line) that describe file
-    names that should be ignored by hg
+    names that should be ignored by hg.
 
  .hgtags::
     This file contains changeset hash values and text tag names (one of each
@@ -306,6 +314,7 @@ NAMED REPOSITORIES
 
 [paths]
 hg = http://selenic.com/hg
+tah = http://hg.intevation.org/mercurial-tah/
 
 NON_TRANSPARENT PROXY SUPPORT
 -----------------------------

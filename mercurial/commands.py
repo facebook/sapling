@@ -172,13 +172,10 @@ def help(ui, cmd=None):
         ui.write('hg commands:\n\n')
 
         h = {}
-        for c,e in table.items():
-            f = c
-            aliases = None
-            if "|" in f:
-                l = f.split("|")
-                f, aliases = l[0], l[1:]
-            if f.startswith("debug"): continue
+        for c, e in table.items():
+            f = c.split("|")[0]
+            if f.startswith("debug"):
+                continue
             d = ""
             if e[0].__doc__:
                 d = e[0].__doc__.splitlines(0)[0].rstrip()
@@ -242,8 +239,6 @@ def annotate(u, repo, file, *files, **ops):
         node = repo.changelog.lookup(ops['revision'])
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
-    maxuserlen = 0
-    maxchangelen = 0
     for f in relpath(repo, (file,) + files):
         lines = repo.file(f).annotate(mmap[f])
         pieces = []
@@ -343,7 +338,7 @@ def diff(ui, repo, *files, **opts):
         revs = map(lambda x: repo.lookup(x), opts['rev'])
 
     if len(revs) > 2:
-        self.ui.warn("too many revisions to diff\n")
+        ui.warn("too many revisions to diff\n")
         sys.exit(1)
 
     if files:
@@ -434,8 +429,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         files = []
         for l in f.read().splitlines():
             l.rstrip('\r\n');
-            if not quiet:
-                print l
+            ui.status("%s\n" % l)
             if l[:14] == 'patching file ':
                 pf = l[14:]
                 if pf not in files:
@@ -662,15 +656,15 @@ def tag(ui, repo, name, rev = None, **opts):
 
 def tags(ui, repo):
     """list repository tags"""
-    
+
     l = repo.tagslist()
     l.reverse()
-    for t,n in l:
+    for t, n in l:
         try:
-            r = repo.changelog.rev(n)
+            r = "%5d:%s" % (repo.changelog.rev(n), hg.hex(n))
         except KeyError:
-            r = "?"
-        print "%-30s %5d:%s" % (t, repo.changelog.rev(n), hg.hex(n))
+            r = "    ?:?"
+        ui.write("%-30s %s\n" % (t, r))
 
 def tip(ui, repo):
     """show the tip revision"""
@@ -782,7 +776,6 @@ table = {
 norepo = "init version help debugindex debugindexdot"
 
 def find(cmd):
-    i = None
     for e in table.keys():
         if re.match("(%s)$" % e, cmd):
             return table[e]

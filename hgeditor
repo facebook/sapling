@@ -27,7 +27,12 @@ else
 
     echo -e "\n\nmanifest hash: $MANIFEST" >> "$T1"
     grep -vE '^(HG: manifest hash .*)?$' "$1" >> "$T1"
-    hg diff >> "$T2"
+    (
+        cd "`hg root`"
+        grep '^HG: changed' "$1" | cut -b 13- | while read changed; do
+            hg diff "$changed" >> "$T2"
+        done
+    )
 
     CHECKSUM=`md5sum "$T1"`
     $EDITOR "$T1" "$T2" || cleanup_exit $?
