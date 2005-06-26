@@ -50,13 +50,9 @@ class filelog(revlog):
             return ([rev] * len(text.splitlines()), text)
 
         def pair(parent, child):
-            new = []
-            lb = 0
             for a1, a2, b1, b2 in bdiff.blocks(parent[1], child[1]):
-                new[lb:] = child[0][lb:b1]
-                new[b1:] = parent[0][a1:a2]
-                lb = b2
-            return (new, child[1])
+                child[0][b1:b2] = parent[0][a1:a2]
+            return child
 
         # find all ancestors
         needed = {node:1}
@@ -72,13 +68,11 @@ class filelog(revlog):
                     needed[p] += 1
 
         # sort by revision which is a topological order
-        visit = needed.keys()
-        visit = [ (self.rev(n), n) for n in visit ]
+        visit = [ (self.rev(n), n) for n in needed.keys() ]
         visit.sort()
-        visit = [ p[1] for p in visit ]
         hist = {}
 
-        for n in visit:
+        for r,n in visit:
             curr = decorate(self.read(n), self.linkrev(n))
             for p in self.parents(n):
                 if p != nullid:
