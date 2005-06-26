@@ -662,15 +662,15 @@ def tag(ui, repo, name, rev = None, **opts):
 
 def tags(ui, repo):
     """list repository tags"""
-    
+
     l = repo.tagslist()
     l.reverse()
-    for t,n in l:
+    for t, n in l:
         try:
-            r = repo.changelog.rev(n)
+            r = "%5d:%s" % (repo.changelog.rev(n), hg.hex(n))
         except KeyError:
-            r = "?"
-        print "%-30s %5d:%s" % (t, repo.changelog.rev(n), hg.hex(n))
+            r = "    ?:?"
+        ui.write("%-30s %s\n" % (t, r))
 
 def tip(ui, repo):
     """show the tip revision"""

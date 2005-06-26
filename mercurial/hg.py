@@ -373,7 +373,7 @@ class localrepository:
 
     def tags(self):
         '''return a mapping of tag to node'''
-        if not self.tagscache: 
+        if not self.tagscache:
             self.tagscache = {}
             try:
                 # read each head of the tags file, ending with the tip
@@ -386,11 +386,20 @@ class localrepository:
                     for l in fl.revision(r).splitlines():
                         if l:
                             n, k = l.split(" ", 1)
-                            self.tagscache[k.strip()] = bin(n)
-            except KeyError: pass
+                            try:
+                                bin_n = bin(n)
+                            except TypeError:
+                                bin_n = ''
+                            self.tagscache[k.strip()] = bin_n
+            except KeyError:
+                pass
             for k, n in self.ui.configitems("tags"):
-                self.tagscache[k] = bin(n)
-                
+                try:
+                    bin_n = bin(n)
+                except TypeError:
+                    bin_n = ''
+                self.tagscache[k] = bin_n
+
             self.tagscache['tip'] = self.changelog.tip()
 
         return self.tagscache
@@ -398,7 +407,7 @@ class localrepository:
     def tagslist(self):
         '''return a list of tags ordered by revision'''
         l = []
-        for t,n in self.tags().items():
+        for t, n in self.tags().items():
             try:
                 r = self.changelog.rev(n)
             except:
