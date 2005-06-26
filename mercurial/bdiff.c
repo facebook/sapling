@@ -30,6 +30,10 @@ struct line {
 	const char *l;
 };
 
+struct pos {
+	int pos, len;
+};
+
 struct hunk {
 	int a1, a2, b1, b2;
 };
@@ -87,36 +91,37 @@ int inline cmp(struct line *a, struct line *b)
 
 static int equatelines(struct line *a, int an, struct line *b, int bn)
 {
-	int i, j, buckets = 1, t, *h, *l;
+	int i, j, buckets = 1, t;
+	struct pos *h;
 
 	/* build a hash table of the next highest power of 2 */
 	while (buckets < bn + 1)
 		buckets *= 2;
 
-	h = malloc(buckets * sizeof(int));
-	l = calloc(buckets, sizeof(int));
+	h = malloc(buckets * sizeof(struct pos));
 	buckets = buckets - 1;
-	if (!h || !l) {
-		free(h);
+	if (!h)
 		return 0;
-	}
 
 	/* clear the hash table */
-	for (i = 0; i <= buckets; i++)
-		h[i] = -1;
+	for (i = 0; i <= buckets; i++) {
+		h[i].pos = -1;
+		h[i].len = 0;
+	}
 
 	/* add lines to the hash table chains */
 	for (i = bn - 1; i >= 0; i--) {
 		/* find the equivalence class */
-		for (j = b[i].h & buckets; h[j] != -1; j = (j + 1) & buckets)
-			if (!cmp(b + i, b + h[j]))
+		for (j = b[i].h & buckets; h[j].pos != -1;
+		     j = (j + 1) & buckets)
+			if (!cmp(b + i, b + h[j].pos))
 				break;
 
 		/* add to the head of the equivalence class */
-		b[i].n = h[j];
+		b[i].n = h[j].pos;
 		b[i].e = j;
-		h[j] = i;
-		l[j]++; /* keep track of popularity */
+		h[j].pos = i;
+		h[j].len++; /* keep track of popularity */
 	}
 
 	/* compute popularity threshold */
@@ -125,24 +130,24 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 	/* match items in a to their equivalence class in b */
 	for (i = 0; i < an; i++) {
 		/* find the equivalence class */
-		for (j = a[i].h & buckets; h[j] != -1; j = (j + 1) & buckets)
-			if (!cmp(a + i, b + h[j]))
+		for (j = a[i].h & buckets; h[j].pos != -1;
+		     j = (j + 1) & buckets)
+			if (!cmp(a + i, b + h[j].pos))
 				break;
 
 		a[i].e = j; /* use equivalence class for quick compare */
-		if(l[j] <= t)
-			a[i].n = h[j]; /* point to head of match list */
+		if(h[j].len <= t)
+			a[i].n = h[j].pos; /* point to head of match list */
 		else
 			a[i].n = -1; /* too popular */
 	}
 
 	/* discard hash tables */
 	free(h);
-	free(l);
 	return 1;
 }
 
-static int longest_match(struct line *a, struct line *b, int *jpos, int *jlen,
+static int longest_match(struct line *a, struct line *b, struct pos *pos,
 			 int a1, int a2, int b1, int b2, int *omi, int *omj)
 {
 	int mi = a1, mj = b1, mk = 0, mb = 0, i, j, k;
@@ -155,12 +160,12 @@ static int longest_match(struct line *a, struct line *b, int *jpos, int *jlen,
 		/* loop through all lines match a[i] in b */
 		for (; j != -1 && j < b2; j = b[j].n) {
 			/* does this extend an earlier match? */
-			if (i > a1 && j > b1 && jpos[j - 1] == i - 1)
-				k = jlen[j - 1] + 1;
+			if (i > a1 && j > b1 && pos[j - 1].pos == i - 1)
+				k = pos[j - 1].len + 1;
 			else
 				k = 1;
-			jpos[j] = i;
-			jlen[j] = k;
+			pos[j].pos = i;
+			pos[j].len = k;
 
 			/* best match so far? */
 			if (k > mk) {
@@ -189,47 +194,46 @@ static int longest_match(struct line *a, struct line *b, int *jpos, int *jlen,
 	return mk + mb;
 }
 
-static void recurse(struct line *a, struct line *b, int *jpos, int *jlen,
+static void recurse(struct line *a, struct line *b, struct pos *pos,
 		    int a1, int a2, int b1, int b2, struct hunklist *l)
 {
 	int i, j, k;
 
 	/* find the longest match in this chunk */
-	k = longest_match(a, b, jpos, jlen, a1, a2, b1, b2, &i, &j);
+	k = longest_match(a, b, pos, a1, a2, b1, b2, &i, &j);
 	if (!k)
 		return;
 
 	/* and recurse on the remaining chunks on either side */
-	recurse(a, b, jpos, jlen, a1, i, b1, j, l);
+	recurse(a, b, pos, a1, i, b1, j, l);
 	l->head->a1 = i;
 	l->head->a2 = i + k;
 	l->head->b1 = j;
 	l->head->b2 = j + k;
 	l->head++;
-	recurse(a, b, jpos, jlen, i + k, a2, j + k, b2, l);
+	recurse(a, b, pos, i + k, a2, j + k, b2, l);
 }
 
 static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 {
 	struct hunklist l;
-	int *jpos, *jlen, t;
+	struct pos *pos;
+	int t;
 
 	/* allocate and fill arrays */
 	t = equatelines(a, an, b, bn);
-	jpos = calloc(bn, sizeof(int));
-	jlen = calloc(bn, sizeof(int));
+	pos = calloc(bn, sizeof(struct pos));
 	l.head = l.base = malloc(sizeof(struct hunk) * ((an + bn) / 4 + 2));
 
-	if (jpos && jlen && l.base && t) {
+	if (pos && l.base && t) {
 		/* generate the matching block list */
-		recurse(a, b, jpos, jlen, 0, an, 0, bn, &l);
+		recurse(a, b, pos, 0, an, 0, bn, &l);
 		l.head->a1 = an;
 		l.head->b1 = bn;
 		l.head++;
 	}
 
-	free(jpos);
-	free(jlen);
+	free(pos);
 	return l;
 }
 
