@@ -73,6 +73,24 @@ annotate [-r <rev> -u -n -c] [files ...]::
 cat <file> [revision]::
     Output the given revision or tip of the specified file to stdout.
 
+clone [-U] <source> [dest]::
+    Create a new copy of an existing repository.
+
+    If the specified source is on the same filesystem, the repository
+    will be copied via hardlinks. This is the fastest and most
+    space-efficient mode of operation.
+
+    If the destination directory is not specified, it defaults to the
+    current directory.
+
+    If the destination is specified, but does not exist, it is created.
+
+    The source is added to .hg/hgrc in the new copy as the default for
+    future pulls.
+
+    options:
+    -U, --no-update   do not update the new working directory
+
 commit [-A -t -l <file> -t <text> -u <user> -d <datecode>] [files...]::
     Commit all changed files in the working dir to the repository.  This uses
     the EDITOR environment variable to bring up an editor to add a commit
@@ -133,6 +151,9 @@ import [-p <n> -b <base> -q] <patches>::
 
 init [-u] [source]::
     Initialize a repository in the current directory.
+
+    NOTE: The following use is deprecated, and will be removed soon;
+    use the "hg clone" command instead.
 
     If a source is specified, pull that source into the repository.
     This source is added to .hg/hgrc as the default for future pulls

@@ -5,6 +5,7 @@ hg commands:
  addremove   add all new files, delete all missing files
  annotate    show changeset information per file line
  cat         output the latest or given revision of a file
+ clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
  copy        mark a file as copied or renamed for the next commit
  diff        diff working directory (or selected files)
@@ -15,7 +16,7 @@ hg commands:
  history     show the changelog history
  identify    print information about the working copy
  import      import an ordered set of patches
- init        create a new repository or copy an existing one
+ init        create a new repository or (deprecated, use clone) copy an existing one
  log         show the revision history of a single file
  manifest    output the latest or given revision of the project manifest
  parents     show the parents of the current working dir
@@ -56,6 +57,7 @@ hg commands:
  addremove   add all new files, delete all missing files
  annotate    show changeset information per file line
  cat         output the latest or given revision of a file
+ clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
  copy        mark a file as copied or renamed for the next commit
  diff        diff working directory (or selected files)
@@ -66,7 +68,7 @@ hg commands:
  history     show the changelog history
  identify    print information about the working copy
  import      import an ordered set of patches
- init        create a new repository or copy an existing one
+ init        create a new repository or (deprecated, use clone) copy an existing one
  log         show the revision history of a single file
  manifest    output the latest or given revision of the project manifest
  parents     show the parents of the current working dir

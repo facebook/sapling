@@ -9,11 +9,9 @@ hg init
 hg addremove
 hg commit -t "1"
 hg verify
-cd ..
 
-mkdir branch
-cd branch
-hg init ../test
+hg clone . ../branch
+cd ../branch
 hg co
 echo bar>>foo
 hg commit -t "2"

@@ -4,10 +4,8 @@
 + echo a
 + hg addremove
 + hg commit -t 1 -u test -d '0 0'
-+ cd ..
-+ mkdir r2
-+ cd r2
-+ hg init ../r1
++ hg clone . ../r2
++ cd ../r2
 + hg up
 + echo abc
 + hg diff

@@ -259,6 +259,50 @@ def cat(ui, repo, file, rev = []):
     if rev: n = r.lookup(rev)
     sys.stdout.write(r.read(n))
 
+def clone(ui, source, dest = None, **opts):
+    """make a copy of an existing repository"""
+    paths = {}
+    for name, path in ui.configitems("paths"):
+        paths[name] = path
+
+    if source in paths: source = paths[source]
+
+    if dest is None:
+        dest = os.getcwd()
+    elif not os.path.exists(dest):
+        os.makedirs(dest)
+
+    link = 0
+    if not source.startswith("http://"):
+        source = os.path.realpath(source)
+        d1 = os.stat(dest).st_dev
+        d2 = os.stat(source).st_dev
+        if d1 == d2: link = 1
+
+    os.chdir(dest)
+
+    if link:
+        ui.debug("copying by hardlink\n")
+        os.system("cp -al %s/.hg .hg" % source)
+        try:
+            os.remove(".hg/dirstate")
+        except: pass
+
+        repo = hg.repository(ui, ".")
+
+    else:
+        repo = hg.repository(ui, ".", create=1)
+        other = hg.repository(ui, source)
+        cg = repo.getchangegroup(other)
+        repo.addchangegroup(cg)
+
+    f = repo.opener("hgrc", "w")
+    f.write("[paths]\n")
+    f.write("default = %s\n" % source)
+
+    if not opts['no-update']:
+        update(ui, repo)
+    
 def commit(ui, repo, *files, **opts):
     """commit the specified files or all outstanding changes"""
     text = opts['text']
@@ -444,42 +488,12 @@ def import_(ui, repo, patch1, *patches, **opts):
         repo.commit(files, text)
 
 def init(ui, source=None, **opts):
-    """create a new repository or copy an existing one"""
+    """create a new repository or (deprecated, use clone) copy an existing one"""
 
     if source:
-        paths = {}
-        for name, path in ui.configitems("paths"):
-            paths[name] = path
-
-        if source in paths: source = paths[source]
-
-        link = 0
-        if not source.startswith("http://"):
-            d1 = os.stat(os.getcwd()).st_dev
-            d2 = os.stat(source).st_dev
-            if d1 == d2: link = 1
-
-        if link:
-            ui.debug("copying by hardlink\n")
-            os.system("cp -al %s/.hg .hg" % source)
-            try:
-                os.remove(".hg/dirstate")
-            except: pass
-
-            repo = hg.repository(ui, ".")
-
-        else:
-            repo = hg.repository(ui, ".", create=1)
-            other = hg.repository(ui, source)
-            cg = repo.getchangegroup(other)
-            repo.addchangegroup(cg)
-
-        f = repo.opener("hgrc", "w")
-        f.write("[paths]\n")
-        f.write("default = %s\n" % source)
-
-        if opts['update']:
-            update(ui, repo)
+        ui.warn("this use of init is deprecated: use \"hg clone\" instead\n")
+        opts['no-update'] = not opts['update']
+        clone(ui, source, None, **opts)
     else:
         repo = hg.repository(ui, ".", create=1)
 
@@ -707,6 +721,8 @@ table = {
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
     "cat": (cat, [], 'hg cat <file> [rev]'),
+    "clone": (clone, [('U', 'no-update', None, 'skip update after cloning')],
+              'hg clone [options] <source> [dest]'),
     "commit|ci": (commit,
                   [('t', 'text', "", 'commit text'),
                    ('A', 'addremove', None, 'run add/remove during commit'),
@@ -773,7 +789,7 @@ table = {
     "version": (show_version, [], 'hg version'),
     }
 
-norepo = "init version help debugindex debugindexdot"
+norepo = "clone init version help debugindex debugindexdot"
 
 def find(cmd):
     for e in table.keys():

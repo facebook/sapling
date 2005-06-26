@@ -10,10 +10,8 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
-+ cd ..
-+ mkdir branch
-+ cd branch
-+ hg init ../test
++ hg clone . ../branch
++ cd ../branch
 + hg co
 + echo bar
 + hg commit -t 2

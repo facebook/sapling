@@ -1,8 +1,7 @@
 #!/bin/bash
 
-mkdir copy
+hg clone http://localhost:20059/ copy
 cd copy
-hg init http://localhost:20059/
 hg verify
 hg co
 cat foo
@@ -23,9 +22,8 @@ EOF
 
 python dumb.py 2>/dev/null &
 
-mkdir copy2
+hg clone http://localhost:20059/foo copy2
 cd copy2
-hg init http://localhost:20059/foo
 hg verify
 hg co
 cat foo
