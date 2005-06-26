@@ -172,13 +172,10 @@ def help(ui, cmd=None):
         ui.write('hg commands:\n\n')
 
         h = {}
-        for c,e in table.items():
-            f = c
-            aliases = None
-            if "|" in f:
-                l = f.split("|")
-                f, aliases = l[0], l[1:]
-            if f.startswith("debug"): continue
+        for c, e in table.items():
+            f = c.split("|")[0]
+            if f.startswith("debug"):
+                continue
             d = ""
             if e[0].__doc__:
                 d = e[0].__doc__.splitlines(0)[0].rstrip()
