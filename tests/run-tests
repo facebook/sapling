@@ -6,9 +6,15 @@ tests=0
 failed=0
 H=$PWD
 
+if [ -d /usr/lib64 ]; then
+    lib=lib64
+else
+    lib=lib
+fi
+
 TESTPATH=$PWD/install/bin
 export PATH=$TESTPATH:$PATH
-export PYTHONPATH=$PWD/install/lib/python
+export PYTHONPATH=$PWD/install/$lib/python
 
 rm -rf install
 cd ..
