@@ -13,11 +13,8 @@ Core:
 - difflib creating/removing files (fixed except dates: should be epoch)
 - directory foo.d or foo.i with existing file foo (use some quoting?)
 - get various options from hgrc (e.g. history always -v, tip always -q)
-- allow full decimal (part of) hash
-  hg export 5005048662 -> OverflowError: long int too large to convert
-  to int
 - better push support (hack exists)
-- hg over ssh://
+- hg over ssh:// and https://
 - commit mailinglist/trigger/hooks
 
 Commands:
@@ -45,3 +42,4 @@ Web:
 - some web servers think hgweb.cgi.[di] is a CGI script with old-http://
   (use quoting (see foo.d in Core) or document server configurations?)
 - link children in hgweb
+- search field searching in descriptions, file names, what else?
