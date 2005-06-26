@@ -340,7 +340,7 @@ def diff(ui, repo, *files, **opts):
         revs = map(lambda x: repo.lookup(x), opts['rev'])
 
     if len(revs) > 2:
-        self.ui.warn("too many revisions to diff\n")
+        ui.warn("too many revisions to diff\n")
         sys.exit(1)
 
     if files:
