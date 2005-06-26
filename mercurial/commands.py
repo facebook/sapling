@@ -239,8 +239,6 @@ def annotate(u, repo, file, *files, **ops):
         node = repo.changelog.lookup(ops['revision'])
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
-    maxuserlen = 0
-    maxchangelen = 0
     for f in relpath(repo, (file,) + files):
         lines = repo.file(f).annotate(mmap[f])
         pieces = []
@@ -778,7 +776,6 @@ table = {
 norepo = "init version help debugindex debugindexdot"
 
 def find(cmd):
-    i = None
     for e in table.keys():
         if re.match("(%s)$" % e, cmd):
             return table[e]
