@@ -1,5 +1,6 @@
-#!/bin/sh +ex
+#!/bin/sh -ex
 
+umask 027
 mkdir test1
 cd test1
 
