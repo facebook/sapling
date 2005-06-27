@@ -17,4 +17,4 @@ hg co
 cat foo
 hg manifest
 
-kill %hg
+kill $!

@@ -29,4 +29,4 @@ hg co
 cat foo
 hg manifest
 
-kill %1
+kill $!
