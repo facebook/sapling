@@ -12,7 +12,6 @@
 #include <Python.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 #ifdef _WIN32
 static uint32_t htonl(uint32_t x)
 {
