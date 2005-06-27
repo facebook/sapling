@@ -25,7 +25,6 @@ Commands:
 - automatic pull fallback to old-http://
 - hg init|pull http://example.com doesn't say that no repo was found
 - hg annotate -u and hgweb annotate with long $EMAIL
-- hg -v history doesn't show tkmerge as modified (removed).
 - hg pull default in a subdir doesn't work, if it is a relative path
 - optionally only show merges (two parents or parent != changeset-1, etc.)
 

@@ -123,7 +123,11 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
     ui.status("user:        %s\n" % changes[1])
     ui.status("date:        %s\n" % time.asctime(
         time.localtime(float(changes[2].split(' ')[0]))))
-    ui.note("files:       %s\n" % " ".join(changes[3]))
+    if ui.verbose:
+        files = repo.diffrevs(changelog.parents(changenode)[0], changenode)
+        for key, value in zip(["files:", "files+:", "files-:"], files):
+            if value:
+                ui.note("%-12s %s\n" % (key, " ".join(value)))
     description = changes[4].strip()
     if description:
         if ui.verbose:

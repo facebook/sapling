@@ -24,7 +24,7 @@ parent:      -1:0000000000000000000000000000000000000000
 manifest:    2:f5d7a10be55c91e08fbd4f527ab313aff2761fc6
 user:        user
 date:        Thu Jan  1 00:00:00 1970
-files:       c
+files+:      c
 description:
 2
 
@@ -41,7 +41,7 @@ parent:      -1:0000000000000000000000000000000000000000
 manifest:    3:1102cb6dde652ec2ba8cc2777e464853afa67cef
 user:        user
 date:        Thu Jan  1 00:00:00 1970
-files:       b
+files-:      b
 description:
 3
 
@@ -91,7 +91,6 @@ parent:      5:f8292b00383d88b470efcb2ea9c71409832ec9d6
 manifest:    6:71c4262e09a89666ee12a92fefa12085aad53243
 user:        user
 date:        Thu Jan  1 00:00:00 1970
-files:       
 description:
 6
 
@@ -107,7 +106,6 @@ parent:      -1:0000000000000000000000000000000000000000
 manifest:    7:c15305fbac9dd3f49bffcc17d659b2d06d10b9a2
 user:        user
 date:        Thu Jan  1 00:00:00 1970
-files:       
 description:
 7
 
