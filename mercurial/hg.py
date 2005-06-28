@@ -318,6 +318,8 @@ def opener(base):
 
     return o
 
+class RepoError(Exception): pass
+
 class localrepository:
     def __init__(self, ui, path=None, create=0):
         self.remote = 0
@@ -330,12 +332,12 @@ class localrepository:
                 while not os.path.isdir(os.path.join(p, ".hg")):
                     oldp = p
                     p = os.path.dirname(p)
-                    if p == oldp: raise "No repo found"
+                    if p == oldp: raise RepoError("no repo found")
                 path = p
             self.path = os.path.join(path, ".hg")
 
             if not create and not os.path.isdir(self.path):
-                raise "repository %s not found" % self.path
+                raise RepoError("repository %s not found" % self.path)
 
         self.root = path
         self.ui = ui
@@ -911,7 +913,7 @@ class localrepository:
 
         for f in fetch:
             if f in m:
-                raise "already have", short(f[:4])
+                raise RepoError("already have changeset " + short(f[:4]))
 
         self.ui.note("adding new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")

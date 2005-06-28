@@ -851,13 +851,13 @@ def dispatch(args):
         help(u, cmd)
         sys.exit(-1)
 
-    if cmd not in norepo.split():
-        repo = hg.repository(ui = u)
-        d = lambda: i[0](u, repo, *args, **cmdoptions)
-    else:
-        d = lambda: i[0](u, *args, **cmdoptions)
-
     try:
+        if cmd not in norepo.split():
+            repo = hg.repository(ui = u)
+            d = lambda: i[0](u, repo, *args, **cmdoptions)
+        else:
+            d = lambda: i[0](u, *args, **cmdoptions)
+
         if options['profile']:
             import hotshot, hotshot.stats
             prof = hotshot.Profile("hg.prof")
@@ -870,6 +870,8 @@ def dispatch(args):
             return r
         else:
             return d()
+    except hg.RepoError, inst:
+        u.warn("abort: ", inst, "!\n")
     except SignalInterrupt:
         u.warn("killed!\n")
     except KeyboardInterrupt:
