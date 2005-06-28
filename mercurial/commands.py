@@ -493,15 +493,13 @@ def import_(ui, repo, patch1, *patches, **opts):
             addremove(ui, repo, *files)
         repo.commit(files, text)
 
-def init(ui, source=None, **opts):
-    """create a new repository or (deprecated, use clone) copy an existing one"""
+def init(ui, source=None):
+    """create a new repository in the current directory"""
 
     if source:
-        ui.warn("this use of init is deprecated: use \"hg clone\" instead\n")
-        opts['no-update'] = not opts['update']
-        clone(ui, source, None, **opts)
-    else:
-        repo = hg.repository(ui, ".", create=1)
+        ui.warn("no longer supported: use \"hg clone\" instead\n")
+        sys.exit(1)
+    repo = hg.repository(ui, ".", create=1)
 
 def log(ui, repo, f):
     """show the revision history of a single file"""
@@ -753,8 +751,7 @@ table = {
                      [('p', 'strip', 1, 'path strip'),
                       ('b', 'base', "", 'base path')],
                      "hg import [options] <patches>"),
-    "init": (init, [('u', 'update', None, 'update after init')],
-             'hg init [options] [url]'),
+    "init": (init, [], 'hg init'),
     "log": (log, [], 'hg log <file>'),
     "manifest": (manifest, [], 'hg manifest [rev]'),
     "parents": (parents, [], 'hg parents [node]'),

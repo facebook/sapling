@@ -149,22 +149,8 @@ import [-p <n> -b <base> -q] <patches>::
 
     aliases: patch
 
-init [-u] [source]::
-    Initialize a repository in the current directory.
-
-    NOTE: The following use is deprecated, and will be removed soon;
-    use the "hg clone" command instead.
-
-    If a source is specified, pull that source into the repository.
-    This source is added to .hg/hgrc as the default for future pulls
-    in this repository.
-
-    If the specified source is on the same filesystem, the repository
-    will be copied via hardlinks. This is the fastest and most
-    space-efficient mode of operation.
-
-    options:
-    -u, --update   update the working directory to match the tip
+init::
+    Initialize a new repository in the current directory.
 
 log <file>::
     Print the revision history of the specified file.
