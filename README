@@ -18,8 +18,8 @@ Setting up Mercurial:
  To install in your home directory (~/bin and ~/lib, actually), run:
 
  $ python2.3 setup.py install --home=~
- $ export PYTHONPATH=${HOME}/lib/python  # add this to your .bashrc
- $ export PATH=${HOME}/bin:$PATH         # 
+ $ export PYTHONPATH=${HOME}/lib/python  # (or lib64/ on some systems)
+ $ export PATH=${HOME}/bin:$PATH         # add these to your .bashrc
 
  And finally:
 
