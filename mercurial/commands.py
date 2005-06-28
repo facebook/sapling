@@ -269,7 +269,7 @@ def clone(ui, source, dest = None, **opts):
     """make a copy of an existing repository"""
     source = ui.expandpath(source)
 
-    created = success = False
+    success = False
 
     if dest is None:
         dest = os.getcwd()
@@ -314,7 +314,7 @@ def clone(ui, source, dest = None, **opts):
         success = True
         
     finally:
-        if not success:
+        if created and not success:
             import shutil
             shutil.rmtree(dest, True)
     
