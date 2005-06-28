@@ -53,17 +53,22 @@ COMMANDS
 --------
 
 add [files ...]::
-    Add the given files to the repository.  Note that this just schedules the
-    files for addition at the next hg commit time.
+    Schedule files to be version controlled and added to the repository.
+    
+    The files get effectively added to the repository at the next commit.
 
 addremove::
-    Add all new files and remove all missing files from the repository.  New
-    files are ignored if they match any of the patterns in .hgignore
+    Add all new files and remove all missing files from the repository.
+    
+    New files are ignored if they match any of the patterns in .hgignore. As
+    with add, the effects of this command take place at the next commit.
 
 annotate [-r <rev> -u -n -c] [files ...]::
-    List the files with each line showing the revision id responsible
-    for that line.
-
+    List changes in files, showing the revision id responsible for each line
+    
+    This command is useful to discover who did a change or when a change took
+    place.
+    
     options:
     -r, --revision <rev>  annotate the specified revision
     -u, --user            list the author
@@ -71,10 +76,105 @@ annotate [-r <rev> -u -n -c] [files ...]::
     -n, --number          list the revision number (default)
 
 cat <file> [revision]::
-    Output the given revision or tip of the specified file to stdout.
+    Output to stdout the given revision for the specified file.
+
+    In case no revision is given, then the tip is used.
 
 clone [-U] <source> [dest]::
-    Create a new copy of an existing repository.
+    Create a copy of an existing repository in a new directory.
+
+    If the destination directory is specified, but doesn't exist, it is
+    created. If no destination directory is specified, it defaults to the
+    current directory.
+
+    The source is added to the new copy's .hg/hgrc file to be used in
+    future pulls.
+
+    For speed and storage size, hardlinks are used to do the copy whenever
+    the specified source and destination are on the same filesystem.
+
+    options:
+    -U, --no-update   do not update the new working directory
+
+commit [-A -t -l <file> -t <text> -u <user> -d <datecode>] [files...]::
+    Incorporate changes from given files into the repository.
+    
+    If a list of files is ommited, all of the working dir files will
+    be commited.
+    
+    The EDITOR environment variable is used to bring up an editor to add
+    a commit comment.
+
+    Options:
+
+    -A, --addremove       run addremove during commit
+    -t, --text <text>     use <text> as commit message
+    -l, --logfile <file>  show the commit message for the given file
+    -d, --date <datecode> record datecode as commit date
+    -u, --user <user>     record user as commiter
+
+    aliases: ci
+
+copy <source> <dest>::
+    Mark <dest> file as a copy or rename of a <source> one
+    
+    This command takes effect for the next commit.
+
+diff [-r revision] [-r revision] [files ...]::
+    Show differences between revisions for the specified files.
+    
+    Differences between files are shown using the unified diff format.
+    
+    When two revision arguments are given, then changes are shown between
+    such revisions. If only one revision is specified then that revision is
+    compared to the tip, and, when no revisions are specified, the working
+    directory files are compared to the tip.
+
+export [revision]::
+    Print the changeset header and diffs for a particular revision.
+
+    The information shown in the changeset header is: author, changeset hash,
+    parent and commit comment.
+
+forget [files]::
+    Undo an 'hg add' scheduled for the next commit.
+
+heads::
+    Show all repository head changesets.
+    
+    Repository "heads" are changesets that don't have children changesets.
+    They are where development generally takes place and are the usual targets
+    for update and merge operations.
+
+history::
+    Print a log of the revision history of the repository.
+    
+    By default this command outputs: changeset id and hash, tags, parents,
+    user, date and time, and a summary for each commit.
+    The -v switch adds some more detail, such as changed files, manifest
+    hashes or message signatures.
+
+    To display the history of a given file, see the log command.
+
+identify::
+    Print a short summary of the current state of the repo.
+    
+    This summary identifies the repository state using one or two parent
+    hash identifiers, followed by a "+" if there are uncommitted changes
+    in the working directory, followed by a list of tags for this revision.
+
+    aliases: id
+
+import [-p <n> -b <base> -q] <patches>::
+    Import a list of patches and commit them individually.
+
+    options:
+    -p, --strip <n>   directory strip option for patch. This has the same
+                      meaning as the correnponding patch option
+    -b <path>         base directory to read patches from
+
+    aliases: patch
+
 
     If the specified source is on the same filesystem, the repository
     will be copied via hardlinks. This is the fastest and most
@@ -91,88 +191,40 @@ clone [-U] <source> [dest]::
     options:
     -U, --no-update   do not update the new working directory
 
-commit [-A -t -l <file> -t <text> -u <user> -d <datecode>] [files...]::
-    Commit all changed files in the working dir to the repository.  This uses
-    the EDITOR environment variable to bring up an editor to add a commit
-    comment.
-
-    Options:
-
-    -A, --addremove       run addremove during commit
-    -t, --text <text>     use <text> as commit message
-    -l, --logfile <file>  read the commit message from the specified
-                          file
-    -d, --date <datecode> use the specified date code
-    -u, --user <user>     record commit as the specified user
-
-    aliases: ci
-
-copy <source> <dest>::
-    Mark a file as copied or renamed for the next commit.
-
-diff [-r revision] [-r revision] [files ...]::
-    Generate a unified diff of the indicated files. If there are no
-    revisions specified, the working directory file is compared to
-    the tip, one revision specified indicates a comparison between the
-    working directory file and the specified revision, and two revisions
-    compares the two versions specified.
-
-export [revision]::
-    Print the changeset header (author, changeset hash, parent, and commit
-    comment) and the diffs for a particular revision.
-
-forget [files]::
-    Undo an 'hg add' scheduled for the next commit.
-
-heads::
-    Show all changesets with no children. These are the "heads" of
-    development branches and are the usual targets for updates and merges.
-
-history::
-    Print the revision history of the repository. Use the -v switch
-    for more detail.
-
-identify::
-    Print a short identifier of the current state of the repo. This
-    includes one or two parent hash identifiers, followed by
-    a "+" if there are uncommitted changes in the working directory,
-    followed by a list of tags for this revision.
-
-    aliases: id
-
-import [-p <n> -b <base> -q] <patches>::
-    Import the listed patches and commit them individually.
-
-    options:
-    -p, --strip <n>   directory strip option for patch
-    -b <path>         base directory to read patches from
-
-    aliases: patch
-
 init::
     Initialize a new repository in the current directory.
 
 log <file>::
     Print the revision history of the specified file.
 
+    To display the revision history for the whole repository, use the history
+    command.
+
 manifest [revision]::
-    Print the indicated revision of the manifest (list of version controlled
-    files).
+    Print a list of version controlled files for the given revision.
+
+    The manifest is the list of files being version controlled. If no revision
+    is given then the tip is used.
 
 parents::
     Print the working directory's parent revisions.
 
 pull <repository path>::
-    Pull any changes from the specified repository to the repository in the
-    current directory.
+    Pull any changes from a repository to the current directory's one.
+
+    Pulling is a fundamental operation in a distributed version control system,
+    as it eases handling changes from different branches, both local and
+    remote, into the current repository. 
 
     options:
     -u, --update   update the working directory to tip after pull
 
 push <destination>::
-    Push changes from the local repository to the specified
-    destination. If the destination is local, this is identical to a
-    a pull in that directory from the current directory.
+    Push changes from the local repository to the given destination.
+    
+    This is the symmetrical operation for pull. It helps to move changes from
+    the current repository to a different one. If the destination is local
+    this is identical to a pull in that directory from the current one.
 
     The other currently available push method is SSH. This requires an
     accessible shell account on the destination machine and a copy of
@@ -182,15 +234,22 @@ push <destination>::
       ssh://[user@]host[:port]/path
 
 rawcommit [-p -d -u -F -t -l]::
-    Primarily useful for importing from other SCMs.
+    Lowlevel commit, for use in helper scripts.
+    
+    This command is not intended to be used by normal users, as it is
+    primarily useful for importing from other SCMs.
 
 recover::
-    Recover from an interrupted commit or pull. This should only be
-    necessary when Mercurial suggests it.
+    Recover from an interrupted commit or pull.
+    
+    This command tries to fix the repository status after an interrupted
+    operation. It should only be necessary when Mercurial suggests it.
 
 remove [files ...]::
-    Schedule the indicated files for removal from the repository at the next
-    commit.
+    Schedule the indicated files for removal from the repository.
+    
+    This command shedules the files to be removed, but the actual removing
+    takes place at the next commit.
 
     aliases: rm
 
@@ -209,14 +268,27 @@ serve [-a addr -n name -p port -t templatedir]::
 status::
     Show changed files in the working directory.
 
+    The codes used to show the status of files are:
+    
     C = changed
     A = added
     R = removed
     ? = not tracked
 
 tag [-t <text> -d <datecode> -u <user>] <name> [revision]::
-    Add a tag <name> to the specified revision or the tip.
+    Name a particular revision using <name>.
+    
+    Tags are used to name particular revisions of the repository and are
+    very useful to compare different revision, to go back to significant
+    earlier versions or to set special branch points, as releases, etc.
+    
+    If no revision is given as argument the tip is used.
 
+    This tags are versioned, and kept along with the repository metadata. But
+    Mercurial has support for other type of tags that can be used locally for
+    convenience and that are created adding lines with a changeset hash value
+    and a name or names to name the revision in a .hgtags file
+    
     options:
     -t, --text <text>     message for tag commit log entry
     -d, --date <datecode> datecode for commit
@@ -225,6 +297,8 @@ tag [-t <text> -d <datecode> -u <user>] <name> [revision]::
 tags::
     List the repository tags.
 
+    Local tags in the .hgtags don't get listed when using this command.
+
 tip::
     Show the tip revision.
 
@@ -232,22 +306,21 @@ undo::
     Undo the last commit or pull transaction.
 
 update [-m -C] [revision]::
-    Update or merge the working directory to a specified revision.
+    Bring the working directory to the state of a given revision.
 
-    If there are no outstanding changes in the working directory and
-    there is a linear relationship between the current version and the
-    requested version, the result is the requested version.
-
-    Otherwise the result is a merge between the contents of the
-    current working directory and the requested version. Files that
-    changed between either parent are marked as changed for the next
-    commit and a commit must be performed before any further updates
-    are allowed. Merging will not be performed without the -m flag.
-
-    The -C switch will tell Mercurial to forcibly update to the
-    specified version, adding, removing, and overwriting locally
-    changed fils as necessary.
-
+    After running this command the current directory will have the contents
+    of the specified revision.
+    
+    If there were outstanding changes in the current directory and a merge
+    would be needed, the -m option can be used to merge those changes with
+    the target revision. Without the -m or --merge option, no merge
+    will happen.
+    
+    The -C or --clean option must be used in case a pristine version is
+    desired. In this case, existing changes will be discarded and lost. If
+    these changes should be kept, then a commit prior updating, or a merge
+    is due.
+    
     options:
     -m, --merge       allow merging of branches
     -C, --clean       overwrite locally modified files
