@@ -273,7 +273,7 @@ def clone(ui, source, dest = None, **opts):
 
     if source in paths: source = paths[source]
 
-    created = False
+    created = success = False
 
     if dest is None:
         dest = os.getcwd()
@@ -314,12 +314,15 @@ def clone(ui, source, dest = None, **opts):
 
         if not opts['no-update']:
             update(ui, repo)
-    except:
-        if created:
+
+        success = True
+        
+    finally:
+        if not success:
+            del repo
             import shutil
             shutil.rmtree(dest, True)
-        raise
-
+    
 def commit(ui, repo, *files, **opts):
     """commit the specified files or all outstanding changes"""
     text = opts['text']
@@ -904,5 +907,6 @@ def dispatch(args):
         u.debug(inst, "\n")
         u.warn("%s: invalid arguments\n" % i[0].__name__)
         help(u, cmd)
-        sys.exit(-1)
+
+    sys.exit(-1)
 

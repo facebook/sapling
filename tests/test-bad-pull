@@ -1,11 +1,8 @@
-#!/bin/bash
+#!/bin/bash -x
 
 hg clone http://localhost:20059/ copy
-cd copy
-hg verify
-hg co
-cat foo
-hg manifest
+echo $?
+ls copy
 
 cat > dumb.py <<EOF
 import BaseHTTPServer, SimpleHTTPServer, signal
@@ -23,10 +20,7 @@ EOF
 python dumb.py 2>/dev/null &
 
 hg clone http://localhost:20059/foo copy2
-cd copy2
-hg verify
-hg co
-cat foo
-hg manifest
+echo $?
 
+set +x
 kill $!
