@@ -918,7 +918,7 @@ class localrepository:
                 raise RepoError("already have changeset " + short(f[:4]))
 
         if fetch == [nullid]:
-            raise RepoError("unrelated repository")
+            self.ui.warn("warning: pulling from an unrelated repository!\n")
 
         self.ui.note("adding new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")
