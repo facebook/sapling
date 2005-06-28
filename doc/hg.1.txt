@@ -1,7 +1,6 @@
 HG(1)
 =====
 Matt Mackall <mpm@selenic.com>
-v0.6, 24 Jun 2005
 
 NAME
 ----
@@ -44,7 +43,7 @@ revision::
     number, a tag, or a unique substring of the changeset hash value
 
 repository path::
-    is either the pathname of a local repository of the URI of a remote
+    either the pathname of a local repository or the URI of a remote
     repository.  There are two available URI protocols, http:// which is
     fast and the old-http:// protocol which is much slower but does not
     require a special server on the web host.
@@ -55,13 +54,13 @@ COMMANDS
 add [files ...]::
     Schedule files to be version controlled and added to the repository.
     
-    The files get effectively added to the repository at the next commit.
+    The files will be added to the repository at the next commit.
 
 addremove::
     Add all new files and remove all missing files from the repository.
     
     New files are ignored if they match any of the patterns in .hgignore. As
-    with add, the effects of this command take place at the next commit.
+    with add, these changes take effect at the next commit.
 
 annotate [-r <rev> -u -n -c] [files ...]::
     List changes in files, showing the revision id responsible for each line
@@ -78,32 +77,32 @@ annotate [-r <rev> -u -n -c] [files ...]::
 cat <file> [revision]::
     Output to stdout the given revision for the specified file.
 
-    In case no revision is given, then the tip is used.
+    If no revision is given then the tip is used.
 
 clone [-U] <source> [dest]::
     Create a copy of an existing repository in a new directory.
 
-    If the destination directory is specified, but doesn't exist, it is
+    If the destination directory is specified but doesn't exist, it is
     created. If no destination directory is specified, it defaults to the
     current directory.
 
-    The source is added to the new copy's .hg/hgrc file to be used in
+    The source is added to the new repository's .hg/hgrc file to be used in
     future pulls.
 
-    For speed and storage size, hardlinks are used to do the copy whenever
-    the specified source and destination are on the same filesystem.
+    For efficiency, hardlinks are used for cloning whenever the
+    source and destination are on the same filesystem.
 
     options:
     -U, --no-update   do not update the new working directory
 
 commit [-A -t -l <file> -t <text> -u <user> -d <datecode>] [files...]::
-    Incorporate changes from given files into the repository.
+    Commit changes to the given files into the repository.
     
-    If a list of files is ommited, all of the working dir files will
-    be commited.
+    If a list of files is omitted, all changes reported by "hg status"
+    will be commited.
     
-    The EDITOR environment variable is used to bring up an editor to add
-    a commit comment.
+    The HGEDITOR or EDITOR environment variables are used to start an
+    editor to add a commit comment.
 
     Options:
 
@@ -125,10 +124,11 @@ diff [-r revision] [-r revision] [files ...]::
     
     Differences between files are shown using the unified diff format.
     
-    When two revision arguments are given, then changes are shown between
-    such revisions. If only one revision is specified then that revision is
-    compared to the tip, and, when no revisions are specified, the working
-    directory files are compared to the tip.
+    When two revision arguments are given, then changes are shown
+    between those revisions. If only one revision is specified then
+    that revision is compared to the working directory, and, when no
+    revisions are specified, the working directory files are compared
+    to its parent.
 
 export [revision]::
     Print the changeset header and diffs for a particular revision.
@@ -142,16 +142,16 @@ forget [files]::
 heads::
     Show all repository head changesets.
     
-    Repository "heads" are changesets that don't have children changesets.
-    They are where development generally takes place and are the usual targets
-    for update and merge operations.
+    Repository "heads" are changesets that don't have children
+    changesets. They are where development generally takes place and
+    are the usual targets for update and merge operations.
 
 history::
     Print a log of the revision history of the repository.
     
-    By default this command outputs: changeset id and hash, tags, parents,
-    user, date and time, and a summary for each commit.
-    The -v switch adds some more detail, such as changed files, manifest
+    By default this command outputs: changeset id and hash, tags,
+    parents, user, date and time, and a summary for each commit. The
+    -v switch adds some more detail, such as changed files, manifest
     hashes or message signatures.
 
     To display the history of a given file, see the log command.
@@ -175,22 +175,6 @@ import [-p <n> -b <base> -q] <patches>::
 
     aliases: patch
 
-
-    If the specified source is on the same filesystem, the repository
-    will be copied via hardlinks. This is the fastest and most
-    space-efficient mode of operation.
-
-    If the destination directory is not specified, it defaults to the
-    current directory.
-
-    If the destination is specified, but does not exist, it is created.
-
-    The source is added to .hg/hgrc in the new copy as the default for
-    future pulls.
-
-    options:
-    -U, --no-update   do not update the new working directory
-
 init::
     Initialize a new repository in the current directory.
 
@@ -210,11 +194,11 @@ parents::
     Print the working directory's parent revisions.
 
 pull <repository path>::
-    Pull any changes from a repository to the current directory's one.
+    Pull changes from a remote repository to a local one.
 
-    Pulling is a fundamental operation in a distributed version control system,
-    as it eases handling changes from different branches, both local and
-    remote, into the current repository. 
+    This finds all changes from the repository at the specified path
+    or URL and adds them to the local repository. By default, this
+    does not update the copy of the project in the working directory.
 
     options:
     -u, --update   update the working directory to tip after pull
@@ -222,9 +206,10 @@ pull <repository path>::
 push <destination>::
     Push changes from the local repository to the given destination.
     
-    This is the symmetrical operation for pull. It helps to move changes from
-    the current repository to a different one. If the destination is local
-    this is identical to a pull in that directory from the current one.
+    This is the symmetrical operation for pull. It helps to move
+    changes from the current repository to a different one. If the
+    destination is local this is identical to a pull in that directory
+    from the current one.
 
     The other currently available push method is SSH. This requires an
     accessible shell account on the destination machine and a copy of
@@ -248,8 +233,9 @@ recover::
 remove [files ...]::
     Schedule the indicated files for removal from the repository.
     
-    This command shedules the files to be removed, but the actual removing
-    takes place at the next commit.
+    This command shedules the files to be removed at the next commit.
+    This only removes files from the current branch, not from the
+    entire project history.
 
     aliases: rm
 
@@ -280,24 +266,28 @@ tag [-t <text> -d <datecode> -u <user>] <name> [revision]::
     
     Tags are used to name particular revisions of the repository and are
     very useful to compare different revision, to go back to significant
-    earlier versions or to set special branch points, as releases, etc.
+    earlier versions or to mark branch points as releases, etc.
     
-    If no revision is given as argument the tip is used.
+    If no revision is given, the tip is used.
 
-    This tags are versioned, and kept along with the repository metadata. But
-    Mercurial has support for other type of tags that can be used locally for
-    convenience and that are created adding lines with a changeset hash value
-    and a name or names to name the revision in a .hgtags file
-    
+    To facilitate version control, distribution, and merging of tags,
+    they are stored as a file named ".hgtags" which is managed
+    similarly to other project files and can be hand-edited if
+    necessary.
+
     options:
     -t, --text <text>     message for tag commit log entry
     -d, --date <datecode> datecode for commit
     -u, --user <user>     user for commit
 
+    Note: Mercurial also has support for "local tags" that are not
+    version-controlled or distributed which are stored in the .hg/hgrc
+    file.
+
 tags::
     List the repository tags.
 
-    Local tags in the .hgtags don't get listed when using this command.
+    This lists both regular and local tags.
 
 tip::
     Show the tip revision.
@@ -306,20 +296,14 @@ undo::
     Undo the last commit or pull transaction.
 
 update [-m -C] [revision]::
-    Bring the working directory to the state of a given revision.
+    Update the working directory to the specified revision.
 
-    After running this command the current directory will have the contents
-    of the specified revision.
-    
-    If there were outstanding changes in the current directory and a merge
-    would be needed, the -m option can be used to merge those changes with
-    the target revision. Without the -m or --merge option, no merge
-    will happen.
-    
-    The -C or --clean option must be used in case a pristine version is
-    desired. In this case, existing changes will be discarded and lost. If
-    these changes should be kept, then a commit prior updating, or a merge
-    is due.
+    By default, update will refuse to run if doing so would require
+    merging or discarding local changes.
+
+    With the -m option, a merge will be performed.
+
+    With the -C option, local changes will be lost.
     
     options:
     -m, --merge       allow merging of branches
@@ -344,7 +328,7 @@ HGEDITOR::
     value of EDITOR.
 
 HGMERGE::
-    An executable to use for resolving merge conflicts. The program ,
+    An executable to use for resolving merge conflicts. The program
     will be executed with three arguments: local file, remote file,
     ancestor file.
 
@@ -363,7 +347,7 @@ LOGNAME::
 
 EDITOR::
     This is the name of the editor used in the hgmerge script. It will be
-    used for commit messages, too, if HGEDITOR isn't set. Defaults to 'vi'.
+    used for commit messages if HGEDITOR isn't set. Defaults to 'vi'.
 
 PYTHONPATH::
     This is used by Python to find imported modules and may need to be set
@@ -397,6 +381,19 @@ tah = http://hg.intevation.org/mercurial-tah/
 -----------------
 
 
+LOCAL TAGS
+----------
+
+To create tags that are local to the repository and not distributed or
+version-controlled, create an hgrc section like the following:
+
+----------------
+[tags]
+working = 2dcced388cab3677a8f543c3c47a0ad34ac9d435
+tested = 12e0fdbc57a0be78f0e817fd1d170a3615cd35da
+----------------
+
+
 HOOKS
 -----
 
@@ -425,10 +422,8 @@ passwd=<password>
 no=<localhost1>,<localhost2>,<localhost3>,...
 --------------
 
-"user","passwd" fields are used for authenticating proxies, "no" is a
-comma-separated list of local host names for which proxy must be
-bypassed.
-
+"user" and "passwd" fields are used for authenticating proxies, "no" is a
+comma-separated list of local host names to not proxy.
 
 BUGS
 ----
