@@ -16,6 +16,7 @@ Core:
 - better push support (hack exists)
 - hg over ssh:// and https://
 - commit mailinglist/trigger/hooks
+- make showing removed files (in history etc.) faster.
 
 Commands:
 - hg status <filename>: file rev, changeset rev, changed, added,
