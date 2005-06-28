@@ -41,6 +41,13 @@ class ui:
             return self.cdata.items(section)
         return []
 
+    def expandpath(self, loc):
+        paths = {}
+        for name, path in self.configitems("paths"):
+            paths[name] = path
+
+        return paths.get(loc, loc)
+
     def write(self, *args):
         for a in args:
             sys.stdout.write(str(a))

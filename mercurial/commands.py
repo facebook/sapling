@@ -267,11 +267,7 @@ def cat(ui, repo, file, rev = []):
 
 def clone(ui, source, dest = None, **opts):
     """make a copy of an existing repository"""
-    paths = {}
-    for name, path in ui.configitems("paths"):
-        paths[name] = path
-
-    if source in paths: source = paths[source]
+    source = ui.expandpath(source)
 
     created = success = False
 
@@ -549,12 +545,7 @@ def parents(ui, repo, node = None):
 
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source"""
-    paths = {}
-    for name, path in ui.configitems("paths"):
-        paths[name] = path
-
-    if source in paths:
-        source = paths[source]
+    source = ui.expandpath(source)
 
     ui.status('pulling from %s\n' % (source))
 
@@ -571,11 +562,7 @@ def pull(ui, repo, source="default", **opts):
 
 def push(ui, repo, dest="default-push"):
     """push changes to the specified destination"""
-    paths = {}
-    for name, path in ui.configitems("paths"):
-        paths[name] = path
-
-    if dest in paths: dest = paths[dest]
+    dest = ui.expandpath(dest)
 
     if not dest.startswith("ssh://"):
         ui.warn("abort: can only push to ssh:// destinations currently\n")
