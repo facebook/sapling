@@ -328,30 +328,48 @@ FILES
 NAMED REPOSITORIES
 ------------------
 
-    To give symbolic names to a repository, create a section in .hgrc
-    or .hg/hgrc containing assignments of names to paths.
+To give symbolic names to a repository, create a section in .hgrc
+or .hg/hgrc containing assignments of names to paths. Example:
 
-    Example:
-
+-----------------
 [paths]
 hg = http://selenic.com/hg
 tah = http://hg.intevation.org/mercurial-tah/
+-----------------
+
+
+HOOKS
+-----
+
+Mercurial supports a set of 'hook', commands that get automatically
+executed by various actions such as starting or finishing a commit. To
+specify a hook, simply create an hgrc section like the following:
+
+-----------------
+[hooks]
+precommit = echo "this hook gets executed immediately before a commit"
+commit = hg export $NODE | mail -s "new commit $NODE" commit-list
+-----------------
+
 
 NON_TRANSPARENT PROXY SUPPORT
 -----------------------------
 
-    To access a Mercurial repository through a proxy,
-    create a file $HOME/.hgrc in the following format:
+To access a Mercurial repository through a proxy, create a file
+$HOME/.hgrc in the following format:
 
+--------------
 [http_proxy]
 host=myproxy:8080
 user=<username>
 passwd=<password>
 no=<localhost1>,<localhost2>,<localhost3>,...
+--------------
 
-    "user","passwd" fields are used for authenticating proxies,
-    "no" is a comma-separated list of local host names
-    for which proxy must be bypassed.
+"user","passwd" fields are used for authenticating proxies, "no" is a
+comma-separated list of local host names for which proxy must be
+bypassed.
+
 
 BUGS
 ----

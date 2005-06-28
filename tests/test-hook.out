@@ -1,0 +1,9 @@
++ hg init
++ echo '[hooks]'
++ echo 'precommit = echo precommit hook'
++ echo 'commit = echo commit hook: $NODE'
++ echo a
++ hg add a
++ hg commit -t test -u test -d '0 0'
+precommit hook
+commit hook: acb14030fe0a21b60322c440ad2d20cf7685a376

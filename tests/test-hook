@@ -1,0 +1,9 @@
+#!/bin/sh -x
+
+hg init
+echo "[hooks]" > .hg/hgrc
+echo 'precommit = echo precommit hook' >> .hg/hgrc
+echo 'commit = echo commit hook: $NODE' >> .hg/hgrc
+echo a > a
+hg add a
+hg commit -t "test" -u test -d "0 0"

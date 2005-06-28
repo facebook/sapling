@@ -371,6 +371,30 @@ class localrepository:
             if pat.search(f): return True
         return False
 
+    def hook(self, name, **args):
+        s = self.ui.config("hooks", name)
+        if s:
+            self.ui.note("running hook %s: %s\n" % (name, s))
+            old = {}
+            for k, v in args.items():
+                k = k.upper()
+                old[k] = os.environ.get(k, None)
+                os.environ[k] = v
+
+            r = os.system(s)
+
+            for k, v in old.items():
+                if v != None:
+                    os.environ[k] = v
+                else:
+                    del os.environ[k]
+
+            if r:
+                self.ui.warn("abort: %s hook failed with status %d!\n" %
+                             (name, r))
+                return False
+        return True
+
     def tags(self):
         '''return a mapping of tag to node'''
         if not self.tagscache:
@@ -548,6 +572,9 @@ class localrepository:
             self.ui.status("nothing changed\n")
             return
 
+        if not self.hook("precommit"):
+            return 1
+
         p1, p2 = self.dirstate.parents()
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
@@ -603,6 +630,10 @@ class localrepository:
             text = edittext
 
         n = self.changelog.add(mn, new, text, tr, p1, p2, user, date)
+
+        if not self.hook("commit", node=hex(n)):
+            return 1
+
         tr.close()
 
         self.dirstate.setparents(n)
