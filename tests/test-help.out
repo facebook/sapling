@@ -13,11 +13,10 @@ hg commands:
  forget      don't add the specified files on the next commit
  heads       show current repository heads
  help        show help for a given command or all commands
- history     show the changelog history
  identify    print information about the working copy
  import      import an ordered set of patches
  init        create a new repository in the current directory
- log         show the revision history of a single file
+ log         show the revision history of the repository or a single file
  manifest    output the latest or given revision of the project manifest
  parents     show the parents of the current working dir
  pull        pull changes from the specified source
@@ -65,11 +64,10 @@ hg commands:
  forget      don't add the specified files on the next commit
  heads       show current repository heads
  help        show help for a given command or all commands
- history     show the changelog history
  identify    print information about the working copy
  import      import an ordered set of patches
  init        create a new repository in the current directory
- log         show the revision history of a single file
+ log         show the revision history of the repository or a single file
  manifest    output the latest or given revision of the project manifest
  parents     show the parents of the current working dir
  pull        pull changes from the specified source

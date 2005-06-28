@@ -434,11 +434,6 @@ def heads(ui, repo):
     for n in repo.changelog.heads():
         show_changeset(ui, repo, changenode=n)
 
-def history(ui, repo):
-    """show the changelog history"""
-    for i in range(repo.changelog.count() - 1, -1, -1):
-        show_changeset(ui, repo, rev=i)
-
 def identify(ui, repo):
     """print information about the working copy"""
     parents = [p for p in repo.dirstate.parents() if p != hg.nullid]
@@ -511,13 +506,16 @@ def init(ui, source=None):
         sys.exit(1)
     repo = hg.repository(ui, ".", create=1)
 
-def log(ui, repo, f):
-    """show the revision history of a single file"""
-    f = relpath(repo, [f])[0]
-
-    r = repo.file(f)
-    for i in range(r.count() - 1, -1, -1):
-        show_changeset(ui, repo, filelog=r, rev=i)
+def log(ui, repo, f = None):
+    """show the revision history of the repository or a single file"""
+    if f:
+        f = relpath(repo, [f])[0]
+        r = repo.file(f)
+        for i in range(r.count() - 1, -1, -1):
+            show_changeset(ui, repo, filelog=r, rev=i)
+    else:
+        for i in range(repo.changelog.count() - 1, -1, -1):
+            show_changeset(ui, repo, rev=i)
 
 def manifest(ui, repo, rev = []):
     """output the latest or given revision of the project manifest"""
@@ -745,7 +743,6 @@ table = {
     "export": (export, [], "hg export <changeset>"),
     "forget": (forget, [], "hg forget [files]"),
     "heads": (heads, [], 'hg heads'),
-    "history": (history, [], 'hg history'),
     "help": (help, [], 'hg help [command]'),
     "identify|id": (identify, [], 'hg identify'),
     "import|patch": (import_,
@@ -753,7 +750,7 @@ table = {
                       ('b', 'base', "", 'base path')],
                      "hg import [options] <patches>"),
     "init": (init, [], 'hg init'),
-    "log": (log, [], 'hg log <file>'),
+    "log|history": (log, [], 'hg log [file]'),
     "manifest": (manifest, [], 'hg manifest [rev]'),
     "parents": (parents, [], 'hg parents [node]'),
     "pull": (pull,

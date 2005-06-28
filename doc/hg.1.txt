@@ -146,16 +146,6 @@ heads::
     changesets. They are where development generally takes place and
     are the usual targets for update and merge operations.
 
-history::
-    Print a log of the revision history of the repository.
-    
-    By default this command outputs: changeset id and hash, tags,
-    parents, user, date and time, and a summary for each commit. The
-    -v switch adds some more detail, such as changed files, manifest
-    hashes or message signatures.
-
-    To display the history of a given file, see the log command.
-
 identify::
     Print a short summary of the current state of the repo.
     
@@ -178,11 +168,15 @@ import [-p <n> -b <base> -q] <patches>::
 init::
     Initialize a new repository in the current directory.
 
-log <file>::
-    Print the revision history of the specified file.
+log [file]::
+    Print the revision history of the specified file or the entire project.
 
-    To display the revision history for the whole repository, use the history
-    command.
+    By default this command outputs: changeset id and hash, tags,
+    parents, user, date and time, and a summary for each commit. The
+    -v switch adds some more detail, such as changed files, manifest
+    hashes or message signatures.
+
+    aliases: history
 
 manifest [revision]::
     Print a list of version controlled files for the given revision.
