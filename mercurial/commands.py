@@ -291,7 +291,7 @@ def clone(ui, source, dest = None, **opts):
 
         if link:
             ui.debug("copying by hardlink\n")
-            os.system("cp -al %s/.hg .hg" % source)
+            util.system("cp -al %s/.hg .hg" % source)
             try:
                 os.remove(".hg/dirstate")
             except: pass
@@ -871,6 +871,8 @@ def dispatch(args):
             return r
         else:
             return d()
+    except util.CommandError, inst:
+        u.warn("abort: %s\n" % inst.args)
     except hg.RepoError, inst:
         u.warn("abort: ", inst, "!\n")
     except SignalInterrupt:

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, sys, re, ConfigParser
+import os, sys, re, ConfigParser, util
 
 class ui:
     def __init__(self, verbose=False, debug=False, quiet=False,
@@ -78,10 +78,7 @@ class ui:
         f.close()
 
         editor = os.environ.get("HGEDITOR") or os.environ.get("EDITOR", "vi")
-        r = os.system("%s %s" % (editor, name))
-
-        if r:
-            raise "Edit failed!"
+        util.system("%s %s" % (editor, name), errprefix = "edit failed")
 
         t = open(name).read()
         t = re.sub("(?m)^HG:.*\n", "", t)

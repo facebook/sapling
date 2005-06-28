@@ -7,6 +7,29 @@
 
 import os
 
+class CommandError(Exception): pass
+
+def explain_exit(code):
+    """return a 2-tuple (desc, code) describing a process's status"""
+    if os.WIFEXITED(code):
+        val = os.WEXITSTATUS(code)
+        return "exited with status %d" % val, val
+    elif os.WIFSIGNALED(code):
+        val = os.WTERMSIG(code)
+        return "killed by signal %d" % val, val
+    elif os.WIFSTOPPED(code):
+        val = os.STOPSIG(code)
+        return "stopped by signal %d" % val, val
+    raise ValueError("invalid exit code")
+    
+def system(cmd, errprefix = "abort"):
+    """execute a shell command that must succeed"""
+    rc = os.system(cmd)
+    if rc:
+        errmsg = "%s: %s %s" % (errprefix, os.path.basename(cmd.split(None, 1)[0]),
+                                explain_exit(rc)[0])
+        raise CommandError(errmsg)
+
 def rename(src, dst):
     try:
         os.rename(src, dst)
