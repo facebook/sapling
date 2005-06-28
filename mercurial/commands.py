@@ -234,7 +234,7 @@ def annotate(u, repo, file, *files, **ops):
                 name = name[:f]
             bcache[rev] = name
             return name
-    
+
     bcache = {}
     opmap = [['user', getname], ['number', str], ['changeset', getnode]]
     if not ops['user'] and not ops['changeset']:
@@ -273,42 +273,53 @@ def clone(ui, source, dest = None, **opts):
 
     if source in paths: source = paths[source]
 
+    created = False
+
     if dest is None:
         dest = os.getcwd()
     elif not os.path.exists(dest):
-        os.makedirs(dest)
+        os.mkdir(dest)
+        created = True
 
-    link = 0
-    if not source.startswith("http://"):
-        source = os.path.realpath(source)
-        d1 = os.stat(dest).st_dev
-        d2 = os.stat(source).st_dev
-        if d1 == d2: link = 1
+    try:
+        dest = os.path.realpath(dest)
 
-    os.chdir(dest)
+        link = 0
+        if not source.startswith("http://"):
+            source = os.path.realpath(source)
+            d1 = os.stat(dest).st_dev
+            d2 = os.stat(source).st_dev
+            if d1 == d2: link = 1
 
-    if link:
-        ui.debug("copying by hardlink\n")
-        os.system("cp -al %s/.hg .hg" % source)
-        try:
-            os.remove(".hg/dirstate")
-        except: pass
+        os.chdir(dest)
 
-        repo = hg.repository(ui, ".")
+        if link:
+            ui.debug("copying by hardlink\n")
+            os.system("cp -al %s/.hg .hg" % source)
+            try:
+                os.remove(".hg/dirstate")
+            except: pass
 
-    else:
-        repo = hg.repository(ui, ".", create=1)
-        other = hg.repository(ui, source)
-        cg = repo.getchangegroup(other)
-        repo.addchangegroup(cg)
+            repo = hg.repository(ui, ".")
 
-    f = repo.opener("hgrc", "w")
-    f.write("[paths]\n")
-    f.write("default = %s\n" % source)
+        else:
+            repo = hg.repository(ui, ".", create=1)
+            other = hg.repository(ui, source)
+            cg = repo.getchangegroup(other)
+            repo.addchangegroup(cg)
 
-    if not opts['no-update']:
-        update(ui, repo)
-    
+        f = repo.opener("hgrc", "w")
+        f.write("[paths]\n")
+        f.write("default = %s\n" % source)
+
+        if not opts['no-update']:
+            update(ui, repo)
+    except:
+        if created:
+            import shutil
+            shutil.rmtree(dest, True)
+        raise
+
 def commit(ui, repo, *files, **opts):
     """commit the specified files or all outstanding changes"""
     text = opts['text']
@@ -459,7 +470,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         pass
 
     patches = (patch1,) + patches
-    
+
     d = opts["base"]
     strip = opts["strip"]
 
@@ -543,7 +554,7 @@ def pull(ui, repo, source="default", **opts):
         source = paths[source]
 
     ui.status('pulling from %s\n' % (source))
-    
+
     other = hg.repository(ui, source)
     cg = repo.getchangegroup(other)
     r = repo.addchangegroup(cg)
@@ -562,7 +573,7 @@ def push(ui, repo, dest="default-push"):
         paths[name] = path
 
     if dest in paths: dest = paths[dest]
-    
+
     if not dest.startswith("ssh://"):
         ui.warn("abort: can only push to ssh:// destinations currently\n")
         return 1
@@ -607,9 +618,9 @@ def rawcommit(ui, repo, *flist, **rc):
         files += open(rc['files']).read().splitlines()
 
     rc['parent'] = map(repo.lookup, rc['parent'])
-    
+
     repo.rawcommit(files, text, rc['user'], rc['date'], *rc['parent'])
- 
+
 def recover(ui, repo):
     """roll back an interrupted transaction"""
     repo.recover()
@@ -626,7 +637,7 @@ def serve(ui, repo, **opts):
     """export the repository via HTTP"""
     hgweb.server(repo.root, opts["name"], opts["templates"],
                  opts["address"], opts["port"])
-    
+
 def status(ui, repo):
     '''show changed files in the working directory
 
@@ -645,7 +656,7 @@ def status(ui, repo):
 
 def tag(ui, repo, name, rev = None, **opts):
     """add a tag for the current tip or a given revision"""
-    
+
     if name == "tip":
 	ui.warn("abort: 'tip' is a reserved name!\n")
 	return -1
@@ -755,7 +766,7 @@ table = {
     "log": (log, [], 'hg log <file>'),
     "manifest": (manifest, [], 'hg manifest [rev]'),
     "parents": (parents, [], 'hg parents [node]'),
-    "pull": (pull, 
+    "pull": (pull,
                   [('u', 'update', None, 'update working directory')],
 		  'hg pull [options] [source]'),
     "push": (push, [], 'hg push <destination>'),
