@@ -312,7 +312,7 @@ def clone(ui, source, dest = None, **opts):
         f.write("[paths]\n")
         f.write("default = %s\n" % source)
 
-        if not opts['no-update']:
+        if not opts['noupdate']:
             update(ui, repo)
 
         success = True
@@ -739,7 +739,7 @@ table = {
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
     "cat": (cat, [], 'hg cat <file> [rev]'),
-    "clone": (clone, [('U', 'no-update', None, 'skip update after cloning')],
+    "clone": (clone, [('U', 'noupdate', None, 'skip update after cloning')],
               'hg clone [options] <source> [dest]'),
     "commit|ci": (commit,
                   [('t', 'text', "", 'commit text'),
