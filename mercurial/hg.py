@@ -483,7 +483,7 @@ class localrepository:
     def recover(self):
         lock = self.lock()
         if os.path.exists(self.join("recover")):
-            self.ui.status("attempting to rollback interrupted transaction\n")
+            self.ui.status("rolling back interrupted transaction\n")
             return transaction.rollback(self.opener, self.join("recover"))
         else:
             self.ui.warn("no interrupted transaction available\n")
@@ -491,7 +491,7 @@ class localrepository:
     def undo(self):
         lock = self.lock()
         if os.path.exists(self.join("undo")):
-            self.ui.status("attempting to rollback last transaction\n")
+            self.ui.status("rolling back last transaction\n")
             transaction.rollback(self.opener, self.join("undo"))
             self.dirstate = None
             util.rename(self.join("undo.dirstate"), self.join("dirstate"))
