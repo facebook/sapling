@@ -164,7 +164,9 @@ class changelog(revlog):
         user = (user or
                 os.environ.get("HGUSER") or
                 os.environ.get("EMAIL") or
-                os.environ.get("LOGNAME", "unknown") + '@' + socket.getfqdn())
+                (os.environ.get("LOGNAME",
+                               os.environ.get("USERNAME", "unknown"))
+                 + '@' + socket.getfqdn()))
         date = date or "%d %d" % (time.time(), time.timezone)
         list.sort()
         l = [hex(manifest), user, date] + list + ["", desc]
