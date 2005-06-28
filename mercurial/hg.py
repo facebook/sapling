@@ -917,6 +917,9 @@ class localrepository:
             if f in m:
                 raise RepoError("already have changeset " + short(f[:4]))
 
+        if fetch == [nullid]:
+            raise RepoError("unrelated repository")
+
         self.ui.note("adding new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")
 
