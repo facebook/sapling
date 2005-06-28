@@ -19,7 +19,7 @@ summary:     test
 
 + hg status
 + hg undo
-attempting to rollback last transaction
+rolling back last transaction
 + hg verify
 checking changesets
 checking manifests
