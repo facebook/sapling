@@ -17,6 +17,8 @@ export LC_MEASUREMENT="C"
 export LC_IDENTIFICATION="C"
 export LC_ALL=""
 
+umask 022
+
 tests=0
 failed=0
 H=$PWD
