@@ -315,7 +315,6 @@ def clone(ui, source, dest = None, **opts):
         
     finally:
         if not success:
-            del repo
             import shutil
             shutil.rmtree(dest, True)
     
