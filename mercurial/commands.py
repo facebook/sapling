@@ -575,13 +575,13 @@ def push(ui, repo, dest="default-push"):
         return 1
 
     user, host, port, path = map(m.group, (2, 3, 5, 7))
-    host = user and ("%s@%s" % (user, host)) or host
+    uhost = user and ("%s@%s" % (user, host)) or host
     port = port and (" -p %s") % port or ""
     path = path or ""
 
     sport = random.randrange(30000, 60000)
     cmd = "ssh %s%s -R %d:localhost:%d 'cd %s; hg pull http://localhost:%d/'"
-    cmd = cmd % (host, port, sport+1, sport, path, sport+1)
+    cmd = cmd % (uhost, port, sport+1, sport, path, sport+1)
 
     child = os.fork()
     if not child:
@@ -589,6 +589,7 @@ def push(ui, repo, dest="default-push"):
         sys.stderr = sys.stdout
         hgweb.server(repo.root, "pull", "", "localhost", sport)
     else:
+        ui.status("connecting to %s\n" % host)
         r = os.system(cmd)
         os.kill(child, signal.SIGTERM)
         return r
