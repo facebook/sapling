@@ -3,13 +3,10 @@ requesting all changes
 adding changesets
 abort: error 111: Connection refused
 transaction abort!
-failed to truncate 00changelog.d
-failed to truncate 00changelog.i
 rollback completed
 + echo 255
 255
 + ls copy
-ls: copy: No such file or directory
 + cat
 + python dumb.py
 + hg clone http://localhost:20059/foo copy2
@@ -17,8 +14,6 @@ requesting all changes
 adding changesets
 abort: HTTP Error 404: File not found
 transaction abort!
-failed to truncate 00changelog.d
-failed to truncate 00changelog.i
 rollback completed
 + echo 255
 255
