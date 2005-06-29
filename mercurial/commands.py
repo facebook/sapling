@@ -269,7 +269,7 @@ def clone(ui, source, dest = None, **opts):
     """make a copy of an existing repository"""
     source = ui.expandpath(source)
 
-    success = False
+    success = created = False
 
     if dest is None:
         dest = os.getcwd()
