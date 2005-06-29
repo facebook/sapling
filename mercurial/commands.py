@@ -269,7 +269,7 @@ def clone(ui, source, dest = None, **opts):
     """make a copy of an existing repository"""
     source = ui.expandpath(source)
 
-    success = created = False
+    success = False
 
     if dest is None:
         dest = os.path.basename(source)
@@ -280,28 +280,23 @@ def clone(ui, source, dest = None, **opts):
     os.mkdir(dest)
 
     try:
-        dest = os.path.realpath(dest)
-
         link = 0
         if not source.startswith("http://"):
-            source = os.path.realpath(source)
             d1 = os.stat(dest).st_dev
             d2 = os.stat(source).st_dev
             if d1 == d2: link = 1
 
-        os.chdir(dest)
-
         if link:
             ui.debug("copying by hardlink\n")
-            util.system("cp -al %s/.hg .hg" % source)
+            util.system("cp -al '%s'/.hg '%s'/.hg" % (source, dest))
             try:
-                os.remove(".hg/dirstate")
+                os.remove(os.path.join(dest, ".hg", "dirstate"))
             except: pass
 
-            repo = hg.repository(ui, ".")
+            repo = hg.repository(ui, dest)
 
         else:
-            repo = hg.repository(ui, ".", create=1)
+            repo = hg.repository(ui, dest, create=1)
             other = hg.repository(ui, source)
             fetch = repo.findincoming(other)
             if fetch:
@@ -318,7 +313,7 @@ def clone(ui, source, dest = None, **opts):
         success = True
 
     finally:
-        if created and not success:
+        if not success:
             import shutil
             shutil.rmtree(dest, True)
 
