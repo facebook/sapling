@@ -814,6 +814,7 @@ def dispatch(args):
             ('d', 'debug', None, 'debug'),
             ('q', 'quiet', None, 'quiet'),
             ('p', 'profile', None, 'profile'),
+            ('R', 'repository', "", 'repository root directory'),
             ('y', 'noninteractive', None, 'run non-interactively'),
             ('', 'version', None, 'output version information and exit'),
             ]
@@ -852,7 +853,8 @@ def dispatch(args):
 
     try:
         if cmd not in norepo.split():
-            repo = hg.repository(ui = u)
+            path = options["repository"] or ""
+            repo = hg.repository(ui=u, path=path)
             d = lambda: i[0](u, repo, *args, **cmdoptions)
         else:
             d = lambda: i[0](u, *args, **cmdoptions)
