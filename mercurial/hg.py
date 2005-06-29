@@ -820,7 +820,7 @@ class localrepository:
 
         return nl
 
-    def getchangegroup(self, remote):
+    def findincoming(self, remote):
         m = self.changelog.nodemap
         search = []
         fetch = []
@@ -830,7 +830,7 @@ class localrepository:
         # if we have an empty repo, fetch everything
         if self.changelog.tip() == nullid:
             self.ui.status("requesting all changes\n")
-            return remote.changegroup([nullid])
+            return [nullid]
 
         # otherwise, assume we're closer to the tip than the root
         self.ui.status("searching for changes\n")
@@ -925,8 +925,8 @@ class localrepository:
 
         self.ui.debug("%d total queries\n" % reqcnt)
 
-        return remote.changegroup(fetch)
-    
+        return fetch
+
     def changegroup(self, basenodes):
         nodes = self.newer(basenodes)
 

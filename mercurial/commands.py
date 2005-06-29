@@ -301,7 +301,8 @@ def clone(ui, source, dest = None, **opts):
         else:
             repo = hg.repository(ui, ".", create=1)
             other = hg.repository(ui, source)
-            cg = repo.getchangegroup(other)
+            fetch = repo.findincoming(other)
+            cg = other.changegroup(fetch)
             repo.addchangegroup(cg)
 
         f = repo.opener("hgrc", "w")
@@ -547,7 +548,8 @@ def pull(ui, repo, source="default", **opts):
     ui.status('pulling from %s\n' % (source))
 
     other = hg.repository(ui, source)
-    cg = repo.getchangegroup(other)
+    fetch = repo.findincoming(other)
+    cg = other.changegroup(fetch)
     r = repo.addchangegroup(cg)
     if cg and not r:
         if opts['update']:
