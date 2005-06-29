@@ -82,9 +82,8 @@ cat <file> [revision]::
 clone [-U] <source> [dest]::
     Create a copy of an existing repository in a new directory.
 
-    If the destination directory is specified but doesn't exist, it is
-    created. If no destination directory is specified, it defaults to the
-    current directory.
+    If no destination directory name is specified, it defaults to the
+    basename of the source.
 
     The source is added to the new repository's .hg/hgrc file to be used in
     future pulls.

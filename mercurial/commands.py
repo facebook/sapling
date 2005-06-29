@@ -272,10 +272,12 @@ def clone(ui, source, dest = None, **opts):
     success = created = False
 
     if dest is None:
-        dest = os.getcwd()
-    elif not os.path.exists(dest):
-        os.mkdir(dest)
-        created = True
+        dest = os.path.basename(source)
+        if dest == source:
+            ui.warn('abort: source and destination are the same\n')
+            sys.exit(1)
+
+    os.mkdir(dest)
 
     try:
         dest = os.path.realpath(dest)
