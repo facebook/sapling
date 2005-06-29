@@ -231,7 +231,7 @@ class dirstate:
             l = e[4]
             pos += 17
             f = st[pos:pos + l]
-            if '\0' in f: 
+            if '\0' in f:
                 f, c = f.split('\0')
                 self.copies[f] = c
             self.map[f] = e[:4]
@@ -244,7 +244,7 @@ class dirstate:
 
     def copied(self, file):
         return self.copies.get(file, None)
-        
+
     def update(self, files, state):
         ''' current states:
         n  normal
@@ -345,7 +345,7 @@ class localrepository:
         self.ui = ui
 
         if create:
-            os.mkdir(self.path)  
+            os.mkdir(self.path)
             os.mkdir(self.join("data"))
 
         self.opener = opener(self.path)
@@ -478,7 +478,7 @@ class localrepository:
         except IOError:
             ds = ""
         self.opener("undo.dirstate", "w").write(ds)
-        
+
         return transaction.transaction(self.opener, self.join("journal"),
                                        self.join("undo"))
 
@@ -668,7 +668,7 @@ class localrepository:
         for dir, subdirs, files in os.walk(path):
             d = dir[len(self.root)+1:]
             if ".hg" in subdirs: subdirs.remove(".hg")
-            
+
             for f in files:
                 fn = util.pconvert(os.path.join(d, f))
                 try: s = os.stat(os.path.join(self.root, fn))
@@ -714,10 +714,10 @@ class localrepository:
                 del mf1[fn]
             else:
                 added.append(fn)
-                
+
         deleted = mf1.keys()
         deleted.sort()
-    
+
         return (changed, added, deleted)
 
     def add(self, list):
@@ -846,7 +846,7 @@ class localrepository:
 
         rep = {}
         reqcnt = 0
-        
+
         unknown = remote.branches(unknown)
         while unknown:
             r = []
@@ -891,7 +891,7 @@ class localrepository:
                                       (short(b[0]), short(b[1])))
                         if b[0] not in m and b[0] not in seen:
                             unknown.append(b)
-  
+
         while search:
             n = search.pop(0)
             reqcnt += 1
@@ -969,7 +969,7 @@ class localrepository:
                         break
                 d, self.buf = self.buf[:l], self.buf[l:]
                 return d
-                
+
         def getchunk():
             d = source.read(4)
             if not d: return ""
@@ -1270,7 +1270,7 @@ class localrepository:
                 self.ui.warn("duplicate changeset at revision %d\n" % i)
                 errors += 1
             seen[n] = 1
-            
+
             for p in self.changelog.parents(n):
                 if p not in self.changelog.nodemap:
                     self.ui.warn("changeset %s has unknown parent %s\n" %
@@ -1293,7 +1293,7 @@ class localrepository:
                 self.ui.warn("duplicate manifest at revision %d\n" % i)
                 errors += 1
             seen[n] = 1
-            
+
             for p in self.manifest.parents(n):
                 if p not in self.manifest.nodemap:
                     self.ui.warn("manifest %s has unknown parent %s\n" %
@@ -1408,7 +1408,7 @@ class remoterepository:
             no = os.environ.get("no_proxy")
         if no:
             no_list = no_list + no.split(",")
-            
+
         no_proxy = 0
         for h in no_list:
             if (path.startswith("http://" + h + "/") or

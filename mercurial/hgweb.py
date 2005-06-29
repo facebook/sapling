@@ -76,7 +76,7 @@ def template(tmpl, filters = {}, **map):
             if fl:
                 for f in fl.split("|")[1:]:
                     v = filters[f](v)
-                
+
             yield v
             tmpl = tmpl[m.end(0):]
         else:
@@ -89,7 +89,7 @@ class templater:
         self.map = {}
         self.base = os.path.dirname(mapfile)
         self.filters = filters
-        
+
         for l in file(mapfile):
             m = re.match(r'(\S+)\s*=\s*"(.*)"$', l)
             if m:
@@ -107,7 +107,7 @@ class templater:
         except KeyError:
             tmpl = self.cache[t] = file(self.map[t]).read()
         return template(tmpl, self.filters, **map)
-        
+
 class hgweb:
     maxchanges = 10
     maxfiles = 10
@@ -158,7 +158,7 @@ class hgweb:
     def diff(self, node1, node2, files):
         def filterfiles(list, files):
             l = [ x for x in list if x in files ]
-            
+
             for f in files:
                 if f[-1] != os.sep: f += os.sep
                 l += [ x for x in list if x.startswith(f) ]
@@ -172,7 +172,7 @@ class hgweb:
                          file = f,
                          filenode = hex(fn or nullid))
             parity[0] = 1 - parity[0]
-            
+
         def prettyprintlines(diff):
             for l in diff.splitlines(1):
                 if l.startswith('+'):
@@ -234,7 +234,7 @@ class hgweb:
                 if pos - f >= 0: l.insert(0, ("-" + r, pos - f))
 
             yield self.t("naventry", rev = 0, label="(0)")
-                    
+
             for label, rev in l:
                 yield self.t("naventry", label = label, rev = rev)
 
@@ -293,7 +293,7 @@ class hgweb:
         p1, p2 = cl.parents(n)
         p1rev, p2rev = cl.rev(p1), cl.rev(p2)
         t = float(changes[2].split(' ')[0])
-        
+
         files = []
         mf = self.repo.manifest.read(changes[0])
         for f in changes[3]:
@@ -330,7 +330,7 @@ class hgweb:
         def entries():
             l = []
             parity = (count - 1) & 1
-            
+
             for i in range(count):
 
                 n = fl.node(i)
@@ -423,7 +423,7 @@ class hgweb:
                     cnode = ncache[r]
                 except KeyError:
                     cnode = ncache[r] = self.repo.changelog.node(r)
-                    
+
                 try:
                     name = bcache[r]
                 except KeyError:
@@ -474,7 +474,7 @@ class hgweb:
         mff=self.repo.manifest.readflags(bin(mnode))
 
         files = {}
- 
+
         p = path[1:]
         l = len(p)
 
@@ -501,7 +501,7 @@ class hgweb:
                                  manifest = mnode,
                                  filenode = hex(fnode),
                                  parity = parity,
-                                 basename = f, 
+                                 basename = f,
                                  permissions = mff[full])
                 else:
                     yield self.t("manifestdirentry",
@@ -550,7 +550,7 @@ class hgweb:
         p1 = cl.parents(n)[0]
         cs = cl.read(n)
         mf = self.repo.manifest.read(cs[0])
-        
+
         def diff():
             yield self.diff(p1, n, file)
 
@@ -565,7 +565,7 @@ class hgweb:
                      p1 = hex(p1),
                      p1rev = self.repo.changelog.rev(p1),
                      diff = diff)
-                     
+
     # add tags to things
     # tags -> list of changesets corresponding to tags
     # find tag, changeset, file
@@ -579,7 +579,7 @@ class hgweb:
             b = os.path.basename("map-" + args['style'][0])
             p = os.path.join(self.templates, b)
             if os.path.isfile(p): m = p
-            
+
         self.t = templater(m, self.filters)
 
         if not args.has_key('cmd') or args['cmd'][0] == 'changelog':
@@ -591,7 +591,7 @@ class hgweb:
                 except KeyError: pass
 
             write(self.changelog(hi))
-            
+
         elif args['cmd'][0] == 'changeset':
             write(self.changeset(args['node'][0]))
 
@@ -674,7 +674,7 @@ def server(path, name, templates, address, port):
             if p:
                 query = self.path[p + 1:]
                 query = query.replace('+', ' ')
-        
+
             env = {}
             env['GATEWAY_INTERFACE'] = 'CGI/1.1'
             env['REQUEST_METHOD'] = self.command

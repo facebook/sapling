@@ -84,4 +84,3 @@ class ui:
         t = re.sub("(?m)^HG:.*\n", "", t)
 
         return t
-    

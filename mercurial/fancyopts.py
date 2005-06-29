@@ -10,7 +10,7 @@ def fancyopts(args, options, state, syntax='', minlen = 0):
         map['-'+s] = map['--'+l]=l
         state[l] = d
         dt[l] = type(d)
-        if not d is None and not callable(d): s, l=s+':', l+'='      
+        if not d is None and not callable(d): s, l=s+':', l+'='
         if s: short = short + s
         if l: long.append(l)
 

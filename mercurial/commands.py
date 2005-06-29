@@ -312,12 +312,12 @@ def clone(ui, source, dest = None, **opts):
             update(ui, repo)
 
         success = True
-        
+
     finally:
         if created and not success:
             import shutil
             shutil.rmtree(dest, True)
-    
+
 def commit(ui, repo, *files, **opts):
     """commit the specified files or all outstanding changes"""
     text = opts['text']

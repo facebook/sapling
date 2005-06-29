@@ -64,14 +64,14 @@ class lazyparser:
             end = self.l
             self.revlog.index = self.index
             self.revlog.nodemap = self.map
-            
+
         while i < end:
             d = self.data[i * self.s: (i + 1) * self.s]
             e = struct.unpack(indexformat, d)
             self.index[i] = e
             self.map[e[6]] = i
             i += 1
-        
+
 class lazyindex:
     def __init__(self, parser):
         self.p = parser
@@ -84,7 +84,7 @@ class lazyindex:
         return self.p.index[pos] or self.load(pos)
     def append(self, e):
         self.p.index.append(e)
-        
+
 class lazymap:
     def __init__(self, parser):
         self.p = parser
@@ -150,7 +150,6 @@ class revlog:
 
             self.nodemap = dict(m)
             self.nodemap[nullid] = -1
-            
 
     def tip(self): return self.node(len(self.index) - 1)
     def count(self): return len(self.index)
@@ -189,7 +188,7 @@ class revlog:
                 elif pn == nullid:
                     continue
         return c
-    
+
     def lookup(self, id):
         try:
             rev = int(id)
@@ -205,7 +204,7 @@ class revlog:
             if len(c) > 1: raise KeyError("Ambiguous identifier")
             if len(c) < 1: raise KeyError("No match found")
             return c[0]
-                
+
         return None
 
     def diff(self, a, b):
@@ -263,7 +262,7 @@ class revlog:
                           % (self.datafile, rev))
 
         self.cache = (node, rev, text)
-        return text  
+        return text
 
     def addrevision(self, text, transaction, link, p1=None, p2=None):
         if text is None: text = ""
@@ -300,7 +299,7 @@ class revlog:
             offset = self.end(t)
 
         e = (offset, len(data), base, link, p1, p2, node)
-        
+
         self.index.append(e)
         self.nodemap[node] = n
         entry = struct.pack(indexformat, *e)
@@ -320,7 +319,7 @@ class revlog:
             n = self.node(i)
             p1, p2 = self.parents(n)
             dist[n] = max(dist[p1], dist[p2]) + 1
-        
+
         # traverse ancestors in order of decreasing distance from root
         def ancestors(node):
             # we store negative distances because heap returns smallest member
@@ -441,7 +440,7 @@ class revlog:
                     ta = construct(ta, base, a)
                 else:
                     ta = ""
-                    
+
                 base = self.base(b)
                 if a > base:
                     base = a
@@ -471,7 +470,7 @@ class revlog:
         r = self.count()
         t = r - 1
         node = nullid
-        
+
         base = prev = -1
         start = end = 0
         if r:

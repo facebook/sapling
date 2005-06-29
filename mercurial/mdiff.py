@@ -47,7 +47,7 @@ def sortdiff(a, b):
     la = lb = 0
     lena = len(a)
     lenb = len(b)
-    
+
     while 1:
         am, bm, = la, lb
 
@@ -65,14 +65,14 @@ def sortdiff(a, b):
 
         if lb >= lenb:
             break
-        
+
         # skip mismatched lines from a
         while la < lena and lb < lenb and b[lb] > a[la]:
             la += 1
 
         if la >= lena:
             break
-        
+
     yield (lena, lenb, 0)
 
 def diff(a, b, sorted=0):
@@ -100,7 +100,7 @@ def diff(a, b, sorted=0):
             bin.append(struct.pack(">lll", p[la], p[am], len(s)) + s)
         la = am + size
         lb = bm + size
-    
+
     return "".join(bin)
 
 def patchtext(bin):

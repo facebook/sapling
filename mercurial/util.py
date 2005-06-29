@@ -21,7 +21,7 @@ def explain_exit(code):
         val = os.STOPSIG(code)
         return "stopped by signal %d" % val, val
     raise ValueError("invalid exit code")
-    
+
 def system(cmd, errprefix = "abort"):
     """execute a shell command that must succeed"""
     rc = os.system(cmd)
@@ -46,7 +46,7 @@ if os.name == 'nt':
 
     def set_exec(f, mode):
         pass
-    
+
     def pconvert(path):
         return path.replace("\\", "/")
 

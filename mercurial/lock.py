@@ -31,7 +31,7 @@ class lock:
                     time.sleep(1)
                     continue
                 raise inst
-        
+
     def trylock(self):
         pid = os.getpid()
         try:

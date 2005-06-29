@@ -65,7 +65,7 @@ class transaction:
         self.entries = []
 
         print "rollback completed"
-        
+
 def rollback(opener, file):
     for l in open(file).readlines():
         f, o = l.split('\0')
