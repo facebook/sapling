@@ -6,7 +6,7 @@ General:
 - python 2.2 support
 - better import support
 - export to git
-- Add standard files: AUTHORS, CREDITS, ChangeLog? What else?
+- Add standard files: ChangeLog? What else?
 - Code cleanup: apply http://python.org/peps/pep-0008.html
 
 Core:
@@ -19,6 +19,8 @@ Core:
 - make showing removed files (in history etc.) faster.
 
 Commands:
+- hg diff Makefile should avoid walking the tree
+- hg add <directory> should work
 - hg status <filename>: file rev, changeset rev, changed, added,
   deleted, sha-1
 - select to pull a subset of the heads
