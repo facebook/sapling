@@ -22,12 +22,14 @@ def explain_exit(code):
         return "stopped by signal %d" % val, val
     raise ValueError("invalid exit code")
 
-def system(cmd, errprefix = "abort"):
+def system(cmd, errprefix=None):
     """execute a shell command that must succeed"""
     rc = os.system(cmd)
     if rc:
-        errmsg = "%s: %s %s" % (errprefix, os.path.basename(cmd.split(None, 1)[0]),
-                                explain_exit(rc)[0])
+        errmsg = "%s %s" % (os.path.basename(cmd.split(None, 1)[0]),
+                            explain_exit(rc)[0])
+        if errprefix:
+            errmsg = "%s: %s" % (errprefix, errmsg)
         raise CommandError(errmsg)
 
 def rename(src, dst):
