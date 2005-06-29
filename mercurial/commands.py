@@ -818,6 +818,7 @@ def dispatch(args):
             ('q', 'quiet', None, 'quiet'),
             ('p', 'profile', None, 'profile'),
             ('R', 'repository', "", 'repository root directory'),
+            ('', 'traceback', None, 'print traceback on exception'),
             ('y', 'noninteractive', None, 'run non-interactively'),
             ('', 'version', None, 'output version information and exit'),
             ]
@@ -855,25 +856,30 @@ def dispatch(args):
         sys.exit(-1)
 
     try:
-        if cmd not in norepo.split():
-            path = options["repository"] or ""
-            repo = hg.repository(ui=u, path=path)
-            d = lambda: i[0](u, repo, *args, **cmdoptions)
-        else:
-            d = lambda: i[0](u, *args, **cmdoptions)
+        try:
+            if cmd not in norepo.split():
+                path = options["repository"] or ""
+                repo = hg.repository(ui=u, path=path)
+                d = lambda: i[0](u, repo, *args, **cmdoptions)
+            else:
+                d = lambda: i[0](u, *args, **cmdoptions)
 
-        if options['profile']:
-            import hotshot, hotshot.stats
-            prof = hotshot.Profile("hg.prof")
-            r = prof.runcall(d)
-            prof.close()
-            stats = hotshot.stats.load("hg.prof")
-            stats.strip_dirs()
-            stats.sort_stats('time', 'calls')
-            stats.print_stats(40)
-            return r
-        else:
-            return d()
+            if options['profile']:
+                import hotshot, hotshot.stats
+                prof = hotshot.Profile("hg.prof")
+                r = prof.runcall(d)
+                prof.close()
+                stats = hotshot.stats.load("hg.prof")
+                stats.strip_dirs()
+                stats.sort_stats('time', 'calls')
+                stats.print_stats(40)
+                return r
+            else:
+                return d()
+        except:
+            if options['traceback']:
+                traceback.print_exc()
+            raise
     except util.CommandError, inst:
         u.warn("abort: %s\n" % inst.args)
     except hg.RepoError, inst:
