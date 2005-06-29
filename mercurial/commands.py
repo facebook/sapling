@@ -302,8 +302,9 @@ def clone(ui, source, dest = None, **opts):
             repo = hg.repository(ui, ".", create=1)
             other = hg.repository(ui, source)
             fetch = repo.findincoming(other)
-            cg = other.changegroup(fetch)
-            repo.addchangegroup(cg)
+            if fetch:
+                cg = other.changegroup(fetch)
+                repo.addchangegroup(cg)
 
         f = repo.opener("hgrc", "w")
         f.write("[paths]\n")
@@ -549,6 +550,10 @@ def pull(ui, repo, source="default", **opts):
 
     other = hg.repository(ui, source)
     fetch = repo.findincoming(other)
+    if not fetch:
+        ui.status("no changes found\n")
+        return
+
     cg = other.changegroup(fetch)
     r = repo.addchangegroup(cg)
     if cg and not r:

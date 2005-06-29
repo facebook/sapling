@@ -841,7 +841,6 @@ class localrepository:
                 unknown.append(h)
 
         if not unknown:
-            self.ui.status("nothing to do!\n")
             return None
 
         rep = {}

@@ -16,5 +16,6 @@ hg verify
 hg co
 cat foo
 hg manifest
+hg pull
 
 kill $!
