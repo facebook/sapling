@@ -432,6 +432,9 @@ class hgweb:
                     f = name.find('@')
                     if f >= 0:
                         name = name[:f]
+                    f = name.find('<')
+                    if f >= 0:
+                        name = name[f+1:]
                     bcache[r] = name
 
                 if last != cnode:

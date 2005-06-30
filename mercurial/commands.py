@@ -232,6 +232,9 @@ def annotate(u, repo, file, *files, **ops):
             f = name.find('@')
             if f >= 0:
                 name = name[:f]
+            f = name.find('<')
+            if f >= 0:
+                name = name[f+1:]
             bcache[rev] = name
             return name
 
