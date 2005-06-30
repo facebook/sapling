@@ -37,7 +37,10 @@ def decompress(bin):
 def hash(text, p1, p2):
     l = [p1, p2]
     l.sort()
-    return sha.sha(l[0] + l[1] + text).digest()
+    s = sha.new(l[0])
+    s.update(l[1])
+    s.update(text)
+    return s.digest()
 
 nullid = "\0" * 20
 indexformat = ">4l20s20s20s"

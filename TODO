@@ -8,6 +8,7 @@ General:
 - export to git
 - Add standard files: ChangeLog? What else?
 - Code cleanup: apply http://python.org/peps/pep-0008.html
+- Replace all remaining print statements with appropriate ui function
 
 Core:
 - difflib creating/removing files (fixed except dates: should be epoch)

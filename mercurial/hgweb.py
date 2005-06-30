@@ -43,7 +43,7 @@ def nl2br(text):
     return text.replace('\n', '<br/>\n')
 
 def obfuscate(text):
-    return ''.join([ '&#%d' % ord(c) for c in text ])
+    return ''.join([ '&#%d;' % ord(c) for c in text ])
 
 def up(p):
     if p[0] != "/": p = "/" + p
@@ -432,6 +432,9 @@ class hgweb:
                     f = name.find('@')
                     if f >= 0:
                         name = name[:f]
+                    f = name.find('<')
+                    if f >= 0:
+                        name = name[f+1:]
                     bcache[r] = name
 
                 if last != cnode:

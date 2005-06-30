@@ -232,6 +232,9 @@ def annotate(u, repo, file, *files, **ops):
             f = name.find('@')
             if f >= 0:
                 name = name[:f]
+            f = name.find('<')
+            if f >= 0:
+                name = name[f+1:]
             bcache[rev] = name
             return name
 
@@ -269,55 +272,59 @@ def clone(ui, source, dest = None, **opts):
     """make a copy of an existing repository"""
     source = ui.expandpath(source)
 
-    success = False
-
     if dest is None:
-        dest = os.path.basename(source)
-        if dest == source:
-            ui.warn('abort: source and destination are the same\n')
-            sys.exit(1)
+        dest = os.path.basename(os.path.normpath(source))
 
-    os.mkdir(dest)
+    if os.path.exists(dest):
+        ui.warn("abort: destination '%s' already exists\n" % dest)
+        return 1
 
-    try:
-        link = 0
-        if not (source.startswith("http://") or
-                source.startswith("hg://") or
-                source.startswith("old-http://")):
-            d1 = os.stat(dest).st_dev
-            d2 = os.stat(source).st_dev
-            if d1 == d2: link = 1
+    class dircleanup:
+        def __init__(self, dir):
+            self.dir = dir
+            os.mkdir(dir)
+        def close(self):
+            self.dir = None
+        def __del__(self):
+            if self.dir:
+                import shutil
+                shutil.rmtree(self.dir, True)
 
-        if link:
-            ui.debug("copying by hardlink\n")
-            util.system("cp -al '%s'/.hg '%s'/.hg" % (source, dest))
-            try:
-                os.remove(os.path.join(dest, ".hg", "dirstate"))
-            except: pass
+    d = dircleanup(dest)
 
-            repo = hg.repository(ui, dest)
+    link = 0
+    if not (source.startswith("http://") or
+            source.startswith("hg://") or
+            source.startswith("old-http://")):
+        d1 = os.stat(dest).st_dev
+        d2 = os.stat(source).st_dev
+        if d1 == d2: link = 1
 
-        else:
-            repo = hg.repository(ui, dest, create=1)
-            other = hg.repository(ui, source)
-            fetch = repo.findincoming(other)
-            if fetch:
-                cg = other.changegroup(fetch)
-                repo.addchangegroup(cg)
+    if link:
+        ui.note("copying by hardlink\n")
+        util.system("cp -al '%s'/.hg '%s'/.hg" % (source, dest))
+        try:
+            os.remove(os.path.join(dest, ".hg", "dirstate"))
+        except: pass
 
-        f = repo.opener("hgrc", "w")
-        f.write("[paths]\n")
-        f.write("default = %s\n" % source)
+        repo = hg.repository(ui, dest)
 
-        if not opts['noupdate']:
-            update(ui, repo)
+    else:
+        repo = hg.repository(ui, dest, create=1)
+        other = hg.repository(ui, source)
+        fetch = repo.findincoming(other)
+        if fetch:
+            cg = other.changegroup(fetch)
+            repo.addchangegroup(cg)
 
-        success = True
+    f = repo.opener("hgrc", "w")
+    f.write("[paths]\n")
+    f.write("default = %s\n" % source)
 
-    finally:
-        if not success:
-            import shutil
-            shutil.rmtree(dest, True)
+    if not opts['noupdate']:
+        update(ui, repo)
+
+    d.close()
 
 def commit(ui, repo, *files, **opts):
     """commit the specified files or all outstanding changes"""
