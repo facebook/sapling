@@ -272,7 +272,7 @@ def clone(ui, source, dest = None, **opts):
     success = False
 
     if dest is None:
-        dest = os.path.basename(source)
+        dest = os.path.basename(os.path.normpath(source))
         if dest == source:
             ui.warn('abort: source and destination are the same\n')
             sys.exit(1)
@@ -287,7 +287,7 @@ def clone(ui, source, dest = None, **opts):
             if d1 == d2: link = 1
 
         if link:
-            ui.debug("copying by hardlink\n")
+            ui.note("copying by hardlink\n")
             util.system("cp -al '%s'/.hg '%s'/.hg" % (source, dest))
             try:
                 os.remove(os.path.join(dest, ".hg", "dirstate"))
