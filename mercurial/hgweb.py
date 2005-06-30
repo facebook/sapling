@@ -43,7 +43,7 @@ def nl2br(text):
     return text.replace('\n', '<br/>\n')
 
 def obfuscate(text):
-    return ''.join([ '&#%d' % ord(c) for c in text ])
+    return ''.join([ '&#%d;' % ord(c) for c in text ])
 
 def up(p):
     if p[0] != "/": p = "/" + p
