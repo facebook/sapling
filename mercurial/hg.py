@@ -1014,9 +1014,9 @@ class localrepository:
             if not f: break
             self.ui.debug("adding %s revisions\n" % f)
             fl = self.file(f)
-            o = fl.tip()
+            o = fl.count()
             n = fl.addgroup(getgroup(), revmap, tr)
-            revisions += fl.rev(n) - fl.rev(o)
+            revisions += fl.count() - o
             files += 1
 
         self.ui.status(("modified %d files, added %d changesets" +
