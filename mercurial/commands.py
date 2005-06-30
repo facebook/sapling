@@ -273,9 +273,10 @@ def clone(ui, source, dest = None, **opts):
 
     if dest is None:
         dest = os.path.basename(os.path.normpath(source))
-        if dest == source:
-            ui.warn('abort: source and destination are the same\n')
-            sys.exit(1)
+
+    if os.path.exists(dest):
+        ui.warn("abort: destination '%s' already exists\n" % dest)
+        return 1
 
     os.mkdir(dest)
 
