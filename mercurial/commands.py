@@ -281,7 +281,9 @@ def clone(ui, source, dest = None, **opts):
 
     try:
         link = 0
-        if not source.startswith("http://"):
+        if not (source.startswith("http://") or
+                source.startswith("hg://") or
+                source.startswith("old-http://")):
             d1 = os.stat(dest).st_dev
             d2 = os.stat(source).st_dev
             if d1 == d2: link = 1
