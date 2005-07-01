@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/sh -x
 
 hg clone http://localhost:20059/ copy
 echo $?
