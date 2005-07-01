@@ -51,6 +51,12 @@ class ui:
     def write(self, *args):
         for a in args:
             sys.stdout.write(str(a))
+
+    def write_err(self, *args):
+        sys.stdout.flush()
+        for a in args:
+            sys.stderr.write(str(a))
+
     def readline(self):
         return sys.stdin.readline()[:-1]
     def prompt(self, msg, pat, default = "y"):
@@ -65,7 +71,7 @@ class ui:
     def status(self, *msg):
         if not self.quiet: self.write(*msg)
     def warn(self, *msg):
-        self.write(*msg)
+        self.write_err(*msg)
     def note(self, *msg):
         if self.verbose: self.write(*msg)
     def debug(self, *msg):
