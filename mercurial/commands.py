@@ -908,6 +908,11 @@ def dispatch(args):
             u.warn("broken pipe\n")
         else:
             raise
+    except OSError, inst:
+        if hasattr(inst, "filename"):
+            u.warn("abort: %s: %s\n" % (inst.strerror, inst.filename))
+        else:
+            u.warn("abort: %s\n" % inst.strerror)
     except TypeError, inst:
         # was this an argument error?
         tb = traceback.extract_tb(sys.exc_info()[2])
