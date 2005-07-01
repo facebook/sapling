@@ -43,5 +43,5 @@ c8edf04160c7 tip
 + hg id
 c8edf04160c7+b9154636be93+ tip
 + hg status
-C a
 C .hgtags
+C a

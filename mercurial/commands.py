@@ -37,7 +37,7 @@ def dodiff(ui, repo, files = None, node1 = None, node2 = None):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
-    (c, a, d, u) = repo.changes(None, node1, files)
+    (c, a, d, u) = repo.changes(node1, node2, files)
     if files:
         c, a, d = map(lambda x: filterfiles(files, x), (c, a, d))
 

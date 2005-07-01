@@ -95,7 +95,7 @@ class manifest(revlog):
     def read(self, node):
         if node == nullid: return {} # don't upset local cache
         if self.mapcache and self.mapcache[0] == node:
-            return self.mapcache[1].copy()
+            return self.mapcache[1]
         text = self.revision(node)
         map = {}
         flag = {}
@@ -687,7 +687,7 @@ class localrepository:
 
     def changes(self, node1, node2, files=None):
         # changed, added, deleted, unknown
-        c, a, d, u, mf1 = [], [], [], [], None
+        c, a, d, u, mf2 = [], [], [], [], None
 
         def fcmp(fn, mf):
             t1 = self.wfile(fn).read()
@@ -695,48 +695,54 @@ class localrepository:
             return cmp(t1, t2)
 
         # are we comparing the working directory?
-        if not node1:
+        if not node2:
             l, c, a, d, u = self.dirstate.changes(files, self.ignore)
 
             # are we comparing working dir against its parent?
-            if not node2:
+            if not node1:
                 if l:
                     # do a full compare of any files that might have changed
                     change = self.changelog.read(self.dirstate.parents()[0])
-                    mf1 = self.manifest.read(change[0])
+                    mf2 = self.manifest.read(change[0])
                     for f in l:
-                        if fcmp(f, mf1):
+                        if fcmp(f, mf2):
                             c.append(f)
+
+                for l in c, a, d, u:
+                    l.sort()
+
                 return (c, a, d, u)
 
         # are we comparing working dir against non-tip?
         # generate a pseudo-manifest for the working dir
-        if not node1:
-            if not mf1:
+        if not node2:
+            if not mf2:
                 change = self.changelog.read(self.dirstate.parents()[0])
-                mf1 = self.manifest.read(change[0])
+                mf2 = self.manifest.read(change[0]).copy()
             for f in a + c + l:
-                mf1[f] = ""
+                mf2[f] = ""
             for f in d:
-                if f in mf1: del mf1[f]
+                if f in mf2: del mf2[f]
         else:
-            change = self.changelog.read(node1)
-            mf1 = self.manifest.read(change[0])
+            change = self.changelog.read(node2)
+            mf2 = self.manifest.read(change[0])
 
-        change = self.changelog.read(node2)
-        mf2 = self.manifest.read(change[0])
+        change = self.changelog.read(node1)
+        mf1 = self.manifest.read(change[0]).copy()
 
         for fn in mf2:
             if mf1.has_key(fn):
                 if mf1[fn] != mf2[fn]:
-                    if mf1[fn] != "" or fcmp(fn, mf2):
+                    if mf2[fn] != "" or fcmp(fn, mf1):
                         c.append(fn)
                 del mf1[fn]
             else:
                 a.append(fn)
 
         d = mf1.keys()
-        d.sort()
+
+        for l in c, a, d, u:
+            l.sort()
 
         return (c, a, d, u)
 
