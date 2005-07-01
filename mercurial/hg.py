@@ -296,16 +296,9 @@ class dirstate:
         # compare all files by default
         if not files: files = [self.root]
 
-        def uniq(g):
-            seen = {}
-            for f in g:
-                if f not in seen:
-                    seen[f] = 1
-                    yield f
-
         # recursive generator of all files listed
         def walk(files):
-            for f in uniq(files):
+            for f in util.unique(files):
                 f = os.path.join(self.root, f)
                 if os.path.isdir(f):
                     for dir, subdirs, fl in os.walk(f):
@@ -317,7 +310,7 @@ class dirstate:
                 else:
                     yield f[len(self.root) + 1:]
 
-        for fn in uniq(walk(files)):
+        for fn in util.unique(walk(files)):
             try: s = os.stat(os.path.join(self.root, fn))
             except: continue
 

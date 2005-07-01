@@ -7,6 +7,13 @@
 
 import os
 
+def unique(g):
+    seen = {}
+    for f in g:
+        if f not in seen:
+            seen[f] = 1
+            yield f
+
 class CommandError(Exception): pass
 
 def explain_exit(code):
