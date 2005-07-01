@@ -155,6 +155,10 @@ class hgweb:
         if node != hex(nullid):
             yield self.t(t1, node = node, rev = rev, **args)
 
+    def showtag(self, t1, node=nullid, **args):
+        for t in self.repo.nodetags(node):
+             yield self.t(t1, tag = t, **args)
+
     def diff(self, node1, node2, files):
         def filterfiles(list, files):
             l = [ x for x in list if x in files ]
@@ -259,6 +263,7 @@ class hgweb:
                                           hex(p1), cl.rev(p1)),
                     parent2 = self.parent("changelogparent",
                                           hex(p2), cl.rev(p2)),
+                    changelogtag = self.showtag("changelogtag",n),
                     p1 = hex(p1), p2 = hex(p2),
                     p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                     manifest = hex(changes[0]),
@@ -326,6 +331,7 @@ class hgweb:
                                           hex(p1), cl.rev(p1)),
                     parent2 = self.parent("changelogparent",
                                           hex(p2), cl.rev(p2)),
+                    changelogtag = self.showtag("changelogtag",n),
                     p1 = hex(p1), p2 = hex(p2),
                     p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                     manifest = hex(changes[0]),
@@ -376,6 +382,7 @@ class hgweb:
                                            hex(p1), cl.rev(p1)),
                      parent2 = self.parent("changesetparent",
                                            hex(p2), cl.rev(p2)),
+                     changesettag = self.showtag("changesettag",n),
                      p1 = hex(p1), p2 = hex(p2),
                      p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                      manifest = hex(changes[0]),

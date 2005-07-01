@@ -30,3 +30,5 @@ fileannotateparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=anno
 tags = tags.tmpl
 tagentry = "<div class="parity#parity#"><tt>#node#</tt> <a href="?cmd=changeset;node=#node#">#tag#</a><br /></div>"
 diffblock = "<div class="parity#parity#">#lines#</div>"
+changelogtag = "<tr><td align="right">tag:&nbsp;</td><td>#tag#</td></tr>"
+changesettag = "<tr><td class="metatag">tag:&nbsp;</td><td>#tag#</td></tr>"
