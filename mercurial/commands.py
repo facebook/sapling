@@ -137,7 +137,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
         if ui.verbose:
             ui.status("description:\n")
             ui.status(description)
-            ui.status("\n")
+            ui.status("\n\n")
         else:
             ui.status("summary:     %s\n" % description.splitlines()[0])
     ui.status("\n")
@@ -295,7 +295,9 @@ def clone(ui, source, dest = None, **opts):
     d = dircleanup(dest)
 
     link = 0
-    if not source.startswith("http://"):
+    if not (source.startswith("http://") or
+            source.startswith("hg://") or
+            source.startswith("old-http://")):
         d1 = os.stat(dest).st_dev
         d2 = os.stat(source).st_dev
         if d1 == d2: link = 1

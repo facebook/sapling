@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # This is an example of using HGEDITOR to automate the signing of
 # commits and so on.

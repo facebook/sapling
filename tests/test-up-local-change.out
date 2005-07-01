@@ -54,6 +54,7 @@ files:       a b
 description:
 2
 
+
 changeset:   0:c19d34741b0a4ced8e4ba74bb834597d5193851e
 manifest:    0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
 user:        test
@@ -61,6 +62,7 @@ date:        Thu Jan  1 00:00:00 1970
 files:       a
 description:
 1
+
 
 + hg diff
 + sed 's/\(\(---\|+++\).*\)\t.*/\1/'

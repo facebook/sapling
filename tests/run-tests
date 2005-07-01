@@ -1,6 +1,4 @@
-#!/bin/bash
-
-set -e
+#!/bin/sh -e
 
 export LANG=C
 export LC_CTYPE="C"
@@ -47,7 +45,7 @@ function run_one
     rm -f $1.err
     export TZ=GMT
     D=`mktemp -d`
-    if [ "$D" == "" ] ; then
+    if [ "$D" = "" ] ; then
 	echo mktemp failed!
     fi
 
@@ -77,7 +75,7 @@ function run_one
 }
 
 TESTS=$@
-if [ "$TESTS" == "" ] ; then
+if [ "$TESTS" = "" ] ; then
     TESTS=`ls test-* | grep -Ev "\.|~"`
 fi
 

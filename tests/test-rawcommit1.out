@@ -28,6 +28,7 @@ files+:      c
 description:
 2
 
+
 + rm b
 + hg -d rawcommit -p 2 -d '0 0' -u user -t3 b
 + hg -d manifest 3
@@ -44,6 +45,7 @@ date:        Thu Jan  1 00:00:00 1970
 files-:      b
 description:
 3
+
 
 + echo this is a22
 + hg -d rawcommit -p 3 -d '0 0' -u user -t4 a
@@ -62,6 +64,7 @@ files:       a
 description:
 4
 
+
 + echo this is c22
 + hg -d rawcommit -p 1 -d '0 0' -u user -t5 c
 + hg -d manifest 5
@@ -79,6 +82,7 @@ files:       a
 description:
 4
 
+
 + hg -d rawcommit -p 4 -p 5 -d '0 0' -u user -t6
 + hg -d manifest 6
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
@@ -94,6 +98,7 @@ date:        Thu Jan  1 00:00:00 1970
 description:
 6
 
+
 + hg -d rawcommit -p 6 -d '0 0' -u user -t7
 + hg -d manifest 7
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
@@ -108,4 +113,5 @@ user:        user
 date:        Thu Jan  1 00:00:00 1970
 description:
 7
+
 
