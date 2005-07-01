@@ -686,8 +686,7 @@ class localrepository:
         self.dirstate.forget(remove)
 
     def changes(self, node1, node2, files=None):
-        # changed, added, deleted, unknown
-        c, a, d, u, mf2 = [], [], [], [], None
+        mf2, u = None, []
 
         def fcmp(fn, mf):
             t1 = self.wfile(fn).read()
@@ -726,6 +725,9 @@ class localrepository:
         else:
             change = self.changelog.read(node2)
             mf2 = self.manifest.read(change[0])
+
+        # flush lists from dirstate before comparing manifests
+        c, a = [], []
 
         change = self.changelog.read(node1)
         mf1 = self.manifest.read(change[0]).copy()
