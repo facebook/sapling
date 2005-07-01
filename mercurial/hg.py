@@ -711,8 +711,8 @@ class localrepository:
                     # do a full compare of any files that might have changed
                     change = self.changelog.read(self.dirstate.parents()[0])
                     mf1 = self.manifest.read(change[0])
-                    for f in lookup:
-                        if fcmp(f, mf):
+                    for f in l:
+                        if fcmp(f, mf1):
                             c.append(f)
                 return (c, a, d, u)
 
