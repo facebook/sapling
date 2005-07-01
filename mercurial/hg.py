@@ -306,6 +306,7 @@ class dirstate:
         # recursive generator of all files listed
         def walk(files):
             for f in uniq(files):
+                f = os.path.join(self.root, f)
                 if os.path.isdir(f):
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
@@ -691,7 +692,7 @@ class localrepository:
         self.dirstate.update(new, "n")
         self.dirstate.forget(remove)
 
-    def changes(self, node1, node2, *files):
+    def changes(self, node1, node2, files=None):
         # changed, added, deleted, unknown
         c, a, d, u, mf1 = [], [], [], [], None
 
