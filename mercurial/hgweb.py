@@ -286,6 +286,68 @@ class hgweb:
                      manifest = hex(mf),
                      rev = pos, changesets = count, entries = changelist)
 
+    def search(self, query):
+
+        def changelist():
+            cl = self.repo.changelog
+            count = 0
+            qw = query.lower().split()
+
+            def revgen():
+                for i in range(cl.count() - 1, 0, -100):
+                    l = []
+                    for j in range(max(0, i - 100), i):
+                        n = cl.node(j)
+                        changes = cl.read(n)
+                        l.insert(0, (n, j, changes))
+                    for e in l:
+                        yield e
+
+            for n, i, changes in revgen():
+                miss = 0
+                for q in qw:
+                    if not (q in changes[1].lower() or
+                            q in changes[4].lower() or
+                            q in " ".join(changes[3][:20]).lower()):
+                        miss = 1
+                        break
+                if miss: continue
+
+                count += 1
+                hn = hex(n)
+                p1, p2 = cl.parents(n)
+                t = float(changes[2].split(' ')[0])
+
+                yield self.t(
+                    'searchentry',
+                    parity = count & 1,
+                    author = changes[1],
+                    parent1 = self.parent("changelogparent",
+                                          hex(p1), cl.rev(p1)),
+                    parent2 = self.parent("changelogparent",
+                                          hex(p2), cl.rev(p2)),
+                    p1 = hex(p1), p2 = hex(p2),
+                    p1rev = cl.rev(p1), p2rev = cl.rev(p2),
+                    manifest = hex(changes[0]),
+                    desc = changes[4],
+                    date = t,
+                    files = self.listfilediffs(changes[3], n),
+                    rev = i,
+                    node = hn)
+
+                if count >= self.maxchanges: break
+
+        cl = self.repo.changelog
+        mf = cl.read(cl.tip())[0]
+
+        yield self.t('search',
+                     header = self.header(),
+                     footer = self.footer(),
+                     query = query,
+                     repo = self.reponame,
+                     manifest = hex(mf),
+                     entries = changelist)
+
     def changeset(self, nodeid):
         n = bin(nodeid)
         cl = self.repo.changelog
@@ -586,13 +648,16 @@ class hgweb:
         self.t = templater(m, self.filters)
 
         if not args.has_key('cmd') or args['cmd'][0] == 'changelog':
-            hi = self.repo.changelog.count() - 1
+            c = self.repo.changelog.count() - 1
+            hi = c
             if args.has_key('rev'):
                 hi = args['rev'][0]
                 try:
                     hi = self.repo.changelog.rev(self.repo.lookup(hi))
-                except KeyError: pass
-
+                except KeyError:
+                    write(self.search(hi))
+                    return
+                
             write(self.changelog(hi))
 
         elif args['cmd'][0] == 'changeset':
