@@ -515,16 +515,28 @@ def init(ui, source=None):
         sys.exit(1)
     repo = hg.repository(ui, ".", create=1)
 
-def log(ui, repo, f = None):
+def log(ui, repo, f=None, **opts):
     """show the revision history of the repository or a single file"""
     if f:
-        f = relpath(repo, [f])[0]
-        r = repo.file(f)
-        for i in range(r.count() - 1, -1, -1):
-            show_changeset(ui, repo, filelog=r, rev=i)
+        filelog = repo.file(relpath(repo, [f])[0])
+        log = filelog
+        lookup = filelog.lookup
     else:
-        for i in range(repo.changelog.count() - 1, -1, -1):
-            show_changeset(ui, repo, rev=i)
+        filelog = None
+        log = repo.changelog
+        lookup = repo.lookup
+    revlist = []
+    revs = [log.rev(lookup(rev)) for rev in opts['rev']]
+    while revs:
+        if len(revs) == 1:
+            revlist.append(revs.pop(0))
+        else:
+            a = revs.pop(0)
+            b = revs.pop(0)
+            off = a > b and -1 or 1
+            revlist.extend(range(a, b + off, off))
+    for i in revlist or range(log.count() - 1, -1, -1):
+        show_changeset(ui, repo, filelog=filelog, rev=i)
 
 def manifest(ui, repo, rev = []):
     """output the latest or given revision of the project manifest"""
@@ -765,7 +777,9 @@ table = {
                       ('b', 'base', "", 'base path')],
                      "hg import [options] <patches>"),
     "init": (init, [], 'hg init'),
-    "log|history": (log, [], 'hg log [file]'),
+    "log|history": (log,
+                    [('r', 'rev', [], 'revision')],
+                    'hg log [-r A] [-r B] [file]'),
     "manifest": (manifest, [], 'hg manifest [rev]'),
     "parents": (parents, [], 'hg parents [node]'),
     "pull": (pull,
