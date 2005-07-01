@@ -31,9 +31,11 @@ class transaction:
         self.file = open(self.journal, "w")
 
     def __del__(self):
-        if self.entries: self.abort()
-        try: os.unlink(self.journal)
-        except: pass
+        if self.journal:
+            if self.entries: self.abort()
+            self.file.close()
+            try: os.unlink(self.journal)
+            except: pass
 
     def add(self, file, offset):
         if file in self.map: return
