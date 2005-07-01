@@ -346,7 +346,8 @@ def copy(ui, repo, source, dest):
 
 def debugcheckdirstate(ui, repo):
     parent1, parent2 = repo.dirstate.parents()
-    dc = repo.dirstate.dup()
+    repo.dirstate.read()
+    dc = repo.dirstate.map
     keys = dc.keys()
     keys.sort()
     m1n = repo.changelog.read(parent1)[0]
@@ -376,7 +377,8 @@ def debugcheckdirstate(ui, repo):
         sys.exit(1)
 
 def debugdumpdirstate(ui, repo):
-    dc = repo.dirstate.dup()
+    repo.dirstate.read()
+    dc = repo.dirstate.map
     keys = dc.keys()
     keys.sort()
     for file in keys:
