@@ -1,0 +1,32 @@
++ mkdir a
++ cd a
++ hg init
++ echo a
++ hg add a
++ hg commit -t test -u test -d '0 0'
++ hg clone . ../b
++ cd ../b
++ cat a
+a
++ hg verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
++ hg clone -U . ../c
++ cd ../c
++ cat a
+cat: a: No such file or directory
++ hg verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
++ mkdir ../d
++ cd ../d
++ hg clone ../a
++ cd a
++ hg cat a
+a

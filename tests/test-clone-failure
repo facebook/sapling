@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -x
+
+# No local source
+hg clone a b
+echo $?
+
+# No remote source
+hg clone http://127.0.0.1:3121/a b
+echo $?
+rm -rf b # work around bug with http clone
+
+# Inaccessible source
+mkdir a
+chmod 000 a
+hg clone a b
+echo $?
+
+# Inaccessible destination
+mkdir b
+cd b
+hg init
+hg clone . ../a
+echo $?
+cd ..
+chmod 700 a
+rm -rf a b
+
+# Source of wrong type
+mkfifo a
+hg clone a b
+echo $?
+rm a
+
+# Default destination, same directory
+mkdir q
+cd q
+hg init
+cd ..
+hg clone q
+
+true

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -x
+mkdir a
+cd a
+hg init
+echo a > a
+hg add a
+hg commit -t test -u test -d '0 0'
+
+# Default operation
+hg clone . ../b
+cd ../b
+cat a
+hg verify
+
+# No update
+hg clone -U . ../c
+cd ../c
+cat a
+hg verify
+
+# Default destination
+mkdir ../d
+cd ../d
+hg clone ../a
+cd a
+hg cat a
