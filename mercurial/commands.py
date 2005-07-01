@@ -135,7 +135,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
         if ui.verbose:
             ui.status("description:\n")
             ui.status(description)
-            ui.status("\n")
+            ui.status("\n\n")
         else:
             ui.status("summary:     %s\n" % description.splitlines()[0])
     ui.status("\n")
