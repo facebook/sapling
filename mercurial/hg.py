@@ -525,9 +525,9 @@ class localrepository:
 
     def recover(self):
         lock = self.lock()
-        if os.path.exists(self.join("recover")):
+        if os.path.exists(self.join("journal")):
             self.ui.status("rolling back interrupted transaction\n")
-            return transaction.rollback(self.opener, self.join("recover"))
+            return transaction.rollback(self.opener, self.join("journal"))
         else:
             self.ui.warn("no interrupted transaction available\n")
 
