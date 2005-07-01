@@ -13,7 +13,12 @@
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
+#ifdef _MSC_VER
+#define inline __inline
+typedef unsigned long uint32_t;
+#else
 #include <stdint.h>
+#endif
 static uint32_t htonl(uint32_t x)
 {
 	return ((x & 0x000000ffUL) << 24) |
