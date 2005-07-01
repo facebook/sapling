@@ -288,9 +288,56 @@ class dirstate:
             st.write(e + f)
         self.dirty = 0
 
-    def dup(self):
+    def changes(self, files, ignore):
         self.read()
-        return self.map.copy()
+        dc = self.map.copy()
+        lookup, changed, added, unknown = [], [], [], []
+
+        # compare all files by default
+        if not files: files = [self.root]
+
+        def uniq(g):
+            seen = {}
+            for f in g:
+                if f not in seen:
+                    seen[f] = 1
+                    yield f
+
+        # recursive generator of all files listed
+        def walk(files):
+            for f in uniq(files):
+                if os.path.isdir(f):
+                    for dir, subdirs, fl in os.walk(f):
+                        d = dir[len(self.root) + 1:]
+                        if ".hg" in subdirs: subdirs.remove(".hg")
+                        for fn in fl:
+                            fn = util.pconvert(os.path.join(d, fn))
+                            yield fn
+                else:
+                    yield f[len(self.root) + 1:]
+
+        for fn in uniq(walk(files)):
+            try: s = os.stat(os.path.join(self.root, fn))
+            except: continue
+
+            if fn in dc:
+                c = dc[fn]
+                del dc[fn]
+
+                if c[0] == 'm':
+                    changed.append(fn)
+                elif c[0] == 'a':
+                    added.append(fn)
+                elif c[0] == 'r':
+                    unknown.append(fn)
+                elif c[2] != s.st_size or (c[1] ^ s.st_mode) & 0100:
+                    changed.append(fn)
+                elif c[1] != s.st_mode or c[3] != s.st_mtime:
+                    lookup.append(fn)
+            else:
+                if not ignore(fn): unknown.append(fn)
+
+        return (lookup, changed, added, dc.keys(), unknown)
 
 # used to avoid circular references so destructors work
 def opener(base):
@@ -568,7 +615,7 @@ class localrepository:
                 else:
                     self.ui.warn("%s not tracked!\n" % f)
         else:
-            (c, a, d, u) = self.diffdir(self.root)
+            (c, a, d, u) = self.changes(None, None)
             commit = c + a
             remove = d
 
@@ -644,81 +691,60 @@ class localrepository:
         self.dirstate.update(new, "n")
         self.dirstate.forget(remove)
 
-    def diffdir(self, path, changeset = None):
-        changed = []
-        added = []
-        unknown = []
-        mf = {}
+    def changes(self, node1, node2, *files):
+        # changed, added, deleted, unknown
+        c, a, d, u, mf1 = [], [], [], [], None
 
-        if changeset:
-            change = self.changelog.read(changeset)
-            mf = self.manifest.read(change[0])
-            dc = dict.fromkeys(mf)
-        else:
-            changeset = self.dirstate.parents()[0]
-            change = self.changelog.read(changeset)
-            mf = self.manifest.read(change[0])
-            dc = self.dirstate.dup()
-
-        def fcmp(fn):
+        def fcmp(fn, mf):
             t1 = self.wfile(fn).read()
             t2 = self.file(fn).revision(mf[fn])
             return cmp(t1, t2)
 
-        for dir, subdirs, files in os.walk(path):
-            d = dir[len(self.root)+1:]
-            if ".hg" in subdirs: subdirs.remove(".hg")
+        # are we comparing the working directory?
+        if not node1:
+            l, c, a, d, u = self.dirstate.changes(files, self.ignore)
 
-            for f in files:
-                fn = util.pconvert(os.path.join(d, f))
-                try: s = os.stat(os.path.join(self.root, fn))
-                except: continue
-                if fn in dc:
-                    c = dc[fn]
-                    del dc[fn]
-                    if not c:
-                        if fcmp(fn):
-                            changed.append(fn)
-                    elif c[0] == 'm':
-                        changed.append(fn)
-                    elif c[0] == 'a':
-                        added.append(fn)
-                    elif c[0] == 'r':
-                        unknown.append(fn)
-                    elif c[2] != s.st_size or (c[1] ^ s.st_mode) & 0100:
-                        changed.append(fn)
-                    elif c[1] != s.st_mode or c[3] != s.st_mtime:
-                        if fcmp(fn):
-                            changed.append(fn)
-                else:
-                    if self.ignore(fn): continue
-                    unknown.append(fn)
+            # are we comparing working dir against its parent?
+            if not node2:
+                if l:
+                    # do a full compare of any files that might have changed
+                    change = self.changelog.read(self.dirstate.parents()[0])
+                    mf1 = self.manifest.read(change[0])
+                    for f in lookup:
+                        if fcmp(f, mf):
+                            c.append(f)
+                return (c, a, d, u)
 
-        deleted = dc.keys()
-        deleted.sort()
+        # are we comparing working dir against non-tip?
+        # generate a pseudo-manifest for the working dir
+        if not node1:
+            if not mf1:
+                change = self.changelog.read(self.dirstate.parents()[0])
+                mf1 = self.manifest.read(change[0])
+            for f in a + c + l:
+                mf1[f] = ""
+            for f in d:
+                if f in mf1: del mf1[f]
+        else:
+            change = self.changelog.read(node1)
+            mf1 = self.manifest.read(change[0])
 
-        return (changed, added, deleted, unknown)
-
-    def diffrevs(self, node1, node2):
-        changed, added = [], []
-
-        change = self.changelog.read(node1)
-        mf1 = self.manifest.read(change[0])
         change = self.changelog.read(node2)
         mf2 = self.manifest.read(change[0])
 
         for fn in mf2:
             if mf1.has_key(fn):
                 if mf1[fn] != mf2[fn]:
-                    changed.append(fn)
+                    if mf1[fn] != "" or fcmp(fn, mf2):
+                        c.append(fn)
                 del mf1[fn]
             else:
-                added.append(fn)
+                a.append(fn)
 
-        deleted = mf1.keys()
-        deleted.sort()
+        d = mf1.keys()
+        d.sort()
 
-        return (changed, added, deleted)
+        return (c, a, d, u)
 
     def add(self, list):
         for f in list:
@@ -1044,7 +1070,7 @@ class localrepository:
         ma = self.manifest.read(man)
         mfa = self.manifest.readflags(man)
 
-        (c, a, d, u) = self.diffdir(self.root)
+        (c, a, d, u) = self.changes(None, None)
 
         # is this a jump, or a merge?  i.e. is there a linear path
         # from p1 to p2?

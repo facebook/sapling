@@ -39,12 +39,12 @@ def dodiff(ui, repo, path, files = None, node1 = None, node2 = None):
     if node2:
         change = repo.changelog.read(node2)
         mmap2 = repo.manifest.read(change[0])
-        (c, a, d) = repo.diffrevs(node1, node2)
+        (c, a, d, u) = repo.changes(node1, node2)
         def read(f): return repo.file(f).read(mmap2[f])
         date2 = date(change)
     else:
         date2 = time.asctime()
-        (c, a, d, u) = repo.diffdir(path, node1)
+        (c, a, d, u) = repo.changes(None, node1, path)
         if not node1:
             node1 = repo.dirstate.parents()[0]
         def read(f): return repo.wfile(f).read()
@@ -124,7 +124,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
     ui.status("date:        %s\n" % time.asctime(
         time.localtime(float(changes[2].split(' ')[0]))))
     if ui.debugflag:
-        files = repo.diffrevs(changelog.parents(changenode)[0], changenode)
+        files = repo.changes(changelog.parents(changenode)[0], changenode)
         for key, value in zip(["files:", "files+:", "files-:"], files):
             if value:
                 ui.note("%-12s %s\n" % (key, " ".join(value)))
@@ -214,7 +214,7 @@ def addremove(ui, repo, *files):
             elif s not in 'nmai' and isfile:
                 u.append(f)
     else:
-        (c, a, d, u) = repo.diffdir(repo.root)
+        (c, a, d, u) = repo.changes(None, None)
     repo.add(u)
     repo.remove(d)
 
@@ -447,7 +447,7 @@ def identify(ui, repo):
         return
 
     hexfunc = ui.verbose and hg.hex or hg.short
-    (c, a, d, u) = repo.diffdir(repo.root)
+    (c, a, d, u) = repo.changes(None, None)
     output = ["%s%s" % ('+'.join([hexfunc(parent) for parent in parents]),
                         (c or a or d) and "+" or "")]
 
@@ -645,7 +645,7 @@ def status(ui, repo):
     R = removed
     ? = not tracked'''
 
-    (c, a, d, u) = repo.diffdir(os.getcwd())
+    (c, a, d, u) = repo.changes(None, None, os.getcwd())
     (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
     for f in c: print "C", f
@@ -660,7 +660,7 @@ def tag(ui, repo, name, rev = None, **opts):
 	ui.warn("abort: 'tip' is a reserved name!\n")
 	return -1
 
-    (c, a, d, u) = repo.diffdir(repo.root)
+    (c, a, d, u) = repo.changes(None, None)
     for x in (c, a, d, u):
 	if ".hgtags" in x:
 	    ui.warn("abort: working copy of .hgtags is changed!\n")

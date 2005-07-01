@@ -1,0 +1,12 @@
+#!/bin/sh
+
+hg init
+touch a
+hg add a
+hg ci -t "a" -u test -d "0 0"
+
+echo 123 > b
+hg add b
+hg diff | sed "s/\(\(---\|+++\).*\)\t.*/\1/"
+
+hg diff -r tip | sed "s/\(\(---\|+++\).*\)\t.*/\1/"
