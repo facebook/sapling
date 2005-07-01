@@ -29,7 +29,8 @@ def relfilter(repo, files):
 def relpath(repo, args):
     if os.getcwd() != repo.root:
         p = os.getcwd()[len(repo.root) + 1: ]
-        return [ util.pconvert(os.path.normpath(os.path.join(p, x))) for x in args ]
+        return [ util.pconvert(os.path.normpath(os.path.join(p, x)))
+                 for x in args ]
     return args
 
 def dodiff(ui, repo, files = None, node1 = None, node2 = None):
@@ -362,7 +363,8 @@ def debugcheckdirstate(ui, repo):
             print "%s in state %s, but also listed in manifest1" % (f, state)
             errors += 1
         if state in "m" and f not in m1 and f not in m2:
-            print "%s in state %s, but not listed in either manifest" % (f, state)
+            print "%s in state %s, but not listed in either manifest" % \
+                  (f, state)
             errors += 1
     for f in m1:
         state = repo.dirstate.state(f)
@@ -370,7 +372,7 @@ def debugcheckdirstate(ui, repo):
             print "%s in manifest1, but listed as state %s" % (f, state)
             errors += 1
     if errors:
-        print ".hg/dirstate inconsistent with current parent's manifest, aborting"
+        print ".hg/dirstate inconsistent with current parent's manifest"
         sys.exit(1)
 
 def debugdumpdirstate(ui, repo):
