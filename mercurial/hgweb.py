@@ -194,7 +194,7 @@ class hgweb:
         date1 = self.date(change1)
         date2 = self.date(change2)
 
-        c, a, d = r.changes(node1, node2)
+        c, a, d, u = r.changes(node1, node2)
         c, a, d = map(lambda x: filterfiles(x, files), (c, a, d))
 
         for f in c:
