@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Build a Mercurial RPM in place.
+#
+# Bryan O'Sullivan <bos@serpentine.com>
+
+root="`hg root 2>/dev/null`"
+specfile=contrib/mercurial.spec
+
+if [ -z "$root" ]; then
+    echo 'You are not inside a Mercurial repository!' 1>&2
+    exit 1
+fi
+
+rpmdir=/tmp/"`basename $root | sed 's/ /_/'`"-rpm
+
+cd "$root"
+rm -rf $rpmdir
+mkdir -p $rpmdir/RPMS
+hg clone "$root" $rpmdir/BUILD
+
+if [ ! -f $specfile ]; then
+    echo "Cannot find $specfile!" 1>&2
+    exit 1
+fi
+
+tmpspec=/tmp/`basename "$specfile"`.$$
+# Use the most recent tag as the version.
+version=`hg tags | perl -e 'while(<STDIN>){if(/^(\d\S+)/){print$1;exit}}'`
+# Compute the release number as the difference in revision numbers
+# between the tip and the most recent tag.
+release=`hg tags | perl -e 'while(<STDIN>){/^(\S+)\s+(\d+)/;if($1eq"tip"){$t=$2}else{print$t-$2+1;exit}}'`
+tip=`hg -q tip`
+
+# Beat up the spec file
+sed -e 's,^Source:.*,Source: /dev/null,' \
+    -e "s,^Version:.*,Version: $version," \
+    -e "s,^Release:.*,Release: $release," \
+    -e "s,^%prep.*,Changeset: $tip\n\0," \
+    -e 's,^%setup.*,,' \
+    $specfile > $tmpspec
+
+rpmbuild --define "_topdir $rpmdir" -bb $tmpspec
+if [ $? = 0 ]; then
+    rm -rf $tmpspec $rpmdir/BUILD
+    mv $rpmdir/RPMS/*/* $rpmdir && rm -r $rpmdir/RPMS
+    echo
+    echo "Packages are in $rpmdir"
+fi
