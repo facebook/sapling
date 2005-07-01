@@ -18,6 +18,7 @@ run()
 EOF
 
 python dumb.py 2>/dev/null &
+sleep 2
 
 hg clone http://localhost:20059/foo copy2
 echo $?
