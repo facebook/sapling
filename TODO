@@ -31,7 +31,6 @@ Commands:
 
 Web:
 - show tags in hgweb
-- show parent changeset number in hgweb
 - optionally only show merges (two parents or parent != changeset-1, etc.)
 - one hgweb with many repos (another script)
 - hgweb tip link too verbose
