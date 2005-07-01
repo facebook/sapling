@@ -296,10 +296,11 @@ def clone(ui, source, dest = None, **opts):
     d = dircleanup(dest)
 
     link = 0
+    abspath = source
     if not (source.startswith("http://") or
             source.startswith("hg://") or
             source.startswith("old-http://")):
-        source = os.path.abspath(source)
+        abspath = os.path.abspath(source)
         d1 = os.stat(dest).st_dev
         d2 = os.stat(source).st_dev
         if d1 == d2: link = 1
@@ -323,7 +324,7 @@ def clone(ui, source, dest = None, **opts):
 
     f = repo.opener("hgrc", "w")
     f.write("[paths]\n")
-    f.write("default = %s\n" % source)
+    f.write("default = %s\n" % abspath)
 
     if not opts['noupdate']:
         update(ui, repo)
