@@ -1,4 +1,4 @@
-import sys, os, getopt
+import os, getopt
 
 def fancyopts(args, options, state, syntax='', minlen = 0):
     long=[]
