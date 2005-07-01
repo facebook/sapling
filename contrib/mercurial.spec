@@ -10,6 +10,9 @@ Packager: Arun Sharma <arun@sharma-home.net>
 Prefix: /usr
 BuildRoot: /tmp/build.%{name}-%{version}-%{release}
 
+%define pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')
+%define pythonlib %{_libdir}/python%{pythonver}/site-packages/%{name}
+
 %description
 
 Mercurial is a fast, lightweight source control management system designed
@@ -29,20 +32,16 @@ python setup.py build
 
 python setup.py install --root $RPM_BUILD_ROOT
 
-cd $RPM_BUILD_ROOT
-find . -type d | sed '1,2d;s,^\.,\%attr(-\,root\,root) \%dir ,' > \
-	$RPM_BUILD_DIR/file.list.%{name}
-
-find . -type f | sed -e 's,^\.,\%attr(-\,root\,root) ,' \
-	-e '/\/config\//s|^|%config|' \
-	-e '/\/applnk\//s|^|%config|' >> \
-	$RPM_BUILD_DIR/file.list.%{name}
-
-find . -type l | sed 's,^\.,\%attr(-\,root\,root) ,' >> \
-	$RPM_BUILD_DIR/file.list.%{name}
-
 %clean
-rm -rf $RPM_BUILD_ROOT $RPM_BUILD_DIR/file.list.%{name}
+rm -rf $RPM_BUILD_ROOT
 
-%files -f ../file.list.%{name}
+%files
+%defattr(-,root,root,-)
 %doc doc
+%dir %{pythonlib}
+%{_bindir}/hgmerge
+%{_bindir}/hg
+%{pythonlib}/templates
+%{pythonlib}/*.pyc
+%{pythonlib}/*.py
+%{pythonlib}/*.so
