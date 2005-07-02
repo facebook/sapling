@@ -647,7 +647,7 @@ class localrepository:
             if cp:
                 meta["copy"] = cp
                 meta["copyrev"] = hex(m1.get(cp, m2.get(cp, nullid)))
-                self.ui.debug(" %s: copy %s:%s\n" % (f, cp, meta["copyrev"])) 
+                self.ui.debug(" %s: copy %s:%s\n" % (f, cp, meta["copyrev"]))
 
             r = self.file(f)
             fp1 = m1.get(f, nullid)
@@ -813,7 +813,7 @@ class localrepository:
             while n != bottom:
                 p = self.changelog.parents(n)[0]
                 if i == f:
-                    l.append(n) 
+                    l.append(n)
                     f = f * 2
                 n = p
                 i += 1

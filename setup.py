@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-
-# This is the mercurial setup script. 
+#
+# This is the mercurial setup script.
 #
 # './setup.py install', or
 # './setup.py --help' for more options
@@ -35,7 +35,7 @@ try:
           data_files=[('mercurial/templates',
                        ['templates/map'] +
                        glob.glob('templates/map-*') +
-                       glob.glob('templates/*.tmpl'))], 
+                       glob.glob('templates/*.tmpl'))],
           cmdclass = { 'install_data' : install_package_data },
           scripts=['hg', 'hgmerge'])
 finally:
