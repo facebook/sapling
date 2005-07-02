@@ -847,7 +847,7 @@ def dispatch(args):
     opts = [('v', 'verbose', None, 'verbose'),
             ('d', 'debug', None, 'debug'),
             ('q', 'quiet', None, 'quiet'),
-            ('p', 'profile', None, 'profile'),
+            ('', 'profile', None, 'profile'),
             ('R', 'repository', "", 'repository root directory'),
             ('', 'traceback', None, 'print traceback on exception'),
             ('y', 'noninteractive', None, 'run non-interactively'),
