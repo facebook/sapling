@@ -1255,6 +1255,9 @@ class localrepository:
         for f in remove:
             self.ui.note("removing %s\n" % f)
             os.unlink(f)
+            # try removing directories that might now be empty
+            try: os.removedirs(os.path.dirname(f))
+            except: pass
         if mode == 'n':
             self.dirstate.forget(remove)
         else:
