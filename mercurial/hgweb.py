@@ -151,10 +151,6 @@ class hgweb:
         if len(files) > self.maxfiles:
             yield self.t("fileellipses")
 
-    def parent(self, t1, node=nullid, rev=-1, **args):
-        if node != hex(nullid):
-            yield self.t(t1, node = node, rev = rev, **args)
-
     def parents(self, t1, nodes=[], rev=None,**args):
         if not rev: rev = lambda x: ""
         for node in nodes:
