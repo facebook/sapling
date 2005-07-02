@@ -52,6 +52,7 @@ class transaction:
             util.rename(self.journal, self.after)
         else:
             os.unlink(self.journal)
+        self.journal = None
 
     def abort(self):
         if not self.entries: return
