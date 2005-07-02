@@ -155,6 +155,12 @@ class hgweb:
         if node != hex(nullid):
             yield self.t(t1, node = node, rev = rev, **args)
 
+    def parents(self, t1, nodes=[], rev=None,**args):
+        if not rev: rev = lambda x: ""
+        for node in nodes:
+            if node != nullid:
+                yield self.t(t1, node = hex(node), rev = rev(node), **args)
+
     def showtag(self, t1, node=nullid, **args):
         for t in self.repo.nodetags(node):
              yield self.t(t1, tag = t, **args)
@@ -259,10 +265,8 @@ class hgweb:
                     'changelogentry',
                     parity = parity,
                     author = changes[1],
-                    parent1 = self.parent("changelogparent",
-                                          hex(p1), cl.rev(p1)),
-                    parent2 = self.parent("changelogparent",
-                                          hex(p2), cl.rev(p2)),
+                    parent1 = self.parents("changelogparent",
+                                          cl.parents(n), cl.rev),
                     changelogtag = self.showtag("changelogtag",n),
                     p1 = hex(p1), p2 = hex(p2),
                     p1rev = cl.rev(p1), p2rev = cl.rev(p2),
@@ -327,10 +331,8 @@ class hgweb:
                     'searchentry',
                     parity = count & 1,
                     author = changes[1],
-                    parent1 = self.parent("changelogparent",
-                                          hex(p1), cl.rev(p1)),
-                    parent2 = self.parent("changelogparent",
-                                          hex(p2), cl.rev(p2)),
+                    parent1 = self.parents("changelogparent",
+                                          cl.parents(n), cl.rev),
                     changelogtag = self.showtag("changelogtag",n),
                     p1 = hex(p1), p2 = hex(p2),
                     p1rev = cl.rev(p1), p2rev = cl.rev(p2),
@@ -378,10 +380,8 @@ class hgweb:
                      diff = diff,
                      rev = cl.rev(n),
                      node = nodeid,
-                     parent1 = self.parent("changesetparent",
-                                           hex(p1), cl.rev(p1)),
-                     parent2 = self.parent("changesetparent",
-                                           hex(p2), cl.rev(p2)),
+                     parent1 = self.parents("changesetparent",
+                                           cl.parents(n), cl.rev),
                      changesettag = self.showtag("changesettag",n),
                      p1 = hex(p1), p2 = hex(p2),
                      p1rev = cl.rev(p1), p2rev = cl.rev(p2),
@@ -462,10 +462,8 @@ class hgweb:
                      manifest = hex(mfn),
                      author = cs[1],
                      date = t,
-                     parent1 = self.parent("filerevparent",
-                                           hex(p1), fl.rev(p1), file=f),
-                     parent2 = self.parent("filerevparent",
-                                           hex(p2), fl.rev(p2), file=f),
+                     parent1 = self.parents("filerevparent",
+                                           fl.parents(n), fl.rev, file=f),
                      p1 = hex(p1), p2 = hex(p2),
                      permissions = self.repo.manifest.readflags(mfn)[f],
                      p1rev = fl.rev(p1), p2rev = fl.rev(p2))
@@ -531,10 +529,8 @@ class hgweb:
                      manifest = hex(mfn),
                      author = cs[1],
                      date = t,
-                     parent1 = self.parent("fileannotateparent",
-                                           hex(p1), fl.rev(p1), file=f),
-                     parent2 = self.parent("fileannotateparent",
-                                           hex(p2), fl.rev(p2), file=f),
+                     parent1 = self.parents("fileannotateparent",
+                                           fl.parents(n), fl.rev, file=f),
                      p1 = hex(p1), p2 = hex(p2),
                      permissions = self.repo.manifest.readflags(mfn)[f],
                      p1rev = fl.rev(p1), p2rev = fl.rev(p2))
