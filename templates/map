@@ -32,3 +32,4 @@ tagentry = "<div class="parity#parity#"><tt>#node#</tt> <a href="?cmd=changeset;
 diffblock = "<div class="parity#parity#">#lines#</div>"
 changelogtag = "<tr><td align="right">tag:&nbsp;</td><td>#tag#</td></tr>"
 changesettag = "<tr><td class="metatag">tag:&nbsp;</td><td>#tag#</td></tr>"
+filediffparent = "<tr><td class="metatag">parent #rev#:</td><td><a href="?cmd=changeset;node=#node#">#node|short#</a></td></tr>"

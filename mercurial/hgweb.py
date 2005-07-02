@@ -630,7 +630,8 @@ class hgweb:
                      filenode = hex(mf.get(file, nullid)),
                      node = changeset,
                      rev = self.repo.changelog.rev(n),
-                     p1 = hex(p1),
+                     parent = self.parents("filediffparent",
+                              cl.parents(n), cl.rev),
                      p1rev = self.repo.changelog.rev(p1),
                      diff = diff)
 
