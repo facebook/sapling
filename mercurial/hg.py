@@ -1092,9 +1092,12 @@ class localrepository:
         # construct a working dir manifest
         mw = m1.copy()
         mfw = mf1.copy()
+        umap = dict.fromkeys(u)
+
         for f in a + c + u:
             mw[f] = ""
             mfw[f] = util.is_exec(self.wjoin(f), mfw.get(f, False))
+
         for f in d:
             if f in mw: del mw[f]
 
@@ -1106,6 +1109,7 @@ class localrepository:
             if linear_path and f not in m2:
                 self.dirstate.forget((f,))
 
+        # Compare manifests
         for f, n in mw.iteritems():
             if f in m2:
                 s = 0
@@ -1140,6 +1144,9 @@ class localrepository:
                         s = 1
                     else:
                         mark[f] = 1
+                elif f in umap:
+                    # this unknown file is the same as the checkout
+                    get[f] = m2[f]
 
                 if not s and mfw[f] != mf2[f]:
                     if force:
