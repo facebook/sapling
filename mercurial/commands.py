@@ -33,7 +33,47 @@ def relpath(repo, args):
                  for x in args ]
     return args
 
-def dodiff(ui, repo, files = None, node1 = None, node2 = None):
+revrangesep = ':'
+
+def revrange(ui, repo, revs = [], revlog = None):
+    if revlog is None:
+        revlog = repo.changelog
+    revcount = revlog.count()
+    def fix(val, defval):
+        if not val: return defval
+        try:
+            num = int(val)
+            if str(num) != val: raise ValueError
+            if num < 0: num += revcount
+            if not (0 <= num < revcount):
+                raise ValueError
+        except ValueError:
+            try:
+                num = repo.changelog.rev(repo.lookup(val))
+            except KeyError:
+                try:
+                    num = revlog.rev(revlog.lookup(val))
+                except KeyError:
+                    ui.warn('abort: invalid revision identifier %s\n' % val)
+                    sys.exit(1)
+        return num
+    for spec in revs:
+        if spec.find(revrangesep) >= 0:
+            start, end = spec.split(revrangesep, 1)
+            start = fix(start, 0)
+            end = fix(end, revcount - 1)
+            if end > start:
+                end += 1
+                step = 1
+            else:
+                end -= 1
+                step = -1
+            for rev in xrange(start, end, step):
+                yield str(rev)
+        else:
+            yield spec
+
+def dodiff(fp, ui, repo, files = None, node1 = None, node2 = None):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
@@ -70,15 +110,15 @@ def dodiff(ui, repo, files = None, node1 = None, node2 = None):
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f, r))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
     for f in a:
         to = None
         tn = read(f)
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f, r))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
     for f in d:
         to = repo.file(f).read(mmap[f])
         tn = None
-        sys.stdout.write(mdiff.unidiff(to, date1, tn, date2, f, r))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
 
 def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
     """show a single changeset or file revision"""
@@ -421,24 +461,68 @@ def diff(ui, repo, *files, **opts):
     else:
         files = relpath(repo, [""])
 
-    dodiff(ui, repo, files, *revs)
+    dodiff(sys.stdout, ui, repo, files, *revs)
 
-def export(ui, repo, changeset):
-    """dump the changeset header and diffs for a revision"""
+def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
     prev, other = repo.changelog.parents(node)
     change = repo.changelog.read(node)
-    print "# HG changeset patch"
-    print "# User %s" % change[1]
-    print "# Node ID %s" % hg.hex(node)
-    print "# Parent  %s" % hg.hex(prev)
-    print
-    if other != hg.nullid:
-        print "# Parent  %s" % hg.hex(other)
-    print change[4].rstrip()
-    print
 
-    dodiff(ui, repo, None, prev, node)
+    def expand(name):
+        expansions = {
+            '%': lambda: '%',
+            'H': lambda: hg.hex(node),
+            'N': lambda: str(total),
+            'R': lambda: str(repo.changelog.rev(node)),
+            'b': lambda: os.path.basename(repo.root),
+            'h': lambda: hg.short(node),
+            'n': lambda: str(seqno).zfill(len(str(total))),
+            'r': lambda: str(repo.changelog.rev(node)).zfill(revwidth),
+            }
+        newname = []
+        namelen = len(name)
+        i = 0
+        while i < namelen:
+            c = name[i]
+            if c == '%':
+                i += 1
+                c = name[i]
+                c = expansions[c]()
+            newname.append(c)
+            i += 1
+        return ''.join(newname)
+
+    if opts['output'] and opts['output'] != '-':
+        try:
+            fp = open(expand(opts['output']), 'w')
+        except KeyError, inst:
+            ui.warn("error: invalid format spec '%%%s' in output file name\n" %
+                    inst.args[0])
+            sys.exit(1)
+    else:
+        fp = sys.stdout
+
+    print >> fp, "# HG changeset patch"
+    print >> fp, "# User %s" % change[1]
+    print >> fp, "# Node ID %s" % hg.hex(node)
+    print >> fp, "# Parent  %s" % hg.hex(prev)
+    print >> fp
+    if other != hg.nullid:
+        print >> fp, "# Parent  %s" % hg.hex(other)
+    print >> fp, change[4].rstrip()
+    print >> fp
+
+    dodiff(fp, ui, repo, None, prev, node)
+
+def export(ui, repo, *changesets, **opts):
+    """dump the header and diffs for one or more changesets"""
+    seqno = 0
+    revs = list(revrange(ui, repo, changesets))
+    total = len(revs)
+    revwidth = max(len(revs[0]), len(revs[-1]))
+    for cset in revs:
+        seqno += 1
+        doexport(ui, repo, cset, seqno, total, revwidth, opts)
 
 def forget(ui, repo, file, *files):
     """don't add the specified files on the next commit"""
@@ -585,7 +669,7 @@ def pull(ui, repo, source="default", **opts):
     if cg and not r:
         if opts['update']:
             return update(ui, repo)
-	else:
+        else:
             ui.status("(run 'hg update' to get a working copy)\n")
 
     return r
@@ -679,15 +763,18 @@ def tag(ui, repo, name, rev = None, **opts):
     """add a tag for the current tip or a given revision"""
 
     if name == "tip":
-	ui.warn("abort: 'tip' is a reserved name!\n")
-	return -1
+        ui.warn("abort: 'tip' is a reserved name!\n")
+        return -1
+    if name.find(revrangesep) >= 0:
+        ui.warn("abort: '%s' cannot be used in a tag name\n" % revrangesep)
+        return -1
 
     (c, a, d, u) = repo.changes(None, None)
     for x in (c, a, d, u):
-	if ".hgtags" in x:
-	    ui.warn("abort: working copy of .hgtags is changed!\n")
+        if ".hgtags" in x:
+            ui.warn("abort: working copy of .hgtags is changed!\n")
             ui.status("(please commit .hgtags manually)\n")
-	    return -1
+            return -1
 
     if rev:
         r = hg.hex(repo.lookup(rev))
@@ -773,7 +860,8 @@ table = {
     "debugindexdot": (debugindexdot, [], 'debugindexdot <file>'),
     "diff": (diff, [('r', 'rev', [], 'revision')],
              'hg diff [-r A] [-r B] [files]'),
-    "export": (export, [], "hg export <changeset>"),
+    "export": (export, [('o', 'output', "", 'output to file')],
+               "hg export [-o file] <changeset> ..."),
     "forget": (forget, [], "hg forget [files]"),
     "heads": (heads, [], 'hg heads'),
     "help": (help, [], 'hg help [command]'),
@@ -790,7 +878,7 @@ table = {
     "parents": (parents, [], 'hg parents [node]'),
     "pull": (pull,
                   [('u', 'update', None, 'update working directory')],
-		  'hg pull [options] [source]'),
+                  'hg pull [options] [source]'),
     "push": (push, [], 'hg push <destination>'),
     "rawcommit": (rawcommit,
                   [('p', 'parent', [], 'parent'),
@@ -943,4 +1031,3 @@ def dispatch(args):
         help(u, cmd)
 
     sys.exit(-1)
-

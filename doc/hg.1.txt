@@ -129,11 +129,27 @@ diff [-r revision] [-r revision] [files ...]::
     revisions are specified, the working directory files are compared
     to its parent.
 
-export [revision]::
-    Print the changeset header and diffs for a particular revision.
+export [-o filespec] [revision] ...::
+    Print the changeset header and diffs for one or more revisions.
 
-    The information shown in the changeset header is: author, changeset hash,
-    parent and commit comment.
+    The information shown in the changeset header is: author,
+    changeset hash, parent and commit comment.
+
+    Output may be to a file, in which case the name of the file is
+    given using a format string.  The formatting rules are as follows:
+
+    %%   literal "%" character
+    %H   changeset hash (40 bytes of hexadecimal)
+    %N   number of patches being generated
+    %R   changeset revision number
+    %b   basename of the exporting repository
+    %h   short-form changeset hash (12 bytes of hexadecimal)
+    %n   zero-padded sequence number, starting at 1
+    %r   zero-padded changeset revision number
+
+    Options:
+
+    -o, --output <filespec>   print output to file with formatted named
 
 forget [files]::
     Undo an 'hg add' scheduled for the next commit.
@@ -317,6 +333,49 @@ verify::
     the changelog, manifest, and tracked files, as well as the
     integrity of their crosslinks and indices.
 
+SPECIFYING SINGLE REVISIONS
+---------------------------
+
+    Mercurial accepts several notations for identifying individual
+    revisions.
+
+    A plain integer is treated as a revision number.  Negative
+    integers are treated as offsets from the tip, with -1 denoting the
+    tip.
+
+    A 40-digit hexadecimal string is treated as a unique revision
+    identifier.
+
+    A hexadecimal string less than 40 characters long is treated as a
+    unique revision identifier, and referred to as a short-form
+    identifier.  A short-form identifier is only valid if it is the
+    prefix of one full-length identifier.
+
+    Any other string is treated as a tag name, which is a symbolic
+    name associated with a revision identifier.  Tag names may not
+    contain the ":" character.
+
+    The reserved name "tip" is a special tag that always identifies
+    the most recent revision.
+
+SPECIFYING MULTIPLE REVISIONS
+-----------------------------
+
+    When Mercurial accepts more than one revision, they may be
+    specified individually, or provided as a continuous range,
+    separated by the ":" character.
+
+    The syntax of range notation is [BEGIN]:[END], where BEGIN and END
+    are revision identifiers.  Both BEGIN and END are optional.  If
+    BEGIN is not specified, it defaults to revision number 0.  If END
+    is not specified, it defaults to the tip.  The range ":" thus
+    means "all revisions".
+
+    If BEGIN is greater than END, revisions are treated in reverse
+    order.
+
+    A range acts as an open interval.  This means that a range of 3:5
+    gives 3, 4 and 5.  Similarly, a range of 4:2 gives 4, 3, and 2.
 
 ENVIRONMENT VARIABLES
 ---------------------
