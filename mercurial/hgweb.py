@@ -54,7 +54,7 @@ def up(p):
     return up + "/"
 
 def httphdr(type):
-    print 'Content-type: %s\n' % type
+    sys.stdout.write('Content-type: %s\n\n' % type)
 
 def write(*things):
     for thing in things:

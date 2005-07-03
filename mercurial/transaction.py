@@ -15,13 +15,14 @@ import os
 import util
 
 class transaction:
-    def __init__(self, opener, journal, after = None):
+    def __init__(self, report, opener, journal, after = None):
         self.journal = None
 
         # abort here if the journal already exists
         if os.path.exists(journal):
             raise "journal already exists - run hg recover"
 
+        self.report = report
         self.opener = opener
         self.after = after
         self.entries = []
@@ -57,17 +58,17 @@ class transaction:
     def abort(self):
         if not self.entries: return
 
-        print "transaction abort!"
+        self.report("transaction abort!\n")
 
         for f, o in self.entries:
             try:
                 self.opener(f, "a").truncate(o)
             except:
-                print "failed to truncate", f
+                self.report("failed to truncate %s\n" % f)
 
         self.entries = []
 
-        print "rollback completed"
+        self.report("rollback completed\n")
 
 def rollback(opener, file):
     for l in open(file).readlines():

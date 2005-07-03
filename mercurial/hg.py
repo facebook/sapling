@@ -520,7 +520,8 @@ class localrepository:
             ds = ""
         self.opener("undo.dirstate", "w").write(ds)
 
-        return transaction.transaction(self.opener, self.join("journal"),
+        return transaction.transaction(self.ui.warn,
+                                       self.opener, self.join("journal"),
                                        self.join("undo"))
 
     def recover(self):
@@ -1350,7 +1351,7 @@ class localrepository:
             try:
                 delta = mdiff.patchtext(self.manifest.delta(n))
             except KeyboardInterrupt:
-                print "aborted"
+                self.ui.warn("aborted")
                 sys.exit(0)
             except Exception, inst:
                 self.ui.warn("unpacking manifest %s: %s\n"
@@ -1392,7 +1393,6 @@ class localrepository:
                 if n not in filenodes[f]:
                     self.ui.warn("%s: %d:%s not in manifests\n"
                                  % (f, i, short(n)))
-                    print len(filenodes[f].keys()), fl.count(), f
                     errors += 1
                 else:
                     del filenodes[f][n]

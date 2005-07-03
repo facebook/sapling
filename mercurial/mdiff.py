@@ -88,7 +88,6 @@ def diff(a, b, sorted=0):
         try:
             d = sortdiff(a, b)
         except:
-            print a, b
             raise
     else:
         d = difflib.SequenceMatcher(None, a, b).get_matching_blocks()

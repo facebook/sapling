@@ -400,22 +400,22 @@ def debugcheckdirstate(ui, repo):
     for f in dc:
         state = repo.dirstate.state(f)
         if state in "nr" and f not in m1:
-            print "%s in state %s, but not listed in manifest1" % (f, state)
+            ui.warn("%s in state %s, but not in manifest1\n" % (f, state))
             errors += 1
         if state in "a" and f in m1:
-            print "%s in state %s, but also listed in manifest1" % (f, state)
+            ui.warn("%s in state %s, but also in manifest1\n" % (f, state))
             errors += 1
         if state in "m" and f not in m1 and f not in m2:
-            print "%s in state %s, but not listed in either manifest" % \
-                  (f, state)
+            ui.warn("%s in state %s, but not in either manifest\n" %
+                    (f, state))
             errors += 1
     for f in m1:
         state = repo.dirstate.state(f)
         if state not in "nrm":
-            print "%s in manifest1, but listed as state %s" % (f, state)
+            ui.warn("%s in manifest1, but listed as state %s" % (f, state))
             errors += 1
     if errors:
-        print ".hg/dirstate inconsistent with current parent's manifest"
+        ui.warn(".hg/dirstate inconsistent with current parent's manifest\n")
         sys.exit(1)
 
 def debugdumpdirstate(ui, repo):
@@ -424,27 +424,27 @@ def debugdumpdirstate(ui, repo):
     keys = dc.keys()
     keys.sort()
     for file in keys:
-        print "%s => %c" % (file, dc[file][0])
+        ui.write("%c %s\n" % (dc[file][0], file))
 
 def debugindex(ui, file):
     r = hg.revlog(hg.opener(""), file, "")
-    print "   rev    offset  length   base linkrev"+\
-          " p1           p2           nodeid"
+    ui.write("   rev    offset  length   base linkrev" +
+             " p1           p2           nodeid\n")
     for i in range(r.count()):
         e = r.index[i]
-        print "% 6d % 9d % 7d % 6d % 7d %s.. %s.. %s.." % (
-            i, e[0], e[1], e[2], e[3],
-            hg.hex(e[4][:5]), hg.hex(e[5][:5]), hg.hex(e[6][:5]))
+        ui.write("% 6d % 9d % 7d % 6d % 7d %s.. %s.. %s..\n" % (
+                i, e[0], e[1], e[2], e[3],
+            hg.hex(e[4][:5]), hg.hex(e[5][:5]), hg.hex(e[6][:5])))
 
 def debugindexdot(ui, file):
     r = hg.revlog(hg.opener(""), file, "")
-    print "digraph G {"
+    ui.write("digraph G {\n")
     for i in range(r.count()):
         e = r.index[i]
-        print "\t%d -> %d" % (r.rev(e[4]), i)
+        ui.write("\t%d -> %d\n" % (r.rev(e[4]), i))
         if e[5] != hg.nullid:
-            print "\t%d -> %d" % (r.rev(e[5]), i)
-    print "}"
+            ui.write("\t%d -> %d\n" % (r.rev(e[5]), i))
+    ui.write("}\n")
 
 def diff(ui, repo, *files, **opts):
     """diff working directory (or selected files)"""
@@ -502,15 +502,14 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     else:
         fp = sys.stdout
 
-    print >> fp, "# HG changeset patch"
-    print >> fp, "# User %s" % change[1]
-    print >> fp, "# Node ID %s" % hg.hex(node)
-    print >> fp, "# Parent  %s" % hg.hex(prev)
-    print >> fp
+    fp.write("# HG changeset patch\n")
+    fp.write("# User %s\n" % change[1])
+    fp.write("# Node ID %s\n" % hg.hex(node))
+    fp.write("# Parent  %s\n" % hg.hex(prev))
     if other != hg.nullid:
-        print >> fp, "# Parent  %s" % hg.hex(other)
-    print >> fp, change[4].rstrip()
-    print >> fp
+        fp.write("# Parent  %s\n" % hg.hex(other))
+    fp.write(change[4].rstrip())
+    fp.write("\n\n")
 
     dodiff(fp, ui, repo, None, prev, node)
 
@@ -715,7 +714,7 @@ def rawcommit(ui, repo, *flist, **rc):
         try: text = open(rc['logfile']).read()
         except IOError: pass
     if not text and not rc['logfile']:
-        print "missing commit text"
+        ui.warn("abort: missing commit text\n")
         return 1
 
     files = relpath(repo, list(flist))
@@ -754,10 +753,10 @@ def status(ui, repo):
     (c, a, d, u) = repo.changes(None, None)
     (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
-    for f in c: print "C", f
-    for f in a: print "A", f
-    for f in d: print "R", f
-    for f in u: print "?", f
+    for f in c: ui.write("C ", f, "\n")
+    for f in a: ui.write("A ", f, "\n")
+    for f in d: ui.write("R ", f, "\n")
+    for f in u: ui.write("? ", f, "\n")
 
 def tag(ui, repo, name, rev = None, **opts):
     """add a tag for the current tip or a given revision"""
