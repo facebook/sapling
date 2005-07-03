@@ -215,16 +215,22 @@ def help(ui, cmd=None):
             ui.warn("hg: unknown command %s\n" % cmd)
         sys.exit(0)
     else:
-        if not ui.quiet:
+        if ui.verbose:
             show_version(ui)
             ui.write('\n')
-        ui.write('hg commands:\n\n')
+        if ui.verbose:
+            ui.write('hg commands:\n\n')
+        else:
+            ui.write('basic hg commands (use -v for long list):\n\n')
 
         h = {}
         for c, e in table.items():
             f = c.split("|")[0]
-            if f.startswith("debug"):
+            if not ui.verbose and not f.startswith("^"):
                 continue
+            if not ui.debugflag and f.startswith("debug"):
+                continue
+            f = f.lstrip("^")
             d = ""
             if e[0].__doc__:
                 d = e[0].__doc__.splitlines(0)[0].rstrip()
@@ -878,7 +884,7 @@ def verify(ui, repo):
 # Command options and aliases are listed here, alphabetically
 
 table = {
-    "add": (add, [], "hg add [files]"),
+    "^add": (add, [], "hg add [files]"),
     "addremove": (addremove, [], "hg addremove [files]"),
     "annotate": (annotate,
                      [('r', 'revision', '', 'revision'),
@@ -887,9 +893,9 @@ table = {
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
     "cat": (cat, [], 'hg cat <file> [rev]'),
-    "clone": (clone, [('U', 'noupdate', None, 'skip update after cloning')],
+    "^clone": (clone, [('U', 'noupdate', None, 'skip update after cloning')],
               'hg clone [options] <source> [dest]'),
-    "commit|ci": (commit,
+    "^commit|ci": (commit,
                   [('t', 'text', "", 'commit text'),
                    ('A', 'addremove', None, 'run add/remove during commit'),
                    ('l', 'logfile', "", 'commit text file'),
@@ -901,7 +907,7 @@ table = {
     "debugdumpdirstate": (debugdumpdirstate, [], 'debugdumpdirstate'),
     "debugindex": (debugindex, [], 'debugindex <file>'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot <file>'),
-    "diff": (diff, [('r', 'rev', [], 'revision')],
+    "^diff": (diff, [('r', 'rev', [], 'revision')],
              'hg diff [-r A] [-r B] [files]'),
     "export": (export, [('o', 'output', "", 'output to file')],
                "hg export [-o file] <changeset> ..."),
@@ -913,16 +919,16 @@ table = {
                      [('p', 'strip', 1, 'path strip'),
                       ('b', 'base', "", 'base path')],
                      "hg import [options] <patches>"),
-    "init": (init, [], 'hg init'),
-    "log|history": (log,
+    "^init": (init, [], 'hg init'),
+    "^log|history": (log,
                     [('r', 'rev', [], 'revision')],
                     'hg log [-r A] [-r B] [file]'),
     "manifest": (manifest, [], 'hg manifest [rev]'),
     "parents": (parents, [], 'hg parents [node]'),
-    "pull": (pull,
+    "^pull": (pull,
                   [('u', 'update', None, 'update working directory')],
                   'hg pull [options] [source]'),
-    "push": (push, [], 'hg push <destination>'),
+    "^push": (push, [], 'hg push <destination>'),
     "rawcommit": (rawcommit,
                   [('p', 'parent', [], 'parent'),
                    ('d', 'date', "", 'date code'),
@@ -932,18 +938,18 @@ table = {
                    ('l', 'logfile', "", 'commit text file')],
                   'hg rawcommit [options] [files]'),
     "recover": (recover, [], "hg recover"),
-    "remove|rm": (remove, [], "hg remove [files]"),
+    "^remove|rm": (remove, [], "hg remove [files]"),
     "revert": (revert,
                [("n", "nonrecursive", None, "don't recurse into subdirs"),
                 ("r", "rev", "", "revision")],
                "hg revert [files|dirs]"),
     "root": (root, [], "hg root"),
-    "serve": (serve, [('p', 'port', 8000, 'listen port'),
+    "^serve": (serve, [('p', 'port', 8000, 'listen port'),
                       ('a', 'address', '', 'interface address'),
                       ('n', 'name', os.getcwd(), 'repository name'),
                       ('t', 'templates', "", 'template map')],
               "hg serve [options]"),
-    "status": (status, [], 'hg status'),
+    "^status": (status, [], 'hg status'),
     "tag": (tag,  [('t', 'text', "", 'commit text'),
                    ('d', 'date', "", 'date code'),
                    ('u', 'user', "", 'user')],
@@ -951,7 +957,7 @@ table = {
     "tags": (tags, [], 'hg tags'),
     "tip": (tip, [], 'hg tip'),
     "undo": (undo, [], 'hg undo'),
-    "update|up|checkout|co":
+    "^update|up|checkout|co":
             (update,
              [('m', 'merge', None, 'allow merging of conflicts'),
               ('C', 'clean', None, 'overwrite locally modified files')],
