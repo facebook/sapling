@@ -1,46 +1,67 @@
-+ hg -q help
-basic hg commands (use -v for long list):
+basic hg commands (use "hg help -v" for more):
 
- add      add the specified files on the next commit
- clone    make a copy of an existing repository
- commit   commit the specified files or all outstanding changes
- diff     diff working directory (or selected files)
- init     create a new repository in the current directory
- log      show the revision history of the repository or a single file
- pull     pull changes from the specified source
- push     push changes to the specified destination
- remove   remove the specified files on the next commit
- serve    export the repository via HTTP
- status   show changed files in the working directory
- update   update or merge working directory
-+ hg add -h
+ add        add the specified files on the next commit
+ annotate   show changeset information per file line
+ clone      make a copy of an existing repository
+ commit     commit the specified files or all outstanding changes
+ diff       diff working directory (or selected files)
+ export     dump the header and diffs for one or more changesets
+ init       create a new repository in the current directory
+ log        show the revision history of the repository or a single file
+ pull       pull changes from the specified source
+ push       push changes to the specified destination
+ remove     remove the specified files on the next commit
+ revert     revert modified files or dirs back to their unmodified states
+ serve      export the repository via HTTP
+ status     show changed files in the working directory
+ update     update or merge working directory
+basic hg commands (use "hg help -v" for more):
+
+ add        add the specified files on the next commit
+ annotate   show changeset information per file line
+ clone      make a copy of an existing repository
+ commit     commit the specified files or all outstanding changes
+ diff       diff working directory (or selected files)
+ export     dump the header and diffs for one or more changesets
+ init       create a new repository in the current directory
+ log        show the revision history of the repository or a single file
+ pull       pull changes from the specified source
+ push       push changes to the specified destination
+ remove     remove the specified files on the next commit
+ revert     revert modified files or dirs back to their unmodified states
+ serve      export the repository via HTTP
+ status     show changed files in the working directory
+ update     update or merge working directory
 hg add: option -h not recognized
 hg add [files]
 
 add the specified files on the next commit
-+ hg help diff
+hg add: option --skjdfks not recognized
+hg add [files]
+
+add the specified files on the next commit
 hg diff [-r A] [-r B] [files]
 
  -r --rev 
    revision
 
 diff working directory (or selected files)
-+ hg help foo
 hg: unknown command foo
-+ hg -q commands
 hg: unknown command 'commands'
-basic hg commands (use -v for long list):
+basic hg commands (use "hg help -v" for more):
 
- add      add the specified files on the next commit
- clone    make a copy of an existing repository
- commit   commit the specified files or all outstanding changes
- diff     diff working directory (or selected files)
- init     create a new repository in the current directory
- log      show the revision history of the repository or a single file
- pull     pull changes from the specified source
- push     push changes to the specified destination
- remove   remove the specified files on the next commit
- serve    export the repository via HTTP
- status   show changed files in the working directory
- update   update or merge working directory
-+ exit 0
+ add        add the specified files on the next commit
+ annotate   show changeset information per file line
+ clone      make a copy of an existing repository
+ commit     commit the specified files or all outstanding changes
+ diff       diff working directory (or selected files)
+ export     dump the header and diffs for one or more changesets
+ init       create a new repository in the current directory
+ log        show the revision history of the repository or a single file
+ pull       pull changes from the specified source
+ push       push changes to the specified destination
+ remove     remove the specified files on the next commit
+ revert     revert modified files or dirs back to their unmodified states
+ serve      export the repository via HTTP
+ status     show changed files in the working directory
+ update     update or merge working directory

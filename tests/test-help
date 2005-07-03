@@ -1,9 +1,9 @@
 #!/bin/sh
 
-set -x
-
+hg help
 hg -q help
 hg add -h
+hg add --skjdfks
 hg help diff
 hg help foo
 hg -q commands

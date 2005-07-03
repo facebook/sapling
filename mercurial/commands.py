@@ -221,7 +221,7 @@ def help(ui, cmd=None):
         if ui.verbose:
             ui.write('hg commands:\n\n')
         else:
-            ui.write('basic hg commands (use -v for long list):\n\n')
+            ui.write('basic hg commands (use "hg help -v" for more):\n\n')
 
         h = {}
         for c, e in table.items():
@@ -392,7 +392,8 @@ def copy(ui, repo, source, dest):
     """mark a file as copied or renamed for the next commit"""
     return repo.copy(*relpath(repo, (source, dest)))
 
-def debugcheckdirstate(ui, repo):
+def debugcheckstate(ui, repo):
+    """validate the correctness of the current dirstate"""
     parent1, parent2 = repo.dirstate.parents()
     repo.dirstate.read()
     dc = repo.dirstate.map
@@ -424,7 +425,8 @@ def debugcheckdirstate(ui, repo):
         ui.warn(".hg/dirstate inconsistent with current parent's manifest\n")
         sys.exit(1)
 
-def debugdumpdirstate(ui, repo):
+def debugstate(ui, repo):
+    """show the contents of the current dirstate"""
     repo.dirstate.read()
     dc = repo.dirstate.map
     keys = dc.keys()
@@ -433,6 +435,7 @@ def debugdumpdirstate(ui, repo):
         ui.write("%c %s\n" % (dc[file][0], file))
 
 def debugindex(ui, file):
+    """dump the contents of an index file"""
     r = hg.revlog(hg.opener(""), file, "")
     ui.write("   rev    offset  length   base linkrev" +
              " p1           p2           nodeid\n")
@@ -443,6 +446,7 @@ def debugindex(ui, file):
             hg.hex(e[4][:5]), hg.hex(e[5][:5]), hg.hex(e[6][:5])))
 
 def debugindexdot(ui, file):
+    """dump an index DAG as a .dot file"""
     r = hg.revlog(hg.opener(""), file, "")
     ui.write("digraph G {\n")
     for i in range(r.count()):
@@ -858,7 +862,18 @@ def tip(ui, repo):
     show_changeset(ui, repo, changenode=n)
 
 def undo(ui, repo):
-    """undo the last transaction"""
+    """undo the last commit or pull
+
+    Roll back the last pull or commit transaction on the
+    repository, restoring the project to its earlier state.
+
+    This command should be used with care. There is only one level of
+    undo and there is no redo.
+
+    This command is not intended for use on public repositories. Once
+    a change is visible for pull by other users, undoing it locally is
+    ineffective.
+    """
     repo.undo()
 
 def update(ui, repo, node=None, merge=False, clean=False):
@@ -886,7 +901,7 @@ def verify(ui, repo):
 table = {
     "^add": (add, [], "hg add [files]"),
     "addremove": (addremove, [], "hg addremove [files]"),
-    "annotate": (annotate,
+    "^annotate": (annotate,
                      [('r', 'revision', '', 'revision'),
                       ('u', 'user', None, 'show user'),
                       ('n', 'number', None, 'show revision number'),
@@ -903,13 +918,13 @@ table = {
                    ('u', 'user', "", 'user')],
                   'hg commit [files]'),
     "copy": (copy, [], 'hg copy <source> <dest>'),
-    "debugcheckdirstate": (debugcheckdirstate, [], 'debugcheckdirstate'),
-    "debugdumpdirstate": (debugdumpdirstate, [], 'debugdumpdirstate'),
+    "debugcheckstate": (debugcheckstate, [], 'debugcheckstate'),
+    "debugstate": (debugstate, [], 'debugstate'),
     "debugindex": (debugindex, [], 'debugindex <file>'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot <file>'),
     "^diff": (diff, [('r', 'rev', [], 'revision')],
              'hg diff [-r A] [-r B] [files]'),
-    "export": (export, [('o', 'output', "", 'output to file')],
+    "^export": (export, [('o', 'output', "", 'output to file')],
                "hg export [-o file] <changeset> ..."),
     "forget": (forget, [], "hg forget [files]"),
     "heads": (heads, [], 'hg heads'),
@@ -939,7 +954,7 @@ table = {
                   'hg rawcommit [options] [files]'),
     "recover": (recover, [], "hg recover"),
     "^remove|rm": (remove, [], "hg remove [files]"),
-    "revert": (revert,
+    "^revert": (revert,
                [("n", "nonrecursive", None, "don't recurse into subdirs"),
                 ("r", "rev", "", "revision")],
                "hg revert [files|dirs]"),
@@ -966,6 +981,16 @@ table = {
     "version": (show_version, [], 'hg version'),
     }
 
+globalopts = [('v', 'verbose', None, 'verbose'),
+              ('', 'debug', None, 'debug'),
+              ('q', 'quiet', None, 'quiet'),
+              ('', 'profile', None, 'profile'),
+              ('R', 'repository', "", 'repository root directory'),
+              ('', 'traceback', None, 'print traceback on exception'),
+              ('y', 'noninteractive', None, 'run non-interactively'),
+              ('', 'version', None, 'output version information and exit'),
+              ]
+
 norepo = "clone init version help debugindex debugindexdot"
 
 def find(cmd):
@@ -983,80 +1008,76 @@ def catchterm(*args):
 def run():
     sys.exit(dispatch(sys.argv[1:]))
 
-def dispatch(args):
-    signal.signal(signal.SIGTERM, catchterm)
+class ParseError(Exception): pass
 
-    def get_ui():
-        return ui.ui(options["verbose"], options["debug"], options["quiet"],
-                     not options["noninteractive"])
-
+def parse(args):
     options = {}
-    opts = [('v', 'verbose', None, 'verbose'),
-            ('', 'debug', None, 'debug'),
-            ('q', 'quiet', None, 'quiet'),
-            ('', 'profile', None, 'profile'),
-            ('R', 'repository', "", 'repository root directory'),
-            ('', 'traceback', None, 'print traceback on exception'),
-            ('y', 'noninteractive', None, 'run non-interactively'),
-            ('', 'version', None, 'output version information and exit'),
-            ]
+    cmdoptions = {}
 
     try:
-        args = fancyopts.fancyopts(args, opts, options,
-                                   'hg [options] <command> [options] [files]')
+        args = fancyopts.fancyopts(args, globalopts, options)
     except fancyopts.getopt.GetoptError, inst:
-        u = ui.ui()
-        u.warn("hg: %s\n" % (inst))
-        sys.exit(-1)
+        raise ParseError(cmd, inst)
 
-    if not args:
-        cmd = "help"
+    if options["version"]:
+        return ("version", show_version, [], options, cmdoptions)
+    elif not args:
+        return ("help", help, [], options, cmdoptions)
     else:
         cmd, args = args[0], args[1:]
 
-    if options["version"]:
-        show_version(get_ui())
-        sys.exit(0)
-
-    try:
-        i = find(cmd)
-    except UnknownCommand:
-        u = get_ui()
-        u.warn("hg: unknown command '%s'\n" % cmd)
-        help(u)
-        sys.exit(1)
+    i = find(cmd)
 
     # combine global options into local
     c = list(i[1])
     l = len(c)
-    for o in opts:
+    for o in globalopts:
         c.append((o[0], o[1], options[o[1]], o[3]))
 
-    cmdoptions = {}
     try:
-        args = fancyopts.fancyopts(args, c, cmdoptions, i[2])
+        args = fancyopts.fancyopts(args, c, cmdoptions)
     except fancyopts.getopt.GetoptError, inst:
-        u = get_ui()
-        u.warn("hg %s: %s\n" % (cmd, inst))
-        help(u, cmd)
-        sys.exit(-1)
+        raise ParseError(cmd, inst)
 
     # separate global options back out
-    for o in opts:
+    for o in globalopts:
         n = o[1]
         options[n] = cmdoptions[n]
         del cmdoptions[n]
 
-    u = get_ui()
+    return (cmd, i[0], args, options, cmdoptions)
+
+def dispatch(args):
+    signal.signal(signal.SIGTERM, catchterm)
+
+    try:
+        cmd, func, args, options, cmdoptions = parse(args)
+    except ParseError, inst:
+        u = ui.ui()
+        if inst.args[0]:
+            u.warn("hg %s: %s\n" % (inst.args[0], inst.args[1]))
+            help(u, inst.args[0])
+        else:
+            u.warn("hg: %s\n" % inst.args[1])
+            help(u)
+        sys.exit(-1)
+    except UnknownCommand, inst:
+        u = ui.ui()
+        u.warn("hg: unknown command '%s'\n" % inst.args[0])
+        help(u)
+        sys.exit(1)
+
+    u = ui.ui(options["verbose"], options["debug"], options["quiet"],
+                     not options["noninteractive"])
 
     try:
         try:
             if cmd not in norepo.split():
                 path = options["repository"] or ""
                 repo = hg.repository(ui=u, path=path)
-                d = lambda: i[0](u, repo, *args, **cmdoptions)
+                d = lambda: func(u, repo, *args, **cmdoptions)
             else:
-                d = lambda: i[0](u, *args, **cmdoptions)
+                d = lambda: func(u, *args, **cmdoptions)
 
             if options['profile']:
                 import hotshot, hotshot.stats
@@ -1102,7 +1123,7 @@ def dispatch(args):
         if len(tb) > 2: # no
             raise
         u.debug(inst, "\n")
-        u.warn("%s: invalid arguments\n" % i[0].__name__)
+        u.warn("%s: invalid arguments\n" % cmd)
         help(u, cmd)
 
     sys.exit(-1)

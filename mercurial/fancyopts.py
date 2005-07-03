@@ -1,6 +1,6 @@
 import os, getopt
 
-def fancyopts(args, options, state, syntax='', minlen = 0):
+def fancyopts(args, options, state):
     long=[]
     short=''
     map={}
