@@ -735,8 +735,10 @@ def remove(ui, repo, file, *files):
 
 def revert(ui, repo, *names, **opts):
     """revert modified files or dirs back to their unmodified states"""
-    node = opts['rev'] and repo.lookup(opts['rev']) or repo.changelog.tip()
+    node = opts['rev'] and repo.lookup(opts['rev']) or \
+           repo.dirstate.parents()[0]
     root = os.path.realpath(repo.root)
+
     def trimpath(p):
         p = os.path.realpath(p)
         if p.startswith(root):
@@ -746,8 +748,10 @@ def revert(ui, repo, *names, **opts):
             if p.startswith(os.sep):
                 return rest[1:]
             return p
+
     relnames = map(trimpath, names or [os.getcwd()])
     chosen = {}
+
     def choose(name):
         def body(name):
             for r in relnames:
