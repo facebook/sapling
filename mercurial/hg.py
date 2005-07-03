@@ -852,6 +852,7 @@ class localrepository:
         m = self.changelog.nodemap
         search = []
         fetch = []
+        base = {}
         seen = {}
         seenbranch = {}
 
@@ -861,6 +862,7 @@ class localrepository:
             return [nullid]
 
         # otherwise, assume we're closer to the tip than the root
+        # and start by examining the heads
         self.ui.status("searching for changes\n")
         heads = remote.heads()
         unknown = []
@@ -874,6 +876,10 @@ class localrepository:
         rep = {}
         reqcnt = 0
 
+        # search through remote branches
+        # a 'branch' here is a linear segment of history, with four parts:
+        # head, root, first parent, second parent
+        # (a branch always has two parents (or none) by definition)
         unknown = remote.branches(unknown)
         while unknown:
             r = []
@@ -899,6 +905,7 @@ class localrepository:
                             self.ui.debug("found new changeset %s\n" %
                                           short(n[1]))
                             fetch.append(n[1]) # earliest unknown
+                            base[n[2]] = 1 # latest known
                             continue
 
                     for a in n[2:4]:
@@ -919,6 +926,7 @@ class localrepository:
                         if b[0] not in m and b[0] not in seen:
                             unknown.append(b)
 
+        # do binary search on the branches we found
         while search:
             n = search.pop(0)
             reqcnt += 1
@@ -933,6 +941,7 @@ class localrepository:
                         self.ui.debug("found new branch changeset %s\n" %
                                           short(p))
                         fetch.append(p)
+                        base[i] = 1
                     else:
                         self.ui.debug("narrowed branch search to %s:%s\n"
                                       % (short(p), short(i)))
@@ -940,11 +949,12 @@ class localrepository:
                     break
                 p, f = i, f * 2
 
+        # sanity check our fetch list
         for f in fetch:
             if f in m:
                 raise RepoError("already have changeset " + short(f[:4]))
 
-        if fetch == [nullid]:
+        if base.keys() == [nullid]:
             self.ui.warn("warning: pulling from an unrelated repository!\n")
 
         self.ui.note("adding new changesets starting at " +

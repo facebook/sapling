@@ -1,0 +1,17 @@
+mkdir a
+cd a
+hg init
+echo 123 > a
+hg add a
+hg commit -t "a" -u a -d "0 0"
+
+cd ..
+mkdir b
+cd b
+hg init 
+echo 321 > b
+hg add b
+hg commit -t "b" -u b -d "0 0"
+
+hg pull ../a
+hg heads
