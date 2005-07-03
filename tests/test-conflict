@@ -11,7 +11,7 @@ hg co 0
 echo "something else" > a
 hg commit -t branch2 -u test -d "0 0"
 export HGMERGE=merge
-hg -d up -m 1
+hg up -m 1
 hg id
 grep -Ev ">>>|<<<" a
 hg status

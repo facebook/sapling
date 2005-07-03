@@ -27,7 +27,7 @@ hg pull ../test2
 hg heads
 hg history
 
-hg -dv co -m
+hg -v co -m
 
 ls -l ../test[12]/a > foo
 cut -b 0-10 < foo

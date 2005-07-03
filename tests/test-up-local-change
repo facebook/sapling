@@ -26,8 +26,8 @@ hg commit -t "2" -u test -d "0 0"
 cd ../r2
 hg -q pull ../r1
 hg status
-hg -d up
-hg -d up -m
+hg --debug up
+hg --debug up -m
 hg parents
 hg -v history
 hg diff > ../d

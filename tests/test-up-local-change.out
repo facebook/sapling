@@ -25,7 +25,7 @@ diff -r c19d34741b0a a
 + hg -q pull ../r1
 + hg status
 C a
-+ hg -d up
++ hg --debug up
 resolving manifests
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
  a versions differ, resolve
@@ -34,7 +34,7 @@ getting b
 merging a
 resolving a
 file a: other d730145abbf9 ancestor b789fdd96dc2
-+ hg -d up -m
++ hg --debug up -m
 resolving manifests
  ancestor 1165e8bd193e local 1165e8bd193e remote 1165e8bd193e
 + hg parents

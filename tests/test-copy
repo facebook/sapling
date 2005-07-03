@@ -9,7 +9,7 @@ hg status
 cp a b
 hg copy a b
 hg status
-hg -d commit -t "2" -u test -d "0 0"
+hg --debug commit -t "2" -u test -d "0 0"
 hg history
 hg log a
 hexdump -C .hg/data/b.d

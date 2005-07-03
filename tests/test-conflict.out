@@ -9,15 +9,9 @@
 + hg commit -t branch2 -u test -d '0 0'
 + export HGMERGE=merge
 + HGMERGE=merge
-+ hg -d up -m 1
++ hg up -m 1
 merge: warning: conflicts during merge
-resolving manifests
- ancestor 1c6e5a129854 local 35fedfab3325 remote a58017859bdc
- a versions differ, resolve
-working dir created .out, keeping
 merging a
-resolving a
-file a: other d7250518cb1b ancestor 68ba9db7a9e4
 merging a failed!
 + hg id
 32e80765d7fe+75234512624c+ tip

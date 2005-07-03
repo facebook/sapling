@@ -62,13 +62,10 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     added a b
 
-+ hg -dv co -m
++ hg -v co -m
 resolving manifests
- ancestor f328b97f7c11 local e7f06daf1cdb remote 629f0b785e0e
- a versions differ, resolve
 merging a
 resolving a
-file a: other 37c42bd6cc03 ancestor b80de5d13875
 + ls -l ../test1/a ../test2/a
 + cut -b 0-10
 -rwxr-x---
