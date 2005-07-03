@@ -253,6 +253,24 @@ remove [files ...]::
 
     aliases: rm
 
+revert [names ...]::
+    Revert any uncommitted modifications made to the named files or
+    directories.  This restores the contents of the affected files to
+    an unmodified state.
+
+    If a file has been deleted, it is recreated.  If the executable
+    mode of a file was changed, it is reset.
+
+    If a directory is given, all files in that directory and its
+    subdirectories are reverted.
+
+    If no arguments are given, all files in the current directory and
+    its subdirectories are reverted.
+
+    options:
+    -r, --rev <rev>       revision to revert to
+    -n, --nonrecursive    do not recurse into subdirectories
+
 root::
     Print the root directory of the current repository.
 

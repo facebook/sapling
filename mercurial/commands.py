@@ -733,6 +733,46 @@ def remove(ui, repo, file, *files):
     """remove the specified files on the next commit"""
     repo.remove(relpath(repo, (file,) + files))
 
+def revert(ui, repo, *names, **opts):
+    """revert modified files or dirs back to their unmodified states"""
+    node = opts['rev'] and repo.lookup(opts['rev']) or repo.changelog.tip()
+    root = os.path.realpath(repo.root)
+    def trimpath(p):
+        p = os.path.realpath(p)
+        if p.startswith(root):
+            rest = p[len(root):]
+            if not rest:
+                return rest
+            if p.startswith(os.sep):
+                return rest[1:]
+            return p
+    relnames = map(trimpath, names or [os.getcwd()])
+    chosen = {}
+    def choose(name):
+        def body(name):
+            for r in relnames:
+                if not name.startswith(r): continue
+                rest = name[len(r):]
+                if not rest: return r, True
+                depth = rest.count(os.sep)
+                if not r:
+                    if depth == 0 or not opts['nonrecursive']: return r, True
+                elif rest[0] == os.sep:
+                    if depth == 1 or not opts['nonrecursive']: return r, True
+            return None, False
+        relname, ret = body(name)
+        if ret:
+            chosen[relname] = 1
+        return ret
+
+    r = repo.update(node, False, True, choose, False)
+    for n in relnames:
+        if n not in chosen:
+            ui.warn('error: no matches for %s\n' % n)
+            r = 1
+    sys.stdout.flush()
+    return r
+
 def root(ui, repo):
     """print the root (top) of the current working dir"""
     ui.write(repo.root + "\n")
@@ -889,6 +929,10 @@ table = {
                   'hg rawcommit [options] [files]'),
     "recover": (recover, [], "hg recover"),
     "remove|rm": (remove, [], "hg remove [files]"),
+    "revert": (revert,
+               [("n", "nonrecursive", None, "don't recurse into subdirs"),
+                ("r", "rev", "", "revision")],
+               "hg revert [files|dirs]"),
     "root": (root, [], "hg root"),
     "serve": (serve, [('p', 'port', 8000, 'listen port'),
                       ('a', 'address', '', 'interface address'),

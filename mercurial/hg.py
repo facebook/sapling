@@ -1065,7 +1065,8 @@ class localrepository:
         tr.close()
         return
 
-    def update(self, node, allow=False, force=False):
+    def update(self, node, allow=False, force=False, choose=None,
+               moddirstate=True):
         pl = self.dirstate.parents()
         if not force and pl[1] != nullid:
             self.ui.warn("aborting: outstanding uncommitted merges\n")
@@ -1117,11 +1118,12 @@ class localrepository:
             # the file, then we need to remove it from the dirstate, to
             # prevent the dirstate from listing the file when it is no
             # longer in the manifest.
-            if linear_path and f not in m2:
+            if moddirstate and linear_path and f not in m2:
                 self.dirstate.forget((f,))
 
         # Compare manifests
         for f, n in mw.iteritems():
+            if choose and not choose(f): continue
             if f in m2:
                 s = 0
 
@@ -1194,6 +1196,7 @@ class localrepository:
                     self.ui.debug("working dir created %s, keeping\n" % f)
 
         for f, n in m2.iteritems():
+            if choose and not choose(f): continue
             if f[0] == "/": continue
             if not force and f in ma and n != ma[f]:
                 r = ""
@@ -1234,9 +1237,11 @@ class localrepository:
             # because any file that's different from either one of its
             # parents must be in the changeset
             mode = 'm'
-            self.dirstate.update(mark.keys(), "m")
+            if moddirstate:
+                self.dirstate.update(mark.keys(), "m")
 
-        self.dirstate.setparents(p1, p2)
+        if moddirstate:
+            self.dirstate.setparents(p1, p2)
 
         # get the files we don't need to change
         files = get.keys()
@@ -1251,7 +1256,8 @@ class localrepository:
                 os.makedirs(os.path.dirname(self.wjoin(f)))
                 self.wfile(f, "w").write(t)
             util.set_exec(self.wjoin(f), mf2[f])
-            self.dirstate.update([f], mode)
+            if moddirstate:
+                self.dirstate.update([f], mode)
 
         # merge the tricky bits
         files = merge.keys()
@@ -1261,7 +1267,8 @@ class localrepository:
             m, o, flag = merge[f]
             self.merge3(f, m, o)
             util.set_exec(self.wjoin(f), flag)
-            self.dirstate.update([f], 'm')
+            if moddirstate:
+                self.dirstate.update([f], 'm')
 
         for f in remove:
             self.ui.note("removing %s\n" % f)
@@ -1269,10 +1276,11 @@ class localrepository:
             # try removing directories that might now be empty
             try: os.removedirs(os.path.dirname(f))
             except: pass
-        if mode == 'n':
-            self.dirstate.forget(remove)
-        else:
-            self.dirstate.update(remove, 'r')
+        if moddirstate:
+            if mode == 'n':
+                self.dirstate.forget(remove)
+            else:
+                self.dirstate.update(remove, 'r')
 
     def merge3(self, fn, my, other):
         """perform a 3-way merge in the working directory"""
