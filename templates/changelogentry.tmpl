@@ -1,22 +1,24 @@
-<div class="parity#parity#">
-<table width="100%" cellpadding="0" cellspacing="0">
-<tr>
- <td align="right" width="15%"><b>#date|age# ago:&nbsp;</b></td>
- <td><b>#desc|firstline|escape#</b></td></tr>
-<tr>
- <td align="right">changeset #rev#:&nbsp;</td>
- <td><a href="?cmd=changeset;node=#node#">#node|short#</a></td></tr>
-#parent#
-#changelogtag#
-<tr>
- <td align="right">author:&nbsp;</td>
- <td>#author|obfuscate#</td></tr>
-<tr>
- <td align="right">date:&nbsp;</td>
- <td>#date|date#</td></tr>
-<tr>
- <td align="right" valign="top"><a href="?cmd=manifest;manifest=#manifest#;path=/">files</a>:&nbsp;</td>
- <td>#files#</td></tr>
+<table class="changelogEntry parity#parity#">
+ <tr>
+  <th class="age">#date|age# ago:</th>
+  <th class="firstline">#desc|firstline|escape#</th>
+ </tr>
+ <tr>
+  <th class="changesetRev">changeset #rev#:</th>
+  <td class="changesetNode"><a href="?cmd=changeset;node=#node#">#node|short#</a></td>
+ </tr>
+ #parent#
+ #changelogtag#
+ <tr>
+  <th class="author">author:</th>
+  <td class="author">#author|obfuscate#</td>
+ </tr>
+ <tr>
+  <th class="date">date:</th>
+  <td class="date">#date|date#</td>
+ </tr>
+ <tr>
+  <th class="files"><a href="?cmd=manifest;manifest=#manifest#;path=/">files</a>:</th>
+  <td class="files">#files#</td>
+ </tr>
 </table>
-</div>
-
