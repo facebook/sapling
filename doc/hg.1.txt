@@ -327,6 +327,16 @@ tip::
 undo::
     Undo the last commit or pull transaction.
 
+    Roll back the last pull or commit transaction on the
+    repository, restoring the project to its earlier state.
+
+    This command should be used with care. There is only one level of
+    undo and there is no redo.
+
+    This command is not intended for use on public repositories. Once
+    a change is visible for pull by other users, undoing it locally is
+    ineffective.
+
 update [-m -C] [revision]::
     Update the working directory to the specified revision.
 
