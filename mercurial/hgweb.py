@@ -254,7 +254,6 @@ class hgweb:
                 n = cl.node(i)
                 changes = cl.read(n)
                 hn = hex(n)
-                p1, p2 = cl.parents(n)
                 t = float(changes[2].split(' ')[0])
 
                 l.insert(0, self.t(
@@ -264,8 +263,6 @@ class hgweb:
                     parent = self.parents("changelogparent",
                                           cl.parents(n), cl.rev),
                     changelogtag = self.showtag("changelogtag",n),
-                    p1 = hex(p1), p2 = hex(p2),
-                    p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                     manifest = hex(changes[0]),
                     desc = changes[4],
                     date = t,
@@ -320,7 +317,6 @@ class hgweb:
 
                 count += 1
                 hn = hex(n)
-                p1, p2 = cl.parents(n)
                 t = float(changes[2].split(' ')[0])
 
                 yield self.t(
@@ -330,8 +326,6 @@ class hgweb:
                     parent = self.parents("changelogparent",
                                           cl.parents(n), cl.rev),
                     changelogtag = self.showtag("changelogtag",n),
-                    p1 = hex(p1), p2 = hex(p2),
-                    p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                     manifest = hex(changes[0]),
                     desc = changes[4],
                     date = t,
@@ -356,8 +350,7 @@ class hgweb:
         n = bin(nodeid)
         cl = self.repo.changelog
         changes = cl.read(n)
-        p1, p2 = cl.parents(n)
-        p1rev, p2rev = cl.rev(p1), cl.rev(p2)
+        p1 = cl.parents(n)[0]
         t = float(changes[2].split(' ')[0])
 
         files = []
@@ -379,8 +372,6 @@ class hgweb:
                      parent = self.parents("changesetparent",
                                            cl.parents(n), cl.rev),
                      changesettag = self.showtag("changesettag",n),
-                     p1 = hex(p1), p2 = hex(p2),
-                     p1rev = cl.rev(p1), p2rev = cl.rev(p2),
                      manifest = hex(changes[0]),
                      author = changes[1],
                      desc = changes[4],
@@ -402,7 +393,6 @@ class hgweb:
                 lr = fl.linkrev(n)
                 cn = cl.node(lr)
                 cs = cl.read(cl.node(lr))
-                p1, p2 = fl.parents(n)
                 t = float(cs[2].split(' ')[0])
 
                 l.insert(0, self.t("filelogentry",
@@ -413,9 +403,9 @@ class hgweb:
                                    node = hex(cn),
                                    author = cs[1],
                                    date = t,
-                                   desc = cs[4],
-                                   p1 = hex(p1), p2 = hex(p2),
-                                   p1rev = fl.rev(p1), p2rev = fl.rev(p2)))
+                                   parent = self.parents("filelogparent",
+                                       fl.parents(n), fl.rev, file=f),
+                                   desc = cs[4]))
                 parity = 1 - parity
 
             yield l
@@ -436,7 +426,6 @@ class hgweb:
         cl = self.repo.changelog
         cn = cl.node(changerev)
         cs = cl.read(cn)
-        p1, p2 = fl.parents(n)
         t = float(cs[2].split(' ')[0])
         mfn = cs[0]
 
@@ -460,9 +449,7 @@ class hgweb:
                      date = t,
                      parent = self.parents("filerevparent",
                                            fl.parents(n), fl.rev, file=f),
-                     p1 = hex(p1), p2 = hex(p2),
-                     permissions = self.repo.manifest.readflags(mfn)[f],
-                     p1rev = fl.rev(p1), p2rev = fl.rev(p2))
+                     permissions = self.repo.manifest.readflags(mfn)[f])
 
     def fileannotate(self, f, node):
         bcache = {}
@@ -474,7 +461,6 @@ class hgweb:
         cl = self.repo.changelog
         cn = cl.node(changerev)
         cs = cl.read(cn)
-        p1, p2 = fl.parents(n)
         t = float(cs[2].split(' ')[0])
         mfn = cs[0]
 
@@ -527,9 +513,7 @@ class hgweb:
                      date = t,
                      parent = self.parents("fileannotateparent",
                                            fl.parents(n), fl.rev, file=f),
-                     p1 = hex(p1), p2 = hex(p2),
-                     permissions = self.repo.manifest.readflags(mfn)[f],
-                     p1rev = fl.rev(p1), p2rev = fl.rev(p2))
+                     permissions = self.repo.manifest.readflags(mfn)[f])
 
     def manifest(self, mnode, path):
         mf = self.repo.manifest.read(bin(mnode))
@@ -628,7 +612,6 @@ class hgweb:
                      rev = self.repo.changelog.rev(n),
                      parent = self.parents("filediffparent",
                               cl.parents(n), cl.rev),
-                     p1rev = self.repo.changelog.rev(p1),
                      diff = diff)
 
     # add tags to things

@@ -17,8 +17,8 @@ line          a line of text (escaped)
 desc          a description (escaped, with breaks)
 shortdesc         a short description (escaped)
 author        a name or email addressv(obfuscated)
-p1, p2        parent nodes
-p1rev, p2rev  parent revs
+parent        a list of the parent
+tags          a list of tag
 
 header        the global page header
 footer        the global page footer
