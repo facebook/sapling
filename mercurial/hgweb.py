@@ -108,6 +108,12 @@ class templater:
             tmpl = self.cache[t] = file(self.map[t]).read()
         return template(tmpl, self.filters, **map)
 
+def rfc822date(x):
+    month= [None,"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    yyyy,mon,dd,hh,mm,ss,wd,x,y = time.gmtime(x)
+    return "%d %s %d %d:%d:%d"%(dd, month[mon], yyyy, hh, mm, ss)
+
 class hgweb:
     maxchanges = 10
     maxfiles = 10
@@ -127,7 +133,8 @@ class hgweb:
             "obfuscate": obfuscate,
             "short": (lambda x: x[:12]),
             "firstline": (lambda x: x.splitlines(1)[0]),
-            "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--")
+            "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
+            "rfc822date": rfc822date,
             }
 
     def refresh(self):
@@ -217,7 +224,12 @@ class hgweb:
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
 
     def header(self):
-        yield self.t("header", repo = self.reponame)
+        port = os.environ["SERVER_PORT"]
+        port = port != "80" and (":" + port) or ""
+        self.url = "http://%s%s%s" % \
+                   (os.environ["SERVER_NAME"], port, os.environ["REQUEST_URI"])
+
+        yield self.t("header", repo = self.reponame, url = self.url)
 
     def footer(self):
         yield self.t("footer", repo = self.reponame)
@@ -729,6 +741,9 @@ def server(path, name, templates, address, port):
             env = {}
             env['GATEWAY_INTERFACE'] = 'CGI/1.1'
             env['REQUEST_METHOD'] = self.command
+            env['SERVER_NAME'] = self.server.server_name
+            env['SERVER_PORT'] = str(self.server.server_port)
+            env['REQUEST_URI'] = "/"
             if query:
                 env['QUERY_STRING'] = query
             host = self.address_string()

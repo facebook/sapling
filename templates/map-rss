@@ -1,0 +1,5 @@
+header = header-rss.tmpl
+changelog = changelog-rss.tmpl
+changelogentry = changelogentry-rss.tmpl
+filelog = filelog-rss.tmpl
+filelogentry = filelogentry-rss.tmpl
