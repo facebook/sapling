@@ -28,7 +28,7 @@ static uint32_t htonl(uint32_t x)
 }
 #else
 #include <sys/types.h>
-#include <netinet/in.h>
+#include <arpa/inet.h>
 #endif
 
 struct line {

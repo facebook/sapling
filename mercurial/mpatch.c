@@ -39,7 +39,7 @@ static uint32_t ntohl(uint32_t x)
 }
 #else
 #include <sys/types.h>
-#include <netinet/in.h>
+#include <arpa/inet.h>
 #endif
 
 static char mpatch_doc[] = "Efficient binary patching.";
