@@ -1,12 +1,15 @@
 include hg
 recursive-include mercurial *.py
-include tkmerge
 include hgweb.cgi
-include hgeditor rewrite-log convert-repo
+include hgeditor rewrite-log
 include tests/README tests/run-tests tests/test-*[a-z] tests/*.out
 include *.txt
 include templates/map templates/map-*[a-z]
 include templates/*.tmpl
 include doc/README doc/*.txt
-include contrib/* contrib/git-vis/*
+include contrib/*
 include README
+include CONTRIBUTORS
+include COPYING
+include TODO
+include MANIFEST.in
