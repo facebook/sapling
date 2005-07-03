@@ -6,9 +6,7 @@ General:
 - python 2.2 support
 - better import support
 - export to git
-- Add standard files: ChangeLog? What else?
 - Code cleanup: apply http://python.org/peps/pep-0008.html
-- Replace all remaining print statements with appropriate ui function
 
 Core:
 - difflib creating/removing files (fixed except dates: should be epoch)
@@ -26,11 +24,9 @@ Commands:
 - select to pull a subset of the heads
 - commands.py: number of args too much magic (e.g. in patch())
 - automatic pull fallback to old-http://
-- hg pull default in a subdir doesn't work, if it is a relative path
 - optionally only show merges (two parents or parent != changeset-1, etc.)
 
 Web:
-- show tags in hgweb
 - optionally only show merges (two parents or parent != changeset-1, etc.)
 - one hgweb with many repos (another script)
 - hgweb tip link too verbose
