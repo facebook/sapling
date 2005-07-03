@@ -978,6 +978,12 @@ def run():
     sys.exit(dispatch(sys.argv[1:]))
 
 def dispatch(args):
+    signal.signal(signal.SIGTERM, catchterm)
+
+    def get_ui():
+        return ui.ui(options["verbose"], options["debug"], options["quiet"],
+                     not options["noninteractive"])
+
     options = {}
     opts = [('v', 'verbose', None, 'verbose'),
             ('', 'debug', None, 'debug'),
@@ -989,37 +995,53 @@ def dispatch(args):
             ('', 'version', None, 'output version information and exit'),
             ]
 
-    args = fancyopts.fancyopts(args, opts, options,
-                               'hg [options] <command> [options] [files]')
+    try:
+        args = fancyopts.fancyopts(args, opts, options,
+                                   'hg [options] <command> [options] [files]')
+    except fancyopts.getopt.GetoptError, inst:
+        u = ui.ui()
+        u.warn("hg: %s\n" % (inst))
+        sys.exit(-1)
 
     if not args:
         cmd = "help"
     else:
         cmd, args = args[0], args[1:]
 
-    u = ui.ui(options["verbose"], options["debug"], options["quiet"],
-           not options["noninteractive"])
-
     if options["version"]:
-        show_version(u)
+        show_version(get_ui())
         sys.exit(0)
 
     try:
         i = find(cmd)
     except UnknownCommand:
+        u = get_ui()
         u.warn("hg: unknown command '%s'\n" % cmd)
         help(u)
         sys.exit(1)
 
-    signal.signal(signal.SIGTERM, catchterm)
+    # combine global options into local
+    c = list(i[1])
+    l = len(c)
+    for o in opts:
+        c.append((o[0], o[1], options[o[1]], o[3]))
 
     cmdoptions = {}
     try:
-        args = fancyopts.fancyopts(args, i[1], cmdoptions, i[2])
+        args = fancyopts.fancyopts(args, c, cmdoptions, i[2])
     except fancyopts.getopt.GetoptError, inst:
+        u = get_ui()
         u.warn("hg %s: %s\n" % (cmd, inst))
         help(u, cmd)
         sys.exit(-1)
+
+    # separate global options back out
+    for o in opts:
+        n = o[1]
+        options[n] = cmdoptions[n]
+        del cmdoptions[n]
+
+    u = get_ui()
 
     try:
         try:
