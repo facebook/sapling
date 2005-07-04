@@ -15,16 +15,17 @@
 
 <h2>#file#</h2>
 
-<table>
+<table id="filediffEntry">
 <tr>
- <td class="metatag">revision #rev#:</td>
- <td><a href="?cmd=changeset;node=#node#">#node|short#</a></td></tr>
+ <th class="revision">revision #rev#:</th>
+ <td class="revision"><a href="?cmd=changeset;node=#node#">#node|short#</a></td>
+</tr>
 #parent#
 </table>
 
-<pre>
+<div id="fileDiff" class="pre">
 #diff#
-</pre>
+</div>
 
 #footer#
 
