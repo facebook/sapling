@@ -586,7 +586,7 @@ def import_(ui, repo, patch1, *patches, **opts):
 
         text = ""
         for l in file(pf):
-            if l[:4] == "--- ": break
+            if l.startswith("--- ") or l.startswith("diff -r"): break
             text += l
 
         # parse values that exist when importing the result of an hg export
