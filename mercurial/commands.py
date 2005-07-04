@@ -586,6 +586,20 @@ def import_(ui, repo, patch1, *patches, **opts):
             if l[:4] == "--- ": break
             text += l
 
+        # parse values that exist when importing the result of an hg export
+        hgpatch = user = snippet = None
+        ui.debug('text:\n')
+        for t in text.splitlines():
+            ui.debug(t,'\n')
+            if t == '# HG changeset patch' or hgpatch == True:
+                hgpatch = True
+                if t[:7] == "# User ":
+                    user = t[7:]
+                    ui.debug('User: %s\n' % user)
+                if t[:2] <> "# " and t.strip() and not snippet: snippet = t
+        if snippet: text = snippet + '\n' + text
+        ui.debug('text:\n%s\n' % text)
+
         # make sure text isn't empty
         if not text: text = "imported patch %s\n" % patch
 
@@ -605,7 +619,7 @@ def import_(ui, repo, patch1, *patches, **opts):
 
         if len(files) > 0:
             addremove(ui, repo, *files)
-        repo.commit(files, text)
+        repo.commit(files, text, user)
 
 def init(ui, source=None):
     """create a new repository in the current directory"""
