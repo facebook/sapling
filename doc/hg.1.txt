@@ -183,7 +183,7 @@ import [-p <n> -b <base> -q] <patches>::
 init::
     Initialize a new repository in the current directory.
 
-log [-r revision ...] [file]::
+log [-r revision ...] [-p] [file]::
     Print the revision history of the specified file or the entire project.
 
     By default this command outputs: changeset id and hash, tags,
@@ -191,10 +191,13 @@ log [-r revision ...] [file]::
     -v switch adds some more detail, such as changed files, manifest
     hashes or message signatures.
 
-    When a revision argument is given, only this file or changelog revision
-    is displayed. With two revision arguments all revisions in this range
-    are listed. Additional revision arguments may be given repeating the above
-    cycle.
+    options:
+    -r, --rev <A>, ...  When a revision argument is given, only this file or
+                        changelog revision is displayed. With two revision
+                        arguments all revisions in this range are listed.
+                        Additional revision arguments may be given repeating
+                        the above cycle.
+    -p, --patch         show patch
 
     aliases: history
 
