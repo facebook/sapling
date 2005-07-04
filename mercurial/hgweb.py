@@ -109,10 +109,7 @@ class templater:
         return template(tmpl, self.filters, **map)
 
 def rfc822date(x):
-    month= [None,"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    yyyy,mon,dd,hh,mm,ss,wd,x,y = time.gmtime(x)
-    return "%d %s %d %d:%d:%d"%(dd, month[mon], yyyy, hh, mm, ss)
+    return strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime(x))
 
 class hgweb:
     maxchanges = 10
