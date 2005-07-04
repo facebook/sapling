@@ -8,7 +8,7 @@
 import os, re, sys, signal
 import fancyopts, ui, hg, util
 from demandload import *
-demandload(globals(), "mdiff time hgweb traceback random signal errno version")
+demandload(globals(), "mdiff time hgweb traceback random signal socket errno version")
 
 class UnknownCommand(Exception): pass
 
@@ -793,8 +793,21 @@ def root(ui, repo):
 
 def serve(ui, repo, **opts):
     """export the repository via HTTP"""
-    hgweb.server(repo.root, opts["name"], opts["templates"],
-                 opts["address"], opts["port"])
+    httpd = hgweb.create_server(repo.root, opts["name"], opts["templates"],
+                                opts["address"], opts["port"])
+    if ui.verbose:
+        addr, port = httpd.socket.getsockname()
+        if addr == '0.0.0.0':
+            addr = socket.gethostname()
+        else:
+            try:
+                addr = socket.gethostbyaddr(addr)[0]
+            except: pass
+        if port != 80:
+            ui.status('listening on http://%s:%d/\n' % (addr, port))
+        else:
+            ui.status('listening on http://%s/\n' % addr)
+    httpd.serve_forever()
 
 def status(ui, repo):
     '''show changed files in the working directory

@@ -694,7 +694,7 @@ class hgweb:
         else:
             write(self.t("error"))
 
-def server(path, name, templates, address, port):
+def create_server(path, name, templates, address, port):
 
     import BaseHTTPServer
     import sys, os
@@ -759,5 +759,8 @@ def server(path, name, templates, address, port):
                 sys.argv, sys.stdin, sys.stdout, sys.stderr = save
 
     hg = hgweb(path, name, templates)
-    httpd = BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
+    return BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
+
+def server(path, name, templates, address, port):
+    httpd = create_server(path, name, templates, address, port)
     httpd.serve_forever()
