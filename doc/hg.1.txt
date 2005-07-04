@@ -415,7 +415,9 @@ ENVIRONMENT VARIABLES
 
 HGEDITOR::
     This is the name of the editor to use when committing. Defaults to the
-    value of EDITOR.
+    value of EDITOR. 
+
+    (deprecated, use .hgrc)
 
 HGMERGE::
     An executable to use for resolving merge conflicts. The program
@@ -425,8 +427,12 @@ HGMERGE::
     The default program is "hgmerge", which is a shell script provided
     by Mercurial with some sensible defaults.
 
+    (deprecated, use .hgrc)
+
 HGUSER::
     This is the string used for the author of a commit.
+
+    (deprecated, use .hgrc)
 
 EMAIL::
     If HGUSER is not set, this will be used as the author for a commit.
@@ -457,6 +463,21 @@ FILES
  $HOME/.hgrc, .hg/hgrc::
     This file contains defaults and configuration. Values in .hg/hgrc
     override those in .hgrc.
+
+
+UI OPTIONS
+----------
+
+Various configuration options can be set in .hgrc:
+
+-------------
+[ui]
+verbose = 0
+username = Matt Mackall <mpm@selenic.com>
+editor = hgeditor
+merge = hgmerge
+-------------
+
 
 NAMED REPOSITORIES
 ------------------

@@ -14,9 +14,6 @@ def fancyopts(args, options, state):
         if s: short = short + s
         if l: long.append(l)
 
-    if os.environ.has_key("HG_OPTS"):
-        args = os.environ["HG_OPTS"].split() + args
-
     opts, args = getopt.getopt(args, short, long)
 
     for opt, arg in opts:

@@ -41,6 +41,14 @@ class ui:
             return self.cdata.items(section)
         return []
 
+    def username(self):
+        return (self.config("ui", "username") or
+                os.environ.get("HGUSER") or
+                os.environ.get("EMAIL") or
+                (os.environ.get("LOGNAME",
+                                os.environ.get("USERNAME", "unknown"))
+                 + '@' + socket.getfqdn()))
+
     def expandpath(self, loc):
         paths = {}
         for name, path in self.configitems("paths"):
@@ -83,7 +91,10 @@ class ui:
         f.write(text)
         f.close()
 
-        editor = os.environ.get("HGEDITOR") or os.environ.get("EDITOR", "vi")
+        editor = (self.config("ui", "editor") or
+                  os.environ.get("HGEDITOR") or
+                  os.environ.get("EDITOR", "vi"))
+
         util.system("%s %s" % (editor, name), errprefix = "edit failed")
 
         t = open(name).read()

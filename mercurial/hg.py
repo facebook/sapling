@@ -161,12 +161,6 @@ class changelog(revlog):
 
     def add(self, manifest, list, desc, transaction, p1=None, p2=None,
                   user=None, date=None):
-        user = (user or
-                os.environ.get("HGUSER") or
-                os.environ.get("EMAIL") or
-                (os.environ.get("LOGNAME",
-                               os.environ.get("USERNAME", "unknown"))
-                 + '@' + socket.getfqdn()))
         date = date or "%d %d" % (time.time(), time.timezone)
         list.sort()
         l = [hex(manifest), user, date] + list + ["", desc]
@@ -592,6 +586,7 @@ class localrepository:
                     pass
 
         mnode = self.manifest.add(mm, mfm, tr, linkrev, c1[0], c2[0])
+        user = user or self.ui.username()
         n = self.changelog.add(mnode, files, text, tr, p1, p2, user, date)
         tr.close()
         if update_dirstate:
@@ -675,6 +670,7 @@ class localrepository:
                 return 1
             text = edittext
 
+        user = user or self.ui.username()
         n = self.changelog.add(mn, new, text, tr, p1, p2, user, date)
 
         if not self.hook("commit", node=hex(n)):
@@ -1303,7 +1299,8 @@ class localrepository:
         self.ui.debug("file %s: other %s ancestor %s\n" %
                               (fn, short(other), short(base)))
 
-        cmd = os.environ.get("HGMERGE", "hgmerge")
+        cmd = self.ui.config("ui", "merge") or \
+              os.environ.get("HGMERGE", "hgmerge")
         r = os.system("%s %s %s %s" % (cmd, a, b, c))
         if r:
             self.ui.warn("merging %s failed!\n" % fn)

@@ -51,6 +51,7 @@ function run_one
 
     cd $D
     fail=0
+    export HOME=$D
 
     if ! $H/$1 > .out 2>&1 ; then
 	echo $1 failed with error code $?
