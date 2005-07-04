@@ -84,11 +84,12 @@ def template(tmpl, filters = {}, **map):
             return
 
 class templater:
-    def __init__(self, mapfile, filters = {}):
+    def __init__(self, mapfile, filters = {}, defaults = {}):
         self.cache = {}
         self.map = {}
         self.base = os.path.dirname(mapfile)
         self.filters = filters
+        self.defaults = defaults
 
         for l in file(mapfile):
             m = re.match(r'(\S+)\s*=\s*"(.*)"$', l)
@@ -102,14 +103,16 @@ class templater:
                     raise "unknown map entry '%s'"  % l
 
     def __call__(self, t, **map):
+        m = self.defaults.copy()
+        m.update(map)
         try:
             tmpl = self.cache[t]
         except KeyError:
             tmpl = self.cache[t] = file(self.map[t]).read()
-        return template(tmpl, self.filters, **map)
+        return template(tmpl, self.filters, **m)
 
 def rfc822date(x):
-    return strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime(x))
+    return time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime(x))
 
 class hgweb:
     maxchanges = 10
@@ -221,15 +224,10 @@ class hgweb:
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
 
     def header(self):
-        port = os.environ["SERVER_PORT"]
-        port = port != "80" and (":" + port) or ""
-        self.url = "http://%s%s%s" % \
-                   (os.environ["SERVER_NAME"], port, os.environ["REQUEST_URI"])
-
-        yield self.t("header", repo = self.reponame, url = self.url)
+        yield self.t("header")
 
     def footer(self):
-        yield self.t("footer", repo = self.reponame)
+        yield self.t("footer")
 
     def changelog(self, pos):
         def changenav():
@@ -290,9 +288,6 @@ class hgweb:
         pos = end - 1
 
         yield self.t('changelog',
-                     header = self.header(),
-                     footer = self.footer(),
-                     repo = self.reponame,
                      changenav = changenav,
                      manifest = hex(mf),
                      rev = pos, changesets = count, entries = changelist)
@@ -348,10 +343,7 @@ class hgweb:
         mf = cl.read(cl.tip())[0]
 
         yield self.t('search',
-                     header = self.header(),
-                     footer = self.footer(),
                      query = query,
-                     repo = self.reponame,
                      manifest = hex(mf),
                      entries = changelist)
 
@@ -372,9 +364,6 @@ class hgweb:
             yield self.diff(p1, n, changes[3])
 
         yield self.t('changeset',
-                     header = self.header(),
-                     footer = self.footer(),
-                     repo = self.reponame,
                      diff = diff,
                      rev = cl.rev(n),
                      node = nodeid,
@@ -420,9 +409,6 @@ class hgweb:
             yield l
 
         yield self.t("filelog",
-                     header = self.header(),
-                     footer = self.footer(),
-                     repo = self.reponame,
                      file = f,
                      filenode = filenode,
                      entries = entries)
@@ -445,9 +431,6 @@ class hgweb:
                              parity = l & 1)
 
         yield self.t("filerevision", file = f,
-                     header = self.header(),
-                     footer = self.footer(),
-                     repo = self.reponame,
                      filenode = node,
                      path = up(f),
                      text = lines(),
@@ -508,9 +491,6 @@ class hgweb:
                              line = l)
 
         yield self.t("fileannotate",
-                     header = self.header(),
-                     footer = self.footer(),
-                     repo = self.reponame,
                      file = f,
                      filenode = node,
                      annotate = annotate,
@@ -568,9 +548,6 @@ class hgweb:
                 parity = 1 - parity
 
         yield self.t("manifest",
-                     header = self.header(),
-                     footer = self.footer(),
-                     repo = self.reponame,
                      manifest = mnode,
                      rev = rev,
                      node = hex(node),
@@ -595,9 +572,6 @@ class hgweb:
                 parity = 1 - parity
 
         yield self.t("tags",
-                     header = self.header(),
-                     footer = self.footer(),
-                     repo = self.reponame,
                      manifest = hex(mf),
                      entries = entries)
 
@@ -612,9 +586,6 @@ class hgweb:
             yield self.diff(p1, n, file)
 
         yield self.t("filediff",
-                     header = self.header(),
-                     footer = self.footer(),
-                     repo = self.reponame,
                      file = file,
                      filenode = hex(mf.get(file, nullid)),
                      node = changeset,
@@ -637,7 +608,17 @@ class hgweb:
             p = os.path.join(self.templates, b)
             if os.path.isfile(p): m = p
 
-        self.t = templater(m, self.filters)
+        port = os.environ["SERVER_PORT"]
+        port = port != "80" and (":" + port) or ""
+        url = "http://%s%s%s" % \
+              (os.environ["SERVER_NAME"], port, os.environ["REQUEST_URI"])
+
+        self.t = templater(m, self.filters,
+                           {"url":url,
+                            "repo":self.reponame,
+                            "header":self.header(),
+                            "footer":self.footer(),
+                            })
 
         if not args.has_key('cmd') or args['cmd'][0] == 'changelog':
             c = self.repo.changelog.count() - 1
