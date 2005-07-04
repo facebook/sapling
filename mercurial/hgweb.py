@@ -610,8 +610,9 @@ class hgweb:
 
         port = os.environ["SERVER_PORT"]
         port = port != "80" and (":" + port) or ""
-        url = "http://%s%s%s" % \
-              (os.environ["SERVER_NAME"], port, os.environ["REQUEST_URI"])
+        uri = os.environ["REQUEST_URI"]
+        if "?" in uri: uri = uri.split("?")[0]
+        url = "http://%s%s%s" % (os.environ["SERVER_NAME"], port, uri)
 
         self.t = templater(m, self.filters,
                            {"url":url,
