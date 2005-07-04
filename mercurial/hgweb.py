@@ -694,12 +694,22 @@ class hgweb:
         else:
             write(self.t("error"))
 
-def create_server(path, name, templates, address, port):
+def create_server(path, name, templates, address, port,
+                  accesslog = sys.stdout, errorlog = sys.stderr):
 
     import BaseHTTPServer
-    import sys, os
 
     class hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
+        def log_error(self, format, *args):
+            errorlog.write("%s - - [%s] %s\n" % (self.address_string(),
+                                                 self.log_date_time_string(),
+                                                 format % args))
+            
+        def log_message(self, format, *args):
+            accesslog.write("%s - - [%s] %s\n" % (self.address_string(),
+                                                  self.log_date_time_string(),
+                                                  format % args))
+
         def do_POST(self):
             try:
                 self.do_hgweb()
@@ -761,6 +771,8 @@ def create_server(path, name, templates, address, port):
     hg = hgweb(path, name, templates)
     return BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
 
-def server(path, name, templates, address, port):
-    httpd = create_server(path, name, templates, address, port)
+def server(path, name, templates, address, port,
+           accesslog = sys.stdout, errorlog = sys.stderr):
+    httpd = create_server(path, name, templates, address, port,
+                          accesslog, errorlog)
     httpd.serve_forever()

@@ -274,13 +274,18 @@ revert [names ...]::
 root::
     Print the root directory of the current repository.
 
-serve [-a addr -n name -p port -t templatedir]::
+serve [-a addr -l logfile -n name -p port -t templatedir]::
     Start a local HTTP repository browser and pull server.
 
+    By default, the server logs accesses to stdout and errors to
+    stderr.  Use the "-A" and "-E" options to log to files.
+
     options:
-    -a, --address <addr> address to use
-    -p, --port <n>       port to use (default: 8000)
-    -n, --name <name>    name to show in web pages (default: working dir)
+    -A, --accesslog <file>   name of access log file to write to
+    -E, --errorlog <file>    name of error log file to write to
+    -a, --address <addr>     address to use
+    -p, --port <n>           port to use (default: 8000)
+    -n, --name <name>        name to show in web pages (default: working dir)
     -t, --templatedir <path> web templates to use
 
 status::

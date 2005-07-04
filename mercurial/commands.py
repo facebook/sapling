@@ -794,8 +794,13 @@ def root(ui, repo):
 
 def serve(ui, repo, **opts):
     """export the repository via HTTP"""
+    def openlog(opt, default):
+        if opts[opt] and opts[opt] != '-': return open(opts[opt], 'w')
+        else: return default
     httpd = hgweb.create_server(repo.root, opts["name"], opts["templates"],
-                                opts["address"], opts["port"])
+                                opts["address"], opts["port"],
+                                openlog('accesslog', sys.stdout),
+                                openlog('errorlog', sys.stderr))
     if ui.verbose:
         addr, port = httpd.socket.getsockname()
         if addr == '0.0.0.0':
@@ -805,9 +810,9 @@ def serve(ui, repo, **opts):
                 addr = socket.gethostbyaddr(addr)[0]
             except: pass
         if port != 80:
-            ui.status('listening on http://%s:%d/\n' % (addr, port))
+            ui.status('listening at http://%s:%d/\n' % (addr, port))
         else:
-            ui.status('listening on http://%s/\n' % addr)
+            ui.status('listening at http://%s/\n' % addr)
     httpd.serve_forever()
 
 def status(ui, repo):
@@ -973,10 +978,12 @@ table = {
                 ("r", "rev", "", "revision")],
                "hg revert [files|dirs]"),
     "root": (root, [], "hg root"),
-    "^serve": (serve, [('p', 'port', 8000, 'listen port'),
-                      ('a', 'address', '', 'interface address'),
-                      ('n', 'name', os.getcwd(), 'repository name'),
-                      ('t', 'templates', "", 'template map')],
+    "^serve": (serve, [('A', 'accesslog', '', 'access log file'),
+                       ('E', 'errorlog', '', 'error log file'),
+                       ('p', 'port', 8000, 'listen port'),
+                       ('a', 'address', '', 'interface address'),
+                       ('n', 'name', os.getcwd(), 'repository name'),
+                       ('t', 'templates', "", 'template map')],
               "hg serve [options]"),
     "^status": (status, [], 'hg status'),
     "tag": (tag,  [('t', 'text', "", 'commit text'),
