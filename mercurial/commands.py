@@ -526,6 +526,9 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets"""
+    if not changesets:
+        ui.warn("error: export requires at least one changeset\n")
+        sys.exit(1)
     seqno = 0
     revs = list(revrange(ui, repo, changesets))
     total = len(revs)
