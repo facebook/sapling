@@ -13,6 +13,7 @@
 + yes k
 + hg update 1
 this update spans a branch affecting the following files:
+ b
 aborting update spanning branches!
 (use update -m to perform a branch merge)
 + exit 0
