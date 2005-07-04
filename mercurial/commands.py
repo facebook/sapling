@@ -505,7 +505,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
 
     if opts['output'] and opts['output'] != '-':
         try:
-            fp = open(expand(opts['output']), 'w')
+            fp = open(expand(opts['output']), 'wb')
         except KeyError, inst:
             ui.warn("error: invalid format spec '%%%s' in output file name\n" %
                     inst.args[0])
