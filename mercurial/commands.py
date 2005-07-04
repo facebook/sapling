@@ -888,7 +888,7 @@ def tag(ui, repo, name, rev = None, **opts):
 
     add = 0
     if not os.path.exists(repo.wjoin(".hgtags")): add = 1
-    repo.wfile(".hgtags", "a").write("%s %s\n" % (r, name))
+    repo.wfile(".hgtags", "ab").write("%s %s\n" % (r, name))
     if add: repo.add([".hgtags"])
 
     if not opts['text']:
