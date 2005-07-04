@@ -5,7 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, sys, re, ConfigParser, util
+import os, ConfigParser
+from demandload import *
+demandload(globals(), "re socket sys util")
 
 class ui:
     def __init__(self, verbose=False, debug=False, quiet=False,

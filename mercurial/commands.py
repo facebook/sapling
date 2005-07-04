@@ -5,11 +5,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, re, sys, signal
-import fancyopts, ui, hg, util
 from demandload import *
-demandload(globals(), "mdiff time hgweb traceback random signal")
-demandload(globals(), "socket errno version")
+demandload(globals(), "os re sys signal")
+demandload(globals(), "fancyopts ui hg util")
+demandload(globals(), "hgweb mdiff random signal time traceback")
+demandload(globals(), "errno socket version")
 
 class UnknownCommand(Exception): pass
 
