@@ -8,7 +8,8 @@
 import os, re, sys, signal
 import fancyopts, ui, hg, util
 from demandload import *
-demandload(globals(), "mdiff time hgweb traceback random signal socket errno version")
+demandload(globals(), "mdiff time hgweb traceback random signal")
+demandload(globals(), "socket errno version")
 
 class UnknownCommand(Exception): pass
 
