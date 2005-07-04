@@ -274,7 +274,7 @@ revert [names ...]::
 root::
     Print the root directory of the current repository.
 
-serve [-a addr -l logfile -n name -p port -t templatedir]::
+serve [options]::
     Start a local HTTP repository browser and pull server.
 
     By default, the server logs accesses to stdout and errors to
