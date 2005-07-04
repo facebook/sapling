@@ -753,8 +753,10 @@ class localrepository:
     def add(self, list):
         for f in list:
             p = self.wjoin(f)
-            if not os.path.isfile(p):
-                self.ui.warn("%s does not exist!\n" % f)
+            if not os.path.exists(p):
+                self.ui.warn("%s does not exist!\n" % f)                
+            elif not os.path.isfile(p):
+                self.ui.warn("%s not added: mercurial only supports files currently\n" % f)
             elif self.dirstate.state(f) == 'n':
                 self.ui.warn("%s already tracked!\n" % f)
             else:
@@ -770,7 +772,7 @@ class localrepository:
     def remove(self, list):
         for f in list:
             p = self.wjoin(f)
-            if os.path.isfile(p):
+            if os.path.exists(p):
                 self.ui.warn("%s still exists!\n" % f)
             elif self.dirstate.state(f) == 'a':
                 self.ui.warn("%s never committed!\n" % f)
@@ -782,8 +784,10 @@ class localrepository:
 
     def copy(self, source, dest):
         p = self.wjoin(dest)
-        if not os.path.isfile(dest):
+        if not os.path.exists(dest):
             self.ui.warn("%s does not exist!\n" % dest)
+        elif not os.path.isfile(dest):
+            self.ui.warn("copy failed: %s is not a file\n" % dest)            
         else:
             if self.dirstate.state(dest) == '?':
                 self.dirstate.update([dest], "a")
