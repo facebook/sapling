@@ -649,6 +649,7 @@ def log(ui, repo, f=None, **opts):
             b = revs.pop(0)
             off = a > b and -1 or 1
             revlist.extend(range(a, b + off, off))
+
     for i in revlist or range(log.count() - 1, -1, -1):
         show_changeset(ui, repo, filelog=filelog, rev=i)
 
@@ -851,9 +852,18 @@ def tag(ui, repo, name, rev = None, **opts):
     if name == "tip":
         ui.warn("abort: 'tip' is a reserved name!\n")
         return -1
+    if rev:
+        r = hg.hex(repo.lookup(rev))
+    else:
+        r = hg.hex(repo.changelog.tip())
+
     if name.find(revrangesep) >= 0:
         ui.warn("abort: '%s' cannot be used in a tag name\n" % revrangesep)
         return -1
+
+    if opts['local']:
+        repo.opener("localtags", "a").write("%s %s\n" % (r, name))
+        return
 
     (c, a, d, u) = repo.changes(None, None)
     for x in (c, a, d, u):
@@ -861,11 +871,6 @@ def tag(ui, repo, name, rev = None, **opts):
             ui.warn("abort: working copy of .hgtags is changed!\n")
             ui.status("(please commit .hgtags manually)\n")
             return -1
-
-    if rev:
-        r = hg.hex(repo.lookup(rev))
-    else:
-        r = hg.hex(repo.changelog.tip())
 
     add = 0
     if not os.path.exists(repo.wjoin(".hgtags")): add = 1
@@ -1000,7 +1005,8 @@ table = {
                        ('t', 'templates', "", 'template map')],
               "hg serve [options]"),
     "^status": (status, [], 'hg status'),
-    "tag": (tag,  [('t', 'text', "", 'commit text'),
+    "tag": (tag,  [('l', 'local', None, 'make the tag local'),
+                   ('t', 'text', "", 'commit text'),
                    ('d', 'date', "", 'date code'),
                    ('u', 'user', "", 'user')],
             'hg tag [options] <name> [rev]'),

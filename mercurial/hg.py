@@ -438,6 +438,13 @@ class localrepository:
         '''return a mapping of tag to node'''
         if not self.tagscache:
             self.tagscache = {}
+            def addtag(self, k, n):
+                try:
+                    bin_n = bin(n)
+                except TypeError:
+                    bin_n = ''
+                self.tagscache[k.strip()] = bin_n
+            
             try:
                 # read each head of the tags file, ending with the tip
                 # and add each tag found to the map, with "newer" ones
@@ -449,22 +456,20 @@ class localrepository:
                     for l in fl.revision(r).splitlines():
                         if l:
                             n, k = l.split(" ", 1)
-                            try:
-                                bin_n = bin(n)
-                            except TypeError:
-                                bin_n = ''
-                            self.tagscache[k.strip()] = bin_n
+                            addtag(self, k, n)
             except KeyError:
                 pass
-            for k, n in self.ui.configitems("tags"):
-                try:
-                    bin_n = bin(n)
-                except TypeError:
-                    bin_n = ''
-                self.tagscache[k] = bin_n
-
+            
+            try:
+                f = self.opener("localtags")
+                for l in f:
+                    n, k = l.split(" ", 1)
+                    addtag(self, k, n)
+            except IOError:
+                pass
+            
             self.tagscache['tip'] = self.changelog.tip()
-
+        
         return self.tagscache
 
     def tagslist(self):
