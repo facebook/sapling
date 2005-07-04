@@ -1073,7 +1073,7 @@ def parse(args):
     try:
         args = fancyopts.fancyopts(args, globalopts, options)
     except fancyopts.getopt.GetoptError, inst:
-        raise ParseError(cmd, inst)
+        raise ParseError(None, inst)
 
     if options["version"]:
         return ("version", show_version, [], options, cmdoptions)
