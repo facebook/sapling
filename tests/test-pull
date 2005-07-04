@@ -7,7 +7,7 @@ hg init
 hg addremove
 hg commit -t "1"
 hg verify
-hg serve -p 20059 2>/dev/null &
+hg serve -p 20059 >/dev/null 2>&1 &
 cd ..
 
 hg clone http://localhost:20059/ copy

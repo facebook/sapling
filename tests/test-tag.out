@@ -9,6 +9,7 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     test
 
+
 + hg tag -u test -d '0 0' bleah
 + hg history
 changeset:   1:863197ef03781c4fc00276d83eb66c4cb9cd91df
@@ -17,11 +18,13 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     Added tag bleah for changeset acb14030fe0a21b60322c440ad2d20cf7685a376
 
+
 changeset:   0:acb14030fe0a21b60322c440ad2d20cf7685a376
 tag:         bleah
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     test
+
 
 + echo foo
 + hg tag -u test -d '0 0' bleah2
