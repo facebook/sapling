@@ -22,16 +22,15 @@ def filterfiles(filters, files):
     return l
 
 def relfilter(repo, files):
-    if os.getcwd() != repo.root:
-        p = os.getcwd()[len(repo.root) + 1: ]
-        return filterfiles([util.pconvert(p)], files)
+    cwd = repo.getcwd()
+    if cwd:
+        return filterfiles([util.pconvert(cwd)], files)
     return files
 
 def relpath(repo, args):
-    if os.getcwd() != repo.root:
-        p = os.getcwd()[len(repo.root) + 1: ]
-        return [ util.pconvert(os.path.normpath(os.path.join(p, x)))
-                 for x in args ]
+    cwd = repo.getcwd()
+    if cwd:
+        return [ util.pconvert(os.path.normpath(os.path.join(cwd, x))) for x in args ]
     return args
 
 revrangesep = ':'
