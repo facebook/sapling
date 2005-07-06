@@ -508,6 +508,11 @@ class localrepository:
         if f[0] == '/': f = f[1:]
         return filelog(self.opener, f)
 
+    def getcwd(self):
+        cwd = os.getcwd()
+        if cwd == self.root: return ''
+        return cwd[len(self.root) + 1:]
+
     def wfile(self, f, mode='r'):
         return self.wopener(f, mode)
 

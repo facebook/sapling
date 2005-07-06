@@ -8,7 +8,7 @@
 from demandload import *
 demandload(globals(), "os re sys signal")
 demandload(globals(), "fancyopts ui hg util")
-demandload(globals(), "hgweb mdiff random signal time traceback")
+demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
 demandload(globals(), "errno socket version struct")
 
 class UnknownCommand(Exception): pass
@@ -631,6 +631,46 @@ def init(ui, source=None):
         sys.exit(1)
     repo = hg.repository(ui, ".", create=1)
 
+def locate(ui, repo, *pats, **opts):
+    """locate files matching specific patterns"""
+    if [p for p in pats if os.sep in p]:
+        ui.warn("error: patterns may not contain '%s'\n" % os.sep)
+        ui.warn("use '-i <dir>' instead\n")
+        sys.exit(1)
+    def compile(pats, head = '^', tail = os.sep, on_empty = True):
+        if not pats:
+            class c:
+                def match(self, x): return on_empty
+            return c()
+        regexp = r'%s(?:%s)%s' % (
+            head,
+            '|'.join([fnmatch.translate(os.path.normpath(os.path.normcase(p)))[:-1]
+                      for p in pats]),
+            tail)
+        print regexp
+        return re.compile(regexp)
+    exclude = compile(opts['exclude'], on_empty = False)
+    include = compile(opts['include'])
+    pat = compile([os.path.normcase(p) for p in pats], head = '', tail = '$')
+    end = '\n'
+    if opts['print0']: end = '\0'
+    if opts['rev']: node = repo.manifest.lookup(opts['rev'])
+    else: node = repo.manifest.tip()
+    manifest = repo.manifest.read(node)
+    cwd = repo.getcwd()
+    cwd_plus = cwd and (cwd + os.sep)
+    found = []
+    for f in manifest:
+        f = os.path.normcase(f)
+        if exclude.match(f) or not(include.match(f) and
+                                   f.startswith(cwd_plus) and
+                                   pat.match(os.path.basename(f))): continue
+        if opts['fullpath']: f = os.path.join(repo.root, f)
+        elif cwd: f = f[len(cwd_plus):]
+        found.append(f)
+    found.sort()
+    for f in found: ui.write(f, end)
+
 def log(ui, repo, f=None, **opts):
     """show the revision history of the repository or a single file"""
     if f:
@@ -1037,6 +1077,13 @@ table = {
                       ('b', 'base', "", 'base path')],
                      "hg import [options] <patches>"),
     "^init": (init, [], 'hg init'),
+    "locate": (locate,
+               [('0', 'print0', None, 'end records with NUL'),
+                ('f', 'fullpath', None, 'print complete paths'),
+                ('i', 'include', [], 'include path in search'),
+                ('r', 'rev', '', 'revision'),
+                ('x', 'exclude', [], 'exclude path from search')],
+               'hg locate [options] [files]'),
     "^log|history": (log,
                     [('r', 'rev', [], 'revision'),
                      ('p', 'patch', None, 'show patch')],

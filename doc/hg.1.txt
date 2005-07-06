@@ -183,6 +183,34 @@ import [-p <n> -b <base> -q] <patches>::
 init::
     Initialize a new repository in the current directory.
 
+locate [options] [patterns]::
+    Print all files under Mercurial control whose names or paths match
+    the given patterns.
+
+    Patterns are shell-style globs.  To restrict searches to specific
+    directories, use the "-i <pat>" option.  To eliminate particular
+    directories from searching, use the "-x <pat>" option.
+
+    This command searches the current directory and its
+    subdirectories.  To search an entire repository, move to the root
+    of the repository.
+
+    If no patterns are given to match, this command prints all file
+    names.
+
+    If you want to feed the output of this command into the "xargs"
+    command, use the "-0" option to both this command and "xargs".
+    This will avoid the problem of "xargs" treating single filenames
+    that contain white space as multiple file names.
+
+    options:
+
+    -0, --print0         end filenames with NUL, for use with xargs
+    -f, --fullpath       print complete paths from the filesystem root
+    -i, --include <pat>  include directories matching the given globs
+    -r, --rev <rev>      search the repository as it stood at rev
+    -x, --exclude <pat>  exclude directories matching the given globs
+
 log [-r revision ...] [-p] [file]::
     Print the revision history of the specified file or the entire project.
 
