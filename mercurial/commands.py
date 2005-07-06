@@ -73,6 +73,39 @@ def revrange(ui, repo, revs = [], revlog = None):
         else:
             yield spec
 
+def make_filename(repo, r, pat, node=None,
+                  total=None, seqno=None, revwidth=None):
+    node_expander = {
+        'H': lambda: hg.hex(node),
+        'R': lambda: str(r.rev(node)),
+        'h': lambda: hg.short(node),
+        }
+    expander = {
+        '%': lambda: '%',
+        'b': lambda: os.path.basename(repo.root),
+        }
+
+    if node: expander.update(node_expander)
+    if node and revwidth is not None:
+        expander['r'] = lambda: str(r.rev(node)).zfill(revwidth)
+    if total is not None: expander['N'] = lambda: str(total)
+    if seqno is not None: expander['n'] = lambda: str(seqno)
+    if total is not None and seqno is not None:
+        expander['n'] = lambda:str(seqno).zfill(len(str(total)))
+
+    newname = []
+    patlen = len(pat)
+    i = 0
+    while i < patlen:
+        c = pat[i]
+        if c == '%':
+            i += 1
+            c = pat[i]
+            c = expander[c]()
+        newname.append(c)
+        i += 1
+    return ''.join(newname)
+
 def dodiff(fp, ui, repo, files = None, node1 = None, node2 = None):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
@@ -310,12 +343,22 @@ def annotate(u, repo, file, *files, **ops):
         for p,l in zip(zip(*pieces), lines):
             u.write(" ".join(p) + ": " + l[1])
 
-def cat(ui, repo, file, rev = []):
+def cat(ui, repo, file, rev = [], **opts):
     """output the latest or given revision of a file"""
     r = repo.file(relpath(repo, [file])[0])
     n = r.tip()
     if rev: n = r.lookup(rev)
-    sys.stdout.write(r.read(n))
+    if opts['output'] and opts['output'] != '-':
+        try:
+            outname = make_filename(repo, r, opts['output'], node=n)
+            fp = open(outname, 'wb')
+        except KeyError, inst:
+            ui.warn("error: invlaid format spec '%%%s' in output file name\n" %
+                    inst.args[0])
+            sys.exit(1);
+    else:
+        fp = sys.stdout
+    fp.write(r.read(n))
 
 def clone(ui, source, dest = None, **opts):
     """make a copy of an existing repository"""
@@ -477,33 +520,12 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     prev, other = repo.changelog.parents(node)
     change = repo.changelog.read(node)
 
-    def expand(name):
-        expansions = {
-            '%': lambda: '%',
-            'H': lambda: hg.hex(node),
-            'N': lambda: str(total),
-            'R': lambda: str(repo.changelog.rev(node)),
-            'b': lambda: os.path.basename(repo.root),
-            'h': lambda: hg.short(node),
-            'n': lambda: str(seqno).zfill(len(str(total))),
-            'r': lambda: str(repo.changelog.rev(node)).zfill(revwidth),
-            }
-        newname = []
-        namelen = len(name)
-        i = 0
-        while i < namelen:
-            c = name[i]
-            if c == '%':
-                i += 1
-                c = name[i]
-                c = expansions[c]()
-            newname.append(c)
-            i += 1
-        return ''.join(newname)
-
     if opts['output'] and opts['output'] != '-':
         try:
-            fp = open(expand(opts['output']), 'wb')
+            outname = make_filename(repo, repo.changelog, opts['output'],
+                                    node=node, total=total, seqno=seqno,
+                                    revwidth=revwidth)
+            fp = open(outname, 'wb')
         except KeyError, inst:
             ui.warn("error: invalid format spec '%%%s' in output file name\n" %
                     inst.args[0])
@@ -1047,7 +1069,7 @@ table = {
                       ('n', 'number', None, 'show revision number'),
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
-    "cat": (cat, [], 'hg cat <file> [rev]'),
+    "cat": (cat, [('o', 'output', "", 'output to file')], 'hg cat [-o outfile] file> [rev]'),
     "^clone": (clone, [('U', 'noupdate', None, 'skip update after cloning')],
               'hg clone [options] <source> [dest]'),
     "^commit|ci": (commit,
