@@ -124,10 +124,10 @@ a tag. Thus tagging a revision must be done as a second step.
 
 .Q. What if I want to just keep local tags?
 
-You can add a section called "[tags]" to your .hg/hgrc which contains
-a list of tag = changeset ID pairs. Unlike traditional tags, these are
-only visible in the local repository, but otherwise act just like
-normal tags.
+You can use "hg tag" command with an option "-l" or "--local". This
+will store the tag in the file .hg/localtags, which will not be
+distributed or versioned. The format of this file is identical to the
+one of .hgtags and the tags stored there are handled the same.
 
 
 .Q. How do tags work with multiple heads?

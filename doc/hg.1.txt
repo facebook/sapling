@@ -329,7 +329,7 @@ status::
     R = removed
     ? = not tracked
 
-tag [-t <text> -d <datecode> -u <user>] <name> [revision]::
+tag [-l -t <text> -d <datecode> -u <user>] <name> [revision]::
     Name a particular revision using <name>.
     
     Tags are used to name particular revisions of the repository and are
@@ -344,13 +344,14 @@ tag [-t <text> -d <datecode> -u <user>] <name> [revision]::
     necessary.
 
     options:
+    -l, --local           make the tag local
     -t, --text <text>     message for tag commit log entry
     -d, --date <datecode> datecode for commit
     -u, --user <user>     user for commit
 
-    Note: Mercurial also has support for "local tags" that are not
-    version-controlled or distributed which are stored in the .hg/hgrc
-    file.
+    Note: Local tags are not version-controlled or distributed and are
+    stored in the .hg/localtags file. If there exists a local tag and
+    a public tag with the same name, local tag is used.
 
 tags::
     List the repository tags.
