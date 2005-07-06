@@ -184,8 +184,8 @@ init::
     Initialize a new repository in the current directory.
 
 locate [options] [patterns]::
-    Print all files under Mercurial control whose names or paths match
-    the given patterns.
+    Print all files under Mercurial control whose basenames match the
+    given patterns.
 
     Patterns are shell-style globs.  To restrict searches to specific
     directories, use the "-i <pat>" option.  To eliminate particular
