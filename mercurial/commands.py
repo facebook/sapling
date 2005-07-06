@@ -9,7 +9,7 @@ from demandload import *
 demandload(globals(), "os re sys signal")
 demandload(globals(), "fancyopts ui hg util")
 demandload(globals(), "hgweb mdiff random signal time traceback")
-demandload(globals(), "errno socket version")
+demandload(globals(), "errno socket version struct")
 
 class UnknownCommand(Exception): pass
 
@@ -823,9 +823,67 @@ def root(ui, repo):
 
 def serve(ui, repo, **opts):
     """export the repository via HTTP"""
+
+    if opts["stdio"]:
+        def getarg():
+            argline = sys.stdin.readline()[:-1]
+            arg, l = argline.split()
+            val = sys.stdin.read(int(l))
+            return arg, val
+        def respond(v):
+            sys.stdout.write("%d\n" % len(v))
+            sys.stdout.write(v)
+            sys.stdout.flush()
+
+        while 1:
+            cmd = sys.stdin.readline()[:-1]
+            if cmd == '':
+                return
+            if cmd == "heads":
+                h = repo.heads()
+                respond(" ".join(map(hg.hex, h)) + "\n")
+            elif cmd == "branches":
+                arg, nodes = getarg()
+                nodes = map(hg.bin, nodes.split(" "))
+                r = []
+                for b in repo.branches(nodes):
+                    r.append(" ".join(map(hg.hex, b)) + "\n")
+                respond("".join(r))
+            elif cmd == "between":
+                arg, pairs = getarg()
+                pairs = [ map(hg.bin, p.split("-")) for p in pairs.split(" ") ]
+                r = []
+                for b in repo.between(pairs):
+                    r.append(" ".join(map(hg.hex, b)) + "\n")
+                respond("".join(r))
+            elif cmd == "changegroup":
+                nodes = []
+                arg, roots = getarg()
+                nodes = map(hg.bin, roots.split(" "))
+
+                b = []
+                t = 0
+                for chunk in repo.changegroup(nodes):
+                    t += len(chunk)
+                    b.append(chunk)
+                    if t > 4096:
+                        sys.stdout.write(struct.pack(">l", t))
+                        for c in b:
+                            sys.stdout.write(c)
+                        t = 0
+                        b = []
+
+                sys.stdout.write(struct.pack(">l", t))
+                for c in b:
+                    sys.stdout.write(c)
+
+                sys.stdout.write(struct.pack(">l", -1))
+                sys.stdout.flush()
+
     def openlog(opt, default):
         if opts[opt] and opts[opt] != '-': return open(opts[opt], 'w')
         else: return default
+
     httpd = hgweb.create_server(repo.root, opts["name"], opts["templates"],
                                 opts["address"], opts["port"],
                                 openlog('accesslog', sys.stdout),
@@ -1017,6 +1075,7 @@ table = {
                        ('p', 'port', 8000, 'listen port'),
                        ('a', 'address', '', 'interface address'),
                        ('n', 'name', os.getcwd(), 'repository name'),
+                       ('', 'stdio', None, 'for remote clients'),
                        ('t', 'templates', "", 'template map')],
               "hg serve [options]"),
     "^status": (status, [], 'hg status'),

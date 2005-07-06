@@ -1592,6 +1592,88 @@ class httprepository:
             yield zd.decompress(d)
         self.ui.note("%d bytes of data transfered\n" % bytes)
 
+class sshrepository:
+    def __init__(self, ui, path):
+        self.url = path
+        self.ui = ui
+
+        m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?', path)
+        if not m:
+            raise RepoError("couldn't parse destination %s\n" % path)
+
+        self.user = m.group(2)
+        self.host = m.group(3)
+        self.port = m.group(5)
+        self.path = m.group(7)
+
+        args = self.user and ("%s@%s" % (self.user, self.host)) or self.host
+        args = self.port and ("%s -p %s") % (args, self.port) or args
+        path = self.path or ""
+
+        cmd = "ssh %s 'hg -R %s serve --stdio'"
+        cmd = cmd % (args, path)
+
+        self.pipeo, self.pipei = os.popen2(cmd)
+
+    def __del__(self):
+        self.pipeo.close()
+        self.pipei.close()
+
+    def do_cmd(self, cmd, **args):
+        self.ui.debug("sending %s command\n" % cmd)
+        self.pipeo.write("%s\n" % cmd)
+        for k, v in args.items():
+            self.pipeo.write("%s %d\n" % (k, len(v)))
+            self.pipeo.write(v)
+        self.pipeo.flush()
+
+        return self.pipei
+
+    def call(self, cmd, **args):
+        r = self.do_cmd(cmd, **args)
+        l = int(r.readline())
+        return r.read(l)
+
+    def heads(self):
+        d = self.call("heads")
+        try:
+            return map(bin, d[:-1].split(" "))
+        except:
+            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
+            raise
+
+    def branches(self, nodes):
+        n = " ".join(map(hex, nodes))
+        d = self.call("branches", nodes=n)
+        try:
+            br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
+            return br
+        except:
+            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
+            raise
+
+    def between(self, pairs):
+        n = "\n".join(["-".join(map(hex, p)) for p in pairs])
+        d = self.call("between", pairs=n)
+        try:
+            p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
+            return p
+        except:
+            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
+            raise
+
+    def changegroup(self, nodes):
+        n = " ".join(map(hex, nodes))
+        f = self.do_cmd("changegroup", roots=n)
+        bytes = 0
+        while 1:
+            l = struct.unpack(">l", f.read(4))[0]
+            if l == -1: break
+            d = f.read(l)
+            bytes += len(d)
+            yield d
+        self.ui.note("%d bytes of data transfered\n" % bytes)
+
 def repository(ui, path=None, create=0):
     if path:
         if path.startswith("http://"):
@@ -1600,5 +1682,7 @@ def repository(ui, path=None, create=0):
             return httprepository(ui, path.replace("hg://", "http://"))
         if path.startswith("old-http://"):
             return localrepository(ui, path.replace("old-http://", "http://"))
+        if path.startswith("ssh://"):
+            return sshrepository(ui, path)
 
     return localrepository(ui, path, create)
