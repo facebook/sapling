@@ -646,7 +646,6 @@ def locate(ui, repo, *pats, **opts):
             '|'.join([fnmatch.translate(os.path.normpath(os.path.normcase(p)))[:-1]
                       for p in pats]),
             tail)
-        print regexp
         return re.compile(regexp)
     exclude = compile(opts['exclude'], on_empty = False)
     include = compile(opts['include'])
