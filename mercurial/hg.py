@@ -1498,7 +1498,7 @@ class localrepository:
             self.ui.warn("%d integrity errors encountered!\n" % errors)
             return 1
 
-class remoterepository:
+class httprepository:
     def __init__(self, ui, path):
         self.url = path
         self.ui = ui
@@ -1593,12 +1593,12 @@ class remoterepository:
         self.ui.note("%d bytes of data transfered\n" % bytes)
 
 def repository(ui, path=None, create=0):
-    if path and path[:7] == "http://":
-        return remoterepository(ui, path)
-    if path and path[:5] == "hg://":
-        return remoterepository(ui, path.replace("hg://", "http://"))
-    if path and path[:11] == "old-http://":
-        return localrepository(ui, path.replace("old-http://", "http://"))
-    else:
-        return localrepository(ui, path, create)
+    if path:
+        if path.startswith("http://"):
+            return httprepository(ui, path)
+        if path.startswith("hg://"):
+            return httprepository(ui, path.replace("hg://", "http://"))
+        if path.startswith("old-http://"):
+            return localrepository(ui, path.replace("old-http://", "http://"))
 
+    return localrepository(ui, path, create)
