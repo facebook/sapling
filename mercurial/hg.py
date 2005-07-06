@@ -995,6 +995,26 @@ class localrepository:
         # this is the set of all roots we have to push
         return subset
 
+    def pull(self, remote):
+        lock = self.lock()
+        fetch = self.findincoming(remote)
+        if not fetch:
+            self.ui.status("no changes found\n")
+            return 1
+
+        cg = remote.changegroup(fetch)
+        return self.addchangegroup(cg)
+
+    def push(self, remote):
+        lock = remote.lock()
+        update = self.findoutgoing(remote)
+        if not update:
+            self.ui.status("no changes found\n")
+            return 1
+
+        cg = self.changegroup(update)
+        return remote.addchangegroup(cg)
+
     def changegroup(self, basenodes):
         nodes = self.newer(basenodes)
 
@@ -1062,7 +1082,6 @@ class localrepository:
         changesets = files = revisions = 0
 
         source = genread(generator)
-        lock = self.lock()
         tr = self.transaction()
 
         # pull off the changeset group
