@@ -331,14 +331,15 @@ def clone(ui, source, dest = None, **opts):
 
     class dircleanup:
         def __init__(self, dir):
+            import shutil
+            self.rmtree = shutil.rmtree
             self.dir = dir
             os.mkdir(dir)
         def close(self):
             self.dir = None
         def __del__(self):
             if self.dir:
-                import shutil
-                shutil.rmtree(self.dir, True)
+                self.rmtree(self.dir, True)
 
     d = dircleanup(dest)
 
@@ -346,6 +347,7 @@ def clone(ui, source, dest = None, **opts):
     abspath = source
     if not (source.startswith("http://") or
             source.startswith("hg://") or
+            source.startswith("ssh://") or
             source.startswith("old-http://")):
         abspath = os.path.abspath(source)
         d1 = os.stat(dest).st_dev
@@ -364,10 +366,7 @@ def clone(ui, source, dest = None, **opts):
     else:
         repo = hg.repository(ui, dest, create=1)
         other = hg.repository(ui, source)
-        fetch = repo.findincoming(other)
-        if fetch:
-            cg = other.changegroup(fetch)
-            repo.addchangegroup(cg)
+        repo.pull(other)
 
     f = repo.opener("hgrc", "w")
     f.write("[paths]\n")
@@ -694,18 +693,11 @@ def parents(ui, repo, node = None):
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source"""
     source = ui.expandpath(source)
-
     ui.status('pulling from %s\n' % (source))
 
     other = hg.repository(ui, source)
-    fetch = repo.findincoming(other)
-    if not fetch:
-        ui.status("no changes found\n")
-        return
-
-    cg = other.changegroup(fetch)
-    r = repo.addchangegroup(cg)
-    if cg and not r:
+    r = repo.pull(other)
+    if not r:
         if opts['update']:
             return update(ui, repo)
         else:
