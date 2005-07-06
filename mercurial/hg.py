@@ -854,11 +854,10 @@ class localrepository:
 
         return nl
 
-    def findincoming(self, remote):
+    def findincoming(self, remote, base={}):
         m = self.changelog.nodemap
         search = []
         fetch = []
-        base = {}
         seen = {}
         seenbranch = {}
 
@@ -875,6 +874,8 @@ class localrepository:
         for h in heads:
             if h not in m:
                 unknown.append(h)
+            else:
+                base[h] = 1
 
         if not unknown:
             return None
@@ -969,6 +970,30 @@ class localrepository:
         self.ui.debug("%d total queries\n" % reqcnt)
 
         return fetch
+
+    def findoutgoing(self, remote):
+        base = {}
+        findincoming(self, remote, base)
+        remain = dict.fromkeys(self.changelog.nodemap)
+
+        # prune everything remote has from the tree
+        remove = base.keys()
+        while remove:
+            n = remove.pop(0)
+            if n in remain:
+                del remain[n]
+                for p in self.changelog.parents(n):
+                    remain.append(p)
+
+        # find every node whose parents have been pruned
+        subset = []
+        for n in remain:
+            p1, p2 = self.changelog.parents(n)
+            if p1 not in remain and p2 not in remain:
+                subset.append(n)
+
+        # this is the set of all roots we have to push
+        return subset
 
     def changegroup(self, basenodes):
         nodes = self.newer(basenodes)
