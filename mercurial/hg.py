@@ -11,7 +11,7 @@ from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
 demandload(globals(), "tempfile httprangereader bdiff")
-demandload(globals(), "bisect")
+demandload(globals(), "bisect select")
 
 class filelog(revlog):
     def __init__(self, opener, path):
@@ -1751,11 +1751,21 @@ class sshrepository:
         cmd = "ssh %s 'hg -R %s serve --stdio'"
         cmd = cmd % (args, path)
 
-        self.pipeo, self.pipei = os.popen2(cmd)
+        self.pipeo, self.pipei, self.pipee = os.popen3(cmd)
+
+    def readerr(self):
+        while 1:
+            r,w,x = select.select([self.pipee], [], [], 0)
+            if not r: break
+            l = self.pipee.readline()
+            if not l: break
+            self.ui.status("remote: ", l)
 
     def __del__(self):
+        self.readerr()
         self.pipeo.close()
         self.pipei.close()
+        self.pipee.close()
 
     def dev(self):
         return -1
@@ -1772,7 +1782,12 @@ class sshrepository:
 
     def call(self, cmd, **args):
         r = self.do_cmd(cmd, **args)
-        l = int(r.readline())
+        l = r.readline()
+        self.readerr()
+        try:
+            l = int(l)
+        except:
+            raise RepoError("unexpected response '%s'" % l)
         return r.read(l)
 
     def lock(self):
@@ -1787,8 +1802,7 @@ class sshrepository:
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
-            raise
+            raise RepoError("unexpected response '%s'" % (d[:400] + "..."))
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -1797,8 +1811,7 @@ class sshrepository:
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
-            raise
+            raise RepoError("unexpected response '%s'" % (d[:400] + "..."))
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
@@ -1807,8 +1820,7 @@ class sshrepository:
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
-            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
-            raise
+            raise RepoError("unexpected response '%s'" % (d[:400] + "..."))
 
     def changegroup(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -1824,11 +1836,13 @@ class sshrepository:
             d = cg.read(4096)
             if not d: break
             self.pipeo.write(d)
+            self.readerr()
 
         self.pipeo.flush()
 
+        self.readerr()
         l = int(self.pipei.readline())
-        return self.pipei.read(l)
+        return self.pipei.read(l) != ""
 
 def repository(ui, path=None, create=0):
     if path:
