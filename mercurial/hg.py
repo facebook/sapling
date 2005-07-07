@@ -498,6 +498,10 @@ class localrepository:
         except KeyError:
             return self.changelog.lookup(key)
 
+    def dev(self):
+        if self.remote: return -1
+        return os.stat(self.path).st_dev
+
     def join(self, f):
         return os.path.join(self.path, f)
 
@@ -1547,6 +1551,9 @@ class httprepository:
         opener = urllib2.build_opener(proxy_handler, authinfo)
         urllib2.install_opener(opener)
 
+    def dev(self):
+        return -1
+
     def do_cmd(self, cmd, **args):
         self.ui.debug("sending %s command\n" % cmd)
         q = {"cmd": cmd}
@@ -1623,6 +1630,9 @@ class sshrepository:
     def __del__(self):
         self.pipeo.close()
         self.pipei.close()
+
+    def dev(self):
+        return -1
 
     def do_cmd(self, cmd, **args):
         self.ui.debug("sending %s command\n" % cmd)

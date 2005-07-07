@@ -362,8 +362,6 @@ def cat(ui, repo, file, rev = [], **opts):
 
 def clone(ui, source, dest = None, **opts):
     """make a copy of an existing repository"""
-    source = ui.expandpath(source)
-
     if dest is None:
         dest = os.path.basename(os.path.normpath(source))
 
@@ -384,20 +382,13 @@ def clone(ui, source, dest = None, **opts):
                 self.rmtree(self.dir, True)
 
     d = dircleanup(dest)
-
     link = 0
     abspath = source
-    if not (source.startswith("http://") or
-            source.startswith("hg://") or
-            source.startswith("ssh://") or
-            source.startswith("old-http://")):
-        abspath = os.path.abspath(source)
-        d1 = os.stat(dest).st_dev
-        d2 = os.stat(source).st_dev
-        if d1 == d2: link = 1
+    source = ui.expandpath(source)
+    other = hg.repository(ui, source)
 
-    if link:
-        ui.note("copying by hardlink\n")
+    if other.dev() != -1 and os.stat(dest).st_dev == other.dev():
+        ui.status("cloning by hardlink\n")
         util.system("cp -al '%s'/.hg '%s'/.hg" % (source, dest))
         try:
             os.remove(os.path.join(dest, ".hg", "dirstate"))
@@ -407,7 +398,6 @@ def clone(ui, source, dest = None, **opts):
 
     else:
         repo = hg.repository(ui, dest, create=1)
-        other = hg.repository(ui, source)
         repo.pull(other)
 
     f = repo.opener("hgrc", "w")
