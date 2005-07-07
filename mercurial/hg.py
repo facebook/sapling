@@ -487,7 +487,7 @@ class localrepository:
         self.wopener = opener(self.root)
         self.manifest = manifest(self.opener)
         self.changelog = changelog(self.opener)
-        self.ignorelist = None
+        self.ignorefunc = None
         self.tagscache = None
         self.nodetagscache = None
 
@@ -498,17 +498,22 @@ class localrepository:
             except IOError: pass
 
     def ignore(self, f):
-        if self.ignorelist is None:
-            self.ignorelist = []
+        if not self.ignorefunc:
+            bigpat = []
             try:
                 l = file(self.wjoin(".hgignore"))
                 for pat in l:
                     if pat != "\n":
-                        self.ignorelist.append(re.compile(util.pconvert(pat[:-1])))
+                        bigpat.append(util.pconvert(pat[:-1]))
             except IOError: pass
-        for pat in self.ignorelist:
-            if pat.search(f): return True
-        return False
+            if bigpat:
+                s = "(%s)" % (")|(".join(bigpat))
+                r = re.compile(s)
+                self.ignorefunc = r.search
+            else:
+                self.ignorefunc = lambda x: False
+
+        return self.ignorefunc(f)
 
     def hook(self, name, **args):
         s = self.ui.config("hooks", name)
