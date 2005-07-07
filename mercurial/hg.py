@@ -1715,6 +1715,21 @@ class sshrepository:
         f = self.do_cmd("changegroup", roots=n)
         return self.pipei
 
+    def addchangegroup(self, cg):
+        d = self.call("addchangegroup")
+        if d:
+            raise RepoError("push refused: %s", d)
+
+        while 1:
+            d = cg.read(4096)
+            if not d: break
+            self.pipeo.write(d)
+
+        self.pipeo.flush()
+
+        l = int(self.pipei.readline())
+        return self.pipei.read(l)
+
 def repository(ui, path=None, create=0):
     if path:
         if path.startswith("http://"):

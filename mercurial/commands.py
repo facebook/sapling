@@ -923,6 +923,15 @@ def serve(ui, repo, **opts):
 
                 out.flush()
 
+            elif cmd == "addchangegroup":
+                if not lock:
+                    respond("not locked")
+                    continue
+                respond("")
+
+                r = repo.addchangegroup(fin)
+                respond("")
+
     def openlog(opt, default):
         if opts[opt] and opts[opt] != '-': return open(opts[opt], 'w')
         else: return default
