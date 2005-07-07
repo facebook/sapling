@@ -870,12 +870,7 @@ class localrepository:
         seen = {}
         seenbranch = {}
 
-        # if we have an empty repo, fetch everything
-        if self.changelog.tip() == nullid:
-            self.ui.status("requesting all changes\n")
-            return [nullid]
-
-        # otherwise, assume we're closer to the tip than the root
+        # assume we're closer to the tip than the root
         # and start by examining the heads
         self.ui.status("searching for changes\n")
         heads = remote.heads()
@@ -1006,7 +1001,14 @@ class localrepository:
 
     def pull(self, remote):
         lock = self.lock()
-        fetch = self.findincoming(remote)
+
+        # if we have an empty repo, fetch everything
+        if self.changelog.tip() == nullid:
+            self.ui.status("requesting all changes\n")
+            fetch = [nullid]
+        else:
+            fetch = self.findincoming(remote)
+
         if not fetch:
             self.ui.status("no changes found\n")
             return 1
