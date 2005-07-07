@@ -33,7 +33,6 @@ Web:
 - hgweb: deliver static files (e.g. favicon, stylesheets)
 - hgweb personalization: timezone (display/change), display of
   features
-- hg export 240 shows -tkmerge (good), hgweb does not (bad).
 - some web servers think hgweb.cgi.[di] is a CGI script with old-http://
   (use quoting (see foo.d in Core) or document server configurations?)
 - link children in hgweb

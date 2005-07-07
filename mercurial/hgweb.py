@@ -208,7 +208,8 @@ class hgweb:
         date2 = self.date(change2)
 
         c, a, d, u = r.changes(node1, node2)
-        c, a, d = map(lambda x: filterfiles(x, files), (c, a, d))
+        if files:
+            c, a, d = map(lambda x: filterfiles(x, files), (c, a, d))
 
         for f in c:
             to = r.file(f).read(mmap1[f])
@@ -361,7 +362,7 @@ class hgweb:
                                 filenode = hex(mf.get(f, nullid)), file = f))
 
         def diff():
-            yield self.diff(p1, n, changes[3])
+            yield self.diff(p1, n, None)
 
         yield self.t('changeset',
                      diff = diff,
