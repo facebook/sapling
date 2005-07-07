@@ -32,46 +32,24 @@ Setting up a Mercurial project:
 
  $ cd project/
  $ hg init         # creates .hg
- $ hg status       # show changes between repo and working dir
- $ hg diff         # generate a unidiff
  $ hg addremove    # add all unknown files and remove all missing files
  $ hg commit       # commit all changes, edit changelog entry
- $ hg export <rev> # export a changeset as a diff
 
  Mercurial will look for a file named .hgignore in the root of your
- repository contains a set of regular expressions to ignore in file
- paths.
-
-Mercurial commands:
-
- $ hg help [command]   # get online help
- $ hg history          # show changesets
- $ hg log Makefile     # show commits per file
- $ hg update           # check out the tip revision
- $ hg update <id>      # check out a specified changeset
-                       # IDs can be tags, revision numbers, or unique
-                       # subsets of changeset hash numbers
- $ hg add foo          # add a new file for the next commit
- $ hg remove bar       # mark a file as removed
- $ hg verify           # check repo integrity
- $ hg tags             # show current tags
- $ hg tag <name>       # tag current tip with distributed tag <name>
- $ hg tag -l <name>    # tag current tip with local tag <name>
- $ hg annotate [files] # show changeset numbers for each file line
+ repository which contains a set of regular expressions to ignore in
+ file paths.
 
 Branching and merging:
 
- $ cd ..
- $ mkdir linux-work
+ $ hg clone linux linux-work    # create a new branch
  $ cd linux-work
- $ hg init ../linux          # create a new branch
- $ hg update                 # populate the working directory
  $ <make changes>
  $ hg commit
  $ cd ../linux
  $ hg pull ../linux-work     # pull changesets from linux-work
  $ hg update -m              # merge the new tip from linux-work into
                              # our working directory
+ $ hg commit                 # commit the result of the merge
 
 Importing patches:
 
@@ -98,9 +76,8 @@ Exporting a patch:
 Network support:
 
  # pull from the primary Mercurial repo
- foo$ hg init
- foo$ hg pull http://selenic.com/hg/
- foo$ hg update # hg co works too
+ foo$ hg clone http://selenic.com/hg/ 
+ foo$ cd hg
 
  # export your current repo via HTTP with browsable interface
  foo$ hg serve -n "My repo" -p 80
@@ -115,12 +92,3 @@ Network support:
  # Set up a CGI server on your webserver
  foo$ cp hgweb.cgi ~/public_html/hg/index.cgi
  foo$ emacs ~/public_html/hg/index.cgi # adjust the defaults
-
-Symbolic repository names:
-
- Mercurial uses an options file called ~/.hgrc. To track locations
- symbolically, add a section to it like this:
-
- [paths]
- main = http://selenic.com/hg
- linux = http://www.kernel.org/hg/
