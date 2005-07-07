@@ -1045,7 +1045,7 @@ table = {
                       ('n', 'number', None, 'show revision number'),
                       ('c', 'changeset', None, 'show changeset')],
                      'hg annotate [-u] [-c] [-n] [-r id] [files]'),
-    "cat": (cat, [('o', 'output', "", 'output to file')], 'hg cat [-o outfile] file> [rev]'),
+    "cat": (cat, [('o', 'output', "", 'output to file')], 'hg cat [-o outfile] <file> [rev]'),
     "^clone": (clone, [('U', 'noupdate', None, 'skip update after cloning')],
               'hg clone [options] <source> [dest]'),
     "^commit|ci": (commit,
