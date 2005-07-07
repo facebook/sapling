@@ -758,35 +758,11 @@ def pull(ui, repo, source="default", **opts):
 def push(ui, repo, dest="default-push"):
     """push changes to the specified destination"""
     dest = ui.expandpath(dest)
+    ui.status('pushing to %s\n' % (dest))
 
-    if not dest.startswith("ssh://"):
-        ui.warn("abort: can only push to ssh:// destinations currently\n")
-        return 1
-
-    m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?', dest)
-    if not m:
-        ui.warn("abort: couldn't parse destination %s\n" % dest)
-        return 1
-
-    user, host, port, path = map(m.group, (2, 3, 5, 7))
-    uhost = user and ("%s@%s" % (user, host)) or host
-    port = port and (" -p %s") % port or ""
-    path = path or ""
-
-    sport = random.randrange(30000, 60000)
-    cmd = "ssh %s%s -R %d:localhost:%d 'cd %s; hg pull http://localhost:%d/'"
-    cmd = cmd % (uhost, port, sport+1, sport, path, sport+1)
-
-    child = os.fork()
-    if not child:
-        sys.stdout = file("/dev/null", "w")
-        sys.stderr = sys.stdout
-        hgweb.server(repo.root, "pull", "", "localhost", sport)
-    else:
-        ui.status("connecting to %s\n" % host)
-        r = os.system(cmd)
-        os.kill(child, signal.SIGTERM)
-        return r
+    other = hg.repository(ui, dest)
+    r = repo.push(other)
+    return r
 
 def rawcommit(ui, repo, *flist, **rc):
     "raw commit interface"
