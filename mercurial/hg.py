@@ -11,6 +11,7 @@ from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
 demandload(globals(), "tempfile httprangereader bdiff")
+demandload(globals(), "bisect")
 
 class filelog(revlog):
     def __init__(self, opener, path):
@@ -124,16 +125,115 @@ class manifest(revlog):
         else:
             return mdiff.textdiff(a, b)
 
-    def add(self, map, flags, transaction, link, p1=None, p2=None):
-        files = map.keys()
-        files.sort()
+    def add(self, map, flags, transaction, link, p1=None, p2=None,changed=None):
+        # directly generate the mdiff delta from the data collected during
+        # the bisect loop below
+        def gendelta(delta):
+            i = 0
+            result = []
+            while i < len(delta):
+                start = delta[i][2]
+                end = delta[i][3]
+                l = delta[i][4]
+                if l == None:
+                    l = ""
+                while i < len(delta) - 1 and start <= delta[i+1][2] and end >= delta[i+1][2]:
+                    if delta[i+1][3] > end:
+                        end = delta[i+1][3]
+                    if delta[i+1][4]:
+                        l += delta[i+1][4]
+                    i += 1
+                result.append(struct.pack(">lll", start, end, len(l)) +  l)
+                i += 1
+            return result
 
-        self.addlist = ["%s\000%s%s\n" %
-                        (f, hex(map[f]), flags[f] and "x" or '')
-                        for f in files]
+        # apply the changes collected during the bisect loop to our addlist
+        def addlistdelta(addlist, delta):
+            # apply the deltas to the addlist.  start from the bottom up
+            # so changes to the offsets don't mess things up.
+            i = len(delta)
+            while i > 0:
+                i -= 1
+                start = delta[i][0]
+                end = delta[i][1]
+                if delta[i][4]:
+                    addlist[start:end] = [delta[i][4]]
+                else:
+                    del addlist[start:end]
+            return addlist
+
+        # calculate the byte offset of the start of each line in the
+        # manifest
+        def calcoffsets(addlist):
+            offsets = [0] * (len(addlist) + 1)
+            offset = 0
+            i = 0
+            while i < len(addlist):
+                offsets[i] = offset
+                offset += len(addlist[i])
+                i += 1
+            offsets[i] = offset
+            return offsets
+
+        # if we're using the listcache, make sure it is valid and
+        # parented by the same node we're diffing against
+        if not changed or not self.listcache or not p1 or self.mapcache[0] != p1:
+            files = map.keys()
+            files.sort()
+
+            self.addlist = ["%s\000%s%s\n" %
+                            (f, hex(map[f]), flags[f] and "x" or '')
+                            for f in files]
+            cachedelta = None
+        else:
+            addlist = self.listcache[1]
+
+            # find the starting offset for each line in the add list
+            offsets = calcoffsets(addlist)
+
+            # combine the changed lists into one list for sorting
+            work = [[x, 0] for x in changed[0]]
+            work[len(work):] = [[x, 1] for x in changed[1]]
+            work.sort()
+
+            delta = []
+            bs = 0
+
+            for w in work:
+                f = w[0]
+                # bs will either be the index of the item or the insertion point
+                bs = bisect.bisect(addlist, f, bs)
+                if bs < len(addlist):
+                    fn = addlist[bs][:addlist[bs].index('\0')]
+                else:
+                    fn = None
+                if w[1] == 0:
+                    l = "%s\000%s%s\n" % (f, hex(map[f]), flags[f] and "x" or '')
+                else:
+                    l = None
+                start = bs
+                if fn != f:
+                    # item not found, insert a new one
+                    end = bs 
+                    if w[1] == 1:
+                        sys.stderr.write("failed to remove %s from manifest" % f)
+                        sys.exit(1)
+                else:
+                    # item is found, replace/delete the existing line
+                    end = bs + 1
+                delta.append([start, end, offsets[start], offsets[end], l])
+
+            self.addlist = addlistdelta(addlist, delta)
+            if self.mapcache[0] == self.tip():
+                cachedelta = "".join(gendelta(delta))
+            else:
+                cachedelta = None
+
         text = "".join(self.addlist)
-
-        n = self.addrevision(text, transaction, link, p1, p2)
+        if cachedelta and mdiff.patch(self.listcache[0], cachedelta) != text:
+            sys.stderr.write("manifest delta failure")
+            sys.exit(1)
+        n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
         self.mapcache = (n, map, flags)
         self.listcache = (text, self.addlist)
         self.addlist = None
@@ -669,7 +769,7 @@ class localrepository:
         for f in remove:
             if f in m1:
                 del m1[f]
-        mn = self.manifest.add(m1, mf1, tr, linkrev, c1[0], c2[0])
+        mn = self.manifest.add(m1, mf1, tr, linkrev, c1[0], c2[0], (new,remove))
 
         # add changeset
         new = new.keys()

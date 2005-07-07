@@ -267,7 +267,7 @@ class revlog:
         self.cache = (node, rev, text)
         return text
 
-    def addrevision(self, text, transaction, link, p1=None, p2=None):
+    def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
         if text is None: text = ""
         if p1 is None: p1 = self.tip()
         if p2 is None: p2 = nullid
@@ -284,8 +284,9 @@ class revlog:
             base = self.base(t)
             start = self.start(base)
             end = self.end(t)
-            prev = self.revision(self.tip())
-            d = self.diff(prev, text)
+            if not d:
+                prev = self.revision(self.tip())
+                d = self.diff(prev, text)
             data = compress(d)
             dist = end - start + len(data)
 
