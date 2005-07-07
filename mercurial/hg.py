@@ -977,17 +977,18 @@ class localrepository:
 
     def findoutgoing(self, remote):
         base = {}
-        findincoming(self, remote, base)
+        self.findincoming(remote, base)
         remain = dict.fromkeys(self.changelog.nodemap)
 
         # prune everything remote has from the tree
+        del remain[nullid]
         remove = base.keys()
         while remove:
             n = remove.pop(0)
             if n in remain:
                 del remain[n]
                 for p in self.changelog.parents(n):
-                    remain.append(p)
+                    remove.append(p)
 
         # find every node whose parents have been pruned
         subset = []
