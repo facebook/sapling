@@ -880,6 +880,8 @@ def serve(ui, repo, **opts):
             fout.write(v)
             fout.flush()
 
+        lock = None
+
         while 1:
             cmd = fin.readline()[:-1]
             if cmd == '':
@@ -887,6 +889,13 @@ def serve(ui, repo, **opts):
             if cmd == "heads":
                 h = repo.heads()
                 respond(" ".join(map(hg.hex, h)) + "\n")
+            if cmd == "lock":
+                lock = repo.lock()
+                respond("")
+            if cmd == "unlock":
+                if lock: lock.release()
+                lock = None
+                respond("")
             elif cmd == "branches":
                 arg, nodes = getarg()
                 nodes = map(hg.bin, nodes.split(" "))

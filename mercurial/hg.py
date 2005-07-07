@@ -1620,6 +1620,15 @@ class httprepository:
 
         return zread(f)
 
+class remotelock:
+    def __init__(self, repo):
+        self.repo = repo
+    def release(self):
+        self.repo.unlock()
+        self.repo = None
+    def __del__(self):
+        if self.repo:
+            self.release()
 
 class sshrepository:
     def __init__(self, ui, path):
@@ -1665,6 +1674,13 @@ class sshrepository:
         r = self.do_cmd(cmd, **args)
         l = int(r.readline())
         return r.read(l)
+
+    def lock(self):
+        self.call("lock")
+        return remotelock(self)
+
+    def unlock(self):
+        self.call("unlock")
 
     def heads(self):
         d = self.call("heads")
