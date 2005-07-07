@@ -1,0 +1,16 @@
+#!/bin/sh
+
+hg init
+mkfifo p
+
+hg serve --stdio < p &
+P=$!
+(echo lock; echo addchangegroup; sleep 5) > p &
+Q=$!
+sleep 1
+kill -HUP $P
+sleep 1
+ls .hg
+
+
+

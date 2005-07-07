@@ -5,6 +5,7 @@
 + hg add a
 + hg commit -t test -u test -d '0 0'
 + hg clone . ../b
+cloning by hardlink
 + cd ../b
 + cat a
 a
@@ -15,6 +16,7 @@ crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
 + hg clone -U . ../c
+cloning by hardlink
 + cd ../c
 + cat a
 cat: a: No such file or directory
@@ -27,6 +29,7 @@ checking files
 + mkdir ../d
 + cd ../d
 + hg clone ../a
+cloning by hardlink
 + cd a
 + hg cat a
 a

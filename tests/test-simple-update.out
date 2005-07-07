@@ -11,6 +11,7 @@ crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
 + hg clone . ../branch
+cloning by hardlink
 + cd ../branch
 + hg co
 + echo bar

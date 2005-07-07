@@ -5,6 +5,7 @@
 + hg addremove
 + hg commit -t 1 -u test -d '0 0'
 + hg clone . ../r2
+cloning by hardlink
 + cd ../r2
 + hg up
 + echo abc
