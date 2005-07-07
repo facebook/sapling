@@ -687,7 +687,10 @@ class hgweb:
                 nodes = map(bin, args['roots'][0].split(" "))
 
             z = zlib.compressobj()
-            for chunk in self.repo.changegroup(nodes):
+            f = self.repo.changegroup(nodes)
+            while 1:
+                chunk = f.read(4096)
+                if not chunk: break
                 sys.stdout.write(z.compress(chunk))
 
             sys.stdout.write(z.flush())

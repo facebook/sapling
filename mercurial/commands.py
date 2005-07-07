@@ -867,18 +867,21 @@ def serve(ui, repo, **opts):
     """export the repository via HTTP"""
 
     if opts["stdio"]:
+        fin, fout = sys.stdin, sys.stdout
+        sys.stdout = sys.stderr
+
         def getarg():
-            argline = sys.stdin.readline()[:-1]
+            argline = fin.readline()[:-1]
             arg, l = argline.split()
-            val = sys.stdin.read(int(l))
+            val = fin.read(int(l))
             return arg, val
         def respond(v):
-            sys.stdout.write("%d\n" % len(v))
-            sys.stdout.write(v)
-            sys.stdout.flush()
+            fout.write("%d\n" % len(v))
+            fout.write(v)
+            fout.flush()
 
         while 1:
-            cmd = sys.stdin.readline()[:-1]
+            cmd = fin.readline()[:-1]
             if cmd == '':
                 return
             if cmd == "heads":
@@ -903,24 +906,13 @@ def serve(ui, repo, **opts):
                 arg, roots = getarg()
                 nodes = map(hg.bin, roots.split(" "))
 
-                b = []
-                t = 0
-                for chunk in repo.changegroup(nodes):
-                    t += len(chunk)
-                    b.append(chunk)
-                    if t > 4096:
-                        sys.stdout.write(struct.pack(">l", t))
-                        for c in b:
-                            sys.stdout.write(c)
-                        t = 0
-                        b = []
+                cg = repo.changegroup(nodes)
+                while 1:
+                    d = cg.read(4096)
+                    if not d: break
+                    fout.write(d)
 
-                sys.stdout.write(struct.pack(">l", t))
-                for c in b:
-                    sys.stdout.write(c)
-
-                sys.stdout.write(struct.pack(">l", -1))
-                sys.stdout.flush()
+                out.flush()
 
     def openlog(opt, default):
         if opts[opt] and opts[opt] != '-': return open(opts[opt], 'w')
