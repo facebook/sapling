@@ -1762,9 +1762,10 @@ class sshrepository:
             self.ui.status("remote: ", l)
 
     def __del__(self):
-        self.readerr()
         self.pipeo.close()
         self.pipei.close()
+        for l in self.pipee:
+            self.ui.status("remote: ", l)
         self.pipee.close()
 
     def dev(self):
