@@ -475,8 +475,8 @@ class revlog:
         t = r - 1
         node = nullid
 
-        base = prev = -1
-        start = end = 0
+        base = -1
+        start = end = measure = 0
         if r:
             start = self.start(self.base(t))
             end = self.end(t)
@@ -491,6 +491,7 @@ class revlog:
 
         # loop through our set of deltas
         chain = None
+        prev = self.tip()
         for chunk in revs:
             node, p1, p2, cs = struct.unpack("20s20s20s20s", chunk[:80])
             link = linkmapper(cs)
@@ -498,6 +499,7 @@ class revlog:
                 # this can happen if two branches make the same change
                 if unique:
                     raise "already have %s" % hex(node[:4])
+                chain = node
                 continue
             delta = chunk[80:]
 
