@@ -507,7 +507,7 @@ class localrepository:
                         bigpat.append(util.pconvert(pat[:-1]))
             except IOError: pass
             if bigpat:
-                s = "(%s)" % (")|(".join(bigpat))
+                s = "(?:%s)" % (")|(?:".join(bigpat))
                 r = re.compile(s)
                 self.ignorefunc = r.search
             else:
