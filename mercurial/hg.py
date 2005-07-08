@@ -1263,6 +1263,8 @@ class localrepository:
         # resolve the manifest to determine which files
         # we care about merging
         self.ui.note("resolving manifests\n")
+        self.ui.debug(" force %s allow %s moddirstate %s linear %s\n" %
+                      (force, allow, moddirstate, linear_path))
         self.ui.debug(" ancestor %s local %s remote %s\n" %
                       (short(man), short(m1n), short(m2n)))
 
@@ -1380,6 +1382,8 @@ class localrepository:
                 get[f] = n
             else:
                 self.ui.debug("local deleted %s\n" % f)
+                if force:
+                    get[f] = n
 
         del mw, m1, m2, ma
 
