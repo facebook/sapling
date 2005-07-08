@@ -388,7 +388,7 @@ def clone(ui, source, dest = None, **opts):
     other = hg.repository(ui, source)
 
     if other.dev() != -1 and os.stat(dest).st_dev == other.dev():
-        ui.status("cloning by hardlink\n")
+        ui.note("cloning by hardlink\n")
         util.system("cp -al '%s'/.hg '%s'/.hg" % (source, dest))
         try:
             os.remove(os.path.join(dest, ".hg", "dirstate"))
