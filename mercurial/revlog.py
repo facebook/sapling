@@ -248,7 +248,7 @@ class revlog:
         f.seek(start)
         data = f.read(end - start)
 
-        if not text:
+        if text is None:
             last = self.length(base)
             text = decompress(data[:last])
 
