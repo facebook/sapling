@@ -475,7 +475,7 @@ class revlog:
         t = r - 1
         node = nullid
 
-        base = -1
+        base = prev = -1
         start = end = measure = 0
         if r:
             start = self.start(self.base(t))
@@ -491,7 +491,6 @@ class revlog:
 
         # loop through our set of deltas
         chain = None
-        prev = self.tip()
         for chunk in revs:
             node, p1, p2, cs = struct.unpack("20s20s20s20s", chunk[:80])
             link = linkmapper(cs)
