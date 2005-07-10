@@ -802,14 +802,14 @@ class localrepository:
         user = user or self.ui.username()
         n = self.changelog.add(mn, new, text, tr, p1, p2, user, date)
 
-        if not self.hook("commit", node=hex(n)):
-            return 1
-
         tr.close()
 
         self.dirstate.setparents(n)
         self.dirstate.update(new, "n")
         self.dirstate.forget(remove)
+
+        if not self.hook("commit", node=hex(n)):
+            return 1
 
     def changes(self, node1, node2, files=None):
         mf2, u = None, []
