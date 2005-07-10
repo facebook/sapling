@@ -1,5 +1,8 @@
 #header#
 <title>#repo|escape#: #file# history</title>
+<link rel="alternate" type="application/rss+xml"
+   href="?cmd=filelog;file=#file#;filenode=0;style=rss" title="RSS feed for #repo|escape#:#file#">
+</head>
 </head>
 <body>
 
@@ -8,7 +11,7 @@
 <a href="?cmd=tags">tags</a>
 <a href="?cmd=file;file=#file#;filenode=#filenode#">file</a>
 <a href="?cmd=annotate;file=#file#;filenode=#filenode#">annotate</a>
-<a href="?cmd=filelog;file=#file#;filenode=0;style=rss">rss</a>
+<a type="application/rss+xml" href="?cmd=filelog;file=#file#;filenode=0;style=rss">rss</a>
 </div>
 
 <h2>#file# revision history</h2>
