@@ -214,7 +214,7 @@ class manifest(revlog):
                 start = bs
                 if fn != f:
                     # item not found, insert a new one
-                    end = bs 
+                    end = bs
                     if w[1] == 1:
                         sys.stderr.write("failed to remove %s from manifest" % f)
                         sys.exit(1)
@@ -556,7 +556,7 @@ class localrepository:
                 except TypeError:
                     bin_n = ''
                 self.tagscache[k.strip()] = bin_n
-            
+
             try:
                 # read each head of the tags file, ending with the tip
                 # and add each tag found to the map, with "newer" ones
@@ -571,7 +571,7 @@ class localrepository:
                             addtag(self, k, n)
             except KeyError:
                 pass
-            
+
             try:
                 f = self.opener("localtags")
                 for l in f:
@@ -579,9 +579,9 @@ class localrepository:
                     addtag(self, k, n)
             except IOError:
                 pass
-            
+
             self.tagscache['tip'] = self.changelog.tip()
-        
+
         return self.tagscache
 
     def tagslist(self):
@@ -878,7 +878,7 @@ class localrepository:
         for f in list:
             p = self.wjoin(f)
             if not os.path.exists(p):
-                self.ui.warn("%s does not exist!\n" % f)                
+                self.ui.warn("%s does not exist!\n" % f)
             elif not os.path.isfile(p):
                 self.ui.warn("%s not added: mercurial only supports files currently\n" % f)
             elif self.dirstate.state(f) == 'n':
@@ -911,7 +911,7 @@ class localrepository:
         if not os.path.exists(dest):
             self.ui.warn("%s does not exist!\n" % dest)
         elif not os.path.isfile(dest):
-            self.ui.warn("copy failed: %s is not a file\n" % dest)            
+            self.ui.warn("copy failed: %s is not a file\n" % dest)
         else:
             if self.dirstate.state(dest) == '?':
                 self.dirstate.update([dest], "a")
