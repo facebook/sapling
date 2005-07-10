@@ -608,7 +608,10 @@ class localrepository:
         try:
             return self.tags()[key]
         except KeyError:
-            return self.changelog.lookup(key)
+            try:
+                return self.changelog.lookup(key)
+            except:
+                raise RepoError("unknown revision '%s'" % key)
 
     def dev(self):
         if self.remote: return -1
