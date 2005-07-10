@@ -504,7 +504,14 @@ class localrepository:
                 l = file(self.wjoin(".hgignore"))
                 for pat in l:
                     if pat != "\n":
-                        bigpat.append(util.pconvert(pat[:-1]))
+                        p = util.pconvert(pat[:-1])
+                        try:
+                            r = re.compile(p)
+                        except:
+                            self.ui.warn("ignoring invalid ignore"
+                                         + " regular expression '%s'\n" % p)
+                        else:
+                            bigpat.append(util.pconvert(pat[:-1]))
             except IOError: pass
             if bigpat:
                 s = "(?:%s)" % (")|(?:".join(bigpat))
