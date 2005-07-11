@@ -361,12 +361,12 @@ class ftpwrapper(urllib.ftpwrapper):
                 cmd = 'RETR ' + file
                 conn = self.ftp.ntransfercmd(cmd, rest)
             except ftplib.error_perm, reason:
-                if str(reason)[:3] == '501':
+                if str(reason).startswith('501'):
                     # workaround for REST not supported error
                     fp, retrlen = self.retrfile(file, type)
                     fp = RangeableFileObject(fp, (rest,''))
                     return (fp, retrlen)
-                elif str(reason)[:3] != '550':
+                elif not str(reason).startswith('550'):
                     raise IOError, ('ftp error', reason), sys.exc_info()[2]
         if not conn:
             # Set transfer mode to ASCII!

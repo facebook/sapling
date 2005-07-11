@@ -606,10 +606,10 @@ def import_(ui, repo, patch1, *patches, **opts):
             ui.debug(t,'\n')
             if t == '# HG changeset patch' or hgpatch == True:
                 hgpatch = True
-                if t[:7] == "# User ":
+                if t.startswith("# User "):
                     user = t[7:]
                     ui.debug('User: %s\n' % user)
-                if t[:2] <> "# " and t.strip() and not snippet: snippet = t
+                if not t.startswith("# ") and t.strip() and not snippet: snippet = t
         if snippet: text = snippet + '\n' + text
         ui.debug('text:\n%s\n' % text)
 
@@ -621,7 +621,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         for l in f.read().splitlines():
             l.rstrip('\r\n');
             ui.status("%s\n" % l)
-            if l[:14] == 'patching file ':
+            if l.startswith('patching file '):
                 pf = l[14:]
                 if pf not in files:
                     files.append(pf)
