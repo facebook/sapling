@@ -397,12 +397,19 @@ class dirstate:
                 if os.path.isdir(f):
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
-                        if ".hg" in subdirs: subdirs.remove(".hg")
+                        if ".hg" in subdirs:
+                            subdirs.remove(".hg")
+                        for sd in subdirs:
+                            if ignore(os.path.join(d, sd + '/')):
+                                subdirs.remove(sd)
                         for fn in fl:
                             fn = util.pconvert(os.path.join(d, fn))
                             yield fn
                 else:
                     yield f[len(self.root) + 1:]
+
+            for k in dc.keys():
+                yield k
 
         for fn in util.unique(walk(files)):
             try: s = os.stat(os.path.join(self.root, fn))
