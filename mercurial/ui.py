@@ -97,9 +97,12 @@ class ui:
                   os.environ.get("HGEDITOR") or
                   os.environ.get("EDITOR", "vi"))
 
+        os.environ["HGUSER"] = self.username()
         util.system("%s %s" % (editor, name), errprefix = "edit failed")
 
         t = open(name).read()
         t = re.sub("(?m)^HG:.*\n", "", t)
+
+        os.unlink(name)
 
         return t
