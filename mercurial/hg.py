@@ -1461,6 +1461,7 @@ class localrepository:
             if moddirstate:
                 self.dirstate.update([f], 'm')
 
+        remove.sort()
         for f in remove:
             self.ui.note("removing %s\n" % f)
             os.unlink(f)
