@@ -387,6 +387,9 @@ def clone(ui, source, dest = None, **opts):
     source = ui.expandpath(source)
     other = hg.repository(ui, source)
 
+    if other.dev() != -1:
+        abspath = os.path.abspath(source)
+
     if other.dev() != -1 and os.stat(dest).st_dev == other.dev():
         ui.note("cloning by hardlink\n")
         util.system("cp -al '%s'/.hg '%s'/.hg" % (source, dest))
