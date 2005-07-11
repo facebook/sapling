@@ -9,6 +9,8 @@ cleanup_exit() {
     exit $1
 }
 
+# If you want to pass your favourite editor some other parameters
+# only for Mercurial, modify this:
 case "${EDITOR:=vi}" in
     emacs)
         EDITOR="$EDITOR -nw"
@@ -44,7 +46,7 @@ else
     {
         head -n 1 "$T1"
         echo
-        grep -v "^HG:" "$T1" | gpg -t -a -u "${HGUSER:-$EMAIL}" --clearsign
+        grep -v "^HG:" "$T1" | gpg -t -a -u "${HGUSER}" --clearsign
     } > "$T2" && mv "$T2" "$1"
     cleanup_exit $?
 fi
