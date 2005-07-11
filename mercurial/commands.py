@@ -1202,8 +1202,8 @@ def parse(args):
 
 def dispatch(args):
     signal.signal(signal.SIGTERM, catchterm)
-    if os.name != 'nt':
-        signal.signal(signal.SIGHUP, catchterm)
+    try: signal.signal(signal.SIGHUP, catchterm)
+    except: pass
 
     try:
         cmd, func, args, options, cmdoptions = parse(args)
