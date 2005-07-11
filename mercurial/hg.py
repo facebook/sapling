@@ -764,7 +764,7 @@ class localrepository:
                 mf1[f] = util.is_exec(self.wjoin(f), mf1.get(f, False))
                 t = self.wfile(f).read()
             except IOError:
-                self.warn("trouble committing %s!\n" % f)
+                self.ui.warn("trouble committing %s!\n" % f)
                 raise
 
             meta = {}

@@ -219,7 +219,7 @@ class FileRangeHandler(urllib2.FileHandler):
         if host:
             host, port = urllib.splitport(host)
             if port or socket.gethostbyname(host) not in self.get_names():
-                raise URLError('file not on local host')
+                raise urllib2.URLError('file not on local host')
         fo = open(localfile,'rb')
         brange = req.headers.get('Range',None)
         brange = range_header_to_tuple(brange)
@@ -249,7 +249,6 @@ from urllib import splitport, splituser, splitpasswd, splitattr, \
 import ftplib
 import socket
 import sys
-import ftplib
 import mimetypes
 import mimetools
 
@@ -275,7 +274,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
         try:
             host = socket.gethostbyname(host)
         except socket.error, msg:
-            raise URLError(msg)
+            raise urllib2.URLError(msg)
         path, attrs = splitattr(req.get_selector())
         dirs = path.split('/')
         dirs = map(unquote, dirs)

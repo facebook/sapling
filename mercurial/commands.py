@@ -897,7 +897,7 @@ def serve(ui, repo, **opts):
                     if not d: break
                     fout.write(d)
 
-                out.flush()
+                fout.flush()
 
             elif cmd == "addchangegroup":
                 if not lock:
