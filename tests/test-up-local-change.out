@@ -27,6 +27,7 @@ diff -r c19d34741b0a a
 C a
 + hg --debug up
 resolving manifests
+ force None allow None moddirstate True linear True
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
  a versions differ, resolve
 remote created b
@@ -36,6 +37,7 @@ resolving a
 file a: other d730145abbf9 ancestor b789fdd96dc2
 + hg --debug up -m
 resolving manifests
+ force None allow 1 moddirstate True linear True
  ancestor 1165e8bd193e local 1165e8bd193e remote 1165e8bd193e
 + hg parents
 changeset:   1:1e71731e6fbb5b35fae293120dea6964371c13c6
