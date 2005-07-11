@@ -22,6 +22,8 @@ if grep -q "^HG: merge resolve" "$1" ; then
     # we don't sign merges
     exec $EDITOR "$1"
 else
+    # Remove temporary files even if we get interrupted
+    trap "cleanup_exit 255" TERM KILL INT QUIT ABRT
     T1=`mktemp`; T2=`mktemp`
 
     # Add manifest hash in order to sign whole repository state.
