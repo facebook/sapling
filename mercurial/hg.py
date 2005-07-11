@@ -21,14 +21,14 @@ class filelog(revlog):
 
     def read(self, node):
         t = self.revision(node)
-        if not t.startswith('\1\n'):
+        if t[:2] != '\1\n':
             return t
         s = t.find('\1\n', 2)
         return t[s+2:]
 
     def readmeta(self, node):
         t = self.revision(node)
-        if not t.startswith('\1\n'):
+        if t[:2] != '\1\n':
             return t
         s = t.find('\1\n', 2)
         mt = t[2:s]
@@ -38,7 +38,7 @@ class filelog(revlog):
         return m
 
     def add(self, text, meta, transaction, link, p1=None, p2=None):
-        if meta or text.startswith('\1\n'):
+        if meta or text[:2] == '\1\n':
             mt = ""
             if meta:
                 mt = [ "%s: %s\n" % (k, v) for k,v in meta.items() ]
@@ -398,7 +398,7 @@ class dirstate:
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
                         for sd in subdirs:
-                            if sd == ".hg" or ignore(os.path.join(d, sd +'/')):
+                            if ignore(os.path.join(d, sd +'/')):
                                 subdirs.remove(sd)
                         for fn in fl:
                             fn = util.pconvert(os.path.join(d, fn))
@@ -436,7 +436,7 @@ class dirstate:
 def opener(base):
     p = base
     def o(path, mode="r"):
-        if p.startswith("http://"):
+        if p[:7] == "http://":
             f = os.path.join(p, urllib.quote(path))
             return httprangereader.httprangereader(f)
 
@@ -465,7 +465,7 @@ class RepoError(Exception): pass
 class localrepository:
     def __init__(self, ui, path=None, create=0):
         self.remote = 0
-        if path and path.startswith("http://"):
+        if path and path[:7] == "http://":
             self.remote = 1
             self.path = path
         else:
@@ -504,7 +504,7 @@ class localrepository:
 
     def ignore(self, f):
         if not self.ignorefunc:
-            bigpat = []
+            bigpat = ["^.hg/$"]
             try:
                 l = file(self.wjoin(".hgignore"))
                 for pat in l:
@@ -518,12 +518,10 @@ class localrepository:
                         else:
                             bigpat.append(util.pconvert(pat[:-1]))
             except IOError: pass
-            if bigpat:
-                s = "(?:%s)" % (")|(?:".join(bigpat))
-                r = re.compile(s)
-                self.ignorefunc = r.search
-            else:
-                self.ignorefunc = lambda x: False
+
+            s = "(?:%s)" % (")|(?:".join(bigpat))
+            r = re.compile(s)
+            self.ignorefunc = r.search
 
         return self.ignorefunc(f)
 
