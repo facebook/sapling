@@ -11,7 +11,6 @@
 + hg commit -t 'commit text' -d '0 0' -u user
 + cd ..
 + hg clone A1 B1
-cloning by hardlink
 + cd A1
 + rm bar
 + hg remove bar
@@ -21,9 +20,7 @@ cloning by hardlink
 + hg commit -t 'commit test' -d '0 0' -u user
 + cd ..
 + hg clone A1 A2
-cloning by hardlink
 + hg clone B1 B2
-cloning by hardlink
 + cd A1
 + hg pull ../B1
 pulling from ../B1
