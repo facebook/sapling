@@ -1394,9 +1394,11 @@ class localrepository:
                 self.ui.debug("remote created %s\n" % f)
                 get[f] = n
             else:
-                self.ui.debug("local deleted %s\n" % f)
-                if force:
+                if force or p2 == pa: # going backwards?
+                    self.ui.debug("local deleted %s, recreating\n" % f)
                     get[f] = n
+                else:
+                    self.ui.debug("local deleted %s\n" % f)
 
         del mw, m1, m2, ma
 
