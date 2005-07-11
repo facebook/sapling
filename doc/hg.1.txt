@@ -494,84 +494,17 @@ FILES
 
  $HOME/.hgrc, .hg/hgrc::
     This file contains defaults and configuration. Values in .hg/hgrc
-    override those in .hgrc.
-
-
-UI OPTIONS
-----------
-
-Various configuration options can be set in .hgrc:
-
--------------
-[ui]
-verbose = 0
-username = Matt Mackall <mpm@selenic.com>
-editor = hgeditor
-merge = hgmerge
--------------
-
-
-NAMED REPOSITORIES
-------------------
-
-To give symbolic names to a repository, create a section in .hgrc
-or .hg/hgrc containing assignments of names to paths. Example:
-
------------------
-[paths]
-hg = http://selenic.com/hg
-tah = http://hg.intevation.org/mercurial-tah/
------------------
-
-
-LOCAL TAGS
-----------
-
-To create tags that are local to the repository and not distributed or
-version-controlled, create an hgrc section like the following:
-
-----------------
-[tags]
-working = 2dcced388cab3677a8f543c3c47a0ad34ac9d435
-tested = 12e0fdbc57a0be78f0e817fd1d170a3615cd35da
-----------------
-
-
-HOOKS
------
-
-Mercurial supports a set of 'hook', commands that get automatically
-executed by various actions such as starting or finishing a commit. To
-specify a hook, simply create an hgrc section like the following:
-
------------------
-[hooks]
-precommit = echo "this hook gets executed immediately before a commit"
-commit = hg export $NODE | mail -s "new commit $NODE" commit-list
------------------
-
-
-NON_TRANSPARENT PROXY SUPPORT
------------------------------
-
-To access a Mercurial repository through a proxy, create a file
-$HOME/.hgrc in the following format:
-
---------------
-[http_proxy]
-host=myproxy:8080
-user=<username>
-passwd=<password>
-no=<localhost1>,<localhost2>,<localhost3>,...
---------------
-
-"user" and "passwd" fields are used for authenticating proxies, "no" is a
-comma-separated list of local host names to not proxy.
+    override those in .hgrc.  See hgrc(5) for details of the contents
+    and format of these files.
 
 BUGS
 ----
 Probably lots, please post them to the mailing list (See Resources below)
 when you find them.
+
+SEE ALSO
+--------
+hgrc(5)
 
 AUTHOR
 ------
@@ -580,6 +513,8 @@ Written by Matt Mackall <mpm@selenic.com>
 RESOURCES
 ---------
 http://selenic.com/mercurial[Main Web Site]
+
+http://www.serpentine.com/mercurial[Wiki site]
 
 http://selenic.com/hg[Source code repository]
 

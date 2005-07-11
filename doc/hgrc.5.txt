@@ -1,0 +1,128 @@
+HGRC(5)
+=======
+Bryan O'Sullivan <bos@serpentine.com>
+
+NAME
+----
+hgrc - configuration files for Mercurial
+
+SYNOPSIS
+--------
+
+The Mercurial system uses a set of configuration files to control
+aspects of its behaviour.
+
+FILES
+-----
+
+Mercurial reads configuration data from two files:
+
+$HOME/.hgrc::
+    Global configuration options that apply to all Mercurial commands,
+    no matter where they are run.
+
+<repo>/.hg/hgrc::
+    Per-repository configuration options that only apply in a
+    particular repository.  This file is not version-controlled, and
+    will not get transferred during a "clone" operation.  Values in
+    this file override global values.
+
+SYNTAX
+------
+
+A configuration file consists of sections, led by a "[section]" header
+and followed by "name: value" entries; "name=value" is also accepted.
+
+    [spam]
+    eggs=ham
+    green=
+       eggs
+
+Each line contains one entry.  If the lines that follow are indented,
+they are treated as continuations of that entry.
+
+Leading whitespace is removed from values.  Empty lines are skipped.
+
+The optional values can contain format strings which refer to other
+values in the same section, or values in a special DEFAULT section.
+
+Lines beginning with "#" or ";" are ignored and may be used to provide
+comments.
+
+SECTIONS
+--------
+
+This section describes the different sections that may appear in a
+Mercurial "hgrc" file, the purpose of each section, its possible
+keys, and their possible values.
+
+hooks::
+  Commands that get automatically executed by various actions such as
+  starting or finishing a commit.
+  precommit;;
+    Run before starting a commit.  Exit status 0 allows the commit to
+    proceed.  Non-zero status will cause the commit to fail.
+  commit;;
+    Run after a changeset has been created. Passed the ID of the newly
+    created changeset.
+
+http_proxy::
+  Used to access web-based Mercurial repositories through a HTTP
+  proxy.
+  host;;
+    Host name and (optional) port of the proxy server, for example
+    "myproxy:8000".
+  user;;
+    Optional.  User name to authenticate with at the proxy server.
+  passwd;;
+    Optional.  Password to authenticate with at the proxy server.
+  no;;
+    Optional.  Comma-separated list of host names that should bypass
+    the proxy.
+
+paths::
+  Assigns symbolic names to repositories.  The left side is the
+  symbolic name, and the right gives the directory or URL that is the
+  location of the repository.
+
+tags::
+  Tags that are local to a repository and not distributed or version
+  controlled.  The left side is the tag name, and the right is the
+  ID of the changeset to identify.
+
+ui::
+  User interface controls.
+  debug;;
+    Print debugging information.  True or False.  Default is True.
+  editor;;
+    The editor to use during a commit.  Default is "vi".
+  merge;;
+    The conflict resolution program to use during a manual merge.
+    Default is "hgeditor".
+  quiet;;
+    Reduce the amount of output printed.  True or False.  Default is
+    False.
+  username;;
+    The committer of a changeset created when running "commit".
+    Typically a person's name and email address, e.g. "Fred Widget
+    <fred@example.com>".  Default is username@hostname.
+  verbose;;
+    Increase the amount of output printed.  True or False.  Default is
+    False.
+
+AUTHOR
+------
+Bryan O'Sullivan <bos@serpentine.com>.
+
+Mercurial was written by Matt Mackall <mpm@selenic.com>.
+
+SEE ALSO
+--------
+hg(1)
+
+COPYING
+-------
+This manual page is copyright 2005 Bryan O'Sullivan.
+Mercurial is copyright 2005 Matt Mackall.
+Free use of this software is granted under the terms of the GNU General
+Public License (GPL).

@@ -5,6 +5,7 @@
 .*pyc
 build/.*
 dist/
+doc/.*\.[0-9]
 MANIFEST$
 .pc/
 patches/

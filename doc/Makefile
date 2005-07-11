@@ -1,7 +1,6 @@
-
-SOURCES=$(wildcard *.1.txt)
-MAN=$(SOURCES:%.1.txt=%.1)
-HTML=$(SOURCES:%.1.txt=%.1.html)
+SOURCES=$(wildcard *.[0-9].txt)
+MAN=$(SOURCES:%.txt=%)
+HTML=$(SOURCES:%.txt=%.html)
 
 all: man
 
@@ -9,14 +8,14 @@ man: $(MAN)
 
 html: $(HTML)
 
-%.1: %.1.xml
-	xmlto man $*.1.xml
+%: %.xml
+	xmlto man $*.xml
 
-%.1.xml: %.1.txt
-	asciidoc -d manpage -b docbook $*.1.txt
+%.xml: %.txt
+	asciidoc -d manpage -b docbook $*.txt
 
-%.1.html: %.1.txt
-	asciidoc -b html $*.1.txt
+%.html: %.txt
+	asciidoc -b html $*.txt
 
 clean:
-	$(RM) $(MAN) $(MAN:%.1=%.1.xml) $(MAN:%.1=%.1.html)
+	$(RM) $(MAN) $(MAN:%=%.xml) $(MAN:%=%.html)
