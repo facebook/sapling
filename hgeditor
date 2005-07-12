@@ -27,12 +27,10 @@ else
     # Remove temporary files even if we get interrupted
     trap "cleanup_exit 255" TERM KILL INT QUIT ABRT
     T1=`mktemp`; T2=`mktemp`
+    MANIFEST=`grep '^HG: manifest hash' "$1" | cut -b 19-`
 
-    # Add manifest hash in order to sign whole repository state.
-    # Remove HG: prefix, as we want that to be stored.
-    grep '^HG: manifest hash' "$1" | cut -b 5- >> "$T1"
-    # Add all other state information
-    grep -v '^HG: manifest hash' "$1" >> "$T1"
+    echo -e "\n\nmanifest hash: $MANIFEST" >> "$T1"
+    grep -vE '^(HG: manifest hash .*)?$' "$1" >> "$T1"
     (
         cd "`hg root`"
         grep '^HG: changed' "$1" | cut -b 13- | while read changed; do
