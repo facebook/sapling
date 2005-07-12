@@ -21,14 +21,14 @@ class filelog(revlog):
 
     def read(self, node):
         t = self.revision(node)
-        if t[:2] != '\1\n':
+        if not t.startswith('\1\n'):
             return t
         s = t.find('\1\n', 2)
         return t[s+2:]
 
     def readmeta(self, node):
         t = self.revision(node)
-        if t[:2] != '\1\n':
+        if not t.startswith('\1\n'):
             return t
         s = t.find('\1\n', 2)
         mt = t[2:s]
@@ -38,7 +38,7 @@ class filelog(revlog):
         return m
 
     def add(self, text, meta, transaction, link, p1=None, p2=None):
-        if meta or text[:2] == '\1\n':
+        if meta or text.startswith('\1\n'):
             mt = ""
             if meta:
                 mt = [ "%s: %s\n" % (k, v) for k,v in meta.items() ]
@@ -436,7 +436,7 @@ class dirstate:
 def opener(base):
     p = base
     def o(path, mode="r"):
-        if p[:7] == "http://":
+        if p.startswith("http://"):
             f = os.path.join(p, urllib.quote(path))
             return httprangereader.httprangereader(f)
 
@@ -465,7 +465,7 @@ class RepoError(Exception): pass
 class localrepository:
     def __init__(self, ui, path=None, create=0):
         self.remote = 0
-        if path and path[:7] == "http://":
+        if path and path.startswith("http://"):
             self.remote = 1
             self.path = path
         else:
