@@ -42,7 +42,7 @@ else
 
     CHECKSUM=`md5sum "$T1"`
     $EDITOR "$T1" "$T2" || cleanup_exit $?
-    echo "$CHECKSUM" | md5sum -c --status && cleanup_exit 13
+    echo "$CHECKSUM" | md5sum -c 2>/dev/null && cleanup_exit 13
     {
         head -n 1 "$T1"
         echo
