@@ -629,7 +629,7 @@ class hgweb:
                 hi = args['rev'][0]
                 try:
                     hi = self.repo.changelog.rev(self.repo.lookup(hi))
-                except KeyError:
+                except RepoError:
                     write(self.search(hi))
                     return
 
