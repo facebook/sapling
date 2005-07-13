@@ -1498,8 +1498,8 @@ class localrepository:
         self.ui.debug("file %s: other %s ancestor %s\n" %
                               (fn, short(other), short(base)))
 
-        cmd = self.ui.config("ui", "merge") or \
-              os.environ.get("HGMERGE", "hgmerge")
+        cmd = os.environ.get("HGMERGE", "hgmerge") or \
+              self.ui.config("ui", "merge")
         r = os.system("%s %s %s %s" % (cmd, a, b, c))
         if r:
             self.ui.warn("merging %s failed!\n" % fn)

@@ -44,8 +44,8 @@ class ui:
         return []
 
     def username(self):
-        return (self.config("ui", "username") or
-                os.environ.get("HGUSER") or
+        return (os.environ.get("HGUSER") or
+                self.config("ui", "username") or
                 os.environ.get("EMAIL") or
                 (os.environ.get("LOGNAME",
                                 os.environ.get("USERNAME", "unknown"))
@@ -93,8 +93,8 @@ class ui:
         f.write(text)
         f.close()
 
-        editor = (self.config("ui", "editor") or
-                  os.environ.get("HGEDITOR") or
+        editor = (os.environ.get("HGEDITOR") or
+                  self.config("ui", "editor") or
                   os.environ.get("EDITOR", "vi"))
 
         os.environ["HGUSER"] = self.username()
