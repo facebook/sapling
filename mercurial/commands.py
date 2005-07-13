@@ -719,7 +719,14 @@ def manifest(ui, repo, rev = []):
     """output the latest or given revision of the project manifest"""
     n = repo.manifest.tip()
     if rev:
-        n = repo.manifest.lookup(rev)
+        try:
+            # assume all revision numbers are for changesets
+            n = repo.lookup(rev)
+            change = repo.changelog.read(n)
+            n = change[0]
+        except:
+            n = repo.manifest.lookup(rev)
+
     m = repo.manifest.read(n)
     mf = repo.manifest.readflags(n)
     files = m.keys()
