@@ -1253,7 +1253,7 @@ class localrepository:
         pl = self.dirstate.parents()
         if not force and pl[1] != nullid:
             self.ui.warn("aborting: outstanding uncommitted merges\n")
-            return
+            return 1
 
         p1, p2 = pl[0], node
         pa = self.changelog.ancestor(p1, p2)
@@ -1407,7 +1407,7 @@ class localrepository:
                 get[f] = merge[f][1]
             merge = {}
 
-        if linear_path:
+        if linear_path or force:
             # we don't need to do any magic, just jump to the new rev
             mode = 'n'
             p1, p2 = p2, nullid
@@ -1464,7 +1464,10 @@ class localrepository:
         remove.sort()
         for f in remove:
             self.ui.note("removing %s\n" % f)
-            os.unlink(f)
+            try:
+                os.unlink(f)
+            except OSError, inst:
+                self.ui.warn("update failed to remove %s: %s!\n" % (f, inst))
             # try removing directories that might now be empty
             try: os.removedirs(os.path.dirname(f))
             except: pass
