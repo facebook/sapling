@@ -183,19 +183,15 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
     if not ui.debugflag and len(parents) == 1 and parents[0][0] == rev-1:
         parents = []
 
+    ui.write("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
+    for tag in repo.nodetags(changenode):
+        ui.status("tag:         %s\n" % tag)
+    for parent in parents:
+        ui.write("parent:      %d:%s\n" % parent)
     if filelog:
-        ui.write("revision:    %d:%s\n" % (filerev, hg.hex(filenode)))
-        for parent in parents:
-            ui.write("parent:      %d:%s\n" % parent)
-        ui.status("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
-    else:
-        ui.write("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
-        for tag in repo.nodetags(changenode):
-            ui.status("tag:         %s\n" % tag)
-        for parent in parents:
-            ui.write("parent:      %d:%s\n" % parent)
-        ui.note("manifest:    %d:%s\n" % (repo.manifest.rev(changes[0]),
-                                          hg.hex(changes[0])))
+        ui.debug("file rev:    %d:%s\n" % (filerev, hg.hex(filenode)))
+    ui.note("manifest:    %d:%s\n" % (repo.manifest.rev(changes[0]),
+                                      hg.hex(changes[0])))
     ui.status("user:        %s\n" % changes[1])
     ui.status("date:        %s\n" % time.asctime(
         time.localtime(float(changes[2].split(' ')[0]))))
