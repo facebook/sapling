@@ -115,7 +115,7 @@ def make_filename(repo, r, pat, node=None,
         i += 1
     return ''.join(newname)
 
-def dodiff(fp, ui, repo, files = None, node1 = None, node2 = None):
+def dodiff(fp, ui, repo, files=None, node1=None, node2=None):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
@@ -763,7 +763,7 @@ def manifest(ui, repo, rev=None):
     for f in files:
         ui.write("%40s %3s %s\n" % (hg.hex(m[f]), mf[f] and "755" or "644", f))
 
-def parents(ui, repo, node = None):
+def parents(ui, repo, node=None):
     '''show the parents of the current working dir'''
     if node:
         p = repo.changelog.parents(repo.lookup(hg.bin(node)))
@@ -995,7 +995,7 @@ def status(ui, repo):
     for f in u:
         ui.write("? ", f, "\n")
 
-def tag(ui, repo, name, rev = None, **opts):
+def tag(ui, repo, name, rev=None, **opts):
     """add a tag for the current tip or a given revision"""
 
     if name == "tip":
