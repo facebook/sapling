@@ -684,7 +684,7 @@ def locate(ui, repo, *pats, **opts):
         return re.compile(regexp)
     exclude = compile(opts['exclude'], on_empty=False)
     include = compile(opts['include'])
-    pat = compile([os.path.normcase(p) for p in pats], head='', tail='$')
+    pat = compile(pats, head='', tail='$')
     end = opts['print0'] and '\0' or '\n'
     if opts['rev']:
         node = repo.manifest.lookup(opts['rev'])
