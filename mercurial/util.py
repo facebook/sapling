@@ -46,6 +46,21 @@ def rename(src, dst):
         os.unlink(dst)
         os.rename(src, dst)
 
+def copytree(src, dst, copyfile):
+    """Copy a directory tree, files are copied using 'copyfile'."""
+    names = os.listdir(src)
+    os.mkdir(dst)
+
+    for name in names:
+        srcname = os.path.join(src, name)
+        dstname = os.path.join(dst, name)
+        if os.path.isdir(srcname):
+            copytree(srcname, dstname, copyfile)
+        elif os.path.isfile(srcname):
+            copyfile(srcname, dstname)
+        else:
+            raise IOError("Not a regular file: %r" % srcname)
+
 # Platfor specific varients
 if os.name == 'nt':
     nulldev = 'NUL:'

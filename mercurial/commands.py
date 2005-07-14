@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from demandload import demandload
-demandload(globals(), "os re sys signal")
+demandload(globals(), "os re sys signal shutil")
 demandload(globals(), "fancyopts ui hg util")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
 demandload(globals(), "errno socket version struct")
@@ -373,7 +373,7 @@ def cat(ui, repo, file1, rev=None, **opts):
         fp = sys.stdout
     fp.write(r.read(n))
 
-def clone(ui, source, dest = None, **opts):
+def clone(ui, source, dest=None, **opts):
     """make a copy of an existing repository"""
     if dest is None:
         dest = os.path.basename(os.path.normpath(source))
@@ -384,7 +384,6 @@ def clone(ui, source, dest = None, **opts):
 
     class Dircleanup:
         def __init__(self, dir_):
-            import shutil
             self.rmtree = shutil.rmtree
             self.dir_ = dir_
             os.mkdir(dir_)
@@ -401,10 +400,12 @@ def clone(ui, source, dest = None, **opts):
 
     if other.dev() != -1:
         abspath = os.path.abspath(source)
-
-    if other.dev() != -1 and os.stat(dest).st_dev == other.dev():
-        ui.note("cloning by hardlink\n")
-        util.system("cp -al '%s'/.hg '%s'/.hg" % (source, dest))
+        copyfile = (os.stat(dest).st_dev == other.dev()
+                    and getattr(os, 'link', None) or shutil.copy2)
+        if copyfile is not shutil.copy2:
+            ui.note("cloning by hardlink\n")
+        util.copytree(os.path.join(source, ".hg"), os.path.join(dest, ".hg"),
+                      copyfile)
         try:
             os.unlink(os.path.join(dest, ".hg", "dirstate"))
         except IOError:
