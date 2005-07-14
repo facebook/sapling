@@ -17,8 +17,9 @@ signal.signal(signal.SIGTERM, lambda x: sys.exit(0))
 run()
 EOF
 
+set +x # backgrounding sometimes disturbs the order of command tracing
 python dumb.py 2>/dev/null &
-sleep 2
+set -x
 
 hg clone http://localhost:20059/foo copy2
 echo $?
