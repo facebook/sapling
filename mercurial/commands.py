@@ -614,31 +614,32 @@ def import_(ui, repo, patch1, *patches, **opts):
         ui.status("applying %s\n" % patch)
         pf = os.path.join(d, patch)
 
-        text = ""
-        for l in file(pf):
-            if l.startswith("--- ") or l.startswith("diff -r"):
+        text = []
+        user = None
+        hgpatch = False
+        for line in file(pf):
+            line = line.rstrip()
+            if line.startswith("--- ") or line.startswith("diff -r"):
                 break
-            text += l
-
-        # parse values that exist when importing the result of an hg export
-        hgpatch = user = snippet = None
-        ui.debug('text:\n')
-        for t in text.splitlines():
-            ui.debug(t, '\n')
-            if t == '# HG changeset patch' or hgpatch:
-                hgpatch = True
-                if t.startswith("# User "):
-                    user = t[7:]
+            elif hgpatch:
+                # parse values when importing the result of an hg export
+                if line.startswith("# User "):
+                    user = line[7:]
                     ui.debug('User: %s\n' % user)
-                if not t.startswith("# ") and t.strip() and not snippet:
-                    snippet = t
-        if snippet:
-            text = snippet + '\n' + text
-        ui.debug('text:\n%s\n' % text)
+                elif not line.startswith("# ") and line:
+                    text.append(line)
+                    hgpatch = False
+            elif line == '# HG changeset patch':
+                hgpatch = True
+            else:
+                text.append(line)
 
         # make sure text isn't empty
         if not text:
             text = "imported patch %s\n" % patch
+        else:
+            text = "%s\n" % '\n'.join(text)
+        ui.debug('text:\n%s\n' % text)
 
         f = os.popen("patch -p%d < %s" % (strip, pf))
         files = []
