@@ -37,7 +37,7 @@ class lock:
         try:
             util.makelock(str(pid), self.f)
             self.held = 1
-        except:
+        except (OSError, IOError):
             raise LockHeld(util.readlock(self.f))
 
     def release(self):
