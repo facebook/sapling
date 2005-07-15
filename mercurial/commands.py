@@ -535,6 +535,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
             outname = make_filename(repo, repo.changelog, opts['output'],
                                     node=node, total=total, seqno=seqno,
                                     revwidth=revwidth)
+            ui.note("Exporting patch to '%s'.\n" % outname)
             fp = open(outname, 'wb')
         except KeyError, inst:
             ui.warn("error: invalid format spec '%%%s' in output file name\n" %
