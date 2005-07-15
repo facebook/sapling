@@ -93,22 +93,22 @@ tags::
 ui::
   User interface controls.
   debug;;
-    Print debugging information.  True or False.  Default is True.
+    Print debugging information.  True or False.  Default is False.
   editor;;
-    The editor to use during a commit.  Default is "vi".
+    The editor to use during a commit.  Default is $EDITOR or "vi".
+  interactive;;
+    Allow to prompt the user.  True or False.  Default is True.
   merge;;
     The conflict resolution program to use during a manual merge.
-    Default is "hgeditor".
+    Default is "hgmerge".
   quiet;;
-    Reduce the amount of output printed.  True or False.  Default is
-    False.
+    Reduce the amount of output printed.  True or False.  Default is False.
   username;;
     The committer of a changeset created when running "commit".
     Typically a person's name and email address, e.g. "Fred Widget
-    <fred@example.com>".  Default is username@hostname.
+    <fred@example.com>".  Default is $EMAIL or username@hostname.
   verbose;;
-    Increase the amount of output printed.  True or False.  Default is
-    False.
+    Increase the amount of output printed.  True or False.  Default is False.
 
 AUTHOR
 ------

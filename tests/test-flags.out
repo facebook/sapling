@@ -52,18 +52,15 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     chmod +x a
 
-
 changeset:   1:c6ecefc45368ed556d965f1c1086c6561a8b2ac5
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     a updated
 
-
 changeset:   0:22a449e20da501ca558394c083ca470e9c81b9f7
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     added a b
-
 
 + hg -v co -m
 resolving manifests

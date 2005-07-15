@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os
+import os, errno
 
 def unique(g):
     seen = {}
@@ -46,6 +46,29 @@ def rename(src, dst):
         os.unlink(dst)
         os.rename(src, dst)
 
+def copytree(src, dst, copyfile):
+    """Copy a directory tree, files are copied using 'copyfile'."""
+    names = os.listdir(src)
+    os.mkdir(dst)
+
+    for name in names:
+        srcname = os.path.join(src, name)
+        dstname = os.path.join(dst, name)
+        if os.path.isdir(srcname):
+            copytree(srcname, dstname, copyfile)
+        elif os.path.isfile(srcname):
+            copyfile(srcname, dstname)
+        else:
+            raise IOError("Not a regular file: %r" % srcname)
+
+def _makelock_file(info, pathname):
+    ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
+    os.write(ld, info)
+    os.close(ld)
+
+def _readlock_file(pathname):
+    return file(pathname).read()
+
 # Platfor specific varients
 if os.name == 'nt':
     nulldev = 'NUL:'
@@ -59,13 +82,8 @@ if os.name == 'nt':
     def pconvert(path):
         return path.replace("\\", "/")
 
-    def makelock(info, pathname):
-        ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
-        os.write(ld, info)
-        os.close(ld)
-
-    def readlock(pathname):
-        return file(pathname).read()
+    makelock = _makelock_file
+    readlock = _readlock_file
 
 else:
     nulldev = '/dev/null'
@@ -90,7 +108,19 @@ else:
         return path
 
     def makelock(info, pathname):
-        os.symlink(info, pathname)
+        try:
+            os.symlink(info, pathname)
+        except OSError, why:
+            if why.errno == errno.EEXIST:
+                raise
+            else:
+                _makelock_file(info, pathname)
 
     def readlock(pathname):
-        return os.readlink(pathname)
+        try:
+            return os.readlink(pathname)
+        except OSError, why:
+            if why.errno == errno.EINVAL:
+                return _readlock_file(pathname)
+            else:
+                raise

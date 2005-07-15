@@ -11,7 +11,6 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     test
 
-
 + hg manifest
 b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3 644 a
 + hg cat a
