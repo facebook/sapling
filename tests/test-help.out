@@ -33,14 +33,14 @@ basic hg commands (use "hg help -v" for more):
  status     show changed files in the working directory
  update     update or merge working directory
 hg add: option -h not recognized
-hg add [files]
+hg add FILE...
 
 add the specified files on the next commit
 hg add: option --skjdfks not recognized
-hg add [files]
+hg add FILE...
 
 add the specified files on the next commit
-hg diff [-r A] [-r B] [files]
+hg diff [-r REV1 [-r REV2]] [FILE]...
 
  -r --rev 
    revision
