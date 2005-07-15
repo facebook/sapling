@@ -20,7 +20,7 @@
 # This updates the mapfile on each commit copied, so it can be
 # interrupted and can be run repeatedly to copy new commits.
 
-import sys, os, zlib, sha
+import sys, os, zlib, sha, time
 from mercurial import hg, ui, util
 
 class convert_git:
@@ -35,7 +35,7 @@ class convert_git:
         if rev == "0" * 40: raise IOError()
         path = os.getcwd()
         os.chdir(self.path)
-        fh = os.popen("git-cat-file %s %s" % (type, rev))
+        fh = os.popen("git-cat-file %s %s 2>/dev/null" % (type, rev))
         os.chdir(path)
         return fh.read()
 
@@ -80,6 +80,18 @@ class convert_git:
                 message += "\ncommitter: %s %s\n" % (committer, date)
             if n == "parent": parents.append(v)
         return (parents, author, date, message)
+
+    def gettags(self):
+        tags = {}
+        for f in os.listdir(self.path + "/.git/refs/tags"):
+            try:
+                h = file(self.path + "/.git/refs/tags/" + f).read().strip()
+                p, a, d, m = self.getcommit(h)
+                if not p: p = [h] # git is ugly, don't blame me
+                tags[f] = p[0]
+            except:
+                pass
+        return tags
 
 class convert_mercurial:
     def __init__(self, path):
@@ -127,6 +139,32 @@ class convert_mercurial:
             text = "(octopus merge fixup)\n"
 
         return hg.hex(self.repo.changelog.tip())
+
+    def puttags(self, tags):
+        try:
+            old = self.repo.wfile(".hgtags").read()
+            oldlines = old.splitlines(1)
+            oldlines.sort()
+        except:
+            oldlines = []
+
+        k = tags.keys()
+        k.sort()
+        newlines = []
+        for tag in k:
+            newlines.append("%s %s\n" % (tags[tag], tag))
+
+        newlines.sort()
+
+        if newlines != oldlines:
+            print "updating tags"
+            f = self.repo.wfile(".hgtags", "w")
+            f.write("".join(newlines))
+            f.close()
+            if not oldlines: self.repo.add([".hgtags"])
+            date = "%s 0" % time.mktime(time.gmtime())
+            self.repo.rawcommit([".hgtags"], "update tags", "convert-repo",
+                                date, self.repo.changelog.tip(), hg.nullid)
 
 class convert:
     def __init__(self, source, dest, mapfile):
@@ -228,6 +266,15 @@ class convert:
             desc = self.commitcache[c][3].splitlines()[0]
             print num, desc
             self.copy(c)
+
+        tags = self.source.gettags()
+        ctags = {}
+        for k in tags:
+            v = tags[k]
+            if v in self.map:
+                ctags[k] = self.map[v]
+
+        self.dest.puttags(ctags)
 
 gitpath, hgpath, mapfile = sys.argv[1:]
 
