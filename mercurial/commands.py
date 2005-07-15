@@ -1023,9 +1023,8 @@ def tag(ui, repo, name, rev=None, **opts):
             ui.status("(please commit .hgtags manually)\n")
             return -1
 
-    add = not os.path.exists(repo.wjoin(".hgtags"))
     repo.wfile(".hgtags", "ab").write("%s %s\n" % (r, name))
-    if add:
+    if repo.dirstate.state(".hgtags") == '?':
         repo.add([".hgtags"])
 
     if not opts['text']:
