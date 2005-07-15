@@ -764,10 +764,10 @@ def manifest(ui, repo, rev=None):
     for f in files:
         ui.write("%40s %3s %s\n" % (hg.hex(m[f]), mf[f] and "755" or "644", f))
 
-def parents(ui, repo, node=None):
-    '''show the parents of the current working dir'''
-    if node:
-        p = repo.changelog.parents(repo.lookup(hg.bin(node)))
+def parents(ui, repo, rev=None):
+    """show the parents of the working dir or revision"""
+    if rev:
+        p = repo.changelog.parents(repo.lookup(rev))
     else:
         p = repo.dirstate.parents()
 
