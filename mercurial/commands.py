@@ -1125,7 +1125,7 @@ table = {
         (export,
          [('o', 'output', "", 'output to file')],
          "hg export [-o OUTFILE] REV..."),
-    "forget": (forget, [], "hg forget [FILE]..."),
+    "forget": (forget, [], "hg forget FILE..."),
     "heads": (heads, [], 'hg heads'),
     "help": (help_, [], 'hg help [COMMAND]'),
     "identify|id": (identify, [], 'hg identify'),
