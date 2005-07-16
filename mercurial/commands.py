@@ -307,7 +307,7 @@ def addremove(ui, repo, *files):
             elif s not in 'nmai' and isfile:
                 u.append(f)
     else:
-        (c, a, d, u) = repo.changes(None, None)
+        (c, a, d, u) = repo.changes()
     repo.add(u)
     repo.remove(d)
 
@@ -584,7 +584,7 @@ def identify(ui, repo):
         return
 
     hexfunc = ui.verbose and hg.hex or hg.short
-    (c, a, d, u) = repo.changes(None, None)
+    (c, a, d, u) = repo.changes()
     output = ["%s%s" % ('+'.join([hexfunc(parent) for parent in parents]),
                         (c or a or d) and "+" or "")]
 
@@ -984,7 +984,7 @@ def status(ui, repo):
     R = removed
     ? = not tracked'''
 
-    (c, a, d, u) = repo.changes(None, None)
+    (c, a, d, u) = repo.changes()
     (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
     for f in c:
@@ -1015,7 +1015,7 @@ def tag(ui, repo, name, rev=None, **opts):
         repo.opener("localtags", "a").write("%s %s\n" % (r, name))
         return
 
-    (c, a, d, u) = repo.changes(None, None)
+    (c, a, d, u) = repo.changes()
     for x in (c, a, d, u):
         if ".hgtags" in x:
             ui.warn("abort: working copy of .hgtags is changed!\n")

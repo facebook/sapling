@@ -13,6 +13,9 @@ demandload(globals(), "re lock urllib urllib2 transaction time socket")
 demandload(globals(), "tempfile httprangereader bdiff")
 demandload(globals(), "bisect select")
 
+def always(fn):
+    return True
+
 class filelog(revlog):
     def __init__(self, opener, path):
         revlog.__init__(self, opener,
@@ -276,6 +279,33 @@ class dirstate:
         self.map = None
         self.pl = None
         self.copies = {}
+        self.ignorefunc = None
+
+    def wjoin(self, f):
+        return os.path.join(self.root, f)
+
+    def ignore(self, f):
+        if not self.ignorefunc:
+            bigpat = []
+            try:
+                l = file(self.wjoin(".hgignore"))
+                for pat in l:
+                    if pat != "\n":
+                        p = util.pconvert(pat[:-1])
+                        try:
+                            r = re.compile(p)
+                        except:
+                            self.ui.warn("ignoring invalid ignore"
+                                         + " regular expression '%s'\n" % p)
+                        else:
+                            bigpat.append(util.pconvert(pat[:-1]))
+            except IOError: pass
+
+            s = "(?:%s)" % (")|(?:".join(bigpat))
+            r = re.compile(s)
+            self.ignorefunc = r.search
+
+        return self.ignorefunc(f)
 
     def __del__(self):
         if self.dirty:
@@ -297,8 +327,12 @@ class dirstate:
             self.read()
         return self.pl
 
+    def markdirty(self):
+        if not self.dirty:
+            self.dirty = 1
+
     def setparents(self, p1, p2 = nullid):
-        self.dirty = 1
+        self.markdirty()
         self.pl = p1, p2
 
     def state(self, key):
@@ -333,7 +367,7 @@ class dirstate:
 
     def copy(self, source, dest):
         self.read()
-        self.dirty = 1
+        self.markdirty()
         self.copies[dest] = source
 
     def copied(self, file):
@@ -348,7 +382,7 @@ class dirstate:
 
         if not files: return
         self.read()
-        self.dirty = 1
+        self.markdirty()
         for f in files:
             if state == "r":
                 self.map[f] = ('r', 0, 0, 0)
@@ -359,7 +393,7 @@ class dirstate:
     def forget(self, files):
         if not files: return
         self.read()
-        self.dirty = 1
+        self.markdirty()
         for f in files:
             try:
                 del self.map[f]
@@ -369,7 +403,7 @@ class dirstate:
 
     def clear(self):
         self.map = {}
-        self.dirty = 1
+        self.markdirty()
 
     def write(self):
         st = self.opener("dirstate", "w")
@@ -382,23 +416,23 @@ class dirstate:
             st.write(e + f)
         self.dirty = 0
 
-    def changes(self, files, ignore):
+    def walk(self, files = None, match = always):
         self.read()
         dc = self.map.copy()
-        lookup, changed, added, unknown = [], [], [], []
-
-        # compare all files by default
+        # walk all files by default
         if not files: files = [self.root]
-
-        # recursive generator of all files listed
-        def walk(files):
+        def traverse():
             for f in util.unique(files):
                 f = os.path.join(self.root, f)
                 if os.path.isdir(f):
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
+                        if d == '.hg':
+                            subdirs[:] = []
+                            continue
                         for sd in subdirs:
-                            if ignore(os.path.join(d, sd +'/')):
+                            ds = os.path.join(d, sd +'/')
+                            if self.ignore(ds) or not match(ds):
                                 subdirs.remove(sd)
                         for fn in fl:
                             fn = util.pconvert(os.path.join(d, fn))
@@ -409,7 +443,23 @@ class dirstate:
             for k in dc.keys():
                 yield k
 
-        for fn in util.unique(walk(files)):
+        # yield only files that match: all in dirstate, others only if
+        # not in .hgignore
+
+        for fn in util.unique(traverse()):
+            if fn in dc:
+                del dc[fn]
+            elif self.ignore(fn):
+                continue
+            if match(fn):
+                yield fn
+
+    def changes(self, files = None, match = always):
+        self.read()
+        dc = self.map.copy()
+        lookup, changed, added, unknown = [], [], [], []
+
+        for fn in self.walk(files, match):
             try: s = os.stat(os.path.join(self.root, fn))
             except: continue
 
@@ -428,7 +478,7 @@ class dirstate:
                 elif c[1] != s.st_mode or c[3] != s.st_mtime:
                     lookup.append(fn)
             else:
-                if not ignore(fn): unknown.append(fn)
+                if match(fn): unknown.append(fn)
 
         return (lookup, changed, added, dc.keys(), unknown)
 
@@ -492,7 +542,6 @@ class localrepository:
         self.wopener = opener(self.root)
         self.manifest = manifest(self.opener)
         self.changelog = changelog(self.opener)
-        self.ignorefunc = None
         self.tagscache = None
         self.nodetagscache = None
 
@@ -501,29 +550,6 @@ class localrepository:
             try:
                 self.ui.readconfig(self.opener("hgrc"))
             except IOError: pass
-
-    def ignore(self, f):
-        if not self.ignorefunc:
-            bigpat = ["^.hg/$"]
-            try:
-                l = file(self.wjoin(".hgignore"))
-                for pat in l:
-                    if pat != "\n":
-                        p = util.pconvert(pat[:-1])
-                        try:
-                            r = re.compile(p)
-                        except:
-                            self.ui.warn("ignoring invalid ignore"
-                                         + " regular expression '%s'\n" % p)
-                        else:
-                            bigpat.append(util.pconvert(pat[:-1]))
-            except IOError: pass
-
-            s = "(?:%s)" % (")|(?:".join(bigpat))
-            r = re.compile(s)
-            self.ignorefunc = r.search
-
-        return self.ignorefunc(f)
 
     def hook(self, name, **args):
         s = self.ui.config("hooks", name)
@@ -737,7 +763,7 @@ class localrepository:
                 else:
                     self.ui.warn("%s not tracked!\n" % f)
         else:
-            (c, a, d, u) = self.changes(None, None)
+            (c, a, d, u) = self.changes()
             commit = c + a
             remove = d
 
@@ -814,7 +840,12 @@ class localrepository:
         if not self.hook("commit", node=hex(n)):
             return 1
 
-    def changes(self, node1, node2, files=None):
+    def walk(self, rev = None, files = [], match = always):
+        if rev is None: fns = self.dirstate.walk(files, match)
+        else: fns = filter(match, self.manifest.read(rev))
+        for fn in fns: yield fn
+
+    def changes(self, node1 = None, node2 = None, files = [], match = always):
         mf2, u = None, []
 
         def fcmp(fn, mf):
@@ -822,16 +853,23 @@ class localrepository:
             t2 = self.file(fn).revision(mf[fn])
             return cmp(t1, t2)
 
+        def mfmatches(node):
+            mf = dict(self.manifest.read(node))
+            for fn in mf.keys():
+                if not match(fn):
+                    del mf[fn]
+            return mf
+            
         # are we comparing the working directory?
         if not node2:
-            l, c, a, d, u = self.dirstate.changes(files, self.ignore)
+            l, c, a, d, u = self.dirstate.changes(files, match)
 
             # are we comparing working dir against its parent?
             if not node1:
                 if l:
                     # do a full compare of any files that might have changed
                     change = self.changelog.read(self.dirstate.parents()[0])
-                    mf2 = self.manifest.read(change[0])
+                    mf2 = mfmatches(change[0])
                     for f in l:
                         if fcmp(f, mf2):
                             c.append(f)
@@ -846,20 +884,20 @@ class localrepository:
         if not node2:
             if not mf2:
                 change = self.changelog.read(self.dirstate.parents()[0])
-                mf2 = self.manifest.read(change[0]).copy()
+                mf2 = mfmatches(change[0])
             for f in a + c + l:
                 mf2[f] = ""
             for f in d:
                 if f in mf2: del mf2[f]
         else:
             change = self.changelog.read(node2)
-            mf2 = self.manifest.read(change[0])
+            mf2 = mfmatches(change[0])
 
         # flush lists from dirstate before comparing manifests
         c, a = [], []
 
         change = self.changelog.read(node1)
-        mf1 = self.manifest.read(change[0]).copy()
+        mf1 = mfmatches(change[0])
 
         for fn in mf2:
             if mf1.has_key(fn):
@@ -1267,7 +1305,7 @@ class localrepository:
         ma = self.manifest.read(man)
         mfa = self.manifest.readflags(man)
 
-        (c, a, d, u) = self.changes(None, None)
+        (c, a, d, u) = self.changes()
 
         # is this a jump, or a merge?  i.e. is there a linear path
         # from p1 to p2?
