@@ -311,7 +311,7 @@ def addremove(ui, repo, *files):
     repo.add(u)
     repo.remove(d)
 
-def annotate(u, repo, file1, *files, **ops):
+def annotate(ui, repo, file1, *files, **opts):
     """show changeset information per file line"""
     def getnode(rev):
         return hg.short(repo.changelog.node(rev))
@@ -333,12 +333,13 @@ def annotate(u, repo, file1, *files, **ops):
 
     bcache = {}
     opmap = [['user', getname], ['number', str], ['changeset', getnode]]
-    if not ops['user'] and not ops['changeset']:
-        ops['number'] = 1
+    if not opts['user'] and not opts['changeset']:
+        opts['number'] = 1
 
-    node = repo.dirstate.parents()[0]
-    if ops['revision']:
-        node = repo.changelog.lookup(ops['revision'])
+    if opts['revision']:
+        node = repo.changelog.lookup(opts['revision'])
+    else:
+        node = repo.dirstate.parents()[0]
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
     for f in relpath(repo, (file1,) + files):
@@ -346,13 +347,13 @@ def annotate(u, repo, file1, *files, **ops):
         pieces = []
 
         for o, f in opmap:
-            if ops[o]:
+            if opts[o]:
                 l = [f(n) for n, dummy in lines]
                 m = max(map(len, l))
                 pieces.append(["%*s" % (m, x) for x in l])
 
         for p, l in zip(zip(*pieces), lines):
-            u.write(" ".join(p) + ": " + l[1])
+            ui.write("%s: %s" % (" ".join(p), l[1]))
 
 def cat(ui, repo, file1, rev=None, **opts):
     """output the latest or given revision of a file"""
