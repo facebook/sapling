@@ -1,11 +1,11 @@
-.*\.orig
-.*\.rej
-.*~
-.*\.so
-.*pyc
+.*\.orig$
+.*\.rej$
+.*~$
+.*\.so$
+.*pyc$
 build/.*
 dist/
-doc/.*\.[0-9]
+doc/.*\.[0-9]$
 MANIFEST$
 .pc/
 patches/
