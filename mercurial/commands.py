@@ -336,8 +336,8 @@ def annotate(ui, repo, file1, *files, **opts):
     if not opts['user'] and not opts['changeset']:
         opts['number'] = 1
 
-    if opts['revision']:
-        node = repo.changelog.lookup(opts['revision'])
+    if opts['rev']:
+        node = repo.changelog.lookup(opts['rev'])
     else:
         node = repo.dirstate.parents()[0]
     change = repo.changelog.read(node)
@@ -1092,7 +1092,7 @@ table = {
     "addremove": (addremove, [], "hg addremove [FILE]..."),
     "^annotate":
         (annotate,
-         [('r', 'revision', '', 'revision'),
+         [('r', 'rev', '', 'revision'),
           ('u', 'user', None, 'show user'),
           ('n', 'number', None, 'show revision number'),
           ('c', 'changeset', None, 'show changeset')],
