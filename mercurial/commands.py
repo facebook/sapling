@@ -36,6 +36,39 @@ def relpath(repo, args):
                 for x in args]
     return args
 
+def matchpats(ui, cwd, pats = [], opts = {}):
+    head = ''
+    if opts.get('rootless'): head = '(?:.*/|)'
+    def reify(name, tail):
+        if name.startswith('re:'):
+            return name[3:]
+        elif name.startswith('glob:'):
+            return head + util.globre(name[5:], '', tail)
+        elif name.startswith('path:'):
+            return '^' + re.escape(name[5:]) + '$'
+        return head + util.globre(name, '', tail)
+    cwdsep = cwd + os.sep
+    def under(fn):
+        if not cwd or fn.startswith(cwdsep): return True
+    def matchfn(pats, tail, ifempty = util.always):
+        if not pats: return ifempty
+        pat = '(?:%s)' % '|'.join([reify(p, tail) for p in pats])
+        if cwd: pat = re.escape(cwd + os.sep) + pat
+        ui.debug('regexp: %s\n' % pat)
+        return re.compile(pat).match
+    patmatch = matchfn(pats, '$')
+    incmatch = matchfn(opts.get('include'), '(?:/|$)', under)
+    excmatch = matchfn(opts.get('exclude'), '(?:/|$)', util.never)
+    return lambda fn: (incmatch(fn) and not excmatch(fn) and
+                       (fn.endswith('/') or patmatch(fn)))
+
+def walk(repo, pats, opts):
+    cwd = repo.getcwd()
+    if cwd: c = len(cwd) + 1
+    for fn in repo.walk(match = matchpats(repo.ui, cwd, pats, opts)):
+        if cwd: yield fn, fn[c:]
+        else: yield fn, fn
+
 revrangesep = ':'
 
 def revrange(ui, repo, revs, revlog=None):
@@ -288,9 +321,17 @@ def help_(ui, cmd=None):
 
 # Commands start here, listed alphabetically
 
-def add(ui, repo, file1, *files):
+def add(ui, repo, *pats, **opts):
     '''add the specified files on the next commit'''
-    repo.add(relpath(repo, (file1,) + files))
+    names = []
+    q = dict(zip(pats, pats))
+    for abs, rel in walk(repo, pats, opts):
+        if rel in q or abs in q:
+            names.append(abs)
+        elif repo.dirstate.state(abs) == '?':
+            ui.status('adding %s\n' % rel)
+            names.append(abs)
+    repo.add(names)
 
 def addremove(ui, repo, *files):
     """add all new files, delete all missing files"""
@@ -669,46 +710,15 @@ def init(ui, source=None):
 
 def locate(ui, repo, *pats, **opts):
     """locate files matching specific patterns"""
-    if [p for p in pats if os.sep in p]:
-        ui.warn("error: patterns may not contain '%s'\n" % os.sep)
-        ui.warn("use '-i <dir>' instead\n")
-        sys.exit(1)
-    def compile(pats, head='^', tail=os.sep, on_empty=True):
-        if not pats:
-            class c:
-                def match(self, x):
-                    return on_empty
-            return c()
-        fnpats = [fnmatch.translate(os.path.normpath(os.path.normcase(p)))[:-1]
-                  for p in pats]
-        regexp = r'%s(?:%s)%s' % (head, '|'.join(fnpats), tail)
-        return re.compile(regexp)
-    exclude = compile(opts['exclude'], on_empty=False)
-    include = compile(opts['include'])
-    pat = compile(pats, head='', tail='$')
-    end = opts['print0'] and '\0' or '\n'
-    if opts['rev']:
-        node = repo.manifest.lookup(opts['rev'])
-    else:
-        node = repo.manifest.tip()
-    manifest = repo.manifest.read(node)
-    cwd = repo.getcwd()
-    cwd_plus = cwd and (cwd + os.sep)
-    found = []
-    for f in manifest:
-        f = os.path.normcase(f)
-        if exclude.match(f) or not(include.match(f) and
-                                   f.startswith(cwd_plus) and
-                                   pat.match(os.path.basename(f))):
-            continue
+    if opts['print0']: end = '\0'
+    else: end = '\n'
+    opts['rootless'] = True
+    for abs, rel in walk(repo, pats, opts):
+        if repo.dirstate.state(abs) == '?': continue
         if opts['fullpath']:
-            f = os.path.join(repo.root, f)
-        elif cwd:
-            f = f[len(cwd_plus):]
-        found.append(f)
-    found.sort()
-    for f in found:
-        ui.write(f, end)
+            ui.write(os.path.join(repo.root, abs), end)
+        else:
+            ui.write(rel, end)
 
 def log(ui, repo, f=None, **opts):
     """show the revision history of the repository or a single file"""
@@ -1087,7 +1097,10 @@ def verify(ui, repo):
 # Command options and aliases are listed here, alphabetically
 
 table = {
-    "^add": (add, [], "hg add [files]"),
+    "^add": (add,
+             [('I', 'include', [], 'include path in search'),
+              ('X', 'exclude', [], 'exclude path from search')],
+             "hg add [options] [files]"),
     "addremove": (addremove, [], "hg addremove [files]"),
     "^annotate":
         (annotate,
@@ -1139,9 +1152,9 @@ table = {
         (locate,
          [('0', 'print0', None, 'end records with NUL'),
           ('f', 'fullpath', None, 'print complete paths'),
-          ('i', 'include', [], 'include path in search'),
+          ('I', 'include', [], 'include path in search'),
           ('r', 'rev', '', 'revision'),
-          ('x', 'exclude', [], 'exclude path from search')],
+          ('X', 'exclude', [], 'exclude path from search')],
          'hg locate [options] [files]'),
     "^log|history":
         (log,

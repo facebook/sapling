@@ -13,9 +13,6 @@ demandload(globals(), "re lock urllib urllib2 transaction time socket")
 demandload(globals(), "tempfile httprangereader bdiff")
 demandload(globals(), "bisect select")
 
-def always(fn):
-    return True
-
 class filelog(revlog):
     def __init__(self, opener, path):
         revlog.__init__(self, opener,
@@ -416,7 +413,7 @@ class dirstate:
             st.write(e + f)
         self.dirty = 0
 
-    def walk(self, files = None, match = always):
+    def walk(self, files = None, match = util.always):
         self.read()
         dc = self.map.copy()
         # walk all files by default
@@ -454,7 +451,7 @@ class dirstate:
             if match(fn):
                 yield fn
 
-    def changes(self, files = None, match = always):
+    def changes(self, files = None, match = util.always):
         self.read()
         dc = self.map.copy()
         lookup, changed, added, unknown = [], [], [], []
@@ -840,12 +837,16 @@ class localrepository:
         if not self.hook("commit", node=hex(n)):
             return 1
 
-    def walk(self, rev = None, files = [], match = always):
-        if rev is None: fns = self.dirstate.walk(files, match)
-        else: fns = filter(match, self.manifest.read(rev))
+    def walk(self, node = None, files = [], match = util.always):
+        if node:
+            change = self.changelog.read(node)
+            fns = filter(match, self.manifest.read(change[0]))
+        else:
+            fns = self.dirstate.walk(files, match)
         for fn in fns: yield fn
 
-    def changes(self, node1 = None, node2 = None, files = [], match = always):
+    def changes(self, node1 = None, node2 = None, files = [],
+                match = util.always):
         mf2, u = None, []
 
         def fcmp(fn, mf):
@@ -922,7 +923,7 @@ class localrepository:
                 self.ui.warn("%s does not exist!\n" % f)
             elif not os.path.isfile(p):
                 self.ui.warn("%s not added: mercurial only supports files currently\n" % f)
-            elif self.dirstate.state(f) == 'n':
+            elif self.dirstate.state(f) in 'an':
                 self.ui.warn("%s already tracked!\n" % f)
             else:
                 self.dirstate.update([f], "a")
