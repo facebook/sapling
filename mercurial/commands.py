@@ -14,6 +14,9 @@ demandload(globals(), "errno socket version struct")
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
 
+class Abort(Exception):
+    """Raised if a command needs to print an error and exit."""
+
 def filterfiles(filters, files):
     l = [x for x in files if x in filters]
 
@@ -93,8 +96,7 @@ def revrange(ui, repo, revs, revlog=None):
                 try:
                     num = revlog.rev(revlog.lookup(val))
                 except KeyError:
-                    ui.warn('abort: invalid revision identifier %s\n' % val)
-                    sys.exit(1)
+                    raise Abort('invalid revision identifier %s', val)
         return num
     for spec in revs:
         if spec.find(revrangesep) >= 0:
@@ -124,29 +126,33 @@ def make_filename(repo, r, pat, node=None,
         'b': lambda: os.path.basename(repo.root),
         }
 
-    if node:
-        expander.update(node_expander)
-    if node and revwidth is not None:
-        expander['r'] = lambda: str(r.rev(node)).zfill(revwidth)
-    if total is not None:
-        expander['N'] = lambda: str(total)
-    if seqno is not None:
-        expander['n'] = lambda: str(seqno)
-    if total is not None and seqno is not None:
-        expander['n'] = lambda:str(seqno).zfill(len(str(total)))
+    try:
+        if node:
+            expander.update(node_expander)
+        if node and revwidth is not None:
+            expander['r'] = lambda: str(r.rev(node)).zfill(revwidth)
+        if total is not None:
+            expander['N'] = lambda: str(total)
+        if seqno is not None:
+            expander['n'] = lambda: str(seqno)
+        if total is not None and seqno is not None:
+            expander['n'] = lambda:str(seqno).zfill(len(str(total)))
 
-    newname = []
-    patlen = len(pat)
-    i = 0
-    while i < patlen:
-        c = pat[i]
-        if c == '%':
-            i += 1
+        newname = []
+        patlen = len(pat)
+        i = 0
+        while i < patlen:
             c = pat[i]
-            c = expander[c]()
-        newname.append(c)
-        i += 1
-    return ''.join(newname)
+            if c == '%':
+                i += 1
+                c = pat[i]
+                c = expander[c]()
+            newname.append(c)
+            i += 1
+        return ''.join(newname)
+    except KeyError, inst:
+        raise Abort("invalid format spec '%%%s' in output file name",
+                    inst.args[0])
 
 def dodiff(fp, ui, repo, files=None, node1=None, node2=None):
     def date(c):
@@ -404,13 +410,7 @@ def cat(ui, repo, file1, rev=None, **opts):
     else:
         n = r.tip()
     if opts['output'] and opts['output'] != '-':
-        try:
-            outname = make_filename(repo, r, opts['output'], node=n)
-            fp = open(outname, 'wb')
-        except KeyError, inst:
-            ui.warn("error: invlaid format spec '%%%s' in output file name\n" %
-                    inst.args[0])
-            sys.exit(1);
+        fp = open(make_filename(repo, r, opts['output'], node=n), 'wb')
     else:
         fp = sys.stdout
     fp.write(r.read(n))
@@ -516,8 +516,7 @@ def debugcheckstate(ui, repo):
             ui.warn("%s in manifest1, but listed as state %s" % (f, state))
             errors += 1
     if errors:
-        ui.warn(".hg/dirstate inconsistent with current parent's manifest\n")
-        sys.exit(1)
+        raise Abort(".hg/dirstate inconsistent with current parent's manifest")
 
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""
@@ -557,8 +556,7 @@ def diff(ui, repo, *files, **opts):
         revs = map(lambda x: repo.lookup(x), opts['rev'])
 
     if len(revs) > 2:
-        ui.warn("too many revisions to diff\n")
-        sys.exit(1)
+        raise Abort("too many revisions to diff")
 
     if files:
         files = relpath(repo, files)
@@ -573,16 +571,11 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     change = repo.changelog.read(node)
 
     if opts['output'] and opts['output'] != '-':
-        try:
-            outname = make_filename(repo, repo.changelog, opts['output'],
-                                    node=node, total=total, seqno=seqno,
-                                    revwidth=revwidth)
-            ui.note("Exporting patch to '%s'.\n" % outname)
-            fp = open(outname, 'wb')
-        except KeyError, inst:
-            ui.warn("error: invalid format spec '%%%s' in output file name\n" %
-                    inst.args[0])
-            sys.exit(1)
+        outname = make_filename(repo, repo.changelog, opts['output'],
+                                node=node, total=total, seqno=seqno,
+                                revwidth=revwidth)
+        ui.note("Exporting patch to '%s'.\n" % outname)
+        fp = open(outname, 'wb')
     else:
         fp = sys.stdout
 
@@ -600,8 +593,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets"""
     if not changesets:
-        ui.warn("error: export requires at least one changeset\n")
-        sys.exit(1)
+        raise Abort("export requires at least one changeset")
     seqno = 0
     revs = list(revrange(ui, repo, changesets))
     total = len(revs)
@@ -695,8 +687,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     files.append(pf)
         patcherr = f.close()
         if patcherr:
-            sys.stderr.write("patch failed")
-            sys.exit(1)
+            raise Abort("patch failed")
 
         if len(files) > 0:
             addremove(ui, repo, *files)
@@ -706,8 +697,7 @@ def init(ui, source=None):
     """create a new repository in the current directory"""
 
     if source:
-        ui.warn("no longer supported: use \"hg clone\" instead\n")
-        sys.exit(1)
+        raise Abort("no longer supported: use \"hg clone\" instead")
     hg.repository(ui, ".", create=1)
 
 def locate(ui, repo, *pats, **opts):
@@ -755,6 +745,11 @@ def log(ui, repo, f=None, **opts):
             prev, other = repo.changelog.parents(changenode)
             dodiff(sys.stdout, ui, repo, files, prev, changenode)
             ui.write("\n\n")
+
+def ls(ui, repo, *pats, **opts):
+    """list files"""
+    for src, abs, rel in walk(repo, pats, opts):
+        ui.write(rel, '\n')
 
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest"""
@@ -1162,6 +1157,10 @@ table = {
          [('r', 'rev', [], 'revision'),
           ('p', 'patch', None, 'show patch')],
          'hg log [-r REV1 [-r REV2]] [-p] [FILE]'),
+    "list|ls": (ls,
+                [('I', 'include', [], 'include path in search'),
+                 ('X', 'exclude', [], 'exclude path from search')],
+                "hg ls [OPTION]... [PATTERN]...."),
     "manifest": (manifest, [], 'hg manifest [REV]'),
     "parents": (parents, [], 'hg parents [REV]'),
     "^pull":
@@ -1357,6 +1356,9 @@ def dispatch(args):
             u.warn("abort: %s: %s\n" % (inst.strerror, inst.filename))
         else:
             u.warn("abort: %s\n" % inst.strerror)
+    except Abort, inst:
+        u.warn('abort: ', inst.args[0] % inst.args[1:], '\n')
+        sys.exit(1)
     except TypeError, inst:
         # was this an argument error?
         tb = traceback.extract_tb(sys.exc_info()[2])
