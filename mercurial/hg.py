@@ -1633,7 +1633,7 @@ class localrepository:
             # cross-check
             for node in filenodes[f]:
                 self.ui.warn("node %s in manifests not in %s\n"
-                             % (hex(n), f))
+                             % (hex(node), f))
                 errors += 1
 
         self.ui.status("%d files, %d changesets, %d total revisions\n" %
