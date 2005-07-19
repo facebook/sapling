@@ -434,30 +434,30 @@ class dirstate:
                                 subdirs.remove(sd)
                         for fn in fl:
                             fn = util.pconvert(os.path.join(d, fn))
-                            yield fn
+                            yield 'f', fn
                 else:
-                    yield f[len(self.root) + 1:]
+                    yield 'f', f[len(self.root) + 1:]
 
             for k in dc.keys():
-                yield k
+                yield 'm', k
 
         # yield only files that match: all in dirstate, others only if
         # not in .hgignore
 
-        for fn in util.unique(traverse()):
+        for src, fn in util.unique(traverse()):
             if fn in dc:
                 del dc[fn]
             elif self.ignore(fn):
                 continue
             if match(fn):
-                yield fn
+                yield src, fn
 
     def changes(self, files = None, match = util.always):
         self.read()
         dc = self.map.copy()
         lookup, changed, added, unknown = [], [], [], []
 
-        for fn in self.walk(files, match):
+        for src, fn in self.walk(files, match):
             try: s = os.stat(os.path.join(self.root, fn))
             except: continue
 
@@ -840,11 +840,11 @@ class localrepository:
 
     def walk(self, node = None, files = [], match = util.always):
         if node:
-            change = self.changelog.read(node)
-            fns = filter(match, self.manifest.read(change[0]))
+            for fn in self.manifest.read(self.changelog.read(node)[0]):
+                yield 'm', fn
         else:
-            fns = self.dirstate.walk(files, match)
-        for fn in fns: yield fn
+            for src, fn in self.dirstate.walk(files, match):
+                yield src, fn
 
     def changes(self, node1 = None, node2 = None, files = [],
                 match = util.always):

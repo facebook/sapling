@@ -65,9 +65,9 @@ def matchpats(ui, cwd, pats = [], opts = {}):
 def walk(repo, pats, opts):
     cwd = repo.getcwd()
     if cwd: c = len(cwd) + 1
-    for fn in repo.walk(match = matchpats(repo.ui, cwd, pats, opts)):
-        if cwd: yield fn, fn[c:]
-        else: yield fn, fn
+    for src, fn in repo.walk(match = matchpats(repo.ui, cwd, pats, opts)):
+        if cwd: yield src, fn, fn[c:]
+        else: yield src, fn, fn
 
 revrangesep = ':'
 
@@ -325,7 +325,7 @@ def add(ui, repo, *pats, **opts):
     '''add the specified files on the next commit'''
     names = []
     q = dict(zip(pats, pats))
-    for abs, rel in walk(repo, pats, opts):
+    for src, abs, rel in walk(repo, pats, opts):
         if rel in q or abs in q:
             names.append(abs)
         elif repo.dirstate.state(abs) == '?':
@@ -715,7 +715,7 @@ def locate(ui, repo, *pats, **opts):
     if opts['print0']: end = '\0'
     else: end = '\n'
     opts['rootless'] = True
-    for abs, rel in walk(repo, pats, opts):
+    for src, abs, rel in walk(repo, pats, opts):
         if repo.dirstate.state(abs) == '?': continue
         if opts['fullpath']:
             ui.write(os.path.join(repo.root, abs), end)
