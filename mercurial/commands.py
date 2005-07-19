@@ -352,7 +352,7 @@ def addremove(ui, repo, *files):
     repo.add(u)
     repo.remove(d)
 
-def annotate(u, repo, file1, *files, **ops):
+def annotate(ui, repo, file1, *files, **opts):
     """show changeset information per file line"""
     def getnode(rev):
         return hg.short(repo.changelog.node(rev))
@@ -374,12 +374,13 @@ def annotate(u, repo, file1, *files, **ops):
 
     bcache = {}
     opmap = [['user', getname], ['number', str], ['changeset', getnode]]
-    if not ops['user'] and not ops['changeset']:
-        ops['number'] = 1
+    if not opts['user'] and not opts['changeset']:
+        opts['number'] = 1
 
-    node = repo.dirstate.parents()[0]
-    if ops['revision']:
-        node = repo.changelog.lookup(ops['revision'])
+    if opts['rev']:
+        node = repo.changelog.lookup(opts['rev'])
+    else:
+        node = repo.dirstate.parents()[0]
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
     for f in relpath(repo, (file1,) + files):
@@ -387,13 +388,13 @@ def annotate(u, repo, file1, *files, **ops):
         pieces = []
 
         for o, f in opmap:
-            if ops[o]:
+            if opts[o]:
                 l = [f(n) for n, dummy in lines]
                 m = max(map(len, l))
                 pieces.append(["%*s" % (m, x) for x in l])
 
         for p, l in zip(zip(*pieces), lines):
-            u.write(" ".join(p) + ": " + l[1])
+            ui.write("%s: %s" % (" ".join(p), l[1]))
 
 def cat(ui, repo, file1, rev=None, **opts):
     """output the latest or given revision of a file"""
@@ -576,6 +577,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
             outname = make_filename(repo, repo.changelog, opts['output'],
                                     node=node, total=total, seqno=seqno,
                                     revwidth=revwidth)
+            ui.note("Exporting patch to '%s'.\n" % outname)
             fp = open(outname, 'wb')
         except KeyError, inst:
             ui.warn("error: invalid format spec '%%%s' in output file name\n" %
@@ -774,10 +776,10 @@ def manifest(ui, repo, rev=None):
     for f in files:
         ui.write("%40s %3s %s\n" % (hg.hex(m[f]), mf[f] and "755" or "644", f))
 
-def parents(ui, repo, node=None):
-    '''show the parents of the current working dir'''
-    if node:
-        p = repo.changelog.parents(repo.lookup(hg.bin(node)))
+def parents(ui, repo, rev=None):
+    """show the parents of the working dir or revision"""
+    if rev:
+        p = repo.changelog.parents(repo.lookup(rev))
     else:
         p = repo.dirstate.parents()
 
@@ -1032,9 +1034,8 @@ def tag(ui, repo, name, rev=None, **opts):
             ui.status("(please commit .hgtags manually)\n")
             return -1
 
-    add = not os.path.exists(repo.wjoin(".hgtags"))
     repo.wfile(".hgtags", "ab").write("%s %s\n" % (r, name))
-    if add:
+    if repo.dirstate.state(".hgtags") == '?':
         repo.add([".hgtags"])
 
     if not opts['text']:
@@ -1100,53 +1101,53 @@ table = {
     "^add": (add,
              [('I', 'include', [], 'include path in search'),
               ('X', 'exclude', [], 'exclude path from search')],
-             "hg add [options] [files]"),
-    "addremove": (addremove, [], "hg addremove [files]"),
+             "hg add [OPTIONS] [FILES]"),
+    "addremove": (addremove, [], "hg addremove [FILES]"),
     "^annotate":
         (annotate,
-         [('r', 'revision', '', 'revision'),
+         [('r', 'rev', '', 'revision'),
           ('u', 'user', None, 'show user'),
           ('n', 'number', None, 'show revision number'),
           ('c', 'changeset', None, 'show changeset')],
-         'hg annotate [-u] [-c] [-n] [-r id] [files]'),
+         'hg annotate [-r REV] [-u] [-n] [-c] FILE...'),
     "cat":
         (cat,
          [('o', 'output', "", 'output to file')],
-         'hg cat [-o outfile] <file> [rev]'),
+         'hg cat [-o OUTFILE] FILE [REV]'),
     "^clone":
         (clone,
          [('U', 'noupdate', None, 'skip update after cloning')],
-         'hg clone [options] <source> [dest]'),
+         'hg clone [-U] SOURCE [DEST]'),
     "^commit|ci":
         (commit,
-         [('t', 'text', "", 'commit text'),
-          ('A', 'addremove', None, 'run add/remove during commit'),
+         [('A', 'addremove', None, 'run add/remove during commit'),
+          ('t', 'text', "", 'commit text'),
           ('l', 'logfile', "", 'commit text file'),
           ('d', 'date', "", 'date code'),
           ('u', 'user', "", 'user')],
-         'hg commit [files]'),
-    "copy": (copy, [], 'hg copy <source> <dest>'),
+         'hg commit [OPTION]... [FILE]...'),
+    "copy": (copy, [], 'hg copy SOURCE DEST'),
     "debugcheckstate": (debugcheckstate, [], 'debugcheckstate'),
     "debugstate": (debugstate, [], 'debugstate'),
-    "debugindex": (debugindex, [], 'debugindex <file>'),
-    "debugindexdot": (debugindexdot, [], 'debugindexdot <file>'),
+    "debugindex": (debugindex, [], 'debugindex FILE'),
+    "debugindexdot": (debugindexdot, [], 'debugindexdot FILE'),
     "^diff":
         (diff,
          [('r', 'rev', [], 'revision')],
-         'hg diff [-r A] [-r B] [files]'),
+         'hg diff [-r REV1 [-r REV2]] [FILE]...'),
     "^export":
         (export,
          [('o', 'output', "", 'output to file')],
-         "hg export [-o file] <changeset> ..."),
-    "forget": (forget, [], "hg forget [files]"),
+         "hg export [-o OUTFILE] REV..."),
+    "forget": (forget, [], "hg forget FILE..."),
     "heads": (heads, [], 'hg heads'),
-    "help": (help_, [], 'hg help [command]'),
+    "help": (help_, [], 'hg help [COMMAND]'),
     "identify|id": (identify, [], 'hg identify'),
     "import|patch":
         (import_,
          [('p', 'strip', 1, 'path strip'),
           ('b', 'base', "", 'base path')],
-         "hg import [options] <patches>"),
+         "hg import [-p NUM] [-b BASE] PATCH..."),
     "^init": (init, [], 'hg init'),
     "locate":
         (locate,
@@ -1155,19 +1156,19 @@ table = {
           ('I', 'include', [], 'include path in search'),
           ('r', 'rev', '', 'revision'),
           ('X', 'exclude', [], 'exclude path from search')],
-         'hg locate [options] [files]'),
+         'hg locate [OPTION]... [PATTERN]...'),
     "^log|history":
         (log,
          [('r', 'rev', [], 'revision'),
           ('p', 'patch', None, 'show patch')],
-         'hg log [-r A] [-r B] [-p] [file]'),
-    "manifest": (manifest, [], 'hg manifest [rev]'),
-    "parents": (parents, [], 'hg parents [node]'),
+         'hg log [-r REV1 [-r REV2]] [-p] [FILE]'),
+    "manifest": (manifest, [], 'hg manifest [REV]'),
+    "parents": (parents, [], 'hg parents [REV]'),
     "^pull":
         (pull,
          [('u', 'update', None, 'update working directory')],
-         'hg pull [options] [source]'),
-    "^push": (push, [], 'hg push <destination>'),
+         'hg pull [-u] [SOURCE]'),
+    "^push": (push, [], 'hg push [DEST]'),
     "rawcommit":
         (rawcommit,
          [('p', 'parent', [], 'parent'),
@@ -1176,14 +1177,14 @@ table = {
           ('F', 'files', "", 'file list'),
           ('t', 'text', "", 'commit text'),
           ('l', 'logfile', "", 'commit text file')],
-         'hg rawcommit [options] [files]'),
+         'hg rawcommit [OPTION]... [FILE]...'),
     "recover": (recover, [], "hg recover"),
-    "^remove|rm": (remove, [], "hg remove [files]"),
+    "^remove|rm": (remove, [], "hg remove FILE..."),
     "^revert":
         (revert,
          [("n", "nonrecursive", None, "don't recurse into subdirs"),
           ("r", "rev", "", "revision")],
-         "hg revert [files|dirs]"),
+         "hg revert [-n] [-r REV] NAME..."),
     "root": (root, [], "hg root"),
     "^serve":
         (serve,
@@ -1194,7 +1195,7 @@ table = {
           ('n', 'name', os.getcwd(), 'repository name'),
           ('', 'stdio', None, 'for remote clients'),
           ('t', 'templates', "", 'template map')],
-         "hg serve [options]"),
+         "hg serve [OPTION]..."),
     "^status": (status, [], 'hg status'),
     "tag":
         (tag,
@@ -1202,7 +1203,7 @@ table = {
           ('t', 'text', "", 'commit text'),
           ('d', 'date', "", 'date code'),
           ('u', 'user', "", 'user')],
-         'hg tag [options] <name> [rev]'),
+         'hg tag [OPTION]... NAME [REV]'),
     "tags": (tags, [], 'hg tags'),
     "tip": (tip, [], 'hg tip'),
     "undo": (undo, [], 'hg undo'),
@@ -1210,7 +1211,7 @@ table = {
         (update,
          [('m', 'merge', None, 'allow merging of conflicts'),
           ('C', 'clean', None, 'overwrite locally modified files')],
-         'hg update [options] [node]'),
+         'hg update [-m] [-C] [REV]'),
     "verify": (verify, [], 'hg verify'),
     "version": (show_version, [], 'hg version'),
     }

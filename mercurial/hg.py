@@ -216,7 +216,8 @@ class manifest(revlog):
                     # item not found, insert a new one
                     end = bs
                     if w[1] == 1:
-                        sys.stderr.write("failed to remove %s from manifest" % f)
+                        sys.stderr.write("failed to remove %s from manifest\n"
+                                         % f)
                         sys.exit(1)
                 else:
                     # item is found, replace/delete the existing line
@@ -231,7 +232,7 @@ class manifest(revlog):
 
         text = "".join(self.addlist)
         if cachedelta and mdiff.patch(self.listcache[0], cachedelta) != text:
-            sys.stderr.write("manifest delta failure")
+            sys.stderr.write("manifest delta failure\n")
             sys.exit(1)
         n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
         self.mapcache = (n, map, flags)

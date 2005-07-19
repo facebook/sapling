@@ -7,7 +7,7 @@ filedifflink = "<a href="?cmd=filediff;node=#node#;file=#file#">#file#</a> "
 filenodelink = "<a href="?cmd=file;filenode=#filenode#;file=#file#">#file#</a> "
 fileellipses = "..."
 changelogentry = changelogentry.tmpl
-searchentry = searchentry.tmpl
+searchentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
 manifestdirentry = "<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td><a href="?cmd=manifest;manifest=#manifest#;path=#path#">#basename#/</a>"

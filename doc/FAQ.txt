@@ -65,7 +65,7 @@ heads. Use "hg heads" to find the heads in the current repository.
 
 The 'tip' is the most recently changed head, and also the highest
 numbered revision. If you have just made a commit, that commit will be
-the head. Alternately, if you have just pulled from another
+the tip. Alternately, if you have just pulled from another
 repository, the tip of that repository becomes the current tip.
 
 The 'tip' is the default revision for many commands such as update,
@@ -152,7 +152,7 @@ upstream repository. This works as a cache so that you don't have to
 pull multiple copies over the network. No need to check files out here
 as you won't be changing them.
 
-The outgoing tree contains all the changes you intend for merger into
+The outgoing tree contains all the changes you intend for merge into
 upsteam. Publish this tree with 'hg serve" or hgweb.cgi or use 'hg
 push" to push it to another publicly availabe repository.
 
@@ -196,7 +196,7 @@ process, which can then be added to our test suite.
 
 If you'd like to request a feature, send your request to
 mercurial@selenic.com. As Mercurial is still very new, there are
-certainly features it is missing and you can give up feedback on how
+certainly features it is missing and you can give us feedback on how
 best to implement them.
 
 
@@ -256,7 +256,7 @@ range from 100 to 1 for things like project makefiles to over 2000 to
 A manifest is simply a list of all files in a given revision of a
 project along with the nodeids of the corresponding file revisions. So
 grabbing a given version of the project means simply looking up its
-manifest and reconstruction all the file revisions pointed to by it.
+manifest and reconstructing all the file revisions pointed to by it.
 
 A changeset is a list of all files changed in a check-in along with a
 change description and some metadata like user and date. It also
