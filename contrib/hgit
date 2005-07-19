@@ -111,7 +111,7 @@ def catfile(args, ui, repo):
         if type != "commit":
             sys.stderr.write("aborting hg cat-file only understands commits\n")
             sys.exit(1);
-        n = repo.changelog.lookup(r)
+        n = repo.lookup(r)
         catcommit(repo, n, prefix)
         if doptions['stdin']:
             try:
@@ -146,17 +146,17 @@ def revtree(args, repo, full="tree", maxnr=0):
     # figure out which commits they are asking for and which ones they
     # want us to stop on
     for i in range(len(args)):
-        if args[i].count('^'):
-            s = args[i].split('^')[1]
-            stop_sha1.append(repo.changelog.lookup(s))
+        if args[i].startswith('^'):
+            s = repo.lookup(args[i][1:])
+            stop_sha1.append(s)
             want_sha1.append(s)
         elif args[i] != 'HEAD':
-            want_sha1.append(args[i])
+            want_sha1.append(repo.lookup(args[i]))
 
     # calculate the graph for the supplied commits
     for i in range(len(want_sha1)):
         reachable.append({});
-        n = repo.changelog.lookup(want_sha1[i]);
+        n = want_sha1[i];
         visit = [n];
         reachable[i][n] = 1
         while visit:
@@ -224,7 +224,7 @@ def help():
     sys.stderr.write("  hgit cat-file [type] sha1\n")
     sys.stderr.write("  hgit diff-tree [-p] [-r] sha1 sha1\n")
     sys.stderr.write("  hgit rev-tree [sha1 ... [^stop sha1]]\n")
-    sys.stderr.write("  hgit rev-list [-c]\n")
+    sys.stderr.write("  hgit rev-list [-c] [sha1 [stop sha1]\n")
 
 cmd = sys.argv[1]
 args = sys.argv[2:]
