@@ -58,7 +58,7 @@ add [options] [files ...]::
     The files will be added to the repository at the next commit.
 
     If no names are given, add all files in the current directory and
-    its subdirectory.
+    its subdirectories.
 
 addremove::
     Add all new files and remove all missing files from the repository.
