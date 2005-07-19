@@ -18,7 +18,7 @@ def difftree(args, ui, repo):
         if node2:
             change = repo.changelog.read(node2)
             mmap2 = repo.manifest.read(change[0])
-            (c, a, d) = repo.diffrevs(node1, node2)
+            (c, a, d, u) = repo.changes(node1, node2)
             def read(f): return repo.file(f).read(mmap2[f])
             date2 = date(change)
         else:
@@ -51,8 +51,7 @@ def difftree(args, ui, repo):
         doptions = {}
         opts = [('p', 'patch', None, 'patch'),
                 ('r', 'recursive', None, 'recursive')]
-        args = fancyopts.fancyopts(args, opts, doptions,
-                                   'hg diff-tree [options] sha1 sha1')
+        args = fancyopts.fancyopts(args, opts, doptions)
 
     if len(args) < 2:
         help()
@@ -61,7 +60,7 @@ def difftree(args, ui, repo):
     revs.append(repo.lookup(args[1]))
     args = args[2:]
     if doptions['patch']:
-        commands.dodiff(ui, repo, "", args, *revs)
+        commands.dodiff(sys.stdout, ui, repo, args, *revs)
     else:
         __difftree(repo, args, *revs)
 
@@ -87,8 +86,7 @@ def catcommit(repo, n, prefix):
 def catfile(args, ui, repo):
     doptions = {}
     opts = [('s', 'stdin', None, 'stdin')]
-    args = fancyopts.fancyopts(args, opts, doptions,
-                               'hg cat-file type sha1')
+    args = fancyopts.fancyopts(args, opts, doptions)
 
     # in stdin mode, every line except the commit is prefixed with two
     # spaces.  This way the our caller can find the commit without magic
@@ -209,8 +207,7 @@ def revlist(args, repo):
     doptions = {}
     opts = [('c', 'commit', None, 'commit'),
             ('n', 'max-nr', 0, 'max-nr')]
-    args = fancyopts.fancyopts(args, opts, doptions,
-                               'hg rev-list')
+    args = fancyopts.fancyopts(args, opts, doptions)
     if doptions['commit']:
         full = "commit"
     else:
