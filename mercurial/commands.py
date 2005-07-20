@@ -121,6 +121,10 @@ def make_file(repo, r, pat, node=None,
     if not pat or pat == '-':
         if 'w' in mode: return sys.stdout
         else: return sys.stdin
+    if hasattr(pat, 'write') and 'w' in mode:
+        return pat
+    if hasattr(pat, 'read') and 'r' in mode:
+        return pat
     node_expander = {
         'H': lambda: hg.hex(node),
         'R': lambda: str(r.rev(node)),
