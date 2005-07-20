@@ -319,8 +319,10 @@ serve [options]::
     -n, --name <name>        name to show in web pages (default: working dir)
     -t, --templatedir <path> web templates to use
 
-status::
-    Show changed files in the working directory.
+status [options] [files]::
+    Show changed files in the working directory.  If no names are
+    given, all files are shown.  Otherwise, only files matching the
+    given names are shown.
 
     The codes used to show the status of files are:
     
@@ -328,6 +330,11 @@ status::
     A = added
     R = removed
     ? = not tracked
+
+    options:
+
+    -I, --include <pat>  include directories matching the given patterns
+    -X, --exclude <pat>  exclude directories matching the given patterns
 
 tag [-l -t <text> -d <datecode> -u <user>] <name> [revision]::
     Name a particular revision using <name>.

@@ -980,7 +980,7 @@ def serve(ui, repo, **opts):
             ui.status('listening at http://%s/\n' % addr)
     httpd.serve_forever()
 
-def status(ui, repo):
+def status(ui, repo, *pats, **opts):
     '''show changed files in the working directory
 
     C = changed
@@ -988,7 +988,8 @@ def status(ui, repo):
     R = removed
     ? = not tracked'''
 
-    (c, a, d, u) = repo.changes()
+    (c, a, d, u) = repo.changes(match = matchpats(ui, repo.getcwd(),
+                                                  pats, opts))
     (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
     for f in c:
@@ -1192,7 +1193,10 @@ table = {
           ('', 'stdio', None, 'for remote clients'),
           ('t', 'templates', "", 'template map')],
          "hg serve [OPTION]..."),
-    "^status": (status, [], 'hg status'),
+    "^status": (status,
+                [('I', 'include', [], 'include path in search'),
+                 ('X', 'exclude', [], 'exclude path from search')],
+                'hg status [OPTION]... [FILE]...'),
     "tag":
         (tag,
          [('l', 'local', None, 'make the tag local'),
