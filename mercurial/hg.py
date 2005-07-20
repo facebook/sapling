@@ -478,7 +478,7 @@ class dirstate:
             else:
                 if match(fn): unknown.append(fn)
 
-        return (lookup, changed, added, dc.keys(), unknown)
+        return (lookup, changed, added, filter(match, dc.keys()), unknown)
 
 # used to avoid circular references so destructors work
 def opener(base):
