@@ -118,7 +118,7 @@ def revrange(ui, repo, revs, revlog=None):
 
 def make_file(repo, r, pat, node=None,
               total=None, seqno=None, revwidth=None, mode='wb'):
-    if pat == '-':
+    if not pat or pat == '-':
         if 'w' in mode: return sys.stdout
         else: return sys.stdin
     node_expander = {
@@ -1098,7 +1098,9 @@ table = {
     "addremove": (addremove, [], "hg addremove [FILES]"),
     "^annotate":
         (annotate,
-         [('r', 'rev', '', 'revision'),
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search'),
+          ('r', 'rev', '', 'revision'),
           ('u', 'user', None, 'show user'),
           ('n', 'number', None, 'show revision number'),
           ('c', 'changeset', None, 'show changeset')],
