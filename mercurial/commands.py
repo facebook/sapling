@@ -39,7 +39,9 @@ def relpath(repo, args):
                 for x in args]
     return args
 
-def matchpats(ui, cwd, pats = [], opts = {}):
+def matchpats(ui, cwd, pats = [], opts = {}, emptyok = True):
+    if not pats and not emptyok:
+        raise Abort('at least one file name or pattern required')
     head = ''
     if opts.get('rootless'): head = '(?:.*/|)'
     def reify(name, tail):
@@ -65,10 +67,10 @@ def matchpats(ui, cwd, pats = [], opts = {}):
     return lambda fn: (incmatch(fn) and not excmatch(fn) and
                        (fn.endswith('/') or patmatch(fn)))
 
-def walk(repo, pats, opts):
+def walk(repo, pats, opts, emptyok = True):
     cwd = repo.getcwd()
     if cwd: c = len(cwd) + 1
-    for src, fn in repo.walk(match = matchpats(repo.ui, cwd, pats, opts)):
+    for src, fn in repo.walk(match = matchpats(repo.ui, cwd, pats, opts, emptyok)):
         if cwd: yield src, fn, fn[c:]
         else: yield src, fn, fn
 
@@ -361,7 +363,7 @@ def addremove(ui, repo, *files):
     repo.add(u)
     repo.remove(d)
 
-def annotate(ui, repo, file1, *files, **opts):
+def annotate(ui, repo, *pats, **opts):
     """show changeset information per file line"""
     def getnode(rev):
         return hg.short(repo.changelog.node(rev))
@@ -392,8 +394,8 @@ def annotate(ui, repo, file1, *files, **opts):
         node = repo.dirstate.parents()[0]
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
-    for f in relpath(repo, (file1,) + files):
-        lines = repo.file(f).annotate(mmap[f])
+    for src, abs, rel in walk(repo, pats, opts, emptyok = False):
+        lines = repo.file(abs).annotate(mmap[abs])
         pieces = []
 
         for o, f in opmap:
