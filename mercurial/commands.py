@@ -549,7 +549,7 @@ def debugindexdot(ui, file_):
             ui.write("\t%d -> %d\n" % (r.rev(e[5]), i))
     ui.write("}\n")
 
-def diff(ui, repo, *files, **opts):
+def diff(ui, repo, *pats, **opts):
     """diff working directory (or selected files)"""
     revs = []
     if opts['rev']:
@@ -558,11 +558,9 @@ def diff(ui, repo, *files, **opts):
     if len(revs) > 2:
         raise Abort("too many revisions to diff")
 
-    if files:
-        files = relpath(repo, files)
-    else:
-        files = relpath(repo, [""])
-
+    files = []
+    for src, abs, rel in walk(repo, pats, opts):
+        files.append(abs)
     dodiff(sys.stdout, ui, repo, files, *revs)
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
@@ -1126,7 +1124,9 @@ table = {
     "debugindexdot": (debugindexdot, [], 'debugindexdot FILE'),
     "^diff":
         (diff,
-         [('r', 'rev', [], 'revision')],
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search'),
+          ('r', 'rev', [], 'revision')],
          'hg diff [-r REV1 [-r REV2]] [FILE]...'),
     "^export":
         (export,
