@@ -299,9 +299,12 @@ class dirstate:
                             bigpat.append(util.pconvert(pat[:-1]))
             except IOError: pass
 
-            s = "(?:%s)" % (")|(?:".join(bigpat))
-            r = re.compile(s)
-            self.ignorefunc = r.search
+            if bigpat:
+                s = "(?:%s)" % (")|(?:".join(bigpat))
+                r = re.compile(s)
+                self.ignorefunc = r.search
+            else:
+                self.ignorefunc = util.never
 
         return self.ignorefunc(f)
 
