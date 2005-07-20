@@ -116,15 +116,8 @@ def revrange(ui, repo, revs, revlog=None):
         else:
             yield spec
 
-def make_file(repo, r, pat, node=None,
-              total=None, seqno=None, revwidth=None, mode='wb'):
-    if not pat or pat == '-':
-        if 'w' in mode: return sys.stdout
-        else: return sys.stdin
-    if hasattr(pat, 'write') and 'w' in mode:
-        return pat
-    if hasattr(pat, 'read') and 'r' in mode:
-        return pat
+def make_filename(repo, r, pat, node=None,
+                  total=None, seqno=None, revwidth=None):
     node_expander = {
         'H': lambda: hg.hex(node),
         'R': lambda: str(r.rev(node)),
@@ -158,10 +151,22 @@ def make_file(repo, r, pat, node=None,
                 c = expander[c]()
             newname.append(c)
             i += 1
-        return open(''.join(newname), mode)
+        return ''.join(newname)
     except KeyError, inst:
         raise Abort("invalid format spec '%%%s' in output file name",
                     inst.args[0])
+
+def make_file(repo, r, pat, node=None,
+              total=None, seqno=None, revwidth=None, mode='wb'):
+    if not pat or pat == '-':
+        if 'w' in mode: return sys.stdout
+        else: return sys.stdin
+    if hasattr(pat, 'write') and 'w' in mode:
+        return pat
+    if hasattr(pat, 'read') and 'r' in mode:
+        return pat
+    return open(make_filename(repo, r, pat, node, total, seqno, revwidth),
+                mode)
 
 def dodiff(fp, ui, repo, files=None, node1=None, node2=None):
     def date(c):
@@ -590,6 +595,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     fp.write("\n\n")
 
     dodiff(fp, ui, repo, None, prev, node)
+    if fp != sys.stdout: fp.close()
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets"""
