@@ -6,7 +6,7 @@ include tests/README tests/run-tests tests/test-*[a-z] tests/*.out
 include *.txt
 include templates/map templates/map-*[a-z]
 include templates/*.tmpl
-include doc/README doc/*.txt
+include doc/README doc/*.txt Makefile
 recursive-include contrib *
 include README
 include CONTRIBUTORS
