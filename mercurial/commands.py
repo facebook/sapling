@@ -114,8 +114,11 @@ def revrange(ui, repo, revs, revlog=None):
         else:
             yield spec
 
-def make_filename(repo, r, pat, node=None,
-                  total=None, seqno=None, revwidth=None):
+def make_file(repo, r, pat, node=None,
+              total=None, seqno=None, revwidth=None, mode='wb'):
+    if pat == '-':
+        if 'w' in mode: return sys.stdout
+        else: return sys.stdin
     node_expander = {
         'H': lambda: hg.hex(node),
         'R': lambda: str(r.rev(node)),
@@ -149,7 +152,7 @@ def make_filename(repo, r, pat, node=None,
                 c = expander[c]()
             newname.append(c)
             i += 1
-        return ''.join(newname)
+        return open(''.join(newname), mode)
     except KeyError, inst:
         raise Abort("invalid format spec '%%%s' in output file name",
                     inst.args[0])
@@ -409,10 +412,7 @@ def cat(ui, repo, file1, rev=None, **opts):
         n = r.lookup(rev)
     else:
         n = r.tip()
-    if opts['output'] and opts['output'] != '-':
-        fp = open(make_filename(repo, r, opts['output'], node=n), 'wb')
-    else:
-        fp = sys.stdout
+    fp = make_file(repo, r, opts['output'], node=n)
     fp.write(r.read(n))
 
 def clone(ui, source, dest=None, **opts):
@@ -570,14 +570,11 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     prev, other = repo.changelog.parents(node)
     change = repo.changelog.read(node)
 
-    if opts['output'] and opts['output'] != '-':
-        outname = make_filename(repo, repo.changelog, opts['output'],
-                                node=node, total=total, seqno=seqno,
-                                revwidth=revwidth)
-        ui.note("Exporting patch to '%s'.\n" % outname)
-        fp = open(outname, 'wb')
-    else:
-        fp = sys.stdout
+    fp = make_file(repo, repo.changelog, opts['output'],
+                   node=node, total=total, seqno=seqno,
+                   revwidth=revwidth)
+    if fp != sys.stdout:
+        ui.note("Exporting patch to '%s'.\n" % fp.name)
 
     fp.write("# HG changeset patch\n")
     fp.write("# User %s\n" % change[1])
