@@ -73,6 +73,8 @@ annotate [-r <rev> -u -n -c] [files ...]::
     place.
     
     options:
+    -I, --include <pat>  include directories matching the given patterns
+    -X, --exclude <pat>  exclude directories matching the given patterns
     -r, --revision <rev>  annotate the specified revision
     -u, --user            list the author
     -c, --changeset       list the changeset
@@ -132,6 +134,10 @@ diff [-r revision] [-r revision] [files ...]::
     that revision is compared to the working directory, and, when no
     revisions are specified, the working directory files are compared
     to its parent.
+
+    options:
+    -I, --include <pat>  include directories matching the given patterns
+    -X, --exclude <pat>  exclude directories matching the given patterns
 
 export [-o filespec] [revision] ...::
     Print the changeset header and diffs for one or more revisions.
