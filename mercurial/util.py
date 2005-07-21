@@ -6,6 +6,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, errno
+from demandload import *
+demandload(globals(), "re")
 
 def unique(g):
     seen = {}
@@ -28,6 +30,54 @@ def explain_exit(code):
         val = os.WSTOPSIG(code)
         return "stopped by signal %d" % val, val
     raise ValueError("invalid exit code")
+
+def always(fn): return True
+def never(fn): return False
+
+def globre(pat, head = '^', tail = '$'):
+    "convert a glob pattern into a regexp"
+    i, n = 0, len(pat)
+    res = ''
+    group = False
+    def peek(): return i < n and pat[i]
+    while i < n:
+        c = pat[i]
+        i = i+1
+        if c == '*':
+            if peek() == '*':
+                i += 1
+                res += '.*'
+            else:
+                res += '[^/]*'
+        elif c == '?':
+            res += '.'
+        elif c == '[':
+            j = i
+            if j < n and pat[j] in '!]':
+                j += 1
+            while j < n and pat[j] != ']':
+                j += 1
+            if j >= n:
+                res += '\\['
+            else:
+                stuff = pat[i:j].replace('\\','\\\\')
+                i = j + 1
+                if stuff[0] == '!':
+                    stuff = '^' + stuff[1:]
+                elif stuff[0] == '^':
+                    stuff = '\\' + stuff
+                res = '%s[%s]' % (res, stuff)
+        elif c == '{':
+            group = True
+            res += '(?:'
+        elif c == '}' and group:
+            res += ')'
+            group = False
+        elif c == ',' and group:
+            res += '|'
+        else:
+            res += re.escape(c)
+    return head + res + tail
 
 def system(cmd, errprefix=None):
     """execute a shell command that must succeed"""
