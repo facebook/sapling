@@ -24,7 +24,7 @@ first                              0:acb14030fe0a21b60322c440ad2d20cf7685a376
 b9154636be93 tip
 + echo bb
 + hg status
-C a
+M a
 + hg identify
 b9154636be93+ tip
 + hg co first
@@ -33,7 +33,7 @@ acb14030fe0a+ first
 + hg -v id
 acb14030fe0a21b60322c440ad2d20cf7685a376+ first
 + hg status
-C a
+M a
 + echo 1
 + hg add b
 + hg commit -t branch -u test -d '0 0'
@@ -43,5 +43,5 @@ c8edf04160c7 tip
 + hg id
 c8edf04160c7+b9154636be93+ tip
 + hg status
-C .hgtags
-C a
+M .hgtags
+M a

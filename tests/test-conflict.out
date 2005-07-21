@@ -20,5 +20,5 @@ something else
 =======
 something
 + hg status
-C a
+M a
 ? .out

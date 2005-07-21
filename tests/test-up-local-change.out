@@ -24,7 +24,7 @@ diff -r c19d34741b0a a
 + cd ../r2
 + hg -q pull ../r1
 + hg status
-C a
+M a
 + hg --debug up
 resolving manifests
  force None allow None moddirstate True linear True
