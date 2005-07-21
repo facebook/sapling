@@ -79,6 +79,37 @@ def globre(pat, head = '^', tail = '$'):
             res += re.escape(c)
     return head + res + tail
 
+def matcher(cwd, pats, inc, exc, head = ''):
+    def regex(name, tail):
+        '''convert a pattern into a regular expression'''
+        if name.startswith('re:'):
+            return name[3:]
+        elif name.startswith('path:'):
+            return '^' + re.escape(name[5:]) + '$'
+        elif name.startswith('glob:'):
+            return head + globre(name[5:], '', tail)
+        return head + globre(name, '', tail)
+
+    def under(fn):
+        """check if fn is under our cwd"""
+        return not cwd or fn.startswith(cwdsep)
+
+    def matchfn(pats, tail):
+        """build a matching function from a set of patterns"""
+        if pats:
+            pat = '(?:%s)' % '|'.join([regex(p, tail) for p in pats])
+            if cwd:
+                pat = re.escape(cwd + os.sep) + pat
+            return re.compile(pat).match
+
+    cwdsep = cwd + os.sep
+    patmatch = matchfn(pats, '$') or (lambda fn: True)
+    incmatch = matchfn(inc, '(?:/|$)') or under
+    excmatch = matchfn(exc, '(?:/|$)') or (lambda fn: False)
+
+    return lambda fn: (incmatch(fn) and not excmatch(fn) and
+                       (fn.endswith('/') or patmatch(fn)))
+
 def system(cmd, errprefix=None):
     """execute a shell command that must succeed"""
     rc = os.system(cmd)

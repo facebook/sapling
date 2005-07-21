@@ -39,40 +39,16 @@ def relpath(repo, args):
                 for x in args]
     return args
 
-def matchpats(ui, cwd, pats = [], opts = {}, emptyok = True):
-    if not pats and not emptyok:
-        raise Abort('at least one file name or pattern required')
-    head = ''
-    if opts.get('rootless'): head = '(?:.*/|)'
-    def reify(name, tail):
-        if name.startswith('re:'):
-            return name[3:]
-        elif name.startswith('glob:'):
-            return head + util.globre(name[5:], '', tail)
-        elif name.startswith('path:'):
-            return '^' + re.escape(name[5:]) + '$'
-        return head + util.globre(name, '', tail)
-    cwdsep = cwd + os.sep
-    def under(fn):
-        if not cwd or fn.startswith(cwdsep): return True
-    def matchfn(pats, tail, ifempty = util.always):
-        if not pats: return ifempty
-        pat = '(?:%s)' % '|'.join([reify(p, tail) for p in pats])
-        if cwd: pat = re.escape(cwd + os.sep) + pat
-        ui.debug('regexp: %s\n' % pat)
-        return re.compile(pat).match
-    patmatch = matchfn(pats, '$')
-    incmatch = matchfn(opts.get('include'), '(?:/|$)', under)
-    excmatch = matchfn(opts.get('exclude'), '(?:/|$)', util.never)
-    return lambda fn: (incmatch(fn) and not excmatch(fn) and
-                       (fn.endswith('/') or patmatch(fn)))
+def matchpats(cwd, pats = [], opts = {}, head = ''):
+    return util.matcher(cwd, pats, opts.get('include'),
+                        opts.get('exclude'), head)
 
-def walk(repo, pats, opts, emptyok = True):
+def walk(repo, pats, opts, head = ''):
     cwd = repo.getcwd()
+    c = 0
     if cwd: c = len(cwd) + 1
-    for src, fn in repo.walk(match = matchpats(repo.ui, cwd, pats, opts, emptyok)):
-        if cwd: yield src, fn, fn[c:]
-        else: yield src, fn, fn
+    for src, fn in repo.walk(match = matchpats(cwd, pats, opts, head)):
+        yield src, fn, fn[c:]
 
 revrangesep = ':'
 
@@ -709,10 +685,10 @@ def init(ui, source=None):
 
 def locate(ui, repo, *pats, **opts):
     """locate files matching specific patterns"""
+    end = '\n'
     if opts['print0']: end = '\0'
-    else: end = '\n'
-    opts['rootless'] = True
-    for src, abs, rel in walk(repo, pats, opts):
+
+    for src, abs, rel in walk(repo, pats, opts, '(?:.*/|)'):
         if repo.dirstate.state(abs) == '?': continue
         if opts['fullpath']:
             ui.write(os.path.join(repo.root, abs), end)
@@ -998,8 +974,7 @@ def status(ui, repo, *pats, **opts):
     R = removed
     ? = not tracked'''
 
-    (c, a, d, u) = repo.changes(match = matchpats(ui, repo.getcwd(),
-                                                  pats, opts))
+    (c, a, d, u) = repo.changes(match = matchpats(repo.getcwd(), pats, opts))
     (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
     for f in c:
