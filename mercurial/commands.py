@@ -729,11 +729,6 @@ def log(ui, repo, f=None, **opts):
             dodiff(sys.stdout, ui, repo, files, prev, changenode)
             ui.write("\n\n")
 
-def ls(ui, repo, *pats, **opts):
-    """list files"""
-    for src, abs, rel in walk(repo, pats, opts):
-        ui.write(rel, '\n')
-
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest"""
     if rev:
@@ -1144,10 +1139,6 @@ table = {
          [('r', 'rev', [], 'revision'),
           ('p', 'patch', None, 'show patch')],
          'hg log [-r REV1 [-r REV2]] [-p] [FILE]'),
-    "list|ls": (ls,
-                [('I', 'include', [], 'include path in search'),
-                 ('X', 'exclude', [], 'exclude path from search')],
-                "hg ls [OPTION]... [PATTERN]...."),
     "manifest": (manifest, [], 'hg manifest [REV]'),
     "parents": (parents, [], 'hg parents [REV]'),
     "^pull":
