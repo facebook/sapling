@@ -657,12 +657,12 @@ class hgweb:
             write(self.filelog(args['file'][0], args['filenode'][0]))
 
         elif args['cmd'][0] == 'heads':
-            httphdr("text/plain")
+            httphdr("application/mercurial-0.1")
             h = self.repo.heads()
             sys.stdout.write(" ".join(map(hex, h)) + "\n")
 
         elif args['cmd'][0] == 'branches':
-            httphdr("text/plain")
+            httphdr("application/mercurial-0.1")
             nodes = []
             if args.has_key('nodes'):
                 nodes = map(bin, args['nodes'][0].split(" "))
@@ -670,7 +670,7 @@ class hgweb:
                 sys.stdout.write(" ".join(map(hex, b)) + "\n")
 
         elif args['cmd'][0] == 'between':
-            httphdr("text/plain")
+            httphdr("application/hg-0.1")
             nodes = []
             if args.has_key('pairs'):
                 pairs = [ map(bin, p.split("-"))
@@ -679,7 +679,7 @@ class hgweb:
                 sys.stdout.write(" ".join(map(hex, b)) + "\n")
 
         elif args['cmd'][0] == 'changegroup':
-            httphdr("application/hg-changegroup")
+            httphdr("application/mercurial-0.1")
             nodes = []
             if self.viewonly:
                 return

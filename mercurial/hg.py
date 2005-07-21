@@ -1753,10 +1753,20 @@ class httprepository:
             self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
             raise
 
+    def verify_hg_repo(self, resp):
+        if (resp.headers['content-type'] == 'application/hg-0.1'):
+            pass
+        else:
+            msg = """'%s' does not appear to be a valid hg repository -
+missing a 'Content-type: application/hg-0.1' HTTP header""" % (self.url,)
+            raise RepoError(msg)
+
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
-        d = self.do_cmd("branches", nodes=n).read()
+        resp = self.do_cmd("branches", nodes=n);
+        self.verify_hg_repo(resp);
         try:
+            d = resp.read()
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
@@ -1765,8 +1775,10 @@ class httprepository:
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
-        d = self.do_cmd("between", pairs=n).read()
+        resp = self.do_cmd("between", pairs=n)
+        self.verify_hg_repo(resp) 
         try:
+            d = resp.read()
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
@@ -1775,7 +1787,8 @@ class httprepository:
 
     def changegroup(self, nodes):
         n = " ".join(map(hex, nodes))
-        f = self.do_cmd("changegroup", roots=n)
+        resp = self.do_cmd("changegroup", roots=n)
+        self.verify_hg_repo(resp)
         bytes = 0
 
         class zread:
@@ -1785,7 +1798,7 @@ class httprepository:
                 self.buf = ""
             def read(self, l):
                 while l > len(self.buf):
-                    r = f.read(4096)
+                    r = self.f.read(4096)
                     if r:
                         self.buf += self.zd.decompress(r)
                     else:
@@ -1794,7 +1807,7 @@ class httprepository:
                 d, self.buf = self.buf[:l], self.buf[l:]
                 return d
 
-        return zread(f)
+        return zread(resp)
 
 class remotelock:
     def __init__(self, repo):
