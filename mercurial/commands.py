@@ -368,6 +368,9 @@ def annotate(ui, repo, *pats, **opts):
             bcache[rev] = name
             return name
 
+    if not pats:
+        raise Abort('at least one file name or pattern required')
+
     bcache = {}
     opmap = [['user', getname], ['number', str], ['changeset', getnode]]
     if not opts['user'] and not opts['changeset']:
@@ -379,7 +382,7 @@ def annotate(ui, repo, *pats, **opts):
         node = repo.dirstate.parents()[0]
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
-    for src, abs, rel in walk(repo, pats, opts, emptyok = False):
+    for src, abs, rel in walk(repo, pats, opts):
         lines = repo.file(abs).annotate(mmap[abs])
         pieces = []
 
