@@ -332,7 +332,7 @@ status [options] [files]::
 
     The codes used to show the status of files are:
     
-    C = changed
+    M = changed
     A = added
     R = removed
     ? = not tracked

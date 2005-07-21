@@ -967,7 +967,7 @@ def serve(ui, repo, **opts):
 def status(ui, repo, *pats, **opts):
     '''show changed files in the working directory
 
-    C = changed
+    M = modified
     A = added
     R = removed
     ? = not tracked'''
@@ -976,7 +976,7 @@ def status(ui, repo, *pats, **opts):
     (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
     for f in c:
-        ui.write("C ", f, "\n")
+        ui.write("M ", f, "\n")
     for f in a:
         ui.write("A ", f, "\n")
     for f in d:
