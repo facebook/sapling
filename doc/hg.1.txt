@@ -100,7 +100,7 @@ clone [-U] <source> [dest]::
     options:
     -U, --noupdate   do not update the new working directory
 
-commit [-A -t -l <file> -t <text> -u <user> -d <datecode>] [files...]::
+commit [-A -t -l <file> -m <text> -u <user> -d <datecode>] [files...]::
     Commit changes to the given files into the repository.
     
     If a list of files is omitted, all changes reported by "hg status"
@@ -112,7 +112,7 @@ commit [-A -t -l <file> -t <text> -u <user> -d <datecode>] [files...]::
     Options:
 
     -A, --addremove       run addremove during commit
-    -t, --text <text>     use <text> as commit message
+    -m, --text <text>     use <text> as commit message
     -l, --logfile <file>  show the commit message for the given file
     -d, --date <datecode> record datecode as commit date
     -u, --user <user>     record user as commiter

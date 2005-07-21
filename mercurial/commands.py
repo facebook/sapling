@@ -1099,7 +1099,8 @@ table = {
     "^commit|ci":
         (commit,
          [('A', 'addremove', None, 'run add/remove during commit'),
-          ('t', 'text', "", 'commit text'),
+          ('m', 'text', "", 'commit message'),
+          ('t', 'text', "", 'commit message (deprecated)'),
           ('l', 'logfile', "", 'commit text file'),
           ('d', 'date', "", 'date code'),
           ('u', 'user', "", 'user')],
