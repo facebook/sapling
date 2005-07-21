@@ -1744,10 +1744,20 @@ class httprepository:
         qs = urllib.urlencode(q)
         cu = "%s?%s" % (self.url, qs)
         resp = urllib2.urlopen(cu)
+        proto = resp.headers['content-type']
 
-        if not resp.headers['content-type'].startswith('application/hg'):
+        # accept old "text/plain" and "application/hg-changegroup" for now
+        if not proto.startswith('application/mercurial') and \
+               not proto.startswith('text/plain') and \
+               not proto.startswith('application/hg-changegroup'):
             raise RepoError("'%s' does not appear to be an hg repository"
                             % self.url)
+
+        if proto.startswith('application/mercurial'):
+            version = proto[22:]
+            if float(version) > 0.1:
+                raise RepoError("'%s' uses newer protocol %s" %
+                                (self.url, version))
 
         return resp
 

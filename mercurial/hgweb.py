@@ -670,7 +670,7 @@ class hgweb:
                 sys.stdout.write(" ".join(map(hex, b)) + "\n")
 
         elif args['cmd'][0] == 'between':
-            httphdr("application/hg-0.1")
+            httphdr("application/mercurial-0.1")
             nodes = []
             if args.has_key('pairs'):
                 pairs = [ map(bin, p.split("-"))
