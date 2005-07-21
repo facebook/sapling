@@ -269,7 +269,7 @@ push <destination>::
 
       ssh://[user@]host[:port]/path
 
-rawcommit [-p -d -u -F -t -l]::
+rawcommit [-p -d -u -F -m -l]::
     Lowlevel commit, for use in helper scripts.
     
     This command is not intended to be used by normal users, as it is
