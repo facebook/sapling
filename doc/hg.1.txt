@@ -342,7 +342,7 @@ status [options] [files]::
     -I, --include <pat>  include directories matching the given patterns
     -X, --exclude <pat>  exclude directories matching the given patterns
 
-tag [-l -t <text> -d <datecode> -u <user>] <name> [revision]::
+tag [-l -m <text> -d <datecode> -u <user>] <name> [revision]::
     Name a particular revision using <name>.
     
     Tags are used to name particular revisions of the repository and are
@@ -358,7 +358,7 @@ tag [-l -t <text> -d <datecode> -u <user>] <name> [revision]::
 
     options:
     -l, --local           make the tag local
-    -t, --text <text>     message for tag commit log entry
+    -m, --text <text>     message for tag commit log entry
     -d, --date <datecode> datecode for commit
     -u, --user <user>     user for commit
 

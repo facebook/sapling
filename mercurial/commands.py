@@ -1185,7 +1185,8 @@ table = {
     "tag":
         (tag,
          [('l', 'local', None, 'make the tag local'),
-          ('t', 'text', "", 'commit text'),
+          ('m', 'text', "", 'commit message'),
+          ('t', 'text', "", 'commit message (deprecated)'),
           ('d', 'date', "", 'date code'),
           ('u', 'user', "", 'user')],
          'hg tag [OPTION]... NAME [REV]'),
