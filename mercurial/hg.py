@@ -125,7 +125,8 @@ class manifest(revlog):
         else:
             return mdiff.textdiff(a, b)
 
-    def add(self, map, flags, transaction, link, p1=None, p2=None,changed=None):
+    def add(self, map, flags, transaction, link, p1=None, p2=None,
+            changed=None):
         # directly generate the mdiff delta from the data collected during
         # the bisect loop below
         def gendelta(delta):
@@ -137,7 +138,8 @@ class manifest(revlog):
                 l = delta[i][4]
                 if l == None:
                     l = ""
-                while i < len(delta) - 1 and start <= delta[i+1][2] and end >= delta[i+1][2]:
+                while i < len(delta) - 1 and start <= delta[i+1][2] \
+                          and end >= delta[i+1][2]:
                     if delta[i+1][3] > end:
                         end = delta[i+1][3]
                     if delta[i+1][4]:
@@ -177,7 +179,8 @@ class manifest(revlog):
 
         # if we're using the listcache, make sure it is valid and
         # parented by the same node we're diffing against
-        if not changed or not self.listcache or not p1 or self.mapcache[0] != p1:
+        if not changed or not self.listcache or not p1 or \
+               self.mapcache[0] != p1:
             files = map.keys()
             files.sort()
 
@@ -201,14 +204,15 @@ class manifest(revlog):
 
             for w in work:
                 f = w[0]
-                # bs will either be the index of the item or the insertion point
+                # bs will either be the index of the item or the insert point
                 bs = bisect.bisect(addlist, f, bs)
                 if bs < len(addlist):
                     fn = addlist[bs][:addlist[bs].index('\0')]
                 else:
                     fn = None
                 if w[1] == 0:
-                    l = "%s\000%s%s\n" % (f, hex(map[f]), flags[f] and "x" or '')
+                    l = "%s\000%s%s\n" % (f, hex(map[f]),
+                                          flags[f] and "x" or '')
                 else:
                     l = None
                 start = bs
@@ -814,7 +818,8 @@ class localrepository:
         for f in remove:
             if f in m1:
                 del m1[f]
-        mn = self.manifest.add(m1, mf1, tr, linkrev, c1[0], c2[0], (new,remove))
+        mn = self.manifest.add(m1, mf1, tr, linkrev, c1[0], c2[0],
+                               (new, remove))
 
         # add changeset
         new = new.keys()
@@ -864,7 +869,7 @@ class localrepository:
                 if not match(fn):
                     del mf[fn]
             return mf
-            
+
         # are we comparing the working directory?
         if not node2:
             l, c, a, d, u = self.dirstate.changes(files, match)
@@ -926,7 +931,7 @@ class localrepository:
             if not os.path.exists(p):
                 self.ui.warn("%s does not exist!\n" % f)
             elif not os.path.isfile(p):
-                self.ui.warn("%s not added: mercurial only supports files currently\n" % f)
+                self.ui.warn("%s not added: only files supported currently\n" % f)
             elif self.dirstate.state(f) in 'an':
                 self.ui.warn("%s already tracked!\n" % f)
             else:
