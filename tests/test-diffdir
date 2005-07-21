@@ -3,7 +3,7 @@
 hg init
 touch a
 hg add a
-hg ci -t "a" -u test -d "0 0"
+hg ci -m "a" -d "0 0"
 
 echo 123 > b
 hg add b

@@ -3,7 +3,7 @@
 + hg init
 + echo a
 + hg addremove
-+ hg commit -t 1 -u test -d '0 0'
++ hg commit -m 1 -d '0 0'
 + hg clone . ../r2
 + cd ../r2
 + hg up
@@ -20,7 +20,7 @@ diff -r c19d34741b0a a
 + echo b
 + echo a2
 + hg addremove
-+ hg commit -t 2 -u test -d '0 0'
++ hg commit -m 2 -d '0 0'
 + cd ../r2
 + hg -q pull ../r1
 + hg status

@@ -6,7 +6,7 @@ cd t
 hg init
 echo a > a
 hg add a
-hg commit -t "test" -u test -d "0 0"
+hg commit -t test -d "0 0"
 hg history
 hg manifest
 hg cat a

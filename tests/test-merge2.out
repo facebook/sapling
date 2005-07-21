@@ -3,15 +3,15 @@
 + hg init
 + echo This is file a1
 + hg add a
-+ hg commit -t 'commit #0' -d '0 0' -u user
++ hg commit -m 'commit #0' -d '0 0'
 + echo This is file b1
 + hg add b
-+ hg commit -t 'commit #1' -d '0 0' -u user
++ hg commit -m 'commit #1' -d '0 0'
 + rm b
 + hg update 0
 + echo This is file b2
 + hg add b
-+ hg commit -t 'commit #2' -d '0 0' -u user
++ hg commit -m 'commit #2' -d '0 0'
 + cd ..
 + /bin/rm -rf t
 + mkdir t
@@ -19,14 +19,14 @@
 + hg init
 + echo This is file a1
 + hg add a
-+ hg commit -t 'commit #0' -d '0 0' -u user
++ hg commit -m 'commit #0' -d '0 0'
 + echo This is file b1
 + hg add b
-+ hg commit -t 'commit #1' -d '0 0' -u user
++ hg commit -m 'commit #1' -d '0 0'
 + rm b
 + hg update 0
 + echo This is file b2
-+ hg commit -A -t 'commit #2' -d '0 0' -u user
++ hg commit -A -m 'commit #2' -d '0 0'
 + cd ..
 + /bin/rm -rf t
 + mkdir t
@@ -34,14 +34,14 @@
 + hg init
 + echo This is file a1
 + hg add a
-+ hg commit -t 'commit #0' -d '0 0' -u user
++ hg commit -m 'commit #0' -d '0 0'
 + echo This is file b1
 + hg add b
-+ hg commit -t 'commit #1' -d '0 0' -u user
++ hg commit -m 'commit #1' -d '0 0'
 + rm b
 + hg remove b
 + hg update 0
 + echo This is file b2
-+ hg commit -A -t 'commit #2' -d '0 0' -u user
++ hg commit -A -m 'commit #2' -d '0 0'
 + cd ..
 + /bin/rm -rf t

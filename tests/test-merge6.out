@@ -8,16 +8,16 @@
 + echo This is file foo1
 + echo This is file bar1
 + hg add foo bar
-+ hg commit -t 'commit text' -d '0 0' -u user
++ hg commit -m 'commit text' -d '0 0'
 + cd ..
 + hg clone A1 B1
 + cd A1
 + rm bar
 + hg remove bar
-+ hg commit -t 'commit test' -d '0 0' -u user
++ hg commit -m 'commit test' -d '0 0'
 + cd ../B1
 + echo This is file foo22
-+ hg commit -t 'commit test' -d '0 0' -u user
++ hg commit -m 'commit test' -d '0 0'
 + cd ..
 + hg clone A1 A2
 + hg clone B1 B2
@@ -31,7 +31,7 @@ adding file revisions
 modified 1 files, added 1 changesets and 1 new revisions
 (run 'hg update' to get a working copy)
 + hg update -m
-+ hg commit -t 'commit test' -d '0 0' -u user
++ hg commit -m 'commit test' -d '0 0'
 + echo bar should remain deleted.
 bar should remain deleted.
 + hg manifest
@@ -46,7 +46,7 @@ adding file revisions
 modified 0 files, added 1 changesets and 0 new revisions
 (run 'hg update' to get a working copy)
 + hg update -m
-+ hg commit -t 'commit test' -d '0 0' -u user
++ hg commit -m 'commit test' -d '0 0'
 + echo bar should remain deleted.
 bar should remain deleted.
 + hg manifest

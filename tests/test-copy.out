@@ -1,7 +1,7 @@
 + hg init
 + echo a
 + hg add a
-+ hg commit -t 1 -u test -d '0 0'
++ hg commit -m 1 -d '0 0'
 + hg status
 ? .out
 + cp a b
@@ -9,7 +9,7 @@
 + hg status
 A b
 ? .out
-+ hg --debug commit -t 2 -u test -d '0 0'
++ hg --debug commit -m 2 -d '0 0'
 b
  b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 + hg history

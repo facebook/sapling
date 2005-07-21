@@ -3,7 +3,7 @@
 + hg init
 + echo a
 + hg add a
-+ hg commit -t test -u test -d '0 0'
++ hg commit -t test -d '0 0'
 + hg history
 changeset:   0:acb14030fe0a21b60322c440ad2d20cf7685a376
 tag:         tip

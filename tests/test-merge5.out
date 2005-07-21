@@ -4,12 +4,12 @@
 + echo This is file a1
 + echo This is file b1
 + hg add a b
-+ hg commit -t 'commit #0' -d '0 0' -u user
++ hg commit -m 'commit #0' -d '0 0'
 + echo This is file b22
-+ hg commit '-tcomment #1' -d '0 0' -u user
++ hg commit '-mcomment #1' -d '0 0'
 + hg update 0
 + rm b
-+ hg commit -A '-tcomment #2' -d '0 0' -u user
++ hg commit -A '-mcomment #2' -d '0 0'
 + yes k
 + hg update 1
 this update spans a branch affecting the following files:

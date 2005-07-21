@@ -1,9 +1,9 @@
 + hg init
 + echo This is file a1
 + hg add a
-+ hg commit -t 'commit #0' -d '0 0' -u user
++ hg commit -m 'commit #0' -d '0 0'
 + touch b
 + hg add b
 + rm b
-+ hg commit -A '-tcomment #1' -d '0 0' -u user
++ hg commit -A '-mcomment #1' -d '0 0'
 b never committed!

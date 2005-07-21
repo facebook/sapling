@@ -13,7 +13,7 @@ hg init
 echo This is file foo1 > foo
 echo This is file bar1 > bar
 hg add foo bar
-hg commit -t "commit text" -d "0 0" -u user
+hg commit -m "commit text" -d "0 0"
 
 cd ..
 hg clone A1 B1
@@ -21,11 +21,11 @@ hg clone A1 B1
 cd A1
 rm bar
 hg remove bar
-hg commit -t "commit test" -d "0 0" -u user
+hg commit -m "commit test" -d "0 0"
 
 cd ../B1
 echo This is file foo22 > foo
-hg commit -t "commit test" -d "0 0" -u user
+hg commit -m "commit test" -d "0 0"
 
 cd ..
 hg clone A1 A2
@@ -34,13 +34,13 @@ hg clone B1 B2
 cd A1
 hg pull ../B1
 hg update -m
-hg commit -t "commit test" -d "0 0" -u user
+hg commit -m "commit test" -d "0 0"
 echo bar should remain deleted.
 hg manifest
 
 cd ../B2
 hg pull ../A2
 hg update -m
-hg commit -t "commit test" -d "0 0" -u user
+hg commit -m "commit test" -d "0 0"
 echo bar should remain deleted.
 hg manifest

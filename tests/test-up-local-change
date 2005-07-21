@@ -1,14 +1,12 @@
 #!/bin/sh
 
-export HGMERGE=true
-
 set -ex
 mkdir r1
 cd r1
 hg init
 echo a > a
 hg addremove
-hg commit -t "1" -u test -d "0 0"
+hg commit -m "1" -d "0 0"
 
 hg clone . ../r2
 cd ../r2
@@ -21,7 +19,7 @@ cd ../r1
 echo b > b
 echo a2 > a
 hg addremove
-hg commit -t "2" -u test -d "0 0"
+hg commit -m "2" -d "0 0"
 
 cd ../r2
 hg -q pull ../r1

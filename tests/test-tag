@@ -3,11 +3,11 @@
 hg init
 echo a > a
 hg add a
-hg commit -t "test" -u test -d "0 0"
+hg commit -m "test" -d "0 0"
 hg history
-hg tag -u test -d "0 0" "bleah" 
+hg tag -d "0 0" "bleah" 
 hg history
 
 echo foo >> .hgtags
-hg tag -u test -d "0 0" "bleah2" || echo "failed" 
+hg tag -d "0 0" "bleah2" || echo "failed" 
 

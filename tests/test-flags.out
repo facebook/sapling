@@ -4,7 +4,7 @@
 + hg init
 + touch a b
 + hg add a b
-+ hg ci -t 'added a b' -u test -d '0 0'
++ hg ci -m 'added a b' -d '0 0'
 + cd ..
 + mkdir test2
 + cd test2
@@ -19,10 +19,10 @@ modified 2 files, added 1 changesets and 2 new revisions
 (run 'hg update' to get a working copy)
 + hg co
 + chmod +x a
-+ hg ci -t 'chmod +x a' -u test -d '0 0'
++ hg ci -m 'chmod +x a' -d '0 0'
 + cd ../test1
 + echo 123
-+ hg ci -t 'a updated' -u test -d '0 0'
++ hg ci -m 'a updated' -d '0 0'
 + hg pull ../test2
 pulling from ../test2
 searching for changes

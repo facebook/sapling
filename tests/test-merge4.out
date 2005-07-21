@@ -1,15 +1,15 @@
 + hg init
 + echo This is file a1
 + hg add a
-+ hg commit -t 'commit #0' -d '0 0' -u user
++ hg commit -m 'commit #0' -d '0 0'
 + echo This is file b1
 + hg add b
-+ hg commit -t 'commit #1' -d '0 0' -u user
++ hg commit -m 'commit #1' -d '0 0'
 + hg update 0
 + echo This is file c1
 + hg add c
-+ hg commit -t 'commit #2' -d '0 0' -u user
++ hg commit -m 'commit #2' -d '0 0'
 + hg update -m 1
 + rm b
 + echo This is file c22
-+ hg commit -t 'commit #3' -d '0 0' -u user
++ hg commit -m 'commit #3' -d '0 0'

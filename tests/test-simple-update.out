@@ -3,7 +3,7 @@
 + echo foo
 + hg init
 + hg addremove
-+ hg commit -t 1
++ hg commit -m 1
 + hg verify
 checking changesets
 checking manifests
@@ -14,7 +14,7 @@ checking files
 + cd ../branch
 + hg co
 + echo bar
-+ hg commit -t 2
++ hg commit -m 2
 + cd ../test
 + hg pull ../branch
 pulling from ../branch

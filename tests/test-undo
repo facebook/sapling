@@ -6,7 +6,7 @@ cd t
 hg init
 echo a > a
 hg add a
-hg commit -t "test" -u test -d "0 0"
+hg commit -m "test" -d "0 0"
 hg verify
 hg parents
 hg status

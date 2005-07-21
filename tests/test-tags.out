@@ -5,7 +5,7 @@
 unknown
 + echo a
 + hg add a
-+ hg commit -t test -u test -d '0 0'
++ hg commit -m test -d '0 0'
 + hg co
 + hg identify
 acb14030fe0a tip
@@ -16,7 +16,7 @@ acb14030fe0a tip
 + cat .hgtags
 acb14030fe0a21b60322c440ad2d20cf7685a376 first
 + hg add .hgtags
-+ hg commit -t 'add tags' -u test -d '0 0'
++ hg commit -m 'add tags' -d '0 0'
 + hg tags
 tip                                1:b9154636be938d3d431e75a7c906504a079bfe07
 first                              0:acb14030fe0a21b60322c440ad2d20cf7685a376
@@ -36,7 +36,7 @@ acb14030fe0a21b60322c440ad2d20cf7685a376+ first
 M a
 + echo 1
 + hg add b
-+ hg commit -t branch -u test -d '0 0'
++ hg commit -m branch -d '0 0'
 + hg id
 c8edf04160c7 tip
 + hg co -m 1
