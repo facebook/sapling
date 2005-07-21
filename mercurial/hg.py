@@ -1743,7 +1743,13 @@ class httprepository:
         q.update(args)
         qs = urllib.urlencode(q)
         cu = "%s?%s" % (self.url, qs)
-        return urllib2.urlopen(cu)
+        resp = urllib2.urlopen(cu)
+
+        if not resp.headers['content-type'].startswith('application/hg'):
+            raise RepoError("'%s' does not appear to be an hg repository"
+                            % self.url)
+
+        return resp
 
     def heads(self):
         d = self.do_cmd("heads").read()
@@ -1753,20 +1759,10 @@ class httprepository:
             self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
             raise
 
-    def verify_hg_repo(self, resp):
-        if (resp.headers['content-type'] == 'application/hg-0.1'):
-            pass
-        else:
-            msg = """'%s' does not appear to be a valid hg repository -
-missing a 'Content-type: application/hg-0.1' HTTP header""" % (self.url,)
-            raise RepoError(msg)
-
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
-        resp = self.do_cmd("branches", nodes=n);
-        self.verify_hg_repo(resp);
+        d = self.do_cmd("branches", nodes=n).read()
         try:
-            d = resp.read()
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
@@ -1775,10 +1771,8 @@ missing a 'Content-type: application/hg-0.1' HTTP header""" % (self.url,)
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
-        resp = self.do_cmd("between", pairs=n)
-        self.verify_hg_repo(resp) 
+        d = self.do_cmd("between", pairs=n).read()
         try:
-            d = resp.read()
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
@@ -1787,8 +1781,7 @@ missing a 'Content-type: application/hg-0.1' HTTP header""" % (self.url,)
 
     def changegroup(self, nodes):
         n = " ".join(map(hex, nodes))
-        resp = self.do_cmd("changegroup", roots=n)
-        self.verify_hg_repo(resp)
+        f = self.do_cmd("changegroup", roots=n)
         bytes = 0
 
         class zread:
@@ -1807,7 +1800,7 @@ missing a 'Content-type: application/hg-0.1' HTTP header""" % (self.url,)
                 d, self.buf = self.buf[:l], self.buf[l:]
                 return d
 
-        return zread(resp)
+        return zread(f)
 
 class remotelock:
     def __init__(self, repo):
