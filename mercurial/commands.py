@@ -615,7 +615,8 @@ def identify(ui, repo):
         parenttags = ['/'.join(tags)
                       for tags in map(repo.nodetags, parents) if tags]
         # tags for multiple parents separated by ' + '
-        output.append(' + '.join(parenttags))
+        if parenttags:
+            output.append(' + '.join(parenttags))
 
     ui.write("%s\n" % ' '.join(output))
 
