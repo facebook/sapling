@@ -562,7 +562,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
                    node=node, total=total, seqno=seqno,
                    revwidth=revwidth)
     if fp != sys.stdout:
-        ui.note("Exporting patch to '%s'.\n" % fp.name)
+        ui.note("%s\n" % fp.name)
 
     fp.write("# HG changeset patch\n")
     fp.write("# User %s\n" % change[1])
@@ -584,6 +584,7 @@ def export(ui, repo, *changesets, **opts):
     revs = list(revrange(ui, repo, changesets))
     total = len(revs)
     revwidth = max(len(revs[0]), len(revs[-1]))
+    ui.note(len(revs) > 1 and "Exporting patches:\n" or "Exporting patch:\n")
     for cset in revs:
         seqno += 1
         doexport(ui, repo, cset, seqno, total, revwidth, opts)
