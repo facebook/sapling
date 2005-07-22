@@ -112,7 +112,7 @@ commit [-A -t -l <file> -m <text> -u <user> -d <datecode>] [files...]::
     Options:
 
     -A, --addremove       run addremove during commit
-    -m, --text <text>     use <text> as commit message
+    -m, --message <text>  use <text> as commit message
     -l, --logfile <file>  show the commit message for the given file
     -d, --date <datecode> record datecode as commit date
     -u, --user <user>     record user as commiter
@@ -358,7 +358,7 @@ tag [-l -m <text> -d <datecode> -u <user>] <name> [revision]::
 
     options:
     -l, --local           make the tag local
-    -m, --text <text>     message for tag commit log entry
+    -m, --message <text>  message for tag commit log entry
     -d, --date <datecode> datecode for commit
     -u, --user <user>     user for commit
 

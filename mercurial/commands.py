@@ -460,7 +460,7 @@ def clone(ui, source, dest=None, **opts):
 
 def commit(ui, repo, *files, **opts):
     """commit the specified files or all outstanding changes"""
-    text = opts['text']
+    text = opts['message'] or opts['text']
     logfile = opts['logfile']
     if not text and logfile:
         try:
@@ -1101,7 +1101,7 @@ table = {
     "^commit|ci":
         (commit,
          [('A', 'addremove', None, 'run add/remove during commit'),
-          ('m', 'text', "", 'commit message'),
+          ('m', 'message', "", 'commit message'),
           ('t', 'text', "", 'commit message (deprecated: use -m)'),
           ('l', 'logfile', "", 'commit text file'),
           ('d', 'date', "", 'date code'),
