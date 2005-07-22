@@ -460,6 +460,9 @@ def clone(ui, source, dest=None, **opts):
 
 def commit(ui, repo, *files, **opts):
     """commit the specified files or all outstanding changes"""
+    if opts['text']:
+        ui.warn("Warning: -t and --text is deprecated,"
+                " please use -m or --message instead.\n")
     message = opts['message'] or opts['text']
     logfile = opts['logfile']
     if not message and logfile:
@@ -791,6 +794,9 @@ def push(ui, repo, dest="default-push"):
 
 def rawcommit(ui, repo, *flist, **rc):
     "raw commit interface"
+    if rc['text']:
+        ui.warn("Warning: -t and --text is deprecated,"
+                " please use -m or --message instead.\n")
     message = rc['message'] or rc['text']
     if not message and rc['logfile']:
         try:
@@ -987,6 +993,9 @@ def status(ui, repo, *pats, **opts):
 
 def tag(ui, repo, name, rev=None, **opts):
     """add a tag for the current tip or a given revision"""
+    if opts['text']:
+        ui.warn("Warning: -t and --text is deprecated,"
+                " please use -m or --message instead.\n")
     if name == "tip":
         ui.warn("abort: 'tip' is a reserved name!\n")
         return -1
