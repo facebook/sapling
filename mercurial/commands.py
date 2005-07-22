@@ -460,17 +460,17 @@ def clone(ui, source, dest=None, **opts):
 
 def commit(ui, repo, *files, **opts):
     """commit the specified files or all outstanding changes"""
-    text = opts['message'] or opts['text']
+    message = opts['message'] or opts['text']
     logfile = opts['logfile']
-    if not text and logfile:
+    if not message and logfile:
         try:
-            text = open(logfile).read()
+            message = open(logfile).read()
         except IOError, why:
-            ui.warn("Can't read commit text %s: %s\n" % (logfile, why))
+            ui.warn("Can't read commit message %s: %s\n" % (logfile, why))
 
     if opts['addremove']:
         addremove(ui, repo, *files)
-    repo.commit(relpath(repo, files), text, opts['user'], opts['date'])
+    repo.commit(relpath(repo, files), message, opts['user'], opts['date'])
 
 def copy(ui, repo, source, dest):
     """mark a file as copied or renamed for the next commit"""
@@ -637,7 +637,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         ui.status("applying %s\n" % patch)
         pf = os.path.join(d, patch)
 
-        text = []
+        message = []
         user = None
         hgpatch = False
         for line in file(pf):
@@ -650,19 +650,19 @@ def import_(ui, repo, patch1, *patches, **opts):
                     user = line[7:]
                     ui.debug('User: %s\n' % user)
                 elif not line.startswith("# ") and line:
-                    text.append(line)
+                    message.append(line)
                     hgpatch = False
             elif line == '# HG changeset patch':
                 hgpatch = True
             else:
-                text.append(line)
+                message.append(line)
 
-        # make sure text isn't empty
-        if not text:
-            text = "imported patch %s\n" % patch
+        # make sure message isn't empty
+        if not message:
+            message = "imported patch %s\n" % patch
         else:
-            text = "%s\n" % '\n'.join(text)
-        ui.debug('text:\n%s\n' % text)
+            message = "%s\n" % '\n'.join(message)
+        ui.debug('message:\n%s\n' % message)
 
         f = os.popen("patch -p%d < %s" % (strip, pf))
         files = []
@@ -679,7 +679,7 @@ def import_(ui, repo, patch1, *patches, **opts):
 
         if len(files) > 0:
             addremove(ui, repo, *files)
-        repo.commit(files, text, user)
+        repo.commit(files, message, user)
 
 def init(ui, source=None):
     """create a new repository in the current directory"""
@@ -791,15 +791,14 @@ def push(ui, repo, dest="default-push"):
 
 def rawcommit(ui, repo, *flist, **rc):
     "raw commit interface"
-
-    text = rc['text']
-    if not text and rc['logfile']:
+    message = rc['message'] or rc['text']
+    if not message and rc['logfile']:
         try:
-            text = open(rc['logfile']).read()
+            message = open(rc['logfile']).read()
         except IOError:
             pass
-    if not text and not rc['logfile']:
-        ui.warn("abort: missing commit text\n")
+    if not message and not rc['logfile']:
+        ui.warn("abort: missing commit message\n")
         return 1
 
     files = relpath(repo, list(flist))
@@ -808,7 +807,7 @@ def rawcommit(ui, repo, *flist, **rc):
 
     rc['parent'] = map(repo.lookup, rc['parent'])
 
-    repo.rawcommit(files, text, rc['user'], rc['date'], *rc['parent'])
+    repo.rawcommit(files, message, rc['user'], rc['date'], *rc['parent'])
 
 def recover(ui, repo):
     """roll back an interrupted transaction"""
@@ -988,7 +987,6 @@ def status(ui, repo, *pats, **opts):
 
 def tag(ui, repo, name, rev=None, **opts):
     """add a tag for the current tip or a given revision"""
-
     if name == "tip":
         ui.warn("abort: 'tip' is a reserved name!\n")
         return -1
@@ -1016,10 +1014,9 @@ def tag(ui, repo, name, rev=None, **opts):
     if repo.dirstate.state(".hgtags") == '?':
         repo.add([".hgtags"])
 
-    if not opts['text']:
-        opts['text'] = "Added tag %s for changeset %s" % (name, r)
-
-    repo.commit([".hgtags"], opts['text'], opts['user'], opts['date'])
+    message = (opts['message'] or opts['text'] or
+               "Added tag %s for changeset %s" % (name, r))
+    repo.commit([".hgtags"], message, opts['user'], opts['date'])
 
 def tags(ui, repo):
     """list repository tags"""
@@ -1103,7 +1100,7 @@ table = {
          [('A', 'addremove', None, 'run add/remove during commit'),
           ('m', 'message', "", 'commit message'),
           ('t', 'text', "", 'commit message (deprecated: use -m)'),
-          ('l', 'logfile', "", 'commit text file'),
+          ('l', 'logfile', "", 'commit message file'),
           ('d', 'date', "", 'date code'),
           ('u', 'user', "", 'user')],
          'hg commit [OPTION]... [FILE]...'),
@@ -1158,9 +1155,9 @@ table = {
           ('d', 'date', "", 'date code'),
           ('u', 'user', "", 'user'),
           ('F', 'files', "", 'file list'),
-          ('m', 'text', "", 'commit message'),
-          ('t', 'text', "", 'commit message (deprecated)'),
-          ('l', 'logfile', "", 'commit text file')],
+          ('m', 'message', "", 'commit message'),
+          ('t', 'text', "", 'commit message (deprecated: use -m)'),
+          ('l', 'logfile', "", 'commit message file')],
          'hg rawcommit [OPTION]... [FILE]...'),
     "recover": (recover, [], "hg recover"),
     "^remove|rm": (remove, [], "hg remove FILE..."),
@@ -1187,8 +1184,8 @@ table = {
     "tag":
         (tag,
          [('l', 'local', None, 'make the tag local'),
-          ('m', 'text', "", 'commit message'),
-          ('t', 'text', "", 'commit message (deprecated)'),
+          ('m', 'message', "", 'commit message'),
+          ('t', 'text', "", 'commit message (deprecated: use -m)'),
           ('d', 'date', "", 'date code'),
           ('u', 'user', "", 'user')],
          'hg tag [OPTION]... NAME [REV]'),
