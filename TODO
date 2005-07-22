@@ -4,7 +4,6 @@ General:
 - More specific try/except.
 - less code duplication, more code in the right places
 - python 2.2 support
-- better import support
 - export to git
 - Code cleanup: apply http://python.org/peps/pep-0008.html
 
@@ -12,27 +11,43 @@ Core:
 - difflib creating/removing files (fixed except dates: should be epoch)
 - directory foo.d or foo.i with existing file foo (use some quoting?)
 - get various options from hgrc (e.g. history always -v, tip always -q)
-- better push support (hack exists)
-- hg over ssh:// and https:// and rsync://
+- hg over https:// and rsync://
 - hooks for new changesets getting pulled/imported etc.
 - make showing removed files (in history etc.) faster.
+- hgmerge error: merge should abort nicely and running it again should work
+- if hardlinking fails, pull should be used
+- .hgignore should use new patterns
 
 Commands:
-- hg add <directory> should work
+- hg add <directory> should work (currently only: hg add -I <dir>)
 - hg status <filename>: file rev, changeset rev, changed, added,
   deleted, sha-1
 - select to pull a subset of the heads
-- commands.py: number of args too much magic (e.g. in patch())
+- commands.py: number of args too much magic (e.g. in import_())
+- optionally only show merges (two parents)
 - automatic pull fallback to old-http://
-- optionally only show merges (two parents or parent != changeset-1, etc.)
+- hg pull http://foo tries hostname
+  'foo?cmd=changegroup&roots=0000000000000000000000000000000000000000'
+- pass options to ssh (debug/verbose/remote hg command etc.)
+- create a commented .hg/hgrc on init/clone
+- hg pull default in a subdir doesn't work, if it is a relative path
+- hg clone should store corrected relative paths, so moving a directory
+  containing related repositories works again
+- mention synonyms (co, ci, ...) in help
+- show global options in help
+- if everyone knows 'hg clone': hg init [DIR]
+- if everyone knows 'hg update -m': remove -t
 
 Web:
-- optionally only show merges (two parents or parent != changeset-1, etc.)
+- optionally only show merges (two parents)
 - one hgweb with many repos (another script)
-- hgweb tip link too verbose
+- hgweb tip link too long (URL?cmd=changelog;rev=)
+- hgweb: shorter links (e.g. cs=... instead of cmd=changeset;node=...?)
 - hgweb: deliver static files (e.g. favicon, stylesheets)
 - hgweb personalization: timezone (display/change), display of
-  features
+  features, number of entries per page
 - some web servers think hgweb.cgi.[di] is a CGI script with old-http://
   (use quoting (see foo.d in Core) or document server configurations?)
 - link children in hgweb
+- allow verbose mode
+- hide trivial parent (like in show_changeset)
