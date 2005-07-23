@@ -1507,7 +1507,7 @@ class localrepository:
             self.merge3(f, m, o)
             util.set_exec(self.wjoin(f), flag)
             if moddirstate:
-                self.dirstate.update([f], 'm')
+                self.dirstate.update([f], mode)
 
         remove.sort()
         for f in remove:
