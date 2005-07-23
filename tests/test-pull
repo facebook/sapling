@@ -8,6 +8,7 @@ hg addremove
 hg commit -m 1
 hg verify
 hg serve -p 20059 > /dev/null &
+sleep 1 # wait for server to be started
 cd ..
 
 hg clone http://localhost:20059/ copy
