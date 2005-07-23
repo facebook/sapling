@@ -329,23 +329,19 @@ def add(ui, repo, *pats, **opts):
             names.append(abs)
     repo.add(names)
 
-def addremove(ui, repo, *files):
+def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files"""
-    if files:
-        files = relpath(repo, files)
-        d = []
-        u = []
-        for f in files:
-            p = repo.wjoin(f)
-            s = repo.dirstate.state(f)
-            isfile = os.path.isfile(p)
-            if s != 'r' and not isfile:
-                d.append(f)
-            elif s not in 'nmai' and isfile:
-                u.append(f)
-    else:
-        (c, a, d, u) = repo.changes()
+    q = dict(zip(pats, pats))
+    cwd = repo.getcwd()
+    n = (cwd and len(cwd) + 1) or 0
+    c, a, d, u = repo.changes(match = matchpats(cwd, pats, opts))
+    for f in u:
+        if f not in q:
+            ui.status('adding %s\n' % f[n:])
     repo.add(u)
+    for f in d:
+        if f not in q:
+            ui.status('removing %s\n' % f[n:])
     repo.remove(d)
 
 def annotate(ui, repo, *pats, **opts):
@@ -1086,7 +1082,10 @@ table = {
              [('I', 'include', [], 'include path in search'),
               ('X', 'exclude', [], 'exclude path from search')],
              "hg add [FILE]..."),
-    "addremove": (addremove, [], "hg addremove [FILE]..."),
+    "addremove": (addremove,
+                  [('I', 'include', [], 'include path in search'),
+                   ('X', 'exclude', [], 'exclude path from search')],
+                  "hg addremove [OPTION]... [FILE]..."),
     "^annotate":
         (annotate,
          [('r', 'rev', '', 'revision'),

@@ -60,7 +60,7 @@ add [options] [files ...]::
     If no names are given, add all files in the current directory and
     its subdirectories.
 
-addremove::
+addremove [options] [files ...]::
     Add all new files and remove all missing files from the repository.
     
     New files are ignored if they match any of the patterns in .hgignore. As
