@@ -379,17 +379,23 @@ def annotate(ui, repo, *pats, **opts):
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
     for src, abs, rel in walk(repo, pats, opts):
+        if abs not in mmap:
+            ui.warn("warning: %s is not in the repository!\n" % rel)
+            continue
+
         lines = repo.file(abs).annotate(mmap[abs])
         pieces = []
 
         for o, f in opmap:
             if opts[o]:
                 l = [f(n) for n, dummy in lines]
-                m = max(map(len, l))
-                pieces.append(["%*s" % (m, x) for x in l])
+                if l:
+                    m = max(map(len, l))
+                    pieces.append(["%*s" % (m, x) for x in l])
 
-        for p, l in zip(zip(*pieces), lines):
-            ui.write("%s: %s" % (" ".join(p), l[1]))
+        if pieces:
+            for p, l in zip(zip(*pieces), lines):
+                ui.write("%s: %s" % (" ".join(p), l[1]))
 
 def cat(ui, repo, file1, rev=None, **opts):
     """output the latest or given revision of a file"""
