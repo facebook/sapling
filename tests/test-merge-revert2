@@ -1,0 +1,45 @@
+#!/bin/sh -x
+
+mkdir t
+cd t
+hg init
+echo "added file1" > file1
+echo "added file2" > file2
+hg add file1 file2
+hg commit -m "added file1 and file2" -d "0 0" -u user
+echo "changed file1" >> file1
+hg commit -m "changed file1" -d "0 0" -u user
+hg -q log
+hg id
+hg update -C 0
+hg id
+echo "changed file1" >> file1
+hg id
+hg revert
+hg diff
+hg status
+hg id
+hg update
+hg diff
+hg status
+hg id
+hg update -C 0
+echo "changed file1 different" >> file1
+HGMERGE=merge hg update
+hg diff | sed -e "s/\(\(---\|+++\).*\)\t.*/\1/" -e "s/\(<<<<<<<\|>>>>>>>\) .*/\1/"
+hg status
+hg id
+hg revert
+hg diff
+hg status
+hg id
+hg revert -r tip
+hg diff
+hg status
+hg id
+hg update -C
+hg diff
+hg status
+hg id
+cd ..; /bin/rm -rf t
+
