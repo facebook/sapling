@@ -3,6 +3,7 @@
 + echo foo
 + hg init
 + hg addremove
+adding foo
 + hg commit -m 1
 + hg verify
 checking changesets

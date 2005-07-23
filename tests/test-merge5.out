@@ -10,6 +10,7 @@
 + hg update 0
 + rm b
 + hg commit -A '-mcomment #2' -d '0 0'
+removing b
 + yes k
 + hg update 1
 this update spans a branch affecting the following files:

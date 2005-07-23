@@ -3,6 +3,7 @@
 + hg init
 + echo a
 + hg addremove
+adding a
 + hg commit -m 1 -d '0 0'
 + hg clone . ../r2
 + cd ../r2
@@ -20,6 +21,7 @@ diff -r c19d34741b0a a
 + echo b
 + echo a2
 + hg addremove
+adding b
 + hg commit -m 2 -d '0 0'
 + cd ../r2
 + hg -q pull ../r1
@@ -68,9 +70,3 @@ description:
 
 + hg diff
 + sed 's/\(\(---\|+++\).*\)\t.*/\1/'
-diff -r 1e71731e6fbb a
---- a/a
-+++ b/a
-@@ -1,1 +1,1 @@
--a2
-+abc

@@ -27,6 +27,7 @@
 + hg update 0
 + echo This is file b2
 + hg commit -A -m 'commit #2' -d '0 0'
+adding b
 + cd ..
 + /bin/rm -rf t
 + mkdir t
@@ -43,5 +44,6 @@
 + hg update 0
 + echo This is file b2
 + hg commit -A -m 'commit #2' -d '0 0'
+adding b
 + cd ..
 + /bin/rm -rf t
