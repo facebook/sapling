@@ -42,7 +42,7 @@ grep -vE '^(HG: manifest hash .*)?$' "$1" >> "$T1"
 
 CHECKSUM=`md5sum "$T1"`
 $EDITOR "$T1" "$T2" || cleanup_exit $?
-echo "$CHECKSUM" | md5sum -c 2>/dev/null && cleanup_exit 13
+echo "$CHECKSUM" | md5sum -c >/dev/null 2>&1 && cleanup_exit 13
 
 if [ "$SIGN" == "1" ]; then
     {
