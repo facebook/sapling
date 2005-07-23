@@ -1506,7 +1506,9 @@ class localrepository:
             m, o, flag = merge[f]
             self.merge3(f, m, o)
             util.set_exec(self.wjoin(f), flag)
-            if moddirstate:
+            if moddirstate and mode == 'm':
+                # only update dirstate on branch merge, otherwise we
+                # could mark files with changes as unchanged
                 self.dirstate.update([f], mode)
 
         remove.sort()

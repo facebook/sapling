@@ -70,3 +70,9 @@ description:
 
 + hg diff
 + sed 's/\(\(---\|+++\).*\)\t.*/\1/'
+diff -r 1e71731e6fbb a
+--- a/a
++++ b/a
+@@ -1,1 +1,1 @@
+-a2
++abc
