@@ -436,7 +436,7 @@ def clone(ui, source, dest=None, **opts):
                       copyfile)
         try:
             os.unlink(os.path.join(dest, ".hg", "dirstate"))
-        except IOError:
+        except OSError:
             pass
 
         repo = hg.repository(ui, dest)
