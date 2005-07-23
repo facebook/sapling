@@ -10,7 +10,7 @@ import util
 from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
-demandload(globals(), "tempfile httprangereader bdiff")
+demandload(globals(), "tempfile httprangereader bdiff urlparse")
 demandload(globals(), "bisect select")
 
 class filelog(revlog):
@@ -1692,7 +1692,11 @@ class localrepository:
 
 class httprepository:
     def __init__(self, ui, path):
-        self.url = path
+        # fix missing / after hostname
+        s = urlparse.urlsplit(path)
+        partial = s[2]
+        if not partial: partial = "/"
+        self.url = urlparse.urlunsplit((s[0], s[1], partial, '', ''))
         self.ui = ui
         no_list = [ "localhost", "127.0.0.1" ]
         host = ui.config("http_proxy", "host")
