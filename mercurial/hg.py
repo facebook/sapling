@@ -1278,7 +1278,7 @@ class localrepository:
         mo = self.manifest.addgroup(getgroup(), revmap, tr)
 
         # process the files
-        self.ui.status("adding file revisions\n")
+        self.ui.status("adding file changes\n")
         while 1:
             f = getchunk()
             if not f: break
@@ -1289,9 +1289,9 @@ class localrepository:
             revisions += fl.count() - o
             files += 1
 
-        self.ui.status(("modified %d files, added %d changesets" +
-                        " and %d new revisions\n")
-                       % (files, changesets, revisions))
+        self.ui.status(("added %d changesets" +
+                        " with %d changes to %d files\n")
+                       % (changesets, revisions, files))
 
         tr.close()
         return
