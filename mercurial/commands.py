@@ -9,7 +9,7 @@ from demandload import demandload
 demandload(globals(), "os re sys signal shutil")
 demandload(globals(), "fancyopts ui hg util")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
-demandload(globals(), "errno socket version struct")
+demandload(globals(), "errno socket version struct atexit")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -1244,6 +1244,7 @@ globalopts = [('v', 'verbose', None, 'verbose'),
               ('', 'traceback', None, 'print traceback on exception'),
               ('y', 'noninteractive', None, 'run non-interactively'),
               ('', 'version', None, 'output version information and exit'),
+              ('', 'time', None, 'time how long the command takes'),
              ]
 
 norepo = "clone init version help debugindex debugindexdot"
@@ -1326,6 +1327,20 @@ def dispatch(args):
         u.warn("hg: unknown command '%s'\n" % inst.args[0])
         help_(u)
         sys.exit(1)
+
+    if options["time"]:
+        def get_times():
+            t = os.times()
+            if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
+                t = (t[0], t[1], t[2], t[3], time.clock())
+            return t
+        s = get_times()
+        def print_time():
+            t = get_times()
+            u = ui.ui()
+            u.warn("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n" %
+                (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
+        atexit.register(print_time)
 
     u = ui.ui(options["verbose"], options["debug"], options["quiet"],
               not options["noninteractive"])
