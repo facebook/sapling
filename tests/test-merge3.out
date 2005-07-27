@@ -6,5 +6,6 @@
 + hg add b
 + rm b
 + hg commit -A '-mcomment #1' -d '0 0'
+adding .out
 removing b
 b never committed!

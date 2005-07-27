@@ -1,6 +1,6 @@
 + hg clone http://localhost:20059/ copy
 requesting all changes
-abort: error 111: Connection refused
+abort: error: Connection refused
 + echo 255
 255
 + ls copy

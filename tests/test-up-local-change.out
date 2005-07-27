@@ -10,7 +10,7 @@ adding a
 + hg up
 + echo abc
 + hg diff
-+ sed 's/\(\(---\|+++\).*\)\t.*/\1/'
++ sed 's/\(\(---\|+++\) [^ \t]*\)[ \t].*/\1/'
 diff -r c19d34741b0a a
 --- a/a
 +++ b/a
@@ -69,7 +69,7 @@ description:
 
 
 + hg diff
-+ sed 's/\(\(---\|+++\).*\)\t.*/\1/'
++ sed 's/\(\(---\|+++\) [^ \t]*\)[ \t].*/\1/'
 diff -r 1e71731e6fbb a
 --- a/a
 +++ b/a

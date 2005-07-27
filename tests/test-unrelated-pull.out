@@ -3,8 +3,8 @@ searching for changes
 warning: pulling from an unrelated repository!
 adding changesets
 adding manifests
-adding file revisions
-modified 1 files, added 1 changesets and 1 new revisions
+adding file changes
+added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
 changeset:   1:9a79c33a9db37480e40fbd2a65d62ebd2a3c441c
 tag:         tip
