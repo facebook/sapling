@@ -777,6 +777,19 @@ def parents(ui, repo, rev=None):
         if n != hg.nullid:
             show_changeset(ui, repo, changenode=n)
 
+def paths(ui, repo, search = None):
+    """show path or list of available paths"""
+    if search:
+        for name, path in ui.configitems("paths"):
+            if name == search:
+                ui.write("%s\n" % path)
+                return
+        ui.warn("not found!\n")
+        return 1
+    else:
+        for name, path in ui.configitems("paths"):
+            ui.write("%s = %s\n" % (name, path))
+
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source"""
     source = ui.expandpath(source)
@@ -1165,6 +1178,7 @@ table = {
          'hg log [-r REV1 [-r REV2]] [-p] [FILE]'),
     "manifest": (manifest, [], 'hg manifest [REV]'),
     "parents": (parents, [], 'hg parents [REV]'),
+    "paths": (paths, [], 'hg paths [name]'),
     "^pull":
         (pull,
          [('u', 'update', None, 'update working directory')],
