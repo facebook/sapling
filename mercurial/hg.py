@@ -1294,6 +1294,10 @@ class localrepository:
                        % (changesets, revisions, files))
 
         tr.close()
+
+        if not self.hook("changegroup"):
+            return 1
+
         return
 
     def update(self, node, allow=False, force=False, choose=None,
