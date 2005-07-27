@@ -18,19 +18,6 @@ def unique(g):
 
 class CommandError(Exception): pass
 
-def explain_exit(code):
-    """return a 2-tuple (desc, code) describing a process's status"""
-    if os.WIFEXITED(code):
-        val = os.WEXITSTATUS(code)
-        return "exited with status %d" % val, val
-    elif os.WIFSIGNALED(code):
-        val = os.WTERMSIG(code)
-        return "killed by signal %d" % val, val
-    elif os.WIFSTOPPED(code):
-        val = os.WSTOPSIG(code)
-        return "stopped by signal %d" % val, val
-    raise ValueError("invalid exit code")
-
 def always(fn): return True
 def never(fn): return False
 
@@ -166,6 +153,9 @@ if os.name == 'nt':
     makelock = _makelock_file
     readlock = _readlock_file
 
+    def explain_exit(code):
+        return "exited with status %d" % code, code
+
 else:
     nulldev = '/dev/null'
 
@@ -205,3 +195,16 @@ else:
                 return _readlock_file(pathname)
             else:
                 raise
+
+    def explain_exit(code):
+        """return a 2-tuple (desc, code) describing a process's status"""
+        if os.WIFEXITED(code):
+            val = os.WEXITSTATUS(code)
+            return "exited with status %d" % val, val
+        elif os.WIFSIGNALED(code):
+            val = os.WTERMSIG(code)
+            return "killed by signal %d" % val, val
+        elif os.WIFSTOPPED(code):
+            val = os.STOPSIG(code)
+            return "stopped by signal %d" % val, val
+        raise ValueError("invalid exit code")
