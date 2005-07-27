@@ -959,9 +959,9 @@ class localrepository:
 
     def copy(self, source, dest):
         p = self.wjoin(dest)
-        if not os.path.exists(dest):
+        if not os.path.exists(p):
             self.ui.warn("%s does not exist!\n" % dest)
-        elif not os.path.isfile(dest):
+        elif not os.path.isfile(p):
             self.ui.warn("copy failed: %s is not a file\n" % dest)
         else:
             if self.dirstate.state(dest) == '?':
