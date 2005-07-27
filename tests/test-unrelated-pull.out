@@ -6,13 +6,13 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
-changeset:   1:9a79c33a9db37480e40fbd2a65d62ebd2a3c441c
+changeset:   1:9a79c33a9db3
 tag:         tip
 user:        a
 date:        Thu Jan  1 00:00:00 1970
 summary:     a
 
-changeset:   0:01f8062b2de51c0fa6428c5db1d1b3ea780189df
+changeset:   0:01f8062b2de5
 user:        b
 date:        Thu Jan  1 00:00:00 1970
 summary:     b

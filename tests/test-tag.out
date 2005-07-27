@@ -3,7 +3,7 @@
 + hg add a
 + hg commit -m test -d '0 0'
 + hg history
-changeset:   0:acb14030fe0a21b60322c440ad2d20cf7685a376
+changeset:   0:acb14030fe0a
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
@@ -11,13 +11,13 @@ summary:     test
 
 + hg tag -d '0 0' bleah
 + hg history
-changeset:   1:863197ef03781c4fc00276d83eb66c4cb9cd91df
+changeset:   1:863197ef0378
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     Added tag bleah for changeset acb14030fe0a21b60322c440ad2d20cf7685a376
 
-changeset:   0:acb14030fe0a21b60322c440ad2d20cf7685a376
+changeset:   0:acb14030fe0a
 tag:         bleah
 user:        test
 date:        Thu Jan  1 00:00:00 1970

@@ -15,7 +15,7 @@
 54837d97f2932a8194e69745a280a2c11e61ff9c 644 b
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
 + hg parents
-changeset:   2:9f827976dae422d883af3cedc7a849c3e41a9b96
+changeset:   2:9f827976dae4
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
@@ -27,7 +27,7 @@ summary:     2
 05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
 + hg parents
-changeset:   3:c8225a10618652ed2048e5ec0e917a92e50b9032
+changeset:   3:c8225a106186
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
@@ -39,7 +39,7 @@ summary:     3
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
 + hg parents
-changeset:   4:8dfeee82a94bbe13e5f3ca5eee08058269af87c1
+changeset:   4:8dfeee82a94b
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
@@ -52,7 +52,7 @@ summary:     4
 54837d97f2932a8194e69745a280a2c11e61ff9c 644 b
 3570202ceac2b52517df64ebd0a062cb0d8fe33a 644 c
 + hg parents
-changeset:   4:8dfeee82a94bbe13e5f3ca5eee08058269af87c1
+changeset:   4:8dfeee82a94b
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     4
@@ -62,10 +62,10 @@ summary:     4
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
 + hg parents
-changeset:   6:c0e932ecae5eb7d8d2af2659f3ab03dbe4a9ff7c
+changeset:   6:c0e932ecae5e
 tag:         tip
-parent:      4:8dfeee82a94bbe13e5f3ca5eee08058269af87c1
-parent:      5:a7925a42d0df7b35e14ecd7bf12ed6bbc776e9df
+parent:      4:8dfeee82a94b
+parent:      5:a7925a42d0df
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     6
@@ -75,7 +75,7 @@ summary:     6
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
 + hg parents
-changeset:   7:3a157da4365dc1966cf9a032b0113fd8613d7865
+changeset:   7:3a157da4365d
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970

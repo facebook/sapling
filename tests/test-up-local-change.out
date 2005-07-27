@@ -42,7 +42,7 @@ resolving manifests
  force None allow 1 moddirstate True linear True
  ancestor 1165e8bd193e local 1165e8bd193e remote 1165e8bd193e
 + hg parents
-changeset:   1:1e71731e6fbb5b35fae293120dea6964371c13c6
+changeset:   1:1e71731e6fbb
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
@@ -51,7 +51,6 @@ summary:     2
 + hg -v history
 changeset:   1:1e71731e6fbb5b35fae293120dea6964371c13c6
 tag:         tip
-manifest:    1:1165e8bd193e17ad7d321d846fcf27ff3f412758
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 files:       a b
@@ -60,7 +59,6 @@ description:
 
 
 changeset:   0:c19d34741b0a4ced8e4ba74bb834597d5193851e
-manifest:    0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 files:       a

@@ -32,32 +32,32 @@ adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
 + hg heads
-changeset:   2:3ef54330565526bebf37a0d9bf540c283fd133a1
+changeset:   2:3ef543305655
 tag:         tip
-parent:      0:22a449e20da501ca558394c083ca470e9c81b9f7
+parent:      0:22a449e20da5
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     chmod +x a
 
-changeset:   1:c6ecefc45368ed556d965f1c1086c6561a8b2ac5
+changeset:   1:c6ecefc45368
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     a updated
 
 + hg history
-changeset:   2:3ef54330565526bebf37a0d9bf540c283fd133a1
+changeset:   2:3ef543305655
 tag:         tip
-parent:      0:22a449e20da501ca558394c083ca470e9c81b9f7
+parent:      0:22a449e20da5
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     chmod +x a
 
-changeset:   1:c6ecefc45368ed556d965f1c1086c6561a8b2ac5
+changeset:   1:c6ecefc45368
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     a updated
 
-changeset:   0:22a449e20da501ca558394c083ca470e9c81b9f7
+changeset:   0:22a449e20da5
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     added a b
