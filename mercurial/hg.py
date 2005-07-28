@@ -675,11 +675,15 @@ class localrepository:
             ds = self.opener("dirstate").read()
         except IOError:
             ds = ""
-        self.opener("undo.dirstate", "w").write(ds)
+        self.opener("journal.dirstate", "w").write(ds)
 
-        return transaction.transaction(self.ui.warn,
-                                       self.opener, self.join("journal"),
-                                       self.join("undo"))
+        def after():
+            util.rename(self.join("journal"), self.join("undo"))
+            util.rename(self.join("journal.dirstate"),
+                        self.join("undo.dirstate"))
+
+        return transaction.transaction(self.ui.warn, self.opener,
+                                       self.join("journal"), after)
 
     def recover(self):
         lock = self.lock()

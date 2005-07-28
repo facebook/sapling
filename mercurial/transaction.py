@@ -50,7 +50,7 @@ class transaction:
         self.file.close()
         self.entries = []
         if self.after:
-            util.rename(self.journal, self.after)
+            self.after()
         else:
             os.unlink(self.journal)
         self.journal = None

@@ -7,4 +7,4 @@ rollback completed
 00changelog.d
 00changelog.i
 data
-undo.dirstate
+journal.dirstate
