@@ -16,8 +16,22 @@ demandload(globals(), "bisect select")
 class filelog(revlog):
     def __init__(self, opener, path):
         revlog.__init__(self, opener,
-                        os.path.join("data", path + ".i"),
-                        os.path.join("data", path + ".d"))
+                        os.path.join("data", self.encodedir(path + ".i")),
+                        os.path.join("data", self.encodedir(path + ".d")))
+
+    # This avoids a collision between a file named foo and a dir named
+    # foo.i or foo.d
+    def encodedir(self, path):
+        path.replace(".hg/", ".hg.hg/")
+        path.replace(".i/", ".i.hg/")
+        path.replace(".d/", ".i.hg/")
+        return path
+
+    def decodedir(self, path):
+        path.replace(".d.hg/", ".d/")
+        path.replace(".i.hg/", ".i/")
+        path.replace(".hg.hg/", ".hg/")
+        return path
 
     def read(self, node):
         t = self.revision(node)
