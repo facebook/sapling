@@ -47,7 +47,7 @@ function run_one
 {
     rm -f $1.err
     export TZ=GMT
-    D=`mktemp -d -t tmp.XXXXXX`
+    D=`mktemp -d ${TMP-/tmp}/tmp.XXXXXX`
     if [ "$D" = "" ] ; then
 	echo mktemp failed!
     fi
