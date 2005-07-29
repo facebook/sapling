@@ -21,12 +21,6 @@ HGUSER="test"; export HGUSER
 
 umask 022
 
-if [ "$[1+1]" = "2" ]; then
-    use_arithmetic=true
-else
-    use_arithmetic=false
-fi
-
 tests=0
 failed=0
 
@@ -55,7 +49,7 @@ fi
 
 INST="$HGTMP/install"
 cd ..
-if ${PYTHON:-python} setup.py install --home="$INST" > tests/install.err 2>&1
+if ${PYTHON-python} setup.py install --home="$INST" > tests/install.err 2>&1
 then
     rm tests/install.err
     mv "$INST/bin/hg" "$INST/bin/hg.real"
@@ -123,35 +117,21 @@ run_one() {
     return $fail
 }
 
-TESTS="$@"
+TESTS="$*"
 if [ -z "$TESTS" ] ; then
-    TESTS=`ls test-* | grep -Ev "\.|~"`
+    TESTS=`ls test-* | grep -v "[.~]"`
 fi
 
 for f in $TESTS ; do
     echo -n "."
-    if $use_arithmetic; then
-	run_one $f || failed=$[$failed + 1]
-	tests=$[$tests + 1]
-    else
-	run_one $f || failed=1
-    fi
+    run_one $f || failed=`expr $failed + 1`
+    tests=`expr $tests + 1`
 done
 
-if $use_arithmetic; then
-    echo
-    echo "Ran $tests tests, $failed failed."
+echo
+echo "Ran $tests tests, $failed failed."
 
-    if [ $failed -gt 0 ] ; then
-	cleanup_exit 1
-    fi
-else
-    echo
-    if [ "$failed" = "1" ] ; then
-	echo "Ran tests, at least one failed."
-	cleanup_exit 1
-    else
-	echo "Ran tests, none failed."
-    fi
+if [ $failed -gt 0 ] ; then
+    cleanup_exit 1
 fi
 cleanup_exit 0
