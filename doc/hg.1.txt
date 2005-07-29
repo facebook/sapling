@@ -73,8 +73,8 @@ annotate [-r <rev> -u -n -c] [files ...]::
     place.
     
     options:
-    -I, --include <pat>  include directories matching the given patterns
-    -X, --exclude <pat>  exclude directories matching the given patterns
+    -I, --include <pat>   include names matching the given patterns
+    -X, --exclude <pat>   exclude names matching the given patterns
     -r, --revision <rev>  annotate the specified revision
     -u, --user            list the author
     -c, --changeset       list the changeset
@@ -136,8 +136,8 @@ diff [-r revision] [-r revision] [files ...]::
     to its parent.
 
     options:
-    -I, --include <pat>  include directories matching the given patterns
-    -X, --exclude <pat>  exclude directories matching the given patterns
+    -I, --include <pat>  include names matching the given patterns
+    -X, --exclude <pat>  exclude names matching the given patterns
 
 export [-o filespec] [revision] ...::
     Print the changeset header and diffs for one or more revisions.
@@ -165,8 +165,8 @@ forget [options] [files]::
     Undo an 'hg add' scheduled for the next commit.
 
     options:
-    -I, --include <pat>  include directories matching the given patterns
-    -X, --exclude <pat>  exclude directories matching the given patterns
+    -I, --include <pat>  include names matching the given patterns
+    -X, --exclude <pat>  exclude names matching the given patterns
 
 heads::
     Show all repository head changesets.
@@ -217,9 +217,9 @@ locate [options] [files]::
 
     -0, --print0         end filenames with NUL, for use with xargs
     -f, --fullpath       print complete paths from the filesystem root
-    -I, --include <pat>  include directories matching the given patterns
+    -I, --include <pat>  include names matching the given patterns
     -r, --rev <rev>      search the repository as it stood at rev
-    -X, --exclude <pat>  exclude directories matching the given patterns
+    -X, --exclude <pat>  exclude names matching the given patterns
 
 log [-r revision ...] [-p] [file]::
     Print the revision history of the specified file or the entire project.
@@ -343,8 +343,8 @@ status [options] [files]::
 
     options:
 
-    -I, --include <pat>  include directories matching the given patterns
-    -X, --exclude <pat>  exclude directories matching the given patterns
+    -I, --include <pat>  include names matching the given patterns
+    -X, --exclude <pat>  exclude names matching the given patterns
 
 tag [-l -m <text> -d <datecode> -u <user>] <name> [revision]::
     Name a particular revision using <name>.
