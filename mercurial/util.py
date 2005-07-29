@@ -66,7 +66,15 @@ def globre(pat, head = '^', tail = '$'):
             res += re.escape(c)
     return head + res + tail
 
-def matcher(cwd, pats, inc, exc, head = ''):
+_globchars = {'[': 1, '{': 1, '*': 1, '?': 1}
+
+def matcher(cwd, names, inc, exc, head = ''):
+    def patlike(name):
+        for prefix in 're:', 'glob:', 'path:':
+            if name.startswith(prefix): return True
+        for c in name:
+            if c in _globchars: return True
+
     def regex(name, tail):
         '''convert a pattern into a regular expression'''
         if name.startswith('re:'):
@@ -77,6 +85,8 @@ def matcher(cwd, pats, inc, exc, head = ''):
             return head + globre(name[5:], '', tail)
         return head + globre(name, '', tail)
 
+    cwdsep = cwd + os.sep
+
     def under(fn):
         """check if fn is under our cwd"""
         return not cwd or fn.startswith(cwdsep)
@@ -86,16 +96,25 @@ def matcher(cwd, pats, inc, exc, head = ''):
         if pats:
             pat = '(?:%s)' % '|'.join([regex(p, tail) for p in pats])
             if cwd:
-                pat = re.escape(cwd + os.sep) + pat
+                pat = re.escape(cwdsep) + pat
             return re.compile(pat).match
 
-    cwdsep = cwd + os.sep
-    patmatch = matchfn(pats, '$') or (lambda fn: True)
+    pats = filter(patlike, names)
+    files = [n for n in names if not patlike(n)]
+    if pats: plain = []
+    elif cwd: plain = [cwdsep + f for f in files]
+    else: plain = files
+        
+    patmatch = matchfn(pats, '$')
+    filematch = matchfn(files, '(?:/|$)')
     incmatch = matchfn(inc, '(?:/|$)') or under
     excmatch = matchfn(exc, '(?:/|$)') or (lambda fn: False)
 
-    return lambda fn: (incmatch(fn) and not excmatch(fn) and
-                       (fn.endswith('/') or patmatch(fn)))
+    return plain, lambda fn: (incmatch(fn) and not excmatch(fn) and
+                              (fn.endswith('/') or
+                               (not pats and not files) or
+                               (pats and patmatch(fn)) or
+                               (files and filematch(fn))))
 
 def system(cmd, errprefix=None):
     """execute a shell command that must succeed"""

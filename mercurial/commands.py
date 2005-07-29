@@ -47,7 +47,8 @@ def walk(repo, pats, opts, head = ''):
     cwd = repo.getcwd()
     c = 0
     if cwd: c = len(cwd) + 1
-    for src, fn in repo.walk(match = matchpats(cwd, pats, opts, head)):
+    files, matchfn = matchpats(cwd, pats, opts, head)
+    for src, fn in repo.walk(files = files, match = matchfn):
         yield src, fn, fn[c:]
 
 revrangesep = ':'
@@ -1007,7 +1008,8 @@ def status(ui, repo, *pats, **opts):
     R = removed
     ? = not tracked'''
 
-    (c, a, d, u) = repo.changes(match = matchpats(repo.getcwd(), pats, opts))
+    files, matchfn = matchpats(repo.getcwd(), pats, opts)
+    (c, a, d, u) = repo.changes(files = files, match = matchfn)
     (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
     for f in c:
