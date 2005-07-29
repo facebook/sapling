@@ -3,6 +3,7 @@ recursive-include mercurial *.py
 include hgweb.cgi
 include hgeditor rewrite-log
 include tests/README tests/run-tests tests/test-*[a-z] tests/*.out
+prune tests/*.err
 include *.txt
 include templates/map templates/map-*[a-z]
 include templates/*.tmpl
