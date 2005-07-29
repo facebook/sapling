@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 
 mkdir t
 cd t
@@ -26,7 +26,7 @@ hg id
 hg update -C 0
 echo "changed file1 different" >> file1
 HGMERGE=merge hg update
-hg diff | sed -e "s/\(\(---\|+++\).*\)\t.*/\1/" -e "s/\(<<<<<<<\|>>>>>>>\) .*/\1/"
+hg diff | sed -e "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/" -e "s/\(<<<<<<<\|>>>>>>>\) .*/\1/"
 hg status
 hg id
 hg revert

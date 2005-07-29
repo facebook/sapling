@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 hg --debug init
 echo this is a1 > a
 hg add a

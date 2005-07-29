@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 
 mkdir t
 cd t

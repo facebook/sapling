@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -x
 mkdir a
 cd a
 hg init

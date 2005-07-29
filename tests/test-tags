@@ -1,6 +1,5 @@
 #!/bin/sh
 
-set -x
 mkdir t
 cd t
 hg init

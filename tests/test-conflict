@@ -1,6 +1,5 @@
 #!/bin/sh
 
-set -x
 hg init
 echo "nothing" > a
 hg add a
@@ -10,7 +9,7 @@ hg commit -m branch1 -d "0 0"
 hg co 0
 echo "something else" > a
 hg commit -m branch2 -d "0 0"
-export HGMERGE=merge
+HGMERGE=merge; export HGMERGE
 hg up -m 1
 hg id
 grep -Ev ">>>|<<<" a
