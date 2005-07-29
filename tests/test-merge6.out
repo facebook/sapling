@@ -27,8 +27,8 @@ pulling from ../B1
 searching for changes
 adding changesets
 adding manifests
-adding file revisions
-modified 1 files, added 1 changesets and 1 new revisions
+adding file changes
+added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
 + hg update -m
 + hg commit -m 'commit test' -d '0 0'
@@ -42,8 +42,8 @@ pulling from ../A2
 searching for changes
 adding changesets
 adding manifests
-adding file revisions
-modified 0 files, added 1 changesets and 0 new revisions
+adding file changes
+added 1 changesets with 0 changes to 0 files
 (run 'hg update' to get a working copy)
 + hg update -m
 + hg commit -m 'commit test' -d '0 0'

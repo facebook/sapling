@@ -4,7 +4,7 @@ abort: repository a/.hg not found!
 255
 + hg clone http://127.0.0.1:3121/a b
 requesting all changes
-abort: error 111: Connection refused
+abort: error: Connection refused
 + echo 255
 255
 + rm -rf b

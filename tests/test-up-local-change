@@ -13,7 +13,7 @@ cd ../r2
 hg up
 echo abc > a
 hg diff > ../d
-sed "s/\(\(---\|+++\).*\)\t.*/\1/" < ../d
+sed "s/\(\(---\|+++\) [^ \t]*\)[ \t].*/\1/" < ../d
 
 cd ../r1
 echo b > b
@@ -29,5 +29,5 @@ hg --debug up -m
 hg parents
 hg -v history
 hg diff > ../d
-sed "s/\(\(---\|+++\).*\)\t.*/\1/" < ../d
+sed "s/\(\(---\|+++\) [^ \t]*\)[ \t].*/\1/" < ../d
 

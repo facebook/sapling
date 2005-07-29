@@ -9,7 +9,7 @@ from demandload import demandload
 demandload(globals(), "os re sys signal shutil")
 demandload(globals(), "fancyopts ui hg util")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
-demandload(globals(), "errno socket version struct")
+demandload(globals(), "errno socket version struct atexit")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -217,24 +217,30 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
 
     changes = changelog.read(changenode)
 
-    parents = [(log.rev(parent), hg.hex(parent))
-               for parent in log.parents(node)
-               if ui.debugflag or parent != hg.nullid]
+    parents = [(log.rev(p), ui.verbose and hg.hex(p) or hg.short(p))
+               for p in log.parents(node)
+               if ui.debugflag or p != hg.nullid]
     if not ui.debugflag and len(parents) == 1 and parents[0][0] == rev-1:
         parents = []
 
-    ui.write("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
+    if ui.verbose:
+        ui.write("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
+    else:
+        ui.write("changeset:   %d:%s\n" % (changerev, hg.short(changenode)))
+
     for tag in repo.nodetags(changenode):
         ui.status("tag:         %s\n" % tag)
     for parent in parents:
         ui.write("parent:      %d:%s\n" % parent)
     if filelog:
         ui.debug("file rev:    %d:%s\n" % (filerev, hg.hex(filenode)))
-    ui.note("manifest:    %d:%s\n" % (repo.manifest.rev(changes[0]),
+
+    ui.debug("manifest:    %d:%s\n" % (repo.manifest.rev(changes[0]),
                                       hg.hex(changes[0])))
     ui.status("user:        %s\n" % changes[1])
     ui.status("date:        %s\n" % time.asctime(
         time.localtime(float(changes[2].split(' ')[0]))))
+
     if ui.debugflag:
         files = repo.changes(changelog.parents(changenode)[0], changenode)
         for key, value in zip(["files:", "files+:", "files-:"], files):
@@ -242,6 +248,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
                 ui.note("%-12s %s\n" % (key, " ".join(value)))
     else:
         ui.note("files:       %s\n" % " ".join(changes[3]))
+
     description = changes[4].strip()
     if description:
         if ui.verbose:
@@ -379,17 +386,23 @@ def annotate(ui, repo, *pats, **opts):
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
     for src, abs, rel in walk(repo, pats, opts):
+        if abs not in mmap:
+            ui.warn("warning: %s is not in the repository!\n" % rel)
+            continue
+
         lines = repo.file(abs).annotate(mmap[abs])
         pieces = []
 
         for o, f in opmap:
             if opts[o]:
                 l = [f(n) for n, dummy in lines]
-                m = max(map(len, l))
-                pieces.append(["%*s" % (m, x) for x in l])
+                if l:
+                    m = max(map(len, l))
+                    pieces.append(["%*s" % (m, x) for x in l])
 
-        for p, l in zip(zip(*pieces), lines):
-            ui.write("%s: %s" % (" ".join(p), l[1]))
+        if pieces:
+            for p, l in zip(zip(*pieces), lines):
+                ui.write("%s: %s" % (" ".join(p), l[1]))
 
 def cat(ui, repo, file1, rev=None, **opts):
     """output the latest or given revision of a file"""
@@ -766,6 +779,19 @@ def parents(ui, repo, rev=None):
     for n in p:
         if n != hg.nullid:
             show_changeset(ui, repo, changenode=n)
+
+def paths(ui, repo, search = None):
+    """show path or list of available paths"""
+    if search:
+        for name, path in ui.configitems("paths"):
+            if name == search:
+                ui.write("%s\n" % path)
+                return
+        ui.warn("not found!\n")
+        return 1
+    else:
+        for name, path in ui.configitems("paths"):
+            ui.write("%s = %s\n" % (name, path))
 
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source"""
@@ -1155,6 +1181,7 @@ table = {
          'hg log [-r REV1 [-r REV2]] [-p] [FILE]'),
     "manifest": (manifest, [], 'hg manifest [REV]'),
     "parents": (parents, [], 'hg parents [REV]'),
+    "paths": (paths, [], 'hg paths [name]'),
     "^pull":
         (pull,
          [('u', 'update', None, 'update working directory')],
@@ -1220,6 +1247,7 @@ globalopts = [('v', 'verbose', None, 'verbose'),
               ('', 'traceback', None, 'print traceback on exception'),
               ('y', 'noninteractive', None, 'run non-interactively'),
               ('', 'version', None, 'output version information and exit'),
+              ('', 'time', None, 'time how long the command takes'),
              ]
 
 norepo = "clone init version help debugindex debugindexdot"
@@ -1303,6 +1331,20 @@ def dispatch(args):
         help_(u)
         sys.exit(1)
 
+    if options["time"]:
+        def get_times():
+            t = os.times()
+            if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
+                t = (t[0], t[1], t[2], t[3], time.clock())
+            return t
+        s = get_times()
+        def print_time():
+            t = get_times()
+            u = ui.ui()
+            u.warn("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n" %
+                (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
+        atexit.register(print_time)
+
     u = ui.ui(options["verbose"], options["debug"], options["quiet"],
               not options["noninteractive"])
 
@@ -1343,7 +1385,7 @@ def dispatch(args):
         if hasattr(inst, "code"):
             u.warn("abort: %s\n" % inst)
         elif hasattr(inst, "reason"):
-            u.warn("abort: error %d: %s\n" % (inst.reason[0], inst.reason[1]))
+            u.warn("abort: error: %s\n" % inst.reason[1])
         elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
             if u.debugflag: u.warn("broken pipe\n")
         else:

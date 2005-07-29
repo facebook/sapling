@@ -28,7 +28,8 @@ writing tests:
 
 - diff will show the current time
 
-  use hg diff | sed "s/\(\(---\|+++\).*\)\t.*/\1/" to strip dates
+  use hg diff | sed "s/\(\(---\|+++\) [^ \t]*\)[ \t].*/\1/" to strip
+  dates
 
 - set -x and pipelines don't generate stable output
 

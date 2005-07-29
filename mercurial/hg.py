@@ -16,8 +16,22 @@ demandload(globals(), "bisect select")
 class filelog(revlog):
     def __init__(self, opener, path):
         revlog.__init__(self, opener,
-                        os.path.join("data", path + ".i"),
-                        os.path.join("data", path + ".d"))
+                        os.path.join("data", self.encodedir(path + ".i")),
+                        os.path.join("data", self.encodedir(path + ".d")))
+
+    # This avoids a collision between a file named foo and a dir named
+    # foo.i or foo.d
+    def encodedir(self, path):
+        path.replace(".hg/", ".hg.hg/")
+        path.replace(".i/", ".i.hg/")
+        path.replace(".d/", ".i.hg/")
+        return path
+
+    def decodedir(self, path):
+        path.replace(".d.hg/", ".d/")
+        path.replace(".i.hg/", ".i/")
+        path.replace(".hg.hg/", ".hg/")
+        return path
 
     def read(self, node):
         t = self.revision(node)
@@ -675,11 +689,15 @@ class localrepository:
             ds = self.opener("dirstate").read()
         except IOError:
             ds = ""
-        self.opener("undo.dirstate", "w").write(ds)
+        self.opener("journal.dirstate", "w").write(ds)
 
-        return transaction.transaction(self.ui.warn,
-                                       self.opener, self.join("journal"),
-                                       self.join("undo"))
+        def after():
+            util.rename(self.join("journal"), self.join("undo"))
+            util.rename(self.join("journal.dirstate"),
+                        self.join("undo.dirstate"))
+
+        return transaction.transaction(self.ui.warn, self.opener,
+                                       self.join("journal"), after)
 
     def recover(self):
         lock = self.lock()
@@ -959,9 +977,9 @@ class localrepository:
 
     def copy(self, source, dest):
         p = self.wjoin(dest)
-        if not os.path.exists(dest):
+        if not os.path.exists(p):
             self.ui.warn("%s does not exist!\n" % dest)
-        elif not os.path.isfile(dest):
+        elif not os.path.isfile(p):
             self.ui.warn("copy failed: %s is not a file\n" % dest)
         else:
             if self.dirstate.state(dest) == '?':
@@ -1278,7 +1296,7 @@ class localrepository:
         mo = self.manifest.addgroup(getgroup(), revmap, tr)
 
         # process the files
-        self.ui.status("adding file revisions\n")
+        self.ui.status("adding file changes\n")
         while 1:
             f = getchunk()
             if not f: break
@@ -1289,11 +1307,15 @@ class localrepository:
             revisions += fl.count() - o
             files += 1
 
-        self.ui.status(("modified %d files, added %d changesets" +
-                        " and %d new revisions\n")
-                       % (files, changesets, revisions))
+        self.ui.status(("added %d changesets" +
+                        " with %d changes to %d files\n")
+                       % (changesets, revisions, files))
 
         tr.close()
+
+        if not self.hook("changegroup"):
+            return 1
+
         return
 
     def update(self, node, allow=False, force=False, choose=None,
