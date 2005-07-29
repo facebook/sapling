@@ -601,9 +601,15 @@ def export(ui, repo, *changesets, **opts):
         seqno += 1
         doexport(ui, repo, cset, seqno, total, revwidth, opts)
 
-def forget(ui, repo, file1, *files):
+def forget(ui, repo, *pats, **opts):
     """don't add the specified files on the next commit"""
-    repo.forget(relpath(repo, (file1,) + files))
+    q = dict(zip(pats, pats))
+    forget = []
+    for src, abs, rel in walk(repo, pats, opts):
+        if repo.dirstate.state(abs) == 'a':
+            forget.append(abs)
+            if rel not in q: ui.status('forgetting ', rel, '\n')
+    repo.forget(forget)
 
 def heads(ui, repo):
     """show current repository heads"""
@@ -1153,7 +1159,10 @@ table = {
         (export,
          [('o', 'output', "", 'output to file')],
          "hg export [-o OUTFILE] REV..."),
-    "forget": (forget, [], "hg forget FILE..."),
+    "forget": (forget,
+               [('I', 'include', [], 'include path in search'),
+                ('X', 'exclude', [], 'exclude path from search')],
+               "hg forget FILE..."),
     "heads": (heads, [], 'hg heads'),
     "help": (help_, [], 'hg help [COMMAND]'),
     "identify|id": (identify, [], 'hg identify'),

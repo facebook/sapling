@@ -161,8 +161,12 @@ export [-o filespec] [revision] ...::
 
     -o, --output <filespec>   print output to file with formatted named
 
-forget [files]::
+forget [options] [files]::
     Undo an 'hg add' scheduled for the next commit.
+
+    options:
+    -I, --include <pat>  include directories matching the given patterns
+    -X, --exclude <pat>  exclude directories matching the given patterns
 
 heads::
     Show all repository head changesets.
