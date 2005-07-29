@@ -339,17 +339,17 @@ def add(ui, repo, *pats, **opts):
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files"""
     q = dict(zip(pats, pats))
-    cwd = repo.getcwd()
-    n = (cwd and len(cwd) + 1) or 0
-    c, a, d, u = repo.changes(match = matchpats(cwd, pats, opts))
-    for f in u:
-        if f not in q:
-            ui.status('adding %s\n' % f[n:])
-    repo.add(u)
-    for f in d:
-        if f not in q:
-            ui.status('removing %s\n' % f[n:])
-    repo.remove(d)
+    add, remove = [], []
+    for src, abs, rel in walk(repo, pats, opts):
+        if src == 'f':
+            if repo.dirstate.state(abs) == '?':
+                add.append(abs)
+                if rel not in q: ui.status('adding ', rel, '\n')
+        elif repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
+            remove.append(abs)
+            if rel not in q: ui.status('removing ', rel, '\n')
+    repo.add(add)
+    repo.remove(remove)
 
 def annotate(ui, repo, *pats, **opts):
     """show changeset information per file line"""
