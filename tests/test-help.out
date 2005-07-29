@@ -1,3 +1,4 @@
++ hg help
 basic hg commands (use "hg help -v" for more):
 
  add        add the specified files on the next commit
@@ -15,6 +16,7 @@ basic hg commands (use "hg help -v" for more):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update or merge working directory
++ hg -q help
 basic hg commands (use "hg help -v" for more):
 
  add        add the specified files on the next commit
@@ -32,6 +34,7 @@ basic hg commands (use "hg help -v" for more):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update or merge working directory
++ hg add -h
 hg add: option -h not recognized
 hg add [FILE]...
 
@@ -41,6 +44,7 @@ hg add [FILE]...
    exclude path from search
 
 add the specified files on the next commit
++ hg add --skjdfks
 hg add: option --skjdfks not recognized
 hg add [FILE]...
 
@@ -50,6 +54,7 @@ hg add [FILE]...
    exclude path from search
 
 add the specified files on the next commit
++ hg help diff
 hg diff [-r REV1 [-r REV2]] [FILE]...
 
  -r --rev 
@@ -60,7 +65,9 @@ hg diff [-r REV1 [-r REV2]] [FILE]...
    exclude path from search
 
 diff working directory (or selected files)
++ hg help foo
 hg: unknown command foo
++ hg -q commands
 hg: unknown command 'commands'
 basic hg commands (use "hg help -v" for more):
 

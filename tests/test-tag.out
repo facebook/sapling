@@ -1,7 +1,6 @@
 + hg init
-+ echo a
 + hg add a
-+ hg commit -m test -d '0 0'
++ hg commit -m test -d 0 0
 + hg history
 changeset:   0:acb14030fe0a
 tag:         tip
@@ -9,7 +8,7 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     test
 
-+ hg tag -d '0 0' bleah
++ hg tag -d 0 0 bleah
 + hg history
 changeset:   1:863197ef0378
 tag:         tip
@@ -23,9 +22,7 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     test
 
-+ echo foo
-+ hg tag -d '0 0' bleah2
++ hg tag -d 0 0 bleah2
 abort: working copy of .hgtags is changed!
 (please commit .hgtags manually)
-+ echo failed
 failed

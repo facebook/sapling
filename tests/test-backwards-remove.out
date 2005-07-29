@@ -1,12 +1,8 @@
 + hg init
-+ echo This is file a1
 + hg add a
-+ hg commit -m 'commit #0' -d '0 0'
-+ ls
++ hg commit -m commit #0 -d 0 0
 a
-+ echo This is file b1
 + hg add b
-+ hg commit -m 'commit #1' -d '0 0'
++ hg commit -m commit #1 -d 0 0
 + hg co 0
-+ ls
 a

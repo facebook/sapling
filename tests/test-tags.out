@@ -1,32 +1,25 @@
-+ mkdir t
-+ cd t
 + hg init
 + hg id
 unknown
-+ echo a
 + hg add a
-+ hg commit -m test -d '0 0'
++ hg commit -m test -d 0 0
 + hg co
 + hg identify
 acb14030fe0a tip
-++ hg -q tip
-++ cut -d : -f 2
-+ T=acb14030fe0a21b60322c440ad2d20cf7685a376
-+ echo 'acb14030fe0a21b60322c440ad2d20cf7685a376 first'
-+ cat .hgtags
++ hg -q tip
 acb14030fe0a21b60322c440ad2d20cf7685a376 first
 + hg add .hgtags
-+ hg commit -m 'add tags' -d '0 0'
++ hg commit -m add tags -d 0 0
 + hg tags
-tip                                1:b9154636be938d3d431e75a7c906504a079bfe07
+tip                                1:b53d0e1f3043ecbccf1b9ad2cea562c1b50462b2
 first                              0:acb14030fe0a21b60322c440ad2d20cf7685a376
+hg -q tip                          ?:?
 + hg identify
-b9154636be93 tip
-+ echo bb
+b53d0e1f3043 tip
 + hg status
 M a
 + hg identify
-b9154636be93+ tip
+b53d0e1f3043+ tip
 + hg co first
 + hg id
 acb14030fe0a+ first
@@ -34,14 +27,13 @@ acb14030fe0a+ first
 acb14030fe0a21b60322c440ad2d20cf7685a376+ first
 + hg status
 M a
-+ echo 1
 + hg add b
-+ hg commit -m branch -d '0 0'
++ hg commit -m branch -d 0 0
 + hg id
 c8edf04160c7 tip
 + hg co -m 1
 + hg id
-c8edf04160c7+b9154636be93+ tip
+c8edf04160c7+b53d0e1f3043+ tip
 + hg status
 M .hgtags
 M a

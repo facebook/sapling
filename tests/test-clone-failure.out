@@ -1,39 +1,20 @@
 + hg clone a b
 abort: repository a/.hg not found!
-+ echo 255
 255
 + hg clone http://127.0.0.1:3121/a b
 requesting all changes
 abort: error: Connection refused
-+ echo 255
 255
-+ rm -rf b
-+ mkdir a
-+ chmod 000 a
 + hg clone a b
 abort: repository a/.hg not found!
-+ echo 255
 255
-+ mkdir b
-+ cd b
 + hg init
 + hg clone . ../a
 abort: destination '../a' already exists
-+ echo 1
 1
-+ cd ..
-+ chmod 700 a
-+ rm -rf a b
-+ mkfifo a
 + hg clone a b
 abort: repository a/.hg not found!
-+ echo 255
 255
-+ rm a
-+ mkdir q
-+ cd q
 + hg init
-+ cd ..
 + hg clone q
 abort: destination 'q' already exists
-+ true

@@ -1,8 +1,14 @@
++ hg init
++ hg add a
++ hg ci -m a -d 0 0
++ hg add b
++ hg diff
 diff -r 3903775176ed b
 --- /dev/null
 +++ b/b
 @@ -0,0 +1,1 @@
 +123
++ hg diff -r tip
 diff -r 3903775176ed b
 --- /dev/null
 +++ b/b

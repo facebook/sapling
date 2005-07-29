@@ -1,3 +1,9 @@
++ hg init
++ hg add a
++ hg commit -m first -d 0 0 a
++ hg add sub/b
++ hg commit -m second -d 0 0 sub/b
 321
++ hg co 0
 cat: sub/b: No such file or directory
 ls: sub: No such file or directory

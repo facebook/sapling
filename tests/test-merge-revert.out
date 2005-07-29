@@ -1,12 +1,7 @@
-+ mkdir t
-+ cd t
 + hg init
-+ echo 'added file1'
-+ echo 'added file2'
 + hg add file1 file2
-+ hg commit -m 'added file1 and file2' -d '0 0' -u user
-+ echo 'changed file1'
-+ hg commit -m 'changed file1' -d '0 0' -u user
++ hg commit -m added file1 and file2 -d 0 0 -u user
++ hg commit -m changed file1 -d 0 0 -u user
 + hg -q log
 1:3aa14bbc23d90e3f8b5b639b4a43d76509bae76c
 0:8633637036c18f021d771208e16ae3508ab81d28
@@ -15,7 +10,6 @@
 + hg update -C 0
 + hg id
 8633637036c1
-+ echo 'changed file1'
 + hg id
 8633637036c1+
 + hg revert
@@ -29,8 +23,6 @@
 + hg id
 3aa14bbc23d9 tip
 + hg update -C 0
-+ echo 'changed file1'
-+ HGMERGE=merge
 + hg update
 merging file1
 + hg diff
@@ -52,5 +44,3 @@ merging file1
 + hg status
 + hg id
 3aa14bbc23d9 tip
-+ cd ..
-+ /bin/rm -rf t

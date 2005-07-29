@@ -1,49 +1,25 @@
-+ mkdir t
-+ cd t
 + hg init
-+ echo This is file a1
 + hg add a
-+ hg commit -m 'commit #0' -d '0 0'
-+ echo This is file b1
++ hg commit -m commit #0 -d 0 0
 + hg add b
-+ hg commit -m 'commit #1' -d '0 0'
-+ rm b
++ hg commit -m commit #1 -d 0 0
 + hg update 0
-+ echo This is file b2
 + hg add b
-+ hg commit -m 'commit #2' -d '0 0'
-+ cd ..
-+ /bin/rm -rf t
-+ mkdir t
-+ cd t
++ hg commit -m commit #2 -d 0 0
 + hg init
-+ echo This is file a1
 + hg add a
-+ hg commit -m 'commit #0' -d '0 0'
-+ echo This is file b1
++ hg commit -m commit #0 -d 0 0
 + hg add b
-+ hg commit -m 'commit #1' -d '0 0'
-+ rm b
++ hg commit -m commit #1 -d 0 0
 + hg update 0
-+ echo This is file b2
-+ hg commit -A -m 'commit #2' -d '0 0'
++ hg commit -A -m commit #2 -d 0 0
 adding b
-+ cd ..
-+ /bin/rm -rf t
-+ mkdir t
-+ cd t
 + hg init
-+ echo This is file a1
 + hg add a
-+ hg commit -m 'commit #0' -d '0 0'
-+ echo This is file b1
++ hg commit -m commit #0 -d 0 0
 + hg add b
-+ hg commit -m 'commit #1' -d '0 0'
-+ rm b
++ hg commit -m commit #1 -d 0 0
 + hg remove b
 + hg update 0
-+ echo This is file b2
-+ hg commit -A -m 'commit #2' -d '0 0'
++ hg commit -A -m commit #2 -d 0 0
 adding b
-+ cd ..
-+ /bin/rm -rf t

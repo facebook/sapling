@@ -1,27 +1,12 @@
-+ cat
-+ chmod +x merge
-+ export HGMERGE=./merge
-+ HGMERGE=./merge
-+ mkdir A1
-+ cd A1
 + hg init
-+ echo This is file foo1
-+ echo This is file bar1
 + hg add foo bar
-+ hg commit -m 'commit text' -d '0 0'
-+ cd ..
++ hg commit -m commit text -d 0 0
 + hg clone A1 B1
-+ cd A1
-+ rm bar
 + hg remove bar
-+ hg commit -m 'commit test' -d '0 0'
-+ cd ../B1
-+ echo This is file foo22
-+ hg commit -m 'commit test' -d '0 0'
-+ cd ..
++ hg commit -m commit test -d 0 0
++ hg commit -m commit test -d 0 0
 + hg clone A1 A2
 + hg clone B1 B2
-+ cd A1
 + hg pull ../B1
 pulling from ../B1
 searching for changes
@@ -31,12 +16,10 @@ adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
 + hg update -m
-+ hg commit -m 'commit test' -d '0 0'
-+ echo bar should remain deleted.
++ hg commit -m commit test -d 0 0
 bar should remain deleted.
 + hg manifest
 6b70e9e451a5a33faad7bbebe627e46b937b7364 644 foo
-+ cd ../B2
 + hg pull ../A2
 pulling from ../A2
 searching for changes
@@ -46,8 +29,7 @@ adding file changes
 added 1 changesets with 0 changes to 0 files
 (run 'hg update' to get a working copy)
 + hg update -m
-+ hg commit -m 'commit test' -d '0 0'
-+ echo bar should remain deleted.
++ hg commit -m commit test -d 0 0
 bar should remain deleted.
 + hg manifest
 6b70e9e451a5a33faad7bbebe627e46b937b7364 644 foo
