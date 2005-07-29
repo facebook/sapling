@@ -100,11 +100,11 @@ clone [-U] <source> [dest]::
     options:
     -U, --noupdate   do not update the new working directory
 
-commit [-A -t -l <file> -m <text> -u <user> -d <datecode>] [files...]::
+commit [options] [files...]::
     Commit changes to the given files into the repository.
     
     If a list of files is omitted, all changes reported by "hg status"
-    will be commited.
+    from the root of the repository will be commited.
     
     The HGEDITOR or EDITOR environment variables are used to start an
     editor to add a commit comment.
@@ -112,6 +112,8 @@ commit [-A -t -l <file> -m <text> -u <user> -d <datecode>] [files...]::
     Options:
 
     -A, --addremove       run addremove during commit
+    -I, --include <pat>   include names matching the given patterns
+    -X, --exclude <pat>   exclude names matching the given patterns
     -m, --message <text>  use <text> as commit message
     -l, --logfile <file>  show the commit message for the given file
     -d, --date <datecode> record datecode as commit date

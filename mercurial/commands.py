@@ -468,7 +468,7 @@ def clone(ui, source, dest=None, **opts):
 
     d.close()
 
-def commit(ui, repo, *files, **opts):
+def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes"""
     if opts['text']:
         ui.warn("Warning: -t and --text is deprecated,"
@@ -482,8 +482,18 @@ def commit(ui, repo, *files, **opts):
             ui.warn("Can't read commit message %s: %s\n" % (logfile, why))
 
     if opts['addremove']:
-        addremove(ui, repo, *files)
-    repo.commit(relpath(repo, files), message, opts['user'], opts['date'])
+        addremove(ui, repo, *pats, **opts)
+    cwd = repo.getcwd()
+    if not pats and cwd:
+        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
+        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
+    fns, match = matchpats((pats and repo.getcwd()) or '', pats, opts)
+    if pats:
+        c, a, d, u = repo.changes(files = fns, match = match)
+        files = c + a + [fn for fn in d if repo.dirstate.state(fn) == 'r']
+    else:
+        files = []
+    repo.commit(files, message, opts['user'], opts['date'], match)
 
 def copy(ui, repo, source, dest):
     """mark a file as copied or renamed for the next commit"""
@@ -1140,6 +1150,8 @@ table = {
     "^commit|ci":
         (commit,
          [('A', 'addremove', None, 'run add/remove during commit'),
+          ('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search'),
           ('m', 'message', "", 'commit message'),
           ('t', 'text', "", 'commit message (deprecated: use -m)'),
           ('l', 'logfile', "", 'commit message file'),

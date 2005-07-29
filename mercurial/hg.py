@@ -773,7 +773,8 @@ class localrepository:
         if update_dirstate:
             self.dirstate.setparents(n, nullid)
 
-    def commit(self, files = None, text = "", user = None, date = None):
+    def commit(self, files = None, text = "", user = None, date = None,
+               match = util.always):
         commit = []
         remove = []
         if files:
@@ -786,7 +787,7 @@ class localrepository:
                 else:
                     self.ui.warn("%s not tracked!\n" % f)
         else:
-            (c, a, d, u) = self.changes()
+            (c, a, d, u) = self.changes(match = match)
             commit = c + a
             remove = d
 
