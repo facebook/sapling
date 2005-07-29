@@ -103,11 +103,17 @@ run_one() {
         if diff -u "$OUTOK" "$OUT" > /dev/null; then
             : no differences
         else
-            cp "$OUT" "$ERR"
-            echo
-            echo "$1 output changed:"
-            diff -u "$OUTOK" "$ERR" || true
-            fail=1
+            if FIXME="`grep 'FIXME' \"$TESTDIR/$1\"`"; then
+                echo
+                echo "$1 failed, but this is ignored because of:"
+                echo "$FIXME"
+            else
+                cp "$OUT" "$ERR"
+                echo
+                echo "$1 output changed:"
+                diff -u "$OUTOK" "$ERR" || true
+                fail=1
+            fi
         fi
     fi
 
