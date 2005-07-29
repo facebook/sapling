@@ -60,9 +60,9 @@ then
     rm tests/install.err
     mv "$INST/bin/hg" "$INST/bin/hg.real"
     (
-        echo '#!/bin/sh'
-        echo 'echo "+ hg $@"'
-        echo 'exec hg.real "$@"'
+	echo '#!/bin/sh'
+	echo 'echo "+ hg $@"'
+	echo 'exec hg.real "$@"'
     ) > "$INST/bin/hg"
     chmod 755 "$INST/bin/hg"
 else
@@ -87,7 +87,7 @@ run_one() {
     ERR="$TESTDIR/$1.err"
 
     if "$TESTDIR/$1" > "$OUT" 2>&1; then
-        : no error
+	: no error
     else
 	echo "$1 failed with error code $?"
 	fail=1
@@ -100,21 +100,21 @@ run_one() {
 	cat "$ERR"
 	fail=1
     elif [ -r "$OUTOK" ]; then
-        if diff -u "$OUTOK" "$OUT" > /dev/null; then
-            : no differences
-        else
-            if FIXME="`grep 'FIXME' \"$TESTDIR/$1\"`"; then
-                echo
-                echo "$1 failed, but this is ignored because of:"
-                echo "$FIXME"
-            else
-                cp "$OUT" "$ERR"
-                echo
-                echo "$1 output changed:"
-                diff -u "$OUTOK" "$ERR" || true
-                fail=1
-            fi
-        fi
+	if diff -u "$OUTOK" "$OUT" > /dev/null; then
+	    : no differences
+	else
+	    if FIXME="`grep 'FIXME' \"$TESTDIR/$1\"`"; then
+		echo
+		echo "$1 failed, but this is ignored because of:"
+		echo "$FIXME"
+	    else
+		cp "$OUT" "$ERR"
+		echo
+		echo "$1 output changed:"
+		diff -u "$OUTOK" "$ERR" || true
+		fail=1
+	    fi
+	fi
     fi
 
     cd "$TESTDIR"
