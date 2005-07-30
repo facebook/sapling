@@ -654,12 +654,6 @@ def identify(ui, repo):
 
 def import_(ui, repo, patch1, *patches, **opts):
     """import an ordered set of patches"""
-    try:
-        import psyco
-        psyco.full()
-    except ImportError:
-        pass
-
     patches = (patch1,) + patches
 
     d = opts["base"]
