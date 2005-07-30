@@ -1492,7 +1492,8 @@ class localrepository:
                     if f in merge: cf = " (resolve)"
                     self.ui.status(" %s%s\n" % (f, cf))
                 self.ui.warn("aborting update spanning branches!\n")
-                self.ui.status("(use update -m to perform a branch merge)\n")
+                self.ui.status("(use update -m to merge across branches" +
+                               " or -C to lose changes)\n")
                 return 1
             # we have to remember what files we needed to get/change
             # because any file that's different from either one of its
