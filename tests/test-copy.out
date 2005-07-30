@@ -1,15 +1,11 @@
 + hg init
-+ echo a
 + hg add a
-+ hg commit -m 1 -d '0 0'
++ hg commit -m 1 -d 0 0
 + hg status
-? .out
-+ cp a b
 + hg copy a b
 + hg status
 A b
-? .out
-+ hg --debug commit -m 2 -d '0 0'
++ hg --debug commit -m 2 -d 0 0
 b
  b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 + hg history
@@ -30,19 +26,9 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     1
 
-+ hexdump -C .hg/data/b.d
-00000000  75 01 0a 63 6f 70 79 72  65 76 3a 20 62 37 38 39  |u..copyrev: b789|
-00000010  66 64 64 39 36 64 63 32  66 33 62 64 32 32 39 63  |fdd96dc2f3bd229c|
-00000020  31 64 64 38 65 65 64 66  30 66 63 36 30 65 32 62  |1dd8eedf0fc60e2b|
-00000030  36 38 65 33 0a 63 6f 70  79 3a 20 61 0a 01 0a 61  |68e3.copy: a...a|
-00000040  0a                                                |.|
-00000041
-+ hg cat b
-+ md5sum bsum
-60b725f10c9c85c70d97880dfe8191b3  bsum
-+ hg cat a
-+ md5sum asum
-60b725f10c9c85c70d97880dfe8191b3  asum
+566e338d09a089ba737c21e0d3759980  .hg/data/b.d
+3268d2f51b2d2d423ff01b59eb6fbb14  bsum
+70909ca2ecf494c71e9184b445e040ee  asum
 + hg verify
 checking changesets
 checking manifests

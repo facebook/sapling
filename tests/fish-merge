@@ -4,8 +4,8 @@ set -e
 set -x
 
 # skip commit logs
-export HGMERGE=tkmerge
-export EDITOR=true
+HGMERGE=tkmerge; export HGMERGE
+EDITOR=true; export EDITOR
 
 rm -rf m m1 m2
 mkdir m

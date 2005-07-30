@@ -1,11 +1,8 @@
 + hg init
-+ echo This is file a1
 + hg add a
-+ hg commit -m 'commit #0' -d '0 0'
-+ touch b
++ hg commit -m commit #0 -d 0 0
 + hg add b
-+ rm b
-+ hg commit -A '-mcomment #1' -d '0 0'
-adding .out
++ hg commit -A -mcomment #1 -d 0 0
 removing b
 b never committed!
+nothing changed

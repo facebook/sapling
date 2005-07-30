@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 
 cat <<'EOF' > merge
 #!/bin/sh

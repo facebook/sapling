@@ -1,3 +1,5 @@
++ hg init
++ hg serve --stdio
 0
 0
 adding changesets

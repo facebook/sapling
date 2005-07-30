@@ -527,7 +527,10 @@ def debugstate(ui, repo):
     keys = dc.keys()
     keys.sort()
     for file_ in keys:
-        ui.write("%c %s\n" % (dc[file_][0], file_))
+        ui.write("%c %3o %10d %s %s\n"
+                 % (dc[file_][0], dc[file_][1] & 0777, dc[file_][2],
+                    time.strftime("%x %X",
+                                  time.localtime(dc[file_][3])), file_))
 
 def debugindex(ui, file_):
     """dump the contents of an index file"""

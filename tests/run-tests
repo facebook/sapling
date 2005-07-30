@@ -1,28 +1,45 @@
 #!/bin/sh -e
 
-export LANG=C
-export LC_CTYPE="C"
-export LC_NUMERIC="C"
-export LC_TIME="C"
-export LC_COLLATE="C"
-export LC_MONETARY="C"
-export LC_MESSAGES="C"
-export LC_PAPER="C"
-export LC_NAME="C"
-export LC_ADDRESS="C"
-export LC_TELEPHONE="C"
-export LC_MEASUREMENT="C"
-export LC_IDENTIFICATION="C"
-export LC_ALL=""
-export HGEDITOR=true
-export HGMERGE=true
-export HGUSER=test
+LANG="C"; export LANG
+LC_CTYPE="C"; export LC_CTYPE
+LC_NUMERIC="C"; export LC_NUMERIC
+LC_TIME="C"; export LC_TIME
+LC_COLLATE="C"; export LC_COLLATE
+LC_MONETARY="C"; export LC_MONETARY
+LC_MESSAGES="C"; export LC_MESSAGES
+LC_PAPER="C"; export LC_PAPER
+LC_NAME="C"; export LC_NAME
+LC_ADDRESS="C"; export LC_ADDRESS
+LC_TELEPHONE="C"; export LC_TELEPHONE
+LC_MEASUREMENT="C"; export LC_MEASUREMENT
+LC_IDENTIFICATION="C"; export LC_IDENTIFICATION
+LC_ALL=""; export LC_ALL
+TZ=GMT; export TZ
+HGEDITOR=true; export HGEDITOR
+HGMERGE=true; export HGMERGE
+HGUSER="test"; export HGUSER
 
 umask 022
 
 tests=0
 failed=0
-H=$PWD
+
+HGTMP=""
+cleanup_exit() {
+    rm -rf "$HGTMP"
+    exit $1
+}
+
+# Remove temporary files even if we get interrupted
+trap "cleanup_exit 255" TERM KILL INT QUIT ABRT
+
+HGTMP="${TMPDIR-/tmp}/hgtests.$RANDOM.$RANDOM.$RANDOM.$$"
+(umask 077 && mkdir "$HGTMP") || {
+    echo "Could not create temporary directory! Exiting." 1>&2
+    exit 1
+}
+
+TESTDIR="$PWD"
 
 if [ -d /usr/lib64 ]; then
     lib=lib64
@@ -30,73 +47,91 @@ else
     lib=lib
 fi
 
-TESTPATH=$PWD/install/bin
-export PATH=$TESTPATH:$PATH
-export PYTHONPATH=$PWD/install/$lib/python
-
-rm -rf install
+INST="$HGTMP/install"
 cd ..
-${PYTHON:-python} setup.py install --home=tests/install > tests/install.err
-if [ $? != 0 ] ; then
+if ${PYTHON-python} setup.py install --home="$INST" > tests/install.err 2>&1
+then
+    rm tests/install.err
+    mv "$INST/bin/hg" "$INST/bin/hg.real"
+    (
+	echo '#!/bin/sh'
+	echo 'echo "+ hg $@"'
+	echo 'exec hg.real "$@"'
+    ) > "$INST/bin/hg"
+    chmod 755 "$INST/bin/hg"
+else
     cat tests/install.err
+    cleanup_exit 1
 fi
-cd $H
-rm install.err
+cd "$TESTDIR"
 
-function run_one
-{
-    rm -f $1.err
-    export TZ=GMT
-    D=`mktemp -d ${TMP-/tmp}/tmp.XXXXXX`
-    if [ "$D" = "" ] ; then
-	echo mktemp failed!
-    fi
+PATH="$INST/bin:$PATH"; export PATH
+PYTHONPATH="$INST/$lib/python"; export PYTHONPATH
 
-    cd $D
+
+run_one() {
+    rm -f "$1.err"
+
+    mkdir "$HGTMP/$1"
+    cd "$HGTMP/$1"
     fail=0
-    export HOME=$D
+    HOME="$HGTMP/$1"; export HOME
+    OUT="$HGTMP/$1.out"
+    OUTOK="$TESTDIR/$1.out"
+    ERR="$TESTDIR/$1.err"
 
-    if ! $H/$1 > .out 2>&1 ; then
-	echo $1 failed with error code $?
+    if "$TESTDIR/$1" > "$OUT" 2>&1; then
+	: no error
+    else
+	echo "$1 failed with error code $?"
 	fail=1
     fi
 
-    if [ -s .out -a ! -r $H/$1.out ] ; then
-	echo $1 generated unexpected output:
-	cat .out
-	cp .out $H/$1.err
+    if [ -s "$OUT" -a ! -s "$OUTOK" ] ; then
+	cp "$OUT" "$ERR"
+	echo
+	echo "$1 generated unexpected output:"
+	cat "$ERR"
 	fail=1
-    elif [ -r $H/$1.out ] && ! diff -u $H/$1.out .out > /dev/null ; then
-	echo $1 output changed:
-	diff -u $H/$1.out .out && true
-	cp .out $H/$1.err
-	fail=1
+    elif [ -r "$OUTOK" ]; then
+	if diff -u "$OUTOK" "$OUT" > /dev/null; then
+	    : no differences
+	else
+	    if FIXME="`grep 'FIXME' \"$TESTDIR/$1\"`"; then
+		echo
+		echo "$1 failed, but this is ignored because of:"
+		echo "$FIXME"
+	    else
+		cp "$OUT" "$ERR"
+		echo
+		echo "$1 output changed:"
+		diff -u "$OUTOK" "$ERR" || true
+		fail=1
+	    fi
+	fi
     fi
 
-    cd $H
-    rm -r $D
+    cd "$TESTDIR"
+    rm -f "$HGTMP/$1.out"
+    rm -rf "$HGTMP/$1"
     return $fail
 }
 
-TESTS=$@
-if [ "$TESTS" = "" ] ; then
-    TESTS=`ls test-* | grep -Ev "\.|~"`
+TESTS="$*"
+if [ -z "$TESTS" ] ; then
+    TESTS=`ls test-* | grep -v "[.~]"`
 fi
 
 for f in $TESTS ; do
     echo -n "."
-    if ! run_one $f ; then
-	failed=$[$failed + 1]
-    fi
-    tests=$[$tests + 1]
+    run_one $f || failed=`expr $failed + 1`
+    tests=`expr $tests + 1`
 done
 
-rm -rf install
-
 echo
-echo Ran $tests tests, $failed failed
+echo "Ran $tests tests, $failed failed."
 
 if [ $failed -gt 0 ] ; then
-    exit 1
+    cleanup_exit 1
 fi
-
+cleanup_exit 0

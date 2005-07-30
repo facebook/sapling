@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -ex
+set -e
 mkdir r1
 cd r1
 hg init
@@ -13,7 +13,7 @@ cd ../r2
 hg up
 echo abc > a
 hg diff > ../d
-sed "s/\(\(---\|+++\) [^ \t]*\)[ \t].*/\1/" < ../d
+sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/" < ../d
 
 cd ../r1
 echo b > b
@@ -29,5 +29,5 @@ hg --debug up -m
 hg parents
 hg -v history
 hg diff > ../d
-sed "s/\(\(---\|+++\) [^ \t]*\)[ \t].*/\1/" < ../d
+sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/" < ../d
 

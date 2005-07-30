@@ -4,10 +4,11 @@
 \.so$
 \.pyc$
 \.swp$
+^tests/.*\.err$
 ^build/
 ^dist/
 ^doc/.*\.[0-9]$
 ^MANIFEST$
-^.pc/
+^\.pc/
 ^patches/
 ^mercurial/__version__.py$

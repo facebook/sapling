@@ -7,34 +7,36 @@
 
 set -e # bail out quickly on failure
 
-LOCAL=$1
-BASE=$2
-OTHER=$3
+LOCAL="$1"
+BASE="$2"
+OTHER="$3"
 
-EDITOR="${EDITOR:-vi}"
+if [ -z "$EDITOR" ]; then
+    EDITOR="vi"
+fi
 
 # Back up our file
-cp $LOCAL $LOCAL.orig
+cp "$LOCAL" "$LOCAL.orig"
 
 # Attempt to do a non-interactive merge
-if which merge > /dev/null ; then
-    if merge $LOCAL $BASE $OTHER 2> /dev/null; then
+if type merge > /dev/null ; then
+    if merge "$LOCAL" "$BASE" "$OTHER" 2> /dev/null; then
 	# success!
 	exit 0
     fi
-    cp $LOCAL.orig $LOCAL
-elif which diff3 > /dev/null ; then
-    if diff3 -m $LOCAL.orig $BASE $OTHER > $LOCAL ; then
+    cp "$LOCAL.orig" "$LOCAL"
+elif type diff3 > /dev/null ; then
+    if diff3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" ; then
 	# success
 	exit 0
     fi
-    cp $LOCAL.orig $LOCAL
+    cp "$LOCAL.orig" "$LOCAL"
 fi
 
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
-    if which kdiff3 > /dev/null ; then
-	if kdiff3 --auto $BASE $LOCAL $OTHER -o $LOCAL ; then
+    if type kdiff3 > /dev/null ; then
+	if kdiff3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" ; then
 	    exit 0
 	else
 	    exit 1
@@ -42,8 +44,8 @@ if [ -n "$DISPLAY" ]; then
     fi
 
     # try using tkdiff, which is a bit less sophisticated
-    if which tkdiff > /dev/null ; then
-	if tkdiff $LOCAL $OTHER -a $BASE -o $LOCAL ; then
+    if type tkdiff > /dev/null ; then
+	if tkdiff "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" ; then
 	    exit 0
 	else
 	    exit 1
@@ -52,30 +54,43 @@ if [ -n "$DISPLAY" ]; then
 fi
 
 # Attempt to do a merge with $EDITOR
-if which merge > /dev/null ; then
+if type merge > /dev/null ; then
     echo "conflicts detected in $LOCAL"
-    merge $LOCAL $BASE $OTHER 2>/dev/null || $EDITOR $LOCAL
+    merge "$LOCAL" "$BASE" "$OTHER" 2>/dev/null || $EDITOR "$LOCAL"
     exit 0
 fi
 
-if which diff3 > /dev/null ; then
+if type diff3 > /dev/null ; then
     echo "conflicts detected in $LOCAL"
-    diff3 -m $LOCAL.orig $BASE $OTHER > $LOCAL || $EDITOR $LOCAL
+    diff3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" || $EDITOR "$LOCAL"
     exit 0
 fi
+
+HGTMP=""
+cleanup_exit() {
+    rm -rf "$HGTMP"
+    exit $1
+}
 
 # attempt to manually merge with diff and patch
-if which diff > /dev/null ; then
-    if which patch > /dev/null ; then
-	T=`mktemp`
-	diff -u $BASE $OTHER > $T
-	if patch $LOCAL < $T ; then
-	    exit 0
+if type diff > /dev/null ; then
+    if type patch > /dev/null ; then
+	# Remove temporary files even if we get interrupted
+	trap "cleanup_exit 1" TERM KILL INT QUIT ABRT
+
+	HGTMP="${TMPDIR-/tmp}/hgmerge.$RANDOM.$RANDOM.$RANDOM.$$"
+	(umask 077 && mkdir "$HGTMP") || {
+	    echo "Could not create temporary directory! Exiting." 1>&2
+	    exit 1
+	}
+
+	diff -u "$BASE" "$OTHER" > "$HGTMP/diff"
+	if patch "$LOCAL" < "$HGTMP/diff" ; then
+	    cleanup_exit 0
 	else
-	    $EDITOR $LOCAL $LOCAL.rej
+	    $EDITOR "$LOCAL" "$LOCAL.rej"
 	fi
-	rm $T
-	exit 1
+	cleanup_exit 1
     fi
 fi
 

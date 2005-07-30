@@ -1,82 +1,45 @@
-+ cat
-+ chmod +x merge
-+ mkdir t
-+ cd t
 + hg init
-+ echo This is file a1
 + hg add a
-+ hg commit -m 'commit #0' -d '0 0'
-+ echo This is file b1
++ hg commit -m commit #0 -d 0 0
 + hg add b
-+ hg commit -m 'commit #1' -d '0 0'
++ hg commit -m commit #1 -d 0 0
 + hg update 0
-+ echo This is file c1
 + hg add c
-+ hg commit -m 'commit #2' -d '0 0'
-+ echo This is file b1
-+ env HGMERGE=../merge hg update -m 1
-+ cd ..
-+ /bin/rm -rf t
-+ mkdir t
-+ cd t
++ hg commit -m commit #2 -d 0 0
++ hg update -m 1
 + hg init
-+ echo This is file a1
 + hg add a
-+ hg commit -m 'commit #0' -d '0 0'
-+ echo This is file b1
++ hg commit -m commit #0 -d 0 0
 + hg add b
-+ hg commit -m 'commit #1' -d '0 0'
++ hg commit -m commit #1 -d 0 0
 + hg update 0
-+ echo This is file c1
 + hg add c
-+ hg commit -m 'commit #2' -d '0 0'
-+ echo This is file b2
-+ env HGMERGE=../merge hg update -m 1
++ hg commit -m commit #2 -d 0 0
++ hg update -m 1
 merging for b
 merging b
-+ cd ..
-+ /bin/rm -rf t
-+ mkdir t
-+ cd t
 + hg init
-+ echo This is file a1
 + hg add a
-+ hg commit -m 'commit #0' -d '0 0'
-+ echo This is file b1
++ hg commit -m commit #0 -d 0 0
 + hg add b
-+ hg commit -m 'commit #1' -d '0 0'
-+ echo This is file b22
-+ hg commit -m 'commit #2' -d '0 0'
++ hg commit -m commit #1 -d 0 0
++ hg commit -m commit #2 -d 0 0
 + hg update 1
-+ echo This is file c1
 + hg add c
-+ hg commit -m 'commit #3' -d '0 0'
-+ cat b
++ hg commit -m commit #3 -d 0 0
 This is file b1
-+ echo This is file b22
-+ env HGMERGE=../merge hg update -m 2
++ hg update -m 2
 merging for b
 merging b
-+ cd ..
-+ /bin/rm -rf t
-+ mkdir t
-+ cd t
 + hg init
-+ echo This is file a1
 + hg add a
-+ hg commit -m 'commit #0' -d '0 0'
-+ echo This is file b1
++ hg commit -m commit #0 -d 0 0
 + hg add b
-+ hg commit -m 'commit #1' -d '0 0'
-+ echo This is file b22
-+ hg commit -m 'commit #2' -d '0 0'
++ hg commit -m commit #1 -d 0 0
++ hg commit -m commit #2 -d 0 0
 + hg update 1
-+ echo This is file c1
 + hg add c
-+ hg commit -m 'commit #3' -d '0 0'
-+ echo This is file b33
-+ env HGMERGE=../merge hg update -m 2
++ hg commit -m commit #3 -d 0 0
++ hg update -m 2
 merging for b
 merging b
-+ cd ..
-+ /bin/rm -rf t

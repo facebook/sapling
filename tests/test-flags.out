@@ -1,13 +1,6 @@
-+ umask 027
-+ mkdir test1
-+ cd test1
 + hg init
-+ touch a b
 + hg add a b
-+ hg ci -m 'added a b' -d '0 0'
-+ cd ..
-+ mkdir test2
-+ cd test2
++ hg ci -m added a b -d 0 0
 + hg init
 + hg pull ../test1
 pulling from ../test1
@@ -18,11 +11,8 @@ adding file changes
 added 1 changesets with 2 changes to 2 files
 (run 'hg update' to get a working copy)
 + hg co
-+ chmod +x a
-+ hg ci -m 'chmod +x a' -d '0 0'
-+ cd ../test1
-+ echo 123
-+ hg ci -m 'a updated' -d '0 0'
++ hg ci -m chmod +x a -d 0 0
++ hg ci -m a updated -d 0 0
 + hg pull ../test2
 pulling from ../test2
 searching for changes
@@ -66,7 +56,5 @@ summary:     added a b
 resolving manifests
 merging a
 resolving a
-+ ls -l ../test1/a ../test2/a
-+ cut -b 0-10
 -rwxr-x---
 -rwxr-x---

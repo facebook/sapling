@@ -7,6 +7,6 @@ hg ci -m "a" -d "0 0"
 
 echo 123 > b
 hg add b
-hg diff | sed "s/\(\(---\|+++\) [^ \t]*\)[ \t].*/\1/"
+hg diff | sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
 
-hg diff -r tip | sed "s/\(\(---\|+++\) [^ \t]*\)[ \t].*/\1/"
+hg diff -r tip | sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
