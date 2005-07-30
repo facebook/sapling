@@ -47,7 +47,8 @@ def walk(repo, pats, opts, head = ''):
     cwd = repo.getcwd()
     c = 0
     if cwd: c = len(cwd) + 1
-    for src, fn in repo.walk(match = matchpats(cwd, pats, opts, head)):
+    files, matchfn = matchpats(cwd, pats, opts, head)
+    for src, fn in repo.walk(files = files, match = matchfn):
         yield src, fn, fn[c:]
 
 revrangesep = ':'
@@ -339,17 +340,17 @@ def add(ui, repo, *pats, **opts):
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files"""
     q = dict(zip(pats, pats))
-    cwd = repo.getcwd()
-    n = (cwd and len(cwd) + 1) or 0
-    c, a, d, u = repo.changes(match = matchpats(cwd, pats, opts))
-    for f in u:
-        if f not in q:
-            ui.status('adding %s\n' % f[n:])
-    repo.add(u)
-    for f in d:
-        if f not in q:
-            ui.status('removing %s\n' % f[n:])
-    repo.remove(d)
+    add, remove = [], []
+    for src, abs, rel in walk(repo, pats, opts):
+        if src == 'f':
+            if repo.dirstate.state(abs) == '?':
+                add.append(abs)
+                if rel not in q: ui.status('adding ', rel, '\n')
+        elif repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
+            remove.append(abs)
+            if rel not in q: ui.status('removing ', rel, '\n')
+    repo.add(add)
+    repo.remove(remove)
 
 def annotate(ui, repo, *pats, **opts):
     """show changeset information per file line"""
@@ -467,7 +468,7 @@ def clone(ui, source, dest=None, **opts):
 
     d.close()
 
-def commit(ui, repo, *files, **opts):
+def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes"""
     if opts['text']:
         ui.warn("Warning: -t and --text is deprecated,"
@@ -481,8 +482,18 @@ def commit(ui, repo, *files, **opts):
             ui.warn("Can't read commit message %s: %s\n" % (logfile, why))
 
     if opts['addremove']:
-        addremove(ui, repo, *files)
-    repo.commit(relpath(repo, files), message, opts['user'], opts['date'])
+        addremove(ui, repo, *pats, **opts)
+    cwd = repo.getcwd()
+    if not pats and cwd:
+        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
+        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
+    fns, match = matchpats((pats and repo.getcwd()) or '', pats, opts)
+    if pats:
+        c, a, d, u = repo.changes(files = fns, match = match)
+        files = c + a + [fn for fn in d if repo.dirstate.state(fn) == 'r']
+    else:
+        files = []
+    repo.commit(files, message, opts['user'], opts['date'], match)
 
 def copy(ui, repo, source, dest):
     """mark a file as copied or renamed for the next commit"""
@@ -604,9 +615,15 @@ def export(ui, repo, *changesets, **opts):
         seqno += 1
         doexport(ui, repo, cset, seqno, total, revwidth, opts)
 
-def forget(ui, repo, file1, *files):
+def forget(ui, repo, *pats, **opts):
     """don't add the specified files on the next commit"""
-    repo.forget(relpath(repo, (file1,) + files))
+    q = dict(zip(pats, pats))
+    forget = []
+    for src, abs, rel in walk(repo, pats, opts):
+        if repo.dirstate.state(abs) == 'a':
+            forget.append(abs)
+            if rel not in q: ui.status('forgetting ', rel, '\n')
+    repo.forget(forget)
 
 def heads(ui, repo):
     """show current repository heads"""
@@ -1004,7 +1021,8 @@ def status(ui, repo, *pats, **opts):
     R = removed
     ? = not tracked'''
 
-    (c, a, d, u) = repo.changes(match = matchpats(repo.getcwd(), pats, opts))
+    files, matchfn = matchpats(repo.getcwd(), pats, opts)
+    (c, a, d, u) = repo.changes(files = files, match = matchfn)
     (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
 
     for f in c:
@@ -1135,6 +1153,8 @@ table = {
     "^commit|ci":
         (commit,
          [('A', 'addremove', None, 'run add/remove during commit'),
+          ('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search'),
           ('m', 'message', "", 'commit message'),
           ('t', 'text', "", 'commit message (deprecated: use -m)'),
           ('l', 'logfile', "", 'commit message file'),
@@ -1156,7 +1176,10 @@ table = {
         (export,
          [('o', 'output', "", 'output to file')],
          "hg export [-o OUTFILE] REV..."),
-    "forget": (forget, [], "hg forget FILE..."),
+    "forget": (forget,
+               [('I', 'include', [], 'include path in search'),
+                ('X', 'exclude', [], 'exclude path from search')],
+               "hg forget FILE..."),
     "heads": (heads, [], 'hg heads'),
     "help": (help_, [], 'hg help [COMMAND]'),
     "identify|id": (identify, [], 'hg identify'),
