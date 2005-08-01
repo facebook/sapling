@@ -458,13 +458,17 @@ class dirstate:
                             ds = os.path.join(nd, sd +'/')
                             if self.ignore(ds) or not match(ds):
                                 subdirs.remove(sd)
+                        subdirs.sort()
+                        fl.sort()
                         for fn in fl:
                             fn = util.pconvert(os.path.join(d, fn))
                             yield 'f', fn
                 else:
                     yield 'f', f[len(self.root) + 1:]
 
-            for k in dc.keys():
+            ks = dc.keys()
+            ks.sort()
+            for k in ks:
                 yield 'm', k
 
         # yield only files that match: all in dirstate, others only if
