@@ -1030,8 +1030,8 @@ def status(ui, repo, *pats, **opts):
 
     cwd = repo.getcwd()
     files, matchfn = matchpats(cwd, pats, opts)
-    (c, a, d, u) = repo.changes(files = files, match = matchfn)
-    (c, a, d, u) = [map(lambda x: pathto(cwd, x), n) for n in c, a, d, u]
+    (c, a, d, u) = [[pathto(cwd, x) for x in n]
+                    for n in repo.changes(files=files, match=matchfn)]
 
     for f in c:
         ui.write("M ", f, "\n")
