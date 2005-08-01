@@ -440,6 +440,10 @@ class dirstate:
         dc = self.map.copy()
         # walk all files by default
         if not files: files = [self.root]
+        known = {'.hg': 1}
+        def seen(fn):
+            if fn in known: return True
+            known[fn] = 1
         def traverse():
             for f in util.unique(files):
                 f = os.path.join(self.root, f)
@@ -447,7 +451,7 @@ class dirstate:
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
                         nd = os.path.normpath(d)
-                        if nd == '.hg':
+                        if seen(nd):
                             subdirs[:] = []
                             continue
                         for sd in subdirs:
@@ -468,6 +472,7 @@ class dirstate:
 
         for src, fn in util.unique(traverse()):
             fn = os.path.normpath(fn)
+            if seen(fn): continue
             if fn in dc:
                 del dc[fn]
             elif self.ignore(fn):
