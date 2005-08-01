@@ -40,16 +40,24 @@ def relpath(repo, args):
     return args
 
 def matchpats(cwd, pats = [], opts = {}, head = ''):
-    return util.matcher(cwd, pats, opts.get('include'),
+    return util.matcher(cwd, pats or ['.'], opts.get('include'),
                         opts.get('exclude'), head)
+
+def pathto(n1, n2):
+    '''return the relative path from one place to another'''
+    if not n1: return n2
+    a, b = n1.split(os.sep), n2.split(os.sep)
+    a.reverse(), b.reverse()
+    while a and b and a[-1] == b[-1]:
+        a.pop(), b.pop()
+    b.reverse()
+    return os.sep.join((['..'] * len(a)) + b)
 
 def walk(repo, pats, opts, head = ''):
     cwd = repo.getcwd()
-    c = 0
-    if cwd: c = len(cwd) + 1
     files, matchfn = matchpats(cwd, pats, opts, head)
     for src, fn in repo.walk(files = files, match = matchfn):
-        yield src, fn, fn[c:]
+        yield src, fn, pathto(cwd, fn)
 
 revrangesep = ':'
 
@@ -565,6 +573,11 @@ def debugindexdot(ui, file_):
             ui.write("\t%d -> %d\n" % (r.rev(e[5]), i))
     ui.write("}\n")
 
+def debugwalk(ui, repo, *pats, **opts):
+    items = list(walk(repo, pats, opts))
+    fmt = '%%s  %%-%ds  %%s' % max([len(abs) for (src, abs, rel) in items])
+    for i in items: print fmt % i
+
 def diff(ui, repo, *pats, **opts):
     """diff working directory (or selected files)"""
     revs = []
@@ -1015,9 +1028,10 @@ def status(ui, repo, *pats, **opts):
     R = removed
     ? = not tracked'''
 
-    files, matchfn = matchpats(repo.getcwd(), pats, opts)
+    cwd = repo.getcwd()
+    files, matchfn = matchpats(cwd, pats, opts)
     (c, a, d, u) = repo.changes(files = files, match = matchfn)
-    (c, a, d, u) = map(lambda x: relfilter(repo, x), (c, a, d, u))
+    (c, a, d, u) = [map(lambda x: pathto(cwd, x), n) for n in c, a, d, u]
 
     for f in c:
         ui.write("M ", f, "\n")
@@ -1160,6 +1174,10 @@ table = {
     "debugstate": (debugstate, [], 'debugstate'),
     "debugindex": (debugindex, [], 'debugindex FILE'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot FILE'),
+    "debugwalk": (debugwalk,
+                  [('I', 'include', [], 'include path in search'),
+                   ('X', 'exclude', [], 'exclude path from search')],
+                  'debugwalk [OPTIONS]... [FILE]...'),
     "^diff":
         (diff,
          [('r', 'rev', [], 'revision'),

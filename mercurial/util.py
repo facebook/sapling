@@ -69,23 +69,26 @@ def globre(pat, head = '^', tail = '$'):
 _globchars = {'[': 1, '{': 1, '*': 1, '?': 1}
 
 def matcher(cwd, names, inc, exc, head = ''):
-    def patlike(name):
+    def patkind(name):
         for prefix in 're:', 'glob:', 'path:':
-            if name.startswith(prefix): return True
+            if name.startswith(prefix): return name.split(':', 1)
         for c in name:
-            if c in _globchars: return True
+            if c in _globchars: return 'glob', name
+        return 'relpath', name
+
+    cwdsep = cwd + os.sep
 
     def regex(name, tail):
         '''convert a pattern into a regular expression'''
-        if name.startswith('re:'):
-            return name[3:]
-        elif name.startswith('path:'):
-            return '^' + re.escape(name[5:]) + '$'
-        elif name.startswith('glob:'):
-            return head + globre(name[5:], '', tail)
+        kind, name = patkind(name)
+        if kind == 're':
+            return name
+        elif kind == 'path':
+            return '^' + re.escape(name) + '$'
+        if cwd: name = os.path.join(cwdsep, name)
+        name = os.path.normpath(name)
+        if name == '.': name = '**'
         return head + globre(name, '', tail)
-
-    cwdsep = cwd + os.sep
 
     def under(fn):
         """check if fn is under our cwd"""
@@ -95,22 +98,28 @@ def matcher(cwd, names, inc, exc, head = ''):
         """build a matching function from a set of patterns"""
         if pats:
             pat = '(?:%s)' % '|'.join([regex(p, tail) for p in pats])
-            if cwd:
-                pat = re.escape(cwdsep) + pat
             return re.compile(pat).match
 
-    pats = filter(patlike, names)
-    files = [n for n in names if not patlike(n)]
-    if pats: plain = []
-    elif cwd: plain = [cwdsep + f for f in files]
-    else: plain = files
+    def globprefix(pat):
+        '''return the non-glob prefix of a path, e.g. foo/* -> foo'''
+        root = []
+        for p in pat.split(os.sep):
+            if patkind(p)[0] == 'glob': break
+            root.append(p)
+        return os.sep.join(root)
+
+    patkinds = map(patkind, names)
+    pats = [name for (kind, name) in patkinds if kind != 'relpath']
+    files = [name for (kind, name) in patkinds if kind == 'relpath']
+    roots = filter(None, map(globprefix, pats)) + files
+    if cwd: roots = [cwdsep + r for r in roots]
         
-    patmatch = matchfn(pats, '$')
-    filematch = matchfn(files, '(?:/|$)')
-    incmatch = matchfn(inc, '(?:/|$)') or under
+    patmatch = matchfn(pats, '$') or always
+    filematch = matchfn(files, '(?:/|$)') or always
+    incmatch = matchfn(inc, '(?:/|$)') or always
     excmatch = matchfn(exc, '(?:/|$)') or (lambda fn: False)
 
-    return plain, lambda fn: (incmatch(fn) and not excmatch(fn) and
+    return roots, lambda fn: (incmatch(fn) and not excmatch(fn) and
                               (fn.endswith('/') or
                                (not pats and not files) or
                                (pats and patmatch(fn)) or
