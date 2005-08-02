@@ -1879,9 +1879,9 @@ class sshrepository:
         self.url = path
         self.ui = ui
 
-        m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?', path)
+        m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))', path)
         if not m:
-            raise RepoError("couldn't parse destination %s\n" % path)
+            raise RepoError("couldn't parse destination %s" % path)
 
         self.user = m.group(2)
         self.host = m.group(3)
@@ -1891,6 +1891,9 @@ class sshrepository:
         args = self.user and ("%s@%s" % (self.user, self.host)) or self.host
         args = self.port and ("%s -p %s") % (args, self.port) or args
         path = self.path or ""
+
+        if not path:
+            raise RepoError("no remote repository path specified")
 
         cmd = "ssh %s 'hg -R %s serve --stdio'"
         cmd = cmd % (args, path)
@@ -1906,11 +1909,14 @@ class sshrepository:
             self.ui.status("remote: ", l)
 
     def __del__(self):
-        self.pipeo.close()
-        self.pipei.close()
-        for l in self.pipee:
-            self.ui.status("remote: ", l)
-        self.pipee.close()
+        try:
+            self.pipeo.close()
+            self.pipei.close()
+            for l in self.pipee:
+                self.ui.status("remote: ", l)
+            self.pipee.close()
+        except:
+            pass
 
     def dev(self):
         return -1
