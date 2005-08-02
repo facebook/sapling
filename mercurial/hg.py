@@ -440,32 +440,43 @@ class dirstate:
         dc = self.map.copy()
         # walk all files by default
         if not files: files = [self.root]
+        known = {'.hg': 1}
+        def seen(fn):
+            if fn in known: return True
+            known[fn] = 1
         def traverse():
             for f in util.unique(files):
                 f = os.path.join(self.root, f)
                 if os.path.isdir(f):
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
-                        if d == '.hg':
+                        nd = os.path.normpath(d)
+                        if seen(nd):
                             subdirs[:] = []
                             continue
                         for sd in subdirs:
-                            ds = os.path.join(d, sd +'/')
+                            ds = os.path.join(nd, sd +'/')
                             if self.ignore(ds) or not match(ds):
                                 subdirs.remove(sd)
+                        subdirs.sort()
+                        fl.sort()
                         for fn in fl:
                             fn = util.pconvert(os.path.join(d, fn))
                             yield 'f', fn
                 else:
                     yield 'f', f[len(self.root) + 1:]
 
-            for k in dc.keys():
+            ks = dc.keys()
+            ks.sort()
+            for k in ks:
                 yield 'm', k
 
         # yield only files that match: all in dirstate, others only if
         # not in .hgignore
 
         for src, fn in util.unique(traverse()):
+            fn = os.path.normpath(fn)
+            if seen(fn): continue
             if fn in dc:
                 del dc[fn]
             elif self.ignore(fn):
@@ -868,7 +879,7 @@ class localrepository:
     def walk(self, node = None, files = [], match = util.always):
         if node:
             for fn in self.manifest.read(self.changelog.read(node)[0]):
-                yield 'm', fn
+                if match(fn): yield 'm', fn
         else:
             for src, fn in self.dirstate.walk(files, match):
                 yield src, fn
