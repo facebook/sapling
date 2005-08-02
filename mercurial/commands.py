@@ -819,13 +819,13 @@ def pull(ui, repo, source="default", **opts):
 
     return r
 
-def push(ui, repo, dest="default-push"):
+def push(ui, repo, dest="default-push", force=False):
     """push changes to the specified destination"""
     dest = ui.expandpath(dest)
     ui.status('pushing to %s\n' % (dest))
 
     other = hg.repository(ui, dest)
-    r = repo.push(other)
+    r = repo.push(other, force)
     return r
 
 def rawcommit(ui, repo, *flist, **rc):
@@ -1203,7 +1203,10 @@ table = {
         (pull,
          [('u', 'update', None, 'update working directory')],
          'hg pull [-u] [SOURCE]'),
-    "^push": (push, [], 'hg push [DEST]'),
+    "^push":
+        (push,
+         [('f', 'force', None, 'force push')],
+         'hg push [DEST]'),
     "rawcommit":
         (rawcommit,
          [('p', 'parent', [], 'parent'),
