@@ -1048,17 +1048,22 @@ class localrepository:
 
         return nl
 
-    def findincoming(self, remote, base={}):
+    def findincoming(self, remote, base=None, heads=None):
         m = self.changelog.nodemap
         search = []
         fetch = []
         seen = {}
         seenbranch = {}
+        if base == None:
+            base = {}
 
         # assume we're closer to the tip than the root
         # and start by examining the heads
         self.ui.status("searching for changes\n")
-        heads = remote.heads()
+
+        if not heads:
+            heads = remote.heads()
+
         unknown = []
         for h in heads:
             if h not in m:
@@ -1160,9 +1165,11 @@ class localrepository:
 
         return fetch
 
-    def findoutgoing(self, remote):
-        base = {}
-        self.findincoming(remote, base)
+    def findoutgoing(self, remote, base=None, heads=None):
+        if base == None:
+            base = {}
+            self.findincoming(remote, base, heads)
+
         remain = dict.fromkeys(self.changelog.nodemap)
 
         # prune everything remote has from the tree
@@ -1202,12 +1209,27 @@ class localrepository:
         cg = remote.changegroup(fetch)
         return self.addchangegroup(cg)
 
-    def push(self, remote):
+    def push(self, remote, force=False):
         lock = remote.lock()
-        update = self.findoutgoing(remote)
+
+        base = {}
+        heads = remote.heads()
+        inc = self.findincoming(remote, base, heads)
+        if not force and inc:
+            self.ui.warn("abort: unsynced remote changes!\n")
+            self.ui.status("(did you forget to sync? use push -f to force)\n")
+            return 1
+
+        update = self.findoutgoing(remote, base)
         if not update:
             self.ui.status("no changes found\n")
             return 1
+        elif not force:
+            if len(heads) < len(self.changelog.heads()):
+                self.ui.warn("abort: push creates new remote branches!\n")
+                self.ui.status("(did you forget to merge?" +
+                               " use push -f to force)\n")
+                return 1
 
         cg = self.changegroup(update)
         return remote.addchangegroup(cg)
