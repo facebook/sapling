@@ -703,7 +703,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             message = "%s\n" % '\n'.join(message)
         ui.debug('message:\n%s\n' % message)
 
-        f = os.popen("patch -p%d < %s" % (strip, pf))
+        f = os.popen("patch -p%d < '%s'" % (strip, pf))
         files = []
         for l in f.read().splitlines():
             l.rstrip('\r\n');
