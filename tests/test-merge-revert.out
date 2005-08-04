@@ -26,6 +26,7 @@
 + hg update
 merging file1
 + hg diff
+FIXME: This is a known bug:
 + hg status
 + hg id
 3aa14bbc23d9 tip
