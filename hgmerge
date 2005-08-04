@@ -75,7 +75,8 @@ if type diff > /dev/null 2>&1 && type patch > /dev/null 2>&1; then
     if patch "$LOCAL" < "$HGTMP/diff"; then
 	cleanup_exit 0
     else
-	$EDITOR "$LOCAL" "$LOCAL.rej"
+	# If rejects are empty after using the editor, merge was ok
+	$EDITOR "$LOCAL" "$LOCAL.rej" && test -s "$LOCAL.rej" || cleanup_exit 0
     fi
     cleanup_exit 1
 fi
