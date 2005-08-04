@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, cgi, time, re, difflib, sys, zlib
+import os, cgi, time, re, difflib, socket, sys, zlib
 from mercurial.hg import *
 from mercurial.ui import *
 
@@ -699,10 +699,13 @@ class hgweb:
         else:
             write(self.t("error"))
 
-def create_server(path, name, templates, address, port,
+def create_server(path, name, templates, address, port, use_ipv6 = False,
                   accesslog = sys.stdout, errorlog = sys.stderr):
 
     import BaseHTTPServer
+
+    class IPv6HTTPServer(BaseHTTPServer.HTTPServer):
+        address_family = socket.AF_INET6
 
     class hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
         def log_error(self, format, *args):
@@ -774,10 +777,13 @@ def create_server(path, name, templates, address, port,
                 sys.argv, sys.stdin, sys.stdout, sys.stderr = save
 
     hg = hgweb(path, name, templates)
-    return BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
+    if use_ipv6:
+        return IPv6HTTPServer((address, port), hgwebhandler)
+    else:
+        return BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
 
-def server(path, name, templates, address, port,
+def server(path, name, templates, address, port, use_ipv6 = False,
            accesslog = sys.stdout, errorlog = sys.stderr):
-    httpd = create_server(path, name, templates, address, port,
+    httpd = create_server(path, name, templates, address, port, use_ipv6,
                           accesslog, errorlog)
     httpd.serve_forever()

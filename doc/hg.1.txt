@@ -330,6 +330,7 @@ serve [options]::
     -p, --port <n>           port to use (default: 8000)
     -n, --name <name>        name to show in web pages (default: working dir)
     -t, --templatedir <path> web templates to use
+    -6, --ipv6               use IPv6 in addition to IPv4
 
 status [options] [files]::
     Show changed files in the working directory.  If no names are
