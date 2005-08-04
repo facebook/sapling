@@ -44,6 +44,7 @@ M file1
 3aa14bbc23d9+ tip
 + hg revert
 + hg diff
+FIXME: This is a known bug:
 + hg status
 + hg id
 3aa14bbc23d9 tip

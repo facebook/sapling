@@ -19,48 +19,36 @@ fi
 cp "$LOCAL" "$LOCAL.orig"
 
 # Attempt to do a non-interactive merge
-if type merge > /dev/null ; then
-    if merge "$LOCAL" "$BASE" "$OTHER" 2> /dev/null; then
-	# success!
-	exit 0
-    fi
+if type merge > /dev/null 2>&1; then
+    merge "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && exit 0
     cp "$LOCAL.orig" "$LOCAL"
-elif type diff3 > /dev/null ; then
-    if diff3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" ; then
-	# success
-	exit 0
-    fi
+elif type diff3 > /dev/null 2>&1; then
+    diff3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" && exit 0
     cp "$LOCAL.orig" "$LOCAL"
 fi
 
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
-    if type kdiff3 > /dev/null ; then
-	if kdiff3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" ; then
-	    exit 0
-	else
-	    exit 1
-	fi
+    if type kdiff3 > /dev/null 2>&1; then
+	kdiff3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" || exit 1
+	exit 0
     fi
 
     # try using tkdiff, which is a bit less sophisticated
-    if type tkdiff > /dev/null ; then
-	if tkdiff "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" ; then
-	    exit 0
-	else
-	    exit 1
-	fi
+    if type tkdiff > /dev/null 2>&1; then
+	tkdiff "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || exit 1
+	exit 0
     fi
 fi
 
 # Attempt to do a merge with $EDITOR
-if type merge > /dev/null ; then
+if type merge > /dev/null 2>&1; then
     echo "conflicts detected in $LOCAL"
     merge "$LOCAL" "$BASE" "$OTHER" 2>/dev/null || $EDITOR "$LOCAL"
     exit 0
 fi
 
-if type diff3 > /dev/null ; then
+if type diff3 > /dev/null 2>&1; then
     echo "conflicts detected in $LOCAL"
     diff3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" || $EDITOR "$LOCAL"
     exit 0
@@ -69,29 +57,28 @@ fi
 HGTMP=""
 cleanup_exit() {
     rm -rf "$HGTMP"
-    exit $1
 }
 
 # attempt to manually merge with diff and patch
-if type diff > /dev/null ; then
-    if type patch > /dev/null ; then
-	# Remove temporary files even if we get interrupted
-	trap "cleanup_exit 1" TERM KILL INT QUIT ABRT
+if type diff > /dev/null 2>&1 && type patch > /dev/null 2>&1; then
+    # Remove temporary files even if we get interrupted
+    trap "cleanup_exit" 0 # normal exit
+    trap "exit 1" 1 2 3 6 15 # HUP INT QUIT ABRT TERM
 
-	HGTMP="${TMPDIR-/tmp}/hgmerge.$RANDOM.$RANDOM.$RANDOM.$$"
-	(umask 077 && mkdir "$HGTMP") || {
-	    echo "Could not create temporary directory! Exiting." 1>&2
-	    exit 1
-	}
+    HGTMP="${TMPDIR-/tmp}/hgmerge.$RANDOM.$RANDOM.$RANDOM.$$"
+    (umask 077 && mkdir "$HGTMP") || {
+	echo "Could not create temporary directory! Exiting." 1>&2
+	exit 1
+    }
 
-	diff -u "$BASE" "$OTHER" > "$HGTMP/diff"
-	if patch "$LOCAL" < "$HGTMP/diff" ; then
-	    cleanup_exit 0
-	else
-	    $EDITOR "$LOCAL" "$LOCAL.rej"
-	fi
-	cleanup_exit 1
+    diff -u "$BASE" "$OTHER" > "$HGTMP/diff"
+    if patch "$LOCAL" < "$HGTMP/diff"; then
+	exit 0
+    else
+	# If rejects are empty after using the editor, merge was ok
+	$EDITOR "$LOCAL" "$LOCAL.rej" && test -s "$LOCAL.rej" || exit 0
     fi
+    exit 1
 fi
 
 echo "hgmerge: unable to find merge, tkdiff, kdiff3, or diff+patch!"

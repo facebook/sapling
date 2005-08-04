@@ -1419,7 +1419,14 @@ def dispatch(args):
     except SignalInterrupt:
         u.warn("killed!\n")
     except KeyboardInterrupt:
-        u.warn("interrupted!\n")
+        try:
+            u.warn("interrupted!\n")
+        except IOError, inst:
+            if inst.errno == errno.EPIPE:
+                if u.debugflag:
+                    u.warn("\nbroken pipe\n")
+            else:
+                raise
     except IOError, inst:
         if hasattr(inst, "code"):
             u.warn("abort: %s\n" % inst)

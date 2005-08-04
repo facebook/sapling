@@ -1,5 +1,4 @@
 #!/bin/sh
-# FIXME: This test may fail due to an uncritical bug in Mercurial.
 
 mkdir t
 cd t
