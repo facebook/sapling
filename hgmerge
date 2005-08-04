@@ -20,36 +20,24 @@ cp "$LOCAL" "$LOCAL.orig"
 
 # Attempt to do a non-interactive merge
 if type merge > /dev/null 2>&1; then
-    if merge "$LOCAL" "$BASE" "$OTHER" 2> /dev/null; then
-	# success!
-	exit 0
-    fi
+    merge "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && exit 0
     cp "$LOCAL.orig" "$LOCAL"
 elif type diff3 > /dev/null 2>&1; then
-    if diff3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" ; then
-	# success
-	exit 0
-    fi
+    diff3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" && exit 0
     cp "$LOCAL.orig" "$LOCAL"
 fi
 
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
     if type kdiff3 > /dev/null 2>&1; then
-	if kdiff3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" ; then
-	    exit 0
-	else
-	    exit 1
-	fi
+	kdiff3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" || exit 1
+	exit 0
     fi
 
     # try using tkdiff, which is a bit less sophisticated
     if type tkdiff > /dev/null 2>&1; then
-	if tkdiff "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" ; then
-	    exit 0
-	else
-	    exit 1
-	fi
+	tkdiff "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || exit 1
+	exit 0
     fi
 fi
 
@@ -73,25 +61,23 @@ cleanup_exit() {
 }
 
 # attempt to manually merge with diff and patch
-if type diff > /dev/null 2>&1; then
-    if type patch > /dev/null 2>&1; then
-	# Remove temporary files even if we get interrupted
-	trap "cleanup_exit 1" TERM KILL INT QUIT ABRT
+if type diff > /dev/null 2>&1 && type patch > /dev/null 2>&1; then
+    # Remove temporary files even if we get interrupted
+    trap "cleanup_exit 1" TERM KILL INT QUIT ABRT
 
-	HGTMP="${TMPDIR-/tmp}/hgmerge.$RANDOM.$RANDOM.$RANDOM.$$"
-	(umask 077 && mkdir "$HGTMP") || {
-	    echo "Could not create temporary directory! Exiting." 1>&2
-	    exit 1
-	}
+    HGTMP="${TMPDIR-/tmp}/hgmerge.$RANDOM.$RANDOM.$RANDOM.$$"
+    (umask 077 && mkdir "$HGTMP") || {
+	echo "Could not create temporary directory! Exiting." 1>&2
+	exit 1
+    }
 
-	diff -u "$BASE" "$OTHER" > "$HGTMP/diff"
-	if patch "$LOCAL" < "$HGTMP/diff" ; then
-	    cleanup_exit 0
-	else
-	    $EDITOR "$LOCAL" "$LOCAL.rej"
-	fi
-	cleanup_exit 1
+    diff -u "$BASE" "$OTHER" > "$HGTMP/diff"
+    if patch "$LOCAL" < "$HGTMP/diff"; then
+	cleanup_exit 0
+    else
+	$EDITOR "$LOCAL" "$LOCAL.rej"
     fi
+    cleanup_exit 1
 fi
 
 echo "hgmerge: unable to find merge, tkdiff, kdiff3, or diff+patch!"
