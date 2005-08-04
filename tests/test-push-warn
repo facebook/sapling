@@ -1,0 +1,28 @@
+#!/bin/sh
+
+mkdir a
+cd a
+hg init
+echo foo > t1
+hg add t1
+hg commit -m "1" -d "0 0"
+
+cd ..
+hg clone a b
+
+cd a
+echo foo > t2
+hg add t2
+hg commit -m "2" -d "0 0"
+
+cd ../b
+echo foo > t3
+hg add t3
+hg commit -m "3" -d "0 0"
+
+hg push ../a
+hg pull ../a
+hg push ../a
+hg up -m
+hg commit -m "4" -d "0 0"
+hg push ../a
