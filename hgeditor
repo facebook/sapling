@@ -24,11 +24,11 @@ esac
 HGTMP=""
 cleanup_exit() {
     rm -rf "$HGTMP"
-    exit $1
 }
 
 # Remove temporary files even if we get interrupted
-trap "cleanup_exit 255" TERM KILL INT QUIT ABRT
+trap "cleanup_exit" 0 # normal exit
+trap "exit 255" 1 2 3 6 15 # HUP INT QUIT ABRT TERM
 
 HGTMP="${TMPDIR-/tmp}/hgeditor.$RANDOM.$RANDOM.$RANDOM.$$"
 (umask 077 && mkdir "$HGTMP") || {
@@ -51,8 +51,8 @@ fi
 grep -vE '^(HG: manifest hash .*)?$' "$1" >> "$HGTMP/msg"
 
 CHECKSUM=`md5sum "$HGTMP/msg"`
-$EDITOR "$HGTMP/msg" "$HGTMP/diff" || cleanup_exit $?
-echo "$CHECKSUM" | md5sum -c >/dev/null 2>&1 && cleanup_exit 13
+$EDITOR "$HGTMP/msg" "$HGTMP/diff" || exit $?
+echo "$CHECKSUM" | md5sum -c >/dev/null 2>&1 && exit 13
 
 if [ "$SIGN" == "1" ]; then
     {
@@ -64,4 +64,4 @@ else
     mv "$HGTMP/msg" "$1"
 fi
 
-cleanup_exit $?
+exit $?

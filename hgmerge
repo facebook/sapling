@@ -57,13 +57,13 @@ fi
 HGTMP=""
 cleanup_exit() {
     rm -rf "$HGTMP"
-    exit $1
 }
 
 # attempt to manually merge with diff and patch
 if type diff > /dev/null 2>&1 && type patch > /dev/null 2>&1; then
     # Remove temporary files even if we get interrupted
-    trap "cleanup_exit 1" TERM KILL INT QUIT ABRT
+    trap "cleanup_exit" 0 # normal exit
+    trap "exit 1" 1 2 3 6 15 # HUP INT QUIT ABRT TERM
 
     HGTMP="${TMPDIR-/tmp}/hgmerge.$RANDOM.$RANDOM.$RANDOM.$$"
     (umask 077 && mkdir "$HGTMP") || {
@@ -73,12 +73,12 @@ if type diff > /dev/null 2>&1 && type patch > /dev/null 2>&1; then
 
     diff -u "$BASE" "$OTHER" > "$HGTMP/diff"
     if patch "$LOCAL" < "$HGTMP/diff"; then
-	cleanup_exit 0
+	exit 0
     else
 	# If rejects are empty after using the editor, merge was ok
-	$EDITOR "$LOCAL" "$LOCAL.rej" && test -s "$LOCAL.rej" || cleanup_exit 0
+	$EDITOR "$LOCAL" "$LOCAL.rej" && test -s "$LOCAL.rej" || exit 0
     fi
-    cleanup_exit 1
+    exit 1
 fi
 
 echo "hgmerge: unable to find merge, tkdiff, kdiff3, or diff+patch!"
