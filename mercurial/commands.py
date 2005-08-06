@@ -333,6 +333,7 @@ def help_(ui, cmd=None):
             ui.write('basic hg commands (use "hg help -v" for more):\n\n')
 
         h = {}
+        cmds = {}
         for c, e in table.items():
             f = c.split("|")[0]
             if not ui.verbose and not f.startswith("^"):
@@ -344,12 +345,17 @@ def help_(ui, cmd=None):
             if e[0].__doc__:
                 d = e[0].__doc__.splitlines(0)[0].rstrip()
             h[f] = d
+            cmds[f]=c.lstrip("^")
 
         fns = h.keys()
         fns.sort()
         m = max(map(len, fns))
         for f in fns:
-            ui.write(' %-*s   %s\n' % (m, f, h[f]))
+            if ui.verbose:
+                commands = cmds[f].replace("|",", ")
+                ui.write(" %s:\n      %s\n"%(commands,h[f]))
+            else:
+                ui.write(' %-*s   %s\n' % (m, f, h[f]))
 
 # Commands start here, listed alphabetically
 
