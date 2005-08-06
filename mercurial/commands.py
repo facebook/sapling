@@ -276,7 +276,8 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
 
 def show_version(ui):
     """output version and copyright information"""
-    ui.write("Mercurial version %s\n" % version.get_version())
+    ui.write("Mercurial Distributed SCM (version %s)\n"
+             % version.get_version())
     ui.status(
         "\nCopyright (C) 2005 Matt Mackall <mpm@selenic.com>\n"
         "This is free software; see the source for copying conditions. "
@@ -287,10 +288,25 @@ def show_version(ui):
 def help_(ui, cmd=None):
     """show help for a given command or all commands"""
     if cmd and cmd != 'shortlist':
-        i = find(cmd)
+        key, i = find(cmd)
+        # synopsis
         ui.write("%s\n\n" % i[2])
 
-        if i[1]:
+        # description
+        doc = i[0].__doc__
+        if ui.quiet:
+            doc = doc.splitlines(0)[0]
+        ui.write("%s\n" % doc.rstrip())
+
+        # aliases
+        if not ui.quiet:
+            aliases = ', '.join(key.split('|')[1:])
+            if aliases:
+                ui.write("\naliases: %s\n" % aliases)
+
+        # options
+        if not ui.quiet and i[1]:
+            ui.write("\noptions:\n\n")
             for s, l, d, c in i[1]:
                 opt = ' '
                 if s:
@@ -302,33 +318,24 @@ def help_(ui, cmd=None):
                 ui.write(opt, "\n")
                 if c:
                     ui.write('   %s\n' % c)
-            ui.write("\n")
 
-        ui.write(i[0].__doc__, "\n")
-        sys.exit(0)
     else:
+        # program name
         if ui.verbose:
             show_version(ui)
-            ui.write('\n')
-        if ui.verbose:
-            ui.write("global options:\n\n")
-            for s, l, d, c in globalopts:
-                opt = ' '
-                if s:
-                    opt = opt + '-' + s + ' '
-                if l:
-                    opt = opt + '--' + l + ' '
-                if d:
-                    opt = opt + '(' + str(d) + ')'
-                ui.write(opt, "\n")
-                if c:
-                    ui.write('    %s\n' % c)
-            ui.write("\n")
+        else:
+            ui.status("Mercurial Distributed SCM\n")
+        ui.status('\n')
 
-            ui.write('hg commands:\n\n')
-
+        # list of commands
         if cmd == "shortlist":
-            ui.write('basic hg commands (use "hg help" for more):\n\n')
+            ui.status('basic commands (use "hg help" '
+                      'for the full list or option "-v" for details):\n\n')
+        elif ui.verbose:
+            ui.status('list of commands:\n\n')
+        else:
+            ui.status('list of commands (use "hg help -v" '
+                      'to show aliases and global options):\n\n')
 
         h = {}
         cmds = {}
@@ -336,9 +343,9 @@ def help_(ui, cmd=None):
             f = c.split("|")[0]
             if cmd == "shortlist" and not f.startswith("^"):
                 continue
+            f = f.lstrip("^")
             if not ui.debugflag and f.startswith("debug"):
                 continue
-            f = f.lstrip("^")
             d = ""
             if e[0].__doc__:
                 d = e[0].__doc__.splitlines(0)[0].rstrip()
@@ -354,6 +361,21 @@ def help_(ui, cmd=None):
                 ui.write(" %s:\n      %s\n"%(commands,h[f]))
             else:
                 ui.write(' %-*s   %s\n' % (m, f, h[f]))
+
+    # global options
+    if ui.verbose:
+        ui.write("\nglobal options:\n\n")
+        for s, l, d, c in globalopts:
+            opt = ' '
+            if s:
+                opt = opt + '-' + s + ' '
+            if l:
+                opt = opt + '--' + l + ' '
+            if d:
+                opt = opt + '(' + str(d) + ')'
+            ui.write(opt, "\n")
+            if c:
+                ui.write('    %s\n' % c)
 
 # Commands start here, listed alphabetically
 
@@ -1330,7 +1352,7 @@ norepo = "clone init version help debugindex debugindexdot"
 def find(cmd):
     for e in table.keys():
         if re.match("(%s)$" % e, cmd):
-            return table[e]
+            return e, table[e]
 
     raise UnknownCommand(cmd)
 
@@ -1362,7 +1384,7 @@ def parse(args):
     else:
         cmd, args = args[0], args[1:]
 
-    i = find(cmd)
+    i = find(cmd)[1]
 
     # combine global options into local
     c = list(i[1])

@@ -1,4 +1,44 @@
++ hg 
+Mercurial Distributed SCM
+
+basic commands (use "hg help" for the full list or option "-v" for details):
+
+ add        add the specified files on the next commit
+ annotate   show changeset information per file line
+ clone      make a copy of an existing repository
+ commit     commit the specified files or all outstanding changes
+ diff       diff working directory (or selected files)
+ export     dump the header and diffs for one or more changesets
+ init       create a new repository in the current directory
+ log        show the revision history of the repository or a single file
+ pull       pull changes from the specified source
+ push       push changes to the specified destination
+ remove     remove the specified files on the next commit
+ revert     revert modified files or dirs back to their unmodified states
+ serve      export the repository via HTTP
+ status     show changed files in the working directory
+ update     update or merge working directory
++ hg -q
+ add        add the specified files on the next commit
+ annotate   show changeset information per file line
+ clone      make a copy of an existing repository
+ commit     commit the specified files or all outstanding changes
+ diff       diff working directory (or selected files)
+ export     dump the header and diffs for one or more changesets
+ init       create a new repository in the current directory
+ log        show the revision history of the repository or a single file
+ pull       pull changes from the specified source
+ push       push changes to the specified destination
+ remove     remove the specified files on the next commit
+ revert     revert modified files or dirs back to their unmodified states
+ serve      export the repository via HTTP
+ status     show changed files in the working directory
+ update     update or merge working directory
 + hg help
+Mercurial Distributed SCM
+
+list of commands (use "hg help -v" to show aliases and global options):
+
  add         add the specified files on the next commit
  addremove   add all new files, delete all missing files
  annotate    show changeset information per file line
@@ -76,24 +116,32 @@
 hg add: option -h not recognized
 hg add [FILE]...
 
+add the specified files on the next commit
+
+options:
+
  -I --include 
    include path in search
  -X --exclude 
    exclude path from search
-
-add the specified files on the next commit
 + hg add --skjdfks
 hg add: option --skjdfks not recognized
 hg add [FILE]...
 
+add the specified files on the next commit
+
+options:
+
  -I --include 
    include path in search
  -X --exclude 
    exclude path from search
-
-add the specified files on the next commit
 + hg help diff
 hg diff [-r REV1 [-r REV2]] [FILE]...
+
+diff working directory (or selected files)
+
+options:
 
  -r --rev 
    revision
@@ -101,11 +149,39 @@ hg diff [-r REV1 [-r REV2]] [FILE]...
    include path in search
  -X --exclude 
    exclude path from search
++ hg help status
+hg status [FILE]...
 
-diff working directory (or selected files)
+show changed files in the working directory
+
+    M = modified
+    A = added
+    R = removed
+    ? = not tracked
+
+options:
+
+ -m --modified 
+   show only modified files
+ -a --added 
+   show only added files
+ -r --removed 
+   show only removed files
+ -u --unknown 
+   show only unknown (not tracked) files
+ -I --include 
+   include path in search
+ -X --exclude 
+   exclude path from search
++ hg -q help status
+hg status [FILE]...
+
+show changed files in the working directory
 + hg help foo
 hg: unknown command 'foo'
-basic hg commands (use "hg help" for more):
+Mercurial Distributed SCM
+
+basic commands (use "hg help" for the full list or option "-v" for details):
 
  add        add the specified files on the next commit
  annotate   show changeset information per file line
@@ -122,9 +198,11 @@ basic hg commands (use "hg help" for more):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update or merge working directory
-+ hg -q commands
-hg: unknown command 'commands'
-basic hg commands (use "hg help" for more):
++ hg skjdfks
+hg: unknown command 'skjdfks'
+Mercurial Distributed SCM
+
+basic commands (use "hg help" for the full list or option "-v" for details):
 
  add        add the specified files on the next commit
  annotate   show changeset information per file line
