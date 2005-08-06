@@ -314,6 +314,20 @@ def help_(ui, cmd=None):
             show_version(ui)
             ui.write('\n')
         if ui.verbose:
+            ui.write("global options:\n\n")
+            for s, l, d, c in globalopts:
+                opt = ' '
+                if s:
+                    opt = opt + '-' + s + ' '
+                if l:
+                    opt = opt + '--' + l + ' '
+                if d:
+                    opt = opt + '(' + str(d) + ')'
+                ui.write(opt, "\n")
+                if c:
+                    ui.write('    %s\n' % c)
+            ui.write("\n")
+
             ui.write('hg commands:\n\n')
         else:
             ui.write('basic hg commands (use "hg help -v" for more):\n\n')
