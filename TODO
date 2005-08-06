@@ -26,8 +26,6 @@ Commands:
 - commands.py: number of args too much magic (e.g. in import_())
 - optionally only show merges (two parents)
 - automatic pull fallback to old-http://
-- hg pull http://foo tries hostname
-  'foo?cmd=changegroup&roots=0000000000000000000000000000000000000000'
 - pass options to ssh (debug/verbose/remote hg command etc.)
 - create a commented .hg/hgrc on init/clone
 - hg pull default in a subdir doesn't work, if it is a relative path
@@ -35,6 +33,11 @@ Commands:
   containing related repositories works again
 - if everyone knows 'hg clone': hg init [DIR]
 - if everyone knows 'hg update -m': remove -t
+- hg revert does not forget added files, it probably should.
+- hg pull should state if there are more heads than before.
+- hg clone: locking the repository while hardlinking.
+- hg clone: fall back to pull if hardlink not possible.
+- "hg diff not_existing" should yield an error message.
 
 Web:
 - optionally only show merges (two parents)
@@ -49,3 +52,5 @@ Web:
 - link children in hgweb
 - allow verbose mode
 - hide trivial parent (like in show_changeset)
+- default port for hg serve configurable in hgrc
+- download tarball via web interface
