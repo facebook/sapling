@@ -33,8 +33,6 @@ Commands:
 - hg pull default in a subdir doesn't work, if it is a relative path
 - hg clone should store corrected relative paths, so moving a directory
   containing related repositories works again
-- mention synonyms (co, ci, ...) in help
-- show global options in help
 - if everyone knows 'hg clone': hg init [DIR]
 - if everyone knows 'hg update -m': remove -t
 
