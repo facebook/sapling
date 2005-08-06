@@ -1143,14 +1143,16 @@ def verify(ui, repo):
 # Command options and aliases are listed here, alphabetically
 
 table = {
-    "^add": (add,
-             [('I', 'include', [], 'include path in search'),
-              ('X', 'exclude', [], 'exclude path from search')],
-             "hg add [FILE]..."),
-    "addremove": (addremove,
-                  [('I', 'include', [], 'include path in search'),
-                   ('X', 'exclude', [], 'exclude path from search')],
-                  "hg addremove [OPTION]... [FILE]..."),
+    "^add":
+        (add,
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         "hg add [FILE]..."),
+    "addremove":
+        (addremove,
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         "hg addremove [OPTION]... [FILE]..."),
     "^annotate":
         (annotate,
          [('r', 'rev', '', 'revision'),
@@ -1184,10 +1186,11 @@ table = {
     "debugstate": (debugstate, [], 'debugstate'),
     "debugindex": (debugindex, [], 'debugindex FILE'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot FILE'),
-    "debugwalk": (debugwalk,
-                  [('I', 'include', [], 'include path in search'),
-                   ('X', 'exclude', [], 'exclude path from search')],
-                  'debugwalk [OPTIONS]... [FILE]...'),
+    "debugwalk":
+        (debugwalk,
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         'debugwalk [OPTIONS]... [FILE]...'),
     "^diff":
         (diff,
          [('r', 'rev', [], 'revision'),
@@ -1198,10 +1201,11 @@ table = {
         (export,
          [('o', 'output', "", 'output to file')],
          "hg export [-o OUTFILE] REV..."),
-    "forget": (forget,
-               [('I', 'include', [], 'include path in search'),
-                ('X', 'exclude', [], 'exclude path from search')],
-               "hg forget FILE..."),
+    "forget":
+        (forget,
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         "hg forget FILE..."),
     "heads": (heads, [], 'hg heads'),
     "help": (help_, [], 'hg help [COMMAND]'),
     "identify|id": (identify, [], 'hg identify'),
