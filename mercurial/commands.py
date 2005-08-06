@@ -287,27 +287,24 @@ def show_version(ui):
 def help_(ui, cmd=None):
     """show help for a given command or all commands"""
     if cmd and cmd != 'shortlist':
-        try:
-            i = find(cmd)
-            ui.write("%s\n\n" % i[2])
+        i = find(cmd)
+        ui.write("%s\n\n" % i[2])
 
-            if i[1]:
-                for s, l, d, c in i[1]:
-                    opt = ' '
-                    if s:
-                        opt = opt + '-' + s + ' '
-                    if l:
-                        opt = opt + '--' + l + ' '
-                    if d:
-                        opt = opt + '(' + str(d) + ')'
-                    ui.write(opt, "\n")
-                    if c:
-                        ui.write('   %s\n' % c)
-                ui.write("\n")
+        if i[1]:
+            for s, l, d, c in i[1]:
+                opt = ' '
+                if s:
+                    opt = opt + '-' + s + ' '
+                if l:
+                    opt = opt + '--' + l + ' '
+                if d:
+                    opt = opt + '(' + str(d) + ')'
+                ui.write(opt, "\n")
+                if c:
+                    ui.write('   %s\n' % c)
+            ui.write("\n")
 
-            ui.write(i[0].__doc__, "\n")
-        except UnknownCommand:
-            ui.warn("hg: unknown command %s\n" % cmd)
+        ui.write(i[0].__doc__, "\n")
         sys.exit(0)
     else:
         if ui.verbose:
@@ -1401,12 +1398,12 @@ def dispatch(args):
             help_(u, inst.args[0])
         else:
             u.warn("hg: %s\n" % inst.args[1])
-            help_(u)
+            help_(u, 'shortlist')
         sys.exit(-1)
     except UnknownCommand, inst:
         u = ui.ui()
         u.warn("hg: unknown command '%s'\n" % inst.args[0])
-        help_(u)
+        help_(u, 'shortlist')
         sys.exit(1)
 
     if options["time"]:
@@ -1491,5 +1488,8 @@ def dispatch(args):
         u.debug(inst, "\n")
         u.warn("%s: invalid arguments\n" % cmd)
         help_(u, cmd)
+    except UnknownCommand, inst:
+        u.warn("hg: unknown command '%s'\n" % inst.args[0])
+        help_(u, 'shortlist')
 
     sys.exit(-1)
