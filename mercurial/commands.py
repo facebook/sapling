@@ -1033,24 +1033,23 @@ def status(ui, repo, *pats, **opts):
     M = modified
     A = added
     R = removed
-    ? = not tracked'''
+    ? = not tracked
+    '''
 
     cwd = repo.getcwd()
     files, matchfn = matchpats(cwd, pats, opts)
     (c, a, d, u) = [[pathto(cwd, x) for x in n]
                     for n in repo.changes(files=files, match=matchfn)]
 
-    filetype = "";
-    if opts['modified']: filetype += "M";
-    if opts[   'added']: filetype += "A";
-    if opts[ 'removed']: filetype += "R";
-    if opts[ 'unknown']: filetype += "?";
-    if filetype == "" : filetype = "MAR?"
-    
-    for key, value in zip(["M", "A", "R", "?"], (c, a, d, u)):
-        if value and filetype.find(key) >= 0:
-            for f in value:
-                ui.write("%s " % key, f, "\n")
+    changetypes = [('modified', 'M', c),
+                   ('added', 'A', a),
+                   ('removed', 'R', d),
+                   ('unknown', '?', u)]
+
+    for opt, char, changes in ([ct for ct in changetypes if opts[ct[0]]]
+                               or changetypes):
+        for f in changes:
+            ui.write("%s %s\n" % (char, f))
 
 def tag(ui, repo, name, rev=None, **opts):
     """add a tag for the current tip or a given revision"""
