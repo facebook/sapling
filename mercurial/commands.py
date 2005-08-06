@@ -1316,9 +1316,9 @@ table = {
     "version": (show_version, [], 'hg version'),
     }
 
-globalopts = [('v', 'verbose', None, 'verbose'),
-              ('', 'debug', None, 'debug'),
-              ('q', 'quiet', None, 'quiet'),
+globalopts = [('v', 'verbose', None, 'verbose mode'),
+              ('', 'debug', None, 'debug mode'),
+              ('q', 'quiet', None, 'quiet mode'),
               ('', 'profile', None, 'profile'),
               ('R', 'repository', "", 'repository root directory'),
               ('', 'traceback', None, 'print traceback on exception'),
