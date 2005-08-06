@@ -286,7 +286,7 @@ def show_version(ui):
 
 def help_(ui, cmd=None):
     """show help for a given command or all commands"""
-    if cmd:
+    if cmd and cmd != 'shortlist':
         try:
             i = find(cmd)
             ui.write("%s\n\n" % i[2])
@@ -329,14 +329,15 @@ def help_(ui, cmd=None):
             ui.write("\n")
 
             ui.write('hg commands:\n\n')
-        else:
-            ui.write('basic hg commands (use "hg help -v" for more):\n\n')
+
+        if cmd == "shortlist":
+            ui.write('basic hg commands (use "hg help" for more):\n\n')
 
         h = {}
         cmds = {}
         for c, e in table.items():
             f = c.split("|")[0]
-            if not ui.verbose and not f.startswith("^"):
+            if cmd == "shortlist" and not f.startswith("^"):
                 continue
             if not ui.debugflag and f.startswith("debug"):
                 continue
@@ -1360,7 +1361,7 @@ def parse(args):
     if options["version"]:
         return ("version", show_version, [], options, cmdoptions)
     elif not args:
-        return ("help", help_, [], options, cmdoptions)
+        return ("help", help_, ["shortlist"], options, cmdoptions)
     else:
         cmd, args = args[0], args[1:]
 
