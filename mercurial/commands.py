@@ -1040,14 +1040,17 @@ def status(ui, repo, *pats, **opts):
     (c, a, d, u) = [[pathto(cwd, x) for x in n]
                     for n in repo.changes(files=files, match=matchfn)]
 
-    for f in c:
-        ui.write("M ", f, "\n")
-    for f in a:
-        ui.write("A ", f, "\n")
-    for f in d:
-        ui.write("R ", f, "\n")
-    for f in u:
-        ui.write("? ", f, "\n")
+    filetype = "";
+    if opts['modified']: filetype += "M";
+    if opts[   'added']: filetype += "A";
+    if opts[ 'removed']: filetype += "R";
+    if opts[ 'unknown']: filetype += "?";
+    if filetype == "" : filetype = "MAR?"
+    
+    for key, value in zip(["M", "A", "R", "?"], (c, a, d, u)):
+        if value and filetype.find(key) >= 0:
+            for f in value:
+                ui.write("%s " % key, f, "\n")
 
 def tag(ui, repo, name, rev=None, **opts):
     """add a tag for the current tip or a given revision"""
@@ -1261,10 +1264,15 @@ table = {
           ('t', 'templates', "", 'template map'),
           ('6', 'ipv6', None, 'use IPv6 in addition to IPv4')],
          "hg serve [OPTION]..."),
-    "^status": (status,
-                [('I', 'include', [], 'include path in search'),
-                 ('X', 'exclude', [], 'exclude path from search')],
-                'hg status [FILE]...'),
+    "^status":
+        (status,
+         [('m', 'modified', None, 'show only modified files'),
+          ('a', 'added', None, 'show only added files'),
+          ('r', 'removed', None, 'show only removed files'),
+          ('u', 'unknown', None, 'show only unknown (not tracked) files'),
+          ('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         "hg status [FILE]..."),
     "tag":
         (tag,
          [('l', 'local', None, 'make the tag local'),

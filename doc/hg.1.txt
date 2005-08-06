@@ -346,6 +346,10 @@ status [options] [files]::
 
     options:
 
+    -m, --modified       show only modified files
+    -a, --added          show only added files
+    -r, --removed        show only removed files
+    -u, --unknown        show only unknown (not tracked) files
     -I, --include <pat>  include names matching the given patterns
     -X, --exclude <pat>  exclude names matching the given patterns
 
