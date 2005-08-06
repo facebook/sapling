@@ -740,6 +740,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     hgpatch = False
             elif line == '# HG changeset patch':
                 hgpatch = True
+                message = []       # We may have collected garbage
             else:
                 message.append(line)
 
