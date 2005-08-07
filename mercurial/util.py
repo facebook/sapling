@@ -16,7 +16,8 @@ def unique(g):
             seen[f] = 1
             yield f
 
-class CommandError(Exception): pass
+class Abort(Exception):
+    """Raised if a command needs to print an error and exit."""
 
 def always(fn): return True
 def never(fn): return False
@@ -68,15 +69,26 @@ def globre(pat, head = '^', tail = '$'):
 
 _globchars = {'[': 1, '{': 1, '*': 1, '?': 1}
 
-def matcher(cwd, names, inc, exc, head = ''):
+def canonpath(repo, cwd, myname):
+    rootsep = repo.root + os.sep
+    name = myname
+    if not name.startswith(os.sep):
+        name = os.path.join(repo.root, cwd, name)
+    name = os.path.normpath(name)
+    if name.startswith(rootsep):
+        return name[len(rootsep):]
+    elif name == repo.root:
+        return ''
+    else:
+        raise Abort('%s not under repository root' % myname)
+    
+def matcher(repo, cwd, names, inc, exc, head = ''):
     def patkind(name):
         for prefix in 're:', 'glob:', 'path:':
             if name.startswith(prefix): return name.split(':', 1)
         for c in name:
             if c in _globchars: return 'glob', name
         return 'relpath', name
-
-    cwdsep = cwd + os.sep
 
     def regex(name, tail):
         '''convert a pattern into a regular expression'''
@@ -85,9 +97,6 @@ def matcher(cwd, names, inc, exc, head = ''):
             return name
         elif kind == 'path':
             return '^' + re.escape(name) + '$'
-        if cwd: name = os.path.join(cwdsep, name)
-        name = os.path.normpath(name)
-        if name == '.': name = '**'
         return head + globre(name, '', tail)
 
     def matchfn(pats, tail):
@@ -104,11 +113,22 @@ def matcher(cwd, names, inc, exc, head = ''):
             root.append(p)
         return os.sep.join(root)
 
-    patkinds = map(patkind, names)
-    pats = [name for (kind, name) in patkinds if kind != 'relpath']
-    files = [name for (kind, name) in patkinds if kind == 'relpath']
-    roots = filter(None, map(globprefix, pats)) + files
-    if cwd: roots = [cwdsep + r for r in roots]
+    pats = []
+    files = []
+    roots = []
+    for kind, name in map(patkind, names):
+        if kind in ('glob', 'relpath'):
+            name = canonpath(repo, cwd, name)
+            if name == '':
+                kind, name = 'glob', '**'
+        if kind in ('glob', 're'):
+            pats.append(name)
+        if kind == 'glob':
+            root = globprefix(name)
+            if root: roots.append(root)
+        elif kind == 'relpath':
+            files.append(name)
+            roots.append(name)
         
     patmatch = matchfn(pats, '$') or always
     filematch = matchfn(files, '(?:/|$)') or always
@@ -129,7 +149,7 @@ def system(cmd, errprefix=None):
                             explain_exit(rc)[0])
         if errprefix:
             errmsg = "%s: %s" % (errprefix, errmsg)
-        raise CommandError(errmsg)
+        raise Abort(errmsg)
 
 def rename(src, dst):
     try:

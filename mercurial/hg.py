@@ -300,6 +300,11 @@ class dirstate:
     def wjoin(self, f):
         return os.path.join(self.root, f)
 
+    def getcwd(self):
+        cwd = os.getcwd()
+        if cwd == self.root: return ''
+        return cwd[len(self.root) + 1:]
+
     def ignore(self, f):
         if not self.ignorefunc:
             bigpat = []
@@ -687,9 +692,7 @@ class localrepository:
         return filelog(self.opener, f)
 
     def getcwd(self):
-        cwd = os.getcwd()
-        if cwd == self.root: return ''
-        return cwd[len(self.root) + 1:]
+        return self.dirstate.getcwd()
 
     def wfile(self, f, mode='r'):
         return self.wopener(f, mode)
