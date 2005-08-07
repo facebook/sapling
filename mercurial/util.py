@@ -90,10 +90,6 @@ def matcher(cwd, names, inc, exc, head = ''):
         if name == '.': name = '**'
         return head + globre(name, '', tail)
 
-    def under(fn):
-        """check if fn is under our cwd"""
-        return not cwd or fn.startswith(cwdsep)
-
     def matchfn(pats, tail):
         """build a matching function from a set of patterns"""
         if pats:
