@@ -581,6 +581,7 @@ def debugindexdot(ui, file_):
 
 def debugwalk(ui, repo, *pats, **opts):
     items = list(walk(repo, pats, opts))
+    if not items: return
     fmt = '%%s  %%-%ds  %%s' % max([len(abs) for (src, abs, rel) in items])
     for i in items: print fmt % i
 
