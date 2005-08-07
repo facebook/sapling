@@ -22,16 +22,16 @@ class filelog(revlog):
     # This avoids a collision between a file named foo and a dir named
     # foo.i or foo.d
     def encodedir(self, path):
-        path.replace(".hg/", ".hg.hg/")
-        path.replace(".i/", ".i.hg/")
-        path.replace(".d/", ".i.hg/")
-        return path
+        return (path
+                .replace(".hg/", ".hg.hg/")
+                .replace(".i/", ".i.hg/")
+                .replace(".d/", ".d.hg/"))
 
     def decodedir(self, path):
-        path.replace(".d.hg/", ".d/")
-        path.replace(".i.hg/", ".i/")
-        path.replace(".hg.hg/", ".hg/")
-        return path
+        return (path
+                .replace(".d.hg/", ".d/")
+                .replace(".i.hg/", ".i/")
+                .replace(".hg.hg/", ".hg/"))
 
     def read(self, node):
         t = self.revision(node)
