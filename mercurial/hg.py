@@ -1781,8 +1781,11 @@ class httprepository:
         # Note: urllib2 takes proxy values from the environment and those will
         # take precedence
         for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
-            if os.environ.has_key(env):
-                del os.environ[env]
+            try:
+                if os.environ.has_key(env):
+                    del os.environ[env]
+            except OSError:
+                pass
 
         proxy_handler = urllib2.BaseHandler()
         if host and not no_proxy:
