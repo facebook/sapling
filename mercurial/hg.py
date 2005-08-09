@@ -10,7 +10,7 @@ import util
 from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
-demandload(globals(), "tempfile httprangereader bdiff urlparse")
+demandload(globals(), "tempfile httprangereader bdiff urlparse stat")
 demandload(globals(), "bisect select")
 
 class filelog(revlog):
@@ -484,33 +484,41 @@ class dirstate:
             if match(fn):
                 yield src, fn
 
-    def changes(self, files = None, match = util.always):
+    def changes(self, files=None, match=util.always):
         self.read()
         dc = self.map.copy()
-        lookup, changed, added, unknown = [], [], [], []
+        lookup, modified, added, unknown = [], [], [], []
+        removed, deleted = [], []
 
         for src, fn in self.walk(files, match):
-            try: s = os.stat(os.path.join(self.root, fn))
-            except: continue
-
-            if fn in dc:
-                c = dc[fn]
+            try:
+                s = os.stat(os.path.join(self.root, fn))
+            except OSError:
+                continue
+            if not stat.S_ISREG(s.st_mode):
+                continue
+            c = dc.get(fn)
+            if c:
                 del dc[fn]
-
                 if c[0] == 'm':
-                    changed.append(fn)
+                    modified.append(fn)
                 elif c[0] == 'a':
                     added.append(fn)
                 elif c[0] == 'r':
                     unknown.append(fn)
                 elif c[2] != s.st_size or (c[1] ^ s.st_mode) & 0100:
-                    changed.append(fn)
-                elif c[1] != s.st_mode or c[3] != s.st_mtime:
+                    modified.append(fn)
+                elif c[3] != s.st_mtime:
                     lookup.append(fn)
             else:
-                if match(fn): unknown.append(fn)
+                unknown.append(fn)
 
-        return (lookup, changed, added, filter(match, dc.keys()), unknown)
+        for fn, c in [(fn, c) for fn, c in dc.items() if match(fn)]:
+            if c[0] == 'r':
+                removed.append(fn)
+            else:
+                deleted.append(fn)
+        return (lookup, modified, added, removed + deleted, unknown)
 
 # used to avoid circular references so destructors work
 def opener(base):
