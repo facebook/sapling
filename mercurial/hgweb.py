@@ -622,7 +622,10 @@ class hgweb:
                             "footer":footer,
                             })
 
-        if not args.has_key('cmd') or args['cmd'][0] == 'changelog':
+        if not args.has_key('cmd'):
+            args['cmd'] = [self.t.cache['default'],]
+        
+        if args['cmd'][0] == 'changelog':
             c = self.repo.changelog.count() - 1
             hi = c
             if args.has_key('rev'):
