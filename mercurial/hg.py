@@ -1584,7 +1584,7 @@ class localrepository:
                     m1n = self.changelog.read(p1)[0]
                     m1 = self.manifest.read(m1n)
                     file_ = self.file(f)
-                    f_len = file_.length(file_.rev(m1[f]))
+                    f_len = len(file_.read(m1[f]))
                     self.dirstate.update([f], mode, st_size=f_len, st_mtime=0)
                 else:
                     self.ui.warn("Second parent without branch merge!?\n"
