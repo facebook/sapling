@@ -273,7 +273,8 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
 
 def show_version(ui):
     """output version and copyright information"""
-    ui.write("Mercurial version %s\n" % version.get_version())
+    ui.write("Mercurial Distributed SCM (version %s)\n"
+             % version.get_version())
     ui.status(
         "\nCopyright (C) 2005 Matt Mackall <mpm@selenic.com>\n"
         "This is free software; see the source for copying conditions. "
@@ -283,56 +284,95 @@ def show_version(ui):
 
 def help_(ui, cmd=None):
     """show help for a given command or all commands"""
-    if cmd:
-        try:
-            i = find(cmd)
-            ui.write("%s\n\n" % i[2])
+    if cmd and cmd != 'shortlist':
+        key, i = find(cmd)
+        # synopsis
+        ui.write("%s\n\n" % i[2])
 
-            if i[1]:
-                for s, l, d, c in i[1]:
-                    opt = ' '
-                    if s:
-                        opt = opt + '-' + s + ' '
-                    if l:
-                        opt = opt + '--' + l + ' '
-                    if d:
-                        opt = opt + '(' + str(d) + ')'
-                    ui.write(opt, "\n")
-                    if c:
-                        ui.write('   %s\n' % c)
-                ui.write("\n")
+        # description
+        doc = i[0].__doc__
+        if ui.quiet:
+            doc = doc.splitlines(0)[0]
+        ui.write("%s\n" % doc.rstrip())
 
-            ui.write(i[0].__doc__, "\n")
-        except UnknownCommand:
-            ui.warn("hg: unknown command %s\n" % cmd)
-        sys.exit(0)
+        # aliases
+        if not ui.quiet:
+            aliases = ', '.join(key.split('|')[1:])
+            if aliases:
+                ui.write("\naliases: %s\n" % aliases)
+
+        # options
+        if not ui.quiet and i[1]:
+            ui.write("\noptions:\n\n")
+            for s, l, d, c in i[1]:
+                opt = ' '
+                if s:
+                    opt = opt + '-' + s + ' '
+                if l:
+                    opt = opt + '--' + l + ' '
+                if d:
+                    opt = opt + '(' + str(d) + ')'
+                ui.write(opt, "\n")
+                if c:
+                    ui.write('   %s\n' % c)
+
     else:
+        # program name
         if ui.verbose:
             show_version(ui)
-            ui.write('\n')
-        if ui.verbose:
-            ui.write('hg commands:\n\n')
         else:
-            ui.write('basic hg commands (use "hg help -v" for more):\n\n')
+            ui.status("Mercurial Distributed SCM\n")
+        ui.status('\n')
+
+        # list of commands
+        if cmd == "shortlist":
+            ui.status('basic commands (use "hg help" '
+                      'for the full list or option "-v" for details):\n\n')
+        elif ui.verbose:
+            ui.status('list of commands:\n\n')
+        else:
+            ui.status('list of commands (use "hg help -v" '
+                      'to show aliases and global options):\n\n')
 
         h = {}
+        cmds = {}
         for c, e in table.items():
             f = c.split("|")[0]
-            if not ui.verbose and not f.startswith("^"):
-                continue
-            if not ui.debugflag and f.startswith("debug"):
+            if cmd == "shortlist" and not f.startswith("^"):
                 continue
             f = f.lstrip("^")
+            if not ui.debugflag and f.startswith("debug"):
+                continue
             d = ""
             if e[0].__doc__:
                 d = e[0].__doc__.splitlines(0)[0].rstrip()
             h[f] = d
+            cmds[f]=c.lstrip("^")
 
         fns = h.keys()
         fns.sort()
         m = max(map(len, fns))
         for f in fns:
-            ui.write(' %-*s   %s\n' % (m, f, h[f]))
+            if ui.verbose:
+                commands = cmds[f].replace("|",", ")
+                ui.write(" %s:\n      %s\n"%(commands,h[f]))
+            else:
+                ui.write(' %-*s   %s\n' % (m, f, h[f]))
+
+    # global options
+    if ui.verbose:
+        ui.write("\nglobal options:\n\n")
+        for s, l, d, c in globalopts:
+            opt = ' '
+            if s:
+                opt = opt + '-' + s + ' '
+            if l:
+                opt = opt + '--' + l + ' '
+            if d:
+                opt = opt + '(' + str(d) + ')'
+            ui.write(opt, "\n")
+            if c:
+                ui.write('    %s\n' % c)
 
 # Commands start here, listed alphabetically
 
@@ -698,6 +738,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     hgpatch = False
             elif line == '# HG changeset patch':
                 hgpatch = True
+                message = []       # We may have collected garbage
             else:
                 message.append(line)
 
@@ -1031,21 +1072,23 @@ def status(ui, repo, *pats, **opts):
     M = modified
     A = added
     R = removed
-    ? = not tracked'''
+    ? = not tracked
+    '''
 
     cwd = repo.getcwd()
     files, matchfn = matchpats(repo, cwd, pats, opts)
     (c, a, d, u) = [[pathto(cwd, x) for x in n]
                     for n in repo.changes(files=files, match=matchfn)]
 
-    for f in c:
-        ui.write("M ", f, "\n")
-    for f in a:
-        ui.write("A ", f, "\n")
-    for f in d:
-        ui.write("R ", f, "\n")
-    for f in u:
-        ui.write("? ", f, "\n")
+    changetypes = [('modified', 'M', c),
+                   ('added', 'A', a),
+                   ('removed', 'R', d),
+                   ('unknown', '?', u)]
+
+    for opt, char, changes in ([ct for ct in changetypes if opts[ct[0]]]
+                               or changetypes):
+        for f in changes:
+            ui.write("%s %s\n" % (char, f))
 
 def tag(ui, repo, name, rev=None, **opts):
     """add a tag for the current tip or a given revision"""
@@ -1138,14 +1181,16 @@ def verify(ui, repo):
 # Command options and aliases are listed here, alphabetically
 
 table = {
-    "^add": (add,
-             [('I', 'include', [], 'include path in search'),
-              ('X', 'exclude', [], 'exclude path from search')],
-             "hg add [FILE]..."),
-    "addremove": (addremove,
-                  [('I', 'include', [], 'include path in search'),
-                   ('X', 'exclude', [], 'exclude path from search')],
-                  "hg addremove [OPTION]... [FILE]..."),
+    "^add":
+        (add,
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         "hg add [FILE]..."),
+    "addremove":
+        (addremove,
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         "hg addremove [OPTION]... [FILE]..."),
     "^annotate":
         (annotate,
          [('r', 'rev', '', 'revision'),
@@ -1179,10 +1224,11 @@ table = {
     "debugstate": (debugstate, [], 'debugstate'),
     "debugindex": (debugindex, [], 'debugindex FILE'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot FILE'),
-    "debugwalk": (debugwalk,
-                  [('I', 'include', [], 'include path in search'),
-                   ('X', 'exclude', [], 'exclude path from search')],
-                  'debugwalk [OPTIONS]... [FILE]...'),
+    "debugwalk":
+        (debugwalk,
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         'debugwalk [OPTIONS]... [FILE]...'),
     "^diff":
         (diff,
          [('r', 'rev', [], 'revision'),
@@ -1193,10 +1239,11 @@ table = {
         (export,
          [('o', 'output', "", 'output to file')],
          "hg export [-o OUTFILE] REV..."),
-    "forget": (forget,
-               [('I', 'include', [], 'include path in search'),
-                ('X', 'exclude', [], 'exclude path from search')],
-               "hg forget FILE..."),
+    "forget":
+        (forget,
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         "hg forget FILE..."),
     "heads": (heads, [], 'hg heads'),
     "help": (help_, [], 'hg help [COMMAND]'),
     "identify|id": (identify, [], 'hg identify'),
@@ -1259,10 +1306,15 @@ table = {
           ('t', 'templates', "", 'template map'),
           ('6', 'ipv6', None, 'use IPv6 in addition to IPv4')],
          "hg serve [OPTION]..."),
-    "^status": (status,
-                [('I', 'include', [], 'include path in search'),
-                 ('X', 'exclude', [], 'exclude path from search')],
-                'hg status [FILE]...'),
+    "^status":
+        (status,
+         [('m', 'modified', None, 'show only modified files'),
+          ('a', 'added', None, 'show only added files'),
+          ('r', 'removed', None, 'show only removed files'),
+          ('u', 'unknown', None, 'show only unknown (not tracked) files'),
+          ('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search')],
+         "hg status [FILE]..."),
     "tag":
         (tag,
          [('l', 'local', None, 'make the tag local'),
@@ -1283,9 +1335,9 @@ table = {
     "version": (show_version, [], 'hg version'),
     }
 
-globalopts = [('v', 'verbose', None, 'verbose'),
-              ('', 'debug', None, 'debug'),
-              ('q', 'quiet', None, 'quiet'),
+globalopts = [('v', 'verbose', None, 'verbose mode'),
+              ('', 'debug', None, 'debug mode'),
+              ('q', 'quiet', None, 'quiet mode'),
               ('', 'profile', None, 'profile'),
               ('R', 'repository', "", 'repository root directory'),
               ('', 'traceback', None, 'print traceback on exception'),
@@ -1299,7 +1351,7 @@ norepo = "clone init version help debugindex debugindexdot"
 def find(cmd):
     for e in table.keys():
         if re.match("(%s)$" % e, cmd):
-            return table[e]
+            return e, table[e]
 
     raise UnknownCommand(cmd)
 
@@ -1327,11 +1379,11 @@ def parse(args):
     if options["version"]:
         return ("version", show_version, [], options, cmdoptions)
     elif not args:
-        return ("help", help_, [], options, cmdoptions)
+        return ("help", help_, ["shortlist"], options, cmdoptions)
     else:
         cmd, args = args[0], args[1:]
 
-    i = find(cmd)
+    i = find(cmd)[1]
 
     # combine global options into local
     c = list(i[1])
@@ -1367,12 +1419,12 @@ def dispatch(args):
             help_(u, inst.args[0])
         else:
             u.warn("hg: %s\n" % inst.args[1])
-            help_(u)
+            help_(u, 'shortlist')
         sys.exit(-1)
     except UnknownCommand, inst:
         u = ui.ui()
         u.warn("hg: unknown command '%s'\n" % inst.args[0])
-        help_(u)
+        help_(u, 'shortlist')
         sys.exit(1)
 
     if options["time"]:
@@ -1455,5 +1507,8 @@ def dispatch(args):
         u.debug(inst, "\n")
         u.warn("%s: invalid arguments\n" % cmd)
         help_(u, cmd)
+    except UnknownCommand, inst:
+        u.warn("hg: unknown command '%s'\n" % inst.args[0])
+        help_(u, 'shortlist')
 
     sys.exit(-1)

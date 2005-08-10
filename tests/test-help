@@ -1,11 +1,15 @@
 #!/bin/sh
 
+hg
+hg -q
 hg help
 hg -q help
 hg add -h
 hg add --skjdfks
 hg help diff
+hg help status
+hg -q help status
 hg help foo
-hg -q commands
+hg skjdfks
 
 exit 0

@@ -70,7 +70,7 @@ def template(tmpl, filters = {}, **map):
         if m:
             yield tmpl[:m.start(0)]
             v = map.get(m.group(1), "")
-            v = callable(v) and v() or v
+            v = callable(v) and v(**map) or v
 
             fl = m.group(2)
             if fl:
@@ -224,14 +224,8 @@ class hgweb:
             tn = None
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
 
-    def header(self):
-        yield self.t("header")
-
-    def footer(self):
-        yield self.t("footer")
-
     def changelog(self, pos):
-        def changenav():
+        def changenav(**map):
             def seq(factor = 1):
                 yield 1 * factor
                 yield 3 * factor
@@ -254,7 +248,7 @@ class hgweb:
 
             yield self.t("naventry", label="tip")
 
-        def changelist():
+        def changelist(**map):
             parity = (start - end) & 1
             cl = self.repo.changelog
             l = [] # build a list in forward order for efficiency
@@ -295,7 +289,7 @@ class hgweb:
 
     def search(self, query):
 
-        def changelist():
+        def changelist(**map):
             cl = self.repo.changelog
             count = 0
             qw = query.lower().split()
@@ -361,7 +355,7 @@ class hgweb:
             files.append(self.t("filenodelink",
                                 filenode = hex(mf.get(f, nullid)), file = f))
 
-        def diff():
+        def diff(**map):
             yield self.diff(p1, n, None)
 
         yield self.t('changeset',
@@ -382,7 +376,7 @@ class hgweb:
         fl = self.repo.file(f)
         count = fl.count()
 
-        def entries():
+        def entries(**map):
             l = []
             parity = (count - 1) & 1
 
@@ -457,7 +451,7 @@ class hgweb:
         t = float(cs[2].split(' ')[0])
         mfn = cs[0]
 
-        def annotate():
+        def annotate(**map):
             parity = 1
             last = None
             for r, l in fl.annotate(n):
@@ -527,7 +521,7 @@ class hgweb:
                 short = os.path.basename(remain)
                 files[short] = (f, n)
 
-        def filelist():
+        def filelist(**map):
             parity = 0
             fl = files.keys()
             fl.sort()
@@ -563,7 +557,7 @@ class hgweb:
         i = self.repo.tagslist()
         i.reverse()
 
-        def entries():
+        def entries(**map):
             parity = 0
             for k,n in i:
                 yield self.t("tagentry",
@@ -583,7 +577,7 @@ class hgweb:
         cs = cl.read(n)
         mf = self.repo.manifest.read(cs[0])
 
-        def diff():
+        def diff(**map):
             yield self.diff(p1, n, file)
 
         yield self.t("filediff",
@@ -600,6 +594,12 @@ class hgweb:
     # find tag, changeset, file
 
     def run(self):
+        def header(**map):
+            yield self.t("header", **map)
+
+        def footer(**map):
+            yield self.t("footer", **map)
+
         self.refresh()
         args = cgi.parse()
 
@@ -618,11 +618,14 @@ class hgweb:
         self.t = templater(m, self.filters,
                            {"url":url,
                             "repo":self.reponame,
-                            "header":self.header(),
-                            "footer":self.footer(),
+                            "header":header,
+                            "footer":footer,
                             })
 
-        if not args.has_key('cmd') or args['cmd'][0] == 'changelog':
+        if not args.has_key('cmd'):
+            args['cmd'] = [self.t.cache['default'],]
+        
+        if args['cmd'][0] == 'changelog':
             c = self.repo.changelog.count() - 1
             hi = c
             if args.has_key('rev'):

@@ -22,16 +22,16 @@ class filelog(revlog):
     # This avoids a collision between a file named foo and a dir named
     # foo.i or foo.d
     def encodedir(self, path):
-        path.replace(".hg/", ".hg.hg/")
-        path.replace(".i/", ".i.hg/")
-        path.replace(".d/", ".i.hg/")
-        return path
+        return (path
+                .replace(".hg/", ".hg.hg/")
+                .replace(".i/", ".i.hg/")
+                .replace(".d/", ".d.hg/"))
 
     def decodedir(self, path):
-        path.replace(".d.hg/", ".d/")
-        path.replace(".i.hg/", ".i/")
-        path.replace(".hg.hg/", ".hg/")
-        return path
+        return (path
+                .replace(".d.hg/", ".d/")
+                .replace(".i.hg/", ".i/")
+                .replace(".hg.hg/", ".hg/"))
 
     def read(self, node):
         t = self.revision(node)
@@ -1784,8 +1784,11 @@ class httprepository:
         # Note: urllib2 takes proxy values from the environment and those will
         # take precedence
         for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
-            if os.environ.has_key(env):
-                del os.environ[env]
+            try:
+                if os.environ.has_key(env):
+                    del os.environ[env]
+            except OSError:
+                pass
 
         proxy_handler = urllib2.BaseHandler()
         if host and not no_proxy:

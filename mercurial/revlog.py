@@ -185,8 +185,8 @@ class revlog:
         for r in range(p + 1, self.count()):
             n = self.node(r)
             for pn in self.parents(n):
-                if pn == p:
-                    c.append(p)
+                if pn == node:
+                    c.append(n)
                     continue
                 elif pn == nullid:
                     continue
