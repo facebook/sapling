@@ -3,36 +3,37 @@
 + hg commit -m added file1 and file2 -d 0 0 -u user
 + hg commit -m changed file1 -d 0 0 -u user
 + hg -q log
-1:3aa14bbc23d90e3f8b5b639b4a43d76509bae76c
-0:8633637036c18f021d771208e16ae3508ab81d28
+1:f4d7a8c73d231bc078e2a5e791325e55e8a4c252
+0:232e179b3f294d467cfa66e1439bc5b0d44e4a93
 + hg id
-3aa14bbc23d9 tip
+f4d7a8c73d23 tip
 + hg update -C 0
 + hg id
-8633637036c1
+232e179b3f29
 + hg id
-8633637036c1+
+232e179b3f29+
 + hg revert
 + hg diff
 + hg status
 + hg id
-8633637036c1
+232e179b3f29
 + hg update
 + hg diff
 + hg status
 + hg id
-3aa14bbc23d9 tip
+f4d7a8c73d23 tip
 + hg update -C 0
 + hg update
 merge: warning: conflicts during merge
 merging file1
 merging file1 failed!
 + hg diff
-diff -r 3aa14bbc23d9 file1
+diff -r f4d7a8c73d23 file1
 --- a/file1
 +++ b/file1
-@@ -1,2 +1,6 @@
+@@ -1,3 +1,7 @@
  added file1
+ another line of text
 +<<<<<<<
 +changed file1 different
 +=======
@@ -41,19 +42,19 @@ diff -r 3aa14bbc23d9 file1
 + hg status
 M file1
 + hg id
-3aa14bbc23d9+ tip
+f4d7a8c73d23+ tip
 + hg revert
 + hg diff
 + hg status
 + hg id
-3aa14bbc23d9 tip
+f4d7a8c73d23 tip
 + hg revert -r tip
 + hg diff
 + hg status
 + hg id
-3aa14bbc23d9 tip
+f4d7a8c73d23 tip
 + hg update -C
 + hg diff
 + hg status
 + hg id
-3aa14bbc23d9 tip
+f4d7a8c73d23 tip
