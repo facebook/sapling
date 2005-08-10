@@ -708,7 +708,12 @@ def create_server(path, name, templates, address, port, use_ipv6 = False,
     import BaseHTTPServer
 
     class IPv6HTTPServer(BaseHTTPServer.HTTPServer):
-        address_family = socket.AF_INET6
+        address_family = getattr(socket, 'AF_INET6', None)
+
+        def __init__(self, *args, **kwargs):
+            if self.address_family is None:
+                raise RepoError('IPv6 not available on this system')
+            BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
 
     class hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
         def log_error(self, format, *args):
