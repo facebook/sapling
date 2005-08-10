@@ -407,10 +407,9 @@ class dirstate:
                 self.map[f] = ('r', 0, 0, 0)
             else:
                 s = os.stat(os.path.join(self.root, f))
-                st_mode = kw.get('st_mode', s.st_mode)
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
-                self.map[f] = (state, st_mode, st_size, st_mtime)
+                self.map[f] = (state, s.st_mode, st_size, st_mtime)
 
     def forget(self, files):
         if not files: return
@@ -1583,8 +1582,7 @@ class localrepository:
                     # update dirstate from parent1's manifest
                     m1n = self.changelog.read(p1)[0]
                     m1 = self.manifest.read(m1n)
-                    file_ = self.file(f)
-                    f_len = len(file_.read(m1[f]))
+                    f_len = len(self.file(f).read(m1[f]))
                     self.dirstate.update([f], mode, st_size=f_len, st_mtime=0)
                 else:
                     self.ui.warn("Second parent without branch merge!?\n"
