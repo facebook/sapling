@@ -392,7 +392,7 @@ class dirstate:
     def copied(self, file):
         return self.copies.get(file, None)
 
-    def update(self, files, state):
+    def update(self, files, state, **kw):
         ''' current states:
         n  normal
         m  needs merging
@@ -407,7 +407,10 @@ class dirstate:
                 self.map[f] = ('r', 0, 0, 0)
             else:
                 s = os.stat(os.path.join(self.root, f))
-                self.map[f] = (state, s.st_mode, s.st_size, s.st_mtime)
+                st_mode = kw.get('st_mode', s.st_mode)
+                st_size = kw.get('st_size', s.st_size)
+                st_mtime = kw.get('st_mtime', s.st_mtime)
+                self.map[f] = (state, st_mode, st_size, st_mtime)
 
     def forget(self, files):
         if not files: return
@@ -1571,10 +1574,21 @@ class localrepository:
             m, o, flag = merge[f]
             self.merge3(f, m, o)
             util.set_exec(self.wjoin(f), flag)
-            if moddirstate and mode == 'm':
-                # only update dirstate on branch merge, otherwise we
-                # could mark files with changes as unchanged
-                self.dirstate.update([f], mode)
+            if moddirstate:
+                if mode == 'm':
+                    # only update dirstate on branch merge, otherwise we
+                    # could mark files with changes as unchanged
+                    self.dirstate.update([f], mode)
+                elif p2 == nullid:
+                    # update dirstate from parent1's manifest
+                    m1n = self.changelog.read(p1)[0]
+                    m1 = self.manifest.read(m1n)
+                    file_ = self.file(f)
+                    f_len = file_.length(file_.rev(m1[f]))
+                    self.dirstate.update([f], mode, st_size=f_len, st_mtime=0)
+                else:
+                    self.ui.warn("Second parent without branch merge!?\n"
+                                 "Dirstate for file %s may be wrong.\n" % f)
 
         remove.sort()
         for f in remove:
