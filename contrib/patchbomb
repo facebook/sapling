@@ -74,15 +74,14 @@ def diffstat(patch):
 
 def patchbomb(ui, repo, *revs, **opts):
     def prompt(prompt, default = None, rest = ': ', empty_ok = False):
-        try:
-            if default: prompt += ' [%s]' % default
-            prompt += rest
+        if default: prompt += ' [%s]' % default
+        prompt += rest
+        while True:
             r = raw_input(prompt)
-            if not r and not empty_ok: raise EOFError
-            return r
-        except EOFError:
-            if default is None: raise
-            return default
+            if r: return r
+            if default is not None: return default
+            if empty_ok: return r
+            print >> sys.stderr, 'Please enter a valid value.'
 
     def confirm(s):
         if not prompt(s, default = 'y', rest = '? ').lower().startswith('y'):
@@ -97,7 +96,7 @@ def patchbomb(ui, repo, *revs, **opts):
             confirm('Does the diffstat above look okay')
         return s
 
-    def make_patch(patch, idx, total):
+    def makepatch(patch, idx, total):
         desc = []
         node = None
         for line in patch:
@@ -107,30 +106,20 @@ def patchbomb(ui, repo, *revs, **opts):
             if line.startswith('diff -r'): break
             desc.append(line)
         if not node: raise ValueError
-        msg = MIMEMultipart()
-        msg['X-Mercurial-Node'] = node
+        body = ('\n'.join(desc[1:]).strip() or
+                'Patch subject is complete summary.')
+        body += '\n\n\n' + cdiffstat('\n'.join(desc), patch) + '\n\n'
+        body += '\n'.join(patch)
+        msg = MIMEText(body)
         subj = '[PATCH %d of %d] %s' % (idx, total, desc[0].strip())
         if subj.endswith('.'): subj = subj[:-1]
         msg['Subject'] = subj
-        body = '\n'.join(desc[1:]).strip() + '\n'
-        summary = subj
-        if body != '\n':
-            msg.attach(MIMEText(body))
-            summary += '\n\n' + body
-        else:
-            summary += '\n'
-        d = cdiffstat(summary, patch)
-        if d: msg.attach(MIMEText(d))
-        p = MIMEText('\n'.join(patch), 'x-patch')
-        p['Content-Disposition'] = commands.make_filename(repo, None,
-                                                          'inline; filename=%b-%n.patch',
-                                                          seqno = idx)
-        msg.attach(p)
+        msg['X-Mercurial-Node'] = node
         return msg
 
     start_time = int(time.time())
 
-    def make_msgid(id):
+    def genmsgid(id):
         return '<%s.%s@%s>' % (id[:20], start_time, socket.getfqdn())
 
     patches = []
@@ -139,6 +128,7 @@ def patchbomb(ui, repo, *revs, **opts):
         def __init__(self, container):
             self.lines = []
             self.container = container
+            self.name = 'email'
 
         def write(self, data):
             self.lines.append(data)
@@ -156,7 +146,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     for p, i in zip(patches, range(len(patches))):
         jumbo.extend(p)
-        msgs.append(make_patch(p, i + 1, len(patches)))
+        msgs.append(makepatch(p, i + 1, len(patches)))
 
     ui.write('\nWrite the introductory message for the patch series.\n\n')
 
@@ -188,24 +178,22 @@ def patchbomb(ui, repo, *revs, **opts):
 
     msgs.insert(0, msg)
 
-    s = smtplib.SMTP()
-    s.connect(host = ui.config('smtp', 'host', 'mail'),
-              port = int(ui.config('smtp', 'port', 25)))
+    if not opts['test']:
+        s = smtplib.SMTP()
+        s.connect(host = ui.config('smtp', 'host', 'mail'),
+                  port = int(ui.config('smtp', 'port', 25)))
 
-    refs = []
     parent = None
     tz = time.strftime('%z')
     for m in msgs:
         try:
-            m['Message-Id'] = make_msgid(m['X-Mercurial-Node'])
+            m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
         except TypeError:
-            m['Message-Id'] = make_msgid('patchbomb')
+            m['Message-Id'] = genmsgid('patchbomb')
         if parent:
             m['In-Reply-To'] = parent
-        parent = m['Message-Id']
-        if len(refs) > 1:
-            m['References'] = ' '.join(refs[:-1])
-        refs.append(parent)
+        else:
+            parent = m['Message-Id']
         m['Date'] = time.strftime('%a, %m %b %Y %T ', time.localtime(start_time)) + tz
         start_time += 1
         m['From'] = sender
@@ -219,7 +207,8 @@ def patchbomb(ui, repo, *revs, **opts):
             fp.close()
         else:
             s.sendmail(sender, to + cc, m.as_string(0))
-    s.close()
+    if not opts['test']:
+        s.close()
 
 if __name__ == '__main__':
     optspec = [('c', 'cc', [], 'email addresses of copy recipients'),
