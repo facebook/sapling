@@ -32,8 +32,7 @@ def relfilter(repo, files):
 def relpath(repo, args):
     cwd = repo.getcwd()
     if cwd:
-        return [util.pconvert(os.path.normpath(os.path.join(cwd, x)))
-                for x in args]
+        return [util.normpath(os.path.join(cwd, x)) for x in args]
     return args
 
 def matchpats(repo, cwd, pats = [], opts = {}, head = ''):
