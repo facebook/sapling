@@ -440,11 +440,50 @@ class dirstate:
             st.write(e + f)
         self.dirty = 0
 
-    def walk(self, files = None, match = util.always):
+    def filterfiles(self, files):
+        ret = {}
+        unknown = []
+
+        for x in files:
+            if x is '.':
+                return self.map.copy()
+            if x not in self.map:
+                unknown.append(x)
+            else:
+                ret[x] = self.map[x]
+                
+        if not unknown:
+            return ret
+
+        b = self.map.keys()
+        b.sort()
+        blen = len(b)
+
+        for x in unknown:
+            bs = bisect.bisect(b, x)
+            if bs != 0 and  b[bs-1] == x: 
+                ret[x] = self.map[x]
+                continue
+            while bs < blen:
+                s = b[bs]
+                if len(s) > len(x) and s.startswith(x) and s[len(x)] == '/':
+                    ret[s] = self.map[s]
+                else:
+                    break
+                bs += 1
+        return ret
+
+    def walk(self, files = None, match = util.always, dc=None):
         self.read()
-        dc = self.map.copy()
+
         # walk all files by default
-        if not files: files = [self.root]
+        if not files:
+            files = [self.root]
+            if not dc:
+                dc = self.map.copy()
+        elif not dc:
+            dc = self.filterfiles(files)
+                    
         known = {'.hg': 1}
         def seen(fn):
             if fn in known: return True
@@ -482,19 +521,20 @@ class dirstate:
         for src, fn in util.unique(traverse()):
             fn = os.path.normpath(fn)
             if seen(fn): continue
-            if fn in dc:
-                del dc[fn]
-            elif self.ignore(fn):
+            if fn not in dc and self.ignore(fn):
                 continue
             if match(fn):
                 yield src, fn
 
     def changes(self, files = None, match = util.always):
         self.read()
-        dc = self.map.copy()
+        if not files:
+            dc = self.map.copy()
+        else:
+            dc = self.filterfiles(files)
         lookup, changed, added, unknown = [], [], [], []
 
-        for src, fn in self.walk(files, match):
+        for src, fn in self.walk(files, match, dc=dc):
             try: s = os.stat(os.path.join(self.root, fn))
             except: continue
 
