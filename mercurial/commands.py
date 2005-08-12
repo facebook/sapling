@@ -393,11 +393,10 @@ def addremove(ui, repo, *pats, **opts):
     q = dict(zip(pats, pats))
     add, remove = [], []
     for src, abs, rel in walk(repo, pats, opts):
-        if src == 'f':
-            if repo.dirstate.state(abs) == '?':
-                add.append(abs)
-                if rel not in q: ui.status('adding ', rel, '\n')
-        elif repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
+        if src == 'f' and repo.dirstate.state(abs) == '?':
+            add.append(abs)
+            if rel not in q: ui.status('adding ', rel, '\n')
+        if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
             remove.append(abs)
             if rel not in q: ui.status('removing ', rel, '\n')
     repo.add(add)
@@ -632,9 +631,11 @@ def diff(ui, repo, *pats, **opts):
         raise util.Abort("too many revisions to diff")
 
     files = []
-    roots, match, results = makewalk(repo, pats, opts)
-    for src, abs, rel in results:
-        files.append(abs)
+    match = util.always
+    if pats:
+        roots, match, results = makewalk(repo, pats, opts)
+        for src, abs, rel in results:
+            files.append(abs)
     dodiff(sys.stdout, ui, repo, files, *revs, **{'match': match})
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
