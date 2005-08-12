@@ -69,6 +69,16 @@ def globre(pat, head = '^', tail = '$'):
 
 _globchars = {'[': 1, '{': 1, '*': 1, '?': 1}
 
+def pathto(n1, n2):
+    '''return the relative path from one place to another'''
+    if not n1: return n2
+    a, b = n1.split(os.sep), n2.split(os.sep)
+    a.reverse(), b.reverse()
+    while a and b and a[-1] == b[-1]:
+        a.pop(), b.pop()
+    b.reverse()
+    return os.sep.join((['..'] * len(a)) + b)
+
 def canonpath(repo, cwd, myname):
     rootsep = repo.root + os.sep
     name = myname

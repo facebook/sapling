@@ -40,22 +40,12 @@ def matchpats(repo, cwd, pats = [], opts = {}, head = ''):
     return util.matcher(repo, cwd, pats or ['.'], opts.get('include'),
                         opts.get('exclude'), head)
 
-def pathto(n1, n2):
-    '''return the relative path from one place to another'''
-    if not n1: return n2
-    a, b = n1.split(os.sep), n2.split(os.sep)
-    a.reverse(), b.reverse()
-    while a and b and a[-1] == b[-1]:
-        a.pop(), b.pop()
-    b.reverse()
-    return os.sep.join((['..'] * len(a)) + b)
-
 def makewalk(repo, pats, opts, head = ''):
     cwd = repo.getcwd()
     files, matchfn = matchpats(repo, cwd, pats, opts, head)
     def walk():
         for src, fn in repo.walk(files = files, match = matchfn):
-            yield src, fn, pathto(cwd, fn)
+            yield src, fn, util.pathto(cwd, fn)
     return files, matchfn, walk()
 
 def walk(repo, pats, opts, head = ''):
@@ -1078,7 +1068,7 @@ def status(ui, repo, *pats, **opts):
 
     cwd = repo.getcwd()
     files, matchfn = matchpats(repo, cwd, pats, opts)
-    (c, a, d, u) = [[pathto(cwd, x) for x in n]
+    (c, a, d, u) = [[util.pathto(cwd, x) for x in n]
                     for n in repo.changes(files=files, match=matchfn)]
 
     changetypes = [('modified', 'M', c),

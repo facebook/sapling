@@ -11,7 +11,7 @@ from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
 demandload(globals(), "tempfile httprangereader bdiff urlparse")
-demandload(globals(), "bisect select")
+demandload(globals(), "bisect errno select stat")
 
 class filelog(revlog):
     def __init__(self, opener, path):
@@ -489,9 +489,16 @@ class dirstate:
             if fn in known: return True
             known[fn] = 1
         def traverse():
-            for f in util.unique(files):
-                f = os.path.join(self.root, f)
-                if os.path.isdir(f):
+            for ff in util.unique(files):
+                f = os.path.join(self.root, ff)
+                try:
+                    st = os.stat(f)
+                except OSError, inst:
+                    if ff not in dc: self.ui.warn('%s: %s\n' % (
+                        util.pathto(self.getcwd(), ff),
+                        inst.strerror))
+                    continue
+                if stat.S_ISDIR(st.st_mode):
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
                         nd = os.path.normpath(d)
@@ -507,8 +514,18 @@ class dirstate:
                         for fn in fl:
                             fn = util.pconvert(os.path.join(d, fn))
                             yield 'f', fn
+                elif stat.S_ISREG(st.st_mode):
+                    yield 'f', ff
                 else:
-                    yield 'f', f[len(self.root) + 1:]
+                    kind = 'unknown'
+                    if stat.S_ISCHR(st.st_mode): kind = 'character device'
+                    elif stat.S_ISBLK(st.st_mode): kind = 'block device'
+                    elif stat.S_ISFIFO(st.st_mode): kind = 'fifo'
+                    elif stat.S_ISLNK(st.st_mode): kind = 'symbolic link'
+                    elif stat.S_ISSOCK(st.st_mode): kind = 'socket'
+                    self.ui.warn('%s: unsupported file type (type is %s)\n' % (
+                        util.pathto(self.getcwd(), ff),
+                        kind))
 
             ks = dc.keys()
             ks.sort()
