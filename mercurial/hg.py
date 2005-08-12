@@ -312,14 +312,14 @@ class dirstate:
                 l = file(self.wjoin(".hgignore"))
                 for pat in l:
                     if pat != "\n":
-                        p = util.pconvert(pat[:-1])
+			p = pat[:-1]
                         try:
-                            r = re.compile(p)
+                            re.compile(p)
                         except:
                             self.ui.warn("ignoring invalid ignore"
                                          + " regular expression '%s'\n" % p)
                         else:
-                            bigpat.append(util.pconvert(pat[:-1]))
+                            bigpat.append(p)
             except IOError: pass
 
             if bigpat:
@@ -501,7 +501,7 @@ class dirstate:
                 if stat.S_ISDIR(st.st_mode):
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
-                        nd = os.path.normpath(d)
+                        nd = util.normpath(d)
                         if seen(nd):
                             subdirs[:] = []
                             continue
@@ -536,7 +536,7 @@ class dirstate:
         # not in .hgignore
 
         for src, fn in util.unique(traverse()):
-            fn = os.path.normpath(fn)
+            fn = util.normpath(fn)
             if seen(fn): continue
             if fn not in dc and self.ignore(fn):
                 continue

@@ -70,9 +70,10 @@ def globre(pat, head = '^', tail = '$'):
 _globchars = {'[': 1, '{': 1, '*': 1, '?': 1}
 
 def pathto(n1, n2):
-    '''return the relative path from one place to another'''
-    if not n1: return n2
-    a, b = n1.split(os.sep), n2.split(os.sep)
+    '''return the relative path from one place to another.
+    this returns a path in the form used by the local filesystem, not hg.'''
+    if not n1: return localpath(n2)
+    a, b = n1.split('/'), n2.split('/')
     a.reverse(), b.reverse()
     while a and b and a[-1] == b[-1]:
         a.pop(), b.pop()
@@ -86,7 +87,7 @@ def canonpath(repo, cwd, myname):
         name = os.path.join(repo.root, cwd, name)
     name = os.path.normpath(name)
     if name.startswith(rootsep):
-        return name[len(rootsep):]
+        return pconvert(name[len(rootsep):])
     elif name == repo.root:
         return ''
     else:
@@ -121,7 +122,7 @@ def matcher(repo, cwd, names, inc, exc, head = ''):
         for p in pat.split(os.sep):
             if patkind(p)[0] == 'glob': break
             root.append(p)
-        return os.sep.join(root)
+        return '/'.join(root)
 
     pats = []
     files = []
@@ -204,6 +205,12 @@ if os.name == 'nt':
     def pconvert(path):
         return path.replace("\\", "/")
 
+    def localpath(path):
+        return path.replace('/', '\\')
+
+    def normpath(path):
+        return pconvert(os.path.normpath(path))
+
     makelock = _makelock_file
     readlock = _readlock_file
 
@@ -231,6 +238,11 @@ else:
 
     def pconvert(path):
         return path
+
+    def localpath(path):
+        return path
+
+    normpath = os.path.normpath
 
     def makelock(info, pathname):
         try:
