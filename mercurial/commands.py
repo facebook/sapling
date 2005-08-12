@@ -393,11 +393,10 @@ def addremove(ui, repo, *pats, **opts):
     q = dict(zip(pats, pats))
     add, remove = [], []
     for src, abs, rel in walk(repo, pats, opts):
-        if src == 'f':
-            if repo.dirstate.state(abs) == '?':
-                add.append(abs)
-                if rel not in q: ui.status('adding ', rel, '\n')
-        elif repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
+        if src == 'f' and repo.dirstate.state(abs) == '?':
+            add.append(abs)
+            if rel not in q: ui.status('adding ', rel, '\n')
+        if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
             remove.append(abs)
             if rel not in q: ui.status('removing ', rel, '\n')
     repo.add(add)
