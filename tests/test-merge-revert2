@@ -4,6 +4,7 @@ mkdir t
 cd t
 hg init
 echo "added file1" > file1
+echo "another line of text" >> file1
 echo "added file2" > file2
 hg add file1 file2
 hg commit -m "added file1 and file2" -d "0 0" -u user

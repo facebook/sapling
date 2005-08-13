@@ -10,7 +10,7 @@ import util
 from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
-demandload(globals(), "tempfile httprangereader bdiff urlparse")
+demandload(globals(), "tempfile httprangereader bdiff urlparse stat")
 demandload(globals(), "bisect select")
 
 class filelog(revlog):
@@ -392,7 +392,7 @@ class dirstate:
     def copied(self, file):
         return self.copies.get(file, None)
 
-    def update(self, files, state):
+    def update(self, files, state, **kw):
         ''' current states:
         n  normal
         m  needs merging
@@ -407,7 +407,9 @@ class dirstate:
                 self.map[f] = ('r', 0, 0, 0)
             else:
                 s = os.stat(os.path.join(self.root, f))
-                self.map[f] = (state, s.st_mode, s.st_size, s.st_mtime)
+                st_size = kw.get('st_size', s.st_size)
+                st_mtime = kw.get('st_mtime', s.st_mtime)
+                self.map[f] = (state, s.st_mode, st_size, st_mtime)
 
     def forget(self, files):
         if not files: return
@@ -484,33 +486,41 @@ class dirstate:
             if match(fn):
                 yield src, fn
 
-    def changes(self, files = None, match = util.always):
+    def changes(self, files=None, match=util.always):
         self.read()
         dc = self.map.copy()
-        lookup, changed, added, unknown = [], [], [], []
+        lookup, modified, added, unknown = [], [], [], []
+        removed, deleted = [], []
 
         for src, fn in self.walk(files, match):
-            try: s = os.stat(os.path.join(self.root, fn))
-            except: continue
-
-            if fn in dc:
-                c = dc[fn]
+            try:
+                s = os.stat(os.path.join(self.root, fn))
+            except OSError:
+                continue
+            if not stat.S_ISREG(s.st_mode):
+                continue
+            c = dc.get(fn)
+            if c:
                 del dc[fn]
-
                 if c[0] == 'm':
-                    changed.append(fn)
+                    modified.append(fn)
                 elif c[0] == 'a':
                     added.append(fn)
                 elif c[0] == 'r':
                     unknown.append(fn)
                 elif c[2] != s.st_size or (c[1] ^ s.st_mode) & 0100:
-                    changed.append(fn)
-                elif c[1] != s.st_mode or c[3] != s.st_mtime:
+                    modified.append(fn)
+                elif c[3] != s.st_mtime:
                     lookup.append(fn)
             else:
-                if match(fn): unknown.append(fn)
+                unknown.append(fn)
 
-        return (lookup, changed, added, filter(match, dc.keys()), unknown)
+        for fn, c in [(fn, c) for fn, c in dc.items() if match(fn)]:
+            if c[0] == 'r':
+                removed.append(fn)
+            else:
+                deleted.append(fn)
+        return (lookup, modified, added, removed + deleted, unknown)
 
 # used to avoid circular references so destructors work
 def opener(base):
@@ -1563,10 +1573,20 @@ class localrepository:
             m, o, flag = merge[f]
             self.merge3(f, m, o)
             util.set_exec(self.wjoin(f), flag)
-            if moddirstate and mode == 'm':
-                # only update dirstate on branch merge, otherwise we
-                # could mark files with changes as unchanged
-                self.dirstate.update([f], mode)
+            if moddirstate:
+                if mode == 'm':
+                    # only update dirstate on branch merge, otherwise we
+                    # could mark files with changes as unchanged
+                    self.dirstate.update([f], mode)
+                elif p2 == nullid:
+                    # update dirstate from parent1's manifest
+                    m1n = self.changelog.read(p1)[0]
+                    m1 = self.manifest.read(m1n)
+                    f_len = len(self.file(f).read(m1[f]))
+                    self.dirstate.update([f], mode, st_size=f_len, st_mtime=0)
+                else:
+                    self.ui.warn("Second parent without branch merge!?\n"
+                                 "Dirstate for file %s may be wrong.\n" % f)
 
         remove.sort()
         for f in remove:
