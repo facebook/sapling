@@ -95,25 +95,26 @@ def canonpath(repo, cwd, myname):
     
 def matcher(repo, cwd, names, inc, exc, head = ''):
     def patkind(name):
-        for prefix in 're:', 'glob:', 'path:':
+        for prefix in 're:', 'glob:', 'path:', 'relpath:':
             if name.startswith(prefix): return name.split(':', 1)
         for c in name:
             if c in _globchars: return 'glob', name
         return 'relpath', name
 
-    def regex(name, tail):
+    def regex(kind, name, tail):
         '''convert a pattern into a regular expression'''
-        kind, name = patkind(name)
         if kind == 're':
             return name
         elif kind == 'path':
-            return '^' + re.escape(name) + '$'
+            return '^' + re.escape(name) + '(?:/|$)'
+        elif kind == 'relpath':
+            return head + re.escape(name) + tail
         return head + globre(name, '', tail)
 
     def matchfn(pats, tail):
         """build a matching function from a set of patterns"""
         if pats:
-            pat = '(?:%s)' % '|'.join([regex(p, tail) for p in pats])
+            pat = '(?:%s)' % '|'.join([regex(k, p, tail) for (k, p) in pats])
             return re.compile(pat).match
 
     def globprefix(pat):
@@ -132,19 +133,19 @@ def matcher(repo, cwd, names, inc, exc, head = ''):
             name = canonpath(repo, cwd, name)
             if name == '':
                 kind, name = 'glob', '**'
-        if kind in ('glob', 're'):
-            pats.append(name)
+        if kind in ('glob', 'path', 're'):
+            pats.append((kind, name))
         if kind == 'glob':
             root = globprefix(name)
             if root: roots.append(root)
         elif kind == 'relpath':
-            files.append(name)
+            files.append((kind, name))
             roots.append(name)
         
     patmatch = matchfn(pats, '$') or always
     filematch = matchfn(files, '(?:/|$)') or always
-    incmatch = matchfn(inc, '(?:/|$)') or always
-    excmatch = matchfn(exc, '(?:/|$)') or (lambda fn: False)
+    incmatch = matchfn(map(patkind, inc), '(?:/|$)') or always
+    excmatch = matchfn(map(patkind, exc), '(?:/|$)') or (lambda fn: False)
 
     return roots, lambda fn: (incmatch(fn) and not excmatch(fn) and
                               (fn.endswith('/') or
