@@ -12,6 +12,11 @@
 #include <Python.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef __hpux
+#define inline
+#endif
+
 #ifdef _WIN32
 #ifdef _MSC_VER
 #define inline __inline
