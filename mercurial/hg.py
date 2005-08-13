@@ -502,6 +502,7 @@ class dirstate:
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
                         nd = util.normpath(d)
+                        if nd == '.': nd = ''
                         if seen(nd):
                             subdirs[:] = []
                             continue
