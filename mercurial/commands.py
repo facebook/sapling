@@ -463,6 +463,8 @@ def clone(ui, source, dest=None, **opts):
         ui.warn("abort: destination '%s' already exists\n" % dest)
         return 1
 
+    dest = os.path.realpath(dest)
+
     class Dircleanup:
         def __init__(self, dir_):
             self.rmtree = shutil.rmtree
