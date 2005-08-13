@@ -81,15 +81,6 @@ f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
 abort: .. not under repository root
 + hg debugwalk beans/../..
 abort: beans/../.. not under repository root
-+ hg debugwalk /tmp/hgtests.15784.14760.4713.20670/test-walk/t/beans
-f  beans/black     beans/black
-f  beans/borlotti  beans/borlotti
-f  beans/kidney    beans/kidney
-f  beans/navy      beans/navy
-f  beans/pinto     beans/pinto
-f  beans/turtle    beans/turtle
-+ hg debugwalk /tmp/hgtests.15784.14760.4713.20670/test-walk/t/..
-abort: /tmp/hgtests.15784.14760.4713.20670/test-walk/t/.. not under repository root
 + hg debugwalk glob:*
 f  fennel      fennel
 f  fenugreek   fenugreek

@@ -35,8 +35,10 @@ hg debugwalk '-X*/Procyonidae' mammals
 hg debugwalk path:mammals
 hg debugwalk ..
 hg debugwalk beans/../..
-hg debugwalk `pwd`/beans
-hg debugwalk `pwd`/..
+# Don't know how to test absolute paths without always getting a false
+# error.
+#hg debugwalk `pwd`/beans
+#hg debugwalk `pwd`/..
 hg debugwalk glob:\*
 hg debugwalk 're:.*[kb]$'
 hg debugwalk path:beans/black
