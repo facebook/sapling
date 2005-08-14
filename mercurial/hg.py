@@ -10,8 +10,8 @@ import util
 from revlog import *
 from demandload import *
 demandload(globals(), "re lock urllib urllib2 transaction time socket")
-demandload(globals(), "tempfile httprangereader bdiff urlparse stat")
-demandload(globals(), "bisect select")
+demandload(globals(), "tempfile httprangereader bdiff urlparse")
+demandload(globals(), "bisect errno select stat")
 
 class filelog(revlog):
     def __init__(self, opener, path):
@@ -300,6 +300,11 @@ class dirstate:
     def wjoin(self, f):
         return os.path.join(self.root, f)
 
+    def getcwd(self):
+        cwd = os.getcwd()
+        if cwd == self.root: return ''
+        return cwd[len(self.root) + 1:]
+
     def ignore(self, f):
         if not self.ignorefunc:
             bigpat = []
@@ -307,14 +312,14 @@ class dirstate:
                 l = file(self.wjoin(".hgignore"))
                 for pat in l:
                     if pat != "\n":
-                        p = util.pconvert(pat[:-1])
+			p = pat[:-1]
                         try:
-                            r = re.compile(p)
+                            re.compile(p)
                         except:
                             self.ui.warn("ignoring invalid ignore"
                                          + " regular expression '%s'\n" % p)
                         else:
-                            bigpat.append(util.pconvert(pat[:-1]))
+                            bigpat.append(p)
             except IOError: pass
 
             if bigpat:
@@ -437,22 +442,69 @@ class dirstate:
             st.write(e + f)
         self.dirty = 0
 
-    def walk(self, files = None, match = util.always):
+    def filterfiles(self, files):
+        ret = {}
+        unknown = []
+
+        for x in files:
+            if x is '.':
+                return self.map.copy()
+            if x not in self.map:
+                unknown.append(x)
+            else:
+                ret[x] = self.map[x]
+                
+        if not unknown:
+            return ret
+
+        b = self.map.keys()
+        b.sort()
+        blen = len(b)
+
+        for x in unknown:
+            bs = bisect.bisect(b, x)
+            if bs != 0 and  b[bs-1] == x: 
+                ret[x] = self.map[x]
+                continue
+            while bs < blen:
+                s = b[bs]
+                if len(s) > len(x) and s.startswith(x) and s[len(x)] == '/':
+                    ret[s] = self.map[s]
+                else:
+                    break
+                bs += 1
+        return ret
+
+    def walk(self, files = None, match = util.always, dc=None):
         self.read()
-        dc = self.map.copy()
+
         # walk all files by default
-        if not files: files = [self.root]
+        if not files:
+            files = [self.root]
+            if not dc:
+                dc = self.map.copy()
+        elif not dc:
+            dc = self.filterfiles(files)
+                    
         known = {'.hg': 1}
         def seen(fn):
             if fn in known: return True
             known[fn] = 1
         def traverse():
-            for f in util.unique(files):
-                f = os.path.join(self.root, f)
-                if os.path.isdir(f):
+            for ff in util.unique(files):
+                f = os.path.join(self.root, ff)
+                try:
+                    st = os.stat(f)
+                except OSError, inst:
+                    if ff not in dc: self.ui.warn('%s: %s\n' % (
+                        util.pathto(self.getcwd(), ff),
+                        inst.strerror))
+                    continue
+                if stat.S_ISDIR(st.st_mode):
                     for dir, subdirs, fl in os.walk(f):
                         d = dir[len(self.root) + 1:]
-                        nd = os.path.normpath(d)
+                        nd = util.normpath(d)
+                        if nd == '.': nd = ''
                         if seen(nd):
                             subdirs[:] = []
                             continue
@@ -465,8 +517,18 @@ class dirstate:
                         for fn in fl:
                             fn = util.pconvert(os.path.join(d, fn))
                             yield 'f', fn
+                elif stat.S_ISREG(st.st_mode):
+                    yield 'f', ff
                 else:
-                    yield 'f', f[len(self.root) + 1:]
+                    kind = 'unknown'
+                    if stat.S_ISCHR(st.st_mode): kind = 'character device'
+                    elif stat.S_ISBLK(st.st_mode): kind = 'block device'
+                    elif stat.S_ISFIFO(st.st_mode): kind = 'fifo'
+                    elif stat.S_ISLNK(st.st_mode): kind = 'symbolic link'
+                    elif stat.S_ISSOCK(st.st_mode): kind = 'socket'
+                    self.ui.warn('%s: unsupported file type (type is %s)\n' % (
+                        util.pathto(self.getcwd(), ff),
+                        kind))
 
             ks = dc.keys()
             ks.sort()
@@ -477,22 +539,23 @@ class dirstate:
         # not in .hgignore
 
         for src, fn in util.unique(traverse()):
-            fn = os.path.normpath(fn)
+            fn = util.normpath(fn)
             if seen(fn): continue
-            if fn in dc:
-                del dc[fn]
-            elif self.ignore(fn):
+            if fn not in dc and self.ignore(fn):
                 continue
             if match(fn):
                 yield src, fn
 
     def changes(self, files=None, match=util.always):
         self.read()
-        dc = self.map.copy()
+        if not files:
+            dc = self.map.copy()
+        else:
+            dc = self.filterfiles(files)
         lookup, modified, added, unknown = [], [], [], []
         removed, deleted = [], []
 
-        for src, fn in self.walk(files, match):
+        for src, fn in self.walk(files, match, dc=dc):
             try:
                 s = os.stat(os.path.join(self.root, fn))
             except OSError:
@@ -697,9 +760,7 @@ class localrepository:
         return filelog(self.opener, f)
 
     def getcwd(self):
-        cwd = os.getcwd()
-        if cwd == self.root: return ''
-        return cwd[len(self.root) + 1:]
+        return self.dirstate.getcwd()
 
     def wfile(self, f, mode='r'):
         return self.wopener(f, mode)

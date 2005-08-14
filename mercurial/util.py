@@ -16,7 +16,8 @@ def unique(g):
             seen[f] = 1
             yield f
 
-class CommandError(Exception): pass
+class Abort(Exception):
+    """Raised if a command needs to print an error and exit."""
 
 def always(fn): return True
 def never(fn): return False
@@ -68,36 +69,52 @@ def globre(pat, head = '^', tail = '$'):
 
 _globchars = {'[': 1, '{': 1, '*': 1, '?': 1}
 
-def matcher(cwd, names, inc, exc, head = ''):
+def pathto(n1, n2):
+    '''return the relative path from one place to another.
+    this returns a path in the form used by the local filesystem, not hg.'''
+    if not n1: return localpath(n2)
+    a, b = n1.split('/'), n2.split('/')
+    a.reverse(), b.reverse()
+    while a and b and a[-1] == b[-1]:
+        a.pop(), b.pop()
+    b.reverse()
+    return os.sep.join((['..'] * len(a)) + b)
+
+def canonpath(repo, cwd, myname):
+    rootsep = repo.root + os.sep
+    name = myname
+    if not name.startswith(os.sep):
+        name = os.path.join(repo.root, cwd, name)
+    name = os.path.normpath(name)
+    if name.startswith(rootsep):
+        return pconvert(name[len(rootsep):])
+    elif name == repo.root:
+        return ''
+    else:
+        raise Abort('%s not under repository root' % myname)
+    
+def matcher(repo, cwd, names, inc, exc, head = ''):
     def patkind(name):
-        for prefix in 're:', 'glob:', 'path:':
+        for prefix in 're:', 'glob:', 'path:', 'relpath:':
             if name.startswith(prefix): return name.split(':', 1)
         for c in name:
             if c in _globchars: return 'glob', name
         return 'relpath', name
 
-    cwdsep = cwd + os.sep
-
-    def regex(name, tail):
+    def regex(kind, name, tail):
         '''convert a pattern into a regular expression'''
-        kind, name = patkind(name)
         if kind == 're':
             return name
         elif kind == 'path':
-            return '^' + re.escape(name) + '$'
-        if cwd: name = os.path.join(cwdsep, name)
-        name = os.path.normpath(name)
-        if name == '.': name = '**'
+            return '^' + re.escape(name) + '(?:/|$)'
+        elif kind == 'relpath':
+            return head + re.escape(name) + tail
         return head + globre(name, '', tail)
-
-    def under(fn):
-        """check if fn is under our cwd"""
-        return not cwd or fn.startswith(cwdsep)
 
     def matchfn(pats, tail):
         """build a matching function from a set of patterns"""
         if pats:
-            pat = '(?:%s)' % '|'.join([regex(p, tail) for p in pats])
+            pat = '(?:%s)' % '|'.join([regex(k, p, tail) for (k, p) in pats])
             return re.compile(pat).match
 
     def globprefix(pat):
@@ -106,18 +123,29 @@ def matcher(cwd, names, inc, exc, head = ''):
         for p in pat.split(os.sep):
             if patkind(p)[0] == 'glob': break
             root.append(p)
-        return os.sep.join(root)
+        return '/'.join(root)
 
-    patkinds = map(patkind, names)
-    pats = [name for (kind, name) in patkinds if kind != 'relpath']
-    files = [name for (kind, name) in patkinds if kind == 'relpath']
-    roots = filter(None, map(globprefix, pats)) + files
-    if cwd: roots = [cwdsep + r for r in roots]
+    pats = []
+    files = []
+    roots = []
+    for kind, name in map(patkind, names):
+        if kind in ('glob', 'relpath'):
+            name = canonpath(repo, cwd, name)
+            if name == '':
+                kind, name = 'glob', '**'
+        if kind in ('glob', 'path', 're'):
+            pats.append((kind, name))
+        if kind == 'glob':
+            root = globprefix(name)
+            if root: roots.append(root)
+        elif kind == 'relpath':
+            files.append((kind, name))
+            roots.append(name)
         
     patmatch = matchfn(pats, '$') or always
     filematch = matchfn(files, '(?:/|$)') or always
-    incmatch = matchfn(inc, '(?:/|$)') or always
-    excmatch = matchfn(exc, '(?:/|$)') or (lambda fn: False)
+    incmatch = matchfn(map(patkind, inc), '(?:/|$)') or always
+    excmatch = matchfn(map(patkind, exc), '(?:/|$)') or (lambda fn: False)
 
     return roots, lambda fn: (incmatch(fn) and not excmatch(fn) and
                               (fn.endswith('/') or
@@ -133,7 +161,7 @@ def system(cmd, errprefix=None):
                             explain_exit(rc)[0])
         if errprefix:
             errmsg = "%s: %s" % (errprefix, errmsg)
-        raise CommandError(errmsg)
+        raise Abort(errmsg)
 
 def rename(src, dst):
     try:
@@ -178,6 +206,12 @@ if os.name == 'nt':
     def pconvert(path):
         return path.replace("\\", "/")
 
+    def localpath(path):
+        return path.replace('/', '\\')
+
+    def normpath(path):
+        return pconvert(os.path.normpath(path))
+
     makelock = _makelock_file
     readlock = _readlock_file
 
@@ -205,6 +239,11 @@ else:
 
     def pconvert(path):
         return path
+
+    def localpath(path):
+        return path
+
+    normpath = os.path.normpath
 
     def makelock(info, pathname):
         try:

@@ -1,0 +1,55 @@
+#!/bin/sh
+
+mkdir t
+cd t
+hg init
+mkdir -p beans
+for b in kidney navy turtle borlotti black pinto; do
+    echo $b > beans/$b
+done
+mkdir -p mammals/Procyonidae
+for m in cacomistle coatimundi raccoon; do
+    echo $m > mammals/Procyonidae/$m
+done
+echo skunk > mammals/skunk
+echo fennel > fennel
+echo fenugreek > fenugreek
+echo fiddlehead > fiddlehead
+echo glob:glob > glob:glob
+hg addremove
+hg commit -m "commit #0" -d "0 0"
+hg debugwalk
+cd mammals
+hg debugwalk
+hg debugwalk Procyonidae
+cd Procyonidae
+hg debugwalk
+hg debugwalk ..
+cd ..
+hg debugwalk ../beans
+hg debugwalk
+cd ..
+hg debugwalk -Ibeans
+hg debugwalk 'mammals/../beans/b*'
+hg debugwalk '-X*/Procyonidae' mammals
+hg debugwalk path:mammals
+hg debugwalk ..
+hg debugwalk beans/../..
+# Don't know how to test absolute paths without always getting a false
+# error.
+#hg debugwalk `pwd`/beans
+#hg debugwalk `pwd`/..
+hg debugwalk glob:\*
+hg debugwalk 're:.*[kb]$'
+hg debugwalk path:beans/black
+hg debugwalk beans 'beans/*'
+hg debugwalk 'j*'
+hg debugwalk NOEXIST
+mkfifo fifo
+hg debugwalk fifo
+rm fenugreek
+hg debugwalk fenugreek
+hg rm fenugreek
+hg debugwalk fenugreek
+touch new
+hg debugwalk new

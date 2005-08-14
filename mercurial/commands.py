@@ -14,9 +14,6 @@ demandload(globals(), "errno socket version struct atexit")
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
 
-class Abort(Exception):
-    """Raised if a command needs to print an error and exit."""
-
 def filterfiles(filters, files):
     l = [x for x in files if x in filters]
 
@@ -35,30 +32,19 @@ def relfilter(repo, files):
 def relpath(repo, args):
     cwd = repo.getcwd()
     if cwd:
-        return [util.pconvert(os.path.normpath(os.path.join(cwd, x)))
-                for x in args]
+        return [util.normpath(os.path.join(cwd, x)) for x in args]
     return args
 
-def matchpats(cwd, pats = [], opts = {}, head = ''):
-    return util.matcher(cwd, pats or ['.'], opts.get('include'),
+def matchpats(repo, cwd, pats = [], opts = {}, head = ''):
+    return util.matcher(repo, cwd, pats or ['.'], opts.get('include'),
                         opts.get('exclude'), head)
-
-def pathto(n1, n2):
-    '''return the relative path from one place to another'''
-    if not n1: return n2
-    a, b = n1.split(os.sep), n2.split(os.sep)
-    a.reverse(), b.reverse()
-    while a and b and a[-1] == b[-1]:
-        a.pop(), b.pop()
-    b.reverse()
-    return os.sep.join((['..'] * len(a)) + b)
 
 def makewalk(repo, pats, opts, head = ''):
     cwd = repo.getcwd()
-    files, matchfn = matchpats(cwd, pats, opts, head)
+    files, matchfn = matchpats(repo, cwd, pats, opts, head)
     def walk():
         for src, fn in repo.walk(files = files, match = matchfn):
-            yield src, fn, pathto(cwd, fn)
+            yield src, fn, util.pathto(cwd, fn)
     return files, matchfn, walk()
 
 def walk(repo, pats, opts, head = ''):
@@ -89,7 +75,7 @@ def revrange(ui, repo, revs, revlog=None):
                 try:
                     num = revlog.rev(revlog.lookup(val))
                 except KeyError:
-                    raise Abort('invalid revision identifier %s', val)
+                    raise util.Abort('invalid revision identifier %s', val)
         return num
     for spec in revs:
         if spec.find(revrangesep) >= 0:
@@ -144,7 +130,7 @@ def make_filename(repo, r, pat, node=None,
             i += 1
         return ''.join(newname)
     except KeyError, inst:
-        raise Abort("invalid format spec '%%%s' in output file name",
+        raise util.Abort("invalid format spec '%%%s' in output file name",
                     inst.args[0])
 
 def make_file(repo, r, pat, node=None,
@@ -396,11 +382,10 @@ def addremove(ui, repo, *pats, **opts):
     q = dict(zip(pats, pats))
     add, remove = [], []
     for src, abs, rel in walk(repo, pats, opts):
-        if src == 'f':
-            if repo.dirstate.state(abs) == '?':
-                add.append(abs)
-                if rel not in q: ui.status('adding ', rel, '\n')
-        elif repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
+        if src == 'f' and repo.dirstate.state(abs) == '?':
+            add.append(abs)
+            if rel not in q: ui.status('adding ', rel, '\n')
+        if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
             remove.append(abs)
             if rel not in q: ui.status('removing ', rel, '\n')
     repo.add(add)
@@ -427,7 +412,7 @@ def annotate(ui, repo, *pats, **opts):
             return name
 
     if not pats:
-        raise Abort('at least one file name or pattern required')
+        raise util.Abort('at least one file name or pattern required')
 
     bcache = {}
     opmap = [['user', getname], ['number', str], ['changeset', getnode]]
@@ -477,6 +462,8 @@ def clone(ui, source, dest=None, **opts):
     if os.path.exists(dest):
         ui.warn("abort: destination '%s' already exists\n" % dest)
         return 1
+
+    dest = os.path.realpath(dest)
 
     class Dircleanup:
         def __init__(self, dir_):
@@ -541,7 +528,7 @@ def commit(ui, repo, *pats, **opts):
     if not pats and cwd:
         opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
         opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    fns, match = matchpats((pats and repo.getcwd()) or '', pats, opts)
+    fns, match = matchpats(repo, (pats and repo.getcwd()) or '', pats, opts)
     if pats:
         c, a, d, u = repo.changes(files = fns, match = match)
         files = c + a + [fn for fn in d if repo.dirstate.state(fn) == 'r']
@@ -583,7 +570,7 @@ def debugcheckstate(ui, repo):
             ui.warn("%s in manifest1, but listed as state %s" % (f, state))
             errors += 1
     if errors:
-        raise Abort(".hg/dirstate inconsistent with current parent's manifest")
+        raise util.Abort(".hg/dirstate inconsistent with current parent's manifest")
 
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""
@@ -621,6 +608,7 @@ def debugindexdot(ui, file_):
 
 def debugwalk(ui, repo, *pats, **opts):
     items = list(walk(repo, pats, opts))
+    if not items: return
     fmt = '%%s  %%-%ds  %%s' % max([len(abs) for (src, abs, rel) in items])
     for i in items: print fmt % i
 
@@ -631,12 +619,14 @@ def diff(ui, repo, *pats, **opts):
         revs = map(lambda x: repo.lookup(x), opts['rev'])
 
     if len(revs) > 2:
-        raise Abort("too many revisions to diff")
+        raise util.Abort("too many revisions to diff")
 
     files = []
-    roots, match, results = makewalk(repo, pats, opts)
-    for src, abs, rel in results:
-        files.append(abs)
+    match = util.always
+    if pats:
+        roots, match, results = makewalk(repo, pats, opts)
+        for src, abs, rel in results:
+            files.append(abs)
     dodiff(sys.stdout, ui, repo, files, *revs, **{'match': match})
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
@@ -665,7 +655,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets"""
     if not changesets:
-        raise Abort("export requires at least one changeset")
+        raise util.Abort("export requires at least one changeset")
     seqno = 0
     revs = list(revrange(ui, repo, changesets))
     total = len(revs)
@@ -762,7 +752,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     files.append(pf)
         patcherr = f.close()
         if patcherr:
-            raise Abort("patch failed")
+            raise util.Abort("patch failed")
 
         if len(files) > 0:
             addremove(ui, repo, *files)
@@ -772,7 +762,7 @@ def init(ui, source=None):
     """create a new repository in the current directory"""
 
     if source:
-        raise Abort("no longer supported: use \"hg clone\" instead")
+        raise util.Abort("no longer supported: use \"hg clone\" instead")
     hg.repository(ui, ".", create=1)
 
 def locate(ui, repo, *pats, **opts):
@@ -1078,8 +1068,8 @@ def status(ui, repo, *pats, **opts):
     '''
 
     cwd = repo.getcwd()
-    files, matchfn = matchpats(cwd, pats, opts)
-    (c, a, d, u) = [[pathto(cwd, x) for x in n]
+    files, matchfn = matchpats(repo, cwd, pats, opts)
+    (c, a, d, u) = [[util.pathto(cwd, x) for x in n]
                     for n in repo.changes(files=files, match=matchfn)]
 
     changetypes = [('modified', 'M', c),
@@ -1471,8 +1461,6 @@ def dispatch(args):
             if options['traceback']:
                 traceback.print_exc()
             raise
-    except util.CommandError, inst:
-        u.warn("abort: %s\n" % inst.args)
     except hg.RepoError, inst:
         u.warn("abort: ", inst, "!\n")
     except SignalInterrupt:
@@ -1500,7 +1488,7 @@ def dispatch(args):
             u.warn("abort: %s: %s\n" % (inst.strerror, inst.filename))
         else:
             u.warn("abort: %s\n" % inst.strerror)
-    except Abort, inst:
+    except util.Abort, inst:
         u.warn('abort: ', inst.args[0] % inst.args[1:], '\n')
         sys.exit(1)
     except TypeError, inst:
