@@ -92,7 +92,7 @@ def canonpath(repo, cwd, myname):
         return ''
     else:
         raise Abort('%s not under repository root' % myname)
-    
+
 def matcher(repo, cwd, names, inc, exc, head = ''):
     def patkind(name):
         for prefix in 're:', 'glob:', 'path:', 'relpath:':
@@ -141,11 +141,15 @@ def matcher(repo, cwd, names, inc, exc, head = ''):
         elif kind == 'relpath':
             files.append((kind, name))
             roots.append(name)
-        
+
     patmatch = matchfn(pats, '$') or always
     filematch = matchfn(files, '(?:/|$)') or always
-    incmatch = matchfn(map(patkind, inc), '(?:/|$)') or always
-    excmatch = matchfn(map(patkind, exc), '(?:/|$)') or (lambda fn: False)
+    incmatch = always
+    if inc:
+        incmatch = matchfn(map(patkind, inc), '(?:/|$)')
+    excmatch = lambda fn: False
+    if exc:
+        excmatch = matchfn(map(patkind, exc), '(?:/|$)')
 
     return roots, lambda fn: (incmatch(fn) and not excmatch(fn) and
                               (fn.endswith('/') or
