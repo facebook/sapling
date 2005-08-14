@@ -194,7 +194,7 @@ def dodiff(fp, ui, repo, files=None, node1=None, node2=None, match=util.always):
         tn = None
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
 
-def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
+def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
     """show a single changeset or file revision"""
     changelog = repo.changelog
     if filelog:
@@ -235,6 +235,10 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None):
         ui.write("parent:      %d:%s\n" % parent)
     if filelog:
         ui.debug("file rev:    %d:%s\n" % (filerev, hg.hex(filenode)))
+
+    if brinfo and changenode in brinfo:
+        br = brinfo[changenode]
+        ui.write("branch:      %s\n" % " ".join(br))
 
     ui.debug("manifest:    %d:%s\n" % (repo.manifest.rev(changes[0]),
                                       hg.hex(changes[0])))
@@ -675,10 +679,14 @@ def forget(ui, repo, *pats, **opts):
             if rel not in q: ui.status('forgetting ', rel, '\n')
     repo.forget(forget)
 
-def heads(ui, repo):
+def heads(ui, repo, **opts):
     """show current repository heads"""
+    heads = repo.changelog.heads()
+    br = None
+    if opts['branches']:
+        br = repo.branchlookup(heads)
     for n in repo.changelog.heads():
-        show_changeset(ui, repo, changenode=n)
+        show_changeset(ui, repo, changenode=n, brinfo=br)
 
 def identify(ui, repo):
     """print information about the working copy"""
@@ -1150,7 +1158,7 @@ def undo(ui, repo):
     """
     repo.undo()
 
-def update(ui, repo, node=None, merge=False, clean=False):
+def update(ui, repo, node=None, merge=False, clean=False, branch=None):
     '''update or merge working directory
 
     If there are no outstanding changes in the working directory and
@@ -1163,7 +1171,25 @@ def update(ui, repo, node=None, merge=False, clean=False):
     commit and a commit must be performed before any further updates
     are allowed.
     '''
-    node = node and repo.lookup(node) or repo.changelog.tip()
+    if branch:
+        br = repo.branchlookup(branch=branch)
+        found = []
+        for x in br:
+            if branch in br[x]:
+                found.append(x)
+        if len(found) > 1:
+            ui.warn("Found multiple heads for %s\n" % branch)
+            for x in found:
+                show_changeset(ui, repo, changenode=x, brinfo=br)
+            return 1
+        if len(found) == 1:
+            node = found[0]
+            ui.warn("Using head %s for branch %s\n" % (hg.short(node), branch))
+        else:
+            ui.warn("branch %s not found\n" % (branch))
+            return 1
+    else:
+        node = node and repo.lookup(node) or repo.changelog.tip()
     return repo.update(node, allow=merge, force=clean)
 
 def verify(ui, repo):
@@ -1236,7 +1262,7 @@ table = {
          [('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
          "hg forget FILE..."),
-    "heads": (heads, [], 'hg heads'),
+    "heads": (heads, [('b', 'branches', None, 'find branch info')], 'hg heads'),
     "help": (help_, [], 'hg help [COMMAND]'),
     "identify|id": (identify, [], 'hg identify'),
     "import|patch":
@@ -1320,7 +1346,8 @@ table = {
     "undo": (undo, [], 'hg undo'),
     "^update|up|checkout|co":
         (update,
-         [('m', 'merge', None, 'allow merging of conflicts'),
+         [('b', 'branch', "", 'checkout the head of a specific branch'),
+          ('m', 'merge', None, 'allow merging of conflicts'),
           ('C', 'clean', None, 'overwrite locally modified files')],
          'hg update [-m] [-C] [REV]'),
     "verify": (verify, [], 'hg verify'),
