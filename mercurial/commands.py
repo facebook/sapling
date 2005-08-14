@@ -522,7 +522,10 @@ def commit(ui, repo, *pats, **opts):
     logfile = opts['logfile']
     if not message and logfile:
         try:
-            message = open(logfile).read()
+            if logfile == '-':
+                message = sys.stdin.read()
+            else:
+                message = open(logfile).read()
         except IOError, why:
             ui.warn("Can't read commit message %s: %s\n" % (logfile, why))
 
