@@ -1268,7 +1268,10 @@ table = {
          [('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
          "hg forget FILE..."),
-    "heads": (heads, [('b', 'branches', None, 'find branch info')], 'hg heads'),
+    "heads":
+        (heads,
+         [('b', 'branches', None, 'find branch info')],
+         'hg [-b] heads'),
     "help": (help_, [], 'hg help [COMMAND]'),
     "identify|id": (identify, [], 'hg identify'),
     "import|patch":
