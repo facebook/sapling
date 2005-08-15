@@ -856,7 +856,7 @@ class localrepository:
             self.dirstate.setparents(n, nullid)
 
     def commit(self, files = None, text = "", user = None, date = None,
-               match = util.always):
+               match = util.always, force=False):
         commit = []
         remove = []
         if files:
@@ -873,7 +873,7 @@ class localrepository:
             commit = c + a
             remove = d
 
-        if not commit and not remove:
+        if not commit and not remove and not force:
             self.ui.status("nothing changed\n")
             return
 
