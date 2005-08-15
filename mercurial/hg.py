@@ -875,10 +875,10 @@ class localrepository:
 
         if not commit and not remove and not force:
             self.ui.status("nothing changed\n")
-            return
+            return None
 
         if not self.hook("precommit"):
-            return 1
+            return None
 
         p1, p2 = self.dirstate.parents()
         c1 = self.changelog.read(p1)
@@ -932,12 +932,11 @@ class localrepository:
             edittext += "".join(["HG: removed %s\n" % f for f in remove])
             edittext = self.ui.edit(edittext)
             if not edittext.rstrip():
-                return 1
+                return None
             text = edittext
 
         user = user or self.ui.username()
         n = self.changelog.add(mn, new, text, tr, p1, p2, user, date)
-
         tr.close()
 
         self.dirstate.setparents(n)
@@ -945,7 +944,8 @@ class localrepository:
         self.dirstate.forget(remove)
 
         if not self.hook("commit", node=hex(n)):
-            return 1
+            return None
+        return n
 
     def walk(self, node = None, files = [], match = util.always):
         if node:
