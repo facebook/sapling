@@ -145,11 +145,14 @@ def make_file(repo, r, pat, node=None,
     return open(make_filename(repo, r, pat, node, total, seqno, revwidth),
                 mode)
 
-def dodiff(fp, ui, repo, files=None, node1=None, node2=None, match=util.always):
+def dodiff(fp, ui, repo, files=None, node1=None, node2=None, match=util.always, changes=None):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
-    (c, a, d, u) = repo.changes(node1, node2, files, match = match)
+    if not changes:
+        (c, a, d, u) = repo.changes(node1, node2, files, match = match)
+    else:
+        (c, a, d, u) = changes
     if files:
         c, a, d = map(lambda x: filterfiles(files, x), (c, a, d))
 
