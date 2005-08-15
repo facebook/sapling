@@ -276,6 +276,6 @@ else:
             val = os.WTERMSIG(code)
             return "killed by signal %d" % val, val
         elif os.WIFSTOPPED(code):
-            val = os.STOPSIG(code)
+            val = os.WSTOPSIG(code)
             return "stopped by signal %d" % val, val
         raise ValueError("invalid exit code")
