@@ -168,13 +168,21 @@ class revlog:
     def end(self, rev): return self.start(rev) + self.length(rev)
     def base(self, rev): return self.index[rev][2]
 
-    def heads(self):
+    def heads(self, stop=None):
         p = {}
         h = []
+        stoprev = 0
+        if stop and stop in self.nodemap:
+            stoprev = self.rev(stop)
+            
         for r in range(self.count() - 1, -1, -1):
             n = self.node(r)
             if n not in p:
                 h.append(n)
+            if n == stop:
+                break
+            if r < stoprev:
+                break
             for pn in self.parents(n):
                 p[pn] = 1
         return h
