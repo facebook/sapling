@@ -1358,7 +1358,7 @@ table = {
          [('b', 'branch', "", 'checkout the head of a specific branch'),
           ('m', 'merge', None, 'allow merging of conflicts'),
           ('C', 'clean', None, 'overwrite locally modified files')],
-         'hg update [-m] [-C] [REV]'),
+         'hg update [-b TAG] [-m] [-C] [REV]'),
     "verify": (verify, [], 'hg verify'),
     "version": (show_version, [], 'hg version'),
     }
