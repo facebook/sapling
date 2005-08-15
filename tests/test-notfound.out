@@ -1,0 +1,9 @@
++ hg init
+Is there an error message when trying to diff non-existing files?
++ hg diff not found
+not: No such file or directory
+found: No such file or directory
+Is there an error message when trying to add non-existing files?
++ hg add not found
+not: No such file or directory
+found: No such file or directory
