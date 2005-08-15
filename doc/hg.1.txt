@@ -196,8 +196,11 @@ import [-p <n> -b <base> -q] <patches>::
 
     aliases: patch
 
-init::
-    Initialize a new repository in the current directory.
+init [dest]::
+    Initialize a new repository in the given directory.  If the given
+    directory does not exist, it is created.
+
+    If no directory is given, the current directory is used.
 
 locate [options] [files]::
     Print all files under Mercurial control whose names match the

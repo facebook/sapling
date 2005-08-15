@@ -772,12 +772,11 @@ def import_(ui, repo, patch1, *patches, **opts):
             addremove(ui, repo, *files)
         repo.commit(files, message, user)
 
-def init(ui, source=None):
-    """create a new repository in the current directory"""
-
-    if source:
-        raise util.Abort("no longer supported: use \"hg clone\" instead")
-    hg.repository(ui, ".", create=1)
+def init(ui, dest="."):
+    """create a new repository in the given directory"""
+    if not os.path.exists(dest):
+        os.mkdir(dest)
+    hg.repository(ui, dest, create=1)
 
 def locate(ui, repo, *pats, **opts):
     """locate files matching specific patterns"""
@@ -1279,7 +1278,7 @@ table = {
          [('p', 'strip', 1, 'path strip'),
           ('b', 'base', "", 'base path')],
          "hg import [-p NUM] [-b BASE] PATCH..."),
-    "^init": (init, [], 'hg init'),
+    "^init": (init, [], 'hg init [DEST]'),
     "locate":
         (locate,
          [('r', 'rev', '', 'revision'),
