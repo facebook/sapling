@@ -1427,6 +1427,9 @@ class localrepository:
             def __init__(self, generator):
                 self.g = generator
                 self.buf = ""
+            def fillbuf(self):
+                self.buf += "".join(self.g)
+
             def read(self, l):
                 while l > len(self.buf):
                     try:
