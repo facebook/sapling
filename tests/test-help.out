@@ -9,7 +9,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  commit     commit the specified files or all outstanding changes
  diff       diff working directory (or selected files)
  export     dump the header and diffs for one or more changesets
- init       create a new repository in the current directory
+ init       create a new repository in the given directory
  log        show the revision history of the repository or a single file
  pull       pull changes from the specified source
  push       push changes to the specified destination
@@ -25,7 +25,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  commit     commit the specified files or all outstanding changes
  diff       diff working directory (or selected files)
  export     dump the header and diffs for one or more changesets
- init       create a new repository in the current directory
+ init       create a new repository in the given directory
  log        show the revision history of the repository or a single file
  pull       pull changes from the specified source
  push       push changes to the specified destination
@@ -53,7 +53,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  help        show help for a given command or all commands
  identify    print information about the working copy
  import      import an ordered set of patches
- init        create a new repository in the current directory
+ init        create a new repository in the given directory
  locate      locate files matching specific patterns
  log         show the revision history of the repository or a single file
  manifest    output the latest or given revision of the project manifest
@@ -90,7 +90,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  help        show help for a given command or all commands
  identify    print information about the working copy
  import      import an ordered set of patches
- init        create a new repository in the current directory
+ init        create a new repository in the given directory
  locate      locate files matching specific patterns
  log         show the revision history of the repository or a single file
  manifest    output the latest or given revision of the project manifest
@@ -189,7 +189,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  commit     commit the specified files or all outstanding changes
  diff       diff working directory (or selected files)
  export     dump the header and diffs for one or more changesets
- init       create a new repository in the current directory
+ init       create a new repository in the given directory
  log        show the revision history of the repository or a single file
  pull       pull changes from the specified source
  push       push changes to the specified destination
@@ -210,7 +210,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  commit     commit the specified files or all outstanding changes
  diff       diff working directory (or selected files)
  export     dump the header and diffs for one or more changesets
- init       create a new repository in the current directory
+ init       create a new repository in the given directory
  log        show the revision history of the repository or a single file
  pull       pull changes from the specified source
  push       push changes to the specified destination
