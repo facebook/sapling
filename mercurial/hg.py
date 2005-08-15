@@ -311,8 +311,8 @@ class dirstate:
             try:
                 l = file(self.wjoin(".hgignore"))
                 for pat in l:
-                    if pat != "\n":
-			p = pat[:-1]
+                    p = pat.rstrip()
+                    if p:
                         try:
                             re.compile(p)
                         except:
