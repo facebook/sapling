@@ -1208,7 +1208,7 @@ table = {
         (add,
          [('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
-         "hg add [FILE]..."),
+         "hg add [OPTION]... [FILE]..."),
     "addremove":
         (addremove,
          [('I', 'include', [], 'include path in search'),
@@ -1222,7 +1222,7 @@ table = {
           ('c', 'changeset', None, 'show changeset'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
-         'hg annotate [-r REV] [-u] [-n] [-c] FILE...'),
+         'hg annotate [OPTION]... FILE...'),
     "cat":
         (cat,
          [('o', 'output', "", 'output to file')],
@@ -1251,13 +1251,13 @@ table = {
         (debugwalk,
          [('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
-         'debugwalk [OPTIONS]... [FILE]...'),
+         'debugwalk [OPTION]... [FILE]...'),
     "^diff":
         (diff,
          [('r', 'rev', [], 'revision'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
-         'hg diff [-r REV1 [-r REV2]] [FILE]...'),
+         'hg diff [-I] [-X] [-r REV1 [-r REV2]] [FILE]...'),
     "^export":
         (export,
          [('o', 'output', "", 'output to file')],
@@ -1266,7 +1266,7 @@ table = {
         (forget,
          [('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
-         "hg forget FILE..."),
+         "hg forget [OPTION]... FILE..."),
     "heads":
         (heads,
          [('b', 'branches', None, 'find branch info')],
@@ -1286,7 +1286,7 @@ table = {
           ('f', 'fullpath', None, 'print complete paths'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
-         'hg locate [-r REV] [-f] [-0] [PATTERN]...'),
+         'hg locate [OPTION]... [PATTERN]...'),
     "^log|history":
         (log,
          [('r', 'rev', [], 'revision'),
@@ -1302,7 +1302,7 @@ table = {
     "^push":
         (push,
          [('f', 'force', None, 'force push')],
-         'hg push [DEST]'),
+         'hg push [-f] [DEST]'),
     "rawcommit":
         (rawcommit,
          [('p', 'parent', [], 'parent'),
@@ -1340,7 +1340,7 @@ table = {
           ('u', 'unknown', None, 'show only unknown (not tracked) files'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
-         "hg status [FILE]..."),
+         "hg status [OPTION]... [FILE]..."),
     "tag":
         (tag,
          [('l', 'local', None, 'make the tag local'),
