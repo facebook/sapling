@@ -216,7 +216,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
         node = changenode
 
     if ui.quiet:
-        ui.write("%d:%s\n" % (rev, hg.hex(node)))
+        ui.write("%d:%s\n" % (rev, hg.short(node)))
         return
 
     changes = changelog.read(changenode)
