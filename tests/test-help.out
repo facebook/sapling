@@ -114,7 +114,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  version     output version and copyright information
 + hg add -h
 hg add: option -h not recognized
-hg add [FILE]...
+hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
 
@@ -126,7 +126,7 @@ options:
    exclude path from search
 + hg add --skjdfks
 hg add: option --skjdfks not recognized
-hg add [FILE]...
+hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
 
@@ -137,7 +137,7 @@ options:
  -X --exclude 
    exclude path from search
 + hg help diff
-hg diff [-r REV1 [-r REV2]] [FILE]...
+hg diff [-I] [-X] [-r REV1 [-r REV2]] [FILE]...
 
 diff working directory (or selected files)
 
@@ -150,7 +150,7 @@ options:
  -X --exclude 
    exclude path from search
 + hg help status
-hg status [FILE]...
+hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
 
@@ -174,7 +174,7 @@ options:
  -X --exclude 
    exclude path from search
 + hg -q help status
-hg status [FILE]...
+hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
 + hg help foo
