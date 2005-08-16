@@ -455,7 +455,14 @@ def cat(ui, repo, file1, rev=None, **opts):
     """output the latest or given revision of a file"""
     r = repo.file(relpath(repo, [file1])[0])
     if rev:
-        n = r.lookup(rev)
+        try:
+            # assume all revision numbers are for changesets
+            n = repo.lookup(rev)
+            change = repo.changelog.read(n)
+            m = repo.manifest.read(change[0])
+            n = m[relpath(repo, [file1])[0]]
+        except hg.RepoError, KeyError:
+            n = r.lookup(rev)
     else:
         n = r.tip()
     fp = make_file(repo, r, opts['output'], node=n)
