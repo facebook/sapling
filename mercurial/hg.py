@@ -453,7 +453,7 @@ class dirstate:
                 unknown.append(x)
             else:
                 ret[x] = self.map[x]
-                
+
         if not unknown:
             return ret
 
@@ -463,7 +463,7 @@ class dirstate:
 
         for x in unknown:
             bs = bisect.bisect(b, x)
-            if bs != 0 and  b[bs-1] == x: 
+            if bs != 0 and  b[bs-1] == x:
                 ret[x] = self.map[x]
                 continue
             while bs < blen:
@@ -485,7 +485,7 @@ class dirstate:
                 dc = self.map.copy()
         elif not dc:
             dc = self.filterfiles(files)
-                    
+
         known = {'.hg': 1}
         def seen(fn):
             if fn in known: return True
@@ -1081,7 +1081,7 @@ class localrepository:
     # So, for this graph:  a->b->c->d->e
     #                       \         /
     #                        aa -----/
-    # a has tag 2.6.12                     
+    # a has tag 2.6.12
     # d has tag 2.6.13
     # e would have branch tags for 2.6.12 and 2.6.13.  Because the node
     # for 2.6.12 can be reached from the node 2.6.13, that is eliminated
