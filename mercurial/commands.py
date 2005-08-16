@@ -7,7 +7,7 @@
 
 from demandload import demandload
 demandload(globals(), "os re sys signal shutil")
-demandload(globals(), "fancyopts ui hg util")
+demandload(globals(), "fancyopts ui hg util lock")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
 demandload(globals(), "errno socket version struct atexit")
 
@@ -494,6 +494,9 @@ def clone(ui, source, dest=None, **opts):
                     and getattr(os, 'link', None) or shutil.copy2)
         if copyfile is not shutil.copy2:
             ui.note("cloning by hardlink\n")
+        # we use a lock here because because we're not nicely ordered
+        l = lock.lock(os.path.join(source, ".hg", "lock"))
+
         util.copytree(os.path.join(source, ".hg"), os.path.join(dest, ".hg"),
                       copyfile)
         try:

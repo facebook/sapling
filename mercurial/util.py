@@ -187,7 +187,7 @@ def copytree(src, dst, copyfile):
         elif os.path.isfile(srcname):
             copyfile(srcname, dstname)
         else:
-            raise IOError("Not a regular file: %r" % srcname)
+            pass
 
 def _makelock_file(info, pathname):
     ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
