@@ -854,6 +854,16 @@ def manifest(ui, repo, rev=None):
     for f in files:
         ui.write("%40s %3s %s\n" % (hg.hex(m[f]), mf[f] and "755" or "644", f))
 
+def outgoing(ui, repo, dest="default-push"):
+    """show changesets not found in destination"""
+    dest = ui.expandpath(dest)
+    other = hg.repository(ui, dest)
+    o = repo.findoutgoing(other)
+    o = repo.newer(o)
+    o.reverse()
+    for n in o:
+        show_changeset(ui, repo, changenode=n)
+
 def parents(ui, repo, rev=None):
     """show the parents of the working dir or revision"""
     if rev:
@@ -1308,6 +1318,7 @@ table = {
           ('p', 'patch', None, 'show patch')],
          'hg log [-r REV1 [-r REV2]] [-p] [FILE]'),
     "manifest": (manifest, [], 'hg manifest [REV]'),
+    "outgoing": (outgoing, [], 'hg outgoing [DEST]'),
     "parents": (parents, [], 'hg parents [REV]'),
     "paths": (paths, [], 'hg paths [name]'),
     "^pull":
