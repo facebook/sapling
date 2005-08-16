@@ -97,7 +97,7 @@ _hg()
 	export|manifest|update|checkout|up|co)
 	    _hg_tags
 	;;
-	pull|push)
+	pull|push|outgoing)
 	    _hg_paths
 	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
 	;;
