@@ -855,8 +855,13 @@ def parents(ui, repo, rev=None):
         if n != hg.nullid:
             show_changeset(ui, repo, changenode=n)
 
-def paths(ui, repo, search = None):
+def paths(ui, search = None):
     """show path or list of available paths"""
+    try:
+        repo = hg.repository(ui=ui)
+    except:
+        pass
+
     if search:
         for name, path in ui.configitems("paths"):
             if name == search:
@@ -1373,7 +1378,7 @@ globalopts = [('v', 'verbose', None, 'verbose mode'),
               ('', 'time', None, 'time how long the command takes'),
              ]
 
-norepo = "clone init version help debugindex debugindexdot"
+norepo = "clone init version help debugindex debugindexdot paths"
 
 def find(cmd):
     for e in table.keys():
