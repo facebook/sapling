@@ -1,25 +1,2 @@
-+ hg init
-+ hg add a
-+ hg commit -m commit #0 -d 0 0
-+ hg add b
-+ hg commit -m commit #1 -d 0 0
-+ hg update 0
-+ hg add b
-+ hg commit -m commit #2 -d 0 0
-+ hg init
-+ hg add a
-+ hg commit -m commit #0 -d 0 0
-+ hg add b
-+ hg commit -m commit #1 -d 0 0
-+ hg update 0
-+ hg commit -A -m commit #2 -d 0 0
 adding b
-+ hg init
-+ hg add a
-+ hg commit -m commit #0 -d 0 0
-+ hg add b
-+ hg commit -m commit #1 -d 0 0
-+ hg remove b
-+ hg update 0
-+ hg commit -A -m commit #2 -d 0 0
 adding b

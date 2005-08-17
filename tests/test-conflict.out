@@ -1,17 +1,8 @@
-+ hg init
-+ hg add a
-+ hg commit -m ancestor -d 0 0
-+ hg commit -m branch1 -d 0 0
-+ hg co 0
-+ hg commit -m branch2 -d 0 0
-+ hg up -m 1
 merge: warning: conflicts during merge
 merging a
 merging a failed!
-+ hg id
 32e80765d7fe+75234512624c+ tip
 something else
 =======
 something
-+ hg status
 M a

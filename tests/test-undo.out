@@ -1,28 +1,18 @@
-+ hg init
-+ hg add a
-+ hg commit -m test -d 0 0
-+ hg verify
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
-+ hg parents
 changeset:   0:acb14030fe0a
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     test
 
-+ hg status
-+ hg undo
 rolling back last transaction
-+ hg verify
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 0 files, 0 changesets, 0 total revisions
-+ hg parents
-+ hg status
 A a

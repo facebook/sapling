@@ -9,7 +9,7 @@ hg add a
 hg commit -m "test" -d "0 0"
 hg co
 hg identify
-T=`hg -q tip | cut -d : -f 2`
+T=`hg tip -v | head -n 1 | cut -d : -f 3`
 echo "$T first" > .hgtags
 cat .hgtags
 hg add .hgtags

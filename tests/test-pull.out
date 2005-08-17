@@ -1,30 +1,21 @@
-+ hg init
-+ hg addremove
 adding foo
-+ hg commit -m 1
-+ hg verify
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
-+ hg clone http://localhost:20059/ copy
 requesting all changes
 adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-+ hg verify
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
-+ hg co
 foo
-+ hg manifest
 2ed2a3912a0b24502043eae84ee4b279c18b90dd 644 foo
-+ hg pull
 pulling from http://localhost:20059/
 searching for changes
 no changes found

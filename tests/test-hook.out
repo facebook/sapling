@@ -1,5 +1,2 @@
-+ hg init
-+ hg add a
-+ hg commit -m test -d 0 0
 precommit hook
 commit hook: acb14030fe0a21b60322c440ad2d20cf7685a376

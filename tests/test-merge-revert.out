@@ -1,46 +1,12 @@
-+ hg init
-+ hg add file1 file2
-+ hg commit -m added file1 and file2 -d 0 0 -u user
-+ hg commit -m changed file1 -d 0 0 -u user
-+ hg -q log
-1:3aa14bbc23d90e3f8b5b639b4a43d76509bae76c
-0:8633637036c18f021d771208e16ae3508ab81d28
-+ hg id
+1:3aa14bbc23d9
+0:8633637036c1
 3aa14bbc23d9 tip
-+ hg update -C 0
-+ hg id
 8633637036c1
-+ hg id
 8633637036c1+
-+ hg revert
-+ hg diff
-+ hg status
-+ hg id
 8633637036c1
-+ hg update
-+ hg diff
-+ hg status
-+ hg id
 3aa14bbc23d9 tip
-+ hg update -C 0
-+ hg update
 merging file1
-+ hg diff
-+ hg status
-+ hg id
 3aa14bbc23d9 tip
-+ hg revert
-+ hg diff
-+ hg status
-+ hg id
 3aa14bbc23d9 tip
-+ hg revert -r tip
-+ hg diff
-+ hg status
-+ hg id
 3aa14bbc23d9 tip
-+ hg update -C
-+ hg diff
-+ hg status
-+ hg id
 3aa14bbc23d9 tip

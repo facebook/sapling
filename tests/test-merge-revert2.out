@@ -1,33 +1,13 @@
-+ hg init
-+ hg add file1 file2
-+ hg commit -m added file1 and file2 -d 0 0 -u user
-+ hg commit -m changed file1 -d 0 0 -u user
-+ hg -q log
-1:f4d7a8c73d231bc078e2a5e791325e55e8a4c252
-0:232e179b3f294d467cfa66e1439bc5b0d44e4a93
-+ hg id
+1:f4d7a8c73d23
+0:232e179b3f29
 f4d7a8c73d23 tip
-+ hg update -C 0
-+ hg id
 232e179b3f29
-+ hg id
 232e179b3f29+
-+ hg revert
-+ hg diff
-+ hg status
-+ hg id
 232e179b3f29
-+ hg update
-+ hg diff
-+ hg status
-+ hg id
 f4d7a8c73d23 tip
-+ hg update -C 0
-+ hg update
 merge: warning: conflicts during merge
 merging file1
 merging file1 failed!
-+ hg diff
 diff -r f4d7a8c73d23 file1
 --- a/file1
 +++ b/file1
@@ -39,22 +19,8 @@ diff -r f4d7a8c73d23 file1
 +=======
  changed file1
 +>>>>>>>
-+ hg status
 M file1
-+ hg id
 f4d7a8c73d23+ tip
-+ hg revert
-+ hg diff
-+ hg status
-+ hg id
 f4d7a8c73d23 tip
-+ hg revert -r tip
-+ hg diff
-+ hg status
-+ hg id
 f4d7a8c73d23 tip
-+ hg update -C
-+ hg diff
-+ hg status
-+ hg id
 f4d7a8c73d23 tip

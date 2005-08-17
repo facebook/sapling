@@ -1,23 +1,12 @@
-+ hg init
-+ hg addremove
 adding a
-+ hg commit -m 1 -d 0 0
-+ hg clone . ../r2
-+ hg up
-+ hg diff
 diff -r c19d34741b0a a
 --- a/a
 +++ b/a
 @@ -1,1 +1,1 @@
 -a
 +abc
-+ hg addremove
 adding b
-+ hg commit -m 2 -d 0 0
-+ hg -q pull ../r1
-+ hg status
 M a
-+ hg --debug up
 resolving manifests
  force None allow None moddirstate True linear True
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
@@ -27,18 +16,15 @@ getting b
 merging a
 resolving a
 file a: other d730145abbf9 ancestor b789fdd96dc2
-+ hg --debug up -m
 resolving manifests
  force None allow 1 moddirstate True linear True
  ancestor 1165e8bd193e local 1165e8bd193e remote 1165e8bd193e
-+ hg parents
 changeset:   1:1e71731e6fbb
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     2
 
-+ hg -v history
 changeset:   1:1e71731e6fbb5b35fae293120dea6964371c13c6
 tag:         tip
 user:        test
@@ -56,7 +42,6 @@ description:
 1
 
 
-+ hg diff
 diff -r 1e71731e6fbb a
 --- a/a
 +++ b/a

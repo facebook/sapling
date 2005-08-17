@@ -1,8 +1,3 @@
-+ hg init
-+ hg add a b
-+ hg ci -m added a b -d 0 0
-+ hg init
-+ hg pull ../test1
 pulling from ../test1
 requesting all changes
 adding changesets
@@ -10,10 +5,6 @@ adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
 (run 'hg update' to get a working copy)
-+ hg co
-+ hg ci -m chmod +x a -d 0 0
-+ hg ci -m a updated -d 0 0
-+ hg pull ../test2
 pulling from ../test2
 searching for changes
 adding changesets
@@ -21,7 +12,6 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
-+ hg heads
 changeset:   2:3ef543305655
 tag:         tip
 parent:      0:22a449e20da5
@@ -34,7 +24,6 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     a updated
 
-+ hg history
 changeset:   2:3ef543305655
 tag:         tip
 parent:      0:22a449e20da5
@@ -52,7 +41,6 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     added a b
 
-+ hg -v co -m
 resolving manifests
 merging a
 resolving a

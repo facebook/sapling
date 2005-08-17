@@ -52,13 +52,6 @@ cd ..
 if ${PYTHON-python} setup.py install --home="$INST" > tests/install.err 2>&1
 then
     rm tests/install.err
-    mv "$INST/bin/hg" "$INST/bin/hg.real"
-    (
-	echo '#!/bin/sh'
-	echo 'echo "+ hg $@"'
-	echo 'exec hg.real "$@"'
-    ) > "$INST/bin/hg"
-    chmod 755 "$INST/bin/hg"
 else
     cat tests/install.err
     exit 1

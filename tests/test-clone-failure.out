@@ -1,20 +1,12 @@
-+ hg clone a b
 abort: repository a/.hg not found!
 255
-+ hg clone http://127.0.0.1:3121/a b
 requesting all changes
 abort: error: Connection refused
 255
-+ hg clone a b
 abort: repository a/.hg not found!
 255
-+ hg init
-+ hg clone . ../a
 abort: destination '../a' already exists
 1
-+ hg clone a b
 abort: repository a/.hg not found!
 255
-+ hg init
-+ hg clone q
 abort: destination 'q' already exists

@@ -1,61 +1,40 @@
-+ hg --debug init
-+ hg add a
-+ hg commit -m0 -d 0 0
-+ hg add b
-+ hg commit -m1 -d 0 0
-+ hg manifest 1
 05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
 54837d97f2932a8194e69745a280a2c11e61ff9c 644 b
-+ hg rawcommit -p 1 -d 0 0 -m2 c
-+ hg manifest 2
 05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
 54837d97f2932a8194e69745a280a2c11e61ff9c 644 b
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
-+ hg parents
 changeset:   2:9f827976dae4
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     2
 
-+ hg rawcommit -p 2 -d 0 0 -m3 b
-+ hg manifest 3
 05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
-+ hg parents
 changeset:   3:c8225a106186
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     3
 
-+ hg rawcommit -p 3 -d 0 0 -m4 a
-+ hg manifest 4
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
-+ hg parents
 changeset:   4:8dfeee82a94b
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     4
 
-+ hg rawcommit -p 1 -d 0 0 -m5 c
-+ hg manifest 5
 05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
 54837d97f2932a8194e69745a280a2c11e61ff9c 644 b
 3570202ceac2b52517df64ebd0a062cb0d8fe33a 644 c
-+ hg parents
 changeset:   4:8dfeee82a94b
 user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     4
 
-+ hg rawcommit -p 4 -p 5 -d 0 0 -m6
-+ hg manifest 6
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
-+ hg parents
 changeset:   6:c0e932ecae5e
 tag:         tip
 parent:      4:8dfeee82a94b
@@ -64,11 +43,8 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970
 summary:     6
 
-+ hg rawcommit -p 6 -d 0 0 -m7
-+ hg manifest 7
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
 76d5e637cbec1bcc04a5a3fa4bcc7d13f6847c00 644 c
-+ hg parents
 changeset:   7:3a157da4365d
 tag:         tip
 user:        test

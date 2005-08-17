@@ -1,5 +1,3 @@
-+ hg init
-+ hg addremove
 adding fennel
 adding fenugreek
 adding fiddlehead
@@ -14,8 +12,6 @@ adding mammals/skunk
 adding mammals/Procyonidae/cacomistle
 adding mammals/Procyonidae/coatimundi
 adding mammals/Procyonidae/raccoon
-+ hg commit -m commit #0 -d 0 0
-+ hg debugwalk
 f  fennel                          fennel
 f  fenugreek                       fenugreek
 f  fiddlehead                      fiddlehead
@@ -30,85 +26,62 @@ f  mammals/skunk                   mammals/skunk
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
-+ hg debugwalk
 f  mammals/skunk                   skunk
 f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
-+ hg debugwalk Procyonidae
 f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
-+ hg debugwalk
 f  mammals/Procyonidae/cacomistle  cacomistle
 f  mammals/Procyonidae/coatimundi  coatimundi
 f  mammals/Procyonidae/raccoon     raccoon
-+ hg debugwalk ..
 f  mammals/skunk                   ../skunk
 f  mammals/Procyonidae/cacomistle  cacomistle
 f  mammals/Procyonidae/coatimundi  coatimundi
 f  mammals/Procyonidae/raccoon     raccoon
-+ hg debugwalk ../beans
 f  beans/black     ../beans/black
 f  beans/borlotti  ../beans/borlotti
 f  beans/kidney    ../beans/kidney
 f  beans/navy      ../beans/navy
 f  beans/pinto     ../beans/pinto
 f  beans/turtle    ../beans/turtle
-+ hg debugwalk
 f  mammals/skunk                   skunk
 f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
-+ hg debugwalk -Ibeans
 f  beans/black     beans/black
 f  beans/borlotti  beans/borlotti
 f  beans/kidney    beans/kidney
 f  beans/navy      beans/navy
 f  beans/pinto     beans/pinto
 f  beans/turtle    beans/turtle
-+ hg debugwalk mammals/../beans/b*
 f  beans/black     beans/black
 f  beans/borlotti  beans/borlotti
-+ hg debugwalk -X*/Procyonidae mammals
 f  mammals/skunk  mammals/skunk
-+ hg debugwalk path:mammals
 f  mammals/skunk                   mammals/skunk
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
-+ hg debugwalk ..
 abort: .. not under repository root
-+ hg debugwalk beans/../..
 abort: beans/../.. not under repository root
-+ hg debugwalk glob:*
 f  fennel      fennel
 f  fenugreek   fenugreek
 f  fiddlehead  fiddlehead
 f  glob:glob   glob:glob
-+ hg debugwalk re:.*[kb]$
 f  fenugreek      fenugreek
 f  glob:glob      glob:glob
 f  beans/black    beans/black
 f  mammals/skunk  mammals/skunk
-+ hg debugwalk path:beans/black
 f  beans/black  beans/black
-+ hg debugwalk beans beans/*
 f  beans/black     beans/black
 f  beans/borlotti  beans/borlotti
 f  beans/kidney    beans/kidney
 f  beans/navy      beans/navy
 f  beans/pinto     beans/pinto
 f  beans/turtle    beans/turtle
-+ hg debugwalk j*
-+ hg debugwalk NOEXIST
 NOEXIST: No such file or directory
-+ hg debugwalk fifo
 fifo: unsupported file type (type is fifo)
-+ hg debugwalk fenugreek
 m  fenugreek  fenugreek
-+ hg rm fenugreek
-+ hg debugwalk fenugreek
 m  fenugreek  fenugreek
-+ hg debugwalk new
 f  new  new

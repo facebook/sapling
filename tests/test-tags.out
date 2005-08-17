@@ -1,39 +1,15 @@
-+ hg init
-+ hg id
 unknown
-+ hg add a
-+ hg commit -m test -d 0 0
-+ hg co
-+ hg identify
 acb14030fe0a tip
-+ hg -q tip
 acb14030fe0a21b60322c440ad2d20cf7685a376 first
-+ hg add .hgtags
-+ hg commit -m add tags -d 0 0
-+ hg tags
-tip                                1:b53d0e1f3043ecbccf1b9ad2cea562c1b50462b2
+tip                                1:b9154636be938d3d431e75a7c906504a079bfe07
 first                              0:acb14030fe0a21b60322c440ad2d20cf7685a376
-hg -q tip                          ?:?
-+ hg identify
-b53d0e1f3043 tip
-+ hg status
+b9154636be93 tip
 M a
-+ hg identify
-b53d0e1f3043+ tip
-+ hg co first
-+ hg id
+b9154636be93+ tip
 acb14030fe0a+ first
-+ hg -v id
 acb14030fe0a21b60322c440ad2d20cf7685a376+ first
-+ hg status
 M a
-+ hg add b
-+ hg commit -m branch -d 0 0
-+ hg id
 c8edf04160c7 tip
-+ hg co -m 1
-+ hg id
-c8edf04160c7+b53d0e1f3043+ tip
-+ hg status
+c8edf04160c7+b9154636be93+ tip
 M .hgtags
 M a

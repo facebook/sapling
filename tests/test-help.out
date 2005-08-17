@@ -1,4 +1,3 @@
-+ hg 
 Mercurial Distributed SCM
 
 basic commands (use "hg help" for the full list or option "-v" for details):
@@ -18,7 +17,6 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update or merge working directory
-+ hg -q
  add        add the specified files on the next commit
  annotate   show changeset information per file line
  clone      make a copy of an existing repository
@@ -34,7 +32,6 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update or merge working directory
-+ hg help
 Mercurial Distributed SCM
 
 list of commands (use "hg help -v" to show aliases and global options):
@@ -57,8 +54,9 @@ list of commands (use "hg help -v" to show aliases and global options):
  locate      locate files matching specific patterns
  log         show the revision history of the repository or a single file
  manifest    output the latest or given revision of the project manifest
+ outgoing    show changesets not found in destination
  parents     show the parents of the working dir or revision
- paths       show path or list of available paths
+ paths       show definition of symbolic path names
  pull        pull changes from the specified source
  push        push changes to the specified destination
  rawcommit   raw commit interface
@@ -75,7 +73,6 @@ list of commands (use "hg help -v" to show aliases and global options):
  update      update or merge working directory
  verify      verify the integrity of the repository
  version     output version and copyright information
-+ hg -q help
  add         add the specified files on the next commit
  addremove   add all new files, delete all missing files
  annotate    show changeset information per file line
@@ -94,8 +91,9 @@ list of commands (use "hg help -v" to show aliases and global options):
  locate      locate files matching specific patterns
  log         show the revision history of the repository or a single file
  manifest    output the latest or given revision of the project manifest
+ outgoing    show changesets not found in destination
  parents     show the parents of the working dir or revision
- paths       show path or list of available paths
+ paths       show definition of symbolic path names
  pull        pull changes from the specified source
  push        push changes to the specified destination
  rawcommit   raw commit interface
@@ -112,7 +110,6 @@ list of commands (use "hg help -v" to show aliases and global options):
  update      update or merge working directory
  verify      verify the integrity of the repository
  version     output version and copyright information
-+ hg add -h
 hg add: option -h not recognized
 hg add [OPTION]... [FILE]...
 
@@ -124,7 +121,6 @@ options:
    include path in search
  -X --exclude 
    exclude path from search
-+ hg add --skjdfks
 hg add: option --skjdfks not recognized
 hg add [OPTION]... [FILE]...
 
@@ -136,7 +132,6 @@ options:
    include path in search
  -X --exclude 
    exclude path from search
-+ hg help diff
 hg diff [-I] [-X] [-r REV1 [-r REV2]] [FILE]...
 
 diff working directory (or selected files)
@@ -149,7 +144,6 @@ options:
    include path in search
  -X --exclude 
    exclude path from search
-+ hg help status
 hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
@@ -173,11 +167,9 @@ options:
    include path in search
  -X --exclude 
    exclude path from search
-+ hg -q help status
 hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
-+ hg help foo
 hg: unknown command 'foo'
 Mercurial Distributed SCM
 
@@ -198,7 +190,6 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update or merge working directory
-+ hg skjdfks
 hg: unknown command 'skjdfks'
 Mercurial Distributed SCM
 

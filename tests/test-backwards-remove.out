@@ -1,8 +1,2 @@
-+ hg init
-+ hg add a
-+ hg commit -m commit #0 -d 0 0
 a
-+ hg add b
-+ hg commit -m commit #1 -d 0 0
-+ hg co 0
 a
