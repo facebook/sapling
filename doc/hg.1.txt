@@ -196,6 +196,13 @@ import [-p <n> -b <base> -q] <patches>::
 
     aliases: patch
 
+incoming [source]::
+    Show new changesets found in the specified repo or the default
+    pull repo. These are the changesets that would be pulled if a pull
+    was requested.
+
+    Currently only local repositories are supported.
+
 init [dest]::
     Initialize a new repository in the given directory.  If the given
     directory does not exist, it is created.
@@ -249,6 +256,11 @@ manifest [revision]::
 
     The manifest is the list of files being version controlled. If no revision
     is given then the tip is used.
+
+outgoing [dest]:: 
+    Show changesets not found in the specified destination repo or the
+    default push repo. These are the changesets that would be pushed
+    if a push was requested.
 
 parents::
     Print the working directory's parent revisions.

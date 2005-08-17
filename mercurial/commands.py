@@ -783,7 +783,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         repo.commit(files, message, user)
 
 def incoming(ui, repo, source="default"):
-    """show changesets not found in source"""
+    """show new changesets found in source"""
     source = ui.expandpath(source)
     other = hg.repository(ui, source)
     if not other.local():
