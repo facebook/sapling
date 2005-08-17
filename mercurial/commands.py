@@ -791,6 +791,8 @@ def incoming(ui, repo, source="default"):
                 + " repositories yet, sorry!\n")
         return 1
     o = repo.findincoming(other)
+    if not o:
+        return
     o = other.newer(o)
     o.reverse()
     for n in o:
