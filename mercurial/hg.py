@@ -1765,11 +1765,11 @@ class localrepository:
         for f in remove:
             self.ui.note("removing %s\n" % f)
             try:
-                os.unlink(f)
+                os.unlink(self.wjoin(f))
             except OSError, inst:
                 self.ui.warn("update failed to remove %s: %s!\n" % (f, inst))
             # try removing directories that might now be empty
-            try: os.removedirs(os.path.dirname(f))
+            try: os.removedirs(os.path.dirname(self.wjoin(f)))
             except: pass
         if moddirstate:
             if mode == 'n':
