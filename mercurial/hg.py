@@ -634,7 +634,7 @@ class localrepository:
             if not create and not os.path.isdir(self.path):
                 raise RepoError("repository %s not found" % self.path)
 
-        self.root = path
+        self.root = os.path.abspath(path)
         self.ui = ui
 
         if create:
