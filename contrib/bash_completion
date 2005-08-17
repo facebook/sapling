@@ -19,6 +19,12 @@ _hg_paths()
     COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W "$paths" -- "$cur" ))
 }
 
+_hg_status()
+{
+    local files="$( hg status -$1 | cut -b 3- )"
+    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W "$files" -- "$cur" ))
+}
+
 _hg_tags()
 {
     local tags="$(hg tags | sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//')"
@@ -104,6 +110,24 @@ _hg()
 	paths)
 	    _hg_paths
 	;;
+	add)
+	    _hg_status "u"
+	;;
+	commit)
+	    _hg_status "mra"
+	;;
+	remove)
+	    _hg_status "r"
+	;;
+	forget)
+	    _hg_status "a"
+	;;
+	diff)
+	    _hg_status "mra"
+	;;
+	revert)
+	    _hg_status "mra"
+	;;
 	clone)
 	    local count=$(_hg_count_non_option)
 	    if [ $count = 1 ]; then
@@ -126,4 +150,4 @@ _hg()
 
 }
 
-complete -o filenames -F _hg hg
+complete -o default -F _hg hg
