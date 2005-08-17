@@ -2199,10 +2199,15 @@ class sshrepository:
         l = int(self.pipei.readline())
         return self.pipei.read(l) != ""
 
+class httpsrepository(httprepository):
+    pass
+
 def repository(ui, path=None, create=0):
     if path:
         if path.startswith("http://"):
             return httprepository(ui, path)
+        if path.startswith("https://"):
+            return httpsrepository(ui, path)
         if path.startswith("hg://"):
             return httprepository(ui, path.replace("hg://", "http://"))
         if path.startswith("old-http://"):
