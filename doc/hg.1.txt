@@ -253,6 +253,14 @@ manifest [revision]::
 parents::
     Print the working directory's parent revisions.
 
+paths [NAME]::
+    Show definition of symbolic path name NAME. If no name is given, show
+    definition of available names.
+
+    Path names are defined in the [paths] section of the $HOME/.hgrc and
+    <repo>/.hg/hgrc configuration files. If run outside a repo, 'paths'
+    queries only $HOME/.hgrc.
+
 pull <repository path>::
     Pull changes from a remote repository to a local one.
 

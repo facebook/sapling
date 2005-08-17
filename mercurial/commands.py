@@ -876,7 +876,7 @@ def parents(ui, repo, rev=None):
             show_changeset(ui, repo, changenode=n)
 
 def paths(ui, search = None):
-    """show path or list of available paths"""
+    """show definition of symbolic path names"""
     try:
         repo = hg.repository(ui=ui)
     except:
@@ -1320,7 +1320,7 @@ table = {
     "manifest": (manifest, [], 'hg manifest [REV]'),
     "outgoing": (outgoing, [], 'hg outgoing [DEST]'),
     "parents": (parents, [], 'hg parents [REV]'),
-    "paths": (paths, [], 'hg paths [name]'),
+    "paths": (paths, [], 'hg paths [NAME]'),
     "^pull":
         (pull,
          [('u', 'update', None, 'update working directory')],
