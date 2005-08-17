@@ -749,6 +749,9 @@ class localrepository:
         if self.remote: return -1
         return os.stat(self.path).st_dev
 
+    def local(self):
+        return not self.remote
+
     def join(self, f):
         return os.path.join(self.path, f)
 
@@ -1939,7 +1942,11 @@ class localrepository:
             self.ui.warn("%d integrity errors encountered!\n" % errors)
             return 1
 
-class httprepository:
+class remoterepository:
+    def local(self):
+        return False
+
+class httprepository(remoterepository):
     def __init__(self, ui, path):
         # fix missing / after hostname
         s = urlparse.urlsplit(path)
@@ -2078,7 +2085,7 @@ class remotelock:
         if self.repo:
             self.release()
 
-class sshrepository:
+class sshrepository(remoterepository):
     def __init__(self, ui, path):
         self.url = path
         self.ui = ui
