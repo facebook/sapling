@@ -782,6 +782,20 @@ def import_(ui, repo, patch1, *patches, **opts):
             addremove(ui, repo, *files)
         repo.commit(files, message, user)
 
+def incoming(ui, repo, source="default"):
+    """show changesets not found in source"""
+    source = ui.expandpath(source)
+    other = hg.repository(ui, source)
+    if not other.local():
+        ui.warn("abort: incoming doesn't work for remote"
+                + " repositories yet, sorry!\n")
+        return 1
+    o = repo.findincoming(other)
+    o = other.newer(o)
+    o.reverse()
+    for n in o:
+        show_changeset(ui, other, changenode=n)
+
 def init(ui, dest="."):
     """create a new repository in the given directory"""
     if not os.path.exists(dest):
@@ -1303,6 +1317,7 @@ table = {
          [('p', 'strip', 1, 'path strip'),
           ('b', 'base', "", 'base path')],
          "hg import [-p NUM] [-b BASE] PATCH..."),
+    "incoming": (incoming, [], 'hg incoming [SOURCE]'),
     "^init": (init, [], 'hg init [DEST]'),
     "locate":
         (locate,
