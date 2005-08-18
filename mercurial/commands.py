@@ -1312,7 +1312,7 @@ table = {
          [('p', 'strip', 1, 'path strip'),
           ('b', 'base', "", 'base path')],
          "hg import [-p NUM] [-b BASE] PATCH..."),
-    "incoming": (incoming, [], 'hg incoming [SOURCE]'),
+    "incoming|in": (incoming, [], 'hg incoming [SOURCE]'),
     "^init": (init, [], 'hg init [DEST]'),
     "locate":
         (locate,
@@ -1328,7 +1328,7 @@ table = {
           ('p', 'patch', None, 'show patch')],
          'hg log [-r REV1 [-r REV2]] [-p] [FILE]'),
     "manifest": (manifest, [], 'hg manifest [REV]'),
-    "outgoing": (outgoing, [], 'hg outgoing [DEST]'),
+    "outgoing|out": (outgoing, [], 'hg outgoing [DEST]'),
     "parents": (parents, [], 'hg parents [REV]'),
     "paths": (paths, [], 'hg paths [NAME]'),
     "^pull":
