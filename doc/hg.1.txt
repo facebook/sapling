@@ -203,6 +203,8 @@ incoming [source]::
 
     Currently only local repositories are supported.
 
+    aliases: in
+
 init [dest]::
     Initialize a new repository in the given directory.  If the given
     directory does not exist, it is created.
@@ -261,6 +263,8 @@ outgoing [dest]::
     Show changesets not found in the specified destination repo or the
     default push repo. These are the changesets that would be pushed
     if a push was requested.
+
+    aliases: out
 
 parents::
     Print the working directory's parent revisions.
