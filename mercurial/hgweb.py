@@ -535,28 +535,40 @@ class hgweb:
             fl.sort()
             for f in fl:
                 full, fnode = files[f]
-                if fnode:
-                    yield self.t("manifestfileentry",
-                                 file = full,
-                                 manifest = mnode,
-                                 filenode = hex(fnode),
-                                 parity = parity,
-                                 basename = f,
-                                 permissions = mff[full])
-                else:
-                    yield self.t("manifestdirentry",
-                                 parity = parity,
-                                 path = os.path.join(path, f),
-                                 manifest = mnode, basename = f[:-1])
+                if not fnode:
+                    continue
+
+                yield {"file": full,
+                       "manifest": mnode,
+                       "filenode": hex(fnode),
+                       "parity": parity,
+                       "basename": f,
+                       "permissions": mff[full]}
                 parity = 1 - parity
 
+        def dirlist(**map):
+            parity = 0
+            fl = files.keys()
+            fl.sort()
+            for f in fl:
+                full, fnode = files[f]
+                if fnode:
+                    continue
+
+                yield {"parity": parity,
+                       "path": os.path.join(path, f),
+                       "manifest": mnode,
+		       "basename": f[:-1]}
+                parity = 1 - parity
+        
         yield self.t("manifest",
                      manifest = mnode,
                      rev = rev,
                      node = hex(node),
                      path = path,
                      up = up(path),
-                     entries = filelist)
+                     fentries = filelist,
+                     dentries = dirlist)
 
     def tags(self):
         cl = self.repo.changelog
