@@ -487,13 +487,12 @@ class hgweb:
                     parity = 1 - parity
                     last = cnode
 
-                yield self.t("annotateline",
-                             parity = parity,
-                             node = hex(cnode),
-                             rev = r,
-                             author = name,
-                             file = f,
-                             line = l)
+                yield {"parity": parity,
+                       "node": hex(cnode),
+                       "rev": r,
+                       "author": name,
+                       "file": f,
+                       "line": l}
 
         yield self.t("fileannotate",
                      file = f,
