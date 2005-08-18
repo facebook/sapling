@@ -398,20 +398,19 @@ class hgweb:
                 cs = cl.read(cl.node(lr))
                 t = float(cs[2].split(' ')[0])
 
-                l.insert(0, self.t("filelogentry",
-                                   parity = parity,
-                                   filenode = hex(n),
-                                   filerev = i,
-                                   file = f,
-                                   node = hex(cn),
-                                   author = cs[1],
-                                   date = t,
-                                   parent = self.parents("filelogparent",
+                l.insert(0, {"parity": parity,
+                             "filenode": hex(n),
+                             "filerev": i,
+                             "file": f,
+                             "node": hex(cn),
+                             "author": cs[1],
+                             "date": t,
+                             "parent": self.parents("filelogparent",
                                        fl.parents(n), fl.rev, file=f),
-                                   desc = cs[4]))
+                             "desc": cs[4]})
                 parity = 1 - parity
 
-            yield l
+            for e in l: yield e
 
         yield self.t("filelog",
                      file = f,
