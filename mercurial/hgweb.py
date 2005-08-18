@@ -431,9 +431,9 @@ class hgweb:
 
         def lines():
             for l, t in enumerate(text.splitlines(1)):
-                yield self.t("fileline", line = t,
-                             linenumber = "% 6d" % (l + 1),
-                             parity = l & 1)
+                yield {"line": t,
+                       "linenumber": "% 6d" % (l + 1),
+                       "parity": l & 1}
 
         yield self.t("filerevision", file = f,
                      filenode = node,
