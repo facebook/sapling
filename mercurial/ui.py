@@ -13,7 +13,8 @@ class ui:
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True):
         self.cdata = ConfigParser.SafeConfigParser()
-        self.cdata.read(os.path.expanduser("~/.hgrc"))
+        self.cdata.read([os.path.normpath(hgrc) for hgrc in
+                         "/etc/mercurial/hgrc", os.path.expanduser("~/.hgrc")])
 
         self.quiet = self.configbool("ui", "quiet")
         self.verbose = self.configbool("ui", "verbose")
