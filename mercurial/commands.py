@@ -1404,6 +1404,7 @@ globalopts = [('v', 'verbose', None, 'verbose mode'),
               ('', 'debug', None, 'debug mode'),
               ('q', 'quiet', None, 'quiet mode'),
               ('', 'profile', None, 'profile'),
+              ('C', 'cwd', '', 'change working directory'),
               ('R', 'repository', "", 'repository root directory'),
               ('', 'traceback', None, 'print traceback on exception'),
               ('y', 'noninteractive', None, 'run non-interactively'),
@@ -1491,6 +1492,14 @@ def dispatch(args):
         u.warn("hg: unknown command '%s'\n" % inst.args[0])
         help_(u, 'shortlist')
         sys.exit(1)
+
+    if options['cwd']:
+        try:
+            os.chdir(options['cwd'])
+        except OSError, inst:
+            u = ui.ui()
+            u.warn('abort: %s: %s\n' % (options['cwd'], inst.strerror))
+            sys.exit(1)
 
     if options["time"]:
         def get_times():
