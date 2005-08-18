@@ -252,12 +252,12 @@ class hgweb:
                 if pos + f < count: l.append(("+" + r, pos + f))
                 if pos - f >= 0: l.insert(0, ("-" + r, pos - f))
 
-            yield self.t("naventry", rev = 0, label="(0)")
+            yield {"rev": 0, "label": "(0)"}
 
             for label, rev in l:
-                yield self.t("naventry", label = label, rev = rev)
+                yield {"label": label, "rev": rev}
 
-            yield self.t("naventry", label="tip")
+            yield {"label": "tip", "rev": ""}
 
         def changelist(**map):
             parity = (start - end) & 1
@@ -269,22 +269,21 @@ class hgweb:
                 hn = hex(n)
                 t = float(changes[2].split(' ')[0])
 
-                l.insert(0, self.t(
-                    'changelogentry',
-                    parity = parity,
-                    author = changes[1],
-                    parent = self.parents("changelogparent",
+                l.insert(0, {
+                    "parity": parity,
+                    "author": changes[1],
+                    "parent": self.parents("changelogparent",
                                           cl.parents(n), cl.rev),
-                    changelogtag = self.showtag("changelogtag",n),
-                    manifest = hex(changes[0]),
-                    desc = changes[4],
-                    date = t,
-                    files = self.listfilediffs(changes[3], n),
-                    rev = i,
-                    node = hn))
+                    "changelogtag": self.showtag("changelogtag",n),
+                    "manifest": hex(changes[0]),
+                    "desc": changes[4],
+                    "date": t,
+                    "files": self.listfilediffs(changes[3], n),
+                    "rev": i,
+                    "node": hn})
                 parity = 1 - parity
 
-            yield l
+            for e in l: yield e
 
         cl = self.repo.changelog
         mf = cl.read(cl.tip())[0]
