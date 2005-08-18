@@ -110,6 +110,24 @@ ui::
   verbose;;
     Increase the amount of output printed.  True or False.  Default is False.
 
+web::
+  Web interface configuration.
+  name;;
+    Repository name to use in the web interface. Default is current
+    working directory.
+  address;;
+    Interface address to bind to. Default is all.
+  port;;
+    Port to listen on. Default is 8000.
+  ipv6;;
+    Whether to use IPv6. Default is false.
+  accesslog;;
+    Where to output the access log. Default is stdout.
+  errorlog;;
+    Where to output the error log. Default is stderr.
+  templates;;
+    Where to find the HTML templates. Default is install path.
+
 AUTHOR
 ------
 Bryan O'Sullivan <bos@serpentine.com>.
