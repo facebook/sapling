@@ -64,25 +64,6 @@ def write(*things):
         else:
             sys.stdout.write(str(thing))
 
-def template(tmpl, filters = {}, **map):
-    while tmpl:
-        m = re.search(r"#([a-zA-Z0-9]+)((\|[a-zA-Z0-9]+)*)#", tmpl)
-        if m:
-            yield tmpl[:m.start(0)]
-            v = map.get(m.group(1), "")
-            v = callable(v) and v(**map) or v
-
-            fl = m.group(2)
-            if fl:
-                for f in fl.split("|")[1:]:
-                    v = filters[f](v)
-
-            yield v
-            tmpl = tmpl[m.end(0):]
-        else:
-            yield tmpl
-            return
-
 class templater:
     def __init__(self, mapfile, filters = {}, defaults = {}):
         self.cache = {}
@@ -109,7 +90,37 @@ class templater:
             tmpl = self.cache[t]
         except KeyError:
             tmpl = self.cache[t] = file(self.map[t]).read()
-        return template(tmpl, self.filters, **m)
+        return self.template(tmpl, self.filters, **m)
+
+    def template(self, tmpl, filters = {}, **map):
+        while tmpl:
+            m = re.search(r"#([a-zA-Z0-9]+)((%[a-zA-Z0-9]+)*)((\|[a-zA-Z0-9]+)*)#", tmpl)
+            if m:
+                yield tmpl[:m.start(0)]
+                v = map.get(m.group(1), "")
+                v = callable(v) and v(**map) or v
+
+                format = m.group(2)
+                fl = m.group(4)
+
+                if format:
+                    q = v.__iter__
+                    for i in q():
+                        lm = map.copy()
+                        lm.update(i)
+                        yield self(format[1:], **lm)
+
+                    v = ""
+
+                elif fl:
+                    for f in fl.split("|")[1:]:
+                        v = filters[f](v)
+
+                yield v
+                tmpl = tmpl[m.end(0):]
+            else:
+                yield tmpl
+                return
 
 def rfc822date(x):
     return time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime(x))
@@ -560,10 +571,9 @@ class hgweb:
         def entries(**map):
             parity = 0
             for k,n in i:
-                yield self.t("tagentry",
-                             parity = parity,
-                             tag = k,
-                             node = hex(n))
+                yield {"parity": parity,
+                       "tag": k,
+                       "node": hex(n)}
                 parity = 1 - parity
 
         yield self.t("tags",
