@@ -719,7 +719,6 @@ def create_server(path, name, templates, address, port, use_ipv6 = False,
     if not address:
         address = u.config("web", "address", "")
     if not port:
-        print port
         port = int(u.config("web", "port", 8000))
     if not use_ipv6:
         use_ipv6 = u.configbool("web", "ipv6")
