@@ -624,7 +624,7 @@ class hgweb:
 
         if not args.has_key('cmd'):
             args['cmd'] = [self.t.cache['default'],]
-        
+
         if args['cmd'][0] == 'changelog':
             c = self.repo.changelog.count() - 1
             hi = c
@@ -720,7 +720,7 @@ def create_server(path, name, templates, address, port, use_ipv6 = False,
             errorlog.write("%s - - [%s] %s\n" % (self.address_string(),
                                                  self.log_date_time_string(),
                                                  format % args))
-            
+
         def log_message(self, format, *args):
             accesslog.write("%s - - [%s] %s\n" % (self.address_string(),
                                                   self.log_date_time_string(),
