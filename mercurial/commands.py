@@ -42,9 +42,10 @@ def matchpats(repo, cwd, pats = [], opts = {}, head = ''):
 def makewalk(repo, pats, opts, head = ''):
     cwd = repo.getcwd()
     files, matchfn = matchpats(repo, cwd, pats, opts, head)
+    exact = dict(zip(files, files))
     def walk():
         for src, fn in repo.walk(files = files, match = matchfn):
-            yield src, fn, util.pathto(cwd, fn)
+            yield src, fn, util.pathto(cwd, fn), fn in exact
     return files, matchfn, walk()
 
 def walk(repo, pats, opts, head = ''):
@@ -375,9 +376,8 @@ def help_(ui, cmd=None):
 def add(ui, repo, *pats, **opts):
     '''add the specified files on the next commit'''
     names = []
-    q = dict(zip(pats, pats))
-    for src, abs, rel in walk(repo, pats, opts):
-        if rel in q or abs in q:
+    for src, abs, rel, exact in walk(repo, pats, opts):
+        if exact:
             names.append(abs)
         elif repo.dirstate.state(abs) == '?':
             ui.status('adding %s\n' % rel)
@@ -386,15 +386,14 @@ def add(ui, repo, *pats, **opts):
 
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files"""
-    q = dict(zip(pats, pats))
     add, remove = [], []
-    for src, abs, rel in walk(repo, pats, opts):
+    for src, abs, rel, exact in walk(repo, pats, opts):
         if src == 'f' and repo.dirstate.state(abs) == '?':
             add.append(abs)
-            if rel not in q: ui.status('adding ', rel, '\n')
+            if not exact: ui.status('adding ', rel, '\n')
         if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
             remove.append(abs)
-            if rel not in q: ui.status('removing ', rel, '\n')
+            if not exact: ui.status('removing ', rel, '\n')
     repo.add(add)
     repo.remove(remove)
 
@@ -432,7 +431,7 @@ def annotate(ui, repo, *pats, **opts):
         node = repo.dirstate.parents()[0]
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
-    for src, abs, rel in walk(repo, pats, opts):
+    for src, abs, rel, exact in walk(repo, pats, opts):
         if abs not in mmap:
             ui.warn("warning: %s is not in the repository!\n" % rel)
             continue
@@ -629,8 +628,12 @@ def debugindexdot(ui, file_):
 def debugwalk(ui, repo, *pats, **opts):
     items = list(walk(repo, pats, opts))
     if not items: return
-    fmt = '%%s  %%-%ds  %%s' % max([len(abs) for (src, abs, rel) in items])
-    for i in items: print fmt % i
+    fmt = '%%s  %%-%ds  %%-%ds  %%s' % (
+        max([len(abs) for (src, abs, rel, exact) in items]),
+        max([len(rel) for (src, abs, rel, exact) in items]))
+    exactly = {True: 'exact', False: ''}
+    for src, abs, rel, exact in items:
+        print fmt % (src, abs, rel, exactly[exact])
 
 def diff(ui, repo, *pats, **opts):
     """diff working directory (or selected files)"""
@@ -645,7 +648,7 @@ def diff(ui, repo, *pats, **opts):
     match = util.always
     if pats:
         roots, match, results = makewalk(repo, pats, opts)
-        for src, abs, rel in results:
+        for src, abs, rel, exact in results:
             files.append(abs)
     dodiff(sys.stdout, ui, repo, files, *revs, **{'match': match})
 
@@ -687,12 +690,11 @@ def export(ui, repo, *changesets, **opts):
 
 def forget(ui, repo, *pats, **opts):
     """don't add the specified files on the next commit"""
-    q = dict(zip(pats, pats))
     forget = []
-    for src, abs, rel in walk(repo, pats, opts):
+    for src, abs, rel, exact in walk(repo, pats, opts):
         if repo.dirstate.state(abs) == 'a':
             forget.append(abs)
-            if rel not in q: ui.status('forgetting ', rel, '\n')
+            if not exact: ui.status('forgetting ', rel, '\n')
     repo.forget(forget)
 
 def heads(ui, repo, **opts):
@@ -809,7 +811,7 @@ def locate(ui, repo, *pats, **opts):
     end = '\n'
     if opts['print0']: end = '\0'
 
-    for src, abs, rel in walk(repo, pats, opts, '(?:.*/|)'):
+    for src, abs, rel, exact in walk(repo, pats, opts, '(?:.*/|)'):
         if repo.dirstate.state(abs) == '?': continue
         if opts['fullpath']:
             ui.write(os.path.join(repo.root, abs), end)
@@ -1402,6 +1404,7 @@ globalopts = [('v', 'verbose', None, 'verbose mode'),
               ('', 'debug', None, 'debug mode'),
               ('q', 'quiet', None, 'quiet mode'),
               ('', 'profile', None, 'profile'),
+              ('C', 'cwd', '', 'change working directory'),
               ('R', 'repository', "", 'repository root directory'),
               ('', 'traceback', None, 'print traceback on exception'),
               ('y', 'noninteractive', None, 'run non-interactively'),
@@ -1489,6 +1492,14 @@ def dispatch(args):
         u.warn("hg: unknown command '%s'\n" % inst.args[0])
         help_(u, 'shortlist')
         sys.exit(1)
+
+    if options['cwd']:
+        try:
+            os.chdir(options['cwd'])
+        except OSError, inst:
+            u = ui.ui()
+            u.warn('abort: %s: %s\n' % (options['cwd'], inst.strerror))
+            sys.exit(1)
 
     if options["time"]:
         def get_times():
