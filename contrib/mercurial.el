@@ -6,17 +6,17 @@
 
 ;; $Id$
 
-;; mercurial.el ("this file") is free software; you can redistribute
-;; it and/or modify it under the terms of version 2 of the GNU General
-;; Public License as published by the Free Software Foundation.
+;; mercurial.el is free software; you can redistribute it and/or
+;; modify it under the terms of version 2 of the GNU General Public
+;; License as published by the Free Software Foundation.
 
-;; This file is distributed in the hope that it will be useful, but
+;; mercurial.el is distributed in the hope that it will be useful, but
 ;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;; General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this file, GNU Emacs, or XEmacs; see the file COPYING
+;; along with mercurial.el, GNU Emacs, or XEmacs; see the file COPYING
 ;; (`C-h C-l').  If not, write to the Free Software Foundation, Inc.,
 ;; 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
@@ -25,7 +25,7 @@
 ;; This mode builds upon Emacs's VC mode to provide flexible
 ;; integration with the Mercurial distributed SCM tool.
 
-;; To get going as quickly as possible, load this file into Emacs and
+;; To get going as quickly as possible, load mercurial.el into Emacs and
 ;; type `C-c h h'; this runs hg-help-overview, which prints a helpful
 ;; usage overview.
 
@@ -64,7 +64,7 @@
 
 ;;; Variables accessible through the custom system.
 
-(defgroup hg nil
+(defgroup mercurial nil
   "Mercurial distributed SCM."
   :group 'tools)
 
@@ -76,17 +76,29 @@
       (return path)))
   "The path to Mercurial's hg executable."
   :type '(file :must-match t)
-  :group 'hg)
+  :group 'mercurial)
 
 (defcustom hg-mode-hook nil
   "Hook run when a buffer enters hg-mode."
   :type 'sexp
-  :group 'hg)
+  :group 'mercurial)
 
 (defcustom hg-global-prefix "\C-ch"
   "The global prefix for Mercurial keymap bindings."
   :type 'sexp
-  :group 'hg)
+  :group 'mercurial)
+
+(defcustom hg-rev-completion-limit 100
+  "The maximum number of revisions that hg-read-rev will offer to complete.
+This affects memory usage and performance when prompting for revisions
+in a repository with a lot of history."
+  :type 'integer
+  :group 'mercurial)
+
+(defcustom hg-log-limit 50
+  "The maximum number of revisions that hg-log will display."
+  :type 'integer
+  :group 'mercurial)
 
 
 ;;; Other variables.
@@ -96,11 +108,18 @@
 
 (defvar hg-mode nil
   "Is this file managed by Mercurial?")
+(make-variable-buffer-local 'hg-mode)
+(put 'hg-mode 'permanent-local t)
+
+(defvar hg-status nil)
+(make-variable-buffer-local 'hg-status)
+(put 'hg-status 'permanent-local t)
 
 (defvar hg-output-buffer-name "*Hg*"
   "The name to use for Mercurial output buffers.")
 
-(defvar hg-file-name-history nil)
+(defvar hg-file-history nil)
+(defvar hg-rev-history nil)
 
 
 ;;; hg-mode keymap.
@@ -111,10 +130,11 @@
     map)
   "This keymap overrides some default vc-mode bindings.")
 (fset 'hg-prefix-map hg-prefix-map)
-(define-key hg-prefix-map "=" 'hg-diff-file)
+(define-key hg-prefix-map "=" 'hg-diff)
 (define-key hg-prefix-map "c" 'hg-undo)
 (define-key hg-prefix-map "g" 'hg-annotate)
-(define-key hg-prefix-map "l" 'hg-log-file)
+(define-key hg-prefix-map "l" 'hg-log)
+(define-key hg-prefix-map "n" 'hg-commit-file)
 ;; (define-key hg-prefix-map "r" 'hg-update)
 (define-key hg-prefix-map "u" 'hg-revert-file)
 (define-key hg-prefix-map "~" 'hg-version-other-window)
@@ -122,10 +142,12 @@
 (defvar hg-mode-map (make-sparse-keymap))
 (define-key hg-mode-map "\C-xv" 'hg-prefix-map)
 
+(add-minor-mode 'hg-mode 'hg-mode hg-mode-map)
+
 
 ;;; Global keymap.
 
-(global-set-key "\C-xvi" 'hg-add-file)
+(global-set-key "\C-xvi" 'hg-add)
 
 (defvar hg-global-map (make-sparse-keymap))
 (fset 'hg-global-map hg-global-map)
@@ -140,6 +162,7 @@
 (define-key hg-global-map "U" 'hg-revert)
 (define-key hg-global-map "a" 'hg-add)
 (define-key hg-global-map "c" 'hg-commit)
+(define-key hg-global-map "f" 'hg-forget)
 (define-key hg-global-map "h" 'hg-help-overview)
 (define-key hg-global-map "i" 'hg-init)
 (define-key hg-global-map "l" 'hg-log)
@@ -248,6 +271,41 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
       (abbreviate-file-name file t)
     (abbreviate-file-name file)))
 
+(defun hg-read-file-name (&optional prompt default)
+  "Read a file or directory name, or a pattern, to use with a command."
+  (let ((path (or default (buffer-file-name))))
+    (if (or (not path) current-prefix-arg)
+	(expand-file-name
+	 (read-file-name (format "File, directory or pattern%s: "
+				 (or prompt ""))
+			 (and path (file-name-directory path))
+			 nil nil
+			 (and path (file-name-nondirectory path))
+			 'hg-file-history))
+      path)))
+
+(defun hg-read-rev (&optional prompt default)
+  "Read a revision or tag, offering completions."
+  (let ((rev (or default "tip")))
+    (if (or (not rev) current-prefix-arg)
+	(let ((revs (split-string (hg-chomp
+				   (hg-run0 "-q" "log" "-r"
+					    (format "-%d"
+						    hg-rev-completion-limit)
+					    "-r" "tip"))
+				  "[\n:]")))
+	  (dolist (line (split-string (hg-chomp (hg-run0 "tags")) "\n"))
+	    (setq revs (cons (car (split-string line "\\s-")) revs)))
+	  (completing-read (format "Revision%s (%s): "
+				   (or prompt "")
+				   (or default "tip"))
+			   (map 'list 'cons revs revs)
+			   nil
+			   nil
+			   nil
+			   'hg-rev-history
+			   (or default "tip")))
+      rev)))
 
 ;;; View mode bits.
 
@@ -272,8 +330,27 @@ current frame."
     (set (make-local-variable 'hg-view-file-name)
 	 (hg-abbrev-file-name file-name))))
   
+(defun hg-file-status (file)
+  "Return status of FILE, or nil if FILE does not exist or is unmanaged."
+  (let* ((s (hg-run "status" file))
+	 (exit (car s))
+	 (output (cdr s)))
+    (if (= exit 0)
+	(let ((state (assoc (substring output 0 (min (length output) 2))
+			    '(("M " . modified)
+			      ("A " . added)
+			      ("R " . removed)))))
+	  (if state
+	      (cdr state)
+	    'normal)))))
+
+(defun hg-tip ()
+  (split-string (hg-chomp (hg-run0 "-q" "tip")) ":"))
+
 (defmacro hg-view-output (args &rest body)
-  "Execute BODY in a clean buffer, then switch that buffer to view-mode.
+  "Execute BODY in a clean buffer, then quickly display that buffer.
+If the buffer contains one line, its contents are displayed in the
+minibuffer.  Otherwise, the buffer is displayed in view-mode.
 ARGS is of the form (BUFFER-NAME &optional FILE), where BUFFER-NAME is
 the name of the buffer to create, and FILE is the name of the file
 being viewed."
@@ -284,12 +361,52 @@ being viewed."
 	   (,prev-buf (current-buffer)))
        (get-buffer-create view-buf-name)
        (kill-buffer view-buf-name)
-       (pop-to-buffer view-buf-name)
+       (get-buffer-create view-buf-name)
+       (set-buffer view-buf-name)
        (save-excursion
 	 ,@body)
-       (hg-view-mode ,prev-buf ,@v-m-rest))))
+       (case (count-lines (point-min) (point-max))
+	 ((0)
+	  (kill-buffer view-buf-name)
+	  (message "(No output)"))
+	 ((1)
+	  (let ((msg (hg-chomp (buffer-substring (point-min) (point-max)))))
+	    (kill-buffer view-buf-name)
+	    (message "%s" msg)))
+	 (t
+	  (pop-to-buffer view-buf-name)
+	  (hg-view-mode ,prev-buf ,@v-m-rest))))))
 
 (put 'hg-view-output 'lisp-indent-function 1)
+
+;;; Hooks.
+
+(defun hg-mode-line ()
+  (when (hg-root)
+    (let ((status (hg-file-status buffer-file-name)))
+      (setq hg-status status
+	    hg-mode (and status (concat " Hg:"
+					(car (hg-tip))
+					(cdr (assq status
+						   '((normal . "")
+						     (removed . "r")
+						     (added . "a")
+						     (modified . "m")))))))
+      status)))
+
+(defun hg-find-file-hook ()
+  (when (hg-mode-line)
+    (run-hooks 'hg-mode-hook)))
+
+(add-hook 'find-file-hooks 'hg-find-file-hook)
+
+(defun hg-after-save-hook ()
+  (let ((old-status hg-status))
+    (hg-mode-line)
+    (if (and (not old-status) hg-status)
+	(run-hooks 'hg-mode-hook))))
+
+(add-hook 'after-save-hook 'hg-after-save-hook)
 
 
 ;;; User interface functions.
@@ -317,13 +434,13 @@ SCM Task                              G/L  Key Binding  Command Name
 --------                              ---  -----------  ------------
 Help overview (what you are reading)  G    C-c h h      hg-help-overview
 
-Tell Mercurial to manage a file       G    C-x v i      hg-add-file
-Commit changes to current file only   L    C-x C-q      vc-toggle-read-only
+Tell Mercurial to manage a file       G    C-c h a      hg-add
+Commit changes to current file only   L    C-x v n      hg-commit
 Undo changes to file since commit     L    C-x v u      hg-revert-file
 
-Diff file vs last checkin             L    C-x v =      hg-diff-file
+Diff file vs last checkin             L    C-x v =      hg-diff
 
-View file change history              L    C-x v l      hg-log-file
+View file change history              L    C-x v l      hg-log
 View annotated file                   L    C-x v a      hg-annotate
 
 Diff repo vs last checkin             G    C-c h =      hg-diff
@@ -342,13 +459,15 @@ Push changes                          G    C-c h >      hg-push"
   (hg-view-output ("Mercurial Help Overview")
     (insert (documentation 'hg-help-overview))))
 
-(defun hg-add ()
-  (interactive)
-  (error "not implemented"))
-
-(defun hg-add-file ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-add (path)
+  (interactive (list (hg-read-file-name " to add")))
+  (let ((buf (current-buffer))
+	(update (equal buffer-file-name path)))
+    (hg-view-output (hg-output-buffer-name)
+      (apply 'call-process (hg-binary) nil t nil (list "add" path)))
+    (when update
+      (with-current-buffer buf
+	(hg-mode-line)))))
 
 (defun hg-addremove ()
   (interactive)
@@ -362,14 +481,32 @@ Push changes                          G    C-c h >      hg-push"
   (interactive)
   (error "not implemented"))
 
-(defun hg-diff ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-diff (path &optional rev1 rev2)
+  (interactive (list (hg-read-file-name " to diff")
+		     (hg-read-rev " to start with")
+		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
+		       (and (not (eq rev2 'working-dir)) rev2))))
+  (let ((a-path (hg-abbrev-file-name path)))
+    (hg-view-output ((if (equal rev1 rev2)
+			 (format "Mercurial: Rev %s of %s" rev1 a-path)
+		       (format "Mercurial: Rev %s to %s of %s"
+			       rev1 (or rev2 "Current") a-path)))
+      (if rev2
+	  (call-process (hg-binary) nil t nil "diff" "-r" rev1 "-r" rev2 path)
+	(call-process (hg-binary) nil t nil "diff" "-r" rev1 path))
+      (diff-mode)
+      (font-lock-fontify-buffer))))
 
-(defun hg-diff-file ()
-  (interactive)
-  (error "not implemented"))
-
+(defun hg-forget (path)
+  (interactive (list (hg-read-file-name " to forget")))
+  (let ((buf (current-buffer))
+	(update (equal buffer-file-name path)))
+    (hg-view-output (hg-output-buffer-name)
+      (apply 'call-process (hg-binary) nil t nil (list "forget" path)))
+    (when update
+      (with-current-buffer buf
+	(hg-mode-line)))))
+  
 (defun hg-incoming ()
   (interactive)
   (error "not implemented"))
@@ -378,13 +515,20 @@ Push changes                          G    C-c h >      hg-push"
   (interactive)
   (error "not implemented"))
 
-(defun hg-log-file ()
-  (interactive)
-  (error "not implemented"))
-
-(defun hg-log ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-log (path &optional rev1 rev2)
+  (interactive (list (hg-read-file-name " to log")
+		     (hg-read-rev " to start with" "-1")
+		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
+  (message "log %s %s" rev1 rev2)
+  (sit-for 1)
+  (let ((a-path (hg-abbrev-file-name path)))
+    (hg-view-output ((if (equal rev1 rev2)
+			 (format "Mercurial: Rev %s of %s" rev1 a-path)
+		       (format "Mercurial: Rev %s to %s of %s"
+			       rev1 (or rev2 "Current") a-path)))
+      (call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2 path)
+      (diff-mode)
+      (font-lock-fontify-buffer))))
 
 (defun hg-outgoing ()
   (interactive)
@@ -407,13 +551,9 @@ Push changes                          G    C-c h >      hg-push"
   (error "not implemented"))
 
 (defun hg-root (&optional path)
-  (interactive)
-  (unless path
-    (setq path (if (and (interactive-p) current-prefix-arg)
-		   (expand-file-name (read-file-name "Path name: "))
-		 (or (buffer-file-name) "(none)"))))
+  (interactive (list (hg-read-file-name)))
   (let ((root (do ((prev nil dir)
-		   (dir (file-name-directory path)
+		   (dir (file-name-directory (or path (buffer-file-name)))
 			(file-name-directory (directory-file-name dir))))
 		  ((equal prev dir))
 		(when (file-directory-p (concat dir ".hg"))
@@ -425,9 +565,12 @@ Push changes                          G    C-c h >      hg-push"
 		 (abbreviate-file-name path t))))
     root))
 
-(defun hg-status ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-status (path)
+  (interactive (list (hg-read-file-name " for status" (hg-root))))
+  (let ((root (hg-root)))
+    (hg-view-output (hg-output-buffer-name)
+      (apply 'call-process (hg-binary) nil t nil
+	     (list "-C" root "status" path)))))
 
 (defun hg-undo ()
   (interactive)
