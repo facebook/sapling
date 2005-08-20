@@ -1,7 +1,7 @@
 _hg_commands()
 {
     local commands="$(hg -v help | sed -e '1,/^list of commands:/d' \
-                                       -e '/^global options:/Q' \
+                                       -e '/^global options:/,$d' \
 				       -e '/^ [^ ]/!d; s/[,:]//g;')"
     
     # hide debug commands from users, but complete them if 

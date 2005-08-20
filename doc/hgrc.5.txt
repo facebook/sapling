@@ -15,17 +15,22 @@ aspects of its behaviour.
 FILES
 -----
 
-Mercurial reads configuration data from two files:
+Mercurial reads configuration data from three files:
+
+/etc/mercurial/hgrc::
+    Options in this global configuration file apply to all Mercurial
+    commands executed by any user in any directory.
 
 $HOME/.hgrc::
-    Global configuration options that apply to all Mercurial commands,
-    no matter where they are run.
+    Per-user configuration options that apply to all Mercurial commands,
+    no matter from which directory they are run.  Values in this file
+    override global settings.
 
 <repo>/.hg/hgrc::
     Per-repository configuration options that only apply in a
     particular repository.  This file is not version-controlled, and
     will not get transferred during a "clone" operation.  Values in
-    this file override global values.
+    this file override global and per-user settings.
 
 SYNTAX
 ------
