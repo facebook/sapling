@@ -127,8 +127,6 @@ common_filters = {
     }
 
 class hgweb:
-    maxchanges = 10
-    maxfiles = 10
 
     def __init__(self, path, name=None, templates=""):
         self.templates = templates
@@ -142,6 +140,9 @@ class hgweb:
         if s.st_mtime != self.mtime:
             self.mtime = s.st_mtime
             self.repo = repository(ui(), self.path)
+            self.maxchanges = self.repo.ui.config("web", "maxchanges", 10)
+            self.maxfiles = self.repo.ui.config("web", "maxchanges", 10)
+            self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
     def date(self, cs):
         return time.asctime(time.gmtime(float(cs[2].split(' ')[0])))
@@ -688,7 +689,7 @@ class hgweb:
         elif args['cmd'][0] == 'changegroup':
             httphdr("application/mercurial-0.1")
             nodes = []
-            if self.viewonly:
+            if not self.allowpull:
                 return
 
             if args.has_key('roots'):

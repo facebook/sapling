@@ -114,7 +114,7 @@ ui::
   ssh;;
     command to use for SSH connections. Default is 'ssh'.
   remotecmd;;
-    command to use for remote push operations. Default is 'hg'.
+    remote command to use for clone/push/pull operations. Default is 'hg'.
 
 
 web::
@@ -134,6 +134,12 @@ web::
     Where to output the error log. Default is stderr.
   templates;;
     Where to find the HTML templates. Default is install path.
+  maxchanges;;
+    Maximum number of changes to list on the changelog. Default is 10.
+  maxfiles;;
+    Maximum number of files to list per changeset. Default is 10.
+  allowpull;;
+    Whether to allow pulling from the repository. Default is true.
 
 AUTHOR
 ------
