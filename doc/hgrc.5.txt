@@ -70,6 +70,8 @@ hooks::
   commit;;
     Run after a changeset has been created. Passed the ID of the newly
     created changeset.
+  changegroup;;
+    Run after a changegroup has been added via push or pull.
 
 http_proxy::
   Used to access web-based Mercurial repositories through a HTTP
@@ -90,11 +92,6 @@ paths::
   symbolic name, and the right gives the directory or URL that is the
   location of the repository.
 
-tags::
-  Tags that are local to a repository and not distributed or version
-  controlled.  The left side is the tag name, and the right is the
-  ID of the changeset to identify.
-
 ui::
   User interface controls.
   debug;;
@@ -114,6 +111,11 @@ ui::
     <fred@example.com>".  Default is $EMAIL or username@hostname.
   verbose;;
     Increase the amount of output printed.  True or False.  Default is False.
+  ssh;;
+    command to use for SSH connections. Default is 'ssh'.
+  remotecmd;;
+    command to use for remote push operations. Default is 'hg'.
+
 
 web::
   Web interface configuration.

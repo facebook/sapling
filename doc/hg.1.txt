@@ -283,6 +283,16 @@ pull <repository path>::
     or URL and adds them to the local repository. By default, this
     does not update the copy of the project in the working directory.
 
+    Valid URLs are of the form:
+
+      local/filesystem/path
+      http://[user@]host[:port][/path]
+      https://[user@]host[:port][/path]
+      ssh://[user@]host[:port][/path]
+
+    SSH requires an accessible shell account on the destination
+    machine and a copy of hg in the remote path.
+      
     options:
     -u, --update   update the working directory to tip after pull
 
@@ -294,12 +304,23 @@ push <destination>::
     destination is local this is identical to a pull in that directory
     from the current one.
 
-    The other currently available push method is SSH. This requires an
-    accessible shell account on the destination machine and a copy of
-    hg in the remote path. Destinations are specified in the following
-    form:
+    By default, push will refuse to run if it detects the result would
+    increase the number of remote heads. This generally indicates the
+    the client has forgotten to sync and merge before pushing.
 
-      ssh://[user@]host[:port]/path
+    Valid URLs are of the form:
+
+      local/filesystem/path
+      ssh://[user@]host[:port][/path]
+      
+    SSH requires an accessible shell account on the destination
+    machine and a copy of hg in the remote path.
+
+    options:
+
+    -f, --force  force update
+    -e, --ssh    specify ssh command to use
+    --remotecmd  specify hg command to run on the remote side
 
 rawcommit [-p -d -u -F -m -l]::
     Lowlevel commit, for use in helper scripts.
