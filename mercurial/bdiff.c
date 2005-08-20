@@ -253,7 +253,7 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 {
 	PyObject *sa, *sb, *rl = NULL, *m;
 	struct line *a, *b;
-	struct hunklist l;
+	struct hunklist l = {NULL, NULL};
 	struct hunk *h;
 	int an, bn, pos = 0;
 
@@ -287,7 +287,7 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 {
 	PyObject *sa, *sb, *result = NULL;
 	struct line *al, *bl;
-	struct hunklist l;
+	struct hunklist l = {NULL, NULL};
 	struct hunk *h;
 	char encode[12], *rb;
 	int an, bn, len = 0, la = 0, lb = 0;
