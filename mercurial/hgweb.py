@@ -833,7 +833,7 @@ class hgwebdir:
 
         if virtual:
             real = self.cp.get("paths", virtual[1:])
-            h = hgweb.hgweb(real)
+            h = hgweb(real)
             h.run()
             return
 
