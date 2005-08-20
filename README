@@ -92,3 +92,9 @@ Network support:
  # Set up a CGI server on your webserver
  foo$ cp hgweb.cgi ~/public_html/hg/index.cgi
  foo$ emacs ~/public_html/hg/index.cgi # adjust the defaults
+
+For more info:
+
+ Documentation in doc/
+ Mercurial website at http://selenic.com/mercurial
+ Mercurial wiki at http://selenic.com/mercurial/wiki
