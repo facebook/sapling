@@ -561,7 +561,7 @@ class hgweb:
                        "manifest": mnode,
                        "basename": f[:-1]}
                 parity = 1 - parity
-        
+
         yield self.t("manifest",
                      manifest = mnode,
                      rev = rev,
@@ -882,8 +882,7 @@ class hgwebdir:
                     except:
                         return default
 
-                yield tmpl("indexentry",
-                           author = get("web", "author", "unknown"),
+                yield dict(author = get("web", "author", "unknown"),
                            name = get("web", "name", v),
                            url = os.environ["REQUEST_URI"] + "/" + v,
                            parity = parity,
