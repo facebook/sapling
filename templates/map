@@ -35,3 +35,5 @@ changelogtag = "<tr><th class="tag">tag:</th><td class="tag">#tag#</td></tr>"
 changesettag = "<tr><th class="tag">tag:</th><td class="tag">#tag#</td></tr>"
 filediffparent = "<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cmd=changeset;node=#node#">#node|short#</a></td></tr>"
 filelogparent = "<tr><td align="right">parent #rev#:&nbsp;</td><td><a href="?cmd=file;file=#file#;filenode=#node#">#node|short#</a></td></tr>"
+indexentry = "<tr class="parity#parity#"><td><a  href="#url#">#name#</a></td><td>#shortdesc#</td><td>#author# <i>#email|obfuscate#</i></td><td>#lastupdate|age# ago</td></tr>"
+index = index.tmpl

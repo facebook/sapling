@@ -114,28 +114,28 @@ class templater:
 def rfc822date(x):
     return time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime(x))
 
+common_filters = {
+    "escape": cgi.escape,
+    "age": age,
+    "date": (lambda x: time.asctime(time.gmtime(x))),
+    "addbreaks": nl2br,
+    "obfuscate": obfuscate,
+    "short": (lambda x: x[:12]),
+    "firstline": (lambda x: x.splitlines(1)[0]),
+    "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
+    "rfc822date": rfc822date,
+    }
+
 class hgweb:
     maxchanges = 10
     maxfiles = 10
 
-    def __init__(self, path, name, templates = ""):
+    def __init__(self, path, name=None, templates=""):
         self.templates = templates
         self.reponame = name
         self.path = path
         self.mtime = -1
         self.viewonly = 0
-
-        self.filters = {
-            "escape": cgi.escape,
-            "age": age,
-            "date": (lambda x: time.asctime(time.gmtime(x))),
-            "addbreaks": nl2br,
-            "obfuscate": obfuscate,
-            "short": (lambda x: x[:12]),
-            "firstline": (lambda x: x.splitlines(1)[0]),
-            "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
-            "rfc822date": rfc822date,
-            }
 
     def refresh(self):
         s = os.stat(os.path.join(self.path, ".hg", "00changelog.i"))
@@ -619,7 +619,7 @@ class hgweb:
 
         name = self.reponame or self.repo.ui.config("web", "name", os.getcwd())
 
-        self.t = templater(m, self.filters,
+        self.t = templater(m, common_filters,
                            {"url":url,
                             "repo":name,
                             "header":header,
@@ -818,3 +818,57 @@ def server(path, name, templates, address, port, use_ipv6 = False,
     httpd = create_server(path, name, templates, address, port, use_ipv6,
                           accesslog, errorlog)
     httpd.serve_forever()
+
+# This is a stopgap
+class hgwebdir:
+    def __init__(self, config):
+        self.cp = ConfigParser.SafeConfigParser()
+        self.cp.read(config)
+
+    def run(self):
+        try:
+            virtual = os.environ["PATH_INFO"]
+        except:
+            virtual = ""
+
+        if virtual:
+            real = self.cp.get("paths", virtual[1:])
+            h = hgweb.hgweb(real)
+            h.run()
+            return
+
+        def header(**map):
+            yield tmpl("header", **map)
+
+        def footer(**map):
+            yield tmpl("footer", **map)
+
+        templates = templatepath()
+        m = os.path.join(templates, "map")
+        tmpl = templater(m, common_filters,
+                         {"header": header, "footer": footer})
+
+        def entries(**map):
+            parity = 0
+            for v,r in self.cp.items("paths"):
+                cp2 = ConfigParser.SafeConfigParser()
+                cp2.read(os.path.join(r, ".hg", "hgrc"))
+
+                def get(sec, val, default):
+                    try:
+                        return cp2.get(sec, val)
+                    except:
+                        return default
+
+                yield tmpl("indexentry",
+                           author = get("web", "author", "unknown"),
+                           name = get("web", "name", v),
+                           url = os.environ["REQUEST_URI"] + "/" + v,
+                           parity = parity,
+                           shortdesc = get("web", "description", "unknown"),
+                           lastupdate = os.stat(os.path.join(r, ".hg",
+                                                "00changelog.d")).st_mtime)
+
+                parity = 1 - parity
+
+        write(tmpl("index", entries = entries))
