@@ -280,7 +280,12 @@ class changelog(revlog):
 
     def add(self, manifest, list, desc, transaction, p1=None, p2=None,
                   user=None, date=None):
-        date = date or "%d %d" % (time.time(), time.timezone)
+        if date:
+            date = util.date_parser(date)
+        else:
+            if time.daylight: offset = time.altzone
+            else: offset = time.timezone
+            date = "%d %d" % (time.time(), offset)
         list.sort()
         l = [hex(manifest), user, date] + list + ["", desc]
         text = "\n".join(l)
