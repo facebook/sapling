@@ -12,6 +12,7 @@ demandload(globals(), "re socket sys util")
 class ui:
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True):
+        self.overlay = {}
         self.cdata = ConfigParser.SafeConfigParser()
         self.cdata.read([os.path.normpath(hgrc) for hgrc in
                          "/etc/mercurial/hgrc", os.path.expanduser("~/.hgrc")])
@@ -29,14 +30,21 @@ class ui:
     def readconfig(self, fp):
         self.cdata.readfp(fp)
 
-    def config(self, section, val, default=None):
-        if self.cdata.has_option(section, val):
-            return self.cdata.get(section, val)
+    def setconfig(self, section, name, val):
+        self.overlay[(section, name)] = val
+
+    def config(self, section, name, default=None):
+        if self.overlay.has_key((section, name)):
+            return self.overlay[(section, name)]
+        if self.cdata.has_option(section, name):
+            return self.cdata.get(section, name)
         return default
 
-    def configbool(self, section, val, default=False):
-        if self.cdata.has_option(section, val):
-            return self.cdata.getboolean(section, val)
+    def configbool(self, section, name, default=False):
+        if self.overlay.has_key((section, name)):
+            return self.overlay[(section, name)]
+        if self.cdata.has_option(section, name):
+            return self.cdata.getboolean(section, name)
         return default
 
     def configitems(self, section):
