@@ -850,7 +850,9 @@ class hgwebdir:
 
         def entries(**map):
             parity = 0
-            for v,r in self.cp.items("paths"):
+            l = self.cp.items("paths")
+            l.sort()
+            for v,r in l:
                 cp2 = ConfigParser.SafeConfigParser()
                 cp2.read(os.path.join(r, ".hg", "hgrc"))
 
