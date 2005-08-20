@@ -570,7 +570,7 @@ Push changes                          G    C-c h >      hg-push"
   (let ((root (hg-root)))
     (hg-view-output (hg-output-buffer-name)
       (apply 'call-process (hg-binary) nil t nil
-	     (list "-C" root "status" path)))))
+	     (list "--cwd" root "status" path)))))
 
 (defun hg-undo ()
   (interactive)
