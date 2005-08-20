@@ -16,29 +16,29 @@ changeset:   2:3ef543305655
 tag:         tip
 parent:      0:22a449e20da5
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     chmod +x a
 
 changeset:   1:c6ecefc45368
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     a updated
 
 changeset:   2:3ef543305655
 tag:         tip
 parent:      0:22a449e20da5
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     chmod +x a
 
 changeset:   1:c6ecefc45368
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     a updated
 
 changeset:   0:22a449e20da5
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     added a b
 
 resolving manifests

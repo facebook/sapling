@@ -9,11 +9,11 @@ added 1 changesets with 1 changes to 1 files
 changeset:   1:9a79c33a9db3
 tag:         tip
 user:        a
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     a
 
 changeset:   0:01f8062b2de5
 user:        b
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     b
 

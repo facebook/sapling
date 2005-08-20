@@ -6,7 +6,7 @@
 changeset:   2:9f827976dae4
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     2
 
 05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
@@ -14,7 +14,7 @@ summary:     2
 changeset:   3:c8225a106186
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     3
 
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
@@ -22,7 +22,7 @@ d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
 changeset:   4:8dfeee82a94b
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     4
 
 05f9e54f4c9b86b09099803d8b49a50edcb4eaab 644 a
@@ -30,7 +30,7 @@ summary:     4
 3570202ceac2b52517df64ebd0a062cb0d8fe33a 644 c
 changeset:   4:8dfeee82a94b
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     4
 
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
@@ -40,7 +40,7 @@ tag:         tip
 parent:      4:8dfeee82a94b
 parent:      5:a7925a42d0df
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     6
 
 d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
@@ -48,6 +48,6 @@ d6e3c4976c13feb1728cd3ac851abaf7256a5c23 644 a
 changeset:   7:3a157da4365d
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     7
 

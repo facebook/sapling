@@ -1,19 +1,19 @@
 changeset:   0:acb14030fe0a
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     test
 
 changeset:   1:863197ef0378
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     Added tag bleah for changeset acb14030fe0a21b60322c440ad2d20cf7685a376
 
 changeset:   0:acb14030fe0a
 tag:         bleah
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     test
 
 abort: working copy of .hgtags is changed!

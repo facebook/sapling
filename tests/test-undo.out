@@ -6,7 +6,7 @@ checking files
 changeset:   0:acb14030fe0a
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     test
 
 rolling back last transaction

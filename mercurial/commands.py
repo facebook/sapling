@@ -222,6 +222,9 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
 
     changes = changelog.read(changenode)
 
+    t, tz = changes[2].split(' ')
+    date = time.asctime(time.localtime(float(t))) + " %+05d" % (int(tz)/-36)
+
     parents = [(log.rev(p), ui.verbose and hg.hex(p) or hg.short(p))
                for p in log.parents(node)
                if ui.debugflag or p != hg.nullid]
@@ -247,8 +250,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
     ui.debug("manifest:    %d:%s\n" % (repo.manifest.rev(changes[0]),
                                       hg.hex(changes[0])))
     ui.status("user:        %s\n" % changes[1])
-    ui.status("date:        %s\n" % time.asctime(
-        time.localtime(float(changes[2].split(' ')[0]))))
+    ui.status("date:        %s\n" % date)
 
     if ui.debugflag:
         files = repo.changes(changelog.parents(changenode)[0], changenode)

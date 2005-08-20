@@ -22,13 +22,13 @@ resolving manifests
 changeset:   1:1e71731e6fbb
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     2
 
 changeset:   1:1e71731e6fbb5b35fae293120dea6964371c13c6
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 files:       a b
 description:
 2
@@ -36,7 +36,7 @@ description:
 
 changeset:   0:c19d34741b0a4ced8e4ba74bb834597d5193851e
 user:        test
-date:        Thu Jan  1 00:00:00 1970
+date:        Thu Jan  1 00:00:00 1970 +0000
 files:       a
 description:
 1
