@@ -126,7 +126,8 @@ in a repository with a lot of history."
 
 (defvar hg-prefix-map
   (let ((map (copy-keymap vc-prefix-map)))
-    (set-keymap-name map 'hg-prefix-map)
+    (if (functionp 'set-keymap-name)
+      (set-keymap-name map 'hg-prefix-map)); XEmacs
     map)
   "This keymap overrides some default vc-mode bindings.")
 (fset 'hg-prefix-map hg-prefix-map)
@@ -177,7 +178,8 @@ in a repository with a lot of history."
   (let ((map (copy-keymap (if (boundp 'view-minor-mode-map)
 			      view-minor-mode-map
 			    view-mode-map))))
-    (set-keymap-name map 'hg-view-mode-map)
+    (if (functionp 'set-keymap-name)
+      (set-keymap-name map 'hg-view-mode-map)); XEmacs
     map))
 (fset 'hg-view-mode-map hg-view-mode-map)
 (define-key hg-view-mode-map
