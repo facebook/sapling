@@ -188,13 +188,14 @@ identify::
 
     aliases: id
 
-import [-p <n> -b <base> -q] <patches>::
+import [-p <n> -b <base> -f] <patches>::
     Import a list of patches and commit them individually.
 
     options:
     -p, --strip <n>   directory strip option for patch. This has the same
                       meaning as the correnponding patch option
     -b <path>         base directory to read patches from
+    -f, --force	      skip check for outstanding uncommitted changes
 
     aliases: patch
 

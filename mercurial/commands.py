@@ -737,6 +737,12 @@ def import_(ui, repo, patch1, *patches, **opts):
     """import an ordered set of patches"""
     patches = (patch1,) + patches
 
+    if not opts['force']:
+        (c, a, d, u) = repo.changes()
+        if c or a or d:
+            ui.warn("abort: outstanding uncommitted changes!\n")
+            return 1
+
     d = opts["base"]
     strip = opts["strip"]
 
@@ -1329,6 +1335,7 @@ table = {
     "import|patch":
         (import_,
          [('p', 'strip', 1, 'path strip'),
+          ('f', 'force', None, 'skip check for outstanding changes'),
           ('b', 'base', "", 'base path')],
          "hg import [-p NUM] [-b BASE] PATCH..."),
     "incoming|in": (incoming, [], 'hg incoming [SOURCE]'),
