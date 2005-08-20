@@ -280,9 +280,7 @@ class changelog(revlog):
 
     def add(self, manifest, list, desc, transaction, p1=None, p2=None,
                   user=None, date=None):
-        if date:
-            date = util.date_parser(date)
-        else:
+        if not date:
             if time.daylight: offset = time.altzone
             else: offset = time.timezone
             date = "%d %d" % (time.time(), offset)
