@@ -223,6 +223,11 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
     changes = changelog.read(changenode)
 
     t, tz = changes[2].split(' ')
+    # a conversion tool was sticking non-integer offsets into repos
+    try:
+        tz = int(tz)
+    except ValueError:
+        tz = 0
     date = time.asctime(time.localtime(float(t))) + " %+05d" % (int(tz)/-36)
 
     parents = [(log.rev(p), ui.verbose and hg.hex(p) or hg.short(p))
