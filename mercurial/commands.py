@@ -926,10 +926,15 @@ def pull(ui, repo, source="default", **opts):
 
     return r
 
-def push(ui, repo, dest="default-push", force=False):
+def push(ui, repo, dest="default-push", force=False, ssh=None, remotecmd=None):
     """push changes to the specified destination"""
     dest = ui.expandpath(dest)
     ui.status('pushing to %s\n' % (dest))
+
+    if ssh:
+        ui.setconfig("ui", "ssh", ssh)
+    if remotecmd:
+        ui.setconfig("ui", "remotecmd", remotecmd)
 
     other = hg.repository(ui, dest)
     r = repo.push(other, force)
@@ -1339,7 +1344,9 @@ table = {
          'hg pull [-u] [SOURCE]'),
     "^push":
         (push,
-         [('f', 'force', None, 'force push')],
+         [('f', 'force', None, 'force push'),
+          ('e', 'ssh', "", 'ssh command'),
+          ('', 'remotecmd', "", 'remote hg command')],
          'hg push [-f] [DEST]'),
     "rawcommit":
         (rawcommit,

@@ -2106,8 +2106,10 @@ class sshrepository(remoterepository):
         if not path:
             raise RepoError("no remote repository path specified")
 
-        cmd = "ssh %s 'hg -R %s serve --stdio'"
-        cmd = cmd % (args, path)
+        sshcmd = self.ui.config("ui", "ssh", "ssh")
+        remotecmd = self.ui.config("ui", "remotecmd", "hg")
+        cmd = "%s %s '%s -R %s serve --stdio'"
+        cmd = cmd % (sshcmd, args, remotecmd, path)
 
         self.pipeo, self.pipei, self.pipee = os.popen3(cmd)
 
