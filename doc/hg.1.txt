@@ -99,6 +99,8 @@ clone [-U] <source> [dest]::
 
     options:
     -U, --noupdate   do not update the new working directory
+    -e, --ssh        specify ssh command to use
+    --remotecmd      specify hg command to run on the remote side
 
 commit [options] [files...]::
     Commit changes to the given files into the repository.
@@ -295,6 +297,8 @@ pull <repository path>::
       
     options:
     -u, --update   update the working directory to tip after pull
+    -e, --ssh    specify ssh command to use
+    --remotecmd  specify hg command to run on the remote side
 
 push <destination>::
     Push changes from the local repository to the given destination.

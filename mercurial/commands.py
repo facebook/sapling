@@ -489,6 +489,11 @@ def clone(ui, source, dest=None, **opts):
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
+    if opts['ssh']:
+        ui.setconfig("ui", "ssh", opts['ssh'])
+    if opts['remotecmd']:
+        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+
     d = Dircleanup(dest)
     abspath = source
     source = ui.expandpath(source)
@@ -916,6 +921,11 @@ def pull(ui, repo, source="default", **opts):
     source = ui.expandpath(source)
     ui.status('pulling from %s\n' % (source))
 
+    if opts['ssh']:
+        ui.setconfig("ui", "ssh", opts['ssh'])
+    if opts['remotecmd']:
+        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+
     other = hg.repository(ui, source)
     r = repo.pull(other)
     if not r:
@@ -1270,8 +1280,10 @@ table = {
          'hg cat [-o OUTFILE] FILE [REV]'),
     "^clone":
         (clone,
-         [('U', 'noupdate', None, 'skip update after cloning')],
-         'hg clone [-U] SOURCE [DEST]'),
+         [('U', 'noupdate', None, 'skip update after cloning'),
+          ('e', 'ssh', "", 'ssh command'),
+          ('', 'remotecmd', "", 'remote hg command')],
+         'hg clone [OPTIONS] SOURCE [DEST]'),
     "^commit|ci":
         (commit,
          [('A', 'addremove', None, 'run add/remove during commit'),
@@ -1340,8 +1352,10 @@ table = {
     "paths": (paths, [], 'hg paths [NAME]'),
     "^pull":
         (pull,
-         [('u', 'update', None, 'update working directory')],
-         'hg pull [-u] [SOURCE]'),
+         [('u', 'update', None, 'update working directory'),
+          ('e', 'ssh', "", 'ssh command'),
+          ('', 'remotecmd', "", 'remote hg command')],
+         'hg pull [OPTIONS] [SOURCE]'),
     "^push":
         (push,
          [('f', 'force', None, 'force push'),
