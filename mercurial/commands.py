@@ -613,12 +613,12 @@ def debugindex(ui, file_):
     """dump the contents of an index file"""
     r = hg.revlog(hg.opener(""), file_, "")
     ui.write("   rev    offset  length   base linkrev" +
-             " p1           p2           nodeid\n")
+             " nodeid       p1           p2\n")
     for i in range(r.count()):
         e = r.index[i]
-        ui.write("% 6d % 9d % 7d % 6d % 7d %s.. %s.. %s..\n" % (
+        ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
                 i, e[0], e[1], e[2], e[3],
-            hg.hex(e[4][:5]), hg.hex(e[5][:5]), hg.hex(e[6][:5])))
+            hg.short(e[6]), hg.short(e[4]), hg.short(e[5])))
 
 def debugindexdot(ui, file_):
     """dump an index DAG as a .dot file"""
