@@ -23,12 +23,6 @@ def filterfiles(filters, files):
         l += [x for x in files if x.startswith(t)]
     return l
 
-def relfilter(repo, files):
-    cwd = repo.getcwd()
-    if cwd:
-        return filterfiles([util.pconvert(cwd)], files)
-    return files
-
 def relpath(repo, args):
     cwd = repo.getcwd()
     if cwd:
