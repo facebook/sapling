@@ -134,6 +134,8 @@ web::
     Where to output the error log. Default is stderr.
   templates;;
     Where to find the HTML templates. Default is install path.
+  style;;
+    Which template map style to use.
   maxchanges;;
     Maximum number of changes to list on the changelog. Default is 10.
   maxfiles;;

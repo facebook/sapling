@@ -626,8 +626,11 @@ class hgweb:
         t = self.templates or self.repo.ui.config("web", "templates",
                                                   templatepath())
         m = os.path.join(t, "map")
+        style = self.repo.ui.config("web", "style", "")
         if args.has_key('style'):
-            b = os.path.basename("map-" + args['style'][0])
+            style = args['style'][0]
+        if style:
+            b = os.path.basename("map-" + style)
             p = os.path.join(t, b)
             if os.path.isfile(p): m = p
 
