@@ -138,19 +138,21 @@ common_filters = {
     }
 
 class hgweb:
+    def __init__(self, repo, name=None):
+        if type(repo) == type(""):
+            self.repo = repository(ui(), repo)
+        else:
+            self.repo = repo
 
-    def __init__(self, path, name=None, templates=""):
-        self.templates = templates
-        self.reponame = name
-        self.path = path
         self.mtime = -1
-        self.viewonly = 0
+        self.reponame = name or self.repo.ui.config("web", "name",
+                                                    self.repo.root)
 
     def refresh(self):
-        s = os.stat(os.path.join(self.path, ".hg", "00changelog.i"))
+        s = os.stat(os.path.join(self.repo.root, ".hg", "00changelog.i"))
         if s.st_mtime != self.mtime:
             self.mtime = s.st_mtime
-            self.repo = repository(ui(), self.path)
+            self.repo = repository(self.repo.ui, self.repo.root)
             self.maxchanges = self.repo.ui.config("web", "maxchanges", 10)
             self.maxfiles = self.repo.ui.config("web", "maxchanges", 10)
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
@@ -623,8 +625,7 @@ class hgweb:
         self.refresh()
         args = cgi.parse()
 
-        t = self.templates or self.repo.ui.config("web", "templates",
-                                                  templatepath())
+        t = self.repo.ui.config("web", "templates", templatepath())
         m = os.path.join(t, "map")
         style = self.repo.ui.config("web", "style", "")
         if args.has_key('style'):
@@ -640,11 +641,9 @@ class hgweb:
         if "?" in uri: uri = uri.split("?")[0]
         url = "http://%s%s%s" % (os.environ["SERVER_NAME"], port, uri)
 
-        name = self.reponame or self.repo.ui.config("web", "name", os.getcwd())
-
         self.t = templater(m, common_filters,
                            {"url":url,
-                            "repo":name,
+                            "repo":self.reponame,
                             "header":header,
                             "footer":footer,
                             })
@@ -729,27 +728,18 @@ class hgweb:
         else:
             write(self.t("error"))
 
-def create_server(path, name, templates, address, port, use_ipv6 = False,
-                  accesslog = sys.stdout, errorlog = sys.stderr):
+def create_server(repo):
 
     def openlog(opt, default):
         if opt and opt != '-':
             return open(opt, 'w')
         return default
 
-    u = ui()
-    repo = repository(u, path)
-    if not address:
-        address = u.config("web", "address", "")
-    if not port:
-        port = int(u.config("web", "port", 8000))
-    if not use_ipv6:
-        use_ipv6 = u.configbool("web", "ipv6")
-
-    accesslog = openlog(accesslog or u.config("web", "accesslog", "-"),
-                        sys.stdout)
-    errorlog = openlog(errorlog or u.config("web", "errorlog", "-"),
-                       sys.stderr)
+    address = repo.ui.config("web", "address", "")
+    port = int(repo.ui.config("web", "port", 8000))
+    use_ipv6 = repo.ui.configbool("web", "ipv6")
+    accesslog = openlog(repo.ui.config("web", "accesslog", "-"), sys.stdout)
+    errorlog = openlog(repo.ui.config("web", "errorlog", "-"), sys.stderr)
 
     import BaseHTTPServer
 
@@ -830,7 +820,7 @@ def create_server(path, name, templates, address, port, use_ipv6 = False,
             finally:
                 sys.argv, sys.stdin, sys.stdout, sys.stderr = save
 
-    hg = hgweb(path, name, templates)
+    hg = hgweb(repo)
     if use_ipv6:
         return IPv6HTTPServer((address, port), hgwebhandler)
     else:

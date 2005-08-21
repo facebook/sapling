@@ -1117,9 +1117,13 @@ def serve(ui, repo, **opts):
                 r = repo.addchangegroup(fin)
                 respond("")
 
-    httpd = hgweb.create_server(repo.root, opts["name"], opts["templates"],
-                                opts["address"], opts["port"], opts["ipv6"],
-                                opts['accesslog'], opts['errorlog'])
+    optlist = "name templates style address port ipv6 accesslog errorlog"
+    for o in optlist.split():
+        if opts[o]:
+            ui.setconfig("web", o, opts[o])
+
+    httpd = hgweb.create_server(repo)
+
     if ui.verbose:
         addr, port = httpd.socket.getsockname()
         if addr == '0.0.0.0':
@@ -1402,7 +1406,8 @@ table = {
           ('a', 'address', '', 'interface address'),
           ('n', 'name', "", 'repository name'),
           ('', 'stdio', None, 'for remote clients'),
-          ('t', 'templates', "", 'template map'),
+          ('t', 'templates', "", 'template directory'),
+          ('', 'style', "", 'template style'),
           ('6', 'ipv6', None, 'use IPv6 in addition to IPv4')],
          "hg serve [OPTION]..."),
     "^status":
