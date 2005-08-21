@@ -630,7 +630,6 @@ class hgweb:
             b = os.path.basename("map-" + args['style'][0])
             p = os.path.join(t, b)
             if os.path.isfile(p): m = p
-        print m
 
         port = os.environ["SERVER_PORT"]
         port = port != "80" and (":" + port) or ""
