@@ -618,7 +618,8 @@ With a prefix argument, prompt for the path to add."
   (interactive)
   (goto-char (point-min))
   (search-forward hg-commit-message-start)
-  (let (message files)
+  (let ((root hg-root)
+	message files)
     (let ((start (point)))
       (goto-char (point-max))
       (search-backward hg-commit-message-end)
@@ -642,7 +643,9 @@ With a prefix argument, prompt for the path to add."
     (apply 'hg-run0 "--cwd" hg-root "commit" "-m" message files)
     (let ((buf hg-prev-buffer))
       (kill-buffer nil)
-      (switch-to-buffer buf))))
+      (switch-to-buffer buf))
+    (hg-do-across-repo root
+      (hg-mode-line))))
 
 (defun hg-commit-mode ()
   "Mode for describing a commit of changes to a Mercurial repository.
