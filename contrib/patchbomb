@@ -172,7 +172,7 @@ def patchbomb(ui, repo, *revs, **opts):
     to = [t.strip() for t in to.split(',')]
     cc = (opts['cc'] or ui.config('patchbomb', 'cc') or
           prompt('Cc', default = ''))
-    cc = [c.strip() for c in cc.split(',')]
+    cc = (cc and [c.strip() for c in cc.split(',')]) or []
 
     ui.write('Finish with ^D or a dot on a line by itself.\n\n')
 
