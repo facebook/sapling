@@ -610,7 +610,9 @@ With a prefix argument, prompt for the path to add."
 
 (defun hg-commit-abort ()
   (interactive)
-  (error "not implemented"))
+  (let ((buf hg-prev-buffer))
+    (kill-buffer nil)
+    (switch-to-buffer buf)))
 
 (defun hg-commit-finish ()
   (interactive)
@@ -637,7 +639,10 @@ With a prefix argument, prompt for the path to add."
 	       (not hg-commit-allow-empty-file-list))
       (error "Cannot proceed - no files to commit"))
     (setq message (concat message "\n"))
-    (apply 'hg-run0 "--cwd" hg-root "commit" "-m" message files)))
+    (apply 'hg-run0 "--cwd" hg-root "commit" "-m" message files)
+    (let ((buf hg-prev-buffer))
+      (kill-buffer nil)
+      (switch-to-buffer buf))))
 
 (defun hg-commit-mode ()
   "Mode for describing a commit of changes to a Mercurial repository.
