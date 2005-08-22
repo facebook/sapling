@@ -1,0 +1,58 @@
+creating base
+creating branch a
+creating branch b
+we shouldn't have anything but n state here
+n 644          2 bar
+n 644          3 baz
+n 644          3 foo
+n 644          2 quux
+merging
+pulling from ../a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 2 changes to 2 files
+(run 'hg update' to get a working copy)
+merging for foo
+resolving manifests
+ force None allow 1 moddirstate True linear False
+ ancestor a0486579db29 local ef1b4dbe2193 remote 336d8406d617
+ remote bar is newer, get
+ foo versions differ, resolve
+getting bar
+merging foo
+resolving foo
+file foo: other 33d1fb69067a ancestor b8e02f643373
+we shouldn't have anything but foo in merge state here
+m 644          3 foo
+main: we should have a merge here
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0      73      0       0 cdca01651b96 000000000000 000000000000
+     1        73      68      1       1 f6718a9cb7f3 cdca01651b96 000000000000
+     2       141      68      2       2 bdd988058d16 cdca01651b96 000000000000
+     3       209      66      3       3 9da9fbd62226 f6718a9cb7f3 bdd988058d16
+foo: we should have a merge here
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       0 b8e02f643373 000000000000 000000000000
+     1         3       4      1       1 2ffeddde1b65 b8e02f643373 000000000000
+     2         7       4      2       2 33d1fb69067a b8e02f643373 000000000000
+     3        11       4      3       3 aa27919ee430 2ffeddde1b65 33d1fb69067a
+bar: we shouldn't have a merge here
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       0 b8e02f643373 000000000000 000000000000
+     1         3       4      1       2 33d1fb69067a b8e02f643373 000000000000
+baz: we shouldn't have a merge here
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       0 b8e02f643373 000000000000 000000000000
+     1         3       4      1       1 2ffeddde1b65 b8e02f643373 000000000000
+quux: we shouldn't have a merge here
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       0 b8e02f643373 000000000000 000000000000
+     1         3       5      1       3 6128c0f33108 b8e02f643373 000000000000
+everything should be clean now
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+4 files, 4 changesets, 10 total revisions

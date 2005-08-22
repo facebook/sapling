@@ -6,7 +6,7 @@ adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
 bar should remain deleted.
-6b70e9e451a5a33faad7bbebe627e46b937b7364 644 foo
+f405ac83a5611071d6b54dd5eb26943b1fdc4460 644 foo
 pulling from ../A2
 searching for changes
 adding changesets
@@ -15,4 +15,4 @@ adding file changes
 added 1 changesets with 0 changes to 0 files
 (run 'hg update' to get a working copy)
 bar should remain deleted.
-6b70e9e451a5a33faad7bbebe627e46b937b7364 644 foo
+f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644 foo

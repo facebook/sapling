@@ -840,8 +840,30 @@ class localrepository:
                 tm = util.is_exec(self.wjoin(f), mfm.get(f, False))
                 r = self.file(f)
                 mfm[f] = tm
-                mm[f] = r.add(t, {}, tr, linkrev,
-                              m1.get(f, nullid), m2.get(f, nullid))
+
+                fp1 = m1.get(f, nullid)
+                fp2 = m2.get(f, nullid)
+
+                # is the same revision on two branches of a merge?
+                if fp2 == fp1:
+                    fp2 = nullid
+
+                if fp2 != nullid:
+                    # is one parent an ancestor of the other?
+                    fpa = r.ancestor(fp1, fp2)
+                    if fpa == fp1:
+                        fp1, fp2 = fp2, nullid
+                    elif fpa == fp2:
+                        fp2 = nullid
+
+                    # is the file unmodified from the parent?
+                    if t == r.read(fp1):
+                        # record the proper existing parent in manifest
+                        # no need to add a revision
+                        mm[f] = fp1
+                        continue
+
+                mm[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
                 if update_dirstate:
                     self.dirstate.update([f], "n")
             except IOError:
@@ -879,19 +901,20 @@ class localrepository:
             commit = c + a
             remove = d
 
-        if not commit and not remove and not force:
-            self.ui.status("nothing changed\n")
-            return None
-
-        if not self.hook("precommit"):
-            return None
-
         p1, p2 = self.dirstate.parents()
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
         m1 = self.manifest.read(c1[0])
         mf1 = self.manifest.readflags(c1[0])
         m2 = self.manifest.read(c2[0])
+
+        if not commit and not remove and not force and p2 == nullid:
+            self.ui.status("nothing changed\n")
+            return None
+
+        if not self.hook("precommit"):
+            return None
+
         lock = self.lock()
         tr = self.transaction()
 
@@ -918,6 +941,26 @@ class localrepository:
             r = self.file(f)
             fp1 = m1.get(f, nullid)
             fp2 = m2.get(f, nullid)
+
+            # is the same revision on two branches of a merge?
+            if fp2 == fp1:
+                fp2 = nullid
+
+            if fp2 != nullid:
+                # is one parent an ancestor of the other?
+                fpa = r.ancestor(fp1, fp2)
+                if fpa == fp1:
+                    fp1, fp2 = fp2, nullid
+                elif fpa == fp2:
+                    fp2 = nullid
+
+                # is the file unmodified from the parent?
+                if not meta and t == r.read(fp1):
+                    # record the proper existing parent in manifest
+                    # no need to add a revision
+                    new[f] = fp1
+                    continue
+
             new[f] = r.add(t, meta, tr, linkrev, fp1, fp2)
 
         # update manifest
@@ -1715,12 +1758,7 @@ class localrepository:
                 self.ui.status("(use update -m to merge across branches" +
                                " or -C to lose changes)\n")
                 return 1
-            # we have to remember what files we needed to get/change
-            # because any file that's different from either one of its
-            # parents must be in the changeset
             mode = 'm'
-            if moddirstate:
-                self.dirstate.update(mark.keys(), "m")
 
         if moddirstate:
             self.dirstate.setparents(p1, p2)
@@ -1739,7 +1777,7 @@ class localrepository:
                 self.wfile(f, "w").write(t)
             util.set_exec(self.wjoin(f), mf2[f])
             if moddirstate:
-                self.dirstate.update([f], mode)
+                self.dirstate.update([f], 'n')
 
         # merge the tricky bits
         files = merge.keys()

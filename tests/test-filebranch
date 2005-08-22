@@ -1,0 +1,73 @@
+#!/bin/sh
+
+# This test makes sure that we don't mark a file as merged with its ancestor
+# when we do a merge.
+
+cat <<'EOF' > merge
+#!/bin/sh
+echo merging for `basename $1`
+EOF
+chmod +x merge
+
+echo creating base
+hg init a
+cd a
+echo 1 > foo
+echo 1 > bar
+echo 1 > baz
+echo 1 > quux
+hg add foo bar baz quux
+hg commit -m "base" -d "0 0"
+
+cd ..
+hg clone a b
+
+echo creating branch a
+cd a
+echo 2a > foo
+echo 2a > bar
+hg commit -m "branch a" -d "0 0"
+
+echo creating branch b
+
+cd ..
+cd b
+echo 2b > foo
+echo 2b > baz
+hg commit -m "branch b" -d "0 0"
+
+echo "we shouldn't have anything but n state here"
+hg debugstate | cut -b 1-16,35-
+
+echo merging
+hg pull ../a
+env HGMERGE=../merge hg update -vm --debug
+
+echo 2m > foo
+echo 2b > baz
+echo new > quux
+
+echo "we shouldn't have anything but foo in merge state here"
+hg debugstate | cut -b 1-16,35- | grep "^m"
+
+hg ci -m "merge" -d "0 0"
+
+echo "main: we should have a merge here"
+hg debugindex .hg/00changelog.i
+
+echo "foo: we should have a merge here"
+hg debugindex .hg/data/foo.i
+
+echo "bar: we shouldn't have a merge here"
+hg debugindex .hg/data/bar.i
+
+echo "baz: we shouldn't have a merge here"
+hg debugindex .hg/data/baz.i
+
+echo "quux: we shouldn't have a merge here"
+hg debugindex .hg/data/quux.i
+
+echo "everything should be clean now"
+hg status
+
+hg verify
