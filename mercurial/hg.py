@@ -824,6 +824,7 @@ class localrepository:
         m1 = self.manifest.read(c1[0])
         mf1 = self.manifest.readflags(c1[0])
         m2 = self.manifest.read(c2[0])
+        changed = []
 
         if orig_parent == p1:
             update_dirstate = 1
@@ -864,6 +865,7 @@ class localrepository:
                         continue
 
                 mm[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
+                changed.append(f)
                 if update_dirstate:
                     self.dirstate.update([f], "n")
             except IOError:
@@ -878,7 +880,7 @@ class localrepository:
 
         mnode = self.manifest.add(mm, mfm, tr, linkrev, c1[0], c2[0])
         user = user or self.ui.username()
-        n = self.changelog.add(mnode, files, text, tr, p1, p2, user, date)
+        n = self.changelog.add(mnode, changed, text, tr, p1, p2, user, date)
         tr.close()
         if update_dirstate:
             self.dirstate.setparents(n, nullid)
@@ -887,6 +889,8 @@ class localrepository:
                match = util.always, force=False):
         commit = []
         remove = []
+        changed = []
+
         if files:
             for f in files:
                 s = self.dirstate.state(f)
@@ -962,6 +966,9 @@ class localrepository:
                     continue
 
             new[f] = r.add(t, meta, tr, linkrev, fp1, fp2)
+            # remember what we've added so that we can later calculate
+            # the files to pull from a set of changesets
+            changed.append(f)
 
         # update manifest
         m1.update(new)
@@ -976,16 +983,21 @@ class localrepository:
         new.sort()
 
         if not text:
-            edittext = "\n" + "HG: manifest hash %s\n" % hex(mn)
-            edittext += "".join(["HG: changed %s\n" % f for f in new])
+            edittext = ""
+            if p2 != nullid:
+                edittext += "HG: branch merge\n"
+            edittext += "\n" + "HG: manifest hash %s\n" % hex(mn)
+            edittext += "".join(["HG: changed %s\n" % f for f in changed])
             edittext += "".join(["HG: removed %s\n" % f for f in remove])
+            if not changed and not remove:
+                edittext += "HG: no files changed\n"
             edittext = self.ui.edit(edittext)
             if not edittext.rstrip():
                 return None
             text = edittext
 
         user = user or self.ui.username()
-        n = self.changelog.add(mn, new, text, tr, p1, p2, user, date)
+        n = self.changelog.add(mn, changed, text, tr, p1, p2, user, date)
         tr.close()
 
         self.dirstate.setparents(n)
@@ -1010,7 +1022,7 @@ class localrepository:
 
         def fcmp(fn, mf):
             t1 = self.wfile(fn).read()
-            t2 = self.file(fn).revision(mf[fn])
+            t2 = self.file(fn).revision(mf.get(fn, nullid))
             return cmp(t1, t2)
 
         def mfmatches(node):
@@ -1772,7 +1784,10 @@ class localrepository:
                 self.wfile(f, "w").write(t)
             util.set_exec(self.wjoin(f), mf2[f])
             if moddirstate:
-                self.dirstate.update([f], 'n')
+                if mode == 'm':
+                    self.dirstate.update([f], 'n', st_mtime=0)
+                else:
+                    self.dirstate.update([f], 'n')
 
         # merge the tricky bits
         files = merge.keys()
