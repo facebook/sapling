@@ -88,6 +88,16 @@
   :type 'sexp
   :group 'mercurial)
 
+(defcustom hg-commit-allow-empty-message nil
+  "Whether to allow changes to be committed with empty descriptions."
+  :type 'boolean
+  :group 'mercurial)
+
+(defcustom hg-commit-allow-empty-file-list nil
+  "Whether to allow changes to be committed without any modified files."
+  :type 'boolean
+  :group 'mercurial)
+
 (defcustom hg-rev-completion-limit 100
   "The maximum number of revisions that hg-read-rev will offer to complete.
 This affects memory usage and performance when prompting for revisions
@@ -126,6 +136,15 @@ Set this to nil on platforms with poor process management, such as Windows."
 
 (defvar hg-file-history nil)
 (defvar hg-rev-history nil)
+
+
+;;; Random constants.
+
+(defconst hg-commit-message-start
+  "--- Enter your commit message.  Type `C-c C-c' to commit. ---\n")
+
+(defconst hg-commit-message-end
+  "--- Files in bold will be committed.  Click to toggle selection. ---\n")
 
 
 ;;; hg-mode keymap.
@@ -193,6 +212,20 @@ Set this to nil on platforms with poor process management, such as Windows."
   'hg-buffer-mouse-clicked)
 
 
+;;; Commit mode keymaps.
+
+(defvar hg-commit-mode-map (make-sparse-keymap))
+(define-key hg-commit-mode-map "\C-c\C-c" 'hg-commit-finish)
+(define-key hg-commit-mode-map "\C-c\C-k" 'hg-commit-abort)
+
+(defvar hg-commit-mode-file-map (make-sparse-keymap))
+(define-key hg-commit-mode-file-map
+  (if hg-running-xemacs [button2] [mouse-2])
+  'hg-commit-mouse-clicked)
+(define-key hg-commit-mode-file-map " " 'hg-commit-toggle-file)
+(define-key hg-commit-mode-file-map "\r" 'hg-commit-toggle-file)
+  
+
 ;;; Convenience functions.
 
 (defsubst hg-binary ()
@@ -210,6 +243,11 @@ XEmacs and GNU Emacs."
   (if (fboundp 'replace-in-string)
       (replace-in-string str regexp newtext literal)
     (replace-regexp-in-string regexp newtext str nil literal)))
+
+(defsubst hg-strip (str)
+  "Strip leading and trailing white space from a string."
+  (hg-replace-in-string (hg-replace-in-string str "[ \t\r\n]+$" "")
+			"^[ \t\r\n]+" ""))
 
 (defsubst hg-chomp (str)
   "Strip trailing newlines from a string."
@@ -315,6 +353,19 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
 			   'hg-rev-history
 			   (or default "tip")))
       rev)))
+
+(defmacro hg-do-across-repo (path &rest body)
+  (let ((root-name (gensym "root-"))
+	(buf-name (gensym "buf-")))
+    `(let ((,root-name (hg-root ,path)))
+       (save-excursion
+	 (dolist (,buf-name (buffer-list))
+	   (set-buffer ,buf-name)
+	   (when (and hg-status (equal (hg-root buffer-file-name) ,root-name))
+	     ,@body))))))
+
+(put 'hg-do-across-repo 'lisp-indent-function 1)
+
 
 ;;; View mode bits.
 
@@ -533,9 +584,126 @@ With a prefix argument, prompt for the path to add."
   (interactive)
   (error "not implemented"))
 
-(defun hg-commit ()
+(defun hg-commit-toggle-file (pos)
+  "Toggle whether or not the file at POS will be committed."
+  (interactive "d")
+  (save-excursion
+    (goto-char pos)
+    (let ((face (get-text-property pos 'face))
+	  bol)
+      (beginning-of-line)
+      (setq bol (+ (point) 4))
+      (end-of-line)
+      (if (eq face 'bold)
+	  (progn
+	    (remove-text-properties bol (point) '(face nil))
+	    (message "%s will not be committed"
+		     (buffer-substring bol (point))))
+	(add-text-properties bol (point) '(face bold))
+	(message "%s will be committed"
+		 (buffer-substring bol (point)))))))
+	
+(defun hg-commit-mouse-clicked (event)
+  "Toggle whether or not the file at POS will be committed."
+  (interactive "@e")
+  (hg-commit-toggle-file (event-point event)))
+
+(defun hg-commit-abort ()
   (interactive)
   (error "not implemented"))
+
+(defun hg-commit-finish ()
+  (interactive)
+  (goto-char (point-min))
+  (search-forward hg-commit-message-start)
+  (let (message files)
+    (let ((start (point)))
+      (goto-char (point-max))
+      (search-backward hg-commit-message-end)
+      (setq message (hg-strip (buffer-substring start (point)))))
+    (when (and (= (length message) 0)
+	       (not hg-commit-allow-empty-message))
+      (error "Cannot proceed - commit message is empty"))
+    (forward-line 1)
+    (beginning-of-line)
+    (while (< (point) (point-max))
+      (let ((pos (+ (point) 4)))
+	(end-of-line)
+	(when (eq (get-text-property pos 'face) 'bold)
+	  (end-of-line)
+	  (setq files (cons (buffer-substring pos (point)) files))))
+      (forward-line 1))
+    (when (and (= (length files) 0)
+	       (not hg-commit-allow-empty-file-list))
+      (error "Cannot proceed - no files to commit"))
+    (setq message (concat message "\n"))
+    (apply 'hg-run0 "--cwd" hg-root "commit" "-m" message files)))
+
+(defun hg-commit-mode ()
+  "Mode for describing a commit of changes to a Mercurial repository.
+This involves two actions: describing the changes with a commit
+message, and choosing the files to commit.
+
+To describe the commit, simply type some text in the designated area.
+
+By default, all modified, added and removed files are selected for
+committing.  Files that will be committed are displayed in bold face\;
+those that will not are displayed in normal face.
+
+To toggle whether a file will be committed, move the cursor over a
+particular file and hit space or return.  Alternatively, middle click
+on the file.
+
+When you are finished with preparations, type \\[hg-commit-finish] to
+proceed with the commit."
+  (interactive)
+  (use-local-map hg-commit-mode-map)
+  (set-syntax-table text-mode-syntax-table)
+  (setq local-abbrev-table text-mode-abbrev-table
+	major-mode 'hg-commit-mode
+	mode-name "Hg-Commit")
+  (set-buffer-modified-p nil)
+  (setq buffer-undo-list nil)
+  (run-hooks 'text-mode-hook 'hg-commit-mode-hook))
+
+(defun hg-commit ()
+  (interactive)
+  (let ((root (hg-root))
+	(prev-buffer (current-buffer)))
+    (unless root
+      (error "Cannot commit outside a repository!"))
+    (hg-do-across-repo
+	(vc-buffer-sync))
+    (let* ((buf-name (format "*Mercurial: Commit %s*" root)))
+      (pop-to-buffer (get-buffer-create buf-name))
+      (when (= (point-min) (point-max))
+	(set (make-local-variable 'hg-root) root)
+	(set (make-local-variable 'hg-prev-buffer) prev-buffer)
+	(insert "\n")
+	(let ((bol (point)))
+	  (insert hg-commit-message-end)
+	  (add-text-properties bol (point) '(read-only t face bold-italic)))
+	(let ((file-area (point)))
+	  (insert (hg-chomp (hg-run0 "--cwd" root "status" "-arm")))
+	  (goto-char file-area)
+	  (while (< (point) (point-max))
+	    (let ((bol (point)))
+	      (forward-char 1)
+	      (insert "  ")
+	      (end-of-line)
+	      (add-text-properties (+ bol 4) (point)
+				   '(face bold mouse-face highlight)))
+	    (forward-line 1))
+	  (goto-char file-area)
+	  (add-text-properties (point) (point-max)
+			       `(read-only t keymap ,hg-commit-mode-file-map))
+	  (goto-char (point-min))
+	  (insert hg-commit-message-start)
+	  (add-text-properties (point-min) (point)
+			       '(read-only t face bold-italic))
+	  (insert "\n\n")
+	  (forward-line -1)
+	  (hg-commit-mode))))))
 
 (defun hg-diff (path &optional rev1 rev2)
   "Show the differences between REV1 and REV2 of PATH.
@@ -651,7 +819,7 @@ When called interactively, the root is printed.  A prefix argument
 prompts for a path to check."
   (interactive (list (hg-read-file-name)))
   (let ((root (do ((prev nil dir)
-		   (dir (file-name-directory (or path (buffer-file-name)))
+		   (dir (file-name-directory (or path buffer-file-name ""))
 			(file-name-directory (directory-file-name dir))))
 		  ((equal prev dir))
 		(when (file-directory-p (concat dir ".hg"))
