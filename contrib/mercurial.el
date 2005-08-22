@@ -100,6 +100,12 @@ in a repository with a lot of history."
   :type 'integer
   :group 'mercurial)
 
+(defcustom hg-update-modeline t
+  "Whether to update the modeline with the status of a file after every save.
+Set this to nil on platforms with poor process management, such as Windows."
+  :type 'boolean
+  :group 'mercurial)
+
 
 ;;; Other variables.
 
@@ -137,7 +143,7 @@ in a repository with a lot of history."
 (define-key hg-prefix-map "l" 'hg-log)
 (define-key hg-prefix-map "n" 'hg-commit-file)
 ;; (define-key hg-prefix-map "r" 'hg-update)
-(define-key hg-prefix-map "u" 'hg-revert-file)
+(define-key hg-prefix-map "u" 'hg-revert-buffer)
 (define-key hg-prefix-map "~" 'hg-version-other-window)
 
 (defvar hg-mode-map (make-sparse-keymap))
@@ -189,12 +195,12 @@ in a repository with a lot of history."
 
 ;;; Convenience functions.
 
-(defun hg-binary ()
+(defsubst hg-binary ()
   (if hg-binary
       hg-binary
     (error "No `hg' executable found!")))
 
-(defun hg-replace-in-string (str regexp newtext &optional literal)
+(defsubst hg-replace-in-string (str regexp newtext &optional literal)
   "Replace all matches in STR for REGEXP with NEWTEXT string.
 Return the new string.  Optional LITERAL non-nil means do a literal
 replacement.
@@ -205,7 +211,7 @@ XEmacs and GNU Emacs."
       (replace-in-string str regexp newtext literal)
     (replace-regexp-in-string regexp newtext str nil literal)))
 
-(defun hg-chomp (str)
+(defsubst hg-chomp (str)
   "Strip trailing newlines from a string."
   (hg-replace-in-string str "[\r\n]+$" ""))
 
@@ -268,7 +274,8 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
   (defun view-minor-mode (prev-buffer exit-func)
     (view-mode)))
 
-(defun hg-abbrev-file-name (file)
+(defsubst hg-abbrev-file-name (file)
+  "Portable wrapper around abbreviate-file-name."
   (if hg-running-xemacs
       (abbreviate-file-name file t)
     (abbreviate-file-name file)))
@@ -341,7 +348,8 @@ current frame."
 	(let ((state (assoc (substring output 0 (min (length output) 2))
 			    '(("M " . modified)
 			      ("A " . added)
-			      ("R " . removed)))))
+			      ("R " . removed)
+			      ("? " . nil)))))
 	  (if state
 	      (cdr state)
 	    'normal)))))
@@ -381,10 +389,54 @@ being viewed."
 
 (put 'hg-view-output 'lisp-indent-function 1)
 
+;;; Context save and restore across revert.
+
+(defun hg-position-context (pos)
+  "Return information to help find the given position again."
+  (let* ((end (min (point-max) (+ pos 98))))
+    (list pos
+	  (buffer-substring (max (point-min) (- pos 2)) end)
+	  (- end pos))))
+
+(defun hg-buffer-context ()
+  "Return information to help restore a user's editing context.
+This is useful across reverts and merges, where a context is likely
+to have moved a little, but not really changed."
+  (let ((point-context (hg-position-context (point)))
+	(mark-context (let ((mark (mark-marker)))
+			(and mark (hg-position-context mark)))))
+    (list point-context mark-context)))
+	
+(defun hg-find-context (ctx)
+  "Attempt to find a context in the given buffer.
+Always returns a valid, hopefully sane, position."
+  (let ((pos (nth 0 ctx))
+	(str (nth 1 ctx))
+	(fixup (nth 2 ctx)))
+    (save-excursion
+      (goto-char (max (point-min) (- pos 15000)))
+      (if (and (not (equal str ""))
+	       (search-forward str nil t))
+	  (- (point) fixup)
+	(max pos (point-min))))))
+
+(defun hg-restore-context (ctx)
+  "Attempt to restore the user's editing context."
+  (let ((point-context (nth 0 ctx))
+	(mark-context (nth 1 ctx)))
+    (goto-char (hg-find-context point-context))
+    (when mark-context
+      (set-mark (hg-find-context mark-context)))))
+
+
 ;;; Hooks.
 
-(defun hg-mode-line ()
-  (when (hg-root)
+(defun hg-mode-line (&optional force)
+  "Update the modeline with the current status of a file.
+An update occurs if optional argument FORCE is non-nil,
+hg-update-modeline is non-nil, or we have not yet checked the state of
+the file."
+  (when (and (hg-root) (or force hg-update-modeline (not hg-mode)))
     (let ((status (hg-file-status buffer-file-name)))
       (setq hg-status status
 	    hg-mode (and status (concat " Hg:"
@@ -438,7 +490,7 @@ Help overview (what you are reading)  G    C-c h h      hg-help-overview
 
 Tell Mercurial to manage a file       G    C-c h a      hg-add
 Commit changes to current file only   L    C-x v n      hg-commit
-Undo changes to file since commit     L    C-x v u      hg-revert-file
+Undo changes to file since commit     L    C-x v u      hg-revert-buffer
 
 Diff file vs last checkin             L    C-x v =      hg-diff
 
@@ -488,7 +540,10 @@ Push changes                          G    C-c h >      hg-push"
 		     (hg-read-rev " to start with")
 		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
 		       (and (not (eq rev2 'working-dir)) rev2))))
-  (let ((a-path (hg-abbrev-file-name path)))
+  (unless rev1
+    (setq rev1 "-1"))
+  (let ((a-path (hg-abbrev-file-name path))
+	diff)
     (hg-view-output ((if (equal rev1 rev2)
 			 (format "Mercurial: Rev %s of %s" rev1 a-path)
 		       (format "Mercurial: Rev %s to %s of %s"
@@ -497,7 +552,9 @@ Push changes                          G    C-c h >      hg-push"
 	  (call-process (hg-binary) nil t nil "diff" "-r" rev1 "-r" rev2 path)
 	(call-process (hg-binary) nil t nil "diff" "-r" rev1 path))
       (diff-mode)
-      (font-lock-fontify-buffer))))
+      (setq diff (not (= (point-min) (point-max))))
+      (font-lock-fontify-buffer))
+    diff))
 
 (defun hg-forget (path)
   (interactive (list (hg-read-file-name " to forget")))
@@ -521,8 +578,6 @@ Push changes                          G    C-c h >      hg-push"
   (interactive (list (hg-read-file-name " to log")
 		     (hg-read-rev " to start with" "-1")
 		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
-  (message "log %s %s" rev1 rev2)
-  (sit-for 1)
   (let ((a-path (hg-abbrev-file-name path)))
     (hg-view-output ((if (equal rev1 rev2)
 			 (format "Mercurial: Rev %s of %s" rev1 a-path)
@@ -544,13 +599,33 @@ Push changes                          G    C-c h >      hg-push"
   (interactive)
   (error "not implemented"))
 
-(defun hg-revert ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-revert-buffer-internal ()
+  (let ((ctx (hg-buffer-context)))
+    (message "Reverting %s..." buffer-file-name)
+    (hg-run0 "revert" buffer-file-name)
+    (revert-buffer t t t)
+    (hg-restore-context ctx)
+    (hg-mode-line)
+    (message "Reverting %s...done" buffer-file-name)))
 
-(defun hg-revert-file ()
+(defun hg-revert-buffer ()
   (interactive)
-  (error "not implemented"))
+  (let ((vc-suppress-confirm nil)
+	(obuf (current-buffer))
+	diff)
+    (vc-buffer-sync)
+    (unwind-protect
+	(setq diff (hg-diff buffer-file-name))
+      (when diff
+	(unless (yes-or-no-p "Discard changes? ")
+	  (error "Revert cancelled")))
+      (when diff
+	(let ((buf (current-buffer)))
+	  (delete-window (selected-window))
+	  (kill-buffer buf))))
+    (set-buffer obuf)
+    (when diff
+      (hg-revert-buffer-internal))))
 
 (defun hg-root (&optional path)
   (interactive (list (hg-read-file-name)))
@@ -587,6 +662,5 @@ Push changes                          G    C-c h >      hg-push"
 
 
 ;;; Local Variables:
-;;; mode: emacs-lisp
 ;;; prompt-to-byte-compile: nil
 ;;; end:
