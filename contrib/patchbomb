@@ -168,10 +168,11 @@ def patchbomb(ui, repo, *revs, **opts):
         len(patches),
         opts['subject'] or
         prompt('Subject:', rest = ' [PATCH 0 of %d] ' % len(patches)))
-    to = (opts['to'] or ui.config('patchbomb', 'to') or
-          [s.strip() for s in prompt('To').split(',')])
+    to = opts['to'] or ui.config('patchbomb', 'to') or prompt('To')
+    to = [t.strip() for t in to.split(',')]
     cc = (opts['cc'] or ui.config('patchbomb', 'cc') or
-          [s.strip() for s in prompt('Cc', default = '').split(',')])
+          prompt('Cc', default = ''))
+    cc = [c.strip() for c in cc.split(',')]
 
     ui.write('Finish with ^D or a dot on a line by itself.\n\n')
 
