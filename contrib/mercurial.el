@@ -514,6 +514,8 @@ Push changes                          G    C-c h >      hg-push"
     (insert (documentation 'hg-help-overview))))
 
 (defun hg-add (path)
+  "Add PATH to the Mercurial repository on the next commit.
+With a prefix argument, prompt for the path to add."
   (interactive (list (hg-read-file-name " to add")))
   (let ((buf (current-buffer))
 	(update (equal buffer-file-name path)))
@@ -536,6 +538,11 @@ Push changes                          G    C-c h >      hg-push"
   (error "not implemented"))
 
 (defun hg-diff (path &optional rev1 rev2)
+  "Show the differences between REV1 and REV2 of PATH.
+When called interactively, the default behaviour is to treat REV1 as
+the tip revision, REV2 as the current edited version of the file, and
+PATH as the file edited in the current buffer.
+With a prefix argument, prompt for all of these."
   (interactive (list (hg-read-file-name " to diff")
 		     (hg-read-rev " to start with")
 		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
@@ -557,6 +564,10 @@ Push changes                          G    C-c h >      hg-push"
     diff))
 
 (defun hg-forget (path)
+  "Lose track of PATH, which has been added, but not yet committed.
+This will prevent the file from being incorporated into the Mercurial
+repository on the next commit.
+With a prefix argument, prompt for the path to forget."
   (interactive (list (hg-read-file-name " to forget")))
   (let ((buf (current-buffer))
 	(update (equal buffer-file-name path)))
@@ -575,6 +586,9 @@ Push changes                          G    C-c h >      hg-push"
   (error "not implemented"))
 
 (defun hg-log (path &optional rev1 rev2)
+  "Display the revision history of PATH, between REV1 and REV2.
+REV1 defaults to the initial revision, while REV2 defaults to the tip.
+With a prefix argument, prompt for each parameter."
   (interactive (list (hg-read-file-name " to log")
 		     (hg-read-rev " to start with" "-1")
 		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
@@ -609,6 +623,9 @@ Push changes                          G    C-c h >      hg-push"
     (message "Reverting %s...done" buffer-file-name)))
 
 (defun hg-revert-buffer ()
+  "Revert current buffer's file back to the latest committed version.
+If the file has not changed, nothing happens.  Otherwise, this
+displays a diff and asks for confirmation before reverting."
   (interactive)
   (let ((vc-suppress-confirm nil)
 	(obuf (current-buffer))
@@ -628,6 +645,10 @@ Push changes                          G    C-c h >      hg-push"
       (hg-revert-buffer-internal))))
 
 (defun hg-root (&optional path)
+  "Return the root of the repository that contains the given path.
+If the path is outside a repository, return nil.
+When called interactively, the root is printed.  A prefix argument
+prompts for a path to check."
   (interactive (list (hg-read-file-name)))
   (let ((root (do ((prev nil dir)
 		   (dir (file-name-directory (or path (buffer-file-name)))
@@ -643,9 +664,18 @@ Push changes                          G    C-c h >      hg-push"
     root))
 
 (defun hg-status (path)
+  "Print revision control status of a file or directory.
+With prefix argument, prompt for the path to give status for.
+Names are displayed relative to the repository root."
   (interactive (list (hg-read-file-name " for status" (hg-root))))
   (let ((root (hg-root)))
-    (hg-view-output (hg-output-buffer-name)
+    (hg-view-output ((format "Mercurial: Status of %s in %s"
+			     (let ((name (substring (expand-file-name path)
+						    (length root))))
+			       (if (> (length name) 0)
+				   name
+				 "*"))
+			     (hg-abbrev-file-name root)))
       (apply 'call-process (hg-binary) nil t nil
 	     (list "--cwd" root "status" path)))))
 
