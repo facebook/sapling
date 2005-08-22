@@ -1617,7 +1617,6 @@ class localrepository:
         merge = {}
         get = {}
         remove = []
-        mark = {}
 
         # construct a working dir manifest
         mw = m1.copy()
@@ -1650,7 +1649,6 @@ class localrepository:
                     t1 = self.wfile(f).read()
                     t2 = self.file(f).revision(m2[f])
                     if cmp(t1, t2) == 0:
-                        mark[f] = 1
                         n = m2[f]
                     del t1, t2
 
@@ -1673,8 +1671,6 @@ class localrepository:
                         self.ui.debug(" remote %s is newer, get\n" % f)
                         get[f] = m2[f]
                         s = 1
-                    else:
-                        mark[f] = 1
                 elif f in umap:
                     # this unknown file is the same as the checkout
                     get[f] = m2[f]
@@ -1689,7 +1685,6 @@ class localrepository:
                         if mode != b:
                             self.ui.debug(" updating permissions for %s\n" % f)
                             util.set_exec(self.wjoin(f), mode)
-                            mark[f] = 1
                 del m2[f]
             elif f in ma:
                 if n != ma[f]:
