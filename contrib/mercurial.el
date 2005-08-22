@@ -4,8 +4,6 @@
 
 ;; Author: Bryan O'Sullivan <bos@serpentine.com>
 
-;; $Id$
-
 ;; mercurial.el is free software; you can redistribute it and/or
 ;; modify it under the terms of version 2 of the GNU General Public
 ;; License as published by the Free Software Foundation.
@@ -22,7 +20,7 @@
 
 ;;; Commentary:
 
-;; This mode builds upon Emacs's VC mode to provide flexible
+;; mercurial.el builds upon Emacs's VC mode to provide flexible
 ;; integration with the Mercurial distributed SCM tool.
 
 ;; To get going as quickly as possible, load mercurial.el into Emacs and
@@ -34,9 +32,9 @@
 ;; job for the commercial Perforce SCM product.  In fact, substantial
 ;; chunks of code are adapted from p4.el.
 
-;; This code has been developed under XEmacs 21.5, and may will not
-;; work as well under GNU Emacs (albeit tested under 21.2).  Patches
-;; to enhance the portability of this code, fix bugs, and add features
+;; This code has been developed under XEmacs 21.5, and may not work as
+;; well under GNU Emacs (albeit tested under 21.4).  Patches to
+;; enhance the portability of this code, fix bugs, and add features
 ;; are most welcome.  You can clone a Mercurial repository for this
 ;; package from http://www.serpentine.com/hg/hg-emacs
 
@@ -314,18 +312,26 @@ If the command does not exit with a zero status code, raise an error."
       (hg-diff hg-view-file-name rev rev prev-buf))
      ((message "I don't know how to do that yet")))))
 
+(defsubst hg-event-point (event)
+  "Return the character position of the mouse event EVENT."
+  (if hg-running-xemacs
+      (event-point event)
+    (posn-point (event-start event))))
+
+(defsubst hg-event-window (event)
+  "Return the window over which mouse event EVENT occurred."
+  (if hg-running-xemacs
+      (event-window event)
+    (posn-window (event-start event))))
+
 (defun hg-buffer-mouse-clicked (event)
   "Translate the mouse clicks in a HG log buffer to character events.
 These are then handed off to `hg-buffer-commands'.
 
 Handle frickin' frackin' gratuitous event-related incompatibilities."
   (interactive "e")
-  (if hg-running-xemacs
-      (progn
-	(select-window (event-window event))
-	(hg-buffer-commands (event-point event)))
-    (select-window (posn-window (event-end event)))
-    (hg-buffer-commands (posn-point (event-start event)))))
+  (select-window (hg-event-window event))
+  (hg-buffer-commands (hg-event-point event)))
 
 (unless (fboundp 'view-minor-mode)
   (defun view-minor-mode (prev-buffer exit-func)
@@ -619,6 +625,7 @@ With a prefix argument, prompt for the path to add."
   (save-excursion
     (goto-char pos)
     (let ((face (get-text-property pos 'face))
+	  (inhibit-read-only t)
 	  bol)
       (beginning-of-line)
       (setq bol (+ (point) 4))
@@ -635,7 +642,7 @@ With a prefix argument, prompt for the path to add."
 (defun hg-commit-mouse-clicked (event)
   "Toggle whether or not the file at POS will be committed."
   (interactive "@e")
-  (hg-commit-toggle-file (event-point event)))
+  (hg-commit-toggle-file (hg-event-point event)))
 
 (defun hg-commit-kill ()
   "Kill the commit currently being prepared."
@@ -740,7 +747,7 @@ Key bindings
 	(insert "\n")
 	(let ((bol (point)))
 	  (insert hg-commit-message-end)
-	  (add-text-properties bol (point) '(read-only t face bold-italic)))
+	  (add-text-properties bol (point) '(face bold-italic)))
 	(let ((file-area (point)))
 	  (insert modified-files)
 	  (goto-char file-area)
@@ -754,13 +761,21 @@ Key bindings
 	    (forward-line 1))
 	  (goto-char file-area)
 	  (add-text-properties (point) (point-max)
-			       `(read-only t keymap ,hg-commit-mode-file-map))
+			       `(keymap ,hg-commit-mode-file-map))
 	  (goto-char (point-min))
 	  (insert hg-commit-message-start)
-	  (add-text-properties (point-min) (point)
-			       '(read-only t face bold-italic))
+	  (add-text-properties (point-min) (point) '(face bold-italic))
 	  (insert "\n\n")
 	  (forward-line -1)
+	  (save-excursion
+	    (goto-char (point-max))
+	    (search-backward hg-commit-message-end)
+	    (add-text-properties (match-beginning 0) (point-max)
+				 '(read-only t))
+	    (goto-char (point-min))
+	    (search-forward hg-commit-message-start)
+	    (add-text-properties (match-beginning 0) (match-end 0)
+				 '(read-only t)))
 	  (hg-commit-mode))))))
 
 (defun hg-diff (path &optional rev1 rev2)
