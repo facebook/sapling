@@ -798,18 +798,21 @@ With a prefix argument, prompt for all of these."
 		     (hg-read-rev " to start with")
 		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
 		       (and (not (eq rev2 'working-dir)) rev2))))
-  (unless rev1
-    (setq rev1 "-1"))
   (hg-sync-buffers path)
   (let ((a-path (hg-abbrev-file-name path))
+	(r1 (or rev1 "tip"))
 	diff)
-    (hg-view-output ((if (equal rev1 rev2)
-			 (format "Mercurial: Rev %s of %s" rev1 a-path)
-		       (format "Mercurial: Rev %s to %s of %s"
-			       rev1 (or rev2 "Current") a-path)))
+    (hg-view-output ((cond
+		      ((and (equal r1 "tip") (not rev2))
+		       (format "Mercurial: Diff against tip of %s" a-path))
+		      ((equal r1 rev2)
+		       (format "Mercurial: Diff of rev %s of %s" r1 a-path))
+		      (t
+		       (format "Mercurial: Diff from rev %s to %s of %s"
+			       r1 (or rev2 "Current") a-path))))
       (if rev2
-	  (call-process (hg-binary) nil t nil "diff" "-r" rev1 "-r" rev2 path)
-	(call-process (hg-binary) nil t nil "diff" "-r" rev1 path))
+	  (call-process (hg-binary) nil t nil "diff" "-r" r1 "-r" rev2 path)
+	(call-process (hg-binary) nil t nil "diff" "-r" r1 path))
       (diff-mode)
       (setq diff (not (= (point-min) (point-max))))
       (font-lock-fontify-buffer))
@@ -844,20 +847,22 @@ With a prefix argument, prompt for the path to forget."
 
 (defun hg-log (path &optional rev1 rev2)
   "Display the revision history of PATH, between REV1 and REV2.
-REV1 defaults to the initial revision, while REV2 defaults to the tip.
-With a prefix argument, prompt for each parameter.
-Variable hg-log-limit controls the number of log entries displayed."
+REV1 defaults to hg-log-limit changes from the tip revision, while
+REV2 defaults to the tip.
+With a prefix argument, prompt for each parameter."
   (interactive (list (hg-read-file-name " to log")
 		     (hg-read-rev " to start with" "-1")
 		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
-  (let ((a-path (hg-abbrev-file-name path)))
-    (hg-view-output ((if (equal rev1 rev2)
-			 (format "Mercurial: Rev %s of %s" rev1 a-path)
-		       (format "Mercurial: Rev %s to %s of %s"
-			       rev1 (or rev2 "Current") a-path)))
+  (let ((a-path (hg-abbrev-file-name path))
+	(r1 (or rev1 (format "-%d" hg-log-limit)))
+	(r2 (or rev2 rev1 "-1")))
+    (hg-view-output ((if (equal r1 r2)
+			 (format "Mercurial: Log of rev %s of %s" rev1 a-path)
+		       (format "Mercurial: Log from rev %s to %s of %s"
+			       r1 r2 a-path)))
       (if (> (length path) (length (hg-root path)))
-	  (call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2 path)
-	(call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2))
+	  (call-process (hg-binary) nil t nil "log" "-r" r1 "-r" r2 path)
+	(call-process (hg-binary) nil t nil "log" "-r" r1 "-r" r2))
       (font-lock-fontify-buffer))))
 
 (defun hg-log-repo (path &optional rev1 rev2)
