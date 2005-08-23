@@ -700,7 +700,7 @@ class localrepository:
                 h = fl.heads()
                 h.reverse()
                 for r in h:
-                    for l in fl.revision(r).splitlines():
+                    for l in fl.read(r).splitlines():
                         if l:
                             n, k = l.split(" ", 1)
                             addtag(self, k, n)
@@ -1022,7 +1022,7 @@ class localrepository:
 
         def fcmp(fn, mf):
             t1 = self.wfile(fn).read()
-            t2 = self.file(fn).revision(mf.get(fn, nullid))
+            t2 = self.file(fn).read(mf.get(fn, nullid))
             return cmp(t1, t2)
 
         def mfmatches(node):
@@ -1659,7 +1659,7 @@ class localrepository:
                 # is the wfile new since m1, and match m2?
                 if f not in m1:
                     t1 = self.wfile(f).read()
-                    t2 = self.file(f).revision(m2[f])
+                    t2 = self.file(f).read(m2[f])
                     if cmp(t1, t2) == 0:
                         n = m2[f]
                     del t1, t2
@@ -1834,7 +1834,7 @@ class localrepository:
             pre = "%s~%s." % (os.path.basename(fn), prefix)
             (fd, name) = tempfile.mkstemp("", pre)
             f = os.fdopen(fd, "wb")
-            f.write(fl.revision(node))
+            f.write(fl.read(node))
             f.close()
             return name
 
