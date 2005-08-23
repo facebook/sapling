@@ -41,7 +41,7 @@ hg debugstate | cut -b 1-16,35-
 
 echo merging
 hg pull ../a
-env HGMERGE=../merge hg update -vm --debug
+env HGMERGE=../merge hg update -vm
 
 echo 2m > foo
 echo 2b > baz
@@ -55,6 +55,9 @@ hg ci -m "merge" -d "0 0"
 echo "main: we should have a merge here"
 hg debugindex .hg/00changelog.i
 
+echo "log should show foo and quux changed"
+hg log -v -r tip
+
 echo "foo: we should have a merge here"
 hg debugindex .hg/data/foo.i
 
@@ -66,6 +69,9 @@ hg debugindex .hg/data/baz.i
 
 echo "quux: we shouldn't have a merge here"
 hg debugindex .hg/data/quux.i
+
+echo "manifest entries should match tips of all files"
+hg manifest
 
 echo "everything should be clean now"
 hg status

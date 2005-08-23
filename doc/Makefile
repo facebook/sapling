@@ -2,7 +2,7 @@ SOURCES=$(wildcard *.[0-9].txt)
 MAN=$(SOURCES:%.txt=%)
 HTML=$(SOURCES:%.txt=%.html)
 
-all: man
+all: man html
 
 man: $(MAN)
 

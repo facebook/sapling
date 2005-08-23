@@ -700,7 +700,7 @@ class localrepository:
                 h = fl.heads()
                 h.reverse()
                 for r in h:
-                    for l in fl.revision(r).splitlines():
+                    for l in fl.read(r).splitlines():
                         if l:
                             n, k = l.split(" ", 1)
                             addtag(self, k, n)
@@ -1022,7 +1022,7 @@ class localrepository:
 
         def fcmp(fn, mf):
             t1 = self.wfile(fn).read()
-            t2 = self.file(fn).revision(mf.get(fn, nullid))
+            t2 = self.file(fn).read(mf.get(fn, nullid))
             return cmp(t1, t2)
 
         def mfmatches(node):
@@ -1659,7 +1659,7 @@ class localrepository:
                 # is the wfile new since m1, and match m2?
                 if f not in m1:
                     t1 = self.wfile(f).read()
-                    t2 = self.file(f).revision(m2[f])
+                    t2 = self.file(f).read(m2[f])
                     if cmp(t1, t2) == 0:
                         n = m2[f]
                     del t1, t2
@@ -1749,7 +1749,7 @@ class localrepository:
 
         if linear_path or force:
             # we don't need to do any magic, just jump to the new rev
-            mode = 'n'
+            branch_merge = False
             p1, p2 = p2, nullid
         else:
             if not allow:
@@ -1765,7 +1765,7 @@ class localrepository:
                 self.ui.status("(use update -m to merge across branches" +
                                " or -C to lose changes)\n")
                 return 1
-            mode = 'm'
+            branch_merge = True
 
         if moddirstate:
             self.dirstate.setparents(p1, p2)
@@ -1784,8 +1784,8 @@ class localrepository:
                 self.wfile(f, "w").write(t)
             util.set_exec(self.wjoin(f), mf2[f])
             if moddirstate:
-                if mode == 'm':
-                    self.dirstate.update([f], 'n', st_mtime=0)
+                if branch_merge:
+                    self.dirstate.update([f], 'n', st_mtime=-1)
                 else:
                     self.dirstate.update([f], 'n')
 
@@ -1794,23 +1794,22 @@ class localrepository:
         files.sort()
         for f in files:
             self.ui.status("merging %s\n" % f)
-            m, o, flag = merge[f]
-            self.merge3(f, m, o)
+            my, other, flag = merge[f]
+            self.merge3(f, my, other)
             util.set_exec(self.wjoin(f), flag)
             if moddirstate:
-                if mode == 'm':
-                    # only update dirstate on branch merge, otherwise we
-                    # could mark files with changes as unchanged
-                    self.dirstate.update([f], mode)
-                elif p2 == nullid:
-                    # update dirstate from parent1's manifest
-                    m1n = self.changelog.read(p1)[0]
-                    m1 = self.manifest.read(m1n)
-                    f_len = len(self.file(f).read(m1[f]))
-                    self.dirstate.update([f], mode, st_size=f_len, st_mtime=0)
+                if branch_merge:
+                    # We've done a branch merge, mark this file as merged
+                    # so that we properly record the merger later
+                    self.dirstate.update([f], 'm')
                 else:
-                    self.ui.warn("Second parent without branch merge!?\n"
-                                 "Dirstate for file %s may be wrong.\n" % f)
+                    # We've update-merged a locally modified file, so
+                    # we set the dirstate to emulate a normal checkout
+                    # of that file some time in the past. Thus our
+                    # merge will appear as a normal local file
+                    # modification.
+                    f_len = len(self.file(f).read(other))
+                    self.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
 
         remove.sort()
         for f in remove:
@@ -1823,10 +1822,10 @@ class localrepository:
             try: os.removedirs(os.path.dirname(self.wjoin(f)))
             except: pass
         if moddirstate:
-            if mode == 'n':
-                self.dirstate.forget(remove)
-            else:
+            if branch_merge:
                 self.dirstate.update(remove, 'r')
+            else:
+                self.dirstate.forget(remove)
 
     def merge3(self, fn, my, other):
         """perform a 3-way merge in the working directory"""
@@ -1835,7 +1834,7 @@ class localrepository:
             pre = "%s~%s." % (os.path.basename(fn), prefix)
             (fd, name) = tempfile.mkstemp("", pre)
             f = os.fdopen(fd, "wb")
-            f.write(fl.revision(node))
+            f.write(fl.read(node))
             f.close()
             return name
 
