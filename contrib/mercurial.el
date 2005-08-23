@@ -47,6 +47,7 @@
 (require 'cl)
 (require 'diff-mode)
 (require 'easymenu)
+(require 'executable)
 (require 'vc)
 
 
@@ -295,6 +296,17 @@ If the command does not exit with a zero status code, raise an error."
 	       (car res))
       (cdr res))))
 
+(defun hg-sync-buffers (path)
+  "Sync buffers visiting PATH with their on-disk copies.
+If PATH is not being visited, but is under the repository root, sync
+all buffers visiting files in the repository."
+  (let ((buf (find-buffer-visiting path)))
+    (if buf
+	(with-current-buffer buf
+	  (vc-buffer-sync))
+      (hg-do-across-repo path
+	(vc-buffer-sync)))))
+  
 (defun hg-buffer-commands (pnt)
   "Use the properties of a character to do something sensible."
   (interactive "d")
@@ -732,8 +744,7 @@ Key bindings
 	modified-files)
     (unless root
       (error "Cannot commit outside a repository!"))
-    (hg-do-across-repo
-	(vc-buffer-sync))
+    (hg-sync-buffers root)
     (setq modified-files (hg-chomp (hg-run0 "--cwd" root "status" "-arm")))
     (when (and (= (length modified-files) 0)
 	       (not hg-commit-allow-empty-file-list))
@@ -789,6 +800,7 @@ With a prefix argument, prompt for all of these."
 		       (and (not (eq rev2 'working-dir)) rev2))))
   (unless rev1
     (setq rev1 "-1"))
+  (hg-sync-buffers path)
   (let ((a-path (hg-abbrev-file-name path))
 	diff)
     (hg-view-output ((if (equal rev1 rev2)
