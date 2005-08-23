@@ -51,7 +51,11 @@ fi
 grep -vE '^(HG: manifest hash .*)?$' "$1" >> "$HGTMP/msg"
 
 CHECKSUM=`md5sum "$HGTMP/msg"`
-$EDITOR "$HGTMP/msg" "$HGTMP/diff" || exit $?
+if [ -s "$HGTMP/diff" ]; then
+    $EDITOR "$HGTMP/msg" "$HGTMP/diff" || exit $?
+else
+    $EDITOR "$HGTMP/msg" || exit $?
+fi
 echo "$CHECKSUM" | md5sum -c >/dev/null 2>&1 && exit 13
 
 if [ "$SIGN" == "1" ]; then
