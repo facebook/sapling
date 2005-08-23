@@ -67,11 +67,10 @@
   :group 'tools)
 
 (defcustom hg-binary
-  (dolist (path '("~/bin/hg"
-		  "/usr/bin/hg"
-		  "/usr/local/bin/hg"))
-    (when (file-executable-p path)
-      (return path)))
+    (or (executable-find "hg")
+	(dolist (path '("~/bin/hg" "/usr/bin/hg" "/usr/local/bin/hg"))
+	  (when (file-executable-p path)
+	    (return path))))
   "The path to Mercurial's hg executable."
   :type '(file :must-match t)
   :group 'mercurial)
