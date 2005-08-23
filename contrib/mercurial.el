@@ -4,8 +4,6 @@
 
 ;; Author: Bryan O'Sullivan <bos@serpentine.com>
 
-;; $Id$
-
 ;; mercurial.el is free software; you can redistribute it and/or
 ;; modify it under the terms of version 2 of the GNU General Public
 ;; License as published by the Free Software Foundation.
@@ -22,7 +20,7 @@
 
 ;;; Commentary:
 
-;; This mode builds upon Emacs's VC mode to provide flexible
+;; mercurial.el builds upon Emacs's VC mode to provide flexible
 ;; integration with the Mercurial distributed SCM tool.
 
 ;; To get going as quickly as possible, load mercurial.el into Emacs and
@@ -34,9 +32,9 @@
 ;; job for the commercial Perforce SCM product.  In fact, substantial
 ;; chunks of code are adapted from p4.el.
 
-;; This code has been developed under XEmacs 21.5, and may will not
-;; work as well under GNU Emacs (albeit tested under 21.2).  Patches
-;; to enhance the portability of this code, fix bugs, and add features
+;; This code has been developed under XEmacs 21.5, and may not work as
+;; well under GNU Emacs (albeit tested under 21.4).  Patches to
+;; enhance the portability of this code, fix bugs, and add features
 ;; are most welcome.  You can clone a Mercurial repository for this
 ;; package from http://www.serpentine.com/hg/hg-emacs
 
@@ -83,9 +81,30 @@
   :type 'sexp
   :group 'mercurial)
 
+(defcustom hg-commit-mode-hook nil
+  "Hook run when a buffer is created to prepare a commit."
+  :type 'sexp
+  :group 'mercurial)
+
+(defcustom hg-pre-commit-hook nil
+  "Hook run before a commit is performed.
+If you want to prevent the commit from proceeding, raise an error."
+  :type 'sexp
+  :group 'mercurial)
+
 (defcustom hg-global-prefix "\C-ch"
   "The global prefix for Mercurial keymap bindings."
   :type 'sexp
+  :group 'mercurial)
+
+(defcustom hg-commit-allow-empty-message nil
+  "Whether to allow changes to be committed with empty descriptions."
+  :type 'boolean
+  :group 'mercurial)
+
+(defcustom hg-commit-allow-empty-file-list nil
+  "Whether to allow changes to be committed without any modified files."
+  :type 'boolean
   :group 'mercurial)
 
 (defcustom hg-rev-completion-limit 100
@@ -98,6 +117,12 @@ in a repository with a lot of history."
 (defcustom hg-log-limit 50
   "The maximum number of revisions that hg-log will display."
   :type 'integer
+  :group 'mercurial)
+
+(defcustom hg-update-modeline t
+  "Whether to update the modeline with the status of a file after every save.
+Set this to nil on platforms with poor process management, such as Windows."
+  :type 'boolean
   :group 'mercurial)
 
 
@@ -115,6 +140,14 @@ in a repository with a lot of history."
 (make-variable-buffer-local 'hg-status)
 (put 'hg-status 'permanent-local t)
 
+(defvar hg-prev-buffer nil)
+(make-variable-buffer-local 'hg-prev-buffer)
+(put 'hg-prev-buffer 'permanent-local t)
+
+(defvar hg-root nil)
+(make-variable-buffer-local 'hg-root)
+(put 'hg-root 'permanent-local t)
+
 (defvar hg-output-buffer-name "*Hg*"
   "The name to use for Mercurial output buffers.")
 
@@ -122,7 +155,19 @@ in a repository with a lot of history."
 (defvar hg-rev-history nil)
 
 
+;;; Random constants.
+
+(defconst hg-commit-message-start
+  "--- Enter your commit message.  Type `C-c C-c' to commit. ---\n")
+
+(defconst hg-commit-message-end
+  "--- Files in bold will be committed.  Click to toggle selection. ---\n")
+
+
 ;;; hg-mode keymap.
+
+(defvar hg-mode-map (make-sparse-keymap))
+(define-key hg-mode-map "\C-xv" 'hg-prefix-map)
 
 (defvar hg-prefix-map
   (let ((map (copy-keymap vc-prefix-map)))
@@ -135,13 +180,10 @@ in a repository with a lot of history."
 (define-key hg-prefix-map "c" 'hg-undo)
 (define-key hg-prefix-map "g" 'hg-annotate)
 (define-key hg-prefix-map "l" 'hg-log)
-(define-key hg-prefix-map "n" 'hg-commit-file)
+(define-key hg-prefix-map "n" 'hg-commit-start)
 ;; (define-key hg-prefix-map "r" 'hg-update)
-(define-key hg-prefix-map "u" 'hg-revert-file)
+(define-key hg-prefix-map "u" 'hg-revert-buffer)
 (define-key hg-prefix-map "~" 'hg-version-other-window)
-
-(defvar hg-mode-map (make-sparse-keymap))
-(define-key hg-mode-map "\C-xv" 'hg-prefix-map)
 
 (add-minor-mode 'hg-mode 'hg-mode hg-mode-map)
 
@@ -156,17 +198,17 @@ in a repository with a lot of history."
 (define-key hg-global-map "," 'hg-incoming)
 (define-key hg-global-map "." 'hg-outgoing)
 (define-key hg-global-map "<" 'hg-pull)
-(define-key hg-global-map "=" 'hg-diff)
+(define-key hg-global-map "=" 'hg-diff-repo)
 (define-key hg-global-map ">" 'hg-push)
 (define-key hg-global-map "?" 'hg-help-overview)
 (define-key hg-global-map "A" 'hg-addremove)
 (define-key hg-global-map "U" 'hg-revert)
 (define-key hg-global-map "a" 'hg-add)
-(define-key hg-global-map "c" 'hg-commit)
+(define-key hg-global-map "c" 'hg-commit-start)
 (define-key hg-global-map "f" 'hg-forget)
 (define-key hg-global-map "h" 'hg-help-overview)
 (define-key hg-global-map "i" 'hg-init)
-(define-key hg-global-map "l" 'hg-log)
+(define-key hg-global-map "l" 'hg-log-repo)
 (define-key hg-global-map "r" 'hg-root)
 (define-key hg-global-map "s" 'hg-status)
 (define-key hg-global-map "u" 'hg-update)
@@ -187,14 +229,28 @@ in a repository with a lot of history."
   'hg-buffer-mouse-clicked)
 
 
+;;; Commit mode keymaps.
+
+(defvar hg-commit-mode-map (make-sparse-keymap))
+(define-key hg-commit-mode-map "\C-c\C-c" 'hg-commit-finish)
+(define-key hg-commit-mode-map "\C-c\C-k" 'hg-commit-kill)
+
+(defvar hg-commit-mode-file-map (make-sparse-keymap))
+(define-key hg-commit-mode-file-map
+  (if hg-running-xemacs [button2] [mouse-2])
+  'hg-commit-mouse-clicked)
+(define-key hg-commit-mode-file-map " " 'hg-commit-toggle-file)
+(define-key hg-commit-mode-file-map "\r" 'hg-commit-toggle-file)
+  
+
 ;;; Convenience functions.
 
-(defun hg-binary ()
+(defsubst hg-binary ()
   (if hg-binary
       hg-binary
     (error "No `hg' executable found!")))
 
-(defun hg-replace-in-string (str regexp newtext &optional literal)
+(defsubst hg-replace-in-string (str regexp newtext &optional literal)
   "Replace all matches in STR for REGEXP with NEWTEXT string.
 Return the new string.  Optional LITERAL non-nil means do a literal
 replacement.
@@ -205,7 +261,12 @@ XEmacs and GNU Emacs."
       (replace-in-string str regexp newtext literal)
     (replace-regexp-in-string regexp newtext str nil literal)))
 
-(defun hg-chomp (str)
+(defsubst hg-strip (str)
+  "Strip leading and trailing white space from a string."
+  (hg-replace-in-string (hg-replace-in-string str "[ \t\r\n]+$" "")
+			"^[ \t\r\n]+" ""))
+
+(defsubst hg-chomp (str)
   "Strip trailing newlines from a string."
   (hg-replace-in-string str "[\r\n]+$" ""))
 
@@ -251,63 +312,91 @@ If the command does not exit with a zero status code, raise an error."
       (hg-diff hg-view-file-name rev rev prev-buf))
      ((message "I don't know how to do that yet")))))
 
+(defsubst hg-event-point (event)
+  "Return the character position of the mouse event EVENT."
+  (if hg-running-xemacs
+      (event-point event)
+    (posn-point (event-start event))))
+
+(defsubst hg-event-window (event)
+  "Return the window over which mouse event EVENT occurred."
+  (if hg-running-xemacs
+      (event-window event)
+    (posn-window (event-start event))))
+
 (defun hg-buffer-mouse-clicked (event)
   "Translate the mouse clicks in a HG log buffer to character events.
 These are then handed off to `hg-buffer-commands'.
 
 Handle frickin' frackin' gratuitous event-related incompatibilities."
   (interactive "e")
-  (if hg-running-xemacs
-      (progn
-	(select-window (event-window event))
-	(hg-buffer-commands (event-point event)))
-    (select-window (posn-window (event-end event)))
-    (hg-buffer-commands (posn-point (event-start event)))))
+  (select-window (hg-event-window event))
+  (hg-buffer-commands (hg-event-point event)))
 
 (unless (fboundp 'view-minor-mode)
   (defun view-minor-mode (prev-buffer exit-func)
     (view-mode)))
 
-(defun hg-abbrev-file-name (file)
+(defsubst hg-abbrev-file-name (file)
+  "Portable wrapper around abbreviate-file-name."
   (if hg-running-xemacs
       (abbreviate-file-name file t)
     (abbreviate-file-name file)))
 
 (defun hg-read-file-name (&optional prompt default)
   "Read a file or directory name, or a pattern, to use with a command."
-  (let ((path (or default (buffer-file-name))))
-    (if (or (not path) current-prefix-arg)
-	(expand-file-name
-	 (read-file-name (format "File, directory or pattern%s: "
-				 (or prompt ""))
-			 (and path (file-name-directory path))
-			 nil nil
-			 (and path (file-name-nondirectory path))
-			 'hg-file-history))
-      path)))
+  (save-excursion
+    (while hg-prev-buffer
+      (set-buffer hg-prev-buffer))
+    (let ((path (or default (buffer-file-name))))
+      (if (or (not path) current-prefix-arg)
+	  (expand-file-name
+	   (read-file-name (format "File, directory or pattern%s: "
+				   (or prompt ""))
+			   (and path (file-name-directory path))
+			   nil nil
+			   (and path (file-name-nondirectory path))
+			   'hg-file-history))
+	path))))
 
 (defun hg-read-rev (&optional prompt default)
   "Read a revision or tag, offering completions."
-  (let ((rev (or default "tip")))
-    (if (or (not rev) current-prefix-arg)
-	(let ((revs (split-string (hg-chomp
-				   (hg-run0 "-q" "log" "-r"
-					    (format "-%d"
-						    hg-rev-completion-limit)
-					    "-r" "tip"))
-				  "[\n:]")))
-	  (dolist (line (split-string (hg-chomp (hg-run0 "tags")) "\n"))
-	    (setq revs (cons (car (split-string line "\\s-")) revs)))
-	  (completing-read (format "Revision%s (%s): "
-				   (or prompt "")
-				   (or default "tip"))
-			   (map 'list 'cons revs revs)
-			   nil
-			   nil
-			   nil
-			   'hg-rev-history
-			   (or default "tip")))
-      rev)))
+  (save-excursion
+    (while hg-prev-buffer
+      (set-buffer hg-prev-buffer))
+    (let ((rev (or default "tip")))
+      (if (or (not rev) current-prefix-arg)
+	  (let ((revs (split-string (hg-chomp
+				     (hg-run0 "-q" "log" "-r"
+					      (format "-%d"
+						      hg-rev-completion-limit)
+					      "-r" "tip"))
+				    "[\n:]")))
+	    (dolist (line (split-string (hg-chomp (hg-run0 "tags")) "\n"))
+	      (setq revs (cons (car (split-string line "\\s-")) revs)))
+	    (completing-read (format "Revision%s (%s): "
+				     (or prompt "")
+				     (or default "tip"))
+			     (map 'list 'cons revs revs)
+			     nil
+			     nil
+			     nil
+			     'hg-rev-history
+			     (or default "tip")))
+	rev))))
+
+(defmacro hg-do-across-repo (path &rest body)
+  (let ((root-name (gensym "root-"))
+	(buf-name (gensym "buf-")))
+    `(let ((,root-name (hg-root ,path)))
+       (save-excursion
+	 (dolist (,buf-name (buffer-list))
+	   (set-buffer ,buf-name)
+	   (when (and hg-status (equal (hg-root buffer-file-name) ,root-name))
+	     ,@body))))))
+
+(put 'hg-do-across-repo 'lisp-indent-function 1)
+
 
 ;;; View mode bits.
 
@@ -341,7 +430,8 @@ current frame."
 	(let ((state (assoc (substring output 0 (min (length output) 2))
 			    '(("M " . modified)
 			      ("A " . added)
-			      ("R " . removed)))))
+			      ("R " . removed)
+			      ("? " . nil)))))
 	  (if state
 	      (cdr state)
 	    'normal)))))
@@ -377,14 +467,59 @@ being viewed."
 	    (message "%s" msg)))
 	 (t
 	  (pop-to-buffer view-buf-name)
+	  (setq hg-prev-buffer ,prev-buf)
 	  (hg-view-mode ,prev-buf ,@v-m-rest))))))
 
 (put 'hg-view-output 'lisp-indent-function 1)
 
+;;; Context save and restore across revert.
+
+(defun hg-position-context (pos)
+  "Return information to help find the given position again."
+  (let* ((end (min (point-max) (+ pos 98))))
+    (list pos
+	  (buffer-substring (max (point-min) (- pos 2)) end)
+	  (- end pos))))
+
+(defun hg-buffer-context ()
+  "Return information to help restore a user's editing context.
+This is useful across reverts and merges, where a context is likely
+to have moved a little, but not really changed."
+  (let ((point-context (hg-position-context (point)))
+	(mark-context (let ((mark (mark-marker)))
+			(and mark (hg-position-context mark)))))
+    (list point-context mark-context)))
+	
+(defun hg-find-context (ctx)
+  "Attempt to find a context in the given buffer.
+Always returns a valid, hopefully sane, position."
+  (let ((pos (nth 0 ctx))
+	(str (nth 1 ctx))
+	(fixup (nth 2 ctx)))
+    (save-excursion
+      (goto-char (max (point-min) (- pos 15000)))
+      (if (and (not (equal str ""))
+	       (search-forward str nil t))
+	  (- (point) fixup)
+	(max pos (point-min))))))
+
+(defun hg-restore-context (ctx)
+  "Attempt to restore the user's editing context."
+  (let ((point-context (nth 0 ctx))
+	(mark-context (nth 1 ctx)))
+    (goto-char (hg-find-context point-context))
+    (when mark-context
+      (set-mark (hg-find-context mark-context)))))
+
+
 ;;; Hooks.
 
-(defun hg-mode-line ()
-  (when (hg-root)
+(defun hg-mode-line (&optional force)
+  "Update the modeline with the current status of a file.
+An update occurs if optional argument FORCE is non-nil,
+hg-update-modeline is non-nil, or we have not yet checked the state of
+the file."
+  (when (and (hg-root) (or force hg-update-modeline (not hg-mode)))
     (let ((status (hg-file-status buffer-file-name)))
       (setq hg-status status
 	    hg-mode (and status (concat " Hg:"
@@ -396,41 +531,16 @@ being viewed."
 						     (modified . "m")))))))
       status)))
 
-(defun hg-find-file-hook ()
-  (when (hg-mode-line)
-    (run-hooks 'hg-mode-hook)))
+(defun hg-mode ()
+  "Minor mode for Mercurial distributed SCM integration.
 
-(add-hook 'find-file-hooks 'hg-find-file-hook)
+The Mercurial mode user interface is based on that of VC mode, so if
+you're already familiar with VC, the same keybindings and functions
+will generally work.
 
-(defun hg-after-save-hook ()
-  (let ((old-status hg-status))
-    (hg-mode-line)
-    (if (and (not old-status) hg-status)
-	(run-hooks 'hg-mode-hook))))
-
-(add-hook 'after-save-hook 'hg-after-save-hook)
-
-
-;;; User interface functions.
-
-(defun hg-help-overview ()
-  "This is an overview of the Mercurial SCM mode for Emacs.
-
-You can find the source code, license (GPL v2), and credits for this
-code by typing `M-x find-library mercurial RET'.
-
-The Mercurial mode user interface is based on that of the older VC
-mode, so if you're already familiar with VC, the same keybindings and
-functions will generally work.
-
-Below is a list of common SCM tasks, with the key bindings needed to
-perform them, and the command names.  This list is not exhaustive.
-
-In the list below, `G/L' indicates whether a key binding is global (G)
-or local (L).  Global keybindings work on any file inside a Mercurial
-repository.  Local keybindings only apply to files under the control
-of Mercurial.  Many commands take a prefix argument.
-
+Below is a list of many common SCM tasks.  In the list, `G/L'
+indicates whether a key binding is global (G) to a repository or local
+(L) to a file.  Many commands take a prefix argument.
 
 SCM Task                              G/L  Key Binding  Command Name
 --------                              ---  -----------  ------------
@@ -438,14 +548,14 @@ Help overview (what you are reading)  G    C-c h h      hg-help-overview
 
 Tell Mercurial to manage a file       G    C-c h a      hg-add
 Commit changes to current file only   L    C-x v n      hg-commit
-Undo changes to file since commit     L    C-x v u      hg-revert-file
+Undo changes to file since commit     L    C-x v u      hg-revert-buffer
 
 Diff file vs last checkin             L    C-x v =      hg-diff
 
 View file change history              L    C-x v l      hg-log
 View annotated file                   L    C-x v a      hg-annotate
 
-Diff repo vs last checkin             G    C-c h =      hg-diff
+Diff repo vs last checkin             G    C-c h =      hg-diff-repo
 View status of files in repo          G    C-c h s      hg-status
 Commit all changes                    G    C-c h c      hg-commit
 
@@ -457,11 +567,41 @@ Pull changes                          G    C-c h <      hg-pull
 Update working directory after pull   G    C-c h u      hg-update
 See changes that can be pushed        G    C-c h .      hg-outgoing
 Push changes                          G    C-c h >      hg-push"
+  (run-hooks 'hg-mode-hook))
+
+(defun hg-find-file-hook ()
+  (when (hg-mode-line)
+    (hg-mode)))
+
+(add-hook 'find-file-hooks 'hg-find-file-hook)
+
+(defun hg-after-save-hook ()
+  (let ((old-status hg-status))
+    (hg-mode-line)
+    (if (and (not old-status) hg-status)
+	(hg-mode))))
+
+(add-hook 'after-save-hook 'hg-after-save-hook)
+
+
+;;; User interface functions.
+
+(defun hg-help-overview ()
+  "This is an overview of the Mercurial SCM mode for Emacs.
+
+You can find the source code, license (GPL v2), and credits for this
+code by typing `M-x find-library mercurial RET'."
   (interactive)
   (hg-view-output ("Mercurial Help Overview")
-    (insert (documentation 'hg-help-overview))))
+    (insert (documentation 'hg-help-overview))
+    (let ((pos (point)))
+      (insert (documentation 'hg-mode))
+      (goto-char pos)
+      (kill-line))))
 
 (defun hg-add (path)
+  "Add PATH to the Mercurial repository on the next commit.
+With a prefix argument, prompt for the path to add."
   (interactive (list (hg-read-file-name " to add")))
   (let ((buf (current-buffer))
 	(update (equal buffer-file-name path)))
@@ -479,16 +619,179 @@ Push changes                          G    C-c h >      hg-push"
   (interactive)
   (error "not implemented"))
 
-(defun hg-commit ()
+(defun hg-commit-toggle-file (pos)
+  "Toggle whether or not the file at POS will be committed."
+  (interactive "d")
+  (save-excursion
+    (goto-char pos)
+    (let ((face (get-text-property pos 'face))
+	  (inhibit-read-only t)
+	  bol)
+      (beginning-of-line)
+      (setq bol (+ (point) 4))
+      (end-of-line)
+      (if (eq face 'bold)
+	  (progn
+	    (remove-text-properties bol (point) '(face nil))
+	    (message "%s will not be committed"
+		     (buffer-substring bol (point))))
+	(add-text-properties bol (point) '(face bold))
+	(message "%s will be committed"
+		 (buffer-substring bol (point)))))))
+	
+(defun hg-commit-mouse-clicked (event)
+  "Toggle whether or not the file at POS will be committed."
+  (interactive "@e")
+  (hg-commit-toggle-file (hg-event-point event)))
+
+(defun hg-commit-kill ()
+  "Kill the commit currently being prepared."
   (interactive)
-  (error "not implemented"))
+  (when (or (not (buffer-modified-p)) (y-or-n-p "Really kill this commit? "))
+    (let ((buf hg-prev-buffer))
+      (kill-buffer nil)
+      (switch-to-buffer buf))))
+
+(defun hg-commit-finish ()
+  "Finish preparing a commit, and perform the actual commit.
+The hook hg-pre-commit-hook is run before anything else is done.  If
+the commit message is empty and hg-commit-allow-empty-message is nil,
+an error is raised.  If the list of files to commit is empty and
+hg-commit-allow-empty-file-list is nil, an error is raised."
+  (interactive)
+  (let ((root hg-root))
+    (save-excursion
+      (run-hooks 'hg-pre-commit-hook)
+      (goto-char (point-min))
+      (search-forward hg-commit-message-start)
+      (let (message files)
+	(let ((start (point)))
+	  (goto-char (point-max))
+	  (search-backward hg-commit-message-end)
+	  (setq message (hg-strip (buffer-substring start (point)))))
+	(when (and (= (length message) 0)
+		   (not hg-commit-allow-empty-message))
+	  (error "Cannot proceed - commit message is empty"))
+	(forward-line 1)
+	(beginning-of-line)
+	(while (< (point) (point-max))
+	  (let ((pos (+ (point) 4)))
+	    (end-of-line)
+	    (when (eq (get-text-property pos 'face) 'bold)
+	      (end-of-line)
+	      (setq files (cons (buffer-substring pos (point)) files))))
+	  (forward-line 1))
+	(when (and (= (length files) 0)
+		   (not hg-commit-allow-empty-file-list))
+	  (error "Cannot proceed - no files to commit"))
+	(setq message (concat message "\n"))
+	(apply 'hg-run0 "--cwd" hg-root "commit" "-m" message files))
+      (let ((buf hg-prev-buffer))
+	(kill-buffer nil)
+	(switch-to-buffer buf))
+      (hg-do-across-repo root
+	(hg-mode-line)))))
+
+(defun hg-commit-mode ()
+  "Mode for describing a commit of changes to a Mercurial repository.
+This involves two actions: describing the changes with a commit
+message, and choosing the files to commit.
+
+To describe the commit, simply type some text in the designated area.
+
+By default, all modified, added and removed files are selected for
+committing.  Files that will be committed are displayed in bold face\;
+those that will not are displayed in normal face.
+
+To toggle whether a file will be committed, move the cursor over a
+particular file and hit space or return.  Alternatively, middle click
+on the file.
+
+Key bindings
+------------
+\\[hg-commit-finish]		proceed with commit
+\\[hg-commit-kill]		kill commit
+
+\\[hg-diff-repo]		view diff of pending changes"
+  (interactive)
+  (use-local-map hg-commit-mode-map)
+  (set-syntax-table text-mode-syntax-table)
+  (setq local-abbrev-table text-mode-abbrev-table
+	major-mode 'hg-commit-mode
+	mode-name "Hg-Commit")
+  (set-buffer-modified-p nil)
+  (setq buffer-undo-list nil)
+  (run-hooks 'text-mode-hook 'hg-commit-mode-hook))
+
+(defun hg-commit-start ()
+  "Prepare a commit of changes to the repository containing the current file."
+  (interactive)
+  (while hg-prev-buffer
+    (set-buffer hg-prev-buffer))
+  (let ((root (hg-root))
+	(prev-buffer (current-buffer))
+	modified-files)
+    (unless root
+      (error "Cannot commit outside a repository!"))
+    (hg-do-across-repo
+	(vc-buffer-sync))
+    (setq modified-files (hg-chomp (hg-run0 "--cwd" root "status" "-arm")))
+    (when (and (= (length modified-files) 0)
+	       (not hg-commit-allow-empty-file-list))
+      (error "No pending changes to commit"))
+    (let* ((buf-name (format "*Mercurial: Commit %s*" root)))
+      (pop-to-buffer (get-buffer-create buf-name))
+      (when (= (point-min) (point-max))
+	(set (make-local-variable 'hg-root) root)
+	(setq hg-prev-buffer prev-buffer)
+	(insert "\n")
+	(let ((bol (point)))
+	  (insert hg-commit-message-end)
+	  (add-text-properties bol (point) '(face bold-italic)))
+	(let ((file-area (point)))
+	  (insert modified-files)
+	  (goto-char file-area)
+	  (while (< (point) (point-max))
+	    (let ((bol (point)))
+	      (forward-char 1)
+	      (insert "  ")
+	      (end-of-line)
+	      (add-text-properties (+ bol 4) (point)
+				   '(face bold mouse-face highlight)))
+	    (forward-line 1))
+	  (goto-char file-area)
+	  (add-text-properties (point) (point-max)
+			       `(keymap ,hg-commit-mode-file-map))
+	  (goto-char (point-min))
+	  (insert hg-commit-message-start)
+	  (add-text-properties (point-min) (point) '(face bold-italic))
+	  (insert "\n\n")
+	  (forward-line -1)
+	  (save-excursion
+	    (goto-char (point-max))
+	    (search-backward hg-commit-message-end)
+	    (add-text-properties (match-beginning 0) (point-max)
+				 '(read-only t))
+	    (goto-char (point-min))
+	    (search-forward hg-commit-message-start)
+	    (add-text-properties (match-beginning 0) (match-end 0)
+				 '(read-only t)))
+	  (hg-commit-mode))))))
 
 (defun hg-diff (path &optional rev1 rev2)
+  "Show the differences between REV1 and REV2 of PATH.
+When called interactively, the default behaviour is to treat REV1 as
+the tip revision, REV2 as the current edited version of the file, and
+PATH as the file edited in the current buffer.
+With a prefix argument, prompt for all of these."
   (interactive (list (hg-read-file-name " to diff")
 		     (hg-read-rev " to start with")
 		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
 		       (and (not (eq rev2 'working-dir)) rev2))))
-  (let ((a-path (hg-abbrev-file-name path)))
+  (unless rev1
+    (setq rev1 "-1"))
+  (let ((a-path (hg-abbrev-file-name path))
+	diff)
     (hg-view-output ((if (equal rev1 rev2)
 			 (format "Mercurial: Rev %s of %s" rev1 a-path)
 		       (format "Mercurial: Rev %s to %s of %s"
@@ -497,9 +800,20 @@ Push changes                          G    C-c h >      hg-push"
 	  (call-process (hg-binary) nil t nil "diff" "-r" rev1 "-r" rev2 path)
 	(call-process (hg-binary) nil t nil "diff" "-r" rev1 path))
       (diff-mode)
-      (font-lock-fontify-buffer))))
+      (setq diff (not (= (point-min) (point-max))))
+      (font-lock-fontify-buffer))
+    diff))
+
+(defun hg-diff-repo ()
+  "Show the differences between the working copy and the tip revision."
+  (interactive)
+  (hg-diff (hg-root)))
 
 (defun hg-forget (path)
+  "Lose track of PATH, which has been added, but not yet committed.
+This will prevent the file from being incorporated into the Mercurial
+repository on the next commit.
+With a prefix argument, prompt for the path to forget."
   (interactive (list (hg-read-file-name " to forget")))
   (let ((buf (current-buffer))
 	(update (equal buffer-file-name path)))
@@ -518,19 +832,33 @@ Push changes                          G    C-c h >      hg-push"
   (error "not implemented"))
 
 (defun hg-log (path &optional rev1 rev2)
+  "Display the revision history of PATH, between REV1 and REV2.
+REV1 defaults to the initial revision, while REV2 defaults to the tip.
+With a prefix argument, prompt for each parameter.
+Variable hg-log-limit controls the number of log entries displayed."
   (interactive (list (hg-read-file-name " to log")
 		     (hg-read-rev " to start with" "-1")
 		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
-  (message "log %s %s" rev1 rev2)
-  (sit-for 1)
   (let ((a-path (hg-abbrev-file-name path)))
     (hg-view-output ((if (equal rev1 rev2)
 			 (format "Mercurial: Rev %s of %s" rev1 a-path)
 		       (format "Mercurial: Rev %s to %s of %s"
 			       rev1 (or rev2 "Current") a-path)))
-      (call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2 path)
+      (if (> (length path) (length (hg-root path)))
+	  (call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2 path)
+	(call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2))
       (diff-mode)
       (font-lock-fontify-buffer))))
+
+(defun hg-log-repo (path &optional rev1 rev2)
+  "Display the revision history of the repository containing PATH.
+History is displayed between REV1, which defaults to the tip, and
+REV2, which defaults to the initial revision.
+Variable hg-log-limit controls the number of log entries displayed."
+  (interactive (list (hg-read-file-name " to log")
+		     (hg-read-rev " to start with" "tip")
+		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
+  (hg-log (hg-root path) rev1 rev2))
 
 (defun hg-outgoing ()
   (interactive)
@@ -544,33 +872,71 @@ Push changes                          G    C-c h >      hg-push"
   (interactive)
   (error "not implemented"))
 
-(defun hg-revert ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-revert-buffer-internal ()
+  (let ((ctx (hg-buffer-context)))
+    (message "Reverting %s..." buffer-file-name)
+    (hg-run0 "revert" buffer-file-name)
+    (revert-buffer t t t)
+    (hg-restore-context ctx)
+    (hg-mode-line)
+    (message "Reverting %s...done" buffer-file-name)))
 
-(defun hg-revert-file ()
+(defun hg-revert-buffer ()
+  "Revert current buffer's file back to the latest committed version.
+If the file has not changed, nothing happens.  Otherwise, this
+displays a diff and asks for confirmation before reverting."
   (interactive)
-  (error "not implemented"))
+  (let ((vc-suppress-confirm nil)
+	(obuf (current-buffer))
+	diff)
+    (vc-buffer-sync)
+    (unwind-protect
+	(setq diff (hg-diff buffer-file-name))
+      (when diff
+	(unless (yes-or-no-p "Discard changes? ")
+	  (error "Revert cancelled")))
+      (when diff
+	(let ((buf (current-buffer)))
+	  (delete-window (selected-window))
+	  (kill-buffer buf))))
+    (set-buffer obuf)
+    (when diff
+      (hg-revert-buffer-internal))))
 
 (defun hg-root (&optional path)
+  "Return the root of the repository that contains the given path.
+If the path is outside a repository, return nil.
+When called interactively, the root is printed.  A prefix argument
+prompts for a path to check."
   (interactive (list (hg-read-file-name)))
-  (let ((root (do ((prev nil dir)
-		   (dir (file-name-directory (or path (buffer-file-name)))
-			(file-name-directory (directory-file-name dir))))
-		  ((equal prev dir))
-		(when (file-directory-p (concat dir ".hg"))
-		  (return dir)))))
-    (when (interactive-p)
-      (if root
-	  (message "The root of this repository is `%s'." root)
-	(message "The path `%s' is not in a Mercurial repository."
-		 (abbreviate-file-name path t))))
-    root))
+  (if (or path (not hg-root))
+      (let ((root (do ((prev nil dir)
+		       (dir (file-name-directory (or path buffer-file-name ""))
+			    (file-name-directory (directory-file-name dir))))
+		      ((equal prev dir))
+		    (when (file-directory-p (concat dir ".hg"))
+		      (return dir)))))
+	(when (interactive-p)
+	  (if root
+	      (message "The root of this repository is `%s'." root)
+	    (message "The path `%s' is not in a Mercurial repository."
+		     (abbreviate-file-name path t))))
+	root)
+    hg-root))
 
 (defun hg-status (path)
+  "Print revision control status of a file or directory.
+With prefix argument, prompt for the path to give status for.
+Names are displayed relative to the repository root."
   (interactive (list (hg-read-file-name " for status" (hg-root))))
   (let ((root (hg-root)))
-    (hg-view-output (hg-output-buffer-name)
+    (hg-view-output ((format "Mercurial: Status of %s in %s"
+			     (let ((name (substring (expand-file-name path)
+						    (length root))))
+			       (if (> (length name) 0)
+				   name
+				 "*"))
+			     (hg-abbrev-file-name root)))
       (apply 'call-process (hg-binary) nil t nil
 	     (list "--cwd" root "status" path)))))
 
@@ -587,6 +953,5 @@ Push changes                          G    C-c h >      hg-push"
 
 
 ;;; Local Variables:
-;;; mode: emacs-lisp
 ;;; prompt-to-byte-compile: nil
 ;;; end:
