@@ -846,7 +846,6 @@ Variable hg-log-limit controls the number of log entries displayed."
       (if (> (length path) (length (hg-root path)))
 	  (call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2 path)
 	(call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2))
-      (diff-mode)
       (font-lock-fontify-buffer))))
 
 (defun hg-log-repo (path &optional rev1 rev2)
