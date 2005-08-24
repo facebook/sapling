@@ -252,8 +252,8 @@ locate [options] [files]::
     -r, --rev <rev>      search the repository as it stood at rev
     -X, --exclude <pat>  exclude names matching the given patterns
 
-log [-r revision ...] [-p] [file]::
-    Print the revision history of the specified file or the entire project.
+log [-r revision ...] [-p] [files]::
+    Print the revision history of the specified files or the entire project.
 
     By default this command outputs: changeset id and hash, tags,
     parents, user, date and time, and a summary for each commit. The
@@ -261,12 +261,10 @@ log [-r revision ...] [-p] [file]::
     hashes or message signatures.
 
     options:
-    -r, --rev <A>, ...  When a revision argument is given, only this file or
-                        changelog revision is displayed. With two revision
-                        arguments all revisions in this range are listed.
-                        Additional revision arguments may be given repeating
-                        the above cycle.
-    -p, --patch         show patch
+    -I, --include <pat>   include names matching the given patterns
+    -X, --exclude <pat>   exclude names matching the given patterns
+    -r, --rev <A>         show the specified revision or range
+    -p, --patch           show patch
 
     aliases: history
 
