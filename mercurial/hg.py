@@ -272,6 +272,8 @@ class changelog(revlog):
         manifest = bin(l[0])
         user = l[1]
         date = l[2]
+        if " " not in date:
+            date += " 0" # some tools used -d without a timezone
         files = l[3:]
         return (manifest, user, date, files, desc)
 

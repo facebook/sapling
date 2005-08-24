@@ -140,7 +140,8 @@ def make_file(repo, r, pat, node=None,
     return open(make_filename(repo, r, pat, node, total, seqno, revwidth),
                 mode)
 
-def dodiff(fp, ui, repo, files=None, node1=None, node2=None, match=util.always, changes=None):
+def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
+           changes=None, text=False):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
@@ -182,15 +183,15 @@ def dodiff(fp, ui, repo, files=None, node1=None, node2=None, match=util.always, 
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
     for f in a:
         to = None
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
     for f in d:
         to = repo.file(f).read(mmap[f])
         tn = None
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
 
 def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
     """show a single changeset or file revision"""
@@ -432,12 +433,18 @@ def annotate(ui, repo, *pats, **opts):
         node = repo.dirstate.parents()[0]
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
+
     for src, abs, rel, exact in walk(repo, pats, opts):
         if abs not in mmap:
             ui.warn("warning: %s is not in the repository!\n" % rel)
             continue
 
-        lines = repo.file(abs).annotate(mmap[abs])
+        f = repo.file(abs)
+        if not opts['text'] and util.binary(f.read(mmap[abs])):
+            ui.write("%s: binary file\n" % rel)
+            continue
+
+        lines = f.annotate(mmap[abs])
         pieces = []
 
         for o, f in opmap:
@@ -650,10 +657,13 @@ def debugwalk(ui, repo, *pats, **opts):
 
 def diff(ui, repo, *pats, **opts):
     """diff working directory (or selected files)"""
-    revs = []
-    if opts['rev']:
-        revs = map(lambda x: repo.lookup(x), opts['rev'])
+    node1, node2 = None, None
+    revs = [repo.lookup(x) for x in opts['rev']]
 
+    if len(revs) > 0:
+        node1 = revs[0]
+    if len(revs) > 1:
+        node2 = revs[1]
     if len(revs) > 2:
         raise util.Abort("too many revisions to diff")
 
@@ -663,7 +673,9 @@ def diff(ui, repo, *pats, **opts):
         roots, match, results = makewalk(repo, pats, opts)
         for src, abs, rel, exact in results:
             files.append(abs)
-    dodiff(sys.stdout, ui, repo, files, *revs, **{'match': match})
+
+    dodiff(sys.stdout, ui, repo, node1, node2, files, match=match,
+           text=opts['text'])
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
@@ -685,7 +697,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     fp.write(change[4].rstrip())
     fp.write("\n\n")
 
-    dodiff(fp, ui, repo, None, prev, node)
+    dodiff(fp, ui, repo, prev, node, text=opts['text'])
     if fp != sys.stdout: fp.close()
 
 def export(ui, repo, *changesets, **opts):
@@ -868,7 +880,7 @@ def log(ui, repo, f=None, **opts):
                 i = filelog.linkrev(filenode)
             changenode = repo.changelog.node(i)
             prev, other = repo.changelog.parents(changenode)
-            dodiff(sys.stdout, ui, repo, files, prev, changenode)
+            dodiff(sys.stdout, ui, repo, prev, changenode, files)
             ui.write("\n\n")
 
 def manifest(ui, repo, rev=None):
@@ -1286,6 +1298,7 @@ table = {
     "^annotate":
         (annotate,
          [('r', 'rev', '', 'revision'),
+          ('a', 'text', None, 'treat all files as text'),
           ('u', 'user', None, 'show user'),
           ('n', 'number', None, 'show revision number'),
           ('c', 'changeset', None, 'show changeset'),
@@ -1327,12 +1340,14 @@ table = {
     "^diff":
         (diff,
          [('r', 'rev', [], 'revision'),
+          ('a', 'text', None, 'treat all files as text'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
          'hg diff [-I] [-X] [-r REV1 [-r REV2]] [FILE]...'),
     "^export":
         (export,
-         [('o', 'output', "", 'output to file')],
+         [('o', 'output', "", 'output to file'),
+          ('a', 'text', None, 'treat all files as text')],
          "hg export [-o OUTFILE] REV..."),
     "forget":
         (forget,

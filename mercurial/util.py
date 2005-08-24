@@ -9,6 +9,11 @@ import os, errno
 from demandload import *
 demandload(globals(), "re")
 
+def binary(s):
+    if s and '\0' in s[:4096]:
+        return True
+    return False
+
 def unique(g):
     seen = {}
     for f in g:
