@@ -844,7 +844,7 @@ class hgwebdir:
         except:
             virtual = ""
 
-        if virtual:
+        if virtual[1:]:
             real = self.cp.get("paths", virtual[1:])
             h = hgweb(real)
             h.run()
@@ -875,9 +875,12 @@ class hgwebdir:
                     except:
                         return default
 
+                url = os.environ["REQUEST_URI"] + "/" + v
+                url = url.replace("//", "/")
+
                 yield dict(author = get("web", "author", "unknown"),
                            name = get("web", "name", v),
-                           url = os.environ["REQUEST_URI"] + "/" + v,
+                           url = url,
                            parity = parity,
                            shortdesc = get("web", "description", "unknown"),
                            lastupdate = os.stat(os.path.join(r, ".hg",

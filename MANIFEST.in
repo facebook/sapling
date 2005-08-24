@@ -12,4 +12,5 @@ recursive-include contrib *
 include README
 include CONTRIBUTORS
 include COPYING
+include Makefile
 include MANIFEST.in

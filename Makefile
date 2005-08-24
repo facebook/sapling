@@ -2,6 +2,9 @@
 PYTHON=python
 
 all:
+	$(PYTHON) setup.py build_ext -i
+
+install:
 	@echo "Read the file README for install instructions."
 
 clean:

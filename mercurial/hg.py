@@ -773,6 +773,14 @@ class localrepository:
     def wfile(self, f, mode='r'):
         return self.wopener(f, mode)
 
+    def wread(self, filename):
+        return self.wopener(filename, 'r').read()
+
+    def wwrite(self, filename, data, fd=None):
+        if fd:
+            return fd.write(data)
+        return self.wopener(filename, 'w').write(data)
+
     def transaction(self):
         # save dirstate for undo
         try:
@@ -839,7 +847,7 @@ class localrepository:
         linkrev = self.changelog.count()
         for f in files:
             try:
-                t = self.wfile(f).read()
+                t = self.wread(f)
                 tm = util.is_exec(self.wjoin(f), mfm.get(f, False))
                 r = self.file(f)
                 mfm[f] = tm
@@ -932,7 +940,7 @@ class localrepository:
             self.ui.note(f + "\n")
             try:
                 mf1[f] = util.is_exec(self.wjoin(f), mf1.get(f, False))
-                t = self.wfile(f).read()
+                t = self.wread(f)
             except IOError:
                 self.ui.warn("trouble committing %s!\n" % f)
                 raise
@@ -1023,7 +1031,7 @@ class localrepository:
         mf2, u = None, []
 
         def fcmp(fn, mf):
-            t1 = self.wfile(fn).read()
+            t1 = self.wread(fn)
             t2 = self.file(fn).read(mf.get(fn, nullid))
             return cmp(t1, t2)
 
@@ -1660,7 +1668,7 @@ class localrepository:
 
                 # is the wfile new since m1, and match m2?
                 if f not in m1:
-                    t1 = self.wfile(f).read()
+                    t1 = self.wread(f)
                     t2 = self.file(f).read(m2[f])
                     if cmp(t1, t2) == 0:
                         n = m2[f]
@@ -1780,10 +1788,10 @@ class localrepository:
             self.ui.note("getting %s\n" % f)
             t = self.file(f).read(get[f])
             try:
-                self.wfile(f, "w").write(t)
+                self.wwrite(f, t)
             except IOError:
                 os.makedirs(os.path.dirname(self.wjoin(f)))
-                self.wfile(f, "w").write(t)
+                self.wwrite(f, t)
             util.set_exec(self.wjoin(f), mf2[f])
             if moddirstate:
                 if branch_merge:
@@ -1836,7 +1844,7 @@ class localrepository:
             pre = "%s~%s." % (os.path.basename(fn), prefix)
             (fd, name) = tempfile.mkstemp("", pre)
             f = os.fdopen(fd, "wb")
-            f.write(fl.read(node))
+            self.wwrite(fn, fl.read(node), f)
             f.close()
             return name
 
