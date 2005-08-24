@@ -35,7 +35,7 @@ def matchpats(repo, cwd, pats = [], opts = {}, head = ''):
 
 def makewalk(repo, pats, opts, head = ''):
     cwd = repo.getcwd()
-    files, matchfn = matchpats(repo, cwd, pats, opts, head)
+    files, matchfn, anypats = matchpats(repo, cwd, pats, opts, head)
     exact = dict(zip(files, files))
     def walk():
         for src, fn in repo.walk(files = files, match = matchfn):
@@ -86,7 +86,7 @@ def revrange(ui, repo, revs, revlog=None):
             for rev in xrange(start, end, step):
                 yield str(rev)
         else:
-            yield spec
+            yield str(fix(spec, None))
 
 def make_filename(repo, r, pat, node=None,
                   total=None, seqno=None, revwidth=None):
@@ -193,29 +193,19 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         tn = None
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
 
-def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
+def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
     """show a single changeset or file revision"""
-    changelog = repo.changelog
-    if filelog:
-        log = filelog
-        filerev = rev
-        node = filenode = filelog.node(filerev)
-        changerev = filelog.linkrev(filenode)
-        changenode = changenode or changelog.node(changerev)
-    else:
-        log = changelog
-        changerev = rev
-        if changenode is None:
-            changenode = changelog.node(changerev)
-        elif not changerev:
-            rev = changerev = changelog.rev(changenode)
-        node = changenode
+    log = repo.changelog
+    if changenode is None:
+        changenode = log.node(rev)
+    elif not rev:
+        rev = log.rev(changenode)
 
     if ui.quiet:
-        ui.write("%d:%s\n" % (rev, hg.short(node)))
+        ui.write("%d:%s\n" % (rev, hg.short(changenode)))
         return
 
-    changes = changelog.read(changenode)
+    changes = log.read(changenode)
 
     t, tz = changes[2].split(' ')
     # a conversion tool was sticking non-integer offsets into repos
@@ -226,22 +216,20 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
     date = time.asctime(time.localtime(float(t))) + " %+05d" % (int(tz)/-36)
 
     parents = [(log.rev(p), ui.verbose and hg.hex(p) or hg.short(p))
-               for p in log.parents(node)
+               for p in log.parents(changenode)
                if ui.debugflag or p != hg.nullid]
     if not ui.debugflag and len(parents) == 1 and parents[0][0] == rev-1:
         parents = []
 
     if ui.verbose:
-        ui.write("changeset:   %d:%s\n" % (changerev, hg.hex(changenode)))
+        ui.write("changeset:   %d:%s\n" % (rev, hg.hex(changenode)))
     else:
-        ui.write("changeset:   %d:%s\n" % (changerev, hg.short(changenode)))
+        ui.write("changeset:   %d:%s\n" % (rev, hg.short(changenode)))
 
     for tag in repo.nodetags(changenode):
         ui.status("tag:         %s\n" % tag)
     for parent in parents:
         ui.write("parent:      %d:%s\n" % parent)
-    if filelog:
-        ui.debug("file rev:    %d:%s\n" % (filerev, hg.hex(filenode)))
 
     if brinfo and changenode in brinfo:
         br = brinfo[changenode]
@@ -253,7 +241,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
     ui.status("date:        %s\n" % date)
 
     if ui.debugflag:
-        files = repo.changes(changelog.parents(changenode)[0], changenode)
+        files = repo.changes(log.parents(changenode)[0], changenode)
         for key, value in zip(["files:", "files+:", "files-:"], files):
             if value:
                 ui.note("%-12s %s\n" % (key, " ".join(value)))
@@ -560,7 +548,8 @@ def commit(ui, repo, *pats, **opts):
     if not pats and cwd:
         opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
         opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    fns, match = matchpats(repo, (pats and repo.getcwd()) or '', pats, opts)
+    fns, match, anypats = matchpats(repo, (pats and repo.getcwd()) or '',
+                                    pats, opts)
     if pats:
         c, a, d, u = repo.changes(files = fns, match = match)
         files = c + a + [fn for fn in d if repo.dirstate.state(fn) == 'r']
@@ -603,6 +592,13 @@ def debugcheckstate(ui, repo):
             errors += 1
     if errors:
         raise util.Abort(".hg/dirstate inconsistent with current parent's manifest")
+
+def debugconfig(ui):
+    try:
+        repo = hg.repository(ui)
+    except: pass
+    for section, name, value in ui.walkconfig():
+        ui.write('%s.%s=%s\n' % (section, name, value))
 
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""
@@ -842,39 +838,92 @@ def locate(ui, repo, *pats, **opts):
         else:
             ui.write(rel, end)
 
-def log(ui, repo, f=None, **opts):
-    """show the revision history of the repository or a single file"""
-    if f:
-        files = relpath(repo, [f])
-        filelog = repo.file(files[0])
-        log = filelog
-        lookup = filelog.lookup
-    else:
-        files = None
-        filelog = None
-        log = repo.changelog
-        lookup = repo.lookup
-    revlist = []
-    revs = [log.rev(lookup(rev)) for rev in opts['rev']]
-    while revs:
-        if len(revs) == 1:
-            revlist.append(revs.pop(0))
-        else:
-            a = revs.pop(0)
-            b = revs.pop(0)
-            off = a > b and -1 or 1
-            revlist.extend(range(a, b + off, off))
+def log(ui, repo, *pats, **opts):
+    """show revision history of entire repository or files"""
+    # This code most commonly needs to iterate backwards over the
+    # history it is interested in.  This has awful (quadratic-looking)
+    # performance, so we use iterators that walk forwards through
+    # windows of revisions, yielding revisions in reverse order, while
+    # walking the windows backwards.
+    files, matchfn, anypats = matchpats(repo, repo.getcwd(), pats, opts)
+    revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
+    wanted = {}
+    slowpath = anypats
+    window = 300
+    if not slowpath and not files:
+        # No files, no patterns.  Display all revs.
+        wanted = dict(zip(revs, revs))
+    if not slowpath:
+        # Only files, no patterns.  Check the history of each file.
+        def filerevgen(filelog):
+            for i in xrange(filelog.count() - 1, 0, -window):
+                revs = []
+                for j in xrange(max(0, i - window), i):
+                    revs.append(filelog.linkrev(filelog.node(j)))
+                revs.reverse()
+                for rev in revs:
+                    yield rev
 
-    for i in revlist or range(log.count() - 1, -1, -1):
-        show_changeset(ui, repo, filelog=filelog, rev=i)
+        minrev, maxrev = min(revs), max(revs)
+        for filelog in map(repo.file, files):
+            # A zero count may be a directory or deleted file, so
+            # try to find matching entries on the slow path.
+            if filelog.count() == 0:
+                slowpath = True
+                break
+            for rev in filerevgen(filelog):
+                if rev <= maxrev:
+                    if rev < minrev: break
+                    wanted[rev] = 1
+    if slowpath:
+        # The slow path checks files modified in every changeset.
+        def mfrevgen():
+            for i in xrange(repo.changelog.count() - 1, 0, -window):
+                for j in xrange(max(0, i - window), i):
+                    yield j, repo.changelog.read(repo.lookup(str(j)))[3]
+
+        for rev, mf in mfrevgen():
+            if filter(matchfn, mf):
+                wanted[rev] = 1
+
+    def changerevgen():
+        class dui:
+            # Implement and delegate some ui protocol.  Save hunks of
+            # output for later display in the desired order.
+            def __init__(self, ui):
+                self.ui = ui
+                self.hunk = {}
+            def bump(self, rev):
+                self.rev = rev
+                self.hunk[rev] = []
+            def note(self, *args):
+                if self.verbose: self.write(*args)
+            def status(self, *args):
+                if not self.quiet: self.write(*args)
+            def write(self, *args):
+                self.hunk[self.rev].append(args)
+            def __getattr__(self, key):
+                return getattr(self.ui, key)
+        for i in xrange(0, len(revs), window):
+            nrevs = [rev for rev in revs[i : min(i + window, len(revs))]
+                     if rev in wanted]
+            srevs = list(nrevs)
+            srevs.sort()
+            du = dui(ui)
+            for rev in srevs:
+                du.bump(rev)
+                yield rev, du
+            for rev in nrevs:
+                for args in du.hunk[rev]:
+                    ui.write(*args)
+
+    for rev, dui in changerevgen():
+        show_changeset(dui, repo, rev)
         if opts['patch']:
-            if filelog:
-                filenode = filelog.node(i)
-                i = filelog.linkrev(filenode)
-            changenode = repo.changelog.node(i)
+            changenode = repo.changelog.node(rev)
             prev, other = repo.changelog.parents(changenode)
-            dodiff(sys.stdout, ui, repo, prev, changenode, files)
-            ui.write("\n\n")
+            dodiff(dui, dui, repo, prev, changenode, files)
+            du.write("\n\n")
 
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest"""
@@ -1155,7 +1204,7 @@ def status(ui, repo, *pats, **opts):
     '''
 
     cwd = repo.getcwd()
-    files, matchfn = matchpats(repo, cwd, pats, opts)
+    files, matchfn, anypats = matchpats(repo, cwd, pats, opts)
     (c, a, d, u) = [[util.pathto(cwd, x) for x in n]
                     for n in repo.changes(files=files, match=matchfn)]
 
@@ -1321,6 +1370,7 @@ table = {
          'hg commit [OPTION]... [FILE]...'),
     "copy": (copy, [], 'hg copy SOURCE DEST'),
     "debugcheckstate": (debugcheckstate, [], 'debugcheckstate'),
+    "debugconfig": (debugconfig, [], 'debugconfig'),
     "debugstate": (debugstate, [], 'debugstate'),
     "debugindex": (debugindex, [], 'debugindex FILE'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot FILE'),
@@ -1370,7 +1420,9 @@ table = {
          'hg locate [OPTION]... [PATTERN]...'),
     "^log|history":
         (log,
-         [('r', 'rev', [], 'revision'),
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search'),
+          ('r', 'rev', [], 'revision'),
           ('p', 'patch', None, 'show patch')],
          'hg log [-r REV1 [-r REV2]] [-p] [FILE]'),
     "manifest": (manifest, [], 'hg manifest [REV]'),
@@ -1461,7 +1513,7 @@ globalopts = [('v', 'verbose', None, 'verbose mode'),
               ('', 'time', None, 'time how long the command takes'),
              ]
 
-norepo = "clone init version help debugindex debugindexdot paths"
+norepo = "clone init version help debugconfig debugindex debugindexdot paths"
 
 def find(cmd):
     for e in table.keys():

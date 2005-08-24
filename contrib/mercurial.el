@@ -47,6 +47,7 @@
 (require 'cl)
 (require 'diff-mode)
 (require 'easymenu)
+(require 'executable)
 (require 'vc)
 
 
@@ -91,6 +92,11 @@ If you want to prevent the commit from proceeding, raise an error."
   :type 'sexp
   :group 'mercurial)
 
+(defcustom hg-log-mode-hook nil
+  "Hook run after a buffer is filled with log information."
+  :type 'sexp
+  :group 'mercurial)
+
 (defcustom hg-global-prefix "\C-ch"
   "The global prefix for Mercurial keymap bindings."
   :type 'sexp
@@ -124,6 +130,20 @@ Set this to nil on platforms with poor process management, such as Windows."
   :type 'boolean
   :group 'mercurial)
 
+(defcustom hg-incoming-repository "default"
+  "The repository from which changes are pulled from by default.
+This should be a symbolic repository name, since it is used for all
+repository-related commands."
+  :type 'string
+  :group 'mercurial)
+
+(defcustom hg-outgoing-repository "default-push"
+  "The repository to which changes are pushed to by default.
+This should be a symbolic repository name, since it is used for all
+repository-related commands."
+  :type 'string
+  :group 'mercurial)
+
 
 ;;; Other variables.
 
@@ -151,6 +171,7 @@ Set this to nil on platforms with poor process management, such as Windows."
   "The name to use for Mercurial output buffers.")
 
 (defvar hg-file-history nil)
+(defvar hg-repo-history nil)
 (defvar hg-rev-history nil)
 
 
@@ -233,6 +254,7 @@ Set this to nil on platforms with poor process management, such as Windows."
 (defvar hg-commit-mode-map (make-sparse-keymap))
 (define-key hg-commit-mode-map "\C-c\C-c" 'hg-commit-finish)
 (define-key hg-commit-mode-map "\C-c\C-k" 'hg-commit-kill)
+(define-key hg-commit-mode-map "\C-xv=" 'hg-diff-repo)
 
 (defvar hg-commit-mode-file-map (make-sparse-keymap))
 (define-key hg-commit-mode-file-map
@@ -295,6 +317,17 @@ If the command does not exit with a zero status code, raise an error."
 	       (car res))
       (cdr res))))
 
+(defun hg-sync-buffers (path)
+  "Sync buffers visiting PATH with their on-disk copies.
+If PATH is not being visited, but is under the repository root, sync
+all buffers visiting files in the repository."
+  (let ((buf (find-buffer-visiting path)))
+    (if buf
+	(with-current-buffer buf
+	  (vc-buffer-sync))
+      (hg-do-across-repo path
+	(vc-buffer-sync)))))
+  
 (defun hg-buffer-commands (pnt)
   "Use the properties of a character to do something sensible."
   (interactive "d")
@@ -358,13 +391,84 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
 			   'hg-file-history))
 	path))))
 
+(defun hg-read-config ()
+  "Return an alist of (key . value) pairs of Mercurial config data.
+Each key is of the form (section . name)."
+  (let (items)
+    (dolist (line (split-string (hg-chomp (hg-run0 "debugconfig")) "\n") items)
+      (string-match "^\\([^=]*\\)=\\(.*\\)" line)
+      (let* ((left (substring line (match-beginning 1) (match-end 1)))
+	     (right (substring line (match-beginning 2) (match-end 2)))
+	     (key (split-string left "\\."))
+	     (value (hg-replace-in-string right "\\\\n" "\n" t)))
+	(setq items (cons (cons (cons (car key) (cadr key)) value) items))))))
+  
+(defun hg-config-section (section config)
+  "Return an alist of (name . value) pairs for SECTION of CONFIG."
+  (let (items)
+    (dolist (item config items)
+      (when (equal (caar item) section)
+	(setq items (cons (cons (cdar item) (cdr item)) items))))))
+
+(defun hg-string-starts-with (sub str)
+  "Indicate whether string STR starts with the substring or character SUB."
+  (if (not (stringp sub))
+      (and (> (length str) 0) (equal (elt str 0) sub))
+    (let ((sub-len (length sub)))
+      (and (<= sub-len (length str))
+	   (string= sub (substring str 0 sub-len))))))
+
+(defun hg-complete-repo (string predicate all)
+  "Attempt to complete a repository name.
+We complete on either symbolic names from Mercurial's config or real
+directory names from the file system.  We do not penalise URLs."
+  (or (if all
+	  (all-completions string hg-repo-completion-table predicate)
+	(try-completion string hg-repo-completion-table predicate))
+      (let* ((str (expand-file-name string))
+	     (dir (file-name-directory str))
+	     (file (file-name-nondirectory str)))
+	(if all
+	    (let (completions)
+	      (dolist (name (delete "./" (file-name-all-completions file dir))
+			    completions)
+		(let ((path (concat dir name)))
+		  (when (file-directory-p path)
+		    (setq completions (cons name completions))))))
+	  (let ((comp (file-name-completion file dir)))
+	    (if comp
+		(hg-abbrev-file-name (concat dir comp))))))))
+
+(defun hg-read-repo-name (&optional prompt initial-contents default)
+  "Read the location of a repository."
+  (save-excursion
+    (while hg-prev-buffer
+      (set-buffer hg-prev-buffer))
+    (let (hg-repo-completion-table)
+      (if current-prefix-arg
+	  (progn
+	    (dolist (path (hg-config-section "paths" (hg-read-config)))
+	      (setq hg-repo-completion-table
+		    (cons (cons (car path) t) hg-repo-completion-table))
+	      (unless (hg-string-starts-with directory-sep-char (cdr path))
+		(setq hg-repo-completion-table
+		      (cons (cons (cdr path) t) hg-repo-completion-table))))
+	    (completing-read (format "Repository%s: " (or prompt ""))
+			     'hg-complete-repo
+			     nil
+			     nil
+			     initial-contents
+			     'hg-repo-history
+			     default))
+	default))))
+
 (defun hg-read-rev (&optional prompt default)
   "Read a revision or tag, offering completions."
   (save-excursion
     (while hg-prev-buffer
       (set-buffer hg-prev-buffer))
     (let ((rev (or default "tip")))
-      (if (or (not rev) current-prefix-arg)
+      (if current-prefix-arg
 	  (let ((revs (split-string (hg-chomp
 				     (hg-run0 "-q" "log" "-r"
 					      (format "-%d"
@@ -732,8 +836,7 @@ Key bindings
 	modified-files)
     (unless root
       (error "Cannot commit outside a repository!"))
-    (hg-do-across-repo
-	(vc-buffer-sync))
+    (hg-sync-buffers root)
     (setq modified-files (hg-chomp (hg-run0 "--cwd" root "status" "-arm")))
     (when (and (= (length modified-files) 0)
 	       (not hg-commit-allow-empty-file-list))
@@ -787,17 +890,21 @@ With a prefix argument, prompt for all of these."
 		     (hg-read-rev " to start with")
 		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
 		       (and (not (eq rev2 'working-dir)) rev2))))
-  (unless rev1
-    (setq rev1 "-1"))
+  (hg-sync-buffers path)
   (let ((a-path (hg-abbrev-file-name path))
+	(r1 (or rev1 "tip"))
 	diff)
-    (hg-view-output ((if (equal rev1 rev2)
-			 (format "Mercurial: Rev %s of %s" rev1 a-path)
-		       (format "Mercurial: Rev %s to %s of %s"
-			       rev1 (or rev2 "Current") a-path)))
+    (hg-view-output ((cond
+		      ((and (equal r1 "tip") (not rev2))
+		       (format "Mercurial: Diff against tip of %s" a-path))
+		      ((equal r1 rev2)
+		       (format "Mercurial: Diff of rev %s of %s" r1 a-path))
+		      (t
+		       (format "Mercurial: Diff from rev %s to %s of %s"
+			       r1 (or rev2 "Current") a-path))))
       (if rev2
-	  (call-process (hg-binary) nil t nil "diff" "-r" rev1 "-r" rev2 path)
-	(call-process (hg-binary) nil t nil "diff" "-r" rev1 path))
+	  (call-process (hg-binary) nil t nil "diff" "-r" r1 "-r" rev2 path)
+	(call-process (hg-binary) nil t nil "diff" "-r" r1 path))
       (diff-mode)
       (setq diff (not (= (point-min) (point-max))))
       (font-lock-fontify-buffer))
@@ -822,32 +929,47 @@ With a prefix argument, prompt for the path to forget."
       (with-current-buffer buf
 	(hg-mode-line)))))
   
-(defun hg-incoming ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-incoming (&optional repo)
+  "Display changesets present in REPO that are not present locally."
+  (interactive (list (hg-read-repo-name " where changes would come from")))
+  (hg-view-output ((format "Mercurial: Incoming from %s to %s"
+			   (hg-abbrev-file-name (hg-root))
+			   (hg-abbrev-file-name
+			    (or repo hg-incoming-repository))))
+    (call-process (hg-binary) nil t nil "incoming"
+		  (or repo hg-incoming-repository))
+    (hg-log-mode)))
 
 (defun hg-init ()
   (interactive)
   (error "not implemented"))
 
+(defun hg-log-mode ()
+  "Mode for viewing a Mercurial change log."
+  (goto-char (point-min))
+  (when (looking-at "^searching for changes")
+    (kill-entire-line))
+  (run-hooks 'hg-log-mode-hook))
+
 (defun hg-log (path &optional rev1 rev2)
   "Display the revision history of PATH, between REV1 and REV2.
-REV1 defaults to the initial revision, while REV2 defaults to the tip.
-With a prefix argument, prompt for each parameter.
-Variable hg-log-limit controls the number of log entries displayed."
+REV1 defaults to hg-log-limit changes from the tip revision, while
+REV2 defaults to the tip.
+With a prefix argument, prompt for each parameter."
   (interactive (list (hg-read-file-name " to log")
 		     (hg-read-rev " to start with" "-1")
 		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
-  (let ((a-path (hg-abbrev-file-name path)))
-    (hg-view-output ((if (equal rev1 rev2)
-			 (format "Mercurial: Rev %s of %s" rev1 a-path)
-		       (format "Mercurial: Rev %s to %s of %s"
-			       rev1 (or rev2 "Current") a-path)))
+  (let ((a-path (hg-abbrev-file-name path))
+	(r1 (or rev1 (format "-%d" hg-log-limit)))
+	(r2 (or rev2 rev1 "-1")))
+    (hg-view-output ((if (equal r1 r2)
+			 (format "Mercurial: Log of rev %s of %s" rev1 a-path)
+		       (format "Mercurial: Log from rev %s to %s of %s"
+			       r1 r2 a-path)))
       (if (> (length path) (length (hg-root path)))
-	  (call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2 path)
-	(call-process (hg-binary) nil t nil "log" "-r" rev1 "-r" rev2))
-      (diff-mode)
-      (font-lock-fontify-buffer))))
+	  (call-process (hg-binary) nil t nil "log" "-r" r1 "-r" r2 path)
+	(call-process (hg-binary) nil t nil "log" "-r" r1 "-r" r2))
+      (hg-log-mode))))
 
 (defun hg-log-repo (path &optional rev1 rev2)
   "Display the revision history of the repository containing PATH.
@@ -859,17 +981,31 @@ Variable hg-log-limit controls the number of log entries displayed."
 		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
   (hg-log (hg-root path) rev1 rev2))
 
-(defun hg-outgoing ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-outgoing (&optional repo)
+  "Display changesets present locally that are not present in REPO."
+  (interactive (list (hg-read-repo-name " where changes would go to" nil
+					hg-outgoing-repository)))
+  (hg-view-output ((format "Mercurial: Outgoing from %s to %s"
+			   (hg-abbrev-file-name (hg-root))
+			   (hg-abbrev-file-name
+			    (or repo hg-outgoing-repository))))
+    (call-process (hg-binary) nil t nil "outgoing"
+		  (or repo hg-outgoing-repository))
+    (hg-log-mode)))
 
 (defun hg-pull ()
   (interactive)
   (error "not implemented"))
 
-(defun hg-push ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-push (&optional repo)
+  "Push changes to repository REPO."
+  (interactive (list (hg-read-repo-name " to push to")))
+  (hg-view-output ((format "Mercurial: Push from %s to %s"
+			   (hg-abbrev-file-name (hg-root))
+			   (hg-abbrev-file-name
+			    (or repo hg-outgoing-repository))))
+    (call-process (hg-binary) nil t nil "push"
+		  (or repo hg-outgoing-repository))))
 
 (defun hg-revert-buffer-internal ()
   (let ((ctx (hg-buffer-context)))
@@ -919,7 +1055,7 @@ prompts for a path to check."
 	  (if root
 	      (message "The root of this repository is `%s'." root)
 	    (message "The path `%s' is not in a Mercurial repository."
-		     (abbreviate-file-name path t))))
+		     (hg-abbrev-file-name path))))
 	root)
     hg-root))
 

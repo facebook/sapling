@@ -156,11 +156,13 @@ def matcher(repo, cwd, names, inc, exc, head = ''):
     if exc:
         excmatch = matchfn(map(patkind, exc), '(?:/|$)')
 
-    return roots, lambda fn: (incmatch(fn) and not excmatch(fn) and
-                              (fn.endswith('/') or
-                               (not pats and not files) or
-                               (pats and patmatch(fn)) or
-                               (files and filematch(fn))))
+    return (roots,
+            lambda fn: (incmatch(fn) and not excmatch(fn) and
+                        (fn.endswith('/') or
+                         (not pats and not files) or
+                         (pats and patmatch(fn)) or
+                         (files and filematch(fn)))),
+            (inc or exc or (pats and pats != [('glob', '**')])) and True)
 
 def system(cmd, errprefix=None):
     """execute a shell command that must succeed"""
