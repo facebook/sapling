@@ -313,7 +313,8 @@ class hgweb:
                     for j in range(max(0, i - 100), i):
                         n = cl.node(j)
                         changes = cl.read(n)
-                        l.insert(0, (n, j, changes))
+                        l.append((n, j, changes))
+                    l.reverse()
                     for e in l:
                         yield e
 
