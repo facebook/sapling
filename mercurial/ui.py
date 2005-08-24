@@ -52,6 +52,17 @@ class ui:
             return self.cdata.items(section)
         return []
 
+    def walkconfig(self):
+        seen = {}
+        for (section, name), value in self.overlay.iteritems():
+            yield section, name, value
+            seen[section, name] = 1
+        for section in self.cdata.sections():
+            for name, value in self.cdata.items(section):
+                if (section, name) in seen: continue
+                yield section, name, value.replace('\n', '\\n')
+                seen[section, name] = 1
+
     def username(self):
         return (os.environ.get("HGUSER") or
                 self.config("ui", "username") or

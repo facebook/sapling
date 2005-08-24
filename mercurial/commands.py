@@ -597,6 +597,13 @@ def debugcheckstate(ui, repo):
     if errors:
         raise util.Abort(".hg/dirstate inconsistent with current parent's manifest")
 
+def debugconfig(ui):
+    try:
+        repo = hg.repository(ui)
+    except: pass
+    for section, name, value in ui.walkconfig():
+        ui.write('%s.%s=%s\n' % (section, name, value))
+
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""
     repo.dirstate.read()
@@ -1308,6 +1315,7 @@ table = {
          'hg commit [OPTION]... [FILE]...'),
     "copy": (copy, [], 'hg copy SOURCE DEST'),
     "debugcheckstate": (debugcheckstate, [], 'debugcheckstate'),
+    "debugconfig": (debugconfig, [], 'debugconfig'),
     "debugstate": (debugstate, [], 'debugstate'),
     "debugindex": (debugindex, [], 'debugindex FILE'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot FILE'),
@@ -1446,7 +1454,7 @@ globalopts = [('v', 'verbose', None, 'verbose mode'),
               ('', 'time', None, 'time how long the command takes'),
              ]
 
-norepo = "clone init version help debugindex debugindexdot paths"
+norepo = "clone init version help debugconfig debugindex debugindexdot paths"
 
 def find(cmd):
     for e in table.keys():
