@@ -71,8 +71,13 @@ annotate [-r <rev> -u -n -c] [files ...]::
     
     This command is useful to discover who did a change or when a change took
     place.
+
+    Without the -a option, annotate will avoid processing files it
+    detects as binary. With -a, annotate will generate an annotation
+    anyway, probably with undesirable results.
     
     options:
+    -a, --text            treat all files as text
     -I, --include <pat>   include names matching the given patterns
     -X, --exclude <pat>   exclude names matching the given patterns
     -r, --revision <rev>  annotate the specified revision

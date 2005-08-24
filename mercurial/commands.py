@@ -433,12 +433,18 @@ def annotate(ui, repo, *pats, **opts):
         node = repo.dirstate.parents()[0]
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
+
     for src, abs, rel, exact in walk(repo, pats, opts):
         if abs not in mmap:
             ui.warn("warning: %s is not in the repository!\n" % rel)
             continue
 
-        lines = repo.file(abs).annotate(mmap[abs])
+        f = repo.file(abs)
+        if not opts['text'] and util.binary(f.read(mmap[abs])):
+            ui.write("%s: binary file\n" % rel)
+            continue
+
+        lines = f.annotate(mmap[abs])
         pieces = []
 
         for o, f in opmap:
@@ -1285,6 +1291,7 @@ table = {
     "^annotate":
         (annotate,
          [('r', 'rev', '', 'revision'),
+          ('a', 'text', None, 'treat all files as text'),
           ('u', 'user', None, 'show user'),
           ('n', 'number', None, 'show revision number'),
           ('c', 'changeset', None, 'show changeset'),
