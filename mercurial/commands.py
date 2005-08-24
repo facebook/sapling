@@ -140,7 +140,8 @@ def make_file(repo, r, pat, node=None,
     return open(make_filename(repo, r, pat, node, total, seqno, revwidth),
                 mode)
 
-def dodiff(fp, ui, repo, files=None, node1=None, node2=None, match=util.always, changes=None):
+def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
+           changes=None):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
@@ -647,6 +648,11 @@ def diff(ui, repo, *pats, **opts):
     if opts['rev']:
         revs = map(lambda x: repo.lookup(x), opts['rev'])
 
+    node1, node2 = None, None
+    if len(revs) > 0:
+        node1 = revs[0]
+    if len(revs) > 1:
+        node2 = revs[1]
     if len(revs) > 2:
         raise util.Abort("too many revisions to diff")
 
@@ -656,7 +662,8 @@ def diff(ui, repo, *pats, **opts):
         roots, match, results = makewalk(repo, pats, opts)
         for src, abs, rel, exact in results:
             files.append(abs)
-    dodiff(sys.stdout, ui, repo, files, *revs, **{'match': match})
+
+    dodiff(sys.stdout, ui, repo, node1, node2, files, match=match)
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
@@ -678,7 +685,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     fp.write(change[4].rstrip())
     fp.write("\n\n")
 
-    dodiff(fp, ui, repo, None, prev, node)
+    dodiff(fp, ui, repo, prev, node)
     if fp != sys.stdout: fp.close()
 
 def export(ui, repo, *changesets, **opts):
@@ -861,7 +868,7 @@ def log(ui, repo, f=None, **opts):
                 i = filelog.linkrev(filenode)
             changenode = repo.changelog.node(i)
             prev, other = repo.changelog.parents(changenode)
-            dodiff(sys.stdout, ui, repo, files, prev, changenode)
+            dodiff(sys.stdout, ui, repo, prev, changenode, files)
             ui.write("\n\n")
 
 def manifest(ui, repo, rev=None):
