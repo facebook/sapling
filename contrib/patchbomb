@@ -147,7 +147,8 @@ def patchbomb(ui, repo, *revs, **opts):
             self.container.append(''.join(self.lines).split('\n'))
             self.lines = []
 
-    commands.export(ui, repo, *args, **{'output': exportee(patches)})
+    commands.export(ui, repo, *args, **{'output': exportee(patches),
+                                        'text': None})
 
     jumbo = []
     msgs = []
