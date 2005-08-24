@@ -103,7 +103,7 @@ _hg()
 	export|manifest|update|checkout|up|co)
 	    _hg_tags
 	;;
-	pull|push|outgoing|incoming)
+	pull|push|outgoing|incoming|out|in)
 	    _hg_paths
 	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
 	;;
@@ -113,7 +113,7 @@ _hg()
 	add)
 	    _hg_status "u"
 	;;
-	commit)
+	commit|ci)
 	    _hg_status "mra"
 	;;
 	remove)
