@@ -7,12 +7,15 @@
 
 import difflib, struct, bdiff
 from mpatch import *
+from util import *
 
-def unidiff(a, ad, b, bd, fn, r=None):
+def unidiff(a, ad, b, bd, fn, r=None, text=False):
 
     if not a and not b: return ""
 
-    if a == None:
+    if not text and (binary(a) or binary(b)):
+        l = ['Binary file %s has changed\n' % fn]
+    elif a == None:
         b = b.splitlines(1)
         l1 = "--- %s\t%s\n" % ("/dev/null", ad)
         l2 = "+++ %s\t%s\n" % ("b/" + fn, bd)

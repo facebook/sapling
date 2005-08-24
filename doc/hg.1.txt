@@ -128,7 +128,7 @@ copy <source> <dest>::
     
     This command takes effect for the next commit.
 
-diff [-r revision] [-r revision] [files ...]::
+diff [-a] [-r revision] [-r revision] [files ...]::
     Show differences between revisions for the specified files.
     
     Differences between files are shown using the unified diff format.
@@ -139,7 +139,12 @@ diff [-r revision] [-r revision] [files ...]::
     revisions are specified, the working directory files are compared
     to its parent.
 
+    Without the -a option, diff will avoid generating diffs of files
+    it detects as binary. With -a, diff will generate a diff anyway,
+    probably with undesirable results.
+
     options:
+    -a, --text           treat all files as text
     -I, --include <pat>  include names matching the given patterns
     -X, --exclude <pat>  exclude names matching the given patterns
 
@@ -161,8 +166,12 @@ export [-o filespec] [revision] ...::
     %n   zero-padded sequence number, starting at 1
     %r   zero-padded changeset revision number
 
-    Options:
+    Without the -a option, export will avoid generating diffs of files
+    it detects as binary. With -a, export will generate a diff anyway,
+    probably with undesirable results.
 
+    options:
+    -a, --text                treat all files as text
     -o, --output <filespec>   print output to file with formatted named
 
 forget [options] [files]::

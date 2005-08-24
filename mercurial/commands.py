@@ -141,7 +141,7 @@ def make_file(repo, r, pat, node=None,
                 mode)
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
-           changes=None):
+           changes=None, text=False):
     def date(c):
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
@@ -183,15 +183,15 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
     for f in a:
         to = None
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
     for f in d:
         to = repo.file(f).read(mmap[f])
         tn = None
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
 
 def show_changeset(ui, repo, rev=0, changenode=None, filelog=None, brinfo=None):
     """show a single changeset or file revision"""
@@ -644,11 +644,9 @@ def debugwalk(ui, repo, *pats, **opts):
 
 def diff(ui, repo, *pats, **opts):
     """diff working directory (or selected files)"""
-    revs = []
-    if opts['rev']:
-        revs = map(lambda x: repo.lookup(x), opts['rev'])
-
     node1, node2 = None, None
+    revs = [repo.lookup(x) for x in opts['rev']]
+
     if len(revs) > 0:
         node1 = revs[0]
     if len(revs) > 1:
@@ -663,7 +661,8 @@ def diff(ui, repo, *pats, **opts):
         for src, abs, rel, exact in results:
             files.append(abs)
 
-    dodiff(sys.stdout, ui, repo, node1, node2, files, match=match)
+    dodiff(sys.stdout, ui, repo, node1, node2, files, match=match,
+           text=opts['text'])
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
@@ -685,7 +684,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     fp.write(change[4].rstrip())
     fp.write("\n\n")
 
-    dodiff(fp, ui, repo, prev, node)
+    dodiff(fp, ui, repo, prev, node, text=opts['text'])
     if fp != sys.stdout: fp.close()
 
 def export(ui, repo, *changesets, **opts):
@@ -1326,12 +1325,14 @@ table = {
     "^diff":
         (diff,
          [('r', 'rev', [], 'revision'),
+          ('a', 'text', None, 'treat all files as text'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
          'hg diff [-I] [-X] [-r REV1 [-r REV2]] [FILE]...'),
     "^export":
         (export,
-         [('o', 'output', "", 'output to file')],
+         [('o', 'output', "", 'output to file'),
+          ('a', 'text', None, 'treat all files as text')],
          "hg export [-o OUTFILE] REV..."),
     "forget":
         (forget,
