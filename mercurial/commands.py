@@ -845,7 +845,12 @@ def log(ui, repo, *pats, **opts):
     # performance, so we use iterators that walk forwards through
     # windows of revisions, yielding revisions in reverse order, while
     # walking the windows backwards.
-    files, matchfn, anypats = matchpats(repo, repo.getcwd(), pats, opts)
+    cwd = repo.getcwd()
+    if not pats and cwd:
+        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
+        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
+    files, matchfn, anypats = matchpats(repo, (pats and cwd) or '',
+                                        pats, opts)
     revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
     wanted = {}
     slowpath = anypats
