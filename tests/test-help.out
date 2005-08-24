@@ -9,7 +9,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  diff       diff working directory (or selected files)
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
- log        show the revision history of the repository or a single file
+ log        show revision history of entire repository or files
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -24,7 +24,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  diff       diff working directory (or selected files)
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
- log        show the revision history of the repository or a single file
+ log        show revision history of entire repository or files
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -53,7 +53,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  incoming    show new changesets found in source
  init        create a new repository in the given directory
  locate      locate files matching specific patterns
- log         show the revision history of the repository or a single file
+ log         show revision history of entire repository or files
  manifest    output the latest or given revision of the project manifest
  outgoing    show changesets not found in destination
  parents     show the parents of the working dir or revision
@@ -91,7 +91,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  incoming    show new changesets found in source
  init        create a new repository in the given directory
  locate      locate files matching specific patterns
- log         show the revision history of the repository or a single file
+ log         show revision history of entire repository or files
  manifest    output the latest or given revision of the project manifest
  outgoing    show changesets not found in destination
  parents     show the parents of the working dir or revision
@@ -186,7 +186,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  diff       diff working directory (or selected files)
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
- log        show the revision history of the repository or a single file
+ log        show revision history of entire repository or files
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -206,7 +206,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  diff       diff working directory (or selected files)
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
- log        show the revision history of the repository or a single file
+ log        show revision history of entire repository or files
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit

@@ -896,6 +896,8 @@ def log(ui, repo, *pats, **opts):
             def bump(self, rev):
                 self.rev = rev
                 self.hunk[rev] = []
+            def note(self, *args):
+                if self.verbose: self.write(*args)
             def status(self, *args):
                 if not self.quiet: self.write(*args)
             def write(self, *args):
