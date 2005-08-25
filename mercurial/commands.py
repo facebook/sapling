@@ -1510,19 +1510,20 @@ table = {
          'hg update [-b TAG] [-m] [-C] [REV]'),
     "verify": (verify, [], 'hg verify'),
     "version": (show_version, [], 'hg version'),
-    }
+}
 
-globalopts = [('v', 'verbose', None, 'verbose mode'),
-              ('', 'debug', None, 'debug mode'),
-              ('q', 'quiet', None, 'quiet mode'),
-              ('', 'profile', None, 'profile'),
-              ('', 'cwd', '', 'change working directory'),
-              ('R', 'repository', "", 'repository root directory'),
-              ('', 'traceback', None, 'print traceback on exception'),
-              ('y', 'noninteractive', None, 'run non-interactively'),
-              ('', 'version', None, 'output version information and exit'),
-              ('', 'time', None, 'time how long the command takes'),
-             ]
+globalopts = [
+    ('R', 'repository', "", 'repository root directory'),
+    ('', 'cwd', '', 'change working directory'),
+    ('y', 'noninteractive', None, 'run non-interactively'),
+    ('q', 'quiet', None, 'quiet mode'),
+    ('v', 'verbose', None, 'verbose mode'),
+    ('', 'debug', None, 'debug mode'),
+    ('', 'traceback', None, 'print traceback on exception'),
+    ('', 'time', None, 'time how long the command takes'),
+    ('', 'profile', None, 'profile'),
+    ('', 'version', None, 'output version information and exit'),
+]
 
 norepo = "clone init version help debugconfig debugdata" + \
          " debugindex debugindexdot paths"
