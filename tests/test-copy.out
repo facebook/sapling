@@ -1,22 +1,48 @@
 A b
 b
  b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
+we should see two history entries
+changeset:   1:3b5b84850bbed12e8ff8c1b87b32dc93c59ae6d8
+tag:         tip
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+files:       b
+description:
+2
+
+
+changeset:   0:c19d34741b0a4ced8e4ba74bb834597d5193851e
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+files:       a
+description:
+1
+
+
+we should see one log entry for a
+filelog
+changeset:   0:c19d34741b0a
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     1
+
+this should show a revision linked to changeset 0
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       0 b789fdd96dc2 000000000000 000000000000
+we should see one log entry for b
+filelog
 changeset:   1:3b5b84850bbe
 tag:         tip
 user:        test
 date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     2
 
-changeset:   0:c19d34741b0a
-user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
-summary:     1
-
-changeset:   0:c19d34741b0a
-user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
-summary:     1
-
+this should show a revision linked to changeset 1
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0      65      0       1 9a263dd772e0 000000000000 000000000000
+this should show the rename information in the metadata
+copyrev: b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
+copy: a
 566e338d09a089ba737c21e0d3759980  .hg/data/b.d
 60b725f10c9c85c70d97880dfe8191b3  bsum
 60b725f10c9c85c70d97880dfe8191b3  asum

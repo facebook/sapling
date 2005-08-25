@@ -3,7 +3,7 @@ searching for changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
+added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg update' to get a working copy)
 bar should remain deleted.
 f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644 foo
@@ -12,7 +12,7 @@ searching for changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 0 changes to 0 files
+added 1 changesets with 0 changes to 0 files (+1 heads)
 (run 'hg update' to get a working copy)
 bar should remain deleted.
 f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644 foo

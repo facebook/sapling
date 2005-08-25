@@ -9,8 +9,20 @@ cp a b
 hg copy a b
 hg status
 hg --debug commit -m "2" -d "0 0"
-hg history
+echo "we should see two history entries"
+hg history -v
+echo "we should see one log entry for a"
 hg log a
+echo "this should show a revision linked to changeset 0"
+hg debugindex .hg/data/a.i
+echo "we should see one log entry for b"
+hg log b
+echo "this should show a revision linked to changeset 1"
+hg debugindex .hg/data/b.i
+
+echo "this should show the rename information in the metadata"
+hg debugdata .hg/data/b.d 0 | head -n 3 | tail -n 2
+
 md5sum .hg/data/b.d
 hg cat b > bsum
 md5sum bsum
