@@ -612,6 +612,11 @@ def debugstate(ui, repo):
                     time.strftime("%x %X",
                                   time.localtime(dc[file_][3])), file_))
 
+def debugdata(ui, file_, rev):
+    """dump the contents of an data file revision"""
+    r = hg.revlog(hg.opener(""), file_[:-2] + ".i", file_)
+    ui.write(r.revision(r.lookup(rev)))
+
 def debugindex(ui, file_):
     """dump the contents of an index file"""
     r = hg.revlog(hg.opener(""), file_, "")
@@ -1377,6 +1382,7 @@ table = {
     "debugcheckstate": (debugcheckstate, [], 'debugcheckstate'),
     "debugconfig": (debugconfig, [], 'debugconfig'),
     "debugstate": (debugstate, [], 'debugstate'),
+    "debugdata": (debugdata, [], 'debugdata FILE REV'),
     "debugindex": (debugindex, [], 'debugindex FILE'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot FILE'),
     "debugwalk":
@@ -1518,7 +1524,8 @@ globalopts = [('v', 'verbose', None, 'verbose mode'),
               ('', 'time', None, 'time how long the command takes'),
              ]
 
-norepo = "clone init version help debugconfig debugindex debugindexdot paths"
+norepo = "clone init version help debugconfig debugdata" + \
+         " debugindex debugindexdot paths"
 
 def find(cmd):
     for e in table.keys():
