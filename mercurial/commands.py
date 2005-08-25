@@ -933,7 +933,7 @@ def log(ui, repo, *pats, **opts):
             changenode = repo.changelog.node(rev)
             prev, other = repo.changelog.parents(changenode)
             dodiff(dui, dui, repo, prev, changenode, files)
-            du.write("\n\n")
+            dui.write("\n\n")
 
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest"""
