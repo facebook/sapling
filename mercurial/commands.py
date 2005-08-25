@@ -716,12 +716,12 @@ def debugindexdot(ui, file_):
 def debugwalk(ui, repo, *pats, **opts):
     items = list(walk(repo, pats, opts))
     if not items: return
-    fmt = '%%s  %%-%ds  %%-%ds  %%s' % (
+    fmt = '%%s  %%-%ds  %%-%ds  %%s\n' % (
         max([len(abs) for (src, abs, rel, exact) in items]),
         max([len(rel) for (src, abs, rel, exact) in items]))
     exactly = {True: 'exact', False: ''}
     for src, abs, rel, exact in items:
-        print fmt % (src, abs, rel, exactly[exact])
+        ui.write(fmt % (src, abs, rel, exactly[exact]))
 
 def diff(ui, repo, *pats, **opts):
     """diff working directory (or selected files)"""
@@ -806,6 +806,7 @@ def grep(ui, repo, pattern = None, *pats, **opts):
         return fcache[fn]
 
     def matchlines(body):
+        # massively inefficient. rewrite.
         for match in regexp.finditer(body):
             start, end = match.span()
             lnum = body.count('\n', 0, start) + 1
