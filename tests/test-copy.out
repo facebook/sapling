@@ -20,7 +20,6 @@ description:
 
 
 we should see one log entry for a
-filelog
 changeset:   0:c19d34741b0a
 user:        test
 date:        Thu Jan  1 00:00:00 1970 +0000
@@ -30,7 +29,6 @@ this should show a revision linked to changeset 0
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       3      0       0 b789fdd96dc2 000000000000 000000000000
 we should see one log entry for b
-filelog
 changeset:   1:3b5b84850bbe
 tag:         tip
 user:        test

@@ -867,7 +867,6 @@ def log(ui, repo, *pats, **opts):
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog):
             for i in xrange(filelog.count() - 1, -1, -window):
-                print "filelog"
                 revs = []
                 for j in xrange(max(0, i - window), i + 1):
                     revs.append(filelog.linkrev(filelog.node(j)))
