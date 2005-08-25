@@ -1569,6 +1569,8 @@ class localrepository:
 
         tr = self.transaction()
 
+        oldheads = len(self.changelog.heads())
+
         # pull off the changeset group
         self.ui.status("adding changesets\n")
         co = self.changelog.tip()
@@ -1592,9 +1594,14 @@ class localrepository:
             revisions += fl.count() - o
             files += 1
 
+        newheads = len(self.changelog.heads())
+        heads = ""
+        if oldheads and newheads > oldheads:
+            heads = " (+%d heads)" % (newheads - oldheads)
+
         self.ui.status(("added %d changesets" +
-                        " with %d changes to %d files\n")
-                       % (changesets, revisions, files))
+                        " with %d changes to %d files%s\n")
+                       % (changesets, revisions, files, heads))
 
         tr.close()
 
