@@ -866,9 +866,10 @@ def log(ui, repo, *pats, **opts):
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog):
-            for i in xrange(filelog.count() - 1, 0, -window):
+            for i in xrange(filelog.count() - 1, -1, -window):
+                print "filelog"
                 revs = []
-                for j in xrange(max(0, i - window), i):
+                for j in xrange(max(0, i - window), i + 1):
                     revs.append(filelog.linkrev(filelog.node(j)))
                 revs.reverse()
                 for rev in revs:
@@ -888,8 +889,8 @@ def log(ui, repo, *pats, **opts):
     if slowpath:
         # The slow path checks files modified in every changeset.
         def mfrevgen():
-            for i in xrange(repo.changelog.count() - 1, 0, -window):
-                for j in xrange(max(0, i - window), i):
+            for i in xrange(repo.changelog.count() - 1, -1, -window):
+                for j in xrange(max(0, i - window), i + 1):
                     yield j, repo.changelog.read(repo.lookup(str(j)))[3]
 
         for rev, mf in mfrevgen():
