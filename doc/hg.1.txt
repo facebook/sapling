@@ -207,7 +207,7 @@ import [-p <n> -b <base> -f] <patches>::
 
     options:
     -p, --strip <n>   directory strip option for patch. This has the same
-                      meaning as the correnponding patch option
+                      meaning as the corresponding patch option
     -b <path>         base directory to read patches from
     -f, --force	      skip check for outstanding uncommitted changes
 
@@ -354,7 +354,7 @@ recover::
 remove [files ...]::
     Schedule the indicated files for removal from the repository.
     
-    This command shedules the files to be removed at the next commit.
+    This command schedules the files to be removed at the next commit.
     This only removes files from the current branch, not from the
     entire project history.
 
@@ -529,7 +529,7 @@ FILE NAME PATTERNS
 
     Regexp examples:
 
-    re:.*\.c$      any name ending in ".c", anywhere in the repsitory
+    re:.*\.c$      any name ending in ".c", anywhere in the repository
 
 
 SPECIFYING SINGLE REVISIONS
@@ -623,7 +623,7 @@ FILES
 
  .hgtags::
     This file contains changeset hash values and text tag names (one of each
-    seperated by spaces) that correspond to tagged versions of the repository
+    separated by spaces) that correspond to tagged versions of the repository
     contents.
 
  /etc/mercurial/hgrc, $HOME/.hgrc, .hg/hgrc::
