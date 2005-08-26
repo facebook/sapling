@@ -806,13 +806,17 @@ def grep(ui, repo, pattern = None, *pats, **opts):
         return fcache[fn]
 
     def matchlines(body):
-        # massively inefficient. rewrite.
-        for match in regexp.finditer(body):
-            start, end = match.span()
-            lnum = body.count('\n', 0, start) + 1
-            lstart = body.rfind('\n', 0, start) + 1
-            lend = body.find('\n', end)
-            yield lnum, start - lstart, end - lstart, body[lstart:lend]
+        begin = 0
+        linenum = 0
+        while True:
+            match = regexp.search(body, begin)
+            if not match: break
+            mstart, mend = match.span()
+            linenum += body.count('\n', begin, mstart) + 1
+            lstart = body.rfind('\n', begin, mstart) + 1 or begin
+            lend = body.find('\n', mend)
+            yield linenum, mstart - lstart, mend - lstart, body[lstart:lend]
+            begin = lend + 1
 
     class linestate:
         def __init__(self, line, linenum, colstart, colend):
