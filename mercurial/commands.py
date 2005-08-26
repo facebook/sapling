@@ -269,9 +269,12 @@ def show_version(ui):
         "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
     )
 
-def help_(ui, cmd=None):
+def help_(ui, cmd=None, with_version=False):
     """show help for a given command or all commands"""
     if cmd and cmd != 'shortlist':
+        if with_version:
+            show_version(ui)
+            ui.write('\n')
         key, i = find(cmd)
         # synopsis
         ui.write("%s\n\n" % i[2])
@@ -305,7 +308,7 @@ def help_(ui, cmd=None):
 
     else:
         # program name
-        if ui.verbose:
+        if ui.verbose or with_version:
             show_version(ui)
         else:
             ui.status("Mercurial Distributed SCM\n")
@@ -1634,7 +1637,7 @@ def dispatch(args):
     try:
         try:
             if options['help']:
-                help_(u, cmd)
+                help_(u, cmd, options['version'])
                 sys.exit(0)
             elif options['version']:
                 show_version(u)
