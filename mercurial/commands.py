@@ -1556,17 +1556,15 @@ def parse(args):
     except fancyopts.getopt.GetoptError, inst:
         raise ParseError(None, inst)
 
-    if options["version"]:
-        return ("version", show_version, [], options, cmdoptions)
-    elif not args:
-        return ("help", help_, ["shortlist"], options, cmdoptions)
-    else:
+    if args:
         cmd, args = args[0], args[1:]
-
-    i = find(cmd)[1]
+        i = find(cmd)[1]
+        c = list(i[1])
+    else:
+        cmd = None
+        c = []
 
     # combine global options into local
-    c = list(i[1])
     for o in globalopts:
         c.append((o[0], o[1], options[o[1]], o[3]))
 
@@ -1581,7 +1579,7 @@ def parse(args):
         options[n] = cmdoptions[n]
         del cmdoptions[n]
 
-    return (cmd, i[0], args, options, cmdoptions)
+    return (cmd, cmd and i[0] or None, args, options, cmdoptions)
 
 def dispatch(args):
     signal.signal(signal.SIGTERM, catchterm)
@@ -1634,6 +1632,13 @@ def dispatch(args):
 
     try:
         try:
+            if options['version']:
+                show_version(u)
+                sys.exit(0)
+            elif not cmd:
+                help_(u, 'shortlist')
+                sys.exit(0)
+
             if cmd not in norepo.split():
                 path = options["repository"] or ""
                 repo = hg.repository(ui=u, path=path)
