@@ -352,17 +352,15 @@ def help_(ui, cmd=None, with_version=False):
     # global options
     if ui.verbose:
         ui.write("\nglobal options:\n\n")
-        for s, l, d, c in globalopts:
-            opt = ' '
-            if s:
-                opt = opt + '-' + s + ' '
-            if l:
-                opt = opt + '--' + l + ' '
-            if d:
-                opt = opt + '(' + str(d) + ')'
-            ui.write(opt, "\n")
-            if c:
-                ui.write('    %s\n' % c)
+        opts, descriptions = [], []
+        for shortopt, longopt, default, desc in globalopts:
+            opts.append("%2s%s" %
+                        (shortopt and "-%s" % shortopt,
+                         longopt and " --%s" % longopt))
+            descriptions.append(desc)
+        opts_len = max(map(len, opts))
+        for opt, desc in zip(opts, descriptions):
+            ui.write(" %-*s  %s\n" % (opts_len, opt, desc))
 
 # Commands start here, listed alphabetically
 
