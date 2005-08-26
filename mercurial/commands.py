@@ -1369,7 +1369,7 @@ table = {
          [('U', 'noupdate', None, 'skip update after cloning'),
           ('e', 'ssh', "", 'ssh command'),
           ('', 'remotecmd', "", 'remote hg command')],
-         'hg clone [OPTIONS] SOURCE [DEST]'),
+         'hg clone [OPTION]... SOURCE [DEST]'),
     "^commit|ci":
         (commit,
          [('A', 'addremove', None, 'run add/remove during commit'),
@@ -1399,12 +1399,12 @@ table = {
           ('a', 'text', None, 'treat all files as text'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
-         'hg diff [-I] [-X] [-r REV1 [-r REV2]] [FILE]...'),
+         'hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...'),
     "^export":
         (export,
          [('o', 'output', "", 'output to file'),
           ('a', 'text', None, 'treat all files as text')],
-         "hg export [-o OUTFILE] REV..."),
+         "hg export [-a] [-o OUTFILE] REV..."),
     "forget":
         (forget,
          [('I', 'include', [], 'include path in search'),
@@ -1413,7 +1413,7 @@ table = {
     "heads":
         (heads,
          [('b', 'branches', None, 'find branch info')],
-         'hg [-b] heads'),
+         'hg heads [-b]'),
     "help": (help_, [], 'hg help [COMMAND]'),
     "identify|id": (identify, [], 'hg identify'),
     "import|patch":
@@ -1421,7 +1421,7 @@ table = {
          [('p', 'strip', 1, 'path strip'),
           ('f', 'force', None, 'skip check for outstanding changes'),
           ('b', 'base', "", 'base path')],
-         "hg import [-p NUM] [-b BASE] PATCH..."),
+         "hg import [-f] [-p NUM] [-b BASE] PATCH..."),
     "incoming|in": (incoming, [], 'hg incoming [SOURCE]'),
     "^init": (init, [], 'hg init [DEST]'),
     "locate":
@@ -1438,7 +1438,7 @@ table = {
           ('X', 'exclude', [], 'exclude path from search'),
           ('r', 'rev', [], 'revision'),
           ('p', 'patch', None, 'show patch')],
-         'hg log [-r REV1 [-r REV2]] [-p] [FILE]'),
+         'hg log [-I] [-X] [-r REV]... [-p] [FILE]'),
     "manifest": (manifest, [], 'hg manifest [REV]'),
     "outgoing|out": (outgoing, [], 'hg outgoing [DEST]'),
     "parents": (parents, [], 'hg parents [REV]'),
@@ -1448,13 +1448,13 @@ table = {
          [('u', 'update', None, 'update working directory'),
           ('e', 'ssh', "", 'ssh command'),
           ('', 'remotecmd', "", 'remote hg command')],
-         'hg pull [OPTIONS] [SOURCE]'),
+         'hg pull [-u] [-e FILE] [--remotecmd FILE] [SOURCE]'),
     "^push":
         (push,
          [('f', 'force', None, 'force push'),
           ('e', 'ssh', "", 'ssh command'),
           ('', 'remotecmd', "", 'remote hg command')],
-         'hg push [-f] [DEST]'),
+         'hg push [-f] [-e FILE] [--remotecmd FILE] [DEST]'),
     "rawcommit":
         (rawcommit,
          [('p', 'parent', [], 'parent'),
