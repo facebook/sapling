@@ -1609,14 +1609,6 @@ def dispatch(args):
         help_(u, 'shortlist')
         sys.exit(1)
 
-    if options['cwd']:
-        try:
-            os.chdir(options['cwd'])
-        except OSError, inst:
-            u = ui.ui()
-            u.warn('abort: %s: %s\n' % (options['cwd'], inst.strerror))
-            sys.exit(1)
-
     if options["time"]:
         def get_times():
             t = os.times()
@@ -1645,6 +1637,13 @@ def dispatch(args):
             elif not cmd:
                 help_(u, 'shortlist')
                 sys.exit(0)
+
+            if options['cwd']:
+                try:
+                    os.chdir(options['cwd'])
+                except OSError, inst:
+                    u.warn('abort: %s: %s\n' % (options['cwd'], inst.strerror))
+                    sys.exit(1)
 
             if cmd not in norepo.split():
                 path = options["repository"] or ""
