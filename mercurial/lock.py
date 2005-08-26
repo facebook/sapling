@@ -12,7 +12,7 @@ class LockHeld(Exception):
     pass
 
 class lock:
-    def __init__(self, file, wait = 1):
+    def __init__(self, file, wait=1):
         self.f = file
         self.held = 0
         self.wait = wait

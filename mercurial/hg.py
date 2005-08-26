@@ -360,7 +360,7 @@ class dirstate:
         if not self.dirty:
             self.dirty = 1
 
-    def setparents(self, p1, p2 = nullid):
+    def setparents(self, p1, p2=nullid):
         self.markdirty()
         self.pl = p1, p2
 
@@ -480,7 +480,7 @@ class dirstate:
                 bs += 1
         return ret
 
-    def walk(self, files = None, match = util.always, dc=None):
+    def walk(self, files=None, match=util.always, dc=None):
         self.read()
 
         # walk all files by default
@@ -816,7 +816,7 @@ class localrepository:
         else:
             self.ui.warn("no undo information available\n")
 
-    def lock(self, wait = 1):
+    def lock(self, wait=1):
         try:
             return lock.lock(self.join("lock"), 0)
         except lock.LockHeld, inst:
@@ -911,7 +911,7 @@ class localrepository:
                 else:
                     self.ui.warn("%s not tracked!\n" % f)
         else:
-            (c, a, d, u) = self.changes(match = match)
+            (c, a, d, u) = self.changes(match=match)
             commit = c + a
             remove = d
 
@@ -1018,7 +1018,7 @@ class localrepository:
             return None
         return n
 
-    def walk(self, node = None, files = [], match = util.always):
+    def walk(self, node=None, files=[], match=util.always):
         if node:
             for fn in self.manifest.read(self.changelog.read(node)[0]):
                 if match(fn): yield 'm', fn

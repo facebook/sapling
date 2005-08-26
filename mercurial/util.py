@@ -27,7 +27,7 @@ class Abort(Exception):
 def always(fn): return True
 def never(fn): return False
 
-def globre(pat, head = '^', tail = '$'):
+def globre(pat, head='^', tail='$'):
     "convert a glob pattern into a regexp"
     i, n = 0, len(pat)
     res = ''
@@ -98,7 +98,7 @@ def canonpath(repo, cwd, myname):
     else:
         raise Abort('%s not under repository root' % myname)
 
-def matcher(repo, cwd, names, inc, exc, head = ''):
+def matcher(repo, cwd, names, inc, exc, head=''):
     def patkind(name):
         for prefix in 're:', 'glob:', 'path:', 'relpath:':
             if name.startswith(prefix): return name.split(':', 1)

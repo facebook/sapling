@@ -29,20 +29,20 @@ def relpath(repo, args):
         return [util.normpath(os.path.join(cwd, x)) for x in args]
     return args
 
-def matchpats(repo, cwd, pats = [], opts = {}, head = ''):
+def matchpats(repo, cwd, pats=[], opts={}, head=''):
     return util.matcher(repo, cwd, pats or ['.'], opts.get('include'),
                         opts.get('exclude'), head)
 
-def makewalk(repo, pats, opts, head = ''):
+def makewalk(repo, pats, opts, head=''):
     cwd = repo.getcwd()
     files, matchfn, anypats = matchpats(repo, cwd, pats, opts, head)
     exact = dict(zip(files, files))
     def walk():
-        for src, fn in repo.walk(files = files, match = matchfn):
+        for src, fn in repo.walk(files=files, match=matchfn):
             yield src, fn, util.pathto(cwd, fn), fn in exact
     return files, matchfn, walk()
 
-def walk(repo, pats, opts, head = ''):
+def walk(repo, pats, opts, head=''):
     files, matchfn, results = makewalk(repo, pats, opts, head)
     for r in results: yield r
 
@@ -220,7 +220,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
     if not changes:
-        (c, a, d, u) = repo.changes(node1, node2, files, match = match)
+        (c, a, d, u) = repo.changes(node1, node2, files, match=match)
     else:
         (c, a, d, u) = changes
     if files:
@@ -626,7 +626,7 @@ def commit(ui, repo, *pats, **opts):
     fns, match, anypats = matchpats(repo, (pats and repo.getcwd()) or '',
                                     pats, opts)
     if pats:
-        c, a, d, u = repo.changes(files = fns, match = match)
+        c, a, d, u = repo.changes(files=fns, match=match)
         files = c + a + [fn for fn in d if repo.dirstate.state(fn) == 'r']
     else:
         files = []
@@ -793,7 +793,7 @@ def forget(ui, repo, *pats, **opts):
             if not exact: ui.status('forgetting ', rel, '\n')
     repo.forget(forget)
 
-def grep(ui, repo, pattern = None, *pats, **opts):
+def grep(ui, repo, pattern=None, *pats, **opts):
     """search for a pattern in specified files and revisions"""
     if pattern is None: pattern = opts['regexp']
     if not pattern: raise util.Abort('no pattern to search for')
@@ -1089,7 +1089,7 @@ def parents(ui, repo, rev=None):
         if n != hg.nullid:
             show_changeset(ui, repo, changenode=n)
 
-def paths(ui, search = None):
+def paths(ui, search=None):
     """show definition of symbolic path names"""
     try:
         repo = hg.repository(ui=ui)

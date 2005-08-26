@@ -473,7 +473,7 @@ class revlog:
 
         yield struct.pack(">l", 0)
 
-    def addgroup(self, revs, linkmapper, transaction, unique = 0):
+    def addgroup(self, revs, linkmapper, transaction, unique=0):
         # given a set of deltas, add them to the revision log. the
         # first delta is against its parent, which should be in our
         # log, the rest are against the previous delta.

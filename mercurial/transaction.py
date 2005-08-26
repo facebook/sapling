@@ -15,7 +15,7 @@ import os
 import util
 
 class transaction:
-    def __init__(self, report, opener, journal, after = None):
+    def __init__(self, report, opener, journal, after=None):
         self.journal = None
 
         # abort here if the journal already exists

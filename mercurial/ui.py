@@ -89,7 +89,7 @@ class ui:
 
     def readline(self):
         return sys.stdin.readline()[:-1]
-    def prompt(self, msg, pat, default = "y"):
+    def prompt(self, msg, pat, default="y"):
         if not self.interactive: return default
         while 1:
             self.write(msg, " ")
@@ -118,7 +118,7 @@ class ui:
                   os.environ.get("EDITOR", "vi"))
 
         os.environ["HGUSER"] = self.username()
-        util.system("%s %s" % (editor, name), errprefix = "edit failed")
+        util.system("%s %s" % (editor, name), errprefix="edit failed")
 
         t = open(name).read()
         t = re.sub("(?m)^HG:.*\n", "", t)
