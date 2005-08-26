@@ -1310,7 +1310,7 @@ class localrepository:
     def findincoming(self, remote, base=None, heads=None):
         m = self.changelog.nodemap
         search = []
-        fetch = []
+        fetch = {}
         seen = {}
         seenbranch = {}
         if base == None:
@@ -1364,7 +1364,7 @@ class localrepository:
                         if n[2] in m and n[3] in m:
                             self.ui.debug("found new changeset %s\n" %
                                           short(n[1]))
-                            fetch.append(n[1]) # earliest unknown
+                            fetch[n[1]] = 1 # earliest unknown
                             base[n[2]] = 1 # latest known
                             continue
 
@@ -1383,7 +1383,10 @@ class localrepository:
                     for b in remote.branches(r[p:p+10]):
                         self.ui.debug("received %s:%s\n" %
                                       (short(b[0]), short(b[1])))
-                        if b[0] not in m and b[0] not in seen:
+                        if b[0] in m:
+                            self.ui.debug("found base node %s\n" % short(b[0]))
+                            base[b[0]] = 1
+                        elif b[0] not in seen:
                             unknown.append(b)
 
         # do binary search on the branches we found
@@ -1400,7 +1403,7 @@ class localrepository:
                     if f <= 2:
                         self.ui.debug("found new branch changeset %s\n" %
                                           short(p))
-                        fetch.append(p)
+                        fetch[p] = 1
                         base[i] = 1
                     else:
                         self.ui.debug("narrowed branch search to %s:%s\n"
@@ -1410,24 +1413,27 @@ class localrepository:
                 p, f = i, f * 2
 
         # sanity check our fetch list
-        for f in fetch:
+        for f in fetch.keys():
             if f in m:
                 raise RepoError("already have changeset " + short(f[:4]))
 
         if base.keys() == [nullid]:
             self.ui.warn("warning: pulling from an unrelated repository!\n")
 
-        self.ui.note("adding new changesets starting at " +
+        self.ui.note("found new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")
 
         self.ui.debug("%d total queries\n" % reqcnt)
 
-        return fetch
+        return fetch.keys()
 
     def findoutgoing(self, remote, base=None, heads=None):
         if base == None:
             base = {}
             self.findincoming(remote, base, heads)
+
+        self.ui.debug("common changesets up to "
+                      + " ".join(map(short, base.keys())) + "\n")
 
         remain = dict.fromkeys(self.changelog.nodemap)
 
