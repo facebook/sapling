@@ -271,6 +271,7 @@ def show_version(ui):
 
 def help_(ui, cmd=None, with_version=False):
     """show help for a given command or all commands"""
+    option_lists = []
     if cmd and cmd != 'shortlist':
         if with_version:
             show_version(ui)
@@ -285,26 +286,15 @@ def help_(ui, cmd=None, with_version=False):
             doc = doc.splitlines(0)[0]
         ui.write("%s\n" % doc.rstrip())
 
-        # aliases
         if not ui.quiet:
+            # aliases
             aliases = ', '.join(key.split('|')[1:])
             if aliases:
                 ui.write("\naliases: %s\n" % aliases)
 
-        # options
-        if not ui.quiet and i[1]:
-            ui.write("\noptions:\n\n")
-            for s, l, d, c in i[1]:
-                opt = ' '
-                if s:
-                    opt = opt + '-' + s + ' '
-                if l:
-                    opt = opt + '--' + l + ' '
-                if d:
-                    opt = opt + '(' + str(d) + ')'
-                ui.write(opt, "\n")
-                if c:
-                    ui.write('   %s\n' % c)
+            # options
+            if i[1]:
+                option_lists.append(("options", i[1]))
 
     else:
         # program name
@@ -351,16 +341,26 @@ def help_(ui, cmd=None, with_version=False):
 
     # global options
     if ui.verbose:
-        ui.write("\nglobal options:\n\n")
-        opts, descriptions = [], []
-        for shortopt, longopt, default, desc in globalopts:
-            opts.append("%2s%s" %
-                        (shortopt and "-%s" % shortopt,
-                         longopt and " --%s" % longopt))
-            descriptions.append(desc)
-        opts_len = max(map(len, opts))
-        for opt, desc in zip(opts, descriptions):
-            ui.write(" %-*s  %s\n" % (opts_len, opt, desc))
+        option_lists.append(("global options", globalopts))
+
+    # list all option lists
+    opt_output = []
+    for title, options in option_lists:
+        opt_output.append(("\n%s:\n" % title, None))
+        for shortopt, longopt, default, desc in options:
+            opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
+                                          longopt and " --%s" % longopt),
+                               "%s%s" % (desc,
+                                         default and " (default: %s)" % default
+                                         or "")))
+
+    if opt_output:
+        opts_len = max([len(line[0]) for line in opt_output if line[1]])
+        for first, second in opt_output:
+            if second:
+                ui.write(" %-*s  %s\n" % (opts_len, first, second))
+            else:
+                ui.write("%s\n" % first)
 
 # Commands start here, listed alphabetically
 

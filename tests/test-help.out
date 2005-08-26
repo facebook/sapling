@@ -118,10 +118,8 @@ add the specified files on the next commit
 
 options:
 
- -I --include 
-   include path in search
- -X --exclude 
-   exclude path from search
+ -I --include  include path in search
+ -X --exclude  exclude path from search
 hg add: option --skjdfks not recognized
 hg add [OPTION]... [FILE]...
 
@@ -129,24 +127,18 @@ add the specified files on the next commit
 
 options:
 
- -I --include 
-   include path in search
- -X --exclude 
-   exclude path from search
+ -I --include  include path in search
+ -X --exclude  exclude path from search
 hg diff [-I] [-X] [-r REV1 [-r REV2]] [FILE]...
 
 diff working directory (or selected files)
 
 options:
 
- -r --rev 
-   revision
- -a --text 
-   treat all files as text
- -I --include 
-   include path in search
- -X --exclude 
-   exclude path from search
+ -r --rev      revision
+ -a --text     treat all files as text
+ -I --include  include path in search
+ -X --exclude  exclude path from search
 hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
@@ -158,18 +150,12 @@ show changed files in the working directory
 
 options:
 
- -m --modified 
-   show only modified files
- -a --added 
-   show only added files
- -r --removed 
-   show only removed files
- -u --unknown 
-   show only unknown (not tracked) files
- -I --include 
-   include path in search
- -X --exclude 
-   exclude path from search
+ -m --modified  show only modified files
+ -a --added     show only added files
+ -r --removed   show only removed files
+ -u --unknown   show only unknown (not tracked) files
+ -I --include   include path in search
+ -X --exclude   exclude path from search
 hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
