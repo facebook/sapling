@@ -1523,6 +1523,7 @@ globalopts = [
     ('', 'time', None, 'time how long the command takes'),
     ('', 'profile', None, 'profile'),
     ('', 'version', None, 'output version information and exit'),
+    ('h', 'help', None, 'display help and exit'),
 ]
 
 norepo = "clone init version help debugconfig debugdata" + \
@@ -1632,7 +1633,10 @@ def dispatch(args):
 
     try:
         try:
-            if options['version']:
+            if options['help']:
+                help_(u, cmd)
+                sys.exit(0)
+            elif options['version']:
                 show_version(u)
                 sys.exit(0)
             elif not cmd:

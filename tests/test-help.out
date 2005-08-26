@@ -112,7 +112,6 @@ list of commands (use "hg help -v" to show aliases and global options):
  update      update or merge working directory
  verify      verify the integrity of the repository
  version     output version and copyright information
-hg add: option -h not recognized
 hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
