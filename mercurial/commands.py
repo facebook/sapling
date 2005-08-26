@@ -9,7 +9,7 @@ from demandload import demandload
 demandload(globals(), "os re sys signal shutil")
 demandload(globals(), "fancyopts ui hg util lock")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
-demandload(globals(), "errno socket version struct atexit")
+demandload(globals(), "errno socket version struct atexit sets")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -841,7 +841,7 @@ def grep(ui, repo, pattern = None, *pats, **opts):
 
     prev = {}
     def display(fn, rev, states, prevstates):
-        diff = list(set(states).symmetric_difference(set(prevstates)))
+        diff = list(sets.Set(states).symmetric_difference(sets.Set(prevstates)))
         diff.sort(lambda x, y: cmp(x.linenum, y.linenum))
         for l in diff:
             if incrementing:
