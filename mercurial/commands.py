@@ -44,7 +44,8 @@ def makewalk(repo, pats, opts, head=''):
 
 def walk(repo, pats, opts, head=''):
     files, matchfn, results = makewalk(repo, pats, opts, head)
-    for r in results: yield r
+    for r in results:
+        yield r
 
 def walkchangerevs(ui, repo, cwd, pats, opts):
     # This code most commonly needs to iterate backwards over the
@@ -88,7 +89,8 @@ def walkchangerevs(ui, repo, cwd, pats, opts):
                 break
             for rev in filerevgen(filelog):
                 if rev <= maxrev:
-                    if rev < minrev: break
+                    if rev < minrev:
+                        break
                     fncache.setdefault(rev, [])
                     fncache[rev].append(file)
                     wanted[rev] = 1
@@ -107,7 +109,7 @@ def walkchangerevs(ui, repo, cwd, pats, opts):
 
     for i in xrange(0, len(revs), window):
         yield 'window', revs[0] < revs[-1], revs[-1]
-        nrevs = [rev for rev in revs[i : min(i + window, len(revs))]
+        nrevs = [rev for rev in revs[i:min(i+window, len(revs))]
                  if rev in wanted]
         srevs = list(nrevs)
         srevs.sort()
@@ -205,8 +207,7 @@ def make_filename(repo, r, pat, node=None,
 def make_file(repo, r, pat, node=None,
               total=None, seqno=None, revwidth=None, mode='wb'):
     if not pat or pat == '-':
-        if 'w' in mode: return sys.stdout
-        else: return sys.stdin
+        return 'w' in mode and sys.stdout or sys.stdin
     if hasattr(pat, 'write') and 'w' in mode:
         return pat
     if hasattr(pat, 'read') and 'r' in mode:
@@ -455,10 +456,12 @@ def addremove(ui, repo, *pats, **opts):
     for src, abs, rel, exact in walk(repo, pats, opts):
         if src == 'f' and repo.dirstate.state(abs) == '?':
             add.append(abs)
-            if not exact: ui.status('adding ', rel, '\n')
+            if not exact:
+                ui.status('adding ', rel, '\n')
         if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
             remove.append(abs)
-            if not exact: ui.status('removing ', rel, '\n')
+            if not exact:
+                ui.status('removing ', rel, '\n')
     repo.add(add)
     repo.remove(remove)
 
@@ -672,7 +675,8 @@ def debugconfig(ui):
     """show combined config settings from all hgrc files"""
     try:
         repo = hg.repository(ui)
-    except: pass
+    except hg.RepoError:
+        pass
     for section, name, value in ui.walkconfig():
         ui.write('%s.%s=%s\n' % (section, name, value))
 
@@ -718,13 +722,13 @@ def debugindexdot(ui, file_):
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
     items = list(walk(repo, pats, opts))
-    if not items: return
+    if not items:
+        return
     fmt = '%%s  %%-%ds  %%-%ds  %%s\n' % (
         max([len(abs) for (src, abs, rel, exact) in items]),
         max([len(rel) for (src, abs, rel, exact) in items]))
-    exactly = {True: 'exact', False: ''}
     for src, abs, rel, exact in items:
-        ui.write(fmt % (src, abs, rel, exactly[exact]))
+        ui.write(fmt % (src, abs, rel, exact and 'exact' or ''))
 
 def diff(ui, repo, *pats, **opts):
     """diff working directory (or selected files)"""
@@ -769,7 +773,8 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     fp.write("\n\n")
 
     dodiff(fp, ui, repo, prev, node, text=opts['text'])
-    if fp != sys.stdout: fp.close()
+    if fp != sys.stdout:
+        fp.close()
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets"""
@@ -790,18 +795,23 @@ def forget(ui, repo, *pats, **opts):
     for src, abs, rel, exact in walk(repo, pats, opts):
         if repo.dirstate.state(abs) == 'a':
             forget.append(abs)
-            if not exact: ui.status('forgetting ', rel, '\n')
+            if not exact:
+                ui.status('forgetting ', rel, '\n')
     repo.forget(forget)
 
 def grep(ui, repo, pattern=None, *pats, **opts):
     """search for a pattern in specified files and revisions"""
-    if pattern is None: pattern = opts['regexp']
-    if not pattern: raise util.Abort('no pattern to search for')
+    if pattern is None:
+        pattern = opts['regexp']
+    if not pattern:
+        raise util.Abort('no pattern to search for')
     reflags = 0
-    if opts['ignore_case']: reflags |= re.I
+    if opts['ignore_case']:
+        reflags |= re.I
     regexp = re.compile(pattern, reflags)
     sep, end = ':', '\n'
-    if opts['null'] or opts['print0']: sep = end = '\0'
+    if opts['null'] or opts['print0']:
+        sep = end = '\0'
 
     fcache = {}
     def getfile(fn):
@@ -814,7 +824,8 @@ def grep(ui, repo, pattern=None, *pats, **opts):
         linenum = 0
         while True:
             match = regexp.search(body, begin)
-            if not match: break
+            if not match:
+                break
             mstart, mend = match.span()
             linenum += body.count('\n', begin, mstart) + 1
             lstart = body.rfind('\n', begin, mstart) + 1 or begin
@@ -828,8 +839,10 @@ def grep(ui, repo, pattern=None, *pats, **opts):
             self.linenum = linenum
             self.colstart = colstart
             self.colend = colend
-        def __eq__(self, other): return self.line == other.line
-        def __hash__(self): return hash(self.line)
+        def __eq__(self, other):
+            return self.line == other.line
+        def __hash__(self):
+            return hash(self.line)
 
     matches = {}
     def grepbody(fn, rev, body):
@@ -999,11 +1012,11 @@ def init(ui, dest="."):
 
 def locate(ui, repo, *pats, **opts):
     """locate files matching specific patterns"""
-    end = '\n'
-    if opts['print0']: end = '\0'
+    end = opts['print0'] and '\0' or '\n'
 
     for src, abs, rel, exact in walk(repo, pats, opts, '(?:.*/|)'):
-        if repo.dirstate.state(abs) == '?': continue
+        if repo.dirstate.state(abs) == '?':
+            continue
         if opts['fullpath']:
             ui.write(os.path.join(repo.root, abs), end)
         else:
@@ -1021,9 +1034,11 @@ def log(ui, repo, *pats, **opts):
             self.rev = rev
             self.hunk[rev] = []
         def note(self, *args):
-            if self.verbose: self.write(*args)
+            if self.verbose:
+                self.write(*args)
         def status(self, *args):
-            if not self.quiet: self.write(*args)
+            if not self.quiet:
+                self.write(*args)
         def write(self, *args):
             self.hunk[self.rev].append(args)
         def __getattr__(self, key):
@@ -1093,7 +1108,7 @@ def paths(ui, search=None):
     """show definition of symbolic path names"""
     try:
         repo = hg.repository(ui=ui)
-    except:
+    except hg.RepoError:
         pass
 
     if search:
@@ -1520,21 +1535,22 @@ table = {
          [('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
          "hg forget [OPTION]... FILE..."),
-    "grep": (grep,
-             [('0', 'print0', None, 'terminate file names with NUL'),
-              ('I', 'include', [], 'include path in search'),
-              ('X', 'exclude', [], 'include path in search'),
-              ('Z', 'null', None, 'terminate file names with NUL'),
-              ('a', 'all-revs', '', 'search all revs'),
-              ('e', 'regexp', '', 'pattern to search for'),
-              ('f', 'full-path', None, 'print complete paths'),
-              ('i', 'ignore-case', None, 'ignore case when matching'),
-              ('l', 'files-with-matches', None, 'print names of files with matches'),
-              ('n', 'line-number', '', 'print line numbers'),
-              ('r', 'rev', [], 'search in revision rev'),
-              ('s', 'no-messages', None, 'do not print error messages'),
-              ('v', 'invert-match', None, 'select non-matching lines')],
-             "hg grep [options] [pat] [files]"),
+    "grep":
+        (grep,
+         [('0', 'print0', None, 'terminate file names with NUL'),
+          ('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'include path in search'),
+          ('Z', 'null', None, 'terminate file names with NUL'),
+          ('a', 'all-revs', '', 'search all revs'),
+          ('e', 'regexp', '', 'pattern to search for'),
+          ('f', 'full-path', None, 'print complete paths'),
+          ('i', 'ignore-case', None, 'ignore case when matching'),
+          ('l', 'files-with-matches', None, 'print names of files with matches'),
+          ('n', 'line-number', '', 'print line numbers'),
+          ('r', 'rev', [], 'search in revision rev'),
+          ('s', 'no-messages', None, 'do not print error messages'),
+          ('v', 'invert-match', None, 'select non-matching lines')],
+         "hg grep [options] [pat] [files]"),
     "heads":
         (heads,
          [('b', 'branches', None, 'find branch info')],
@@ -1654,8 +1670,8 @@ globalopts = [
     ('h', 'help', None, 'display help and exit'),
 ]
 
-norepo = "clone init version help debugconfig debugdata" + \
-         " debugindex debugindexdot paths"
+norepo = ("clone init version help debugconfig debugdata"
+          " debugindex debugindexdot paths")
 
 def find(cmd):
     for e in table.keys():
@@ -1812,7 +1828,8 @@ def dispatch(args):
         elif hasattr(inst, "reason"):
             u.warn("abort: error: %s\n" % inst.reason[1])
         elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
-            if u.debugflag: u.warn("broken pipe\n")
+            if u.debugflag:
+                u.warn("broken pipe\n")
         else:
             raise
     except OSError, inst:
