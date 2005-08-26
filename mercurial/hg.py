@@ -2157,26 +2157,22 @@ class sshrepository(remoterepository):
         self.url = path
         self.ui = ui
 
-        m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))', path)
+        m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?', path)
         if not m:
             raise RepoError("couldn't parse destination %s" % path)
 
         self.user = m.group(2)
         self.host = m.group(3)
         self.port = m.group(5)
-        self.path = m.group(7)
+        self.path = m.group(7) or "."
 
         args = self.user and ("%s@%s" % (self.user, self.host)) or self.host
         args = self.port and ("%s -p %s") % (args, self.port) or args
-        path = self.path or ""
-
-        if not path:
-            raise RepoError("no remote repository path specified")
 
         sshcmd = self.ui.config("ui", "ssh", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd", "hg")
         cmd = "%s %s '%s -R %s serve --stdio'"
-        cmd = cmd % (sshcmd, args, remotecmd, path)
+        cmd = cmd % (sshcmd, args, remotecmd, self.path)
 
         self.pipeo, self.pipei, self.pipee = os.popen3(cmd)
 
