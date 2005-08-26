@@ -1546,7 +1546,7 @@ table = {
           ('r', 'rev', [], 'search in revision rev'),
           ('s', 'no-messages', None, 'do not print error messages'),
           ('v', 'invert-match', None, 'select non-matching lines')],
-         "hg grep [options] [pat] [files]"),
+         "hg grep [OPTION]... [PATTERN] [FILE]..."),
     "heads":
         (heads,
          [('b', 'branches', None, 'find branch info')],
