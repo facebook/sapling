@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from demandload import demandload
-demandload(globals(), "os re sys signal shutil")
+demandload(globals(), "os re sys signal shutil imp")
 demandload(globals(), "fancyopts ui hg util lock")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
 demandload(globals(), "errno socket version struct atexit sets")
@@ -1729,10 +1729,29 @@ def dispatch(args):
     except AttributeError:
         pass
 
+    u = ui.ui()
+    external = []
+    for x in u.extensions():
+        if x[1]:
+            mod = imp.load_source(x[0], x[1])
+        else:
+            def importh(name):
+                mod = __import__(name)
+                components = name.split('.')
+                for comp in components[1:]:
+                    mod = getattr(mod, comp)
+                return mod
+            mod = importh(x[0])
+        external.append(mod)
+    for x in external:
+        for t in x.cmdtable:
+            if t in table:
+                u.warn("module %s override %s\n" % (x.__name__, t))
+        table.update(x.cmdtable)
+
     try:
         cmd, func, args, options, cmdoptions = parse(args)
     except ParseError, inst:
-        u = ui.ui()
         if inst.args[0]:
             u.warn("hg %s: %s\n" % (inst.args[0], inst.args[1]))
             help_(u, inst.args[0])
@@ -1741,7 +1760,6 @@ def dispatch(args):
             help_(u, 'shortlist')
         sys.exit(-1)
     except UnknownCommand, inst:
-        u = ui.ui()
         u.warn("hg: unknown command '%s'\n" % inst.args[0])
         help_(u, 'shortlist')
         sys.exit(1)
@@ -1755,12 +1773,11 @@ def dispatch(args):
         s = get_times()
         def print_time():
             t = get_times()
-            u = ui.ui()
             u.warn("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n" %
                 (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
         atexit.register(print_time)
 
-    u = ui.ui(options["verbose"], options["debug"], options["quiet"],
+    u.updateopts(options["verbose"], options["debug"], options["quiet"],
               not options["noninteractive"])
 
     try:
@@ -1785,6 +1802,8 @@ def dispatch(args):
             if cmd not in norepo.split():
                 path = options["repository"] or ""
                 repo = hg.repository(ui=u, path=path)
+                for x in external:
+                    x.reposetup(u, repo)
                 d = lambda: func(u, repo, *args, **cmdoptions)
             else:
                 d = lambda: func(u, *args, **cmdoptions)

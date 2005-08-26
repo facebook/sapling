@@ -22,6 +22,10 @@ class ui:
         self.debugflag = self.configbool("ui", "debug")
         self.interactive = self.configbool("ui", "interactive", True)
 
+        self.updateopts(verbose, debug, quiet, interactive)
+
+    def updateopts(self, verbose=False, debug=False, quiet=False,
+                 interactive=True):
         self.quiet = (self.quiet or quiet) and not verbose and not debug
         self.verbose = (self.verbose or verbose) or debug
         self.debugflag = (self.debugflag or debug)
@@ -62,6 +66,9 @@ class ui:
                 if (section, name) in seen: continue
                 yield section, name, value.replace('\n', '\\n')
                 seen[section, name] = 1
+
+    def extensions(self):
+        return self.configitems("extensions")
 
     def username(self):
         return (os.environ.get("HGUSER") or
