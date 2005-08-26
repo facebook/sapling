@@ -595,6 +595,7 @@ def debugcheckstate(ui, repo):
         raise util.Abort(".hg/dirstate inconsistent with current parent's manifest")
 
 def debugconfig(ui):
+    """show combined config settings from all hgrc files"""
     try:
         repo = hg.repository(ui)
     except: pass
@@ -641,6 +642,7 @@ def debugindexdot(ui, file_):
     ui.write("}\n")
 
 def debugwalk(ui, repo, *pats, **opts):
+    """show how files match on given patterns"""
     items = list(walk(repo, pats, opts))
     if not items: return
     fmt = '%%s  %%-%ds  %%-%ds  %%s' % (
