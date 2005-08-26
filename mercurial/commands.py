@@ -779,7 +779,7 @@ def export(ui, repo, *changesets, **opts):
     seqno = 0
     revs = list(revrange(ui, repo, changesets))
     total = len(revs)
-    revwidth = max(len(revs[0]), len(revs[-1]))
+    revwidth = max(map(len, revs))
     ui.note(len(revs) > 1 and "Exporting patches:\n" or "Exporting patch:\n")
     for cset in revs:
         seqno += 1
