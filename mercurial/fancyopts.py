@@ -7,9 +7,10 @@ def fancyopts(args, options, state):
     dt={}
 
     for s, l, d, c in options:
-        map['-'+s] = map['--'+l]=l
-        state[l] = d
-        dt[l] = type(d)
+        pl = l.replace('-', '_')
+        map['-'+s] = map['--'+l] = pl
+        state[pl] = d
+        dt[pl] = type(d)
         if not d is None and not callable(d):
             if s: s += ':'
             if l: l += '='

@@ -46,6 +46,80 @@ def walk(repo, pats, opts, head = ''):
     files, matchfn, results = makewalk(repo, pats, opts, head)
     for r in results: yield r
 
+def walkchangerevs(ui, repo, cwd, pats, opts):
+    # This code most commonly needs to iterate backwards over the
+    # history it is interested in.  Doing so has awful
+    # (quadratic-looking) performance, so we use iterators in a
+    # "windowed" way.  Walk forwards through a window of revisions,
+    # yielding them in the desired order, and walk the windows
+    # themselves backwards.
+    cwd = repo.getcwd()
+    if not pats and cwd:
+        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
+        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
+    files, matchfn, anypats = matchpats(repo, (pats and cwd) or '',
+                                        pats, opts)
+    revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
+    wanted = {}
+    slowpath = anypats
+    window = 300
+    fncache = {}
+    if not slowpath and not files:
+        # No files, no patterns.  Display all revs.
+        wanted = dict(zip(revs, revs))
+    if not slowpath:
+        # Only files, no patterns.  Check the history of each file.
+        def filerevgen(filelog):
+            for i in xrange(filelog.count() - 1, -1, -window):
+                revs = []
+                for j in xrange(max(0, i - window), i + 1):
+                    revs.append(filelog.linkrev(filelog.node(j)))
+                revs.reverse()
+                for rev in revs:
+                    yield rev
+
+        minrev, maxrev = min(revs), max(revs)
+        for file in files:
+            filelog = repo.file(file)
+            # A zero count may be a directory or deleted file, so
+            # try to find matching entries on the slow path.
+            if filelog.count() == 0:
+                slowpath = True
+                break
+            for rev in filerevgen(filelog):
+                if rev <= maxrev:
+                    if rev < minrev: break
+                    fncache.setdefault(rev, [])
+                    fncache[rev].append(file)
+                    wanted[rev] = 1
+    if slowpath:
+        # The slow path checks files modified in every changeset.
+        def changerevgen():
+            for i in xrange(repo.changelog.count() - 1, -1, -window):
+                for j in xrange(max(0, i - window), i + 1):
+                    yield j, repo.changelog.read(repo.lookup(str(j)))[3]
+
+        for rev, changefiles in changerevgen():
+            matches = filter(matchfn, changefiles)
+            if matches:
+                fncache[rev] = matches
+                wanted[rev] = 1
+
+    for i in xrange(0, len(revs), window):
+        yield 'window', revs[0] < revs[-1], revs[-1]
+        nrevs = [rev for rev in revs[i : min(i + window, len(revs))]
+                 if rev in wanted]
+        srevs = list(nrevs)
+        srevs.sort()
+        for rev in srevs:
+            fns = fncache.get(rev)
+            if not fns:
+                fns = repo.changelog.read(repo.lookup(str(rev)))[3]
+                fns = filter(matchfn, fns)
+            yield 'add', rev, fns
+        for rev in nrevs:
+            yield 'iter', rev, None
+
 revrangesep = ':'
 
 def revrange(ui, repo, revs, revlog=None):
@@ -645,12 +719,12 @@ def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
     items = list(walk(repo, pats, opts))
     if not items: return
-    fmt = '%%s  %%-%ds  %%-%ds  %%s' % (
+    fmt = '%%s  %%-%ds  %%-%ds  %%s\n' % (
         max([len(abs) for (src, abs, rel, exact) in items]),
         max([len(rel) for (src, abs, rel, exact) in items]))
     exactly = {True: 'exact', False: ''}
     for src, abs, rel, exact in items:
-        print fmt % (src, abs, rel, exactly[exact])
+        ui.write(fmt % (src, abs, rel, exactly[exact]))
 
 def diff(ui, repo, *pats, **opts):
     """diff working directory (or selected files)"""
@@ -718,6 +792,95 @@ def forget(ui, repo, *pats, **opts):
             forget.append(abs)
             if not exact: ui.status('forgetting ', rel, '\n')
     repo.forget(forget)
+
+def grep(ui, repo, pattern = None, *pats, **opts):
+    """search for a pattern in specified files and revisions"""
+    if pattern is None: pattern = opts['regexp']
+    if not pattern: raise util.Abort('no pattern to search for')
+    reflags = 0
+    if opts['ignore_case']: reflags |= re.I
+    regexp = re.compile(pattern, reflags)
+    sep, end = ':', '\n'
+    if opts['null'] or opts['print0']: sep = end = '\0'
+
+    fcache = {}
+    def getfile(fn):
+        if fn not in fcache:
+            fcache[fn] = repo.file(fn)
+        return fcache[fn]
+
+    def matchlines(body):
+        begin = 0
+        linenum = 0
+        while True:
+            match = regexp.search(body, begin)
+            if not match: break
+            mstart, mend = match.span()
+            linenum += body.count('\n', begin, mstart) + 1
+            lstart = body.rfind('\n', begin, mstart) + 1 or begin
+            lend = body.find('\n', mend)
+            yield linenum, mstart - lstart, mend - lstart, body[lstart:lend]
+            begin = lend + 1
+
+    class linestate:
+        def __init__(self, line, linenum, colstart, colend):
+            self.line = line
+            self.linenum = linenum
+            self.colstart = colstart
+            self.colend = colend
+        def __eq__(self, other): return self.line == other.line
+        def __hash__(self): return hash(self.line)
+
+    matches = {}
+    def grepbody(fn, rev, body):
+        matches[rev].setdefault(fn, {})
+        m = matches[rev][fn]
+        for lnum, cstart, cend, line in matchlines(body):
+            s = linestate(line, lnum, cstart, cend)
+            m[s] = s
+
+    prev = {}
+    def display(fn, rev, states, prevstates):
+        diff = list(set(states).symmetric_difference(set(prevstates)))
+        diff.sort(lambda x, y: cmp(x.linenum, y.linenum))
+        for l in diff:
+            if incrementing:
+                change = ((l in prevstates) and '-') or '+'
+                r = rev
+            else:
+                change = ((l in states) and '-') or '+'
+                r = prev[fn]
+            ui.write('%s:%s:%s:%s%s\n' % (fn, r, l.linenum, change, l.line))
+
+    fstate = {}
+    for st, rev, fns in walkchangerevs(ui, repo, repo.getcwd(), pats, opts):
+        if st == 'window':
+            incrementing = rev
+            matches.clear()
+        elif st == 'add':
+            change = repo.changelog.read(repo.lookup(str(rev)))
+            mf = repo.manifest.read(change[0])
+            matches[rev] = {}
+            for fn in fns:
+                fstate.setdefault(fn, {})
+                try:
+                    grepbody(fn, rev, getfile(fn).read(mf[fn]))
+                except KeyError:
+                    pass
+        elif st == 'iter':
+            states = matches[rev].items()
+            states.sort()
+            for fn, m in states:
+                if incrementing or fstate[fn]:
+                    display(fn, rev, m, fstate[fn])
+                fstate[fn] = m
+                prev[fn] = rev
+
+    if not incrementing:
+        fstate = fstate.items()
+        fstate.sort()
+        for fn, state in fstate:
+            display(fn, rev, {}, state)
 
 def heads(ui, repo, **opts):
     """show current repository heads"""
@@ -848,95 +1011,42 @@ def locate(ui, repo, *pats, **opts):
 
 def log(ui, repo, *pats, **opts):
     """show revision history of entire repository or files"""
-    # This code most commonly needs to iterate backwards over the
-    # history it is interested in.  This has awful (quadratic-looking)
-    # performance, so we use iterators that walk forwards through
-    # windows of revisions, yielding revisions in reverse order, while
-    # walking the windows backwards.
+    class dui:
+        # Implement and delegate some ui protocol.  Save hunks of
+        # output for later display in the desired order.
+        def __init__(self, ui):
+            self.ui = ui
+            self.hunk = {}
+        def bump(self, rev):
+            self.rev = rev
+            self.hunk[rev] = []
+        def note(self, *args):
+            if self.verbose: self.write(*args)
+        def status(self, *args):
+            if not self.quiet: self.write(*args)
+        def write(self, *args):
+            self.hunk[self.rev].append(args)
+        def __getattr__(self, key):
+            return getattr(self.ui, key)
     cwd = repo.getcwd()
     if not pats and cwd:
         opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
         opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    files, matchfn, anypats = matchpats(repo, (pats and cwd) or '',
-                                        pats, opts)
-    revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
-    wanted = {}
-    slowpath = anypats
-    window = 300
-    if not slowpath and not files:
-        # No files, no patterns.  Display all revs.
-        wanted = dict(zip(revs, revs))
-    if not slowpath:
-        # Only files, no patterns.  Check the history of each file.
-        def filerevgen(filelog):
-            for i in xrange(filelog.count() - 1, -1, -window):
-                revs = []
-                for j in xrange(max(0, i - window), i + 1):
-                    revs.append(filelog.linkrev(filelog.node(j)))
-                revs.reverse()
-                for rev in revs:
-                    yield rev
-
-        minrev, maxrev = min(revs), max(revs)
-        for filelog in map(repo.file, files):
-            # A zero count may be a directory or deleted file, so
-            # try to find matching entries on the slow path.
-            if filelog.count() == 0:
-                slowpath = True
-                break
-            for rev in filerevgen(filelog):
-                if rev <= maxrev:
-                    if rev < minrev: break
-                    wanted[rev] = 1
-    if slowpath:
-        # The slow path checks files modified in every changeset.
-        def mfrevgen():
-            for i in xrange(repo.changelog.count() - 1, -1, -window):
-                for j in xrange(max(0, i - window), i + 1):
-                    yield j, repo.changelog.read(repo.lookup(str(j)))[3]
-
-        for rev, mf in mfrevgen():
-            if filter(matchfn, mf):
-                wanted[rev] = 1
-
-    def changerevgen():
-        class dui:
-            # Implement and delegate some ui protocol.  Save hunks of
-            # output for later display in the desired order.
-            def __init__(self, ui):
-                self.ui = ui
-                self.hunk = {}
-            def bump(self, rev):
-                self.rev = rev
-                self.hunk[rev] = []
-            def note(self, *args):
-                if self.verbose: self.write(*args)
-            def status(self, *args):
-                if not self.quiet: self.write(*args)
-            def write(self, *args):
-                self.hunk[self.rev].append(args)
-            def __getattr__(self, key):
-                return getattr(self.ui, key)
-        for i in xrange(0, len(revs), window):
-            nrevs = [rev for rev in revs[i : min(i + window, len(revs))]
-                     if rev in wanted]
-            srevs = list(nrevs)
-            srevs.sort()
+    for st, rev, fns in walkchangerevs(ui, repo, (pats and cwd) or '', pats,
+                                       opts):
+        if st == 'window':
             du = dui(ui)
-            for rev in srevs:
-                du.bump(rev)
-                yield rev, du
-            for rev in nrevs:
-                for args in du.hunk[rev]:
-                    ui.write(*args)
-
-    for rev, dui in changerevgen():
-        show_changeset(dui, repo, rev)
-        if opts['patch']:
-            changenode = repo.changelog.node(rev)
-            prev, other = repo.changelog.parents(changenode)
-            dodiff(dui, dui, repo, prev, changenode, files)
-            dui.write("\n\n")
+        elif st == 'add':
+            du.bump(rev)
+            show_changeset(du, repo, rev)
+            if opts['patch']:
+                changenode = repo.changelog.node(rev)
+                prev, other = repo.changelog.parents(changenode)
+                dodiff(du, du, repo, prev, changenode, fns)
+                du.write("\n\n")
+        elif st == 'iter':
+            for args in du.hunk[rev]:
+                ui.write(*args)
 
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest"""
@@ -1410,6 +1520,21 @@ table = {
          [('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
          "hg forget [OPTION]... FILE..."),
+    "grep": (grep,
+             [('0', 'print0', None, 'terminate file names with NUL'),
+              ('I', 'include', [], 'include path in search'),
+              ('X', 'exclude', [], 'include path in search'),
+              ('Z', 'null', None, 'terminate file names with NUL'),
+              ('a', 'all-revs', '', 'search all revs'),
+              ('e', 'regexp', '', 'pattern to search for'),
+              ('f', 'full-path', None, 'print complete paths'),
+              ('i', 'ignore-case', None, 'ignore case when matching'),
+              ('l', 'files-with-matches', None, 'print names of files with matches'),
+              ('n', 'line-number', '', 'print line numbers'),
+              ('r', 'rev', [], 'search in revision rev'),
+              ('s', 'no-messages', None, 'do not print error messages'),
+              ('v', 'invert-match', None, 'select non-matching lines')],
+             "hg grep [options] [pat] [files]"),
     "heads":
         (heads,
          [('b', 'branches', None, 'find branch info')],

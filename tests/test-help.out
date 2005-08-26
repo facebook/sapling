@@ -46,6 +46,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  diff        diff working directory (or selected files)
  export      dump the header and diffs for one or more changesets
  forget      don't add the specified files on the next commit
+ grep        search for a pattern in specified files and revisions
  heads       show current repository heads
  help        show help for a given command or all commands
  identify    print information about the working copy
@@ -84,6 +85,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  diff        diff working directory (or selected files)
  export      dump the header and diffs for one or more changesets
  forget      don't add the specified files on the next commit
+ grep        search for a pattern in specified files and revisions
  heads       show current repository heads
  help        show help for a given command or all commands
  identify    print information about the working copy
