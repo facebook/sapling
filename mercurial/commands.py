@@ -125,6 +125,7 @@ def walkchangerevs(ui, repo, cwd, pats, opts):
 revrangesep = ':'
 
 def revrange(ui, repo, revs, revlog=None):
+    """Yield revision as strings from a list of revision specifications."""
     if revlog is None:
         revlog = repo.changelog
     revcount = revlog.count()
@@ -153,13 +154,8 @@ def revrange(ui, repo, revs, revlog=None):
             start, end = spec.split(revrangesep, 1)
             start = fix(start, 0)
             end = fix(end, revcount - 1)
-            if end > start:
-                end += 1
-                step = 1
-            else:
-                end -= 1
-                step = -1
-            for rev in xrange(start, end, step):
+            step = start > end and -1 or 1
+            for rev in xrange(start, end+step, step):
                 yield str(rev)
         else:
             yield str(fix(spec, None))
