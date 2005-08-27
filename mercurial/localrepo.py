@@ -6,14 +6,10 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import struct, os, util
-from repo import *
-from revlog import *
-from filelog import *
-from manifest import *
-from changelog import *
-from dirstate import *
+import filelog, manifest, changelog, dirstate, repo
+from node import *
 from demandload import *
-demandload(globals(), "re lock transaction tempfile stat")
+demandload(globals(), "re lock transaction tempfile stat mdiff")
 
 class localrepository:
     def __init__(self, ui, opener, path=None, create=0):
@@ -27,12 +23,12 @@ class localrepository:
                 while not os.path.isdir(os.path.join(p, ".hg")):
                     oldp = p
                     p = os.path.dirname(p)
-                    if p == oldp: raise RepoError("no repo found")
+                    if p == oldp: raise repo.RepoError("no repo found")
                 path = p
             self.path = os.path.join(path, ".hg")
 
             if not create and not os.path.isdir(self.path):
-                raise RepoError("repository %s not found" % self.path)
+                raise repo.RepoError("repository %s not found" % self.path)
 
         self.root = os.path.abspath(path)
         self.ui = ui
@@ -43,13 +39,13 @@ class localrepository:
 
         self.opener = opener(self.path)
         self.wopener = opener(self.root)
-        self.manifest = manifest(self.opener)
-        self.changelog = changelog(self.opener)
+        self.manifest = manifest.manifest(self.opener)
+        self.changelog = changelog.changelog(self.opener)
         self.tagscache = None
         self.nodetagscache = None
 
         if not self.remote:
-            self.dirstate = dirstate(self.opener, ui, self.root)
+            self.dirstate = dirstate.dirstate(self.opener, ui, self.root)
             try:
                 self.ui.readconfig(self.opener("hgrc"))
             except IOError: pass
@@ -143,7 +139,7 @@ class localrepository:
             try:
                 return self.changelog.lookup(key)
             except:
-                raise RepoError("unknown revision '%s'" % key)
+                raise repo.RepoError("unknown revision '%s'" % key)
 
     def dev(self):
         if self.remote: return -1
@@ -160,7 +156,7 @@ class localrepository:
 
     def file(self, f):
         if f[0] == '/': f = f[1:]
-        return filelog(self.opener, f)
+        return filelog.filelog(self.opener, f)
 
     def getcwd(self):
         return self.dirstate.getcwd()
@@ -207,7 +203,7 @@ class localrepository:
             transaction.rollback(self.opener, self.join("undo"))
             self.dirstate = None
             util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-            self.dirstate = dirstate(self.opener, self.ui, self.root)
+            self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
         else:
             self.ui.warn("no undo information available\n")
 
@@ -810,7 +806,7 @@ class localrepository:
         # sanity check our fetch list
         for f in fetch.keys():
             if f in m:
-                raise RepoError("already have changeset " + short(f[:4]))
+                raise repo.RepoError("already have changeset " + short(f[:4]))
 
         if base.keys() == [nullid]:
             self.ui.warn("warning: pulling from an unrelated repository!\n")
