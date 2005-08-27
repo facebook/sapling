@@ -6,9 +6,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, cgi, time, re, difflib, socket, sys, zlib
-from mercurial.hg import *
-from mercurial.ui import *
+import os, cgi, time, re, socket, sys, zlib
+from hg import *
+from ui import *
+
 
 def templatepath():
     for f in "templates", "../templates":

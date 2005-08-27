@@ -11,7 +11,7 @@ of the GNU General Public License, incorporated herein by reference.
 """
 
 import zlib, struct, sha, binascii, heapq
-from mercurial import mdiff
+import mdiff
 from node import *
 
 def hash(text, p1, p2):
