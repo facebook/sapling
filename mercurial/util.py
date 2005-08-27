@@ -276,6 +276,8 @@ else:
 
     def explain_exit(code):
         """return a 2-tuple (desc, code) describing a process's status"""
+        if os.name == 'nt': # os.WIFxx is not supported on windows
+            return "aborted with error." , -1
         if os.WIFEXITED(code):
             val = os.WEXITSTATUS(code)
             return "exited with status %d" % val, val
