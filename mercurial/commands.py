@@ -1348,14 +1348,14 @@ def status(ui, repo, *pats, **opts):
                    ('unknown', '?', u)]
 
     end = opts['print0'] and '\0' or '\n'
-    
+
     for opt, char, changes in ([ct for ct in changetypes if opts[ct[0]]]
                                or changetypes):
         if opts['no_status']:
             format = "%%s%s" % end
         else:
             format = "%s %%s%s" % (char, end);
-            
+
         for f in changes:
             ui.write(format % f)
 
