@@ -5,7 +5,6 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import util
 from node import *
 from repo import *
 from demandload import *
@@ -26,4 +25,4 @@ def repository(ui, path=None, create=0):
         if path.startswith("ssh://"):
             return sshrepo.sshrepository(ui, path)
 
-    return localrepo.localrepository(ui, util.opener, path, create)
+    return localrepo.localrepository(ui, path, create)

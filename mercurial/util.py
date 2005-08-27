@@ -238,8 +238,6 @@ def opener(base):
 
     this function is used to hide the details of COW semantics and
     remote file access from higher level code.
-
-    todo: separate remote file access into a separate function
     """
     p = base
     def o(path, mode="r"):

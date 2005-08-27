@@ -12,7 +12,7 @@ from demandload import *
 demandload(globals(), "re lock transaction tempfile stat mdiff")
 
 class localrepository:
-    def __init__(self, ui, opener, path=None, create=0):
+    def __init__(self, ui, path=None, create=0):
         if not path:
             p = os.getcwd()
             while not os.path.isdir(os.path.join(p, ".hg")):
@@ -32,8 +32,8 @@ class localrepository:
             os.mkdir(self.path)
             os.mkdir(self.join("data"))
 
-        self.opener = opener(self.path)
-        self.wopener = opener(self.root)
+        self.opener = util.opener(self.path)
+        self.wopener = util.opener(self.root)
         self.manifest = manifest.manifest(self.opener)
         self.changelog = changelog.changelog(self.opener)
         self.tagscache = None
