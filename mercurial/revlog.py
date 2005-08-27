@@ -14,6 +14,20 @@ import zlib, struct, sha, binascii, heapq
 from mercurial import mdiff
 from node import *
 
+def hash(text, p1, p2):
+    """generate a hash from the given text and its parent hashes
+
+    This hash combines both the current file contents and its history
+    in a manner that makes it easy to distinguish nodes with the same
+    content in the revision graph.
+    """
+    l = [p1, p2]
+    l.sort()
+    s = sha.new(l[0])
+    s.update(l[1])
+    s.update(text)
+    return s.digest()
+
 def compress(text):
     """ generate a possibly-compressed representation of text """
     if not text: return text
