@@ -13,22 +13,17 @@ demandload(globals(), "re lock transaction tempfile stat mdiff")
 
 class localrepository:
     def __init__(self, ui, opener, path=None, create=0):
-        self.remote = 0
-        if path and path.startswith("http://"):
-            self.remote = 1
-            self.path = path
-        else:
-            if not path:
-                p = os.getcwd()
-                while not os.path.isdir(os.path.join(p, ".hg")):
-                    oldp = p
-                    p = os.path.dirname(p)
-                    if p == oldp: raise repo.RepoError("no repo found")
-                path = p
-            self.path = os.path.join(path, ".hg")
+        if not path:
+            p = os.getcwd()
+            while not os.path.isdir(os.path.join(p, ".hg")):
+                oldp = p
+                p = os.path.dirname(p)
+                if p == oldp: raise repo.RepoError("no repo found")
+            path = p
+        self.path = os.path.join(path, ".hg")
 
-            if not create and not os.path.isdir(self.path):
-                raise repo.RepoError("repository %s not found" % self.path)
+        if not create and not os.path.isdir(self.path):
+            raise repo.RepoError("repository %s not found" % self.path)
 
         self.root = os.path.abspath(path)
         self.ui = ui
@@ -44,11 +39,10 @@ class localrepository:
         self.tagscache = None
         self.nodetagscache = None
 
-        if not self.remote:
-            self.dirstate = dirstate.dirstate(self.opener, ui, self.root)
-            try:
-                self.ui.readconfig(self.opener("hgrc"))
-            except IOError: pass
+        self.dirstate = dirstate.dirstate(self.opener, ui, self.root)
+        try:
+            self.ui.readconfig(self.opener("hgrc"))
+        except IOError: pass
 
     def hook(self, name, **args):
         s = self.ui.config("hooks", name)
@@ -142,11 +136,10 @@ class localrepository:
                 raise repo.RepoError("unknown revision '%s'" % key)
 
     def dev(self):
-        if self.remote: return -1
         return os.stat(self.path).st_dev
 
     def local(self):
-        return not self.remote
+        return True
 
     def join(self, f):
         return os.path.join(self.path, f)

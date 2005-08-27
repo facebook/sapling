@@ -243,10 +243,6 @@ def opener(base):
     """
     p = base
     def o(path, mode="r"):
-        if p.startswith("http://"):
-            f = os.path.join(p, urllib.quote(path))
-            return httprangereader.httprangereader(f)
-
         f = os.path.join(p, path)
 
         mode += "b" # for that other OS

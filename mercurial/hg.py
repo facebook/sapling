@@ -9,7 +9,7 @@ import util
 from node import *
 from repo import *
 from demandload import *
-demandload(globals(), "localrepo httprepo sshrepo")
+demandload(globals(), "localrepo httprepo sshrepo statichttprepo")
 
 def repository(ui, path=None, create=0):
     if path:
@@ -21,8 +21,8 @@ def repository(ui, path=None, create=0):
             return httprepo.httprepository(
                 ui, path.replace("hg://", "http://"))
         if path.startswith("old-http://"):
-            return localrepo.localrepository(
-                ui, util.opener, path.replace("old-http://", "http://"))
+            return statichttprepo.statichttprepository(
+                ui, path.replace("old-http://", "http://"))
         if path.startswith("ssh://"):
             return sshrepo.sshrepository(ui, path)
 
