@@ -1,12 +1,14 @@
-# revlog.py - storage back-end for mercurial
-#
-# This provides efficient delta storage with O(1) retrieve and append
-# and O(changes) merge between branches
-#
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
-#
-# This software may be used and distributed according to the terms
-# of the GNU General Public License, incorporated herein by reference.
+"""
+revlog.py - storage back-end for mercurial
+
+This provides efficient delta storage with O(1) retrieve and append
+and O(changes) merge between branches
+
+Copyright 2005 Matt Mackall <mpm@selenic.com>
+
+This software may be used and distributed according to the terms
+of the GNU General Public License, incorporated herein by reference.
+"""
 
 import zlib, struct, sha, binascii, heapq
 from mercurial import mdiff
@@ -16,6 +18,7 @@ def bin(node): return binascii.unhexlify(node)
 def short(node): return hex(node[:6])
 
 def compress(text):
+    """ generate a possibly-compressed representation of text """
     if not text: return text
     if len(text) < 44:
         if text[0] == '\0': return text
@@ -27,6 +30,7 @@ def compress(text):
     return bin
 
 def decompress(bin):
+    """ decompress the given input """
     if not bin: return bin
     t = bin[0]
     if t == '\0': return bin
@@ -35,6 +39,12 @@ def decompress(bin):
     raise RevlogError("unknown compression type %s" % t)
 
 def hash(text, p1, p2):
+    """generate a hash from the given text and its parent hashes
+
+    This hash combines both the current file contents and its history
+    in a manner that makes it easy to distinguish nodes with the same
+    content in the revision graph.
+    """
     l = [p1, p2]
     l.sort()
     s = sha.new(l[0])
@@ -46,6 +56,15 @@ nullid = "\0" * 20
 indexformat = ">4l20s20s20s"
 
 class lazyparser:
+    """
+    this class avoids the need to parse the entirety of large indices
+
+    By default we parse and load 1000 entries at a time.
+
+    If no position is specified, we load the whole index, and replace
+    the lazy objects in revlog with the underlying objects for
+    efficiency in cases where we look at most of the nodes.
+    """
     def __init__(self, data, revlog):
         self.data = data
         self.s = struct.calcsize(indexformat)
@@ -76,6 +95,7 @@ class lazyparser:
             i += 1
 
 class lazyindex:
+    """a lazy version of the index array"""
     def __init__(self, parser):
         self.p = parser
     def __len__(self):
@@ -89,6 +109,7 @@ class lazyindex:
         self.p.index.append(e)
 
 class lazymap:
+    """a lazy version of the node map"""
     def __init__(self, parser):
         self.p = parser
     def load(self, key):
@@ -123,7 +144,37 @@ class lazymap:
 class RevlogError(Exception): pass
 
 class revlog:
+    """
+    the underlying revision storage object
+
+    A revlog consists of two parts, an index and the revision data.
+
+    The index is a file with a fixed record size containing
+    information on each revision, includings its nodeid (hash), the
+    nodeids of its parents, the position and offset of its data within
+    the data file, and the revision it's based on. Finally, each entry
+    contains a linkrev entry that can serve as a pointer to external
+    data.
+
+    The revision data itself is a linear collection of data chunks.
+    Each chunk represents a revision and is usually represented as a
+    delta against the previous chunk. To bound lookup time, runs of
+    deltas are limited to about 2 times the length of the original
+    version data. This makes retrieval of a version proportional to
+    its size, or O(1) relative to the number of revisions.
+
+    Both pieces of the revlog are written to in an append-only
+    fashion, which means we never need to rewrite a file to insert or
+    remove data, and can use some simple techniques to avoid the need
+    for locking while reading.
+    """
     def __init__(self, opener, indexfile, datafile):
+        """
+        create a revlog object
+
+        opener is a function that abstracts the file opening operation
+        and can be used to implement COW semantics or the like.
+        """
         self.indexfile = indexfile
         self.datafile = datafile
         self.opener = opener
@@ -193,12 +244,13 @@ class revlog:
         return reachable
 
     def heads(self, stop=None):
+        """return the list of all nodes that have no children"""
         p = {}
         h = []
         stoprev = 0
         if stop and stop in self.nodemap:
             stoprev = self.rev(stop)
-            
+
         for r in range(self.count() - 1, -1, -1):
             n = self.node(r)
             if n not in p:
@@ -212,6 +264,7 @@ class revlog:
         return h
 
     def children(self, node):
+        """find the children of a given node"""
         c = []
         p = self.rev(node)
         for r in range(p + 1, self.count()):
@@ -225,6 +278,7 @@ class revlog:
         return c
 
     def lookup(self, id):
+        """locate a node based on revision number or subset of hex nodeid"""
         try:
             rev = int(id)
             if str(rev) != id: raise ValueError
@@ -243,12 +297,15 @@ class revlog:
         return None
 
     def diff(self, a, b):
+        """return a delta between two revisions"""
         return mdiff.textdiff(a, b)
 
     def patches(self, t, pl):
+        """apply a list of patches to a string"""
         return mdiff.patches(t, pl)
 
     def delta(self, node):
+        """return or calculate a delta between a node and its predecessor"""
         r = self.rev(node)
         b = self.base(r)
         if r == b:
@@ -261,15 +318,18 @@ class revlog:
         return decompress(data)
 
     def revision(self, node):
+        """return an uncompressed revision of a given"""
         if node == nullid: return ""
         if self.cache and self.cache[0] == node: return self.cache[2]
 
+        # look up what we need to read
         text = None
         rev = self.rev(node)
         start, length, base, link, p1, p2, node = self.index[rev]
         end = start + length
         if base != rev: start = self.start(base)
 
+        # do we have useful data cached?
         if self.cache and self.cache[1] >= base and self.cache[1] < rev:
             base = self.cache[1]
             start = self.start(base + 1)
@@ -300,6 +360,14 @@ class revlog:
         return text
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
+        """add a revision to the log
+
+        text - the revision data to add
+        transaction - the transaction object used for rollback
+        link - the linkrev data to add
+        p1, p2 - the parent nodeids of the revision
+        d - an optional precomputed delta
+        """
         if text is None: text = ""
         if p1 is None: p1 = self.tip()
         if p2 is None: p2 = nullid
@@ -349,6 +417,7 @@ class revlog:
         return node
 
     def ancestor(self, a, b):
+        """calculate the least common ancestor of nodes a and b"""
         # calculate the distance of every node from root
         dist = {nullid: 0}
         for i in xrange(self.count()):
@@ -387,12 +456,14 @@ class revlog:
                 lx = x.next()
 
     def group(self, linkmap):
-        # given a list of changeset revs, return a set of deltas and
-        # metadata corresponding to nodes. the first delta is
-        # parent(nodes[0]) -> nodes[0] the receiver is guaranteed to
-        # have this parent as it has all history before these
-        # changesets. parent is parent[0]
+        """calculate a delta group
 
+        Given a list of changeset revs, return a set of deltas and
+        metadata corresponding to nodes. the first delta is
+        parent(nodes[0]) -> nodes[0] the receiver is guaranteed to
+        have this parent as it has all history before these
+        changesets. parent is parent[0]
+        """
         revs = []
         needed = {}
 
@@ -498,11 +569,15 @@ class revlog:
         yield struct.pack(">l", 0)
 
     def addgroup(self, revs, linkmapper, transaction, unique=0):
-        # given a set of deltas, add them to the revision log. the
-        # first delta is against its parent, which should be in our
-        # log, the rest are against the previous delta.
+        """
+        add a delta group
 
-        # track the base of the current delta log
+        given a set of deltas, add them to the revision log. the
+        first delta is against its parent, which should be in our
+        log, the rest are against the previous delta.
+        """
+
+        #track the base of the current delta log
         r = self.count()
         t = r - 1
         node = nullid
