@@ -10,7 +10,7 @@ of the GNU General Public License, incorporated herein by reference.
 import struct, os
 from node import *
 from demandload import *
-demandload(globals(), "time bisect stat util")
+demandload(globals(), "time bisect stat util re")
 
 class dirstate:
     def __init__(self, opener, ui, root):
