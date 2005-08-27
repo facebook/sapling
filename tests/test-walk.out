@@ -63,8 +63,8 @@ f  mammals/skunk                   mammals/skunk
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle  
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi  
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon     
-abort: .. not under repository root
-abort: beans/../.. not under repository root
+abort: .. not under root
+abort: beans/../.. not under root
 f  fennel      fennel      
 f  fenugreek   fenugreek   
 f  fiddlehead  fiddlehead  

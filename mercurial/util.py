@@ -1,20 +1,27 @@
-# util.py - utility functions and platform specfic implementations
-#
-# Copyright 2005 K. Thananchayan <thananck@yahoo.com>
-#
-# This software may be used and distributed according to the terms
-# of the GNU General Public License, incorporated herein by reference.
+"""
+util.py - Mercurial utility functions and platform specfic implementations
+
+ Copyright 2005 K. Thananchayan <thananck@yahoo.com>
+
+This software may be used and distributed according to the terms
+of the GNU General Public License, incorporated herein by reference.
+
+This contains helper routines that are independent of the SCM core and hide
+platform-specific details from the core.
+"""
 
 import os, errno
 from demandload import *
 demandload(globals(), "re")
 
 def binary(s):
+    """return true if a string is binary data using diff's heuristic"""
     if s and '\0' in s[:4096]:
         return True
     return False
 
 def unique(g):
+    """return the uniq elements of iterable g"""
     seen = {}
     for f in g:
         if f not in seen:
@@ -86,6 +93,7 @@ def pathto(n1, n2):
     return os.sep.join((['..'] * len(a)) + b)
 
 def canonpath(root, cwd, myname):
+    """return the canonical path of myname, given cwd and root"""
     rootsep = root + os.sep
     name = myname
     if not name.startswith(os.sep):
@@ -99,6 +107,33 @@ def canonpath(root, cwd, myname):
         raise Abort('%s not under root' % myname)
 
 def matcher(canonroot, cwd, names, inc, exc, head=''):
+    """build a function to match a set of file patterns
+
+    arguments:
+    canonroot - the canonical root of the tree you're matching against
+    cwd - the current working directory, if relevant
+    names - patterns to find
+    inc - patterns to include
+    exc - patterns to exclude
+    head - a regex to prepend to patterns to control whether a match is rooted
+
+    a pattern is one of:
+    're:<regex>'
+    'glob:<shellglob>'
+    'path:<explicit path>'
+    'relpath:<relative path>'
+    '<relative path>'
+
+    returns:
+    a 3-tuple containing
+    - list of explicit non-pattern names passed in
+    - a bool match(filename) function
+    - a bool indicating if any patterns were passed in
+
+    todo:
+    make head regex a rooted bool
+    """
+
     def patkind(name):
         for prefix in 're:', 'glob:', 'path:', 'relpath:':
             if name.startswith(prefix): return name.split(':', 1)
@@ -175,6 +210,7 @@ def system(cmd, errprefix=None):
         raise Abort(errmsg)
 
 def rename(src, dst):
+    """forcibly rename a file"""
     try:
         os.rename(src, dst)
     except:
@@ -204,7 +240,7 @@ def _makelock_file(info, pathname):
 def _readlock_file(pathname):
     return file(pathname).read()
 
-# Platfor specific varients
+# Platform specific variants
 if os.name == 'nt':
     nulldev = 'NUL:'
 
@@ -233,6 +269,7 @@ else:
     nulldev = '/dev/null'
 
     def is_exec(f, last):
+        """check whether a file is executable"""
         return (os.stat(f).st_mode & 0100 != 0)
 
     def set_exec(f, mode):
