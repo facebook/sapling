@@ -1351,7 +1351,7 @@ def status(ui, repo, *pats, **opts):
     
     for opt, char, changes in ([ct for ct in changetypes if opts[ct[0]]]
                                or changetypes):
-        if opts['strip']:
+        if opts['no_status']:
             format = "%%s%s" % end
         else:
             format = "%s %%s%s" % (char, end);
@@ -1635,7 +1635,7 @@ table = {
           ('a', 'added', None, 'show only added files'),
           ('r', 'removed', None, 'show only removed files'),
           ('u', 'unknown', None, 'show only unknown (not tracked) files'),
-          ('p', 'strip', None, 'strip status prefix'),
+          ('n', 'no-status', None, 'hide status prefix'),
           ('0', 'print0', None, 'end records with NUL'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
