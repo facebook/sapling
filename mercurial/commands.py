@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from demandload import demandload
+from node import *
 demandload(globals(), "os re sys signal shutil imp")
 demandload(globals(), "fancyopts ui hg util lock")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
@@ -163,9 +164,9 @@ def revrange(ui, repo, revs, revlog=None):
 def make_filename(repo, r, pat, node=None,
                   total=None, seqno=None, revwidth=None):
     node_expander = {
-        'H': lambda: hg.hex(node),
+        'H': lambda: hex(node),
         'R': lambda: str(r.rev(node)),
-        'h': lambda: hg.short(node),
+        'h': lambda: short(node),
         }
     expander = {
         '%': lambda: '%',
@@ -242,7 +243,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     if ui.quiet:
         r = None
     else:
-        hexfunc = ui.verbose and hg.hex or hg.short
+        hexfunc = ui.verbose and hex or short
         r = [hexfunc(node) for node in [node1, node2] if node]
 
     change = repo.changelog.read(node1)
@@ -273,7 +274,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
         rev = log.rev(changenode)
 
     if ui.quiet:
-        ui.write("%d:%s\n" % (rev, hg.short(changenode)))
+        ui.write("%d:%s\n" % (rev, short(changenode)))
         return
 
     changes = log.read(changenode)
@@ -286,16 +287,16 @@ def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
         tz = 0
     date = time.asctime(time.localtime(float(t))) + " %+05d" % (int(tz)/-36)
 
-    parents = [(log.rev(p), ui.verbose and hg.hex(p) or hg.short(p))
+    parents = [(log.rev(p), ui.verbose and hex(p) or short(p))
                for p in log.parents(changenode)
-               if ui.debugflag or p != hg.nullid]
+               if ui.debugflag or p != nullid]
     if not ui.debugflag and len(parents) == 1 and parents[0][0] == rev-1:
         parents = []
 
     if ui.verbose:
-        ui.write("changeset:   %d:%s\n" % (rev, hg.hex(changenode)))
+        ui.write("changeset:   %d:%s\n" % (rev, hex(changenode)))
     else:
-        ui.write("changeset:   %d:%s\n" % (rev, hg.short(changenode)))
+        ui.write("changeset:   %d:%s\n" % (rev, short(changenode)))
 
     for tag in repo.nodetags(changenode):
         ui.status("tag:         %s\n" % tag)
@@ -307,7 +308,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
         ui.write("branch:      %s\n" % " ".join(br))
 
     ui.debug("manifest:    %d:%s\n" % (repo.manifest.rev(changes[0]),
-                                      hg.hex(changes[0])))
+                                      hex(changes[0])))
     ui.status("user:        %s\n" % changes[1])
     ui.status("date:        %s\n" % date)
 
@@ -464,7 +465,7 @@ def addremove(ui, repo, *pats, **opts):
 def annotate(ui, repo, *pats, **opts):
     """show changeset information per file line"""
     def getnode(rev):
-        return hg.short(repo.changelog.node(rev))
+        return short(repo.changelog.node(rev))
 
     def getname(rev):
         try:
@@ -702,7 +703,7 @@ def debugindex(ui, file_):
         e = r.index[i]
         ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
                 i, e[0], e[1], e[2], e[3],
-            hg.short(e[6]), hg.short(e[4]), hg.short(e[5])))
+            short(e[6]), short(e[4]), short(e[5])))
 
 def debugindexdot(ui, file_):
     """dump an index DAG as a .dot file"""
@@ -711,7 +712,7 @@ def debugindexdot(ui, file_):
     for i in range(r.count()):
         e = r.index[i]
         ui.write("\t%d -> %d\n" % (r.rev(e[4]), i))
-        if e[5] != hg.nullid:
+        if e[5] != nullid:
             ui.write("\t%d -> %d\n" % (r.rev(e[5]), i))
     ui.write("}\n")
 
@@ -761,10 +762,10 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
 
     fp.write("# HG changeset patch\n")
     fp.write("# User %s\n" % change[1])
-    fp.write("# Node ID %s\n" % hg.hex(node))
-    fp.write("# Parent  %s\n" % hg.hex(prev))
-    if other != hg.nullid:
-        fp.write("# Parent  %s\n" % hg.hex(other))
+    fp.write("# Node ID %s\n" % hex(node))
+    fp.write("# Parent  %s\n" % hex(prev))
+    if other != nullid:
+        fp.write("# Parent  %s\n" % hex(other))
     fp.write(change[4].rstrip())
     fp.write("\n\n")
 
@@ -902,12 +903,12 @@ def heads(ui, repo, **opts):
 
 def identify(ui, repo):
     """print information about the working copy"""
-    parents = [p for p in repo.dirstate.parents() if p != hg.nullid]
+    parents = [p for p in repo.dirstate.parents() if p != nullid]
     if not parents:
         ui.write("unknown\n")
         return
 
-    hexfunc = ui.verbose and hg.hex or hg.short
+    hexfunc = ui.verbose and hex or short
     (c, a, d, u) = repo.changes()
     output = ["%s%s" % ('+'.join([hexfunc(parent) for parent in parents]),
                         (c or a or d) and "+" or "")]
@@ -1077,7 +1078,7 @@ def manifest(ui, repo, rev=None):
     files.sort()
 
     for f in files:
-        ui.write("%40s %3s %s\n" % (hg.hex(m[f]), mf[f] and "755" or "644", f))
+        ui.write("%40s %3s %s\n" % (hex(m[f]), mf[f] and "755" or "644", f))
 
 def outgoing(ui, repo, dest="default-push"):
     """show changesets not found in destination"""
@@ -1097,7 +1098,7 @@ def parents(ui, repo, rev=None):
         p = repo.dirstate.parents()
 
     for n in p:
-        if n != hg.nullid:
+        if n != nullid:
             show_changeset(ui, repo, changenode=n)
 
 def paths(ui, search=None):
@@ -1260,7 +1261,7 @@ def serve(ui, repo, **opts):
                 return
             if cmd == "heads":
                 h = repo.heads()
-                respond(" ".join(map(hg.hex, h)) + "\n")
+                respond(" ".join(map(hex, h)) + "\n")
             if cmd == "lock":
                 lock = repo.lock()
                 respond("")
@@ -1271,22 +1272,22 @@ def serve(ui, repo, **opts):
                 respond("")
             elif cmd == "branches":
                 arg, nodes = getarg()
-                nodes = map(hg.bin, nodes.split(" "))
+                nodes = map(bin, nodes.split(" "))
                 r = []
                 for b in repo.branches(nodes):
-                    r.append(" ".join(map(hg.hex, b)) + "\n")
+                    r.append(" ".join(map(hex, b)) + "\n")
                 respond("".join(r))
             elif cmd == "between":
                 arg, pairs = getarg()
-                pairs = [map(hg.bin, p.split("-")) for p in pairs.split(" ")]
+                pairs = [map(bin, p.split("-")) for p in pairs.split(" ")]
                 r = []
                 for b in repo.between(pairs):
-                    r.append(" ".join(map(hg.hex, b)) + "\n")
+                    r.append(" ".join(map(hex, b)) + "\n")
                 respond("".join(r))
             elif cmd == "changegroup":
                 nodes = []
                 arg, roots = getarg()
-                nodes = map(hg.bin, roots.split(" "))
+                nodes = map(bin, roots.split(" "))
 
                 cg = repo.changegroup(nodes)
                 while 1:
@@ -1368,9 +1369,9 @@ def tag(ui, repo, name, rev=None, **opts):
         ui.warn("abort: 'tip' is a reserved name!\n")
         return -1
     if rev:
-        r = hg.hex(repo.lookup(rev))
+        r = hex(repo.lookup(rev))
     else:
-        r = hg.hex(repo.changelog.tip())
+        r = hex(repo.changelog.tip())
 
     if name.find(revrangesep) >= 0:
         ui.warn("abort: '%s' cannot be used in a tag name\n" % revrangesep)
@@ -1402,7 +1403,7 @@ def tags(ui, repo):
     l.reverse()
     for t, n in l:
         try:
-            r = "%5d:%s" % (repo.changelog.rev(n), hg.hex(n))
+            r = "%5d:%s" % (repo.changelog.rev(n), hex(n))
         except KeyError:
             r = "    ?:?"
         ui.write("%-30s %s\n" % (t, r))
@@ -1453,7 +1454,7 @@ def update(ui, repo, node=None, merge=False, clean=False, branch=None):
             return 1
         if len(found) == 1:
             node = found[0]
-            ui.warn("Using head %s for branch %s\n" % (hg.short(node), branch))
+            ui.warn("Using head %s for branch %s\n" % (short(node), branch))
         else:
             ui.warn("branch %s not found\n" % (branch))
             return 1
