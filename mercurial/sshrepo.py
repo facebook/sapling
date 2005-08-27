@@ -6,6 +6,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, re, select
+from node import *
+from remoterepo import *
 
 class sshrepository(remoterepository):
     def __init__(self, ui, path):
