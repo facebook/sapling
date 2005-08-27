@@ -30,7 +30,7 @@ def relpath(repo, args):
     return args
 
 def matchpats(repo, cwd, pats=[], opts={}, head=''):
-    return util.matcher(repo, cwd, pats or ['.'], opts.get('include'),
+    return util.matcher(repo.root, cwd, pats or ['.'], opts.get('include'),
                         opts.get('exclude'), head)
 
 def makewalk(repo, pats, opts, head=''):

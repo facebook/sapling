@@ -85,20 +85,20 @@ def pathto(n1, n2):
     b.reverse()
     return os.sep.join((['..'] * len(a)) + b)
 
-def canonpath(repo, cwd, myname):
-    rootsep = repo.root + os.sep
+def canonpath(root, cwd, myname):
+    rootsep = root + os.sep
     name = myname
     if not name.startswith(os.sep):
-        name = os.path.join(repo.root, cwd, name)
+        name = os.path.join(root, cwd, name)
     name = os.path.normpath(name)
     if name.startswith(rootsep):
         return pconvert(name[len(rootsep):])
-    elif name == repo.root:
+    elif name == root:
         return ''
     else:
-        raise Abort('%s not under repository root' % myname)
+        raise Abort('%s not under root' % myname)
 
-def matcher(repo, cwd, names, inc, exc, head=''):
+def matcher(canonroot, cwd, names, inc, exc, head=''):
     def patkind(name):
         for prefix in 're:', 'glob:', 'path:', 'relpath:':
             if name.startswith(prefix): return name.split(':', 1)
@@ -135,7 +135,7 @@ def matcher(repo, cwd, names, inc, exc, head=''):
     roots = []
     for kind, name in map(patkind, names):
         if kind in ('glob', 'relpath'):
-            name = canonpath(repo, cwd, name)
+            name = canonpath(canonroot, cwd, name)
             if name == '':
                 kind, name = 'glob', '**'
         if kind in ('glob', 'path', 're'):
