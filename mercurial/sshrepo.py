@@ -1,4 +1,4 @@
-# hg.py - repository classes for mercurial
+# sshrepo.py - ssh repository proxy class for mercurial
 #
 # Copyright 2005 Matt Mackall <mpm@selenic.com>
 #
