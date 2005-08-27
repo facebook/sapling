@@ -156,6 +156,8 @@ options:
  -a --added     show only added files
  -r --removed   show only removed files
  -u --unknown   show only unknown (not tracked) files
+ -p --strip     strip status prefix
+ -0 --print0    end records with NUL
  -I --include   include path in search
  -X --exclude   exclude path from search
 hg status [OPTION]... [FILE]...
