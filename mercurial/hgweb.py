@@ -58,8 +58,14 @@ def up(p):
         return "/"
     return up + "/"
 
-def httphdr(type):
-    sys.stdout.write('Content-type: %s\n\n' % type)
+def httphdr(type, file="", size=0):
+    sys.stdout.write('Content-type: %s\n' % type)
+    if file:
+        sys.stdout.write('Content-disposition: attachment; filename=%s\n'
+            % file)
+    if size > 0:
+        sys.stdout.write('Content-length: %d\n' % size)
+    sys.stdout.write('\n')
 
 def write(*things):
     for thing in things:
@@ -161,6 +167,9 @@ class hgweb:
             self.maxchanges = self.repo.ui.config("web", "maxchanges", 10)
             self.maxfiles = self.repo.ui.config("web", "maxchanges", 10)
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
+            self.allowzip = self.repo.ui.configbool("web", "zip", True)
+            self.allowgz = self.repo.ui.configbool("web", "gz", True)
+            self.allowbz2 = self.repo.ui.configbool("web", "bz2", True)
 
     def date(self, cs):
         return time.asctime(time.gmtime(float(cs[2].split(' ')[0])))
@@ -187,6 +196,16 @@ class hgweb:
     def showtag(self, t1, node=nullid, **args):
         for t in self.repo.nodetags(node):
              yield self.t(t1, tag=t, **args)
+
+    def tarballbuttons(self, m):
+        s = ''
+        if self.allowzip:
+            s += '<a href="?cmd=tarball;manifest=%s;type=zip">zip</a>\n' % m
+        if self.allowgz:
+            s += '<a href="?cmd=tarball;manifest=%s;type=gz">gz</a>\n' % m
+        if self.allowbz2:
+            s += '<a href="?cmd=tarball;manifest=%s;type=bz2">bz2</a>\n' % m
+        return s
 
     def diff(self, node1, node2, files):
         def filterfiles(list, files):
@@ -395,7 +414,8 @@ class hgweb:
                      author=changes[1],
                      desc=changes[4],
                      date=t,
-                     files=files)
+                     files=files,
+                     tarballbuttons=self.tarballbuttons(hex(changes[0])))
 
     def filelog(self, f, filenode):
         cl = self.repo.changelog
@@ -623,6 +643,58 @@ class hgweb:
                                          cl.parents(n), cl.rev),
                      diff=diff)
 
+    def ziparchive(self, mnode):
+        import zipfile
+
+        tmp = tempfile.mkstemp()[1]
+        zf = zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED)
+        mf = self.repo.manifest.read(bin(mnode))
+        rev = self.repo.manifest.rev(bin(mnode))
+        cnode = short(self.repo.changelog.node(rev))
+        name = os.path.basename(self.repo.path[:-4]) # without '/.hg' suffix
+        name += '-' + str(rev) + '-' + cnode + '/'
+
+        for fname in mf.keys():
+            r = self.repo.file(fname)
+            zf.writestr(name + fname, r.read(mf[fname]))
+        zf.close()
+
+        f = open(tmp, 'r')
+        httphdr('application/zip', name[:-1] + '.zip', os.path.getsize(tmp))
+        sys.stdout.write(f.read())
+        f.close()
+        os.unlink(tmp)
+
+    def tararchive(self, mnode, type):
+        import StringIO
+        import time
+        import tarfile
+
+        #if type == "gz":
+        #    tf = tarfile.TarFile.gzopen('', 'w', sys.stdout, compressionlevel)
+        #else:
+        #    tf = tarfile.TarFile.bz2open('', 'w', sys.stdout, compressionlevel)
+        tf = tarfile.TarFile.open(mode='w|' + type, fileobj=sys.stdout)
+
+        mf = self.repo.manifest.read(bin(mnode))
+        rev = self.repo.manifest.rev(bin(mnode))
+        cnode = short(self.repo.changelog.node(rev))
+        mff = self.repo.manifest.readflags(bin(mnode))
+        mtime = int(time.time())
+        name = os.path.basename(self.repo.path[:-4]) # without '/.hg' suffix
+        name += '-' + str(rev) + '-' + cnode  + '/'
+
+        httphdr('application/octet-stream', name[:-1] + '.tar.' + type)
+        for fname in mf.keys():
+            r = self.repo.file(fname)
+            rcont = r.read(mf[fname])
+            finfo = tarfile.TarInfo(name + fname)
+            finfo.mtime = mtime
+            finfo.size = len(rcont)
+            finfo.mode = mff[fname] and 0755 or 0644
+            tf.addfile(finfo, StringIO.StringIO(rcont))
+        tf.close()
+
     # add tags to things
     # tags -> list of changesets corresponding to tags
     # find tag, changeset, file
@@ -739,6 +811,18 @@ class hgweb:
                 sys.stdout.write(z.compress(chunk))
 
             sys.stdout.write(z.flush())
+
+        elif args['cmd'][0] == 'tarball':
+            manifest = args['manifest'][0]
+            type = args['type'][0]
+            if type == 'zip' and self.allowzip:
+                self.ziparchive(manifest)
+            elif type == 'gz' and self.allowgz:
+                self.tararchive(manifest, 'gz')
+            elif type == 'bz2' and self.allowbz2:
+                self.tararchive(manifest, 'bz2')
+            else:
+                write(self.t("error"))
 
         else:
             write(self.t("error"))
