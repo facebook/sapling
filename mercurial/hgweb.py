@@ -86,7 +86,7 @@ class templater:
                 if m:
                     self.map[m.group(1)] = os.path.join(self.base, m.group(2))
                 else:
-                    raise "unknown map entry '%s'"  % l
+                    raise LookupError("unknown map entry '%s'" % l)
 
     def __call__(self, t, **map):
         m = self.defaults.copy()

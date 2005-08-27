@@ -20,7 +20,7 @@ class transaction:
 
         # abort here if the journal already exists
         if os.path.exists(journal):
-            raise "journal already exists - run hg recover"
+            raise AssertionError("journal already exists - run hg recover")
 
         self.report = report
         self.opener = opener

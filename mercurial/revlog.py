@@ -32,7 +32,7 @@ def decompress(bin):
     if t == '\0': return bin
     if t == 'x': return zlib.decompress(bin)
     if t == 'u': return bin[1:]
-    raise "unknown compression type %s" % t
+    raise RevlogError("unknown compression type %s" % t)
 
 def hash(text, p1, p2):
     l = [p1, p2]
@@ -119,6 +119,8 @@ class lazymap:
                 raise KeyError("node " + hex(key))
     def __setitem__(self, key, val):
         self.p.map[key] = val
+
+class RevlogError(Exception): pass
 
 class revlog:
     def __init__(self, opener, indexfile, datafile):
@@ -505,7 +507,7 @@ class revlog:
             if node in self.nodemap:
                 # this can happen if two branches make the same change
                 if unique:
-                    raise "already have %s" % hex(node[:4])
+                    raise RevlogError("already have %s" % hex(node[:4]))
                 chain = node
                 continue
             delta = chunk[80:]
@@ -514,7 +516,7 @@ class revlog:
                 # retrieve the parent revision of the delta chain
                 chain = p1
                 if not chain in self.nodemap:
-                    raise "unknown base %s" % short(chain[:4])
+                    raise RevlogError("unknown base %s" % short(chain[:4]))
 
             # full versions are inserted when the needed deltas become
             # comparable to the uncompressed text or when the previous
@@ -533,7 +535,7 @@ class revlog:
                 text = self.patches(text, [delta])
                 chk = self.addrevision(text, transaction, link, p1, p2)
                 if chk != node:
-                    raise "consistency error adding group"
+                    raise RevlogError("consistency error adding group")
                 measure = len(text)
             else:
                 e = (end, len(cdelta), self.base(t), link, p1, p2, node)
