@@ -17,17 +17,38 @@ The hg(1) command provides a command line interface to the Mercurial system.
 OPTIONS
 -------
 
---debug, -d::
-    enable debugging output
+-R, --repository::
+    repository root directory
+    
+--cwd::
+    change working directory
 
---quiet, -q::
+-y, --noninteractive::
+    do not prompt, assume 'yes' for any required answers
+
+-q, --quiet::
     suppress output
 
---verbose, -v::
+-v, --verbose::
     enable additional output
 
---noninteractive, -y::
-    do not prompt, assume 'yes' for any required answers
+--debug::
+    enable debugging output
+
+--traceback::
+    print traceback on exception
+
+--time::
+    time how long the command takes
+
+--profile::
+    print command execution profile
+
+--version::
+    output version information and exit
+
+-h, --help::
+    display help and exit
 
 COMMAND ELEMENTS
 ----------------
@@ -122,7 +143,7 @@ commit [options] [files...]::
     -I, --include <pat>   include names matching the given patterns
     -X, --exclude <pat>   exclude names matching the given patterns
     -m, --message <text>  use <text> as commit message
-    -l, --logfile <file>  show the commit message for the given file
+    -l, --logfile <file>  read the commit message from <file>
     -d, --date <datecode> record datecode as commit date
     -u, --user <user>     record user as commiter
 
