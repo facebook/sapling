@@ -73,7 +73,11 @@ def write(*things):
             for part in thing:
                 write(part)
         else:
-            sys.stdout.write(str(thing))
+            try:
+                sys.stdout.write(str(thing))
+            except socket.error, x:
+                if x[0] != errno.ECONNRESET:
+                    raise
 
 class templater:
     def __init__(self, mapfile, filters={}, defaults={}):
