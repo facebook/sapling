@@ -232,6 +232,41 @@ def copytree(src, dst, copyfile):
         else:
             pass
 
+def opener(base):
+    """
+    return a function that opens files relative to base
+
+    this function is used to hide the details of COW semantics and
+    remote file access from higher level code.
+
+    todo: separate remote file access into a separate function
+    """
+    p = base
+    def o(path, mode="r"):
+        if p.startswith("http://"):
+            f = os.path.join(p, urllib.quote(path))
+            return httprangereader.httprangereader(f)
+
+        f = os.path.join(p, path)
+
+        mode += "b" # for that other OS
+
+        if mode[0] != "r":
+            try:
+                s = os.stat(f)
+            except OSError:
+                d = os.path.dirname(f)
+                if not os.path.isdir(d):
+                    os.makedirs(d)
+            else:
+                if s.st_nlink > 1:
+                    file(f + ".tmp", "wb").write(file(f, "rb").read())
+                    rename(f+".tmp", f)
+
+        return file(f, mode)
+
+    return o
+
 def _makelock_file(info, pathname):
     ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
     os.write(ld, info)
