@@ -170,6 +170,28 @@ class revlog:
     def end(self, rev): return self.start(rev) + self.length(rev)
     def base(self, rev): return self.index[rev][2]
 
+    def reachable(self, rev, stop=None):
+        reachable = {}
+        visit = [rev]
+        reachable[rev] = 1
+        if stop:
+            stopn = self.rev(stop)
+        else:
+            stopn = 0
+        while visit:
+            n = visit.pop(0)
+            if n == stop:
+                continue
+            if n == nullid:
+                continue
+            for p in self.parents(n):
+                if self.rev(p) < stopn:
+                    continue
+                if p not in reachable:
+                    reachable[p] = 1
+                    visit.append(p)
+        return reachable
+
     def heads(self, stop=None):
         p = {}
         h = []
