@@ -142,6 +142,14 @@ web::
     Maximum number of files to list per changeset. Default is 10.
   allowpull;;
     Whether to allow pulling from the repository. Default is true.
+  allowzip;;
+    Whether to allow .zip downloading of repo revisions. Default is false.
+    This feature creates temporary files.
+  allowgz;;
+    Whether to allow .tar.gz downloading of repo revisions. Default is false.
+  allowbz2;;
+    Whether to allow .tar.bz2 downloading of repo revisions. Default is false.
+
 
 AUTHOR
 ------
