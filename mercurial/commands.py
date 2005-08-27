@@ -8,7 +8,7 @@
 from demandload import demandload
 from node import *
 demandload(globals(), "os re sys signal shutil imp")
-demandload(globals(), "fancyopts ui hg util lock")
+demandload(globals(), "fancyopts ui hg util lock revlog")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
 demandload(globals(), "errno socket version struct atexit sets")
 
@@ -691,12 +691,12 @@ def debugstate(ui, repo):
 
 def debugdata(ui, file_, rev):
     """dump the contents of an data file revision"""
-    r = hg.revlog(file, file_[:-2] + ".i", file_)
+    r = revlog.revlog(file, file_[:-2] + ".i", file_)
     ui.write(r.revision(r.lookup(rev)))
 
 def debugindex(ui, file_):
     """dump the contents of an index file"""
-    r = hg.revlog(file, file_, "")
+    r = revlog.revlog(file, file_, "")
     ui.write("   rev    offset  length   base linkrev" +
              " nodeid       p1           p2\n")
     for i in range(r.count()):
@@ -707,7 +707,7 @@ def debugindex(ui, file_):
 
 def debugindexdot(ui, file_):
     """dump an index DAG as a .dot file"""
-    r = hg.revlog(file, file_, "")
+    r = revlog.revlog(file, file_, "")
     ui.write("digraph G {\n")
     for i in range(r.count()):
         e = r.index[i]

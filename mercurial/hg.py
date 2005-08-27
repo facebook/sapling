@@ -8,7 +8,6 @@
 import os
 import util
 from node import *
-from revlog import *
 from repo import *
 from demandload import *
 demandload(globals(), "localrepo httprepo sshrepo")
