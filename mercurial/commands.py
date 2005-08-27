@@ -1347,10 +1347,17 @@ def status(ui, repo, *pats, **opts):
                    ('removed', 'R', d),
                    ('unknown', '?', u)]
 
+    end = opts['print0'] and '\0' or '\n'
+    
     for opt, char, changes in ([ct for ct in changetypes if opts[ct[0]]]
                                or changetypes):
+        if opts['strip']:
+            format = "%%s%s" % end
+        else:
+            format = "%s %%s%s" % (char, end);
+            
         for f in changes:
-            ui.write("%s %s\n" % (char, f))
+            ui.write(format % f)
 
 def tag(ui, repo, name, rev=None, **opts):
     """add a tag for the current tip or a given revision"""
@@ -1628,6 +1635,8 @@ table = {
           ('a', 'added', None, 'show only added files'),
           ('r', 'removed', None, 'show only removed files'),
           ('u', 'unknown', None, 'show only unknown (not tracked) files'),
+          ('p', 'strip', None, 'strip status prefix'),
+          ('0', 'print0', None, 'end records with NUL'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
          "hg status [OPTION]... [FILE]..."),
