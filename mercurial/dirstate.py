@@ -7,8 +7,8 @@ This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
 
-import sys, struct, os
-from revlog import *
+import struct, os
+from node import *
 from demandload import *
 demandload(globals(), "time bisect stat util")
 
