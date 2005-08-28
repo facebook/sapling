@@ -1,0 +1,41 @@
+#!/bin/sh
+
+hg clone old-http://localhost:20059/ copy
+echo $?
+ls copy
+
+# This server doesn't do range requests so it's basically only good for
+# one pull
+cat > dumb.py <<EOF
+import BaseHTTPServer, SimpleHTTPServer, signal
+
+def run(server_class=BaseHTTPServer.HTTPServer,
+        handler_class=SimpleHTTPServer.SimpleHTTPRequestHandler):
+    server_address = ('localhost', 20059)
+    httpd = server_class(server_address, handler_class)
+    httpd.serve_forever()
+
+signal.signal(signal.SIGTERM, lambda x: sys.exit(0))
+run()
+EOF
+
+python dumb.py 2>/dev/null &
+
+mkdir remote
+cd remote
+hg init
+echo foo > bar
+hg add bar
+hg commit -m"test" -d"0 0"
+hg tip
+
+cd ..
+
+hg clone old-http://localhost:20059/remote local
+
+cd local
+hg verify
+cat bar
+hg pull
+
+kill $!

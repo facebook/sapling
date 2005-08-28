@@ -1,0 +1,26 @@
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 0 changesets with 0 changes to 0 files
+0
+changeset:   0:61c9426e69fe
+tag:         tip
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     test
+
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
+foo
+pulling from old-http://localhost:20059/remote
+searching for changes
+no changes found
