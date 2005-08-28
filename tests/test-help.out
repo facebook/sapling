@@ -157,7 +157,7 @@ options:
  -r --removed    show only removed files
  -u --unknown    show only unknown (not tracked) files
  -n --no-status  hide status prefix
- -0 --print0     end records with NUL
+ -0 --print0     end filenames with NUL
  -I --include    include path in search
  -X --exclude    exclude path from search
 hg status [OPTION]... [FILE]...

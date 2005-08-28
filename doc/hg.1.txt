@@ -435,7 +435,7 @@ status [options] [files]::
     -a, --added          show only added files
     -r, --removed        show only removed files
     -u, --unknown        show only unknown (not tracked) files
-    -p, --strip          strip status prefix
+    -n, --no-status      hide status prefix
     -0, --print0         end filenames with NUL, for use with xargs
     -I, --include <pat>  include names matching the given patterns
     -X, --exclude <pat>  exclude names matching the given patterns

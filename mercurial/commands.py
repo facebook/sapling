@@ -1537,7 +1537,7 @@ table = {
          "hg forget [OPTION]... FILE..."),
     "grep":
         (grep,
-         [('0', 'print0', None, 'terminate file names with NUL'),
+         [('0', 'print0', None, 'end filenames with NUL'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'include path in search'),
           ('i', 'ignore-case', None, 'ignore case when matching'),
@@ -1562,7 +1562,7 @@ table = {
     "locate":
         (locate,
          [('r', 'rev', '', 'revision'),
-          ('0', 'print0', None, 'end records with NUL'),
+          ('0', 'print0', None, 'end filenames with NUL'),
           ('f', 'fullpath', None, 'print complete paths'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
@@ -1627,7 +1627,7 @@ table = {
           ('r', 'removed', None, 'show only removed files'),
           ('u', 'unknown', None, 'show only unknown (not tracked) files'),
           ('n', 'no-status', None, 'hide status prefix'),
-          ('0', 'print0', None, 'end records with NUL'),
+          ('0', 'print0', None, 'end filenames with NUL'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
          "hg status [OPTION]... [FILE]..."),
