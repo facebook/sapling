@@ -1,3 +1,5 @@
+#!/bin/bash
+
 _hg_commands()
 {
     local commands="$(hg -v help | sed -e '1,/^list of commands:/d' \
@@ -8,7 +10,7 @@ _hg_commands()
     # specifically asked for
     if [[ "$cur" == de* ]]; then
 	commands="$commands debugcheckstate debugstate debugindex"
-	commands="$commands debugindexdot debugwalk"
+	commands="$commands debugindexdot debugwalk debugdata"
     fi
     COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W "$commands" -- "$cur") )
 }
@@ -134,6 +136,12 @@ _hg()
 		_hg_paths
 	    fi
 	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
+	;;
+	debugindex|debugindexdot)
+	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -X "!*.i" -- "$cur" ))
+	;;
+	debugdata)
+	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -X "!*.d" -- "$cur" ))
 	;;
 	cat)
 	    local count=$(_hg_count_non_option -o --output)
