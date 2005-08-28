@@ -796,18 +796,14 @@ def forget(ui, repo, *pats, **opts):
                 ui.status('forgetting ', rel, '\n')
     repo.forget(forget)
 
-def grep(ui, repo, pattern=None, *pats, **opts):
+def grep(ui, repo, pattern, *pats, **opts):
     """search for a pattern in specified files and revisions"""
-    if pattern is None:
-        pattern = opts['regexp']
-    if not pattern:
-        raise util.Abort('no pattern to search for')
     reflags = 0
     if opts['ignore_case']:
         reflags |= re.I
     regexp = re.compile(pattern, reflags)
     sep, end = ':', '\n'
-    if opts['null'] or opts['print0']:
+    if opts['print0']:
         sep = end = '\0'
 
     fcache = {}
@@ -1349,14 +1345,14 @@ def status(ui, repo, *pats, **opts):
                    ('unknown', '?', u)]
 
     end = opts['print0'] and '\0' or '\n'
-    
+
     for opt, char, changes in ([ct for ct in changetypes if opts[ct[0]]]
                                or changetypes):
-        if opts['strip']:
+        if opts['no_status']:
             format = "%%s%s" % end
         else:
             format = "%s %%s%s" % (char, end);
-            
+
         for f in changes:
             ui.write(format % f)
 
@@ -1544,17 +1540,11 @@ table = {
          [('0', 'print0', None, 'terminate file names with NUL'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'include path in search'),
-          ('Z', 'null', None, 'terminate file names with NUL'),
-          ('a', 'all-revs', '', 'search all revs'),
-          ('e', 'regexp', '', 'pattern to search for'),
-          ('f', 'full-path', None, 'print complete paths'),
           ('i', 'ignore-case', None, 'ignore case when matching'),
           ('l', 'files-with-matches', None, 'print names of files with matches'),
           ('n', 'line-number', '', 'print line numbers'),
-          ('r', 'rev', [], 'search in revision rev'),
-          ('s', 'no-messages', None, 'do not print error messages'),
-          ('v', 'invert-match', None, 'select non-matching lines')],
-         "hg grep [OPTION]... [PATTERN] [FILE]..."),
+          ('r', 'rev', [], 'search in revision rev')],
+         "hg grep [OPTION]... PATTERN [FILE]..."),
     "heads":
         (heads,
          [('b', 'branches', None, 'find branch info')],
@@ -1636,7 +1626,7 @@ table = {
           ('a', 'added', None, 'show only added files'),
           ('r', 'removed', None, 'show only removed files'),
           ('u', 'unknown', None, 'show only unknown (not tracked) files'),
-          ('p', 'strip', None, 'strip status prefix'),
+          ('n', 'no-status', None, 'hide status prefix'),
           ('0', 'print0', None, 'end records with NUL'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
