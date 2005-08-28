@@ -38,3 +38,4 @@ filelogparent = "<tr><td align="right">parent #rev#:&nbsp;</td><td><a href="?cmd
 indexentry = "<tr class="parity#parity#"><td><a  href="#url#">#name#</a></td><td>#shortdesc#</td><td>#author# <i>#email|obfuscate#</i></td><td>#lastupdate|age# ago</td></tr>"
 index = index.tmpl
 archiveentry = "<a href="?cmd=archive;node=#node#;type=#type#">#type#</a> "
+notfound = notfound.tmpl

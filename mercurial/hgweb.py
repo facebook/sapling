@@ -69,10 +69,6 @@ def httphdr(type, file="", size=0):
         sys.stdout.write('Content-length: %d\n' % size)
     sys.stdout.write('\n')
 
-def httpnotfound(filename):
-    sys.stdout.write("Status: 404\r\n\r\n")
-    sys.stdout.write("File not found: (%s)" % (filename, ))
-
 def write(*things):
     for thing in things:
         if hasattr(thing, "__iter__"):
@@ -937,23 +933,6 @@ class hgwebdir:
         self.cp.read(config)
 
     def run(self):
-        try:
-            virtual = os.environ["PATH_INFO"]
-        except:
-            virtual = ""
-
-        virtual = virtual.strip('/')
-
-        if len(virtual):
-            if self.cp.has_option("paths", virtual):
-                real = self.cp.get("paths", virtual)
-                h = hgweb(real)
-                h.run()
-                return
-            else:
-                httpnotfound(virtual)
-                return
-
         def header(**map):
             yield tmpl("header", **map)
 
@@ -991,5 +970,22 @@ class hgwebdir:
                                                 "00changelog.d")).st_mtime)
 
                 parity = 1 - parity
+
+        try:
+            virtual = os.environ["PATH_INFO"]
+        except:
+            virtual = ""
+
+        virtual = virtual.strip('/')
+
+        if len(virtual):
+            if self.cp.has_option("paths", virtual):
+                real = self.cp.get("paths", virtual)
+                h = hgweb(real)
+                h.run()
+                return
+            else:
+                write(tmpl("notfound", repo = virtual))
+                return
 
         write(tmpl("index", entries=entries))
