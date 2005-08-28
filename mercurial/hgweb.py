@@ -948,7 +948,8 @@ class hgwebdir:
                 url = os.environ["REQUEST_URI"] + "/" + name
                 url = url.replace("//", "/")
 
-                yield dict(author=get("web", "author", "unknown"),
+                yield dict(contact=get("web", "contact") or
+                                   get("web", "author", "unknown"),
                            name=get("web", "name", name),
                            url=url,
                            parity=parity,
