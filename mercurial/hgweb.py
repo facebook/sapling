@@ -7,6 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, cgi, time, re, socket, sys, zlib
+import mdiff
 from hg import *
 from ui import *
 
@@ -649,6 +650,9 @@ class hgweb:
         reponame = re.sub(r"\W+", "-", self.reponame)
         name = "%s-%s/" % (reponame, short(cnode))
 
+        files = mf.keys()
+        files.sort()
+
         if type == 'zip':
             import zipfile
 
@@ -656,7 +660,7 @@ class hgweb:
                 tmp = tempfile.mkstemp()[1]
                 zf = zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED)
 
-                for f in mf.keys():
+                for f in files:
                     zf.writestr(name + f, self.repo.file(f).read(mf[f]))
                 zf.close()
 
@@ -678,7 +682,7 @@ class hgweb:
             mtime = int(time.time())
 
             httphdr('application/octet-stream', name[:-1] + '.tar.' + type)
-            for fname in mf.keys():
+            for fname in files:
                 rcont = self.repo.file(fname).read(mf[fname])
                 finfo = tarfile.TarInfo(name + fname)
                 finfo.mtime = mtime
