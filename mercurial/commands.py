@@ -690,6 +690,9 @@ def debugstate(ui, repo):
                  % (dc[file_][0], dc[file_][1] & 0777, dc[file_][2],
                     time.strftime("%x %X",
                                   time.localtime(dc[file_][3])), file_))
+    ui.write("\n")
+    for f in repo.dirstate.copies:
+        ui.write("%s -> %s\n" % (repo.dirstate.copies[f], f))
 
 def debugdata(ui, file_, rev):
     """dump the contents of an data file revision"""
@@ -717,6 +720,25 @@ def debugindexdot(ui, file_):
         if e[5] != nullid:
             ui.write("\t%d -> %d\n" % (r.rev(e[5]), i))
     ui.write("}\n")
+
+def debugrename(ui, repo, file, rev=None):
+    r = repo.file(relpath(repo, [file])[0])
+    if rev:
+        try:
+            # assume all revision numbers are for changesets
+            n = repo.lookup(rev)
+            change = repo.changelog.read(n)
+            m = repo.manifest.read(change[0])
+            n = m[relpath(repo, [file])[0]]
+        except hg.RepoError, KeyError:
+            n = r.lookup(rev)
+    else:
+        n = r.tip()
+    m = r.renamed(n)
+    if m:
+        ui.write("renamed from %s:%s\n" % (m[0], hex(m[1])))
+    else:
+        ui.write("not renamed\n")
 
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
@@ -1515,6 +1537,7 @@ table = {
     "debugdata": (debugdata, [], 'debugdata FILE REV'),
     "debugindex": (debugindex, [], 'debugindex FILE'),
     "debugindexdot": (debugindexdot, [], 'debugindexdot FILE'),
+    "debugrename": (debugrename, [], 'debugrename FILE [REV]'),
     "debugwalk":
         (debugwalk,
          [('I', 'include', [], 'include path in search'),

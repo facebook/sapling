@@ -40,9 +40,10 @@ class filelog(revlog):
     def readmeta(self, node):
         t = self.revision(node)
         if not t.startswith('\1\n'):
-            return t
+            return {}
         s = t.find('\1\n', 2)
         mt = t[2:s]
+        m = {}
         for l in mt.splitlines():
             k, v = l.split(": ", 1)
             m[k] = v
@@ -55,6 +56,15 @@ class filelog(revlog):
                 mt = [ "%s: %s\n" % (k, v) for k,v in meta.items() ]
             text = "\1\n" + "".join(mt) + "\1\n" + text
         return self.addrevision(text, transaction, link, p1, p2)
+
+    def renamed(self, node):
+        if 0 and self.parents(node)[0] != nullid:
+            print "shortcut"
+            return False
+        m = self.readmeta(node)
+        if m and m.has_key("copy"):
+            return (m["copy"], bin(m["copyrev"]))
+        return False
 
     def annotate(self, node):
 
