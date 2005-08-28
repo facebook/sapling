@@ -950,7 +950,7 @@ class hgwebdir:
                 h = hgweb(real)
                 h.run()
                 return
-            except NoOptionError:
+            except:
                 httpnotfound(virtual)
                 return
 
