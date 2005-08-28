@@ -114,9 +114,11 @@ def patchbomb(ui, repo, *revs, **opts):
             if line.startswith('diff -r'): break
             desc.append(line)
         if not node: raise ValueError
-        body = ('\n'.join(desc[1:]).strip() or
-                'Patch subject is complete summary.')
-        body += '\n\n\n'
+
+        #body = ('\n'.join(desc[1:]).strip() or
+        #        'Patch subject is complete summary.')
+        #body += '\n\n\n'
+
         if opts['diffstat']:
             body += cdiffstat('\n'.join(desc), patch) + '\n\n'
         body += '\n'.join(patch)
