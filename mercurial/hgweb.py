@@ -939,11 +939,11 @@ class hgwebdir:
 
         def entries(**map):
             parity = 0
-            l = self.cp.items("paths")
-            l.sort()
-            for v,r in l:
+            repos = self.cp.items("paths")
+            repos.sort()
+            for name, path in repos:
                 cp2 = ConfigParser.SafeConfigParser()
-                cp2.read(os.path.join(r, ".hg", "hgrc"))
+                cp2.read(os.path.join(path, ".hg", "hgrc"))
 
                 def get(sec, val, default):
                     try:
@@ -951,15 +951,15 @@ class hgwebdir:
                     except:
                         return default
 
-                url = os.environ["REQUEST_URI"] + "/" + v
+                url = os.environ["REQUEST_URI"] + "/" + name
                 url = url.replace("//", "/")
 
                 yield dict(author=get("web", "author", "unknown"),
-                           name=get("web", "name", v),
+                           name=get("web", "name", name),
                            url=url,
                            parity=parity,
                            shortdesc=get("web", "description", "unknown"),
-                           lastupdate=os.stat(os.path.join(r, ".hg",
+                           lastupdate=os.stat(os.path.join(path, ".hg",
                                                 "00changelog.d")).st_mtime)
 
                 parity = 1 - parity
