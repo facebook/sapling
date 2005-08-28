@@ -69,6 +69,10 @@ def httphdr(type, file="", size=0):
         sys.stdout.write('Content-length: %d\n' % size)
     sys.stdout.write('\n')
 
+def httpnotfound(filename):
+    sys.stdout.write("Status: 404\r\n\r\n")
+    sys.stdout.write("File not found: (%s)" % (filename, ))
+
 def write(*things):
     for thing in things:
         if hasattr(thing, "__iter__"):
@@ -938,11 +942,16 @@ class hgwebdir:
         except:
             virtual = ""
 
-        if virtual[1:]:
-            if self.cp.has_option("paths", virtual[1:]):
-                real = self.cp.get("paths", virtual[1:])
+        virtual = virtual.strip('/')
+
+        if len(virtual):
+            try:
+                real = self.cp.get("paths", virtual)
                 h = hgweb(real)
                 h.run()
+                return
+            except NoOptionError:
+                httpnotfound(virtual)
                 return
 
         def header(**map):
