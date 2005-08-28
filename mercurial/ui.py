@@ -78,6 +78,16 @@ class ui:
                                 os.environ.get("USERNAME", "unknown"))
                  + '@' + socket.getfqdn()))
 
+    def shortuser(self, user):
+        """Return a short representation of a user name or email address."""
+        f = user.find('@')
+        if f >= 0:
+            user = user[:f]
+        f = user.find('<')
+        if f >= 0:
+            user = user[f+1:]
+        return user
+
     def expandpath(self, loc):
         paths = {}
         for name, path in self.configitems("paths"):

@@ -472,14 +472,7 @@ def annotate(ui, repo, *pats, **opts):
             return bcache[rev]
         except KeyError:
             cl = repo.changelog.read(repo.changelog.node(rev))
-            name = cl[1]
-            f = name.find('@')
-            if f >= 0:
-                name = name[:f]
-            f = name.find('<')
-            if f >= 0:
-                name = name[f+1:]
-            bcache[rev] = name
+            bcache[rev] = name = ui.shortuser(cl[1])
             return name
 
     if not pats:

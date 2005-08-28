@@ -507,14 +507,7 @@ class hgweb:
                     name = bcache[r]
                 except KeyError:
                     cl = self.repo.changelog.read(cnode)
-                    name = cl[1]
-                    f = name.find('@')
-                    if f >= 0:
-                        name = name[:f]
-                    f = name.find('<')
-                    if f >= 0:
-                        name = name[f+1:]
-                    bcache[r] = name
+                    bcache[r] = name = self.repo.ui.shortuser(cl[1])
 
                 if last != cnode:
                     parity = 1 - parity
