@@ -945,12 +945,12 @@ class hgwebdir:
         virtual = virtual.strip('/')
 
         if len(virtual):
-            try:
+            if self.cp.has_option("paths", virtual):
                 real = self.cp.get("paths", virtual)
                 h = hgweb(real)
                 h.run()
                 return
-            except:
+            else:
                 httpnotfound(virtual)
                 return
 
