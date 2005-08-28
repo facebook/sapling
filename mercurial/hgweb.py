@@ -947,6 +947,7 @@ class hgwebdir:
 
                 url = os.environ["REQUEST_URI"] + "/" + name
                 url = url.replace("//", "/")
+                changes = repo.changelog.read(repo.changelog.tip())
 
                 yield dict(contact=get("web", "contact") or
                                    get("web", "author", "unknown"),
@@ -954,8 +955,7 @@ class hgwebdir:
                            url=url,
                            parity=parity,
                            shortdesc=get("web", "description", "unknown"),
-                           lastupdate=os.stat(os.path.join(path, ".hg",
-                                                "00changelog.d")).st_mtime)
+                           lastupdate=float(changes[2].split(' ')[0]))
 
                 parity = 1 - parity
 
