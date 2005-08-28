@@ -690,9 +690,8 @@ def debugstate(ui, repo):
                  % (dc[file_][0], dc[file_][1] & 0777, dc[file_][2],
                     time.strftime("%x %X",
                                   time.localtime(dc[file_][3])), file_))
-    ui.write("\n")
     for f in repo.dirstate.copies:
-        ui.write("%s -> %s\n" % (repo.dirstate.copies[f], f))
+        ui.write("copy: %s -> %s\n" % (repo.dirstate.copies[f], f))
 
 def debugdata(ui, file_, rev):
     """dump the contents of an data file revision"""
