@@ -192,8 +192,9 @@ def patchbomb(ui, repo, *revs, **opts):
 
     ui.write('\n')
 
-    d = cdiffstat('Final summary:\n', jumbo)
-    if d: msg.attach(MIMEText(d))
+    if opts['diffstat']:
+        d = cdiffstat('Final summary:\n', jumbo)
+        if d: msg.attach(MIMEText(d))
 
     msgs.insert(0, msg)
 
