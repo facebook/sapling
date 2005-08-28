@@ -141,6 +141,8 @@ class dirstate:
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
                 self.map[f] = (state, s.st_mode, st_size, st_mtime)
+            if self.copies.has_key(f):
+                del self.copies[f]
 
     def forget(self, files):
         if not files: return

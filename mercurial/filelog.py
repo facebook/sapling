@@ -59,7 +59,6 @@ class filelog(revlog):
 
     def renamed(self, node):
         if 0 and self.parents(node)[0] != nullid:
-            print "shortcut"
             return False
         m = self.readmeta(node)
         if m and m.has_key("copy"):

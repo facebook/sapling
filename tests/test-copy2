@@ -1,0 +1,41 @@
+#!/bin/sh
+
+hg init
+echo foo > foo
+hg add foo
+hg commit -m1 -d"0 0"
+
+echo "# should show copy"
+cp foo bar
+hg copy foo bar
+hg debugstate
+
+echo "# shouldn't show copy"
+hg commit -m2 -d"0 0"
+hg debugstate
+
+echo "# should match"
+hg debugindex .hg/data/foo.i
+hg debugrename bar
+
+echo bleah > foo
+echo quux > bar
+hg commit -m3 -d"0 0"
+
+echo "# should not be renamed"
+hg debugrename bar
+
+cp foo bar
+hg copy foo bar
+echo "# should show copy"
+hg debugstate
+hg commit -m3 -d"0 0"
+
+echo "# should show no parents for tip"
+hg debugindex .hg/data/bar.i
+echo "# should match"
+hg debugindex .hg/data/foo.i
+hg debugrename bar
+
+echo "# should show no copies"
+hg debugstate

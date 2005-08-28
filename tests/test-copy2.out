@@ -1,0 +1,34 @@
+# should show copy
+a 644          4 08/28/05 05:00:19 bar
+n 644          4 08/28/05 05:00:19 foo
+
+foo -> bar
+# shouldn't show copy
+n 644          4 08/28/05 05:00:19 bar
+n 644          4 08/28/05 05:00:19 foo
+
+# should match
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       5      0       0 2ed2a3912a0b 000000000000 000000000000
+renamed from foo:2ed2a3912a0b24502043eae84ee4b279c18b90dd
+# should not be renamed
+not renamed
+# should show copy
+n 644          5 08/28/05 05:00:19 bar
+n 644          6 08/28/05 05:00:19 foo
+
+foo -> bar
+# should show no parents for tip
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0      69      0       1 6ca237634e1f 000000000000 000000000000
+     1        69       6      1       2 7a1ff8e75f5b 6ca237634e1f 000000000000
+     2        75      82      1       3 243dfe60f3d9 000000000000 000000000000
+# should match
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       5      0       0 2ed2a3912a0b 000000000000 000000000000
+     1         5       7      1       2 dd12c926cf16 2ed2a3912a0b 000000000000
+renamed from foo:dd12c926cf165e3eb4cf87b084955cb617221c17
+# should show no copies
+n 644          6 08/28/05 05:00:19 bar
+n 644          6 08/28/05 05:00:19 foo
+

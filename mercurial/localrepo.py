@@ -329,16 +329,18 @@ class localrepository:
                 self.ui.warn("trouble committing %s!\n" % f)
                 raise
 
+            r = self.file(f)
+
             meta = {}
             cp = self.dirstate.copied(f)
             if cp:
                 meta["copy"] = cp
                 meta["copyrev"] = hex(m1.get(cp, m2.get(cp, nullid)))
                 self.ui.debug(" %s: copy %s:%s\n" % (f, cp, meta["copyrev"]))
-
-            r = self.file(f)
-            fp1 = m1.get(f, nullid)
-            fp2 = m2.get(f, nullid)
+                fp1, fp2 = nullid, nullid
+            else:
+                fp1 = m1.get(f, nullid)
+                fp2 = m2.get(f, nullid)
 
             # is the same revision on two branches of a merge?
             if fp2 == fp1:
