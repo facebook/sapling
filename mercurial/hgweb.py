@@ -939,10 +939,11 @@ class hgwebdir:
             virtual = ""
 
         if virtual[1:]:
-            real = self.cp.get("paths", virtual[1:])
-            h = hgweb(real)
-            h.run()
-            return
+            if self.cp.has_option("paths", virtual[1:]):
+                real = self.cp.get("paths", virtual[1:])
+                h = hgweb(real)
+                h.run()
+                return
 
         def header(**map):
             yield tmpl("header", **map)
