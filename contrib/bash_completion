@@ -90,6 +90,9 @@ _hg()
 	return
     fi
 
+    # canonicalize command name
+    cmd=$(hg -q help "$cmd" | sed -e 's/^hg //; s/ .*//; 1q')
+
     if [ "$cmd" != status ] && [ "$prev" = -r ] || [ "$prev" = --rev ]; then
 	_hg_tags
 	return
@@ -99,10 +102,10 @@ _hg()
 	help)
 	    _hg_commands
 	;;
-	export|manifest|update|checkout|up|co)
+	export|manifest|update)
 	    _hg_tags
 	;;
-	pull|push|outgoing|incoming|out|in)
+	pull|push|outgoing|incoming)
 	    _hg_paths
 	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
 	;;
@@ -112,7 +115,7 @@ _hg()
 	add)
 	    _hg_status "u"
 	;;
-	commit|ci)
+	commit)
 	    _hg_status "mra"
 	;;
 	remove)
