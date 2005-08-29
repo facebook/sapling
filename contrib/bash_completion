@@ -73,11 +73,8 @@ _hg()
     done
 
     if [[ "$cur" == -* ]]; then
-	opts="$(hg -v help | sed -e '1,/^global options/d; /^ -/!d')"
-
-	if [ -n "$cmd" ]; then
-	    opts="$opts $(hg help "$cmd" | sed -e '/^ -/!d; s/ [^-][^ ]*//')"
-	fi
+	# this assumes that there are no commands with spaces in the name
+	opts=$(hg -v help $cmd | sed -e '/^ *-/!d; s/ [^- ].*//')
 
 	COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W "$opts" -- "$cur") )
 	return
