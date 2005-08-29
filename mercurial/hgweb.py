@@ -934,8 +934,7 @@ class hgwebdir:
         def footer(**map):
             yield tmpl("footer", **map)
 
-        templates = templatepath()
-        m = os.path.join(templates, "map")
+        m = os.path.join(templatepath(), "map")
         tmpl = templater(m, common_filters,
                          {"header": header, "footer": footer})
 
@@ -946,8 +945,8 @@ class hgwebdir:
                 u.readconfig(file(os.path.join(path, '.hg', 'hgrc')))
                 get = u.config
 
-                url = os.environ["REQUEST_URI"] + "/" + name
-                url = url.replace("//", "/")
+                url = ('/'.join([os.environ["REQUEST_URI"], name])
+                       .replace("//", "/"))
 
                 yield dict(contact=get("web", "contact") or
                                    get("web", "author", "unknown"),
@@ -956,25 +955,16 @@ class hgwebdir:
                            parity=parity,
                            shortdesc=get("web", "description", "unknown"),
                            lastupdate=os.stat(os.path.join(path, ".hg",
-                                                "00changelog.d")).st_mtime)
+                                              "00changelog.d")).st_mtime)
 
                 parity = 1 - parity
 
-        try:
-            virtual = os.environ["PATH_INFO"]
-        except:
-            virtual = ""
-
-        virtual = virtual.strip('/')
-
-        if len(virtual):
+        virtual = os.environ.get("PATH_INFO", "").strip('/')
+        if virtual:
             real = dict(self.repos).get(virtual)
             if real:
-                h = hgweb(real)
-                h.run()
-                return
+                hgweb(real).run()
             else:
-                write(tmpl("notfound", repo = virtual))
-                return
-
-        write(tmpl("index", entries=entries))
+                write(tmpl("notfound", repo=virtual))
+        else:
+            write(tmpl("index", entries=entries))
