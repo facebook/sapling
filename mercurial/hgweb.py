@@ -942,8 +942,9 @@ class hgwebdir:
             repos = self.cp.items("paths")
             repos.sort()
             for name, path in repos:
-                repo = repository(ui(), path)
-                get = repo.ui.config
+                u = ui()
+                u.readconfig(file(os.path.join(path, '.hg', 'hgrc')))
+                get = u.config
 
                 url = os.environ["REQUEST_URI"] + "/" + name
                 url = url.replace("//", "/")
