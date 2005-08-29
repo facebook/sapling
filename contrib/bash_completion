@@ -56,19 +56,22 @@ _hg_count_non_option()
 _hg()
 {
     local cur prev cmd opts i
+    # global options that receive an argument
+    local global_args='--cwd|-R|--repository'
 
     COMPREPLY=()
     cur="$2"
     prev="$3"
 
     # searching for the command 
-    # (first non-option argument that doesn't follow -R/--repository)
+    # (first non-option argument that doesn't follow a global option that
+    #  receives an argument)
     for (( i=1; $i<=$COMP_CWORD; i++ )); do
-	if [[ ${COMP_WORDS[i]} != -* ]] \
-	   && [ "${COMP_WORDS[i-1]}" != -R ] \
-	   && [ "${COMP_WORDS[i-1]}" != --repository ]; then
-	    cmd="${COMP_WORDS[i]}"
-	    break
+	if [[ ${COMP_WORDS[i]} != -* ]]; then
+	    if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
+		cmd="${COMP_WORDS[i]}"
+		break
+	    fi
 	fi
     done
 
@@ -80,10 +83,17 @@ _hg()
 	return
     fi
 
-    if [ "$prev" = -R ] || [ "$prev" = --repository ]; then
-        COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
-	return
-    fi
+    # global options
+    case "$prev" in
+	-R|--repository)
+	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
+	    return
+	;;
+	--cwd)
+	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
+	    return
+	;;
+    esac
 
     if [ -z "$cmd" ] || [ $COMP_CWORD -eq $i ]; then
 	_hg_commands
