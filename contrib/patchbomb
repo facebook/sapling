@@ -172,11 +172,13 @@ def patchbomb(ui, repo, *revs, **opts):
         len(patches),
         opts['subject'] or
         prompt('Subject:', rest = ' [PATCH 0 of %d] ' % len(patches)))
-    to = opts['to'] or ui.config('patchbomb', 'to') or prompt('To')
-    to = [t.strip() for t in to.split(',')]
-    cc = (opts['cc'] or ui.config('patchbomb', 'cc') or
-          prompt('Cc', default = ''))
-    cc = (cc and [c.strip() for c in cc.split(',')]) or []
+
+    def getaddrs(opt, prpt, default = None):
+        addrs = opts[opt] or (ui.config('patchbomb', opt) or
+                              prompt(prpt, default = default)).split(',')
+        return [a.strip() for a in addrs if a.strip()]
+    to = getaddrs('to', 'To')
+    cc = getaddrs('cc', 'Cc', '')
 
     ui.write('Finish with ^D or a dot on a line by itself.\n\n')
 
