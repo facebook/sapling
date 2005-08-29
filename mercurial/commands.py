@@ -297,20 +297,12 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         tn = None
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
 
-def trimuser(ui, rev, name, revcache):
+def trimuser(ui, name, rev, revcache):
     """trim the name of the user who committed a change"""
-    try:
-        return revcache[rev]
-    except KeyError:
-        if not ui.verbose:
-            f = name.find('@')
-            if f >= 0:
-                name = name[:f]
-            f = name.find('<')
-            if f >= 0:
-                name = name[f+1:]
-        revcache[rev] = name
-        return name
+    user = revcache.get(rev)
+    if user is None:
+        user = revcache[rev] = ui.shortuser(name)
+    return user
 
 def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
     """show a single changeset or file revision"""
@@ -517,7 +509,7 @@ def annotate(ui, repo, *pats, **opts):
     ucache = {}
     def getname(rev):
         cl = repo.changelog.read(repo.changelog.node(rev))
-        return trimuser(ui, rev, cl[1], ucache)
+        return trimuser(ui, cl[1], rev, ucache)
 
     if not pats:
         raise util.Abort('at least one file name or pattern required')
@@ -630,8 +622,8 @@ def clone(ui, source, dest=None, **opts):
         repo = hg.repository(ui, dest, create=1)
         repo.pull(other)
 
-    f = repo.opener("hgrc", "w")
-    f.write("[paths]\n")
+    f = repo.opener("hgrc", "a")
+    f.write("\n[paths]\n")
     f.write("default = %s\n" % abspath)
 
     if not opts['noupdate']:
@@ -726,9 +718,8 @@ def debugstate(ui, repo):
                  % (dc[file_][0], dc[file_][1] & 0777, dc[file_][2],
                     time.strftime("%x %X",
                                   time.localtime(dc[file_][3])), file_))
-    ui.write("\n")
     for f in repo.dirstate.copies:
-        ui.write("%s -> %s\n" % (repo.dirstate.copies[f], f))
+        ui.write("copy: %s -> %s\n" % (repo.dirstate.copies[f], f))
 
 def debugdata(ui, file_, rev):
     """dump the contents of an data file revision"""
@@ -922,7 +913,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             cols = [fn, str(rev)]
             if opts['line_number']: cols.append(str(l.linenum))
             if opts['every_match']: cols.append(change)
-            if opts['user']: cols.append(trimuser(ui, rev, getchange(rev)[1],
+            if opts['user']: cols.append(trimuser(ui, getchange(rev)[1], rev,
                                                   ucache))
             if opts['files_with_matches']:
                 c = (fn, rev)

@@ -507,14 +507,7 @@ class hgweb:
                     name = bcache[r]
                 except KeyError:
                     cl = self.repo.changelog.read(cnode)
-                    name = cl[1]
-                    f = name.find('@')
-                    if f >= 0:
-                        name = name[:f]
-                    f = name.find('<')
-                    if f >= 0:
-                        name = name[f+1:]
-                    bcache[r] = name
+                    bcache[r] = name = self.repo.ui.shortuser(cl[1])
 
                 if last != cnode:
                     parity = 1 - parity
@@ -929,8 +922,16 @@ def server(path, name, templates, address, port, use_ipv6=False,
 # This is a stopgap
 class hgwebdir:
     def __init__(self, config):
-        self.cp = ConfigParser.SafeConfigParser()
-        self.cp.read(config)
+        if type(config) == type([]):
+            self.repos = config
+        elif type(config) == type({}):
+            self.repos = config.items()
+            self.repos.sort()
+        else:
+            cp = ConfigParser.SafeConfigParser()
+            cp.read(config)
+            self.repos = cp.items("paths")
+            self.repos.sort()
 
     def run(self):
         def header(**map):
@@ -939,53 +940,37 @@ class hgwebdir:
         def footer(**map):
             yield tmpl("footer", **map)
 
-        templates = templatepath()
-        m = os.path.join(templates, "map")
+        m = os.path.join(templatepath(), "map")
         tmpl = templater(m, common_filters,
                          {"header": header, "footer": footer})
 
         def entries(**map):
             parity = 0
-            l = self.cp.items("paths")
-            l.sort()
-            for v,r in l:
-                cp2 = ConfigParser.SafeConfigParser()
-                cp2.read(os.path.join(r, ".hg", "hgrc"))
+            for name, path in self.repos:
+                u = ui()
+                u.readconfig(file(os.path.join(path, '.hg', 'hgrc')))
+                get = u.config
 
-                def get(sec, val, default):
-                    try:
-                        return cp2.get(sec, val)
-                    except:
-                        return default
+                url = ('/'.join([os.environ["REQUEST_URI"], name])
+                       .replace("//", "/"))
 
-                url = os.environ["REQUEST_URI"] + "/" + v
-                url = url.replace("//", "/")
-
-                yield dict(author=get("web", "author", "unknown"),
-                           name=get("web", "name", v),
+                yield dict(contact=get("web", "contact") or
+                                   get("web", "author", "unknown"),
+                           name=get("web", "name", name),
                            url=url,
                            parity=parity,
                            shortdesc=get("web", "description", "unknown"),
-                           lastupdate=os.stat(os.path.join(r, ".hg",
-                                                "00changelog.d")).st_mtime)
+                           lastupdate=os.stat(os.path.join(path, ".hg",
+                                              "00changelog.d")).st_mtime)
 
                 parity = 1 - parity
 
-        try:
-            virtual = os.environ["PATH_INFO"]
-        except:
-            virtual = ""
-
-        virtual = virtual.strip('/')
-
-        if len(virtual):
-            if self.cp.has_option("paths", virtual):
-                real = self.cp.get("paths", virtual)
-                h = hgweb(real)
-                h.run()
-                return
+        virtual = os.environ.get("PATH_INFO", "").strip('/')
+        if virtual:
+            real = dict(self.repos).get(virtual)
+            if real:
+                hgweb(real).run()
             else:
-                write(tmpl("notfound", repo = virtual))
-                return
-
-        write(tmpl("index", entries=entries))
+                write(tmpl("notfound", repo=virtual))
+        else:
+            write(tmpl("index", entries=entries))

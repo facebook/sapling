@@ -31,7 +31,7 @@ hg tip
 
 cd ..
 
-hg clone old-http://localhost:20059/remote local
+http_proxy= hg clone old-http://localhost:20059/remote local
 
 cd local
 hg verify
