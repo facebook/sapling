@@ -873,16 +873,20 @@ def grep(ui, repo, pattern, *pats, **opts):
     def display(fn, rev, states, prevstates):
         diff = list(sets.Set(states).symmetric_difference(sets.Set(prevstates)))
         diff.sort(lambda x, y: cmp(x.linenum, y.linenum))
+        counts = {'-': 0, '+': 0}
         for l in diff:
-            if incrementing:
+            if incrementing or not opts['every_match']:
                 change = ((l in prevstates) and '-') or '+'
                 r = rev
             else:
                 change = ((l in states) and '-') or '+'
                 r = prev[fn]
             ui.write('%s:%s:%s:%s%s\n' % (fn, r, l.linenum, change, l.line))
+            counts[change] += 1
+        return counts['+'], counts['-']
 
     fstate = {}
+    skip = {}
     for st, rev, fns in walkchangerevs(ui, repo, repo.getcwd(), pats, opts):
         if st == 'window':
             incrementing = rev
@@ -892,6 +896,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             mf = repo.manifest.read(change[0])
             matches[rev] = {}
             for fn in fns:
+                if fn in skip: continue
                 fstate.setdefault(fn, {})
                 try:
                     grepbody(fn, rev, getfile(fn).read(mf[fn]))
@@ -901,8 +906,11 @@ def grep(ui, repo, pattern, *pats, **opts):
             states = matches[rev].items()
             states.sort()
             for fn, m in states:
-                if incrementing or fstate[fn]:
-                    display(fn, rev, m, fstate[fn])
+                if fn in skip: continue
+                if incrementing or not opts['every_match'] or fstate[fn]:
+                    pos, neg = display(fn, rev, m, fstate[fn])
+                    if pos and not opts['every_match']:
+                        skip[fn] = True
                 fstate[fn] = m
                 prev[fn] = rev
 
@@ -910,6 +918,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         fstate = fstate.items()
         fstate.sort()
         for fn, state in fstate:
+            if fn in skip: continue
             display(fn, rev, {}, state)
 
 def heads(ui, repo, **opts):
@@ -1565,6 +1574,7 @@ table = {
          [('0', 'print0', None, 'end filenames with NUL'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'include path in search'),
+          ('e', 'every-match', None, 'print every match in file history'),
           ('i', 'ignore-case', None, 'ignore case when matching'),
           ('l', 'files-with-matches', None, 'print names of files with matches'),
           ('n', 'line-number', '', 'print line numbers'),
