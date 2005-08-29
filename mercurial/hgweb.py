@@ -922,10 +922,16 @@ def server(path, name, templates, address, port, use_ipv6=False,
 # This is a stopgap
 class hgwebdir:
     def __init__(self, config):
-        cp = ConfigParser.SafeConfigParser()
-        cp.read(config)
-        self.repos = cp.items("paths")
-        self.repos.sort()
+        if type(config) == type([]):
+            self.repos = config
+        elif type(config) == type({}):
+            self.repos = config.items()
+            self.repos.sort()
+        else:
+            cp = ConfigParser.SafeConfigParser()
+            cp.read(config)
+            self.repos = cp.items("paths")
+            self.repos.sort()
 
     def run(self):
         def header(**map):
