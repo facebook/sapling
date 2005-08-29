@@ -49,12 +49,31 @@ def walk(repo, pats, opts, head=''):
         yield r
 
 def walkchangerevs(ui, repo, cwd, pats, opts):
-    # This code most commonly needs to iterate backwards over the
-    # history it is interested in.  Doing so has awful
-    # (quadratic-looking) performance, so we use iterators in a
-    # "windowed" way.  Walk forwards through a window of revisions,
-    # yielding them in the desired order, and walk the windows
-    # themselves backwards.
+    '''Iterate over files and the revs they changed in.
+
+    Callers most commonly need to iterate backwards over the history
+    it is interested in.  Doing so has awful (quadratic-looking)
+    performance, so we use iterators in a "windowed" way.
+
+    We walk a window of revisions in the desired order.  Within the
+    window, we first walk forwards to gather data, then in the desired
+    order (usually backwards) to display it.
+
+    This function returns an (iterator, getchange) pair.  The
+    getchange function returns the changelog entry for a numeric
+    revision.  The iterator yields 3-tuples.  They will be of one of
+    the following forms:
+
+    "window", incrementing, lastrev: stepping through a window,
+    positive if walking forwards through revs, last rev in the
+    sequence iterated over - use to reset state for the current window
+
+    "add", rev, fns: out-of-order traversal of the given file names
+    fns, which changed during revision rev - use to gather data for
+    possible display
+
+    "iter", rev, None: in-order traversal of the revs earlier iterated
+    over with "add" - use to display data'''
     cwd = repo.getcwd()
     if not pats and cwd:
         opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
@@ -66,6 +85,14 @@ def walkchangerevs(ui, repo, cwd, pats, opts):
     slowpath = anypats
     window = 300
     fncache = {}
+
+    chcache = {}
+    def getchange(rev):
+        ch = chcache.get(rev)
+        if ch is None:
+            chcache[rev] = ch = repo.changelog.read(repo.lookup(str(rev)))
+        return ch
+
     if not slowpath and not files:
         # No files, no patterns.  Display all revs.
         wanted = dict(zip(revs, revs))
@@ -100,7 +127,7 @@ def walkchangerevs(ui, repo, cwd, pats, opts):
         def changerevgen():
             for i in xrange(repo.changelog.count() - 1, -1, -window):
                 for j in xrange(max(0, i - window), i + 1):
-                    yield j, repo.changelog.read(repo.lookup(str(j)))[3]
+                    yield j, getchange(j)[3]
 
         for rev, changefiles in changerevgen():
             matches = filter(matchfn, changefiles)
@@ -108,20 +135,19 @@ def walkchangerevs(ui, repo, cwd, pats, opts):
                 fncache[rev] = matches
                 wanted[rev] = 1
 
-    for i in xrange(0, len(revs), window):
-        yield 'window', revs[0] < revs[-1], revs[-1]
-        nrevs = [rev for rev in revs[i:min(i+window, len(revs))]
-                 if rev in wanted]
-        srevs = list(nrevs)
-        srevs.sort()
-        for rev in srevs:
-            fns = fncache.get(rev)
-            if not fns:
-                fns = repo.changelog.read(repo.lookup(str(rev)))[3]
-                fns = filter(matchfn, fns)
-            yield 'add', rev, fns
-        for rev in nrevs:
-            yield 'iter', rev, None
+    def iterate():
+        for i in xrange(0, len(revs), window):
+            yield 'window', revs[0] < revs[-1], revs[-1]
+            nrevs = [rev for rev in revs[i:min(i+window, len(revs))]
+                     if rev in wanted]
+            srevs = list(nrevs)
+            srevs.sort()
+            for rev in srevs:
+                fns = fncache.get(rev) or filter(matchfn, getchange(rev)[3])
+                yield 'add', rev, fns
+            for rev in nrevs:
+                yield 'iter', rev, None
+    return iterate(), getchange
 
 revrangesep = ':'
 
@@ -150,6 +176,7 @@ def revrange(ui, repo, revs, revlog=None):
                 except KeyError:
                     raise util.Abort('invalid revision identifier %s', val)
         return num
+    seen = {}
     for spec in revs:
         if spec.find(revrangesep) >= 0:
             start, end = spec.split(revrangesep, 1)
@@ -157,9 +184,14 @@ def revrange(ui, repo, revs, revlog=None):
             end = fix(end, revcount - 1)
             step = start > end and -1 or 1
             for rev in xrange(start, end+step, step):
+                if rev in seen: continue
+                seen[rev] = 1
                 yield str(rev)
         else:
-            yield str(fix(spec, None))
+            rev = fix(spec, None)
+            if rev in seen: continue
+            seen[rev] = 1
+            yield str(rev)
 
 def make_filename(repo, r, pat, node=None,
                   total=None, seqno=None, revwidth=None):
@@ -264,6 +296,21 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         to = repo.file(f).read(mmap[f])
         tn = None
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
+
+def trimuser(ui, rev, name, revcache):
+    """trim the name of the user who committed a change"""
+    try:
+        return revcache[rev]
+    except KeyError:
+        if not ui.verbose:
+            f = name.find('@')
+            if f >= 0:
+                name = name[:f]
+            f = name.find('<')
+            if f >= 0:
+                name = name[f+1:]
+        revcache[rev] = name
+        return name
 
 def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
     """show a single changeset or file revision"""
@@ -467,25 +514,14 @@ def annotate(ui, repo, *pats, **opts):
     def getnode(rev):
         return short(repo.changelog.node(rev))
 
+    ucache = {}
     def getname(rev):
-        try:
-            return bcache[rev]
-        except KeyError:
-            cl = repo.changelog.read(repo.changelog.node(rev))
-            name = cl[1]
-            f = name.find('@')
-            if f >= 0:
-                name = name[:f]
-            f = name.find('<')
-            if f >= 0:
-                name = name[f+1:]
-            bcache[rev] = name
-            return name
+        cl = repo.changelog.read(repo.changelog.node(rev))
+        return trimuser(ui, rev, cl[1], ucache)
 
     if not pats:
         raise util.Abort('at least one file name or pattern required')
 
-    bcache = {}
     opmap = [['user', getname], ['number', str], ['changeset', getnode]]
     if not opts['user'] and not opts['changeset']:
         opts['number'] = 1
@@ -826,9 +862,9 @@ def grep(ui, repo, pattern, *pats, **opts):
     if opts['ignore_case']:
         reflags |= re.I
     regexp = re.compile(pattern, reflags)
-    sep, end = ':', '\n'
+    sep, eol = ':', '\n'
     if opts['print0']:
-        sep = end = '\0'
+        sep = eol = '\0'
 
     fcache = {}
     def getfile(fn):
@@ -870,10 +906,12 @@ def grep(ui, repo, pattern, *pats, **opts):
             m[s] = s
 
     prev = {}
+    ucache = {}
     def display(fn, rev, states, prevstates):
         diff = list(sets.Set(states).symmetric_difference(sets.Set(prevstates)))
         diff.sort(lambda x, y: cmp(x.linenum, y.linenum))
         counts = {'-': 0, '+': 0}
+        filerevmatches = {}
         for l in diff:
             if incrementing or not opts['every_match']:
                 change = ((l in prevstates) and '-') or '+'
@@ -881,13 +919,26 @@ def grep(ui, repo, pattern, *pats, **opts):
             else:
                 change = ((l in states) and '-') or '+'
                 r = prev[fn]
-            ui.write('%s:%s:%s:%s%s\n' % (fn, r, l.linenum, change, l.line))
+            cols = [fn, str(rev)]
+            if opts['line_number']: cols.append(str(l.linenum))
+            if opts['every_match']: cols.append(change)
+            if opts['user']: cols.append(trimuser(ui, rev, getchange(rev)[1],
+                                                  ucache))
+            if opts['files_with_matches']:
+                c = (fn, rev)
+                if c in filerevmatches: continue
+                filerevmatches[c] = 1
+            else:
+                cols.append(l.line)
+            ui.write(sep.join(cols), eol)
             counts[change] += 1
         return counts['+'], counts['-']
 
     fstate = {}
     skip = {}
-    for st, rev, fns in walkchangerevs(ui, repo, repo.getcwd(), pats, opts):
+    changeiter, getchange = walkchangerevs(ui, repo, repo.getcwd(), pats, opts)
+    count = 0
+    for st, rev, fns in changeiter:
         if st == 'window':
             incrementing = rev
             matches.clear()
@@ -909,6 +960,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                 if fn in skip: continue
                 if incrementing or not opts['every_match'] or fstate[fn]:
                     pos, neg = display(fn, rev, m, fstate[fn])
+                    count += pos + neg
                     if pos and not opts['every_match']:
                         skip[fn] = True
                 fstate[fn] = m
@@ -920,6 +972,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         for fn, state in fstate:
             if fn in skip: continue
             display(fn, rev, {}, state)
+    return (count == 0 and 1) or 0
 
 def heads(ui, repo, **opts):
     """show current repository heads"""
@@ -1073,8 +1126,9 @@ def log(ui, repo, *pats, **opts):
     if not pats and cwd:
         opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
         opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    for st, rev, fns in walkchangerevs(ui, repo, (pats and cwd) or '', pats,
-                                       opts):
+    changeiter, getchange = walkchangerevs(ui, repo, (pats and cwd) or '',
+                                           pats, opts)
+    for st, rev, fns in changeiter:
         if st == 'window':
             du = dui(ui)
         elif st == 'add':
@@ -1571,14 +1625,15 @@ table = {
          "hg forget [OPTION]... FILE..."),
     "grep":
         (grep,
-         [('0', 'print0', None, 'end filenames with NUL'),
+         [('0', 'print0', None, 'end fields with NUL'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'include path in search'),
-          ('e', 'every-match', None, 'print every match in file history'),
+          ('e', 'every-match', None, 'print every rev with matches'),
           ('i', 'ignore-case', None, 'ignore case when matching'),
-          ('l', 'files-with-matches', None, 'print names of files with matches'),
-          ('n', 'line-number', '', 'print line numbers'),
-          ('r', 'rev', [], 'search in revision rev')],
+          ('l', 'files-with-matches', None, 'print names of files and revs with matches'),
+          ('n', 'line-number', None, 'print line numbers'),
+          ('r', 'rev', [], 'search in revision rev'),
+          ('u', 'user', None, 'print user who made change')],
          "hg grep [OPTION]... PATTERN [FILE]..."),
     "heads":
         (heads,

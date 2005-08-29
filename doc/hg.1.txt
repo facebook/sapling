@@ -207,6 +207,31 @@ forget [options] [files]::
     -I, --include <pat>  include names matching the given patterns
     -X, --exclude <pat>  exclude names matching the given patterns
 
+grep [options] pattern [files]::
+    Search revisions of files for a regular expression.
+
+    This command behaves differently than Unix grep.  It only accepts
+    Python/Perl regexps.  It searches repository history, not the
+    working directory.  It always prints the revision number in which
+    a match appears.
+
+    By default, grep only prints output for the first revision of a
+    file in which it finds a match.  To get it to print every revision
+    that contains a change in match status ("-" for a match that
+    becomes a non-match, or "+" for a non-match that becomes a match),
+    use the --every-match flag.
+
+    options:
+    -0, --print0              end fields with NUL
+    -I, --include <pat>       include names matching the given patterns
+    -X, --exclude <pat>       exclude names matching the given patterns
+    -e, --every-match         print every revision that matches
+    -i, --ignore-case         ignore case when matching
+    -l, --files-with-matches  print only file names and revs that match
+    -n, --line-number         print matching line numbers
+    -r <rev>, --rev <rev>     search in given revision range
+    -u, --user                print user who committed change
+
 heads::
     Show all repository head changesets.
     

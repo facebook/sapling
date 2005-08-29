@@ -1,0 +1,22 @@
+#!/bin/sh
+
+mkdir t
+cd t
+hg init
+echo import > port
+hg add port
+hg commit -m 0 -u spam -d '0 0'
+echo export >> port
+hg commit -m 1 -u eggs -d '1 0'
+echo export > port
+echo vaportight >> port
+echo 'import/export' >> port
+hg commit -m 2 -u spam -d '2 0'
+echo 'import/export' >> port
+hg commit -m 3 -u eggs -d '3 0'
+head -3 port > port1
+mv port1 port
+hg commit -m 4 -u spam -d '4 0'
+hg grep port port
+hg grep -enu port port
+hg grep import port
