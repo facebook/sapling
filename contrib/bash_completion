@@ -41,11 +41,9 @@ _hg_count_non_option()
 
     for (( i=1; $i<=$COMP_CWORD; i++ )); do
 	if [[ "${COMP_WORDS[i]}" != -* ]]; then
-	    for f in $filters; do
-		if [[ ${COMP_WORDS[i-1]} == $f ]]; then
-		    continue 2
-		fi
-	    done
+	    if [[ ${COMP_WORDS[i-1]} == @($filters|$global_args) ]]; then
+		continue
+	    fi
 	    count=$(($count + 1))
 	fi
     done
@@ -154,7 +152,7 @@ _hg()
 	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -X "!*.d" -- "$cur" ))
 	;;
 	cat)
-	    local count=$(_hg_count_non_option -o --output)
+	    local count=$(_hg_count_non_option '-o|--output')
 	    if [ $count = 2 ]; then
 		_hg_tags
 	    else
