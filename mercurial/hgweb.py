@@ -60,26 +60,40 @@ def up(p):
         return "/"
     return up + "/"
 
-def httphdr(type, file="", size=0):
-    sys.stdout.write('Content-type: %s\n' % type)
-    if file:
-        sys.stdout.write('Content-disposition: attachment; filename=%s\n'
-            % file)
-    if size > 0:
-        sys.stdout.write('Content-length: %d\n' % size)
-    sys.stdout.write('\n')
+class hgrequest:
+    def __init__(self, inp=None, out=None, env=None):
+        self.inp = inp or sys.stdin
+        self.out = out or sys.stdout
+        self.env = env or os.environ
+        self.form = cgi.parse(self.inp, self.env)
 
-def write(*things):
-    for thing in things:
-        if hasattr(thing, "__iter__"):
-            for part in thing:
-                write(part)
-        else:
-            try:
-                sys.stdout.write(str(thing))
-            except socket.error, x:
-                if x[0] != errno.ECONNRESET:
-                    raise
+    def write(self, *things):
+        for thing in things:
+            if hasattr(thing, "__iter__"):
+                for part in thing:
+                    self.write(part)
+            else:
+                try:
+                    self.out.write(thing)
+                except TypeError:
+                    self.out.write(str(thing))
+                except socket.error, x:
+                    if x[0] != errno.ECONNRESET:
+                        raise
+
+    def header(self, headers=[('Content-type','text/html')]):
+        for header in headers:
+            self.out.write("%s: %s\r\n" % header)
+        self.out.write("\r\n")
+
+    def httphdr(self, type, file="", size=0):
+
+        headers = [('Content-type', type)]
+        if file:
+            headers.append(('Content-disposition', 'attachment; filename=%s' % file))
+        if size > 0:
+            headers.append(('Content-length', str(size)))
+        self.header(headers)
 
 class templater:
     def __init__(self, mapfile, filters={}, defaults={}):
@@ -153,6 +167,8 @@ common_filters = {
     "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
     "rfc822date": rfc822date,
     }
+
+
 
 class hgweb:
     def __init__(self, repo, name=None):
@@ -635,7 +651,7 @@ class hgweb:
                                          cl.parents(n), cl.rev),
                      diff=diff)
 
-    def archive(self, cnode, type):
+    def archive(self, req, cnode, type):
         cs = self.repo.changelog.read(cnode)
         mnode = cs[0]
         mf = self.repo.manifest.read(mnode)
@@ -658,9 +674,9 @@ class hgweb:
                 zf.close()
 
                 f = open(tmp, 'r')
-                httphdr('application/zip', name[:-1] + '.zip',
+                req.httphdr('application/zip', name[:-1] + '.zip',
                         os.path.getsize(tmp))
-                sys.stdout.write(f.read())
+                req.write(f.read())
                 f.close()
             finally:
                 os.unlink(tmp)
@@ -670,11 +686,11 @@ class hgweb:
             import time
             import tarfile
 
-            tf = tarfile.TarFile.open(mode='w|' + type, fileobj=sys.stdout)
+            tf = tarfile.TarFile.open(mode='w|' + type, fileobj=req.out)
             mff = self.repo.manifest.readflags(mnode)
             mtime = int(time.time())
 
-            httphdr('application/octet-stream', name[:-1] + '.tar.' + type)
+            req.httphdr('application/octet-stream', name[:-1] + '.tar.' + type)
             for fname in files:
                 rcont = self.repo.file(fname).read(mf[fname])
                 finfo = tarfile.TarInfo(name + fname)
@@ -688,7 +704,7 @@ class hgweb:
     # tags -> list of changesets corresponding to tags
     # find tag, changeset, file
 
-    def run(self):
+    def run(self, req=hgrequest()):
         def header(**map):
             yield self.t("header", **map)
 
@@ -696,25 +712,24 @@ class hgweb:
             yield self.t("footer", **map)
 
         self.refresh()
-        args = cgi.parse()
 
         t = self.repo.ui.config("web", "templates", templatepath())
         m = os.path.join(t, "map")
         style = self.repo.ui.config("web", "style", "")
-        if args.has_key('style'):
-            style = args['style'][0]
+        if req.form.has_key('style'):
+            style = req.form['style'][0]
         if style:
             b = os.path.basename("map-" + style)
             p = os.path.join(t, b)
             if os.path.isfile(p):
                 m = p
 
-        port = os.environ["SERVER_PORT"]
+        port = req.env["SERVER_PORT"]
         port = port != "80" and (":" + port) or ""
-        uri = os.environ["REQUEST_URI"]
+        uri = req.env["REQUEST_URI"]
         if "?" in uri:
             uri = uri.split("?")[0]
-        url = "http://%s%s%s" % (os.environ["SERVER_NAME"], port, uri)
+        url = "http://%s%s%s" % (req.env["SERVER_NAME"], port, uri)
 
         self.t = templater(m, common_filters,
                            {"url": url,
@@ -723,73 +738,73 @@ class hgweb:
                             "footer": footer,
                            })
 
-        if not args.has_key('cmd'):
-            args['cmd'] = [self.t.cache['default'],]
+        if not req.form.has_key('cmd'):
+            req.form['cmd'] = [self.t.cache['default'],]
 
-        if args['cmd'][0] == 'changelog':
+        if req.form['cmd'][0] == 'changelog':
             c = self.repo.changelog.count() - 1
             hi = c
-            if args.has_key('rev'):
-                hi = args['rev'][0]
+            if req.form.has_key('rev'):
+                hi = req.form['rev'][0]
                 try:
                     hi = self.repo.changelog.rev(self.repo.lookup(hi))
                 except RepoError:
-                    write(self.search(hi))
+                    req.write(self.search(hi))
                     return
 
-            write(self.changelog(hi))
+            req.write(self.changelog(hi))
 
-        elif args['cmd'][0] == 'changeset':
-            write(self.changeset(args['node'][0]))
+        elif req.form['cmd'][0] == 'changeset':
+            req.write(self.changeset(req.form['node'][0]))
 
-        elif args['cmd'][0] == 'manifest':
-            write(self.manifest(args['manifest'][0], args['path'][0]))
+        elif req.form['cmd'][0] == 'manifest':
+            req.write(self.manifest(req.form['manifest'][0], req.form['path'][0]))
 
-        elif args['cmd'][0] == 'tags':
-            write(self.tags())
+        elif req.form['cmd'][0] == 'tags':
+            req.write(self.tags())
 
-        elif args['cmd'][0] == 'filediff':
-            write(self.filediff(args['file'][0], args['node'][0]))
+        elif req.form['cmd'][0] == 'filediff':
+            req.write(self.filediff(req.form['file'][0], req.form['node'][0]))
 
-        elif args['cmd'][0] == 'file':
-            write(self.filerevision(args['file'][0], args['filenode'][0]))
+        elif req.form['cmd'][0] == 'file':
+            req.write(self.filerevision(req.form['file'][0], req.form['filenode'][0]))
 
-        elif args['cmd'][0] == 'annotate':
-            write(self.fileannotate(args['file'][0], args['filenode'][0]))
+        elif req.form['cmd'][0] == 'annotate':
+            req.write(self.fileannotate(req.form['file'][0], req.form['filenode'][0]))
 
-        elif args['cmd'][0] == 'filelog':
-            write(self.filelog(args['file'][0], args['filenode'][0]))
+        elif req.form['cmd'][0] == 'filelog':
+            req.write(self.filelog(req.form['file'][0], req.form['filenode'][0]))
 
-        elif args['cmd'][0] == 'heads':
-            httphdr("application/mercurial-0.1")
+        elif req.form['cmd'][0] == 'heads':
+            req.httphdr("application/mercurial-0.1")
             h = self.repo.heads()
-            sys.stdout.write(" ".join(map(hex, h)) + "\n")
+            req.write(" ".join(map(hex, h)) + "\n")
 
-        elif args['cmd'][0] == 'branches':
-            httphdr("application/mercurial-0.1")
+        elif req.form['cmd'][0] == 'branches':
+            req.httphdr("application/mercurial-0.1")
             nodes = []
-            if args.has_key('nodes'):
-                nodes = map(bin, args['nodes'][0].split(" "))
+            if req.form.has_key('nodes'):
+                nodes = map(bin, req.form['nodes'][0].split(" "))
             for b in self.repo.branches(nodes):
-                sys.stdout.write(" ".join(map(hex, b)) + "\n")
+                req.write(" ".join(map(hex, b)) + "\n")
 
-        elif args['cmd'][0] == 'between':
-            httphdr("application/mercurial-0.1")
+        elif req.form['cmd'][0] == 'between':
+            req.httphdr("application/mercurial-0.1")
             nodes = []
-            if args.has_key('pairs'):
+            if req.form.has_key('pairs'):
                 pairs = [map(bin, p.split("-"))
-                         for p in args['pairs'][0].split(" ")]
+                         for p in req.form['pairs'][0].split(" ")]
             for b in self.repo.between(pairs):
-                sys.stdout.write(" ".join(map(hex, b)) + "\n")
+                req.write(" ".join(map(hex, b)) + "\n")
 
-        elif args['cmd'][0] == 'changegroup':
-            httphdr("application/mercurial-0.1")
+        elif req.form['cmd'][0] == 'changegroup':
+            req.httphdr("application/mercurial-0.1")
             nodes = []
             if not self.allowpull:
                 return
 
-            if args.has_key('roots'):
-                nodes = map(bin, args['roots'][0].split(" "))
+            if req.form.has_key('roots'):
+                nodes = map(bin, req.form['roots'][0].split(" "))
 
             z = zlib.compressobj()
             f = self.repo.changegroup(nodes)
@@ -797,22 +812,22 @@ class hgweb:
                 chunk = f.read(4096)
                 if not chunk:
                     break
-                sys.stdout.write(z.compress(chunk))
+                req.write(z.compress(chunk))
 
-            sys.stdout.write(z.flush())
+            req.write(z.flush())
 
-        elif args['cmd'][0] == 'archive':
-            changeset = bin(args['node'][0])
-            type = args['type'][0]
+        elif req.form['cmd'][0] == 'archive':
+            changeset = bin(req.form['node'][0])
+            type = req.form['type'][0]
             if (type in self.archives and
                 self.repo.ui.configbool("web", "allow" + type, False)):
-                self.archive(changeset, type)
+                self.archive(req, changeset, type)
                 return
 
-            write(self.t("error"))
+            req.write(self.t("error"))
 
         else:
-            write(self.t("error"))
+            req.write(self.t("error"))
 
 def create_server(repo):
 
@@ -893,19 +908,16 @@ def create_server(repo):
                     accept = accept + line[7:].split(',')
             env['HTTP_ACCEPT'] = ','.join(accept)
 
-            os.environ.update(env)
-
-            save = sys.argv, sys.stdin, sys.stdout, sys.stderr
+            save = sys.argv, sys.stderr
             try:
-                sys.stdin = self.rfile
-                sys.stdout = self.wfile
+                req = hgrequest(self.rfile, self.wfile, env)
                 sys.argv = ["hgweb.py"]
                 if '=' not in query:
                     sys.argv.append(query)
                 self.send_response(200, "Script output follows")
-                hg.run()
+                hg.run(req)
             finally:
-                sys.argv, sys.stdin, sys.stdout, sys.stderr = save
+                sys.argv, sys.stderr = save
 
     hg = hgweb(repo)
     if use_ipv6:
@@ -933,7 +945,7 @@ class hgwebdir:
             self.repos = cp.items("paths")
             self.repos.sort()
 
-    def run(self):
+    def run(self, req=hgrequest()):
         def header(**map):
             yield tmpl("header", **map)
 
@@ -951,7 +963,7 @@ class hgwebdir:
                 u.readconfig(file(os.path.join(path, '.hg', 'hgrc')))
                 get = u.config
 
-                url = ('/'.join([os.environ["REQUEST_URI"], name])
+                url = ('/'.join([req.env["REQUEST_URI"], name])
                        .replace("//", "/"))
 
                 yield dict(contact=get("web", "contact") or
@@ -965,12 +977,12 @@ class hgwebdir:
 
                 parity = 1 - parity
 
-        virtual = os.environ.get("PATH_INFO", "").strip('/')
+        virtual = req.env.get("PATH_INFO", "").strip('/')
         if virtual:
             real = dict(self.repos).get(virtual)
             if real:
-                hgweb(real).run()
+                hgweb(real).run(req)
             else:
-                write(tmpl("notfound", repo=virtual))
+                req.write(tmpl("notfound", repo=virtual))
         else:
-            write(tmpl("index", entries=entries))
+            req.write(tmpl("index", entries=entries))
