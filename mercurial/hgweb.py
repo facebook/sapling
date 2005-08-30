@@ -912,13 +912,12 @@ def create_server(repo):
 
             save = sys.argv, sys.stdin, sys.stdout, sys.stderr
             try:
-                sys.stdin = self.rfile
-                sys.stdout = self.wfile
+                req = hgrequest(self.rfile, self.wfile, os.environ)
                 sys.argv = ["hgweb.py"]
                 if '=' not in query:
                     sys.argv.append(query)
                 self.send_response(200, "Script output follows")
-                hg.run()
+                hg.run(req)
             finally:
                 sys.argv, sys.stdin, sys.stdout, sys.stderr = save
 
