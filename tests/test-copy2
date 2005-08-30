@@ -8,11 +8,11 @@ hg commit -m1 -d"0 0"
 echo "# should show copy"
 cp foo bar
 hg copy foo bar
-hg debugstate|grep ^copy
+hg debugstate|grep '^copy'
 
 echo "# shouldn't show copy"
 hg commit -m2 -d"0 0"
-hg debugstate|grep ^copy
+hg debugstate|grep '^copy'
 
 echo "# should match"
 hg debugindex .hg/data/foo.i
@@ -28,7 +28,7 @@ hg debugrename bar
 cp foo bar
 hg copy foo bar
 echo "# should show copy"
-hg debugstate|grep ^copy
+hg debugstate|grep '^copy'
 hg commit -m3 -d"0 0"
 
 echo "# should show no parents for tip"
@@ -38,6 +38,6 @@ hg debugindex .hg/data/foo.i
 hg debugrename bar
 
 echo "# should show no copies"
-hg debugstate|grep ^copy
+hg debugstate|grep '^copy'
 
 exit 0

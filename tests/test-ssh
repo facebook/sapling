@@ -13,7 +13,7 @@ if [ $1 != "user@dummy" ] ; then
 fi
 
 # check that we're in the right directory
-if \! [ -x dummyssh ] ; then
+if [ ! -x dummyssh ] ; then
 	exit -1
 fi
 
