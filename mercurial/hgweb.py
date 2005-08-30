@@ -908,7 +908,7 @@ def create_server(repo):
                     accept = accept + line[7:].split(',')
             env['HTTP_ACCEPT'] = ','.join(accept)
 
-            save = sys.argv, sys.stdin, sys.stdout, sys.stderr
+            save = sys.argv, sys.stderr
             try:
                 req = hgrequest(self.rfile, self.wfile, env)
                 sys.argv = ["hgweb.py"]
@@ -917,7 +917,7 @@ def create_server(repo):
                 self.send_response(200, "Script output follows")
                 hg.run(req)
             finally:
-                sys.argv, sys.stdin, sys.stdout, sys.stderr = save
+                sys.argv, sys.stderr = save
 
     hg = hgweb(repo)
     if use_ipv6:
