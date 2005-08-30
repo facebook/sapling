@@ -663,10 +663,10 @@ class hgweb:
         files.sort()
 
         if type == 'zip':
-            import zipfile
+            import zipfile, tempfile
 
+            tmp = tempfile.mkstemp()[1]
             try:
-                tmp = tempfile.mkstemp()[1]
                 zf = zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED)
 
                 for f in files:
