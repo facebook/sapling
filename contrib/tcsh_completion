@@ -14,10 +14,17 @@
 
 complete hg \
   'n/--cwd/d/' 'n/-R/d/' 'n/--repository/d/' \
-  'C/-/(-R --repository --cwd -y --noninteractive \
-    -q --quiet -v --verbose --debug \
-    --traceback --time --profile --version -h \
-    --help)/' \
+  'C/-/( -R --repository \
+    --cwd \
+    -y --noninteractive \
+    -q --quiet \
+    -v --verbose \
+    --debug \
+    --traceback \
+    --time \
+    --profile \
+    --version \
+    -h --help)/' \
   'p/1/(add addremove annotate cat clone \
     commit ci copy debugcheckstate debugconfig \
     debugdata debugindex debugindexdot debugrename debugstate \
