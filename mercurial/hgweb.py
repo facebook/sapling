@@ -908,11 +908,9 @@ def create_server(repo):
                     accept = accept + line[7:].split(',')
             env['HTTP_ACCEPT'] = ','.join(accept)
 
-            os.environ.update(env)
-
             save = sys.argv, sys.stdin, sys.stdout, sys.stderr
             try:
-                req = hgrequest(self.rfile, self.wfile, os.environ)
+                req = hgrequest(self.rfile, self.wfile, env)
                 sys.argv = ["hgweb.py"]
                 if '=' not in query:
                     sys.argv.append(query)
