@@ -1,0 +1,15 @@
+adding foo
+adding bar
+adding baz/bletch
+test-archive-TIP/bar
+test-archive-TIP/baz/bletch
+test-archive-TIP/foo
+test-archive-TIP/bar
+test-archive-TIP/baz/bletch
+test-archive-TIP/foo
+Archive:  archive.zip
+    testing: test-archive-TIP/bar   OK
+    testing: test-archive-TIP/baz/bletch   OK
+    testing: test-archive-TIP/foo   OK
+No errors detected in compressed data of archive.zip.
+killed!
