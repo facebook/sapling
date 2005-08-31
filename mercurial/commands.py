@@ -1386,7 +1386,10 @@ def serve(ui, repo, **opts):
         if opts[o]:
             ui.setconfig("web", o, opts[o])
 
-    httpd = hgweb.create_server(repo)
+    try:
+        httpd = hgweb.create_server(repo)
+    except socket.error, inst:
+        raise util.Abort('cannot start server: ' + inst.args[1])
 
     if ui.verbose:
         addr, port = httpd.socket.getsockname()
