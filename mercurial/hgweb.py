@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, cgi, time, re, socket, sys, zlib
+import os, cgi, time, re, socket, sys, zlib, errno
 import mdiff
 from hg import *
 from ui import *
@@ -77,8 +77,8 @@ class hgrequest:
                     self.out.write(thing)
                 except TypeError:
                     self.out.write(str(thing))
-                except socket.error, x:
-                    if x[0] != errno.ECONNRESET:
+                except socket.error, inst:
+                    if inst[0] != errno.ECONNRESET:
                         raise
 
     def header(self, headers=[('Content-type','text/html')]):
@@ -178,8 +178,7 @@ class hgweb:
             self.repo = repo
 
         self.mtime = -1
-        self.reponame = name or self.repo.ui.config("web", "name",
-                                                    self.repo.root)
+        self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
 
     def refresh(self):
@@ -730,6 +729,9 @@ class hgweb:
         if "?" in uri:
             uri = uri.split("?")[0]
         url = "http://%s%s%s" % (req.env["SERVER_NAME"], port, uri)
+        if not self.reponame:
+            self.reponame = (self.repo.ui.config("web", "name")
+                             or uri.strip('/') or self.repo.root)
 
         self.t = templater(m, common_filters,
                            {"url": url,
@@ -867,7 +869,7 @@ def create_server(repo):
             try:
                 self.do_hgweb()
             except socket.error, inst:
-                if inst.args[0] != 32:
+                if inst[0] != errno.EPIPE:
                     raise
 
         def do_GET(self):
