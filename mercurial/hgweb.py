@@ -910,16 +910,9 @@ def create_server(repo):
                     accept = accept + line[7:].split(',')
             env['HTTP_ACCEPT'] = ','.join(accept)
 
-            save = sys.argv, sys.stderr
-            try:
-                req = hgrequest(self.rfile, self.wfile, env)
-                sys.argv = ["hgweb.py"]
-                if '=' not in query:
-                    sys.argv.append(query)
-                self.send_response(200, "Script output follows")
-                hg.run(req)
-            finally:
-                sys.argv, sys.stderr = save
+            req = hgrequest(self.rfile, self.wfile, env)
+            self.send_response(200, "Script output follows")
+            hg.run(req)
 
     hg = hgweb(repo)
     if use_ipv6:
@@ -936,15 +929,18 @@ def server(path, name, templates, address, port, use_ipv6=False,
 # This is a stopgap
 class hgwebdir:
     def __init__(self, config):
+        def cleannames(items):
+            return [(name.strip('/'), path) for name, path in items]
+
         if type(config) == type([]):
-            self.repos = config
+            self.repos = cleannames(config)
         elif type(config) == type({}):
-            self.repos = config.items()
+            self.repos = cleannames(config.items())
             self.repos.sort()
         else:
             cp = ConfigParser.SafeConfigParser()
             cp.read(config)
-            self.repos = cp.items("paths")
+            self.repos = cleannames(cp.items("paths"))
             self.repos.sort()
 
     def run(self, req=hgrequest()):
@@ -968,7 +964,7 @@ class hgwebdir:
                     pass
                 get = u.config
 
-                url = ('/'.join([req.env["REQUEST_URI"], name])
+                url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
                        .replace("//", "/"))
 
                 yield dict(contact=get("web", "contact") or
