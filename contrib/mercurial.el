@@ -283,13 +283,13 @@ XEmacs and GNU Emacs."
     (replace-regexp-in-string regexp newtext str nil literal)))
 
 (defsubst hg-strip (str)
-  "Strip leading and trailing white space from a string."
-  (hg-replace-in-string (hg-replace-in-string str "[ \t\r\n]+$" "")
-			"^[ \t\r\n]+" ""))
+  "Strip leading and trailing blank lines from a string."
+  (hg-replace-in-string (hg-replace-in-string str "[\r\n][ \t\r\n]*\\'" "")
+			"\\`[ \t\r\n]*[\r\n]" ""))
 
 (defsubst hg-chomp (str)
   "Strip trailing newlines from a string."
-  (hg-replace-in-string str "[\r\n]+$" ""))
+  (hg-replace-in-string str "[\r\n]+\'" ""))
 
 (defun hg-run-command (command &rest args)
   "Run the shell command COMMAND, returning (EXIT-CODE . COMMAND-OUTPUT).
