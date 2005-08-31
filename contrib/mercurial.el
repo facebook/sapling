@@ -649,7 +649,7 @@ SCM Task                              G/L  Key Binding  Command Name
 Help overview (what you are reading)  G    C-c h h      hg-help-overview
 
 Tell Mercurial to manage a file       G    C-c h a      hg-add
-Commit changes to current file only   L    C-x v n      hg-commit
+Commit changes to current file only   L    C-x v n      hg-commit-start
 Undo changes to file since commit     L    C-x v u      hg-revert-buffer
 
 Diff file vs last checkin             L    C-x v =      hg-diff
@@ -659,10 +659,10 @@ View annotated file                   L    C-x v a      hg-annotate
 
 Diff repo vs last checkin             G    C-c h =      hg-diff-repo
 View status of files in repo          G    C-c h s      hg-status
-Commit all changes                    G    C-c h c      hg-commit
+Commit all changes                    G    C-c h c      hg-commit-start
 
 Undo all changes since last commit    G    C-c h U      hg-revert
-View repo change history              G    C-c h l      hg-log
+View repo change history              G    C-c h l      hg-log-repo
 
 See changes that can be pulled        G    C-c h ,      hg-incoming
 Pull changes                          G    C-c h <      hg-pull
