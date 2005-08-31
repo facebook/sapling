@@ -64,14 +64,14 @@ keys, and their possible values.
 hooks::
   Commands that get automatically executed by various actions such as
   starting or finishing a commit.
-  precommit;;
-    Run before starting a commit.  Exit status 0 allows the commit to
-    proceed.  Non-zero status will cause the commit to fail.
+  changegroup;;
+    Run after a changegroup has been added via push or pull.
   commit;;
     Run after a changeset has been created. Passed the ID of the newly
     created changeset.
-  changegroup;;
-    Run after a changegroup has been added via push or pull.
+  precommit;;
+    Run before starting a commit.  Exit status 0 allows the commit to
+    proceed.  Non-zero status will cause the commit to fail.
 
 http_proxy::
   Used to access web-based Mercurial repositories through a HTTP
@@ -79,13 +79,13 @@ http_proxy::
   host;;
     Host name and (optional) port of the proxy server, for example
     "myproxy:8000".
-  user;;
-    Optional.  User name to authenticate with at the proxy server.
-  passwd;;
-    Optional.  Password to authenticate with at the proxy server.
   no;;
     Optional.  Comma-separated list of host names that should bypass
     the proxy.
+  passwd;;
+    Optional.  Password to authenticate with at the proxy server.
+  user;;
+    Optional.  User name to authenticate with at the proxy server.
 
 paths::
   Assigns symbolic names to repositories.  The left side is the
@@ -105,50 +105,53 @@ ui::
     Default is "hgmerge".
   quiet;;
     Reduce the amount of output printed.  True or False.  Default is False.
+  remotecmd;;
+    remote command to use for clone/push/pull operations. Default is 'hg'.
+  ssh;;
+    command to use for SSH connections. Default is 'ssh'.
   username;;
     The committer of a changeset created when running "commit".
     Typically a person's name and email address, e.g. "Fred Widget
     <fred@example.com>".  Default is $EMAIL or username@hostname.
   verbose;;
     Increase the amount of output printed.  True or False.  Default is False.
-  ssh;;
-    command to use for SSH connections. Default is 'ssh'.
-  remotecmd;;
-    remote command to use for clone/push/pull operations. Default is 'hg'.
 
 
 web::
   Web interface configuration.
-  name;;
-    Repository name to use in the web interface. Default is current
-    working directory.
-  address;;
-    Interface address to bind to. Default is all.
-  port;;
-    Port to listen on. Default is 8000.
-  ipv6;;
-    Whether to use IPv6. Default is false.
   accesslog;;
     Where to output the access log. Default is stdout.
-  errorlog;;
-    Where to output the error log. Default is stderr.
-  templates;;
-    Where to find the HTML templates. Default is install path.
-  style;;
-    Which template map style to use.
-  maxchanges;;
-    Maximum number of changes to list on the changelog. Default is 10.
-  maxfiles;;
-    Maximum number of files to list per changeset. Default is 10.
+  address;;
+    Interface address to bind to. Default is all.
+  allowbz2;;
+    Whether to allow .tar.bz2 downloading of repo revisions. Default is false.
+  allowgz;;
+    Whether to allow .tar.gz downloading of repo revisions. Default is false.
   allowpull;;
     Whether to allow pulling from the repository. Default is true.
   allowzip;;
     Whether to allow .zip downloading of repo revisions. Default is false.
     This feature creates temporary files.
-  allowgz;;
-    Whether to allow .tar.gz downloading of repo revisions. Default is false.
-  allowbz2;;
-    Whether to allow .tar.bz2 downloading of repo revisions. Default is false.
+  description;;
+    Textual description of the repository's purpose or contents.
+    Default is "unknown".
+  errorlog;;
+    Where to output the error log. Default is stderr.
+  ipv6;;
+    Whether to use IPv6. Default is false.
+  name;;
+    Repository name to use in the web interface. Default is current
+    working directory.
+  maxchanges;;
+    Maximum number of changes to list on the changelog. Default is 10.
+  maxfiles;;
+    Maximum number of files to list per changeset. Default is 10.
+  port;;
+    Port to listen on. Default is 8000.
+  style;;
+    Which template map style to use.
+  templates;;
+    Where to find the HTML templates. Default is install path.
 
 
 AUTHOR
