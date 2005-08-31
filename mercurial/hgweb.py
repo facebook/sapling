@@ -960,7 +960,10 @@ class hgwebdir:
             parity = 0
             for name, path in self.repos:
                 u = ui()
-                u.readconfig(file(os.path.join(path, '.hg', 'hgrc')))
+                try:
+                    u.readconfig(file(os.path.join(path, '.hg', 'hgrc')))
+                except IOError:
+                    pass
                 get = u.config
 
                 url = ('/'.join([req.env["REQUEST_URI"], name])
