@@ -178,8 +178,7 @@ class hgweb:
             self.repo = repo
 
         self.mtime = -1
-        self.reponame = name or self.repo.ui.config("web", "name",
-                                                    self.repo.root)
+        self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
 
     def refresh(self):
@@ -730,6 +729,9 @@ class hgweb:
         if "?" in uri:
             uri = uri.split("?")[0]
         url = "http://%s%s%s" % (req.env["SERVER_NAME"], port, uri)
+        if not self.reponame:
+            self.reponame = (self.repo.ui.config("web", "name")
+                             or uri.strip('/') or self.repo.root)
 
         self.t = templater(m, common_filters,
                            {"url": url,
