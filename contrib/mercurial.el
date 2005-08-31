@@ -469,12 +469,11 @@ directory names from the file system.  We do not penalise URLs."
       (set-buffer hg-prev-buffer))
     (let ((rev (or default "tip")))
       (if current-prefix-arg
-	  (let ((revs (split-string (hg-chomp
-				     (hg-run0 "-q" "log" "-r"
-					      (format "-%d"
-						      hg-rev-completion-limit)
-					      "-r" "tip"))
-				    "[\n:]")))
+	  (let ((revs (split-string
+		       (hg-chomp
+			(hg-run0 "-q" "log" "-r"
+				 (format "-%d:tip" hg-rev-completion-limit)))
+		       "[\n:]")))
 	    (dolist (line (split-string (hg-chomp (hg-run0 "tags")) "\n"))
 	      (setq revs (cons (car (split-string line "\\s-")) revs)))
 	    (completing-read (format "Revision%s (%s): "
@@ -966,9 +965,10 @@ With a prefix argument, prompt for each parameter."
 			 (format "Mercurial: Log of rev %s of %s" rev1 a-path)
 		       (format "Mercurial: Log from rev %s to %s of %s"
 			       r1 r2 a-path)))
-      (if (> (length path) (length (hg-root path)))
-	  (call-process (hg-binary) nil t nil "log" "-r" r1 "-r" r2 path)
-	(call-process (hg-binary) nil t nil "log" "-r" r1 "-r" r2))
+      (let ((revs (format "%s:%s" r1 r2)))
+	(if (> (length path) (length (hg-root path)))
+	    (call-process (hg-binary) nil t nil "log" "-r" revs path)
+	  (call-process (hg-binary) nil t nil "log" "-r" revs)))
       (hg-log-mode))))
 
 (defun hg-log-repo (path &optional rev1 rev2)
