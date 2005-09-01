@@ -266,12 +266,15 @@ import [-p <n> -b <base> -f] <patches>::
 
     aliases: patch
 
-incoming [source]::
+incoming [-p] [source]::
     Show new changesets found in the specified repo or the default
     pull repo. These are the changesets that would be pulled if a pull
     was requested.
 
     Currently only local repositories are supported.
+
+    options:
+    -p, --patch           show patch
 
     aliases: in
 
@@ -327,10 +330,13 @@ manifest [revision]::
     The manifest is the list of files being version controlled. If no revision
     is given then the tip is used.
 
-outgoing [dest]:: 
+outgoing [-p] [dest]:: 
     Show changesets not found in the specified destination repo or the
     default push repo. These are the changesets that would be pushed
     if a push was requested.
+
+    options:
+    -p, --patch           show patch
 
     aliases: out
 
