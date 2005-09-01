@@ -22,6 +22,7 @@ class dirstate:
         self.pl = None
         self.copies = {}
         self.ignorefunc = None
+        self.blockignore = False
 
     def wjoin(self, f):
         return os.path.join(self.root, f)
@@ -32,6 +33,8 @@ class dirstate:
         return cwd[len(self.root) + 1:]
 
     def ignore(self, f):
+        if self.blockignore:
+            return False
         if not self.ignorefunc:
             bigpat = []
             try:
@@ -214,98 +217,153 @@ class dirstate:
         elif not dc:
             dc = self.filterfiles(files)
 
+        def statmatch(file, stat):
+            if file not in dc and self.ignore(file):
+                return False
+            return match(file)
+        return self.walkhelper(files=files, statmatch=statmatch, dc=dc)
+
+    # walk recursively through the directory tree, finding all files
+    # matched by the statmatch function
+    # 
+    # results are yielded in a tuple (src, filename), where src is one of:
+    # 'f' the file was found in the directory tree
+    # 'm' the file was only in the dirstate and not in the tree
+    #
+    # dc is an optional arg for the current dirstate.  dc is not modified
+    # directly by this function, but might be modified by your statmatch call.
+    #
+    def walkhelper(self, files, statmatch, dc):
+        # recursion free walker, faster than os.walk.
+        def findfiles(s):
+            retfiles = []
+            work = [s]
+            while work:
+                top = work.pop()
+                names = os.listdir(top)
+                names.sort()
+                # nd is the top of the repository dir tree
+                nd = util.normpath(top[len(self.root) + 1:])
+                if nd == '.': nd = ''
+                for f in names:
+                    np = os.path.join(nd, f)
+                    if seen(np):
+                        continue
+                    p = os.path.join(top, f)
+                    st = os.stat(p)
+                    if stat.S_ISDIR(st.st_mode):
+                        ds = os.path.join(nd, f +'/')
+                        if statmatch(ds, st):
+                            work.append(p)
+                    else:
+                        if statmatch(np, st):
+                            yield np
+
         known = {'.hg': 1}
         def seen(fn):
             if fn in known: return True
             known[fn] = 1
-        def traverse():
-            for ff in util.unique(files):
-                f = os.path.join(self.root, ff)
-                try:
-                    st = os.stat(f)
-                except OSError, inst:
-                    if ff not in dc: self.ui.warn('%s: %s\n' % (
-                        util.pathto(self.getcwd(), ff),
-                        inst.strerror))
-                    continue
-                if stat.S_ISDIR(st.st_mode):
-                    for dir, subdirs, fl in os.walk(f):
-                        d = dir[len(self.root) + 1:]
-                        nd = util.normpath(d)
-                        if nd == '.': nd = ''
-                        if seen(nd):
-                            subdirs[:] = []
-                            continue
-                        for sd in subdirs:
-                            ds = os.path.join(nd, sd +'/')
-                            if self.ignore(ds) or not match(ds):
-                                subdirs.remove(sd)
-                        subdirs.sort()
-                        fl.sort()
-                        for fn in fl:
-                            fn = util.pconvert(os.path.join(d, fn))
-                            yield 'f', fn
-                elif stat.S_ISREG(st.st_mode):
-                    yield 'f', ff
-                else:
-                    kind = 'unknown'
-                    if stat.S_ISCHR(st.st_mode): kind = 'character device'
-                    elif stat.S_ISBLK(st.st_mode): kind = 'block device'
-                    elif stat.S_ISFIFO(st.st_mode): kind = 'fifo'
-                    elif stat.S_ISLNK(st.st_mode): kind = 'symbolic link'
-                    elif stat.S_ISSOCK(st.st_mode): kind = 'socket'
-                    self.ui.warn('%s: unsupported file type (type is %s)\n' % (
-                        util.pathto(self.getcwd(), ff),
-                        kind))
 
-            ks = dc.keys()
-            ks.sort()
-            for k in ks:
-                yield 'm', k
-
-        # yield only files that match: all in dirstate, others only if
-        # not in .hgignore
-
-        for src, fn in util.unique(traverse()):
-            fn = util.normpath(fn)
-            if seen(fn): continue
-            if fn not in dc and self.ignore(fn):
+        # step one, find all files that match our criteria
+        files.sort()
+        for ff in util.unique(files):
+            f = os.path.join(self.root, ff)
+            try:
+                st = os.stat(f)
+            except OSError, inst:
+                if ff not in dc: self.ui.warn('%s: %s\n' % (
+                    util.pathto(self.getcwd(), ff),
+                    inst.strerror))
                 continue
-            if match(fn):
-                yield src, fn
+            if stat.S_ISDIR(st.st_mode):
+                sorted = [ x for x in findfiles(f) ]
+                sorted.sort()
+                for fl in sorted:
+                    yield 'f', fl
+            elif stat.S_ISREG(st.st_mode):
+                ff = util.normpath(ff)
+                if seen(ff):
+                    continue
+                found = False
+                self.blockignore = True
+                if statmatch(ff, st):
+                    found = True
+                self.blockignore = False
+                if found:
+                    yield 'f', ff
+            else:
+                kind = 'unknown'
+                if stat.S_ISCHR(st.st_mode): kind = 'character device'
+                elif stat.S_ISBLK(st.st_mode): kind = 'block device'
+                elif stat.S_ISFIFO(st.st_mode): kind = 'fifo'
+                elif stat.S_ISLNK(st.st_mode): kind = 'symbolic link'
+                elif stat.S_ISSOCK(st.st_mode): kind = 'socket'
+                self.ui.warn('%s: unsupported file type (type is %s)\n' % (
+                    util.pathto(self.getcwd(), ff),
+                    kind))
+
+        # step two run through anything left in the dc hash and yield
+        # if we haven't already seen it
+        ks = dc.keys()
+        ks.sort()
+        for k in ks:
+            if not seen(k) and (statmatch(k, None)):
+                yield 'm', k
 
     def changes(self, files=None, match=util.always):
         self.read()
         if not files:
+            files = [self.root]
             dc = self.map.copy()
         else:
             dc = self.filterfiles(files)
         lookup, modified, added, unknown = [], [], [], []
         removed, deleted = [], []
 
-        for src, fn in self.walk(files, match, dc=dc):
-            try:
-                s = os.stat(os.path.join(self.root, fn))
-            except OSError:
-                continue
-            if not stat.S_ISREG(s.st_mode):
-                continue
-            c = dc.get(fn)
-            if c:
-                del dc[fn]
-                if c[0] == 'm':
-                    modified.append(fn)
-                elif c[0] == 'a':
-                    added.append(fn)
-                elif c[0] == 'r':
-                    unknown.append(fn)
-                elif c[2] != s.st_size or (c[1] ^ s.st_mode) & 0100:
-                    modified.append(fn)
-                elif c[3] != s.st_mtime:
-                    lookup.append(fn)
-            else:
-                unknown.append(fn)
+        # statmatch function to eliminate entries from the dirstate copy
+        # and put files into the appropriate array.  This gets passed
+        # to the walking code
+        def statmatch(fn, s):
+            def checkappend(l, fn):
+                if match is util.always or match(fn):
+                    l.append(fn)
+                   
+            if not s or stat.S_ISDIR(s.st_mode):
+                return self.ignore(fn) and False or match(fn)
 
+            if not stat.S_ISREG(s.st_mode):
+                return False
+            c = dc.pop(fn, None)
+            if c:
+                type, mode, size, time = c
+                # check the common case first
+                if type == 'n':
+                    if size != s.st_size or (mode ^ s.st_mode) & 0100:
+                        checkappend(modified, fn)
+                    elif time != s.st_mtime:
+                        checkappend(lookup, fn)
+                elif type == 'm':
+                    checkappend(modified, fn)
+                elif type == 'a':
+                    checkappend(added, fn)
+                elif type == 'r':
+                    checkappend(unknown, fn)
+            else:
+                if not self.ignore(fn) and match(fn):
+                    unknown.append(fn)
+            # return false because we've already handled all cases above.
+            # there's no need for the walking code to process the file
+            # any further.
+            return False
+
+        # because our statmatch always returns false, self.walk will only
+        # return files in the dirstate map that are not present in the FS.
+        # But, we still need to iterate through the results to force the
+        # walk to complete
+        for src, fn in self.walkhelper(files, statmatch, dc):
+            pass
+
+        # anything left in dc didn't exist in the filesystem
         for fn, c in [(fn, c) for fn, c in dc.items() if match(fn)]:
             if c[0] == 'r':
                 removed.append(fn)
