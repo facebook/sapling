@@ -1265,18 +1265,19 @@ def recover(ui, repo):
 def remove(ui, repo, pat, *pats, **opts):
     """remove the specified files on the next commit"""
     names = []
+    def okaytoremove(abs, rel, exact):
+        c, a, d, u = repo.changes(files = [abs])
+        reason = None
+        if c: reason = 'is modified'
+        elif a: reason = 'has been marked for add'
+        elif u: reason = 'not managed'
+        if reason and exact:
+            ui.warn('not removing %s: file %s\n' % (rel, reason))
+        else:
+            return True
     for src, abs, rel, exact in walk(repo, (pat,) + pats, opts):
-        if exact:
-            skip = {'m': 'file has pending merge',
-                    'a': 'file has been marked for add (use forget)',
-                    '?': 'file not managed'}
-            reason = skip.get(repo.dirstate.state(abs))
-            if reason:
-                ui.warn('not removing %s: %s\n' % (rel, reason))
-            else:
-                names.append(abs)
-        elif repo.dirstate.state(abs) == 'n':
-            ui.status('removing %s\n' % rel)
+        if okaytoremove(abs, rel, exact):
+            if not exact: ui.status('removing %s\n' % rel)
             names.append(abs)
     repo.remove(names)
 
