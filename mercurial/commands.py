@@ -1009,7 +1009,8 @@ def import_(ui, repo, patch1, *patches, **opts):
     d = opts["base"]
     strip = opts["strip"]
 
-    mailre = re.compile(r'(From |[\w-]+:)')
+    mailre = re.compile(r'(?:From |[\w-]+:)')
+    diffre = re.compile(r'(?:diff -|--- .*\s+\w+ \w+ +\d+ \d+:\d+:\d+ \d+)')
 
     for patch in patches:
         ui.status("applying %s\n" % patch)
@@ -1024,7 +1025,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 if len(line) > 35: line = line[:32] + '...'
                 raise util.Abort('first line looks like a '
                                  'mail header: ' + line)
-            if line.startswith("--- ") or line.startswith("diff -r"):
+            if diffre.match(line):
                 break
             elif hgpatch:
                 # parse values when importing the result of an hg export
