@@ -749,6 +749,7 @@ def debugindexdot(ui, file_):
     ui.write("}\n")
 
 def debugrename(ui, repo, file, rev=None):
+    """dump rename information"""
     r = repo.file(relpath(repo, [file])[0])
     if rev:
         try:
