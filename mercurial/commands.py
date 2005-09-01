@@ -1064,7 +1064,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             addremove(ui, repo, *files)
         repo.commit(files, message, user)
 
-def incoming(ui, repo, source="default", **opts):
+def incoming(ui, repo, source="default"):
     """show new changesets found in source"""
     source = ui.expandpath(source)
     other = hg.repository(ui, source)
@@ -1079,10 +1079,6 @@ def incoming(ui, repo, source="default", **opts):
     o.reverse()
     for n in o:
         show_changeset(ui, other, changenode=n)
-        if opts['patch']:
-            prev = other.changelog.parents(n)[0]
-            dodiff(ui, ui, other, prev, n)
-            ui.write("\n")
 
 def init(ui, dest="."):
     """create a new repository in the given directory"""
@@ -1164,7 +1160,7 @@ def manifest(ui, repo, rev=None):
     for f in files:
         ui.write("%40s %3s %s\n" % (hex(m[f]), mf[f] and "755" or "644", f))
 
-def outgoing(ui, repo, dest="default-push", **opts):
+def outgoing(ui, repo, dest="default-push"):
     """show changesets not found in destination"""
     dest = ui.expandpath(dest)
     other = hg.repository(ui, dest)
@@ -1173,10 +1169,6 @@ def outgoing(ui, repo, dest="default-push", **opts):
     o.reverse()
     for n in o:
         show_changeset(ui, repo, changenode=n)
-        if opts['patch']:
-            prev = repo.changelog.parents(n)[0]
-            dodiff(ui, ui, repo, prev, n)
-            ui.write("\n")
 
 def parents(ui, repo, rev=None):
     """show the parents of the working dir or revision"""
@@ -1671,9 +1663,7 @@ table = {
           ('b', 'base', "", 'base path'),
           ('m', 'mail-like', None, 'apply a patch that looks like email')],
          "hg import [-f] [-p NUM] [-b BASE] PATCH..."),
-    "incoming|in": (incoming, 
-         [('p', 'patch', None, 'show patch')],
-         'hg incoming [-p] [SOURCE]'),
+    "incoming|in": (incoming, [], 'hg incoming [SOURCE]'),
     "^init": (init, [], 'hg init [DEST]'),
     "locate":
         (locate,
@@ -1691,9 +1681,7 @@ table = {
           ('p', 'patch', None, 'show patch')],
          'hg log [-I] [-X] [-r REV]... [-p] [FILE]'),
     "manifest": (manifest, [], 'hg manifest [REV]'),
-    "outgoing|out": (outgoing, 
-         [('p', 'patch', None, 'show patch')],
-         'hg outgoing [-p] [DEST]'),
+    "outgoing|out": (outgoing, [], 'hg outgoing [DEST]'),
     "parents": (parents, [], 'hg parents [REV]'),
     "paths": (paths, [], 'hg paths [NAME]'),
     "^pull":
