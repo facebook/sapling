@@ -403,7 +403,7 @@ recover::
     This command tries to fix the repository status after an interrupted
     operation. It should only be necessary when Mercurial suggests it.
 
-remove [files ...]::
+remove [options] [files ...]::
     Schedule the indicated files for removal from the repository.
     
     This command schedules the files to be removed at the next commit.

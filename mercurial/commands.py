@@ -1262,9 +1262,23 @@ def recover(ui, repo):
     """roll back an interrupted transaction"""
     repo.recover()
 
-def remove(ui, repo, file1, *files):
+def remove(ui, repo, pat, *pats, **opts):
     """remove the specified files on the next commit"""
-    repo.remove(relpath(repo, (file1,) + files))
+    names = []
+    for src, abs, rel, exact in walk(repo, (pat,) + pats, opts):
+        if exact:
+            skip = {'m': 'file has pending merge',
+                    'a': 'file has been marked for add (use forget)',
+                    '?': 'file not managed'}
+            reason = skip.get(repo.dirstate.state(abs))
+            if reason:
+                ui.warn('not removing %s: %s\n' % (rel, reason))
+            else:
+                names.append(abs)
+        elif repo.dirstate.state(abs) == 'n':
+            ui.status('removing %s\n' % rel)
+            names.append(abs)
+    repo.remove(names)
 
 def revert(ui, repo, *names, **opts):
     """revert modified files or dirs back to their unmodified states"""
@@ -1697,7 +1711,10 @@ table = {
           ('l', 'logfile', "", 'commit message file')],
          'hg rawcommit [OPTION]... [FILE]...'),
     "recover": (recover, [], "hg recover"),
-    "^remove|rm": (remove, [], "hg remove FILE..."),
+    "^remove|rm": (remove,
+                   [('I', 'include', [], 'include path in search'),
+                    ('X', 'exclude', [], 'exclude path from search')],
+                   "hg remove [OPTION]... FILE..."),
     "^revert":
         (revert,
          [("n", "nonrecursive", None, "don't recurse into subdirs"),
