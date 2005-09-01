@@ -689,7 +689,14 @@ class hgweb:
             mff = self.repo.manifest.readflags(mnode)
             mtime = int(time.time())
 
-            req.httphdr('application/octet-stream', name[:-1] + '.tar.' + type)
+            if type == "gz":
+                encoding = "gzip"
+            else:
+                encoding = "x-bzip2"
+            req.header([('Content-type', 'application/x-tar'), 
+                    ('Content-disposition', 'attachment; filename=%s%s%s' %
+                        (name[:-1], '.tar.', type)),
+                    ('Content-encoding', encoding)])
             for fname in files:
                 rcont = self.repo.file(fname).read(mf[fname])
                 finfo = tarfile.TarInfo(name + fname)
