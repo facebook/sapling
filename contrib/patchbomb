@@ -52,12 +52,17 @@ from mercurial import hg
 from mercurial import ui
 import os
 import popen2
-import readline
 import smtplib
 import socket
 import sys
 import tempfile
 import time
+
+try:
+    # readline gives raw_input editing capabilities, but is not
+    # present on windows
+    import readline
+except ImportError: pass
 
 def diffstat(patch):
     fd, name = tempfile.mkstemp()
