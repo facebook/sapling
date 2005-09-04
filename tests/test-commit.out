@@ -1,90 +1,15 @@
-Traceback (most recent call last):
-  File "/tmp/hgtests.22041.15131.11536.3935/install/bin/hg", line 13, in ?
-    commands.run()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1809, in run
-    sys.exit(dispatch(sys.argv[1:]))
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1945, in dispatch
-    return d()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1930, in <lambda>
-    d = lambda: func(u, repo, *args, **cmdoptions)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 663, in commit
-    repo.commit(files, message, opts['user'], opts['date'], match)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/localrepo.py", line 398, in commit
-    n = self.changelog.add(mn, changed, text, tr, p1, p2, user, date)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/changelog.py", line 42, in add
-    raise ValueError('impossible time zone offset: %d' % offset)
-ValueError: impossible time zone offset: 4444444
 transaction abort!
 rollback completed
-Traceback (most recent call last):
-  File "/tmp/hgtests.22041.15131.11536.3935/install/bin/hg", line 13, in ?
-    commands.run()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1809, in run
-    sys.exit(dispatch(sys.argv[1:]))
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1945, in dispatch
-    return d()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1930, in <lambda>
-    d = lambda: func(u, repo, *args, **cmdoptions)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 663, in commit
-    repo.commit(files, message, opts['user'], opts['date'], match)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/localrepo.py", line 398, in commit
-    n = self.changelog.add(mn, changed, text, tr, p1, p2, user, date)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/changelog.py", line 38, in add
-    when, offset = map(int, date.split(' '))
-ValueError: invalid literal for int(): 1	15.1
+abort: impossible time zone offset: 4444444
 transaction abort!
 rollback completed
-Traceback (most recent call last):
-  File "/tmp/hgtests.22041.15131.11536.3935/install/bin/hg", line 13, in ?
-    commands.run()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1809, in run
-    sys.exit(dispatch(sys.argv[1:]))
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1945, in dispatch
-    return d()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1930, in <lambda>
-    d = lambda: func(u, repo, *args, **cmdoptions)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 663, in commit
-    repo.commit(files, message, opts['user'], opts['date'], match)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/localrepo.py", line 398, in commit
-    n = self.changelog.add(mn, changed, text, tr, p1, p2, user, date)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/changelog.py", line 38, in add
-    when, offset = map(int, date.split(' '))
-ValueError: invalid literal for int(): foo
+abort: invalid date: '1\t15.1'
 transaction abort!
 rollback completed
-Traceback (most recent call last):
-  File "/tmp/hgtests.22041.15131.11536.3935/install/bin/hg", line 13, in ?
-    commands.run()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1809, in run
-    sys.exit(dispatch(sys.argv[1:]))
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1945, in dispatch
-    return d()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1930, in <lambda>
-    d = lambda: func(u, repo, *args, **cmdoptions)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 663, in commit
-    repo.commit(files, message, opts['user'], opts['date'], match)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/localrepo.py", line 398, in commit
-    n = self.changelog.add(mn, changed, text, tr, p1, p2, user, date)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/changelog.py", line 38, in add
-    when, offset = map(int, date.split(' '))
-ValueError: invalid literal for int(): 
+abort: invalid date: 'foo bar'
 transaction abort!
 rollback completed
-Traceback (most recent call last):
-  File "/tmp/hgtests.22041.15131.11536.3935/install/bin/hg", line 13, in ?
-    commands.run()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1809, in run
-    sys.exit(dispatch(sys.argv[1:]))
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1945, in dispatch
-    return d()
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 1930, in <lambda>
-    d = lambda: func(u, repo, *args, **cmdoptions)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/commands.py", line 663, in commit
-    repo.commit(files, message, opts['user'], opts['date'], match)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/localrepo.py", line 398, in commit
-    n = self.changelog.add(mn, changed, text, tr, p1, p2, user, date)
-  File "/tmp/hgtests.22041.15131.11536.3935/install/lib/python/mercurial/changelog.py", line 40, in add
-    raise ValueError('date exceeds 32 bits: %d' % when)
-ValueError: date exceeds 32 bits: 111111111111
+abort: invalid date: ' 1 4444'
 transaction abort!
 rollback completed
+abort: date exceeds 32 bits: 111111111111

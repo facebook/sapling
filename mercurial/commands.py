@@ -660,7 +660,10 @@ def commit(ui, repo, *pats, **opts):
         files = c + a + [fn for fn in d if repo.dirstate.state(fn) == 'r']
     else:
         files = []
-    repo.commit(files, message, opts['user'], opts['date'], match)
+    try:
+        repo.commit(files, message, opts['user'], opts['date'], match)
+    except ValueError, inst:
+        raise util.Abort(str(inst))
 
 def copy(ui, repo, source, dest):
     """mark a file as copied or renamed for the next commit"""
@@ -1264,7 +1267,10 @@ def rawcommit(ui, repo, *flist, **rc):
 
     rc['parent'] = map(repo.lookup, rc['parent'])
 
-    repo.rawcommit(files, message, rc['user'], rc['date'], *rc['parent'])
+    try:
+        repo.rawcommit(files, message, rc['user'], rc['date'], *rc['parent'])
+    except ValueError, inst:
+        raise util.Abort(str(inst))
 
 def recover(ui, repo):
     """roll back an interrupted transaction"""
@@ -1502,7 +1508,10 @@ def tag(ui, repo, name, rev=None, **opts):
 
     message = (opts['message'] or opts['text'] or
                "Added tag %s for changeset %s" % (name, r))
-    repo.commit([".hgtags"], message, opts['user'], opts['date'])
+    try:
+        repo.commit([".hgtags"], message, opts['user'], opts['date'])
+    except ValueError, inst:
+        raise util.Abort(str(inst))
 
 def tags(ui, repo):
     """list repository tags"""

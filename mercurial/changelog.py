@@ -35,7 +35,10 @@ class changelog(revlog):
             # validate explicit (probably user-specified) date and
             # time zone offset. values must fit in signed 32 bits for
             # current 32-bit linux runtimes.
-            when, offset = map(int, date.split(' '))
+            try:
+                when, offset = map(int, date.split(' '))
+            except ValueError:
+                raise ValueError('invalid date: %r' % date)
             if abs(when) > 0x7fffffff:
                 raise ValueError('date exceeds 32 bits: %d' % when)
             if abs(offset) >= 43200:
