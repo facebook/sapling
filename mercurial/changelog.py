@@ -33,10 +33,13 @@ class changelog(revlog):
                   user=None, date=None):
         if date:
             # validate explicit (probably user-specified) date and
-            # time zone offset
+            # time zone offset. values must fit in signed 32 bits for
+            # current 32-bit linux runtimes.
             when, offset = map(int, date.split(' '))
-            time.localtime(when)
-            assert abs(offset) < 43200, 'bad time zone offset: %d' % offset
+            if abs(when) > 0x7fffffff:
+                raise ValueError('date exceeds 32 bits: %d' % when)
+            if abs(offset) >= 43200:
+                raise ValueError('impossible time zone offset: %d' % offset)
         else:
             if time.daylight: offset = time.altzone
             else: offset = time.timezone
