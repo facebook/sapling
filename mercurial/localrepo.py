@@ -888,21 +888,7 @@ class localrepository:
         return remote.addchangegroup(cg)
 
     def changegroup(self, basenodes):
-        class genread:
-            def __init__(self, generator):
-                self.g = generator
-                self.buf = ""
-            def fillbuf(self):
-                self.buf += "".join(self.g)
-
-            def read(self, l):
-                while l > len(self.buf):
-                    try:
-                        self.buf += self.g.next()
-                    except StopIteration:
-                        break
-                d, self.buf = self.buf[:l], self.buf[l:]
-                return d
+        genread = util.chunkbuffer
 
         def gengroup():
             nodes = self.newer(basenodes)
