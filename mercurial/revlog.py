@@ -206,11 +206,15 @@ class revlog:
     def tip(self): return self.node(len(self.index) - 1)
     def count(self): return len(self.index)
     def node(self, rev): return (rev < 0) and nullid or self.index[rev][6]
-    def rev(self, node): return self.nodemap[node]
-    def linkrev(self, node): return self.index[self.nodemap[node]][3]
+    def rev(self, node):
+        try:
+            return self.nodemap[node]
+        except KeyError:
+            raise KeyError('%s: no node %s' % (self.indexfile, hex(node)))
+    def linkrev(self, node): return self.index[self.rev(node)][3]
     def parents(self, node):
         if node == nullid: return (nullid, nullid)
-        return self.index[self.nodemap[node]][4:6]
+        return self.index[self.rev(node)][4:6]
 
     def start(self, rev): return self.index[rev][0]
     def length(self, rev): return self.index[rev][1]
