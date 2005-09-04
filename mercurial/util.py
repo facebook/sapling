@@ -356,35 +356,31 @@ else:
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
     iterator over chunks of arbitrary size."""
+
     def __init__(self, in_iter, targetsize = 2**16):
         """in_iter is the iterator that's iterating over the input chunks.
         targetsize is how big a buffer to try to maintain."""
         self.in_iter = iter(in_iter)
         self.buf = ''
-        targetsize = int(targetsize)
-        if (targetsize <= 0):
-            raise ValueError("targetsize must be greater than 0, was %d" % targetsize)
         self.targetsize = int(targetsize)
+        if self.targetsize <= 0:
+            raise ValueError("targetsize must be greater than 0, was %d" %
+                             targetsize)
         self.iterempty = False
-    def fillbuf(self):
-        """x.fillbuf()
 
-        Ignore the target size, and just read every chunk from the iterator
-        until it's empty."""
+    def fillbuf(self):
+        """Ignore target size; read every chunk from iterator until empty."""
         if not self.iterempty:
             collector = cStringIO.StringIO()
             collector.write(self.buf)
             for ch in self.in_iter:
                 collector.write(ch)
             self.buf = collector.getvalue()
-            collector.close()
-            collector = None
             self.iterempty = True
 
     def read(self, l):
-        """x.read(l) -> str
-        Read l bytes of data from the iterator of chunks of data.  Returns less
-        than l bytes if the iterator runs dry."""
+        """Read L bytes of data from the iterator of chunks of data.
+	Returns less than L bytes if the iterator runs dry."""
         if l > len(self.buf) and not self.iterempty:
             # Clamp to a multiple of self.targetsize
             targetsize = self.targetsize * ((l // self.targetsize) + 1)
@@ -399,23 +395,15 @@ class chunkbuffer(object):
             if collected < targetsize:
                 self.iterempty = True
             self.buf = collector.getvalue()
-            collector.close()
-            collector = None
-        s = self.buf[:l]
-        self.buf = buffer(self.buf, l)
+        s, self.buf = self.buf[:l], buffer(self.buf, l)
         return s
-    def __repr__(self):
-        return "<%s.%s targetsize = %u buffered = %u bytes>" % \
-               (self.__class__.__module__, self.__class__.__name__,
-                self.targetsize, len(self.buf))
 
 def filechunkiter(f, size = 65536):
-    """filechunkiter(file[, size]) -> generator
-
-    Create a generator that produces all the data in the file size (default
-    65536) bytes at a time.  Chunks may be less than size bytes if the
-    chunk is the last chunk in the file, or the file is a socket or some
-    other type of file that sometimes reads less data than is requested."""
+    """Create a generator that produces all the data in the file size
+    (default 65536) bytes at a time.  Chunks may be less than size
+    bytes if the chunk is the last chunk in the file, or the file is a
+    socket or some other type of file that sometimes reads less data
+    than is requested."""
     s = f.read(size)
     while len(s) >= 0:
         yield s
