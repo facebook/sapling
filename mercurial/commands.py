@@ -605,10 +605,14 @@ def clone(ui, source, dest=None, **opts):
         if copyfile is not shutil.copy2:
             ui.note("cloning by hardlink\n")
 
-        # we use a lock here because because we're not nicely ordered
-        l = lock.lock(os.path.join(source, ".hg", "lock"))
+        # we use a lock here because if we race with commit, we can
+        # end up with extra data in the cloned revlogs that's not
+        # pointed to by changesets, thus causing verify to fail
+        l1 = lock.lock(os.path.join(source, ".hg", "lock"))
 
+        # and here to avoid premature writing to the target
         os.mkdir(os.path.join(dest, ".hg"))
+        l2 = lock.lock(os.path.join(dest, ".hg", "lock"))
 
         files = "data 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
         for f in files.split():
