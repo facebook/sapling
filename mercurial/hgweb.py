@@ -8,7 +8,7 @@
 
 import os, cgi, sys
 from demandload import demandload
-demandload(globals(), "mdiff time re socket zlib errno ui hg")
+demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
 demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer")
 from node import *
 
