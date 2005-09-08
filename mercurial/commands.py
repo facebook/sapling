@@ -1961,6 +1961,8 @@ def dispatch(args):
             raise
     except hg.RepoError, inst:
         u.warn("abort: ", inst, "!\n")
+    except revlog.RevlogError, inst:
+        u.warn("abort: ", inst, "!\n")
     except SignalInterrupt:
         u.warn("killed!\n")
     except KeyboardInterrupt:

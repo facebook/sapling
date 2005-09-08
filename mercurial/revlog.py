@@ -111,7 +111,8 @@ class lazymap:
     def load(self, key):
         if self.p.all: return
         n = self.p.data.find(key)
-        if n < 0: raise KeyError("node " + hex(key))
+        if n < 0:
+            raise KeyError(key)
         pos = n / self.p.s
         self.p.load(pos)
     def __contains__(self, key):
@@ -210,7 +211,7 @@ class revlog:
         try:
             return self.nodemap[node]
         except KeyError:
-            raise KeyError('%s: no node %s' % (self.indexfile, hex(node)))
+            raise RevlogError('%s: no node %s' % (self.indexfile, hex(node)))
     def linkrev(self, node): return self.index[self.rev(node)][3]
     def parents(self, node):
         if node == nullid: return (nullid, nullid)
@@ -290,8 +291,8 @@ class revlog:
             for n in self.nodemap:
                 if hex(n).startswith(id):
                     c.append(n)
-            if len(c) > 1: raise KeyError("Ambiguous identifier")
-            if len(c) < 1: raise KeyError("No match found")
+            if len(c) > 1: raise RevlogError("Ambiguous identifier")
+            if len(c) < 1: raise RevlogError("No match found")
             return c[0]
 
         return None
@@ -353,7 +354,7 @@ class revlog:
         text = mdiff.patches(text, bins)
 
         if node != hash(text, p1, p2):
-            raise IOError("integrity check failed on %s:%d"
+            raise RevlogError("integrity check failed on %s:%d"
                           % (self.datafile, rev))
 
         self.cache = (node, rev, text)
