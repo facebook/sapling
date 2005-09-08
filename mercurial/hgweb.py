@@ -74,8 +74,6 @@ class hgrequest:
                     self.write(part)
             else:
                 try:
-                    self.out.write(thing)
-                except TypeError:
                     self.out.write(str(thing))
                 except socket.error, inst:
                     if inst[0] != errno.ECONNRESET:
