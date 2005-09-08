@@ -607,7 +607,7 @@ def clone(ui, source, dest=None, **opts):
         # we use a lock here because because we're not nicely ordered
         l = lock.lock(os.path.join(source, ".hg", "lock"))
 
-        util.copytree(os.path.join(source, ".hg"), os.path.join(dest, ".hg"),
+        util.copyfiles(os.path.join(source, ".hg"), os.path.join(dest, ".hg"),
                       copyfile)
 
         for fn in "dirstate", "lock", "hgrc", "localtags":
