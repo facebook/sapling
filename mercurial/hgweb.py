@@ -749,7 +749,7 @@ class hgweb:
                 hi = req.form['rev'][0]
                 try:
                     hi = self.repo.changelog.rev(self.repo.lookup(hi))
-                except RepoError:
+                except hg.RepoError:
                     req.write(self.search(hi))
                     return
 
@@ -848,7 +848,7 @@ def create_server(repo):
 
         def __init__(self, *args, **kwargs):
             if self.address_family is None:
-                raise RepoError('IPv6 not available on this system')
+                raise hg.RepoError('IPv6 not available on this system')
             BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
 
     class hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
