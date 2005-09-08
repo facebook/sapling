@@ -1557,6 +1557,7 @@ def tip(ui, repo):
     show_changeset(ui, repo, changenode=n)
 
 def unbundle(ui, repo, fname):
+    """apply a changegroup file"""
     f = urllib.urlopen(fname)
 
     if f.read(4) != "HG10":
