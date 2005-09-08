@@ -1049,7 +1049,8 @@ def import_(ui, repo, patch1, *patches, **opts):
         hgpatch = False
         for line in file(pf):
             line = line.rstrip()
-            if not message and mailre.match(line) and not opts['force']:
+            if (not message and not hgpatch and
+                   mailre.match(line) and not opts['force']):
                 if len(line) > 35: line = line[:32] + '...'
                 raise util.Abort('first line looks like a '
                                  'mail header: ' + line)
