@@ -1029,7 +1029,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         hgpatch = False
         for line in file(pf):
             line = line.rstrip()
-            if not message and mailre.match(line) and not opts['mail_like']:
+            if not message and mailre.match(line) and not opts['force']:
                 if len(line) > 35: line = line[:32] + '...'
                 raise util.Abort('first line looks like a '
                                  'mail header: ' + line)
@@ -1683,8 +1683,7 @@ table = {
         (import_,
          [('p', 'strip', 1, 'path strip'),
           ('f', 'force', None, 'skip check for outstanding changes'),
-          ('b', 'base', "", 'base path'),
-          ('m', 'mail-like', None, 'apply a patch that looks like email')],
+          ('b', 'base', "", 'base path')],
          "hg import [-f] [-p NUM] [-b BASE] PATCH..."),
     "incoming|in": (incoming, 
          [('p', 'patch', None, 'show patch')],

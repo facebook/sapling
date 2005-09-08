@@ -251,10 +251,13 @@ identify::
 import [-p <n> -b <base> -f] <patches>::
     Import a list of patches and commit them individually.
 
+    If there are outstanding changes in the working directory, import
+    will abort unless given the -f flag.
+
     If a patch looks like a mail message (its first line starts with
     "From " or looks like an RFC822 header), it will not be applied
-    unless the -m option is used.  The importer neither parses nor
-    discards mail headers, so use -m only to override the "mailness"
+    unless the -f option is used.  The importer neither parses nor
+    discards mail headers, so use -f only to override the "mailness"
     safety check, not to import a real mail message.
 
     options:
@@ -262,7 +265,6 @@ import [-p <n> -b <base> -f] <patches>::
                       meaning as the corresponding patch option
     -b <path>         base directory to read patches from
     -f, --force	      skip check for outstanding uncommitted changes
-    -m, --mail-like   apply a patch that appears to be a mail message
 
     aliases: patch
 
