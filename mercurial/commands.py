@@ -604,17 +604,17 @@ def clone(ui, source, dest=None, **opts):
                     and getattr(os, 'link', None) or shutil.copy2)
         if copyfile is not shutil.copy2:
             ui.note("cloning by hardlink\n")
+
         # we use a lock here because because we're not nicely ordered
         l = lock.lock(os.path.join(source, ".hg", "lock"))
 
-        util.copyfiles(os.path.join(source, ".hg"), os.path.join(dest, ".hg"),
-                      copyfile)
+        os.mkdir(os.path.join(dest, ".hg"))
 
-        for fn in "dirstate", "lock", "hgrc", "localtags":
-            try:
-                os.unlink(os.path.join(dest, ".hg", fn))
-            except OSError:
-                pass
+        files = "data 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
+        for f in files.split():
+            src = os.path.join(source, ".hg", f)
+            dst = os.path.join(dest, ".hg", f)
+            util.copyfiles(src, dst, copyfile)
 
         repo = hg.repository(ui, dest)
 
