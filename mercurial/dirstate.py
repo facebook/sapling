@@ -218,14 +218,16 @@ class dirstate:
             dc = self.filterfiles(files)
 
         def statmatch(file, stat):
+            file = util.pconvert(file)
             if file not in dc and self.ignore(file):
                 return False
             return match(file)
+
         return self.walkhelper(files=files, statmatch=statmatch, dc=dc)
 
     # walk recursively through the directory tree, finding all files
     # matched by the statmatch function
-    # 
+    #
     # results are yielded in a tuple (src, filename), where src is one of:
     # 'f' the file was found in the directory tree
     # 'm' the file was only in the dirstate and not in the tree
@@ -324,10 +326,11 @@ class dirstate:
         # and put files into the appropriate array.  This gets passed
         # to the walking code
         def statmatch(fn, s):
+            fn = util.pconvert(fn)
             def checkappend(l, fn):
                 if match is util.always or match(fn):
                     l.append(fn)
-                   
+
             if not s or stat.S_ISDIR(s.st_mode):
                 return self.ignore(fn) and False or match(fn)
 
