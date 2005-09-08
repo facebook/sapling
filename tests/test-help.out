@@ -39,6 +39,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  add         add the specified files on the next commit
  addremove   add all new files, delete all missing files
  annotate    show changeset information per file line
+ bundle      create a changegroup file
  cat         output the latest or given revision of a file
  clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
@@ -71,6 +72,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  tag         add a tag for the current tip or a given revision
  tags        list repository tags
  tip         show the tip revision
+ unbundle    apply a changegroup file
  undo        undo the last commit or pull
  update      update or merge working directory
  verify      verify the integrity of the repository
@@ -78,6 +80,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  add         add the specified files on the next commit
  addremove   add all new files, delete all missing files
  annotate    show changeset information per file line
+ bundle      create a changegroup file
  cat         output the latest or given revision of a file
  clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
@@ -110,6 +113,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  tag         add a tag for the current tip or a given revision
  tags        list repository tags
  tip         show the tip revision
+ unbundle    apply a changegroup file
  undo        undo the last commit or pull
  update      update or merge working directory
  verify      verify the integrity of the repository
