@@ -2003,5 +2003,12 @@ def dispatch(args):
     except UnknownCommand, inst:
         u.warn("hg: unknown command '%s'\n" % inst.args[0])
         help_(u, 'shortlist')
+    except SystemExit:
+        # don't catch this is the catch-all below
+        raise
+    except:
+        u.warn("** unknown exception encountered, details follow\n")
+        u.warn("** report bug details to mercurial@selenic.com\n")
+        raise
 
     sys.exit(-1)
