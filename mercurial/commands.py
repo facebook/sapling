@@ -7,10 +7,10 @@
 
 from demandload import demandload
 from node import *
-demandload(globals(), "os re sys signal shutil imp")
+demandload(globals(), "os re sys signal shutil imp urllib")
 demandload(globals(), "fancyopts ui hg util lock revlog")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
-demandload(globals(), "errno socket version struct atexit sets")
+demandload(globals(), "errno socket version struct atexit sets bz2")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -548,6 +548,26 @@ def annotate(ui, repo, *pats, **opts):
         if pieces:
             for p, l in zip(zip(*pieces), lines):
                 ui.write("%s: %s" % (" ".join(p), l[1]))
+
+def bundle(ui, repo, fname, dest="default-push", **opts):
+    """create a changegroup file"""
+    f = open(fname, "wb")
+    dest = ui.expandpath(dest)
+    other = hg.repository(ui, dest)
+    o = repo.findoutgoing(other)
+    cg = repo.changegroup(o)
+
+    try:
+        f.write("HG10")
+        z = bz2.BZ2Compressor(9)
+        while 1:
+            chunk = cg.read(4096)
+            if not chunk:
+                break
+            f.write(z.compress(chunk))
+        f.write(z.flush())
+    except:
+        os.unlink(fname)
 
 def cat(ui, repo, file1, rev=None, **opts):
     """output the latest or given revision of a file"""
@@ -1534,6 +1554,30 @@ def tip(ui, repo):
     n = repo.changelog.tip()
     show_changeset(ui, repo, changenode=n)
 
+def unbundle(ui, repo, fname):
+    f = urllib.urlopen(fname)
+
+    if f.read(4) != "HG10":
+        ui.warn("abort: not a Mercurial bundle file!\n")
+        return -1
+
+    class bzread:
+        def __init__(self, f):
+            self.zd = bz2.BZ2Decompressor()
+            self.f = f
+            self.buf = ""
+        def read(self, l):
+            while l > len(self.buf):
+                r = self.f.read(4096)
+                if r:
+                    self.buf += self.zd.decompress(r)
+                else:
+                    break
+            d, self.buf = self.buf[:l], self.buf[l:]
+            return d
+
+    repo.addchangegroup(bzread(f))
+
 def undo(ui, repo):
     """undo the last commit or pull
 
@@ -1610,6 +1654,10 @@ table = {
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search')],
          'hg annotate [OPTION]... FILE...'),
+    "bundle":
+        (bundle,
+         [],
+         'hg bundle FILE DEST'),
     "cat":
         (cat,
          [('o', 'output', "", 'output to file')],
@@ -1776,6 +1824,10 @@ table = {
          'hg tag [OPTION]... NAME [REV]'),
     "tags": (tags, [], 'hg tags'),
     "tip": (tip, [], 'hg tip'),
+    "unbundle":
+        (unbundle,
+         [],
+         'hg unbundle FILE'),
     "undo": (undo, [], 'hg undo'),
     "^update|up|checkout|co":
         (update,

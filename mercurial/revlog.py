@@ -604,8 +604,8 @@ class revlog:
             link = linkmapper(cs)
             if node in self.nodemap:
                 # this can happen if two branches make the same change
-                if unique:
-                    raise RevlogError("already have %s" % hex(node[:4]))
+                # if unique:
+                #    raise RevlogError("already have %s" % hex(node[:4]))
                 chain = node
                 continue
             delta = chunk[80:]
