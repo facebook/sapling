@@ -10,7 +10,7 @@ from node import *
 demandload(globals(), "os re sys signal shutil imp")
 demandload(globals(), "fancyopts ui hg util lock revlog")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
-demandload(globals(), "ConfigParser errno socket version struct atexit sets")
+demandload(globals(), "errno socket version struct atexit sets")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -610,7 +610,7 @@ def clone(ui, source, dest=None, **opts):
         util.copytree(os.path.join(source, ".hg"), os.path.join(dest, ".hg"),
                       copyfile)
 
-        for fn in "dirstate", "lock":
+        for fn in "dirstate", "lock", "hgrc", "localtags":
             try:
                 os.unlink(os.path.join(dest, ".hg", fn))
             except OSError:
@@ -622,16 +622,9 @@ def clone(ui, source, dest=None, **opts):
         repo = hg.repository(ui, dest, create=1)
         repo.pull(other)
 
-    cfg = ConfigParser.SafeConfigParser()
-    try:
-        fp = repo.opener('hgrc', 'r')
-        os.unlink(fp.name)
-        cfg.readfp(fp)
-    except IOError, inst:
-        if inst.errno != errno.ENOENT: raise
-    if not cfg.has_section('paths'): cfg.add_section('paths')
-    cfg.set('paths', 'default', abspath)
-    cfg.write(repo.opener('hgrc', 'w'))
+    f = repo.opener("hgrc", "w")
+    f.write("[paths]\n")
+    f.write("default = %s\n" % abspath)
 
     if not opts['noupdate']:
         update(ui, repo)
