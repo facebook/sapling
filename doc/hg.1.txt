@@ -19,7 +19,7 @@ OPTIONS
 
 -R, --repository::
     repository root directory
-    
+
 --cwd::
     change working directory
 
@@ -75,7 +75,7 @@ COMMANDS
 
 add [options] [files ...]::
     Schedule files to be version controlled and added to the repository.
-    
+
     The files will be added to the repository at the next commit.
 
     If no names are given, add all files in the current directory and
@@ -83,20 +83,20 @@ add [options] [files ...]::
 
 addremove [options] [files ...]::
     Add all new files and remove all missing files from the repository.
-    
+
     New files are ignored if they match any of the patterns in .hgignore. As
     with add, these changes take effect at the next commit.
 
 annotate [-r <rev> -u -n -c] [files ...]::
     List changes in files, showing the revision id responsible for each line
-    
+
     This command is useful to discover who did a change or when a change took
     place.
 
     Without the -a option, annotate will avoid processing files it
     detects as binary. With -a, annotate will generate an annotation
     anyway, probably with undesirable results.
-    
+
     options:
     -a, --text            treat all files as text
     -I, --include <pat>   include names matching the given patterns
@@ -130,10 +130,10 @@ clone [-U] <source> [dest]::
 
 commit [options] [files...]::
     Commit changes to the given files into the repository.
-    
+
     If a list of files is omitted, all changes reported by "hg status"
     from the root of the repository will be commited.
-    
+
     The HGEDITOR or EDITOR environment variables are used to start an
     editor to add a commit comment.
 
@@ -151,14 +151,14 @@ commit [options] [files...]::
 
 copy <source> <dest>::
     Mark <dest> file as a copy or rename of a <source> one
-    
+
     This command takes effect for the next commit.
 
 diff [-a] [-r revision] [-r revision] [files ...]::
     Show differences between revisions for the specified files.
-    
+
     Differences between files are shown using the unified diff format.
-    
+
     When two revision arguments are given, then changes are shown
     between those revisions. If only one revision is specified then
     that revision is compared to the working directory, and, when no
@@ -234,14 +234,14 @@ grep [options] pattern [files]::
 
 heads::
     Show all repository head changesets.
-    
+
     Repository "heads" are changesets that don't have children
     changesets. They are where development generally takes place and
     are the usual targets for update and merge operations.
 
 identify::
     Print a short summary of the current state of the repo.
-    
+
     This summary identifies the repository state using one or two parent
     hash identifiers, followed by a "+" if there are uncommitted changes
     in the working directory, followed by a list of tags for this revision.
@@ -264,7 +264,7 @@ import [-p <n> -b <base> -f] <patches>::
     -p, --strip <n>   directory strip option for patch. This has the same
                       meaning as the corresponding patch option
     -b <path>         base directory to read patches from
-    -f, --force	      skip check for outstanding uncommitted changes
+    -f, --force       skip check for outstanding uncommitted changes
 
     aliases: patch
 
@@ -332,7 +332,7 @@ manifest [revision]::
     The manifest is the list of files being version controlled. If no revision
     is given then the tip is used.
 
-outgoing [-p] [dest]:: 
+outgoing [-p] [dest]::
     Show changesets not found in the specified destination repo or the
     default push repo. These are the changesets that would be pushed
     if a push was requested.
@@ -368,7 +368,7 @@ pull <repository path>::
 
     SSH requires an accessible shell account on the destination
     machine and a copy of hg in the remote path.
-      
+
     options:
     -u, --update   update the working directory to tip after pull
     -e, --ssh    specify ssh command to use
@@ -376,7 +376,7 @@ pull <repository path>::
 
 push <destination>::
     Push changes from the local repository to the given destination.
-    
+
     This is the symmetrical operation for pull. It helps to move
     changes from the current repository to a different one. If the
     destination is local this is identical to a pull in that directory
@@ -390,7 +390,7 @@ push <destination>::
 
       local/filesystem/path
       ssh://[user@]host[:port][/path]
-      
+
     SSH requires an accessible shell account on the destination
     machine and a copy of hg in the remote path.
 
@@ -402,19 +402,19 @@ push <destination>::
 
 rawcommit [-p -d -u -F -m -l]::
     Lowlevel commit, for use in helper scripts.
-    
+
     This command is not intended to be used by normal users, as it is
     primarily useful for importing from other SCMs.
 
 recover::
     Recover from an interrupted commit or pull.
-    
+
     This command tries to fix the repository status after an interrupted
     operation. It should only be necessary when Mercurial suggests it.
 
 remove [options] [files ...]::
     Schedule the indicated files for removal from the repository.
-    
+
     This command schedules the files to be removed at the next commit.
     This only removes files from the current branch, not from the
     entire project history.
@@ -463,7 +463,7 @@ status [options] [files]::
     given names are shown.
 
     The codes used to show the status of files are:
-    
+
     M = changed
     A = added
     R = removed
@@ -482,11 +482,11 @@ status [options] [files]::
 
 tag [-l -m <text> -d <datecode> -u <user>] <name> [revision]::
     Name a particular revision using <name>.
-    
+
     Tags are used to name particular revisions of the repository and are
     very useful to compare different revision, to go back to significant
     earlier versions or to mark branch points as releases, etc.
-    
+
     If no revision is given, the tip is used.
 
     To facilitate version control, distribution, and merging of tags,
@@ -534,7 +534,7 @@ update [-m -C] [revision]::
     With the -m option, a merge will be performed.
 
     With the -C option, local changes will be lost.
-    
+
     options:
     -m, --merge       allow merging of branches
     -C, --clean       overwrite locally modified files
@@ -644,7 +644,7 @@ ENVIRONMENT VARIABLES
 
 HGEDITOR::
     This is the name of the editor to use when committing. Defaults to the
-    value of EDITOR. 
+    value of EDITOR.
 
     (deprecated, use .hgrc)
 
