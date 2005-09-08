@@ -6,11 +6,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, cgi, time, re, socket, sys, zlib, errno
-import mdiff
-from hg import *
-from ui import *
-
+import os, cgi, sys
+from demandload import demandload
+demandload(globals(), "mdiff time re socket zlib errno ui hg")
+demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer")
+from node import *
 
 def templatepath():
     for f in "templates", "../templates":
@@ -171,7 +171,7 @@ common_filters = {
 class hgweb:
     def __init__(self, repo, name=None):
         if type(repo) == type(""):
-            self.repo = repository(ui(), repo)
+            self.repo = hg.repository(ui.ui(), repo)
         else:
             self.repo = repo
 
@@ -183,7 +183,7 @@ class hgweb:
         s = os.stat(os.path.join(self.repo.root, ".hg", "00changelog.i"))
         if s.st_mtime != self.mtime:
             self.mtime = s.st_mtime
-            self.repo = repository(self.repo.ui, self.repo.root)
+            self.repo = hg.repository(self.repo.ui, self.repo.root)
             self.maxchanges = self.repo.ui.config("web", "maxchanges", 10)
             self.maxfiles = self.repo.ui.config("web", "maxchanges", 10)
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
@@ -660,8 +660,6 @@ class hgweb:
         files.sort()
 
         if type == 'zip':
-            import zipfile, tempfile
-
             tmp = tempfile.mkstemp()[1]
             try:
                 zf = zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED)
@@ -679,10 +677,6 @@ class hgweb:
                 os.unlink(tmp)
 
         else:
-            import StringIO
-            import time
-            import tarfile
-
             tf = tarfile.TarFile.open(mode='w|' + type, fileobj=req.out)
             mff = self.repo.manifest.readflags(mnode)
             mtime = int(time.time())
@@ -849,8 +843,6 @@ def create_server(repo):
     accesslog = openlog(repo.ui.config("web", "accesslog", "-"), sys.stdout)
     errorlog = openlog(repo.ui.config("web", "errorlog", "-"), sys.stderr)
 
-    import BaseHTTPServer
-
     class IPv6HTTPServer(BaseHTTPServer.HTTPServer):
         address_family = getattr(socket, 'AF_INET6', None)
 
@@ -962,7 +954,7 @@ class hgwebdir:
         def entries(**map):
             parity = 0
             for name, path in self.repos:
-                u = ui()
+                u = ui.ui()
                 try:
                     u.readconfig(file(os.path.join(path, '.hg', 'hgrc')))
                 except IOError:
