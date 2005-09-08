@@ -19,5 +19,5 @@ mv port1 port
 hg commit -m 4 -u spam -d '4 0'
 hg grep port port
 echo 'FIXME: history is wrong here'
-hg grep -enu port port
+hg grep --all -nu port port
 hg grep import port

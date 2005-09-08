@@ -912,7 +912,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         counts = {'-': 0, '+': 0}
         filerevmatches = {}
         for l in diff:
-            if incrementing or not opts['every_match']:
+            if incrementing or not opts['all']:
                 change = ((l in prevstates) and '-') or '+'
                 r = rev
             else:
@@ -920,7 +920,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                 r = prev[fn]
             cols = [fn, str(rev)]
             if opts['line_number']: cols.append(str(l.linenum))
-            if opts['every_match']: cols.append(change)
+            if opts['all']: cols.append(change)
             if opts['user']: cols.append(trimuser(ui, getchange(rev)[1], rev,
                                                   ucache))
             if opts['files_with_matches']:
@@ -957,10 +957,10 @@ def grep(ui, repo, pattern, *pats, **opts):
             states.sort()
             for fn, m in states:
                 if fn in skip: continue
-                if incrementing or not opts['every_match'] or fstate[fn]:
+                if incrementing or not opts['all'] or fstate[fn]:
                     pos, neg = display(fn, rev, m, fstate[fn])
                     count += pos + neg
-                    if pos and not opts['every_match']:
+                    if pos and not opts['all']:
                         skip[fn] = True
                 fstate[fn] = m
                 prev[fn] = rev
@@ -1666,7 +1666,7 @@ table = {
          [('0', 'print0', None, 'end fields with NUL'),
           ('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'include path in search'),
-          ('e', 'every-match', None, 'print every rev with matches'),
+          ('', 'all', None, 'print all revisions with matches'),
           ('i', 'ignore-case', None, 'ignore case when matching'),
           ('l', 'files-with-matches', None, 'print names of files and revs with matches'),
           ('n', 'line-number', None, 'print line numbers'),

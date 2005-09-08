@@ -219,13 +219,13 @@ grep [options] pattern [files]::
     file in which it finds a match.  To get it to print every revision
     that contains a change in match status ("-" for a match that
     becomes a non-match, or "+" for a non-match that becomes a match),
-    use the --every-match flag.
+    use the --all flag.
 
     options:
     -0, --print0              end fields with NUL
     -I, --include <pat>       include names matching the given patterns
     -X, --exclude <pat>       exclude names matching the given patterns
-    -e, --every-match         print every revision that matches
+        --all                 print all revisions that match
     -i, --ignore-case         ignore case when matching
     -l, --files-with-matches  print only file names and revs that match
     -n, --line-number         print matching line numbers
