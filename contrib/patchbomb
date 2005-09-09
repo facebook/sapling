@@ -35,6 +35,9 @@
 # [smtp]
 # host = my_mail_host
 # port = 1025
+# tls = yes # or omit if not needed
+# username = user     # if SMTP authentication required
+# password = password # if SMTP authentication required - PLAINTEXT
 #
 # To configure other defaults, add a section like this to your hgrc
 # file:
@@ -209,7 +212,14 @@ def patchbomb(ui, repo, *revs, **opts):
         s = smtplib.SMTP()
         s.connect(host = ui.config('smtp', 'host', 'mail'),
                   port = int(ui.config('smtp', 'port', 25)))
-
+        if ui.configbool('smtp', 'tls'):
+            s.ehlo()
+            s.starttls()
+            s.ehlo()
+        username = ui.config('smtp', 'username')
+        password = ui.config('smtp', 'password')
+        if username and password:
+            s.login(username, password)
     parent = None
     tz = time.strftime('%z')
     for m in msgs:
