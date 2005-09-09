@@ -592,8 +592,7 @@ def clone(ui, source, dest=None, **opts):
         dest = os.path.basename(os.path.normpath(source))
 
     if os.path.exists(dest):
-        ui.warn("abort: destination '%s' already exists\n" % dest)
-        return 1
+        raise util.Abort("destination '%s' already exists")
 
     dest = os.path.realpath(dest)
 
@@ -1032,8 +1031,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     if not opts['force']:
         (c, a, d, u) = repo.changes()
         if c or a or d:
-            ui.warn("abort: outstanding uncommitted changes!\n")
-            return 1
+            raise util.Abort("outstanding uncommitted changes")
 
     d = opts["base"]
     strip = opts["strip"]
@@ -1100,9 +1098,7 @@ def incoming(ui, repo, source="default", **opts):
     source = ui.expandpath(source)
     other = hg.repository(ui, source)
     if not other.local():
-        ui.warn("abort: incoming doesn't work for remote"
-                + " repositories yet, sorry!\n")
-        return 1
+        raise util.Abort("incoming doesn't work for remote repositories yet")
     o = repo.findincoming(other)
     if not o:
         return
@@ -1284,8 +1280,7 @@ def rawcommit(ui, repo, *flist, **rc):
         except IOError:
             pass
     if not message and not rc['logfile']:
-        ui.warn("abort: missing commit message\n")
-        return 1
+        raise util.Abort("missing commit message")
 
     files = relpath(repo, list(flist))
     if rc['files']:
@@ -1506,16 +1501,14 @@ def tag(ui, repo, name, rev=None, **opts):
         ui.warn("Warning: -t and --text is deprecated,"
                 " please use -m or --message instead.\n")
     if name == "tip":
-        ui.warn("abort: 'tip' is a reserved name!\n")
-        return -1
+        raise util.Abort("the name 'tip' is reserved")
     if rev:
         r = hex(repo.lookup(rev))
     else:
         r = hex(repo.changelog.tip())
 
     if name.find(revrangesep) >= 0:
-        ui.warn("abort: '%s' cannot be used in a tag name\n" % revrangesep)
-        return -1
+        raise util.Abort("'%s' cannot be used in a tag name" % revrangesep)
 
     if opts['local']:
         repo.opener("localtags", "a").write("%s %s\n" % (r, name))
@@ -1524,9 +1517,8 @@ def tag(ui, repo, name, rev=None, **opts):
     (c, a, d, u) = repo.changes()
     for x in (c, a, d, u):
         if ".hgtags" in x:
-            ui.warn("abort: working copy of .hgtags is changed!\n")
-            ui.status("(please commit .hgtags manually)\n")
-            return -1
+            raise util.Abort("working copy of .hgtags is changed "
+                             "(please commit .hgtags manually)")
 
     repo.wfile(".hgtags", "ab").write("%s %s\n" % (r, name))
     if repo.dirstate.state(".hgtags") == '?':
@@ -1561,8 +1553,7 @@ def unbundle(ui, repo, fname):
     f = urllib.urlopen(fname)
 
     if f.read(4) != "HG10":
-        ui.warn("abort: not a Mercurial bundle file!\n")
-        return -1
+        raise util.Abort("%s: not a Mercurial bundle file" % fname)
 
     class bzread:
         def __init__(self, f):
@@ -1991,8 +1982,8 @@ def dispatch(args):
                 try:
                     os.chdir(options['cwd'])
                 except OSError, inst:
-                    u.warn('abort: %s: %s\n' % (options['cwd'], inst.strerror))
-                    sys.exit(1)
+                    raise util.Abort('%s: %s' %
+                                     (options['cwd'], inst.strerror))
 
             if cmd not in norepo.split():
                 path = options["repository"] or ""
