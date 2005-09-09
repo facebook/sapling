@@ -7,7 +7,7 @@
 
 from demandload import demandload
 from node import *
-demandload(globals(), "os re sys signal shutil imp urllib")
+demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
 demandload(globals(), "errno socket version struct atexit sets bz2")
@@ -1849,6 +1849,7 @@ globalopts = [
     ('q', 'quiet', None, 'quiet mode'),
     ('v', 'verbose', None, 'verbose mode'),
     ('', 'debug', None, 'debug mode'),
+    ('', 'debugger', None, 'start debugger'),
     ('', 'traceback', None, 'print traceback on exception'),
     ('', 'time', None, 'time how long the command takes'),
     ('', 'profile', None, 'profile'),
@@ -1970,6 +1971,10 @@ def dispatch(args):
     u.updateopts(options["verbose"], options["debug"], options["quiet"],
               not options["noninteractive"])
 
+    # enter the debugger before command execution
+    if options['debugger']:
+        pdb.set_trace()
+
     try:
         try:
             if options['help']:
@@ -2011,6 +2016,9 @@ def dispatch(args):
             else:
                 return d()
         except:
+            # enter the debugger when we hit an exception
+            if options['debugger']:
+                pdb.post_mortem(sys.exc_info()[2])
             if options['traceback']:
                 traceback.print_exc()
             raise
