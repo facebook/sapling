@@ -252,7 +252,8 @@ class dirstate:
                     if seen(np):
                         continue
                     p = os.path.join(top, f)
-                    st = os.stat(p)
+                    # don't trip over symlinks
+                    st = os.lstat(p)
                     if stat.S_ISDIR(st.st_mode):
                         ds = os.path.join(nd, f +'/')
                         if statmatch(ds, st):
