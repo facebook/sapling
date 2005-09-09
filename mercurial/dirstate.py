@@ -140,7 +140,7 @@ class dirstate:
             if state == "r":
                 self.map[f] = ('r', 0, 0, 0)
             else:
-                s = os.stat(os.path.join(self.root, f))
+                s = os.lstat(os.path.join(self.root, f))
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
                 self.map[f] = (state, s.st_mode, st_size, st_mtime)
@@ -272,7 +272,7 @@ class dirstate:
         for ff in util.unique(files):
             f = os.path.join(self.root, ff)
             try:
-                st = os.stat(f)
+                st = os.lstat(f)
             except OSError, inst:
                 if ff not in dc: self.ui.warn('%s: %s\n' % (
                     util.pathto(self.getcwd(), ff),
