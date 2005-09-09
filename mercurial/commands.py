@@ -2058,7 +2058,7 @@ def dispatch(args):
         u.warn("hg: unknown command '%s'\n" % inst.args[0])
         help_(u, 'shortlist')
     except SystemExit:
-        # don't catch this is the catch-all below
+        # don't catch this in the catch-all below
         raise
     except:
         u.warn("** unknown exception encountered, details follow\n")
