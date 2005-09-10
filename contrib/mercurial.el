@@ -993,9 +993,16 @@ Variable hg-log-limit controls the number of log entries displayed."
 		  (or repo hg-outgoing-repository))
     (hg-log-mode)))
 
-(defun hg-pull ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-pull (&optional repo)
+  "Pull changes from repository REPO.
+This does not update the working directory."
+  (interactive (list (hg-read-repo-name " to pull from")))
+  (hg-view-output ((format "Mercurial: Pull to %s from %s"
+			   (hg-abbrev-file-name (hg-root))
+			   (hg-abbrev-file-name
+			    (or repo hg-incoming-repository))))
+    (call-process (hg-binary) nil t nil "pull"
+		  (or repo hg-incoming-repository))))
 
 (defun hg-push (&optional repo)
   "Push changes to repository REPO."
@@ -1076,6 +1083,10 @@ Names are displayed relative to the repository root."
 	     (list "--cwd" root "status" path)))))
 
 (defun hg-undo ()
+  (interactive)
+  (error "not implemented"))
+
+(defun hg-update ()
   (interactive)
   (error "not implemented"))
 
