@@ -1,7 +1,13 @@
+%% no merges expected
+%% merge of b expected
 merging for b
 merging b
+%%
+Contents of b should be "this is file b1"
 This is file b1
+%% merge expected!
 merging for b
 merging b
+%% merge of b expected
 merging for b
 merging b

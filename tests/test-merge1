@@ -21,8 +21,8 @@ echo This is file c1 > c
 hg add c
 hg commit -m "commit #2" -d "0 0"
 echo This is file b1 > b
+echo %% no merges expected
 env HGMERGE=../merge hg update -m 1
-# no merges expected
 cd ..; /bin/rm -rf t
 
 mkdir t
@@ -40,9 +40,10 @@ echo This is file c1 > c
 hg add c
 hg commit -m "commit #2" -d "0 0"
 echo This is file b2 > b
+echo %% merge of b expected
 env HGMERGE=../merge hg update -m 1
-# merge of b expected
 cd ..; /bin/rm -rf t
+echo %%
 
 mkdir t
 cd t
@@ -59,10 +60,13 @@ hg update 1
 echo This is file c1 > c
 hg add c
 hg commit -m "commit #3" -d "0 0"
+
+echo 'Contents of b should be "this is file b1"'
 cat b
+
 echo This is file b22 > b
+echo %% merge expected!
 env HGMERGE=../merge hg update -m 2
-# merge expected!
 cd ..; /bin/rm -rf t
 
 mkdir t
@@ -81,6 +85,6 @@ echo This is file c1 > c
 hg add c
 hg commit -m "commit #3" -d "0 0"
 echo This is file b33 > b
+echo %% merge of b expected
 env HGMERGE=../merge hg update -m 2
-# merge of b expected
 cd ..; /bin/rm -rf t

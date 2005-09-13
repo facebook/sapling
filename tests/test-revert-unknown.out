@@ -1,0 +1,8 @@
+%% Should show unknown
+? unknown
+%% Should show unknown and b removed
+R b
+? unknown
+%% Should show a and unknown
+a
+unknown

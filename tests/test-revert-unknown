@@ -1,0 +1,20 @@
+#!/bin/sh
+
+hg init
+touch unknown
+
+touch a
+hg add a
+hg ci -m "1" -d "0 0"
+
+touch b
+hg add b
+hg ci -m "2" -d "0 0"
+
+echo %% Should show unknown
+hg status
+hg revert -r 0
+echo %% Should show unknown and b removed
+hg status
+echo %% Should show a and unknown
+ls

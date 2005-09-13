@@ -1,0 +1,34 @@
+#!/bin/sh
+
+hg init
+touch a
+hg add a
+hg commit -m "Added a" -d "0 0"
+
+touch main
+hg add main
+hg commit -t "Added main" -d "0 0"
+hg checkout 0
+
+echo Main should be gone
+ls
+
+touch side1 
+hg add side1
+hg commit -m "Added side1" -d "0 0"
+touch side2
+hg add side2
+hg commit -m "Added side2" -d "0 0"
+
+hg log
+
+echo Should have two heads, side2 and main
+hg heads
+
+echo Should show "a side1 side2"
+ls
+
+hg update --debug -C 1
+echo Should only show "a main"
+ls
+

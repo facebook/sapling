@@ -1,0 +1,53 @@
+Warning: -t and --text is deprecated, please use -m or --message instead.
+Main should be gone
+a
+changeset:   3:91ebc10ed028
+tag:         tip
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     Added side2
+
+changeset:   2:b932d7dbb1e1
+parent:      0:c2eda428b523
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     Added side1
+
+changeset:   1:71a760306caf
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     Added main
+
+changeset:   0:c2eda428b523
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     Added a
+
+Should have two heads, side2 and main
+changeset:   3:91ebc10ed028
+tag:         tip
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     Added side2
+
+changeset:   1:71a760306caf
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     Added main
+
+Should show a side1 side2
+a
+side1
+side2
+resolving manifests
+ force 1 allow None moddirstate True linear False
+ ancestor 8515d4bfda76 local 1c0f48f8ece6 remote 0594b9004bae
+remote deleted side2, clobbering
+remote deleted side1, clobbering
+remote created main
+getting main
+removing side1
+removing side2
+Should only show a main
+a
+main

@@ -1108,12 +1108,16 @@ class localrepository:
                     self.ui.debug("other deleted %s\n" % f)
                     remove.append(f) # other deleted it
             else:
-                if n == m1.get(f, nullid): # same as parent
+                # file is created on branch or in working directory
+                if force and f not in umap:
+                    self.ui.debug("remote deleted %s, clobbering\n" % f)
+                    remove.append(f)
+                elif n == m1.get(f, nullid): # same as parent
                     if p2 == pa: # going backwards?
                         self.ui.debug("remote deleted %s\n" % f)
                         remove.append(f)
                     else:
-                        self.ui.debug("local created %s, keeping\n" % f)
+                        self.ui.debug("local modified %s, keeping\n" % f)
                 else:
                     self.ui.debug("working dir created %s, keeping\n" % f)
 
