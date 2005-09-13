@@ -16,5 +16,6 @@ user:        test
 date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     test
 
-abort: working copy of .hgtags is changed (please commit .hgtags manually)
+abort: working copy of .hgtags is changed!
+(please commit .hgtags manually)
 failed
