@@ -592,7 +592,7 @@ def clone(ui, source, dest=None, **opts):
         dest = os.path.basename(os.path.normpath(source))
 
     if os.path.exists(dest):
-        raise util.Abort("destination '%s' already exists")
+        raise util.Abort("destination '%s' already exists", dest)
 
     dest = os.path.realpath(dest)
 

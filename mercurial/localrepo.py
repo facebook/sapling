@@ -1108,12 +1108,10 @@ class localrepository:
                     self.ui.debug("other deleted %s\n" % f)
                     remove.append(f) # other deleted it
             else:
-                if n == m1.get(f, nullid): # same as parent
-                    if p2 == pa: # going backwards?
-                        self.ui.debug("remote deleted %s\n" % f)
-                        remove.append(f)
-                    else:
-                        self.ui.debug("local created %s, keeping\n" % f)
+                # file is not in ancestor or target
+                if n == m1.get(f, nullid) or force: # same as parent
+                    self.ui.debug("remote deleted %s\n" % f)
+                    remove.append(f)
                 else:
                     self.ui.debug("working dir created %s, keeping\n" % f)
 
