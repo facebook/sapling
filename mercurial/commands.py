@@ -1161,7 +1161,10 @@ def log(ui, repo, *pats, **opts):
             du = dui(ui)
         elif st == 'add':
             du.bump(rev)
-            show_changeset(du, repo, rev)
+            br = None
+            if opts['branch']:
+                br = repo.branchlookup([repo.changelog.node(rev)])
+            show_changeset(du, repo, rev, brinfo=br)
             if opts['patch']:
                 changenode = repo.changelog.node(rev)
                 prev, other = repo.changelog.parents(changenode)
@@ -1743,6 +1746,7 @@ table = {
         (log,
          [('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search'),
+          ('b', 'branch', None, 'show branches'),
           ('r', 'rev', [], 'revision'),
           ('p', 'patch', None, 'show patch')],
          'hg log [-I] [-X] [-r REV]... [-p] [FILE]'),
