@@ -256,13 +256,13 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
         while visit:
             n = visit.pop(0)
             if n in stop_sha1:
-                break
+                continue
             for p in repo.changelog.parents(n):
                 if p not in reachable[i]:
                     reachable[i][p] = 1
                     visit.append(p)
                 if p in stop_sha1:
-                    break
+                    continue
 
     # walk the repository looking for commits that are in our
     # reachability graph
