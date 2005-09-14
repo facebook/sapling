@@ -579,8 +579,11 @@ def cat(ui, repo, file1, rev=None, **opts):
             change = repo.changelog.read(n)
             m = repo.manifest.read(change[0])
             n = m[relpath(repo, [file1])[0]]
-        except hg.RepoError, KeyError:
-            n = r.lookup(rev)
+        except (hg.RepoError, KeyError):
+            try:
+                n = r.lookup(rev)
+            except KeyError, inst:
+                raise util.Abort('cannot find file %s in rev %s', file1, rev)
     else:
         n = r.tip()
     fp = make_file(repo, r, opts['output'], node=n)
@@ -618,15 +621,23 @@ def clone(ui, source, dest=None, **opts):
     abspath = source
     other = hg.repository(ui, source)
 
+    copy = False
     if other.dev() != -1:
         abspath = os.path.abspath(source)
+        copy = True
 
-        # we use a lock here because if we race with commit, we can
-        # end up with extra data in the cloned revlogs that's not
-        # pointed to by changesets, thus causing verify to fail
-        l1 = lock.lock(os.path.join(source, ".hg", "lock"))
+    if copy:
+        try:
+            # we use a lock here because if we race with commit, we
+            # can end up with extra data in the cloned revlogs that's
+            # not pointed to by changesets, thus causing verify to
+            # fail
+            l1 = lock.lock(os.path.join(source, ".hg", "lock"))
+        except OSError:
+            copy = False
 
-        # and here to avoid premature writing to the target
+    if copy:
+        # we lock here to avoid premature writing to the target
         os.mkdir(os.path.join(dest, ".hg"))
         l2 = lock.lock(os.path.join(dest, ".hg", "lock"))
 
