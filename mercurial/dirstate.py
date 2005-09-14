@@ -260,7 +260,7 @@ class dirstate:
                             work.append(p)
                     else:
                         if statmatch(np, st):
-                            yield np
+                            yield util.pconvert(np)
 
         known = {'.hg': 1}
         def seen(fn):
