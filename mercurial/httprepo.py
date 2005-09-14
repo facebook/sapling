@@ -5,9 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import urllib, urllib2, urlparse, os, zlib
 from node import *
 from remoterepo import *
+from demandload import *
+demandload(globals(), "hg os urllib urllib2 urlparse zlib")
 
 class httprepository(remoterepository):
     def __init__(self, ui, path):
@@ -76,14 +77,14 @@ class httprepository(remoterepository):
         if not proto.startswith('application/mercurial') and \
                not proto.startswith('text/plain') and \
                not proto.startswith('application/hg-changegroup'):
-            raise RepoError("'%s' does not appear to be an hg repository"
-                            % self.url)
+            raise hg.RepoError("'%s' does not appear to be an hg repository" %
+                               self.url)
 
         if proto.startswith('application/mercurial'):
             version = proto[22:]
             if float(version) > 0.1:
-                raise RepoError("'%s' uses newer protocol %s" %
-                                (self.url, version))
+                raise hg.RepoError("'%s' uses newer protocol %s" %
+                                   (self.url, version))
 
         return resp
 

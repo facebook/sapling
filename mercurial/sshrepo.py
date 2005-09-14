@@ -5,9 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, re, select
 from node import *
 from remoterepo import *
+from demandload import *
+demandload(globals(), "hg os re select")
 
 class sshrepository(remoterepository):
     def __init__(self, ui, path):
@@ -16,7 +17,7 @@ class sshrepository(remoterepository):
 
         m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?', path)
         if not m:
-            raise RepoError("couldn't parse destination %s" % path)
+            raise hg.RepoError("couldn't parse destination %s" % path)
 
         self.user = m.group(2)
         self.host = m.group(3)
@@ -71,7 +72,7 @@ class sshrepository(remoterepository):
         try:
             l = int(l)
         except:
-            raise RepoError("unexpected response '%s'" % l)
+            raise hg.RepoError("unexpected response '%s'" % l)
         return r.read(l)
 
     def lock(self):
@@ -86,7 +87,7 @@ class sshrepository(remoterepository):
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            raise RepoError("unexpected response '%s'" % (d[:400] + "..."))
+            raise hg.RepoError("unexpected response '%s'" % (d[:400] + "..."))
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -95,7 +96,7 @@ class sshrepository(remoterepository):
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            raise RepoError("unexpected response '%s'" % (d[:400] + "..."))
+            raise hg.RepoError("unexpected response '%s'" % (d[:400] + "..."))
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
@@ -104,7 +105,7 @@ class sshrepository(remoterepository):
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
-            raise RepoError("unexpected response '%s'" % (d[:400] + "..."))
+            raise hg.RepoError("unexpected response '%s'" % (d[:400] + "..."))
 
     def changegroup(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -114,7 +115,7 @@ class sshrepository(remoterepository):
     def addchangegroup(self, cg):
         d = self.call("addchangegroup")
         if d:
-            raise RepoError("push refused: %s", d)
+            raise hg.RepoError("push refused: %s", d)
 
         while 1:
             d = cg.read(4096)
