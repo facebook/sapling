@@ -86,9 +86,7 @@ class convert_git:
         for f in os.listdir(self.path + "/.git/refs/tags"):
             try:
                 h = file(self.path + "/.git/refs/tags/" + f).read().strip()
-                p, a, d, m = self.getcommit(h)
-                if not p: p = [h] # git is ugly, don't blame me
-                tags[f] = p[0]
+                tags[f] = h
             except:
                 pass
         return tags
