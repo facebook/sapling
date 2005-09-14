@@ -26,7 +26,7 @@ echo "# should not be renamed"
 hg debugrename bar
 
 cp foo bar
-hg copy foo bar
+hg copy -f foo bar
 echo "# should show copy"
 hg debugstate|grep '^copy'
 hg commit -m3 -d"0 0"

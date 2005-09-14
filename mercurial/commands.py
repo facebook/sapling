@@ -685,9 +685,84 @@ def commit(ui, repo, *pats, **opts):
     except ValueError, inst:
         raise util.Abort(str(inst))
 
-def copy(ui, repo, source, dest):
-    """mark a file as copied or renamed for the next commit"""
-    return repo.copy(*relpath(repo, (source, dest)))
+def copy(ui, repo, *pats, **opts):
+    """mark files as copied for the next commit"""
+    if not pats:
+        raise util.Abort('no source or destination specified')
+    elif len(pats) == 1:
+        raise util.Abort('no destination specified')
+    pats = list(pats)
+    dest = pats.pop()
+    sources = []
+
+    def okaytocopy(abs, rel, exact):
+        reasons = {'?': 'is not managed',
+                   'a': 'has been marked for add'}
+        reason = reasons.get(repo.dirstate.state(abs))
+        if reason:
+            if exact: ui.warn('%s: not copying - file %s\n' % (rel, reason))
+        else:
+            return True
+
+    for src, abs, rel, exact in walk(repo, pats, opts):
+        if okaytocopy(abs, rel, exact):
+            sources.append((abs, rel, exact))
+    if not sources:
+        raise util.Abort('no files to copy')
+
+    cwd = repo.getcwd()
+    absdest = util.canonpath(repo.root, cwd, dest)
+    reldest = util.pathto(cwd, absdest)
+    if os.path.exists(reldest):
+        destisfile = not os.path.isdir(reldest)
+    else:
+        destisfile = len(sources) == 1 or repo.dirstate.state(absdest) != '?'
+
+    if destisfile:
+        if opts['parents']:
+            raise util.Abort('with --parents, destination must be a directory')
+        elif len(sources) > 1:
+            raise util.Abort('with multiple sources, destination must be a '
+                             'directory')
+    errs = 0
+    for abs, rel, exact in sources:
+        if opts['parents']:
+            mydest = os.path.join(dest, rel)
+        elif destisfile:
+            mydest = reldest
+        else:
+            mydest = os.path.join(dest, os.path.basename(rel))
+        myabsdest = util.canonpath(repo.root, cwd, mydest)
+        myreldest = util.pathto(cwd, myabsdest)
+        if not opts['force'] and repo.dirstate.state(myabsdest) not in 'a?':
+            ui.warn('%s: not overwriting - file already managed\n' % myreldest)
+            continue
+        mydestdir = os.path.dirname(myreldest) or '.'
+        if not opts['after']:
+            try:
+                if opts['parents']: os.makedirs(mydestdir)
+                elif not destisfile: os.mkdir(mydestdir)
+            except OSError, inst:
+                if inst.errno != errno.EEXIST: raise
+        if ui.verbose or not exact:
+            ui.status('copying %s to %s\n' % (rel, myreldest))
+        if not opts['after']:
+            try:
+                shutil.copyfile(rel, myreldest)
+                n = repo.manifest.tip()
+                mf = repo.manifest.readflags(n)
+                util.set_exec(myreldest, util.is_exec(rel, mf[abs]))
+            except IOError, inst:
+                if inst.errno == errno.ENOENT:
+                    ui.warn('%s: deleted in working copy\n' % rel)
+                else:
+                    ui.warn('%s: cannot copy - %s\n' % (rel, inst.strerror))
+                errs += 1
+                continue
+        repo.copy(abs, myabsdest)
+    if errs:
+        ui.warn('(consider using --after to record failed copies)\n')
+    return errs
 
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
@@ -1677,7 +1752,13 @@ table = {
           ('d', 'date', "", 'date code'),
           ('u', 'user', "", 'user')],
          'hg commit [OPTION]... [FILE]...'),
-    "copy": (copy, [], 'hg copy SOURCE DEST'),
+    "copy|cp": (copy,
+             [('I', 'include', [], 'include path in search'),
+              ('X', 'exclude', [], 'exclude path from search'),
+              ('A', 'after', None, 'record a copy after it has happened'),
+              ('f', 'force', None, 'replace destination if it exists'),
+              ('p', 'parents', None, 'append source path to dest')],
+             'hg copy [OPTION]... [SOURCE]... DEST'),
     "debugcheckstate": (debugcheckstate, [], 'debugcheckstate'),
     "debugconfig": (debugconfig, [], 'debugconfig'),
     "debugstate": (debugstate, [], 'debugstate'),

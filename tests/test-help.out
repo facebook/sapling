@@ -43,7 +43,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  cat         output the latest or given revision of a file
  clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
- copy        mark a file as copied or renamed for the next commit
+ copy        mark files as copied for the next commit
  diff        diff working directory (or selected files)
  export      dump the header and diffs for one or more changesets
  forget      don't add the specified files on the next commit
@@ -84,7 +84,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  cat         output the latest or given revision of a file
  clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
- copy        mark a file as copied or renamed for the next commit
+ copy        mark files as copied for the next commit
  diff        diff working directory (or selected files)
  export      dump the header and diffs for one or more changesets
  forget      don't add the specified files on the next commit

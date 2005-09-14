@@ -164,11 +164,22 @@ commit [options] [files...]::
 
     aliases: ci
 
-copy <source> <dest>::
-    Mark <dest> file as a copy or rename of a <source> one
+copy <source ...> <dest>::
+    Mark dest as having copies of source files.  If dest is a
+    directory, copies are put in that directory.  If dest is a file,
+    there can only be one source.
+
+    By default, this command copies the contents of files as they
+    stand in the working directory.  If invoked with --after, the
+    operation is recorded, but no copying is performed.
 
     This command takes effect for the next commit.
 
+    Options:
+    -A, --after        record a copy that has already occurred
+    -f, --force        forcibly copy over an existing managed file
+    -p, --parents      append source path to dest
+    
 diff [-a] [-r revision] [-r revision] [files ...]::
     Show differences between revisions for the specified files.
 
