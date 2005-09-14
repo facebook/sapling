@@ -621,15 +621,23 @@ def clone(ui, source, dest=None, **opts):
     abspath = source
     other = hg.repository(ui, source)
 
+    copy = False
     if other.dev() != -1:
         abspath = os.path.abspath(source)
+        copy = True
 
-        # we use a lock here because if we race with commit, we can
-        # end up with extra data in the cloned revlogs that's not
-        # pointed to by changesets, thus causing verify to fail
-        l1 = lock.lock(os.path.join(source, ".hg", "lock"))
+    if copy:
+        try:
+            # we use a lock here because if we race with commit, we
+            # can end up with extra data in the cloned revlogs that's
+            # not pointed to by changesets, thus causing verify to
+            # fail
+            l1 = lock.lock(os.path.join(source, ".hg", "lock"))
+        except OSError:
+            copy = False
 
-        # and here to avoid premature writing to the target
+    if copy:
+        # we lock here to avoid premature writing to the target
         os.mkdir(os.path.join(dest, ".hg"))
         l2 = lock.lock(os.path.join(dest, ".hg", "lock"))
 
