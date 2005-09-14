@@ -432,7 +432,8 @@ remove [options] [files ...]::
 
     This command schedules the files to be removed at the next commit.
     This only removes files from the current branch, not from the
-    entire project history.
+    entire project history.  If the files still exist in the working
+    directory, they will be deleted from it.
 
     aliases: rm
 

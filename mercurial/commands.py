@@ -1313,6 +1313,11 @@ def remove(ui, repo, pat, *pats, **opts):
         if okaytoremove(abs, rel, exact):
             if not exact: ui.status('removing %s\n' % rel)
             names.append(abs)
+    for name in names:
+        try:
+            os.unlink(name)
+        except OSError, inst:
+            if inst.errno != errno.ENOENT: raise
     repo.remove(names)
 
 def revert(ui, repo, *names, **opts):
