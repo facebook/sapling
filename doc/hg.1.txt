@@ -173,13 +173,15 @@ copy <source ...> <dest>::
     stand in the working directory.  If invoked with --after, the
     operation is recorded, but no copying is performed.
 
-    This command takes effect for the next commit.
+    This command takes effect in the next commit.
 
     Options:
     -A, --after        record a copy that has already occurred
     -f, --force        forcibly copy over an existing managed file
     -p, --parents      append source path to dest
     
+    aliases: cp
+
 diff [-a] [-r revision] [-r revision] [files ...]::
     Show differences between revisions for the specified files.
 
@@ -447,6 +449,24 @@ remove [options] [files ...]::
     directory, they will be deleted from it.
 
     aliases: rm
+
+rename <source ...> <dest>::
+    Mark dest as copies of sources; mark sources for deletion.  If
+    dest is a directory, copies are put in that directory.  If dest is
+    a file, there can only be one source.
+
+    By default, this command copies the contents of files as they
+    stand in the working directory.  If invoked with --after, the
+    operation is recorded, but no copying is performed.
+
+    This command takes effect in the next commit.
+
+    Options:
+    -A, --after        record a rename that has already occurred
+    -f, --force        forcibly copy over an existing managed file
+    -p, --parents      append source path to dest
+
+    aliases: mv
 
 revert [names ...]::
     Revert any uncommitted modifications made to the named files or

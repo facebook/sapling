@@ -696,8 +696,7 @@ def commit(ui, repo, *pats, **opts):
     except ValueError, inst:
         raise util.Abort(str(inst))
 
-def copy(ui, repo, *pats, **opts):
-    """mark files as copied for the next commit"""
+def docopy(ui, repo, pats, opts):
     if not pats:
         raise util.Abort('no source or destination specified')
     elif len(pats) == 1:
@@ -735,7 +734,7 @@ def copy(ui, repo, *pats, **opts):
         elif len(sources) > 1:
             raise util.Abort('with multiple sources, destination must be a '
                              'directory')
-    errs = 0
+    errs, copied = 0, []
     for abs, rel, exact in sources:
         if opts['parents']:
             mydest = os.path.join(dest, rel)
@@ -763,6 +762,8 @@ def copy(ui, repo, *pats, **opts):
                 n = repo.manifest.tip()
                 mf = repo.manifest.readflags(n)
                 util.set_exec(myreldest, util.is_exec(rel, mf[abs]))
+            except shutil.Error, inst:
+                raise util.Abort(str(inst))
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
                     ui.warn('%s: deleted in working copy\n' % rel)
@@ -771,8 +772,14 @@ def copy(ui, repo, *pats, **opts):
                 errs += 1
                 continue
         repo.copy(abs, myabsdest)
+        copied.append((abs, rel, exact))
     if errs:
-        ui.warn('(consider using --after to record failed copies)\n')
+        ui.warn('(consider using --after)\n')
+    return errs, copied
+
+def copy(ui, repo, *pats, **opts):
+    """mark files as copied for the next commit"""
+    errs, copied = docopy(ui, repo, pats, opts)
     return errs
 
 def debugcheckstate(ui, repo):
@@ -1390,14 +1397,14 @@ def remove(ui, repo, pat, *pats, **opts):
         reason = None
         if c: reason = 'is modified'
         elif a: reason = 'has been marked for add'
-        elif u: reason = 'not managed'
+        elif u: reason = 'is not managed'
         if reason and exact:
             ui.warn('not removing %s: file %s\n' % (rel, reason))
         else:
             return True
     for src, abs, rel, exact in walk(repo, (pat,) + pats, opts):
         if okaytoremove(abs, rel, exact):
-            if not exact: ui.status('removing %s\n' % rel)
+            if ui.verbose or not exact: ui.status('removing %s\n' % rel)
             names.append(abs)
     for name in names:
         try:
@@ -1405,6 +1412,20 @@ def remove(ui, repo, pat, *pats, **opts):
         except OSError, inst:
             if inst.errno != errno.ENOENT: raise
     repo.remove(names)
+
+def rename(ui, repo, *pats, **opts):
+    """rename files; equivalent of copy + remove"""
+    errs, copied = docopy(ui, repo, pats, opts)
+    names = []
+    for abs, rel, exact in copied:
+        if ui.verbose or not exact: ui.status('removing %s\n' % rel)
+        try:
+            os.unlink(rel)
+        except OSError, inst:
+            if inst.errno != errno.ENOENT: raise
+        names.append(abs)
+    repo.remove(names)
+    return errs
 
 def revert(ui, repo, *names, **opts):
     """revert modified files or dirs back to their unmodified states"""
@@ -1823,7 +1844,7 @@ table = {
           ('f', 'force', None, 'skip check for outstanding changes'),
           ('b', 'base', "", 'base path')],
          "hg import [-f] [-p NUM] [-b BASE] PATCH..."),
-    "incoming|in": (incoming, 
+    "incoming|in": (incoming,
          [('p', 'patch', None, 'show patch')],
          'hg incoming [-p] [SOURCE]'),
     "^init": (init, [], 'hg init [DEST]'),
@@ -1844,7 +1865,7 @@ table = {
           ('p', 'patch', None, 'show patch')],
          'hg log [-I] [-X] [-r REV]... [-p] [FILE]'),
     "manifest": (manifest, [], 'hg manifest [REV]'),
-    "outgoing|out": (outgoing, 
+    "outgoing|out": (outgoing,
          [('p', 'patch', None, 'show patch')],
          'hg outgoing [-p] [DEST]'),
     "parents": (parents, [], 'hg parents [REV]'),
@@ -1876,6 +1897,13 @@ table = {
                    [('I', 'include', [], 'include path in search'),
                     ('X', 'exclude', [], 'exclude path from search')],
                    "hg remove [OPTION]... FILE..."),
+    "rename|mv": (rename,
+                  [('I', 'include', [], 'include path in search'),
+                   ('X', 'exclude', [], 'exclude path from search'),
+                   ('A', 'after', None, 'record a copy after it has happened'),
+                   ('f', 'force', None, 'replace destination if it exists'),
+                   ('p', 'parents', None, 'append source path to dest')],
+                  'hg rename [OPTION]... [SOURCE]... DEST'),
     "^revert":
         (revert,
          [("n", "nonrecursive", None, "don't recurse into subdirs"),

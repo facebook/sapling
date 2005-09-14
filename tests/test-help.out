@@ -65,6 +65,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  rawcommit   raw commit interface
  recover     roll back an interrupted transaction
  remove      remove the specified files on the next commit
+ rename      rename files; equivalent of copy + remove
  revert      revert modified files or dirs back to their unmodified states
  root        print the root (top) of the current working dir
  serve       export the repository via HTTP
@@ -106,6 +107,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  rawcommit   raw commit interface
  recover     roll back an interrupted transaction
  remove      remove the specified files on the next commit
+ rename      rename files; equivalent of copy + remove
  revert      revert modified files or dirs back to their unmodified states
  root        print the root (top) of the current working dir
  serve       export the repository via HTTP
