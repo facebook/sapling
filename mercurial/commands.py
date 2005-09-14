@@ -620,10 +620,6 @@ def clone(ui, source, dest=None, **opts):
 
     if other.dev() != -1:
         abspath = os.path.abspath(source)
-        copyfile = (os.stat(dest).st_dev == other.dev()
-                    and getattr(os, 'link', None) or shutil.copy2)
-        if copyfile is not shutil.copy2:
-            ui.note("cloning by hardlink\n")
 
         # we use a lock here because if we race with commit, we can
         # end up with extra data in the cloned revlogs that's not
@@ -638,7 +634,7 @@ def clone(ui, source, dest=None, **opts):
         for f in files.split():
             src = os.path.join(source, ".hg", f)
             dst = os.path.join(dest, ".hg", f)
-            util.copyfiles(src, dst, copyfile)
+            util.copyfiles(src, dst)
 
         repo = hg.repository(ui, dest)
 

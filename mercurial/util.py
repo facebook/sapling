@@ -12,7 +12,7 @@ platform-specific details from the core.
 
 import os, errno
 from demandload import *
-demandload(globals(), "re cStringIO")
+demandload(globals(), "re cStringIO shutil")
 
 def binary(s):
     """return true if a string is binary data using diff's heuristic"""
@@ -217,17 +217,28 @@ def rename(src, dst):
         os.unlink(dst)
         os.rename(src, dst)
 
-def copyfiles(src, dst, copyfile):
-    """Copy a directory tree, files are copied using 'copyfile'."""
+def copyfiles(src, dst, hardlink=None):
+    """Copy a directory tree using hardlinks if possible"""
+
+    if hardlink is None:
+        hardlink = (os.stat(src).st_dev ==
+                    os.stat(os.path.dirname(dst)).st_dev)
 
     if os.path.isdir(src):
         os.mkdir(dst)
         for name in os.listdir(src):
             srcname = os.path.join(src, name)
             dstname = os.path.join(dst, name)
-            copyfiles(srcname, dstname, copyfile)
+            copyfiles(srcname, dstname, hardlink)
     else:
-        copyfile(src, dst)
+        if hardlink:
+            try:
+                os_link(src, dst)
+            except:
+                hardlink = False
+                shutil.copy2(src, dst)
+        else:
+            shutil.copy2(src, dst)
 
 def opener(base):
     """
@@ -244,13 +255,13 @@ def opener(base):
 
         if mode[0] != "r":
             try:
-                s = os.stat(f)
+                nlink = nlinks(f)
             except OSError:
                 d = os.path.dirname(f)
                 if not os.path.isdir(d):
                     os.makedirs(d)
             else:
-                if s.st_nlink > 1:
+                if nlink > 1:
                     file(f + ".tmp", "wb").write(file(f, "rb").read())
                     rename(f+".tmp", f)
 
@@ -266,9 +277,40 @@ def _makelock_file(info, pathname):
 def _readlock_file(pathname):
     return file(pathname).read()
 
+def nlinks(pathname):
+    """Return number of hardlinks for the given file."""
+    return os.stat(pathname).st_nlink
+
+if hasattr(os, 'link'):
+    os_link = os.link
+else:
+    def os_link(src, dst):
+        raise OSError(0, "Hardlinks not supported")
+
 # Platform specific variants
 if os.name == 'nt':
     nulldev = 'NUL:'
+
+    try: # ActivePython can create hard links using win32file module
+        import win32file
+
+        def os_link(src, dst): # NB will only succeed on NTFS
+            win32file.CreateHardLink(dst, src)
+
+        def nlinks(pathname):
+            """Return number of hardlinks for the given file."""
+            try:
+                fh = win32file.CreateFile(pathname,
+                    win32file.GENERIC_READ, win32file.FILE_SHARE_READ,
+                    None, win32file.OPEN_EXISTING, 0, None)
+                res = win32file.GetFileInformationByHandle(fh)
+                fh.Close()
+                return res[7]
+            except:
+                return os.stat(pathname).st_nlink
+
+    except ImportError:
+        pass
 
     def is_exec(f, last):
         return last
