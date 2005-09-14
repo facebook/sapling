@@ -5,7 +5,6 @@ echo a > a
 hg add a
 hg commit -m "1" -d "0 0"
 hg status
-cp a b
 hg copy a b
 hg status
 hg --debug commit -m "2" -d "0 0"
