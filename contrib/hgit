@@ -8,10 +8,61 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import time, sys, signal
-from mercurial import hg, mdiff, fancyopts, commands, ui
-    
-def difftree(args, ui, repo):
-    def __difftree(repo, files = None, node1 = None, node2 = None):
+from mercurial import hg, mdiff, fancyopts, commands, ui, util
+
+def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
+           changes=None, text=False):
+    def date(c):
+        return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
+
+    if not changes:
+        (c, a, d, u) = repo.changes(node1, node2, files, match=match)
+    else:
+        (c, a, d, u) = changes
+    if files:
+        c, a, d = map(lambda x: filterfiles(files, x), (c, a, d))
+
+    if not c and not a and not d:
+        return
+
+    if node2:
+        change = repo.changelog.read(node2)
+        mmap2 = repo.manifest.read(change[0])
+        date2 = date(change)
+        def read(f):
+            return repo.file(f).read(mmap2[f])
+    else:
+        date2 = time.asctime()
+        if not node1:
+            node1 = repo.dirstate.parents()[0]
+        def read(f):
+            return repo.wfile(f).read()
+
+    change = repo.changelog.read(node1)
+    mmap = repo.manifest.read(change[0])
+    date1 = date(change)
+
+    for f in c:
+        to = None
+        if f in mmap:
+            to = repo.file(f).read(mmap[f])
+        tn = read(f)
+        fp.write("diff --git a/%s b/%s\n" % (f, f))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, text=text))
+    for f in a:
+        to = None
+        tn = read(f)
+        fp.write("diff --git /dev/null b/%s\n" % (f))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, text=text))
+    for f in d:
+        to = repo.file(f).read(mmap[f])
+        tn = None
+        fp.write("diff --git a/%s /dev/null\n" % (f))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, text=text))
+
+def difftree(ui, repo, node1=None, node2=None, **opts):
+    """diff trees from two commits"""
+    def __difftree(repo, node1, node2):
         def date(c):
             return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
 
@@ -23,7 +74,7 @@ def difftree(args, ui, repo):
             date2 = date(change)
         else:
             date2 = time.asctime()
-            (c, a, d, u) = repo.diffdir(repo.root, node1)
+            (c, a, d, u) = repo.changes(node1, None)
             if not node1:
                 node1 = repo.dirstate.parents()[0]
             def read(f): return file(os.path.join(repo.root, f)).read()
@@ -32,9 +83,6 @@ def difftree(args, ui, repo):
         mmap = repo.manifest.read(change[0])
         date1 = date(change)
         empty = "0" * 40;
-
-        if files:
-            c, a, d = map(lambda x: filterfiles(files, x), (c, a, d))
 
         for f in c:
             # TODO get file permissions
@@ -46,66 +94,85 @@ def difftree(args, ui, repo):
             print ":100664 000000 %s %s D\t%s\t%s" % (hg.hex(mmap[f]), empty, f, f)
     ##
 
-    revs = []
-    if args:
-        doptions = {}
-        opts = [('p', 'patch', None, 'patch'),
-                ('r', 'recursive', None, 'recursive')]
-        args = fancyopts.fancyopts(args, opts, doptions)
+    while True:
+        if opts['stdin']:
+            try:
+                line = raw_input().split(' ')
+                node1 = line[0]
+                if len(line) > 1:
+                    node2 = line[1]
+                else:
+                    node2 = None
+            except EOFError:
+                break
+        node1 = repo.lookup(node1)
+        if node2:
+            node2 = repo.lookup(node2)
+        else:
+            node2 = node1
+            node1 = repo.changelog.parents(node1)[0]
+        if opts['patch']:
+            if opts['pretty']:
+                catcommit(repo, node2, "")
+            dodiff(sys.stdout, ui, repo, node1, node2)
+        else:
+            __difftree(repo, node1, node2)
+        if not opts['stdin']:
+            break
 
-    if len(args) < 2:
-        help()
-        sys.exit(1)
-    revs.append(repo.lookup(args[0]))
-    revs.append(repo.lookup(args[1]))
-    args = args[2:]
-    if doptions['patch']:
-        commands.dodiff(sys.stdout, ui, repo, args, *revs)
-    else:
-        __difftree(repo, args, *revs)
-
-def catcommit(repo, n, prefix):
+def catcommit(repo, n, prefix, changes=None):
     nlprefix = '\n' + prefix;
-    changes = repo.changelog.read(n)
     (p1, p2) = repo.changelog.parents(n)
     (h, h1, h2) = map(hg.hex, (n, p1, p2))
     (i1, i2) = map(repo.changelog.rev, (p1, p2))
-    print "tree %s" % (h)
-    if i1 != -1: print "%sparent %s" % (prefix, h1)
-    if i2 != -1: print "%sparent %s" % (prefix, h2)
+    if not changes:
+        changes = repo.changelog.read(n)
+    print "tree %s" % (hg.hex(changes[0]))
+    if i1 != -1: print "parent %s" % (h1)
+    if i2 != -1: print "parent %s" % (h2)
     date_ar = changes[2].split(' ')
     date = int(float(date_ar[0]))
-    print "%sauthor <%s> %s %s" % (prefix, changes[1], date, date_ar[1])
-    print "%scommitter <%s> %s %s" % (prefix, changes[1], date, date_ar[1])
-    print prefix
+    lines = changes[4].splitlines()
+    if lines[-1].startswith('committer:'):
+        committer = lines[-1].split(': ')[1].rstrip()
+    else:
+        committer = "%s %s %s" % (changes[1], date, date_ar[1])
+        
+    print "author %s %s %s" % (changes[1], date, date_ar[1])
+    print "committer %s" % (committer)
+    print ""
     if prefix != "":
         print "%s%s" % (prefix, changes[4].replace('\n', nlprefix).strip())
     else:
         print changes[4]
+    if prefix:
+        sys.stdout.write('\0')
 
-def catfile(args, ui, repo):
-    doptions = {}
-    opts = [('s', 'stdin', None, 'stdin')]
-    args = fancyopts.fancyopts(args, opts, doptions)
+def base(ui, repo, node1, node2):
+    """Output common ancestor information"""
+    node1 = repo.lookup(node1)
+    node2 = repo.lookup(node2)
+    n = repo.changelog.ancestor(node1, node2)
+    print hg.hex(n)
 
+def catfile(ui, repo, type=None, r=None, **opts):
+    """cat a specific revision"""
     # in stdin mode, every line except the commit is prefixed with two
     # spaces.  This way the our caller can find the commit without magic
     # strings
     #
     prefix = ""
-    if doptions['stdin']:
+    if opts['stdin']:
         try:
             (type, r) = raw_input().split(' ');
-            prefix = "  "
+            prefix = "    "
         except EOFError:
             return
 
     else:
-        if len(args) < 2:
-            help()
-            sys.exit(1)
-        type = args[0]
-        r = args[1]
+        if not type or not r:
+            ui.warn("cat-file: type or revision not supplied\n")
+            commands.help_(ui, 'cat-file')
 
     while r:
         if type != "commit":
@@ -113,7 +180,7 @@ def catfile(args, ui, repo):
             sys.exit(1);
         n = repo.lookup(r)
         catcommit(repo, n, prefix)
-        if doptions['stdin']:
+        if opts['stdin']:
             try:
                 (type, r) = raw_input().split(' ');
             except EOFError:
@@ -126,7 +193,34 @@ def catfile(args, ui, repo):
 # telling you which commits are reachable from the supplied ones via
 # a bitmask based on arg position.
 # you can specify a commit to stop at by starting the sha1 with ^
-def revtree(args, repo, full="tree", maxnr=0):
+def revtree(args, repo, full="tree", maxnr=0, parents=False):
+    def chlogwalk():
+        ch = repo.changelog
+        count = ch.count()
+        i = count
+        l = [0] * 100
+        chunk = 100
+        while True:
+            if chunk > i:
+                chunk = i
+                i = 0
+            else:
+                i -= chunk
+
+            for x in xrange(0, chunk):
+                if i + x >= count:
+                    l[chunk - x:] = [0] * (chunk - x)
+                    break
+                if full != None:
+                    l[x] = ch.read(ch.node(i + x))
+                else:
+                    l[x] = 1
+            for x in xrange(chunk-1, -1, -1):
+                if l[x] != 0:
+                    yield (i + x, full != None and l[x] or None)
+            if i == 0:
+                break
+            
     # calculate and return the reachability bitmask for sha
     def is_reachable(ar, reachable, sha):
         if len(ar) == 0:
@@ -172,17 +266,24 @@ def revtree(args, repo, full="tree", maxnr=0):
 
     # walk the repository looking for commits that are in our
     # reachability graph
-    for i in range(repo.changelog.count()-1, -1, -1):
+    #for i in range(repo.changelog.count()-1, -1, -1):
+    for i, changes in chlogwalk():
         n = repo.changelog.node(i)
         mask = is_reachable(want_sha1, reachable, n)
         if mask:
+            parentstr = ""
+            if parents:
+                pp = repo.changelog.parents(n)
+                if pp[0] != hg.nullid:
+                    parentstr += " " + hg.hex(pp[0])
+                if pp[1] != hg.nullid:
+                    parentstr += " " + hg.hex(pp[1])
             if not full:
-                print hg.hex(n)
+                print hg.hex(n) + parentstr
             elif full is "commit":
-                print hg.hex(n)
-                catcommit(repo, n, '  ')
+                print hg.hex(n) + parentstr
+                catcommit(repo, n, '    ', changes)
             else:
-                changes = repo.changelog.read(n)
                 (p1, p2) = repo.changelog.parents(n)
                 (h, h1, h2) = map(hg.hex, (n, p1, p2))
                 (i1, i2) = map(repo.changelog.rev, (p1, p2))
@@ -203,53 +304,32 @@ def revtree(args, repo, full="tree", maxnr=0):
 # git rev-list tries to order things by date, and has the ability to stop
 # at a given commit without walking the whole repo.  TODO add the stop
 # parameter
-def revlist(args, repo):
-    doptions = {}
-    opts = [('c', 'commit', None, 'commit'),
-            ('n', 'max-nr', 0, 'max-nr')]
-    args = fancyopts.fancyopts(args, opts, doptions)
-    if doptions['commit']:
+def revlist(ui, repo, *revs, **opts):
+    """print revisions"""
+    if opts['header']:
         full = "commit"
     else:
         full = None
-    for i in range(1, len(args)):
-        args[i] = '^' + args[i]
-    revtree(args, repo, full, doptions['max-nr'])
+    copy = [x for x in revs]
+    revtree(copy, repo, full, opts['max_count'], opts['parents'])
 
-def catchterm(*args):
-    raise SignalInterrupt
+cmdtable = {
+    "git-diff-tree": (difftree, [('p', 'patch', None, 'generate patch'),
+                            ('r', 'recursive', None, 'recursive'),
+                            ('P', 'pretty', None, 'pretty'),
+                            ('s', 'stdin', None, 'stdin'),
+                            ('C', 'copy', None, 'detect copies'),
+                            ('S', 'search', "", 'search')],
+                            "hg git-diff-tree [options] node1 node2"),
+    "git-cat-file": (catfile, [('s', 'stdin', None, 'stdin')],
+                 "hg cat-file [options] type file"),
+    "git-merge-base": (base, [], "hg git-merge-base node node"),
+    "git-rev-list": (revlist, [('H', 'header', None, 'header'),
+                           ('t', 'topo-order', None, 'topo-order'),
+                           ('p', 'parents', None, 'parents'),
+                           ('n', 'max-count', 0, 'max-count')],
+                 "hg git-rev-list [options] revs"),
+}
 
-def help():
-    sys.stderr.write("commands:\n")
-    sys.stderr.write("  hgit cat-file [type] sha1\n")
-    sys.stderr.write("  hgit diff-tree [-p] [-r] sha1 sha1\n")
-    sys.stderr.write("  hgit rev-tree [sha1 ... [^stop sha1]]\n")
-    sys.stderr.write("  hgit rev-list [-c] [sha1 [stop sha1]\n")
-
-cmd = sys.argv[1]
-args = sys.argv[2:]
-u = ui.ui()
-signal.signal(signal.SIGTERM, catchterm)
-repo = hg.repository(ui = u)
-
-if cmd == "diff-tree":
-    difftree(args, u, repo)
-
-elif cmd == "cat-file":
-    catfile(args, u, repo)
-
-elif cmd == "rev-tree":
-    revtree(args, repo)
-
-elif cmd == "rev-list":
-    revlist(args, repo)
-
-elif cmd == "help":
-    help()
-
-else:
-    if cmd: sys.stderr.write("unknown command\n\n")
-    help()
-    sys.exit(1)
-
-sys.exit(0)
+def reposetup(ui, repo):
+    pass
