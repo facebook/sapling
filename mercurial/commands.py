@@ -485,6 +485,7 @@ def add(ui, repo, *pats, **opts):
     names = []
     for src, abs, rel, exact in walk(repo, pats, opts):
         if exact:
+            if ui.verbose: ui.status('adding %s\n' % rel)
             names.append(abs)
         elif repo.dirstate.state(abs) == '?':
             ui.status('adding %s\n' % rel)
@@ -497,11 +498,11 @@ def addremove(ui, repo, *pats, **opts):
     for src, abs, rel, exact in walk(repo, pats, opts):
         if src == 'f' and repo.dirstate.state(abs) == '?':
             add.append(abs)
-            if not exact:
+            if ui.verbose or not exact:
                 ui.status('adding ', rel, '\n')
         if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
             remove.append(abs)
-            if not exact:
+            if ui.verbose or not exact:
                 ui.status('removing ', rel, '\n')
     repo.add(add)
     repo.remove(remove)
@@ -966,7 +967,7 @@ def forget(ui, repo, *pats, **opts):
     for src, abs, rel, exact in walk(repo, pats, opts):
         if repo.dirstate.state(abs) == 'a':
             forget.append(abs)
-            if not exact:
+            if ui.verbose or not exact:
                 ui.status('forgetting ', rel, '\n')
     repo.forget(forget)
 
@@ -1404,8 +1405,8 @@ def remove(ui, repo, pat, *pats, **opts):
         if c: reason = 'is modified'
         elif a: reason = 'has been marked for add'
         elif u: reason = 'is not managed'
-        if reason and exact:
-            ui.warn('not removing %s: file %s\n' % (rel, reason))
+        if reason:
+            if exact: ui.warn('not removing %s: file %s\n' % (rel, reason))
         else:
             return True
     for src, abs, rel, exact in walk(repo, (pat,) + pats, opts):
