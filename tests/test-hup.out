@@ -7,5 +7,4 @@ rollback completed
 00changelog.d
 00changelog.i
 data
-hgrc
 journal.dirstate
