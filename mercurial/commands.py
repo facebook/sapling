@@ -163,9 +163,9 @@ def revrange(ui, repo, revs, revlog=None):
             num = int(val)
             if str(num) != val:
                 raise ValueError
-            if num < 0:
-                num += revcount
-            if not (0 <= num < revcount):
+            if num < 0: num += revcount
+            if num < 0: num = 0
+            elif num >= revcount:
                 raise ValueError
         except ValueError:
             try:
