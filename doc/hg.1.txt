@@ -188,6 +188,10 @@ copy <source ...> <dest>::
 
     This command takes effect in the next commit.
 
+    NOTE: This command should be treated as experimental. While it
+    should properly record copied files, this information is not yet
+    fully used by merge, nor fully reported by log.
+
     Options:
     -A, --after           record a copy that has already occurred
     -I, --include <pat>   include names matching the given patterns
@@ -475,6 +479,10 @@ rename <source ...> <dest>::
     operation is recorded, but no copying is performed.
 
     This command takes effect in the next commit.
+
+    NOTE: This command should be treated as experimental. While it
+    should properly record rename files, this information is not yet
+    fully used by merge, nor fully reported by log.
 
     Options:
     -A, --after        record a rename that has already occurred
