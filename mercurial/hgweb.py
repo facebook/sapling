@@ -964,8 +964,9 @@ class hgwebdir:
                 url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
                        .replace("//", "/"))
 
-                yield dict(contact=get("web", "contact") or
-                                   get("web", "author", "unknown"),
+                yield dict(contact=(get("ui", "username") or # preferred
+                                    get("web", "contact") or # deprecated
+                                    get("web", "author", "unknown")), # also
                            name=get("web", "name", name),
                            url=url,
                            parity=parity,

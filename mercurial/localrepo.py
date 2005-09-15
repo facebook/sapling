@@ -39,9 +39,6 @@ class localrepository:
         if create:
             os.mkdir(self.path)
             os.mkdir(self.join("data"))
-            f = self.opener("hgrc", "w")
-            f.write("[web]\n")
-            f.write("contact = %s\n" % ui.shortuser(ui.username()))
 
         self.dirstate = dirstate.dirstate(self.opener, ui, self.root)
         try:

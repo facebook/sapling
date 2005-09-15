@@ -13,6 +13,7 @@ mkdir baz
 echo bletch>baz/bletch
 hg addremove
 hg commit -m 3
+echo "[web]" >> .hg/hgrc
 echo "name = test-archive" >> .hg/hgrc
 echo "allowzip = true" >> .hg/hgrc
 echo "allowgz = true" >> .hg/hgrc
