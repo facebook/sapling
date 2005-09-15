@@ -33,6 +33,8 @@ class localrepository:
         self.changelog = changelog.changelog(self.opener)
         self.tagscache = None
         self.nodetagscache = None
+        self.encodepats = None
+        self.decodepats = None
 
         if create:
             os.mkdir(self.path)
@@ -160,9 +162,37 @@ class localrepository:
         return self.wopener(f, mode)
 
     def wread(self, filename):
-        return self.wopener(filename, 'r').read()
+        if self.encodepats == None:
+            l = []
+            for pat, cmd in self.ui.configitems("encode"):
+                mf = util.matcher("", "/", [pat], [], [])[1]
+                l.append((mf, cmd))
+            self.encodepats = l
+
+        data = self.wopener(filename, 'r').read()
+
+        for mf, cmd in self.encodepats:
+            if mf(filename):
+                self.ui.debug("filtering %s through %s\n" % (filename, cmd))
+                data = util.filter(data, cmd)
+                break
+
+        return data
 
     def wwrite(self, filename, data, fd=None):
+        if self.decodepats == None:
+            l = []
+            for pat, cmd in self.ui.configitems("decode"):
+                mf = util.matcher("", "/", [pat], [], [])[1]
+                l.append((mf, cmd))
+            self.decodepats = l
+
+        for mf, cmd in self.decodepats:
+            if mf(filename):
+                self.ui.debug("filtering %s through %s\n" % (filename, cmd))
+                data = util.filter(data, cmd)
+                break
+
         if fd:
             return fd.write(data)
         return self.wopener(filename, 'w').write(data)

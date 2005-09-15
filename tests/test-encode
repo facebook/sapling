@@ -1,0 +1,34 @@
+#!/bin/sh
+
+hg init
+
+cat > .hg/hgrc <<EOF
+[encode]
+*.gz = gunzip
+
+[decode]
+*.gz = gzip
+
+EOF
+
+echo "this is a test" | gzip > a.gz
+hg add a.gz
+hg ci -m "test" -d "0 0"
+echo %% no changes
+hg status
+touch a.gz
+
+echo %% no changes
+hg status
+
+echo %% uncompressed contents in repo
+hg debugdata .hg/data/a.gz.d 0
+
+echo %% uncompress our working dir copy
+gunzip < a.gz
+
+rm a.gz
+hg co
+
+echo %% uncompress our new working dir copy
+gunzip < a.gz

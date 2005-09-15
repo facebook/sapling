@@ -12,7 +12,23 @@ platform-specific details from the core.
 
 import os, errno
 from demandload import *
-demandload(globals(), "re cStringIO shutil")
+demandload(globals(), "re cStringIO shutil popen2 threading")
+
+def filter(s, cmd):
+    "filter a string through a command that transforms its input to its output"
+    (pout, pin) = popen2.popen2(cmd, -1, 'b')
+    def writer():
+        pin.write(s)
+        pin.close()
+
+    # we should use select instead on UNIX, but this will work on most
+    # systems, including Windows
+    w = threading.Thread(target=writer)
+    w.start()
+    f = pout.read()
+    pout.close()
+    w.join()
+    return f
 
 def binary(s):
     """return true if a string is binary data using diff's heuristic"""

@@ -61,6 +61,26 @@ This section describes the different sections that may appear in a
 Mercurial "hgrc" file, the purpose of each section, its possible
 keys, and their possible values.
 
+decode/encode:: 
+  Filters for transforming files on checkout/checkin. This would
+  typically be used for newline processing or other
+  localization/canonicalization of files.
+
+  Filters consist of a filter pattern followed by a filter command.
+  The command must accept data on stdin and return the transformed
+  data on stdout.
+
+  Example:
+
+    [encode]
+    # uncompress gzip files on checkin to improve delta compression
+    # note: not necessarily a good idea, just an example
+    *.gz = gunzip
+
+    [decode]
+    # recompress gzip files when writing them to the working dir
+    *.gz = gzip
+
 hooks::
   Commands that get automatically executed by various actions such as
   starting or finishing a commit.
