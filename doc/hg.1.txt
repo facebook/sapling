@@ -121,10 +121,23 @@ bundle <file> <other>::
     Unlike import/export, this exactly preserves all changeset
     contents including permissions, rename data, and revision history.
 
-cat <file> [revision]::
-    Output to stdout the given revision for the specified file.
-
+cat [options] <file ...>::
+    Print the specified files as they were at the given revision.
     If no revision is given then the tip is used.
+
+    Output may be to a file, in which case the name of the file is
+    given using a format string.  The formatting rules are the same as
+    for the export command, with the following additions:
+
+    %s   basename of file being printed
+    %d   dirname of file being printed, or '.' if in repo root
+    %p   root-relative path name of file being printed
+
+    options:
+    -I, --include <pat>       include names matching the given patterns
+    -X, --exclude <pat>       exclude names matching the given patterns
+    -o, --output <filespec>   print output to file with formatted name
+    -r, --rev <rev>           print the given revision
 
 clone [-U] <source> [dest]::
     Create a copy of an existing repository in a new directory.
@@ -176,9 +189,11 @@ copy <source ...> <dest>::
     This command takes effect in the next commit.
 
     Options:
-    -A, --after        record a copy that has already occurred
-    -f, --force        forcibly copy over an existing managed file
-    -p, --parents      append source path to dest
+    -A, --after           record a copy that has already occurred
+    -I, --include <pat>   include names matching the given patterns
+    -X, --exclude <pat>   exclude names matching the given patterns
+    -f, --force           forcibly copy over an existing managed file
+    -p, --parents         append source path to dest
     
     aliases: cp
 
@@ -226,7 +241,7 @@ export [-o filespec] [revision] ...::
 
     options:
     -a, --text                treat all files as text
-    -o, --output <filespec>   print output to file with formatted named
+    -o, --output <filespec>   print output to file with formatted name
 
 forget [options] [files]::
     Undo an 'hg add' scheduled for the next commit.

@@ -194,7 +194,7 @@ def revrange(ui, repo, revs, revlog=None):
             yield str(rev)
 
 def make_filename(repo, r, pat, node=None,
-                  total=None, seqno=None, revwidth=None):
+                  total=None, seqno=None, revwidth=None, pathname=None):
     node_expander = {
         'H': lambda: hex(node),
         'R': lambda: str(r.rev(node)),
@@ -216,6 +216,10 @@ def make_filename(repo, r, pat, node=None,
             expander['n'] = lambda: str(seqno)
         if total is not None and seqno is not None:
             expander['n'] = lambda:str(seqno).zfill(len(str(total)))
+        if pathname is not None:
+            expander['s'] = lambda: os.path.basename(pathname)
+            expander['d'] = lambda: os.path.dirname(pathname) or '.'
+            expander['p'] = lambda: pathname
 
         newname = []
         patlen = len(pat)
@@ -234,14 +238,15 @@ def make_filename(repo, r, pat, node=None,
                     inst.args[0])
 
 def make_file(repo, r, pat, node=None,
-              total=None, seqno=None, revwidth=None, mode='wb'):
+              total=None, seqno=None, revwidth=None, mode='wb', pathname=None):
     if not pat or pat == '-':
         return 'w' in mode and sys.stdout or sys.stdin
     if hasattr(pat, 'write') and 'w' in mode:
         return pat
     if hasattr(pat, 'read') and 'r' in mode:
         return pat
-    return open(make_filename(repo, r, pat, node, total, seqno, revwidth),
+    return open(make_filename(repo, r, pat, node, total, seqno, revwidth,
+                              pathname),
                 mode)
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
@@ -569,25 +574,26 @@ def bundle(ui, repo, fname, dest="default-push", **opts):
     except:
         os.unlink(fname)
 
-def cat(ui, repo, file1, rev=None, **opts):
-    """output the latest or given revision of a file"""
-    r = repo.file(relpath(repo, [file1])[0])
-    if rev:
-        try:
-            # assume all revision numbers are for changesets
-            n = repo.lookup(rev)
-            change = repo.changelog.read(n)
-            m = repo.manifest.read(change[0])
-            n = m[relpath(repo, [file1])[0]]
-        except (hg.RepoError, KeyError):
+def cat(ui, repo, file1, *pats, **opts):
+    """output the latest or given revisions of files"""
+    mf = {}
+    if opts['rev']:
+        change = repo.changelog.read(repo.lookup(opts['rev']))
+        mf = repo.manifest.read(change[0])
+    for src, abs, rel, exact in walk(repo, (file1,) + pats, opts):
+        r = repo.file(abs)
+        if opts['rev']:
             try:
-                n = r.lookup(rev)
-            except KeyError, inst:
-                raise util.Abort('cannot find file %s in rev %s', file1, rev)
-    else:
-        n = r.tip()
-    fp = make_file(repo, r, opts['output'], node=n)
-    fp.write(r.read(n))
+                n = mf[abs]
+            except (hg.RepoError, KeyError):
+                try:
+                    n = r.lookup(rev)
+                except KeyError, inst:
+                    raise util.Abort('cannot find file %s in rev %s', rel, rev)
+        else:
+            n = r.tip()
+        fp = make_file(repo, r, opts['output'], node=n, pathname=abs)
+        fp.write(r.read(n))
 
 def clone(ui, source, dest=None, **opts):
     """make a copy of an existing repository"""
@@ -1765,8 +1771,11 @@ table = {
          'hg bundle FILE DEST'),
     "cat":
         (cat,
-         [('o', 'output', "", 'output to file')],
-         'hg cat [-o OUTFILE] FILE [REV]'),
+         [('I', 'include', [], 'include path in search'),
+          ('X', 'exclude', [], 'exclude path from search'),
+          ('o', 'output', "", 'output to file'),
+          ('r', 'rev', '', 'revision')],
+         'hg cat [OPTION]... FILE...'),
     "^clone":
         (clone,
          [('U', 'noupdate', None, 'skip update after cloning'),

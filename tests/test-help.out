@@ -40,7 +40,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  addremove   add all new files, delete all missing files
  annotate    show changeset information per file line
  bundle      create a changegroup file
- cat         output the latest or given revision of a file
+ cat         output the latest or given revisions of files
  clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
  copy        mark files as copied for the next commit
@@ -82,7 +82,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  addremove   add all new files, delete all missing files
  annotate    show changeset information per file line
  bundle      create a changegroup file
- cat         output the latest or given revision of a file
+ cat         output the latest or given revisions of files
  clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
  copy        mark files as copied for the next commit
