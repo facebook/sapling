@@ -920,14 +920,9 @@ def diff(ui, repo, *pats, **opts):
     if len(revs) > 2:
         raise util.Abort("too many revisions to diff")
 
-    files = []
-    match = util.always
-    if pats:
-        roots, match, results = makewalk(repo, pats, opts)
-        for src, abs, rel, exact in results:
-            files.append(abs)
+    fns, matchfn, anypats = matchpats(repo, repo.getcwd(), pats, opts)
 
-    dodiff(sys.stdout, ui, repo, node1, node2, files, match=match,
+    dodiff(sys.stdout, ui, repo, node1, node2, fns, match=matchfn,
            text=opts['text'])
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
