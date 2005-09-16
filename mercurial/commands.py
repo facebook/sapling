@@ -789,6 +789,12 @@ def copy(ui, repo, *pats, **opts):
     errs, copied = docopy(ui, repo, pats, opts)
     return errs
 
+def debugancestor(ui, index, rev1, rev2):
+    """find the ancestor revision of two revisions in a given index"""
+    r = revlog.revlog(file, index, "")
+    a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
+    ui.write("%d:%s\n" % (r.rev(a), hex(a)))
+
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
     parent1, parent2 = repo.dirstate.parents()
@@ -1801,6 +1807,7 @@ table = {
               ('f', 'force', None, 'replace destination if it exists'),
               ('p', 'parents', None, 'append source path to dest')],
              'hg copy [OPTION]... [SOURCE]... DEST'),
+    "debugancestor": (debugancestor, [], 'debugancestor INDEX REV1 REV2'),
     "debugcheckstate": (debugcheckstate, [], 'debugcheckstate'),
     "debugconfig": (debugconfig, [], 'debugconfig'),
     "debugstate": (debugstate, [], 'debugstate'),
@@ -1983,7 +1990,7 @@ globalopts = [
     ('h', 'help', None, 'display help and exit'),
 ]
 
-norepo = ("clone init version help debugconfig debugdata"
+norepo = ("clone init version help debugancestor debugconfig debugdata"
           " debugindex debugindexdot paths")
 
 def find(cmd):
