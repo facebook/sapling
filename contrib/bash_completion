@@ -11,6 +11,7 @@ _hg_commands()
     if [[ "$cur" == de* ]]; then
 	commands="$commands debugcheckstate debugstate debugindex"
 	commands="$commands debugindexdot debugwalk debugdata"
+	commands="$commands debugancestor debugconfig debugrename"
     fi
     COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W "$commands" -- "$cur") )
 }
