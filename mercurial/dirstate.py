@@ -333,7 +333,8 @@ class dirstate:
                     l.append(fn)
 
             if not s or stat.S_ISDIR(s.st_mode):
-                return self.ignore(fn) and False or match(fn)
+                if self.ignore(fn): return False
+                return match(fn)
 
             if not stat.S_ISREG(s.st_mode):
                 return False
