@@ -84,8 +84,12 @@ class dirstate:
         if self.blockignore:
             return False
         if not self.ignorefunc:
-            files, self.ignorefunc, anypats = util.matcher(self.root,
-                                                           inc=self.hgignore())
+            ignore = self.hgignore()
+            if ignore:
+                files, self.ignorefunc, anypats = util.matcher(self.root,
+                                                               inc=ignore)
+            else:
+                self.ignorefunc = util.never
         return self.ignorefunc(fn)
 
     def __del__(self):
