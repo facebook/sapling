@@ -1,16 +1,21 @@
-\.elc$
-\.orig$
-\.rej$
-~$
-\.so$
-\.pyc$
-\.swp$
-\.prof$
-^tests/.*\.err$
-^build/
-^dist/
-^doc/.*\.[0-9](\.(x|ht)ml)?$
-^MANIFEST$
+syntax: glob
+
+*.elc
+*.orig
+*.rej
+*~
+*.so
+*.pyc
+*.swp
+*.prof
+tests/*.err
+build
+dist
+doc/*.[0-9]
+doc/*.[0-9].{x,ht}ml
+MANIFEST
+patches
+mercurial/__version__.py
+
+syntax: regexp
 ^\.pc/
-^patches/
-^mercurial/__version__.py$

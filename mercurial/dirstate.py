@@ -32,33 +32,61 @@ class dirstate:
         if cwd == self.root: return ''
         return cwd[len(self.root) + 1:]
 
-    def ignore(self, f):
+    def hgignore(self):
+        '''return the contents of .hgignore as a list of patterns.
+
+        trailing white space is dropped.
+        the escape character is backslash.
+        comments start with #.
+        empty lines are skipped.
+
+        lines can be of the following formats:
+
+        syntax: regexp # defaults following lines to non-rooted regexps
+        syntax: glob   # defaults following lines to non-rooted globs
+        re:pattern     # non-rooted regular expression
+        glob:pattern   # non-rooted glob
+        pattern        # pattern of the current default type'''
+        syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:'}
+        def parselines(fp):
+            for line in fp:
+                escape = False
+                for i in xrange(len(line)):
+                    if escape: escape = False
+                    elif line[i] == '\\': escape = True
+                    elif line[i] == '#': break
+                line = line[:i].rstrip()
+                if line: yield line
+        pats = []
+        try:
+            fp = open(self.wjoin('.hgignore'))
+            syntax = 'relre:'
+            for line in parselines(fp):
+                if line.startswith('syntax:'):
+                    s = line[7:].strip()
+                    try:
+                        syntax = syntaxes[s]
+                    except KeyError:
+                        self.ui.warn("ignoring invalid syntax '%s'\n" % s)
+                    continue
+                pat = syntax + line
+                for s in syntaxes.values():
+                    if line.startswith(s):
+                        pat = line
+                        break
+                pats.append(pat)
+        except IOError: pass
+        return pats
+
+    def ignore(self, fn):
+        '''default match function used by dirstate and localrepository.
+        this honours the .hgignore file, and nothing more.'''
         if self.blockignore:
             return False
         if not self.ignorefunc:
-            bigpat = []
-            try:
-                l = file(self.wjoin(".hgignore"))
-                for pat in l:
-                    p = pat.rstrip()
-                    if p:
-                        try:
-                            re.compile(p)
-                        except:
-                            self.ui.warn("ignoring invalid ignore"
-                                         + " regular expression '%s'\n" % p)
-                        else:
-                            bigpat.append(p)
-            except IOError: pass
-
-            if bigpat:
-                s = "(?:%s)" % (")|(?:".join(bigpat))
-                r = re.compile(s)
-                self.ignorefunc = r.search
-            else:
-                self.ignorefunc = util.never
-
-        return self.ignorefunc(f)
+            files, self.ignorefunc, anypats = util.matcher(self.root,
+                                                           inc=self.hgignore())
+        return self.ignorefunc(fn)
 
     def __del__(self):
         if self.dirty:
@@ -353,9 +381,8 @@ class dirstate:
                     checkappend(added, fn)
                 elif type == 'r':
                     checkappend(unknown, fn)
-            else:
-                if not self.ignore(fn) and match(fn):
-                    unknown.append(fn)
+            elif not self.ignore(fn) and match(fn):
+                unknown.append(fn)
             # return false because we've already handled all cases above.
             # there's no need for the walking code to process the file
             # any further.

@@ -122,7 +122,7 @@ def canonpath(root, cwd, myname):
     else:
         raise Abort('%s not under root' % myname)
 
-def matcher(canonroot, cwd, names, inc, exc, head=''):
+def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head=''):
     """build a function to match a set of file patterns
 
     arguments:
@@ -134,11 +134,13 @@ def matcher(canonroot, cwd, names, inc, exc, head=''):
     head - a regex to prepend to patterns to control whether a match is rooted
 
     a pattern is one of:
-    're:<regex>'
-    'glob:<shellglob>'
-    'path:<explicit path>'
+    'glob:<rooted glob>'
+    're:<rooted regexp>'
+    'path:<rooted path>'
+    'relglob:<relative glob>'
     'relpath:<relative path>'
-    '<relative path>'
+    'relre:<relative regexp>'
+    '<rooted path or regexp>'
 
     returns:
     a 3-tuple containing
@@ -151,8 +153,8 @@ def matcher(canonroot, cwd, names, inc, exc, head=''):
     """
 
     def patkind(name):
-        for prefix in 're:', 'glob:', 'path:', 'relpath:':
-            if name.startswith(prefix): return name.split(':', 1)
+        for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
+            if name.startswith(prefix + ':'): return name.split(':', 1)
         for c in name:
             if c in _globchars: return 'glob', name
         return 'relpath', name
@@ -163,8 +165,14 @@ def matcher(canonroot, cwd, names, inc, exc, head=''):
             return name
         elif kind == 'path':
             return '^' + re.escape(name) + '(?:/|$)'
+        elif kind == 'relglob':
+            return head + globre(name, '(?:|.*/)', tail)
         elif kind == 'relpath':
             return head + re.escape(name) + tail
+        elif kind == 'relre':
+            if name.startswith('^'):
+                return name
+            return '.*' + name
         return head + globre(name, '', tail)
 
     def matchfn(pats, tail):
