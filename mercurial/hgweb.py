@@ -184,8 +184,8 @@ class hgweb:
         if s.st_mtime != self.mtime:
             self.mtime = s.st_mtime
             self.repo = hg.repository(self.repo.ui, self.repo.root)
-            self.maxchanges = self.repo.ui.config("web", "maxchanges", 10)
-            self.maxfiles = self.repo.ui.config("web", "maxchanges", 10)
+            self.maxchanges = int(self.repo.ui.config("web", "maxchanges", 10))
+            self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
     def date(self, cs):
