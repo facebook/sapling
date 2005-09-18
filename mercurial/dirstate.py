@@ -399,8 +399,19 @@ class dirstate:
         for src, fn in self.walkhelper(files, statmatch, dc):
             pass
 
+        # there may be patterns in the .hgignore file that prevent us
+        # from examining entire directories in the dirstate map, so we
+        # go back and explicitly examine any matching files we've
+        # ignored
+        unexamined = [fn for fn in dc.iterkeys()
+                      if self.ignore(fn) and match(fn)]
+
+        for src, fn in self.walkhelper(unexamined, statmatch, dc):
+            pass
+
         # anything left in dc didn't exist in the filesystem
-        for fn, c in [(fn, c) for fn, c in dc.items() if match(fn)]:
+        for fn, c in dc.iteritems():
+            if not match(fn): continue
             if c[0] == 'r':
                 removed.append(fn)
             else:
