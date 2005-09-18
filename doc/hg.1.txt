@@ -274,7 +274,7 @@ grep [options] pattern [files]::
     -X, --exclude <pat>       exclude names matching the given patterns
         --all                 print all revisions that match
     -i, --ignore-case         ignore case when matching
-    -l, --files-with-matches  print only file names and revs that match
+    -l, --files-with-matches  print only filenames and revs that match
     -n, --line-number         print matching line numbers
     -r <rev>, --rev <rev>     search in given revision range
     -u, --user                print user who committed change
@@ -347,7 +347,7 @@ locate [options] [files]::
     If you want to feed the output of this command into the "xargs"
     command, use the "-0" option to both this command and "xargs".
     This will avoid the problem of "xargs" treating single filenames
-    that contain white space as multiple file names.
+    that contain white space as multiple filenames.
 
     options:
 
@@ -631,9 +631,9 @@ FILE NAME PATTERNS
 ------------------
 
     Mercurial accepts several notations for identifying one or more
-    file at a time.
+    files at a time.
 
-    By default, Mercurial treats file names as shell-style extended
+    By default, Mercurial treats filenames as shell-style extended
     glob patterns.
 
     Alternate pattern notations must be specified explicitly.
