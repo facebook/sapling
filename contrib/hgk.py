@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import time, sys, signal
+import time, sys, signal, os
 from mercurial import hg, mdiff, fancyopts, commands, ui, util
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
@@ -313,22 +313,28 @@ def revlist(ui, repo, *revs, **opts):
     copy = [x for x in revs]
     revtree(copy, repo, full, opts['max_count'], opts['parents'])
 
+def view(ui, repo, *etc):
+    "start interactive history viewer"
+    os.chdir(repo.root)
+    os.system("hgk " + " ".join(etc))
+
 cmdtable = {
-    "git-diff-tree": (difftree, [('p', 'patch', None, 'generate patch'),
+    "view": (view, [], 'hg view'),
+    "debug-diff-tree": (difftree, [('p', 'patch', None, 'generate patch'),
                             ('r', 'recursive', None, 'recursive'),
                             ('P', 'pretty', None, 'pretty'),
                             ('s', 'stdin', None, 'stdin'),
                             ('C', 'copy', None, 'detect copies'),
                             ('S', 'search', "", 'search')],
                             "hg git-diff-tree [options] node1 node2"),
-    "git-cat-file": (catfile, [('s', 'stdin', None, 'stdin')],
-                 "hg cat-file [options] type file"),
-    "git-merge-base": (base, [], "hg git-merge-base node node"),
-    "git-rev-list": (revlist, [('H', 'header', None, 'header'),
+    "debug-cat-file": (catfile, [('s', 'stdin', None, 'stdin')],
+                 "hg debug-cat-file [options] type file"),
+    "debug-merge-base": (base, [], "hg debug-merge-base node node"),
+    "debug-rev-list": (revlist, [('H', 'header', None, 'header'),
                            ('t', 'topo-order', None, 'topo-order'),
                            ('p', 'parents', None, 'parents'),
                            ('n', 'max-count', 0, 'max-count')],
-                 "hg git-rev-list [options] revs"),
+                 "hg debug-rev-list [options] revs"),
 }
 
 def reposetup(ui, repo):

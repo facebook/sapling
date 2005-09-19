@@ -34,7 +34,7 @@ proc getcommits {rargs} {
     set ncmupdate 1
     if [catch {
 	set parse_args [concat --default HEAD $rargs]
-	set parsed_args [split [eval exec hg git-rev-parse $parse_args] "\n"]
+	set parsed_args [split [eval exec hg debug-rev-parse $parse_args] "\n"]
     }] {
 	# if git-rev-parse failed for some reason...
 	if {$rargs == {}} {
@@ -43,9 +43,9 @@ proc getcommits {rargs} {
 	set parsed_args $rargs
     }
     if [catch {
-	set commfd [open "|hg git-rev-list --header --topo-order --parents $parsed_args" r]
+	set commfd [open "|hg debug-rev-list --header --topo-order --parents $parsed_args" r]
     } err] {
-	puts stderr "Error executing hg git-rev-list: $err"
+	puts stderr "Error executing hg debug-rev-list: $err"
 	exit 1
     }
     set leftover {}
@@ -113,7 +113,7 @@ to allow selection of commits to be displayed.)}
 	    if {[string length $shortcmit] > 80} {
 		set shortcmit "[string range $shortcmit 0 80]..."
 	    }
-	    error_popup "Can't parse hg git-rev-list output: {$shortcmit}"
+	    error_popup "Can't parse hg debug-rev-list output: {$shortcmit}"
 	    exit 1
 	}
 	set id [lindex $ids 0]
@@ -164,7 +164,7 @@ proc doupdate {reading} {
 }
 
 proc readcommit {id} {
-    if [catch {set contents [exec hg git-cat-file commit $id]}] return
+    if [catch {set contents [exec hg debug-cat-file commit $id]}] return
     parsecommit $id $contents 0 {}
 }
 
@@ -1708,7 +1708,7 @@ proc findpatches {} {
     }
 
     if {[catch {
-	set f [open [list | hg git-diff-tree --stdin -s -r -S$findstring \
+	set f [open [list | hg debug-diff-tree --stdin -s -r -S$findstring \
 			 << $inputids] r]
     } err]} {
 	error_popup "Error starting search process: $err"
@@ -1811,7 +1811,7 @@ proc findfiles {} {
     # start off a git-diff-tree process if needed
     if {$diffsneeded ne {}} {
 	if {[catch {
-	    set df [open [list | hg git-diff-tree -r --stdin << $diffsneeded] r]
+	    set df [open [list | hg debug-diff-tree -r --stdin << $diffsneeded] r]
 	} err ]} {
 	    error_popup "Error starting search process: $err"
 	    return
@@ -1843,7 +1843,7 @@ proc readfilediffs {df} {
 	    if {[catch {close $df} err]} {
 		stopfindproc
 		bell
-		error_popup "Error in hg git-diff-tree: $err"
+		error_popup "Error in hg debug-diff-tree: $err"
 	    } elseif {[info exists findids]} {
 		set ids $findids
 		stopfindproc
@@ -2232,7 +2232,7 @@ proc findgca {ids} {
 	    set gca $id
 	} else {
 	    if {[catch {
-		set gca [exec hg git-merge-base $gca $id]
+		set gca [exec hg debug-merge-base $gca $id]
 	    } err]} {
 		return {}
 	    }
@@ -2320,7 +2320,7 @@ proc showmergediff {} {
     catch {unset grouphunks}
     set groupfilelast -1
     foreach p $parents($diffmergeid) {
-	set cmd [list | hg git-diff-tree -p $p $diffmergeid]
+	set cmd [list | hg debug-diff-tree -p $p $diffmergeid]
 	set cmd [concat $cmd $mergefilelist($diffmergeid)]
 	if {[catch {set f [open $cmd r]} err]} {
 	    error_popup "Error getting diffs: $err"
@@ -2764,7 +2764,7 @@ proc gettreediffs {ids} {
     set treediff {}
     set id [lindex $ids 0]
     set p [lindex $ids 1]
-    if [catch {set gdtf [open "|hg git-diff-tree -r $p $id" r]}] return
+    if [catch {set gdtf [open "|hg debug-diff-tree -r $p $id" r]}] return
     fconfigure $gdtf -blocking 0
     fileevent $gdtf readable [list gettreediffline $gdtf $ids]
 }
@@ -2800,7 +2800,7 @@ proc getblobdiffs {ids} {
     set id [lindex $ids 0]
     set p [lindex $ids 1]
     set env(GIT_DIFF_OPTS) $diffopts
-    set cmd [list | hg git-diff-tree -r -p -C $p $id]
+    set cmd [list | hg debug-diff-tree -r -p -C $p $id]
     if {[catch {set bdf [open $cmd r]} err]} {
 	puts "error getting diffs: $err"
 	return
@@ -3387,7 +3387,7 @@ proc mkpatchgo {} {
     set oldid [$patchtop.fromsha1 get]
     set newid [$patchtop.tosha1 get]
     set fname [$patchtop.fname get]
-    if {[catch {exec hg git-diff-tree -p $oldid $newid >$fname &} err]} {
+    if {[catch {exec hg debug-diff-tree -p $oldid $newid >$fname &} err]} {
 	error_popup "Error creating patch: $err"
     }
     catch {destroy $patchtop}
@@ -3608,7 +3608,7 @@ proc doquit {} {
 set datemode 0
 set boldnames 0
 set diffopts "-U 5 -p"
-set wrcomcmd "hg git-diff-tree --stdin -p --pretty"
+set wrcomcmd "hg debug-diff-tree --stdin -p --pretty"
 
 set mainfont {Helvetica 9}
 set textfont {Courier 9}
