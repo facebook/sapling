@@ -139,20 +139,24 @@ cat [options] <file ...>::
     -o, --output <filespec>   print output to file with formatted name
     -r, --rev <rev>           print the given revision
 
-clone [-U] <source> [dest]::
+clone [options] <source> [dest]::
     Create a copy of an existing repository in a new directory.
 
     If no destination directory name is specified, it defaults to the
     basename of the source.
 
-    The source is added to the new repository's .hg/hgrc file to be used in
-    future pulls.
+    The location of the source is added to the new repository's
+    .hg/hgrc file, as the default to be used for future pulls.
 
-    For efficiency, hardlinks are used for cloning whenever the
-    source and destination are on the same filesystem.
+    For efficiency, hardlinks are used for cloning whenever the source
+    and destination are on the same filesystem.  Some filesystems,
+    such as AFS, implement hardlinking incorrectly, but do not report
+    errors.  In these cases, use the --pull option to avoid
+    hardlinking.
 
     options:
     -U, --noupdate   do not update the new working directory
+    --pull           use pull protocol to copy metadata
     -e, --ssh        specify ssh command to use
     --remotecmd      specify hg command to run on the remote side
 
