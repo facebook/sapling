@@ -956,7 +956,12 @@ class localrepository:
             if not d: return ""
             l = struct.unpack(">l", d)[0]
             if l <= 4: return ""
-            return source.read(l - 4)
+            d = source.read(l - 4)
+            if len(d) < l - 4:
+                raise repo.RepoError("premature EOF reading chunk" +
+                                     " (got %d bytes, expected %d)"
+                                     % (len(d), l - 4))
+            return d
 
         def getgroup():
             while 1:
