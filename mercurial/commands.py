@@ -629,7 +629,7 @@ def clone(ui, source, dest=None, **opts):
     other = hg.repository(ui, source)
 
     copy = False
-    if other.dev() != -1:
+    if not opts['pull'] and other.dev() != -1:
         abspath = os.path.abspath(source)
         copy = True
 
@@ -1782,6 +1782,7 @@ table = {
         (clone,
          [('U', 'noupdate', None, 'skip update after cloning'),
           ('e', 'ssh', "", 'ssh command'),
+          ('', 'pull', None, 'use pull protocol to copy metadata'),
           ('', 'remotecmd', "", 'remote hg command')],
          'hg clone [OPTION]... SOURCE [DEST]'),
     "^commit|ci":
