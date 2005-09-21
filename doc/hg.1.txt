@@ -202,7 +202,7 @@ copy <source ...> <dest>::
     -X, --exclude <pat>   exclude names matching the given patterns
     -f, --force           forcibly copy over an existing managed file
     -p, --parents         append source path to dest
-    
+
     aliases: cp
 
 diff [-a] [-r revision] [-r revision] [files ...]::

@@ -10,7 +10,7 @@ hg commit -m "a" -u a -d "0 0"
 cd ..
 mkdir b
 cd b
-hg init 
+hg init
 echo 321 > b
 hg add b
 hg commit -m "b" -u b -d "0 0"

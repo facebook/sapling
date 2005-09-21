@@ -45,7 +45,7 @@ def patch(strip, patchname, ui):
     if code:
         raise Abort("patch command failed: exit status %s " % code)
     return files.keys()
-    
+
 def binary(s):
     """return true if a string is binary data using diff's heuristic"""
     if s and '\0' in s[:4096]:
@@ -470,7 +470,7 @@ class chunkbuffer(object):
 
     def read(self, l):
         """Read L bytes of data from the iterator of chunks of data.
-	Returns less than L bytes if the iterator runs dry."""
+        Returns less than L bytes if the iterator runs dry."""
         if l > len(self.buf) and not self.iterempty:
             # Clamp to a multiple of self.targetsize
             targetsize = self.targetsize * ((l // self.targetsize) + 1)

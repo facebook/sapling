@@ -2113,7 +2113,7 @@ proc selectline {l isnew} {
 	}
 	$ctext insert end "\n"
     }
- 
+
     set comment {}
     if {[info exists parents($id)]} {
 	foreach p $parents($id) {

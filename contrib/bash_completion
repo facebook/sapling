@@ -3,10 +3,10 @@
 _hg_commands()
 {
     local commands="$(hg -v help | sed -e '1,/^list of commands:/d' \
-                                       -e '/^global options:/,$d' \
+				       -e '/^global options:/,$d' \
 				       -e '/^ [^ ]/!d; s/[,:]//g;')"
-    
-    # hide debug commands from users, but complete them if 
+
+    # hide debug commands from users, but complete them if
     # specifically asked for
     if [[ "$cur" == de* ]]; then
 	commands="$commands debugcheckstate debugstate debugindex"
@@ -62,7 +62,7 @@ _hg()
     cur="$2"
     prev="$3"
 
-    # searching for the command 
+    # searching for the command
     # (first non-option argument that doesn't follow a global option that
     #  receives an argument)
     for (( i=1; $i<=$COMP_CWORD; i++ )); do
@@ -160,7 +160,7 @@ _hg()
 		COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -- "$cur" ))
 	    fi
 	;;
-	*) 
+	*)
             COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -- "$cur" ))
 	;;
     esac

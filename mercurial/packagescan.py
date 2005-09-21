@@ -1,4 +1,4 @@
-# packagescan.py - Helper module for identifing used modules. 
+# packagescan.py - Helper module for identifing used modules.
 # Used for the py2exe distutil.
 #
 # Copyright 2005 Volker Kleinfeld <Volker.Kleinfeld@gmx.de>
@@ -26,9 +26,9 @@ def getmodules(libpath,packagename):
     libpath = os.path.abspath(libpath)
     sys.path.insert(0,libpath)
     packdir = os.path.join(libpath,packagename)
-    # A normal import would not find the package in 
+    # A normal import would not find the package in
     # the build directory. ihook is used to force the import.
-    # After the package is imported the import scope for 
+    # After the package is imported the import scope for
     # the following imports is settled.
     p = importfrom(packdir)
     globals()[packagename] = p
@@ -46,7 +46,7 @@ def getmodules(libpath,packagename):
         if m == '__init__.py': continue
         tmp = {}
         mname,ext = os.path.splitext(m)
-        fullname = packagename+'.'+mname 
+        fullname = packagename+'.'+mname
         __import__(fullname,tmp,tmp)
         requiredmodules[fullname] = 1
     # Import all extension modules and by that run the fake demandload

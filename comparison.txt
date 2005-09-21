@@ -3,7 +3,7 @@ storage             revlog delta   compressed revisions    SCCS weave
 storage naming      by filename    by revision hash        by filename
 merge               file DAGs      changeset DAG           file DAGs?
 consistency         SHA1           SHA1                    CRC
-signable?           yes            yes                     no       
+signable?           yes            yes                     no
 
 retrieve file tip   O(1)           O(1)                    O(revs)
 add rev             O(1)           O(1)                    O(revs)

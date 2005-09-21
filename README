@@ -63,7 +63,7 @@ Importing patches:
  $ hg commit `lsdiff -p1 ../p/foo.patch`
 
  Fastest:
- $ cat ../p/patchlist | xargs hg import -p1 -b ../p 
+ $ cat ../p/patchlist | xargs hg import -p1 -b ../p
 
 Exporting a patch:
 
@@ -76,12 +76,12 @@ Exporting a patch:
 Network support:
 
  # pull from the primary Mercurial repo
- foo$ hg clone http://selenic.com/hg/ 
+ foo$ hg clone http://selenic.com/hg/
  foo$ cd hg
 
  # export your current repo via HTTP with browsable interface
  foo$ hg serve -n "My repo" -p 80
- 
+
  # pushing changes to a remote repo with SSH
  foo$ hg push ssh://user@example.com/~/hg/
 

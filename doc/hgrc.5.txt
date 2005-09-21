@@ -61,7 +61,7 @@ This section describes the different sections that may appear in a
 Mercurial "hgrc" file, the purpose of each section, its possible
 keys, and their possible values.
 
-decode/encode:: 
+decode/encode::
   Filters for transforming files on checkout/checkin. This would
   typically be used for newline processing or other
   localization/canonicalization of files.

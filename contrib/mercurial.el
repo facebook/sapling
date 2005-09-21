@@ -262,7 +262,7 @@ repository-related commands."
   'hg-commit-mouse-clicked)
 (define-key hg-commit-mode-file-map " " 'hg-commit-toggle-file)
 (define-key hg-commit-mode-file-map "\r" 'hg-commit-toggle-file)
-  
+
 
 ;;; Convenience functions.
 
@@ -327,7 +327,7 @@ all buffers visiting files in the repository."
 	  (vc-buffer-sync))
       (hg-do-across-repo path
 	(vc-buffer-sync)))))
-  
+
 (defun hg-buffer-commands (pnt)
   "Use the properties of a character to do something sensible."
   (interactive "d")
@@ -402,7 +402,7 @@ Each key is of the form (section . name)."
 	     (key (split-string left "\\."))
 	     (value (hg-replace-in-string right "\\\\n" "\n" t)))
 	(setq items (cons (cons (cons (car key) (cadr key)) value) items))))))
-  
+
 (defun hg-config-section (section config)
   "Return an alist of (name . value) pairs for SECTION of CONFIG."
   (let (items)
@@ -522,7 +522,7 @@ current frame."
   (when file-name
     (set (make-local-variable 'hg-view-file-name)
 	 (hg-abbrev-file-name file-name))))
-  
+
 (defun hg-file-status (file)
   "Return status of FILE, or nil if FILE does not exist or is unmanaged."
   (let* ((s (hg-run "status" file))
@@ -591,7 +591,7 @@ to have moved a little, but not really changed."
 	(mark-context (let ((mark (mark-marker)))
 			(and mark (hg-position-context mark)))))
     (list point-context mark-context)))
-	
+
 (defun hg-find-context (ctx)
   "Attempt to find a context in the given buffer.
 Always returns a valid, hopefully sane, position."
@@ -740,7 +740,7 @@ With a prefix argument, prompt for the path to add."
 	(add-text-properties bol (point) '(face bold))
 	(message "%s will be committed"
 		 (buffer-substring bol (point)))))))
-	
+
 (defun hg-commit-mouse-clicked (event)
   "Toggle whether or not the file at POS will be committed."
   (interactive "@e")
@@ -927,7 +927,7 @@ With a prefix argument, prompt for the path to forget."
     (when update
       (with-current-buffer buf
 	(hg-mode-line)))))
-  
+
 (defun hg-incoming (&optional repo)
   "Display changesets present in REPO that are not present locally."
   (interactive (list (hg-read-repo-name " where changes would come from")))
