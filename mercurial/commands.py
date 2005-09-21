@@ -1173,18 +1173,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             message = "%s\n" % '\n'.join(message)
         ui.debug('message:\n%s\n' % message)
 
-        f = os.popen("patch -p%d < '%s'" % (strip, pf))
-        files = []
-        for l in f.read().splitlines():
-            l.rstrip('\r\n');
-            ui.status("%s\n" % l)
-            if l.startswith('patching file '):
-                pf = l[14:]
-                if pf not in files:
-                    files.append(pf)
-        patcherr = f.close()
-        if patcherr:
-            raise util.Abort("patch failed")
+        files = util.patch(strip, pf, ui)
 
         if len(files) > 0:
             addremove(ui, repo, *files)

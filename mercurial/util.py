@@ -30,6 +30,22 @@ def filter(s, cmd):
     w.join()
     return f
 
+def patch(strip, patchname, ui):
+    """apply the patch <patchname> to the working directory.
+    a list of patched files is returned"""
+    fp = os.popen('patch -p%d < "%s"' % (strip, patchname))
+    files = {}
+    for line in fp:
+        line = line.rstrip()
+        ui.status("%s\n" % line)
+        if line.startswith('patching file '):
+            pf = parse_patch_output(line)
+            files.setdefault(pf, 1)
+    code = fp.close()
+    if code:
+        raise Abort("patch command failed: exit status %s " % code)
+    return files.keys()
+    
 def binary(s):
     """return true if a string is binary data using diff's heuristic"""
     if s and '\0' in s[:4096]:
@@ -315,6 +331,13 @@ else:
 if os.name == 'nt':
     nulldev = 'NUL:'
 
+    def parse_patch_output(output_line):
+        """parses the output produced by patch and returns the file name"""
+        pf = output_line[14:]
+        if pf[0] == '`':
+            pf = pf[1:-1] # Remove the quotes
+        return pf
+
     try: # ActivePython can create hard links using win32file module
         import win32file
 
@@ -359,6 +382,10 @@ if os.name == 'nt':
 
 else:
     nulldev = '/dev/null'
+
+    def parse_patch_output(output_line):
+        """parses the output produced by patch and returns the file name"""
+        return output_line[14:]
 
     def is_exec(f, last):
         """check whether a file is executable"""
