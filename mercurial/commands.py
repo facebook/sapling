@@ -902,11 +902,12 @@ def debugwalk(ui, repo, *pats, **opts):
     items = list(walk(repo, pats, opts))
     if not items:
         return
-    fmt = '%%s  %%-%ds  %%-%ds  %%s\n' % (
+    fmt = '%%s  %%-%ds  %%-%ds  %%s' % (
         max([len(abs) for (src, abs, rel, exact) in items]),
         max([len(rel) for (src, abs, rel, exact) in items]))
     for src, abs, rel, exact in items:
-        ui.write(fmt % (src, abs, rel, exact and 'exact' or ''))
+        line = fmt % (src, abs, rel, exact and 'exact' or '')
+        ui.write("%s\n" % line.rstrip())
 
 def diff(ui, repo, *pats, **opts):
     """diff working directory (or selected files)"""
