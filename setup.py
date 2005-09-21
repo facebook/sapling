@@ -64,7 +64,7 @@ try:
           url='http://selenic.com/mercurial',
           description='scalable distributed SCM',
           license='GNU GPL',
-          packages=['mercurial', 'mercurial.ext'],
+          packages=['mercurial', 'hgext'],
           ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
                        Extension('mercurial.bdiff', ['mercurial/bdiff.c'])],
           data_files=[('mercurial/templates',
