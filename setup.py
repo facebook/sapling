@@ -36,6 +36,8 @@ try:
                 self.includes = []
             self.includes += mercurial.packagescan.getmodules(self.build_lib,
                                                               'mercurial')
+            self.includes += mercurial.packagescan.getmodules(self.build_lib,
+                                                              'hgext')
             build_exe.finalize_options(self)
 except ImportError:
     py2exe_for_demandload = None
