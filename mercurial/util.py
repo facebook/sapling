@@ -45,7 +45,7 @@ def patch(strip, patchname, ui):
     if code:
         raise Abort("patch command failed: exit status %s " % code)
     return files.keys()
-    
+
 def binary(s):
     """return true if a string is binary data using diff's heuristic"""
     if s and '\0' in s[:4096]:
@@ -331,6 +331,9 @@ else:
 if os.name == 'nt':
     nulldev = 'NUL:'
 
+    rcpath = (r'c:\mercurial\mercurial.ini',
+              os.path.join(os.path.expanduser('~'), 'mercurial.ini'))
+
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
         pf = output_line[14:]
@@ -382,6 +385,9 @@ if os.name == 'nt':
 
 else:
     nulldev = '/dev/null'
+
+    rcpath = map(os.path.normpath,
+                 ('/etc/mercurial/hgrc', os.path.expanduser('~/.hgrc')))
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
