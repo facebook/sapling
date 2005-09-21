@@ -36,7 +36,8 @@ try:
                 self.includes = []
             self.includes += mercurial.packagescan.getmodules(self.build_lib,'mercurial')
             build_exe.finalize_options(self)
-except ImportError: pass
+except ImportError:
+    py2exe_for_demandload = None
 
 
 # specify version string, otherwise 'hg identify' will be used:
@@ -50,6 +51,9 @@ class install_package_data(install_data):
 
 try:
     mercurial.version.remember_version(version)
+    cmdclass = {'install_data': install_package_data}
+    if py2exe_for_demandload is not None:
+        cmdclass['py2exe'] = py2exe_for_demandload
     setup(name='mercurial',
           version=mercurial.version.get_version(),
           author='Matt Mackall',
@@ -64,8 +68,7 @@ try:
                        ['templates/map'] +
                        glob.glob('templates/map-*') +
                        glob.glob('templates/*.tmpl'))],
-          cmdclass = { 'install_data' : install_package_data,
-                       'py2exe' : py2exe_for_demandload},
+          cmdclass=cmdclass,
           scripts=['hg', 'hgmerge'],
           console = ['hg'])
 finally:
