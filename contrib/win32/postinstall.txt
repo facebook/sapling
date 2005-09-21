@@ -10,6 +10,29 @@ Release Notes
 
 2005-09-21  v0.7 with modifications
 
-This is the first standalone release of Mercurial for Windows.  I
-believe it to be mostly functional, with one exception: there is no
-support yet for DOS <-> Unix line ending conversion.
+* New INI files have been added to control Mercurial's behaviour:
+
+    System-wide -  C:\Mercurial\Mercurial.ini
+    Per-user    -  C:\Documents and Settings\USERNAME\Mercurial.ini
+
+  A default version of the system-wide INI file is installed with
+  Mercurial.  No per-user INI file is installed, but it will be
+  honoured if you create one.
+
+* Windows line endings are now handled automatically and correctly by
+  the update and commit commands.  See the INI file for how to
+  customise this behaviour.
+
+* NOTE: Much of the rest of the Mercurial code does not handle Windows
+  line endings properly.  Accordingly, the output of the diff command,
+  for example, will appear huge until I fix this.
+
+* Packaged text files now have correct Windows line endings.
+
+
+2005-09-21  v0.7 with modifications
+
+* This is the first standalone release of Mercurial for Windows.
+
+* I believe it to be mostly functional, with one exception: there is
+  no support yet for DOS <-> Unix line ending conversion.
