@@ -1,0 +1,43 @@
+The standalone Windows installer for Mercurial is built in a somewhat
+jury-rigged fashion.
+
+It has the following prerequisites, at least as I build it:
+
+  Python for Windows
+      http://www.python.org/ftp/python/2.4.1/python-2.4.1.msi
+
+  MinGW
+      http://www.mingw.org/
+
+  Python for Windows Extensions
+      http://sourceforge.net/projects/pywin32/
+
+  mfc71.dll (just download, don't install)
+      http://starship.python.net/crew/mhammond/win32/
+
+  The py2exe distutils extension
+      http://sourceforge.net/projects/py2exe/
+
+  Inno Setup
+      http://www.jrsoftware.org/isinfo.php
+
+  ISTool
+      http://www.istool.org/default.aspx/
+
+And, of course, Mercurial itself.
+
+Once you have all this installed and built, clone a copy of the
+Mercurial repository you want to package, and name the repo
+C:\hg\hg-release.
+
+In a shell, build a standalone copy of the hg.exe program:
+
+  python setup.py build -c mingw32 py2exe -b 1
+
+Copy mfc71.dll into the dist directory that just got created.
+
+Run ISTool, and open the C:\hg\hg-release\contrib\win32\mercurial.iss
+file.
+
+In ISTool, type Ctrl-F9 to compile the installer file.  The actual
+installer will be in the C:\hg\hg-release\Output directory.
