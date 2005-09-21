@@ -44,6 +44,7 @@ Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: ..\..\msys\1.0\bin\patch.exe; DestDir: {app}
 Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Flags: confirmoverwrite
+Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
 
 [INI]
 Filename: {app}\Mercurial.url; Section: InternetShortcut; Key: URL; String: http://www.selenic.com/mercurial/
