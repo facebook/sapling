@@ -67,19 +67,52 @@ decode/encode::
   localization/canonicalization of files.
 
   Filters consist of a filter pattern followed by a filter command.
-  The command must accept data on stdin and return the transformed
-  data on stdout.
+  Filter patterns are globs by default, rooted at the repository
+  root.  For example, to match any file ending in ".txt" in the root
+  directory only, use the pattern "*.txt".  To match any file ending
+  in ".c" anywhere in the repository, use the pattern "**.c".
 
-  Example:
+  The filter command can start with a specifier, either "pipe:" or
+  "tempfile:".  If no specifier is given, "pipe:" is used by default.
+
+  A "pipe:" command must accept data on stdin and return the
+  transformed data on stdout.
+
+  Pipe example:
 
     [encode]
     # uncompress gzip files on checkin to improve delta compression
     # note: not necessarily a good idea, just an example
-    *.gz = gunzip
+    *.gz = pipe: gunzip
 
     [decode]
-    # recompress gzip files when writing them to the working dir
+    # recompress gzip files when writing them to the working dir (we
+    # can safely omit "pipe:", because it's the default)
     *.gz = gzip
+
+  A "tempfile:" command is a template.  The string INFILE is replaced
+  with the name of a temporary file that contains the data to be
+  filtered by the command.  The string OUTFILE is replaced with the
+  name of an empty temporary file, where the filtered data must be
+  written by the command.
+
+  NOTE: the tempfile mechanism is recommended for Windows systems,
+  where the standard shell I/O redirection operators often have
+  strange effects.  In particular, if you are doing line ending
+  conversion on Windows using the popular dos2unix and unix2dos
+  programs, you *must* use the tempfile mechanism, as using pipes will
+  corrupt the contents of your files.
+
+  Tempfile example:
+
+    [encode]
+    # convert files to unix line ending conventions on checkin
+    **.txt = tempfile: dos2unix -n INFILE OUTFILE
+
+    [decode]
+    # convert files to windows line ending conventions when writing
+    # them to the working dir
+    **.txt = tempfile: unix2dos -n INFILE OUTFILE
 
 hooks::
   Commands that get automatically executed by various actions such as

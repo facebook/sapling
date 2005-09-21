@@ -12,10 +12,10 @@ platform-specific details from the core.
 
 import os, errno
 from demandload import *
-demandload(globals(), "re cStringIO shutil popen2 threading")
+demandload(globals(), "re cStringIO shutil popen2 tempfile threading")
 
-def filter(s, cmd):
-    "filter a string through a command that transforms its input to its output"
+def pipefilter(s, cmd):
+    '''filter string S through command CMD, returning its output'''
     (pout, pin) = popen2.popen2(cmd, -1, 'b')
     def writer():
         pin.write(s)
@@ -30,6 +30,45 @@ def filter(s, cmd):
     w.join()
     return f
 
+def tempfilter(s, cmd):
+    '''filter string S through a pair of temporary files with CMD.
+    CMD is used as a template to create the real command to be run,
+    with the strings INFILE and OUTFILE replaced by the real names of
+    the temporary files generated.'''
+    inname, outname = None, None
+    try:
+        infd, inname = tempfile.mkstemp(prefix='hgfin')
+        fp = os.fdopen(infd, 'wb')
+        fp.write(s)
+        fp.close()
+        outfd, outname = tempfile.mkstemp(prefix='hgfout')
+        os.close(outfd)
+        cmd = cmd.replace('INFILE', inname)
+        cmd = cmd.replace('OUTFILE', outname)
+        code = os.system(cmd)
+        if code: raise Abort("command '%s' failed: %s" %
+                             (cmd, explain_exit(code)))
+        return open(outname, 'rb').read()
+    finally:
+        try:
+            if inname: os.unlink(inname)
+        except: pass
+        try:
+            if outname: os.unlink(outname)
+        except: pass
+
+filtertable = {
+    'tempfile:': tempfilter,
+    'pipe:': pipefilter,
+    }
+
+def filter(s, cmd):
+    "filter a string through a command that transforms its input to its output"
+    for name, fn in filtertable.iteritems():
+        if cmd.startswith(name):
+            return fn(s, cmd[len(name):].lstrip())
+    return pipefilter(s, cmd)
+
 def patch(strip, patchname, ui):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
@@ -43,7 +82,7 @@ def patch(strip, patchname, ui):
             files.setdefault(pf, 1)
     code = fp.close()
     if code:
-        raise Abort("patch command failed: exit status %s " % code)
+        raise Abort("patch command failed: %s" % explain_exit(code))
     return files.keys()
 
 def binary(s):
