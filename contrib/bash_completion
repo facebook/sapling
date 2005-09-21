@@ -1,5 +1,7 @@
 #!/bin/bash
 
+shopt -s extglob
+
 _hg_commands()
 {
     local commands="$(hg -v help | sed -e '1,/^list of commands:/d' \
