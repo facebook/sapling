@@ -11,6 +11,34 @@ from distutils.command.install_data import install_data
 
 import mercurial.version
 
+# py2exe needs to be installed to work
+try:
+    import py2exe 
+
+    # Due to the use of demandload py2exe is not finding the modules.
+    # packagescan.getmodules creates a list of modules included in 
+    # the mercurial package plus depdent modules.
+    import mercurial.packagescan 
+    from py2exe.build_exe import py2exe as build_exe 
+
+    class py2exe_for_demandload(build_exe):
+        """ overwrites the py2exe command class for getting the build
+        directory and for setting the 'includes' option."""
+        def initialize_options(self):
+            self.build_lib = None
+            build_exe.initialize_options(self)
+        def finalize_options(self):
+            # Get the build directory, ie. where to search for modules.
+            self.set_undefined_options('build',
+                                       ('build_lib', 'build_lib'))
+            # Sets the 'includes' option with the list of needed modules
+            if not self.includes:
+                self.includes = []
+            self.includes += mercurial.packagescan.getmodules(self.build_lib,'mercurial')
+            build_exe.finalize_options(self)
+except ImportError: pass
+
+
 # specify version string, otherwise 'hg identify' will be used:
 version = ''
 
@@ -36,7 +64,9 @@ try:
                        ['templates/map'] +
                        glob.glob('templates/map-*') +
                        glob.glob('templates/*.tmpl'))],
-          cmdclass = { 'install_data' : install_package_data },
-          scripts=['hg', 'hgmerge'])
+          cmdclass = { 'install_data' : install_package_data,
+                       'py2exe' : py2exe_for_demandload},
+          scripts=['hg', 'hgmerge'],
+          console = ['hg'])
 finally:
     mercurial.version.forget_version()
