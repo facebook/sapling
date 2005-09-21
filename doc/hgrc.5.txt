@@ -15,18 +15,22 @@ aspects of its behaviour.
 FILES
 -----
 
-Mercurial reads configuration data from three files:
+Mercurial reads configuration data from up to three files, if they
+exist.  The names of these files depend on the system on which
+Mercurial is installed.
 
-/etc/mercurial/hgrc::
+(Unix)    /etc/mercurial/hgrc::
+(Windows) C:\Mercurial\Mercurial.ini::
     Options in this global configuration file apply to all Mercurial
     commands executed by any user in any directory.
 
-$HOME/.hgrc::
+(Unix)    $HOME/.hgrc::
+(Windows) C:\Documents and Settings\USERNAME\Mercurial.ini
     Per-user configuration options that apply to all Mercurial commands,
     no matter from which directory they are run.  Values in this file
     override global settings.
 
-<repo>/.hg/hgrc::
+(Unix, Windows) <repo>/.hg/hgrc::
     Per-repository configuration options that only apply in a
     particular repository.  This file is not version-controlled, and
     will not get transferred during a "clone" operation.  Values in
