@@ -2053,10 +2053,11 @@ def dispatch(args):
             mod = importh(x[0])
         external.append(mod)
     for x in external:
-        for t in x.cmdtable:
+        cmdtable = getattr(x, 'cmdtable', {})
+        for t in cmdtable:
             if t in table:
-                u.warn("module %s override %s\n" % (x.__name__, t))
-        table.update(x.cmdtable)
+                u.warn("module %s overrides %s\n" % (x.__name__, t))
+        table.update(cmdtable)
 
     try:
         cmd, func, args, options, cmdoptions = parse(args)
@@ -2116,7 +2117,7 @@ def dispatch(args):
                 path = options["repository"] or ""
                 repo = hg.repository(ui=u, path=path)
                 for x in external:
-                    x.reposetup(u, repo)
+                    if hasattr(x, 'reposetup'): x.reposetup(u, repo)
                 d = lambda: func(u, repo, *args, **cmdoptions)
             else:
                 d = lambda: func(u, *args, **cmdoptions)
