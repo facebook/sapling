@@ -853,7 +853,10 @@ def debugstate(ui, repo):
 def debugdata(ui, file_, rev):
     """dump the contents of an data file revision"""
     r = revlog.revlog(file, file_[:-2] + ".i", file_)
-    ui.write(r.revision(r.lookup(rev)))
+    try:
+        ui.write(r.revision(r.lookup(rev)))
+    except KeyError:
+        raise util.Abort('invalid revision identifier %s', rev)
 
 def debugindex(ui, file_):
     """dump the contents of an index file"""
