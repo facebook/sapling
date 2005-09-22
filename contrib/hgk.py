@@ -86,7 +86,7 @@ def difftree(ui, repo, node1=None, node2=None, **opts):
 
         for f in c:
             # TODO get file permissions
-            print ":100664 100664 %s %s M\t%s\t%s" % (hg.hex(mmap[f]), 
+            print ":100664 100664 %s %s M\t%s\t%s" % (hg.hex(mmap[f]),
                                                       hg.hex(mmap2[f]), f, f)
         for f in a:
             print ":000000 100664 %s %s N\t%s\t%s" % (empty, hg.hex(mmap2[f]), f, f)
@@ -137,7 +137,7 @@ def catcommit(repo, n, prefix, changes=None):
         committer = lines[-1].split(': ')[1].rstrip()
     else:
         committer = "%s %s %s" % (changes[1], date, date_ar[1])
-        
+
     print "author %s %s %s" % (changes[1], date, date_ar[1])
     print "committer %s" % (committer)
     print ""
@@ -220,7 +220,7 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
                     yield (i + x, full != None and l[x] or None)
             if i == 0:
                 break
-            
+
     # calculate and return the reachability bitmask for sha
     def is_reachable(ar, reachable, sha):
         if len(ar) == 0:

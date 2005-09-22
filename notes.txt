@@ -91,7 +91,7 @@ need to be added, deleted, and merged.
 
 Then for each file, we perform a graph merge and resolve as above.
 It's important to merge files using per-file DAGs rather than just
-changeset level DAGs as this diagram illustrates: 
+changeset level DAGs as this diagram illustrates:
 
 M   M1   M2
 

@@ -515,7 +515,7 @@ class chunkbuffer(object):
 
     def read(self, l):
         """Read L bytes of data from the iterator of chunks of data.
-	Returns less than L bytes if the iterator runs dry."""
+        Returns less than L bytes if the iterator runs dry."""
         if l > len(self.buf) and not self.iterempty:
             # Clamp to a multiple of self.targetsize
             targetsize = self.targetsize * ((l // self.targetsize) + 1)

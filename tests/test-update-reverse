@@ -13,7 +13,7 @@ hg checkout 0
 echo Main should be gone
 ls
 
-touch side1 
+touch side1
 hg add side1
 hg commit -m "Added side1" -d "0 0"
 touch side2

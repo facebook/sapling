@@ -685,7 +685,7 @@ class hgweb:
                 encoding = "gzip"
             else:
                 encoding = "x-bzip2"
-            req.header([('Content-type', 'application/x-tar'), 
+            req.header([('Content-type', 'application/x-tar'),
                     ('Content-disposition', 'attachment; filename=%s%s%s' %
                         (name[:-1], '.tar.', type)),
                     ('Content-encoding', encoding)])
