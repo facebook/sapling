@@ -122,10 +122,12 @@ hooks::
   Commands that get automatically executed by various actions such as
   starting or finishing a commit.
   changegroup;;
-    Run after a changegroup has been added via push or pull.
+    Run after a changegroup has been added via push or pull. Passed
+    the ID of the first new changeset in $NODE.
   commit;;
-    Run after a changeset has been created. Passed the ID of the newly
-    created changeset.
+    Run after a changeset has been created or for each changeset
+    pulled. Passed the ID of the newly created changeset in
+    environment variable $NODE.
   precommit;;
     Run before starting a commit.  Exit status 0 allows the commit to
     proceed.  Non-zero status will cause the commit to fail.

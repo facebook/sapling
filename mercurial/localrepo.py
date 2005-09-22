@@ -987,7 +987,8 @@ class localrepository:
         self.ui.status("adding changesets\n")
         co = self.changelog.tip()
         cn = self.changelog.addgroup(getgroup(), csmap, tr, 1) # unique
-        changesets = self.changelog.rev(cn) - self.changelog.rev(co)
+        cnr, cor = map(self.changelog.rev, (cn, co))
+        changesets = cnr - cor
 
         # pull off the manifest group
         self.ui.status("adding manifests\n")
@@ -1017,8 +1018,12 @@ class localrepository:
 
         tr.close()
 
-        if not self.hook("changegroup"):
+        if not self.hook("changegroup", node=hex(self.changelog.node(cor+1))):
+            self.ui.warn("abort: changegroup hook returned failure!\n")
             return 1
+
+        for i in range(cor + 1, cnr + 1):
+            self.hook("commit", node=hex(self.changelog.node(i)))
 
         return
 
