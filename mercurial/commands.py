@@ -1189,7 +1189,6 @@ def incoming(ui, repo, source="default", **opts):
     if not o:
         return
     o = other.newer(o)
-    o.reverse()
     for n in o:
         show_changeset(ui, other, changenode=n)
         if opts['patch']:
@@ -1286,7 +1285,6 @@ def outgoing(ui, repo, dest="default-push", **opts):
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other)
     o = repo.newer(o)
-    o.reverse()
     for n in o:
         show_changeset(ui, repo, changenode=n)
         if opts['patch']:
