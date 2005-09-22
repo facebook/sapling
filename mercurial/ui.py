@@ -14,8 +14,7 @@ class ui:
                  interactive=True):
         self.overlay = {}
         self.cdata = ConfigParser.SafeConfigParser()
-        self.cdata.read([os.path.normpath(hgrc) for hgrc in
-                         "/etc/mercurial/hgrc", os.path.expanduser("~/.hgrc")])
+        self.cdata.read(util.rcpath)
 
         self.quiet = self.configbool("ui", "quiet")
         self.verbose = self.configbool("ui", "verbose")

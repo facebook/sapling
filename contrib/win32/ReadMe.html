@@ -1,0 +1,123 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>Mercurial for Windows</title>
+  </head>
+
+  <body>
+    <h1>Mercurial version 0.7 for Windows</h1>
+
+    <p>Welcome to Mercurial for Windows!</p>
+
+    <p>Mercurial is a command-line application.  You must run it from
+      the Windows command prompt (or if you're hard core, a <a
+      href="http://www.mingw.org/">MinGW</a> shell).</p>
+
+    <p>For documentation, please visit the <a
+	href="http://www.selenic.com/mercurial">Mercurial web
+	site</a>.</p>
+
+    <p>By default, Mercurial installs to <tt>C:\Mercurial</tt>.  The
+      Mercurial command is called <tt>hg.exe</tt>.  To run this
+      command, the install directory must be in your search path.</p>
+
+    <h2>Setting your search path temporarily</h2>
+
+    <p>To set your search path temporarily, type the following into a
+      command prompt window:</p>
+
+    <pre>
+set PATH=C:\Mercurial;%PATH%
+</pre>
+
+    <h2>Setting your search path permanently</h2>
+
+    <p>To set your search path permanently, perform the following
+      steps.  These instructions are for Windows NT, 2000 and XP.</p>
+
+    <ol>
+      <li>Open the Control Panel.  Under Windows XP, select the
+	"Classic View".</li>
+
+      <li>Double-click on the "System" control panel.</li>
+
+      <li>Click on the "Advanced" tab.</li>
+
+      <li>Click on "Environment Variables".  You'll find this near the
+	bottom of the window.</li>
+
+      <li>Under "System variables", you will see "Path".  Double-click
+	it.</li>
+
+      <li>Edit "Variable value".  Each path element is separated by a
+	semicolon (";") character.  Append a semicolon to the end of the
+	list, followed by the path where you installed Mercurial
+	(e.g. <tt>C:\Mercurial</tt>).</li>
+
+      <li>Click on the various "OK" buttons until you've completely
+	exited from the System control panel.</li>
+
+      <li>Log out and log back in, or restart your system.</li>
+
+      <li>The next time you run the Windows command prompt, you will be
+	able to run the <tt>hg</tt> command without any special
+	help.</li>
+    </ol>
+
+    <h1>Testing Mercurial after you've installed it</h1>
+
+    <p>The easiest way to check that Mercurial is installed properly is to
+      just type the following at the command prompt:</p>
+
+    <pre>
+hg
+</pre>
+
+    <p>This command should print a useful help message.  If it does,
+      other Mercurial commands should work fine for you.</p>
+
+    <h1>Reporting problems</h1>
+
+    <p>Before you report any problems, please consult the <a
+	href="http://www.selenic.com/mercurial">Mercurial web site</a> and
+      see if your question is already in our list of <a
+	href="http://www.selenic.com/mercurial/wiki/index.cgi/FAQ">Frequently
+	Answered Questions</a> (the "FAQ").
+
+    <p>If you cannot find an answer to your question, please feel
+      free to send mail to the Mercurial mailing list, at <a
+	href="mailto:mercurial@selenic.com">mercurial@selenic.com</a>.
+      <b>Remember</b>, the more useful information you include in your
+      report, the easier it will be for us to help you!</p>
+
+    <p>If you are IRC-savvy, that's usually the fastest way to get
+      help.  Go to <tt>#mercurial</tt> on
+      <tt>irc.freenode.net</tt>.</p>
+
+    <h1>Author and copyright information</h1>
+
+    <p>Mercurial was written by <a href="http://www.selenic.com">Matt
+	Mackall</a>, and is maintained by Matt and a team of
+	volunteers.</p>
+
+    <p>The Windows installer was written by <a
+	href="http://www.serpentine.com/blog">Bryan
+	O'Sullivan</a>.</p>
+
+    <p>Mercurial is Copyright 2005 Matt Mackall and others.  See the
+      <tt>Contributors.txt</tt> file for a list of contributors.</p>
+
+    <p>Mercurial is free software; you can redistribute it and/or
+      modify it under the terms of the <a
+	href="http://www.gnu.org/copyleft/gpl.html">GNU General Public
+	License</a> as published by the Free Software Foundation; either
+      version 2 of the License, or (at your option) any later
+      version.</p>
+
+    <p>Mercurial is distributed in the hope that it will be useful,
+      but <b>without any warranty</b>; without even the implied
+      warranty of <b>merchantability</b> or <b>fitness for a
+      particular purpose</b>.  See the GNU General Public License for
+      more details.</p>
+  </body>
+</html>
