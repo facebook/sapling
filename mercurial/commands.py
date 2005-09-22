@@ -630,10 +630,11 @@ def clone(ui, source, dest=None, **opts):
     other = hg.repository(ui, source)
 
     copy = False
-    if not opts['pull'] and other.dev() != -1:
+    if other.dev() != -1:
         abspath = os.path.abspath(source)
-        copy = True
-
+        if not opts['pull']:
+            copy = True
+        
     if copy:
         try:
             # we use a lock here because if we race with commit, we
