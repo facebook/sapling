@@ -622,9 +622,10 @@ def clone(ui, source, dest=None, **opts):
     if opts['remotecmd']:
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
-    d = Dircleanup(dest)
     if not os.path.exists(source):
         source = ui.expandpath(source)
+
+    d = Dircleanup(dest)
     abspath = source
     other = hg.repository(ui, source)
 
