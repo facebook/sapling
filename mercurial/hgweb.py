@@ -27,7 +27,7 @@ def age(x):
         return "%d %s" % (c, plural(t, c))
 
     now = time.time()
-    then = x[2][0]
+    then = x[0]
     delta = max(1, int(now - then))
 
     scales = [["second", 1],
@@ -155,13 +155,13 @@ class templater:
 common_filters = {
     "escape": cgi.escape,
     "age": age,
-    "date": lambda x: util.datestr(x[2]),
+    "date": lambda x: util.datestr(x),
     "addbreaks": nl2br,
     "obfuscate": obfuscate,
     "short": (lambda x: x[:12]),
     "firstline": (lambda x: x.splitlines(1)[0]),
     "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
-    "rfc822date": lambda x: util.datestr(x[2], "%a, %d %b %Y %H:%M:%S"),
+    "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
     }
 
 class hgweb:
@@ -184,8 +184,8 @@ class hgweb:
             self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
-    def date(self, cs):
-        return util.datestr(cs[2])
+    def date(self, t):
+        return util.datestr(t)
 
     def listfiles(self, files, mf):
         for f in files[:self.maxfiles]:
@@ -311,7 +311,7 @@ class hgweb:
                              "changelogtag": self.showtag("changelogtag",n),
                              "manifest": hex(changes[0]),
                              "desc": changes[4],
-                             "date": changes,
+                             "date": changes[2],
                              "files": self.listfilediffs(changes[3], n),
                              "rev": i,
                              "node": hn})
@@ -372,7 +372,7 @@ class hgweb:
                              changelogtag=self.showtag("changelogtag",n),
                              manifest=hex(changes[0]),
                              desc=changes[4],
-                             date=changes,
+                             date=changes[2],
                              files=self.listfilediffs(changes[3], n),
                              rev=i,
                              node=hn)
@@ -418,7 +418,7 @@ class hgweb:
                      manifest=hex(changes[0]),
                      author=changes[1],
                      desc=changes[4],
-                     date=changes,
+                     date=changes[2],
                      files=files,
                      archives=archivelist())
 
@@ -443,7 +443,7 @@ class hgweb:
                              "file": f,
                              "node": hex(cn),
                              "author": cs[1],
-                             "date": cs,
+                             "date": cs[2],
                              "parent": self.parents("filelogparent",
                                                     fl.parents(n),
                                                     fl.rev, file=f),
@@ -480,7 +480,7 @@ class hgweb:
                      node=hex(cn),
                      manifest=hex(mfn),
                      author=cs[1],
-                     date=cs,
+                     date=cs[2],
                      parent=self.parents("filerevparent",
                                          fl.parents(n), fl.rev, file=f),
                      permissions=self.repo.manifest.readflags(mfn)[f])
@@ -532,7 +532,7 @@ class hgweb:
                      node=hex(cn),
                      manifest=hex(mfn),
                      author=cs[1],
-                     date=cs,
+                     date=cs[2],
                      parent=self.parents("fileannotateparent",
                                          fl.parents(n), fl.rev, file=f),
                      permissions=self.repo.manifest.readflags(mfn)[f])
