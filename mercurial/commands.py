@@ -30,6 +30,20 @@ def relpath(repo, args):
         return [util.normpath(os.path.join(cwd, x)) for x in args]
     return args
 
+def datestr(change=None):
+    if change is None:
+        t = time.time()
+        if time.daylight: tz = time.altzone
+        else: tz = time.timezone
+    else:
+        t, tz = change[2].split(' ')
+        try:
+            # a conversion tool was sticking non-integer offsets into repos
+            tz = int(tz)
+        except ValueError:
+            tz = 0
+    return time.asctime(time.gmtime(float(t) - tz)) + " %+05d" % (int(tz)/-36)
+
 def matchpats(repo, cwd, pats=[], opts={}, head=''):
     return util.matcher(repo.root, cwd, pats or ['.'], opts.get('include'),
                         opts.get('exclude'), head)
@@ -251,9 +265,6 @@ def make_file(repo, r, pat, node=None,
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False):
-    def date(c):
-        return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
-
     if not changes:
         (c, a, d, u) = repo.changes(node1, node2, files, match=match)
     else:
@@ -267,11 +278,11 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     if node2:
         change = repo.changelog.read(node2)
         mmap2 = repo.manifest.read(change[0])
-        date2 = date(change)
+        date2 = datestr(change)
         def read(f):
             return repo.file(f).read(mmap2[f])
     else:
-        date2 = time.asctime()
+        date2 = datestr()
         if not node1:
             node1 = repo.dirstate.parents()[0]
         def read(f):
@@ -285,7 +296,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
 
     change = repo.changelog.read(node1)
     mmap = repo.manifest.read(change[0])
-    date1 = date(change)
+    date1 = datestr(change)
 
     for f in c:
         to = None
@@ -322,14 +333,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
         return
 
     changes = log.read(changenode)
-
-    t, tz = changes[2].split(' ')
-    # a conversion tool was sticking non-integer offsets into repos
-    try:
-        tz = int(tz)
-    except ValueError:
-        tz = 0
-    date = time.asctime(time.gmtime(float(t) - tz)) + " %+05d" % (int(tz)/-36)
+    date = datestr(changes)
 
     parents = [(log.rev(p), ui.verbose and hex(p) or short(p))
                for p in log.parents(changenode)
