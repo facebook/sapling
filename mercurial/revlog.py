@@ -12,7 +12,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import *
 from demandload import demandload
-demandload(globals(), "binascii errno heapq mdiff sha struct urllib2 zlib")
+demandload(globals(), "binascii errno heapq mdiff sha struct zlib")
 
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
@@ -179,8 +179,6 @@ class revlog:
 
         try:
             i = self.opener(self.indexfile).read()
-        except urllib2.URLError:
-            raise
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
