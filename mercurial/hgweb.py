@@ -9,7 +9,7 @@
 import os, cgi, sys
 from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
-demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer")
+demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer util")
 from node import *
 
 def templatepath():
@@ -18,7 +18,7 @@ def templatepath():
         if os.path.isdir(p):
             return p
 
-def age(t):
+def age(x):
     def plural(t, c):
         if c == 1:
             return t
@@ -27,7 +27,8 @@ def age(t):
         return "%d %s" % (c, plural(t, c))
 
     now = time.time()
-    delta = max(1, int(now - t))
+    then = int(x[2].split(' ')[0])
+    delta = max(1, int(now - then))
 
     scales = [["second", 1],
               ["minute", 60],
@@ -151,22 +152,17 @@ class templater:
                 yield tmpl
                 return
 
-def rfc822date(x):
-    return time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime(x))
-
 common_filters = {
     "escape": cgi.escape,
     "age": age,
-    "date": (lambda x: time.asctime(time.gmtime(x))),
+    "date": util.datestr,
     "addbreaks": nl2br,
     "obfuscate": obfuscate,
     "short": (lambda x: x[:12]),
     "firstline": (lambda x: x.splitlines(1)[0]),
     "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
-    "rfc822date": rfc822date,
+    "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
     }
-
-
 
 class hgweb:
     def __init__(self, repo, name=None):
@@ -189,7 +185,7 @@ class hgweb:
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
     def date(self, cs):
-        return time.asctime(time.gmtime(float(cs[2].split(' ')[0])))
+        return util.datestr(cs)
 
     def listfiles(self, files, mf):
         for f in files[:self.maxfiles]:
@@ -307,7 +303,6 @@ class hgweb:
                 n = cl.node(i)
                 changes = cl.read(n)
                 hn = hex(n)
-                t = float(changes[2].split(' ')[0])
 
                 l.insert(0, {"parity": parity,
                              "author": changes[1],
@@ -316,7 +311,7 @@ class hgweb:
                              "changelogtag": self.showtag("changelogtag",n),
                              "manifest": hex(changes[0]),
                              "desc": changes[4],
-                             "date": t,
+                             "date": changes,
                              "files": self.listfilediffs(changes[3], n),
                              "rev": i,
                              "node": hn})
@@ -368,7 +363,6 @@ class hgweb:
 
                 count += 1
                 hn = hex(n)
-                t = float(changes[2].split(' ')[0])
 
                 yield self.t('searchentry',
                              parity=count & 1,
@@ -378,7 +372,7 @@ class hgweb:
                              changelogtag=self.showtag("changelogtag",n),
                              manifest=hex(changes[0]),
                              desc=changes[4],
-                             date=t,
+                             date=changes,
                              files=self.listfilediffs(changes[3], n),
                              rev=i,
                              node=hn)
@@ -399,7 +393,6 @@ class hgweb:
         cl = self.repo.changelog
         changes = cl.read(n)
         p1 = cl.parents(n)[0]
-        t = float(changes[2].split(' ')[0])
 
         files = []
         mf = self.repo.manifest.read(changes[0])
@@ -425,7 +418,7 @@ class hgweb:
                      manifest=hex(changes[0]),
                      author=changes[1],
                      desc=changes[4],
-                     date=t,
+                     date=changes,
                      files=files,
                      archives=archivelist())
 
@@ -443,7 +436,6 @@ class hgweb:
                 lr = fl.linkrev(n)
                 cn = cl.node(lr)
                 cs = cl.read(cl.node(lr))
-                t = float(cs[2].split(' ')[0])
 
                 l.insert(0, {"parity": parity,
                              "filenode": hex(n),
@@ -451,7 +443,7 @@ class hgweb:
                              "file": f,
                              "node": hex(cn),
                              "author": cs[1],
-                             "date": t,
+                             "date": cs,
                              "parent": self.parents("filelogparent",
                                                     fl.parents(n),
                                                     fl.rev, file=f),
@@ -471,7 +463,6 @@ class hgweb:
         cl = self.repo.changelog
         cn = cl.node(changerev)
         cs = cl.read(cn)
-        t = float(cs[2].split(' ')[0])
         mfn = cs[0]
 
         def lines():
@@ -489,7 +480,7 @@ class hgweb:
                      node=hex(cn),
                      manifest=hex(mfn),
                      author=cs[1],
-                     date=t,
+                     date=cs,
                      parent=self.parents("filerevparent",
                                          fl.parents(n), fl.rev, file=f),
                      permissions=self.repo.manifest.readflags(mfn)[f])
@@ -504,7 +495,6 @@ class hgweb:
         cl = self.repo.changelog
         cn = cl.node(changerev)
         cs = cl.read(cn)
-        t = float(cs[2].split(' ')[0])
         mfn = cs[0]
 
         def annotate(**map):
@@ -542,7 +532,7 @@ class hgweb:
                      node=hex(cn),
                      manifest=hex(mfn),
                      author=cs[1],
-                     date=t,
+                     date=cs,
                      parent=self.parents("fileannotateparent",
                                          fl.parents(n), fl.rev, file=f),
                      permissions=self.repo.manifest.readflags(mfn)[f])

@@ -12,7 +12,7 @@ platform-specific details from the core.
 
 import os, errno
 from demandload import *
-demandload(globals(), "re cStringIO shutil popen2 tempfile threading")
+demandload(globals(), "re cStringIO shutil popen2 tempfile threading time")
 
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
@@ -543,3 +543,23 @@ def filechunkiter(f, size = 65536):
     while len(s) >= 0:
         yield s
         s = f.read(size)
+
+def datestr(change=None, format='%c'):
+    """represent a change date as a localized time.
+    a change date is a 'unixtime offset' string, where unixtime is
+    seconds since the epoch, and offset is seconds away from UTC."""
+    if change is None:
+        t = time.time()
+        if time.daylight: tz = time.altzone
+        else: tz = time.timezone
+    else:
+        t, tz = change[2].split(' ')
+        try:
+            # a conversion tool was sticking non-integer offsets into repos
+            tz = int(tz)
+        except ValueError:
+            tz = 0
+    return ("%s %+03d%02d" %
+            (time.strftime(format, time.gmtime(float(t) - tz)),
+             -tz / 3600,
+             ((-tz % 3600) / 60)))
