@@ -22,7 +22,7 @@ class changelog(revlog):
         manifest = bin(l[0])
         user = l[1]
         date = l[2].split(' ')
-        time = int(date.pop(0))
+        time = float(date.pop(0))
         try:
             # various tools did silly things with the time zone field.
             timezone = int(date[0])
