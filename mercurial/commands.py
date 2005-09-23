@@ -624,7 +624,7 @@ def clone(ui, source, dest=None, **opts):
         abspath = os.path.abspath(source)
         if not opts['pull']:
             copy = True
-        
+
     if copy:
         try:
             # we use a lock here because if we race with commit, we
@@ -652,7 +652,7 @@ def clone(ui, source, dest=None, **opts):
         repo = hg.repository(ui, dest, create=1)
         repo.pull(other)
 
-    f = repo.opener("hgrc", "w")
+    f = repo.opener("hgrc", "w", text=True)
     f.write("[paths]\n")
     f.write("default = %s\n" % abspath)
 
