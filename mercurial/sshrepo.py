@@ -29,10 +29,10 @@ class sshrepository(remoterepository):
 
         sshcmd = self.ui.config("ui", "ssh", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd", "hg")
-        cmd = "%s %s '%s -R %s serve --stdio'"
+        cmd = '%s %s "%s -R %s serve --stdio"'
         cmd = cmd % (sshcmd, args, remotecmd, self.path)
 
-        self.pipeo, self.pipei, self.pipee = os.popen3(cmd)
+        self.pipeo, self.pipei, self.pipee = os.popen3(cmd, 'b')
 
     def readerr(self):
         while 1:
