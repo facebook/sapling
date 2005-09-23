@@ -2160,6 +2160,8 @@ def dispatch(args):
             u.warn("abort: %s\n" % inst)
         elif hasattr(inst, "reason"):
             u.warn("abort: error: %s\n" % inst.reason[1])
+        elif getattr(inst, "strerror", None):
+            u.warn("abort: %s\n" % inst.strerror)
         elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
             if u.debugflag:
                 u.warn("broken pipe\n")
