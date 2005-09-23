@@ -32,6 +32,7 @@ class sshrepository(remoterepository):
         cmd = '%s %s "%s -R %s serve --stdio"'
         cmd = cmd % (sshcmd, args, remotecmd, self.path)
 
+        ui.note('running %s\n' % cmd)
         self.pipeo, self.pipei, self.pipee = os.popen3(cmd, 'b')
 
     def readerr(self):
