@@ -327,10 +327,11 @@ def opener(base):
     remote file access from higher level code.
     """
     p = base
-    def o(path, mode="r"):
+    def o(path, mode="r", text=False):
         f = os.path.join(p, path)
 
-        mode += "b" # for that other OS
+        if not text:
+            mode += "b" # for that other OS
 
         if mode[0] != "r":
             try:
@@ -549,7 +550,7 @@ def makedate():
     if time.daylight: tz = time.altzone
     else: tz = time.timezone
     return t, tz
-    
+
 def datestr(date=None, format='%c'):
     """represent a (unixtime, offset) tuple as a localized time.
     unixtime is seconds since the epoch, and offset is the time zone's
