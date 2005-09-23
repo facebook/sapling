@@ -329,7 +329,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
         tz = int(tz)
     except ValueError:
         tz = 0
-    date = time.asctime(time.localtime(float(t))) + " %+05d" % (int(tz)/-36)
+    date = time.asctime(time.gmtime(float(t) - tz)) + " %+05d" % (int(tz)/-36)
 
     parents = [(log.rev(p), ui.verbose and hex(p) or short(p))
                for p in log.parents(changenode)
