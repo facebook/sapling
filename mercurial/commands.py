@@ -682,14 +682,19 @@ def commit(ui, repo, *pats, **opts):
                 " please use -m or --message instead.\n")
     message = opts['message'] or opts['text']
     logfile = opts['logfile']
+
+    if message and logfile:
+        raise util.Abort('options --message and --logfile are mutually '
+                         'exclusive')
     if not message and logfile:
         try:
             if logfile == '-':
                 message = sys.stdin.read()
             else:
                 message = open(logfile).read()
-        except IOError, why:
-            ui.warn("Can't read commit message %s: %s\n" % (logfile, why))
+        except IOError, inst:
+            raise util.Abort("can't read commit message '%s': %s" %
+                             (logfile, inst.strerror))
 
     if opts['addremove']:
         addremove(ui, repo, *pats, **opts)
