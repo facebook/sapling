@@ -10,9 +10,9 @@ This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
 
-import zlib, struct, sha, binascii, heapq
-import mdiff
 from node import *
+from demandload import demandload
+demandload(globals(), "binascii errno heapq mdiff sha struct urllib2 zlib")
 
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
@@ -179,7 +179,11 @@ class revlog:
 
         try:
             i = self.opener(self.indexfile).read()
-        except IOError:
+        except urllib2.URLError:
+            raise
+        except IOError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
             i = ""
 
         if len(i) > 10000:
