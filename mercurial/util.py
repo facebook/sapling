@@ -544,21 +544,17 @@ def filechunkiter(f, size = 65536):
         yield s
         s = f.read(size)
 
-def datestr(change=None, format='%c'):
-    """represent a change date as a localized time.
-    a change date is a 'unixtime offset' string, where unixtime is
-    seconds since the epoch, and offset is seconds away from UTC."""
-    if change is None:
-        t = time.time()
-        if time.daylight: tz = time.altzone
-        else: tz = time.timezone
-    else:
-        t, tz = change[2].split(' ')
-        try:
-            # a conversion tool was sticking non-integer offsets into repos
-            tz = int(tz)
-        except ValueError:
-            tz = 0
+def makedate():
+    t = time.time()
+    if time.daylight: tz = time.altzone
+    else: tz = time.timezone
+    return t, tz
+    
+def datestr(date=None, format='%c'):
+    """represent a (unixtime, offset) tuple as a localized time.
+    unixtime is seconds since the epoch, and offset is the time zone's
+    number of seconds away from UTC."""
+    t, tz = date or makedate()
     return ("%s %+03d%02d" %
             (time.strftime(format, time.gmtime(float(t) - tz)),
              -tz / 3600,

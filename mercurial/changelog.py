@@ -5,8 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, time
 from revlog import *
+from demandload import demandload
+demandload(globals(), "os time util")
 
 class changelog(revlog):
     def __init__(self, opener):
@@ -20,11 +21,15 @@ class changelog(revlog):
         l = text[:last].splitlines()
         manifest = bin(l[0])
         user = l[1]
-        date = l[2]
-        if " " not in date:
-            date += " 0" # some tools used -d without a timezone
+        date = l[2].split(' ')
+        time = int(date.pop(0))
+        try:
+            # various tools did silly things with the time zone field.
+            timezone = int(date[0])
+        except:
+            timezone = 0
         files = l[3:]
-        return (manifest, user, date, files, desc)
+        return (manifest, user, (time, timezone), files, desc)
 
     def read(self, node):
         return self.extract(self.revision(node))
@@ -44,9 +49,7 @@ class changelog(revlog):
             if abs(offset) >= 43200:
                 raise ValueError('impossible time zone offset: %d' % offset)
         else:
-            if time.daylight: offset = time.altzone
-            else: offset = time.timezone
-            date = "%d %d" % (time.time(), offset)
+            date = "%d %d" % util.makedate()
         list.sort()
         l = [hex(manifest), user, date] + list + ["", desc]
         text = "\n".join(l)

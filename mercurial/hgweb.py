@@ -27,7 +27,7 @@ def age(x):
         return "%d %s" % (c, plural(t, c))
 
     now = time.time()
-    then = int(x[2].split(' ')[0])
+    then = x[2][0]
     delta = max(1, int(now - then))
 
     scales = [["second", 1],
@@ -155,13 +155,13 @@ class templater:
 common_filters = {
     "escape": cgi.escape,
     "age": age,
-    "date": util.datestr,
+    "date": lambda x: util.datestr(x[2]),
     "addbreaks": nl2br,
     "obfuscate": obfuscate,
     "short": (lambda x: x[:12]),
     "firstline": (lambda x: x.splitlines(1)[0]),
     "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
-    "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
+    "rfc822date": lambda x: util.datestr(x[2], "%a, %d %b %Y %H:%M:%S"),
     }
 
 class hgweb:
@@ -185,7 +185,7 @@ class hgweb:
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
     def date(self, cs):
-        return util.datestr(cs)
+        return util.datestr(cs[2])
 
     def listfiles(self, files, mf):
         for f in files[:self.maxfiles]:

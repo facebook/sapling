@@ -264,7 +264,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     if node2:
         change = repo.changelog.read(node2)
         mmap2 = repo.manifest.read(change[0])
-        date2 = util.datestr(change)
+        date2 = util.datestr(change[2])
         def read(f):
             return repo.file(f).read(mmap2[f])
     else:
@@ -282,7 +282,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
 
     change = repo.changelog.read(node1)
     mmap = repo.manifest.read(change[0])
-    date1 = util.datestr(change)
+    date1 = util.datestr(change[2])
 
     for f in c:
         to = None
@@ -319,7 +319,7 @@ def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
         return
 
     changes = log.read(changenode)
-    date = util.datestr(changes)
+    date = util.datestr(changes[2])
 
     parents = [(log.rev(p), ui.verbose and hex(p) or short(p))
                for p in log.parents(changenode)
