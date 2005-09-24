@@ -17,7 +17,7 @@ filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
-fileline = "<div class="parity#parity#"><span class="lineno">#linenumber# </span>#line|escape#</div>"
+fileline = "<div class="parity#parity#"><span class="lineno">#linenumber#</span>#line|escape#</div>"
 filelogentry = filelogentry.tmpl
 annotateline = "<tr class="parity#parity#"><td class="annotate"><a href="?cmd=changeset;node=#node#">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>"
 difflineplus = "<span class="plusline">#line|escape#</span>"
