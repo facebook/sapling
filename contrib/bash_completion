@@ -1,5 +1,3 @@
-#!/bin/bash
-
 shopt -s extglob
 
 _hg_commands()
