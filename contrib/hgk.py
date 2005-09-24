@@ -316,7 +316,7 @@ def revlist(ui, repo, *revs, **opts):
 def view(ui, repo, *etc):
     "start interactive history viewer"
     os.chdir(repo.root)
-    os.system("hgk " + " ".join(etc))
+    os.system(ui.config("hgk", "path", "hgk") + " " + " ".join(etc))
 
 cmdtable = {
     "view": (view, [], 'hg view'),
