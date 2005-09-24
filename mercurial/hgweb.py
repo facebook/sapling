@@ -184,9 +184,6 @@ class hgweb:
             self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
-    def date(self, t):
-        return util.datestr(t)
-
     def listfiles(self, files, mf):
         for f in files[:self.maxfiles]:
             yield self.t("filenodelink", node=hex(mf[f]), file=f)
@@ -247,8 +244,8 @@ class hgweb:
         change2 = cl.read(node2)
         mmap1 = mf.read(change1[0])
         mmap2 = mf.read(change2[0])
-        date1 = self.date(change1)
-        date2 = self.date(change2)
+        date1 = util.datestr(change1[2])
+        date2 = util.datestr(change2[2])
 
         c, a, d, u = r.changes(node1, node2)
         if files:
