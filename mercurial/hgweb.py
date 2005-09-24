@@ -951,6 +951,11 @@ class hgwebdir:
                 url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
                        .replace("//", "/"))
 
+                # update time with local timezone
+                d = (os.stat(os.path.join(path,
+                                          ".hg", "00changelog.d")).st_mtime,
+                     util.makedate()[1])
+
                 yield dict(contact=(get("ui", "username") or # preferred
                                     get("web", "contact") or # deprecated
                                     get("web", "author", "unknown")), # also
@@ -958,8 +963,7 @@ class hgwebdir:
                            url=url,
                            parity=parity,
                            shortdesc=get("web", "description", "unknown"),
-                           lastupdate=os.stat(os.path.join(path, ".hg",
-                                              "00changelog.d")).st_mtime)
+                           lastupdate=d)
 
                 parity = 1 - parity
 
