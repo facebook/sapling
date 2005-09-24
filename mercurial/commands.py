@@ -2046,7 +2046,11 @@ def dispatch(args):
     external = []
     for x in u.extensions():
         if x[1]:
-            mod = imp.load_source(x[0], x[1])
+            try:
+                mod = imp.load_source(x[0], x[1])
+            except:
+                u.warn("*** failed to import extension %s\n" % x[1])
+                continue
         else:
             def importh(name):
                 mod = __import__(name)
@@ -2054,7 +2058,12 @@ def dispatch(args):
                 for comp in components[1:]:
                     mod = getattr(mod, comp)
                 return mod
-            mod = importh(x[0])
+            try:
+                mod = importh(x[0])
+            except:
+                u.warn("failed to import extension %s\n" % x[0])
+                continue
+
         external.append(mod)
     for x in external:
         cmdtable = getattr(x, 'cmdtable', {})
