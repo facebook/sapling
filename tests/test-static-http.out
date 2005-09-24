@@ -1,4 +1,4 @@
-abort: error: Connection refused
+abort: <urlopen error (111, 'Connection refused')>
 255
 ls: copy: No such file or directory
 changeset:   0:61c9426e69fe
