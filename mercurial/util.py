@@ -426,8 +426,12 @@ if os.name == 'nt':
 else:
     nulldev = '/dev/null'
 
-    rcpath = map(os.path.normpath,
-                 ('/etc/mercurial/hgrc', os.path.expanduser('~/.hgrc')))
+    hgrcd = '/etc/mercurial/hgrc.d'
+    hgrcs = []
+    if os.path.isdir(hgrcd):
+        hgrcs = [f for f in os.listdir(hgrcd) if f.endswith(".rc")]
+    rcpath = map(os.path.normpath, hgrcs +
+                 ['/etc/mercurial/hgrc', os.path.expanduser('~/.hgrc')])
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
