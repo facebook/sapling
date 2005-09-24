@@ -74,6 +74,10 @@ def walkchangerevs(ui, repo, cwd, pats, opts):
 
     "iter", rev, None: in-order traversal of the revs earlier iterated
     over with "add" - use to display data'''
+
+    if repo.changelog.count() == 0:
+        return [], False
+
     cwd = repo.getcwd()
     if not pats and cwd:
         opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
@@ -1055,6 +1059,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     skip = {}
     changeiter, getchange = walkchangerevs(ui, repo, repo.getcwd(), pats, opts)
     count = 0
+    incrementing = False
     for st, rev, fns in changeiter:
         if st == 'window':
             incrementing = rev
