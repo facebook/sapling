@@ -13,7 +13,7 @@ from mercurial import hg, mdiff, fancyopts, commands, ui, util
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False):
     def date(c):
-        return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
+        return time.asctime(time.gmtime(c[2][0]))
 
     if not changes:
         (c, a, d, u) = repo.changes(node1, node2, files, match=match)
@@ -64,7 +64,7 @@ def difftree(ui, repo, node1=None, node2=None, **opts):
     """diff trees from two commits"""
     def __difftree(repo, node1, node2):
         def date(c):
-            return time.asctime(time.gmtime(float(c[2].split(' ')[0])))
+            return time.asctime(time.gmtime(c[2][0]))
 
         if node2:
             change = repo.changelog.read(node2)
@@ -130,7 +130,7 @@ def catcommit(repo, n, prefix, changes=None):
     print "tree %s" % (hg.hex(changes[0]))
     if i1 != -1: print "parent %s" % (h1)
     if i2 != -1: print "parent %s" % (h2)
-    date_ar = changes[2].split(' ')
+    date_ar = changes[2]
     date = int(float(date_ar[0]))
     lines = changes[4].splitlines()
     if lines[-1].startswith('committer:'):
@@ -288,7 +288,7 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
                 (h, h1, h2) = map(hg.hex, (n, p1, p2))
                 (i1, i2) = map(repo.changelog.rev, (p1, p2))
 
-                date = changes[2].split(' ')[0]
+                date = changes[2][0]
                 print "%s %s:%s" % (date, h, mask),
                 mask = is_reachable(want_sha1, reachable, p1)
                 if i1 != -1 and mask > 0:
