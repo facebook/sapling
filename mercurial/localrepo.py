@@ -55,7 +55,11 @@ class localrepository:
                 old[k] = os.environ.get(k, None)
                 os.environ[k] = v
 
+            # Hooks run in the repository root
+            olddir = os.getcwd()
+            os.chdir(self.root)
             r = os.system(s)
+            os.chdir(olddir)
 
             for k, v in old.items():
                 if v != None:
