@@ -439,24 +439,45 @@ class revlog:
                 if n not in seen:
                     seen[n] = 1
                     r = self.rev(n)
-                    yield (-d, r, n)
+                    yield (-d, n)
                     for p in self.parents(n):
                         heapq.heappush(h, (-dist[p], p))
 
-        x = ancestors(a)
-        y = ancestors(b)
-        lx = x.next()
-        ly = y.next()
+        def generations(node):
+            sg, s = None, {}
+            for g,n in ancestors(node):
+                if g != sg:
+                    if sg:
+                        yield sg, s
+                    sg, s = g, {n:1}
+                else:
+                    s[n] = 1
+            yield sg, s
+
+        x = generations(a)
+        y = generations(b)
+        gx = x.next()
+        gy = y.next()
 
         # increment each ancestor list until it is closer to root than
         # the other, or they match
         while 1:
-            if lx == ly:
-                return lx[2]
-            elif lx < ly:
-                ly = y.next()
-            elif lx > ly:
-                lx = x.next()
+            #print "ancestor gen %s %s" % (gx[0], gy[0])
+            if gx[0] == gy[0]:
+                # find the intersection
+                i = [ n for n in gx[1] if n in gy[1] ]
+                if i:
+                    return i[0]
+                else:
+                    #print "next"
+                    gy = y.next()
+                    gx = x.next()
+            elif gx[0] < gy[0]:
+                #print "next y"
+                gy = y.next()
+            else:
+                #print "next x"
+                gx = x.next()
 
     def group(self, linkmap):
         """calculate a delta group

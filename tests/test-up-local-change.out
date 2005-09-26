@@ -15,7 +15,7 @@ remote created b
 getting b
 merging a
 resolving a
-file a: other d730145abbf9 ancestor b789fdd96dc2
+file a: my b789fdd96dc2 other d730145abbf9 ancestor b789fdd96dc2
 resolving manifests
  force None allow 1 moddirstate True linear True
  ancestor 1165e8bd193e local 1165e8bd193e remote 1165e8bd193e

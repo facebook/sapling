@@ -1,0 +1,69 @@
+pulling from /tmp/hgtests.12359.29374.16319.16463/test-merge7/test-a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+(run 'hg update' to get a working copy)
+merge: warning: conflicts during merge
+merging test.txt
+merging test.txt failed!
+pulling from /tmp/hgtests.12359.29374.16319.16463/test-merge7/test-a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+(run 'hg update' to get a working copy)
+merge: warning: conflicts during merge
+resolving manifests
+ force None allow 1 moddirstate True linear False
+ ancestor 055d847dd401 local 2eded9ab0a5c remote 84cf5750dd20
+ test.txt versions differ, resolve
+merging test.txt
+resolving test.txt
+file test.txt: my fc3148072371 other d40249267ae3 ancestor 8fe46a3eb557
+merging test.txt failed!
+one
+<<<<<<< /tmp/hgtests.12359.29374.16319.16463/test-merge7/test-b/test.txt
+two-point-five
+=======
+two-point-one
+>>>>>>> /tmp/test.txt~other.bN33Pl
+three
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       7      0       0 01365c4cca56 000000000000 000000000000
+     1         7       9      1       1 7b013192566a 01365c4cca56 000000000000
+     2        16      15      2       2 8fe46a3eb557 01365c4cca56 000000000000
+     3        31      27      2       3 fc3148072371 7b013192566a 8fe46a3eb557
+     4        58      25      4       4 d40249267ae3 8fe46a3eb557 000000000000
+changeset:   4:50aec39675ea
+tag:         tip
+parent:      2:96b70246a118
+user:        test
+date:        Mon Sep 26 23:50:15 2005 +0000
+summary:     two -> two-point-one
+
+changeset:   3:50c3a7e29886
+parent:      1:d1e159716d41
+parent:      2:96b70246a118
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     Merge 1
+
+changeset:   2:96b70246a118
+parent:      0:b1832b9d912a
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     Numbers as words
+
+changeset:   1:d1e159716d41
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     2 -> 2.5
+
+changeset:   0:b1832b9d912a
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     Initial
+
