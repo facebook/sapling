@@ -1287,8 +1287,8 @@ class localrepository:
         c = temp("other", other)
 
         self.ui.note("resolving %s\n" % fn)
-        self.ui.debug("file %s: other %s ancestor %s\n" %
-                              (fn, short(other), short(base)))
+        self.ui.debug("file %s: my %s other %s ancestor %s\n" %
+                              (fn, short(my), short(other), short(base)))
 
         cmd = (os.environ.get("HGMERGE") or self.ui.config("ui", "merge")
                or "hgmerge")
