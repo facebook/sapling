@@ -47,7 +47,9 @@ class sshrepository(remoterepository):
         try:
             self.pipeo.close()
             self.pipei.close()
-            readerr()
+            # read the error descriptor until EOF
+            for l in self.pipee:
+                self.ui.status("remote: ", l)
             self.pipee.close()
         except:
             pass
