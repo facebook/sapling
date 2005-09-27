@@ -8,7 +8,7 @@
 from node import *
 from remoterepo import *
 from demandload import *
-demandload(globals(), "hg os re select")
+demandload(globals(), "hg os re stat")
 
 class sshrepository(remoterepository):
     def __init__(self, ui, path):
@@ -37,8 +37,8 @@ class sshrepository(remoterepository):
 
     def readerr(self):
         while 1:
-            r,w,x = select.select([self.pipee], [], [], 0)
-            if not r: break
+            size = os.fstat(self.pipee.fileno())[stat.ST_SIZE]
+            if size == 0: break
             l = self.pipee.readline()
             if not l: break
             self.ui.status("remote: ", l)
@@ -47,8 +47,7 @@ class sshrepository(remoterepository):
         try:
             self.pipeo.close()
             self.pipei.close()
-            for l in self.pipee:
-                self.ui.status("remote: ", l)
+            readerr()
             self.pipee.close()
         except:
             pass
