@@ -9,7 +9,7 @@ import struct, os, util
 import filelog, manifest, changelog, dirstate, repo
 from node import *
 from demandload import *
-demandload(globals(), "re lock transaction tempfile stat mdiff")
+demandload(globals(), "re lock transaction tempfile stat mdiff errno")
 
 class localrepository:
     def __init__(self, ui, path=None, create=0):
@@ -1221,7 +1221,9 @@ class localrepository:
             t = self.file(f).read(get[f])
             try:
                 self.wwrite(f, t)
-            except IOError:
+            except IOError, e:
+                if e.errno != errno.ENOENT:
+                    raise
                 os.makedirs(os.path.dirname(self.wjoin(f)))
                 self.wwrite(f, t)
             util.set_exec(self.wjoin(f), mf2[f])
