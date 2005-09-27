@@ -34,7 +34,7 @@ EOF
 hg commit -m "2 -> 2.5" -d "0 0"
 
 # now pull and merge from test-a
-hg pull
+hg pull ../test-a
 HGMERGE=merge hg update -m
 # resolve conflict
 cat >test.txt <<"EOF"
@@ -52,14 +52,14 @@ one
 two-point-one
 three
 EOF
-hg commit -m "two -> two-point-one"
+hg commit -m "two -> two-point-one" -d "0 0"
 
 # pull and merge from test-a again
 cd ../test-b
-hg pull
+hg pull ../test-a
 HGMERGE=merge hg update --debug -m
 
-cat test.txt
+cat test.txt | sed "s% .*%%"
 
 hg debugindex .hg/data/test.txt.i
 

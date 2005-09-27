@@ -1,4 +1,4 @@
-pulling from /tmp/hgtests.12359.29374.16319.16463/test-merge7/test-a
+pulling from ../test-a
 searching for changes
 adding changesets
 adding manifests
@@ -8,7 +8,7 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 merge: warning: conflicts during merge
 merging test.txt
 merging test.txt failed!
-pulling from /tmp/hgtests.12359.29374.16319.16463/test-merge7/test-a
+pulling from ../test-a
 searching for changes
 adding changesets
 adding manifests
@@ -25,11 +25,11 @@ resolving test.txt
 file test.txt: my fc3148072371 other d40249267ae3 ancestor 8fe46a3eb557
 merging test.txt failed!
 one
-<<<<<<< /tmp/hgtests.12359.29374.16319.16463/test-merge7/test-b/test.txt
+<<<<<<<
 two-point-five
 =======
 two-point-one
->>>>>>> /tmp/test.txt~other.bN33Pl
+>>>>>>>
 three
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       7      0       0 01365c4cca56 000000000000 000000000000
@@ -37,11 +37,11 @@ three
      2        16      15      2       2 8fe46a3eb557 01365c4cca56 000000000000
      3        31      27      2       3 fc3148072371 7b013192566a 8fe46a3eb557
      4        58      25      4       4 d40249267ae3 8fe46a3eb557 000000000000
-changeset:   4:50aec39675ea
+changeset:   4:40d11a4173a8
 tag:         tip
 parent:      2:96b70246a118
 user:        test
-date:        Mon Sep 26 23:50:15 2005 +0000
+date:        Thu Jan  1 00:00:00 1970 +0000
 summary:     two -> two-point-one
 
 changeset:   3:50c3a7e29886
