@@ -2178,7 +2178,10 @@ def dispatch(args):
             if u.debugflag:
                 u.warn("broken pipe\n")
         elif getattr(inst, "strerror", None):
-            u.warn("abort: %s\n" % inst.strerror)
+            if getattr(inst, "filename", None):
+                u.warn("abort: %s - %s\n" % (inst.strerror, inst.filename))
+            else:
+                u.warn("abort: %s\n" % inst.strerror)
         else:
             raise
     except OSError, inst:
