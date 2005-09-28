@@ -633,7 +633,7 @@ the file."
 						     (modified . "m")))))))
       status)))
 
-(defun hg-mode ()
+(defun hg-mode (&optional toggle)
   "Minor mode for Mercurial distributed SCM integration.
 
 The Mercurial mode user interface is based on that of VC mode, so if
