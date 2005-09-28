@@ -59,6 +59,8 @@ class httprepository(remoterepository):
             authinfo = urllib2.ProxyBasicAuthHandler(passmgr)
 
         opener = urllib2.build_opener(proxy_handler, authinfo)
+        # 1.0 here is the _protocol_ version
+        opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
         urllib2.install_opener(opener)
 
     def dev(self):
