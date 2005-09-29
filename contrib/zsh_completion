@@ -1,0 +1,312 @@
+#compdef hg
+
+# Zsh completion script for mercurial.  Rename this file to _hg and copy
+# it into your zsh function path (/usr/share/zsh/site-functions for
+# instance)
+#
+# Copyright (C) 2005 Steve Borho
+#
+# This is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+
+local curcontext="$curcontext" state line
+typeset -A opt_args
+local subcmds repos tags newFiles addedFiles
+
+tags=($(hg tags | sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//'))
+subcmds=($(hg -v help | sed -e '1,/^list of commands:/d' \
+      -e '/^global options:/,$d' -e '/^ [^ ]/!d; s/[,:]//g;'))
+
+if [[ $service == "hg" ]]; then
+	_arguments -C -A "-*" \
+	'-R+[repository root directory]' \
+	'-y[non-interactive]' \
+	'-v[verbose]' \
+	'-q[quiet]' \
+	'--time[time how long the command takes]' \
+	'--profile[profile]' \
+	'-h-[display help and exit]' \
+	'--version-[output version information and exit]' \
+    '--cwd[change working directory]:new working directory:_files -/' \
+	'*::command:->subcmd' && return 0
+
+	if (( CURRENT == 1 )); then
+		_wanted commands expl 'hg command' compadd -a subcmds
+		return
+	fi
+	service="$words[1]"
+	curcontext="${curcontext%:*}=$service:"
+fi
+
+case $service in
+    (addremove)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '*:directories:_files -/'  # assume they want to add/remove a dir
+    ;;
+
+    (add)
+        newFiles=( $(hg status -un) )
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/'
+        _wanted files expl 'unknown files' compadd -a newFiles
+    ;;
+
+    (remove|rm)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '*:file:_files'
+    ;;
+
+	(cat)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '-o[output to file]:file:' \
+        '-r[revision]:revision:($tags)' \
+        '*:file:_files'
+	;;
+
+	(checkout|update|up|co)
+		_arguments \
+        '-b[checkout the head of a specific branch]:tag:' \
+        '-m[allow merging of conflicts]' \
+        '-C[overwrite locally modified files]' \
+        '*:revision:->revs'
+        _wanted revs expl 'revision or tag' compadd -a tags
+	;;
+
+	(commit|ci)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+		'-A[run addremove during commit]' \
+		'-m[commit message]:string:' \
+		'-d[date code]:string:' \
+		'-u[user]:string:' \
+        '*:file:_files'
+	;;
+
+	(tag)
+		_arguments \
+		'-l[make the tag local]:' \
+		'-m[commit message]:string:' \
+		'-d[date code]:string:' \
+		'-u[user]:string:' \
+        '*:name and revision:'
+	;;
+
+	(clone)
+		_arguments \
+		'-U[skip update after cloning]' \
+		'-e[ssh command]:string:' \
+		'--pull[use pull protocol to copy metadata]' \
+		'--remotecmd[remote hg command]:command:->subcmd'
+	;;
+
+	(export)
+		_arguments \
+        '-o[output to a file]:file:' \
+        '-a-[tread all files as text]' \
+        '*:revision:->revs'
+        _wanted revs expl 'revision or tag' compadd -a tags
+	;;
+
+	(heads)
+		_arguments '-b[find branch info]'
+	;;
+
+	(outgoing|out)
+		_arguments '-p[show patch]'
+	;;
+
+	(paths)
+		_arguments '*:symbolic name:(default default-push)'
+	;;
+
+	(init)
+		_arguments '*:new repo directory:_files -/'
+    ;;
+
+	(unbundle)
+        _arguments '*:changegroup file:_files'
+    ;;
+
+	(manifest)
+		_arguments \
+        '*:revision:->revs'
+        _wanted revs expl 'revision or tag' compadd -a tags
+    ;;
+
+	(parents)
+		_arguments \
+        '*:revision:->revs'
+        _wanted revs expl 'revision or tag' compadd -a tags
+    ;;
+
+	(serve)
+        _arguments \
+        '-A[access log file]:log file:_files' \
+        '-E[error log file]:log file:_files' \
+        '-p[listen port]:listen port:' \
+        '-a[interface address]:interface address:' \
+        '-n[repository name]:repository name:' \
+        '--stdio[for remote clients]' \
+        '-t[template directory]:template dir:_files -/' \
+        '--style[template style]:style' \
+        '-6[use IPv6 in addition to IPv4]'
+    ;;
+
+	(pull)
+        repos=( $(hg paths | sed -e 's/^.*= //') )
+		_arguments \
+        '-u[update working directory]' \
+        '-e[ssh command]:remote commands:' \
+		'--remotecmd[remote hg command]:command:->subcmd' \
+        '*:pull source:->repo'
+		_wanted source expl 'source repository' compadd -a repos
+    ;;
+
+	(pull)
+        repos=( $(hg paths | sed -e 's/^.*= //') )
+		_arguments \
+        '-f[force push]' \
+        '-e[ssh command]:remote commands:' \
+		'--remotecmd[remote hg command]:command:->subcmd' \
+        '*:pull source:->repo'
+		_wanted source expl 'source repository' compadd -a repos
+    ;;
+
+	(id|identify)
+	;;
+
+	(recover)
+	;;
+
+	(rawcommit)
+		_arguments \
+        '-p[parent]:revision:($tags)' \
+        '-d[date]:date:' \
+        '-u[user]:user:' \
+        '-F[file list]:file list:_files' \
+        '-m[commit message]:string:' \
+        '-l[commit message file]:message file:_files -g *.txt' \
+        '*:files to commit:_files'
+	;;
+
+	(copy|cp)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '-A-[record a copy after it has happened]' \
+        '-f[replace destination if it exists]' \
+        '-p[append source path to dest]' \
+        '*:destination:'
+	;;
+
+	(rename|mv)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '-A-[record a copy after it has happened]' \
+        '-f[replace destination if it exists]' \
+        '-p[append source path to dest]' \
+        '*:destination:'
+	;;
+
+	(forget)
+        addedFiles=( $(hg status -an) )
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/'
+        _wanted files expl 'newly added files' compadd -a addedFiles
+	;;
+
+	(import|patch)
+		_arguments \
+        '-p[path strip (default: 1)]:count:' \
+        '-f[skip check for outstanding changes]' \
+        '-b[base path]:file:_files -W $(hg root)' \
+        '*:patch file:_files'
+	;;
+
+	(incoming|in)
+		_arguments \
+        '-p[show patch]' \
+        '*:mercurial repository:_files'
+	;;
+
+	(diff)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '-r[revision]:revision:($tags)' \
+        '-a-[tread all files as text]' \
+        '*:file:_files'
+	;;
+
+	(log|history)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '-r[revision]:revision:($tags)' \
+        '-b[show branches]' \
+        '-p[show patch]' \
+        '*:file:_files'
+	;;
+
+	(grep)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '-0[end fields with NUL]' \
+        '--all[print all revisions with matches]' \
+        '-i[ignore case]' \
+        '-l[print names of files and revs with matches]' \
+        '-n[print line numbers]' \
+        '-r[search in revision rev]:revision:($tags)' \
+        '-u[print user who made change]' \
+        '*:search pattern, then files:_files'
+	;;
+
+	(status)
+		_arguments \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '-0[end filenames with NUL]' \
+        '-m[show only modified files]' \
+        '-a[show only added files]' \
+        '-r[show only removed files]' \
+        '-u[show only unknown files]' \
+        '-n[hide status prefix]' \
+        '*:search pattern, then files:_files'
+	;;
+
+	(locate)
+		_arguments \
+        '-r[search in revision rev]:revision:($tags)' \
+        '-0[end fields with NUL]' \
+        '-f[print complete paths]' \
+        '-I[include path in search]:dir:_files -W $(hg root) -/' \
+        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        '*:search pattern:'
+	;;
+
+	(help)
+		_wanted commands expl 'hg command' compadd -a subcmds
+	;;
+
+    (root|undo|view|verify|version)
+        # no arguments for these commands
+    ;;
+
+	(*)
+		_message "unknown hg command completion: $service"
+	;;
+esac
