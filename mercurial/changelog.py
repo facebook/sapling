@@ -15,7 +15,7 @@ class changelog(revlog):
 
     def extract(self, text):
         if not text:
-            return (nullid, "", "0", [], "")
+            return (nullid, "", (0, 0), [], "")
         last = text.index("\n\n")
         desc = text[last + 2:]
         l = text[:last].splitlines()
