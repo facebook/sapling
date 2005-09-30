@@ -16,7 +16,7 @@ local curcontext="$curcontext" state line
 typeset -A opt_args
 local subcmds repos tags newFiles addedFiles
 
-tags=($(hg tags | sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//'))
+tags=($(hg tags 2> /dev/null | sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//
 subcmds=($(hg -v help | sed -e '1,/^list of commands:/d' \
       -e '/^global options:/,$d' -e '/^ [^ ]/!d; s/[,:]//g;'))
 
