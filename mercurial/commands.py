@@ -568,6 +568,7 @@ def bundle(ui, repo, fname, dest="default-push", **opts):
         f.write(z.flush())
     except:
         os.unlink(fname)
+        raise
 
 def cat(ui, repo, file1, *pats, **opts):
     """output the latest or given revisions of files"""
