@@ -386,8 +386,9 @@ class hgweb:
                      entries=changelist)
 
     def changeset(self, nodeid):
-        n = bin(nodeid)
         cl = self.repo.changelog
+        n = self.repo.lookup(nodeid)
+        nodeid = hex(n)
         changes = cl.read(n)
         p1 = cl.parents(n)[0]
 
@@ -422,6 +423,7 @@ class hgweb:
     def filelog(self, f, filenode):
         cl = self.repo.changelog
         fl = self.repo.file(f)
+        filenode = hex(fl.lookup(filenode))
         count = fl.count()
 
         def entries(**map):
@@ -454,7 +456,8 @@ class hgweb:
 
     def filerevision(self, f, node):
         fl = self.repo.file(f)
-        n = bin(node)
+        n = fl.lookup(node)
+        node = hex(n)
         text = fl.read(n)
         changerev = fl.linkrev(n)
         cl = self.repo.changelog
@@ -486,7 +489,8 @@ class hgweb:
         bcache = {}
         ncache = {}
         fl = self.repo.file(f)
-        n = bin(node)
+        n = fl.lookup(node)
+        node = hex(n)
         changerev = fl.linkrev(n)
 
         cl = self.repo.changelog
@@ -535,10 +539,13 @@ class hgweb:
                      permissions=self.repo.manifest.readflags(mfn)[f])
 
     def manifest(self, mnode, path):
-        mf = self.repo.manifest.read(bin(mnode))
-        rev = self.repo.manifest.rev(bin(mnode))
+        man = self.repo.manifest
+        mn = man.lookup(mnode)
+        mnode = hex(mn)
+        mf = man.read(mn)
+        rev = man.rev(mn)
         node = self.repo.changelog.node(rev)
-        mff=self.repo.manifest.readflags(bin(mnode))
+        mff = man.readflags(mn)
 
         files = {}
 
@@ -617,8 +624,9 @@ class hgweb:
                      entries=entries)
 
     def filediff(self, file, changeset):
-        n = bin(changeset)
         cl = self.repo.changelog
+        n = self.repo.lookup(changeset)
+        changeset = hex(n)
         p1 = cl.parents(n)[0]
         cs = cl.read(n)
         mf = self.repo.manifest.read(cs[0])
@@ -805,7 +813,7 @@ class hgweb:
             req.write(z.flush())
 
         elif req.form['cmd'][0] == 'archive':
-            changeset = bin(req.form['node'][0])
+            changeset = self.repo.lookup(req.form['node'][0])
             type = req.form['type'][0]
             if (type in self.archives and
                 self.repo.ui.configbool("web", "allow" + type, False)):
