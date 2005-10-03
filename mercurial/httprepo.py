@@ -123,23 +123,13 @@ class httprepository(remoterepository):
         f = self.do_cmd("changegroup", roots=n)
         bytes = 0
 
-        class zread:
-            def __init__(self, f):
-                self.zd = zlib.decompressobj()
-                self.f = f
-                self.buf = ""
-            def read(self, l):
-                while l > len(self.buf):
-                    r = self.f.read(4096)
-                    if r:
-                        self.buf += self.zd.decompress(r)
-                    else:
-                        self.buf += self.zd.flush()
-                        break
-                d, self.buf = self.buf[:l], self.buf[l:]
-                return d
+        def zgenerator(f):
+            zd = zlib.decompressobj()
+            for chnk in f:
+                yield zd.decompress(chnk)
+            yield zd.flush()
 
-        return zread(f)
+        return util.chunkbuffer(zgenerator(util.filechunkiter(f)))
 
 class httpsrepository(httprepository):
     pass
