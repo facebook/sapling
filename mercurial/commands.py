@@ -1681,22 +1681,14 @@ def unbundle(ui, repo, fname):
     if f.read(4) != "HG10":
         raise util.Abort("%s: not a Mercurial bundle file" % fname)
 
-    class bzread:
-        def __init__(self, f):
-            self.zd = bz2.BZ2Decompressor()
-            self.f = f
-            self.buf = ""
-        def read(self, l):
-            while l > len(self.buf):
-                r = self.f.read(4096)
-                if r:
-                    self.buf += self.zd.decompress(r)
-                else:
-                    break
-            d, self.buf = self.buf[:l], self.buf[l:]
-            return d
+    def bzgenerator(f):
+        zd = bz2.BZ2Decompressor()
+        for chunk in f:
+            yield zd.decompress(chunk)
+        yield zd.flush()
 
-    repo.addchangegroup(bzread(f))
+    bzgen = bzgenerator(util.filechunkiter(f, 4096))
+    repo.addchangegroup(util.chunkbuffer(bzgen))
 
 def undo(ui, repo):
     """undo the last commit or pull
