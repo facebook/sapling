@@ -545,7 +545,7 @@ def filechunkiter(f, size = 65536):
     socket or some other type of file that sometimes reads less data
     than is requested."""
     s = f.read(size)
-    while len(s) >= 0:
+    while len(s) > 0:
         yield s
         s = f.read(size)
 

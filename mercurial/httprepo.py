@@ -8,7 +8,7 @@
 from node import *
 from remoterepo import *
 from demandload import *
-demandload(globals(), "hg os urllib urllib2 urlparse zlib")
+demandload(globals(), "hg os urllib urllib2 urlparse zlib util")
 
 class httprepository(remoterepository):
     def __init__(self, ui, path):
