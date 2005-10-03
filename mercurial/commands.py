@@ -1256,6 +1256,19 @@ def log(ui, repo, *pats, **opts):
             br = None
             if opts['branch']:
                 br = repo.branchlookup([repo.changelog.node(rev)])
+
+            if opts['keyword']:
+                changes = repo.changelog.read(repo.changelog.node(rev))
+                miss = 0
+                for k in opts['keyword']:
+                    if not (k in changes[1].lower() or
+                            k in changes[4].lower() or
+                            k in " ".join(changes[3][:20]).lower()):
+                        miss = 1
+                        break
+                if miss:
+                    continue
+
             show_changeset(du, repo, rev, brinfo=br)
             if opts['patch']:
                 changenode = repo.changelog.node(rev)
@@ -1868,6 +1881,7 @@ table = {
          [('I', 'include', [], 'include path in search'),
           ('X', 'exclude', [], 'exclude path from search'),
           ('b', 'branch', None, 'show branches'),
+          ('k', 'keyword', [], 'search for a keyword'),
           ('r', 'rev', [], 'revision'),
           ('p', 'patch', None, 'show patch')],
          'hg log [-I] [-X] [-r REV]... [-p] [FILE]'),
