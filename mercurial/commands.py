@@ -768,9 +768,7 @@ def docopy(ui, repo, pats, opts):
         if not opts['after']:
             try:
                 shutil.copyfile(rel, myreldest)
-                n = repo.manifest.tip()
-                mf = repo.manifest.readflags(n)
-                util.set_exec(myreldest, util.is_exec(rel, mf[abs]))
+                shutil.copymode(rel, myreldest)
             except shutil.Error, inst:
                 raise util.Abort(str(inst))
             except IOError, inst:
