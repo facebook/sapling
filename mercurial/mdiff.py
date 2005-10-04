@@ -5,16 +5,14 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import difflib, struct, bdiff
-from mpatch import *
-from util import *
+import difflib, struct, bdiff, util, mpatch
 
 def unidiff(a, ad, b, bd, fn, r=None, text=False):
 
     if not a and not b: return ""
-    epoch = datestr((0,0))
+    epoch = util.datestr((0, 0))
 
-    if not text and (binary(a) or binary(b)):
+    if not text and (util.binary(a) or util.binary(b)):
         l = ['Binary file %s has changed\n' % fn]
     elif a == None:
         b = b.splitlines(1)
@@ -117,8 +115,9 @@ def patchtext(bin):
     return "".join(t)
 
 def patch(a, bin):
-    return patches(a, [bin])
+    return mpatch.patches(a, [bin])
 
+patches = mpatch.patches
 textdiff = bdiff.bdiff
 
 
