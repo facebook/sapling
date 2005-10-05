@@ -1379,7 +1379,8 @@ class localrepository:
         self.ui.status("crosschecking files in changesets and manifests\n")
 
         for m,c in neededmanifests.items():
-            err("Changeset %s refers to unknown manifest %s" % (m, c))
+            err("Changeset %s refers to unknown manifest %s" %
+                (short(m), short(c)))
         del neededmanifests
 
         for f in filenodes:
