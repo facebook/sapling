@@ -1309,8 +1309,12 @@ class localrepository:
         filelinkrevs = {}
         filenodes = {}
         changesets = revisions = files = 0
-        errors = 0
+        errors = [0]
         neededmanifests = {}
+
+        def err(msg):
+            self.ui.warn(msg + "\n")
+            errors[0] += 1
 
         seen = {}
         self.ui.status("checking changesets\n")
@@ -1319,23 +1323,19 @@ class localrepository:
             n = self.changelog.node(i)
             l = self.changelog.linkrev(n)
             if l != i:
-                self.ui.warn("incorrect linkrev (%d) for changeset revision %d"
-                             % (l, i))
+                err("incorrect link (%d) for changeset revision %d" % (l, i))
             if n in seen:
-                self.ui.warn("duplicate changeset at revision %d\n" % i)
-                errors += 1
+                err("duplicate changeset at revision %d" % i)
             seen[n] = 1
 
             for p in self.changelog.parents(n):
                 if p not in self.changelog.nodemap:
-                    self.ui.warn("changeset %s has unknown parent %s\n" %
+                    err("changeset %s has unknown parent %s" %
                                  (short(n), short(p)))
-                    errors += 1
             try:
                 changes = self.changelog.read(n)
             except Exception, inst:
-                self.ui.warn("unpacking changeset %s: %s\n" % (short(n), inst))
-                errors += 1
+                err("unpacking changeset %s: %s" % (short(n), inst))
 
             neededmanifests[changes[0]] = n
 
@@ -1349,23 +1349,20 @@ class localrepository:
             l = self.manifest.linkrev(n)
 
             if l < 0 or l >= self.changelog.count():
-                self.ui.warn("bad manifest link (%d) at revision %d\n" %
-                             (l, i))
-                errors += 1
+                err("bad manifest link (%d) at revision %d" % (l, i))
 
             if n in neededmanifests:
                 del neededmanifests[n]
 
             if n in seen:
-                self.ui.warn("duplicate manifest at revision %d\n" % i)
-                errors += 1
+                err("duplicate manifest at revision %d" % i)
+
             seen[n] = 1
 
             for p in self.manifest.parents(n):
                 if p not in self.manifest.nodemap:
-                    self.ui.warn("manifest %s has unknown parent %s\n" %
-                            (short(n), short(p)))
-                    errors += 1
+                    err("manifest %s has unknown parent %s" %
+                        (short(n), short(p)))
 
             try:
                 delta = mdiff.patchtext(self.manifest.delta(n))
@@ -1373,9 +1370,7 @@ class localrepository:
                 self.ui.warn("interrupted")
                 raise
             except Exception, inst:
-                self.ui.warn("unpacking manifest %s: %s\n"
-                             % (short(n), inst))
-                errors += 1
+                err("unpacking manifest %s: %s" % (short(n), inst))
 
             ff = [ l.split('\0') for l in delta.splitlines() ]
             for f, fn in ff:
@@ -1384,20 +1379,16 @@ class localrepository:
         self.ui.status("crosschecking files in changesets and manifests\n")
 
         for m,c in neededmanifests.items():
-            self.ui.warn("Changeset %s refers to unknown manifest %s\n"
-                         % (m, c))
-            errors += 1
+            err("Changeset %s refers to unknown manifest %s" % (m, c))
         del neededmanifests
 
         for f in filenodes:
             if f not in filelinkrevs:
-                self.ui.warn("file %s in manifest but not in changesets\n" % f)
-                errors += 1
+                err("file %s in manifest but not in changesets" % f)
 
         for f in filelinkrevs:
             if f not in filenodes:
-                self.ui.warn("file %s in changeset but not in manifest\n" % f)
-                errors += 1
+                err("file %s in changeset but not in manifest" % f)
 
         self.ui.status("checking files\n")
         ff = filenodes.keys()
@@ -1413,21 +1404,16 @@ class localrepository:
                 n = fl.node(i)
 
                 if n in seen:
-                    self.ui.warn("%s: duplicate revision %d\n" % (f, i))
-                    errors += 1
-
+                    err("%s: duplicate revision %d" % (f, i))
                 if n not in filenodes[f]:
-                    self.ui.warn("%s: %d:%s not in manifests\n"
-                                 % (f, i, short(n)))
-                    errors += 1
+                    err("%s: %d:%s not in manifests" % (f, i, short(n)))
                 else:
                     del filenodes[f][n]
 
                 flr = fl.linkrev(n)
                 if flr not in filelinkrevs[f]:
-                    self.ui.warn("%s:%s points to unexpected changeset %d\n"
-                            % (f, short(n), fl.linkrev(n)))
-                    errors += 1
+                    err("%s:%s points to unexpected changeset %d"
+                            % (f, short(n), flr))
                 else:
                     filelinkrevs[f].remove(flr)
 
@@ -1435,31 +1421,25 @@ class localrepository:
                 try:
                     t = fl.read(n)
                 except Exception, inst:
-                    self.ui.warn("unpacking file %s %s: %s\n"
-                                 % (f, short(n), inst))
-                    errors += 1
+                    err("unpacking file %s %s: %s" % (f, short(n), inst))
 
                 # verify parents
                 (p1, p2) = fl.parents(n)
                 if p1 not in nodes:
-                    self.ui.warn("file %s:%s unknown parent 1 %s" %
-                            (f, short(n), short(p1)))
-                    errors += 1
+                    err("file %s:%s unknown parent 1 %s" %
+                        (f, short(n), short(p1)))
                 if p2 not in nodes:
-                    self.ui.warn("file %s:%s unknown parent 2 %s" %
+                    err("file %s:%s unknown parent 2 %s" %
                             (f, short(n), short(p1)))
-                    errors += 1
                 nodes[n] = 1
 
             # cross-check
             for node in filenodes[f]:
-                self.ui.warn("node %s in manifests not in %s\n"
-                             % (hex(node), f))
-                errors += 1
+                err("node %s in manifests not in %s" % (hex(node), f))
 
         self.ui.status("%d files, %d changesets, %d total revisions\n" %
                        (files, changesets, revisions))
 
-        if errors:
-            self.ui.warn("%d integrity errors encountered!\n" % errors)
+        if errors[0]:
+            self.ui.warn("%d integrity errors encountered!\n" % errors[0])
             return 1
