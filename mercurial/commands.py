@@ -1238,6 +1238,9 @@ def log(ui, repo, *pats, **opts):
                 self.write(*args)
         def write(self, *args):
             self.hunk[self.rev].append(args)
+        def debug(self, *args):
+            if self.debugflag:
+                self.write(*args)
         def __getattr__(self, key):
             return getattr(self.ui, key)
     cwd = repo.getcwd()
