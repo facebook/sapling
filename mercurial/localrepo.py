@@ -1310,12 +1310,17 @@ class localrepository:
         filenodes = {}
         changesets = revisions = files = 0
         errors = 0
+        neededmanifests = {}
 
         seen = {}
         self.ui.status("checking changesets\n")
         for i in range(self.changelog.count()):
             changesets += 1
             n = self.changelog.node(i)
+            l = self.changelog.linkrev(n)
+            if l != i:
+                self.ui.warn("incorrect linkrev (%d) for changeset revision %d"
+                             % (l, i))
             if n in seen:
                 self.ui.warn("duplicate changeset at revision %d\n" % i)
                 errors += 1
@@ -1332,6 +1337,8 @@ class localrepository:
                 self.ui.warn("unpacking changeset %s: %s\n" % (short(n), inst))
                 errors += 1
 
+            neededmanifests[changes[0]] = n
+
             for f in changes[3]:
                 filelinkrevs.setdefault(f, []).append(i)
 
@@ -1339,6 +1346,16 @@ class localrepository:
         self.ui.status("checking manifests\n")
         for i in range(self.manifest.count()):
             n = self.manifest.node(i)
+            l = self.manifest.linkrev(n)
+
+            if l < 0 or l >= self.changelog.count():
+                self.ui.warn("bad manifest link (%d) at revision %d\n" %
+                             (l, i))
+                errors += 1
+
+            if n in neededmanifests:
+                del neededmanifests[n]
+
             if n in seen:
                 self.ui.warn("duplicate manifest at revision %d\n" % i)
                 errors += 1
@@ -1365,6 +1382,13 @@ class localrepository:
                 filenodes.setdefault(f, {})[bin(fn[:40])] = 1
 
         self.ui.status("crosschecking files in changesets and manifests\n")
+
+        for m,c in neededmanifests.items():
+            self.ui.warn("Changeset %s refers to unknown manifest %s\n"
+                         % (m, c))
+            errors += 1
+        del neededmanifests
+
         for f in filenodes:
             if f not in filelinkrevs:
                 self.ui.warn("file %s in manifest but not in changesets\n" % f)
