@@ -160,6 +160,7 @@ class convert_mercurial:
             date = "%s 0" % int(time.mktime(time.gmtime()))
             self.repo.rawcommit([".hgtags"], "update tags", "convert-repo",
                                 date, self.repo.changelog.tip(), hg.nullid)
+            return hg.hex(self.repo.changelog.tip())
 
 class convert:
     def __init__(self, source, dest, mapfile):
@@ -269,7 +270,11 @@ class convert:
             if v in self.map:
                 ctags[k] = self.map[v]
 
-        self.dest.puttags(ctags)
+        if ctags:
+            nrev = self.dest.puttags(ctags)
+            # write another hash correspondence to override the previous
+            # one so we don't end up with extra tag heads
+            file(self.mapfile, "a").write("%s %s\n" % (c, nrev))
 
 gitpath, hgpath, mapfile = sys.argv[1:]
 if os.path.isdir(gitpath + "/.git"):
