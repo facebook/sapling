@@ -82,6 +82,8 @@ class convert_git:
         for f in os.listdir(self.path + "/refs/tags"):
             try:
                 h = file(self.path + "/refs/tags/" + f).read().strip()
+                c = self.catfile(h, "tag") # read the commit hash
+                h = c.splitlines()[0].split()[1]
                 tags[f] = h
             except:
                 pass
