@@ -61,16 +61,20 @@ class convert_git:
             n,v = e.split(" ", 1)
             if n == "author":
                 p = v.split()
-                date = " ".join(p[-2:])
+                tm, tz = p[-2:]
                 author = " ".join(p[:-2])
                 if author[0] == "<": author = author[1:-1]
             if n == "committer":
                 p = v.split()
-                date = " ".join(p[-2:])
+                tm, tz = p[-2:]
                 committer = " ".join(p[:-2])
                 if committer[0] == "<": committer = committer[1:-1]
-                message += "\ncommitter: %s %s\n" % (committer, date)
+                message += "\ncommitter: %s\n" % v
             if n == "parent": parents.append(v)
+
+        tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
+        tz = int(tzs) * (int(tzh) * 3600 + int(tzm))
+        date = tm + " " + str(tz)
         return (parents, author, date, message)
 
     def gettags(self):
