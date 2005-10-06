@@ -254,11 +254,11 @@ class convert:
         heads = self.source.getheads()
         parents = self.walktree(heads)
         t = self.toposort(parents)
+        t = [n for n in t if n not in self.map]
         num = len(t)
 
         for c in t:
             num -= 1
-            if c in self.map: continue
             desc = self.commitcache[c][3].splitlines()[0]
             #print num, desc
             self.copy(c)
