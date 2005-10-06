@@ -132,8 +132,9 @@ class convert_mercurial:
             self.repo.rawcommit(files, text, author, dest,
                                 hg.bin(p1), hg.bin(p2))
             text = "(octopus merge fixup)\n"
+            p2 = hg.hex(self.repo.changelog.tip())
 
-        return hg.hex(self.repo.changelog.tip())
+        return p2
 
     def puttags(self, tags):
         try:
