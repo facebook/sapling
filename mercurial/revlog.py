@@ -622,7 +622,7 @@ class revlog:
                 #print "next x"
                 gx = x.next()
 
-    def group(self, linkmap):
+    def group(self, nodelist, lookup, infocollect = None):
         """calculate a delta group
 
         Given a list of changeset revs, return a set of deltas and
@@ -631,14 +631,8 @@ class revlog:
         have this parent as it has all history before these
         changesets. parent is parent[0]
         """
-        revs = []
-        needed = {}
-
-        # find file nodes/revs that match changeset revs
-        for i in xrange(0, self.count()):
-            if self.index[i][3] in linkmap:
-                revs.append(i)
-                needed[i] = 1
+        revs = [self.rev(n) for n in nodelist]
+        needed = dict.fromkeys(revs, 1)
 
         # if we don't have any revisions touched by these changesets, bail
         if not revs:
@@ -706,6 +700,9 @@ class revlog:
             a, b = revs[d], revs[d + 1]
             n = self.node(b)
 
+            if infocollect is not None:
+                infocollect(n)
+
             # do we need to construct a new delta?
             if a + 1 != b or self.base(b) == b:
                 if a >= 0:
@@ -727,7 +724,7 @@ class revlog:
                 d = chunks[b]
 
             p = self.parents(n)
-            meta = n + p[0] + p[1] + linkmap[self.linkrev(n)]
+            meta = n + p[0] + p[1] + lookup(n)
             l = struct.pack(">l", len(meta) + len(d) + 4)
             yield l
             yield meta

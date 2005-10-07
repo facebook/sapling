@@ -892,40 +892,182 @@ class localrepository:
         cg = self.changegroup(update)
         return remote.addchangegroup(cg)
 
-    def changegroup(self, basenodes):
-        genread = util.chunkbuffer
+    def changegroupsubset(self, bases, heads):
+        cl = self.changelog
+        # msng = missing
+        msng_cl_lst, bases, heads = cl.nodesbetween(basenodes, headnodes)
+        junk = None
+        knownheads = {}
+        for n in basenodes:
+            for p in cl.parents(n):
+                if p != nullid:
+                    knownheads[p] = 1
+        knownheads = knownheads.keys()
+        has_cl_set, junk, junk = cl.nodesbetween(None, knownheads)
+        has_cl_set = dict.fromkeys(hasnodeset)
+
+        mnfst = self.manifest
+        msng_mnfst_set = {}
+        msng_filenode_set = {}
+
+        def identity(x):
+            return x
+
+        def cmp_by_rev_func(revlog):
+            def cmpfunc(a, b):
+                return cmp(revlog.rev(a), revlog.rev(b))
+            return cmpfunc
+
+        def prune_parents(revlog, hasset, msngset):
+            haslst = hasset.keys()
+            haslst.sort(cmp_by_rev_func(revlog))
+            for node in haslst:
+                parentlst = [p for p in revlog.parents(node) if p != nullid]
+                while parentlst:
+                    n = parentlst.pop()
+                    if n not in hasset:
+                        hasset[n] = 1
+                        p = [p for p in revlog.parents(n) if p != nullid]
+                        parentlst.extend(p)
+            for n in hasset:
+                msngset.pop(n, None)
+
+        def manifest_and_file_collector(changedfileset):
+            def collect_manifests_and_files(clnode):
+                c = cl.read(clnode)
+                for f in c[3]:
+                    # This is to make sure we only have one instance of each
+                    # filename string for each filename.
+                    changedfileset.set_default(f, f)
+                msng_mnfst_set.set_default(c[0], clnode)
+            return collect_manifests_and_files
+
+        def prune_manifests():
+            has_mnfst_set = {}
+            for n in msng_mnfst_set:
+                linknode = cl.node(mnfst.linkrev(n))
+                if linknode in has_cl_set:
+                    has_mnfst_set[n] = 1
+            prune_parents(mnfst, has_mnfst_set, msng_mnfst_set)
+
+        def lookup_manifest_link(mnfstnode):
+            return msng_mnfst_set[mnfstnode]
+
+        def filenode_collector(changedfiles):
+            def collect_msng_filenodes(mnfstnode):
+                m = mnfst.read(mnfstnode)
+                for f in changedfiles:
+                    fnode = m.get(f, None)
+                    if fnode is not None:
+                        clnode = msng_mnfst_set[mnfstnode]
+                        ndset = msng_filenode_set.setdefault(f, {})
+                        ndset.set_default(fnode, clnode)
+
+        def prune_filenodes(f, filerevlog):
+            msngset = msng_filenode_set[f]
+            hasset = {}
+            for n in msngset:
+                clnode = cl.node(filerevlog.linkrev(n))
+                if clnode in has_cl_set:
+                    hasset[n] = 1
+            prune_parents(filerevlog, hasset, msngset)
+
+        def lookup_filenode_link_func(fname):
+            msngset = msng_filenode_set[fname]
+            def lookup_filenode_link(fnode):
+                return msngset[fnode]
+            return lookup_filenode_link
 
         def gengroup():
-            nodes = self.changelog.nodesbetween(basenodes)[0]
+            changedfiles = {}
+            group = cl.group(msng_cl_lst, identity,
+                             manifest_and_file_collector(changedfiles))
+            for chnk in group:
+                yield chnk
+            prune_manifests()
+            msng_mnfst_lst = msng_mnfst_set.keys()
+            msng_mnfst_lst.sort(cmp_by_rev_func(mnfst))
+            changedfiles = changedfiles.keys()
+            changedfiles.sort()
+            group = mnfst.group(mnfst, lookup_manifest_link,
+                                filenode_collector(changedfiles))
+            for chnk in group:
+                yield chnk
+            msng_mnfst_lst = None
+            msng_mnfst_set.clear()
+            for fname in changedfiles:
+                filerevlog = self.file(fname)
+                prune_filenodes(fname, filerevlog)
+                msng_filenode_lst = msng_filenode_set[fname].keys()
+                if len(msng_filenode_lst) > 0:
+                    yield struct.pack(">l", len(f) + 4) + f
+                    msng_filenode_lst.sort(cmp_by_rev_func(filerevlog))
+                    group = filerevlog.group(msng_filenode_lst,
+                                             lookup_filenode_link)
+                    for chnk in group:
+                        yield chnk
+                del msng_filenode_set[fname]
+            yield struct.pack(">l", 0)
 
-            # construct the link map
-            linkmap = {}
-            for n in nodes:
-                linkmap[self.changelog.rev(n)] = n
+        return util.chunkbuffer(gengroup())
 
+    def changegroup(self, basenodes):
+        cl = self.changelog
+        nodes = cl.nodesbetween(basenodes, None)[0]
+        revset = dict.fromkeys([cl.rev(n) for n in nodes])
+
+        def identity(x):
+            return x
+
+        def gennodelst(revlog):
+            for r in xrange(0, revlog.count()):
+                n = revlog.node(r)
+                if revlog.linkrev(n) in revset:
+                    yield n
+
+        def changed_file_collector(changedfileset):
+            def collect_changed_files(clnode):
+                c = cl.read(clnode)
+                for fname in c[3]:
+                    changedfileset[fname] = 1
+            return collect_changed_files
+
+        def lookuprevlink_func(revlog):
+            def lookuprevlink(n):
+                return cl.node(revlog.linkrev(n))
+            return lookuprevlink
+
+        def gengroup():
             # construct a list of all changed files
-            changed = {}
-            for n in nodes:
-                c = self.changelog.read(n)
-                for f in c[3]:
-                    changed[f] = 1
-            changed = changed.keys()
-            changed.sort()
+            changedfiles = {}
 
-            # the changegroup is changesets + manifests + all file revs
-            revs = [ self.changelog.rev(n) for n in nodes ]
+            for chnk in cl.group(nodes, identity,
+                                 changed_file_collector(changedfiles)):
+                yield chnk
+            changedfiles = changedfiles.keys()
+            changedfiles.sort()
 
-            for y in self.changelog.group(linkmap): yield y
-            for y in self.manifest.group(linkmap): yield y
-            for f in changed:
-                yield struct.pack(">l", len(f) + 4) + f
-                g = self.file(f).group(linkmap)
-                for y in g:
-                    yield y
+            mnfst = self.manifest
+            def nodegen(revlog, reviter):
+                for r in reviter:
+                    yield revlog.node(r)
+            nodeiter = gennodelst(mnfst)
+            for chnk in mnfst.group(nodeiter, lookuprevlink_func(mnfst)):
+                yield chnk
+
+            for fname in changedfiles:
+                filerevlog = self.file(fname)
+                nodeiter = gennodelst(filerevlog)
+                nodeiter = list(nodeiter)
+                if nodeiter:
+                    yield struct.pack(">l", len(fname) + 4) + fname
+                    lookup = lookuprevlink_func(filerevlog)
+                    for chnk in filerevlog.group(nodeiter, lookup):
+                        yield chnk
 
             yield struct.pack(">l", 0)
 
-        return genread(gengroup())
+        return util.chunkbuffer(gengroup())
 
     def addchangegroup(self, source):
 
