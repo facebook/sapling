@@ -700,32 +700,6 @@ class localrepository:
 
         return r
 
-    def newer(self, nodes):
-        m = {}
-        nl = []
-        pm = {}
-        cl = self.changelog
-        t = l = cl.count()
-
-        # find the lowest numbered node
-        for n in nodes:
-            l = min(l, cl.rev(n))
-            m[n] = 1
-
-        for i in xrange(l, t):
-            n = cl.node(i)
-            if n in m: # explicitly listed
-                pm[n] = 1
-                nl.append(n)
-                continue
-            for p in cl.parents(n):
-                if p in pm: # parent listed
-                    pm[n] = 1
-                    nl.append(n)
-                    break
-
-        return nl
-
     def findincoming(self, remote, base=None, heads=None):
         m = self.changelog.nodemap
         search = []
@@ -922,7 +896,7 @@ class localrepository:
         genread = util.chunkbuffer
 
         def gengroup():
-            nodes = self.newer(basenodes)
+            nodes = self.changelog.nodesbetween(basenodes)[0]
 
             # construct the link map
             linkmap = {}

@@ -1193,7 +1193,7 @@ def incoming(ui, repo, source="default", **opts):
     o = repo.findincoming(other)
     if not o:
         return
-    o = other.newer(o)
+    o = other.changelog.nodesbetween(o)[0]
     for n in o:
         show_changeset(ui, other, changenode=n)
         if opts['patch']:
@@ -1305,7 +1305,7 @@ def outgoing(ui, repo, dest="default-push", **opts):
     dest = ui.expandpath(dest)
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other)
-    o = repo.newer(o)
+    o = repo.changelog.nodesbetween(o)[0]
     for n in o:
         show_changeset(ui, repo, changenode=n)
         if opts['patch']:
