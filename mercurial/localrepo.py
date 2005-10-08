@@ -850,7 +850,7 @@ class localrepository:
         # this is the set of all roots we have to push
         return subset
 
-    def pull(self, remote):
+    def pull(self, remote, heads = None):
         lock = self.lock()
 
         # if we have an empty repo, fetch everything
@@ -864,7 +864,10 @@ class localrepository:
             self.ui.status("no changes found\n")
             return 1
 
-        cg = remote.changegroup(fetch)
+        if heads is None:
+            cg = remote.changegroup(fetch)
+        else:
+            cg = remote.changegroupsubset(fetch, heads)
         return self.addchangegroup(cg)
 
     def push(self, remote, force=False):

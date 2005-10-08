@@ -627,7 +627,7 @@ def clone(ui, source, dest=None, **opts):
     copy = False
     if other.dev() != -1:
         abspath = os.path.abspath(source)
-        if not opts['pull']:
+        if not opts['pull'] and not opts['rev']:
             copy = True
 
     if copy:
@@ -655,7 +655,10 @@ def clone(ui, source, dest=None, **opts):
 
     else:
         repo = hg.repository(ui, dest, create=1)
-        repo.pull(other)
+        rev = None
+        if opts['rev']:
+            rev = [other.lookup(opts['rev'])]
+        repo.pull(other, heads = rev)
 
     f = repo.opener("hgrc", "w", text=True)
     f.write("[paths]\n")
@@ -1782,6 +1785,7 @@ table = {
         (clone,
          [('U', 'noupdate', None, 'skip update after cloning'),
           ('e', 'ssh', "", 'ssh command'),
+          ('r', 'rev', "", 'only clone changesets needed to create revision'),
           ('', 'pull', None, 'use pull protocol to copy metadata'),
           ('', 'remotecmd', "", 'remote hg command')],
          'hg clone [OPTION]... SOURCE [DEST]'),
