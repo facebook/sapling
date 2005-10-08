@@ -895,20 +895,26 @@ class localrepository:
     def changegroupsubset(self, bases, heads):
         cl = self.changelog
         # msng = missing
-        msng_cl_lst, bases, heads = cl.nodesbetween(basenodes, headnodes)
+        msng_cl_lst, bases, heads = cl.nodesbetween(bases, heads)
         junk = None
         knownheads = {}
-        for n in basenodes:
+        for n in bases:
             for p in cl.parents(n):
                 if p != nullid:
                     knownheads[p] = 1
         knownheads = knownheads.keys()
-        has_cl_set, junk, junk = cl.nodesbetween(None, knownheads)
-        has_cl_set = dict.fromkeys(hasnodeset)
+        if knownheads:
+            has_cl_set, junk, junk = cl.nodesbetween(None, knownheads)
+            has_cl_set = dict.fromkeys(hasnodeset)
+        else:
+            has_cl_set = {}
 
         mnfst = self.manifest
         msng_mnfst_set = {}
         msng_filenode_set = {}
+
+        junk = mnfst.index[mnfst.count() - 1] # Get around a bug in lazyindex
+        junk = None
 
         def identity(x):
             return x
@@ -938,8 +944,8 @@ class localrepository:
                 for f in c[3]:
                     # This is to make sure we only have one instance of each
                     # filename string for each filename.
-                    changedfileset.set_default(f, f)
-                msng_mnfst_set.set_default(c[0], clnode)
+                    changedfileset.setdefault(f, f)
+                msng_mnfst_set.setdefault(c[0], clnode)
             return collect_manifests_and_files
 
         def prune_manifests():
@@ -961,7 +967,8 @@ class localrepository:
                     if fnode is not None:
                         clnode = msng_mnfst_set[mnfstnode]
                         ndset = msng_filenode_set.setdefault(f, {})
-                        ndset.set_default(fnode, clnode)
+                        ndset.setdefault(fnode, clnode)
+            return collect_msng_filenodes
 
         def prune_filenodes(f, filerevlog):
             msngset = msng_filenode_set[f]
@@ -989,7 +996,7 @@ class localrepository:
             msng_mnfst_lst.sort(cmp_by_rev_func(mnfst))
             changedfiles = changedfiles.keys()
             changedfiles.sort()
-            group = mnfst.group(mnfst, lookup_manifest_link,
+            group = mnfst.group(msng_mnfst_lst, lookup_manifest_link,
                                 filenode_collector(changedfiles))
             for chnk in group:
                 yield chnk
@@ -1000,10 +1007,10 @@ class localrepository:
                 prune_filenodes(fname, filerevlog)
                 msng_filenode_lst = msng_filenode_set[fname].keys()
                 if len(msng_filenode_lst) > 0:
-                    yield struct.pack(">l", len(f) + 4) + f
+                    yield struct.pack(">l", len(fname) + 4) + fname
                     msng_filenode_lst.sort(cmp_by_rev_func(filerevlog))
                     group = filerevlog.group(msng_filenode_lst,
-                                             lookup_filenode_link)
+                                             lookup_filenode_link_func(fname))
                     for chnk in group:
                         yield chnk
                 del msng_filenode_set[fname]
@@ -1048,9 +1055,6 @@ class localrepository:
             changedfiles.sort()
 
             mnfst = self.manifest
-            def nodegen(revlog, reviter):
-                for r in reviter:
-                    yield revlog.node(r)
             nodeiter = gennodelst(mnfst)
             for chnk in mnfst.group(nodeiter, lookuprevlink_func(mnfst)):
                 yield chnk
