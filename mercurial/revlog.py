@@ -310,6 +310,8 @@ class revlog:
                         # So it is, real heads should not be the ancestors of
                         # any other heads.
                         heads.pop(n)
+            if not ancestors:
+                return ([], [], [])
             # Now that we have our set of ancestors, we want to remove any
             # roots that are not ancestors.
 
