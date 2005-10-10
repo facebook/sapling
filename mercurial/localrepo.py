@@ -963,14 +963,30 @@ class localrepository:
             return msng_mnfst_set[mnfstnode]
 
         def filenode_collector(changedfiles):
+            next_rev = [0]
             def collect_msng_filenodes(mnfstnode):
-                m = mnfst.read(mnfstnode)
-                for f in changedfiles:
-                    fnode = m.get(f, None)
-                    if fnode is not None:
-                        clnode = msng_mnfst_set[mnfstnode]
-                        ndset = msng_filenode_set.setdefault(f, {})
-                        ndset.setdefault(fnode, clnode)
+                r = mnfst.rev(mnfstnode)
+                if r == next_rev[0]:
+                    # If the last rev we looked at was the one just previous,
+                    # we only need to see a diff.
+                    delta = mdiff.patchtext(mnfst.delta(mnfstnode))
+                    for dline in delta.splitlines():
+                        f, fnode = dline.split('\0')
+                        fnode = bin(fnode[:40])
+                        f = changedfiles.get(f, None)
+                        if f is not None:
+                            clnode = msng_mnfst_set[mnfstnode]
+                            ndset = msng_filenode_set.setdefault(f, {})
+                            ndset.setdefault(fnode, clnode)
+                else:
+                    m = mnfst.read(mnfstnode)
+                    for f in changedfiles:
+                        fnode = m.get(f, None)
+                        if fnode is not None:
+                            clnode = msng_mnfst_set[mnfstnode]
+                            ndset = msng_filenode_set.setdefault(f, {})
+                            ndset.setdefault(fnode, clnode)
+                next_rev[0] = r + 1
             return collect_msng_filenodes
 
         def prune_filenodes(f, filerevlog):
@@ -997,14 +1013,14 @@ class localrepository:
             prune_manifests()
             msng_mnfst_lst = msng_mnfst_set.keys()
             msng_mnfst_lst.sort(cmp_by_rev_func(mnfst))
-            changedfiles = changedfiles.keys()
-            changedfiles.sort()
             group = mnfst.group(msng_mnfst_lst, lookup_manifest_link,
                                 filenode_collector(changedfiles))
             for chnk in group:
                 yield chnk
             msng_mnfst_lst = None
             msng_mnfst_set.clear()
+            changedfiles = changedfiles.keys()
+            changedfiles.sort()
             for fname in changedfiles:
                 filerevlog = self.file(fname)
                 prune_filenodes(fname, filerevlog)
