@@ -654,11 +654,14 @@ def clone(ui, source, dest=None, **opts):
         repo = hg.repository(ui, dest)
 
     else:
-        repo = hg.repository(ui, dest, create=1)
         rev = None
         if opts['rev']:
-            rev = [other.lookup(opts['rev'])]
-        repo.pull(other, heads = rev)
+            if not other.local():
+                raise util.Abort("clone -r not supported yet for remote repositories.")
+            else:
+                revs = [other.lookup(rev) for rev in opts['rev']]
+        repo = hg.repository(ui, dest, create=1)
+        repo.pull(other, heads = revs)
 
     f = repo.opener("hgrc", "w", text=True)
     f.write("[paths]\n")
@@ -1356,7 +1359,12 @@ def pull(ui, repo, source="default", **opts):
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
     other = hg.repository(ui, source)
-    r = repo.pull(other)
+    revs = None
+    if opts['rev'] and not other.local():
+        raise util.Abort("pull -r doesn't work for remote repositories yet")
+    elif opts['rev']:
+        revs = [other.lookup(rev) for rev in opts['rev']]
+    r = repo.pull(other, heads=revs)
     if not r:
         if opts['update']:
             return update(ui, repo)
@@ -1785,7 +1793,7 @@ table = {
         (clone,
          [('U', 'noupdate', None, 'skip update after cloning'),
           ('e', 'ssh', "", 'ssh command'),
-          ('r', 'rev', "", 'only clone changesets needed to create revision'),
+          ('r', 'rev', [], 'a changeset you would like to have after cloning'),
           ('', 'pull', None, 'use pull protocol to copy metadata'),
           ('', 'remotecmd', "", 'remote hg command')],
          'hg clone [OPTION]... SOURCE [DEST]'),
@@ -1892,8 +1900,9 @@ table = {
         (pull,
          [('u', 'update', None, 'update working directory'),
           ('e', 'ssh', "", 'ssh command'),
-          ('', 'remotecmd', "", 'remote hg command')],
-         'hg pull [-u] [-e FILE] [--remotecmd FILE] [SOURCE]'),
+          ('', 'remotecmd', "", 'remote hg command'),
+          ('r', 'rev', [], 'a specific revision you would like to pull')],
+         'hg pull [-u] [-e FILE] [--remotecmd FILE] [-r rev]... [SOURCE]'),
     "^push":
         (push,
          [('f', 'force', None, 'force push'),
