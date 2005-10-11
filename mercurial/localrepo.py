@@ -908,7 +908,7 @@ class localrepository:
         knownheads = knownheads.keys()
         if knownheads:
             has_cl_set, junk, junk = cl.nodesbetween(None, knownheads)
-            has_cl_set = dict.fromkeys(hasnodeset)
+            has_cl_set = dict.fromkeys(has_cl_set)
         else:
             has_cl_set = {}
 
