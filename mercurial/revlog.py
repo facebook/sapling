@@ -261,8 +261,11 @@ class revlog:
         If heads is unspecified, it is taken to be the output of the
         heads method (i.e. a list of all nodes in the repository that
         have no children)."""
+        nonodes = ([], [], [])
         if roots is not None:
             roots = list(roots)
+            if not roots:
+                return nonodes
             lowestrev = min([self.rev(n) for n in roots])
         else:
             roots = [nullid] # Everybody's a descendent of nullid
@@ -280,9 +283,12 @@ class revlog:
             # Set heads to an empty dictionary for later discovery of heads
             heads = {}
         else:
+            heads = list(heads)
+            if not heads:
+                return nonodes
             ancestors = {}
             # Start at the top and keep marking parents until we're done.
-            nodestotag = list(heads)
+            nodestotag = heads[:]
             # Turn heads into a dictionary so we can remove 'fake' heads.
             # Also, later we will be using it to filter out the heads we can't
             # find from roots.
@@ -311,7 +317,7 @@ class revlog:
                         # any other heads.
                         heads.pop(n)
             if not ancestors:
-                return ([], [], [])
+                return nonodes
             # Now that we have our set of ancestors, we want to remove any
             # roots that are not ancestors.
 
@@ -327,7 +333,7 @@ class revlog:
                     lowestrev = min([self.rev(n) for n in roots])
                 else:
                     # No more roots?  Return empty list
-                    return ([], [], [])
+                    return nonodes
             else:
                 # We are descending from nullid, and don't need to care about
                 # any other roots.
