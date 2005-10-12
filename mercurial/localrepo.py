@@ -896,37 +896,80 @@ class localrepository:
         return remote.addchangegroup(cg)
 
     def changegroupsubset(self, bases, heads):
+        """This function generates a changegroup consisting of all the nodes
+        that are descendents of any of the bases, and ancestors of any of
+        the heads.
+
+        It is fairly complex as determining which filenodes and which
+        manifest nodes need to be included for the changeset to be complete
+        is non-trivial.
+
+        Another wrinkle is doing the reverse, figuring out which changeset in
+        the changegroup a particular filenode or manifestnode belongs to."""
+
+        # Set up some initial variables
+        # Make it easy to refer to self.changelog
         cl = self.changelog
-        # msng = missing
+        # msng is short for missing - compute the list of changesets in this
+        # changegroup.
         msng_cl_lst, bases, heads = cl.nodesbetween(bases, heads)
-        junk = None
+        # Some bases may turn out to be superfluous, and some heads may be
+        # too.  nodesbetween will return the minimal set of bases and heads
+        # necessary to re-create the changegroup.
+
+        # Known heads are the list of heads that it is assumed the recipient
+        # of this changegroup will know about.
         knownheads = {}
+        # We assume that all parents of bases are known heads.
         for n in bases:
             for p in cl.parents(n):
                 if p != nullid:
                     knownheads[p] = 1
         knownheads = knownheads.keys()
         if knownheads:
+            # Now that we know what heads are known, we can compute which
+            # changesets are known.  The recipient must know about all
+            # changesets required to reach the known heads from the null
+            # changeset.
             has_cl_set, junk, junk = cl.nodesbetween(None, knownheads)
+            junk = None
+            # Transform the list into an ersatz set.
             has_cl_set = dict.fromkeys(has_cl_set)
         else:
+            # If there were no known heads, the recipient cannot be assumed to
+            # know about any changesets.
             has_cl_set = {}
 
+        # Make it easy to refer to self.manifest
         mnfst = self.manifest
+        # We don't know which manifests are missing yet
         msng_mnfst_set = {}
+        # Nor do we know which filenodes are missing.
         msng_filenode_set = {}
 
         junk = mnfst.index[mnfst.count() - 1] # Get around a bug in lazyindex
         junk = None
 
+        # A changeset always belongs to itself, so the changenode lookup
+        # function for a changenode is identity.
         def identity(x):
             return x
 
+        # A function generating function.  Sets up an environment for the
+        # inner function.
         def cmp_by_rev_func(revlog):
-            def cmpfunc(a, b):
+            # Compare two nodes by their revision number in the environment's
+            # revision history.  Since the revision number both represents the
+            # most efficient order to read the nodes in, and represents a
+            # topological sorting of the nodes, this function is often useful.
+            def cmp_by_rev(a, b):
                 return cmp(revlog.rev(a), revlog.rev(b))
-            return cmpfunc
+            return cmp_by_rev
 
+        # If we determine that a particular file or manifest node must be a
+        # node that the recipient of the changegroup will already have, we can
+        # also assume the recipient will have all the parents.  This function
+        # prunes them from the set of missing nodes.
         def prune_parents(revlog, hasset, msngset):
             haslst = hasset.keys()
             haslst.sort(cmp_by_rev_func(revlog))
@@ -941,7 +984,19 @@ class localrepository:
             for n in hasset:
                 msngset.pop(n, None)
 
+        # This is a function generating function used to set up an environment
+        # for the inner function to execute in.
         def manifest_and_file_collector(changedfileset):
+            # This is an information gathering function that gathers
+            # information from each changeset node that goes out as part of
+            # the changegroup.  The information gathered is a list of which
+            # manifest nodes are potentially required (the recipient may
+            # already have them) and total list of all files which were
+            # changed in any changeset in the changegroup.
+            #
+            # We also remember the first changenode we saw any manifest
+            # referenced by so we can later determine which changenode 'owns'
+            # the manifest.
             def collect_manifests_and_files(clnode):
                 c = cl.read(clnode)
                 for f in c[3]:
@@ -951,93 +1006,163 @@ class localrepository:
                 msng_mnfst_set.setdefault(c[0], clnode)
             return collect_manifests_and_files
 
+        # Figure out which manifest nodes (of the ones we think might be part
+        # of the changegroup) the recipient must know about and remove them
+        # from the changegroup.
         def prune_manifests():
             has_mnfst_set = {}
             for n in msng_mnfst_set:
+                # If a 'missing' manifest thinks it belongs to a changenode
+                # the recipient is assumed to have, obviously the recipient
+                # must have that manifest.
                 linknode = cl.node(mnfst.linkrev(n))
                 if linknode in has_cl_set:
                     has_mnfst_set[n] = 1
             prune_parents(mnfst, has_mnfst_set, msng_mnfst_set)
 
+        # Use the information collected in collect_manifests_and_files to say
+        # which changenode any manifestnode belongs to.
         def lookup_manifest_link(mnfstnode):
             return msng_mnfst_set[mnfstnode]
 
+        # A function generating function that sets up the initial environment
+        # the inner function.
         def filenode_collector(changedfiles):
             next_rev = [0]
+            # This gathers information from each manifestnode included in the
+            # changegroup about which filenodes the manifest node references
+            # so we can include those in the changegroup too.
+            #
+            # It also remembers which changenode each filenode belongs to.  It
+            # does this by assuming the a filenode belongs to the changenode
+            # the first manifest that references it belongs to.
             def collect_msng_filenodes(mnfstnode):
                 r = mnfst.rev(mnfstnode)
                 if r == next_rev[0]:
                     # If the last rev we looked at was the one just previous,
                     # we only need to see a diff.
                     delta = mdiff.patchtext(mnfst.delta(mnfstnode))
+                    # For each line in the delta
                     for dline in delta.splitlines():
+                        # get the filename and filenode for that line
                         f, fnode = dline.split('\0')
                         fnode = bin(fnode[:40])
                         f = changedfiles.get(f, None)
+                        # And if the file is in the list of files we care
+                        # about.
                         if f is not None:
+                            # Get the changenode this manifest belongs to
                             clnode = msng_mnfst_set[mnfstnode]
+                            # Create the set of filenodes for the file if
+                            # there isn't one already.
                             ndset = msng_filenode_set.setdefault(f, {})
+                            # And set the filenode's changelog node to the
+                            # manifest's if it hasn't been set already.
                             ndset.setdefault(fnode, clnode)
                 else:
+                    # Otherwise we need a full manifest.
                     m = mnfst.read(mnfstnode)
+                    # For every file in we care about.
                     for f in changedfiles:
                         fnode = m.get(f, None)
+                        # If it's in the manifest
                         if fnode is not None:
+                            # See comments above.
                             clnode = msng_mnfst_set[mnfstnode]
                             ndset = msng_filenode_set.setdefault(f, {})
                             ndset.setdefault(fnode, clnode)
+                # Remember the revision we hope to see next.
                 next_rev[0] = r + 1
             return collect_msng_filenodes
 
+        # We have a list of filenodes we think we need for a file, lets remove
+        # all those we now the recipient must have.
         def prune_filenodes(f, filerevlog):
             msngset = msng_filenode_set[f]
             hasset = {}
+            # If a 'missing' filenode thinks it belongs to a changenode we
+            # assume the recipient must have, then the recipient must have
+            # that filenode.
             for n in msngset:
                 clnode = cl.node(filerevlog.linkrev(n))
                 if clnode in has_cl_set:
                     hasset[n] = 1
             prune_parents(filerevlog, hasset, msngset)
 
+        # A function generator function that sets up the a context for the
+        # inner function.
         def lookup_filenode_link_func(fname):
             msngset = msng_filenode_set[fname]
+            # Lookup the changenode the filenode belongs to.
             def lookup_filenode_link(fnode):
                 return msngset[fnode]
             return lookup_filenode_link
 
+        # Now that we have all theses utility functions to help out and
+        # logically divide up the task, generate the group.
         def gengroup():
+            # The set of changed files starts empty.
             changedfiles = {}
+            # Create a changenode group generator that will call our functions
+            # back to lookup the owning changenode and collect information.
             group = cl.group(msng_cl_lst, identity,
                              manifest_and_file_collector(changedfiles))
             for chnk in group:
                 yield chnk
+
+            # The list of manifests has been collected by the generator
+            # calling our functions back.
             prune_manifests()
             msng_mnfst_lst = msng_mnfst_set.keys()
+            # Sort the manifestnodes by revision number.
             msng_mnfst_lst.sort(cmp_by_rev_func(mnfst))
+            # Create a generator for the manifestnodes that calls our lookup
+            # and data collection functions back.
             group = mnfst.group(msng_mnfst_lst, lookup_manifest_link,
                                 filenode_collector(changedfiles))
             for chnk in group:
                 yield chnk
+
+            # These are no longer needed, dereference and toss the memory for
+            # them.
             msng_mnfst_lst = None
             msng_mnfst_set.clear()
+
             changedfiles = changedfiles.keys()
             changedfiles.sort()
+            # Go through all our files in order sorted by name.
             for fname in changedfiles:
                 filerevlog = self.file(fname)
+                # Toss out the filenodes that the recipient isn't really
+                # missing.
                 prune_filenodes(fname, filerevlog)
                 msng_filenode_lst = msng_filenode_set[fname].keys()
+                # If any filenodes are left, generate the group for them,
+                # otherwise don't bother.
                 if len(msng_filenode_lst) > 0:
                     yield struct.pack(">l", len(fname) + 4) + fname
+                    # Sort the filenodes by their revision #
                     msng_filenode_lst.sort(cmp_by_rev_func(filerevlog))
+                    # Create a group generator and only pass in a changenode
+                    # lookup function as we need to collect no information
+                    # from filenodes.
                     group = filerevlog.group(msng_filenode_lst,
                                              lookup_filenode_link_func(fname))
                     for chnk in group:
                         yield chnk
+                # Don't need this anymore, toss it to free memory.
                 del msng_filenode_set[fname]
+            # Signal that no more groups are left.
             yield struct.pack(">l", 0)
 
         return util.chunkbuffer(gengroup())
 
     def changegroup(self, basenodes):
+        """Generate a changegroup of all nodes that we have that a recipient
+        doesn't.
+
+        This is much easier than the previous function as we can assume that
+        the recipient has any changenode we aren't sending them."""
         cl = self.changelog
         nodes = cl.nodesbetween(basenodes, None)[0]
         revset = dict.fromkeys([cl.rev(n) for n in nodes])
