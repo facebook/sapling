@@ -654,7 +654,7 @@ def clone(ui, source, dest=None, **opts):
         repo = hg.repository(ui, dest)
 
     else:
-        rev = None
+        revs = None
         if opts['rev']:
             if not other.local():
                 raise util.Abort("clone -r not supported yet for remote repositories.")
