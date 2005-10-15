@@ -1139,7 +1139,12 @@ def import_(ui, repo, patch1, *patches, **opts):
     strip = opts["strip"]
 
     mailre = re.compile(r'(?:From |[\w-]+:)')
-    diffre = re.compile(r'(?:diff -|--- .*\s+\w+ \w+ +\d+ \d+:\d+:\d+ \d+)')
+
+    # attempt to detect the start of a patch
+    # (this heuristic is borrowed from quilt)
+    diffre = re.compile(r'(?:Index:[ \t]|diff[ \t]|RCS file: |' +
+                        'retrieving revision [0-9]+(\.[0-9]+)*$|' +
+                        '(---|\*\*\*)[ \t])')
 
     for patch in patches:
         ui.status("applying %s\n" % patch)
