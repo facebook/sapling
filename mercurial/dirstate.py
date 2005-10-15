@@ -268,6 +268,22 @@ class dirstate:
     # directly by this function, but might be modified by your statmatch call.
     #
     def walkhelper(self, files, statmatch, dc):
+        def supported_type(f, st):
+            if stat.S_ISREG(st.st_mode):
+                return True
+            else:
+                kind = 'unknown'
+                if stat.S_ISCHR(st.st_mode): kind = 'character device'
+                elif stat.S_ISBLK(st.st_mode): kind = 'block device'
+                elif stat.S_ISFIFO(st.st_mode): kind = 'fifo'
+                elif stat.S_ISLNK(st.st_mode): kind = 'symbolic link'
+                elif stat.S_ISSOCK(st.st_mode): kind = 'socket'
+                elif stat.S_ISDIR(st.st_mode): kind = 'directory'
+                self.ui.warn('%s: unsupported file type (type is %s)\n' % (
+                    util.pathto(self.getcwd(), f),
+                    kind))
+                return False
+
         # recursion free walker, faster than os.walk.
         def findfiles(s):
             retfiles = []
@@ -290,9 +306,10 @@ class dirstate:
                         ds = os.path.join(nd, f +'/')
                         if statmatch(ds, st):
                             work.append(p)
-                    else:
+                    elif supported_type(np, st):
                         if statmatch(np, st):
                             yield util.pconvert(np)
+
 
         known = {'.hg': 1}
         def seen(fn):
@@ -315,27 +332,17 @@ class dirstate:
                 sorted.sort()
                 for fl in sorted:
                     yield 'f', fl
-            elif stat.S_ISREG(st.st_mode):
+            else:
                 ff = util.normpath(ff)
                 if seen(ff):
                     continue
                 found = False
                 self.blockignore = True
-                if statmatch(ff, st):
+                if supported_type(ff, st) and statmatch(ff, st):
                     found = True
                 self.blockignore = False
                 if found:
                     yield 'f', ff
-            else:
-                kind = 'unknown'
-                if stat.S_ISCHR(st.st_mode): kind = 'character device'
-                elif stat.S_ISBLK(st.st_mode): kind = 'block device'
-                elif stat.S_ISFIFO(st.st_mode): kind = 'fifo'
-                elif stat.S_ISLNK(st.st_mode): kind = 'symbolic link'
-                elif stat.S_ISSOCK(st.st_mode): kind = 'socket'
-                self.ui.warn('%s: unsupported file type (type is %s)\n' % (
-                    util.pathto(self.getcwd(), ff),
-                    kind))
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
@@ -368,8 +375,6 @@ class dirstate:
                 if self.ignore(fn): return False
                 return match(fn)
 
-            if not stat.S_ISREG(s.st_mode):
-                return False
             c = dc.pop(fn, None)
             if c:
                 type, mode, size, time = c
