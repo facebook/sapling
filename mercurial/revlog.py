@@ -293,8 +293,8 @@ class revlog:
             for n in self.nodemap:
                 if hex(n).startswith(id):
                     c.append(n)
-            if len(c) > 1: raise KeyError("Ambiguous identifier")
-            if len(c) < 1: raise KeyError("No match found")
+            if len(c) > 1: raise RevlogError("Ambiguous identifier")
+            if len(c) < 1: raise RevlogError("No match found")
             return c[0]
 
         return None
