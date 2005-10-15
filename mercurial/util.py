@@ -82,7 +82,7 @@ def patch(strip, patchname, ui):
             files.setdefault(pf, 1)
     code = fp.close()
     if code:
-        raise Abort("patch command failed: %s" % explain_exit(code))
+        raise Abort("patch command failed: %s" % explain_exit(code)[0])
     return files.keys()
 
 def binary(s):
