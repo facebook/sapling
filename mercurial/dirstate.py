@@ -117,6 +117,8 @@ class dirstate:
             self.dirty = 1
 
     def setparents(self, p1, p2=nullid):
+        if not self.pl:
+            self.read()
         self.markdirty()
         self.pl = p1, p2
 
