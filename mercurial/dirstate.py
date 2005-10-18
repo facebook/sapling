@@ -308,9 +308,8 @@ class dirstate:
                         ds = os.path.join(nd, f +'/')
                         if statmatch(ds, st):
                             work.append(p)
-                    elif supported_type(np, st):
-                        if statmatch(np, st):
-                            yield util.pconvert(np)
+                    elif statmatch(np, st) and supported_type(np, st):
+                        yield util.pconvert(np)
 
 
         known = {'.hg': 1}
@@ -340,7 +339,7 @@ class dirstate:
                     continue
                 found = False
                 self.blockignore = True
-                if supported_type(ff, st) and statmatch(ff, st):
+                if statmatch(ff, st) and supported_type(ff, st):
                     found = True
                 self.blockignore = False
                 if found:
