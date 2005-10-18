@@ -836,6 +836,19 @@ def debugconfig(ui):
     for section, name, value in ui.walkconfig():
         ui.write('%s.%s=%s\n' % (section, name, value))
 
+def debugsetparents(ui, repo, rev1, rev2=None):
+    """
+    manually set the parents of the current working directory
+
+    This is useful for writing repository conversion tools, but should
+    be used with care.
+    """
+
+    if not rev2:
+        rev2 = hex(nullid)
+
+    repo.dirstate.setparents(repo.lookup(rev1), repo.lookup(rev2))
+
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""
     repo.dirstate.read()
@@ -1811,6 +1824,7 @@ table = {
     "debugancestor": (debugancestor, [], 'debugancestor INDEX REV1 REV2'),
     "debugcheckstate": (debugcheckstate, [], 'debugcheckstate'),
     "debugconfig": (debugconfig, [], 'debugconfig'),
+    "debugsetparents": (debugsetparents, [], 'debugsetparents REV1 [REV2]'),
     "debugstate": (debugstate, [], 'debugstate'),
     "debugdata": (debugdata, [], 'debugdata FILE REV'),
     "debugindex": (debugindex, [], 'debugindex FILE'),
