@@ -53,7 +53,7 @@ struct hunklist {
 	struct hunk *base, *head;
 };
 
-static __inline uint32_t rol32(uint32_t word, unsigned int shift)
+static inline uint32_t rol32(uint32_t word, unsigned int shift)
 {
         return (word << shift) | (word >> (32 - shift));
 }
