@@ -98,6 +98,8 @@ class lazyindex:
     def __len__(self):
         return len(self.p.index)
     def load(self, pos):
+        if pos < 0:
+            pos += len(self.p.index)
         self.p.load(pos)
         return self.p.index[pos]
     def __getitem__(self, pos):
