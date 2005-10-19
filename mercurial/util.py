@@ -47,7 +47,7 @@ def tempfilter(s, cmd):
         cmd = cmd.replace('INFILE', inname)
         cmd = cmd.replace('OUTFILE', outname)
         code = os.system(cmd)
-        if code: raise Abort("command '%s' failed: %s" %
+        if code: raise Abort(_("command '%s' failed: %s") %
                              (cmd, explain_exit(code)))
         return open(outname, 'rb').read()
     finally:
@@ -83,7 +83,7 @@ def patch(strip, patchname, ui):
             files.setdefault(pf, 1)
     code = fp.close()
     if code:
-        raise Abort("patch command failed: %s" % explain_exit(code)[0])
+        raise Abort(_("patch command failed: %s") % explain_exit(code)[0])
     return files.keys()
 
 def binary(s):
@@ -366,7 +366,7 @@ if hasattr(os, 'link'):
     os_link = os.link
 else:
     def os_link(src, dst):
-        raise OSError(0, "Hardlinks not supported")
+        raise OSError(0, _("Hardlinks not supported"))
 
 # Platform specific variants
 if os.name == 'nt':
@@ -431,7 +431,7 @@ if os.name == 'nt':
     readlock = _readlock_file
 
     def explain_exit(code):
-        return "exited with status %d" % code, code
+        return _("exited with status %d") % code, code
 
 else:
     nulldev = '/dev/null'
@@ -494,14 +494,14 @@ else:
         """return a 2-tuple (desc, code) describing a process's status"""
         if os.WIFEXITED(code):
             val = os.WEXITSTATUS(code)
-            return "exited with status %d" % val, val
+            return _("exited with status %d") % val, val
         elif os.WIFSIGNALED(code):
             val = os.WTERMSIG(code)
-            return "killed by signal %d" % val, val
+            return _("killed by signal %d") % val, val
         elif os.WIFSTOPPED(code):
             val = os.WSTOPSIG(code)
-            return "stopped by signal %d" % val, val
-        raise ValueError("invalid exit code")
+            return _("stopped by signal %d") % val, val
+        raise ValueError(_("invalid exit code"))
 
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
@@ -514,7 +514,7 @@ class chunkbuffer(object):
         self.buf = ''
         self.targetsize = int(targetsize)
         if self.targetsize <= 0:
-            raise ValueError("targetsize must be greater than 0, was %d" %
+            raise ValueError(_("targetsize must be greater than 0, was %d") %
                              targetsize)
         self.iterempty = False
 

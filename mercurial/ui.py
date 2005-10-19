@@ -115,7 +115,7 @@ class ui:
             if re.match(pat, r):
                 return r
             else:
-                self.write("unrecognized response\n")
+                self.write(_("unrecognized response\n"))
     def status(self, *msg):
         if not self.quiet: self.write(*msg)
     def warn(self, *msg):
@@ -136,7 +136,7 @@ class ui:
                   os.environ.get("EDITOR", "vi"))
 
         os.environ["HGUSER"] = self.username()
-        util.system("%s %s" % (editor, name), errprefix="edit failed")
+        util.system("%s %s" % (editor, name), errprefix=_("edit failed"))
 
         t = open(name).read()
         t = re.sub("(?m)^HG:.*\n", "", t)

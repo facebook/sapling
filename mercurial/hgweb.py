@@ -112,7 +112,7 @@ class templater:
                 if m:
                     self.map[m.group(1)] = os.path.join(self.base, m.group(2))
                 else:
-                    raise LookupError("unknown map entry '%s'" % l)
+                    raise LookupError(_("unknown map entry '%s'") % l)
 
     def __call__(self, t, **map):
         m = self.defaults.copy()
@@ -844,7 +844,7 @@ def create_server(repo):
 
         def __init__(self, *args, **kwargs):
             if self.address_family is None:
-                raise hg.RepoError('IPv6 not available on this system')
+                raise hg.RepoError(_('IPv6 not available on this system'))
             BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
 
     class hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):

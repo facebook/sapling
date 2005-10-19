@@ -21,7 +21,7 @@ class transaction:
 
         # abort here if the journal already exists
         if os.path.exists(journal):
-            raise AssertionError("journal already exists - run hg recover")
+            raise AssertionError(_("journal already exists - run hg recover"))
 
         self.report = report
         self.opener = opener
@@ -59,17 +59,17 @@ class transaction:
     def abort(self):
         if not self.entries: return
 
-        self.report("transaction abort!\n")
+        self.report(_("transaction abort!\n"))
 
         for f, o in self.entries:
             try:
                 self.opener(f, "a").truncate(o)
             except:
-                self.report("failed to truncate %s\n" % f)
+                self.report(_("failed to truncate %s\n") % f)
 
         self.entries = []
 
-        self.report("rollback completed\n")
+        self.report(_("rollback completed\n"))
 
 def rollback(opener, file):
     for l in open(file).readlines():

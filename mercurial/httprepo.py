@@ -68,7 +68,7 @@ class httprepository(remoterepository):
         return -1
 
     def do_cmd(self, cmd, **args):
-        self.ui.debug("sending %s command\n" % cmd)
+        self.ui.debug(_("sending %s command\n") % cmd)
         q = {"cmd": cmd}
         q.update(args)
         qs = urllib.urlencode(q)
@@ -80,13 +80,13 @@ class httprepository(remoterepository):
         if not proto.startswith('application/mercurial') and \
                not proto.startswith('text/plain') and \
                not proto.startswith('application/hg-changegroup'):
-            raise hg.RepoError("'%s' does not appear to be an hg repository" %
+            raise hg.RepoError(_("'%s' does not appear to be an hg repository") %
                                self.url)
 
         if proto.startswith('application/mercurial'):
             version = proto[22:]
             if float(version) > 0.1:
-                raise hg.RepoError("'%s' uses newer protocol %s" %
+                raise hg.RepoError(_("'%s' uses newer protocol %s") %
                                    (self.url, version))
 
         return resp
@@ -96,7 +96,7 @@ class httprepository(remoterepository):
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
+            self.ui.warn(_("unexpected response:\n") + d[:400] + "\n...\n")
             raise
 
     def branches(self, nodes):
@@ -106,7 +106,7 @@ class httprepository(remoterepository):
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
+            self.ui.warn(_("unexpected response:\n") + d[:400] + "\n...\n")
             raise
 
     def between(self, pairs):
@@ -116,7 +116,7 @@ class httprepository(remoterepository):
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
-            self.ui.warn("unexpected response:\n" + d[:400] + "\n...\n")
+            self.ui.warn(_("unexpected response:\n") + d[:400] + "\n...\n")
             raise
 
     def changegroup(self, nodes):

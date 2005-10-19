@@ -48,7 +48,7 @@ def decompress(bin):
     if t == '\0': return bin
     if t == 'x': return zlib.decompress(bin)
     if t == 'u': return bin[1:]
-    raise RevlogError("unknown compression type %s" % t)
+    raise RevlogError(_("unknown compression type %s") % t)
 
 indexformat = ">4l20s20s20s"
 
@@ -214,7 +214,7 @@ class revlog:
         try:
             return self.nodemap[node]
         except KeyError:
-            raise RevlogError('%s: no node %s' % (self.indexfile, hex(node)))
+            raise RevlogError(_('%s: no node %s') % (self.indexfile, hex(node)))
     def linkrev(self, node): return self.index[self.rev(node)][3]
     def parents(self, node):
         if node == nullid: return (nullid, nullid)
@@ -294,8 +294,8 @@ class revlog:
             for n in self.nodemap:
                 if hex(n).startswith(id):
                     c.append(n)
-            if len(c) > 1: raise RevlogError("Ambiguous identifier")
-            if len(c) < 1: raise RevlogError("No match found")
+            if len(c) > 1: raise RevlogError(_("Ambiguous identifier"))
+            if len(c) < 1: raise RevlogError(_("No match found"))
             return c[0]
 
         return None
@@ -357,7 +357,7 @@ class revlog:
         text = mdiff.patches(text, bins)
 
         if node != hash(text, p1, p2):
-            raise RevlogError("integrity check failed on %s:%d"
+            raise RevlogError(_("integrity check failed on %s:%d")
                           % (self.datafile, rev))
 
         self.cache = (node, rev, text)
@@ -629,7 +629,7 @@ class revlog:
             if node in self.nodemap:
                 # this can happen if two branches make the same change
                 # if unique:
-                #    raise RevlogError("already have %s" % hex(node[:4]))
+                #    raise RevlogError(_("already have %s") % hex(node[:4]))
                 chain = node
                 continue
             delta = chunk[80:]
@@ -638,7 +638,7 @@ class revlog:
                 # retrieve the parent revision of the delta chain
                 chain = p1
                 if not chain in self.nodemap:
-                    raise RevlogError("unknown base %s" % short(chain[:4]))
+                    raise RevlogError(_("unknown base %s") % short(chain[:4]))
 
             # full versions are inserted when the needed deltas become
             # comparable to the uncompressed text or when the previous
@@ -657,7 +657,7 @@ class revlog:
                 text = self.patches(text, [delta])
                 chk = self.addrevision(text, transaction, link, p1, p2)
                 if chk != node:
-                    raise RevlogError("consistency error adding group")
+                    raise RevlogError(_("consistency error adding group"))
                 measure = len(text)
             else:
                 e = (end, len(cdelta), self.base(t), link, p1, p2, node)
