@@ -1,0 +1,24 @@
+#!/bin/sh
+#Test bug regarding symlinks that showed up in hg 0.7
+#Author: Matthew Elder <sseses@gmail.com>
+
+#make and initialize repo
+hg init test; cd test;
+
+#make a file and a symlink
+touch foo; ln -s foo bar;
+
+#import with addremove -- symlink walking should _not_ screwup.
+hg addremove
+
+#commit -- the symlink should _not_ appear added to dir state
+hg commit -m 'initial'
+
+#add a new file so hg will let me commit again
+touch bomb
+
+#again, symlink should _not_ show up on dir state
+hg addremove
+
+#Assert screamed here before, should go by without consequence
+hg commit -m 'is there a bug?'
