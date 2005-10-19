@@ -67,7 +67,7 @@ class hgrequest:
         self.inp = inp or sys.stdin
         self.out = out or sys.stdout
         self.env = env or os.environ
-        self.form = cgi.parse(self.inp, self.env)
+        self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
 
     def write(self, *things):
         for thing in things:
