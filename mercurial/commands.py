@@ -1274,9 +1274,6 @@ def log(ui, repo, *pats, **opts):
         elif st == 'add':
             du.bump(rev)
             br = None
-            if opts['branch']:
-                br = repo.branchlookup([repo.changelog.node(rev)])
-
             if opts['keyword']:
                 changes = repo.changelog.read(repo.changelog.node(rev))
                 miss = 0
@@ -1288,6 +1285,9 @@ def log(ui, repo, *pats, **opts):
                         break
                 if miss:
                     continue
+
+            if opts['branch']:
+                br = repo.branchlookup([repo.changelog.node(rev)])
 
             show_changeset(du, repo, rev, brinfo=br)
             if opts['patch']:
