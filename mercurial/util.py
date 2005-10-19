@@ -310,6 +310,13 @@ def rename(src, dst):
         os.unlink(dst)
         os.rename(src, dst)
 
+def unlink(f):
+    """unlink and remove the directory if it is empty"""
+    os.unlink(f)
+    # try removing directories that might now be empty
+    try: os.removedirs(os.path.dirname(f))
+    except: pass
+
 def copyfiles(src, dst, hardlink=None):
     """Copy a directory tree using hardlinks if possible"""
 

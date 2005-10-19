@@ -536,7 +536,13 @@ class localrepository:
             else:
                 self.dirstate.forget([f])
 
-    def remove(self, list):
+    def remove(self, list, unlink=False):
+        if unlink:
+            for f in list:
+                try:
+                    util.unlink(self.wjoin(f))
+                except OSError, inst:
+                    if inst.errno != errno.ENOENT: raise
         for f in list:
             p = self.wjoin(f)
             if os.path.exists(p):
@@ -1264,14 +1270,11 @@ class localrepository:
         for f in remove:
             self.ui.note(_("removing %s\n") % f)
             try:
-                os.unlink(self.wjoin(f))
+                util.unlink(self.wjoin(f))
             except OSError, inst:
                 if inst.errno != errno.ENOENT:
                     self.ui.warn(_("update failed to remove %s: %s!\n") %
                                  (f, inst.strerror))
-            # try removing directories that might now be empty
-            try: os.removedirs(os.path.dirname(self.wjoin(f)))
-            except: pass
         if moddirstate:
             if branch_merge:
                 self.dirstate.update(remove, 'r')

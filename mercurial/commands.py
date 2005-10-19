@@ -1441,12 +1441,7 @@ def remove(ui, repo, pat, *pats, **opts):
         if okaytoremove(abs, rel, exact):
             if ui.verbose or not exact: ui.status(_('removing %s\n') % rel)
             names.append(abs)
-    for name in names:
-        try:
-            os.unlink(name)
-        except OSError, inst:
-            if inst.errno != errno.ENOENT: raise
-    repo.remove(names)
+    repo.remove(names, unlink=True)
 
 def rename(ui, repo, *pats, **opts):
     """rename files; equivalent of copy + remove"""
@@ -1454,12 +1449,8 @@ def rename(ui, repo, *pats, **opts):
     names = []
     for abs, rel, exact in copied:
         if ui.verbose or not exact: ui.status(_('removing %s\n') % rel)
-        try:
-            os.unlink(rel)
-        except OSError, inst:
-            if inst.errno != errno.ENOENT: raise
         names.append(abs)
-    repo.remove(names)
+    repo.remove(names, unlink=True)
     return errs
 
 def revert(ui, repo, *names, **opts):
