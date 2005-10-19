@@ -1265,7 +1265,9 @@ class localrepository:
             try:
                 os.unlink(self.wjoin(f))
             except OSError, inst:
-                self.ui.warn("update failed to remove %s: %s!\n" % (f, inst))
+                if inst.errno != errno.ENOENT:
+                    self.ui.warn("update failed to remove %s: %s!\n" %
+                                 (f, inst.strerror))
             # try removing directories that might now be empty
             try: os.removedirs(os.path.dirname(self.wjoin(f)))
             except: pass
