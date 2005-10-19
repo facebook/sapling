@@ -291,7 +291,7 @@ class hgweb:
             for label, rev in l:
                 yield {"label": label, "rev": rev}
 
-            yield {"label": "tip", "rev": ""}
+            yield {"label": "tip", "rev": "tip"}
 
         def changelist(**map):
             parity = (start - end) & 1
@@ -704,11 +704,21 @@ class hgweb:
 
         def footer(**map):
             yield self.t("footer", **map)
-        
+
         def expand_form(form):
             shortcuts = {
+                'cl': [('cmd', ['changelog']), ('rev', None)],
                 'cs': [('cmd', ['changeset']), ('node', None)],
+                'f': [('cmd', ['file']), ('filenode', None)],
+                'fl': [('cmd', ['filelog']), ('filenode', None)],
+                'fd': [('cmd', ['filediff']), ('node', None)],
+                'fa': [('cmd', ['annotate']), ('filenode', None)],
+                'mf': [('cmd', ['manifest']), ('manifest', None)],
+                'ca': [('cmd', ['archive']), ('node', None)],
+                'tags': [('cmd', ['tags'])],
+                'tip': [('cmd', ['changeset']), ('node', ['tip'])],
             }
+
             for k in shortcuts.iterkeys():
                 if form.has_key(k):
                     for name, value in shortcuts[k]:
