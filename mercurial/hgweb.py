@@ -704,8 +704,22 @@ class hgweb:
 
         def footer(**map):
             yield self.t("footer", **map)
+        
+        def expand_form(form):
+            shortcuts = {
+                'cs': [('cmd', ['changeset']), ('node', None)],
+            }
+            for k in shortcuts.iterkeys():
+                if form.has_key(k):
+                    for name, value in shortcuts[k]:
+                        if value is None:
+                            value = form[k]
+                        form[name] = value
+                    del form[k]
 
         self.refresh()
+
+        expand_form(req.form)
 
         t = self.repo.ui.config("web", "templates", templatepath())
         m = os.path.join(t, "map")
