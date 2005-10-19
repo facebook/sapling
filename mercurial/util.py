@@ -179,6 +179,16 @@ def canonpath(root, cwd, myname):
         raise Abort('%s not under root' % myname)
 
 def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head=''):
+    return _matcher(canonroot, cwd, names, inc, exc, head, 'glob')
+
+def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head=''):
+    if os.name == 'nt':
+        dflt_pat = 'glob'
+    else:
+        dflt_pat = 'relpath'
+    return _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat)
+
+def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
     """build a function to match a set of file patterns
 
     arguments:
@@ -208,12 +218,15 @@ def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head=''):
     make head regex a rooted bool
     """
 
-    def patkind(name):
+    def patkind(name, dflt_pat='glob'):
         for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
             if name.startswith(prefix + ':'): return name.split(':', 1)
+        return dflt_pat, name
+
+    def contains_glob(name):
         for c in name:
-            if c in _globchars: return 'glob', name
-        return 'relpath', name
+            if c in _globchars: return True
+        return False
 
     def regex(kind, name, tail):
         '''convert a pattern into a regular expression'''
@@ -241,14 +254,14 @@ def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head=''):
         '''return the non-glob prefix of a path, e.g. foo/* -> foo'''
         root = []
         for p in pat.split(os.sep):
-            if patkind(p)[0] == 'glob': break
+            if contains_glob(p): break
             root.append(p)
         return '/'.join(root)
 
     pats = []
     files = []
     roots = []
-    for kind, name in map(patkind, names):
+    for kind, name in [patkind(p, dflt_pat) for p in names]:
         if kind in ('glob', 'relpath'):
             name = canonpath(canonroot, cwd, name)
             if name == '':

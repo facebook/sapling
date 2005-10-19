@@ -30,7 +30,7 @@ hg debugwalk ../beans
 hg debugwalk
 cd ..
 hg debugwalk -Ibeans
-hg debugwalk 'mammals/../beans/b*'
+hg debugwalk 'glob:mammals/../beans/b*'
 hg debugwalk '-X*/Procyonidae' mammals
 hg debugwalk path:mammals
 hg debugwalk ..
@@ -42,8 +42,8 @@ hg debugwalk beans/../..
 hg debugwalk glob:\*
 hg debugwalk 're:.*[kb]$'
 hg debugwalk path:beans/black
-hg debugwalk beans 'beans/*'
-hg debugwalk 'j*'
+hg debugwalk beans 'glob:beans/*'
+hg debugwalk 'glob:j*'
 hg debugwalk NOEXIST
 mkfifo fifo
 hg debugwalk fifo
