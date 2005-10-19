@@ -10,6 +10,7 @@ import os, cgi, sys
 from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
 demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer util")
+demandload(globals(), "mimetypes")
 from node import *
 from i18n import gettext as _
 
@@ -466,6 +467,11 @@ class hgweb:
         cs = cl.read(cn)
         mfn = cs[0]
 
+        mt = mimetypes.guess_type(f)[0]
+        rawtext = text
+        if util.binary(text):
+            text = "(binary:%s)" % mt
+
         def lines():
             for l, t in enumerate(text.splitlines(1)):
                 yield {"line": t,
@@ -477,6 +483,8 @@ class hgweb:
                      filenode=node,
                      path=up(f),
                      text=lines(),
+                     raw=rawtext,
+                     mimetype=mt,
                      rev=changerev,
                      node=hex(cn),
                      manifest=hex(mfn),
