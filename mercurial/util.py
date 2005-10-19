@@ -370,8 +370,17 @@ else:
 # Platform specific variants
 if os.name == 'nt':
     nulldev = 'NUL:'
+    
+    try:
+        import win32api, win32process
+        filename = win32process.GetModuleFileNameEx(win32api.GetCurrentProcess(), 0)
+        systemrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
+        
+    except ImportError:
+        systemrc = r'c:\mercurial\mercurial.ini'
+        pass
 
-    rcpath = (r'c:\mercurial\mercurial.ini',
+    rcpath = (systemrc,
               os.path.join(os.path.expanduser('~'), 'mercurial.ini'))
 
     def parse_patch_output(output_line):
