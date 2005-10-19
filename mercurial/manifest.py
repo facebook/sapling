@@ -7,6 +7,7 @@
 
 import sys, struct
 from revlog import *
+from i18n import gettext as _
 from demandload import *
 demandload(globals(), "bisect")
 

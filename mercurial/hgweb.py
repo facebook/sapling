@@ -11,6 +11,7 @@ from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
 demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer util")
 from node import *
+from i18n import gettext as _
 
 def templatepath():
     for f in "templates", "../templates":

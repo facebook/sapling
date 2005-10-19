@@ -11,6 +11,7 @@ platform-specific details from the core.
 """
 
 import os, errno
+from i18n import gettext as _
 from demandload import *
 demandload(globals(), "re cStringIO shutil popen2 tempfile threading time")
 

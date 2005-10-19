@@ -13,6 +13,7 @@
 
 import os
 import util
+from i18n import gettext as _
 
 class transaction:
     def __init__(self, report, opener, journal, after=None):

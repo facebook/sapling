@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from revlog import *
+from i18n import gettext as _
 from demandload import demandload
 demandload(globals(), "os time util")
 

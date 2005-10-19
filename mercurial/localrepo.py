@@ -8,6 +8,7 @@
 import struct, os, util
 import filelog, manifest, changelog, dirstate, repo
 from node import *
+from i18n import gettext as _
 from demandload import *
 demandload(globals(), "re lock transaction tempfile stat mdiff errno")
 

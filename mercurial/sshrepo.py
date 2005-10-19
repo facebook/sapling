@@ -7,6 +7,7 @@
 
 from node import *
 from remoterepo import *
+from i18n import gettext as _
 from demandload import *
 demandload(globals(), "hg os re stat")
 

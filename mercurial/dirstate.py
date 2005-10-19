@@ -9,6 +9,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 import struct, os
 from node import *
+from i18n import gettext as _
 from demandload import *
 demandload(globals(), "time bisect stat util re")
 

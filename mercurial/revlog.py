@@ -11,6 +11,7 @@ of the GNU General Public License, incorporated herein by reference.
 """
 
 from node import *
+from i18n import gettext as _
 from demandload import demandload
 demandload(globals(), "binascii errno heapq mdiff sha struct zlib")
 

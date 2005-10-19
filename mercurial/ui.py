@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, ConfigParser
+from i18n import gettext as _
 from demandload import *
 demandload(globals(), "re socket sys util")
 

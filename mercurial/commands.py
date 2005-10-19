@@ -7,6 +7,7 @@
 
 from demandload import demandload
 from node import *
+from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
