@@ -4,10 +4,10 @@
 <body>
 
 <div class="buttons">
-<a href="?cmd=changelog;rev=#rev#">changelog</a>
+<a href="?cl=#rev#">changelog</a>
 <a href="?cmd=tags">tags</a>
-<a href="?cmd=manifest;manifest=#manifest#;path=/">manifest</a>
-<a href="?cmd=changeset;node=#node#;style=raw">raw</a>
+<a href="?mf=#manifest|short#">manifest</a>
+<a href="?cs=#node|short#;style=raw">raw</a>
 #archives%archiveentry#
 </div>
 
@@ -16,7 +16,7 @@
 <table id="changesetEntry">
 <tr>
  <th class="changeset">changeset #rev#:</th>
- <td class="changeset"><a href="?cmd=changeset;node=#node#">#node|short#</a></td>
+ <td class="changeset"><a href="?cs=#node|short#">#node|short#</a></td>
 </tr>
 #parent#
 #changesettag#

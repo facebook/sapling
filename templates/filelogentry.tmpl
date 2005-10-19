@@ -1,12 +1,12 @@
 <table class="parity#parity#" width="100%" cellspacing="0" cellpadding="0">
 <tr>
  <td align="right" width="15%"><b>#date|age# ago:&nbsp;</b></td>
- <td><b><a href="?cmd=changeset;node=#node#">#desc|firstline|escape#</a></b></td></tr>
+ <td><b><a href="?cs=#node|short#">#desc|firstline|escape#</a></b></td></tr>
 <tr>
  <td align="right">revision #filerev#:&nbsp;</td>
- <td><a href="?cmd=file;file=#file#;filenode=#filenode#">#filenode|short#</a>
-<a href="?cmd=filediff;file=#file#;node=#node#">(diff)</a>
-<a href="?cmd=annotate;file=#file#;filenode=#filenode#">(annotate)</a>
+ <td><a href="?f=#filenode|short#;file=#file#">#filenode|short#</a>
+<a href="?fd=#node|short#;file=#file#">(diff)</a>
+<a href="?fa=#filenode|short#;file=#file#">(annotate)</a>
 </td></tr>
 <tr>
  <td align="right">author:&nbsp;</td>

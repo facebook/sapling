@@ -4,13 +4,13 @@
 <body>
 
 <div class="buttons">
-<a href="?cmd=changelog;rev=#rev#">changelog</a>
-<a href="?cmd=tags">tags</a>
-<a href="?cmd=changeset;node=#node#">changeset</a>
-<a href="?cmd=file;file=#file#;filenode=#filenode#">file</a>
-<a href="?cmd=filelog;file=#file#;filenode=#filenode#">revisions</a>
-<a href="?cmd=annotate;file=#file#;filenode=#filenode#">annotate</a>
-<a href="?cmd=filediff;file=#file#;node=#node#;style=raw">raw</a>
+<a href="?cl=#rev#">changelog</a>
+<a href="?tags=">tags</a>
+<a href="?cs=#node|short#">changeset</a>
+<a href="?f=#filenode|short#;file=#file#">file</a>
+<a href="?fl=#filenode|short#;file=#file#">revisions</a>
+<a href="?fa=#filenode|short#;file=#file#">annotate</a>
+<a href="?fd=#node|short#;file=#file#;style=raw">raw</a>
 </div>
 
 <h2>#file#</h2>
@@ -18,7 +18,7 @@
 <table id="filediffEntry">
 <tr>
  <th class="revision">revision #rev#:</th>
- <td class="revision"><a href="?cmd=changeset;node=#node#">#node|short#</a></td>
+ <td class="revision"><a href="?cs=#node|short#">#node|short#</a></td>
 </tr>
 #parent#
 </table>

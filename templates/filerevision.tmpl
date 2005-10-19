@@ -4,13 +4,13 @@
 <body>
 
 <div class="buttons">
-<a href="?cmd=changelog;rev=#rev#">changelog</a>
-<a href="?cmd=tags">tags</a>
-<a href="?cmd=changeset;node=#node#">changeset</a>
-<a href="?cmd=manifest;manifest=#manifest#;path=#path#">manifest</a>
-<a href="?cmd=filelog;file=#file#;filenode=#filenode#">revisions</a>
-<a href="?cmd=annotate;file=#file#;filenode=#filenode#">annotate</a>
-<a href="?cmd=file;file=#file#;filenode=#filenode#;style=raw">raw</a>
+<a href="?cl=#rev#">changelog</a>
+<a href="?tags=">tags</a>
+<a href="?cs=#node|short#">changeset</a>
+<a href="?mf=#manifest|short#;path=#path#">manifest</a>
+<a href="?fl=#filenode|short#;file=#file#">revisions</a>
+<a href="?fa=#filenode|short#;file=#file#">annotate</a>
+<a href="?f=#node|short#;file=#file#;style=raw">raw</a>
 </div>
 
 <h2>#file#</h2>
@@ -18,7 +18,7 @@
 <table>
 <tr>
  <td class="metatag">changeset #rev#:</td>
- <td><a href="?cmd=changeset;node=#node#">#node|short#</a></td></tr>
+ <td><a href="?cs=#node|short#">#node|short#</a></td></tr>
 #parent#
 <tr>
  <td class="metatag">author:</td>
