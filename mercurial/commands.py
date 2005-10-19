@@ -1280,7 +1280,7 @@ def log(ui, repo, *pats, **opts):
             if opts['keyword']:
                 changes = repo.changelog.read(repo.changelog.node(rev))
                 miss = 0
-                for k in opts['keyword']:
+                for k in [kw.lower() for kw in opts['keyword']]:
                     if not (k in changes[1].lower() or
                             k in changes[4].lower() or
                             k in " ".join(changes[3][:20]).lower()):
