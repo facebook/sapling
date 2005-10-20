@@ -63,6 +63,14 @@ def up(p):
         return "/"
     return up + "/"
 
+def get_mtime(repo_path):
+    hg_path = os.path.join(repo_path, ".hg")
+    cl_path = os.path.join(hg_path, "00changelog.i")
+    if os.path.exists(os.path.join(cl_path)):
+        return os.stat(cl_path).st_mtime
+    else:
+        return os.stat(hg_path).st_mtime
+
 class hgrequest:
     def __init__(self, inp=None, out=None, env=None):
         self.inp = inp or sys.stdin
@@ -178,9 +186,9 @@ class hgweb:
         self.archives = 'zip', 'gz', 'bz2'
 
     def refresh(self):
-        s = os.stat(os.path.join(self.repo.root, ".hg", "00changelog.i"))
-        if s.st_mtime != self.mtime:
-            self.mtime = s.st_mtime
+        mtime = get_mtime(self.repo.root)
+        if mtime != self.mtime:
+            self.mtime = mtime
             self.repo = hg.repository(self.repo.ui, self.repo.root)
             self.maxchanges = int(self.repo.ui.config("web", "maxchanges", 10))
             self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
@@ -989,9 +997,7 @@ class hgwebdir:
                        .replace("//", "/"))
 
                 # update time with local timezone
-                d = (os.stat(os.path.join(path,
-                                          ".hg", "00changelog.d")).st_mtime,
-                     util.makedate()[1])
+                d = (get_mtime(path), util.makedate()[1])
 
                 yield dict(contact=(get("ui", "username") or # preferred
                                     get("web", "contact") or # deprecated
