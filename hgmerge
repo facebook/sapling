@@ -15,6 +15,17 @@ if [ -z "$EDITOR" ]; then
     EDITOR="vi"
 fi
 
+# find decent versions of our utilities, insisting on the GNU versions where we
+# need to
+DIFF3=gdiff3
+DIFF=gdiff
+PATCH=gpatch
+
+type $DIFF3 >/dev/null 2>&1 || DIFF3=diff3
+type $DIFF  >/dev/null 2>&1 || DIFF=diff
+type $PATCH  >/dev/null 2>&1 || PATCH=patch
+$DIFF3 --version >/dev/null 2>&1 || DIFF3=
+
 # Back up our file
 cp "$LOCAL" "$LOCAL.orig"
 
@@ -22,8 +33,14 @@ cp "$LOCAL" "$LOCAL.orig"
 if type merge > /dev/null 2>&1; then
     merge "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && exit 0
     cp "$LOCAL.orig" "$LOCAL"
-elif type diff3 > /dev/null 2>&1; then
-    diff3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" && exit 0
+elif [ -n "$DIFF3" ]; then
+    echo $DIFF3 -m "$LOCAL.orig" "$BASE" "$OTHER"
+    $DIFF3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" && exit 0
+    if [ $? -eq 2 ]; then
+        echo "$DIFF3 failed! Exiting." 1>&2
+        cp "$LOCAL.orig" "$LOCAL"
+        exit 1
+    fi
     cp "$LOCAL.orig" "$LOCAL"
 fi
 
@@ -48,10 +65,18 @@ if type merge > /dev/null 2>&1; then
     exit 0
 fi
 
-if type diff3 > /dev/null 2>&1; then
+if [ -n "$DIFF3" ]; then
     echo "conflicts detected in $LOCAL"
-    diff3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" || $EDITOR "$LOCAL"
-    exit 0
+    $DIFF3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" || {
+        case $? in
+            1)
+                $EDITOR "$LOCAL" ;;
+            2)  echo "$DIFF3 failed! Exiting." 1>&2
+                cp "$LOCAL.orig" "$LOCAL"
+                exit 1 ;;
+        esac
+        exit 0
+    }
 fi
 
 HGTMP=""
@@ -60,7 +85,7 @@ cleanup_exit() {
 }
 
 # attempt to manually merge with diff and patch
-if type diff > /dev/null 2>&1 && type patch > /dev/null 2>&1; then
+if [ -n "$DIFF" -a -n "$PATCH" ]; then
     # Remove temporary files even if we get interrupted
     trap "cleanup_exit" 0 # normal exit
     trap "exit 1" 1 2 3 6 15 # HUP INT QUIT ABRT TERM
@@ -71,8 +96,8 @@ if type diff > /dev/null 2>&1 && type patch > /dev/null 2>&1; then
 	exit 1
     }
 
-    diff -u "$BASE" "$OTHER" > "$HGTMP/diff"
-    if patch "$LOCAL" < "$HGTMP/diff"; then
+    $DIFF -u "$BASE" "$OTHER" > "$HGTMP/diff" || :
+    if $PATCH "$LOCAL" < "$HGTMP/diff"; then
 	exit 0
     else
 	# If rejects are empty after using the editor, merge was ok
