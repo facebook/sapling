@@ -465,6 +465,7 @@ proc makewindow {} {
     bindkey ? findprev
     bindkey f nextfile
     bind . <Control-q> doquit
+    bind . <Control-w> doquit
     bind . <Control-f> dofind
     bind . <Control-g> {findnext 0}
     bind . <Control-r> findprev
