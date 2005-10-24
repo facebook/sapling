@@ -1214,9 +1214,12 @@ def incoming(ui, repo, source="default", **opts):
         return
     o = other.newer(o)
     for n in o:
+        parents = [p for p in other.changelog.parents(n) if p != nullid]
+        if opts['no_merges'] and len(parents) == 2:
+            continue
         show_changeset(ui, other, changenode=n)
         if opts['patch']:
-            prev = other.changelog.parents(n)[0]
+            prev = (parents and parents[0]) or nullid
             dodiff(ui, ui, other, prev, n)
             ui.write("\n")
 
@@ -1273,6 +1276,12 @@ def log(ui, repo, *pats, **opts):
             du = dui(ui)
         elif st == 'add':
             du.bump(rev)
+            changenode = repo.changelog.node(rev)
+            parents = [p for p in repo.changelog.parents(changenode)
+                       if p != nullid]
+            if opts['no_merges'] and len(parents) == 2:
+                 continue
+
             br = None
             if opts['keyword']:
                 changes = repo.changelog.read(repo.changelog.node(rev))
@@ -1291,8 +1300,7 @@ def log(ui, repo, *pats, **opts):
 
             show_changeset(du, repo, rev, brinfo=br)
             if opts['patch']:
-                changenode = repo.changelog.node(rev)
-                prev, other = repo.changelog.parents(changenode)
+                prev = (parents and parents[0]) or nullid
                 dodiff(du, du, repo, prev, changenode, fns)
                 du.write("\n\n")
         elif st == 'iter':
@@ -1326,9 +1334,12 @@ def outgoing(ui, repo, dest="default-push", **opts):
     o = repo.findoutgoing(other)
     o = repo.newer(o)
     for n in o:
+        parents = [p for p in repo.changelog.parents(n) if p != nullid]
+        if opts['no_merges'] and len(parents) == 2:
+            continue
         show_changeset(ui, repo, changenode=n)
         if opts['patch']:
-            prev = repo.changelog.parents(n)[0]
+            prev = (parents and parents[0]) or nullid
             dodiff(ui, ui, repo, prev, n)
             ui.write("\n")
 
@@ -1872,7 +1883,8 @@ table = {
           ('b', 'base', "", _('base path'))],
          _("hg import [-f] [-p NUM] [-b BASE] PATCH...")),
     "incoming|in": (incoming,
-         [('p', 'patch', None, _('show patch'))],
+         [('M', 'no-merges', None, _("do not show merges")),
+          ('p', 'patch', None, _('show patch'))],
          _('hg incoming [-p] [SOURCE]')),
     "^init": (init, [], _('hg init [DEST]')),
     "locate":
@@ -1890,11 +1902,13 @@ table = {
           ('b', 'branch', None, _('show branches')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('r', 'rev', [], _('revision')),
+          ('M', 'no-merges', None, _("do not show merges")),
           ('p', 'patch', None, _('show patch'))],
          _('hg log [-I] [-X] [-r REV]... [-p] [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "outgoing|out": (outgoing,
-         [('p', 'patch', None, _('show patch'))],
+         [('M', 'no-merges', None, _("do not show merges")),
+          ('p', 'patch', None, _('show patch'))],
          _('hg outgoing [-p] [DEST]')),
     "parents": (parents, [], _('hg parents [REV]')),
     "paths": (paths, [], _('hg paths [NAME]')),
