@@ -390,6 +390,7 @@ else:
 
 # Platform specific variants
 if os.name == 'nt':
+    demandload(globals(), "msvcrt")
     nulldev = 'NUL:'
     
     try:
@@ -438,6 +439,9 @@ if os.name == 'nt':
     def set_exec(f, mode):
         pass
 
+    def set_binary(fd):
+        msvcrt.setmode(fd.fileno(), os.O_BINARY)
+
     def pconvert(path):
         return path.replace("\\", "/")
 
@@ -483,6 +487,9 @@ else:
             os.chmod(f, s | (s & 0444) >> 2 & ~umask)
         else:
             os.chmod(f, s & 0666)
+
+    def set_binary(fd):
+        pass
 
     def pconvert(path):
         return path

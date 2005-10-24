@@ -1512,6 +1512,10 @@ def serve(ui, repo, **opts):
         fin, fout = sys.stdin, sys.stdout
         sys.stdout = sys.stderr
 
+        # Prevent insertion/deletion of CRs
+        util.set_binary(fin)
+        util.set_binary(fout)
+
         def getarg():
             argline = fin.readline()[:-1]
             arg, l = argline.split()
