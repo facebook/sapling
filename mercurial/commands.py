@@ -1700,7 +1700,6 @@ def unbundle(ui, repo, fname):
         zd = bz2.BZ2Decompressor()
         for chunk in f:
             yield zd.decompress(chunk)
-        yield zd.flush()
 
     bzgen = bzgenerator(util.filechunkiter(f, 4096))
     repo.addchangegroup(util.chunkbuffer(bzgen))
