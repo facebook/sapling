@@ -18,6 +18,9 @@ dist:	tests doc
 tests:
 	cd tests && ./run-tests
 
+test-%:
+	cd tests && ./run-tests $@
+
 doc:
 	$(MAKE) -C doc
 
