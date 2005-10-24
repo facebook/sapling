@@ -124,33 +124,66 @@ hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
 
+    Schedule files to be version controlled and added to the repository.
+
+    The files will be added to the repository at the next commit.
+
+    If no names are given, add all files in the current directory and
+    its subdirectories.
+
 options:
 
- -I --include  include path in search
- -X --exclude  exclude path from search
+ -I --include  include names matching the given patterns
+ -X --exclude  exclude names matching the given patterns
 hg add: option --skjdfks not recognized
 hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
 
+    Schedule files to be version controlled and added to the repository.
+
+    The files will be added to the repository at the next commit.
+
+    If no names are given, add all files in the current directory and
+    its subdirectories.
+
 options:
 
- -I --include  include path in search
- -X --exclude  exclude path from search
+ -I --include  include names matching the given patterns
+ -X --exclude  exclude names matching the given patterns
 hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...
 
 diff working directory (or selected files)
+
+    Show differences between revisions for the specified files.
+
+    Differences between files are shown using the unified diff format.
+
+    When two revision arguments are given, then changes are shown
+    between those revisions. If only one revision is specified then
+    that revision is compared to the working directory, and, when no
+    revisions are specified, the working directory files are compared
+    to its parent.
+
+    Without the -a option, diff will avoid generating diffs of files
+    it detects as binary. With -a, diff will generate a diff anyway,
+    probably with undesirable results.
 
 options:
 
  -r --rev      revision
  -a --text     treat all files as text
- -I --include  include path in search
- -X --exclude  exclude path from search
+ -I --include  include names matching the given patterns
+ -X --exclude  exclude names matching the given patterns
 hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
 
+    Show changed files in the working directory.  If no names are
+    given, all files are shown.  Otherwise, only files matching the
+    given names are shown.
+
+    The codes used to show the status of files are:
     M = modified
     A = added
     R = removed
@@ -163,9 +196,9 @@ options:
  -r --removed    show only removed files
  -u --unknown    show only unknown (not tracked) files
  -n --no-status  hide status prefix
- -0 --print0     end filenames with NUL
- -I --include    include path in search
- -X --exclude    exclude path from search
+ -0 --print0     end filenames with NUL, for use with xargs
+ -I --include    include names matching the given patterns
+ -X --exclude    exclude names matching the given patterns
 hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
