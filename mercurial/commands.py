@@ -1388,6 +1388,8 @@ def incoming(ui, repo, source="default", **opts):
     if not o:
         return
     o = other.newer(o)
+    if opts['newest_first']:
+        o.reverse()
     for n in o:
         parents = [p for p in other.changelog.parents(n) if p != nullid]
         if opts['no_merges'] and len(parents) == 2:
@@ -1551,6 +1553,8 @@ def outgoing(ui, repo, dest="default-push", **opts):
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other)
     o = repo.newer(o)
+    if opts['newest_first']:
+        o.reverse()
     for n in o:
         parents = [p for p in repo.changelog.parents(n) if p != nullid]
         if opts['no_merges'] and len(parents) == 2:
@@ -2254,8 +2258,9 @@ table = {
          "hg import [-f] [-p NUM] [-b BASE] PATCH..."),
     "incoming|in": (incoming,
          [('M', 'no-merges', None, _("do not show merges")),
-          ('p', 'patch', None, _('show patch'))],
-         _('hg incoming [-p] [SOURCE]')),
+          ('p', 'patch', None, _('show patch')),
+          ('n', 'newest-first', None, _('show newest record first'))],
+         _('hg incoming [-p] [-n] [-M] [SOURCE]')),
     "^init": (init, [], _('hg init [DEST]')),
     "locate":
         (locate,
@@ -2279,8 +2284,9 @@ table = {
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "outgoing|out": (outgoing,
          [('M', 'no-merges', None, _("do not show merges")),
-          ('p', 'patch', None, _('show patch'))],
-         _('hg outgoing [-p] [DEST]')),
+          ('p', 'patch', None, _('show patch')),
+          ('n', 'newest-first', None, _('show newest record first'))],
+         _('hg outgoing [-p] [-n] [-M] [DEST]')),
     "parents": (parents, [], _('hg parents [REV]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
