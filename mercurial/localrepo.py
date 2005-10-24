@@ -1304,7 +1304,7 @@ class localrepository:
 
         cmd = (os.environ.get("HGMERGE") or self.ui.config("ui", "merge")
                or "hgmerge")
-        r = os.system("%s %s %s %s" % (cmd, a, b, c))
+        r = os.system('%s "%s" "%s" "%s"' % (cmd, a, b, c))
         if r:
             self.ui.warn(_("merging %s failed!\n") % fn)
 
