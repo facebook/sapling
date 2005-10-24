@@ -1281,6 +1281,8 @@ def log(ui, repo, *pats, **opts):
                        if p != nullid]
             if opts['no_merges'] and len(parents) == 2:
                  continue
+            if opts['only_merges'] and len(parents) != 2:
+                 continue
 
             br = None
             if opts['keyword']:
@@ -1903,6 +1905,7 @@ table = {
           ('k', 'keyword', [], _('search for a keyword')),
           ('r', 'rev', [], _('revision')),
           ('M', 'no-merges', None, _("do not show merges")),
+          ('m', 'only-merges', None, _("show only merges")),
           ('p', 'patch', None, _('show patch'))],
          _('hg log [-I] [-X] [-r REV]... [-p] [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
