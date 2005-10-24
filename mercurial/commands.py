@@ -2068,11 +2068,16 @@ def dispatch(args):
     u = ui.ui()
     external = []
     for x in u.extensions():
+        def on_exception(Exception, inst):
+            u.warn(_("*** failed to import extension %s\n") % x[1])
+            u.warn("%s\n" % inst)
+            if "--traceback" in sys.argv[1:]:
+                traceback.print_exc()
         if x[1]:
             try:
                 mod = imp.load_source(x[0], x[1])
-            except:
-                u.warn(_("*** failed to import extension %s\n") % x[1])
+            except Exception, inst:
+                on_exception(Exception, inst)
                 continue
         else:
             def importh(name):
@@ -2083,8 +2088,8 @@ def dispatch(args):
                 return mod
             try:
                 mod = importh(x[0])
-            except:
-                u.warn(_("failed to import extension %s\n") % x[0])
+            except Exception, inst:
+                on_exception(Exception, inst)
                 continue
 
         external.append(mod)
