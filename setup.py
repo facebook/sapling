@@ -6,6 +6,7 @@
 # './setup.py --help' for more options
 
 import glob
+import sys
 from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
 
@@ -14,6 +15,20 @@ import mercurial.version
 # py2exe needs to be installed to work
 try:
     import py2exe
+
+    # Help py2exe to find win32com.shell
+    try:
+        import modulefinder
+        import win32com
+        for p in win32com.__path__[1:]: # Take the path to win32comext
+            modulefinder.AddPackagePath("win32com", p)
+        pn = "win32com.shell"
+        __import__(pn)
+        m = sys.modules[pn]
+        for p in m.__path__[1:]:
+            modulefinder.AddPackagePath(pn, p)
+    except ImportError:
+        pass
 
     # Due to the use of demandload py2exe is not finding the modules.
     # packagescan.getmodules creates a list of modules included in
