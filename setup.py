@@ -34,6 +34,8 @@ try:
             # Sets the 'includes' option with the list of needed modules
             if not self.includes:
                 self.includes = []
+            else:
+                self.includes = self.includes.split(',')
             self.includes += mercurial.packagescan.getmodules(self.build_lib,
                                                               'mercurial')
             self.includes += mercurial.packagescan.getmodules(self.build_lib,
