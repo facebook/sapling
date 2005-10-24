@@ -14,23 +14,38 @@
 
 local curcontext="$curcontext" state line
 typeset -A opt_args
-local subcmds repos tags newFiles addedFiles
+local subcmds repos tags newFiles addedFiles includeExclude
 
 tags=($(hg tags 2> /dev/null | sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//'))
 subcmds=($(hg -v help | sed -e '1,/^list of commands:/d' \
-      -e '/^global options:/,$d' -e '/^ [^ ]/!d; s/[,:]//g;'))
+      -e '/^global options:/,$d' -e '/^ [^ ]/!d; s/[,:].*//g;'))
+
+# A lot of commands have these arguments
+includeExclude=(
+        '*-I-[include names matching the given patterns]:dir:_files -W $(hg root) -/'
+        '*--include-[include names matching the given patterns]:dir:_files -W $(hg root) -/'
+        '*-X-[exclude names matching the given patterns]:dir:_files -W $(hg root) -/'
+        '*--exclude-[exclude names matching the given patterns]:dir:_files -W $(hg root) -/')
 
 if [[ $service == "hg" ]]; then
     _arguments -C -A "-*" \
-    '-R+[repository root directory]' \
-    '-y[non-interactive]' \
-    '-v[verbose]' \
-    '-q[quiet]' \
+    '(--repository)-R[repository root directory]:root:_files -/' \
+    '(-R)--repository[repository root directory]:root:_files -/' \
+    '--cwd[change working directory]:new working directory:_files -/' \
+    '(--noninteractive)-y[do not prompt, assume yes for any required answers]' \
+    '(-y)--noninteractive[do not prompt, assume yes for any required answers]' \
+    '(--verbose)-v[enable additional output]' \
+    '(-v)--verbose[enable additional output]' \
+    '(--quiet)-q[suppress output]' \
+    '(-q)--quiet[suppress output]' \
+    '(--help)-h[display help and exit]' \
+    '(-h)--help[display help and exit]' \
+    '--debug[debug mode]' \
+    '--debugger[start debugger]' \
+    '--traceback[print traceback on exception]' \
     '--time[time how long the command takes]' \
     '--profile[profile]' \
-    '-h-[display help and exit]' \
-    '--version-[output version information and exit]' \
-    '--cwd[change working directory]:new working directory:_files -/' \
+    '--version[output version information and exit]' \
     '*::command:->subcmd' && return 0
 
     if (( CURRENT == 1 )); then
@@ -42,88 +57,340 @@ if [[ $service == "hg" ]]; then
 fi
 
 case $service in
-    (addremove)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '*:directories:_files -/'  # assume they want to add/remove a dir
-    ;;
-
     (add)
         newFiles=( $(hg status -un) )
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/'
+        _arguments $includeExclude \
+        '*:file:->unknown'
         _wanted files expl 'unknown files' compadd -a newFiles
     ;;
 
+    (addremove)
+        _arguments $includeExclude \
+        '*:directories:_files -/'  # assume they want to add/remove a dir
+    ;;
+
+    (forget)
+        addedFiles=( $(hg status -an) )
+        _arguments $includeExclude  \
+        '*:file:->added'
+        _wanted files expl 'newly added files' compadd -a addedFiles
+    ;;
+
     (remove|rm)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
+        _arguments $includeExclude \
         '*:file:_files'
     ;;
 
-    (cat)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '-o[output to file]:file:' \
-        '-r[revision]:revision:($tags)' \
+    (copy|cp)
+        _arguments $includeExclude \
+        '(--after)-A[record a copy that has already occurred]' \
+        '(-A)--after[record a copy that has already occurred]' \
+        '(--force)-f[forcibly copy over an existing managed file]' \
+        '(-f)--force[forcibly copy over an existing managed file]' \
+        '(--parents)-p[append source path to dest]' \
+        '(-p)--parents[append source path to dest]' \
+        '*:files:_files'
+    ;;
+
+    (rename|mv)
+        if (( CURRENT == 2 )); then
+            _arguments $includeExclude \
+            '(--after)-A[record a rename that has already occurred]' \
+            '(-A)--after[record a rename that has already occurred]' \
+            '(--force)-f[replace destination if it exists]' \
+            '(-F)--force[replace destination if it exists]' \
+            '(--parents)-p[append source path to dest]' \
+            '(-p)--parents[append source path to dest]' \
+            '*:files:_files'
+        else
+            _arguments '*:destination:_files'
+        fi
+    ;;
+
+    (diff)
+        _arguments $includeExclude \
+        '*-r[revision]:revision:($tags)' \
+        '*--rev[revision]:revision:($tags)' \
+        '(--text)-a[treat all files as text]' \
+        '(-a)--text[treat all files as text]' \
         '*:file:_files'
     ;;
 
-    (checkout|update|up|co)
+    (status)
+        _arguments $includeExclude \
+        '(--no-status)-n[hide status prefix]' \
+        '(-n)--no-status[hide status prefix]' \
+        '(--print0)-0[end filenames with NUL, for use with xargs]' \
+        '(-0)--print0[end filenames with NUL, for use with xargs]' \
+        '(--modified)-m[show only modified files]' \
+        '(-m)--modified[show only modified files]' \
+        '(--added)-a[show only added files]' \
+        '(-a)--added[show only added files]' \
+        '(--removed)-r[show only removed files]' \
+        '(-r)--removed[show only removed files]' \
+        '(--unknown)-u[show only unknown files]' \
+        '(-u)--unknown[show only unknown files]' \
+        '*:search pattern, then files:_files'
+    ;;
+
+    (revert)
+        addedFiles=( $(hg status -mrn) ) # modified, removed
         _arguments \
-        '-b[checkout the head of a specific branch]:tag:' \
-        '-m[allow merging of conflicts]' \
-        '-C[overwrite locally modified files]' \
-        '*:revision:->revs'
-        _wanted revs expl 'revision or tag' compadd -a tags
+        '(--rev)-r[revision to revert to]:revision:($tags)' \
+        '(-r)--rev[revision to revert to]:revision:($tags)' \
+        '(--nonrecursive)-n[do not recurse into subdirectories]' \
+        '(-n)--nonrecursive[do not recurse into subdirectories]' \
+        '*:file:->modified'
+        _wanted files expl 'mofified files' compadd -a addedFiles
     ;;
 
     (commit|ci)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '-A[run addremove during commit]' \
-        '-m[commit message]:string:' \
-        '-d[date code]:string:' \
-        '-u[user]:string:' \
+        addedFiles=( $(hg status -amrn) ) # added, modified, removed
+        _arguments $includeExclude \
+        '(--addremove)-A[run addremove during commit]' \
+        '(-A)--addremove[run addremove during commit]' \
+        '(--message)-m[use <txt> as commit message]:string:' \
+        '(-m)--message[use <txt> as commit message]:string:' \
+        '(--logfile)-l[read commit message from <file>]:.log file:_file -g \*.txt' \
+        '(-l)--logfile[read commit message from <file>]:.log file:_file -g \*.txt' \
+        '(--date)-d[record datecode as commit date]:date code:' \
+        '(-d)--date[record datecode as commit date]:date code:' \
+        '(--user)-u[record user as commiter]:user:' \
+        '(-u)--user[record user as commiter]:user:' \
+        '*:file:->modified'
+        _wanted files expl 'mofified files' compadd -a addedFiles
+    ;;
+
+    (cat)
+        _arguments $includeExclude \
+        '(--output)-o[print output to file with formatted name]:filespec:' \
+        '(-o)--output[print output to file with formatted name]:filespec:' \
+        '(--rev)-r[revision]:revision:($tags)' \
+        '(-r)--rev[revision]:revision:($tags)' \
         '*:file:_files'
+    ;;
+
+    (annotate)
+        _arguments $includeExclude \
+        '(--rev)-r[annotate the specified revision]:revision:($tags)' \
+        '(-r)--rev[annotate the specified revision]:revision:($tags)' \
+        '(--text)-a[treat all files as text]' \
+        '(-a)--text[treat all files as text]' \
+        '(--user)-u[list the author]' \
+        '(-u)--user[list the author]' \
+        '(--changeset)-c[list the changeset]' \
+        '(-c)--changeset[list the changeset]' \
+        '(--number)-n[list the revision number (default)]' \
+        '(-n)--number[list the revision number (default)]' \
+        '*:files:_files'
+    ;;
+
+    (grep)
+        _arguments $includeExclude \
+        '*-r[search in given revision range]:revision:($tags)' \
+        '*--rev[search in given revision range]:revision:($tags)' \
+        '--all[print all revisions with matches]' \
+        '(-print0)-0[end filenames with NUL, for use with xargs]' \
+        '(-0)--print0[end filenames with NUL, for use with xargs]' \
+        '(--ignore-case)-i[ignore case when matching]' \
+        '(-i)--ignore-case[ignore case when matching]' \
+        '(--files-with-matches)-l[print names of files and revs that match]' \
+        '(-l)--files-with-matches[print names of files and revs that match]' \
+        '(--line-number)-n[print matching line numbers]' \
+        '(-n)--line-number[print matching line numbers]' \
+        '(--user)-u[print user who committed change]' \
+        '(-u)--user[print user who committed change]' \
+        '*:search pattern:'
+    ;;
+
+    (locate)
+        _arguments $includeExclude \
+        '(--rev)-r[search repository as it stood at revision]:revision:($tags)' \
+        '(-r)--rev[search repository as it stood at revision]:revision:($tags)' \
+        '(--print0)-0[end filenames with NUL, for use with xargs]' \
+        '(-0)--print0[end filenames with NUL, for use with xargs]' \
+        '(--fullpath)-f[print complete paths]' \
+        '(-f)--fullpath[print complete paths]' \
+        '*:search pattern:'
+    ;;
+
+    (log|history)
+        _arguments $includeExclude \
+        '*-r[show the specified revision or range]:revision:($tags)' \
+        '*--rev[show the specified revision or range]:revision:($tags)' \
+        '(--no-merges -M --only-merges)-m[show only merge revisions]' \
+        '(--no-merges -M -m)--only-merges[show only merge revisions]' \
+        '(--only-merges -m --no-merges)-M[do not show merge revisions]' \
+        '(--only-merges -m -M)--no-merges[do not show merge revisions]' \
+        '(--keyword)-k[search for a keyword]:keyword:' \
+        '(-k)--keyword[search for a keyword]:keyword:' \
+        '(--branch)-b[show branches]' \
+        '(-b)--branch[show branches]' \
+        '(--patch)-p[show patch]' \
+        '(-p)--patch[show patch]' \
+        '*:file:_files'
+    ;;
+
+    (update|checkout|co)
+        _arguments \
+        '(--branch)-b[checkout the head of a specific branch]' \
+        '(-b)--branch[checkout the head of a specific branch]' \
+        '(-C --clean --merge)-m[allow merging of branches]' \
+        '(-C --clean -m)--merge[allow merging of branches]' \
+        '(-m --merge --clean)-C[overwrite locally modified files]' \
+        '(-m --merge -C)--clean[overwrite locally modified files]' \
+        '*:revision or tag:($tags)'
     ;;
 
     (tag)
         _arguments \
-        '-l[make the tag local]:' \
-        '-m[commit message]:string:' \
-        '-d[date code]:string:' \
-        '-u[user]:string:' \
-        '*:name and revision:'
+        '(--local)-l[make the tag local]' \
+        '(-l)--local[make the tag local]' \
+        '(--message)-m[message for tag commit log entry]:string:' \
+        '(-m)--message[message for tag commit log entry]:string:' \
+        '(--date)-d[record datecode as commit date]:date code:' \
+        '(-d)--date[record datecode as commit date]:date code:' \
+        '(--user)-u[record user as commiter]:user:' \
+        '(-u)--user[record user as commiter]:user:' \
+        '*:name, then revision:($tags)'
     ;;
 
     (clone)
+        if (( CURRENT == 2 )); then
+            _arguments \
+            '(--no-update)-U[do not update the new working directory]' \
+            '(-U)--no-update[do not update the new working directory]' \
+            '(--ssh)-e[specify ssh command to use]:string:' \
+            '(-e)--ssh[specify ssh command to use]:string:' \
+            '--pull[use pull protocol to copy metadata]' \
+            '--remotecmd[specify hg command to run on the remote side]:remote hg:' \
+            '*:local repo:_files -/'
+        elif (( CURRENT == 3 )); then
+            _arguments '*:dest repo:_files -/'
+        fi
+    ;;
+
+    (rawcommit)
         _arguments \
-        '-U[skip update after cloning]' \
-        '-e[ssh command]:string:' \
-        '--pull[use pull protocol to copy metadata]' \
-        '--remotecmd[remote hg command]:command:->subcmd'
+        '(--parent)-p[parent revision]:revision:($tags)' \
+        '(-p)--parent[parent revision]:revision:($tags)' \
+        '(--date)-d[record datecode as commit date]:date code:' \
+        '(-d)--date[record datecode as commit date]:date code:' \
+        '(--user)-u[record user as commiter]:user:' \
+        '(-u)--user[record user as commiter]:user:' \
+        '(--message)-m[use <txt> as commit message]:string:' \
+        '(-m)--message[use <txt> as commit message]:string:' \
+        '(--logfile)-l[read commit message from <file>]:.log file:_file -g \*.txt' \
+        '(-l)--logfile[read commit message from <file>]:.log file:_file -g \*.txt' \
+        '(--files)-F[file list]:file list:_files' \
+        '(-F)--files[file list]:file list:_files' \
+        '*:files to commit:_files'
+    ;;
+
+    (bundle)
+        if (( CURRENT == 2 )); then
+            _arguments '*:changegroup file:_files -g \*.hg'
+        elif (( CURRENT == 3 )); then
+            _arguments '*:other repo:_files -/'
+        fi
+    ;;
+
+    (unbundle)
+        _arguments '*:changegroup .hg file:_files -g \*.hg'
+    ;;
+
+    (incoming)
+        _arguments \
+        '(--patch)-p[show patch]' \
+        '(-p)--patch[show patch]' \
+        '(--no-merges)-M[do not show merge revisions]' \
+        '(-M)--no-merges[do not show merge revisions]' \
+        '*:mercurial repository:_files -/'
+    ;;
+
+    (import|patch)
+        _arguments \
+        '(--strip)-p[directory strip option for patch (default: 1)]:count:' \
+        '(-p)--strip[directory strip option for patch (default: 1)]:count:' \
+        '(--force)-f[skip check for outstanding uncommitted changes]' \
+        '(-f)--force[skip check for outstanding uncommitted changes]' \
+        '(--base)-b[base directory to read patches from]:file:_files -W $(hg root) -/' \
+        '(-b)--base[base directory to read patches from]:file:_files -W $(hg root) -/' \
+        '*:patch file:_files'
+    ;;
+
+    (pull)
+        repos=( $(hg paths | sed -e 's/^.*= //') )
+        _arguments \
+        '(--update)-u[update working directory to tip after pull]' \
+        '(-u)--update[update working directory to tip after pull]' \
+        '(--ssh)-e[specify ssh command to use]:ssh command:' \
+        '(-e)--ssh[specify ssh command to use]:ssh command:' \
+        '--remotecmd[specify hg command to run on the remote side]:remote hg:' \
+        '*:local repo:_files -/'
+        _wanted source expl 'source repository' compadd -a repos
+    ;;
+
+    (outgoing)
+        _arguments \
+        '(--patch)-p[show patch]' \
+        '(-p)--patch[show patch]' \
+        '(--no-merges)-M[do not show merge revisions]' \
+        '(-M)--no-merges[do not show merge revisions]' \
+        '*:local repo:_files -/'
+        _wanted source expl 'source repository' compadd -a repos
     ;;
 
     (export)
         _arguments \
-        '-o[output to a file]:file:' \
-        '-a-[tread all files as text]' \
+        '(--outout)-o[print output to file with formatted name]:filespec:' \
+        '(-o)--output[print output to file with formatted name]:filespec:' \
+        '(--text)-a[treat all files as text]' \
+        '(-a)--text[treat all files as text]' \
         '*:revision:->revs'
         _wanted revs expl 'revision or tag' compadd -a tags
     ;;
 
-    (heads)
-        _arguments '-b[find branch info]'
+    (push)
+        repos=( $(hg paths | sed -e 's/^.*= //') )
+        _arguments \
+        '(--force)-f[force push]' \
+        '(-f)--force[force push]' \
+        '(--ssh)-e[specify ssh command to use]:ssh command:' \
+        '(-e)--ssh[specify ssh command to use]:ssh command:' \
+        '--remotecmd[specify hg command to run on the remote side]:remote hg:' \
+        '*:local repo:_files -/'
+        _wanted source expl 'source repository' compadd -a repos
     ;;
 
-    (outgoing|out)
-        _arguments '-p[show patch]'
+    (serve)
+        _arguments \
+        '(--accesslog)-A[name of access log file]:log file:_files' \
+        '(-A)--accesslog[name of access log file]:log file:_files' \
+        '(--errorlog)-E[name of error log file]:log file:_files' \
+        '(-E)--errorlog[name of error log file]:log file:_files' \
+        '(--port)-p[listen port]:listen port:' \
+        '(-p)--port[listen port]:listen port:' \
+        '(--address)-a[interface address]:interface address:' \
+        '(-a)--address[interface address]:interface address:' \
+        '(--name)-n[name to show in web pages]:repository name:' \
+        '(-n)--name[name to show in web pages]:repository name:' \
+        '(--templates)-t[web template directory]:template dir:_files -/' \
+        '(-t)--templates[web template directory]:template dir:_files -/' \
+        '--style[web template style]:style' \
+        '--stdio[for remote clients]' \
+        '(--ipv6)-6[use IPv6 in addition to IPv4]' \
+        '(-6)--ipv6[use IPv6 in addition to IPv4]'
+    ;;
+
+    (help)
+        _wanted commands expl 'hg command' compadd -a subcmds
+    ;;
+
+    (heads)
+        _arguments \
+        '(--branches)-b[find branch info]' \
+        '(-b)--branches[find branch info]'
     ;;
 
     (paths)
@@ -134,175 +401,15 @@ case $service in
         _arguments '*:new repo directory:_files -/'
     ;;
 
-    (unbundle)
-        _arguments '*:changegroup file:_files'
-    ;;
-
     (manifest)
-        _arguments \
-        '*:revision:->revs'
-        _wanted revs expl 'revision or tag' compadd -a tags
+        _arguments '*:revision:($tags)'
     ;;
 
     (parents)
-        _arguments \
-        '*:revision:->revs'
-        _wanted revs expl 'revision or tag' compadd -a tags
+        _arguments '*:revision:($tags)'
     ;;
 
-    (serve)
-        _arguments \
-        '-A[access log file]:log file:_files' \
-        '-E[error log file]:log file:_files' \
-        '-p[listen port]:listen port:' \
-        '-a[interface address]:interface address:' \
-        '-n[repository name]:repository name:' \
-        '--stdio[for remote clients]' \
-        '-t[template directory]:template dir:_files -/' \
-        '--style[template style]:style' \
-        '-6[use IPv6 in addition to IPv4]'
-    ;;
-
-    (pull)
-        repos=( $(hg paths | sed -e 's/^.*= //') )
-        _arguments \
-        '-u[update working directory]' \
-        '-e[ssh command]:remote commands:' \
-        '--remotecmd[remote hg command]:command:->subcmd' \
-        '*:pull source:->repo'
-        _wanted source expl 'source repository' compadd -a repos
-    ;;
-
-	(push)
-        repos=( $(hg paths | sed -e 's/^.*= //') )
-        _arguments \
-        '-f[force push]' \
-        '-e[ssh command]:remote commands:' \
-        '--remotecmd[remote hg command]:command:->subcmd' \
-        '*:pull source:->repo'
-        _wanted source expl 'source repository' compadd -a repos
-    ;;
-
-    (id|identify)
-    ;;
-
-    (recover)
-    ;;
-
-    (rawcommit)
-        _arguments \
-        '-p[parent]:revision:($tags)' \
-        '-d[date]:date:' \
-        '-u[user]:user:' \
-        '-F[file list]:file list:_files' \
-        '-m[commit message]:string:' \
-        '-l[commit message file]:message file:_files -g *.txt' \
-        '*:files to commit:_files'
-    ;;
-
-    (copy|cp)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '-A-[record a copy after it has happened]' \
-        '-f[replace destination if it exists]' \
-        '-p[append source path to dest]' \
-        '*:destination:'
-    ;;
-
-    (rename|mv)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '-A-[record a copy after it has happened]' \
-        '-f[replace destination if it exists]' \
-        '-p[append source path to dest]' \
-        '*:destination:'
-    ;;
-
-    (forget)
-        addedFiles=( $(hg status -an) )
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/'
-        _wanted files expl 'newly added files' compadd -a addedFiles
-    ;;
-
-    (import|patch)
-        _arguments \
-        '-p[path strip (default: 1)]:count:' \
-        '-f[skip check for outstanding changes]' \
-        '-b[base path]:file:_files -W $(hg root)' \
-        '*:patch file:_files'
-    ;;
-
-    (incoming|in)
-        _arguments \
-        '-p[show patch]' \
-        '*:mercurial repository:_files'
-    ;;
-
-    (diff)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '-r[revision]:revision:($tags)' \
-        '-a-[tread all files as text]' \
-        '*:file:_files'
-    ;;
-
-    (log|history)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '-r[revision]:revision:($tags)' \
-        '-b[show branches]' \
-        '-p[show patch]' \
-        '*:file:_files'
-    ;;
-
-    (grep)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '-0[end fields with NUL]' \
-        '--all[print all revisions with matches]' \
-        '-i[ignore case]' \
-        '-l[print names of files and revs with matches]' \
-        '-n[print line numbers]' \
-        '-r[search in revision rev]:revision:($tags)' \
-        '-u[print user who made change]' \
-        '*:search pattern, then files:_files'
-    ;;
-
-    (status)
-        _arguments \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '-0[end filenames with NUL]' \
-        '-m[show only modified files]' \
-        '-a[show only added files]' \
-        '-r[show only removed files]' \
-        '-u[show only unknown files]' \
-        '-n[hide status prefix]' \
-        '*:search pattern, then files:_files'
-    ;;
-
-    (locate)
-        _arguments \
-        '-r[search in revision rev]:revision:($tags)' \
-        '-0[end fields with NUL]' \
-        '-f[print complete paths]' \
-        '-I[include path in search]:dir:_files -W $(hg root) -/' \
-        '-X[exclude path in search]:dir:_files -W $(hg root) -/' \
-        '*:search pattern:'
-    ;;
-
-    (help)
-        _wanted commands expl 'hg command' compadd -a subcmds
-    ;;
-
-    (root|undo|view|verify|version)
+    (identify|recover|root|undo|view|verify|version|ct|tags)
         # no arguments for these commands
     ;;
 
