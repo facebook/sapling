@@ -403,9 +403,12 @@ proc makewindow {} {
     set ctext .ctop.cdet.left.ctext
     text $ctext -bg white -state disabled -font $textfont \
 	-width $geometry(ctextw) -height $geometry(ctexth) \
-	-yscrollcommand ".ctop.cdet.left.sb set" -wrap none
+	-yscrollcommand ".ctop.cdet.left.sb set" \
+	-xscrollcommand ".ctop.cdet.left.hb set" -wrap none
     scrollbar .ctop.cdet.left.sb -command "$ctext yview"
+    scrollbar .ctop.cdet.left.hb -orient horizontal -command "$ctext xview"
     pack .ctop.cdet.left.sb -side right -fill y
+    pack .ctop.cdet.left.hb -side bottom -fill x
     pack $ctext -side left -fill both -expand 1
     .ctop.cdet add .ctop.cdet.left
 
