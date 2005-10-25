@@ -7,7 +7,7 @@ hg commit -m "Added a" -d "0 0"
 
 touch main
 hg add main
-hg commit -t "Added main" -d "0 0"
+hg commit -m "Added main" -d "0 0"
 hg checkout 0
 
 echo Main should be gone

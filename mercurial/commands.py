@@ -743,10 +743,7 @@ def commit(ui, repo, *pats, **opts):
     The HGEDITOR or EDITOR environment variables are used to start an
     editor to add a commit comment.
     """
-    if opts['text']:
-        ui.warn(_("Warning: -t and --text is deprecated,"
-                  " please use -m or --message instead.\n"))
-    message = opts['message'] or opts['text']
+    message = opts['message']
     logfile = opts['logfile']
 
     if message and logfile:
@@ -2188,7 +2185,6 @@ table = {
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
           ('m', 'message', "", _('use <text> as commit message')),
-          ('t', 'text', "", _('commit message (deprecated: use -m)')),
           ('l', 'logfile', "", _('read the commit message from <file>')),
           ('d', 'date', "", _('record datecode as commit date')),
           ('u', 'user', "", _('record user as commiter'))],

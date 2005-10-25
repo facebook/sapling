@@ -1,4 +1,3 @@
-Warning: -t and --text is deprecated, please use -m or --message instead.
 Main should be gone
 a
 changeset:   3:91ebc10ed028
