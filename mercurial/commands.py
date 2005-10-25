@@ -715,7 +715,10 @@ def clone(ui, source, dest=None, **opts):
         for f in files.split():
             src = os.path.join(source, ".hg", f)
             dst = os.path.join(dest, ".hg", f)
-            util.copyfiles(src, dst)
+            try:
+                util.copyfiles(src, dst)
+            except OSError, inst:
+                if inst.errno != errno.ENOENT: raise
 
         repo = hg.repository(ui, dest)
 
