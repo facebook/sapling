@@ -556,11 +556,7 @@ class localrepository:
                 self.dirstate.update([f], "r")
 
     def undelete(self, list):
-        pl = self.dirstate.parents()
-        if pl[1] != nullid:
-            self.ui.warn("aborting: outstanding uncommitted merges\n")
-            return 1
-        p = pl[0]
+        p = self.dirstate.parents()[0]
         mn = self.changelog.read(p)[0]
         mf = self.manifest.readflags(mn)
         m = self.manifest.read(mn)
