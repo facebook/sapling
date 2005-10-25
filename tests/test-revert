@@ -1,0 +1,24 @@
+#!/bin/sh
+
+hg init
+echo 123 > a
+echo 123 > c
+hg add a c
+hg commit -m "first" -d "0 0" a c
+echo 123 > b
+hg status
+echo 12 > c
+hg status
+hg add b
+hg status
+hg rm a
+hg status
+hg revert a
+hg status
+hg revert b
+hg status
+hg revert c
+hg status
+ls
+
+true

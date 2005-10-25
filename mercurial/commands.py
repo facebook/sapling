@@ -1824,6 +1824,10 @@ def revert(ui, repo, *names, **opts):
             chosen[relname] = 1
         return ret
 
+    (c, a, d, u) = repo.changes()
+    repo.forget(filter(choose, a))
+    repo.undelete(filter(choose, d))
+
     r = repo.update(node, False, True, choose, False)
     for n in relnames:
         if n not in chosen:

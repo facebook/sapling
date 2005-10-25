@@ -555,6 +555,30 @@ class localrepository:
             else:
                 self.dirstate.update([f], "r")
 
+    def undelete(self, list):
+        pl = self.dirstate.parents()
+        if pl[1] != nullid:
+            self.ui.warn("aborting: outstanding uncommitted merges\n")
+            return 1
+        p = pl[0]
+        mn = self.changelog.read(p)[0]
+        mf = self.manifest.readflags(mn)
+        m = self.manifest.read(mn)
+        for f in list:
+            if self.dirstate.state(f) not in  "r":
+                self.ui.warn("%s not removed!\n" % f)
+            else:
+                t = self.file(f).read(m[f])
+                try:
+                    self.wwrite(f, t)
+                except IOError, e:
+                    if e.errno != errno.ENOENT:
+                        raise
+                    os.makedirs(os.path.dirname(self.wjoin(f)))
+                    self.wwrite(f, t)
+                util.set_exec(self.wjoin(f), mf[f])
+                self.dirstate.update([f], "n")
+
     def copy(self, source, dest):
         p = self.wjoin(dest)
         if not os.path.exists(p):
