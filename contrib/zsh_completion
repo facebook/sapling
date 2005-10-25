@@ -305,6 +305,8 @@ case $service in
         '(-p)--patch[show patch]' \
         '(--no-merges)-M[do not show merge revisions]' \
         '(-M)--no-merges[do not show merge revisions]' \
+        '(--newest-first)-n[show newest record first]' \
+        '(-n)--newest-first[show newest record first]' \
         '*:mercurial repository:_files -/'
     ;;
 
@@ -337,6 +339,8 @@ case $service in
         '(-p)--patch[show patch]' \
         '(--no-merges)-M[do not show merge revisions]' \
         '(-M)--no-merges[do not show merge revisions]' \
+        '(--newest-first)-n[show newest record first]' \
+        '(-n)--newest-first[show newest record first]' \
         '*:local repo:_files -/'
         _wanted source expl 'source repository' compadd -a repos
     ;;
