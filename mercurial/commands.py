@@ -591,7 +591,7 @@ def bundle(ui, repo, fname, dest="default-push", **opts):
     contents including permissions, rename data, and revision history.
     """
     f = open(fname, "wb")
-    dest = ui.expandpath(dest)
+    dest = ui.expandpath(dest, repo.root)
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other)
     cg = repo.changegroup(o)
@@ -1380,7 +1380,7 @@ def incoming(ui, repo, source="default", **opts):
 
     Currently only local repositories are supported.
     """
-    source = ui.expandpath(source)
+    source = ui.expandpath(source, repo.root)
     other = hg.repository(ui, source)
     if not other.local():
         raise util.Abort(_("incoming doesn't work for remote repositories yet"))
@@ -1549,7 +1549,7 @@ def outgoing(ui, repo, dest="default-push", **opts):
     default push repo. These are the changesets that would be pushed
     if a push was requested.
     """
-    dest = ui.expandpath(dest)
+    dest = ui.expandpath(dest, repo.root)
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other)
     o = repo.newer(o)
@@ -1625,7 +1625,7 @@ def pull(ui, repo, source="default", **opts):
     to the remote user's home directory by default; use two slashes at
     the start of a path to specify it as relative to the filesystem root.
     """
-    source = ui.expandpath(source)
+    source = ui.expandpath(source, repo.root)
     ui.status(_('pulling from %s\n') % (source))
 
     if opts['ssh']:
@@ -1665,7 +1665,7 @@ def push(ui, repo, dest="default-push", force=False, ssh=None, remotecmd=None):
     SSH requires an accessible shell account on the destination
     machine and a copy of hg in the remote path.
     """
-    dest = ui.expandpath(dest)
+    dest = ui.expandpath(dest, repo.root)
     ui.status('pushing to %s\n' % (dest))
 
     if ssh:

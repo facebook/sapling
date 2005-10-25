@@ -89,9 +89,12 @@ class ui:
                 user = user[f+1:]
         return user
 
-    def expandpath(self, loc):
+    def expandpath(self, loc, root=""):
         paths = {}
         for name, path in self.configitems("paths"):
+            m = path.find("://")
+            if m == -1:
+                    path = os.path.join(root, path)
             paths[name] = path
 
         return paths.get(loc, loc)
