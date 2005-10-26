@@ -788,6 +788,7 @@ def docopy(ui, repo, pats, opts):
     pats = list(pats)
     dest = pats.pop()
     sources = []
+    dir2dir = not opts['parents'] and len(pats) == 1 and os.path.isdir(pats[0])
 
     def okaytocopy(abs, rel, exact):
         reasons = {'?': _('is not managed'),
@@ -810,7 +811,8 @@ def docopy(ui, repo, pats, opts):
     if os.path.exists(reldest):
         destisfile = not os.path.isdir(reldest)
     else:
-        destisfile = len(sources) == 1 or repo.dirstate.state(absdest) != '?'
+        destisfile = not dir2dir and (len(sources) == 1
+                                      or repo.dirstate.state(absdest) != '?')
 
     if destisfile:
         if opts['parents']:
@@ -818,12 +820,23 @@ def docopy(ui, repo, pats, opts):
         elif len(sources) > 1:
             raise util.Abort(_('with multiple sources, destination must be a '
                                'directory'))
+    srcpfxlen = 0
+    if dir2dir:
+        srcpfx = util.pathto(cwd, util.canonpath(repo.root, cwd, pats[0]))
+        if os.path.exists(reldest):
+            srcpfx = os.path.split(srcpfx)[0]
+        if srcpfx:
+            srcpfx += os.sep
+        srcpfxlen = len(srcpfx)
+
     errs, copied = 0, []
     for abs, rel, exact in sources:
         if opts['parents']:
             mydest = os.path.join(dest, rel)
         elif destisfile:
             mydest = reldest
+        elif dir2dir:
+            mydest = os.path.join(dest, rel[srcpfxlen:])
         else:
             mydest = os.path.join(dest, os.path.basename(rel))
         myabsdest = util.canonpath(repo.root, cwd, mydest)
@@ -834,7 +847,7 @@ def docopy(ui, repo, pats, opts):
         mydestdir = os.path.dirname(myreldest) or '.'
         if not opts['after']:
             try:
-                if opts['parents']: os.makedirs(mydestdir)
+                if opts['parents'] or dir2dir: os.makedirs(mydestdir)
                 elif not destisfile: os.mkdir(mydestdir)
             except OSError, inst:
                 if inst.errno != errno.EEXIST: raise
