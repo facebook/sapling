@@ -246,6 +246,8 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
 
     def matchfn(pats, tail):
         """build a matching function from a set of patterns"""
+        if not pats:
+            return
         matches = []
         for k, p in pats:
             try:
