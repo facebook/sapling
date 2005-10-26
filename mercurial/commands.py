@@ -2417,7 +2417,7 @@ def run():
 class ParseError(Exception):
     """Exception raised on errors in parsing the command line."""
 
-def parse(args):
+def parse(ui, args):
     options = {}
     cmdoptions = {}
 
@@ -2428,6 +2428,17 @@ def parse(args):
 
     if args:
         cmd, args = args[0], args[1:]
+        defaults = ui.config("defaults", cmd)
+        if defaults:
+            # reparse with command defaults added
+            args = [cmd] + defaults.split() + args
+            try:
+                args = fancyopts.fancyopts(args, globalopts, options)
+            except fancyopts.getopt.GetoptError, inst:
+                raise ParseError(None, inst)
+
+            cmd, args = args[0], args[1:]
+
         i = find(cmd)[1]
         c = list(i[1])
     else:
@@ -2494,7 +2505,7 @@ def dispatch(args):
         table.update(cmdtable)
 
     try:
-        cmd, func, args, options, cmdoptions = parse(args)
+        cmd, func, args, options, cmdoptions = parse(u, args)
     except ParseError, inst:
         if inst.args[0]:
             u.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
