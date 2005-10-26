@@ -201,7 +201,6 @@ copy <source ...> <dest>::
     -I, --include <pat>   include names matching the given patterns
     -X, --exclude <pat>   exclude names matching the given patterns
     -f, --force           forcibly copy over an existing managed file
-    -p, --parents         append source path to dest
 
     aliases: cp
 
@@ -493,7 +492,6 @@ rename <source ...> <dest>::
     Options:
     -A, --after        record a rename that has already occurred
     -f, --force        forcibly copy over an existing managed file
-    -p, --parents      append source path to dest
 
     aliases: mv
 

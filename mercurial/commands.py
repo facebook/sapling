@@ -788,7 +788,7 @@ def docopy(ui, repo, pats, opts):
     pats = list(pats)
     dest = pats.pop()
     sources = []
-    dir2dir = not opts['parents'] and len(pats) == 1 and os.path.isdir(pats[0])
+    dir2dir = len(pats) == 1 and os.path.isdir(pats[0])
 
     def okaytocopy(abs, rel, exact):
         reasons = {'?': _('is not managed'),
@@ -814,12 +814,10 @@ def docopy(ui, repo, pats, opts):
         destisfile = not dir2dir and (len(sources) == 1
                                       or repo.dirstate.state(absdest) != '?')
 
-    if destisfile:
-        if opts['parents']:
-            raise util.Abort(_('with --parents, destination must be a directory'))
-        elif len(sources) > 1:
-            raise util.Abort(_('with multiple sources, destination must be a '
-                               'directory'))
+    if destisfile and len(sources) > 1:
+        raise util.Abort(_('with multiple sources, destination must be a '
+                           'directory'))
+
     srcpfxlen = 0
     if dir2dir:
         srcpfx = util.pathto(cwd, util.canonpath(repo.root, cwd, pats[0]))
@@ -831,9 +829,7 @@ def docopy(ui, repo, pats, opts):
 
     errs, copied = 0, []
     for abs, rel, exact in sources:
-        if opts['parents']:
-            mydest = os.path.join(dest, rel)
-        elif destisfile:
+        if destisfile:
             mydest = reldest
         elif dir2dir:
             mydest = os.path.join(dest, rel[srcpfxlen:])
@@ -847,7 +843,7 @@ def docopy(ui, repo, pats, opts):
         mydestdir = os.path.dirname(myreldest) or '.'
         if not opts['after']:
             try:
-                if opts['parents'] or dir2dir: os.makedirs(mydestdir)
+                if dir2dir: os.makedirs(mydestdir)
                 elif not destisfile: os.mkdir(mydestdir)
             except OSError, inst:
                 if inst.errno != errno.EEXIST: raise
@@ -2213,8 +2209,7 @@ table = {
              [('I', 'include', [], _('include names matching the given patterns')),
               ('X', 'exclude', [], _('exclude names matching the given patterns')),
               ('A', 'after', None, _('record a copy that has already occurred')),
-              ('f', 'force', None, _('forcibly copy over an existing managed file')),
-              ('p', 'parents', None, _('append source path to dest'))],
+              ('f', 'force', None, _('forcibly copy over an existing managed file'))],
              _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
@@ -2336,8 +2331,7 @@ table = {
                   [('I', 'include', [], _('include names matching the given patterns')),
                    ('X', 'exclude', [], _('exclude names matching the given patterns')),
                    ('A', 'after', None, _('record a rename that has already occurred')),
-                   ('f', 'force', None, _('forcibly copy over an existing managed file')),
-                   ('p', 'parents', None, _('append source path to dest'))],
+                   ('f', 'force', None, _('forcibly copy over an existing managed file'))],
                   _('hg rename [OPTION]... [SOURCE]... DEST')),
     "^revert":
         (revert,
