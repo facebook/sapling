@@ -39,16 +39,6 @@ class manifest(revlog):
             self.read(node)
         return self.mapcache[2]
 
-    def diff(self, a, b):
-        # this is sneaky, as we're not actually using a and b
-        if self.listcache and self.addlist and self.listcache[0] == a:
-            d = mdiff.diff(self.listcache[1], self.addlist, 1)
-            if mdiff.patch(a, d) != b:
-                raise AssertionError(_("sortdiff failed!"))
-            return d
-        else:
-            return mdiff.textdiff(a, b)
-
     def add(self, map, flags, transaction, link, p1=None, p2=None,
             changed=None):
         # directly generate the mdiff delta from the data collected during
