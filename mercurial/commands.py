@@ -942,8 +942,7 @@ def debugconfig(ui):
         ui.write('%s.%s=%s\n' % (section, name, value))
 
 def debugsetparents(ui, repo, rev1, rev2=None):
-    """
-    manually set the parents of the current working directory
+    """manually set the parents of the current working directory
 
     This is useful for writing repository conversion tools, but should
     be used with care.
@@ -1285,6 +1284,7 @@ def heads(ui, repo, **opts):
 
 def identify(ui, repo):
     """print information about the working copy
+
     Print a short summary of the current state of the repo.
 
     This summary identifies the repository state using one or two parent
