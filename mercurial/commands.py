@@ -1790,7 +1790,7 @@ def rename(ui, repo, *pats, **opts):
     repo.remove(names, unlink=True)
     return errs
 
-def revert(ui, repo, *names, **opts):
+def revert(ui, repo, *pats, **opts):
     """revert modified files or dirs back to their unmodified states
 
     Revert any uncommitted modifications made to the named files or
@@ -1800,61 +1800,20 @@ def revert(ui, repo, *names, **opts):
     If a file has been deleted, it is recreated.  If the executable
     mode of a file was changed, it is reset.
 
-    If a directory is given, all files in that directory and its
-    subdirectories are reverted.
+    If names are given, all files matching the names are reverted.
 
-    If no arguments are given, all files in the current directory and
+    If no names are given, all files in the current directory and
     its subdirectories are reverted.
     """
     node = opts['rev'] and repo.lookup(opts['rev']) or \
            repo.dirstate.parents()[0]
-    root = os.path.realpath(repo.root)
 
-    def trimpath(p):
-        p = os.path.realpath(p)
-        if p.startswith(root):
-            rest = p[len(root):]
-            if not rest:
-                return rest
-            if p.startswith(os.sep):
-                return rest[1:]
-            return p
+    files, choose, anypats = matchpats(repo, repo.getcwd(), pats, opts)
+    (c, a, d, u) = repo.changes(match=choose)
+    repo.forget(a)
+    repo.undelete(d)
 
-    relnames = map(trimpath, names or [os.getcwd()])
-    chosen = {}
-
-    def choose(name):
-        def body(name):
-            for r in relnames:
-                if not name.startswith(r):
-                    continue
-                rest = name[len(r):]
-                if not rest:
-                    return r, True
-                depth = rest.count(os.sep)
-                if not r:
-                    if depth == 0 or not opts['nonrecursive']:
-                        return r, True
-                elif rest[0] == os.sep:
-                    if depth == 1 or not opts['nonrecursive']:
-                        return r, True
-            return None, False
-        relname, ret = body(name)
-        if ret:
-            chosen[relname] = 1
-        return ret
-
-    (c, a, d, u) = repo.changes()
-    repo.forget(filter(choose, a))
-    repo.undelete(filter(choose, d))
-
-    r = repo.update(node, False, True, choose, False)
-    for n in relnames:
-        if n not in chosen:
-            ui.warn(_('error: no matches for %s\n') % n)
-            r = 1
-    sys.stdout.flush()
-    return r
+    return repo.update(node, False, True, choose, False)
 
 def root(ui, repo):
     """print the root (top) of the current working dir
@@ -2348,7 +2307,8 @@ table = {
                   _('hg rename [OPTION]... [SOURCE]... DEST')),
     "^revert":
         (revert,
-         [("n", "nonrecursive", None, _("do not recurse into subdirectories")),
+         [('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
           ("r", "rev", "", _("revision to revert to"))],
          _("hg revert [-n] [-r REV] [NAME]...")),
     "root": (root, [], _("hg root")),
