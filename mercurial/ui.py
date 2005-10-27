@@ -15,7 +15,7 @@ class ui:
                  interactive=True):
         self.overlay = {}
         self.cdata = ConfigParser.SafeConfigParser()
-        self.cdata.read(util.rcpath)
+        self.readconfig(util.rcpath)
 
         self.quiet = self.configbool("ui", "quiet")
         self.verbose = self.configbool("ui", "verbose")
@@ -31,8 +31,11 @@ class ui:
         self.debugflag = (self.debugflag or debug)
         self.interactive = (self.interactive and interactive)
 
-    def readconfig(self, fp):
-        self.cdata.readfp(fp)
+    def readconfig(self, fn):
+        try:
+            self.cdata.read(fn)
+        except ConfigParser.ParsingError, inst:
+            raise util.Abort(_("Failed to parse %s\n%s") % (fn, inst))
 
     def setconfig(self, section, name, val):
         self.overlay[(section, name)] = val

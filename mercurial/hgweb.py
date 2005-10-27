@@ -990,7 +990,7 @@ class hgwebdir:
             for name, path in self.repos:
                 u = ui.ui()
                 try:
-                    u.readconfig(file(os.path.join(path, '.hg', 'hgrc')))
+                    u.readconfig(os.path.join(path, '.hg', 'hgrc'))
                 except IOError:
                     pass
                 get = u.config

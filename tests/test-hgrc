@@ -1,0 +1,7 @@
+#!/bin/sh
+
+mkdir t
+cd t
+hg init
+echo "invalid" > .hg/hgrc
+hg status 2>&1 |sed -e "s:/.*\(/t/.*\):...\1:" 
