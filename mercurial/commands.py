@@ -693,7 +693,7 @@ def clone(ui, source, dest=None, **opts):
     copy = False
     if other.dev() != -1:
         abspath = os.path.abspath(source)
-        if not opts['pull']:
+        if not opts['pull'] and not opts['rev']:
             copy = True
 
     if copy:
@@ -723,8 +723,14 @@ def clone(ui, source, dest=None, **opts):
         repo = hg.repository(ui, dest)
 
     else:
+        revs = None
+        if opts['rev']:
+            if not other.local():
+                raise util.Abort("clone -r not supported yet for remote repositories.")
+            else:
+                revs = [other.lookup(rev) for rev in opts['rev']]
         repo = hg.repository(ui, dest, create=1)
-        repo.pull(other)
+        repo.pull(other, heads = revs)
 
     f = repo.opener("hgrc", "w", text=True)
     f.write("[paths]\n")
@@ -1396,7 +1402,7 @@ def incoming(ui, repo, source="default", **opts):
     o = repo.findincoming(other)
     if not o:
         return
-    o = other.newer(o)
+    o = other.changelog.nodesbetween(o)[0]
     if opts['newest_first']:
         o.reverse()
     for n in o:
@@ -1561,7 +1567,7 @@ def outgoing(ui, repo, dest="default-push", **opts):
     dest = ui.expandpath(dest, repo.root)
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other)
-    o = repo.newer(o)
+    o = repo.changelog.nodesbetween(o)[0]
     if opts['newest_first']:
         o.reverse()
     for n in o:
@@ -1643,7 +1649,12 @@ def pull(ui, repo, source="default", **opts):
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
     other = hg.repository(ui, source)
-    r = repo.pull(other)
+    revs = None
+    if opts['rev'] and not other.local():
+        raise util.Abort("pull -r doesn't work for remote repositories yet")
+    elif opts['rev']:
+        revs = [other.lookup(rev) for rev in opts['rev']]
+    r = repo.pull(other, heads=revs)
     if not r:
         if opts['update']:
             return update(ui, repo)
@@ -2193,6 +2204,7 @@ table = {
          [('U', 'noupdate', None, _('do not update the new working directory')),
           ('e', 'ssh', "", _('specify ssh command to use')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
+          ('r', 'rev', [], _('a changeset you would like to have after cloning')),
           ('', 'remotecmd', "", _('specify hg command to run on the remote side'))],
          _('hg clone [OPTION]... SOURCE [DEST]')),
     "^commit|ci":
@@ -2304,8 +2316,9 @@ table = {
         (pull,
          [('u', 'update', None, _('update the working directory to tip after pull')),
           ('e', 'ssh', "", _('specify ssh command to use')),
+          ('r', 'rev', [], _('a specific revision you would like to pull')),
           ('', 'remotecmd', "", _('specify hg command to run on the remote side'))],
-         _('hg pull [-u] [-e FILE] [--remotecmd FILE] [SOURCE]')),
+         _('hg pull [-u] [-e FILE] [-r rev] [--remotecmd FILE] [SOURCE]')),
     "^push":
         (push,
          [('f', 'force', None, _('force push')),

@@ -249,6 +249,157 @@ class revlog:
                     visit.append(p)
         return reachable
 
+    def nodesbetween(self, roots=None, heads=None):
+        """Return a tuple containing three elements. Elements 1 and 2 contain
+        a final list bases and heads after all the unreachable ones have been
+        pruned.  Element 0 contains a topologically sorted list of all
+
+        nodes that satisfy these constraints:
+        1. All nodes must be descended from a node in roots (the nodes on
+           roots are considered descended from themselves).
+        2. All nodes must also be ancestors of a node in heads (the nodes in
+           heads are considered to be their own ancestors).
+
+        If roots is unspecified, nullid is assumed as the only root.
+        If heads is unspecified, it is taken to be the output of the
+        heads method (i.e. a list of all nodes in the repository that
+        have no children)."""
+        nonodes = ([], [], [])
+        if roots is not None:
+            roots = list(roots)
+            if not roots:
+                return nonodes
+            lowestrev = min([self.rev(n) for n in roots])
+        else:
+            roots = [nullid] # Everybody's a descendent of nullid
+            lowestrev = -1
+        if (lowestrev == -1) and (heads is None):
+            # We want _all_ the nodes!
+            return ([self.node(r) for r in xrange(0, self.count())],
+                    [nullid], list(self.heads()))
+        if heads is None:
+            # All nodes are ancestors, so the latest ancestor is the last
+            # node.
+            highestrev = self.count() - 1
+            # Set ancestors to None to signal that every node is an ancestor.
+            ancestors = None
+            # Set heads to an empty dictionary for later discovery of heads
+            heads = {}
+        else:
+            heads = list(heads)
+            if not heads:
+                return nonodes
+            ancestors = {}
+            # Start at the top and keep marking parents until we're done.
+            nodestotag = heads[:]
+            # Turn heads into a dictionary so we can remove 'fake' heads.
+            # Also, later we will be using it to filter out the heads we can't
+            # find from roots.
+            heads = dict.fromkeys(heads, 0)
+            # Remember where the top was so we can use it as a limit later.
+            highestrev = max([self.rev(n) for n in nodestotag])
+            while nodestotag:
+                # grab a node to tag
+                n = nodestotag.pop()
+                # Never tag nullid
+                if n == nullid:
+                    continue
+                # A node's revision number represents its place in a
+                # topologically sorted list of nodes.
+                r = self.rev(n)
+                if r >= lowestrev:
+                    if n not in ancestors:
+                        # If we are possibly a descendent of one of the roots
+                        # and we haven't already been marked as an ancestor
+                        ancestors[n] = 1 # Mark as ancestor
+                        # Add non-nullid parents to list of nodes to tag.
+                        nodestotag.extend([p for p in self.parents(n) if
+                                           p != nullid])
+                    elif n in heads: # We've seen it before, is it a fake head?
+                        # So it is, real heads should not be the ancestors of
+                        # any other heads.
+                        heads.pop(n)
+            if not ancestors:
+                return nonodes
+            # Now that we have our set of ancestors, we want to remove any
+            # roots that are not ancestors.
+
+            # If one of the roots was nullid, everything is included anyway.
+            if lowestrev > -1:
+                # But, since we weren't, let's recompute the lowest rev to not
+                # include roots that aren't ancestors.
+
+                # Filter out roots that aren't ancestors of heads
+                roots = [n for n in roots if n in ancestors]
+                # Recompute the lowest revision
+                if roots:
+                    lowestrev = min([self.rev(n) for n in roots])
+                else:
+                    # No more roots?  Return empty list
+                    return nonodes
+            else:
+                # We are descending from nullid, and don't need to care about
+                # any other roots.
+                lowestrev = -1
+                roots = [nullid]
+        # Transform our roots list into a 'set' (i.e. a dictionary where the
+        # values don't matter.
+        descendents = dict.fromkeys(roots, 1)
+        # Also, keep the original roots so we can filter out roots that aren't
+        # 'real' roots (i.e. are descended from other roots).
+        roots = descendents.copy()
+        # Our topologically sorted list of output nodes.
+        orderedout = []
+        # Don't start at nullid since we don't want nullid in our output list,
+        # and if nullid shows up in descedents, empty parents will look like
+        # they're descendents.
+        for r in xrange(max(lowestrev, 0), highestrev + 1):
+            n = self.node(r)
+            isdescendent = False
+            if lowestrev == -1:  # Everybody is a descendent of nullid
+                isdescendent = True
+            elif n in descendents:
+                # n is already a descendent
+                isdescendent = True
+                # This check only needs to be done here because all the roots
+                # will start being marked is descendents before the loop.
+                if n in roots:
+                    # If n was a root, check if it's a 'real' root.
+                    p = tuple(self.parents(n))
+                    # If any of its parents are descendents, it's not a root.
+                    if (p[0] in descendents) or (p[1] in descendents):
+                        roots.pop(n)
+            else:
+                p = tuple(self.parents(n))
+                # A node is a descendent if either of its parents are
+                # descendents.  (We seeded the dependents list with the roots
+                # up there, remember?)
+                if (p[0] in descendents) or (p[1] in descendents):
+                    descendents[n] = 1
+                    isdescendent = True
+            if isdescendent and ((ancestors is None) or (n in ancestors)):
+                # Only include nodes that are both descendents and ancestors.
+                orderedout.append(n)
+                if (ancestors is not None) and (n in heads):
+                    # We're trying to figure out which heads are reachable
+                    # from roots.
+                    # Mark this head as having been reached
+                    heads[n] = 1
+                elif ancestors is None:
+                    # Otherwise, we're trying to discover the heads.
+                    # Assume this is a head because if it isn't, the next step
+                    # will eventually remove it.
+                    heads[n] = 1
+                    # But, obviously its parents aren't.
+                    for p in self.parents(n):
+                        heads.pop(p, None)
+        heads = [n for n in heads.iterkeys() if heads[n] != 0]
+        roots = roots.keys()
+        assert orderedout
+        assert roots
+        assert heads
+        return (orderedout, roots, heads)
+
     def heads(self, stop=None):
         """return the list of all nodes that have no children"""
         p = {}
@@ -482,7 +633,7 @@ class revlog:
                 #print "next x"
                 gx = x.next()
 
-    def group(self, linkmap):
+    def group(self, nodelist, lookup, infocollect = None):
         """calculate a delta group
 
         Given a list of changeset revs, return a set of deltas and
@@ -491,14 +642,8 @@ class revlog:
         have this parent as it has all history before these
         changesets. parent is parent[0]
         """
-        revs = []
-        needed = {}
-
-        # find file nodes/revs that match changeset revs
-        for i in xrange(0, self.count()):
-            if self.index[i][3] in linkmap:
-                revs.append(i)
-                needed[i] = 1
+        revs = [self.rev(n) for n in nodelist]
+        needed = dict.fromkeys(revs, 1)
 
         # if we don't have any revisions touched by these changesets, bail
         if not revs:
@@ -566,6 +711,9 @@ class revlog:
             a, b = revs[d], revs[d + 1]
             n = self.node(b)
 
+            if infocollect is not None:
+                infocollect(n)
+
             # do we need to construct a new delta?
             if a + 1 != b or self.base(b) == b:
                 if a >= 0:
@@ -587,7 +735,7 @@ class revlog:
                 d = chunks[b]
 
             p = self.parents(n)
-            meta = n + p[0] + p[1] + linkmap[self.linkrev(n)]
+            meta = n + p[0] + p[1] + lookup(n)
             l = struct.pack(">l", len(meta) + len(d) + 4)
             yield l
             yield meta
