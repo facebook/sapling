@@ -241,7 +241,7 @@ class dirstate:
                 bs += 1
         return ret
 
-    def walk(self, files=None, match=util.always, dc=None):
+    def statwalk(self, files=None, match=util.always, dc=None):
         self.read()
 
         # walk all files by default
@@ -260,12 +260,19 @@ class dirstate:
 
         return self.walkhelper(files=files, statmatch=statmatch, dc=dc)
 
+    def walk(self, files=None, match=util.always, dc=None):
+        # filter out the stat
+        for src, f, st in self.statwalk(files, match, dc):
+            yield src, f
+
     # walk recursively through the directory tree, finding all files
     # matched by the statmatch function
     #
-    # results are yielded in a tuple (src, filename), where src is one of:
+    # results are yielded in a tuple (src, filename, st), where src
+    # is one of:
     # 'f' the file was found in the directory tree
     # 'm' the file was only in the dirstate and not in the tree
+    # and st is the stat result if the file was found in the directory.
     #
     # dc is an optional arg for the current dirstate.  dc is not modified
     # directly by this function, but might be modified by your statmatch call.
@@ -310,7 +317,7 @@ class dirstate:
                         if statmatch(ds, st):
                             work.append(p)
                     elif statmatch(np, st) and supported_type(np, st):
-                        yield util.pconvert(np)
+                        yield util.pconvert(np), st
 
 
         known = {'.hg': 1}
@@ -330,10 +337,11 @@ class dirstate:
                     inst.strerror))
                 continue
             if stat.S_ISDIR(st.st_mode):
+                cmp0 = (lambda x, y: cmp(x[0], y[0]))
                 sorted = [ x for x in findfiles(f) ]
-                sorted.sort()
-                for fl in sorted:
-                    yield 'f', fl
+                sorted.sort(cmp0)
+                for fl, stl in sorted:
+                    yield 'f', fl, stl
             else:
                 ff = util.normpath(ff)
                 if seen(ff):
@@ -344,7 +352,7 @@ class dirstate:
                     found = True
                 self.blockignore = False
                 if found:
-                    yield 'f', ff
+                    yield 'f', ff, st
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
@@ -352,75 +360,36 @@ class dirstate:
         ks.sort()
         for k in ks:
             if not seen(k) and (statmatch(k, None)):
-                yield 'm', k
+                yield 'm', k, None
 
     def changes(self, files=None, match=util.always):
-        self.read()
-        if not files:
-            files = [self.root]
-            dc = self.map.copy()
-        else:
-            dc = self.filterfiles(files)
         lookup, modified, added, unknown = [], [], [], []
         removed, deleted = [], []
 
-        # statmatch function to eliminate entries from the dirstate copy
-        # and put files into the appropriate array.  This gets passed
-        # to the walking code
-        def statmatch(fn, s):
-            fn = util.pconvert(fn)
-            def checkappend(l, fn):
-                if match is util.always or match(fn):
-                    l.append(fn)
-
-            if not s or stat.S_ISDIR(s.st_mode):
-                if self.ignore(fn): return False
-                return match(fn)
-
-            c = dc.pop(fn, None)
-            if c:
-                type, mode, size, time = c
-                # check the common case first
-                if type == 'n':
-                    if size != s.st_size or (mode ^ s.st_mode) & 0100:
-                        checkappend(modified, fn)
-                    elif time != s.st_mtime:
-                        checkappend(lookup, fn)
-                elif type == 'm':
-                    checkappend(modified, fn)
-                elif type == 'a':
-                    checkappend(added, fn)
-                elif type == 'r':
-                    checkappend(unknown, fn)
-            elif not self.ignore(fn) and match(fn):
+        for src, fn, st in self.statwalk(files, match):
+            try:
+                type, mode, size, time = self[fn]
+            except KeyError:
                 unknown.append(fn)
-            # return false because we've already handled all cases above.
-            # there's no need for the walking code to process the file
-            # any further.
-            return False
-
-        # because our statmatch always returns false, self.walk will only
-        # return files in the dirstate map that are not present in the FS.
-        # But, we still need to iterate through the results to force the
-        # walk to complete
-        for src, fn in self.walkhelper(files, statmatch, dc):
-            pass
-
-        # there may be patterns in the .hgignore file that prevent us
-        # from examining entire directories in the dirstate map, so we
-        # go back and explicitly examine any matching files we've
-        # ignored
-        unexamined = [fn for fn in dc.iterkeys()
-                      if self.ignore(fn) and match(fn)]
-
-        for src, fn in self.walkhelper(unexamined, statmatch, dc):
-            pass
-
-        # anything left in dc didn't exist in the filesystem
-        for fn, c in dc.iteritems():
-            if not match(fn): continue
-            if c[0] == 'r':
-                removed.append(fn)
-            else:
+                continue
+            # XXX: what to do with file no longer present in the fs
+            # who are not removed in the dirstate ?
+            if src == 'm' and not type == 'r':
                 deleted.append(fn)
+                continue
+            # check the common case first
+            if type == 'n':
+                if not st:
+                    st = os.stat(fn)
+                if size != st.st_size or (mode ^ st.st_mode) & 0100:
+                    modified.append(fn)
+                elif time != st.st_mtime:
+                    lookup.append(fn)
+            elif type == 'm':
+                modified.append(fn)
+            elif type == 'a':
+                added.append(fn)
+            elif type == 'r':
+                removed.append(fn)
+
         return (lookup, modified, added, removed + deleted, unknown)
