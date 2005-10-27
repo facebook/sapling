@@ -2269,7 +2269,7 @@ table = {
           ('p', 'patch', None, _('show patch')),
           ('n', 'newest-first', None, _('show newest record first'))],
          _('hg outgoing [-p] [-n] [-M] [DEST]')),
-    "parents": (parents, [], _('hg parents [REV]')),
+    "^parents": (parents, [], _('hg parents [REV]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
         (pull,

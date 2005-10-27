@@ -10,6 +10,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
+ parents    show the parents of the working dir or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -25,6 +26,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
+ parents    show the parents of the working dir or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -215,6 +217,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
+ parents    show the parents of the working dir or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -235,6 +238,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
+ parents    show the parents of the working dir or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
