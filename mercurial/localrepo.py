@@ -565,13 +565,7 @@ class localrepository:
                 self.ui.warn("%s not removed!\n" % f)
             else:
                 t = self.file(f).read(m[f])
-                try:
-                    self.wwrite(f, t)
-                except IOError, e:
-                    if e.errno != errno.ENOENT:
-                        raise
-                    os.makedirs(os.path.dirname(self.wjoin(f)))
-                    self.wwrite(f, t)
+                self.wwrite(f, t)
                 util.set_exec(self.wjoin(f), mf[f])
                 self.dirstate.update([f], "n")
 
@@ -1514,13 +1508,7 @@ class localrepository:
             if f[0] == "/": continue
             self.ui.note(_("getting %s\n") % f)
             t = self.file(f).read(get[f])
-            try:
-                self.wwrite(f, t)
-            except IOError, e:
-                if e.errno != errno.ENOENT:
-                    raise
-                os.makedirs(os.path.dirname(self.wjoin(f)))
-                self.wwrite(f, t)
+            self.wwrite(f, t)
             util.set_exec(self.wjoin(f), mf2[f])
             if moddirstate:
                 if branch_merge:
