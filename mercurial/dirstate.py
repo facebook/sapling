@@ -11,7 +11,7 @@ import struct, os
 from node import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "time bisect stat util re")
+demandload(globals(), "time bisect stat util re errno")
 
 class dirstate:
     def __init__(self, opener, ui, root):
@@ -372,11 +372,16 @@ class dirstate:
             except KeyError:
                 unknown.append(fn)
                 continue
-            # XXX: what to do with file no longer present in the fs
-            # who are not removed in the dirstate ?
-            if src == 'm' and not type == 'r':
-                deleted.append(fn)
-                continue
+            if src == 'm':
+                try:
+                    st = os.stat(fn)
+                except OSError, inst:
+                # XXX: what to do with file no longer present in the fs
+                # who are not removed in the dirstate ?
+                    if inst.errno != errno.ENOENT:
+                        raise
+                    deleted.append(fn)
+                    continue
             # check the common case first
             if type == 'n':
                 if not st:
