@@ -1,0 +1,34 @@
+--
+A dir/b.o
+? a.c
+? a.o
+? dir/c.o
+? syntax
+--
+abort: invalid pattern: relre:*.o
+--
+A dir/b.o
+? .hgignore
+? a.c
+? syntax
+--
+ignoring invalid syntax 'invalid'
+A dir/b.o
+? .hgignore
+? a.c
+? a.o
+? dir/c.o
+? syntax
+--
+A dir/b.o
+? .hgignore
+? a.c
+? syntax
+--
+A dir/b.o
+? .hgignore
+? a.c
+? a.o
+? dir/c.o
+--
+A dir/b.o

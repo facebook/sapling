@@ -1,0 +1,42 @@
+#!/bin/sh
+
+hg init
+touch a.o
+touch a.c
+touch syntax
+mkdir dir
+touch dir/a.o
+touch dir/b.o
+touch dir/c.o
+
+hg add dir/a.o
+hg commit -m 0
+hg add dir/b.o
+
+echo "--" ; hg status
+
+echo "*.o" > .hgignore
+echo "--" ; hg status
+
+echo ".*\.o" > .hgignore
+echo "--" ; hg status
+
+# XXX: broken
+#echo "glob:**.o" > .hgignore
+#echo "--" ; hg status
+#
+#echo "glob:*.o" > .hgignore
+#echo "--" ; hg status
+
+echo "syntax: invalid" > .hgignore
+echo "--" ; hg status
+
+echo "syntax: glob" > .hgignore
+echo "*.o" >> .hgignore
+echo "--" ; hg status
+
+echo "relglob:syntax*" > .hgignore
+echo "--" ; hg status
+
+echo "relglob:*" > .hgignore
+echo "--" ; hg status
