@@ -47,9 +47,8 @@ class localrepository:
         except IOError: pass
 
     def hook(self, name, **args):
-        s = self.ui.config("hooks", name)
-        if s:
-            self.ui.note(_("running hook %s: %s\n") % (name, s))
+        def runhook(name, cmd):
+            self.ui.note(_("running hook %s: %s\n") % (name, cmd))
             old = {}
             for k, v in args.items():
                 k = k.upper()
@@ -59,7 +58,7 @@ class localrepository:
             # Hooks run in the repository root
             olddir = os.getcwd()
             os.chdir(self.root)
-            r = os.system(s)
+            r = os.system(cmd)
             os.chdir(olddir)
 
             for k, v in old.items():
@@ -72,7 +71,14 @@ class localrepository:
                 self.ui.warn(_("abort: %s hook failed with status %d!\n") %
                              (name, r))
                 return False
-        return True
+            return True
+
+        r = True
+        for hname, cmd in self.ui.configitems("hooks"):
+            s = hname.split(".")
+            if s[0] == name and cmd:
+                r = runhook(hname, cmd) and r
+        return r
 
     def tags(self):
         '''return a mapping of tag to node'''
