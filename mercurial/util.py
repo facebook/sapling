@@ -377,8 +377,17 @@ def opener(base):
                     os.makedirs(d)
             else:
                 if nlink > 1:
-                    file(f + ".tmp", "wb").write(file(f, "rb").read())
-                    rename(f+".tmp", f)
+                    d, fn = os.path.split(f)
+                    fd, temp = tempfile.mkstemp(prefix=fn, dir=d)
+                    fp = os.fdopen(fd, "wb")
+                    try:
+                        fp.write(file(f, "rb").read())
+                    except:
+                        try: os.unlink(temp)
+                        except: pass
+                        raise
+                    fp.close()
+                    rename(temp, f)
 
         return file(f, mode)
 
