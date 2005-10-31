@@ -32,10 +32,13 @@ class ui:
         self.interactive = (self.interactive and interactive)
 
     def readconfig(self, fn):
-        try:
-            self.cdata.read(fn)
-        except ConfigParser.ParsingError, inst:
-            raise util.Abort(_("Failed to parse %s\n%s") % (fn, inst))
+        if isinstance(fn, basestring):
+            fn = [fn]
+        for f in fn:
+            try:
+                self.cdata.read(f)
+            except ConfigParser.ParsingError, inst:
+                raise util.Abort(_("Failed to parse %s\n%s") % (f, inst))
 
     def setconfig(self, section, name, val):
         self.overlay[(section, name)] = val

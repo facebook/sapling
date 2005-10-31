@@ -2449,7 +2449,12 @@ def dispatch(args):
     except AttributeError:
         pass
 
-    u = ui.ui()
+    try:
+        u = ui.ui()
+    except util.Abort, inst:
+        sys.stderr.write(_("abort: %s\n") % inst)
+        sys.exit(1)
+
     external = []
     for x in u.extensions():
         def on_exception(Exception, inst):
