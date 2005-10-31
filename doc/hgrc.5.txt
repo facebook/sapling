@@ -120,7 +120,19 @@ decode/encode::
 
 hooks::
   Commands that get automatically executed by various actions such as
-  starting or finishing a commit.
+  starting or finishing a commit. Multiple commands can be run for
+  the same action by appending a suffix to the action. Overriding a
+  site-wide hook can be done by changing its value or setting it to
+  an empty string.
+
+  Example .hg/hgrc:
+
+    [hooks]
+    # do not use the site-wide hook
+    commit =
+    commit.email = /my/email/hook
+    commit.autobuild = /my/build/hook
+
   changegroup;;
     Run after a changegroup has been added via push or pull. Passed
     the ID of the first new changeset in $NODE.
