@@ -610,10 +610,12 @@ def filechunkiter(f, size = 65536):
         s = f.read(size)
 
 def makedate():
-    t = time.time()
-    if time.daylight: tz = time.altzone
-    else: tz = time.timezone
-    return t, tz
+    lt = time.localtime()
+    if lt[8] == 1 and time.daylight:
+        tz = time.altzone
+    else:
+        tz = time.timezone
+    return time.mktime(lt), tz
 
 def datestr(date=None, format='%c'):
     """represent a (unixtime, offset) tuple as a localized time.
