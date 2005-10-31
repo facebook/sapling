@@ -58,7 +58,7 @@ fi
 
 case $service in
     (add)
-        newFiles=( $(hg status -un) )
+        newFiles=(${(ps:\0:)"$(hg status -0un .)"})
         _arguments $includeExclude \
         '*:file:->unknown'
         _wanted files expl 'unknown files' compadd -a newFiles
@@ -70,7 +70,7 @@ case $service in
     ;;
 
     (forget)
-        addedFiles=( $(hg status -an) )
+        addedFiles=(${(ps:\0:)"$(hg status -0an .)"})
         _arguments $includeExclude  \
         '*:file:->added'
         _wanted files expl 'newly added files' compadd -a addedFiles
@@ -134,7 +134,7 @@ case $service in
     ;;
 
     (revert)
-        addedFiles=( $(hg status -mrn) ) # modified, removed
+        addedFiles=(${(ps:\0:)"$(hg status -0amrn .)"})
         _arguments \
         '(--rev)-r[revision to revert to]:revision:($tags)' \
         '(-r)--rev[revision to revert to]:revision:($tags)' \
@@ -145,7 +145,7 @@ case $service in
     ;;
 
     (commit|ci)
-        addedFiles=( $(hg status -amrn) ) # added, modified, removed
+        addedFiles=(${(ps:\0:)"$(hg status -0amrn .)"})
         _arguments $includeExclude \
         '(--addremove)-A[run addremove during commit]' \
         '(-A)--addremove[run addremove during commit]' \
