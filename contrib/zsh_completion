@@ -257,6 +257,7 @@ case $service in
 
     (clone)
         if (( CURRENT == 2 )); then
+            repos=( $(hg paths | sed -e 's/^.*= //') )
             _arguments \
             '(--no-update)-U[do not update the new working directory]' \
             '(-U)--no-update[do not update the new working directory]' \
@@ -265,6 +266,7 @@ case $service in
             '--pull[use pull protocol to copy metadata]' \
             '--remotecmd[specify hg command to run on the remote side]:remote hg:' \
             '*:local repo:_files -/'
+            _wanted source expl 'source repository' compadd -a repos
         elif (( CURRENT == 3 )); then
             _arguments '*:dest repo:_files -/'
         fi
