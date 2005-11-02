@@ -241,6 +241,22 @@ class dirstate:
                 bs += 1
         return ret
 
+    def supported_type(self, f, st, verbose=True):
+        if stat.S_ISREG(st.st_mode):
+            return True
+        if verbose:
+            kind = 'unknown'
+            if stat.S_ISCHR(st.st_mode): kind = _('character device')
+            elif stat.S_ISBLK(st.st_mode): kind = _('block device')
+            elif stat.S_ISFIFO(st.st_mode): kind = _('fifo')
+            elif stat.S_ISLNK(st.st_mode): kind = _('symbolic link')
+            elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
+            elif stat.S_ISDIR(st.st_mode): kind = _('directory')
+            self.ui.warn(_('%s: unsupported file type (type is %s)\n') % (
+                util.pathto(self.getcwd(), f),
+                kind))
+        return False
+
     def statwalk(self, files=None, match=util.always, dc=None):
         self.read()
 
@@ -278,22 +294,6 @@ class dirstate:
     # directly by this function, but might be modified by your statmatch call.
     #
     def walkhelper(self, files, statmatch, dc):
-        def supported_type(f, st):
-            if stat.S_ISREG(st.st_mode):
-                return True
-            else:
-                kind = 'unknown'
-                if stat.S_ISCHR(st.st_mode): kind = _('character device')
-                elif stat.S_ISBLK(st.st_mode): kind = _('block device')
-                elif stat.S_ISFIFO(st.st_mode): kind = _('fifo')
-                elif stat.S_ISLNK(st.st_mode): kind = _('symbolic link')
-                elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
-                elif stat.S_ISDIR(st.st_mode): kind = _('directory')
-                self.ui.warn(_('%s: unsupported file type (type is %s)\n') % (
-                    util.pathto(self.getcwd(), f),
-                    kind))
-                return False
-
         # recursion free walker, faster than os.walk.
         def findfiles(s):
             retfiles = []
@@ -316,9 +316,13 @@ class dirstate:
                         ds = os.path.join(nd, f +'/')
                         if statmatch(ds, st):
                             work.append(p)
-                    elif statmatch(np, st) and supported_type(np, st):
-                        yield util.pconvert(np), st
-
+                        if statmatch(np, st) and np in dc:
+                            yield 'm', util.pconvert(np), st
+                    elif statmatch(np, st):
+                        if self.supported_type(np, st):
+                            yield 'f', util.pconvert(np), st
+                        elif np in dc:
+                            yield 'm', util.pconvert(np), st
 
         known = {'.hg': 1}
         def seen(fn):
@@ -337,22 +341,22 @@ class dirstate:
                     inst.strerror))
                 continue
             if stat.S_ISDIR(st.st_mode):
-                cmp0 = (lambda x, y: cmp(x[0], y[0]))
+                cmp1 = (lambda x, y: cmp(x[1], y[1]))
                 sorted = [ x for x in findfiles(f) ]
-                sorted.sort(cmp0)
-                for fl, stl in sorted:
-                    yield 'f', fl, stl
+                sorted.sort(cmp1)
+                for e in sorted:
+                    yield e
             else:
                 ff = util.normpath(ff)
                 if seen(ff):
                     continue
-                found = False
                 self.blockignore = True
-                if statmatch(ff, st) and supported_type(ff, st):
-                    found = True
+                if statmatch(ff, st):
+                    if self.supported_type(ff, st):
+                        yield 'f', ff, st
+                    elif ff in dc:
+                        yield 'm', ff, st
                 self.blockignore = False
-                if found:
-                    yield 'f', ff, st
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
@@ -373,13 +377,20 @@ class dirstate:
                 unknown.append(fn)
                 continue
             if src == 'm':
-                try:
-                    st = os.stat(fn)
-                except OSError, inst:
+                nonexistent = True
+                if not st:
+                    try:
+                        st = os.lstat(fn)
+                    except OSError, inst:
+                        if inst.errno != errno.ENOENT:
+                            raise
+                        st = None
+                    # We need to re-check that it is a valid file
+                    if st and self.supported_type(fn, st):
+                        nonexistent = False
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
-                    if inst.errno != errno.ENOENT:
-                        raise
+                if nonexistent:
                     deleted.append(fn)
                     continue
             # check the common case first

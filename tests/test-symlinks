@@ -22,3 +22,20 @@ hg addremove
 
 #Assert screamed here before, should go by without consequence
 hg commit -m 'is there a bug?'
+
+cd .. ; rm -rf test
+hg init test; cd test;
+
+mkdir dir
+touch a.c dir/a.o dir/b.o
+# test what happens if we want to trick hg
+hg commit -A -m 0
+echo "relglob:*.o" > .hgignore
+rm a.c
+rm dir/a.o
+rm dir/b.o
+mkdir dir/a.o
+ln -sf nonexist dir/b.o
+mkfifo a.c
+# it should show a.c, dir/a.o and dir/b.o removed
+hg status

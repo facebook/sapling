@@ -1,16 +1,24 @@
+%% should show b unknown
 ? b
+%% should show b unknown and c modified
 M c
 ? b
+%% should show b added and c modified
 M c
 A b
+%% should show a removed, b added and c modified
 M c
 A b
 R a
+%% should show b added and c modified
 M c
 A b
+%% should show b unknown and c modified
 M c
 ? b
+%% should show b unknown
 ? b
+%% should show a b and c
 a
 b
 c

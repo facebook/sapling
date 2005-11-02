@@ -6,19 +6,27 @@ echo 123 > c
 hg add a c
 hg commit -m "first" -d "0 0" a c
 echo 123 > b
+echo %% should show b unknown
 hg status
 echo 12 > c
+echo %% should show b unknown and c modified
 hg status
 hg add b
+echo %% should show b added and c modified
 hg status
 hg rm a
+echo %% should show a removed, b added and c modified
 hg status
 hg revert a
+echo %% should show b added and c modified
 hg status
 hg revert b
+echo %% should show b unknown and c modified
 hg status
 hg revert c
+echo %% should show b unknown
 hg status
+echo %% should show a b and c
 ls
 
 true
