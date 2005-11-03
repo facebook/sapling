@@ -380,7 +380,8 @@ class dirstate:
                 nonexistent = True
                 if not st:
                     try:
-                        st = os.lstat(fn)
+                        f = os.path.join(self.root, fn)
+                        st = os.lstat(f)
                     except OSError, inst:
                         if inst.errno != errno.ENOENT:
                             raise

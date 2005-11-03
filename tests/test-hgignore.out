@@ -32,3 +32,5 @@ A dir/b.o
 ? dir/c.o
 --
 A dir/b.o
+--
+A b.o

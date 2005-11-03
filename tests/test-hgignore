@@ -40,3 +40,6 @@ echo "--" ; hg status
 
 echo "relglob:*" > .hgignore
 echo "--" ; hg status
+
+cd dir
+echo "--" ; hg status
