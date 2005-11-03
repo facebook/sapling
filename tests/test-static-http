@@ -1,6 +1,6 @@
 #!/bin/sh
 
-hg clone old-http://localhost:20059/ copy
+http_proxy= hg clone old-http://localhost:20059/ copy
 echo $?
 ls copy
 
@@ -36,6 +36,6 @@ http_proxy= hg clone old-http://localhost:20059/remote local
 cd local
 hg verify
 cat bar
-hg pull
+http_proxy= hg pull
 
 kill $!
