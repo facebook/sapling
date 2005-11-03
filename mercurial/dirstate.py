@@ -390,7 +390,7 @@ class dirstate:
                         nonexistent = False
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
-                if nonexistent:
+                if nonexistent and type in "nm":
                     deleted.append(fn)
                     continue
             # check the common case first

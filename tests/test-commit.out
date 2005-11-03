@@ -13,3 +13,4 @@ abort: invalid date: ' 1 4444'
 transaction abort!
 rollback completed
 abort: date exceeds 32 bits: 111111111111
+abort: No such file or directory: .../test/bar
