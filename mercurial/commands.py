@@ -1705,10 +1705,7 @@ def rawcommit(ui, repo, *flist, **rc):
     This command is not intended to be used by normal users, as it is
     primarily useful for importing from other SCMs.
     """
-    if rc['text']:
-        ui.warn(_("Warning: -t and --text is deprecated,"
-                  " please use -m or --message instead.\n"))
-    message = rc['message'] or rc['text']
+    message = rc['message']
     if not message and rc['logfile']:
         try:
             message = open(rc['logfile']).read()
@@ -1980,9 +1977,6 @@ def tag(ui, repo, name, rev=None, **opts):
     similarly to other project files and can be hand-edited if
     necessary.
     """
-    if opts['text']:
-        ui.warn(_("Warning: -t and --text is deprecated,"
-                  " please use -m or --message instead.\n"))
     if name == "tip":
         raise util.Abort(_("the name 'tip' is reserved"))
     if rev:
@@ -2007,7 +2001,7 @@ def tag(ui, repo, name, rev=None, **opts):
     if repo.dirstate.state(".hgtags") == '?':
         repo.add([".hgtags"])
 
-    message = (opts['message'] or opts['text'] or
+    message = (opts['message'] or
                _("Added tag %s for changeset %s") % (name, r))
     try:
         repo.commit([".hgtags"], message, opts['user'], opts['date'])
@@ -2291,7 +2285,6 @@ table = {
           ('u', 'user', "", _('user')),
           ('F', 'files', "", _('file list')),
           ('m', 'message', "", _('commit message')),
-          ('t', 'text', "", _('commit message (deprecated: use -m)')),
           ('l', 'logfile', "", _('commit message file'))],
          _('hg rawcommit [OPTION]... [FILE]...')),
     "recover": (recover, [], _("hg recover")),
@@ -2339,7 +2332,6 @@ table = {
         (tag,
          [('l', 'local', None, _('make the tag local')),
           ('m', 'message', "", _('message for tag commit log entry')),
-          ('t', 'text', "", _('commit message (deprecated: use -m)')),
           ('d', 'date', "", _('record datecode as commit date')),
           ('u', 'user', "", _('record user as commiter'))],
          _('hg tag [OPTION]... NAME [REV]')),
