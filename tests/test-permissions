@@ -1,0 +1,15 @@
+#!/bin/sh
+
+hg init
+echo foo > a
+hg add a
+hg commit -m "1" -d "0 0"
+hg verify
+chmod -r .hg/data/a.d
+hg verify 2>/dev/null || echo verify failed
+chmod +r .hg/data/a.d
+hg verify 2>/dev/null || echo verify failed
+chmod -w .hg/data/a.d
+echo barber > a
+hg commit -m "2" -d "0 0" 2>/dev/null || echo commit failed
+
