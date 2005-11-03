@@ -2217,7 +2217,7 @@ table = {
         (grep,
          [('0', 'print0', None, _('end fields with NUL')),
           ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
           ('', 'all', None, _('print all revisions that match')),
           ('i', 'ignore-case', None, _('ignore case when matching')),
           ('l', 'files-with-matches', None, _('print only filenames and revs that match')),
