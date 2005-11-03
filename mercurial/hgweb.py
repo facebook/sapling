@@ -196,6 +196,11 @@ class hgweb:
             self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
+    def archivelist(self, nodeid):
+        for i in self.archives:
+            if self.repo.ui.configbool("web", "allow" + i, False):
+                yield {"type" : i, "node" : nodeid}
+
     def listfiles(self, files, mf):
         for f in files[:self.maxfiles]:
             yield self.t("filenodelink", node=hex(mf[f]), file=f)
@@ -414,11 +419,6 @@ class hgweb:
         def diff(**map):
             yield self.diff(p1, n, None)
 
-        def archivelist():
-            for i in self.archives:
-                if self.repo.ui.configbool("web", "allow" + i, False):
-                    yield {"type" : i, "node" : nodeid}
-
         yield self.t('changeset',
                      diff=diff,
                      rev=cl.rev(n),
@@ -430,7 +430,7 @@ class hgweb:
                      desc=changes[4],
                      date=changes[2],
                      files=files,
-                     archives=archivelist())
+                     archives=self.archivelist(nodeid))
 
     def filelog(self, f, filenode):
         cl = self.repo.changelog
@@ -618,7 +618,8 @@ class hgweb:
                      path=path,
                      up=up(path),
                      fentries=filelist,
-                     dentries=dirlist)
+                     dentries=dirlist,
+                     archives=self.archivelist(hex(node)))
 
     def tags(self):
         cl = self.repo.changelog
