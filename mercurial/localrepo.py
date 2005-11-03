@@ -1504,9 +1504,6 @@ class localrepository:
                 return 1
             branch_merge = True
 
-        if moddirstate:
-            self.dirstate.setparents(p1, p2)
-
         # get the files we don't need to change
         files = get.keys()
         files.sort()
@@ -1558,6 +1555,9 @@ class localrepository:
                 self.dirstate.update(remove, 'r')
             else:
                 self.dirstate.forget(remove)
+
+        if moddirstate:
+            self.dirstate.setparents(p1, p2)
 
     def merge3(self, fn, my, other):
         """perform a 3-way merge in the working directory"""
