@@ -1618,6 +1618,9 @@ class localrepository:
                                  (short(n), short(p)))
             try:
                 changes = self.changelog.read(n)
+            except KeyboardInterrupt:
+                self.ui.warn(_("interrupted"))
+                raise
             except Exception, inst:
                 err(_("unpacking changeset %s: %s") % (short(n), inst))
 
@@ -1705,6 +1708,9 @@ class localrepository:
                 # verify contents
                 try:
                     t = fl.read(n)
+                except KeyboardInterrupt:
+                    self.ui.warn(_("interrupted"))
+                    raise
                 except Exception, inst:
                     err(_("unpacking file %s %s: %s") % (f, short(n), inst))
 
