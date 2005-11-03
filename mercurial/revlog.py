@@ -823,3 +823,12 @@ class revlog:
         dfh.close()
         ifh.close()
         return node
+
+    def checksize(self):
+        expected = 0
+        if self.count():
+            expected = self.end(self.count() - 1)
+        f = self.opener(self.datafile)
+        f.seek(0, 2)
+        actual = f.tell()
+        return expected - actual

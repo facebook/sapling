@@ -1602,6 +1602,9 @@ class localrepository:
 
         seen = {}
         self.ui.status(_("checking changesets\n"))
+        d = self.changelog.checksize()
+        if d:
+            err(_("changeset data short %d bytes") % d)
         for i in range(self.changelog.count()):
             changesets += 1
             n = self.changelog.node(i)
@@ -1631,6 +1634,9 @@ class localrepository:
 
         seen = {}
         self.ui.status(_("checking manifests\n"))
+        d = self.manifest.checksize()
+        if d:
+            err(_("manifest data short %d bytes") % d)
         for i in range(self.manifest.count()):
             n = self.manifest.node(i)
             l = self.manifest.linkrev(n)
@@ -1685,6 +1691,10 @@ class localrepository:
             if f == "/dev/null": continue
             files += 1
             fl = self.file(f)
+            d = fl.checksize()
+            if d:
+                err(_("%s file data short %d bytes") % (f, d))
+
             nodes = { nullid: 1 }
             seen = {}
             for i in range(fl.count()):
