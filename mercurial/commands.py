@@ -2319,7 +2319,7 @@ table = {
           ('', 'style', "", _('template style to use')),
           ('6', 'ipv6', None, _('use IPv6 in addition to IPv4'))],
          _("hg serve [OPTION]...")),
-    "^status":
+    "^status|st":
         (status,
          [('m', 'modified', None, _('show only modified files')),
           ('a', 'added', None, _('show only added files')),
