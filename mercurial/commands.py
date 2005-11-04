@@ -2374,9 +2374,17 @@ norepo = ("clone init version help debugancestor debugconfig debugdata"
           " debugindex debugindexdot paths")
 
 def find(cmd):
+    choice = []
     for e in table.keys():
-        if re.match("(%s)$" % e, cmd):
+        aliases = e.lstrip("^").split("|")
+        if cmd in aliases:
             return e, table[e]
+        for a in aliases:
+            if a.startswith(cmd):
+                choice.append(e)
+    if len(choice) == 1:
+        e = choice[0]
+        return e, table[e]
 
     raise UnknownCommand(cmd)
 
