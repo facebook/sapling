@@ -72,8 +72,10 @@ class install_package_data(install_data):
 try:
     mercurial.version.remember_version(version)
     cmdclass = {'install_data': install_package_data}
+    py2exe_opts = {}
     if py2exe_for_demandload is not None:
         cmdclass['py2exe'] = py2exe_for_demandload
+        py2exe_opts['console'] = 'hg'
     setup(name='mercurial',
           version=mercurial.version.get_version(),
           author='Matt Mackall',
@@ -90,6 +92,6 @@ try:
                        glob.glob('templates/*.tmpl'))],
           cmdclass=cmdclass,
           scripts=['hg', 'hgmerge'],
-          console = ['hg'])
+          **py2exe_opts)
 finally:
     mercurial.version.forget_version()
