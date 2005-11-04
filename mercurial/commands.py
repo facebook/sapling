@@ -1979,6 +1979,8 @@ def tag(ui, repo, name, rev=None, **opts):
     """
     if name == "tip":
         raise util.Abort(_("the name 'tip' is reserved"))
+    if 'rev' in opts:
+        rev = opts['rev']
     if rev:
         r = hex(repo.lookup(rev))
     else:
@@ -2333,7 +2335,8 @@ table = {
          [('l', 'local', None, _('make the tag local')),
           ('m', 'message', "", _('message for tag commit log entry')),
           ('d', 'date', "", _('record datecode as commit date')),
-          ('u', 'user', "", _('record user as commiter'))],
+          ('u', 'user', "", _('record user as commiter')),
+          ('r', 'rev', "", _('revision to tag'))],
          _('hg tag [OPTION]... NAME [REV]')),
     "tags": (tags, [], _('hg tags')),
     "tip": (tip, [], _('hg tip')),
