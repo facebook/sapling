@@ -15,6 +15,8 @@ demandload(globals(), "errno socket version struct atexit sets bz2")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
+class AmbiguousCommand(Exception):
+    """Exception raised if command shortcut matches more than one command."""
 
 def filterfiles(filters, files):
     l = [x for x in files if x in filters]
@@ -2382,7 +2384,7 @@ def find(cmd):
         for a in aliases:
             if a.startswith(cmd):
                 if choice:
-                    raise UnknownCommand(cmd)
+                    raise AmbiguousCommand(cmd)
                 else:
                     choice = aliases, table[e]
     if choice:
@@ -2505,6 +2507,9 @@ def dispatch(args):
             u.warn(_("hg: %s\n") % inst.args[1])
             help_(u, 'shortlist')
         sys.exit(-1)
+    except AmbiguousCommand, inst:
+        u.warn(_("hg: command '%s' is ambiguous.\n") % inst.args[0])
+        sys.exit(1)
     except UnknownCommand, inst:
         u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         help_(u, 'shortlist')
