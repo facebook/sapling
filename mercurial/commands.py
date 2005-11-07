@@ -387,7 +387,7 @@ def help_(ui, cmd=None, with_version=False):
         if with_version:
             show_version(ui)
             ui.write('\n')
-        key, i = find(cmd)
+        aliases, i = find(cmd)
         # synopsis
         ui.write("%s\n\n" % i[2])
 
@@ -399,9 +399,8 @@ def help_(ui, cmd=None, with_version=False):
 
         if not ui.quiet:
             # aliases
-            aliases = ', '.join(key.split('|')[1:])
-            if aliases:
-                ui.write(_("\naliases: %s\n") % aliases)
+            if len(aliases) > 1:
+                ui.write(_("\naliases: %s\n") % ', '.join(aliases[1:]))
 
             # options
             if i[1]:
@@ -2374,17 +2373,20 @@ norepo = ("clone init version help debugancestor debugconfig debugdata"
           " debugindex debugindexdot paths")
 
 def find(cmd):
-    choice = []
+    """Return (aliases, command table entry) for command string."""
+    choice = None
     for e in table.keys():
         aliases = e.lstrip("^").split("|")
         if cmd in aliases:
-            return e, table[e]
+            return aliases, table[e]
         for a in aliases:
             if a.startswith(cmd):
-                choice.append(e)
-    if len(choice) == 1:
-        e = choice[0]
-        return e, table[e]
+                if choice:
+                    raise UnknownCommand(cmd)
+                else:
+                    choice = aliases, table[e]
+    if choice:
+        return choice
 
     raise UnknownCommand(cmd)
 
@@ -2422,7 +2424,8 @@ def parse(ui, args):
 
             cmd, args = args[0], args[1:]
 
-        i = find(cmd)[1]
+        aliases, i = find(cmd)
+        cmd = aliases[0]
         c = list(i[1])
     else:
         cmd = None
