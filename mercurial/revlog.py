@@ -784,6 +784,10 @@ class revlog:
                 continue
             delta = chunk[80:]
 
+            for p in (p1, p2):
+                if not p in self.nodemap:
+                    raise RevlogError(_("unknown parent %s") % short(p1))
+
             if not chain:
                 # retrieve the parent revision of the delta chain
                 chain = p1
