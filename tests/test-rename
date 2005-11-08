@@ -1,0 +1,60 @@
+#!/bin/sh
+
+hg init
+mkdir d1 d1/d11 d2
+echo d1/a > d1/a
+echo d1/ba > d1/ba
+echo d1/a1 > d1/d11/a1
+echo d1/b > d1/b
+echo d2/b > d2/b
+hg add d1/a d1/b d1/ba d1/d11/a1 d2/b
+hg commit -m "1" -d "0 0"
+
+echo "# rename a single file"
+hg rename d1/d11/a1 d2/c
+hg status
+hg update -C
+
+echo "# move a single file to an existing directory"
+hg rename d1/d11/a1 d2
+hg status
+hg update -C
+
+echo "# rename directory d1 as d3"
+hg rename d1 d3
+hg status
+hg update -C
+
+echo "# move directory d1/d11 to an existing directory d2 (removes empty d1)"
+hg rename d1/d11 d2
+hg status
+hg update -C
+
+echo "# move directories d1 and d2 to a new directory d3"
+mkdir d3
+hg rename d1 d2 d3
+hg status
+hg update -C
+
+echo "# move everything under directory d1 to existing directory d2, do not"
+echo "# overwrite existing files (d2/b)"
+hg rename d1/* d2
+hg status
+diff d1/b d2/b
+hg update -C
+
+echo "# attempt to move potentially more than one file into a non-existent"
+echo "# directory"
+hg rename 'glob:d1/**' dx
+
+echo "# move every file under d1 to d2/d21 (glob)"
+mkdir d2/d21
+hg rename 'glob:d1/**' d2/d21
+hg status
+hg update -C
+
+echo "# move every file under d1 starting with an 'a' to d2/d21 (regexp)"
+mkdir d2/d21
+hg rename 're:d1/([^a][^/]*/)*a.*' d2/d21
+hg status
+hg update -C

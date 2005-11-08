@@ -787,14 +787,9 @@ def commit(ui, repo, *pats, **opts):
         raise util.Abort(str(inst))
 
 def docopy(ui, repo, pats, opts):
-    if not pats:
-        raise util.Abort(_('no source or destination specified'))
-    elif len(pats) == 1:
-        raise util.Abort(_('no destination specified'))
-    pats = list(pats)
-    dest = pats.pop()
-    sources = []
-    dir2dir = len(pats) == 1 and os.path.isdir(pats[0])
+    cwd = repo.getcwd()
+    errors = 0
+    copied = []
 
     def okaytocopy(abs, rel, exact):
         reasons = {'?': _('is not managed'),
@@ -805,74 +800,68 @@ def docopy(ui, repo, pats, opts):
         else:
             return True
 
-    for src, abs, rel, exact in walk(repo, pats, opts):
-        if okaytocopy(abs, rel, exact):
-            sources.append((abs, rel, exact))
-    if not sources:
-        raise util.Abort(_('no files to copy'))
-
-    cwd = repo.getcwd()
-    absdest = util.canonpath(repo.root, cwd, dest)
-    reldest = util.pathto(cwd, absdest)
-    if os.path.exists(reldest):
-        destisfile = not os.path.isdir(reldest)
-    else:
-        destisfile = not dir2dir and (len(sources) == 1
-                                      or repo.dirstate.state(absdest) != '?')
-
-    if destisfile and len(sources) > 1:
-        raise util.Abort(_('with multiple sources, destination must be a '
-                           'directory'))
-
-    srcpfxlen = 0
-    if dir2dir:
-        srcpfx = util.pathto(cwd, util.canonpath(repo.root, cwd, pats[0]))
-        if os.path.exists(reldest):
-            srcpfx = os.path.split(srcpfx)[0]
-        if srcpfx:
-            srcpfx += os.sep
-        srcpfxlen = len(srcpfx)
-
-    errs, copied = 0, []
-    for abs, rel, exact in sources:
-        if destisfile:
-            mydest = reldest
-        elif dir2dir:
-            mydest = os.path.join(dest, rel[srcpfxlen:])
-        else:
-            mydest = os.path.join(dest, os.path.basename(rel))
-        myabsdest = util.canonpath(repo.root, cwd, mydest)
-        myreldest = util.pathto(cwd, myabsdest)
-        if not opts['force'] and repo.dirstate.state(myabsdest) not in 'a?':
-            ui.warn(_('%s: not overwriting - file already managed\n') % myreldest)
-            continue
-        mydestdir = os.path.dirname(myreldest) or '.'
-        if not opts['after']:
-            try:
-                if dir2dir: os.makedirs(mydestdir)
-                elif not destisfile: os.mkdir(mydestdir)
-            except OSError, inst:
-                if inst.errno != errno.EEXIST: raise
+    def copy(abssrc, relsrc, target, exact):
+        abstarget = util.canonpath(repo.root, cwd, target)
+        reltarget = util.pathto(cwd, abstarget)
+        if not opts['force'] and repo.dirstate.state(abstarget) not in 'a?':
+            ui.warn(_('%s: not overwriting - file already managed\n') %
+                    reltarget)
+            return
         if ui.verbose or not exact:
-            ui.status(_('copying %s to %s\n') % (rel, myreldest))
+            ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         if not opts['after']:
+            targetdir = os.path.dirname(reltarget) or '.'
+            if not os.path.isdir(targetdir):
+                os.makedirs(targetdir)
             try:
-                shutil.copyfile(rel, myreldest)
-                shutil.copymode(rel, myreldest)
+                shutil.copyfile(relsrc, reltarget)
+                shutil.copymode(relsrc, reltarget)
             except shutil.Error, inst:
                 raise util.Abort(str(inst))
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
-                    ui.warn(_('%s: deleted in working copy\n') % rel)
+                    ui.warn(_('%s: deleted in working copy\n') % relsrc)
                 else:
-                    ui.warn(_('%s: cannot copy - %s\n') % (rel, inst.strerror))
-                errs += 1
-                continue
-        repo.copy(abs, myabsdest)
-        copied.append((abs, rel, exact))
-    if errs:
+                    ui.warn(_('%s: cannot copy - %s\n') %
+                            (relsrc, inst.strerror))
+                    errors += 1
+                    return
+        repo.copy(abssrc, abstarget)
+        copied.append((abssrc, relsrc, exact))
+
+    pats = list(pats)
+    if not pats:
+        raise util.Abort(_('no source or destination specified'))
+    if len(pats) == 1:
+        raise util.Abort(_('no destination specified'))
+    dest = pats.pop()
+    destdirexists = os.path.isdir(dest)
+    if (len(pats) > 1 or not os.path.exists(pats[0])) and not destdirexists:
+        raise util.Abort(_('with multiple sources, destination must be an '
+                         'existing directory'))
+
+    for pat in pats:
+        if os.path.isdir(pat):
+            if destdirexists:
+                striplen = len(os.path.split(pat)[0])
+            else:
+                striplen = len(pat)
+            if striplen:
+                striplen += len(os.sep)
+            targetpath = lambda p: os.path.join(dest, p[striplen:])
+        elif destdirexists:
+            targetpath = lambda p: os.path.join(dest, os.path.basename(p))
+        else:
+            targetpath = lambda p: dest
+        for tag, abssrc, relsrc, exact in walk(repo, [pat], opts):
+            if okaytocopy(abssrc, relsrc, exact):
+                copy(abssrc, relsrc, targetpath(abssrc), exact)
+
+    if errors:
         ui.warn(_('(consider using --after)\n'))
-    return errs, copied
+    if len(copied) == 0:
+        raise util.Abort(_('no files to copy'))
+    return errors, copied
 
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit
