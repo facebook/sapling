@@ -1732,7 +1732,9 @@ def recover(ui, repo):
     This command tries to fix the repository status after an interrupted
     operation. It should only be necessary when Mercurial suggests it.
     """
-    repo.recover()
+    if repo.recover():
+        return repo.verify()
+    return False
 
 def remove(ui, repo, pat, *pats, **opts):
     """remove the specified files on the next commit

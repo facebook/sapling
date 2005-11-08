@@ -225,9 +225,11 @@ class localrepository:
         lock = self.lock()
         if os.path.exists(self.join("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
-            return transaction.rollback(self.opener, self.join("journal"))
+            transaction.rollback(self.opener, self.join("journal"))
+            return True
         else:
             self.ui.warn(_("no interrupted transaction available\n"))
+            return False
 
     def undo(self):
         lock = self.lock()
