@@ -76,3 +76,9 @@ ln -s ba d1/ca
 hg rename --force d1/ba d1/ca
 hg status
 hg update -C
+
+echo "# do not copy more than one source file to the same destination file"
+mkdir d3
+hg rename d1/* d2/* d3
+hg status
+hg update -C

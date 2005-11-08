@@ -790,6 +790,7 @@ def docopy(ui, repo, pats, opts):
     cwd = repo.getcwd()
     errors = 0
     copied = []
+    targets = {}
 
     def okaytocopy(abs, rel, exact):
         reasons = {'?': _('is not managed'),
@@ -803,7 +804,12 @@ def docopy(ui, repo, pats, opts):
     def copy(abssrc, relsrc, target, exact):
         abstarget = util.canonpath(repo.root, cwd, target)
         reltarget = util.pathto(cwd, abstarget)
-        if os.path.exists(reltarget):
+        prevsrc = targets.get(abstarget)
+        if prevsrc is not None:
+            ui.warn(_('%s: not overwriting - %s collides with %s\n') %
+                    (reltarget, abssrc, prevsrc))
+            return
+        elif os.path.exists(reltarget):
             if opts['force']:
                 os.unlink(reltarget)
             else:
@@ -829,6 +835,7 @@ def docopy(ui, repo, pats, opts):
                             (relsrc, inst.strerror))
                     errors += 1
                     return
+        targets[abstarget] = abssrc
         repo.copy(abssrc, abstarget)
         copied.append((abssrc, relsrc, exact))
 

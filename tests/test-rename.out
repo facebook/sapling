@@ -101,3 +101,15 @@ R d1/ba
 # replace a symlink with a file
 A d1/ca
 R d1/ba
+# do not copy more than one source file to the same destination file
+copying d1/d11/a1 to d3/d11/a1
+d3/b: not overwriting - d2/b collides with d1/b
+removing d1/d11/a1
+A d3/a
+A d3/b
+A d3/ba
+A d3/d11/a1
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1
