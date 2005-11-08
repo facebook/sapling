@@ -165,7 +165,6 @@ class templater:
 common_filters = {
     "escape": cgi.escape,
     "strip": lambda x: x.strip(),
-    "rstrip": lambda x: x.rstrip(),
     "age": age,
     "date": lambda x: util.datestr(x),
     "addbreaks": nl2br,
