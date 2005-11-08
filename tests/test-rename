@@ -58,3 +58,21 @@ mkdir d2/d21
 hg rename 're:d1/([^a][^/]*/)*a.*' d2/d21
 hg status
 hg update -C
+
+echo "# attempt to overwrite an existing file"
+echo "ca" > d1/ca
+hg rename d1/ba d1/ca
+hg status
+hg update -C
+
+echo "# forced overwrite of an existing file"
+echo "ca" > d1/ca
+hg rename --force d1/ba d1/ca
+hg status
+hg update -C
+
+echo "# replace a symlink with a file"
+ln -s ba d1/ca
+hg rename --force d1/ba d1/ca
+hg status
+hg update -C

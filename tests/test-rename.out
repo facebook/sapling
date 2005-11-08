@@ -49,7 +49,7 @@ R d1/d11/a1
 R d2/b
 # move everything under directory d1 to existing directory d2, do not
 # overwrite existing files (d2/b)
-d2/b: not overwriting - file already managed
+d2/b: not overwriting - file exists
 copying d1/d11/a1 to d2/d11/a1
 removing d1/d11/a1
 A d2/a
@@ -91,3 +91,13 @@ A d2/d21/a
 A d2/d21/a1
 R d1/a
 R d1/d11/a1
+# attempt to overwrite an existing file
+d1/ca: not overwriting - file exists
+abort: no files to copy
+? d1/ca
+# forced overwrite of an existing file
+A d1/ca
+R d1/ba
+# replace a symlink with a file
+A d1/ca
+R d1/ba

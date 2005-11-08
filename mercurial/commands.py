@@ -803,10 +803,13 @@ def docopy(ui, repo, pats, opts):
     def copy(abssrc, relsrc, target, exact):
         abstarget = util.canonpath(repo.root, cwd, target)
         reltarget = util.pathto(cwd, abstarget)
-        if not opts['force'] and repo.dirstate.state(abstarget) not in 'a?':
-            ui.warn(_('%s: not overwriting - file already managed\n') %
-                    reltarget)
-            return
+        if os.path.exists(reltarget):
+            if opts['force']:
+                os.unlink(reltarget)
+            else:
+                ui.warn(_('%s: not overwriting - file exists\n') %
+                        reltarget)
+                return
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         if not opts['after']:
