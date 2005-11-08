@@ -191,6 +191,8 @@ show changed files in the working directory
     R = removed
     ? = not tracked
 
+aliases: st
+
 options:
 
  -m --modified   show only modified files
