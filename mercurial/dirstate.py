@@ -175,7 +175,7 @@ class dirstate:
             if state == "r":
                 self.map[f] = ('r', 0, 0, 0)
             else:
-                s = os.lstat(os.path.join(self.root, f))
+                s = os.lstat(self.wjoin(f))
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
                 self.map[f] = (state, s.st_mode, st_size, st_mtime)
@@ -332,7 +332,7 @@ class dirstate:
         # step one, find all files that match our criteria
         files.sort()
         for ff in util.unique(files):
-            f = os.path.join(self.root, ff)
+            f = self.wjoin(ff)
             try:
                 st = os.lstat(f)
             except OSError, inst:
@@ -380,7 +380,7 @@ class dirstate:
                 nonexistent = True
                 if not st:
                     try:
-                        f = os.path.join(self.root, fn)
+                        f = self.wjoin(fn)
                         st = os.lstat(f)
                     except OSError, inst:
                         if inst.errno != errno.ENOENT:

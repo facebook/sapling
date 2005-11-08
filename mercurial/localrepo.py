@@ -43,7 +43,7 @@ class localrepository:
 
         self.dirstate = dirstate.dirstate(self.opener, ui, self.root)
         try:
-            self.ui.readconfig(os.path.join(self.path, "hgrc"))
+            self.ui.readconfig(self.join("hgrc"))
         except IOError: pass
 
     def hook(self, name, **args):
