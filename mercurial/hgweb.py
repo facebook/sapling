@@ -999,7 +999,10 @@ class hgwebdir:
                        .replace("//", "/"))
 
                 # update time with local timezone
-                d = (get_mtime(path), util.makedate()[1])
+                try:
+                    d = (get_mtime(path), util.makedate()[1])
+                except OSError:
+                    continue
 
                 yield dict(contact=(get("ui", "username") or # preferred
                                     get("web", "contact") or # deprecated
