@@ -549,7 +549,8 @@ def annotate(ui, repo, *pats, **opts):
     if not pats:
         raise util.Abort(_('at least one file name or pattern required'))
 
-    opmap = [['user', getname], ['number', str], ['changeset', getnode], ['date', getdate]]
+    opmap = [['user', getname], ['number', str], ['changeset', getnode],
+             ['date', getdate]]
     if not opts['user'] and not opts['changeset'] and not opts['date']:
         opts['number'] = 1
 
