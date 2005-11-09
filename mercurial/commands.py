@@ -2398,6 +2398,7 @@ def find(cmd):
                     raise AmbiguousCommand(cmd)
                 else:
                     choice = aliases, table[e]
+                    break
     if choice:
         return choice
 
