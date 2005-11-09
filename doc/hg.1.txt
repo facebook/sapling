@@ -87,7 +87,7 @@ addremove [options] [files ...]::
     New files are ignored if they match any of the patterns in .hgignore. As
     with add, these changes take effect at the next commit.
 
-annotate [-r <rev> -u -n -c] [files ...]::
+annotate [-r <rev> -u -n -c -d] [files ...]::
     List changes in files, showing the revision id responsible for each line
 
     This command is useful to discover who did a change or when a change took
@@ -103,6 +103,7 @@ annotate [-r <rev> -u -n -c] [files ...]::
     -X, --exclude <pat>   exclude names matching the given patterns
     -r, --revision <rev>  annotate the specified revision
     -u, --user            list the author
+    -d, --date            list the commit date
     -c, --changeset       list the changeset
     -n, --number          list the revision number (default)
 

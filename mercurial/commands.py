@@ -538,11 +538,19 @@ def annotate(ui, repo, *pats, **opts):
         cl = repo.changelog.read(repo.changelog.node(rev))
         return trimuser(ui, cl[1], rev, ucache)
 
+    dcache = {}
+    def getdate(rev):
+    	datestr = dcache.get(rev)
+        if datestr is None:
+            cl = repo.changelog.read(repo.changelog.node(rev))
+            datestr = dcache[rev] = util.datestr(cl[2])
+	return datestr
+
     if not pats:
         raise util.Abort(_('at least one file name or pattern required'))
 
-    opmap = [['user', getname], ['number', str], ['changeset', getnode]]
-    if not opts['user'] and not opts['changeset']:
+    opmap = [['user', getname], ['number', str], ['changeset', getnode], ['date', getdate]]
+    if not opts['user'] and not opts['changeset'] and not opts['date']:
         opts['number'] = 1
 
     if opts['rev']:
@@ -2140,6 +2148,7 @@ table = {
          [('r', 'rev', '', _('annotate the specified revision')),
           ('a', 'text', None, _('treat all files as text')),
           ('u', 'user', None, _('list the author')),
+          ('d', 'date', None, _('list the date')),
           ('n', 'number', None, _('list the revision number (default)')),
           ('c', 'changeset', None, _('list the changeset')),
           ('I', 'include', [], _('include names matching the given patterns')),
