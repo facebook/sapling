@@ -387,6 +387,8 @@ def opener(base):
                         except: pass
                         raise
                     fp.close()
+                    st = os.lstat(f)
+                    os.chmod(temp, st.st_mode)
                     rename(temp, f)
 
         return file(f, mode)
