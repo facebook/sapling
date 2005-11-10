@@ -2640,6 +2640,9 @@ def dispatch(args):
         u.debug(inst, "\n")
         u.warn(_("%s: invalid arguments\n") % cmd)
         help_(u, cmd)
+    except AmbiguousCommand, inst:
+        u.warn(_("hg: command '%s' is ambiguous.\n") % inst.args[0])
+        help_(u, 'shortlist')
     except UnknownCommand, inst:
         u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         help_(u, 'shortlist')
