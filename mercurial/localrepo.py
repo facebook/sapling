@@ -232,13 +232,13 @@ class localrepository:
             return False
 
     def undo(self):
+        wlock = self.wlock()
         lock = self.lock()
         if os.path.exists(self.join("undo")):
             self.ui.status(_("rolling back last transaction\n"))
             transaction.rollback(self.opener, self.join("undo"))
-            self.dirstate = None
             util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-            self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
+            self.dirstate.read()
         else:
             self.ui.warn(_("no undo information available\n"))
 
@@ -250,6 +250,17 @@ class localrepository:
                 self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
                 return lock.lock(self.join("lock"), wait)
             raise inst
+
+    def wlock(self, wait=1):
+        try:
+            wlock = lock.lock(self.join("wlock"), 0, self.dirstate.write)
+        except lock.LockHeld, inst:
+            if not wait:
+                raise inst
+            self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
+            wlock = lock.lock(self.join("wlock"), wait, self.dirstate.write)
+        self.dirstate.read()
+        return wlock
 
     def rawcommit(self, files, text, user, date, p1=None, p2=None):
         orig_parent = self.dirstate.parents()[0] or nullid
@@ -267,6 +278,8 @@ class localrepository:
         else:
             update_dirstate = 0
 
+        wlock = self.wlock()
+        lock = self.lock()
         tr = self.transaction()
         mm = m1.copy()
         mfm = mf1.copy()
@@ -355,6 +368,7 @@ class localrepository:
         if not self.hook("precommit"):
             return None
 
+        wlock = self.wlock()
         lock = self.lock()
         tr = self.transaction()
 
@@ -526,6 +540,7 @@ class localrepository:
         return (c, a, d, u)
 
     def add(self, list):
+        wlock = self.wlock()
         for f in list:
             p = self.wjoin(f)
             if not os.path.exists(p):
@@ -538,6 +553,7 @@ class localrepository:
                 self.dirstate.update([f], "a")
 
     def forget(self, list):
+        wlock = self.wlock()
         for f in list:
             if self.dirstate.state(f) not in 'ai':
                 self.ui.warn(_("%s not added!\n") % f)
@@ -551,6 +567,7 @@ class localrepository:
                     util.unlink(self.wjoin(f))
                 except OSError, inst:
                     if inst.errno != errno.ENOENT: raise
+        wlock = self.wlock()
         for f in list:
             p = self.wjoin(f)
             if os.path.exists(p):
@@ -568,6 +585,7 @@ class localrepository:
         mn = self.changelog.read(p)[0]
         mf = self.manifest.readflags(mn)
         m = self.manifest.read(mn)
+        wlock = self.wlock()
         for f in list:
             if self.dirstate.state(f) not in  "r":
                 self.ui.warn("%s not removed!\n" % f)
@@ -584,6 +602,7 @@ class localrepository:
         elif not os.path.isfile(p):
             self.ui.warn(_("copy failed: %s is not a file\n") % dest)
         else:
+            wlock = self.wlock()
             if self.dirstate.state(dest) == '?':
                 self.dirstate.update([dest], "a")
             self.dirstate.copy(source, dest)
@@ -1373,6 +1392,9 @@ class localrepository:
         for f in a + c + u:
             mw[f] = ""
             mfw[f] = util.is_exec(self.wjoin(f), mfw.get(f, False))
+
+        if moddirstate:
+            wlock = self.wlock()
 
         for f in d:
             if f in mw: del mw[f]
