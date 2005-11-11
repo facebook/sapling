@@ -241,7 +241,7 @@ class dirstate:
                 bs += 1
         return ret
 
-    def supported_type(self, f, st, verbose=True):
+    def supported_type(self, f, st, verbose=False):
         if stat.S_ISREG(st.st_mode):
             return True
         if verbose:
@@ -352,7 +352,7 @@ class dirstate:
                     continue
                 self.blockignore = True
                 if statmatch(ff, st):
-                    if self.supported_type(ff, st):
+                    if self.supported_type(ff, st, verbose=True):
                         yield 'f', ff, st
                     elif ff in dc:
                         yield 'm', ff, st
