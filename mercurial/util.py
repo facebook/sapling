@@ -362,7 +362,36 @@ def opener(base):
     remote file access from higher level code.
     """
     p = base
-    def o(path, mode="r", text=False):
+
+    def mktempcopy(name):
+        d, fn = os.path.split(name)
+        fd, temp = tempfile.mkstemp(prefix=fn, dir=d)
+        fp = os.fdopen(fd, "wb")
+        try:
+            fp.write(file(name, "rb").read())
+        except:
+            try: os.unlink(temp)
+            except: pass
+            raise
+        fp.close()
+        st = os.lstat(name)
+        os.chmod(temp, st.st_mode)
+        return temp
+
+    class atomicfile(file):
+        """the file will only be copied on close"""
+        def __init__(self, name, mode, atomic=False):
+            self.__name = name
+            self.temp = mktempcopy(name)
+            file.__init__(self, self.temp, mode)
+        def close(self):
+            if not self.closed:
+                rename(self.temp, self.__name)
+            file.close(self)
+        def __del__(self):
+            self.close()
+
+    def o(path, mode="r", text=False, atomic=False):
         f = os.path.join(p, path)
 
         if not text:
@@ -376,21 +405,10 @@ def opener(base):
                 if not os.path.isdir(d):
                     os.makedirs(d)
             else:
+                if atomic:
+                    return atomicfile(f, mode)
                 if nlink > 1:
-                    d, fn = os.path.split(f)
-                    fd, temp = tempfile.mkstemp(prefix=fn, dir=d)
-                    fp = os.fdopen(fd, "wb")
-                    try:
-                        fp.write(file(f, "rb").read())
-                    except:
-                        try: os.unlink(temp)
-                        except: pass
-                        raise
-                    fp.close()
-                    st = os.lstat(f)
-                    os.chmod(temp, st.st_mode)
-                    rename(temp, f)
-
+                    rename(mktempcopy(f), f)
         return file(f, mode)
 
     return o
