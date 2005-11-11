@@ -486,6 +486,10 @@ class localrepository:
 
         # are we comparing the working directory?
         if not node2:
+            try:
+                wlock = self.wlock(wait=0)
+            except lock.LockHeld:
+                wlock = None
             l, c, a, d, u = self.dirstate.changes(files, match)
 
             # are we comparing working dir against its parent?
@@ -497,6 +501,8 @@ class localrepository:
                     for f in l:
                         if fcmp(f, mf2):
                             c.append(f)
+                        elif wlock is not None:
+                            self.dirstate.update([f], "n")
 
                 for l in c, a, d, u:
                     l.sort()
