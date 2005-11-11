@@ -101,16 +101,15 @@ class dirstate:
         try:
             return self.map[key]
         except TypeError:
-            self.read()
+            self.lazyread()
             return self[key]
 
     def __contains__(self, key):
-        if not self.map: self.read()
+        self.lazyread()
         return key in self.map
 
     def parents(self):
-        if not self.pl:
-            self.read()
+        self.lazyread()
         return self.pl
 
     def markdirty(self):
@@ -118,8 +117,7 @@ class dirstate:
             self.dirty = 1
 
     def setparents(self, p1, p2=nullid):
-        if not self.pl:
-            self.read()
+        self.lazyread()
         self.markdirty()
         self.pl = p1, p2
 
@@ -129,9 +127,11 @@ class dirstate:
         except KeyError:
             return "?"
 
-    def read(self):
-        if self.map is not None: return self.map
+    def lazyread(self):
+        if self.map is None:
+            self.read()
 
+    def read(self):
         self.map = {}
         self.pl = [nullid, nullid]
         try:
@@ -154,7 +154,7 @@ class dirstate:
             pos += l
 
     def copy(self, source, dest):
-        self.read()
+        self.lazyread()
         self.markdirty()
         self.copies[dest] = source
 
@@ -169,7 +169,7 @@ class dirstate:
         a  marked for addition'''
 
         if not files: return
-        self.read()
+        self.lazyread()
         self.markdirty()
         for f in files:
             if state == "r":
@@ -184,7 +184,7 @@ class dirstate:
 
     def forget(self, files):
         if not files: return
-        self.read()
+        self.lazyread()
         self.markdirty()
         for f in files:
             try:
@@ -198,7 +198,7 @@ class dirstate:
         self.markdirty()
 
     def write(self):
-        st = self.opener("dirstate", "w")
+        st = self.opener("dirstate", "w", atomic=True)
         st.write("".join(self.pl))
         for f, e in self.map.items():
             c = self.copied(f)
@@ -258,7 +258,7 @@ class dirstate:
         return False
 
     def statwalk(self, files=None, match=util.always, dc=None):
-        self.read()
+        self.lazyread()
 
         # walk all files by default
         if not files:
