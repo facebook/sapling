@@ -2429,14 +2429,7 @@ def parse(ui, args):
         cmd, args = args[0], args[1:]
         defaults = ui.config("defaults", cmd)
         if defaults:
-            # reparse with command defaults added
-            args = [cmd] + defaults.split() + args
-            try:
-                args = fancyopts.fancyopts(args, globalopts, options)
-            except fancyopts.getopt.GetoptError, inst:
-                raise ParseError(None, inst)
-
-            cmd, args = args[0], args[1:]
+            args = defaults.split() + args
 
         aliases, i = find(cmd)
         cmd = aliases[0]
