@@ -31,15 +31,15 @@ def hash(text, p1, p2):
 
 def compress(text):
     """ generate a possibly-compressed representation of text """
-    if not text: return text
+    if not text: return ("", text)
     if len(text) < 44:
-        if text[0] == '\0': return text
-        return 'u' + text
+        if text[0] == '\0': return ("", text)
+        return ('u', text)
     bin = zlib.compress(text)
     if len(bin) > len(text):
-        if text[0] == '\0': return text
-        return 'u' + text
-    return bin
+        if text[0] == '\0': return ("", text)
+        return ('u', text)
+    return ("", bin)
 
 def decompress(bin):
     """ decompress the given input """
@@ -543,14 +543,16 @@ class revlog:
             end = self.end(t)
             if not d:
                 prev = self.revision(self.tip())
-                d = self.diff(prev, text)
+                d = self.diff(prev, str(text))
             data = compress(d)
-            dist = end - start + len(data)
+            l = len(data[1]) + len(data[0])
+            dist = end - start + l
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
         if not n or dist > len(text) * 2:
             data = compress(text)
+            l = len(data[1]) + len(data[0])
             base = n
         else:
             base = self.base(t)
@@ -559,14 +561,17 @@ class revlog:
         if t >= 0:
             offset = self.end(t)
 
-        e = (offset, len(data), base, link, p1, p2, node)
+        e = (offset, l, base, link, p1, p2, node)
 
         self.index.append(e)
         self.nodemap[node] = n
         entry = struct.pack(indexformat, *e)
 
         transaction.add(self.datafile, e[0])
-        self.opener(self.datafile, "a").write(data)
+        f = self.opener(self.datafile, "a")
+        if data[0]:
+            f.write(data[0])
+        f.write(data[1])
         transaction.add(self.indexfile, n * len(entry))
         self.opener(self.indexfile, "a").write(entry)
 
@@ -801,7 +806,8 @@ class revlog:
             # current size.
 
             if chain == prev:
-                cdelta = compress(delta)
+                tempd = compress(delta)
+                cdelta = tempd[0] + tempd[1]
 
             if chain != prev or (end - start + len(cdelta)) > measure * 2:
                 # flush our writes here so we can read it in revision
