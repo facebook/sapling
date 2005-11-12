@@ -71,6 +71,9 @@ class lazyparser:
         self.all = 0
         self.revlog = revlog
 
+    def trunc(self, pos):
+        self.l = pos/self.s
+
     def load(self, pos=None):
         if self.all: return
         if pos is not None:
@@ -104,8 +107,12 @@ class lazyindex:
         return self.p.index[pos]
     def __getitem__(self, pos):
         return self.p.index[pos] or self.load(pos)
+    def __delitem__(self, pos):
+        del self.p.index[pos]
     def append(self, e):
         self.p.index.append(e)
+    def trunc(self, pos):
+        self.p.trunc(pos)
 
 class lazymap:
     """a lazy version of the node map"""
@@ -140,6 +147,8 @@ class lazymap:
                 raise KeyError("node " + hex(key))
     def __setitem__(self, key, val):
         self.p.map[key] = val
+    def __delitem__(self, key):
+        del self.p.map[key]
 
 class RevlogError(Exception): pass
 
@@ -833,6 +842,36 @@ class revlog:
         dfh.close()
         ifh.close()
         return node
+
+    def strip(self, rev, minlink):
+        if self.count() == 0 or rev >= self.count():
+            return
+
+        # When stripping away a revision, we need to make sure it
+        # does not actually belong to an older changeset.
+        # The minlink parameter defines the oldest revision
+        # we're allowed to strip away.
+        while minlink > self.index[rev][3]:
+            rev += 1
+            if rev >= self.count():
+                return
+
+        # first truncate the files on disk
+        end = self.start(rev)
+        self.opener(self.datafile, "a").truncate(end)
+        end = rev * struct.calcsize(indexformat)
+        self.opener(self.indexfile, "a").truncate(end)
+
+        # then reset internal state in memory to forget those revisions
+        self.cache = None
+        for p in self.index[rev:]:
+            del self.nodemap[p[6]]
+        del self.index[rev:]
+
+        # truncating the lazyindex also truncates the lazymap.
+        if isinstance(self.index, lazyindex):
+            self.index.trunc(end)
+
 
     def checksize(self):
         expected = 0
