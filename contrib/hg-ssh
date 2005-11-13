@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+#
+# Copyright 2005 by Intevation GmbH <intevation@intevation.de>
+# Author(s):
+# Thomas Arendsen Hein <thomas@intevation.de>
+#
+# This software may be used and distributed according to the terms
+# of the GNU General Public License, incorporated herein by reference.
+
+"""
+hg-ssh - a wrapper for ssh access to a limited set of mercurial repos
+
+To be used in ~/.ssh/authorized_keys with the "command" option, see sshd(8):
+command="hg-ssh path/to/repo1 /path/to/repo2 ~/repo3 ~user/repo4" ssh-dss ...
+(probably together with these other useful options:
+ no-port-forwarding,no-X11-forwarding,no-agent-forwarding)
+
+This allows pull/push over ssh to to the repositories given as arguments.
+
+If all your repositories are subdirectories of a common directory, you can
+allow shorter paths with:
+command="cd path/to/my/repositories && hg-ssh repo1 subdir/repo2"
+"""
+
+from mercurial import commands
+
+import sys, os
+
+cwd = os.getcwd()
+allowed_paths = [os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
+                 for path in sys.argv[1:]]
+orig_cmd = os.getenv('SSH_ORIGINAL_COMMAND', '?')
+
+if orig_cmd.startswith('hg -R ') and orig_cmd.endswith(' serve --stdio'):
+    path = orig_cmd[6:-14]
+    repo = os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
+    if repo in allowed_paths:
+        commands.dispatch(['-R', repo, 'serve', '--stdio'])
+    else:
+        sys.stderr.write("Illegal repository %r\n" % repo)
+        sys.exit(-1)
+else:
+    sys.stderr.write("Illegal command %r\n" % orig_cmd)
+    sys.exit(-1)
+
