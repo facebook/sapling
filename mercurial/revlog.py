@@ -31,15 +31,15 @@ def hash(text, p1, p2):
 
 def compress(text):
     """ generate a possibly-compressed representation of text """
-    if not text: return text
+    if not text: return ("", text)
     if len(text) < 44:
-        if text[0] == '\0': return text
-        return 'u' + text
+        if text[0] == '\0': return ("", text)
+        return ('u', text)
     bin = zlib.compress(text)
     if len(bin) > len(text):
-        if text[0] == '\0': return text
-        return 'u' + text
-    return bin
+        if text[0] == '\0': return ("", text)
+        return ('u', text)
+    return ("", bin)
 
 def decompress(bin):
     """ decompress the given input """
@@ -70,6 +70,9 @@ class lazyparser:
         self.map = {nullid: -1}
         self.all = 0
         self.revlog = revlog
+
+    def trunc(self, pos):
+        self.l = pos/self.s
 
     def load(self, pos=None):
         if self.all: return
@@ -104,8 +107,12 @@ class lazyindex:
         return self.p.index[pos]
     def __getitem__(self, pos):
         return self.p.index[pos] or self.load(pos)
+    def __delitem__(self, pos):
+        del self.p.index[pos]
     def append(self, e):
         self.p.index.append(e)
+    def trunc(self, pos):
+        self.p.trunc(pos)
 
 class lazymap:
     """a lazy version of the node map"""
@@ -140,6 +147,8 @@ class lazymap:
                 raise KeyError("node " + hex(key))
     def __setitem__(self, key, val):
         self.p.map[key] = val
+    def __delitem__(self, key):
+        del self.p.map[key]
 
 class RevlogError(Exception): pass
 
@@ -543,14 +552,16 @@ class revlog:
             end = self.end(t)
             if not d:
                 prev = self.revision(self.tip())
-                d = self.diff(prev, text)
+                d = self.diff(prev, str(text))
             data = compress(d)
-            dist = end - start + len(data)
+            l = len(data[1]) + len(data[0])
+            dist = end - start + l
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
         if not n or dist > len(text) * 2:
             data = compress(text)
+            l = len(data[1]) + len(data[0])
             base = n
         else:
             base = self.base(t)
@@ -559,14 +570,17 @@ class revlog:
         if t >= 0:
             offset = self.end(t)
 
-        e = (offset, len(data), base, link, p1, p2, node)
+        e = (offset, l, base, link, p1, p2, node)
 
         self.index.append(e)
         self.nodemap[node] = n
         entry = struct.pack(indexformat, *e)
 
         transaction.add(self.datafile, e[0])
-        self.opener(self.datafile, "a").write(data)
+        f = self.opener(self.datafile, "a")
+        if data[0]:
+            f.write(data[0])
+        f.write(data[1])
         transaction.add(self.indexfile, n * len(entry))
         self.opener(self.indexfile, "a").write(entry)
 
@@ -801,7 +815,8 @@ class revlog:
             # current size.
 
             if chain == prev:
-                cdelta = compress(delta)
+                tempd = compress(delta)
+                cdelta = tempd[0] + tempd[1]
 
             if chain != prev or (end - start + len(cdelta)) > measure * 2:
                 # flush our writes here so we can read it in revision
@@ -827,6 +842,36 @@ class revlog:
         dfh.close()
         ifh.close()
         return node
+
+    def strip(self, rev, minlink):
+        if self.count() == 0 or rev >= self.count():
+            return
+
+        # When stripping away a revision, we need to make sure it
+        # does not actually belong to an older changeset.
+        # The minlink parameter defines the oldest revision
+        # we're allowed to strip away.
+        while minlink > self.index[rev][3]:
+            rev += 1
+            if rev >= self.count():
+                return
+
+        # first truncate the files on disk
+        end = self.start(rev)
+        self.opener(self.datafile, "a").truncate(end)
+        end = rev * struct.calcsize(indexformat)
+        self.opener(self.indexfile, "a").truncate(end)
+
+        # then reset internal state in memory to forget those revisions
+        self.cache = None
+        for p in self.index[rev:]:
+            del self.nodemap[p[6]]
+        del self.index[rev:]
+
+        # truncating the lazyindex also truncates the lazymap.
+        if isinstance(self.index, lazyindex):
+            self.index.trunc(end)
+
 
     def checksize(self):
         expected = 0

@@ -12,10 +12,11 @@ class LockHeld(Exception):
     pass
 
 class lock:
-    def __init__(self, file, wait=1):
+    def __init__(self, file, wait=1, releasefn=None):
         self.f = file
         self.held = 0
         self.wait = wait
+        self.releasefn = releasefn
         self.lock()
 
     def __del__(self):
@@ -43,6 +44,8 @@ class lock:
     def release(self):
         if self.held:
             self.held = 0
+            if self.releasefn:
+                self.releasefn()
             try:
                 os.unlink(self.f)
             except: pass
