@@ -388,8 +388,8 @@ def opener(base):
             file.__init__(self, self.temp, mode)
         def close(self):
             if not self.closed:
+                file.close(self)
                 rename(self.temp, self.__name)
-            file.close(self)
         def __del__(self):
             self.close()
 
