@@ -147,7 +147,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 				break;
 
 		a[i].e = j; /* use equivalence class for quick compare */
-		if(h[j].len <= t)
+		if (h[j].len <= t)
 			a[i].n = h[j].pos; /* point to head of match list */
 		else
 			a[i].n = -1; /* too popular */
@@ -270,7 +270,7 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 	if (!l.head || !rl)
 		goto nomem;
 
-	for(h = l.base; h != l.head; h++) {
+	for (h = l.base; h != l.head; h++) {
 		m = Py_BuildValue("iiii", h->a1, h->a2, h->b1, h->b2);
 		PyList_SetItem(rl, pos, m);
 		pos++;
@@ -305,7 +305,7 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 		goto nomem;
 
 	/* calculate length of output */
-	for(h = l.base; h != l.head; h++) {
+	for (h = l.base; h != l.head; h++) {
 		if (h->a1 != la || h->b1 != lb)
 			len += 12 + bl[h->b1].l - bl[lb].l;
 		la = h->a2;
@@ -320,7 +320,7 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	rb = PyString_AsString(result);
 	la = lb = 0;
 
-	for(h = l.base; h != l.head; h++) {
+	for (h = l.base; h != l.head; h++) {
 		if (h->a1 != la || h->b1 != lb) {
 			len = bl[h->b1].l - bl[lb].l;
 			*(uint32_t *)(encode)     = htonl(al[la].l - al->l);
@@ -353,3 +353,4 @@ PyMODINIT_FUNC initbdiff(void)
 {
 	Py_InitModule3("bdiff", methods, mdiff_doc);
 }
+

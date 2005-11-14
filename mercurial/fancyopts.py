@@ -1,10 +1,10 @@
 import getopt
 
 def fancyopts(args, options, state):
-    long=[]
-    short=''
-    map={}
-    dt={}
+    long = []
+    short = ''
+    map = {}
+    dt = {}
 
     for s, l, d, c in options:
         pl = l.replace('-', '_')

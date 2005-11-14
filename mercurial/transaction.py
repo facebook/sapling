@@ -12,7 +12,6 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os
-import util
 from i18n import gettext as _
 
 class transaction:

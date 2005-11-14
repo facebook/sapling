@@ -213,7 +213,7 @@ class dirstate:
         unknown = []
 
         for x in files:
-            if x is '.':
+            if x == '.':
                 return self.map.copy()
             if x not in self.map:
                 unknown.append(x)
@@ -296,7 +296,6 @@ class dirstate:
     def walkhelper(self, files, statmatch, dc):
         # recursion free walker, faster than os.walk.
         def findfiles(s):
-            retfiles = []
             work = [s]
             while work:
                 top = work.pop()
