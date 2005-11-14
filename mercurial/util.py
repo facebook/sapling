@@ -158,9 +158,11 @@ def pathto(n1, n2):
     this returns a path in the form used by the local filesystem, not hg.'''
     if not n1: return localpath(n2)
     a, b = n1.split('/'), n2.split('/')
-    a.reverse(), b.reverse()
+    a.reverse()
+    b.reverse()
     while a and b and a[-1] == b[-1]:
-        a.pop(), b.pop()
+        a.pop()
+        b.pop()
     b.reverse()
     return os.sep.join((['..'] * len(a)) + b)
 
@@ -253,7 +255,7 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
             try:
                 pat = '(?:%s)' % regex(k, p, tail)
                 matches.append(re.compile(pat).match)
-            except re.error, inst:
+            except re.error:
                 raise Abort("invalid pattern: %s:%s" % (k, p))
 
         def buildfn(text):

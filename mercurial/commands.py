@@ -644,7 +644,7 @@ def cat(ui, repo, file1, *pats, **opts):
                 n = mf[abs]
             except (hg.RepoError, KeyError):
                 try:
-                    n = r.lookup(rev)
+                    n = r.lookup(rev) # XXX rev undefined!
                 except KeyError, inst:
                     raise util.Abort(_('cannot find file %s in rev %s'), rel, rev)
         else:
@@ -1016,7 +1016,7 @@ def debugrename(ui, repo, file, rev=None):
             change = repo.changelog.read(n)
             m = repo.manifest.read(change[0])
             n = m[relpath(repo, [file])[0]]
-        except hg.RepoError, KeyError:
+        except (hg.RepoError, KeyError):
             n = r.lookup(rev)
     else:
         n = r.tip()
@@ -2470,7 +2470,7 @@ def dispatch(args):
 
     external = []
     for x in u.extensions():
-        def on_exception(Exception, inst):
+        def on_exception(Exception, inst): # XXX Exception is a builtin name!?
             u.warn(_("*** failed to import extension %s\n") % x[1])
             u.warn("%s\n" % inst)
             if "--traceback" in sys.argv[1:]:
