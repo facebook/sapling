@@ -951,12 +951,6 @@ def create_server(repo):
     else:
         return BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
 
-def server(path, name, templates, address, port, use_ipv6=False,
-           accesslog=sys.stdout, errorlog=sys.stderr):
-    httpd = create_server(path, name, templates, address, port, use_ipv6,
-                          accesslog, errorlog) # XXX wrong param count
-    httpd.serve_forever()
-
 # This is a stopgap
 class hgwebdir:
     def __init__(self, config):

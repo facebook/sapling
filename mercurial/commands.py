@@ -634,17 +634,18 @@ def cat(ui, repo, file1, *pats, **opts):
     %p   root-relative path name of file being printed
     """
     mf = {}
-    if opts['rev']:
-        change = repo.changelog.read(repo.lookup(opts['rev']))
+    rev = opts['rev']
+    if rev:
+        change = repo.changelog.read(repo.lookup(rev))
         mf = repo.manifest.read(change[0])
     for src, abs, rel, exact in walk(repo, (file1,) + pats, opts):
         r = repo.file(abs)
-        if opts['rev']:
+        if rev:
             try:
                 n = mf[abs]
             except (hg.RepoError, KeyError):
                 try:
-                    n = r.lookup(rev) # XXX rev undefined!
+                    n = r.lookup(rev)
                 except KeyError, inst:
                     raise util.Abort(_('cannot find file %s in rev %s'), rel, rev)
         else:
@@ -2470,7 +2471,7 @@ def dispatch(args):
 
     external = []
     for x in u.extensions():
-        def on_exception(Exception, inst): # XXX Exception is a builtin name!?
+        def on_exception(exc, inst):
             u.warn(_("*** failed to import extension %s\n") % x[1])
             u.warn("%s\n" % inst)
             if "--traceback" in sys.argv[1:]:
