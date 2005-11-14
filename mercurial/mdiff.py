@@ -32,8 +32,8 @@ def unidiff(a, ad, b, bd, fn, r=None, text=False):
         l = list(difflib.unified_diff(a, b, "a/" + fn, "b/" + fn))
         if not l: return ""
         # difflib uses a space, rather than a tab
-        l[0] = l[0][:-2] + "\t" + ad + "\n"
-        l[1] = l[1][:-2] + "\t" + bd + "\n"
+        l[0] = "%s\t%s\n" % (l[0][:-2], ad)
+        l[1] = "%s\t%s\n" % (l[1][:-2], bd)
 
     for ln in xrange(len(l)):
         if l[ln][-1] != '\n':
