@@ -746,6 +746,7 @@ def clone(ui, source, dest=None, **opts):
     f = repo.opener("hgrc", "w", text=True)
     f.write("[paths]\n")
     f.write("default = %s\n" % abspath)
+    f.close()
 
     if not opts['noupdate']:
         update(ui, repo)
