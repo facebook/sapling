@@ -1286,11 +1286,14 @@ def heads(ui, repo, **opts):
     changesets. They are where development generally takes place and
     are the usual targets for update and merge operations.
     """
-    heads = repo.changelog.heads()
+    if opts['rev']:
+        heads = repo.heads(repo.lookup(rev))
+    else:
+        heads = repo.heads()
     br = None
     if opts['branches']:
-        br = repo.branchlookup(heads)
-    for n in repo.changelog.heads():
+        br = repo.branchlookup(list(heads))
+    for n in heads:
         show_changeset(ui, repo, changenode=n, brinfo=br)
 
 def identify(ui, repo):
@@ -2237,8 +2240,9 @@ table = {
          "hg grep [OPTION]... PATTERN [FILE]..."),
     "heads":
         (heads,
-         [('b', 'branches', None, _('find branch info'))],
-         _('hg heads [-b]')),
+         [('b', 'branches', None, _('find branch info')),
+          ('r', 'rev', None, _('show only heads descendants from rev'))],
+         _('hg heads [-b] [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id": (identify, [], _('hg identify')),
     "import|patch":

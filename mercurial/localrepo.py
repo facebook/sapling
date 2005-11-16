@@ -613,8 +613,12 @@ class localrepository:
                 self.dirstate.update([dest], "a")
             self.dirstate.copy(source, dest)
 
-    def heads(self):
-        return self.changelog.heads()
+    def heads(self, start=nullid):
+        heads = self.changelog.heads(start)
+        # sort the output in rev descending order
+        heads = [(-self.changelog.rev(h), h) for h in heads]
+        heads.sort()
+        return [n for (r, n) in heads]
 
     # branchlookup returns a dict giving a list of branches for
     # each head.  A branch is defined as the tag of a node or

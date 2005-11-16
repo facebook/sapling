@@ -409,25 +409,23 @@ class revlog:
         assert heads
         return (orderedout, roots, heads)
 
-    def heads(self, stop=None):
-        """return the list of all nodes that have no children"""
-        p = {}
-        h = []
-        stoprev = 0
-        if stop and stop in self.nodemap:
-            stoprev = self.rev(stop)
+    def heads(self, start=nullid):
+        """return the list of all nodes that have no children
+        if start is specified, only heads that are children of
+        start will be returned"""
+        reachable = {start: 1}
+        heads = {start: 1}
+        startrev = self.rev(start)
 
-        for r in range(self.count() - 1, -1, -1):
+        for r in xrange(startrev + 1, self.count()):
             n = self.node(r)
-            if n not in p:
-                h.append(n)
-            if n == stop:
-                break
-            if r < stoprev:
-                break
             for pn in self.parents(n):
-                p[pn] = 1
-        return h
+                if pn in reachable:
+                    reachable[n] = 1
+                    heads[n] = 1
+                if pn in heads:
+                    del heads[pn]
+        return heads.keys()
 
     def children(self, node):
         """find the children of a given node"""
