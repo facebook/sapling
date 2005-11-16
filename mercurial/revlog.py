@@ -409,10 +409,15 @@ class revlog:
         assert heads
         return (orderedout, roots, heads)
 
-    def heads(self, start=nullid):
+    def heads(self, start=None):
         """return the list of all nodes that have no children
-        if start is specified, only heads that are children of
-        start will be returned"""
+
+        if start is specified, only heads that are descendants of
+        start will be returned
+
+        """
+        if start is None:
+            start = nullid
         reachable = {start: 1}
         heads = {start: 1}
         startrev = self.rev(start)

@@ -1287,12 +1287,12 @@ def heads(ui, repo, **opts):
     are the usual targets for update and merge operations.
     """
     if opts['rev']:
-        heads = repo.heads(repo.lookup(rev))
+        heads = repo.heads(repo.lookup(opts['rev']))
     else:
         heads = repo.heads()
     br = None
     if opts['branches']:
-        br = repo.branchlookup(list(heads))
+        br = repo.branchlookup(heads)
     for n in heads:
         show_changeset(ui, repo, changenode=n, brinfo=br)
 
@@ -2241,7 +2241,7 @@ table = {
     "heads":
         (heads,
          [('b', 'branches', None, _('find branch info')),
-          ('r', 'rev', None, _('show only heads descendants from rev'))],
+          ('r', 'rev', "", _('show only heads which are descendants of rev'))],
          _('hg heads [-b] [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id": (identify, [], _('hg identify')),

@@ -613,7 +613,7 @@ class localrepository:
                 self.dirstate.update([dest], "a")
             self.dirstate.copy(source, dest)
 
-    def heads(self, start=nullid):
+    def heads(self, start=None):
         heads = self.changelog.heads(start)
         # sort the output in rev descending order
         heads = [(-self.changelog.rev(h), h) for h in heads]
