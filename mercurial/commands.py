@@ -2651,6 +2651,8 @@ def dispatch(args):
     except:
         u.warn(_("** unknown exception encountered, details follow\n"))
         u.warn(_("** report bug details to mercurial@selenic.com\n"))
+        u.warn(_("** Mercurial Distributed SCM (version %s)\n")
+               % version.get_version())
         raise
 
     sys.exit(-1)
