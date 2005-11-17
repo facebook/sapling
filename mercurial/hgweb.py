@@ -1013,7 +1013,12 @@ class hgwebdir:
         if virtual:
             real = dict(self.repos).get(virtual)
             if real:
-                hgweb(real).run(req)
+                try:
+                    hgweb(real).run(req)
+                except IOError, inst:
+                    req.write(tmpl("error", error=inst.strerror))
+                except hg.RepoError, inst:
+                    req.write(tmpl("error", error=str(inst)))
             else:
                 req.write(tmpl("notfound", repo=virtual))
         else:
