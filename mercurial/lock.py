@@ -11,7 +11,7 @@ import util
 class LockHeld(Exception):
     pass
 
-class lock:
+class lock(object):
     def __init__(self, file, wait=1, releasefn=None):
         self.f = file
         self.held = 0

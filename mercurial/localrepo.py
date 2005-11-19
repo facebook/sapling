@@ -12,7 +12,7 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "re lock transaction tempfile stat mdiff errno")
 
-class localrepository:
+class localrepository(object):
     def __init__(self, ui, path=None, create=0):
         if not path:
             p = os.getcwd()

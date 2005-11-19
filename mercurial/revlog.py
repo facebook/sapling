@@ -52,7 +52,7 @@ def decompress(bin):
 
 indexformat = ">4l20s20s20s"
 
-class lazyparser:
+class lazyparser(object):
     """
     this class avoids the need to parse the entirety of large indices
 
@@ -94,7 +94,7 @@ class lazyparser:
             self.map[e[6]] = i
             i += 1
 
-class lazyindex:
+class lazyindex(object):
     """a lazy version of the index array"""
     def __init__(self, parser):
         self.p = parser
@@ -114,7 +114,7 @@ class lazyindex:
     def trunc(self, pos):
         self.p.trunc(pos)
 
-class lazymap:
+class lazymap(object):
     """a lazy version of the node map"""
     def __init__(self, parser):
         self.p = parser
@@ -152,7 +152,7 @@ class lazymap:
 
 class RevlogError(Exception): pass
 
-class revlog:
+class revlog(object):
     """
     the underlying revision storage object
 

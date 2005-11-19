@@ -71,7 +71,7 @@ def get_mtime(repo_path):
     else:
         return os.stat(hg_path).st_mtime
 
-class hgrequest:
+class hgrequest(object):
     def __init__(self, inp=None, out=None, env=None):
         self.inp = inp or sys.stdin
         self.out = out or sys.stdout
@@ -104,7 +104,7 @@ class hgrequest:
             headers.append(('Content-length', str(size)))
         self.header(headers)
 
-class templater:
+class templater(object):
     def __init__(self, mapfile, filters={}, defaults={}):
         self.cache = {}
         self.map = {}
@@ -175,7 +175,7 @@ common_filters = {
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
     }
 
-class hgweb:
+class hgweb(object):
     def __init__(self, repo, name=None):
         if type(repo) == type(""):
             self.repo = hg.repository(ui.ui(), repo)
@@ -952,7 +952,7 @@ def create_server(repo):
         return BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
 
 # This is a stopgap
-class hgwebdir:
+class hgwebdir(object):
     def __init__(self, config):
         def cleannames(items):
             return [(name.strip('/'), path) for name, path in items]

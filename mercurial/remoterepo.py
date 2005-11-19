@@ -5,11 +5,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-class remoterepository:
+class remoterepository(object):
     def local(self):
         return False
 
-class remotelock:
+class remotelock(object):
     def __init__(self, repo):
         self.repo = repo
     def release(self):

@@ -26,7 +26,7 @@ def check_clean(ui, repo):
             ui.warn("Repository is not clean, please commit or revert\n")
             sys.exit(1)
 
-class bisect:
+class bisect(object):
     """dichotomic search in the DAG of changesets"""
     def __init__(self, ui, repo):
         self.repo = repo
