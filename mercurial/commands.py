@@ -1475,9 +1475,9 @@ def log(ui, repo, *pats, **opts):
     Print the revision history of the specified files or the entire project.
 
     By default this command outputs: changeset id and hash, tags,
-    parents, user, date and time, and a summary for each commit. The
-    -v switch adds some more detail, such as changed files, manifest
-    hashes or message signatures.
+    non-trivial parents, user, date and time, and a summary for each
+    commit. When the -v/--verbose switch is used, the list of changed
+    files and full commit message is shown.
     """
     class dui:
         # Implement and delegate some ui protocol.  Save hunks of
