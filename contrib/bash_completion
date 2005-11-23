@@ -2,18 +2,25 @@ shopt -s extglob
 
 _hg_commands()
 {
-    local commands="$(hg -v help | sed -e '1,/^list of commands:/d' \
-				       -e '/^global options:/,$d' \
-				       -e '/^ [^ ]/!d; s/[,:]//g;')"
+    local all commands result
+
+    all=($(hg --debug help | sed -e '1,/^list of commands:/d' \
+				 -e '/^global options:/,$d' \
+				 -e '/^ [^ ]/!d; s/^ //; s/[,:]//g;'))
+    
+    commands="${all[*]##debug*}"
+    result=$(compgen -W "${commands[*]}" -- "$cur")
 
     # hide debug commands from users, but complete them if
-    # specifically asked for
-    if [[ "$cur" == de* ]]; then
-	commands="$commands debugcheckstate debugstate debugindex"
-	commands="$commands debugindexdot debugwalk debugdata"
-	commands="$commands debugancestor debugconfig debugrename"
+    # there is no other possible command
+    if [ "$result" = "" ]; then
+	local debug
+	debug=(${all[*]##!(debug*)})
+	debug="${debug[*]/g/debug}"
+	result=$(compgen -W "$debug" -- "$cur")
     fi
-    COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W "$commands" -- "$cur") )
+
+    COMPREPLY=(${COMPREPLY[@]:-} $result)
 }
 
 _hg_paths()
