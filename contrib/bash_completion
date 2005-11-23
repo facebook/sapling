@@ -7,7 +7,7 @@ _hg_commands()
     all=($(hg --debug help | sed -e '1,/^list of commands:/d' \
 				 -e '/^global options:/,$d' \
 				 -e '/^ [^ ]/!d; s/^ //; s/[,:]//g;'))
-    
+
     commands="${all[*]##debug*}"
     result=$(compgen -W "${commands[*]}" -- "$cur")
 
@@ -168,7 +168,7 @@ _hg()
 	    fi
 	;;
 	*)
-            COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -- "$cur" ))
+	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -- "$cur" ))
 	;;
     esac
 
