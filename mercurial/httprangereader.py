@@ -7,7 +7,7 @@
 
 import byterange, urllib2
 
-class httprangereader:
+class httprangereader(object):
     def __init__(self, url):
         self.url = url
         self.pos = 0

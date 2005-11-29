@@ -13,7 +13,7 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "time bisect stat util re errno")
 
-class dirstate:
+class dirstate(object):
     def __init__(self, opener, ui, root):
         self.opener = opener
         self.root = root

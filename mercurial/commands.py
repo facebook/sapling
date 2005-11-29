@@ -678,7 +678,7 @@ def clone(ui, source, dest=None, **opts):
 
     dest = os.path.realpath(dest)
 
-    class Dircleanup:
+    class Dircleanup(object):
         def __init__(self, dir_):
             self.rmtree = shutil.rmtree
             self.dir_ = dir_
@@ -1188,7 +1188,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             yield linenum, mstart - lstart, mend - lstart, body[lstart:lend]
             begin = lend + 1
 
-    class linestate:
+    class linestate(object):
         def __init__(self, line, linenum, colstart, colend):
             self.line = line
             self.linenum = linenum
@@ -1479,7 +1479,7 @@ def log(ui, repo, *pats, **opts):
     commit. When the -v/--verbose switch is used, the list of changed
     files and full commit message is shown.
     """
-    class dui:
+    class dui(object):
         # Implement and delegate some ui protocol.  Save hunks of
         # output for later display in the desired order.
         def __init__(self, ui):

@@ -14,7 +14,7 @@
 import os
 from i18n import gettext as _
 
-class transaction:
+class transaction(object):
     def __init__(self, report, opener, journal, after=None):
         self.journal = None
 
