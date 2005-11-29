@@ -2002,8 +2002,10 @@ def tag(ui, repo, name, rev=None, **opts):
     else:
         r = hex(repo.changelog.tip())
 
-    if name.find(revrangesep) >= 0:
-        raise util.Abort(_("'%s' cannot be used in a tag name") % revrangesep)
+    disallowed = (revrangesep, '\r', '\n')
+    for c in disallowed:
+        if name.find(c) >= 0:
+            raise util.Abort(_("%s cannot be used in a tag name") % repr(c))
 
     if opts['local']:
         repo.opener("localtags", "a").write("%s %s\n" % (r, name))
