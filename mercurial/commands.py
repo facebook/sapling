@@ -33,13 +33,17 @@ def relpath(repo, args):
         return [util.normpath(os.path.join(cwd, x)) for x in args]
     return args
 
-def matchpats(repo, cwd, pats=[], opts={}, head=''):
+def matchpats(repo, pats=[], opts={}, head=''):
+    cwd = repo.getcwd()
+    if not pats and cwd:
+        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
+        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
+        cwd = ''
     return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
-                        opts.get('exclude'), head)
+                        opts.get('exclude'), head) + (cwd,)
 
 def makewalk(repo, pats, opts, head=''):
-    cwd = repo.getcwd()
-    files, matchfn, anypats = matchpats(repo, cwd, pats, opts, head)
+    files, matchfn, anypats, cwd = matchpats(repo, pats, opts, head)
     exact = dict(zip(files, files))
     def walk():
         for src, fn in repo.walk(files=files, match=matchfn):
@@ -51,7 +55,7 @@ def walk(repo, pats, opts, head=''):
     for r in results:
         yield r
 
-def walkchangerevs(ui, repo, cwd, pats, opts):
+def walkchangerevs(ui, repo, pats, opts):
     '''Iterate over files and the revs they changed in.
 
     Callers most commonly need to iterate backwards over the history
@@ -81,12 +85,7 @@ def walkchangerevs(ui, repo, cwd, pats, opts):
     if repo.changelog.count() == 0:
         return [], False
 
-    cwd = repo.getcwd()
-    if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
-        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    files, matchfn, anypats = matchpats(repo, (pats and cwd) or '',
-                                        pats, opts)
+    files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
     revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
     wanted = {}
     slowpath = anypats
@@ -483,8 +482,7 @@ def add(ui, repo, *pats, **opts):
 
     The files will be added to the repository at the next commit.
 
-    If no names are given, add all files in the current directory and
-    its subdirectories.
+    If no names are given, add all files in the repository.
     """
 
     names = []
@@ -759,7 +757,7 @@ def commit(ui, repo, *pats, **opts):
     Commit changes to the given files into the repository.
 
     If a list of files is omitted, all changes reported by "hg status"
-    from the root of the repository will be commited.
+    will be commited.
 
     The HGEDITOR or EDITOR environment variables are used to start an
     editor to add a commit comment.
@@ -782,12 +780,7 @@ def commit(ui, repo, *pats, **opts):
 
     if opts['addremove']:
         addremove(ui, repo, *pats, **opts)
-    cwd = repo.getcwd()
-    if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
-        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    fns, match, anypats = matchpats(repo, (pats and repo.getcwd()) or '',
-                                    pats, opts)
+    fns, match, anypats, cwd = matchpats(repo, pats, opts)
     if pats:
         c, a, d, u = repo.changes(files=fns, match=match)
         files = c + a + [fn for fn in d if repo.dirstate.state(fn) == 'r']
@@ -1097,7 +1090,7 @@ def debugwalk(ui, repo, *pats, **opts):
         ui.write("%s\n" % line.rstrip())
 
 def diff(ui, repo, *pats, **opts):
-    """diff working directory (or selected files)
+    """diff repository (or selected files)
 
     Show differences between revisions for the specified files.
 
@@ -1123,7 +1116,7 @@ def diff(ui, repo, *pats, **opts):
     if len(revs) > 2:
         raise util.Abort(_("too many revisions to diff"))
 
-    fns, matchfn, anypats = matchpats(repo, repo.getcwd(), pats, opts)
+    fns, matchfn, anypats, cwd = matchpats(repo, pats, opts)
 
     dodiff(sys.stdout, ui, repo, node1, node2, fns, match=matchfn,
            text=opts['text'])
@@ -1294,7 +1287,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     fstate = {}
     skip = {}
-    changeiter, getchange = walkchangerevs(ui, repo, repo.getcwd(), pats, opts)
+    changeiter, getchange = walkchangerevs(ui, repo, pats, opts)
     count = 0
     incrementing = False
     for st, rev, fns in changeiter:
@@ -1557,12 +1550,7 @@ def log(ui, repo, *pats, **opts):
                 self.write(*args)
         def __getattr__(self, key):
             return getattr(self.ui, key)
-    cwd = repo.getcwd()
-    if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
-        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    changeiter, getchange = walkchangerevs(ui, repo, (pats and cwd) or '',
-                                           pats, opts)
+    changeiter, getchange = walkchangerevs(ui, repo, pats, opts)
     for st, rev, fns in changeiter:
         if st == 'window':
             du = dui(ui)
@@ -1871,13 +1859,12 @@ def revert(ui, repo, *pats, **opts):
 
     If names are given, all files matching the names are reverted.
 
-    If no names are given, all files in the current directory and
-    its subdirectories are reverted.
+    If no arguments are given, all files in the repository are reverted.
     """
     node = opts['rev'] and repo.lookup(opts['rev']) or \
            repo.dirstate.parents()[0]
 
-    files, choose, anypats = matchpats(repo, repo.getcwd(), pats, opts)
+    files, choose, anypats, cwd = matchpats(repo, pats, opts)
     (c, a, d, u) = repo.changes(match=choose)
     repo.forget(a)
     repo.undelete(d)
@@ -2000,9 +1987,8 @@ def serve(ui, repo, **opts):
 def status(ui, repo, *pats, **opts):
     """show changed files in the working directory
 
-    Show changed files in the working directory.  If no names are
-    given, all files are shown.  Otherwise, only files matching the
-    given names are shown.
+    Show changed files in the repository.  If names are
+    given, only files that match are shown.
 
     The codes used to show the status of files are:
     M = modified
@@ -2011,8 +1997,7 @@ def status(ui, repo, *pats, **opts):
     ? = not tracked
     """
 
-    cwd = repo.getcwd()
-    files, matchfn, anypats = matchpats(repo, cwd, pats, opts)
+    files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
     (c, a, d, u) = [[util.pathto(cwd, x) for x in n]
                     for n in repo.changes(files=files, match=matchfn)]
 

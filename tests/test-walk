@@ -20,14 +20,14 @@ hg addremove
 hg commit -m "commit #0" -d "0 0"
 hg debugwalk
 cd mammals
-hg debugwalk
+hg debugwalk .
 hg debugwalk Procyonidae
 cd Procyonidae
-hg debugwalk
+hg debugwalk .
 hg debugwalk ..
 cd ..
 hg debugwalk ../beans
-hg debugwalk
+hg debugwalk .
 cd ..
 hg debugwalk -Ibeans
 hg debugwalk 'glob:mammals/../beans/b*'

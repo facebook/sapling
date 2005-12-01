@@ -6,7 +6,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  annotate   show changeset information per file line
  clone      make a copy of an existing repository
  commit     commit the specified files or all outstanding changes
- diff       diff working directory (or selected files)
+ diff       diff repository (or selected files)
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
@@ -22,7 +22,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  annotate   show changeset information per file line
  clone      make a copy of an existing repository
  commit     commit the specified files or all outstanding changes
- diff       diff working directory (or selected files)
+ diff       diff repository (or selected files)
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
@@ -46,7 +46,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
  copy        mark files as copied for the next commit
- diff        diff working directory (or selected files)
+ diff        diff repository (or selected files)
  export      dump the header and diffs for one or more changesets
  forget      don't add the specified files on the next commit
  grep        search for a pattern in specified files and revisions
@@ -88,7 +88,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  clone       make a copy of an existing repository
  commit      commit the specified files or all outstanding changes
  copy        mark files as copied for the next commit
- diff        diff working directory (or selected files)
+ diff        diff repository (or selected files)
  export      dump the header and diffs for one or more changesets
  forget      don't add the specified files on the next commit
  grep        search for a pattern in specified files and revisions
@@ -130,8 +130,7 @@ add the specified files on the next commit
 
     The files will be added to the repository at the next commit.
 
-    If no names are given, add all files in the current directory and
-    its subdirectories.
+    If no names are given, add all files in the repository.
 
 options:
 
@@ -146,8 +145,7 @@ add the specified files on the next commit
 
     The files will be added to the repository at the next commit.
 
-    If no names are given, add all files in the current directory and
-    its subdirectories.
+    If no names are given, add all files in the repository.
 
 options:
 
@@ -155,7 +153,7 @@ options:
  -X --exclude  exclude names matching the given patterns
 hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...
 
-diff working directory (or selected files)
+diff repository (or selected files)
 
     Show differences between revisions for the specified files.
 
@@ -181,9 +179,8 @@ hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
 
-    Show changed files in the working directory.  If no names are
-    given, all files are shown.  Otherwise, only files matching the
-    given names are shown.
+    Show changed files in the repository.  If names are
+    given, only files that match are shown.
 
     The codes used to show the status of files are:
     M = modified
@@ -215,7 +212,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  annotate   show changeset information per file line
  clone      make a copy of an existing repository
  commit     commit the specified files or all outstanding changes
- diff       diff working directory (or selected files)
+ diff       diff repository (or selected files)
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
@@ -236,7 +233,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  annotate   show changeset information per file line
  clone      make a copy of an existing repository
  commit     commit the specified files or all outstanding changes
- diff       diff working directory (or selected files)
+ diff       diff repository (or selected files)
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
