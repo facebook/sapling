@@ -821,16 +821,18 @@ def docopy(ui, repo, pats, opts):
             ui.warn(_('%s: not overwriting - %s collides with %s\n') %
                     (reltarget, abssrc, prevsrc))
             return
-        elif os.path.exists(reltarget):
-            if opts['force']:
-                os.unlink(reltarget)
-            else:
+        if (not opts['after'] and os.path.exists(reltarget) or
+            opts['after'] and repo.dirstate.state(abstarget) not in '?r'):
+            if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %
                         reltarget)
                 return
-        if ui.verbose or not exact:
-            ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
-        if not opts['after']:
+            if not opts['after']:
+                os.unlink(reltarget)
+        if opts['after']:
+            if not os.path.exists(reltarget):
+                return
+        else:
             targetdir = os.path.dirname(reltarget) or '.'
             if not os.path.isdir(targetdir):
                 os.makedirs(targetdir)
@@ -847,9 +849,63 @@ def docopy(ui, repo, pats, opts):
                             (relsrc, inst.strerror))
                     errors += 1
                     return
+        if ui.verbose or not exact:
+            ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
         repo.copy(abssrc, abstarget)
         copied.append((abssrc, relsrc, exact))
+
+    def targetpathfn(pat, dest, srcs):
+        if os.path.isdir(pat):
+            if pat.endswith(os.sep):
+                pat = pat[:-len(os.sep)]
+            if destdirexists:
+                striplen = len(os.path.split(pat)[0])
+            else:
+                striplen = len(pat)
+            if striplen:
+                striplen += len(os.sep)
+            res = lambda p: os.path.join(dest, p[striplen:])
+        elif destdirexists:
+            res = lambda p: os.path.join(dest, os.path.basename(p))
+        else:
+            res = lambda p: dest
+        return res
+
+    def targetpathafterfn(pat, dest, srcs):
+        if util.patkind(pat, None)[0]:
+            # a mercurial pattern
+            res = lambda p: os.path.join(dest, os.path.basename(p))
+        elif len(util.canonpath(repo.root, cwd, pat)) < len(srcs[0][0]):
+            # A directory. Either the target path contains the last
+            # component of the source path or it does not.
+            def evalpath(striplen):
+                score = 0
+                for s in srcs:
+                    t = os.path.join(dest, s[1][striplen:])
+                    if os.path.exists(t):
+                        score += 1
+                return score
+
+            if pat.endswith(os.sep):
+                pat = pat[:-len(os.sep)]
+            striplen = len(pat) + len(os.sep)
+            if os.path.isdir(os.path.join(dest, os.path.split(pat)[1])):
+                score = evalpath(striplen)
+                striplen1 = len(os.path.split(pat)[0])
+                if striplen1:
+                    striplen1 += len(os.sep)
+                if evalpath(striplen1) > score:
+                    striplen = striplen1
+            res = lambda p: os.path.join(dest, p[striplen:])
+        else:
+            # a file
+            if destdirexists:
+                res = lambda p: os.path.join(dest, os.path.basename(p))
+            else:
+                res = lambda p: dest
+        return res
+
 
     pats = list(pats)
     if not pats:
@@ -858,31 +914,31 @@ def docopy(ui, repo, pats, opts):
         raise util.Abort(_('no destination specified'))
     dest = pats.pop()
     destdirexists = os.path.isdir(dest)
-    if (len(pats) > 1 or not os.path.exists(pats[0])) and not destdirexists:
+    if (len(pats) > 1 or util.patkind(pats[0], None)[0]) and not destdirexists:
         raise util.Abort(_('with multiple sources, destination must be an '
                          'existing directory'))
-
+    if opts['after']:
+        tfn = targetpathafterfn
+    else:
+        tfn = targetpathfn
+    copylist = []
     for pat in pats:
-        if os.path.isdir(pat):
-            if destdirexists:
-                striplen = len(os.path.split(pat)[0])
-            else:
-                striplen = len(pat)
-            if striplen:
-                striplen += len(os.sep)
-            targetpath = lambda p: os.path.join(dest, p[striplen:])
-        elif destdirexists:
-            targetpath = lambda p: os.path.join(dest, os.path.basename(p))
-        else:
-            targetpath = lambda p: dest
+        srcs = []
         for tag, abssrc, relsrc, exact in walk(repo, [pat], opts):
             if okaytocopy(abssrc, relsrc, exact):
-                copy(abssrc, relsrc, targetpath(abssrc), exact)
+                srcs.append((abssrc, relsrc, exact))
+        if not srcs:
+            continue
+        copylist.append((tfn(pat, dest, srcs), srcs))
+    if not copylist:
+        raise util.Abort(_('no files to copy'))
+
+    for targetpath, srcs in copylist:
+        for abssrc, relsrc, exact in srcs:
+            copy(abssrc, relsrc, targetpath(relsrc), exact)
 
     if errors:
         ui.warn(_('(consider using --after)\n'))
-    if len(copied) == 0:
-        raise util.Abort(_('no files to copy'))
     return errors, copied
 
 def copy(ui, repo, *pats, **opts):
