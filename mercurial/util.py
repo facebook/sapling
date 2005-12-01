@@ -106,6 +106,13 @@ class Abort(Exception):
 def always(fn): return True
 def never(fn): return False
 
+def patkind(name, dflt_pat='glob'):
+    """Split a string into an optional pattern kind prefix and the
+    actual pattern."""
+    for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
+        if name.startswith(prefix + ':'): return name.split(':', 1)
+    return dflt_pat, name
+
 def globre(pat, head='^', tail='$'):
     "convert a glob pattern into a regexp"
     i, n = 0, len(pat)
@@ -219,11 +226,6 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
     todo:
     make head regex a rooted bool
     """
-
-    def patkind(name, dflt_pat='glob'):
-        for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
-            if name.startswith(prefix + ':'): return name.split(':', 1)
-        return dflt_pat, name
 
     def contains_glob(name):
         for c in name:
