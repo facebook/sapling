@@ -335,9 +335,16 @@ class dirstate(object):
             try:
                 st = os.lstat(f)
             except OSError, inst:
-                if ff not in dc: self.ui.warn('%s: %s\n' % (
-                    util.pathto(self.getcwd(), ff),
-                    inst.strerror))
+                nf = util.normpath(ff)
+                found = False
+                for fn in dc:
+                    if nf == fn or (fn.startswith(nf) and fn[len(nf)] == '/'):
+                        found = True
+                        break
+                if not found:
+                    self.ui.warn('%s: %s\n' % (
+                                 util.pathto(self.getcwd(), ff),
+                                 inst.strerror))
                 continue
             if stat.S_ISDIR(st.st_mode):
                 cmp1 = (lambda x, y: cmp(x[1], y[1]))
