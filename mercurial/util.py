@@ -175,7 +175,10 @@ def pathto(n1, n2):
 
 def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
-    rootsep = root + os.sep
+    if root == os.sep:
+        rootsep = os.sep
+    else:
+    	rootsep = root + os.sep
     name = myname
     if not name.startswith(os.sep):
         name = os.path.join(root, cwd, name)
