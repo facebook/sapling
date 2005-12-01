@@ -305,7 +305,7 @@ class dirstate(object):
                 nd = util.normpath(top[len(self.root) + 1:])
                 if nd == '.': nd = ''
                 for f in names:
-                    np = os.path.join(nd, f)
+                    np = util.pconvert(os.path.join(nd, f))
                     if seen(np):
                         continue
                     p = os.path.join(top, f)
@@ -316,12 +316,12 @@ class dirstate(object):
                         if statmatch(ds, st):
                             work.append(p)
                         if statmatch(np, st) and np in dc:
-                            yield 'm', util.pconvert(np), st
+                            yield 'm', np, st
                     elif statmatch(np, st):
                         if self.supported_type(np, st):
-                            yield 'f', util.pconvert(np), st
+                            yield 'f', np, st
                         elif np in dc:
-                            yield 'm', util.pconvert(np), st
+                            yield 'm', np, st
 
         known = {'.hg': 1}
         def seen(fn):
