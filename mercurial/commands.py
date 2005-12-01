@@ -2491,12 +2491,11 @@ def parse(ui, args):
 
     if args:
         cmd, args = args[0], args[1:]
+        aliases, i = find(cmd)
+        cmd = aliases[0]
         defaults = ui.config("defaults", cmd)
         if defaults:
             args = defaults.split() + args
-
-        aliases, i = find(cmd)
-        cmd = aliases[0]
         c = list(i[1])
     else:
         cmd = None
