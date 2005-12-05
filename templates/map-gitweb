@@ -20,7 +20,7 @@ filerevision = filerevision-gitweb.tmpl
 fileannotate = fileannotate-gitweb.tmpl
 filediff = filediff-gitweb.tmpl
 filelog = filelog-gitweb.tmpl
-fileline = "<div class="pre"><a id="l#linenumber#" href="#l#linenumber#" class="linenr">   #linenumber#</a> #line|escape#</div>"
+fileline = "<div style="font-family:monospace; white-space: pre;" class="parity#parity#"><span class="linenr">   #linenumber#</span> #line|escape#</div>"
 filelogentry = filelogentry-gitweb.tmpl
 annotateline = "<tr class="parity#parity#"><td class="annotate"><a href="?cmd=changeset;node=#node#;style=gitweb">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>"
 difflineplus = "<div class="pre" style="color:#008800;">#line|escape#</div>"
