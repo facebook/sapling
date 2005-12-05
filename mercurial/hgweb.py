@@ -632,6 +632,7 @@ class hgweb(object):
             for k,n in i:
                 yield {"parity": parity,
                        "tag": k,
+		       "manifest": hex(cl.read(n)[0]),
 		       "date": cl.read(n)[2],
                        "node": hex(n)}
                 parity = 1 - parity

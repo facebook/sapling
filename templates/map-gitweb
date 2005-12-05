@@ -32,7 +32,7 @@ changesetparent = "<tr><td>parent</td><td style="font-family:monospace"><a class
 filerevparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=file;file=#file#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
 fileannotateparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=annotate;file=#file#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
 tags = tags-gitweb.tmpl
-tagentry = "<tr class="parity#parity#"><td><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#tag#</b></a></td><td class="link"><a href="?cmd=changeset;node=#node|short#;style=gitweb">changeset</a> | <a href="?cmd=changelog;rev=#node|short#;style=gitweb">changelog</a> |  <a href="?cmd=manifest;manifest=#manifest|short#;path=/;style=gitweb">manifest</a></td></tr>"
+tagentry = "<tr class="parity#parity#"><td><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#tag#</b></a></td><td class="link"><a href="?cmd=changeset;node=#node|short#;style=gitweb">changeset</a> | <a href="?cmd=changelog;rev=#node|short#;style=gitweb">changelog</a> |  <a href="?mf=#manifest|short#;path=/;style=gitweb">manifest</a></td></tr>"
 diffblock = "#lines#"
 changelogtag = "<tr><th class="tag">tag:</th><td class="tag">#tag#</td></tr>"
 changesettag = "<tr><td>tag</td><td>#tag#</td></tr>"
