@@ -632,7 +632,7 @@ class hgweb(object):
             for k,n in i:
                 yield {"parity": parity,
                        "tag": k,
-		       "manifest": hex(cl.read(n)[0]),
+		       "tagmanifest": hex(cl.read(n)[0]),
 		       "date": cl.read(n)[2],
                        "node": hex(n)}
                 parity = 1 - parity
@@ -668,7 +668,7 @@ class hgweb(object):
                              tag = k,
                              node = hex(n),
                              date = t,
-                             manifest = hex(m))
+                             tagmanifest = hex(m))
                 parity = 1 - parity
         
         def changelist(**map):
