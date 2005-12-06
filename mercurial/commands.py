@@ -42,16 +42,16 @@ def matchpats(repo, pats=[], opts={}, head=''):
     return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
                         opts.get('exclude'), head) + (cwd,)
 
-def makewalk(repo, pats, opts, head=''):
+def makewalk(repo, pats, opts, node=None, head=''):
     files, matchfn, anypats, cwd = matchpats(repo, pats, opts, head)
     exact = dict(zip(files, files))
     def walk():
-        for src, fn in repo.walk(files=files, match=matchfn):
+        for src, fn in repo.walk(node=node, files=files, match=matchfn):
             yield src, fn, util.pathto(cwd, fn), fn in exact
     return files, matchfn, walk()
 
-def walk(repo, pats, opts, head=''):
-    files, matchfn, results = makewalk(repo, pats, opts, head)
+def walk(repo, pats, opts, node=None, head=''):
+    files, matchfn, results = makewalk(repo, pats, opts, node, head)
     for r in results:
         yield r
 
@@ -634,20 +634,14 @@ def cat(ui, repo, file1, *pats, **opts):
     mf = {}
     rev = opts['rev']
     if rev:
-        change = repo.changelog.read(repo.lookup(rev))
-        mf = repo.manifest.read(change[0])
-    for src, abs, rel, exact in walk(repo, (file1,) + pats, opts):
+        node = repo.lookup(rev)
+    else:
+        node = repo.changelog.tip()
+    change = repo.changelog.read(node)
+    mf = repo.manifest.read(change[0])
+    for src, abs, rel, exact in walk(repo, (file1,) + pats, opts, node):
         r = repo.file(abs)
-        if rev:
-            try:
-                n = mf[abs]
-            except (hg.RepoError, KeyError):
-                try:
-                    n = r.lookup(rev)
-                except KeyError, inst:
-                    raise util.Abort(_('cannot find file %s in rev %s'), rel, rev)
-        else:
-            n = r.tip()
+        n = mf[abs]
         fp = make_file(repo, r, opts['output'], node=n, pathname=abs)
         fp.write(r.read(n))
 

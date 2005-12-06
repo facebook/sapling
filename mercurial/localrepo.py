@@ -462,8 +462,14 @@ class localrepository(object):
 
     def walk(self, node=None, files=[], match=util.always):
         if node:
+            fdict = dict.fromkeys(files)
             for fn in self.manifest.read(self.changelog.read(node)[0]):
-                if match(fn): yield 'm', fn
+                fdict.pop(fn, None)
+                if match(fn):
+                    yield 'm', fn
+            for fn in fdict:
+                self.ui.warn(_('%s: No such file in rev %s\n') % (
+                    util.pathto(self.getcwd(), fn), short(node)))
         else:
             for src, fn in self.dirstate.walk(files, match):
                 yield src, fn
