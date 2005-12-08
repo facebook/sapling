@@ -31,10 +31,12 @@ class statichttprepository(localrepo.localrepository):
         self.path = (path + "/.hg")
         self.ui = ui
         self.opener = opener(self.path)
-        self.manifest = manifest.manifest(self.opener)
-        self.changelog = changelog.changelog(self.opener)
+        self.manifest = manifest.manifest(self.opener, local=self.local())
+        self.changelog = changelog.changelog(self.opener, local=self.local())
         self.tagscache = None
         self.nodetagscache = None
+        self.encodepats = None
+        self.decodepats = None
 
     def dev(self):
         return -1

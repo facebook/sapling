@@ -11,10 +11,11 @@ from demandload import *
 demandload(globals(), "bdiff")
 
 class filelog(revlog):
-    def __init__(self, opener, path):
+    def __init__(self, opener, path, local=True):
         revlog.__init__(self, opener,
                         os.path.join("data", self.encodedir(path + ".i")),
-                        os.path.join("data", self.encodedir(path + ".d")))
+                        os.path.join("data", self.encodedir(path + ".d")),
+                        local=local)
 
     # This avoids a collision between a file named foo and a dir named
     # foo.i or foo.d
