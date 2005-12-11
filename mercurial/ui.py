@@ -10,7 +10,7 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "re socket sys util")
 
-class ui:
+class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True):
         self.overlay = {}

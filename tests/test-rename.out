@@ -1,0 +1,183 @@
+# rename a single file
+A d2/c
+R d1/d11/a1
+# rename --after a single file
+A d2/c
+R d1/d11/a1
+# move a single file to an existing directory
+A d2/a1
+R d1/d11/a1
+# move --after a single file to an existing directory
+A d2/a1
+R d1/d11/a1
+# rename a file using a relative path
+A d1/d11/e
+R d2/b
+# rename --after a file using a relative path
+A d1/d11/e
+R d2/b
+# rename directory d1 as d3
+copying d1/a to d3/a
+copying d1/b to d3/b
+copying d1/ba to d3/ba
+copying d1/d11/a1 to d3/d11/a1
+removing d1/a
+removing d1/b
+removing d1/ba
+removing d1/d11/a1
+A d3/a
+A d3/b
+A d3/ba
+A d3/d11/a1
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1
+# rename --after directory d1 as d3
+copying d1/a to d3/a
+copying d1/b to d3/b
+copying d1/ba to d3/ba
+copying d1/d11/a1 to d3/d11/a1
+removing d1/a
+removing d1/b
+removing d1/ba
+removing d1/d11/a1
+A d3/a
+A d3/b
+A d3/ba
+A d3/d11/a1
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1
+# move a directory using a relative path
+copying ../d1/d11/a1 to d3/d11/a1
+removing ../d1/d11/a1
+A d2/d3/d11/a1
+R d1/d11/a1
+# move --after a directory using a relative path
+copying ../d1/d11/a1 to d3/d11/a1
+removing ../d1/d11/a1
+A d2/d3/d11/a1
+R d1/d11/a1
+# move directory d1/d11 to an existing directory d2 (removes empty d1)
+copying d1/d11/a1 to d2/d11/a1
+removing d1/d11/a1
+A d2/d11/a1
+R d1/d11/a1
+# move directories d1 and d2 to a new directory d3
+copying d1/a to d3/d1/a
+copying d1/b to d3/d1/b
+copying d1/ba to d3/d1/ba
+copying d1/d11/a1 to d3/d1/d11/a1
+copying d2/b to d3/d2/b
+removing d1/a
+removing d1/b
+removing d1/ba
+removing d1/d11/a1
+removing d2/b
+A d3/d1/a
+A d3/d1/b
+A d3/d1/ba
+A d3/d1/d11/a1
+A d3/d2/b
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1
+R d2/b
+# move --after directories d1 and d2 to a new directory d3
+copying d1/a to d3/d1/a
+copying d1/b to d3/d1/b
+copying d1/ba to d3/d1/ba
+copying d1/d11/a1 to d3/d1/d11/a1
+copying d2/b to d3/d2/b
+removing d1/a
+removing d1/b
+removing d1/ba
+removing d1/d11/a1
+removing d2/b
+A d3/d1/a
+A d3/d1/b
+A d3/d1/ba
+A d3/d1/d11/a1
+A d3/d2/b
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1
+R d2/b
+# move everything under directory d1 to existing directory d2, do not
+# overwrite existing files (d2/b)
+d2/b: not overwriting - file exists
+copying d1/d11/a1 to d2/d11/a1
+removing d1/d11/a1
+A d2/a
+A d2/ba
+A d2/d11/a1
+R d1/a
+R d1/ba
+R d1/d11/a1
+1c1
+< d1/b
+---
+> d2/b
+# attempt to move potentially more than one file into a non-existent
+# directory
+abort: with multiple sources, destination must be an existing directory
+# move every file under d1 to d2/d21 (glob)
+copying d1/a to d2/d21/a
+copying d1/b to d2/d21/b
+copying d1/ba to d2/d21/ba
+copying d1/d11/a1 to d2/d21/a1
+removing d1/a
+removing d1/b
+removing d1/ba
+removing d1/d11/a1
+A d2/d21/a
+A d2/d21/a1
+A d2/d21/b
+A d2/d21/ba
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1
+# move --after some files under d1 to d2/d21 (glob)
+copying d1/a to d2/d21/a
+copying d1/d11/a1 to d2/d21/a1
+removing d1/a
+removing d1/d11/a1
+A d2/d21/a
+A d2/d21/a1
+R d1/a
+R d1/d11/a1
+# move every file under d1 starting with an 'a' to d2/d21 (regexp)
+copying d1/a to d2/d21/a
+copying d1/d11/a1 to d2/d21/a1
+removing d1/a
+removing d1/d11/a1
+A d2/d21/a
+A d2/d21/a1
+R d1/a
+R d1/d11/a1
+# attempt to overwrite an existing file
+d1/ca: not overwriting - file exists
+? d1/ca
+# forced overwrite of an existing file
+A d1/ca
+R d1/ba
+# replace a symlink with a file
+A d1/ca
+R d1/ba
+# do not copy more than one source file to the same destination file
+copying d1/d11/a1 to d3/d11/a1
+d3/b: not overwriting - d2/b collides with d1/b
+removing d1/d11/a1
+A d3/a
+A d3/b
+A d3/ba
+A d3/d11/a1
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1

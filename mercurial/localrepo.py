@@ -12,7 +12,7 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "re lock transaction tempfile stat mdiff errno")
 
-class localrepository:
+class localrepository(object):
     def __init__(self, ui, path=None, create=0):
         if not path:
             p = os.getcwd()
@@ -43,7 +43,7 @@ class localrepository:
 
         self.dirstate = dirstate.dirstate(self.opener, ui, self.root)
         try:
-            self.ui.readconfig(os.path.join(self.path, "hgrc"))
+            self.ui.readconfig(self.join("hgrc"))
         except IOError: pass
 
     def hook(self, name, **args):
@@ -225,18 +225,20 @@ class localrepository:
         lock = self.lock()
         if os.path.exists(self.join("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
-            return transaction.rollback(self.opener, self.join("journal"))
+            transaction.rollback(self.opener, self.join("journal"))
+            return True
         else:
             self.ui.warn(_("no interrupted transaction available\n"))
+            return False
 
     def undo(self):
+        wlock = self.wlock()
         lock = self.lock()
         if os.path.exists(self.join("undo")):
             self.ui.status(_("rolling back last transaction\n"))
             transaction.rollback(self.opener, self.join("undo"))
-            self.dirstate = None
             util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-            self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
+            self.dirstate.read()
         else:
             self.ui.warn(_("no undo information available\n"))
 
@@ -248,6 +250,17 @@ class localrepository:
                 self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
                 return lock.lock(self.join("lock"), wait)
             raise inst
+
+    def wlock(self, wait=1):
+        try:
+            wlock = lock.lock(self.join("wlock"), 0, self.dirstate.write)
+        except lock.LockHeld, inst:
+            if not wait:
+                raise inst
+            self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
+            wlock = lock.lock(self.join("wlock"), wait, self.dirstate.write)
+        self.dirstate.read()
+        return wlock
 
     def rawcommit(self, files, text, user, date, p1=None, p2=None):
         orig_parent = self.dirstate.parents()[0] or nullid
@@ -265,6 +278,8 @@ class localrepository:
         else:
             update_dirstate = 0
 
+        wlock = self.wlock()
+        lock = self.lock()
         tr = self.transaction()
         mm = m1.copy()
         mfm = mf1.copy()
@@ -353,6 +368,7 @@ class localrepository:
         if not self.hook("precommit"):
             return None
 
+        wlock = self.wlock()
         lock = self.lock()
         tr = self.transaction()
 
@@ -446,8 +462,14 @@ class localrepository:
 
     def walk(self, node=None, files=[], match=util.always):
         if node:
+            fdict = dict.fromkeys(files)
             for fn in self.manifest.read(self.changelog.read(node)[0]):
-                if match(fn): yield 'm', fn
+                fdict.pop(fn, None)
+                if match(fn):
+                    yield 'm', fn
+            for fn in fdict:
+                self.ui.warn(_('%s: No such file in rev %s\n') % (
+                    util.pathto(self.getcwd(), fn), short(node)))
         else:
             for src, fn in self.dirstate.walk(files, match):
                 yield src, fn
@@ -470,6 +492,10 @@ class localrepository:
 
         # are we comparing the working directory?
         if not node2:
+            try:
+                wlock = self.wlock(wait=0)
+            except lock.LockHeld:
+                wlock = None
             l, c, a, d, u = self.dirstate.changes(files, match)
 
             # are we comparing working dir against its parent?
@@ -481,6 +507,8 @@ class localrepository:
                     for f in l:
                         if fcmp(f, mf2):
                             c.append(f)
+                        elif wlock is not None:
+                            self.dirstate.update([f], "n")
 
                 for l in c, a, d, u:
                     l.sort()
@@ -524,6 +552,7 @@ class localrepository:
         return (c, a, d, u)
 
     def add(self, list):
+        wlock = self.wlock()
         for f in list:
             p = self.wjoin(f)
             if not os.path.exists(p):
@@ -536,6 +565,7 @@ class localrepository:
                 self.dirstate.update([f], "a")
 
     def forget(self, list):
+        wlock = self.wlock()
         for f in list:
             if self.dirstate.state(f) not in 'ai':
                 self.ui.warn(_("%s not added!\n") % f)
@@ -549,6 +579,7 @@ class localrepository:
                     util.unlink(self.wjoin(f))
                 except OSError, inst:
                     if inst.errno != errno.ENOENT: raise
+        wlock = self.wlock()
         for f in list:
             p = self.wjoin(f)
             if os.path.exists(p):
@@ -566,6 +597,7 @@ class localrepository:
         mn = self.changelog.read(p)[0]
         mf = self.manifest.readflags(mn)
         m = self.manifest.read(mn)
+        wlock = self.wlock()
         for f in list:
             if self.dirstate.state(f) not in  "r":
                 self.ui.warn("%s not removed!\n" % f)
@@ -582,12 +614,17 @@ class localrepository:
         elif not os.path.isfile(p):
             self.ui.warn(_("copy failed: %s is not a file\n") % dest)
         else:
+            wlock = self.wlock()
             if self.dirstate.state(dest) == '?':
                 self.dirstate.update([dest], "a")
             self.dirstate.copy(source, dest)
 
-    def heads(self):
-        return self.changelog.heads()
+    def heads(self, start=None):
+        heads = self.changelog.heads(start)
+        # sort the output in rev descending order
+        heads = [(-self.changelog.rev(h), h) for h in heads]
+        heads.sort()
+        return [n for (r, n) in heads]
 
     # branchlookup returns a dict giving a list of branches for
     # each head.  A branch is defined as the tag of a node or
@@ -1371,6 +1408,9 @@ class localrepository:
         for f in a + c + u:
             mw[f] = ""
             mfw[f] = util.is_exec(self.wjoin(f), mfw.get(f, False))
+
+        if moddirstate:
+            wlock = self.wlock()
 
         for f in d:
             if f in mw: del mw[f]

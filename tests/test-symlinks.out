@@ -1,15 +1,11 @@
-bar: unsupported file type (type is symbolic link)
 adding foo
-bar: unsupported file type (type is symbolic link)
-bar: unsupported file type (type is symbolic link)
 adding bomb
-bar: unsupported file type (type is symbolic link)
 adding a.c
 adding dir/a.o
 adding dir/b.o
-a.c: unsupported file type (type is fifo)
-dir/b.o: unsupported file type (type is symbolic link)
 R a.c
 R dir/a.o
 R dir/b.o
 ? .hgignore
+a.c: unsupported file type (type is fifo)
+R a.c

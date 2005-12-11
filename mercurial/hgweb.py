@@ -71,7 +71,7 @@ def get_mtime(repo_path):
     else:
         return os.stat(hg_path).st_mtime
 
-class hgrequest:
+class hgrequest(object):
     def __init__(self, inp=None, out=None, env=None):
         self.inp = inp or sys.stdin
         self.out = out or sys.stdout
@@ -104,7 +104,7 @@ class hgrequest:
             headers.append(('Content-length', str(size)))
         self.header(headers)
 
-class templater:
+class templater(object):
     def __init__(self, mapfile, filters={}, defaults={}):
         self.cache = {}
         self.map = {}
@@ -165,7 +165,6 @@ class templater:
 common_filters = {
     "escape": cgi.escape,
     "strip": lambda x: x.strip(),
-    "rstrip": lambda x: x.rstrip(),
     "age": age,
     "date": lambda x: util.datestr(x),
     "addbreaks": nl2br,
@@ -176,7 +175,7 @@ common_filters = {
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
     }
 
-class hgweb:
+class hgweb(object):
     def __init__(self, repo, name=None):
         if type(repo) == type(""):
             self.repo = hg.repository(ui.ui(), repo)
@@ -952,14 +951,8 @@ def create_server(repo):
     else:
         return BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
 
-def server(path, name, templates, address, port, use_ipv6=False,
-           accesslog=sys.stdout, errorlog=sys.stderr):
-    httpd = create_server(path, name, templates, address, port, use_ipv6,
-                          accesslog, errorlog)
-    httpd.serve_forever()
-
 # This is a stopgap
-class hgwebdir:
+class hgwebdir(object):
     def __init__(self, config):
         def cleannames(items):
             return [(name.strip('/'), path) for name, path in items]
@@ -1000,7 +993,10 @@ class hgwebdir:
                        .replace("//", "/"))
 
                 # update time with local timezone
-                d = (get_mtime(path), util.makedate()[1])
+                try:
+                    d = (get_mtime(path), util.makedate()[1])
+                except OSError:
+                    continue
 
                 yield dict(contact=(get("ui", "username") or # preferred
                                     get("web", "contact") or # deprecated
@@ -1017,7 +1013,12 @@ class hgwebdir:
         if virtual:
             real = dict(self.repos).get(virtual)
             if real:
-                hgweb(real).run(req)
+                try:
+                    hgweb(real).run(req)
+                except IOError, inst:
+                    req.write(tmpl("error", error=inst.strerror))
+                except hg.RepoError, inst:
+                    req.write(tmpl("error", error=str(inst)))
             else:
                 req.write(tmpl("notfound", repo=virtual))
         else:

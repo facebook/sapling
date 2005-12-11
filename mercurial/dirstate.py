@@ -13,7 +13,7 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "time bisect stat util re errno")
 
-class dirstate:
+class dirstate(object):
     def __init__(self, opener, ui, root):
         self.opener = opener
         self.root = root
@@ -101,16 +101,15 @@ class dirstate:
         try:
             return self.map[key]
         except TypeError:
-            self.read()
+            self.lazyread()
             return self[key]
 
     def __contains__(self, key):
-        if not self.map: self.read()
+        self.lazyread()
         return key in self.map
 
     def parents(self):
-        if not self.pl:
-            self.read()
+        self.lazyread()
         return self.pl
 
     def markdirty(self):
@@ -118,8 +117,7 @@ class dirstate:
             self.dirty = 1
 
     def setparents(self, p1, p2=nullid):
-        if not self.pl:
-            self.read()
+        self.lazyread()
         self.markdirty()
         self.pl = p1, p2
 
@@ -129,9 +127,11 @@ class dirstate:
         except KeyError:
             return "?"
 
-    def read(self):
-        if self.map is not None: return self.map
+    def lazyread(self):
+        if self.map is None:
+            self.read()
 
+    def read(self):
         self.map = {}
         self.pl = [nullid, nullid]
         try:
@@ -154,7 +154,7 @@ class dirstate:
             pos += l
 
     def copy(self, source, dest):
-        self.read()
+        self.lazyread()
         self.markdirty()
         self.copies[dest] = source
 
@@ -169,13 +169,13 @@ class dirstate:
         a  marked for addition'''
 
         if not files: return
-        self.read()
+        self.lazyread()
         self.markdirty()
         for f in files:
             if state == "r":
                 self.map[f] = ('r', 0, 0, 0)
             else:
-                s = os.lstat(os.path.join(self.root, f))
+                s = os.lstat(self.wjoin(f))
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
                 self.map[f] = (state, s.st_mode, st_size, st_mtime)
@@ -184,7 +184,7 @@ class dirstate:
 
     def forget(self, files):
         if not files: return
-        self.read()
+        self.lazyread()
         self.markdirty()
         for f in files:
             try:
@@ -198,7 +198,7 @@ class dirstate:
         self.markdirty()
 
     def write(self):
-        st = self.opener("dirstate", "w")
+        st = self.opener("dirstate", "w", atomic=True)
         st.write("".join(self.pl))
         for f, e in self.map.items():
             c = self.copied(f)
@@ -213,7 +213,7 @@ class dirstate:
         unknown = []
 
         for x in files:
-            if x is '.':
+            if x == '.':
                 return self.map.copy()
             if x not in self.map:
                 unknown.append(x)
@@ -241,7 +241,7 @@ class dirstate:
                 bs += 1
         return ret
 
-    def supported_type(self, f, st, verbose=True):
+    def supported_type(self, f, st, verbose=False):
         if stat.S_ISREG(st.st_mode):
             return True
         if verbose:
@@ -258,7 +258,7 @@ class dirstate:
         return False
 
     def statwalk(self, files=None, match=util.always, dc=None):
-        self.read()
+        self.lazyread()
 
         # walk all files by default
         if not files:
@@ -296,7 +296,6 @@ class dirstate:
     def walkhelper(self, files, statmatch, dc):
         # recursion free walker, faster than os.walk.
         def findfiles(s):
-            retfiles = []
             work = [s]
             while work:
                 top = work.pop()
@@ -306,7 +305,7 @@ class dirstate:
                 nd = util.normpath(top[len(self.root) + 1:])
                 if nd == '.': nd = ''
                 for f in names:
-                    np = os.path.join(nd, f)
+                    np = util.pconvert(os.path.join(nd, f))
                     if seen(np):
                         continue
                     p = os.path.join(top, f)
@@ -317,12 +316,12 @@ class dirstate:
                         if statmatch(ds, st):
                             work.append(p)
                         if statmatch(np, st) and np in dc:
-                            yield 'm', util.pconvert(np), st
+                            yield 'm', np, st
                     elif statmatch(np, st):
                         if self.supported_type(np, st):
-                            yield 'f', util.pconvert(np), st
+                            yield 'f', np, st
                         elif np in dc:
-                            yield 'm', util.pconvert(np), st
+                            yield 'm', np, st
 
         known = {'.hg': 1}
         def seen(fn):
@@ -332,13 +331,20 @@ class dirstate:
         # step one, find all files that match our criteria
         files.sort()
         for ff in util.unique(files):
-            f = os.path.join(self.root, ff)
+            f = self.wjoin(ff)
             try:
                 st = os.lstat(f)
             except OSError, inst:
-                if ff not in dc: self.ui.warn('%s: %s\n' % (
-                    util.pathto(self.getcwd(), ff),
-                    inst.strerror))
+                nf = util.normpath(ff)
+                found = False
+                for fn in dc:
+                    if nf == fn or (fn.startswith(nf) and fn[len(nf)] == '/'):
+                        found = True
+                        break
+                if not found:
+                    self.ui.warn('%s: %s\n' % (
+                                 util.pathto(self.getcwd(), ff),
+                                 inst.strerror))
                 continue
             if stat.S_ISDIR(st.st_mode):
                 cmp1 = (lambda x, y: cmp(x[1], y[1]))
@@ -352,7 +358,7 @@ class dirstate:
                     continue
                 self.blockignore = True
                 if statmatch(ff, st):
-                    if self.supported_type(ff, st):
+                    if self.supported_type(ff, st, verbose=True):
                         yield 'f', ff, st
                     elif ff in dc:
                         yield 'm', ff, st
@@ -380,7 +386,7 @@ class dirstate:
                 nonexistent = True
                 if not st:
                     try:
-                        f = os.path.join(self.root, fn)
+                        f = self.wjoin(fn)
                         st = os.lstat(f)
                     except OSError, inst:
                         if inst.errno != errno.ENOENT:

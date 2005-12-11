@@ -54,11 +54,11 @@ class filelog(revlog):
             mt = ""
             if meta:
                 mt = [ "%s: %s\n" % (k, v) for k,v in meta.items() ]
-            text = "\1\n" + "".join(mt) + "\1\n" + text
+            text = "\1\n%s\1\n%s" % ("".join(mt), text)
         return self.addrevision(text, transaction, link, p1, p2)
 
     def renamed(self, node):
-        if 0 and self.parents(node)[0] != nullid:
+        if 0 and self.parents(node)[0] != nullid: # XXX
             return False
         m = self.readmeta(node)
         if m and m.has_key("copy"):

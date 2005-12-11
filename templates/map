@@ -39,3 +39,4 @@ indexentry = "<tr class="parity#parity#"><td><a href="#url#">#name#</a></td><td>
 index = index.tmpl
 archiveentry = "<a href="?ca=#node|short#;type=#type#">#type#</a> "
 notfound = notfound.tmpl
+error = error.tmpl

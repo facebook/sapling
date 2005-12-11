@@ -11,3 +11,7 @@ hg history
 echo foo >> .hgtags
 hg tag -d "0 0" "bleah2" || echo "failed"
 
+hg tag -l 'xx
+newline'
+hg tag -l 'xx:xx'
+true

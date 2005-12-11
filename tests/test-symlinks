@@ -39,3 +39,4 @@ ln -sf nonexist dir/b.o
 mkfifo a.c
 # it should show a.c, dir/a.o and dir/b.o removed
 hg status
+hg status a.c

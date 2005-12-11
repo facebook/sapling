@@ -106,6 +106,13 @@ class Abort(Exception):
 def always(fn): return True
 def never(fn): return False
 
+def patkind(name, dflt_pat='glob'):
+    """Split a string into an optional pattern kind prefix and the
+    actual pattern."""
+    for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
+        if name.startswith(prefix + ':'): return name.split(':', 1)
+    return dflt_pat, name
+
 def globre(pat, head='^', tail='$'):
     "convert a glob pattern into a regexp"
     i, n = 0, len(pat)
@@ -158,15 +165,20 @@ def pathto(n1, n2):
     this returns a path in the form used by the local filesystem, not hg.'''
     if not n1: return localpath(n2)
     a, b = n1.split('/'), n2.split('/')
-    a.reverse(), b.reverse()
+    a.reverse()
+    b.reverse()
     while a and b and a[-1] == b[-1]:
-        a.pop(), b.pop()
+        a.pop()
+        b.pop()
     b.reverse()
     return os.sep.join((['..'] * len(a)) + b)
 
 def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
-    rootsep = root + os.sep
+    if root == os.sep:
+        rootsep = os.sep
+    else:
+    	rootsep = root + os.sep
     name = myname
     if not name.startswith(os.sep):
         name = os.path.join(root, cwd, name)
@@ -218,11 +230,6 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
     make head regex a rooted bool
     """
 
-    def patkind(name, dflt_pat='glob'):
-        for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
-            if name.startswith(prefix + ':'): return name.split(':', 1)
-        return dflt_pat, name
-
     def contains_glob(name):
         for c in name:
             if c in _globchars: return True
@@ -253,7 +260,7 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
             try:
                 pat = '(?:%s)' % regex(k, p, tail)
                 matches.append(re.compile(pat).match)
-            except re.error, inst:
+            except re.error:
                 raise Abort("invalid pattern: %s:%s" % (k, p))
 
         def buildfn(text):
@@ -362,7 +369,36 @@ def opener(base):
     remote file access from higher level code.
     """
     p = base
-    def o(path, mode="r", text=False):
+
+    def mktempcopy(name):
+        d, fn = os.path.split(name)
+        fd, temp = tempfile.mkstemp(prefix=fn, dir=d)
+        fp = os.fdopen(fd, "wb")
+        try:
+            fp.write(file(name, "rb").read())
+        except:
+            try: os.unlink(temp)
+            except: pass
+            raise
+        fp.close()
+        st = os.lstat(name)
+        os.chmod(temp, st.st_mode)
+        return temp
+
+    class atomicfile(file):
+        """the file will only be copied on close"""
+        def __init__(self, name, mode, atomic=False):
+            self.__name = name
+            self.temp = mktempcopy(name)
+            file.__init__(self, self.temp, mode)
+        def close(self):
+            if not self.closed:
+                file.close(self)
+                rename(self.temp, self.__name)
+        def __del__(self):
+            self.close()
+
+    def o(path, mode="r", text=False, atomic=False):
         f = os.path.join(p, path)
 
         if not text:
@@ -376,19 +412,10 @@ def opener(base):
                 if not os.path.isdir(d):
                     os.makedirs(d)
             else:
+                if atomic:
+                    return atomicfile(f, mode)
                 if nlink > 1:
-                    d, fn = os.path.split(f)
-                    fd, temp = tempfile.mkstemp(prefix=fn, dir=d)
-                    fp = os.fdopen(fd, "wb")
-                    try:
-                        fp.write(file(f, "rb").read())
-                    except:
-                        try: os.unlink(temp)
-                        except: pass
-                        raise
-                    fp.close()
-                    rename(temp, f)
-
+                    rename(mktempcopy(f), f)
         return file(f, mode)
 
     return o
@@ -484,6 +511,7 @@ else:
     nulldev = '/dev/null'
 
     def rcfiles(path):
+        print 'checking', path
         rcs = [os.path.join(path, 'hgrc')]
         rcdir = os.path.join(path, 'hgrc.d')
         try:

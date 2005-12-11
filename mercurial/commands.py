@@ -15,6 +15,8 @@ demandload(globals(), "errno socket version struct atexit sets bz2")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
+class AmbiguousCommand(Exception):
+    """Exception raised if command shortcut matches more than one command."""
 
 def filterfiles(filters, files):
     l = [x for x in files if x in filters]
@@ -31,25 +33,29 @@ def relpath(repo, args):
         return [util.normpath(os.path.join(cwd, x)) for x in args]
     return args
 
-def matchpats(repo, cwd, pats=[], opts={}, head=''):
-    return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
-                        opts.get('exclude'), head)
-
-def makewalk(repo, pats, opts, head=''):
+def matchpats(repo, pats=[], opts={}, head=''):
     cwd = repo.getcwd()
-    files, matchfn, anypats = matchpats(repo, cwd, pats, opts, head)
+    if not pats and cwd:
+        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
+        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
+        cwd = ''
+    return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
+                        opts.get('exclude'), head) + (cwd,)
+
+def makewalk(repo, pats, opts, node=None, head=''):
+    files, matchfn, anypats, cwd = matchpats(repo, pats, opts, head)
     exact = dict(zip(files, files))
     def walk():
-        for src, fn in repo.walk(files=files, match=matchfn):
+        for src, fn in repo.walk(node=node, files=files, match=matchfn):
             yield src, fn, util.pathto(cwd, fn), fn in exact
     return files, matchfn, walk()
 
-def walk(repo, pats, opts, head=''):
-    files, matchfn, results = makewalk(repo, pats, opts, head)
+def walk(repo, pats, opts, node=None, head=''):
+    files, matchfn, results = makewalk(repo, pats, opts, node, head)
     for r in results:
         yield r
 
-def walkchangerevs(ui, repo, cwd, pats, opts):
+def walkchangerevs(ui, repo, pats, opts):
     '''Iterate over files and the revs they changed in.
 
     Callers most commonly need to iterate backwards over the history
@@ -79,12 +85,7 @@ def walkchangerevs(ui, repo, cwd, pats, opts):
     if repo.changelog.count() == 0:
         return [], False
 
-    cwd = repo.getcwd()
-    if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
-        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    files, matchfn, anypats = matchpats(repo, (pats and cwd) or '',
-                                        pats, opts)
+    files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
     revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
     wanted = {}
     slowpath = anypats
@@ -387,7 +388,7 @@ def help_(ui, cmd=None, with_version=False):
         if with_version:
             show_version(ui)
             ui.write('\n')
-        key, i = find(cmd)
+        aliases, i = find(cmd)
         # synopsis
         ui.write("%s\n\n" % i[2])
 
@@ -399,9 +400,8 @@ def help_(ui, cmd=None, with_version=False):
 
         if not ui.quiet:
             # aliases
-            aliases = ', '.join(key.split('|')[1:])
-            if aliases:
-                ui.write(_("\naliases: %s\n") % aliases)
+            if len(aliases) > 1:
+                ui.write(_("\naliases: %s\n") % ', '.join(aliases[1:]))
 
             # options
             if i[1]:
@@ -482,8 +482,7 @@ def add(ui, repo, *pats, **opts):
 
     The files will be added to the repository at the next commit.
 
-    If no names are given, add all files in the current directory and
-    its subdirectories.
+    If no names are given, add all files in the repository.
     """
 
     names = []
@@ -537,11 +536,20 @@ def annotate(ui, repo, *pats, **opts):
         cl = repo.changelog.read(repo.changelog.node(rev))
         return trimuser(ui, cl[1], rev, ucache)
 
+    dcache = {}
+    def getdate(rev):
+    	datestr = dcache.get(rev)
+        if datestr is None:
+            cl = repo.changelog.read(repo.changelog.node(rev))
+            datestr = dcache[rev] = util.datestr(cl[2])
+	return datestr
+
     if not pats:
         raise util.Abort(_('at least one file name or pattern required'))
 
-    opmap = [['user', getname], ['number', str], ['changeset', getnode]]
-    if not opts['user'] and not opts['changeset']:
+    opmap = [['user', getname], ['number', str], ['changeset', getnode],
+             ['date', getdate]]
+    if not opts['user'] and not opts['changeset'] and not opts['date']:
         opts['number'] = 1
 
     if opts['rev']:
@@ -624,21 +632,16 @@ def cat(ui, repo, file1, *pats, **opts):
     %p   root-relative path name of file being printed
     """
     mf = {}
-    if opts['rev']:
-        change = repo.changelog.read(repo.lookup(opts['rev']))
-        mf = repo.manifest.read(change[0])
-    for src, abs, rel, exact in walk(repo, (file1,) + pats, opts):
+    rev = opts['rev']
+    if rev:
+        node = repo.lookup(rev)
+    else:
+        node = repo.changelog.tip()
+    change = repo.changelog.read(node)
+    mf = repo.manifest.read(change[0])
+    for src, abs, rel, exact in walk(repo, (file1,) + pats, opts, node):
         r = repo.file(abs)
-        if opts['rev']:
-            try:
-                n = mf[abs]
-            except (hg.RepoError, KeyError):
-                try:
-                    n = r.lookup(rev)
-                except KeyError, inst:
-                    raise util.Abort(_('cannot find file %s in rev %s'), rel, rev)
-        else:
-            n = r.tip()
+        n = mf[abs]
         fp = make_file(repo, r, opts['output'], node=n, pathname=abs)
         fp.write(r.read(n))
 
@@ -667,7 +670,7 @@ def clone(ui, source, dest=None, **opts):
 
     dest = os.path.realpath(dest)
 
-    class Dircleanup:
+    class Dircleanup(object):
         def __init__(self, dir_):
             self.rmtree = shutil.rmtree
             self.dir_ = dir_
@@ -735,6 +738,7 @@ def clone(ui, source, dest=None, **opts):
     f = repo.opener("hgrc", "w", text=True)
     f.write("[paths]\n")
     f.write("default = %s\n" % abspath)
+    f.close()
 
     if not opts['noupdate']:
         update(ui, repo)
@@ -747,7 +751,7 @@ def commit(ui, repo, *pats, **opts):
     Commit changes to the given files into the repository.
 
     If a list of files is omitted, all changes reported by "hg status"
-    from the root of the repository will be commited.
+    will be commited.
 
     The HGEDITOR or EDITOR environment variables are used to start an
     editor to add a commit comment.
@@ -770,12 +774,7 @@ def commit(ui, repo, *pats, **opts):
 
     if opts['addremove']:
         addremove(ui, repo, *pats, **opts)
-    cwd = repo.getcwd()
-    if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
-        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    fns, match, anypats = matchpats(repo, (pats and repo.getcwd()) or '',
-                                    pats, opts)
+    fns, match, anypats, cwd = matchpats(repo, pats, opts)
     if pats:
         c, a, d, u = repo.changes(files=fns, match=match)
         files = c + a + [fn for fn in d if repo.dirstate.state(fn) == 'r']
@@ -787,14 +786,10 @@ def commit(ui, repo, *pats, **opts):
         raise util.Abort(str(inst))
 
 def docopy(ui, repo, pats, opts):
-    if not pats:
-        raise util.Abort(_('no source or destination specified'))
-    elif len(pats) == 1:
-        raise util.Abort(_('no destination specified'))
-    pats = list(pats)
-    dest = pats.pop()
-    sources = []
-    dir2dir = len(pats) == 1 and os.path.isdir(pats[0])
+    cwd = repo.getcwd()
+    errors = 0
+    copied = []
+    targets = {}
 
     def okaytocopy(abs, rel, exact):
         reasons = {'?': _('is not managed'),
@@ -805,74 +800,133 @@ def docopy(ui, repo, pats, opts):
         else:
             return True
 
-    for src, abs, rel, exact in walk(repo, pats, opts):
-        if okaytocopy(abs, rel, exact):
-            sources.append((abs, rel, exact))
-    if not sources:
-        raise util.Abort(_('no files to copy'))
-
-    cwd = repo.getcwd()
-    absdest = util.canonpath(repo.root, cwd, dest)
-    reldest = util.pathto(cwd, absdest)
-    if os.path.exists(reldest):
-        destisfile = not os.path.isdir(reldest)
-    else:
-        destisfile = not dir2dir and (len(sources) == 1
-                                      or repo.dirstate.state(absdest) != '?')
-
-    if destisfile and len(sources) > 1:
-        raise util.Abort(_('with multiple sources, destination must be a '
-                           'directory'))
-
-    srcpfxlen = 0
-    if dir2dir:
-        srcpfx = util.pathto(cwd, util.canonpath(repo.root, cwd, pats[0]))
-        if os.path.exists(reldest):
-            srcpfx = os.path.split(srcpfx)[0]
-        if srcpfx:
-            srcpfx += os.sep
-        srcpfxlen = len(srcpfx)
-
-    errs, copied = 0, []
-    for abs, rel, exact in sources:
-        if destisfile:
-            mydest = reldest
-        elif dir2dir:
-            mydest = os.path.join(dest, rel[srcpfxlen:])
+    def copy(abssrc, relsrc, target, exact):
+        abstarget = util.canonpath(repo.root, cwd, target)
+        reltarget = util.pathto(cwd, abstarget)
+        prevsrc = targets.get(abstarget)
+        if prevsrc is not None:
+            ui.warn(_('%s: not overwriting - %s collides with %s\n') %
+                    (reltarget, abssrc, prevsrc))
+            return
+        if (not opts['after'] and os.path.exists(reltarget) or
+            opts['after'] and repo.dirstate.state(abstarget) not in '?r'):
+            if not opts['force']:
+                ui.warn(_('%s: not overwriting - file exists\n') %
+                        reltarget)
+                return
+            if not opts['after']:
+                os.unlink(reltarget)
+        if opts['after']:
+            if not os.path.exists(reltarget):
+                return
         else:
-            mydest = os.path.join(dest, os.path.basename(rel))
-        myabsdest = util.canonpath(repo.root, cwd, mydest)
-        myreldest = util.pathto(cwd, myabsdest)
-        if not opts['force'] and repo.dirstate.state(myabsdest) not in 'a?':
-            ui.warn(_('%s: not overwriting - file already managed\n') % myreldest)
-            continue
-        mydestdir = os.path.dirname(myreldest) or '.'
-        if not opts['after']:
+            targetdir = os.path.dirname(reltarget) or '.'
+            if not os.path.isdir(targetdir):
+                os.makedirs(targetdir)
             try:
-                if dir2dir: os.makedirs(mydestdir)
-                elif not destisfile: os.mkdir(mydestdir)
-            except OSError, inst:
-                if inst.errno != errno.EEXIST: raise
-        if ui.verbose or not exact:
-            ui.status(_('copying %s to %s\n') % (rel, myreldest))
-        if not opts['after']:
-            try:
-                shutil.copyfile(rel, myreldest)
-                shutil.copymode(rel, myreldest)
+                shutil.copyfile(relsrc, reltarget)
+                shutil.copymode(relsrc, reltarget)
             except shutil.Error, inst:
                 raise util.Abort(str(inst))
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
-                    ui.warn(_('%s: deleted in working copy\n') % rel)
+                    ui.warn(_('%s: deleted in working copy\n') % relsrc)
                 else:
-                    ui.warn(_('%s: cannot copy - %s\n') % (rel, inst.strerror))
-                errs += 1
-                continue
-        repo.copy(abs, myabsdest)
-        copied.append((abs, rel, exact))
-    if errs:
+                    ui.warn(_('%s: cannot copy - %s\n') %
+                            (relsrc, inst.strerror))
+                    errors += 1
+                    return
+        if ui.verbose or not exact:
+            ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
+        targets[abstarget] = abssrc
+        repo.copy(abssrc, abstarget)
+        copied.append((abssrc, relsrc, exact))
+
+    def targetpathfn(pat, dest, srcs):
+        if os.path.isdir(pat):
+            if pat.endswith(os.sep):
+                pat = pat[:-len(os.sep)]
+            if destdirexists:
+                striplen = len(os.path.split(pat)[0])
+            else:
+                striplen = len(pat)
+            if striplen:
+                striplen += len(os.sep)
+            res = lambda p: os.path.join(dest, p[striplen:])
+        elif destdirexists:
+            res = lambda p: os.path.join(dest, os.path.basename(p))
+        else:
+            res = lambda p: dest
+        return res
+
+    def targetpathafterfn(pat, dest, srcs):
+        if util.patkind(pat, None)[0]:
+            # a mercurial pattern
+            res = lambda p: os.path.join(dest, os.path.basename(p))
+        elif len(util.canonpath(repo.root, cwd, pat)) < len(srcs[0][0]):
+            # A directory. Either the target path contains the last
+            # component of the source path or it does not.
+            def evalpath(striplen):
+                score = 0
+                for s in srcs:
+                    t = os.path.join(dest, s[1][striplen:])
+                    if os.path.exists(t):
+                        score += 1
+                return score
+
+            if pat.endswith(os.sep):
+                pat = pat[:-len(os.sep)]
+            striplen = len(pat) + len(os.sep)
+            if os.path.isdir(os.path.join(dest, os.path.split(pat)[1])):
+                score = evalpath(striplen)
+                striplen1 = len(os.path.split(pat)[0])
+                if striplen1:
+                    striplen1 += len(os.sep)
+                if evalpath(striplen1) > score:
+                    striplen = striplen1
+            res = lambda p: os.path.join(dest, p[striplen:])
+        else:
+            # a file
+            if destdirexists:
+                res = lambda p: os.path.join(dest, os.path.basename(p))
+            else:
+                res = lambda p: dest
+        return res
+
+
+    pats = list(pats)
+    if not pats:
+        raise util.Abort(_('no source or destination specified'))
+    if len(pats) == 1:
+        raise util.Abort(_('no destination specified'))
+    dest = pats.pop()
+    destdirexists = os.path.isdir(dest)
+    if (len(pats) > 1 or util.patkind(pats[0], None)[0]) and not destdirexists:
+        raise util.Abort(_('with multiple sources, destination must be an '
+                         'existing directory'))
+    if opts['after']:
+        tfn = targetpathafterfn
+    else:
+        tfn = targetpathfn
+    copylist = []
+    for pat in pats:
+        srcs = []
+        for tag, abssrc, relsrc, exact in walk(repo, [pat], opts):
+            if okaytocopy(abssrc, relsrc, exact):
+                srcs.append((abssrc, relsrc, exact))
+        if not srcs:
+            continue
+        copylist.append((tfn(pat, dest, srcs), srcs))
+    if not copylist:
+        raise util.Abort(_('no files to copy'))
+
+    for targetpath, srcs in copylist:
+        for abssrc, relsrc, exact in srcs:
+            copy(abssrc, relsrc, targetpath(relsrc), exact)
+
+    if errors:
         ui.warn(_('(consider using --after)\n'))
-    return errs, copied
+    return errors, copied
 
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit
@@ -1007,7 +1061,7 @@ def debugrename(ui, repo, file, rev=None):
             change = repo.changelog.read(n)
             m = repo.manifest.read(change[0])
             n = m[relpath(repo, [file])[0]]
-        except hg.RepoError, KeyError:
+        except (hg.RepoError, KeyError):
             n = r.lookup(rev)
     else:
         n = r.tip()
@@ -1030,7 +1084,7 @@ def debugwalk(ui, repo, *pats, **opts):
         ui.write("%s\n" % line.rstrip())
 
 def diff(ui, repo, *pats, **opts):
-    """diff working directory (or selected files)
+    """diff repository (or selected files)
 
     Show differences between revisions for the specified files.
 
@@ -1056,7 +1110,7 @@ def diff(ui, repo, *pats, **opts):
     if len(revs) > 2:
         raise util.Abort(_("too many revisions to diff"))
 
-    fns, matchfn, anypats = matchpats(repo, repo.getcwd(), pats, opts)
+    fns, matchfn, anypats, cwd = matchpats(repo, pats, opts)
 
     dodiff(sys.stdout, ui, repo, node1, node2, fns, match=matchfn,
            text=opts['text'])
@@ -1177,7 +1231,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             yield linenum, mstart - lstart, mend - lstart, body[lstart:lend]
             begin = lend + 1
 
-    class linestate:
+    class linestate(object):
         def __init__(self, line, linenum, colstart, colend):
             self.line = line
             self.linenum = linenum
@@ -1227,7 +1281,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     fstate = {}
     skip = {}
-    changeiter, getchange = walkchangerevs(ui, repo, repo.getcwd(), pats, opts)
+    changeiter, getchange = walkchangerevs(ui, repo, pats, opts)
     count = 0
     incrementing = False
     for st, rev, fns in changeiter:
@@ -1275,11 +1329,14 @@ def heads(ui, repo, **opts):
     changesets. They are where development generally takes place and
     are the usual targets for update and merge operations.
     """
-    heads = repo.changelog.heads()
+    if opts['rev']:
+        heads = repo.heads(repo.lookup(opts['rev']))
+    else:
+        heads = repo.heads()
     br = None
     if opts['branches']:
         br = repo.branchlookup(heads)
-    for n in repo.changelog.heads():
+    for n in heads:
         show_changeset(ui, repo, changenode=n, brinfo=br)
 
 def identify(ui, repo):
@@ -1461,11 +1518,11 @@ def log(ui, repo, *pats, **opts):
     Print the revision history of the specified files or the entire project.
 
     By default this command outputs: changeset id and hash, tags,
-    parents, user, date and time, and a summary for each commit. The
-    -v switch adds some more detail, such as changed files, manifest
-    hashes or message signatures.
+    non-trivial parents, user, date and time, and a summary for each
+    commit. When the -v/--verbose switch is used, the list of changed
+    files and full commit message is shown.
     """
-    class dui:
+    class dui(object):
         # Implement and delegate some ui protocol.  Save hunks of
         # output for later display in the desired order.
         def __init__(self, ui):
@@ -1487,12 +1544,7 @@ def log(ui, repo, *pats, **opts):
                 self.write(*args)
         def __getattr__(self, key):
             return getattr(self.ui, key)
-    cwd = repo.getcwd()
-    if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
-        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-    changeiter, getchange = walkchangerevs(ui, repo, (pats and cwd) or '',
-                                           pats, opts)
+    changeiter, getchange = walkchangerevs(ui, repo, pats, opts)
     for st, rev, fns in changeiter:
         if st == 'window':
             du = dui(ui)
@@ -1733,7 +1785,9 @@ def recover(ui, repo):
     This command tries to fix the repository status after an interrupted
     operation. It should only be necessary when Mercurial suggests it.
     """
-    repo.recover()
+    if repo.recover():
+        return repo.verify()
+    return False
 
 def remove(ui, repo, pat, *pats, **opts):
     """remove the specified files on the next commit
@@ -1799,13 +1853,12 @@ def revert(ui, repo, *pats, **opts):
 
     If names are given, all files matching the names are reverted.
 
-    If no names are given, all files in the current directory and
-    its subdirectories are reverted.
+    If no arguments are given, all files in the repository are reverted.
     """
     node = opts['rev'] and repo.lookup(opts['rev']) or \
            repo.dirstate.parents()[0]
 
-    files, choose, anypats = matchpats(repo, repo.getcwd(), pats, opts)
+    files, choose, anypats, cwd = matchpats(repo, pats, opts)
     (c, a, d, u) = repo.changes(match=choose)
     repo.forget(a)
     repo.undelete(d)
@@ -1928,9 +1981,8 @@ def serve(ui, repo, **opts):
 def status(ui, repo, *pats, **opts):
     """show changed files in the working directory
 
-    Show changed files in the working directory.  If no names are
-    given, all files are shown.  Otherwise, only files matching the
-    given names are shown.
+    Show changed files in the repository.  If names are
+    given, only files that match are shown.
 
     The codes used to show the status of files are:
     M = modified
@@ -1939,8 +1991,7 @@ def status(ui, repo, *pats, **opts):
     ? = not tracked
     """
 
-    cwd = repo.getcwd()
-    files, matchfn, anypats = matchpats(repo, cwd, pats, opts)
+    files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
     (c, a, d, u) = [[util.pathto(cwd, x) for x in n]
                     for n in repo.changes(files=files, match=matchfn)]
 
@@ -1986,8 +2037,10 @@ def tag(ui, repo, name, rev=None, **opts):
     else:
         r = hex(repo.changelog.tip())
 
-    if name.find(revrangesep) >= 0:
-        raise util.Abort(_("'%s' cannot be used in a tag name") % revrangesep)
+    disallowed = (revrangesep, '\r', '\n')
+    for c in disallowed:
+        if name.find(c) >= 0:
+            raise util.Abort(_("%s cannot be used in a tag name") % repr(c))
 
     if opts['local']:
         repo.opener("localtags", "a").write("%s %s\n" % (r, name))
@@ -2138,6 +2191,7 @@ table = {
          [('r', 'rev', '', _('annotate the specified revision')),
           ('a', 'text', None, _('treat all files as text')),
           ('u', 'user', None, _('list the author')),
+          ('d', 'date', None, _('list the date')),
           ('n', 'number', None, _('list the revision number (default)')),
           ('c', 'changeset', None, _('list the changeset')),
           ('I', 'include', [], _('include names matching the given patterns')),
@@ -2223,8 +2277,9 @@ table = {
          "hg grep [OPTION]... PATTERN [FILE]..."),
     "heads":
         (heads,
-         [('b', 'branches', None, _('find branch info'))],
-         _('hg heads [-b]')),
+         [('b', 'branches', None, _('find branch info')),
+          ('r', 'rev', "", _('show only heads which are descendants of rev'))],
+         _('hg heads [-b] [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id": (identify, [], _('hg identify')),
     "import|patch":
@@ -2374,17 +2429,21 @@ norepo = ("clone init version help debugancestor debugconfig debugdata"
           " debugindex debugindexdot paths")
 
 def find(cmd):
-    choice = []
+    """Return (aliases, command table entry) for command string."""
+    choice = None
     for e in table.keys():
         aliases = e.lstrip("^").split("|")
         if cmd in aliases:
-            return e, table[e]
+            return aliases, table[e]
         for a in aliases:
             if a.startswith(cmd):
-                choice.append(e)
-    if len(choice) == 1:
-        e = choice[0]
-        return e, table[e]
+                if choice:
+                    raise AmbiguousCommand(cmd)
+                else:
+                    choice = aliases, table[e]
+                    break
+    if choice:
+        return choice
 
     raise UnknownCommand(cmd)
 
@@ -2411,18 +2470,11 @@ def parse(ui, args):
 
     if args:
         cmd, args = args[0], args[1:]
+        aliases, i = find(cmd)
+        cmd = aliases[0]
         defaults = ui.config("defaults", cmd)
         if defaults:
-            # reparse with command defaults added
-            args = [cmd] + defaults.split() + args
-            try:
-                args = fancyopts.fancyopts(args, globalopts, options)
-            except fancyopts.getopt.GetoptError, inst:
-                raise ParseError(None, inst)
-
-            cmd, args = args[0], args[1:]
-
-        i = find(cmd)[1]
+            args = defaults.split() + args
         c = list(i[1])
     else:
         cmd = None
@@ -2460,7 +2512,7 @@ def dispatch(args):
 
     external = []
     for x in u.extensions():
-        def on_exception(Exception, inst):
+        def on_exception(exc, inst):
             u.warn(_("*** failed to import extension %s\n") % x[1])
             u.warn("%s\n" % inst)
             if "--traceback" in sys.argv[1:]:
@@ -2502,6 +2554,9 @@ def dispatch(args):
             u.warn(_("hg: %s\n") % inst.args[1])
             help_(u, 'shortlist')
         sys.exit(-1)
+    except AmbiguousCommand, inst:
+        u.warn(_("hg: command '%s' is ambiguous.\n") % inst.args[0])
+        sys.exit(1)
     except UnknownCommand, inst:
         u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         help_(u, 'shortlist')
@@ -2620,6 +2675,9 @@ def dispatch(args):
         u.debug(inst, "\n")
         u.warn(_("%s: invalid arguments\n") % cmd)
         help_(u, cmd)
+    except AmbiguousCommand, inst:
+        u.warn(_("hg: command '%s' is ambiguous.\n") % inst.args[0])
+        help_(u, 'shortlist')
     except UnknownCommand, inst:
         u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         help_(u, 'shortlist')
@@ -2629,6 +2687,8 @@ def dispatch(args):
     except:
         u.warn(_("** unknown exception encountered, details follow\n"))
         u.warn(_("** report bug details to mercurial@selenic.com\n"))
+        u.warn(_("** Mercurial Distributed SCM (version %s)\n")
+               % version.get_version())
         raise
 
     sys.exit(-1)

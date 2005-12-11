@@ -18,3 +18,5 @@ summary:     test
 
 abort: working copy of .hgtags is changed (please commit .hgtags manually)
 failed
+abort: '\n' cannot be used in a tag name
+abort: ':' cannot be used in a tag name

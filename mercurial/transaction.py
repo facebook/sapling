@@ -12,10 +12,9 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os
-import util
 from i18n import gettext as _
 
-class transaction:
+class transaction(object):
     def __init__(self, report, opener, journal, after=None):
         self.journal = None
 

@@ -116,7 +116,7 @@ case $service in
         '*:file:_files'
     ;;
 
-    (status)
+    (status|st)
         _arguments $includeExclude \
         '(--no-status)-n[hide status prefix]' \
         '(-n)--no-status[hide status prefix]' \
