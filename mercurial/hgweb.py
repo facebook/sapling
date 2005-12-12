@@ -632,8 +632,8 @@ class hgweb(object):
             for k,n in i:
                 yield {"parity": parity,
                        "tag": k,
-		       "tagmanifest": hex(cl.read(n)[0]),
-		       "date": cl.read(n)[2],
+                       "tagmanifest": hex(cl.read(n)[0]),
+                       "date": cl.read(n)[2],
                        "node": hex(n)}
                 parity = 1 - parity
 
@@ -650,19 +650,19 @@ class hgweb(object):
 
         def tagentries(**map):
             parity = 0
-	    count = 0
+            count = 0
             for k,n in i:
-                if k == "tip":		# skip tip
+                if k == "tip": # skip tip
                     continue;
 
                 count += 1
-                if count > 10:		# limit to 10 tags
+                if count > 10: # limit to 10 tags
                     break;
 
                 c = cl.read(n)
                 m = c[0]
                 t = c[2]
-                
+
                 yield self.t("tagentry",
                              parity = parity,
                              tag = k,
@@ -670,7 +670,7 @@ class hgweb(object):
                              date = t,
                              tagmanifest = hex(m))
                 parity = 1 - parity
-        
+
         def changelist(**map):
             parity = 0
             cl = self.repo.changelog
@@ -702,15 +702,15 @@ class hgweb(object):
         pos = end - 1
 
         yield self.t("summary",
-		 desc = self.repo.ui.config("web", "description", "unknown"),
-		 owner = (self.repo.ui.config("ui", "username") or # preferred
+                 desc = self.repo.ui.config("web", "description", "unknown"),
+                 owner = (self.repo.ui.config("ui", "username") or # preferred
                           self.repo.ui.config("web", "contact") or # deprecated
                           self.repo.ui.config("web", "author", "unknown")), # also
-		 lastchange = (0, 0), # FIXME
+                 lastchange = (0, 0), # FIXME
                  manifest = hex(mf),
                  tags = tagentries,
                  shortlog = changelist)
- 
+
     def filediff(self, file, changeset):
         cl = self.repo.changelog
         n = self.repo.lookup(changeset)
@@ -872,7 +872,7 @@ class hgweb(object):
 
         elif req.form['cmd'][0] == 'summary':
             req.write(self.summary())
-	    
+
         elif req.form['cmd'][0] == 'filediff':
             req.write(self.filediff(req.form['file'][0], req.form['node'][0]))
 
