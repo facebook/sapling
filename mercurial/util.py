@@ -511,7 +511,6 @@ else:
     nulldev = '/dev/null'
 
     def rcfiles(path):
-        print 'checking', path
         rcs = [os.path.join(path, 'hgrc')]
         rcdir = os.path.join(path, 'hgrc.d')
         try:
