@@ -18,7 +18,6 @@ manifestdirentry = "<tr class="parity#parity#"><td style="font-family:monospace"
 manifestfileentry = "<tr class="parity#parity#"><td style="font-family:monospace">#permissions|permissions#</td><td class="list"><a class="list" href="?f=#filenode|short#;file=#file#;style=gitweb">#basename#</a></td><td class="link"><a href="?f=#filenode|short#;file=#file#;style=gitweb">file</a> | <a href="?fl=#filenode|short#;file=#file#;style=gitweb">revisions</a> | <a href="?fa=#filenode|short#;file=#file#;style=gitweb">annotate</a></td></tr>"
 filerevision = filerevision-gitweb.tmpl
 fileannotate = fileannotate-gitweb.tmpl
-filediff = filediff-gitweb.tmpl
 filelog = filelog-gitweb.tmpl
 fileline = "<div style="font-family:monospace; white-space: pre;" class="parity#parity#"><span class="linenr">   #linenumber#</span> #line|escape#</div>"
 filelogentry = filelogentry-gitweb.tmpl
