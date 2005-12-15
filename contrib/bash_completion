@@ -29,6 +29,14 @@ _hg_paths()
     COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W "$paths" -- "$cur" ))
 }
 
+_hg_repos()
+{
+    local i
+    for i in $( compgen -d -- "$cur" ); do
+        test ! -d "$i"/.hg || COMPREPLY=(${COMPREPLY[@]:-} "$i")
+    done
+}
+
 _hg_status()
 {
     local files="$( hg status -$1 | cut -b 3- )"
@@ -92,11 +100,11 @@ _hg()
     # global options
     case "$prev" in
 	-R|--repository)
-	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
+	    _hg_repos
 	    return
 	;;
 	--cwd)
-	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
+	    # Stick with default bash completion
 	    return
 	;;
     esac
@@ -123,7 +131,7 @@ _hg()
 	;;
 	pull|push|outgoing|incoming)
 	    _hg_paths
-	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
+	    _hg_repos
 	;;
 	paths)
 	    _hg_paths
@@ -151,7 +159,7 @@ _hg()
 	    if [ $count = 1 ]; then
 		_hg_paths
 	    fi
-	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -d -- "$cur" ))
+            _hg_repos
 	;;
 	debugindex|debugindexdot)
 	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -X "!*.i" -- "$cur" ))
