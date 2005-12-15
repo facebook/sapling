@@ -30,8 +30,8 @@ class localrepository(object):
         self.ui = ui
         self.opener = util.opener(self.path)
         self.wopener = util.opener(self.root)
-        self.manifest = manifest.manifest(self.opener, local=self.local())
-        self.changelog = changelog.changelog(self.opener, local=self.local())
+        self.manifest = manifest.manifest(self.opener)
+        self.changelog = changelog.changelog(self.opener)
         self.tagscache = None
         self.nodetagscache = None
         self.encodepats = None
@@ -161,7 +161,7 @@ class localrepository(object):
 
     def file(self, f):
         if f[0] == '/': f = f[1:]
-        return filelog.filelog(self.opener, f, local=self.local())
+        return filelog.filelog(self.opener, f)
 
     def getcwd(self):
         return self.dirstate.getcwd()

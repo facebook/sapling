@@ -12,11 +12,10 @@ from demandload import *
 demandload(globals(), "bisect array")
 
 class manifest(revlog):
-    def __init__(self, opener, local=True):
+    def __init__(self, opener):
         self.mapcache = None
         self.listcache = None
-        revlog.__init__(self, opener, "00manifest.i", "00manifest.d",
-                        local=local)
+        revlog.__init__(self, opener, "00manifest.i", "00manifest.d")
 
     def read(self, node):
         if node == nullid: return {} # don't upset local cache

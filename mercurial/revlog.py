@@ -177,7 +177,7 @@ class revlog(object):
     remove data, and can use some simple techniques to avoid the need
     for locking while reading.
     """
-    def __init__(self, opener, indexfile, datafile, local=True):
+    def __init__(self, opener, indexfile, datafile):
         """
         create a revlog object
 
@@ -188,7 +188,6 @@ class revlog(object):
         self.datafile = datafile
         self.opener = opener
         self.cache = None
-        self.local = local # XXX only needed because statichttp
 
         try:
             i = self.opener(self.indexfile).read()
@@ -651,7 +650,7 @@ class revlog(object):
                 #print "next x"
                 gx = x.next()
 
-    def group(self, nodelist, lookup, infocollect=None):
+    def group(self, nodelist, lookup, infocollect = None):
         """calculate a delta group
 
         Given a list of changeset revs, return a set of deltas and
@@ -661,6 +660,7 @@ class revlog(object):
         changesets. parent is parent[0]
         """
         revs = [self.rev(n) for n in nodelist]
+        needed = dict.fromkeys(revs, 1)
 
         # if we don't have any revisions touched by these changesets, bail
         if not revs:
@@ -671,70 +671,59 @@ class revlog(object):
         p = self.parents(self.node(revs[0]))[0]
         revs.insert(0, self.rev(p))
 
-        if self.local:
-            mm = self.opener(self.datafile)
-            def chunk(r):
-                o = self.start(r)
-                l = self.length(r)
-                mm.seek(o)
-                return decompress(mm.read(l))
-        else:
-            # XXX: statichttp workaround
-            needed = dict.fromkeys(revs[1:], 1)
-            # for each delta that isn't contiguous in the log, we need to
-            # reconstruct the base, reconstruct the result, and then
-            # calculate the delta. We also need to do this where we've
-            # stored a full version and not a delta
-            for i in xrange(0, len(revs) - 1):
-                a, b = revs[i], revs[i + 1]
-                if a + 1 != b or self.base(b) == b:
-                    for j in xrange(self.base(a), a + 1):
-                        needed[j] = 1
-                    for j in xrange(self.base(b), b + 1):
-                        needed[j] = 1
+        # for each delta that isn't contiguous in the log, we need to
+        # reconstruct the base, reconstruct the result, and then
+        # calculate the delta. We also need to do this where we've
+        # stored a full version and not a delta
+        for i in xrange(0, len(revs) - 1):
+            a, b = revs[i], revs[i + 1]
+            if a + 1 != b or self.base(b) == b:
+                for j in xrange(self.base(a), a + 1):
+                    needed[j] = 1
+                for j in xrange(self.base(b), b + 1):
+                    needed[j] = 1
 
-            # calculate spans to retrieve from datafile
-            needed = needed.keys()
-            needed.sort()
-            spans = []
-            oo = -1
-            ol = 0
-            for n in needed:
-                if n < 0: continue
-                o = self.start(n)
-                l = self.length(n)
-                if oo + ol == o: # can we merge with the previous?
-                    nl = spans[-1][2]
-                    nl.append((n, l))
-                    ol += l
-                    spans[-1] = (oo, ol, nl)
-                else:
-                    oo = o
-                    ol = l
-                    spans.append((oo, ol, [(n, l)]))
+        # calculate spans to retrieve from datafile
+        needed = needed.keys()
+        needed.sort()
+        spans = []
+        oo = -1
+        ol = 0
+        for n in needed:
+            if n < 0: continue
+            o = self.start(n)
+            l = self.length(n)
+            if oo + ol == o: # can we merge with the previous?
+                nl = spans[-1][2]
+                nl.append((n, l))
+                ol += l
+                spans[-1] = (oo, ol, nl)
+            else:
+                oo = o
+                ol = l
+                spans.append((oo, ol, [(n, l)]))
 
-            # read spans in, divide up chunks
-            chunks = {}
-            for span in spans:
-                # we reopen the file for each span to make http happy for now
-                f = self.opener(self.datafile)
-                f.seek(span[0])
-                data = f.read(span[1])
+        # read spans in, divide up chunks
+        chunks = {}
+        for span in spans:
+            # we reopen the file for each span to make http happy for now
+            f = self.opener(self.datafile)
+            f.seek(span[0])
+            data = f.read(span[1])
 
-                # divide up the span
-                pos = 0
-                for r, l in span[2]:
-                    chunks[r] = decompress(data[pos: pos + l])
-                    pos += l
-            def chunk(r):
-                return chunks[r]
+            # divide up the span
+            pos = 0
+            for r, l in span[2]:
+                chunks[r] = decompress(data[pos: pos + l])
+                pos += l
 
         # helper to reconstruct intermediate versions
         def construct(text, base, rev):
-            bins = [chunk(r) for r in xrange(base + 1, rev + 1)]
+            bins = [chunks[r] for r in xrange(base + 1, rev + 1)]
             return mdiff.patches(text, bins)
 
         # build deltas
+        deltas = []
         for d in xrange(0, len(revs) - 1):
             a, b = revs[d], revs[d + 1]
             n = self.node(b)
@@ -746,7 +735,7 @@ class revlog(object):
             if a + 1 != b or self.base(b) == b:
                 if a >= 0:
                     base = self.base(a)
-                    ta = chunk(self.base(a))
+                    ta = chunks[self.base(a)]
                     ta = construct(ta, base, a)
                 else:
                     ta = ""
@@ -756,11 +745,11 @@ class revlog(object):
                     base = a
                     tb = ta
                 else:
-                    tb = chunk(self.base(b))
+                    tb = chunks[self.base(b)]
                 tb = construct(tb, base, b)
                 d = self.diff(ta, tb)
             else:
-                d = chunk(b)
+                d = chunks[b]
 
             p = self.parents(n)
             meta = n + p[0] + p[1] + lookup(n)

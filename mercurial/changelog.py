@@ -11,9 +11,8 @@ from demandload import demandload
 demandload(globals(), "os time util")
 
 class changelog(revlog):
-    def __init__(self, opener, local=True):
-        revlog.__init__(self, opener, "00changelog.i", "00changelog.d",
-                        local=local)
+    def __init__(self, opener):
+        revlog.__init__(self, opener, "00changelog.i", "00changelog.d")
 
     def extract(self, text):
         if not text:
