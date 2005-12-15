@@ -24,7 +24,7 @@ class localrepository(object):
         self.path = os.path.join(path, ".hg")
 
         if not create and not os.path.isdir(self.path):
-            raise repo.RepoError(_("repository %s not found") % self.path)
+            raise repo.RepoError(_("repository %s not found") % path)
 
         self.root = os.path.abspath(path)
         self.ui = ui
