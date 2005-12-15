@@ -66,7 +66,7 @@ def walkchangerevs(ui, repo, pats, opts):
     window, we first walk forwards to gather data, then in the desired
     order (usually backwards) to display it.
 
-    This function returns an (iterator, getchange) pair.  The
+    This function returns an (iterator, getchange, matchfn) tuple.  The
     getchange function returns the changelog entry for a numeric
     revision.  The iterator yields 3-tuples.  They will be of one of
     the following forms:
@@ -82,10 +82,11 @@ def walkchangerevs(ui, repo, pats, opts):
     "iter", rev, None: in-order traversal of the revs earlier iterated
     over with "add" - use to display data'''
 
-    if repo.changelog.count() == 0:
-        return [], False
-
     files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
+
+    if repo.changelog.count() == 0:
+        return [], False, matchfn
+
     revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
     wanted = {}
     slowpath = anypats
@@ -153,7 +154,7 @@ def walkchangerevs(ui, repo, pats, opts):
                 yield 'add', rev, fns
             for rev in nrevs:
                 yield 'iter', rev, None
-    return iterate(), getchange
+    return iterate(), getchange, matchfn
 
 revrangesep = ':'
 
@@ -1117,9 +1118,12 @@ def diff(ui, repo, *pats, **opts):
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
-    prev, other = repo.changelog.parents(node)
+    parents = [p for p in repo.changelog.parents(node) if p != nullid]
+    prev = (parents and parents[0]) or nullid
     change = repo.changelog.read(node)
 
+    if opts['switch_parent']:
+        parents.reverse()
     fp = make_file(repo, repo.changelog, opts['output'],
                    node=node, total=total, seqno=seqno,
                    revwidth=revwidth)
@@ -1130,8 +1134,8 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     fp.write("# User %s\n" % change[1])
     fp.write("# Node ID %s\n" % hex(node))
     fp.write("# Parent  %s\n" % hex(prev))
-    if other != nullid:
-        fp.write("# Parent  %s\n" % hex(other))
+    if len(parents) > 1:
+        fp.write("# Parent  %s\n" % hex(parents[1]))
     fp.write(change[4].rstrip())
     fp.write("\n\n")
 
@@ -1162,6 +1166,9 @@ def export(ui, repo, *changesets, **opts):
     Without the -a option, export will avoid generating diffs of files
     it detects as binary. With -a, export will generate a diff anyway,
     probably with undesirable results.
+
+    With the --switch-parent option, the diff will be against the second
+    parent. It can be useful to review a merge.
     """
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
@@ -1281,7 +1288,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     fstate = {}
     skip = {}
-    changeiter, getchange = walkchangerevs(ui, repo, pats, opts)
+    changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
     count = 0
     incrementing = False
     for st, rev, fns in changeiter:
@@ -1544,7 +1551,7 @@ def log(ui, repo, *pats, **opts):
                 self.write(*args)
         def __getattr__(self, key):
             return getattr(self.ui, key)
-    changeiter, getchange = walkchangerevs(ui, repo, pats, opts)
+    changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
     for st, rev, fns in changeiter:
         if st == 'window':
             du = dui(ui)
@@ -1560,7 +1567,7 @@ def log(ui, repo, *pats, **opts):
 
             br = None
             if opts['keyword']:
-                changes = repo.changelog.read(repo.changelog.node(rev))
+                changes = getchange(rev)
                 miss = 0
                 for k in [kw.lower() for kw in opts['keyword']]:
                     if not (k in changes[1].lower() or
@@ -1577,7 +1584,7 @@ def log(ui, repo, *pats, **opts):
             show_changeset(du, repo, rev, brinfo=br)
             if opts['patch']:
                 prev = (parents and parents[0]) or nullid
-                dodiff(du, du, repo, prev, changenode, fns)
+                dodiff(du, du, repo, prev, changenode, match=matchfn)
                 du.write("\n\n")
         elif st == 'iter':
             for args in du.hunk[rev]:
@@ -2122,7 +2129,8 @@ def undo(ui, repo):
     """
     repo.undo()
 
-def update(ui, repo, node=None, merge=False, clean=False, branch=None):
+def update(ui, repo, node=None, merge=False, clean=False, force=None,
+           branch=None):
     """update or merge working directory
 
     Update the working directory to the specified revision.
@@ -2159,7 +2167,7 @@ def update(ui, repo, node=None, merge=False, clean=False, branch=None):
             return 1
     else:
         node = node and repo.lookup(node) or repo.changelog.tip()
-    return repo.update(node, allow=merge, force=clean)
+    return repo.update(node, allow=merge, force=clean, forcemerge=force)
 
 def verify(ui, repo):
     """verify the integrity of the repository
@@ -2256,7 +2264,8 @@ table = {
     "^export":
         (export,
          [('o', 'output', "", _('print output to file with formatted name')),
-          ('a', 'text', None, _('treat all files as text'))],
+          ('a', 'text', None, _('treat all files as text')),
+          ('', 'switch-parent', None, _('diff against the second parent'))],
          "hg export [-a] [-o OUTFILE] REV..."),
     "forget":
         (forget,
@@ -2404,8 +2413,9 @@ table = {
         (update,
          [('b', 'branch', "", _('checkout the head of a specific branch')),
           ('m', 'merge', None, _('allow merging of branches')),
-          ('C', 'clean', None, _('overwrite locally modified files'))],
-         _('hg update [-b TAG] [-m] [-C] [REV]')),
+          ('C', 'clean', None, _('overwrite locally modified files')),
+          ('f', 'force', None, _('force a merge with outstanding changes'))],
+         _('hg update [-b TAG] [-m] [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),
 }

@@ -25,7 +25,8 @@ cd ../r2
 hg -q pull ../r1
 hg status
 hg --debug up
-hg --debug up -m
+hg --debug up -m || echo failed
+hg --debug up -f -m
 hg parents
 hg -v history
 hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \

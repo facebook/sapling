@@ -8,6 +8,10 @@ hg commit -m 1 -d "0 0"
 rm foo
 hg remove foo
 hg commit -m 2 -d "0 0"
+hg export 0
+hg export 1
+hg log -p -r 0
+hg log -p -r 1
 
 cd ..
 hg clone a b
