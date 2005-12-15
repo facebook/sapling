@@ -1124,9 +1124,12 @@ def diff(ui, repo, *pats, **opts):
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
-    prev, other = repo.changelog.parents(node)
+    parents = [p for p in repo.changelog.parents(node) if p != nullid]
+    prev = (parents and parents[0]) or nullid
     change = repo.changelog.read(node)
 
+    if opts['switch_parent']:
+        parents.reverse()
     fp = make_file(repo, repo.changelog, opts['output'],
                    node=node, total=total, seqno=seqno,
                    revwidth=revwidth)
@@ -1137,8 +1140,8 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     fp.write("# User %s\n" % change[1])
     fp.write("# Node ID %s\n" % hex(node))
     fp.write("# Parent  %s\n" % hex(prev))
-    if other != nullid:
-        fp.write("# Parent  %s\n" % hex(other))
+    if len(parents) > 1:
+        fp.write("# Parent  %s\n" % hex(parents[1]))
     fp.write(change[4].rstrip())
     fp.write("\n\n")
 
@@ -1169,6 +1172,9 @@ def export(ui, repo, *changesets, **opts):
     Without the -a option, export will avoid generating diffs of files
     it detects as binary. With -a, export will generate a diff anyway,
     probably with undesirable results.
+
+    With the --switch-parent option, the diff will be against the second
+    parent. It can be useful to review a merge.
     """
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
@@ -2263,7 +2269,8 @@ table = {
     "^export":
         (export,
          [('o', 'output', "", _('print output to file with formatted name')),
-          ('a', 'text', None, _('treat all files as text'))],
+          ('a', 'text', None, _('treat all files as text')),
+          ('', 'switch-parent', None, _('diff against the second parent'))],
          "hg export [-a] [-o OUTFILE] REV..."),
     "forget":
         (forget,
