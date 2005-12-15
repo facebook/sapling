@@ -13,7 +13,7 @@ platform-specific details from the core.
 import os, errno
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "re cStringIO shutil popen2 tempfile threading time")
+demandload(globals(), "re cStringIO shutil popen2 sys tempfile threading time")
 
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
@@ -510,12 +510,18 @@ if os.name == 'nt':
 else:
     nulldev = '/dev/null'
 
-    hgrcd = '/etc/mercurial/hgrc.d'
-    hgrcs = []
-    if os.path.isdir(hgrcd):
-        hgrcs = [f for f in os.listdir(hgrcd) if f.endswith(".rc")]
-    rcpath = map(os.path.normpath, hgrcs +
-                 ['/etc/mercurial/hgrc', os.path.expanduser('~/.hgrc')])
+    def rcfiles(path):
+        rcs = [os.path.join(path, 'hgrc')]
+        rcdir = os.path.join(path, 'hgrc.d')
+        try:
+            rcs.extend([os.path.join(rcdir, f) for f in os.listdir(rcdir)
+                        if f.endswith(".rc")])
+        except OSError, inst: pass
+        return rcs
+    rcpath = rcfiles(os.path.dirname(sys.argv[0]) + '/../etc/mercurial')
+    rcpath.extend(rcfiles('/etc/mercurial'))
+    rcpath.append(os.path.expanduser('~/.hgrc'))
+    rcpath = [os.path.normpath(f) for f in rcpath]
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""

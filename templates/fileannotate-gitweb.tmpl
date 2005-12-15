@@ -1,0 +1,43 @@
+#header#
+<title>#repo|escape#: Annotate</title>
+<link rel="alternate" type="application/rss+xml"
+   href="?cmd=changelog;style=rss" title="RSS feed for #repo|escape#">
+</head>
+<body>
+
+<div class="page_header">
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="?cmd=summary;style=gitweb">#repo|escape#</a> / annotate
+</div>
+
+<div class="page_nav">
+<a href="?cmd=summary;style=gitweb">summary</a> | <a href="?cmd=changelog;style=gitweb">changelog</a> | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?cmd=manifest;manifest=#manifest#;path=#path#;style=gitweb">manifest</a> | <a href="?cmd=changeset;node=#node#;style=gitweb">changeset</a> | <a href="?cmd=file;file=#file#;filenode=#filenode#;style=gitweb">file</a> | <a href="?cmd=filelog;file=#file#;filenode=#filenode#;style=gitweb">revisions</a> | annotate<br/>
+</div>
+
+<div class="title">#file#</div>
+
+<table>
+<tr>
+ <td class="metatag">changeset #rev#:</td>
+ <td><a href="?cs=#node|short#;style=gitweb">#node|short#</a></td></tr>
+#parent%fileannotateparent#
+<tr>
+ <td class="metatag">manifest:</td>
+ <td><a href="?mf=#manifest|short#;path=/;style=gitweb">#manifest|short#</a></td></tr>
+<tr>
+ <td class="metatag">author:</td>
+ <td>#author|obfuscate#</td></tr>
+<tr>
+ <td class="metatag">date:</td>
+ <td>#date|date# (#date|age# ago)</td></tr>
+<tr>
+ <td class="metatag">permissions:</td>
+ <td>#permissions|permissions#</td></tr>
+</table>
+
+<div class="page_body">
+<table>
+#annotate%annotateline#
+</table>
+</div>
+
+#footer#

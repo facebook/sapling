@@ -1,0 +1,47 @@
+# HG changeset patch
+# User test
+# Node ID b51ca55c20354097ca299529d18b5cd356976ba2
+# Parent  0000000000000000000000000000000000000000
+1
+
+diff -r 000000000000 -r b51ca55c2035 foo
+--- /dev/null	Thu Jan  1 00:00:00 1970 +0000
++++ b/foo	Thu Jan  1 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++a
+# HG changeset patch
+# User test
+# Node ID 1e555b9b85c52e1e9e8175446f1ede507b2d1ebb
+# Parent  b51ca55c20354097ca299529d18b5cd356976ba2
+2
+
+diff -r b51ca55c2035 -r 1e555b9b85c5 foo
+--- a/foo	Thu Jan  1 00:00:00 1970 +0000
++++ /dev/null	Thu Jan  1 00:00:00 1970 +0000
+@@ -1,1 +0,0 @@
+-a
+changeset:   0:b51ca55c2035
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     1
+
+diff -r 000000000000 -r b51ca55c2035 foo
+--- /dev/null	Thu Jan  1 00:00:00 1970 +0000
++++ b/foo	Thu Jan  1 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+
+changeset:   1:1e555b9b85c5
+tag:         tip
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     2
+
+diff -r b51ca55c2035 -r 1e555b9b85c5 foo
+--- a/foo	Thu Jan  1 00:00:00 1970 +0000
++++ /dev/null	Thu Jan  1 00:00:00 1970 +0000
+@@ -1,1 +0,0 @@
+-a
+
+
