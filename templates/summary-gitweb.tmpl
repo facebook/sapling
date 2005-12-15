@@ -1,0 +1,34 @@
+#header#
+<title>#repo|escape#: Summary</title>
+<link rel="alternate" type="application/rss+xml"
+   href="?cmd=changelog;style=rss" title="RSS feed for #repo|escape#">
+</head>
+<body>
+
+<div class="page_header">
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="?cmd=summary;style=gitweb">#repo|escape#</a> / summary
+</div>
+<div class="page_nav">
+summary | <a href="?cmd=changelog;style=gitweb">changelog</a> | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?cmd=manifest;manifest=#manifest#;path=/;style=gitweb">manifest</a><br/>
+</div>
+
+<div class="title">&nbsp;</div>
+<table cellspacing="0">
+<tr><td>description</td><td>#desc#</td></tr>
+<tr><td>owner</td><td>#owner#</td></tr>
+<!-- <tr><td>last change</td><td>#lastchange|rfc822date#</td></tr> -->
+</table>
+
+<div><a  class="title" href="?cmd=changelog;style=gitweb">changes</a></div>
+<table cellspacing="0">
+#shortlog#
+<tr class="light"><td colspan="3"><a class="list" href="?cmd=changelog;style=gitweb">...</a></td></tr>
+</table>
+
+<div><a class="title" href="?cmd=tags;style=gitweb">tags</a></div>
+<table cellspacing="0">
+#tags#
+<tr class="light"><td colspan="3"><a class="list" href="?cmd=tags;style=gitweb">...</a></td></tr>
+</table>
+
+#footer#
