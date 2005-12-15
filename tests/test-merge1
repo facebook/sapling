@@ -40,8 +40,10 @@ echo This is file c1 > c
 hg add c
 hg commit -m "commit #2" -d "0 0"
 echo This is file b2 > b
-echo %% merge of b expected
+echo %% merge should fail
 env HGMERGE=../merge hg update -m 1
+echo %% merge of b expected
+env HGMERGE=../merge hg update -f -m 1
 cd ..; /bin/rm -rf t
 echo %%
 
@@ -65,8 +67,10 @@ echo 'Contents of b should be "this is file b1"'
 cat b
 
 echo This is file b22 > b
-echo %% merge expected!
+echo %% merge fails
 env HGMERGE=../merge hg update -m 2
+echo %% merge expected!
+env HGMERGE=../merge hg update -f -m 2
 cd ..; /bin/rm -rf t
 
 mkdir t
@@ -85,6 +89,8 @@ echo This is file c1 > c
 hg add c
 hg commit -m "commit #3" -d "0 0"
 echo This is file b33 > b
-echo %% merge of b expected
+echo %% merge of b should fail
 env HGMERGE=../merge hg update -m 2
+echo %% merge of b expected
+env HGMERGE=../merge hg update -f -m 2
 cd ..; /bin/rm -rf t

@@ -1358,7 +1358,7 @@ class localrepository(object):
         return
 
     def update(self, node, allow=False, force=False, choose=None,
-               moddirstate=True):
+               moddirstate=True, forcemerge=False):
         pl = self.dirstate.parents()
         if not force and pl[1] != nullid:
             self.ui.warn(_("aborting: outstanding uncommitted merges\n"))
@@ -1377,6 +1377,18 @@ class localrepository(object):
         mfa = self.manifest.readflags(man)
 
         (c, a, d, u) = self.changes()
+
+        if allow and not forcemerge:
+            if c or a or d:
+                raise util.Abort(_("outstanding uncommited changes"))
+        if not forcemerge and not force:
+            for f in u:
+                if f in m2:
+                     t1 = self.wread(f)
+                     t2 = self.file(f).read(m2[f])
+                     if cmp(t1, t2) != 0:
+                        raise util.Abort(_("'%s' already exists in the working"
+                                           " dir and differs from remote") % f)
 
         # is this a jump, or a merge?  i.e. is there a linear path
         # from p1 to p2?

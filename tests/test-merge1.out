@@ -1,13 +1,19 @@
 %% no merges expected
+%% merge should fail
+abort: 'b' already exists in the working dir and differs from remote
 %% merge of b expected
 merging for b
 merging b
 %%
 Contents of b should be "this is file b1"
 This is file b1
+%% merge fails
+abort: outstanding uncommited changes
 %% merge expected!
 merging for b
 merging b
+%% merge of b should fail
+abort: outstanding uncommited changes
 %% merge of b expected
 merging for b
 merging b

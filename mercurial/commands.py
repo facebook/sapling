@@ -2135,7 +2135,8 @@ def undo(ui, repo):
     """
     repo.undo()
 
-def update(ui, repo, node=None, merge=False, clean=False, branch=None):
+def update(ui, repo, node=None, merge=False, clean=False, force=None,
+           branch=None):
     """update or merge working directory
 
     Update the working directory to the specified revision.
@@ -2172,7 +2173,7 @@ def update(ui, repo, node=None, merge=False, clean=False, branch=None):
             return 1
     else:
         node = node and repo.lookup(node) or repo.changelog.tip()
-    return repo.update(node, allow=merge, force=clean)
+    return repo.update(node, allow=merge, force=clean, forcemerge=force)
 
 def verify(ui, repo):
     """verify the integrity of the repository
@@ -2418,8 +2419,9 @@ table = {
         (update,
          [('b', 'branch', "", _('checkout the head of a specific branch')),
           ('m', 'merge', None, _('allow merging of branches')),
-          ('C', 'clean', None, _('overwrite locally modified files'))],
-         _('hg update [-b TAG] [-m] [-C] [REV]')),
+          ('C', 'clean', None, _('overwrite locally modified files')),
+          ('f', 'force', None, _('force a merge with outstanding changes'))],
+         _('hg update [-b TAG] [-m] [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),
 }
