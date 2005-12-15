@@ -66,7 +66,7 @@ def walkchangerevs(ui, repo, pats, opts):
     window, we first walk forwards to gather data, then in the desired
     order (usually backwards) to display it.
 
-    This function returns an (iterator, getchange) pair.  The
+    This function returns an (iterator, getchange, matchfn) tuple.  The
     getchange function returns the changelog entry for a numeric
     revision.  The iterator yields 3-tuples.  They will be of one of
     the following forms:
@@ -82,10 +82,11 @@ def walkchangerevs(ui, repo, pats, opts):
     "iter", rev, None: in-order traversal of the revs earlier iterated
     over with "add" - use to display data'''
 
-    if repo.changelog.count() == 0:
-        return [], False
-
     files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
+
+    if repo.changelog.count() == 0:
+        return [], False, matchfn
+
     revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
     wanted = {}
     slowpath = anypats
@@ -153,7 +154,7 @@ def walkchangerevs(ui, repo, pats, opts):
                 yield 'add', rev, fns
             for rev in nrevs:
                 yield 'iter', rev, None
-    return iterate(), getchange
+    return iterate(), getchange, matchfn
 
 revrangesep = ':'
 
@@ -1287,7 +1288,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     fstate = {}
     skip = {}
-    changeiter, getchange = walkchangerevs(ui, repo, pats, opts)
+    changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
     count = 0
     incrementing = False
     for st, rev, fns in changeiter:
@@ -1550,7 +1551,7 @@ def log(ui, repo, *pats, **opts):
                 self.write(*args)
         def __getattr__(self, key):
             return getattr(self.ui, key)
-    changeiter, getchange = walkchangerevs(ui, repo, pats, opts)
+    changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
     for st, rev, fns in changeiter:
         if st == 'window':
             du = dui(ui)
@@ -1566,7 +1567,7 @@ def log(ui, repo, *pats, **opts):
 
             br = None
             if opts['keyword']:
-                changes = repo.changelog.read(repo.changelog.node(rev))
+                changes = getchange(rev)
                 miss = 0
                 for k in [kw.lower() for kw in opts['keyword']]:
                     if not (k in changes[1].lower() or
@@ -1583,7 +1584,7 @@ def log(ui, repo, *pats, **opts):
             show_changeset(du, repo, rev, brinfo=br)
             if opts['patch']:
                 prev = (parents and parents[0]) or nullid
-                dodiff(du, du, repo, prev, changenode, fns)
+                dodiff(du, du, repo, prev, changenode, match=matchfn)
                 du.write("\n\n")
         elif st == 'iter':
             for args in du.hunk[rev]:
