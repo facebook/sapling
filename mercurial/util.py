@@ -357,9 +357,9 @@ def copyfiles(src, dst, hardlink=None):
                 os_link(src, dst)
             except:
                 hardlink = False
-                shutil.copy2(src, dst)
+                shutil.copy(src, dst)
         else:
-            shutil.copy2(src, dst)
+            shutil.copy(src, dst)
 
 def opener(base):
     """
