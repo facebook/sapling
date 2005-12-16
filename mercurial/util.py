@@ -525,7 +525,10 @@ else:
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
-        return output_line[14:]
+        pf = output_line[14:]
+        if pf.startswith("'") and pf.endswith("'") and pf.find(" ") >= 0:
+            pf = pf[1:-1] # Remove the quotes
+        return pf
 
     def is_exec(f, last):
         """check whether a file is executable"""
