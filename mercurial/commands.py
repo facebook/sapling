@@ -1119,11 +1119,11 @@ def diff(ui, repo, *pats, **opts):
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
     parents = [p for p in repo.changelog.parents(node) if p != nullid]
+    if opts['switch_parent']:
+        parents.reverse()
     prev = (parents and parents[0]) or nullid
     change = repo.changelog.read(node)
 
-    if opts['switch_parent']:
-        parents.reverse()
     fp = make_file(repo, repo.changelog, opts['output'],
                    node=node, total=total, seqno=seqno,
                    revwidth=revwidth)
