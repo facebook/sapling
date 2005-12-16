@@ -226,6 +226,8 @@ class localrepository(object):
         if os.path.exists(self.join("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
             transaction.rollback(self.opener, self.join("journal"))
+            self.manifest = manifest.manifest(self.opener)
+            self.changelog = changelog.changelog(self.opener)
             return True
         else:
             self.ui.warn(_("no interrupted transaction available\n"))
