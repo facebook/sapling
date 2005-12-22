@@ -58,7 +58,7 @@ class filelog(revlog):
         return self.addrevision(text, transaction, link, p1, p2)
 
     def renamed(self, node):
-        if 0 and self.parents(node)[0] != nullid: # XXX
+        if self.parents(node)[0] != nullid:
             return False
         m = self.readmeta(node)
         if m and m.has_key("copy"):
