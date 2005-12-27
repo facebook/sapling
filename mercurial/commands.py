@@ -2019,7 +2019,7 @@ def status(ui, repo, *pats, **opts):
         for f in changes:
             ui.write(format % f)
 
-def tag(ui, repo, name, rev=None, **opts):
+def tag(ui, repo, name, rev_=None, **opts):
     """add a tag for the current tip or a given revision
 
     Name a particular revision using <name>.
@@ -2037,10 +2037,10 @@ def tag(ui, repo, name, rev=None, **opts):
     """
     if name == "tip":
         raise util.Abort(_("the name 'tip' is reserved"))
-    if 'rev' in opts:
-        rev = opts['rev']
-    if rev:
-        r = hex(repo.lookup(rev))
+    if opts['rev']:
+        rev_ = opts['rev']
+    if rev_:
+        r = hex(repo.lookup(rev_))
     else:
         r = hex(repo.changelog.tip())
 
