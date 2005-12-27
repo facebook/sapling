@@ -400,10 +400,6 @@ class localrepository(object):
                 fp1 = m1.get(f, nullid)
                 fp2 = m2.get(f, nullid)
 
-            # is the same revision on two branches of a merge?
-            if fp2 == fp1:
-                fp2 = nullid
-
             if fp2 != nullid:
                 # is one parent an ancestor of the other?
                 fpa = r.ancestor(fp1, fp2)
@@ -413,7 +409,7 @@ class localrepository(object):
                     fp2 = nullid
 
                 # is the file unmodified from the parent?
-                if not meta and t == r.read(fp1):
+                if not meta and t == r.read(fp1) and fp2 == nullid:
                     # record the proper existing parent in manifest
                     # no need to add a revision
                     new[f] = fp1
