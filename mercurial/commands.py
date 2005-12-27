@@ -2112,7 +2112,9 @@ def unbundle(ui, repo, fname, **opts):
             yield zd.decompress(chunk)
 
     bzgen = bzgenerator(util.filechunkiter(f, 4096))
-    repo.addchangegroup(util.chunkbuffer(bzgen))
+    if repo.addchangegroup(util.chunkbuffer(bzgen)):
+        return 1
+
     if opts['update']:
         return update(ui, repo)
     else:
@@ -2410,7 +2412,8 @@ table = {
     "tip": (tip, [], _('hg tip')),
     "unbundle":
         (unbundle,
-         [('u', 'update', None, _('update the working directory to tip after unbundle'))],
+         [('u', 'update', None,
+           _('update the working directory to tip after unbundle'))],
          _('hg unbundle [-u] FILE')),
     "undo": (undo, [], _('hg undo')),
     "^update|up|checkout|co":
