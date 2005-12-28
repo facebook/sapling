@@ -463,7 +463,8 @@ def help_(ui, cmd=None, with_version=False):
             opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
                                           longopt and " --%s" % longopt),
                                "%s%s" % (desc,
-                                         default and _(" (default: %s)") % default
+                                         default
+                                         and _(" (default: %s)") % default
                                          or "")))
 
     if opt_output:
@@ -730,7 +731,8 @@ def clone(ui, source, dest=None, **opts):
         revs = None
         if opts['rev']:
             if not other.local():
-                raise util.Abort("clone -r not supported yet for remote repositories.")
+                error = "clone -r not supported yet for remote repositories."
+                raise util.Abort(error)
             else:
                 revs = [other.lookup(rev) for rev in opts['rev']]
         repo = hg.repository(ui, dest, create=1)
@@ -985,7 +987,8 @@ def debugcheckstate(ui, repo):
             ui.warn(_("%s in manifest1, but listed as state %s") % (f, state))
             errors += 1
     if errors:
-        raise util.Abort(_(".hg/dirstate inconsistent with current parent's manifest"))
+        error = _(".hg/dirstate inconsistent with current parent's manifest")
+        raise util.Abort(error)
 
 def debugconfig(ui):
     """show combined config settings from all hgrc files"""
@@ -1176,7 +1179,8 @@ def export(ui, repo, *changesets, **opts):
     revs = list(revrange(ui, repo, changesets))
     total = len(revs)
     revwidth = max(map(len, revs))
-    ui.note(len(revs) > 1 and _("Exporting patches:\n") or _("Exporting patch:\n"))
+    msg = len(revs) > 1 and _("Exporting patches:\n") or _("Exporting patch:\n")
+    ui.note(msg)
     for cset in revs:
         seqno += 1
         doexport(ui, repo, cset, seqno, total, revwidth, opts)
@@ -2227,8 +2231,10 @@ table = {
          [('U', 'noupdate', None, _('do not update the new working directory')),
           ('e', 'ssh', "", _('specify ssh command to use')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
-          ('r', 'rev', [], _('a changeset you would like to have after cloning')),
-          ('', 'remotecmd', "", _('specify hg command to run on the remote side'))],
+          ('r', 'rev', [],
+           _('a changeset you would like to have after cloning')),
+          ('', 'remotecmd', "",
+           _('specify hg command to run on the remote side'))],
          _('hg clone [OPTION]... SOURCE [DEST]')),
     "^commit|ci":
         (commit,
@@ -2241,10 +2247,14 @@ table = {
           ('u', 'user', "", _('record user as commiter'))],
          _('hg commit [OPTION]... [FILE]...')),
     "copy|cp": (copy,
-             [('I', 'include', [], _('include names matching the given patterns')),
-              ('X', 'exclude', [], _('exclude names matching the given patterns')),
-              ('A', 'after', None, _('record a copy that has already occurred')),
-              ('f', 'force', None, _('forcibly copy over an existing managed file'))],
+             [('I', 'include', [],
+               _('include names matching the given patterns')),
+              ('X', 'exclude', [],
+               _('exclude names matching the given patterns')),
+              ('A', 'after', None,
+               _('record a copy that has already occurred')),
+              ('f', 'force', None,
+               _('forcibly copy over an existing managed file'))],
              _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
@@ -2285,7 +2295,8 @@ table = {
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
           ('', 'all', None, _('print all revisions that match')),
           ('i', 'ignore-case', None, _('ignore case when matching')),
-          ('l', 'files-with-matches', None, _('print only filenames and revs that match')),
+          ('l', 'files-with-matches', None,
+           _('print only filenames and revs that match')),
           ('n', 'line-number', None, _('print matching line numbers')),
           ('r', 'rev', [], _('search in given revision range')),
           ('u', 'user', None, _('print user who committed change'))],
@@ -2299,9 +2310,11 @@ table = {
     "identify|id": (identify, [], _('hg identify')),
     "import|patch":
         (import_,
-         [('p', 'strip', 1, _('directory strip option for patch. This has the same\n') +
-                            _('meaning as the corresponding patch option')),
-          ('f', 'force', None, _('skip check for outstanding uncommitted changes')),
+         [('p', 'strip', 1,
+           _('directory strip option for patch. This has the same\n') +
+           _('meaning as the corresponding patch option')),
+          ('f', 'force', None,
+           _('skip check for outstanding uncommitted changes')),
           ('b', 'base', "", _('base path'))],
          "hg import [-f] [-p NUM] [-b BASE] PATCH..."),
     "incoming|in": (incoming,
@@ -2313,8 +2326,10 @@ table = {
     "locate":
         (locate,
          [('r', 'rev', '', _('search the repository as it stood at rev')),
-          ('0', 'print0', None, _('end filenames with NUL, for use with xargs')),
-          ('f', 'fullpath', None, _('print complete paths from the filesystem root')),
+          ('0', 'print0', None,
+           _('end filenames with NUL, for use with xargs')),
+          ('f', 'fullpath', None,
+           _('print complete paths from the filesystem root')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg locate [OPTION]... [PATTERN]...')),
@@ -2339,16 +2354,19 @@ table = {
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
         (pull,
-         [('u', 'update', None, _('update the working directory to tip after pull')),
+         [('u', 'update', None,
+           _('update the working directory to tip after pull')),
           ('e', 'ssh', "", _('specify ssh command to use')),
           ('r', 'rev', [], _('a specific revision you would like to pull')),
-          ('', 'remotecmd', "", _('specify hg command to run on the remote side'))],
+          ('', 'remotecmd', "",
+           _('specify hg command to run on the remote side'))],
          _('hg pull [-u] [-e FILE] [-r rev] [--remotecmd FILE] [SOURCE]')),
     "^push":
         (push,
          [('f', 'force', None, _('force push')),
           ('e', 'ssh', "", _('specify ssh command to use')),
-          ('', 'remotecmd', "", _('specify hg command to run on the remote side'))],
+          ('', 'remotecmd', "",
+           _('specify hg command to run on the remote side'))],
          _('hg push [-f] [-e FILE] [--remotecmd FILE] [DEST]')),
     "rawcommit":
         (rawcommit,
@@ -2361,14 +2379,20 @@ table = {
          _('hg rawcommit [OPTION]... [FILE]...')),
     "recover": (recover, [], _("hg recover")),
     "^remove|rm": (remove,
-                   [('I', 'include', [], _('include names matching the given patterns')),
-                    ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+                   [('I', 'include', [],
+                     _('include names matching the given patterns')),
+                    ('X', 'exclude', [],
+                     _('exclude names matching the given patterns'))],
                    _("hg remove [OPTION]... FILE...")),
     "rename|mv": (rename,
-                  [('I', 'include', [], _('include names matching the given patterns')),
-                   ('X', 'exclude', [], _('exclude names matching the given patterns')),
-                   ('A', 'after', None, _('record a rename that has already occurred')),
-                   ('f', 'force', None, _('forcibly copy over an existing managed file'))],
+                  [('I', 'include', [],
+                    _('include names matching the given patterns')),
+                   ('X', 'exclude', [],
+                    _('exclude names matching the given patterns')),
+                   ('A', 'after', None,
+                    _('record a rename that has already occurred')),
+                   ('f', 'force', None,
+                    _('forcibly copy over an existing managed file'))],
                   _('hg rename [OPTION]... [SOURCE]... DEST')),
     "^revert":
         (revert,
@@ -2383,7 +2407,8 @@ table = {
           ('E', 'errorlog', '', _('name of error log file to write to')),
           ('p', 'port', 0, _('port to use (default: 8000)')),
           ('a', 'address', '', _('address to use')),
-          ('n', 'name', "", _('name to show in web pages (default: working dir)')),
+          ('n', 'name', "",
+           _('name to show in web pages (default: working dir)')),
           ('', 'stdio', None, _('for remote clients')),
           ('t', 'templates', "", _('web templates to use')),
           ('', 'style', "", _('template style to use')),
@@ -2396,7 +2421,8 @@ table = {
           ('r', 'removed', None, _('show only removed files')),
           ('u', 'unknown', None, _('show only unknown (not tracked) files')),
           ('n', 'no-status', None, _('hide status prefix')),
-          ('0', 'print0', None, _('end filenames with NUL, for use with xargs')),
+          ('0', 'print0', None,
+           _('end filenames with NUL, for use with xargs')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _("hg status [OPTION]... [FILE]...")),
@@ -2430,7 +2456,8 @@ table = {
 globalopts = [
     ('R', 'repository', "", _("repository root directory")),
     ('', 'cwd', '', _("change working directory")),
-    ('y', 'noninteractive', None, _("do not prompt, assume 'yes' for any required answers")),
+    ('y', 'noninteractive', None,
+     _("do not prompt, assume 'yes' for any required answers")),
     ('q', 'quiet', None, _("suppress output")),
     ('v', 'verbose', None, _("enable additional output")),
     ('', 'debug', None, _("enable debugging output")),
