@@ -159,6 +159,7 @@ def patchbomb(ui, repo, *revs, **opts):
             self.lines = []
 
     commands.export(ui, repo, *args, **{'output': exportee(patches),
+                                        'switch_parent': False,
                                         'text': None})
 
     jumbo = []
