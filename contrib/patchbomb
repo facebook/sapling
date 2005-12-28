@@ -128,6 +128,10 @@ def patchbomb(ui, repo, *revs, **opts):
         #        'Patch subject is complete summary.')
         #body += '\n\n\n'
 
+        if opts['plain']:
+            while patch and patch[0].startswith('# '): patch.pop(0)
+            if patch: patch.pop(0)
+            while patch and not patch[0].strip(): patch.pop(0)
         if opts['diffstat']:
             body += cdiffstat('\n'.join(desc), patch) + '\n\n'
         body += '\n'.join(patch)
@@ -252,6 +256,7 @@ if __name__ == '__main__':
     optspec = [('c', 'cc', [], 'email addresses of copy recipients'),
                ('d', 'diffstat', None, 'add diffstat output to messages'),
                ('f', 'from', '', 'email address of sender'),
+               ('', 'plain', None, 'omit hg patch header'),
                ('n', 'test', None, 'print messages that would be sent'),
                ('s', 'subject', '', 'subject of introductory message'),
                ('t', 'to', [], 'email addresses of recipients')]
