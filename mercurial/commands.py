@@ -731,7 +731,7 @@ def clone(ui, source, dest=None, **opts):
         revs = None
         if opts['rev']:
             if not other.local():
-                error = "clone -r not supported yet for remote repositories."
+                error = _("clone -r not supported yet for remote repositories.")
                 raise util.Abort(error)
             else:
                 revs = [other.lookup(rev) for rev in opts['rev']]
@@ -1714,7 +1714,7 @@ def pull(ui, repo, source="default", **opts):
     other = hg.repository(ui, source)
     revs = None
     if opts['rev'] and not other.local():
-        raise util.Abort("pull -r doesn't work for remote repositories yet")
+        raise util.Abort(_("pull -r doesn't work for remote repositories yet"))
     elif opts['rev']:
         revs = [other.lookup(rev) for rev in opts['rev']]
     r = repo.pull(other, heads=revs)
@@ -1972,7 +1972,7 @@ def serve(ui, repo, **opts):
     try:
         httpd = hgweb.create_server(repo)
     except socket.error, inst:
-        raise util.Abort('cannot start server: ' + inst.args[1])
+        raise util.Abort(_('cannot start server: ') + inst.args[1])
 
     if ui.verbose:
         addr, port = httpd.socket.getsockname()
