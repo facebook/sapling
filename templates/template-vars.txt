@@ -18,6 +18,7 @@ desc          a description (escaped, with breaks)
 shortdesc         a short description (escaped)
 author        a name or email addressv(obfuscated)
 parent        a list of the parent
+child         a list of the children
 tags          a list of tag
 
 header        the global page header

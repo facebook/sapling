@@ -212,14 +212,14 @@ class hgweb(object):
         if len(files) > self.maxfiles:
             yield self.t("fileellipses")
 
-    def parents(self, node, parents=[], rev=None, hide=False, **args):
+    def siblings(self, siblings=[], rev=None, hiderev=None, **args):
         if not rev:
             rev = lambda x: ""
-        parents = [p for p in parents if p != nullid]
-        if hide and len(parents) == 1 and rev(parents[0]) == rev(node) - 1:
+        siblings = [s for s in siblings if s != nullid]
+        if len(siblings) == 1 and rev(siblings[0]) == hiderev:
             return
-        for p in parents:
-            yield dict(node=hex(p), rev=rev(p), **args)
+        for s in siblings:
+            yield dict(node=hex(s), rev=rev(s), **args)
 
     def showtag(self, t1, node=nullid, **args):
         for t in self.repo.nodetags(node):
@@ -321,8 +321,10 @@ class hgweb(object):
 
                 l.insert(0, {"parity": parity,
                              "author": changes[1],
-                             "parent": self.parents(n, cl.parents(n), cl.rev,
-                                                    hide=True),
+                             "parent": self.siblings(cl.parents(n), cl.rev,
+                                                     cl.rev(n) - 1),
+                             "child": self.siblings(cl.children(n), cl.rev,
+                                                    cl.rev(n) + 1),
                              "changelogtag": self.showtag("changelogtag",n),
                              "manifest": hex(changes[0]),
                              "desc": changes[4],
@@ -382,7 +384,8 @@ class hgweb(object):
                 yield self.t('searchentry',
                              parity=count & 1,
                              author=changes[1],
-                             parent=self.parents(n, cl.parents(n), cl.rev),
+                             parent=self.siblings(cl.parents(n), cl.rev),
+                             child=self.siblings(cl.children(n), cl.rev),
                              changelogtag=self.showtag("changelogtag",n),
                              manifest=hex(changes[0]),
                              desc=changes[4],
@@ -422,7 +425,8 @@ class hgweb(object):
                      diff=diff,
                      rev=cl.rev(n),
                      node=nodeid,
-                     parent=self.parents(n, cl.parents(n), cl.rev),
+                     parent=self.siblings(cl.parents(n), cl.rev),
+                     child=self.siblings(cl.children(n), cl.rev),
                      changesettag=self.showtag("changesettag",n),
                      manifest=hex(changes[0]),
                      author=changes[1],
@@ -454,7 +458,9 @@ class hgweb(object):
                              "node": hex(cn),
                              "author": cs[1],
                              "date": cs[2],
-                             "parent": self.parents(n, fl.parents(n),
+                             "parent": self.siblings(fl.parents(n),
+                                                     fl.rev, file=f),
+                             "child": self.siblings(fl.children(n),
                                                     fl.rev, file=f),
                              "desc": cs[4]})
                 parity = 1 - parity
@@ -498,7 +504,8 @@ class hgweb(object):
                      manifest=hex(mfn),
                      author=cs[1],
                      date=cs[2],
-                     parent=self.parents(n, fl.parents(n), fl.rev, file=f),
+                     parent=self.siblings(fl.parents(n), fl.rev, file=f),
+                     child=self.siblings(fl.children(n), fl.rev, file=f),
                      permissions=self.repo.manifest.readflags(mfn)[f])
 
     def fileannotate(self, f, node):
@@ -550,7 +557,8 @@ class hgweb(object):
                      manifest=hex(mfn),
                      author=cs[1],
                      date=cs[2],
-                     parent=self.parents(n, fl.parents(n), fl.rev, file=f),
+                     parent=self.siblings(fl.parents(n), fl.rev, file=f),
+                     child=self.siblings(fl.children(n), fl.rev, file=f),
                      permissions=self.repo.manifest.readflags(mfn)[f])
 
     def manifest(self, mnode, path):
@@ -727,7 +735,8 @@ class hgweb(object):
                      filenode=hex(mf.get(file, nullid)),
                      node=changeset,
                      rev=self.repo.changelog.rev(n),
-                     parent=self.parents(n, cl.parents(n), cl.rev),
+                     parent=self.siblings(cl.parents(n), cl.rev),
+                     child=self.siblings(cl.children(n), cl.rev),
                      diff=diff)
 
     def archive(self, req, cnode, type):
