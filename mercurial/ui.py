@@ -110,7 +110,7 @@ class ui(object):
             sys.stdout.write(str(a))
 
     def write_err(self, *args):
-        sys.stdout.flush()
+        if not sys.stdout.closed: sys.stdout.flush()
         for a in args:
             sys.stderr.write(str(a))
 

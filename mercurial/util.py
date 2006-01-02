@@ -13,7 +13,8 @@ platform-specific details from the core.
 import os, errno
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "re cStringIO shutil popen2 sys tempfile threading time")
+demandload(globals(), "cStringIO errno popen2 re shutil sys tempfile")
+demandload(globals(), "threading time")
 
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
@@ -442,12 +443,36 @@ else:
 if os.name == 'nt':
     demandload(globals(), "msvcrt")
     nulldev = 'NUL:'
-    
+
+    class winstdout:
+        '''stdout on windows misbehaves if sent through a pipe'''
+
+        def __init__(self, fp):
+            self.fp = fp
+
+        def __getattr__(self, key):
+            return getattr(self.fp, key)
+
+        def close(self):
+            try:
+                self.fp.close()
+            except: pass
+
+        def write(self, s):
+            try:
+                return self.fp.write(s)
+            except IOError, inst:
+                if inst.errno != 0: raise
+                self.close()
+                raise IOError(errno.EPIPE, 'Broken pipe')
+
+    sys.stdout = winstdout(sys.stdout)
+
     try:
         import win32api, win32process
         filename = win32process.GetModuleFileNameEx(win32api.GetCurrentProcess(), 0)
         systemrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
-        
+
     except ImportError:
         systemrc = r'c:\mercurial\mercurial.ini'
         pass
