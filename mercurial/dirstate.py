@@ -68,7 +68,8 @@ class dirstate(object):
                     try:
                         syntax = syntaxes[s]
                     except KeyError:
-                        self.ui.warn(_("ignoring invalid syntax '%s'\n") % s)
+                        self.ui.warn(_(".hgignore: ignoring invalid "
+                                       "syntax '%s'\n") % s)
                     continue
                 pat = syntax + line
                 for s in syntaxes.values():
@@ -88,7 +89,8 @@ class dirstate(object):
             ignore = self.hgignore()
             if ignore:
                 files, self.ignorefunc, anypats = util.matcher(self.root,
-                                                               inc=ignore)
+                                                               inc=ignore,
+                                                               src='.hgignore')
             else:
                 self.ignorefunc = util.never
         return self.ignorefunc(fn)

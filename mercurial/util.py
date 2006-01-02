@@ -191,17 +191,17 @@ def canonpath(root, cwd, myname):
     else:
         raise Abort('%s not under root' % myname)
 
-def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head=''):
-    return _matcher(canonroot, cwd, names, inc, exc, head, 'glob')
+def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
+    return _matcher(canonroot, cwd, names, inc, exc, head, 'glob', src)
 
-def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head=''):
+def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
     if os.name == 'nt':
         dflt_pat = 'glob'
     else:
         dflt_pat = 'relpath'
-    return _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat)
+    return _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src)
 
-def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
+def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     """build a function to match a set of file patterns
 
     arguments:
@@ -262,7 +262,8 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
                 pat = '(?:%s)' % regex(k, p, tail)
                 matches.append(re.compile(pat).match)
             except re.error:
-                raise Abort("invalid pattern: %s:%s" % (k, p))
+                if src: raise Abort("%s: invalid pattern: %s:%s" % (src, k, p))
+                else: raise Abort("invalid pattern: %s:%s" % (k, p))
 
         def buildfn(text):
             for m in matches:
