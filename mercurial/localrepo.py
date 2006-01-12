@@ -355,7 +355,7 @@ class localrepository(object):
                 else:
                     self.ui.warn(_("%s not tracked!\n") % f)
         else:
-            modified, added, removed, unknown = self.changes(match=match)
+            modified, added, removed, deleted, unknown = self.changes(match=match)
             commit = modified + added
             remove = removed
 
@@ -544,12 +544,10 @@ class localrepository(object):
 
             removed = mf1.keys()
 
-        removed.extend(deleted) #XXX get rid of this when returning deleted
-
         # sort and return results:
-        for l in modified, added, removed, unknown:
+        for l in modified, added, removed, deleted, unknown:
             l.sort()
-        return (modified, added, removed, unknown)
+        return (modified, added, removed, deleted, unknown)
 
     def add(self, list):
         wlock = self.wlock()
@@ -1392,7 +1390,7 @@ class localrepository(object):
         ma = self.manifest.read(man)
         mfa = self.manifest.readflags(man)
 
-        modified, added, removed, unknown = self.changes()
+        modified, added, removed, deleted, unknown = self.changes()
 
         if allow and not forcemerge:
             if modified or added or removed:
@@ -1434,7 +1432,7 @@ class localrepository(object):
         if moddirstate:
             wlock = self.wlock()
 
-        for f in removed:
+        for f in deleted:
             if f in mw:
                 del mw[f]
 

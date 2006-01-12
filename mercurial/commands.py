@@ -264,7 +264,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False):
     if not changes:
         changes = repo.changes(node1, node2, files, match=match)
-    modified, added, removed, unknown = changes
+    modified, added, removed, deleted, unknown = changes
     if files:
         modified, added, removed = map(lambda x: filterfiles(x, files),
                                        (modified, added, removed))
@@ -785,10 +785,9 @@ def commit(ui, repo, *pats, **opts):
         addremove(ui, repo, *pats, **opts)
     fns, match, anypats, cwd = matchpats(repo, pats, opts)
     if pats:
-        modified, added, removed, unknown = (
+        modified, added, removed, deleted, unknown = (
             repo.changes(files=fns, match=match))
-        files = (modified + added +
-                [fn for fn in removed if repo.dirstate.state(fn) == 'r'])
+        files = modified + added + removed
     else:
         files = []
     try:
@@ -1381,9 +1380,10 @@ def identify(ui, repo):
         return
 
     hexfunc = ui.verbose and hex or short
-    modified, added, removed, unknown = repo.changes()
-    output = ["%s%s" % ('+'.join([hexfunc(parent) for parent in parents]),
-                        (modified or added or removed) and "+" or "")]
+    modified, added, removed, deleted, unknown = repo.changes()
+    output = ["%s%s" %
+              ('+'.join([hexfunc(parent) for parent in parents]),
+              (modified or added or removed or deleted) and "+" or "")]
 
     if not ui.quiet:
         # multiple tags for a single parent separated by '/'
@@ -1412,8 +1412,8 @@ def import_(ui, repo, patch1, *patches, **opts):
     patches = (patch1,) + patches
 
     if not opts['force']:
-        modified, added, removed, unknown = repo.changes()
-        if modified or added or removed:
+        modified, added, removed, deleted, unknown = repo.changes()
+        if modified or added or removed or deleted:
             raise util.Abort(_("outstanding uncommitted changes"))
 
     d = opts["base"]
@@ -1829,7 +1829,7 @@ def remove(ui, repo, pat, *pats, **opts):
     """
     names = []
     def okaytoremove(abs, rel, exact):
-        modified, added, removed, unknown = repo.changes(files=[abs])
+        modified, added, removed, deleted, unknown = repo.changes(files=[abs])
         reason = None
         if modified:
             reason = _('is modified')
@@ -1893,9 +1893,9 @@ def revert(ui, repo, *pats, **opts):
            repo.dirstate.parents()[0]
 
     files, choose, anypats, cwd = matchpats(repo, pats, opts)
-    modified, added, removed, unknown = repo.changes(match=choose)
+    modified, added, removed, deleted, unknown = repo.changes(match=choose)
     repo.forget(added)
-    repo.undelete(removed)
+    repo.undelete(removed + deleted)
 
     return repo.update(node, False, True, choose, False)
 
@@ -2022,17 +2022,19 @@ def status(ui, repo, *pats, **opts):
     M = modified
     A = added
     R = removed
+    ! = deleted, but still tracked
     ? = not tracked
     """
 
     files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
-    modified, added, removed, unknown = [
+    modified, added, removed, deleted, unknown = [
         [util.pathto(cwd, x) for x in n]
         for n in repo.changes(files=files, match=matchfn)]
 
     changetypes = [(_('modified'), 'M', modified),
                    (_('added'), 'A', added),
                    (_('removed'), 'R', removed),
+                   (_('deleted'), '!', deleted),
                    (_('unknown'), '?', unknown)]
 
     end = opts['print0'] and '\0' or '\n'
@@ -2437,6 +2439,7 @@ table = {
          [('m', 'modified', None, _('show only modified files')),
           ('a', 'added', None, _('show only added files')),
           ('r', 'removed', None, _('show only removed files')),
+          ('d', 'deleted', None, _('show only deleted (but tracked) files')),
           ('u', 'unknown', None, _('show only unknown (not tracked) files')),
           ('n', 'no-status', None, _('hide status prefix')),
           ('0', 'print0', None,
