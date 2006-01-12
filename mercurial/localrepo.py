@@ -1432,7 +1432,7 @@ class localrepository(object):
         if moddirstate:
             wlock = self.wlock()
 
-        for f in deleted:
+        for f in deleted + removed:
             if f in mw:
                 del mw[f]
 
