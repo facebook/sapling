@@ -476,7 +476,11 @@ class localrepository(object):
                 yield src, fn
 
     def changes(self, node1=None, node2=None, files=[], match=util.always):
-        mf2, u = None, []
+        """return changes between two nodes or node and working directory
+
+        If node1 is None, use the first dirstate parent instead.
+        If node2 is None, compare node1 with working directory.
+        """
 
         def fcmp(fn, mf):
             t1 = self.wread(fn)
@@ -484,7 +488,8 @@ class localrepository(object):
             return cmp(t1, t2)
 
         def mfmatches(node):
-            mf = dict(self.manifest.read(node))
+            change = self.changelog.read(node)
+            mf = dict(self.manifest.read(change[0]))
             for fn in mf.keys():
                 if not match(fn):
                     del mf[fn]
@@ -496,61 +501,53 @@ class localrepository(object):
                 wlock = self.wlock(wait=0)
             except lock.LockHeld:
                 wlock = None
-            l, c, a, d, u = self.dirstate.changes(files, match)
+            lookup, modified, added, deleted, unknown = (
+                self.dirstate.changes(files, match))
 
             # are we comparing working dir against its parent?
             if not node1:
-                if l:
+                if lookup:
                     # do a full compare of any files that might have changed
-                    change = self.changelog.read(self.dirstate.parents()[0])
-                    mf2 = mfmatches(change[0])
-                    for f in l:
+                    mf2 = mfmatches(self.dirstate.parents()[0])
+                    for f in lookup:
                         if fcmp(f, mf2):
-                            c.append(f)
+                            modified.append(f)
                         elif wlock is not None:
                             self.dirstate.update([f], "n")
-
-                for l in c, a, d, u:
-                    l.sort()
-
-                return (c, a, d, u)
-
-        # are we comparing working dir against non-tip?
-        # generate a pseudo-manifest for the working dir
-        if not node2:
-            if not mf2:
-                change = self.changelog.read(self.dirstate.parents()[0])
-                mf2 = mfmatches(change[0])
-            for f in a + c + l:
-                mf2[f] = ""
-            for f in d:
-                if f in mf2:
-                    del mf2[f]
-        else:
-            change = self.changelog.read(node2)
-            mf2 = mfmatches(change[0])
-
-        # flush lists from dirstate before comparing manifests
-        c, a = [], []
-
-        change = self.changelog.read(node1)
-        mf1 = mfmatches(change[0])
-
-        for fn in mf2:
-            if mf1.has_key(fn):
-                if mf1[fn] != mf2[fn]:
-                    if mf2[fn] != "" or fcmp(fn, mf1):
-                        c.append(fn)
-                del mf1[fn]
             else:
-                a.append(fn)
+                # we are comparing working dir against non-parent
+                # generate a pseudo-manifest for the working dir
+                mf2 = mfmatches(self.dirstate.parents()[0])
+                for f in lookup + modified + added:
+                    mf2[f] = ""
+                for f in deleted:
+                    if f in mf2:
+                        del mf2[f]
+        else:
+            # we are comparing two revisions
+            unknown = []
+            mf2 = mfmatches(node2)
 
-        d = mf1.keys()
+        if node1:
+            # flush lists from dirstate before comparing manifests
+            modified, added = [], []
 
-        for l in c, a, d, u:
+            mf1 = mfmatches(node1)
+
+            for fn in mf2:
+                if mf1.has_key(fn):
+                    if mf1[fn] != mf2[fn] and (mf2[fn] != "" or fcmp(fn, mf1)):
+                        modified.append(fn)
+                    del mf1[fn]
+                else:
+                    added.append(fn)
+
+            deleted = mf1.keys()
+
+        # sort and return results:
+        for l in modified, added, deleted, unknown:
             l.sort()
-
-        return (c, a, d, u)
+        return (modified, added, deleted, unknown)
 
     def add(self, list):
         wlock = self.wlock()
