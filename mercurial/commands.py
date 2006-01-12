@@ -263,13 +263,13 @@ def make_file(repo, r, pat, node=None,
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False):
     if not changes:
-        (c, a, d, u) = repo.changes(node1, node2, files, match=match)
-    else:
-        (c, a, d, u) = changes
+        changes = repo.changes(node1, node2, files, match=match)
+    modified, added, removed, unknown = changes
     if files:
-        c, a, d = map(lambda x: filterfiles(files, x), (c, a, d))
+        modified, added, removed = map(lambda x: filterfiles(x, files),
+                                       (modified, added, removed))
 
-    if not c and not a and not d:
+    if not modified and not added and not removed:
         return
 
     if node2:
@@ -295,17 +295,17 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     mmap = repo.manifest.read(change[0])
     date1 = util.datestr(change[2])
 
-    for f in c:
+    for f in modified:
         to = None
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
-    for f in a:
+    for f in added:
         to = None
         tn = read(f)
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
-    for f in d:
+    for f in removed:
         to = repo.file(f).read(mmap[f])
         tn = None
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
@@ -785,8 +785,10 @@ def commit(ui, repo, *pats, **opts):
         addremove(ui, repo, *pats, **opts)
     fns, match, anypats, cwd = matchpats(repo, pats, opts)
     if pats:
-        c, a, d, u = repo.changes(files=fns, match=match)
-        files = c + a + [fn for fn in d if repo.dirstate.state(fn) == 'r']
+        modified, added, removed, unknown = (
+            repo.changes(files=fns, match=match))
+        files = (modified + added +
+                [fn for fn in removed if repo.dirstate.state(fn) == 'r'])
     else:
         files = []
     try:
@@ -1379,9 +1381,9 @@ def identify(ui, repo):
         return
 
     hexfunc = ui.verbose and hex or short
-    (c, a, d, u) = repo.changes()
+    modified, added, removed, unknown = repo.changes()
     output = ["%s%s" % ('+'.join([hexfunc(parent) for parent in parents]),
-                        (c or a or d) and "+" or "")]
+                        (modified or added or removed) and "+" or "")]
 
     if not ui.quiet:
         # multiple tags for a single parent separated by '/'
@@ -1410,8 +1412,8 @@ def import_(ui, repo, patch1, *patches, **opts):
     patches = (patch1,) + patches
 
     if not opts['force']:
-        (c, a, d, u) = repo.changes()
-        if c or a or d:
+        modified, added, removed, unknown = repo.changes()
+        if modified or added or removed:
             raise util.Abort(_("outstanding uncommitted changes"))
 
     d = opts["base"]
@@ -1827,13 +1829,13 @@ def remove(ui, repo, pat, *pats, **opts):
     """
     names = []
     def okaytoremove(abs, rel, exact):
-        c, a, d, u = repo.changes(files = [abs])
+        modified, added, removed, unknown = repo.changes(files=[abs])
         reason = None
-        if c:
+        if modified:
             reason = _('is modified')
-        elif a:
+        elif added:
             reason = _('has been marked for add')
-        elif u:
+        elif unknown:
             reason = _('is not managed')
         if reason:
             if exact:
@@ -1891,9 +1893,9 @@ def revert(ui, repo, *pats, **opts):
            repo.dirstate.parents()[0]
 
     files, choose, anypats, cwd = matchpats(repo, pats, opts)
-    (c, a, d, u) = repo.changes(match=choose)
-    repo.forget(a)
-    repo.undelete(d)
+    modified, added, removed, unknown = repo.changes(match=choose)
+    repo.forget(added)
+    repo.undelete(removed)
 
     return repo.update(node, False, True, choose, False)
 
@@ -2024,13 +2026,14 @@ def status(ui, repo, *pats, **opts):
     """
 
     files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
-    (c, a, d, u) = [[util.pathto(cwd, x) for x in n]
-                    for n in repo.changes(files=files, match=matchfn)]
+    modified, added, removed, unknown = [
+        [util.pathto(cwd, x) for x in n]
+        for n in repo.changes(files=files, match=matchfn)]
 
-    changetypes = [(_('modified'), 'M', c),
-                   (_('added'), 'A', a),
-                   (_('removed'), 'R', d),
-                   (_('unknown'), '?', u)]
+    changetypes = [(_('modified'), 'M', modified),
+                   (_('added'), 'A', added),
+                   (_('removed'), 'R', removed),
+                   (_('unknown'), '?', unknown)]
 
     end = opts['print0'] and '\0' or '\n'
 
@@ -2078,8 +2081,7 @@ def tag(ui, repo, name, rev_=None, **opts):
         repo.opener("localtags", "a").write("%s %s\n" % (r, name))
         return
 
-    (c, a, d, u) = repo.changes()
-    for x in (c, a, d, u):
+    for x in repo.changes():
         if ".hgtags" in x:
             raise util.Abort(_("working copy of .hgtags is changed "
                                "(please commit .hgtags manually)"))

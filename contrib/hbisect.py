@@ -21,8 +21,8 @@ def lookup_rev(ui, repo, rev=None):
     return parents.pop()
 
 def check_clean(ui, repo):
-        c, a, d, u = repo.changes()
-        if c or a or d:
+        modified, added, removed, unknown = repo.changes()
+        if modified or added or removed:
             ui.warn("Repository is not clean, please commit or revert\n")
             sys.exit(1)
 

@@ -355,9 +355,9 @@ class localrepository(object):
                 else:
                     self.ui.warn(_("%s not tracked!\n") % f)
         else:
-            (c, a, d, u) = self.changes(match=match)
-            commit = c + a
-            remove = d
+            modified, added, removed, unknown = self.changes(match=match)
+            commit = modified + added
+            remove = removed
 
         p1, p2 = self.dirstate.parents()
         c1 = self.changelog.read(p1)
@@ -1392,13 +1392,13 @@ class localrepository(object):
         ma = self.manifest.read(man)
         mfa = self.manifest.readflags(man)
 
-        (c, a, d, u) = self.changes()
+        modified, added, removed, unknown = self.changes()
 
         if allow and not forcemerge:
-            if c or a or d:
+            if modified or added or removed:
                 raise util.Abort(_("outstanding uncommited changes"))
         if not forcemerge and not force:
-            for f in u:
+            for f in unknown:
                 if f in m2:
                     t1 = self.wread(f)
                     t2 = self.file(f).read(m2[f])
@@ -1425,16 +1425,16 @@ class localrepository(object):
         # construct a working dir manifest
         mw = m1.copy()
         mfw = mf1.copy()
-        umap = dict.fromkeys(u)
+        umap = dict.fromkeys(unknown)
 
-        for f in a + c + u:
+        for f in added + modified + unknown:
             mw[f] = ""
             mfw[f] = util.is_exec(self.wjoin(f), mfw.get(f, False))
 
         if moddirstate:
             wlock = self.wlock()
 
-        for f in d:
+        for f in removed:
             if f in mw:
                 del mw[f]
 

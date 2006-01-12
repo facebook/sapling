@@ -265,19 +265,20 @@ class hgweb(object):
         date1 = util.datestr(change1[2])
         date2 = util.datestr(change2[2])
 
-        c, a, d, u = r.changes(node1, node2)
+        modified, added, removed, unknown = r.changes(node1, node2)
         if files:
-            c, a, d = map(lambda x: filterfiles(x, files), (c, a, d))
+            modified, added, removed = map(lambda x: filterfiles(x, files),
+                                           (modified, added, removed))
 
-        for f in c:
+        for f in modified:
             to = r.file(f).read(mmap1[f])
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
-        for f in a:
+        for f in added:
             to = None
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
-        for f in d:
+        for f in removed:
             to = r.file(f).read(mmap1[f])
             tn = None
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)

@@ -14,13 +14,13 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         return time.asctime(time.gmtime(c[2][0]))
 
     if not changes:
-        (c, a, d, u) = repo.changes(node1, node2, files, match=match)
-    else:
-        (c, a, d, u) = changes
+        changes = repo.changes(node1, node2, files, match=match)
+    modified, added, removed, unknown = changes
     if files:
-        c, a, d = map(lambda x: filterfiles(files, x), (c, a, d))
+        modified, added, removed = map(lambda x: filterfiles(x, files),
+                                       (modified, added, removed))
 
-    if not c and not a and not d:
+    if not modified and not added and not removed:
         return
 
     if node2:
@@ -40,19 +40,19 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     mmap = repo.manifest.read(change[0])
     date1 = date(change)
 
-    for f in c:
+    for f in modified:
         to = None
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
         fp.write("diff --git a/%s b/%s\n" % (f, f))
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, text=text))
-    for f in a:
+    for f in added:
         to = None
         tn = read(f)
         fp.write("diff --git /dev/null b/%s\n" % (f))
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, text=text))
-    for f in d:
+    for f in removed:
         to = repo.file(f).read(mmap[f])
         tn = None
         fp.write("diff --git a/%s /dev/null\n" % (f))
@@ -67,12 +67,12 @@ def difftree(ui, repo, node1=None, node2=None, **opts):
         if node2:
             change = repo.changelog.read(node2)
             mmap2 = repo.manifest.read(change[0])
-            (c, a, d, u) = repo.changes(node1, node2)
+            modified, added, removed, unknown = repo.changes(node1, node2)
             def read(f): return repo.file(f).read(mmap2[f])
             date2 = date(change)
         else:
             date2 = time.asctime()
-            (c, a, d, u) = repo.changes(node1, None)
+            modified, added, removed, unknown = repo.changes(node1)
             if not node1:
                 node1 = repo.dirstate.parents()[0]
             def read(f): return file(os.path.join(repo.root, f)).read()
@@ -82,13 +82,13 @@ def difftree(ui, repo, node1=None, node2=None, **opts):
         date1 = date(change)
         empty = "0" * 40;
 
-        for f in c:
+        for f in modified:
             # TODO get file permissions
             print ":100664 100664 %s %s M\t%s\t%s" % (hg.hex(mmap[f]),
                                                       hg.hex(mmap2[f]), f, f)
-        for f in a:
+        for f in added:
             print ":000000 100664 %s %s N\t%s\t%s" % (empty, hg.hex(mmap2[f]), f, f)
-        for f in d:
+        for f in removed:
             print ":100664 000000 %s %s D\t%s\t%s" % (hg.hex(mmap[f]), empty, f, f)
     ##
 
