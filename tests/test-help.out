@@ -186,6 +186,7 @@ show changed files in the working directory
     M = modified
     A = added
     R = removed
+    ! = deleted, but still tracked
     ? = not tracked
 
 aliases: st
@@ -195,6 +196,7 @@ options:
  -m --modified   show only modified files
  -a --added      show only added files
  -r --removed    show only removed files
+ -d --deleted    show only deleted (but tracked) files
  -u --unknown    show only unknown (not tracked) files
  -n --no-status  hide status prefix
  -0 --print0     end filenames with NUL, for use with xargs
