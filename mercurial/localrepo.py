@@ -501,7 +501,7 @@ class localrepository(object):
                 wlock = self.wlock(wait=0)
             except lock.LockHeld:
                 wlock = None
-            lookup, modified, added, deleted, unknown = (
+            lookup, modified, added, removed, deleted, unknown = (
                 self.dirstate.changes(files, match))
 
             # are we comparing working dir against its parent?
@@ -520,12 +520,12 @@ class localrepository(object):
                 mf2 = mfmatches(self.dirstate.parents()[0])
                 for f in lookup + modified + added:
                     mf2[f] = ""
-                for f in deleted:
+                for f in removed:
                     if f in mf2:
                         del mf2[f]
         else:
             # we are comparing two revisions
-            unknown = []
+            deleted, unknown = [], []
             mf2 = mfmatches(node2)
 
         if node1:
@@ -542,12 +542,14 @@ class localrepository(object):
                 else:
                     added.append(fn)
 
-            deleted = mf1.keys()
+            removed = mf1.keys()
+
+        removed.extend(deleted) #XXX get rid of this when returning deleted
 
         # sort and return results:
-        for l in modified, added, deleted, unknown:
+        for l in modified, added, removed, unknown:
             l.sort()
-        return (modified, added, deleted, unknown)
+        return (modified, added, removed, unknown)
 
     def add(self, list):
         wlock = self.wlock()

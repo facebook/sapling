@@ -417,4 +417,4 @@ class dirstate(object):
             elif type == 'r':
                 removed.append(fn)
 
-        return (lookup, modified, added, removed + deleted, unknown)
+        return (lookup, modified, added, removed, deleted, unknown)
