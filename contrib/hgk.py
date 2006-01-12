@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Minimal support for git commands on an hg repository
 #
 # Copyright 2005 Chris Mason <mason@suse.com>
