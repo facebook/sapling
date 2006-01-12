@@ -170,8 +170,10 @@ def revrange(ui, repo, revs, revlog=None):
             num = int(val)
             if str(num) != val:
                 raise ValueError
-            if num < 0: num += revcount
-            if num < 0: num = 0
+            if num < 0:
+                num += revcount
+            if num < 0:
+                num = 0
             elif num >= revcount:
                 raise ValueError
         except ValueError:
@@ -191,12 +193,14 @@ def revrange(ui, repo, revs, revlog=None):
             end = fix(end, revcount - 1)
             step = start > end and -1 or 1
             for rev in xrange(start, end+step, step):
-                if rev in seen: continue
+                if rev in seen:
+                    continue
                 seen[rev] = 1
                 yield str(rev)
         else:
             rev = fix(spec, None)
-            if rev in seen: continue
+            if rev in seen:
+                continue
             seen[rev] = 1
             yield str(rev)
 
@@ -439,7 +443,7 @@ def help_(ui, cmd=None, with_version=False):
             if e[0].__doc__:
                 d = e[0].__doc__.splitlines(0)[0].rstrip()
             h[f] = d
-            cmds[f]=c.lstrip("^")
+            cmds[f] = c.lstrip("^")
 
         fns = h.keys()
         fns.sort()
@@ -447,7 +451,7 @@ def help_(ui, cmd=None, with_version=False):
         for f in fns:
             if ui.verbose:
                 commands = cmds[f].replace("|",", ")
-                ui.write(" %s:\n      %s\n"%(commands,h[f]))
+                ui.write(" %s:\n      %s\n"%(commands, h[f]))
             else:
                 ui.write(' %-*s   %s\n' % (m, f, h[f]))
 
@@ -490,7 +494,8 @@ def add(ui, repo, *pats, **opts):
     names = []
     for src, abs, rel, exact in walk(repo, pats, opts):
         if exact:
-            if ui.verbose: ui.status(_('adding %s\n') % rel)
+            if ui.verbose:
+                ui.status(_('adding %s\n') % rel)
             names.append(abs)
         elif repo.dirstate.state(abs) == '?':
             ui.status(_('adding %s\n') % rel)
@@ -540,11 +545,11 @@ def annotate(ui, repo, *pats, **opts):
 
     dcache = {}
     def getdate(rev):
-    	datestr = dcache.get(rev)
+        datestr = dcache.get(rev)
         if datestr is None:
             cl = repo.changelog.read(repo.changelog.node(rev))
             datestr = dcache[rev] = util.datestr(cl[2])
-	return datestr
+        return datestr
 
     if not pats:
         raise util.Abort(_('at least one file name or pattern required'))
@@ -723,7 +728,8 @@ def clone(ui, source, dest=None, **opts):
             try:
                 util.copyfiles(src, dst)
             except OSError, inst:
-                if inst.errno != errno.ENOENT: raise
+                if inst.errno != errno.ENOENT:
+                    raise
 
         repo = hg.repository(ui, dest)
 
@@ -799,7 +805,8 @@ def docopy(ui, repo, pats, opts):
                    'a': _('has been marked for add')}
         reason = reasons.get(repo.dirstate.state(abs))
         if reason:
-            if exact: ui.warn(_('%s: not copying - file %s\n') % (rel, reason))
+            if exact:
+                ui.warn(_('%s: not copying - file %s\n') % (rel, reason))
         else:
             return True
 
@@ -1276,13 +1283,17 @@ def grep(ui, repo, pattern, *pats, **opts):
                 change = ((l in states) and '-') or '+'
                 r = prev[fn]
             cols = [fn, str(rev)]
-            if opts['line_number']: cols.append(str(l.linenum))
-            if opts['all']: cols.append(change)
-            if opts['user']: cols.append(trimuser(ui, getchange(rev)[1], rev,
+            if opts['line_number']:
+                cols.append(str(l.linenum))
+            if opts['all']:
+                cols.append(change)
+            if opts['user']:
+                cols.append(trimuser(ui, getchange(rev)[1], rev,
                                                   ucache))
             if opts['files_with_matches']:
                 c = (fn, rev)
-                if c in filerevmatches: continue
+                if c in filerevmatches:
+                    continue
                 filerevmatches[c] = 1
             else:
                 cols.append(l.line)
@@ -1304,7 +1315,8 @@ def grep(ui, repo, pattern, *pats, **opts):
             mf = repo.manifest.read(change[0])
             matches[rev] = {}
             for fn in fns:
-                if fn in skip: continue
+                if fn in skip:
+                    continue
                 fstate.setdefault(fn, {})
                 try:
                     grepbody(fn, rev, getfile(fn).read(mf[fn]))
@@ -1314,7 +1326,8 @@ def grep(ui, repo, pattern, *pats, **opts):
             states = matches[rev].items()
             states.sort()
             for fn, m in states:
-                if fn in skip: continue
+                if fn in skip:
+                    continue
                 if incrementing or not opts['all'] or fstate[fn]:
                     pos, neg = display(fn, rev, m, fstate[fn])
                     count += pos + neg
@@ -1327,7 +1340,8 @@ def grep(ui, repo, pattern, *pats, **opts):
         fstate = fstate.items()
         fstate.sort()
         for fn, state in fstate:
-            if fn in skip: continue
+            if fn in skip:
+                continue
             display(fn, rev, {}, state)
     return (count == 0 and 1) or 0
 
@@ -1422,7 +1436,8 @@ def import_(ui, repo, patch1, *patches, **opts):
             line = line.rstrip()
             if (not message and not hgpatch and
                    mailre.match(line) and not opts['force']):
-                if len(line) > 35: line = line[:32] + '...'
+                if len(line) > 35:
+                    line = line[:32] + '...'
                 raise util.Abort(_('first line looks like a '
                                    'mail header: ') + line)
             if diffre.match(line):
@@ -1565,9 +1580,9 @@ def log(ui, repo, *pats, **opts):
             parents = [p for p in repo.changelog.parents(changenode)
                        if p != nullid]
             if opts['no_merges'] and len(parents) == 2:
-                 continue
+                continue
             if opts['only_merges'] and len(parents) != 2:
-                 continue
+                continue
 
             br = None
             if opts['keyword']:
@@ -1814,16 +1829,21 @@ def remove(ui, repo, pat, *pats, **opts):
     def okaytoremove(abs, rel, exact):
         c, a, d, u = repo.changes(files = [abs])
         reason = None
-        if c: reason = _('is modified')
-        elif a: reason = _('has been marked for add')
-        elif u: reason = _('is not managed')
+        if c:
+            reason = _('is modified')
+        elif a:
+            reason = _('has been marked for add')
+        elif u:
+            reason = _('is not managed')
         if reason:
-            if exact: ui.warn(_('not removing %s: file %s\n') % (rel, reason))
+            if exact:
+                ui.warn(_('not removing %s: file %s\n') % (rel, reason))
         else:
             return True
     for src, abs, rel, exact in walk(repo, (pat,) + pats, opts):
         if okaytoremove(abs, rel, exact):
-            if ui.verbose or not exact: ui.status(_('removing %s\n') % rel)
+            if ui.verbose or not exact:
+                ui.status(_('removing %s\n') % rel)
             names.append(abs)
     repo.remove(names, unlink=True)
 
@@ -1847,7 +1867,8 @@ def rename(ui, repo, *pats, **opts):
     errs, copied = docopy(ui, repo, pats, opts)
     names = []
     for abs, rel, exact in copied:
-        if ui.verbose or not exact: ui.status(_('removing %s\n') % rel)
+        if ui.verbose or not exact:
+            ui.status(_('removing %s\n') % rel)
         names.append(abs)
     repo.remove(names, unlink=True)
     return errs
@@ -2198,12 +2219,12 @@ table = {
         (add,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         "hg add [OPTION]... [FILE]..."),
+         _('hg add [OPTION]... [FILE]...')),
     "addremove":
         (addremove,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         "hg addremove [OPTION]... [FILE]..."),
+         _('hg addremove [OPTION]... [FILE]...')),
     "^annotate":
         (annotate,
          [('r', 'rev', '', _('annotate the specified revision')),
@@ -2223,17 +2244,17 @@ table = {
         (cat,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('o', 'output', "", _('print output to file with formatted name')),
+          ('o', 'output', '', _('print output to file with formatted name')),
           ('r', 'rev', '', _('print the given revision'))],
          _('hg cat [OPTION]... FILE...')),
     "^clone":
         (clone,
          [('U', 'noupdate', None, _('do not update the new working directory')),
-          ('e', 'ssh', "", _('specify ssh command to use')),
+          ('e', 'ssh', '', _('specify ssh command to use')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
           ('r', 'rev', [],
            _('a changeset you would like to have after cloning')),
-          ('', 'remotecmd', "",
+          ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
          _('hg clone [OPTION]... SOURCE [DEST]')),
     "^commit|ci":
@@ -2241,21 +2262,19 @@ table = {
          [('A', 'addremove', None, _('run addremove during commit')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('m', 'message', "", _('use <text> as commit message')),
-          ('l', 'logfile', "", _('read the commit message from <file>')),
-          ('d', 'date', "", _('record datecode as commit date')),
-          ('u', 'user', "", _('record user as commiter'))],
+          ('m', 'message', '', _('use <text> as commit message')),
+          ('l', 'logfile', '', _('read the commit message from <file>')),
+          ('d', 'date', '', _('record datecode as commit date')),
+          ('u', 'user', '', _('record user as commiter'))],
          _('hg commit [OPTION]... [FILE]...')),
-    "copy|cp": (copy,
-             [('I', 'include', [],
-               _('include names matching the given patterns')),
-              ('X', 'exclude', [],
-               _('exclude names matching the given patterns')),
-              ('A', 'after', None,
-               _('record a copy that has already occurred')),
-              ('f', 'force', None,
-               _('forcibly copy over an existing managed file'))],
-             _('hg copy [OPTION]... [SOURCE]... DEST')),
+    "copy|cp":
+        (copy,
+         [('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
+          ('A', 'after', None, _('record a copy that has already occurred')),
+          ('f', 'force', None,
+           _('forcibly copy over an existing managed file'))],
+         _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
     "debugconfig": (debugconfig, [], _('debugconfig')),
@@ -2279,15 +2298,15 @@ table = {
          _('hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...')),
     "^export":
         (export,
-         [('o', 'output', "", _('print output to file with formatted name')),
+         [('o', 'output', '', _('print output to file with formatted name')),
           ('a', 'text', None, _('treat all files as text')),
           ('', 'switch-parent', None, _('diff against the second parent'))],
-         "hg export [-a] [-o OUTFILE] REV..."),
+         _('hg export [-a] [-o OUTFILE] REV...')),
     "forget":
         (forget,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         "hg forget [OPTION]... FILE..."),
+         _('hg forget [OPTION]... FILE...')),
     "grep":
         (grep,
          [('0', 'print0', None, _('end fields with NUL')),
@@ -2300,11 +2319,11 @@ table = {
           ('n', 'line-number', None, _('print matching line numbers')),
           ('r', 'rev', [], _('search in given revision range')),
           ('u', 'user', None, _('print user who committed change'))],
-         "hg grep [OPTION]... PATTERN [FILE]..."),
+         _('hg grep [OPTION]... PATTERN [FILE]...')),
     "heads":
         (heads,
          [('b', 'branches', None, _('find branch info')),
-          ('r', 'rev', "", _('show only heads which are descendants of rev'))],
+          ('r', 'rev', '', _('show only heads which are descendants of rev'))],
          _('hg heads [-b] [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id": (identify, [], _('hg identify')),
@@ -2315,10 +2334,10 @@ table = {
            _('meaning as the corresponding patch option')),
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes')),
-          ('b', 'base', "", _('base path'))],
-         "hg import [-f] [-p NUM] [-b BASE] PATCH..."),
+          ('b', 'base', '', _('base path'))],
+         _('hg import [-f] [-p NUM] [-b BASE] PATCH...')),
     "incoming|in": (incoming,
-         [('M', 'no-merges', None, _("do not show merges")),
+         [('M', 'no-merges', None, _('do not show merges')),
           ('p', 'patch', None, _('show patch')),
           ('n', 'newest-first', None, _('show newest record first'))],
          _('hg incoming [-p] [-n] [-M] [SOURCE]')),
@@ -2340,13 +2359,13 @@ table = {
           ('b', 'branch', None, _('show branches')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('r', 'rev', [], _('show the specified revision or range')),
-          ('M', 'no-merges', None, _("do not show merges")),
-          ('m', 'only-merges', None, _("show only merges")),
+          ('M', 'no-merges', None, _('do not show merges')),
+          ('m', 'only-merges', None, _('show only merges')),
           ('p', 'patch', None, _('show patch'))],
          _('hg log [-I] [-X] [-r REV]... [-p] [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "outgoing|out": (outgoing,
-         [('M', 'no-merges', None, _("do not show merges")),
+         [('M', 'no-merges', None, _('do not show merges')),
           ('p', 'patch', None, _('show patch')),
           ('n', 'newest-first', None, _('show newest record first'))],
          _('hg outgoing [-p] [-n] [-M] [DEST]')),
@@ -2356,64 +2375,61 @@ table = {
         (pull,
          [('u', 'update', None,
            _('update the working directory to tip after pull')),
-          ('e', 'ssh', "", _('specify ssh command to use')),
+          ('e', 'ssh', '', _('specify ssh command to use')),
           ('r', 'rev', [], _('a specific revision you would like to pull')),
-          ('', 'remotecmd', "",
+          ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
          _('hg pull [-u] [-e FILE] [-r rev] [--remotecmd FILE] [SOURCE]')),
     "^push":
         (push,
          [('f', 'force', None, _('force push')),
-          ('e', 'ssh', "", _('specify ssh command to use')),
-          ('', 'remotecmd', "",
+          ('e', 'ssh', '', _('specify ssh command to use')),
+          ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
          _('hg push [-f] [-e FILE] [--remotecmd FILE] [DEST]')),
     "rawcommit":
         (rawcommit,
          [('p', 'parent', [], _('parent')),
-          ('d', 'date', "", _('date code')),
-          ('u', 'user', "", _('user')),
-          ('F', 'files', "", _('file list')),
-          ('m', 'message', "", _('commit message')),
-          ('l', 'logfile', "", _('commit message file'))],
+          ('d', 'date', '', _('date code')),
+          ('u', 'user', '', _('user')),
+          ('F', 'files', '', _('file list')),
+          ('m', 'message', '', _('commit message')),
+          ('l', 'logfile', '', _('commit message file'))],
          _('hg rawcommit [OPTION]... [FILE]...')),
-    "recover": (recover, [], _("hg recover")),
-    "^remove|rm": (remove,
-                   [('I', 'include', [],
-                     _('include names matching the given patterns')),
-                    ('X', 'exclude', [],
-                     _('exclude names matching the given patterns'))],
-                   _("hg remove [OPTION]... FILE...")),
-    "rename|mv": (rename,
-                  [('I', 'include', [],
-                    _('include names matching the given patterns')),
-                   ('X', 'exclude', [],
-                    _('exclude names matching the given patterns')),
-                   ('A', 'after', None,
-                    _('record a rename that has already occurred')),
-                   ('f', 'force', None,
-                    _('forcibly copy over an existing managed file'))],
-                  _('hg rename [OPTION]... [SOURCE]... DEST')),
+    "recover": (recover, [], _('hg recover')),
+    "^remove|rm":
+        (remove,
+         [('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         _('hg remove [OPTION]... FILE...')),
+    "rename|mv":
+        (rename,
+         [('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
+          ('A', 'after', None, _('record a rename that has already occurred')),
+          ('f', 'force', None,
+           _('forcibly copy over an existing managed file'))],
+         _('hg rename [OPTION]... [SOURCE]... DEST')),
     "^revert":
         (revert,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ("r", "rev", "", _("revision to revert to"))],
-         _("hg revert [-n] [-r REV] [NAME]...")),
-    "root": (root, [], _("hg root")),
+          ('r', 'rev', '', _('revision to revert to'))],
+         _('hg revert [-n] [-r REV] [NAME]...')),
+    "root": (root, [], _('hg root')),
     "^serve":
         (serve,
          [('A', 'accesslog', '', _('name of access log file to write to')),
           ('E', 'errorlog', '', _('name of error log file to write to')),
           ('p', 'port', 0, _('port to use (default: 8000)')),
           ('a', 'address', '', _('address to use')),
-          ('n', 'name', "",
+          ('n', 'name', '',
            _('name to show in web pages (default: working dir)')),
           ('', 'stdio', None, _('for remote clients')),
-          ('t', 'templates', "", _('web templates to use')),
-          ('', 'style', "", _('template style to use')),
+          ('t', 'templates', '', _('web templates to use')),
+          ('', 'style', '', _('template style to use')),
           ('6', 'ipv6', None, _('use IPv6 in addition to IPv4'))],
-         _("hg serve [OPTION]...")),
+         _('hg serve [OPTION]...')),
     "^status|st":
         (status,
          [('m', 'modified', None, _('show only modified files')),
@@ -2425,14 +2441,14 @@ table = {
            _('end filenames with NUL, for use with xargs')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         _("hg status [OPTION]... [FILE]...")),
+         _('hg status [OPTION]... [FILE]...')),
     "tag":
         (tag,
          [('l', 'local', None, _('make the tag local')),
-          ('m', 'message', "", _('message for tag commit log entry')),
-          ('d', 'date', "", _('record datecode as commit date')),
-          ('u', 'user', "", _('record user as commiter')),
-          ('r', 'rev', "", _('revision to tag'))],
+          ('m', 'message', '', _('message for tag commit log entry')),
+          ('d', 'date', '', _('record datecode as commit date')),
+          ('u', 'user', '', _('record user as commiter')),
+          ('r', 'rev', '', _('revision to tag'))],
          _('hg tag [OPTION]... NAME [REV]')),
     "tags": (tags, [], _('hg tags')),
     "tip": (tip, [], _('hg tip')),
@@ -2444,7 +2460,7 @@ table = {
     "undo": (undo, [], _('hg undo')),
     "^update|up|checkout|co":
         (update,
-         [('b', 'branch', "", _('checkout the head of a specific branch')),
+         [('b', 'branch', '', _('checkout the head of a specific branch')),
           ('m', 'merge', None, _('allow merging of branches')),
           ('C', 'clean', None, _('overwrite locally modified files')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
@@ -2454,19 +2470,19 @@ table = {
 }
 
 globalopts = [
-    ('R', 'repository', "", _("repository root directory")),
-    ('', 'cwd', '', _("change working directory")),
+    ('R', 'repository', '', _('repository root directory')),
+    ('', 'cwd', '', _('change working directory')),
     ('y', 'noninteractive', None,
-     _("do not prompt, assume 'yes' for any required answers")),
-    ('q', 'quiet', None, _("suppress output")),
-    ('v', 'verbose', None, _("enable additional output")),
-    ('', 'debug', None, _("enable debugging output")),
-    ('', 'debugger', None, _("start debugger")),
-    ('', 'traceback', None, _("print traceback on exception")),
-    ('', 'time', None, _("time how long the command takes")),
-    ('', 'profile', None, _("print command execution profile")),
-    ('', 'version', None, _("output version information and exit")),
-    ('h', 'help', None, _("display help and exit")),
+     _('do not prompt, assume \'yes\' for any required answers')),
+    ('q', 'quiet', None, _('suppress output')),
+    ('v', 'verbose', None, _('enable additional output')),
+    ('', 'debug', None, _('enable debugging output')),
+    ('', 'debugger', None, _('start debugger')),
+    ('', 'traceback', None, _('print traceback on exception')),
+    ('', 'time', None, _('time how long the command takes')),
+    ('', 'profile', None, _('print command execution profile')),
+    ('', 'version', None, _('output version information and exit')),
+    ('h', 'help', None, _('display help and exit')),
 ]
 
 norepo = ("clone init version help debugancestor debugconfig debugdata"
@@ -2649,7 +2665,8 @@ def dispatch(args):
                 path = options["repository"] or ""
                 repo = hg.repository(ui=u, path=path)
                 for x in external:
-                    if hasattr(x, 'reposetup'): x.reposetup(u, repo)
+                    if hasattr(x, 'reposetup'):
+                        x.reposetup(u, repo)
                 d = lambda: func(u, repo, *args, **cmdoptions)
             else:
                 d = lambda: func(u, *args, **cmdoptions)
