@@ -1531,9 +1531,15 @@ def locate(ui, repo, *pats, **opts):
     that contain white space as multiple filenames.
     """
     end = opts['print0'] and '\0' or '\n'
+    rev = opts['rev']
+    if rev:
+        node = repo.lookup(rev)
+    else:
+        node = None
 
-    for src, abs, rel, exact in walk(repo, pats, opts, '(?:.*/|)'):
-        if repo.dirstate.state(abs) == '?':
+    for src, abs, rel, exact in walk(repo, pats, opts, node=node,
+                                     head='(?:.*/|)'):
+        if not node and repo.dirstate.state(abs) == '?':
             continue
         if opts['fullpath']:
             ui.write(os.path.join(repo.root, abs), end)
