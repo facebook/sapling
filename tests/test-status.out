@@ -1,0 +1,103 @@
+hg status in repo root:
+? a/1/in_a_1
+? a/in_a
+? b/1/in_b_1
+? b/2/in_b_2
+? b/in_b
+? in_root
+hg status . in repo root:
+? a/1/in_a_1
+? a/in_a
+? b/1/in_b_1
+? b/2/in_b_2
+? b/in_b
+? in_root
+hg status in a:
+? a/1/in_a_1
+? a/in_a
+? b/1/in_b_1
+? b/2/in_b_2
+? b/in_b
+? in_root
+hg status . in a:
+? 1/in_a_1
+? in_a
+hg status .. in a:
+? 1/in_a_1
+? in_a
+? ../b/1/in_b_1
+? ../b/2/in_b_2
+? ../b/in_b
+? ../in_root
+hg status in b:
+? a/1/in_a_1
+? a/in_a
+? b/1/in_b_1
+? b/2/in_b_2
+? b/in_b
+? in_root
+hg status . in b:
+? 1/in_b_1
+? 2/in_b_2
+? in_b
+hg status .. in b:
+? ../a/1/in_a_1
+? ../a/in_a
+? 1/in_b_1
+? 2/in_b_2
+? in_b
+? ../in_root
+hg status in a/1:
+? a/1/in_a_1
+? a/in_a
+? b/1/in_b_1
+? b/2/in_b_2
+? b/in_b
+? in_root
+hg status . in a/1:
+? in_a_1
+hg status .. in a/1:
+? in_a_1
+? ../in_a
+hg status in b/1:
+? a/1/in_a_1
+? a/in_a
+? b/1/in_b_1
+? b/2/in_b_2
+? b/in_b
+? in_root
+hg status . in b/1:
+? in_b_1
+hg status .. in b/1:
+? in_b_1
+? ../2/in_b_2
+? ../in_b
+hg status in b/2:
+? a/1/in_a_1
+? a/in_a
+? b/1/in_b_1
+? b/2/in_b_2
+? b/in_b
+? in_root
+hg status . in b/2:
+? in_b_2
+hg status .. in b/2:
+? ../1/in_b_1
+? in_b_2
+? ../in_b
+adding .hgignore
+adding deleted
+adding modified
+adding removed
+hg status:
+A added
+R removed
+! deleted
+? unknown
+hg status modified added removed deleted unknown never-existed ignored:
+never-existed: No such file or directory
+A added
+R removed
+! deleted
+? ignored
+? unknown
