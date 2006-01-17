@@ -40,14 +40,14 @@ def matchpats(repo, pats=[], opts={}, head=''):
         opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
         cwd = ''
     return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
-                        opts.get('exclude'), head) + (cwd,)
+                           opts.get('exclude'), head)
 
 def makewalk(repo, pats, opts, node=None, head=''):
-    files, matchfn, anypats, cwd = matchpats(repo, pats, opts, head)
+    files, matchfn, anypats = matchpats(repo, pats, opts, head)
     exact = dict(zip(files, files))
     def walk():
         for src, fn in repo.walk(node=node, files=files, match=matchfn):
-            yield src, fn, util.pathto(cwd, fn), fn in exact
+            yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
     return files, matchfn, walk()
 
 def walk(repo, pats, opts, node=None, head=''):
@@ -82,7 +82,7 @@ def walkchangerevs(ui, repo, pats, opts):
     "iter", rev, None: in-order traversal of the revs earlier iterated
     over with "add" - use to display data'''
 
-    files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
+    files, matchfn, anypats = matchpats(repo, pats, opts)
 
     if repo.changelog.count() == 0:
         return [], False, matchfn
@@ -515,11 +515,11 @@ def addremove(ui, repo, *pats, **opts):
         if src == 'f' and repo.dirstate.state(abs) == '?':
             add.append(abs)
             if ui.verbose or not exact:
-                ui.status(_('adding %s\n') % rel)
+                ui.status(_('adding %s\n') % ((pats and rel) or abs))
         if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
             remove.append(abs)
             if ui.verbose or not exact:
-                ui.status(_('removing %s\n') % rel)
+                ui.status(_('removing %s\n') % ((pats and rel) or abs))
     repo.add(add)
     repo.remove(remove)
 
@@ -568,12 +568,13 @@ def annotate(ui, repo, *pats, **opts):
 
     for src, abs, rel, exact in walk(repo, pats, opts):
         if abs not in mmap:
-            ui.warn(_("warning: %s is not in the repository!\n") % rel)
+            ui.warn(_("warning: %s is not in the repository!\n") %
+                    ((pats and rel) or abs))
             continue
 
         f = repo.file(abs)
         if not opts['text'] and util.binary(f.read(mmap[abs])):
-            ui.write(_("%s: binary file\n") % rel)
+            ui.write(_("%s: binary file\n") % ((pats and rel) or abs))
             continue
 
         lines = f.annotate(mmap[abs])
@@ -783,7 +784,7 @@ def commit(ui, repo, *pats, **opts):
 
     if opts['addremove']:
         addremove(ui, repo, *pats, **opts)
-    fns, match, anypats, cwd = matchpats(repo, pats, opts)
+    fns, match, anypats = matchpats(repo, pats, opts)
     if pats:
         modified, added, removed, deleted, unknown = (
             repo.changes(files=fns, match=match))
@@ -1122,7 +1123,7 @@ def diff(ui, repo, *pats, **opts):
     if len(revs) > 2:
         raise util.Abort(_("too many revisions to diff"))
 
-    fns, matchfn, anypats, cwd = matchpats(repo, pats, opts)
+    fns, matchfn, anypats = matchpats(repo, pats, opts)
 
     dodiff(sys.stdout, ui, repo, node1, node2, fns, match=matchfn,
            text=opts['text'])
@@ -1203,7 +1204,7 @@ def forget(ui, repo, *pats, **opts):
         if repo.dirstate.state(abs) == 'a':
             forget.append(abs)
             if ui.verbose or not exact:
-                ui.status(_('forgetting %s\n') % rel)
+                ui.status(_('forgetting %s\n') % ((pats and rel) or abs))
     repo.forget(forget)
 
 def grep(ui, repo, pattern, *pats, **opts):
@@ -1544,7 +1545,7 @@ def locate(ui, repo, *pats, **opts):
         if opts['fullpath']:
             ui.write(os.path.join(repo.root, abs), end)
         else:
-            ui.write(rel, end)
+            ui.write(((pats and rel) or abs), end)
 
 def log(ui, repo, *pats, **opts):
     """show revision history of entire repository or files
@@ -1898,7 +1899,7 @@ def revert(ui, repo, *pats, **opts):
     node = opts['rev'] and repo.lookup(opts['rev']) or \
            repo.dirstate.parents()[0]
 
-    files, choose, anypats, cwd = matchpats(repo, pats, opts)
+    files, choose, anypats = matchpats(repo, pats, opts)
     modified, added, removed, deleted, unknown = repo.changes(match=choose)
     repo.forget(added)
     repo.undelete(removed + deleted)
@@ -2032,7 +2033,8 @@ def status(ui, repo, *pats, **opts):
     ? = not tracked
     """
 
-    files, matchfn, anypats, cwd = matchpats(repo, pats, opts)
+    files, matchfn, anypats = matchpats(repo, pats, opts)
+    cwd = (pats and repo.getcwd()) or ''
     modified, added, removed, deleted, unknown = [
         [util.pathto(cwd, x) for x in n]
         for n in repo.changes(files=files, match=matchfn)]
