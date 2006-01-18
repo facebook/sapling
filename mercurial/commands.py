@@ -266,7 +266,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         changes = repo.changes(node1, node2, files, match=match)
     modified, added, removed, deleted, unknown = changes
     if files:
-        modified, added, removed = map(lambda x: filterfiles(x, files),
+        modified, added, removed = map(lambda x: filterfiles(files, x),
                                        (modified, added, removed))
 
     if not modified and not added and not removed:

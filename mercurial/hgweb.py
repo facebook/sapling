@@ -226,13 +226,13 @@ class hgweb(object):
              yield self.t(t1, tag=t, **args)
 
     def diff(self, node1, node2, files):
-        def filterfiles(list, files):
-            l = [x for x in list if x in files]
+        def filterfiles(filters, files):
+            l = [x for x in list if x in filters]
 
-            for f in files:
-                if f[-1] != os.sep:
-                    f += os.sep
-                l += [x for x in list if x.startswith(f)]
+            for t in filters:
+                if t[-1] != os.sep:
+                    t += os.sep
+                l += [x for x in files if x.startswith(t)]
             return l
 
         parity = [0]
@@ -267,7 +267,7 @@ class hgweb(object):
 
         modified, added, removed, deleted, unknown = r.changes(node1, node2)
         if files:
-            modified, added, removed = map(lambda x: filterfiles(x, files),
+            modified, added, removed = map(lambda x: filterfiles(files, x),
                                            (modified, added, removed))
 
         for f in modified:
