@@ -227,10 +227,10 @@ class hgweb(object):
 
     def diff(self, node1, node2, files):
         def filterfiles(filters, files):
-            l = [x for x in list if x in filters]
+            l = [x for x in files if x in filters]
 
             for t in filters:
-                if t[-1] != os.sep:
+                if t and t[-1] != os.sep:
                     t += os.sep
                 l += [x for x in files if x.startswith(t)]
             return l
