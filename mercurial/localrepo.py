@@ -1202,8 +1202,11 @@ class localrepository(object):
                 filerevlog = self.file(fname)
                 # Toss out the filenodes that the recipient isn't really
                 # missing.
-                prune_filenodes(fname, filerevlog)
-                msng_filenode_lst = msng_filenode_set[fname].keys()
+                if msng_filenode_set.has_key(fname):
+                    prune_filenodes(fname, filerevlog)
+                    msng_filenode_lst = msng_filenode_set[fname].keys()
+                else:
+                    msng_filenode_lst = []
                 # If any filenodes are left, generate the group for them,
                 # otherwise don't bother.
                 if len(msng_filenode_lst) > 0:
@@ -1217,8 +1220,9 @@ class localrepository(object):
                                              lookup_filenode_link_func(fname))
                     for chnk in group:
                         yield chnk
-                # Don't need this anymore, toss it to free memory.
-                del msng_filenode_set[fname]
+                if msng_filenode_set.has_key(fname):
+                    # Don't need this anymore, toss it to free memory.
+                    del msng_filenode_set[fname]
             # Signal that no more groups are left.
             yield struct.pack(">l", 0)
 
