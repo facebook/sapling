@@ -424,6 +424,7 @@ class localrepository(object):
             changed.append(f)
 
         # update manifest
+        m1 = m1.copy()
         m1.update(new)
         for f in remove:
             if f in m1:
@@ -1385,7 +1386,7 @@ class localrepository(object):
         man = self.manifest.ancestor(m1n, m2n)
         m1 = self.manifest.read(m1n)
         mf1 = self.manifest.readflags(m1n)
-        m2 = self.manifest.read(m2n)
+        m2 = self.manifest.read(m2n).copy()
         mf2 = self.manifest.readflags(m2n)
         ma = self.manifest.read(man)
         mfa = self.manifest.readflags(man)
