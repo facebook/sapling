@@ -295,20 +295,26 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     mmap = repo.manifest.read(change[0])
     date1 = util.datestr(change[2])
 
+    diffopts = ui.diffopts()
+    showfunc = diffopts['showfunc']
+    ignorews = diffopts['ignorews']
     for f in modified:
         to = None
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text,
+                               showfunc=showfunc, ignorews=ignorews))
     for f in added:
         to = None
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text,
+                               showfunc=showfunc, ignorews=ignorews))
     for f in removed:
         to = repo.file(f).read(mmap[f])
         tn = None
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text,
+                               showfunc=showfunc, ignorews=ignorews))
 
 def trimuser(ui, name, rev, revcache):
     """trim the name of the user who committed a change"""

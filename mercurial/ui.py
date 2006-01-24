@@ -23,6 +23,7 @@ class ui(object):
         self.interactive = self.configbool("ui", "interactive", True)
 
         self.updateopts(verbose, debug, quiet, interactive)
+        self.diffcache = None
 
     def updateopts(self, verbose=False, debug=False, quiet=False,
                  interactive=True):
@@ -75,6 +76,23 @@ class ui(object):
 
     def extensions(self):
         return self.configitems("extensions")
+
+    def diffopts(self):
+        if self.diffcache:
+            return self.diffcache
+        ret = { 'showfunc' : True, 'ignorews' : False}
+        for x in self.configitems("diff"):
+            k = x[0].lower()
+            v = x[1]
+            if v:
+                v = v.lower()
+                if v == 'true':
+                    value = True
+                else:
+                    value = False
+                ret[k] = value
+        self.diffcache = ret
+        return ret
 
     def username(self):
         return (os.environ.get("HGUSER") or

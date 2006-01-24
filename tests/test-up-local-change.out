@@ -2,7 +2,7 @@ adding a
 diff -r c19d34741b0a a
 --- a/a
 +++ b/a
-@@ -1,1 +1,1 @@
+@@ -1,1 +1,1 @@ a
 -a
 +abc
 adding b
@@ -47,6 +47,6 @@ description:
 diff -r 1e71731e6fbb a
 --- a/a
 +++ b/a
-@@ -1,1 +1,1 @@
+@@ -1,1 +1,1 @@ a2
 -a2
 +abc
