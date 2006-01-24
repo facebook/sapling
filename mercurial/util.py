@@ -544,7 +544,9 @@ else:
                         if f.endswith(".rc")])
         except OSError, inst: pass
         return rcs
-    rcpath = rcfiles(os.path.dirname(sys.argv[0]) + '/../etc/mercurial')
+    rcpath = []
+    if len(sys.argv) > 0:
+        rcpath.extend(rcfiles(os.path.dirname(sys.argv[0]) + '/../etc/mercurial'))
     rcpath.extend(rcfiles('/etc/mercurial'))
     rcpath.append(os.path.expanduser('~/.hgrc'))
     rcpath = [os.path.normpath(f) for f in rcpath]
