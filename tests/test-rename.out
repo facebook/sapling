@@ -232,3 +232,17 @@ R d1/a
 R d1/b
 R d1/ba
 R d1/d11/a1
+# skip removed files
+copying d1/a to d3/a
+copying d1/ba to d3/ba
+copying d1/d11/a1 to d3/d11/a1
+removing d1/a
+removing d1/ba
+removing d1/d11/a1
+A d3/a
+A d3/ba
+A d3/d11/a1
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1

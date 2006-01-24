@@ -804,7 +804,8 @@ def docopy(ui, repo, pats, opts):
 
     def okaytocopy(abs, rel, exact):
         reasons = {'?': _('is not managed'),
-                   'a': _('has been marked for add')}
+                   'a': _('has been marked for add'),
+                   'r': _('has been marked for remove')}
         reason = reasons.get(repo.dirstate.state(abs))
         if reason:
             if exact:

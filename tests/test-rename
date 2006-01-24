@@ -152,3 +152,9 @@ echo "# move the parent tree with \"hg rename ..\""
 (cd d1/d11; hg rename .. ../../d3)
 hg status
 hg update -C
+
+echo "# skip removed files"
+hg remove d1/b
+hg rename d1 d3
+hg status
+hg update -C
