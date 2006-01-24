@@ -134,3 +134,21 @@ mkdir d3
 hg rename d1/* d2/* d3
 hg status
 hg update -C
+
+echo "# move a whole subtree with \"hg rename .\""
+mkdir d3
+(cd d1; hg rename . ../d3)
+hg status
+hg update -C
+
+echo "# move a whole subtree with \"hg rename --after .\""
+mkdir d3
+mv d1/* d3
+(cd d1; hg rename --after . ../d3)
+hg status
+hg update -C
+
+echo "# move the parent tree with \"hg rename ..\""
+(cd d1/d11; hg rename .. ../../d3)
+hg status
+hg update -C

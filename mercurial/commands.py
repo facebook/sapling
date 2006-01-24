@@ -856,12 +856,11 @@ def docopy(ui, repo, pats, opts):
 
     def targetpathfn(pat, dest, srcs):
         if os.path.isdir(pat):
-            if pat.endswith(os.sep):
-                pat = pat[:-len(os.sep)]
+            abspfx = util.canonpath(repo.root, cwd, pat)
             if destdirexists:
-                striplen = len(os.path.split(pat)[0])
+                striplen = len(os.path.split(abspfx)[0])
             else:
-                striplen = len(pat)
+                striplen = len(abspfx)
             if striplen:
                 striplen += len(os.sep)
             res = lambda p: os.path.join(dest, p[striplen:])
@@ -875,34 +874,36 @@ def docopy(ui, repo, pats, opts):
         if util.patkind(pat, None)[0]:
             # a mercurial pattern
             res = lambda p: os.path.join(dest, os.path.basename(p))
-        elif len(util.canonpath(repo.root, cwd, pat)) < len(srcs[0][0]):
-            # A directory. Either the target path contains the last
-            # component of the source path or it does not.
-            def evalpath(striplen):
-                score = 0
-                for s in srcs:
-                    t = os.path.join(dest, s[1][striplen:])
-                    if os.path.exists(t):
-                        score += 1
-                return score
-
-            if pat.endswith(os.sep):
-                pat = pat[:-len(os.sep)]
-            striplen = len(pat) + len(os.sep)
-            if os.path.isdir(os.path.join(dest, os.path.split(pat)[1])):
-                score = evalpath(striplen)
-                striplen1 = len(os.path.split(pat)[0])
-                if striplen1:
-                    striplen1 += len(os.sep)
-                if evalpath(striplen1) > score:
-                    striplen = striplen1
-            res = lambda p: os.path.join(dest, p[striplen:])
         else:
-            # a file
-            if destdirexists:
-                res = lambda p: os.path.join(dest, os.path.basename(p))
+            abspfx = util.canonpath(repo.root, cwd, pat)
+            if len(abspfx) < len(srcs[0][0]):
+                # A directory. Either the target path contains the last
+                # component of the source path or it does not.
+                def evalpath(striplen):
+                    score = 0
+                    for s in srcs:
+                        t = os.path.join(dest, s[0][striplen:])
+                        if os.path.exists(t):
+                            score += 1
+                    return score
+
+                striplen = len(abspfx)
+                if striplen:
+                    striplen += len(os.sep)
+                if os.path.isdir(os.path.join(dest, os.path.split(abspfx)[1])):
+                    score = evalpath(striplen)
+                    striplen1 = len(os.path.split(abspfx)[0])
+                    if striplen1:
+                        striplen1 += len(os.sep)
+                    if evalpath(striplen1) > score:
+                        striplen = striplen1
+                res = lambda p: os.path.join(dest, p[striplen:])
             else:
-                res = lambda p: dest
+                # a file
+                if destdirexists:
+                    res = lambda p: os.path.join(dest, os.path.basename(p))
+                else:
+                    res = lambda p: dest
         return res
 
 
@@ -934,7 +935,7 @@ def docopy(ui, repo, pats, opts):
 
     for targetpath, srcs in copylist:
         for abssrc, relsrc, exact in srcs:
-            copy(abssrc, relsrc, targetpath(relsrc), exact)
+            copy(abssrc, relsrc, targetpath(abssrc), exact)
 
     if errors:
         ui.warn(_('(consider using --after)\n'))
