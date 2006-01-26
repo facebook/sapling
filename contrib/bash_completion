@@ -39,7 +39,7 @@ _hg_repos()
 
 _hg_status()
 {
-    local files="$( hg status -$1 . | cut -b 3- )"
+    local files="$( hg status -n$1 . )"
     COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W "$files" -- "$cur" ))
 }
 
@@ -140,19 +140,19 @@ _hg()
 	    _hg_status "u"
 	;;
 	commit)
-	    _hg_status "mra"
+	    _hg_status "mar"
 	;;
 	remove)
-	    _hg_status "r"
+	    _hg_status "d"
 	;;
 	forget)
 	    _hg_status "a"
 	;;
 	diff)
-	    _hg_status "mra"
+	    _hg_status "mar"
 	;;
 	revert)
-	    _hg_status "mra"
+	    _hg_status "mard"
 	;;
 	clone)
 	    local count=$(_hg_count_non_option)
