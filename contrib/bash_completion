@@ -9,7 +9,7 @@ _hg_commands()
 				 -e '/^ [^ ]/!d; s/^ //; s/[,:]//g;'))
 
     commands="${all[*]##debug*}"
-    result=$(compgen -W "${commands[*]}" -- "$cur")
+    result=$(compgen -W "$commands" -- "$cur")
 
     # hide debug commands from users, but complete them if
     # there is no other possible command
@@ -39,7 +39,7 @@ _hg_repos()
 
 _hg_status()
 {
-    local files="$( hg status -$1 | cut -b 3- )"
+    local files="$( hg status -$1 . | cut -b 3- )"
     COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W "$files" -- "$cur" ))
 }
 
@@ -166,17 +166,6 @@ _hg()
 	;;
 	debugdata)
 	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -X "!*.d" -- "$cur" ))
-	;;
-	cat)
-	    local count=$(_hg_count_non_option '-o|--output')
-	    if [ $count = 2 ]; then
-		_hg_tags
-	    else
-		COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -- "$cur" ))
-	    fi
-	;;
-	*)
-	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -- "$cur" ))
 	;;
     esac
 
