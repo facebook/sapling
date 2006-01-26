@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2005 by Intevation GmbH <intevation@intevation.de>
+# Copyright 2005, 2006 by Intevation GmbH <intevation@intevation.de>
 # Author(s):
 # Thomas Arendsen Hein <thomas@intevation.de>
 #
@@ -20,6 +20,9 @@ This allows pull/push over ssh to to the repositories given as arguments.
 If all your repositories are subdirectories of a common directory, you can
 allow shorter paths with:
 command="cd path/to/my/repositories && hg-ssh repo1 subdir/repo2"
+
+You can use pattern matching of your normal shell, e.g.:
+command="cd repos && hg-ssh user/thomas/* projects/{mercurial,foo}"
 """
 
 from mercurial import commands
