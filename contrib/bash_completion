@@ -41,14 +41,14 @@ _hg_commands()
 
     all=$(_hg_command_list)
     commands=${all%%$'\n'debug*}
-    result=$(compgen -W "$commands" -- "$cur")
+    result=$(compgen -W '$commands' -- "$cur")
 
     # hide debug commands from users, but complete them if
     # there is no other possible command
     if [ "$result" = "" ]; then
 	local debug
 	debug=debug${all#*$'\n'debug}
-	result=$(compgen -W "$debug" -- "$cur")
+	result=$(compgen -W '$debug' -- "$cur")
     fi
 
     COMPREPLY=(${COMPREPLY[@]:-} $result)
@@ -57,7 +57,7 @@ _hg_commands()
 _hg_paths()
 {
     local paths="$(hg paths | sed -e 's/ = .*$//')"
-    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W "$paths" -- "$cur" ))
+    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W '$paths' -- "$cur" ))
 }
 
 _hg_repos()
@@ -71,13 +71,13 @@ _hg_repos()
 _hg_status()
 {
     local files="$( hg status -n$1 . )"
-    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W "$files" -- "$cur" ))
+    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W '$files' -- "$cur" ))
 }
 
 _hg_tags()
 {
     local tags="$(hg tags | sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//')"
-    COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W "$tags" -- "$cur") )
+    COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W '$tags' -- "$cur") )
 }
 
 # this is "kind of" ugly...
@@ -123,7 +123,7 @@ _hg()
     if [[ "$cur" == -* ]]; then
 	opts=$(_hg_option_list $cmd)
 
-	COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W "$opts" -- "$cur") )
+	COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur") )
 	return
     fi
 
