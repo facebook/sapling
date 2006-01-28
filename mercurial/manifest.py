@@ -108,8 +108,8 @@ class manifest(revlog):
             files = map.keys()
             files.sort()
 
-            % if this is changed to support newlines in filenames,
-            % be sure to check the templates/ dir again (especially *-raw.tmpl)
+            # if this is changed to support newlines in filenames,
+            # be sure to check the templates/ dir again (especially *-raw.tmpl)
             text = ["%s\000%s%s\n" %
                             (f, hex(map[f]), flags[f] and "x" or '')
                             for f in files]
