@@ -451,7 +451,7 @@ class localrepository(object):
             text = edittext
 
         user = user or self.ui.username()
-        n = self.changelog.add(mn, changed, text, tr, p1, p2, user, date)
+        n = self.changelog.add(mn, changed + remove, text, tr, p1, p2, user, date)
         tr.close()
 
         self.dirstate.setparents(n)
