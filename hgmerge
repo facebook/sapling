@@ -44,6 +44,16 @@ elif [ -n "$DIFF3" ]; then
     cp "$LOCAL.orig" "$LOCAL"
 fi
 
+# on MacOS X try opendiff
+# (uses FileMerge.app, shipped with Apple's developer tools)
+if type opendiff > /dev/null 2>&1; then
+    opendiff "$LOCAL.orig" "$OTHER" -ancestor "$BASE" -merge "$LOCAL" || exit 1
+    # prevent $OTHER from being removed too early
+    # can surely be done in a more elegant way
+    sleep 1
+    exit 0
+fi
+
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
     if type kdiff3 > /dev/null 2>&1; then
