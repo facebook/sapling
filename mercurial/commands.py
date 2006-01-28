@@ -283,7 +283,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         if not node1:
             node1 = repo.dirstate.parents()[0]
         def read(f):
-            return repo.wfile(f).read()
+            return repo.wread(f)
 
     if ui.quiet:
         r = None
