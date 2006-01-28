@@ -580,6 +580,8 @@ class hgweb(object):
         files = {}
 
         p = path[1:]
+        if p and p[-1] != "/":
+            p += "/"
         l = len(p)
 
         for f,n in mf.items():
