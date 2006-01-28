@@ -801,6 +801,12 @@ class hgweb(object):
     # find tag, changeset, file
 
     def run(self, req=hgrequest()):
+        def clean(path):
+            p = os.path.normpath(path)
+            if p[:2] == "..":
+                raise "suspicious path"
+            return p
+
         def header(**map):
             yield self.t("header", **map)
 
@@ -881,7 +887,8 @@ class hgweb(object):
             req.write(self.changeset(req.form['node'][0]))
 
         elif req.form['cmd'][0] == 'manifest':
-            req.write(self.manifest(req.form['manifest'][0], req.form['path'][0]))
+            req.write(self.manifest(req.form['manifest'][0],
+                                    clean(req.form['path'][0])))
 
         elif req.form['cmd'][0] == 'tags':
             req.write(self.tags())
@@ -890,16 +897,20 @@ class hgweb(object):
             req.write(self.summary())
 
         elif req.form['cmd'][0] == 'filediff':
-            req.write(self.filediff(req.form['file'][0], req.form['node'][0]))
+            req.write(self.filediff(clean(req.form['file'][0]),
+                                    req.form['node'][0]))
 
         elif req.form['cmd'][0] == 'file':
-            req.write(self.filerevision(req.form['file'][0], req.form['filenode'][0]))
+            req.write(self.filerevision(clean(req.form['file'][0]),
+                                        req.form['filenode'][0]))
 
         elif req.form['cmd'][0] == 'annotate':
-            req.write(self.fileannotate(req.form['file'][0], req.form['filenode'][0]))
+            req.write(self.fileannotate(clean(req.form['file'][0]),
+                                        req.form['filenode'][0]))
 
         elif req.form['cmd'][0] == 'filelog':
-            req.write(self.filelog(req.form['file'][0], req.form['filenode'][0]))
+            req.write(self.filelog(clean(req.form['file'][0]),
+                                   req.form['filenode'][0]))
 
         elif req.form['cmd'][0] == 'heads':
             req.httphdr("application/mercurial-0.1")
