@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, cgi, sys
+import os, cgi, sys, urllib
 from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
 demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer util")
@@ -163,7 +163,8 @@ class templater(object):
                 return
 
 common_filters = {
-    "escape": cgi.escape,
+    "escape": lambda x: cgi.escape(x, True),
+    "urlescape": urllib.quote,
     "strip": lambda x: x.strip(),
     "age": age,
     "date": lambda x: util.datestr(x),

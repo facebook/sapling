@@ -5,17 +5,17 @@ search = search-gitweb.tmpl
 changelog = changelog-gitweb.tmpl
 summary = summary-gitweb.tmpl
 error = error-gitweb.tmpl
-naventry = "<a href="?cmd=changelog;rev=#rev#;style=gitweb">#label#</a> "
-navshortentry = "<a href="?cmd=shortlog;rev=#rev#;style=gitweb">#label#</a> "
-filedifflink = "<a href="?cmd=filediff;node=#node#;file=#file#;style=gitweb">#file#</a> "
-filenodelink = "<tr class="light"><td><a class="list" href="">#file#</a></td><td></td><td class="link"><a href="?cmd=file;filenode=#filenode#;file=#file#;style=gitweb">file</a> | <!-- FIXME: <a href="?fd=#filenode|short#;file=#file#;style=gitweb">diff</a> | --> <a href="?cmd=filelog;filenode=#filenode|short#;file=#file#;style=gitweb">revisions</a></td></tr>"
+naventry = "<a href="?cmd=changelog;rev=#rev#;style=gitweb">#label|escape#</a> "
+navshortentry = "<a href="?cmd=shortlog;rev=#rev#;style=gitweb">#label|escape#</a> "
+filedifflink = "<a href="?cmd=filediff;node=#node#;file=#file|urlescape#;style=gitweb">#file|escape#</a> "
+filenodelink = "<tr class="light"><td><a class="list" href="">#file|escape#</a></td><td></td><td class="link"><a href="?cmd=file;filenode=#filenode#;file=#file|urlescape#;style=gitweb">file</a> | <!-- FIXME: <a href="?fd=#filenode|short#;file=#file|urlescape#;style=gitweb">diff</a> | --> <a href="?cmd=filelog;filenode=#filenode|short#;file=#file|urlescape#;style=gitweb">revisions</a></td></tr>"
 fileellipses = "..."
 changelogentry = changelogentry-gitweb.tmpl
 searchentry = changelogentry-gitweb.tmpl
 changeset = changeset-gitweb.tmpl
 manifest = manifest-gitweb.tmpl
-manifestdirentry = "<tr class="parity#parity#"><td style="font-family:monospace">drwxr-xr-x</td><td><a href="?mf=#manifest|short#;path=#path#;style=gitweb">#basename#/</a></td><td class="link"><a href="?mf=#manifest|short#;path=#path#;style=gitweb">manifest</a></td></tr>"
-manifestfileentry = "<tr class="parity#parity#"><td style="font-family:monospace">#permissions|permissions#</td><td class="list"><a class="list" href="?f=#filenode|short#;file=#file#;style=gitweb">#basename#</a></td><td class="link"><a href="?f=#filenode|short#;file=#file#;style=gitweb">file</a> | <a href="?fl=#filenode|short#;file=#file#;style=gitweb">revisions</a> | <a href="?fa=#filenode|short#;file=#file#;style=gitweb">annotate</a></td></tr>"
+manifestdirentry = "<tr class="parity#parity#"><td style="font-family:monospace">drwxr-xr-x</td><td><a href="?mf=#manifest|short#;path=#path|urlescape#;style=gitweb">#basename|escape#/</a></td><td class="link"><a href="?mf=#manifest|short#;path=#path|urlescape#;style=gitweb">manifest</a></td></tr>"
+manifestfileentry = "<tr class="parity#parity#"><td style="font-family:monospace">#permissions|permissions#</td><td class="list"><a class="list" href="?f=#filenode|short#;file=#file|urlescape#;style=gitweb">#basename|escape#</a></td><td class="link"><a href="?f=#filenode|short#;file=#file|urlescape#;style=gitweb">file</a> | <a href="?fl=#filenode|short#;file=#file|urlescape#;style=gitweb">revisions</a> | <a href="?fa=#filenode|short#;file=#file|urlescape#;style=gitweb">annotate</a></td></tr>"
 filerevision = filerevision-gitweb.tmpl
 fileannotate = fileannotate-gitweb.tmpl
 filelog = filelog-gitweb.tmpl
@@ -28,22 +28,22 @@ difflineat = "<div class="pre" style="color:#990099;">#line|escape#</div>"
 diffline = "<div class="pre">#line|escape#</div>"
 changelogparent = "<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cmd=changeset;node=#node#;style=gitweb">#node|short#</a></td></tr>"
 changesetparent = "<tr><td>parent</td><td style="font-family:monospace"><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb">#node|short#</a></td></tr>"
-filerevparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=file;file=#file#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
-fileannotateparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=annotate;file=#file#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
+filerevparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=file;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
+fileannotateparent = "<tr><td class="metatag">parent:</td><td><a href="?cmd=annotate;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
 changelogchild = "<tr><th class="child">child #rev#:</th><td class="child"><a href="?cmd=changeset;node=#node#;style=gitweb">#node|short#</a></td></tr>"
 changesetchild = "<tr><td>child</td><td style="font-family:monospace"><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb">#node|short#</a></td></tr>"
-filerevchild = "<tr><td class="metatag">child:</td><td><a href="?cmd=file;file=#file#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
-fileannotatechild = "<tr><td class="metatag">child:</td><td><a href="?cmd=annotate;file=#file#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
+filerevchild = "<tr><td class="metatag">child:</td><td><a href="?cmd=file;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
+fileannotatechild = "<tr><td class="metatag">child:</td><td><a href="?cmd=annotate;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
 tags = tags-gitweb.tmpl
-tagentry = "<tr class="parity#parity#"><td><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#tag#</b></a></td><td class="link"><a href="?cmd=changeset;node=#node|short#;style=gitweb">changeset</a> | <a href="?cmd=changelog;rev=#node|short#;style=gitweb">changelog</a> |  <a href="?mf=#tagmanifest|short#;path=/;style=gitweb">manifest</a></td></tr>"
+tagentry = "<tr class="parity#parity#"><td><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#tag|escape#</b></a></td><td class="link"><a href="?cmd=changeset;node=#node|short#;style=gitweb">changeset</a> | <a href="?cmd=changelog;rev=#node|short#;style=gitweb">changelog</a> |  <a href="?mf=#tagmanifest|short#;path=/;style=gitweb">manifest</a></td></tr>"
 diffblock = "#lines#"
-changelogtag = "<tr><th class="tag">tag:</th><td class="tag">#tag#</td></tr>"
-changesettag = "<tr><td>tag</td><td>#tag#</td></tr>"
+changelogtag = "<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>"
+changesettag = "<tr><td>tag</td><td>#tag|escape#</td></tr>"
 filediffparent = "<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cmd=changeset;node=#node#;style=gitweb">#node|short#</a></td></tr>"
-filelogparent = "<tr><td align="right">parent #rev#:&nbsp;</td><td><a href="?cmd=file;file=#file#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
+filelogparent = "<tr><td align="right">parent #rev#:&nbsp;</td><td><a href="?cmd=file;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
 filediffchild = "<tr><th class="child">child #rev#:</th><td class="child"><a href="?cmd=changeset;node=#node#;style=gitweb">#node|short#</a></td></tr>"
-filelogchild = "<tr><td align="right">child #rev#:&nbsp;</td><td><a href="?cmd=file;file=#file#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
+filelogchild = "<tr><td align="right">child #rev#:&nbsp;</td><td><a href="?cmd=file;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>"
 shortlog = shortlog-gitweb.tmpl
 shortlogentry = "<tr class="parity#parity#"><td><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#desc|firstline|escape#</b></a></td><td class="link"><a href="?cmd=changeset;node=#node|short#;style=gitweb">changeset</a> |  <a href="?cmd=manifest;manifest=#manifest|short#;path=/;style=gitweb">manifest</a></td></tr>"
-filelogentry = "<tr class="parity#parity#"><td><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#desc|firstline|escape#</b></a></td><td class="link"><!-- FIXME: <a href="?fd=#node|short#;file=#file#;style=gitweb">diff</a> | --> <a href="?fa=#filenode|short#;file=#file#;style=gitweb">annotate</a></td></tr>"
-archiveentry = " | <a href="?ca=#node|short#;type=#type#">#type#</a> "
+filelogentry = "<tr class="parity#parity#"><td><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#desc|firstline|escape#</b></a></td><td class="link"><!-- FIXME: <a href="?fd=#node|short#;file=#file|urlescape#;style=gitweb">diff</a> | --> <a href="?fa=#filenode|short#;file=#file|urlescape#;style=gitweb">annotate</a></td></tr>"
+archiveentry = " | <a href="?ca=#node|short#;type=#type|urlescape#">#type|escape#</a> "
