@@ -21,7 +21,7 @@
 # interrupted and can be run repeatedly to copy new commits.
 
 import sys, os, zlib, sha, time
-from mercurial import hg, ui, util
+from mercurial import hg, ui, util, commands
 
 class convert_git:
     def __init__(self, path):
@@ -113,7 +113,7 @@ class convert_mercurial:
         except:
             pass
 
-    def putcommit(self, files, parents, author, dest, text):
+    def putcommit(self, files, parents, author, date, text):
         seen = {}
         pl = []
         for p in parents:
@@ -129,8 +129,13 @@ class convert_mercurial:
         while parents:
             p1 = p2
             p2 = parents.pop(0)
-            self.repo.rawcommit(files, text, author, dest,
-                                hg.bin(p1), hg.bin(p2))
+            self.repo.dirstate.setparents(hg.bin(p1), hg.bin(p2))
+            if len(files) > 0:
+                olddir = os.getcwd()
+                os.chdir(self.path)
+                commands.addremove(self.repo.ui, self.repo, *files)
+                os.chdir(olddir)
+            self.repo.commit(files, text, author, date)
             text = "(octopus merge fixup)\n"
             p2 = hg.hex(self.repo.changelog.tip())
 
