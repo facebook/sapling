@@ -171,9 +171,12 @@ class convert:
         self.commitcache = {}
 
         self.map = {}
-        for l in file(self.mapfile):
-            sv, dv = l[:-1].split()
-            self.map[sv] = dv
+        try:
+            for l in file(self.mapfile):
+                sv, dv = l[:-1].split()
+                self.map[sv] = dv
+        except IOError:
+            pass
 
     def walktree(self, heads):
         visit = heads
