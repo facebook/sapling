@@ -197,7 +197,7 @@ class revlog(object):
                 raise
             i = ""
 
-        if i[:4] != "\0\0\0\0":
+        if i and i[:4] != "\0\0\0\0":
             raise RevlogError(_("incompatible revlog signature on %s") %
                               self.indexfile)
 
