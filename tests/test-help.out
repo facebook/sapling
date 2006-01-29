@@ -64,7 +64,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  paths       show definition of symbolic path names
  pull        pull changes from the specified source
  push        push changes to the specified destination
- rawcommit   raw commit interface
+ rawcommit   raw commit interface (DEPRECATED)
  recover     roll back an interrupted transaction
  remove      remove the specified files on the next commit
  rename      rename files; equivalent of copy + remove
@@ -106,7 +106,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  paths       show definition of symbolic path names
  pull        pull changes from the specified source
  push        push changes to the specified destination
- rawcommit   raw commit interface
+ rawcommit   raw commit interface (DEPRECATED)
  recover     roll back an interrupted transaction
  remove      remove the specified files on the next commit
  rename      rename files; equivalent of copy + remove

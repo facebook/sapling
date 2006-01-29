@@ -454,10 +454,13 @@ push <destination>::
     --remotecmd  specify hg command to run on the remote side
 
 rawcommit [-p -d -u -F -m -l]::
-    Lowlevel commit, for use in helper scripts.
+    Lowlevel commit, for use in helper scripts. (DEPRECATED)
 
     This command is not intended to be used by normal users, as it is
     primarily useful for importing from other SCMs.
+
+    This command is now deprecated and will be removed in a future
+    release, please use debugsetparents and commit instead.
 
 recover::
     Recover from an interrupted commit or pull.

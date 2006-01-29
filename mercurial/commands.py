@@ -1793,13 +1793,19 @@ def push(ui, repo, dest="default-push", force=False, ssh=None, remotecmd=None):
     return r
 
 def rawcommit(ui, repo, *flist, **rc):
-    """raw commit interface
+    """raw commit interface (DEPRECATED)
 
     Lowlevel commit, for use in helper scripts.
 
     This command is not intended to be used by normal users, as it is
     primarily useful for importing from other SCMs.
+
+    This command is now deprecated and will be removed in a future
+    release, please use debugsetparents and commit instead.
     """
+
+    ui.warn(_("(the rawcommit command is deprecated)\n"))
+
     message = rc['message']
     if not message and rc['logfile']:
         try:
