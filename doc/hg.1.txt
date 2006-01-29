@@ -155,6 +155,8 @@ clone [options] <source> [dest]::
     errors.  In these cases, use the --pull option to avoid
     hardlinking.
 
+    See pull for valid source format details.
+
     options:
     -U, --noupdate   do not update the new working directory
     --pull           use pull protocol to copy metadata
@@ -387,6 +389,8 @@ outgoing [-p] [dest]::
     Show changesets not found in the specified destination repo or the
     default push repo. These are the changesets that would be pushed
     if a push was requested.
+
+    See pull for valid source format details.
 
     options:
     -p, --patch           show patch
