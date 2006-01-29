@@ -10,6 +10,7 @@ hg history
 
 echo foo >> .hgtags
 hg tag -d "0 0" "bleah2" || echo "failed"
+hg tag -d "0 0" -r 0 "bleah2" 1 || echo "failed"
 
 hg revert .hgtags
 hg tag -d "0 0" -r 0 "bleah0"

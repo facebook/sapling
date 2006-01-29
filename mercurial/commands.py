@@ -2079,10 +2079,16 @@ def tag(ui, repo, name, rev_=None, **opts):
     To facilitate version control, distribution, and merging of tags,
     they are stored as a file named ".hgtags" which is managed
     similarly to other project files and can be hand-edited if
-    necessary.
+    necessary.  The file '.hg/localtags' is used for local tags (not
+    shared among repositories).
     """
     if name == "tip":
         raise util.Abort(_("the name 'tip' is reserved"))
+    if rev_ is not None:
+        ui.warn(_("use of 'hg tag NAME [REV]' is deprecated, "
+                  "please use 'hg tag [-r REV] NAME instead\n"))
+        if opts['rev']:
+            raise util.Abort(_("use only one form to specify the revision"))
     if opts['rev']:
         rev_ = opts['rev']
     if rev_:
@@ -2470,7 +2476,7 @@ table = {
           ('d', 'date', '', _('record datecode as commit date')),
           ('u', 'user', '', _('record user as commiter')),
           ('r', 'rev', '', _('revision to tag'))],
-         _('hg tag [OPTION]... NAME [REV]')),
+         _('hg tag [-r REV] [OPTION]... NAME')),
     "tags": (tags, [], _('hg tags')),
     "tip": (tip, [], _('hg tip')),
     "unbundle":
