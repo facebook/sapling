@@ -222,6 +222,12 @@ class hgweb(object):
         for s in siblings:
             yield dict(node=hex(s), rev=rev(s), **args)
 
+    def renamelink(self, fl, node):
+        r = fl.renamed(node)
+        if r:
+            return [dict(file=r[0], node=hex(r[1]))]
+        return []
+
     def showtag(self, t1, node=nullid, **args):
         for t in self.repo.nodetags(node):
              yield self.t(t1, tag=t, **args)
@@ -466,6 +472,7 @@ class hgweb(object):
                              "node": hex(cn),
                              "author": cs[1],
                              "date": cs[2],
+                             "rename": self.renamelink(fl, n),
                              "parent": self.siblings(fl.parents(n),
                                                      fl.rev, file=f),
                              "child": self.siblings(fl.children(n),
@@ -514,6 +521,7 @@ class hgweb(object):
                      date=cs[2],
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
+                     rename=self.renamelink(fl, n),
                      permissions=self.repo.manifest.readflags(mfn)[f])
 
     def fileannotate(self, f, node):
@@ -565,6 +573,7 @@ class hgweb(object):
                      manifest=hex(mfn),
                      author=cs[1],
                      date=cs[2],
+                     rename=self.renamelink(fl, n),
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
                      permissions=self.repo.manifest.readflags(mfn)[f])
