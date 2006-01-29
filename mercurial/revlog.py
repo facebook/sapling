@@ -197,6 +197,10 @@ class revlog(object):
                 raise
             i = ""
 
+        if i[:4] != "\0\0\0\0":
+            raise RevlogError(_("incompatible revlog signature on %s") %
+                              self.indexfile)
+
         if len(i) > 10000:
             # big index, let's parse it on demand
             parser = lazyparser(i, self)
