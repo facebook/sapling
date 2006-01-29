@@ -1383,6 +1383,8 @@ class localrepository(object):
             self.ui.warn(_("aborting: outstanding uncommitted merges\n"))
             return 1
 
+        err = False
+
         p1, p2 = pl[0], node
         pa = self.changelog.ancestor(p1, p2)
         m1n = self.changelog.read(p1)[0]
@@ -1598,7 +1600,9 @@ class localrepository(object):
         for f in files:
             self.ui.status(_("merging %s\n") % f)
             my, other, flag = merge[f]
-            self.merge3(f, my, other)
+            ret = self.merge3(f, my, other)
+            if ret:
+                err = True
             util.set_exec(self.wjoin(f), flag)
             if moddirstate:
                 if branch_merge:
@@ -1631,6 +1635,7 @@ class localrepository(object):
 
         if moddirstate:
             self.dirstate.setparents(p1, p2)
+        return err
 
     def merge3(self, fn, my, other):
         """perform a 3-way merge in the working directory"""
@@ -1661,6 +1666,7 @@ class localrepository(object):
 
         os.unlink(b)
         os.unlink(c)
+        return r
 
     def verify(self):
         filelinkrevs = {}
