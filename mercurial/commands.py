@@ -2092,7 +2092,7 @@ def tag(ui, repo, name, rev_=None, **opts):
         raise util.Abort(_("the name 'tip' is reserved"))
     if rev_ is not None:
         ui.warn(_("use of 'hg tag NAME [REV]' is deprecated, "
-                  "please use 'hg tag [-r REV] NAME instead\n"))
+                  "please use 'hg tag [-r REV] NAME' instead\n"))
         if opts['rev']:
             raise util.Abort(_("use only one form to specify the revision"))
     if opts['rev']:
