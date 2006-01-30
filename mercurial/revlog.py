@@ -213,7 +213,7 @@ class revlog(object):
             m = [None] * l
 
             n = 0
-            for f in xrange(0, len(i), s):
+            for f in xrange(0, l * s, s):
                 # offset, size, base, linkrev, p1, p2, nodeid
                 e = struct.unpack(indexformat, i[f:f + s])
                 m[n] = (e[6], n)
@@ -841,14 +841,29 @@ class revlog(object):
         expected = 0
         if self.count():
             expected = self.end(self.count() - 1)
+
         try:
             f = self.opener(self.datafile)
             f.seek(0, 2)
             actual = f.tell()
-            return expected - actual
+            dd = actual - expected
         except IOError, inst:
-            if inst.errno == errno.ENOENT:
-                return 0
-            raise
+            if inst.errno != errno.ENOENT:
+                raise
+            dd = 0
+
+        try:
+            f = self.opener(self.indexfile)
+            f.seek(0, 2)
+            actual = f.tell()
+            s = struct.calcsize(indexformat)
+            i = actual / s
+            di = actual - (i * s)
+        except IOError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
+            di = 0
+
+        return (dd, di)
 
 

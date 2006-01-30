@@ -1679,11 +1679,17 @@ class localrepository(object):
             self.ui.warn(msg + "\n")
             errors[0] += 1
 
+        def checksize(obj, name):
+            d = obj.checksize()
+            if d[0]:
+                err(_("%s data length off by %d bytes") % (name, d[0]))
+            if d[1]:
+                err(_("%s index contains %d extra bytes") % (name, d[1]))
+
         seen = {}
         self.ui.status(_("checking changesets\n"))
-        d = self.changelog.checksize()
-        if d:
-            err(_("changeset data short %d bytes") % d)
+        checksize(self.changelog, "changelog")
+
         for i in range(self.changelog.count()):
             changesets += 1
             n = self.changelog.node(i)
@@ -1713,9 +1719,8 @@ class localrepository(object):
 
         seen = {}
         self.ui.status(_("checking manifests\n"))
-        d = self.manifest.checksize()
-        if d:
-            err(_("manifest data short %d bytes") % d)
+        checksize(self.manifest, "manifest")
+
         for i in range(self.manifest.count()):
             n = self.manifest.node(i)
             l = self.manifest.linkrev(n)
@@ -1771,9 +1776,7 @@ class localrepository(object):
                 continue
             files += 1
             fl = self.file(f)
-            d = fl.checksize()
-            if d:
-                err(_("%s file data short %d bytes") % (f, d))
+            checksize(fl, f)
 
             nodes = {nullid: 1}
             seen = {}
