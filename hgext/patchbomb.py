@@ -1,7 +1,5 @@
-#!/usr/bin/python
-#
-# Interactive script for sending a collection of Mercurial changesets
-# as a series of patch emails.
+# Command for sending a collection of Mercurial changesets as a series
+# of patch emails.
 #
 # The series is started off with a "[PATCH 0 of N]" introduction,
 # which describes the series as a whole.
@@ -50,7 +48,6 @@
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from mercurial import commands
-from mercurial import fancyopts
 from mercurial import hg
 from mercurial import ui
 import os
@@ -89,6 +86,7 @@ def diffstat(patch):
         except: pass
 
 def patchbomb(ui, repo, *revs, **opts):
+    '''send changesets as a series of patch emails'''
     def prompt(prompt, default = None, rest = ': ', empty_ok = False):
         if default: prompt += ' [%s]' % default
         prompt += rest
@@ -162,7 +160,7 @@ def patchbomb(ui, repo, *revs, **opts):
             self.container.append(''.join(self.lines).split('\n'))
             self.lines = []
 
-    commands.export(ui, repo, *args, **{'output': exportee(patches),
+    commands.export(ui, repo, *revs, **{'output': exportee(patches),
                                         'switch_parent': False,
                                         'text': None})
 
@@ -252,25 +250,15 @@ def patchbomb(ui, repo, *revs, **opts):
     if not opts['test']:
         s.close()
 
-if __name__ == '__main__':
-    optspec = [('c', 'cc', [], 'email addresses of copy recipients'),
-               ('d', 'diffstat', None, 'add diffstat output to messages'),
-               ('f', 'from', '', 'email address of sender'),
-               ('', 'plain', None, 'omit hg patch header'),
-               ('n', 'test', None, 'print messages that would be sent'),
-               ('s', 'subject', '', 'subject of introductory message'),
-               ('t', 'to', [], 'email addresses of recipients')]
-    options = {}
-    try:
-        args = fancyopts.fancyopts(sys.argv[1:], commands.globalopts + optspec,
-                                   options)
-    except fancyopts.getopt.GetoptError, inst:
-        u = ui.ui()
-        u.warn('error: %s' % inst)
-        sys.exit(1)
-
-    u = ui.ui(options["verbose"], options["debug"], options["quiet"],
-              not options["noninteractive"])
-    repo = hg.repository(ui = u)
-
-    patchbomb(u, repo, *args, **options)
+cmdtable = {
+    'email':
+    (patchbomb,
+     [('c', 'cc', [], 'email addresses of copy recipients'),
+      ('d', 'diffstat', None, 'add diffstat output to messages'),
+      ('f', 'from', '', 'email address of sender'),
+      ('', 'plain', None, 'omit hg patch header'),
+      ('n', 'test', None, 'print messages that would be sent'),
+      ('s', 'subject', '', 'subject of introductory message'),
+      ('t', 'to', [], 'email addresses of recipients')],
+     "hg email [OPTION]... [REV]...")
+    }
