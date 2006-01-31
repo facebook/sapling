@@ -50,6 +50,7 @@ from email.MIMEText import MIMEText
 from mercurial import commands
 from mercurial import hg
 from mercurial import ui
+from mercurial.i18n import gettext as _
 import os
 import popen2
 import smtplib
