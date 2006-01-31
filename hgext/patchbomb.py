@@ -95,7 +95,7 @@ def patchbomb(ui, repo, *revs, **opts):
             if r: return r
             if default is not None: return default
             if empty_ok: return r
-            ui.warn('Please enter a valid value.\n')
+            ui.warn(_('Please enter a valid value.\n'))
 
     def confirm(s):
         if not prompt(s, default = 'y', rest = '? ').lower().startswith('y'):
@@ -107,7 +107,7 @@ def patchbomb(ui, repo, *revs, **opts):
             if summary:
                 ui.write(summary, '\n')
                 ui.write(s, '\n')
-            confirm('Does the diffstat above look okay')
+            confirm(_('Does the diffstat above look okay'))
         return s
 
     def makepatch(patch, idx, total):
@@ -167,13 +167,13 @@ def patchbomb(ui, repo, *revs, **opts):
     jumbo = []
     msgs = []
 
-    ui.write('This patch series consists of %d patches.\n\n' % len(patches))
+    ui.write(_('This patch series consists of %d patches.\n\n') % len(patches))
 
     for p, i in zip(patches, range(len(patches))):
         jumbo.extend(p)
         msgs.append(makepatch(p, i + 1, len(patches)))
 
-    ui.write('\nWrite the introductory message for the patch series.\n\n')
+    ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
 
     sender = (opts['from'] or ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
@@ -191,7 +191,7 @@ def patchbomb(ui, repo, *revs, **opts):
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
 
-    ui.write('Finish with ^D or a dot on a line by itself.\n\n')
+    ui.write(_('Finish with ^D or a dot on a line by itself.\n\n'))
 
     body = []
 
@@ -206,7 +206,7 @@ def patchbomb(ui, repo, *revs, **opts):
     ui.write('\n')
 
     if opts['diffstat']:
-        d = cdiffstat('Final summary:\n', jumbo)
+        d = cdiffstat(_('Final summary:\n'), jumbo)
         if d: msg.attach(MIMEText(d))
 
     msgs.insert(0, msg)
