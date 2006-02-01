@@ -1399,6 +1399,13 @@ class localrepository(object):
 
         modified, added, removed, deleted, unknown = self.changes()
 
+        # is this a jump, or a merge?  i.e. is there a linear path
+        # from p1 to p2?
+        linear_path = (pa == p1 or pa == p2)
+
+        if allow and linear_path:
+            raise util.Abort(_("there is nothing to merge, "
+                               "just use 'hg update'"))
         if allow and not forcemerge:
             if modified or added or removed:
                 raise util.Abort(_("outstanding uncommited changes"))
@@ -1410,10 +1417,6 @@ class localrepository(object):
                     if cmp(t1, t2) != 0:
                         raise util.Abort(_("'%s' already exists in the working"
                                            " dir and differs from remote") % f)
-
-        # is this a jump, or a merge?  i.e. is there a linear path
-        # from p1 to p2?
-        linear_path = (pa == p1 or pa == p2)
 
         # resolve the manifest to determine which files
         # we care about merging

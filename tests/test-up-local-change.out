@@ -7,6 +7,11 @@ diff -r c19d34741b0a a
 +abc
 adding b
 M a
+changeset:   0:c19d34741b0a
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     1
+
 resolving manifests
  force None allow None moddirstate True linear True
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
@@ -16,11 +21,38 @@ getting b
 merging a
 resolving a
 file a: my b789fdd96dc2 other d730145abbf9 ancestor b789fdd96dc2
-abort: outstanding uncommited changes
-failed
+changeset:   1:1e71731e6fbb
+tag:         tip
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     2
+
 resolving manifests
- force None allow 1 moddirstate True linear True
- ancestor 1165e8bd193e local 1165e8bd193e remote 1165e8bd193e
+ force None allow None moddirstate True linear True
+ ancestor a0c8bcbbb45c local 1165e8bd193e remote a0c8bcbbb45c
+remote deleted b
+removing b
+changeset:   0:c19d34741b0a
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     1
+
+abort: there is nothing to merge, just use 'hg update'
+failed
+changeset:   0:c19d34741b0a
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     1
+
+resolving manifests
+ force None allow None moddirstate True linear True
+ ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
+ a versions differ, resolve
+remote created b
+getting b
+merging a
+resolving a
+file a: my b789fdd96dc2 other d730145abbf9 ancestor b789fdd96dc2
 changeset:   1:1e71731e6fbb
 tag:         tip
 user:        test
@@ -43,6 +75,55 @@ files:       a
 description:
 1
 
+
+diff -r 1e71731e6fbb a
+--- a/a
++++ b/a
+@@ -1,1 +1,1 @@ a2
+-a2
++abc
+adding b
+M a
+changeset:   1:1e71731e6fbb
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     2
+
+resolving manifests
+ force None allow None moddirstate True linear False
+ ancestor a0c8bcbbb45c local 1165e8bd193e remote 4096f2872392
+ a versions differ, resolve
+ b versions differ, resolve
+this update spans a branch affecting the following files:
+ a (resolve)
+ b (resolve)
+aborting update spanning branches!
+(use update -m to merge across branches or -C to lose changes)
+failed
+abort: outstanding uncommited changes
+failed
+resolving manifests
+ force None allow 1 moddirstate True linear False
+ ancestor a0c8bcbbb45c local 1165e8bd193e remote 4096f2872392
+ a versions differ, resolve
+ b versions differ, resolve
+merging a
+resolving a
+file a: my d730145abbf9 other 13e0d5f949fa ancestor b789fdd96dc2
+merging b
+resolving b
+file b: my 1e88685f5dde other 61de8c7723ca ancestor 000000000000
+changeset:   1:1e71731e6fbb
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     2
+
+changeset:   2:83c51d0caff4
+tag:         tip
+parent:      0:c19d34741b0a
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     3
 
 diff -r 1e71731e6fbb a
 --- a/a
