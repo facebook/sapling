@@ -156,9 +156,9 @@ def sigs(ui, repo):
         revs[r].extend(keys)
     nodes = list(revs)
     nodes.reverse()
-    for r in nodes:
-        for k in revs[r]:
-            r = "%5d:%s" % (r, hgnode.hex(repo.changelog.node(r)))
+    for rev in nodes:
+        for k in revs[rev]:
+            r = "%5d:%s" % (rev, hgnode.hex(repo.changelog.node(rev)))
             ui.write("%-30s %s\n" % (keystr(ui, k), r))
 
 def check(ui, repo, rev):
@@ -262,7 +262,7 @@ cmdtable = {
           ('d', 'date', "", _("date code")),
           ('u', 'user', "", _("user")),
           ('k', 'key', "", _("the key id to sign with"))],
-         _("hg sign [OPTION]... REVISIONS")),
+         _("hg sign [OPTION]... [REVISION]...")),
     "sigcheck": (check, [], _('hg sigcheck REVISION')),
     "sigs": (sigs, [], _('hg sigs')),
 }
