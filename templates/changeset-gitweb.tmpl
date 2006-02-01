@@ -10,7 +10,7 @@
 </div>
 
 <div class="page_nav">
-<a href="?cmd=summary;style=gitweb">summary</a> | <a href="?cmd=changelog;rev=#rev#;style=gitweb">changelog</a> | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?cmd=manifest;manifest=#manifest#;path=/;style=gitweb">manifest</a> | changeset | <a href="?cmd=changeset;node=#node#;style=raw">raw</a><br/>
+<a href="?cmd=summary;style=gitweb">summary</a> | <a href="?cmd=changelog;rev=#rev#;style=gitweb">changelog</a> | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?cmd=manifest;manifest=#manifest#;path=/;style=gitweb">manifest</a> | changeset | <a href="?cmd=changeset;node=#node#;style=raw">raw</a> #archives%archiveentry#<br/>
 </div>
 
 <div>
@@ -23,11 +23,12 @@
 <tr><td>changeset</td><td style="font-family:monospace">#node|short#</td></tr>
 <tr><td>manifest</td><td style="font-family:monospace"><a class="list" href="?cmd=manifest;manifest=#manifest|short#;path=/;style=gitweb">#manifest|short#</a></td></tr>
 #parent%changesetparent#
+#child%changesetchild#
 #changesettag#
 </table></div>
 
 <div class="title_text">
-#desc|addbreaks#
+#desc|escape|addbreaks#
 </div>
 
 <div class="title_text">

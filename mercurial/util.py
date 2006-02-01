@@ -13,7 +13,8 @@ platform-specific details from the core.
 import os, errno
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "re cStringIO shutil popen2 sys tempfile threading time")
+demandload(globals(), "cStringIO errno popen2 re shutil sys tempfile")
+demandload(globals(), "threading time")
 
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
@@ -190,17 +191,17 @@ def canonpath(root, cwd, myname):
     else:
         raise Abort('%s not under root' % myname)
 
-def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head=''):
-    return _matcher(canonroot, cwd, names, inc, exc, head, 'glob')
+def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
+    return _matcher(canonroot, cwd, names, inc, exc, head, 'glob', src)
 
-def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head=''):
+def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
     if os.name == 'nt':
         dflt_pat = 'glob'
     else:
         dflt_pat = 'relpath'
-    return _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat)
+    return _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src)
 
-def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
+def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     """build a function to match a set of file patterns
 
     arguments:
@@ -261,7 +262,8 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat):
                 pat = '(?:%s)' % regex(k, p, tail)
                 matches.append(re.compile(pat).match)
             except re.error:
-                raise Abort("invalid pattern: %s:%s" % (k, p))
+                if src: raise Abort("%s: invalid pattern (%s): %s" % (src, k, p))
+                else: raise Abort("invalid pattern (%s): %s" % (k, p))
 
         def buildfn(text):
             for m in matches:
@@ -357,9 +359,9 @@ def copyfiles(src, dst, hardlink=None):
                 os_link(src, dst)
             except:
                 hardlink = False
-                shutil.copy2(src, dst)
+                shutil.copy(src, dst)
         else:
-            shutil.copy2(src, dst)
+            shutil.copy(src, dst)
 
 def opener(base):
     """
@@ -442,12 +444,36 @@ else:
 if os.name == 'nt':
     demandload(globals(), "msvcrt")
     nulldev = 'NUL:'
-    
+
+    class winstdout:
+        '''stdout on windows misbehaves if sent through a pipe'''
+
+        def __init__(self, fp):
+            self.fp = fp
+
+        def __getattr__(self, key):
+            return getattr(self.fp, key)
+
+        def close(self):
+            try:
+                self.fp.close()
+            except: pass
+
+        def write(self, s):
+            try:
+                return self.fp.write(s)
+            except IOError, inst:
+                if inst.errno != 0: raise
+                self.close()
+                raise IOError(errno.EPIPE, 'Broken pipe')
+
+    sys.stdout = winstdout(sys.stdout)
+
     try:
         import win32api, win32process
         filename = win32process.GetModuleFileNameEx(win32api.GetCurrentProcess(), 0)
         systemrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
-        
+
     except ImportError:
         systemrc = r'c:\mercurial\mercurial.ini'
         pass
@@ -518,14 +544,19 @@ else:
                         if f.endswith(".rc")])
         except OSError, inst: pass
         return rcs
-    rcpath = rcfiles(os.path.dirname(sys.argv[0]) + '/../etc/mercurial')
+    rcpath = []
+    if len(sys.argv) > 0:
+        rcpath.extend(rcfiles(os.path.dirname(sys.argv[0]) + '/../etc/mercurial'))
     rcpath.extend(rcfiles('/etc/mercurial'))
     rcpath.append(os.path.expanduser('~/.hgrc'))
     rcpath = [os.path.normpath(f) for f in rcpath]
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
-        return output_line[14:]
+        pf = output_line[14:]
+        if pf.startswith("'") and pf.endswith("'") and pf.find(" ") >= 0:
+            pf = pf[1:-1] # Remove the quotes
+        return pf
 
     def is_exec(f, last):
         """check whether a file is executable"""

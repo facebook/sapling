@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, cgi, sys
+import os, cgi, sys, urllib
 from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
 demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer util")
@@ -163,7 +163,8 @@ class templater(object):
                 return
 
 common_filters = {
-    "escape": cgi.escape,
+    "escape": lambda x: cgi.escape(x, True),
+    "urlescape": urllib.quote,
     "strip": lambda x: x.strip(),
     "age": age,
     "date": lambda x: util.datestr(x),
@@ -212,27 +213,33 @@ class hgweb(object):
         if len(files) > self.maxfiles:
             yield self.t("fileellipses")
 
-    def parents(self, node, parents=[], rev=None, hide=False, **args):
+    def siblings(self, siblings=[], rev=None, hiderev=None, **args):
         if not rev:
             rev = lambda x: ""
-        parents = [p for p in parents if p != nullid]
-        if hide and len(parents) == 1 and rev(parents[0]) == rev(node) - 1:
+        siblings = [s for s in siblings if s != nullid]
+        if len(siblings) == 1 and rev(siblings[0]) == hiderev:
             return
-        for p in parents:
-            yield dict(node=hex(p), rev=rev(p), **args)
+        for s in siblings:
+            yield dict(node=hex(s), rev=rev(s), **args)
+
+    def renamelink(self, fl, node):
+        r = fl.renamed(node)
+        if r:
+            return [dict(file=r[0], node=hex(r[1]))]
+        return []
 
     def showtag(self, t1, node=nullid, **args):
         for t in self.repo.nodetags(node):
              yield self.t(t1, tag=t, **args)
 
     def diff(self, node1, node2, files):
-        def filterfiles(list, files):
-            l = [x for x in list if x in files]
+        def filterfiles(filters, files):
+            l = [x for x in files if x in filters]
 
-            for f in files:
-                if f[-1] != os.sep:
-                    f += os.sep
-                l += [x for x in list if x.startswith(f)]
+            for t in filters:
+                if t and t[-1] != os.sep:
+                    t += os.sep
+                l += [x for x in files if x.startswith(t)]
             return l
 
         parity = [0]
@@ -265,22 +272,29 @@ class hgweb(object):
         date1 = util.datestr(change1[2])
         date2 = util.datestr(change2[2])
 
-        c, a, d, u = r.changes(node1, node2)
+        modified, added, removed, deleted, unknown = r.changes(node1, node2)
         if files:
-            c, a, d = map(lambda x: filterfiles(x, files), (c, a, d))
+            modified, added, removed = map(lambda x: filterfiles(files, x),
+                                           (modified, added, removed))
 
-        for f in c:
+        diffopts = self.repo.ui.diffopts()
+        showfunc = diffopts['showfunc']
+        ignorews = diffopts['ignorews']
+        for f in modified:
             to = r.file(f).read(mmap1[f])
             tn = r.file(f).read(mmap2[f])
-            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
-        for f in a:
+            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
+                            showfunc=showfunc, ignorews=ignorews), f, tn)
+        for f in added:
             to = None
             tn = r.file(f).read(mmap2[f])
-            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
-        for f in d:
+            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
+                            showfunc=showfunc, ignorews=ignorews), f, tn)
+        for f in removed:
             to = r.file(f).read(mmap1[f])
             tn = None
-            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f), f, tn)
+            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
+                            showfunc=showfunc, ignorews=ignorews), f, tn)
 
     def changelog(self, pos):
         def changenav(**map):
@@ -321,8 +335,10 @@ class hgweb(object):
 
                 l.insert(0, {"parity": parity,
                              "author": changes[1],
-                             "parent": self.parents(n, cl.parents(n), cl.rev,
-                                                    hide=True),
+                             "parent": self.siblings(cl.parents(n), cl.rev,
+                                                     cl.rev(n) - 1),
+                             "child": self.siblings(cl.children(n), cl.rev,
+                                                    cl.rev(n) + 1),
                              "changelogtag": self.showtag("changelogtag",n),
                              "manifest": hex(changes[0]),
                              "desc": changes[4],
@@ -382,7 +398,8 @@ class hgweb(object):
                 yield self.t('searchentry',
                              parity=count & 1,
                              author=changes[1],
-                             parent=self.parents(n, cl.parents(n), cl.rev),
+                             parent=self.siblings(cl.parents(n), cl.rev),
+                             child=self.siblings(cl.children(n), cl.rev),
                              changelogtag=self.showtag("changelogtag",n),
                              manifest=hex(changes[0]),
                              desc=changes[4],
@@ -422,7 +439,8 @@ class hgweb(object):
                      diff=diff,
                      rev=cl.rev(n),
                      node=nodeid,
-                     parent=self.parents(n, cl.parents(n), cl.rev),
+                     parent=self.siblings(cl.parents(n), cl.rev),
+                     child=self.siblings(cl.children(n), cl.rev),
                      changesettag=self.showtag("changesettag",n),
                      manifest=hex(changes[0]),
                      author=changes[1],
@@ -454,7 +472,10 @@ class hgweb(object):
                              "node": hex(cn),
                              "author": cs[1],
                              "date": cs[2],
-                             "parent": self.parents(n, fl.parents(n),
+                             "rename": self.renamelink(fl, n),
+                             "parent": self.siblings(fl.parents(n),
+                                                     fl.rev, file=f),
+                             "child": self.siblings(fl.children(n),
                                                     fl.rev, file=f),
                              "desc": cs[4]})
                 parity = 1 - parity
@@ -498,7 +519,9 @@ class hgweb(object):
                      manifest=hex(mfn),
                      author=cs[1],
                      date=cs[2],
-                     parent=self.parents(n, fl.parents(n), fl.rev, file=f),
+                     parent=self.siblings(fl.parents(n), fl.rev, file=f),
+                     child=self.siblings(fl.children(n), fl.rev, file=f),
+                     rename=self.renamelink(fl, n),
                      permissions=self.repo.manifest.readflags(mfn)[f])
 
     def fileannotate(self, f, node):
@@ -550,7 +573,9 @@ class hgweb(object):
                      manifest=hex(mfn),
                      author=cs[1],
                      date=cs[2],
-                     parent=self.parents(n, fl.parents(n), fl.rev, file=f),
+                     rename=self.renamelink(fl, n),
+                     parent=self.siblings(fl.parents(n), fl.rev, file=f),
+                     child=self.siblings(fl.children(n), fl.rev, file=f),
                      permissions=self.repo.manifest.readflags(mfn)[f])
 
     def manifest(self, mnode, path):
@@ -565,6 +590,8 @@ class hgweb(object):
         files = {}
 
         p = path[1:]
+        if p and p[-1] != "/":
+            p += "/"
         l = len(p)
 
         for f,n in mf.items():
@@ -727,7 +754,8 @@ class hgweb(object):
                      filenode=hex(mf.get(file, nullid)),
                      node=changeset,
                      rev=self.repo.changelog.rev(n),
-                     parent=self.parents(n, cl.parents(n), cl.rev),
+                     parent=self.siblings(cl.parents(n), cl.rev),
+                     child=self.siblings(cl.children(n), cl.rev),
                      diff=diff)
 
     def archive(self, req, cnode, type):
@@ -785,6 +813,12 @@ class hgweb(object):
     # find tag, changeset, file
 
     def run(self, req=hgrequest()):
+        def clean(path):
+            p = os.path.normpath(path)
+            if p[:2] == "..":
+                raise "suspicious path"
+            return p
+
         def header(**map):
             yield self.t("header", **map)
 
@@ -865,7 +899,8 @@ class hgweb(object):
             req.write(self.changeset(req.form['node'][0]))
 
         elif req.form['cmd'][0] == 'manifest':
-            req.write(self.manifest(req.form['manifest'][0], req.form['path'][0]))
+            req.write(self.manifest(req.form['manifest'][0],
+                                    clean(req.form['path'][0])))
 
         elif req.form['cmd'][0] == 'tags':
             req.write(self.tags())
@@ -874,16 +909,20 @@ class hgweb(object):
             req.write(self.summary())
 
         elif req.form['cmd'][0] == 'filediff':
-            req.write(self.filediff(req.form['file'][0], req.form['node'][0]))
+            req.write(self.filediff(clean(req.form['file'][0]),
+                                    req.form['node'][0]))
 
         elif req.form['cmd'][0] == 'file':
-            req.write(self.filerevision(req.form['file'][0], req.form['filenode'][0]))
+            req.write(self.filerevision(clean(req.form['file'][0]),
+                                        req.form['filenode'][0]))
 
         elif req.form['cmd'][0] == 'annotate':
-            req.write(self.fileannotate(req.form['file'][0], req.form['filenode'][0]))
+            req.write(self.fileannotate(clean(req.form['file'][0]),
+                                        req.form['filenode'][0]))
 
         elif req.form['cmd'][0] == 'filelog':
-            req.write(self.filelog(req.form['file'][0], req.form['filenode'][0]))
+            req.write(self.filelog(clean(req.form['file'][0]),
+                                   req.form['filenode'][0]))
 
         elif req.form['cmd'][0] == 'heads':
             req.httphdr("application/mercurial-0.1")

@@ -188,6 +188,7 @@ class revlog(object):
         self.datafile = datafile
         self.opener = opener
         self.cache = None
+        self.chunkcache = None
 
         try:
             i = self.opener(self.indexfile).read()
@@ -195,6 +196,10 @@ class revlog(object):
             if inst.errno != errno.ENOENT:
                 raise
             i = ""
+
+        if i and i[:4] != "\0\0\0\0":
+            raise RevlogError(_("incompatible revlog signature on %s") %
+                              self.indexfile)
 
         if len(i) > 10000:
             # big index, let's parse it on demand
@@ -208,7 +213,7 @@ class revlog(object):
             m = [None] * l
 
             n = 0
-            for f in xrange(0, len(i), s):
+            for f in xrange(0, l * s, s):
                 # offset, size, base, linkrev, p1, p2, nodeid
                 e = struct.unpack(indexformat, i[f:f + s])
                 m[n] = (e[6], n)
@@ -473,6 +478,35 @@ class revlog(object):
         """apply a list of patches to a string"""
         return mdiff.patches(t, pl)
 
+    def chunk(self, rev):
+        start, length = self.start(rev), self.length(rev)
+        end = start + length
+
+        def loadcache():
+            cache_length = max(4096 * 1024, length) # 4Mo
+            df = self.opener(self.datafile)
+            df.seek(start)
+            self.chunkcache = (start, df.read(cache_length))
+
+        if not self.chunkcache:
+            loadcache()
+
+        cache_start = self.chunkcache[0]
+        cache_end = cache_start + len(self.chunkcache[1])
+        if start >= cache_start and end <= cache_end:
+            # it is cached
+            offset = start - cache_start
+        else:
+            loadcache()
+            offset = 0
+
+        #def checkchunk():
+        #    df = self.opener(self.datafile)
+        #    df.seek(start)
+        #    return df.read(length)
+        #assert s == checkchunk()
+        return decompress(self.chunkcache[1][offset:offset + length])
+
     def delta(self, node):
         """return or calculate a delta between a node and its predecessor"""
         r = self.rev(node)
@@ -481,10 +515,7 @@ class revlog(object):
             return self.diff(self.revision(self.node(r - 1)),
                              self.revision(node))
         else:
-            f = self.opener(self.datafile)
-            f.seek(self.start(r))
-            data = f.read(self.length(r))
-        return decompress(data)
+            return self.chunk(r)
 
     def revision(self, node):
         """return an uncompressed revision of a given"""
@@ -494,33 +525,22 @@ class revlog(object):
         # look up what we need to read
         text = None
         rev = self.rev(node)
-        start, length, base, link, p1, p2, node = self.index[rev]
-        end = start + length
-        if base != rev: start = self.start(base)
+        base = self.base(rev)
 
         # do we have useful data cached?
         if self.cache and self.cache[1] >= base and self.cache[1] < rev:
             base = self.cache[1]
-            start = self.start(base + 1)
             text = self.cache[2]
-            last = 0
-
-        f = self.opener(self.datafile)
-        f.seek(start)
-        data = f.read(end - start)
-
-        if text is None:
-            last = self.length(base)
-            text = decompress(data[:last])
+        else:
+            text = self.chunk(base)
 
         bins = []
         for r in xrange(base + 1, rev + 1):
-            s = self.length(r)
-            bins.append(decompress(data[last:last + s]))
-            last = last + s
+            bins.append(self.chunk(r))
 
         text = mdiff.patches(text, bins)
 
+        p1, p2 = self.parents(node)
         if node != hash(text, p1, p2):
             raise RevlogError(_("integrity check failed on %s:%d")
                           % (self.datafile, rev))
@@ -650,7 +670,7 @@ class revlog(object):
                 #print "next x"
                 gx = x.next()
 
-    def group(self, nodelist, lookup, infocollect = None):
+    def group(self, nodelist, lookup, infocollect=None):
         """calculate a delta group
 
         Given a list of changeset revs, return a set of deltas and
@@ -660,7 +680,6 @@ class revlog(object):
         changesets. parent is parent[0]
         """
         revs = [self.rev(n) for n in nodelist]
-        needed = dict.fromkeys(revs, 1)
 
         # if we don't have any revisions touched by these changesets, bail
         if not revs:
@@ -671,88 +690,30 @@ class revlog(object):
         p = self.parents(self.node(revs[0]))[0]
         revs.insert(0, self.rev(p))
 
-        # for each delta that isn't contiguous in the log, we need to
-        # reconstruct the base, reconstruct the result, and then
-        # calculate the delta. We also need to do this where we've
-        # stored a full version and not a delta
-        for i in xrange(0, len(revs) - 1):
-            a, b = revs[i], revs[i + 1]
-            if a + 1 != b or self.base(b) == b:
-                for j in xrange(self.base(a), a + 1):
-                    needed[j] = 1
-                for j in xrange(self.base(b), b + 1):
-                    needed[j] = 1
-
-        # calculate spans to retrieve from datafile
-        needed = needed.keys()
-        needed.sort()
-        spans = []
-        oo = -1
-        ol = 0
-        for n in needed:
-            if n < 0: continue
-            o = self.start(n)
-            l = self.length(n)
-            if oo + ol == o: # can we merge with the previous?
-                nl = spans[-1][2]
-                nl.append((n, l))
-                ol += l
-                spans[-1] = (oo, ol, nl)
-            else:
-                oo = o
-                ol = l
-                spans.append((oo, ol, [(n, l)]))
-
-        # read spans in, divide up chunks
-        chunks = {}
-        for span in spans:
-            # we reopen the file for each span to make http happy for now
-            f = self.opener(self.datafile)
-            f.seek(span[0])
-            data = f.read(span[1])
-
-            # divide up the span
-            pos = 0
-            for r, l in span[2]:
-                chunks[r] = decompress(data[pos: pos + l])
-                pos += l
-
         # helper to reconstruct intermediate versions
         def construct(text, base, rev):
-            bins = [chunks[r] for r in xrange(base + 1, rev + 1)]
+            bins = [self.chunk(r) for r in xrange(base + 1, rev + 1)]
             return mdiff.patches(text, bins)
 
         # build deltas
-        deltas = []
         for d in xrange(0, len(revs) - 1):
             a, b = revs[d], revs[d + 1]
-            n = self.node(b)
+            na = self.node(a)
+            nb = self.node(b)
 
             if infocollect is not None:
-                infocollect(n)
+                infocollect(nb)
 
             # do we need to construct a new delta?
             if a + 1 != b or self.base(b) == b:
-                if a >= 0:
-                    base = self.base(a)
-                    ta = chunks[self.base(a)]
-                    ta = construct(ta, base, a)
-                else:
-                    ta = ""
-
-                base = self.base(b)
-                if a > base:
-                    base = a
-                    tb = ta
-                else:
-                    tb = chunks[self.base(b)]
-                tb = construct(tb, base, b)
+                ta = self.revision(na)
+                tb = self.revision(nb)
                 d = self.diff(ta, tb)
             else:
-                d = chunks[b]
+                d = self.chunk(b)
 
-            p = self.parents(n)
-            meta = n + p[0] + p[1] + lookup(n)
+            p = self.parents(nb)
+            meta = nb + p[0] + p[1] + lookup(nb)
             l = struct.pack(">l", len(meta) + len(d) + 4)
             yield l
             yield meta
@@ -880,14 +841,29 @@ class revlog(object):
         expected = 0
         if self.count():
             expected = self.end(self.count() - 1)
+
         try:
             f = self.opener(self.datafile)
             f.seek(0, 2)
             actual = f.tell()
-            return expected - actual
+            dd = actual - expected
         except IOError, inst:
-            if inst.errno == errno.ENOENT:
-                return 0
-            raise
+            if inst.errno != errno.ENOENT:
+                raise
+            dd = 0
+
+        try:
+            f = self.opener(self.indexfile)
+            f.seek(0, 2)
+            actual = f.tell()
+            s = struct.calcsize(indexformat)
+            i = actual / s
+            di = actual - (i * s)
+        except IOError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
+            di = 0
+
+        return (dd, di)
 
 

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+hg init rep
+cd rep
+mkdir dir
+touch foo dir/bar
+hg -v addremove
+hg -v commit -m "add 1" -d "0 0"
+cd dir/
+touch ../foo_2 bar_2
+hg -v addremove
+hg -v commit -m "add 2" -d "0 0"

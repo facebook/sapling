@@ -44,6 +44,39 @@ elif [ -n "$DIFF3" ]; then
     cp "$LOCAL.orig" "$LOCAL"
 fi
 
+# on MacOS X try FileMerge.app, shipped with Apple's developer tools
+# TODO: make proper temp files. foo.orig and foo.link are dangerous
+FILEMERGE='/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge'
+if type "$FILEMERGE" > /dev/null 2>&1; then
+    cp "$LOCAL.orig" "$LOCAL"
+    ln "$LOCAL" "$LOCAL.link"
+    # filemerge prefers the right by default
+    if ! "$FILEMERGE" -left "$OTHER" -right "$LOCAL" -ancestor "$BASE" -merge "$LOCAL"
+    then
+        echo "FileMerge failed to launch"
+        exit 1
+    fi
+    if ! test "$LOCAL" -ef "$LOCAL.link"
+    then
+        rm "$LOCAL.orig" "$LOCAL.link"
+        exit 0
+    else
+        rm "$LOCAL.link"
+        echo "$LOCAL is unchanged. Was the merge successful?"
+        select answer in yes no
+        do
+            if test "$answer" == "yes"
+            then
+                rm "$LOCAL.orig"
+                exit 0
+            else
+                exit 1
+            fi
+        done
+        exit 1
+    fi
+fi
+
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
     if type kdiff3 > /dev/null 2>&1; then

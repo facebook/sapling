@@ -4,10 +4,11 @@
  <td><b><a href="?cs=#node|short#">#desc|strip|firstline|escape#</a></b></td></tr>
 <tr>
  <td align="right">revision #filerev#:&nbsp;</td>
- <td><a href="?f=#filenode|short#;file=#file#">#filenode|short#</a>
-<a href="?fd=#node|short#;file=#file#">(diff)</a>
-<a href="?fa=#filenode|short#;file=#file#">(annotate)</a>
+ <td><a href="?f=#filenode|short#;file=#file|urlescape#">#filenode|short#</a>
+<a href="?fd=#node|short#;file=#file|urlescape#">(diff)</a>
+<a href="?fa=#filenode|short#;file=#file|urlescape#">(annotate)</a>
 </td></tr>
+#rename%filelogrename#
 <tr>
  <td align="right">author:&nbsp;</td>
  <td>#author|obfuscate#</td></tr>

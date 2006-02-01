@@ -10,16 +10,17 @@
 </div>
 
 <div class="page_nav">
-<a href="?cmd=summary;style=gitweb">summary</a> | <a href="?cmd=changelog;style=gitweb">changelog</a> | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?cmd=manifest;manifest=#manifest#;path=#path#;style=gitweb">manifest</a> | <a href="?cmd=changeset;node=#node#;style=gitweb">changeset</a> | <a href="?cmd=file;file=#file#;filenode=#filenode#;style=gitweb">file</a> | <a href="?cmd=filelog;file=#file#;filenode=#filenode#;style=gitweb">revisions</a> | annotate<br/>
+<a href="?cmd=summary;style=gitweb">summary</a> | <a href="?cmd=changelog;style=gitweb">changelog</a> | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?cmd=manifest;manifest=#manifest#;path=#path|urlescape#;style=gitweb">manifest</a> | <a href="?cmd=changeset;node=#node#;style=gitweb">changeset</a> | <a href="?cmd=file;file=#file|urlescape#;filenode=#filenode#;style=gitweb">file</a> | <a href="?cmd=filelog;file=#file|urlescape#;filenode=#filenode#;style=gitweb">revisions</a> | annotate<br/>
 </div>
 
-<div class="title">#file#</div>
+<div class="title">#file|escape#</div>
 
 <table>
 <tr>
  <td class="metatag">changeset #rev#:</td>
  <td><a href="?cs=#node|short#;style=gitweb">#node|short#</a></td></tr>
 #parent%fileannotateparent#
+#child%fileannotatechild#
 <tr>
  <td class="metatag">manifest:</td>
  <td><a href="?mf=#manifest|short#;path=/;style=gitweb">#manifest|short#</a></td></tr>

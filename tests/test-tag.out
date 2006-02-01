@@ -18,5 +18,12 @@ summary:     test
 
 abort: working copy of .hgtags is changed (please commit .hgtags manually)
 failed
+use of 'hg tag NAME [REV]' is deprecated, please use 'hg tag [-r REV] NAME' instead
+abort: use only one form to specify the revision
+failed
+use of 'hg tag NAME [REV]' is deprecated, please use 'hg tag [-r REV] NAME' instead
+acb14030fe0a21b60322c440ad2d20cf7685a376 bleah
+acb14030fe0a21b60322c440ad2d20cf7685a376 bleah0
+863197ef03781c4fc00276d83eb66c4cb9cd91df bleah1
 abort: '\n' cannot be used in a tag name
 abort: ':' cannot be used in a tag name

@@ -1,5 +1,5 @@
 #header#
-<title>#repo|escape#:#file#</title>
+<title>#repo|escape#:#file|escape#</title>
 </head>
 <body>
 
@@ -7,19 +7,21 @@
 <a href="?cl=#rev#">changelog</a>
 <a href="?tags=">tags</a>
 <a href="?cs=#node|short#">changeset</a>
-<a href="?mf=#manifest|short#;path=#path#">manifest</a>
-<a href="?fl=#filenode|short#;file=#file#">revisions</a>
-<a href="?fa=#filenode|short#;file=#file#">annotate</a>
-<a href="?f=#filenode|short#;file=#file#;style=raw">raw</a>
+<a href="?mf=#manifest|short#;path=#path|urlescape#">manifest</a>
+<a href="?fl=#filenode|short#;file=#file|urlescape#">revisions</a>
+<a href="?fa=#filenode|short#;file=#file|urlescape#">annotate</a>
+<a href="?f=#filenode|short#;file=#file|urlescape#;style=raw">raw</a>
 </div>
 
-<h2>#file#</h2>
+<h2>#file|escape#</h2>
 
 <table>
 <tr>
  <td class="metatag">changeset #rev#:</td>
  <td><a href="?cs=#node|short#">#node|short#</a></td></tr>
+#rename%filerename#
 #parent%filerevparent#
+#child%filerevchild#
 <tr>
  <td class="metatag">author:</td>
  <td>#author|obfuscate#</td></tr>

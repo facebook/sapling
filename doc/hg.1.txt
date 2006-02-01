@@ -155,6 +155,8 @@ clone [options] <source> [dest]::
     errors.  In these cases, use the --pull option to avoid
     hardlinking.
 
+    See pull for valid source format details.
+
     options:
     -U, --noupdate   do not update the new working directory
     --pull           use pull protocol to copy metadata
@@ -388,6 +390,8 @@ outgoing [-p] [dest]::
     default push repo. These are the changesets that would be pushed
     if a push was requested.
 
+    See pull for valid source format details.
+
     options:
     -p, --patch           show patch
 
@@ -454,10 +458,13 @@ push <destination>::
     --remotecmd  specify hg command to run on the remote side
 
 rawcommit [-p -d -u -F -m -l]::
-    Lowlevel commit, for use in helper scripts.
+    Lowlevel commit, for use in helper scripts. (DEPRECATED)
 
     This command is not intended to be used by normal users, as it is
     primarily useful for importing from other SCMs.
+
+    This command is now deprecated and will be removed in a future
+    release, please use debugsetparents and commit instead.
 
 recover::
     Recover from an interrupted commit or pull.
@@ -497,9 +504,18 @@ rename <source ...> <dest>::
     aliases: mv
 
 revert [names ...]::
-    Revert any uncommitted modifications made to the named files or
-    directories.  This restores the contents of the affected files to
-    an unmodified state.
+    The revert command has two modes of operation.
+
+    In its default mode, it reverts any uncommitted modifications made
+    to the named files or directories.  This restores the contents of
+    the affected files to an unmodified state.
+
+    Using the -r option, it reverts the given files or directories to
+    their state as of an earlier revision.  This can be helpful to "roll
+    back" some or all of a change that should not have been committed.
+
+    Revert modifies the working directory.  It does not commit any
+    changes, or change the parent of the current working directory.
 
     If a file has been deleted, it is recreated.  If the executable
     mode of a file was changed, it is reset.

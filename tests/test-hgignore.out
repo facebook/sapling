@@ -5,14 +5,14 @@ A dir/b.o
 ? dir/c.o
 ? syntax
 --
-abort: invalid pattern: relre:*.o
+abort: .hgignore: invalid pattern (relre): *.o
 --
 A dir/b.o
 ? .hgignore
 ? a.c
 ? syntax
 --
-ignoring invalid syntax 'invalid'
+.hgignore: ignoring invalid syntax 'invalid'
 A dir/b.o
 ? .hgignore
 ? a.c

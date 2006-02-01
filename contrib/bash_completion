@@ -1,23 +1,54 @@
 shopt -s extglob
 
+_hg_command_list()
+{
+    hg --debug help 2>/dev/null | \
+	awk 'function command_line(line) {
+		 gsub(/,/, "", line)
+		 gsub(/:.*/, "", line)
+		 split(line, aliases)
+		 command = aliases[1]
+		 delete aliases[1]
+		 print command
+		 for (i in aliases)
+		     if (index(command, aliases[i]) != 1)
+			 print aliases[i]
+	     }
+	     /^list of commands:/ {commands=1}
+	     commands && /^ debug/ {a[i++] = $0; next;}
+	     commands && /^ [^ ]/ {command_line($0)}
+	     /^global options:/ {exit 0}
+	     END {for (i in a) command_line(a[i])}'
+
+}
+
+_hg_option_list()
+{
+    hg -v help $1 2> /dev/null | \
+        awk '/^ *-/ {
+		 for (i = 1; i <= NF; i ++) {
+		    if (index($i, "-") != 1)
+			 break;
+		    print $i;
+		 }
+	     }'
+}
+
+
 _hg_commands()
 {
     local all commands result
 
-    all=($(hg --debug help | sed -e '1,/^list of commands:/d' \
-				 -e '/^global options:/,$d' \
-				 -e '/^ [^ ]/!d; s/^ //; s/[,:]//g;'))
-
-    commands="${all[*]##debug*}"
-    result=$(compgen -W "${commands[*]}" -- "$cur")
+    all=$(_hg_command_list)
+    commands=${all%%$'\n'debug*}
+    result=$(compgen -W '$commands' -- "$cur")
 
     # hide debug commands from users, but complete them if
     # there is no other possible command
     if [ "$result" = "" ]; then
 	local debug
-	debug=(${all[*]##!(debug*)})
-	debug="${debug[*]/g/debug}"
-	result=$(compgen -W "$debug" -- "$cur")
+	debug=debug${all#*$'\n'debug}
+	result=$(compgen -W '$debug' -- "$cur")
     fi
 
     COMPREPLY=(${COMPREPLY[@]:-} $result)
@@ -25,8 +56,8 @@ _hg_commands()
 
 _hg_paths()
 {
-    local paths="$(hg paths | sed -e 's/ = .*$//')"
-    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W "$paths" -- "$cur" ))
+    local paths="$(hg paths 2> /dev/null | sed -e 's/ = .*$//')"
+    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W '$paths' -- "$cur" ))
 }
 
 _hg_repos()
@@ -39,14 +70,15 @@ _hg_repos()
 
 _hg_status()
 {
-    local files="$( hg status -$1 | cut -b 3- )"
-    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W "$files" -- "$cur" ))
+    local files="$( hg status -n$1 . 2> /dev/null)"
+    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W '$files' -- "$cur" ))
 }
 
 _hg_tags()
 {
-    local tags="$(hg tags | sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//')"
-    COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W "$tags" -- "$cur") )
+    local tags="$(hg tags 2> /dev/null |
+                      sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//')"
+    COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W '$tags' -- "$cur") )
 }
 
 # this is "kind of" ugly...
@@ -90,10 +122,9 @@ _hg()
     done
 
     if [[ "$cur" == -* ]]; then
-	# this assumes that there are no commands with spaces in the name
-	opts=$(hg -v help $cmd | sed -e '/^ *-/!d; s/ [^- ].*//')
+	opts=$(_hg_option_list $cmd)
 
-	COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W "$opts" -- "$cur") )
+	COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur") )
 	return
     fi
 
@@ -115,7 +146,7 @@ _hg()
     fi
 
     # canonicalize command name
-    cmd=$(hg -q help "$cmd" | sed -e 's/^hg //; s/ .*//; 1q')
+    cmd=$(hg -q help "$cmd" 2> /dev/null | sed -e 's/^hg //; s/ .*//; 1q')
 
     if [ "$cmd" != status ] && [ "$prev" = -r ] || [ "$prev" = --rev ]; then
 	_hg_tags
@@ -140,19 +171,19 @@ _hg()
 	    _hg_status "u"
 	;;
 	commit)
-	    _hg_status "mra"
+	    _hg_status "mar"
 	;;
 	remove)
-	    _hg_status "r"
+	    _hg_status "d"
 	;;
 	forget)
 	    _hg_status "a"
 	;;
 	diff)
-	    _hg_status "mra"
+	    _hg_status "mar"
 	;;
 	revert)
-	    _hg_status "mra"
+	    _hg_status "mard"
 	;;
 	clone)
 	    local count=$(_hg_count_non_option)
@@ -166,17 +197,6 @@ _hg()
 	;;
 	debugdata)
 	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -X "!*.d" -- "$cur" ))
-	;;
-	cat)
-	    local count=$(_hg_count_non_option '-o|--output')
-	    if [ $count = 2 ]; then
-		_hg_tags
-	    else
-		COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -- "$cur" ))
-	    fi
-	;;
-	*)
-	    COMPREPLY=(${COMPREPLY[@]:-} $( compgen -f -- "$cur" ))
 	;;
     esac
 

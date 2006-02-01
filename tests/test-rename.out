@@ -181,3 +181,68 @@ R d1/a
 R d1/b
 R d1/ba
 R d1/d11/a1
+# move a whole subtree with "hg rename ."
+copying a to ../d3/d1/a
+copying b to ../d3/d1/b
+copying ba to ../d3/d1/ba
+copying d11/a1 to ../d3/d1/d11/a1
+removing a
+removing b
+removing ba
+removing d11/a1
+A d3/d1/a
+A d3/d1/b
+A d3/d1/ba
+A d3/d1/d11/a1
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1
+# move a whole subtree with "hg rename --after ."
+copying a to ../d3/a
+copying b to ../d3/b
+copying ba to ../d3/ba
+copying d11/a1 to ../d3/d11/a1
+removing a
+removing b
+removing ba
+removing d11/a1
+A d3/a
+A d3/b
+A d3/ba
+A d3/d11/a1
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1
+# move the parent tree with "hg rename .."
+copying ../a to ../../d3/a
+copying ../b to ../../d3/b
+copying ../ba to ../../d3/ba
+copying a1 to ../../d3/d11/a1
+removing ../a
+removing ../b
+removing ../ba
+removing a1
+A d3/a
+A d3/b
+A d3/ba
+A d3/d11/a1
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1
+# skip removed files
+copying d1/a to d3/a
+copying d1/ba to d3/ba
+copying d1/d11/a1 to d3/d11/a1
+removing d1/a
+removing d1/ba
+removing d1/d11/a1
+A d3/a
+A d3/ba
+A d3/d11/a1
+R d1/a
+R d1/b
+R d1/ba
+R d1/d11/a1

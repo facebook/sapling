@@ -1,10 +1,7 @@
 #!/bin/sh
 #
-# This is an example of using HGEDITOR to automate the signing of
-# commits and so on.
-
-# change this to one to turn on GPG support
-SIGN=0
+# This is an example of using HGEDITOR to create of diff to review the
+# changes while commiting.
 
 # If you want to pass your favourite editor some other parameters
 # only for Mercurial, modify this:
@@ -43,12 +40,7 @@ HGTMP="${TMPDIR-/tmp}/hgeditor.$RANDOM.$RANDOM.$RANDOM.$$"
     done
 )
 
-echo > "$HGTMP/msg"
-if [ "$SIGN" == "1" ]; then
-    MANIFEST=`grep '^HG: manifest hash' "$1" | cut -b 19-`
-    echo -e "\nmanifest hash: $MANIFEST" >> "$HGTMP/msg"
-fi
-grep -vE '^(HG: manifest hash .*)?$' "$1" >> "$HGTMP/msg"
+cat "$1" > "$HGTMP/msg"
 
 CHECKSUM=`md5sum "$HGTMP/msg"`
 if [ -s "$HGTMP/diff" ]; then
@@ -58,14 +50,6 @@ else
 fi
 echo "$CHECKSUM" | md5sum -c >/dev/null 2>&1 && exit 13
 
-if [ "$SIGN" == "1" ]; then
-    {
-        head -n 1 "$HGTMP/msg"
-        echo
-        grep -v "^HG:" "$HGTMP/msg" | gpg -t -a -u "${HGUSER}" --clearsign
-    } > "$HGTMP/msg.gpg" && mv "$HGTMP/msg.gpg" "$1"
-else
-    mv "$HGTMP/msg" "$1"
-fi
+mv "$HGTMP/msg" "$1"
 
 exit $?

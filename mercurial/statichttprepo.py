@@ -35,6 +35,8 @@ class statichttprepository(localrepo.localrepository):
         self.changelog = changelog.changelog(self.opener)
         self.tagscache = None
         self.nodetagscache = None
+        self.encodepats = None
+        self.decodepats = None
 
     def dev(self):
         return -1
