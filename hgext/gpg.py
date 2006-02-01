@@ -163,7 +163,7 @@ def sign(ui, repo, *revs, **opts):
     for x in repo.changes():
         if ".hgsigs" in x and not opts["force"]:
             raise util.Abort("working copy of .hgsigs is changed "
-                             "(please commit .hgsigs manually"
+                             "(please commit .hgsigs manually "
                              "or use --force)")
 
     repo.wfile(".hgsigs", "ab").write(sigmessage)
