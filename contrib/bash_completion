@@ -2,7 +2,7 @@ shopt -s extglob
 
 _hg_command_list()
 {
-    hg --debug help 2>/dev/null | \
+    "$hg" --debug help 2>/dev/null | \
 	awk 'function command_line(line) {
 		 gsub(/,/, "", line)
 		 gsub(/:.*/, "", line)
@@ -24,7 +24,7 @@ _hg_command_list()
 
 _hg_option_list()
 {
-    hg -v help $1 2> /dev/null | \
+    "$hg" -v help $1 2> /dev/null | \
         awk '/^ *-/ {
 		 for (i = 1; i <= NF; i ++) {
 		    if (index($i, "-") != 1)
@@ -56,7 +56,7 @@ _hg_commands()
 
 _hg_paths()
 {
-    local paths="$(hg paths 2> /dev/null | sed -e 's/ = .*$//')"
+    local paths="$("$hg" paths 2> /dev/null | sed -e 's/ = .*$//')"
     COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W '$paths' -- "$cur" ))
 }
 
@@ -70,13 +70,13 @@ _hg_repos()
 
 _hg_status()
 {
-    local files="$( hg status -n$1 . 2> /dev/null)"
+    local files="$( "$hg" status -n$1 . 2> /dev/null)"
     COMPREPLY=(${COMPREPLY[@]:-} $( compgen -W '$files' -- "$cur" ))
 }
 
 _hg_tags()
 {
-    local tags="$(hg tags 2> /dev/null |
+    local tags="$("$hg" tags 2> /dev/null |
                       sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//')"
     COMPREPLY=( ${COMPREPLY[@]:-} $(compgen -W '$tags' -- "$cur") )
 }
@@ -104,6 +104,7 @@ _hg()
     local cur prev cmd opts i
     # global options that receive an argument
     local global_args='--cwd|-R|--repository'
+    local hg="$1"
 
     COMPREPLY=()
     cur="$2"
@@ -146,7 +147,7 @@ _hg()
     fi
 
     # canonicalize command name
-    cmd=$(hg -q help "$cmd" 2> /dev/null | sed -e 's/^hg //; s/ .*//; 1q')
+    cmd=$("$hg" -q help "$cmd" 2> /dev/null | sed -e 's/^hg //; s/ .*//; 1q')
 
     if [ "$cmd" != status ] && [ "$prev" = -r ] || [ "$prev" = --rev ]; then
 	_hg_tags
