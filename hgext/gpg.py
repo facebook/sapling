@@ -250,7 +250,7 @@ def node2txt(repo, node, ver):
     if ver == "0":
         return "%s\n" % hgnode.hex(node)
     else:
-        util.Abort(_("unknown signature version"))
+        raise util.Abort(_("unknown signature version"))
 
 cmdtable = {
     "sign":
