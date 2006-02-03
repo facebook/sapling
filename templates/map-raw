@@ -1,14 +1,13 @@
 header = header-raw.tmpl
 footer = ""
 changeset = changeset-raw.tmpl
-annotateline = "<tr class="parity#parity#"><td class="annotate"><a href="?cmd=changeset;node=#node#">#author#@#rev#</a></td><td><pre>#line#</pre></td></tr>"
 difflineplus = "#line#"
 difflineminus = "#line#"
 difflineat = "#line#"
 diffline = "#line#"
 changesetparent = "# parent: #node#"
 changesetchild = "# child: #node#"
-filenodelink = "#file|urlescape#"
+filenodelink = ""
 filerevision = filerevision-raw.tmpl
 fileline = "#line#"
 diffblock = "#lines#"
