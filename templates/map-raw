@@ -12,3 +12,5 @@ filerevision = filerevision-raw.tmpl
 fileline = "#line#"
 diffblock = "#lines#"
 filediff = filediff-raw.tmpl
+fileannotate = fileannotate-raw.tmpl
+annotateline = "#author#@#rev#: #line#"
