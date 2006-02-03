@@ -1,0 +1,11 @@
+to build a new macosx binary package:
+
+install macpython from http://undefined.org/python/
+
+install py2app from http://pythonmac.org/packages/
+
+make sure /usr/local/bin is in your path
+
+run bdist_mpkg in top-level hg directory
+
+find packaged stuff in dist directory
