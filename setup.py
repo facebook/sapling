@@ -76,7 +76,7 @@ try:
     if py2exe_for_demandload is not None:
         cmdclass['py2exe'] = py2exe_for_demandload
         py2exe_opts['console'] = ['hg']
-    setup(name='Mercurial',
+    setup(name='mercurial',
           version=mercurial.version.get_version(),
           author='Matt Mackall',
           author_email='mpm@selenic.com',
