@@ -27,6 +27,10 @@
 # firing it up "for real", in which case it will use your pager to
 # display each of the messages that it would send.
 #
+# The "-m" (mbox) option will create an mbox file instead of sending
+# the messages directly. This can be reviewed e.g. with "mutt -R -f mbox",
+# and finally sent with "formail -s sendmail -bm -t < mbox".
+#
 # To configure a default mail host, add a section like this to your
 # hgrc file:
 #
@@ -47,6 +51,7 @@
 
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
+from email.Utils import parseaddr
 from mercurial import commands
 from mercurial import hg
 from mercurial import ui
@@ -222,7 +227,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     msgs.insert(0, msg)
 
-    if not opts['test']:
+    if not opts['test'] and not opts['mbox']:
         s = smtplib.SMTP()
         s.connect(host = ui.config('smtp', 'host', 'mail'),
                   port = int(ui.config('smtp', 'port', 25)))
@@ -236,6 +241,7 @@ def patchbomb(ui, repo, *revs, **opts):
             s.login(username, password)
     parent = None
     tz = time.strftime('%z')
+    sender_addr = parseaddr(sender)[1]
     for m in msgs:
         try:
             m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
@@ -250,15 +256,24 @@ def patchbomb(ui, repo, *revs, **opts):
         m['From'] = sender
         m['To'] = ', '.join(to)
         if cc: m['Cc'] = ', '.join(cc)
-        ui.status('Sending ', m['Subject'], ' ...\n')
         if opts['test']:
+            ui.status('Displaying ', m['Subject'], ' ...\n')
             fp = os.popen(os.getenv('PAGER', 'more'), 'w')
             fp.write(m.as_string(0))
             fp.write('\n')
             fp.close()
+        elif opts['mbox']:
+            ui.status('Writing ', m['Subject'], ' ...\n')
+            fp = open(opts['mbox'], m.has_key('In-Reply-To') and 'ab+' or 'wb+')
+            date = time.asctime(time.localtime(start_time))
+            fp.write('From %s %s\n' % (sender_addr, date))
+            fp.write(m.as_string(0))
+            fp.write('\n\n')
+            fp.close()
         else:
+            ui.status('Sending ', m['Subject'], ' ...\n')
             s.sendmail(sender, to + cc, m.as_string(0))
-    if not opts['test']:
+    if not opts['test'] and not opts['mbox']:
         s.close()
 
 cmdtable = {
@@ -269,6 +284,7 @@ cmdtable = {
       ('f', 'from', '', 'email address of sender'),
       ('', 'plain', None, 'omit hg patch header'),
       ('n', 'test', None, 'print messages that would be sent'),
+      ('m', 'mbox', '', 'write messages to mbox file instead of sending them'),
       ('s', 'subject', '', 'subject of introductory message'),
       ('t', 'to', [], 'email addresses of recipients')],
      "hg email [OPTION]... [REV]...")
