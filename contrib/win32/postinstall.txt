@@ -8,6 +8,27 @@ file that comes with this package.
 Release Notes
 -------------
 
+2006-01-29  v0.8 
+
+* Upgrade notes:
+
+  - diff and status command are now repo-wide by default
+   (use 'hg diff .' for the old behavior)
+  - GPG signing is now done with the gpg extension
+  - the --text option for commit, rawcommit, and tag has been removed
+  - the copy/rename --parents option has been removed
+
+* Major changes from 0.7 to 0.8:
+
+  - faster status, diff, and commit
+  - reduced memory usage for push and pull
+  - improved extension API
+  - new bisect, gpg, hgk, and win32text extensions
+  - short URLs, binary file handling, and optional gitweb skin for hgweb
+  - numerous new command options including log --keyword and pull --rev
+  - improved hooks and file filtering
+
+ 
 2005-09-21  v0.7 with modifications
 
 * New INI files have been added to control Mercurial's behaviour:

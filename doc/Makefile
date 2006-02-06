@@ -15,7 +15,7 @@ html: $(HTML)
 	asciidoc -d manpage -b docbook $*.txt
 
 %.html: %.txt
-	asciidoc -b html4 $*.txt
+	asciidoc -b html4 $*.txt || asciidoc -b html $*.txt
 
 clean:
 	$(RM) $(MAN) $(MAN:%=%.xml) $(MAN:%=%.html)

@@ -81,7 +81,7 @@ try:
           author='Matt Mackall',
           author_email='mpm@selenic.com',
           url='http://selenic.com/mercurial',
-          description='scalable distributed SCM',
+          description='Scalable distributed SCM',
           license='GNU GPL',
           packages=['mercurial', 'hgext'],
           ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
@@ -92,6 +92,10 @@ try:
                        glob.glob('templates/*.tmpl'))],
           cmdclass=cmdclass,
           scripts=['hg', 'hgmerge'],
+          options=dict(bdist_mpkg=dict(zipdist=True,
+                                       license='COPYING',
+                                       readme='contrib/macosx/Readme.html',
+                                       welcome='contrib/macosx/Welcome.html')),
           **py2exe_opts)
 finally:
     mercurial.version.forget_version()
