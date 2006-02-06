@@ -17,21 +17,32 @@ fi
 
 # find decent versions of our utilities, insisting on the GNU versions where we
 # need to
+MERGE=merge
 DIFF3=gdiff3
 DIFF=gdiff
 PATCH=gpatch
 
+type $MERGE >/dev/null 2>&1 || MERGE=
 type $DIFF3 >/dev/null 2>&1 || DIFF3=diff3
 type $DIFF  >/dev/null 2>&1 || DIFF=diff
-type $PATCH  >/dev/null 2>&1 || PATCH=patch
+type $PATCH >/dev/null 2>&1 || PATCH=patch
 $DIFF3 --version >/dev/null 2>&1 || DIFF3=
+
+# find optional visual utilities
+FILEMERGE='/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge'
+KDIFF3=kdiff3
+TKDIFF=tkdiff
+
+type $FILEMERGE >/dev/null 2>&1 || FILEMERGE=
+type $KDIFF3    >/dev/null 2>&1 || KDIFF3=
+type $TKDIFF    >/dev/null 2>&1 || TKDIFF=
 
 # Back up our file
 cp "$LOCAL" "$LOCAL.orig"
 
 # Attempt to do a non-interactive merge
-if type merge > /dev/null 2>&1; then
-    merge "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && exit 0
+if [ -n "$MERGE" ]; then
+    $MERGE "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && exit 0
     cp "$LOCAL.orig" "$LOCAL"
 elif [ -n "$DIFF3" ]; then
     echo $DIFF3 -m "$LOCAL.orig" "$BASE" "$OTHER"
@@ -46,8 +57,8 @@ fi
 
 # on MacOS X try FileMerge.app, shipped with Apple's developer tools
 # TODO: make proper temp files. foo.orig and foo.link are dangerous
-FILEMERGE='/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge'
-if type "$FILEMERGE" > /dev/null 2>&1; then
+
+if [ -n "$FILEMERGE" ]; then
     cp "$LOCAL.orig" "$LOCAL"
     ln "$LOCAL" "$LOCAL.link"
     # filemerge prefers the right by default
@@ -79,22 +90,22 @@ fi
 
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
-    if type kdiff3 > /dev/null 2>&1; then
-	kdiff3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" || exit 1
+    if [ -n "$KDIFF3" ]; then
+	$KDIFF3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" || exit 1
 	exit 0
     fi
 
     # try using tkdiff, which is a bit less sophisticated
-    if type tkdiff > /dev/null 2>&1; then
-	tkdiff "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || exit 1
+    if [ -n "$TKDIFF" ]; then
+	$TKDIFF "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || exit 1
 	exit 0
     fi
 fi
 
 # Attempt to do a merge with $EDITOR
-if type merge > /dev/null 2>&1; then
+if [ -n "$MERGE" ]; then
     echo "conflicts detected in $LOCAL"
-    merge "$LOCAL" "$BASE" "$OTHER" 2>/dev/null || $EDITOR "$LOCAL"
+    $MERGE "$LOCAL" "$BASE" "$OTHER" 2>/dev/null || $EDITOR "$LOCAL"
     exit 0
 fi
 
