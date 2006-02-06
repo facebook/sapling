@@ -37,12 +37,21 @@ type $FILEMERGE >/dev/null 2>&1 || FILEMERGE=
 type $KDIFF3    >/dev/null 2>&1 || KDIFF3=
 type $TKDIFF    >/dev/null 2>&1 || TKDIFF=
 
+# random part of names
+RAND="$RANDOM.$RANDOM.$RANDOM.$$"
+
 # temporary directory for diff+patch merge
-HGTMP="${TMPDIR-/tmp}/hgmerge.$RANDOM.$RANDOM.$RANDOM.$$"
+HGTMP="${TMPDIR-/tmp}/hgmerge.$RAND"
+
+# backup file
+BACKUP="$LOCAL.orig.$RAND"
+
+# file used to test for file change
+CHGTEST="$LOCAL.chg.$RAND"
 
 # put all your required cleanup here
 cleanup() {
-    rm -f "$LOCAL.orig"
+    rm -f "$BACKUP" "$CHGTEST"
     rm -rf "$HGTMP"
 }
 
@@ -54,7 +63,7 @@ success() {
 
 failure() {
     echo "merge failed" 1>&2
-    cp "$LOCAL.orig" "$LOCAL"
+    mv "$BACKUP" "$LOCAL"
     cleanup
     exit 1
 }
@@ -62,55 +71,43 @@ failure() {
 # Clean up when interrupted
 trap "failure" 1 2 3 6 15 # HUP INT QUIT ABRT TERM
 
-# Back up our file
-cp "$LOCAL" "$LOCAL.orig"
+# Back up our file (and try hard to keep the mtime unchanged)
+mv "$LOCAL" "$BACKUP"
+cp "$BACKUP" "$LOCAL"
 
 # Attempt to do a non-interactive merge
 if [ -n "$MERGE" ]; then
     $MERGE "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && success
-    cp "$LOCAL.orig" "$LOCAL"
+    cp "$BACKUP" "$LOCAL"
 elif [ -n "$DIFF3" ]; then
-    echo $DIFF3 -m "$LOCAL.orig" "$BASE" "$OTHER"
-    $DIFF3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" && success
+    echo $DIFF3 -m "$BACKUP" "$BASE" "$OTHER"
+    $DIFF3 -m "$BACKUP" "$BASE" "$OTHER" > "$LOCAL" && success
     if [ $? -eq 2 ]; then
         echo "$DIFF3 failed! Exiting." 1>&2
-        cp "$LOCAL.orig" "$LOCAL"
+        cp "$BACKUP" "$LOCAL"
         failure
     fi
-    cp "$LOCAL.orig" "$LOCAL"
+    cp "$BACKUP" "$LOCAL"
 fi
 
 # on MacOS X try FileMerge.app, shipped with Apple's developer tools
-# TODO: make proper temp files. foo.orig and foo.link are dangerous
-
 if [ -n "$FILEMERGE" ]; then
-    cp "$LOCAL.orig" "$LOCAL"
-    ln "$LOCAL" "$LOCAL.link"
+    cp "$BACKUP" "$LOCAL"
+    cp "$BACKUP" "$CHGTEST"
     # filemerge prefers the right by default
-    if ! "$FILEMERGE" -left "$OTHER" -right "$LOCAL" -ancestor "$BASE" -merge "$LOCAL"
+    $FILEMERGE -left "$OTHER" -right "$LOCAL" -ancestor "$BASE" -merge "$LOCAL"
+    [ $? -ne 0 ] && echo "FileMerge failed to launch" && failure
+    if test "$LOCAL" -nt "$CHGTEST"
     then
-        echo "FileMerge failed to launch"
-        failure
-    fi
-    if ! test "$LOCAL" -ef "$LOCAL.link"
-    then
-        rm "$LOCAL.orig" "$LOCAL.link"
         success
     else
-        rm "$LOCAL.link"
-        echo "$LOCAL is unchanged. Was the merge successful?"
+        echo "$LOCAL seems unchanged. Was the merge successful?"
         select answer in yes no
         do
-            if test "$answer" == "yes"
-            then
-                rm "$LOCAL.orig"
-                success
-            else
-                failure
-            fi
+            test "$answer" == "yes" && success || failure
         done
-        failure
     fi
+    failure
 fi
 
 if [ -n "$DISPLAY" ]; then
@@ -136,12 +133,12 @@ fi
 
 if [ -n "$DIFF3" ]; then
     echo "conflicts detected in $LOCAL"
-    $DIFF3 -m "$LOCAL.orig" "$BASE" "$OTHER" > "$LOCAL" || {
+    $DIFF3 -m "$BACKUP" "$BASE" "$OTHER" > "$LOCAL" || {
         case $? in
             1)
                 $EDITOR "$LOCAL" ;;
             2)  echo "$DIFF3 failed! Exiting." 1>&2
-                cp "$LOCAL.orig" "$LOCAL"
+                cp "$BACKUP" "$LOCAL"
                 failure ;;
         esac
         success
