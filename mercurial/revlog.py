@@ -828,6 +828,7 @@ class revlog(object):
 
         # then reset internal state in memory to forget those revisions
         self.cache = None
+        self.chunkcache = None
         for p in self.index[rev:]:
             del self.nodemap[p[6]]
         del self.index[rev:]
