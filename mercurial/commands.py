@@ -405,6 +405,8 @@ def help_(ui, cmd=None, with_version=False):
 
         # description
         doc = i[0].__doc__
+        if not doc:
+            doc = _("(No help text available)")
         if ui.quiet:
             doc = doc.splitlines(0)[0]
         ui.write("%s\n" % doc.rstrip())
@@ -446,9 +448,10 @@ def help_(ui, cmd=None, with_version=False):
             if not ui.debugflag and f.startswith("debug"):
                 continue
             d = ""
-            if e[0].__doc__:
-                d = e[0].__doc__.splitlines(0)[0].rstrip()
-            h[f] = d
+            doc = e[0].__doc__
+            if not doc:
+                doc = _("(No help text available)")
+            h[f] = doc.splitlines(0)[0].rstrip()
             cmds[f] = c.lstrip("^")
 
         fns = h.keys()
