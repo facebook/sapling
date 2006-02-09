@@ -437,17 +437,18 @@ class localrepository(object):
         new.sort()
 
         if not text:
-            edittext = "\n"
+            edittext = [""]
             if p2 != nullid:
-                edittext += "HG: branch merge\n"
-            edittext += "".join(["HG: changed %s\n" % f for f in changed])
-            edittext += "".join(["HG: removed %s\n" % f for f in remove])
+                edittext.append("HG: branch merge")
+            edittext.extend(["HG: changed %s" % f for f in changed])
+            edittext.extend(["HG: removed %s" % f for f in remove])
             if not changed and not remove:
-                edittext += "HG: no files changed\n"
+                edittext.append("HG: no files changed")
+            edittext.append("")
             # run editor in the repository root
             olddir = os.getcwd()
             os.chdir(self.root)
-            edittext = self.ui.edit(edittext)
+            edittext = self.ui.edit("\n".join(edittext))
             os.chdir(olddir)
             if not edittext.rstrip():
                 return None
