@@ -445,7 +445,11 @@ class localrepository(object):
             edittext += "".join(["HG: removed %s\n" % f for f in remove])
             if not changed and not remove:
                 edittext += "HG: no files changed\n"
+            # run editor in the repository root
+            olddir = os.getcwd()
+            os.chdir(self.root)
             edittext = self.ui.edit(edittext)
+            os.chdir(olddir)
             if not edittext.rstrip():
                 return None
             text = edittext
