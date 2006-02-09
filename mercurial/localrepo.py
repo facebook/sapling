@@ -236,8 +236,9 @@ class localrepository(object):
             self.ui.warn(_("no interrupted transaction available\n"))
             return False
 
-    def undo(self):
-        wlock = self.wlock()
+    def undo(self, wlock=None):
+        if not wlock:
+            wlock = self.wlock()
         lock = self.lock()
         if os.path.exists(self.join("undo")):
             self.ui.status(_("rolling back last transaction\n"))
@@ -267,7 +268,7 @@ class localrepository(object):
         self.dirstate.read()
         return wlock
 
-    def rawcommit(self, files, text, user, date, p1=None, p2=None):
+    def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None):
         orig_parent = self.dirstate.parents()[0] or nullid
         p1 = p1 or self.dirstate.parents()[0] or nullid
         p2 = p2 or self.dirstate.parents()[1] or nullid
@@ -283,7 +284,8 @@ class localrepository(object):
         else:
             update_dirstate = 0
 
-        wlock = self.wlock()
+        if not wlock:
+            wlock = self.wlock()
         lock = self.lock()
         tr = self.transaction()
         mm = m1.copy()
@@ -340,7 +342,7 @@ class localrepository(object):
             self.dirstate.setparents(n, nullid)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False):
+               match=util.always, force=False, wlock=None):
         commit = []
         remove = []
         changed = []
@@ -373,7 +375,8 @@ class localrepository(object):
         if not self.hook("precommit"):
             return None
 
-        wlock = self.wlock()
+        if not wlock:
+            wlock = self.wlock()
         lock = self.lock()
         tr = self.transaction()
 
@@ -480,7 +483,8 @@ class localrepository(object):
             for src, fn in self.dirstate.walk(files, match):
                 yield src, fn
 
-    def changes(self, node1=None, node2=None, files=[], match=util.always):
+    def changes(self, node1=None, node2=None, files=[], match=util.always,
+                wlock=None):
         """return changes between two nodes or node and working directory
 
         If node1 is None, use the first dirstate parent instead.
@@ -502,10 +506,11 @@ class localrepository(object):
 
         # are we comparing the working directory?
         if not node2:
-            try:
-                wlock = self.wlock(wait=0)
-            except lock.LockHeld:
-                wlock = None
+            if not wlock:
+                try:
+                    wlock = self.wlock(wait=0)
+                except lock.LockHeld:
+                    wlock = None
             lookup, modified, added, removed, deleted, unknown = (
                 self.dirstate.changes(files, match))
 
@@ -554,8 +559,9 @@ class localrepository(object):
             l.sort()
         return (modified, added, removed, deleted, unknown)
 
-    def add(self, list):
-        wlock = self.wlock()
+    def add(self, list, wlock=None):
+        if not wlock:
+            wlock = self.wlock()
         for f in list:
             p = self.wjoin(f)
             if not os.path.exists(p):
@@ -568,15 +574,16 @@ class localrepository(object):
             else:
                 self.dirstate.update([f], "a")
 
-    def forget(self, list):
-        wlock = self.wlock()
+    def forget(self, list, wlock=None):
+        if not wlock:
+            wlock = self.wlock()
         for f in list:
             if self.dirstate.state(f) not in 'ai':
                 self.ui.warn(_("%s not added!\n") % f)
             else:
                 self.dirstate.forget([f])
 
-    def remove(self, list, unlink=False):
+    def remove(self, list, unlink=False, wlock=None):
         if unlink:
             for f in list:
                 try:
@@ -584,7 +591,8 @@ class localrepository(object):
                 except OSError, inst:
                     if inst.errno != errno.ENOENT:
                         raise
-        wlock = self.wlock()
+        if not wlock:
+            wlock = self.wlock()
         for f in list:
             p = self.wjoin(f)
             if os.path.exists(p):
@@ -597,12 +605,13 @@ class localrepository(object):
             else:
                 self.dirstate.update([f], "r")
 
-    def undelete(self, list):
+    def undelete(self, list, wlock=None):
         p = self.dirstate.parents()[0]
         mn = self.changelog.read(p)[0]
         mf = self.manifest.readflags(mn)
         m = self.manifest.read(mn)
-        wlock = self.wlock()
+        if not wlock:
+            wlock = self.wlock()
         for f in list:
             if self.dirstate.state(f) not in  "r":
                 self.ui.warn("%s not removed!\n" % f)
@@ -612,14 +621,15 @@ class localrepository(object):
                 util.set_exec(self.wjoin(f), mf[f])
                 self.dirstate.update([f], "n")
 
-    def copy(self, source, dest):
+    def copy(self, source, dest, wlock=None):
         p = self.wjoin(dest)
         if not os.path.exists(p):
             self.ui.warn(_("%s does not exist!\n") % dest)
         elif not os.path.isfile(p):
             self.ui.warn(_("copy failed: %s is not a file\n") % dest)
         else:
-            wlock = self.wlock()
+            if not wlock:
+                wlock = self.wlock()
             if self.dirstate.state(dest) == '?':
                 self.dirstate.update([dest], "a")
             self.dirstate.copy(source, dest)
@@ -1381,7 +1391,7 @@ class localrepository(object):
         return
 
     def update(self, node, allow=False, force=False, choose=None,
-               moddirstate=True, forcemerge=False):
+               moddirstate=True, forcemerge=False, wlock=None):
         pl = self.dirstate.parents()
         if not force and pl[1] != nullid:
             self.ui.warn(_("aborting: outstanding uncommitted merges\n"))
@@ -1443,7 +1453,7 @@ class localrepository(object):
             mw[f] = ""
             mfw[f] = util.is_exec(self.wjoin(f), mfw.get(f, False))
 
-        if moddirstate:
+        if moddirstate and not wlock:
             wlock = self.wlock()
 
         for f in deleted + removed:

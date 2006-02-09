@@ -519,6 +519,9 @@ def addremove(ui, repo, *pats, **opts):
     New files are ignored if they match any of the patterns in .hgignore. As
     with add, these changes take effect at the next commit.
     """
+    return addremove_lock(ui, repo, pats, opts)
+
+def addremove_lock(ui, repo, pats, opts, wlock=None):
     add, remove = [], []
     for src, abs, rel, exact in walk(repo, pats, opts):
         if src == 'f' and repo.dirstate.state(abs) == '?':
@@ -529,8 +532,8 @@ def addremove(ui, repo, *pats, **opts):
             remove.append(abs)
             if ui.verbose or not exact:
                 ui.status(_('removing %s\n') % ((pats and rel) or abs))
-    repo.add(add)
-    repo.remove(remove)
+    repo.add(add, wlock=wlock)
+    repo.remove(remove, wlock=wlock)
 
 def annotate(ui, repo, *pats, **opts):
     """show changeset information per file line
