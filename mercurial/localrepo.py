@@ -437,10 +437,10 @@ class localrepository(object):
         new.sort()
 
         if not text:
-            edittext = ""
+            edittext = "\n"
             if p2 != nullid:
                 edittext += "HG: branch merge\n"
-            edittext += "\n" + "HG: manifest hash %s\n" % hex(mn)
+            edittext += "HG: manifest hash %s\n" % hex(mn)
             edittext += "".join(["HG: changed %s\n" % f for f in changed])
             edittext += "".join(["HG: removed %s\n" % f for f in remove])
             if not changed and not remove:
