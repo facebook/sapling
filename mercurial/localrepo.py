@@ -1386,7 +1386,7 @@ class localrepository(object):
                 return 1
 
             for i in range(cor + 1, cnr + 1):
-                self.hook("commit", node=hex(self.changelog.node(i)))
+                self.hook("incoming", node=hex(self.changelog.node(i)))
 
         return
 
