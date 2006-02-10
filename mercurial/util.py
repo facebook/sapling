@@ -690,3 +690,16 @@ def datestr(date=None, format='%c'):
             (time.strftime(format, time.gmtime(float(t) - tz)),
              -tz / 3600,
              ((-tz % 3600) / 60)))
+
+def walkrepos(path):
+    '''yield every hg repository under path, recursively.'''
+    def errhandler(err):
+        if err.filename == path:
+            raise err
+
+    for root, dirs, files in os.walk(path, onerror=errhandler):
+        for d in dirs:
+            if d == '.hg':
+                yield root
+                dirs[:] = []
+                break

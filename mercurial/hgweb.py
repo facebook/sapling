@@ -1075,17 +1075,27 @@ def create_server(repo):
 class hgwebdir(object):
     def __init__(self, config):
         def cleannames(items):
-            return [(name.strip('/'), path) for name, path in items]
+            return [(name.strip(os.sep), path) for name, path in items]
 
-        if type(config) == type([]):
+        if isinstance(config, (list, tuple)):
             self.repos = cleannames(config)
-        elif type(config) == type({}):
+        elif isinstance(config, dict):
             self.repos = cleannames(config.items())
             self.repos.sort()
         else:
             cp = ConfigParser.SafeConfigParser()
             cp.read(config)
-            self.repos = cleannames(cp.items("paths"))
+            self.repos = []
+            if cp.has_section('paths'):
+                self.repos.extend(cleannames(cp.items('paths')))
+            if cp.has_section('collections'):
+                for prefix, root in cp.items('collections'):
+                    for path in util.walkrepos(root):
+                        repo = os.path.normpath(path)
+                        name = repo
+                        if name.startswith(prefix):
+                            name = name[len(prefix):]
+                        self.repos.append((name.lstrip(os.sep), repo))
             self.repos.sort()
 
     def run(self, req=hgrequest()):
