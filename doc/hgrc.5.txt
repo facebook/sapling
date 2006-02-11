@@ -141,17 +141,21 @@ hooks::
 
     [hooks]
     # do not use the site-wide hook
-    commit =
-    commit.email = /my/email/hook
-    commit.autobuild = /my/build/hook
+    incoming =
+    incoming.email = /my/email/hook
+    incoming.autobuild = /my/build/hook
 
   changegroup;;
     Run after a changegroup has been added via push or pull. Passed
     the ID of the first new changeset in $NODE.
   commit;;
-    Run after a changeset has been created or for each changeset
-    pulled. Passed the ID of the newly created changeset in
-    environment variable $NODE.
+    Run after a changeset has been created in the local repository.
+    Passed the ID of the newly created changeset in environment
+    variable $NODE.
+  incoming;;
+    Run after a changeset has been pulled, pushed, or unbundled into
+    the local repository.  Passed the ID of the newly arrived
+    changeset in environment variable $NODE.
   precommit;;
     Run before starting a commit.  Exit status 0 allows the commit to
     proceed.  Non-zero status will cause the commit to fail.
