@@ -48,7 +48,7 @@ class localrepository(object):
         except IOError:
             pass
 
-    def hook(self, name, **args):
+    def hook(self, name, throw=False, **args):
         def runhook(name, cmd):
             self.ui.note(_("running hook %s: %s\n") % (name, cmd))
             old = {}
@@ -57,21 +57,25 @@ class localrepository(object):
                 old[k] = os.environ.get(k, None)
                 os.environ[k] = v
 
-            # Hooks run in the repository root
-            olddir = os.getcwd()
-            os.chdir(self.root)
-            r = os.system(cmd)
-            os.chdir(olddir)
+            try:
+                # Hooks run in the repository root
+                olddir = os.getcwd()
+                os.chdir(self.root)
+                r = os.system(cmd)
+            finally:
+                for k, v in old.items():
+                    if v != None:
+                        os.environ[k] = v
+                    else:
+                        del os.environ[k]
 
-            for k, v in old.items():
-                if v != None:
-                    os.environ[k] = v
-                else:
-                    del os.environ[k]
+                os.chdir(olddir)
 
             if r:
-                self.ui.warn(_("abort: %s hook failed with status %d!\n") %
-                             (name, r))
+                desc, r = util.explain_exit(r)
+                if throw:
+                    raise util.Abort(_('%s hook %s') % (name, desc))
+                self.ui.warn(_('error: %s hook %s\n') % (name, desc))
                 return False
             return True
 
@@ -372,8 +376,7 @@ class localrepository(object):
             self.ui.status(_("nothing changed\n"))
             return None
 
-        if not self.hook("precommit"):
-            return None
+        self.hook("precommit", throw=True)
 
         if not wlock:
             wlock = self.wlock()
