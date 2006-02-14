@@ -55,7 +55,7 @@ class localrepository(object):
             for k, v in args.items():
                 k = k.upper()
                 old[k] = os.environ.get(k, None)
-                os.environ[k] = v
+                os.environ[k] = str(v)
 
             try:
                 # Hooks run in the repository root
