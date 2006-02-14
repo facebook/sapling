@@ -465,8 +465,7 @@ class localrepository(object):
         self.dirstate.update(new, "n")
         self.dirstate.forget(remove)
 
-        if not self.hook("commit", node=hex(n)):
-            return None
+        self.hook("commit", node=hex(n))
         return n
 
     def walk(self, node=None, files=[], match=util.always):
@@ -1380,15 +1379,10 @@ class localrepository(object):
         tr.close()
 
         if changesets > 0:
-            if not self.hook("changegroup",
-                             node=hex(self.changelog.node(cor+1))):
-                self.ui.warn(_("abort: changegroup hook returned failure!\n"))
-                return 1
+            self.hook("changegroup", node=hex(self.changelog.node(cor+1)))
 
             for i in range(cor + 1, cnr + 1):
                 self.hook("incoming", node=hex(self.changelog.node(i)))
-
-        return
 
     def update(self, node, allow=False, force=False, choose=None,
                moddirstate=True, forcemerge=False, wlock=None):
