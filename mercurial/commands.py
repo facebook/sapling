@@ -1764,7 +1764,7 @@ def pull(ui, repo, source="default", **opts):
 
     return r
 
-def push(ui, repo, dest="default-push", force=False, ssh=None, remotecmd=None):
+def push(ui, repo, dest="default-push", **opts):
     """push changes to the specified destination
 
     Push changes from the local repository to the given destination.
@@ -1789,13 +1789,16 @@ def push(ui, repo, dest="default-push", force=False, ssh=None, remotecmd=None):
     dest = ui.expandpath(dest, repo.root)
     ui.status('pushing to %s\n' % (dest))
 
-    if ssh:
-        ui.setconfig("ui", "ssh", ssh)
-    if remotecmd:
-        ui.setconfig("ui", "remotecmd", remotecmd)
+    if opts['ssh']:
+        ui.setconfig("ui", "ssh", opts['ssh'])
+    if opts['remotecmd']:
+        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
     other = hg.repository(ui, dest)
-    r = repo.push(other, force)
+    revs = None
+    if opts['rev']:
+        revs = [repo.lookup(rev) for rev in opts['rev']]
+    r = repo.push(other, opts['force'], revs=revs)
     return r
 
 def rawcommit(ui, repo, *flist, **rc):
@@ -2417,14 +2420,15 @@ table = {
           ('r', 'rev', [], _('a specific revision you would like to pull')),
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
-         _('hg pull [-u] [-e FILE] [-r rev] [--remotecmd FILE] [SOURCE]')),
+         _('hg pull [-u] [-e FILE] [-r rev]... [--remotecmd FILE] [SOURCE]')),
     "^push":
         (push,
          [('f', 'force', None, _('force push')),
           ('e', 'ssh', '', _('specify ssh command to use')),
+          ('r', 'rev', [], _('a specific revision you would like to push')),
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
-         _('hg push [-f] [-e FILE] [--remotecmd FILE] [DEST]')),
+         _('hg push [-f] [-e FILE] [-r rev]... [--remotecmd FILE] [DEST]')),
     "rawcommit":
         (rawcommit,
          [('p', 'parent', [], _('parent')),

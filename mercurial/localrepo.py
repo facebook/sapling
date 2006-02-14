@@ -952,7 +952,7 @@ class localrepository(object):
             cg = remote.changegroupsubset(fetch, heads)
         return self.addchangegroup(cg)
 
-    def push(self, remote, force=False):
+    def push(self, remote, force=False, revs=None):
         lock = remote.lock()
 
         base = {}
@@ -964,17 +964,25 @@ class localrepository(object):
             return 1
 
         update = self.findoutgoing(remote, base)
-        if not update:
+        if revs is not None:
+            msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
+        else:
+            bases, heads = update, self.changelog.heads()
+
+        if not bases:
             self.ui.status(_("no changes found\n"))
             return 1
         elif not force:
-            if len(heads) < len(self.changelog.heads()):
+            if len(bases) < len(heads):
                 self.ui.warn(_("abort: push creates new remote branches!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
                 return 1
 
-        cg = self.changegroup(update)
+        if revs is None:
+            cg = self.changegroup(update)
+        else:
+            cg = self.changegroupsubset(update, revs)
         return remote.addchangegroup(cg)
 
     def changegroupsubset(self, bases, heads):
