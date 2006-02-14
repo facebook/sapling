@@ -2113,8 +2113,12 @@ def tag(ui, repo, name, rev_=None, **opts):
         if name.find(c) >= 0:
             raise util.Abort(_("%s cannot be used in a tag name") % repr(c))
 
+    repo.hook('pretag', throw=True, node=r, tag=name,
+              local=not not opts['local'])
+
     if opts['local']:
         repo.opener("localtags", "a").write("%s %s\n" % (r, name))
+        repo.hook('tag', node=r, tag=name, local=1)
         return
 
     for x in repo.changes():
@@ -2130,6 +2134,7 @@ def tag(ui, repo, name, rev_=None, **opts):
                _("Added tag %s for changeset %s") % (name, r))
     try:
         repo.commit([".hgtags"], message, opts['user'], opts['date'])
+        repo.hook('tag', node=r, tag=name, local=0)
     except ValueError, inst:
         raise util.Abort(str(inst))
 

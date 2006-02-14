@@ -159,6 +159,15 @@ hooks::
   precommit;;
     Run before starting a commit.  Exit status 0 allows the commit to
     proceed.  Non-zero status will cause the commit to fail.
+  pretag;;
+    Run before creating a tag.  Exit status 0 allows the tag to be
+    created.  Non-zero status will cause the tag to fail.  ID of
+    changeset to tag in $NODE.  Name of tag in $TAG.  Tag is local if
+    $LOCAL=1, in repo if $LOCAL=0.
+  tag;;
+    Run after a tag is created.  ID of tagged changeset in $NODE.
+    Name of tag in $TAG.  Tag is local if $LOCAL=1, in repo if
+    $LOCAL=0.
 
 http_proxy::
   Used to access web-based Mercurial repositories through a HTTP
