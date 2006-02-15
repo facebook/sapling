@@ -1681,7 +1681,7 @@ def outgoing(ui, repo, dest="default-push", **opts):
             dodiff(ui, ui, repo, prev, n)
             ui.write("\n")
 
-def parents(ui, repo, rev=None):
+def parents(ui, repo, rev=None, branch=None):
     """show the parents of the working dir or revision
 
     Print the working directory's parent revisions.
@@ -1691,9 +1691,12 @@ def parents(ui, repo, rev=None):
     else:
         p = repo.dirstate.parents()
 
+    br = None
+    if branch is not None:
+        br = repo.branchlookup(p)
     for n in p:
         if n != nullid:
-            show_changeset(ui, repo, changenode=n)
+            show_changeset(ui, repo, changenode=n, brinfo=br)
 
 def paths(ui, search=None):
     """show definition of symbolic path names
@@ -2412,7 +2415,10 @@ table = {
           ('p', 'patch', None, _('show patch')),
           ('n', 'newest-first', None, _('show newest record first'))],
          _('hg outgoing [-p] [-n] [-M] [DEST]')),
-    "^parents": (parents, [], _('hg parents [REV]')),
+    "^parents":
+        (parents,
+         [('b', 'branch', None, _('show branches'))],
+         _('hg parents [-b] [REV]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
         (pull,
