@@ -2155,13 +2155,15 @@ def tags(ui, repo):
             r = "    ?:?"
         ui.write("%-30s %s\n" % (t, r))
 
-def tip(ui, repo):
+def tip(ui, repo, **opts):
     """show the tip revision
 
     Show the tip revision.
     """
     n = repo.changelog.tip()
     show_changeset(ui, repo, changenode=n)
+    if opts['patch']:
+        dodiff(ui, ui, repo, repo.changelog.parents(n)[0], n)
 
 def unbundle(ui, repo, fname, **opts):
     """apply a changegroup file
@@ -2500,7 +2502,7 @@ table = {
           ('r', 'rev', '', _('revision to tag'))],
          _('hg tag [-r REV] [OPTION]... NAME')),
     "tags": (tags, [], _('hg tags')),
-    "tip": (tip, [], _('hg tip')),
+    "tip": (tip, [('p', 'patch', None, _('show patch'))], _('hg tip')),
     "unbundle":
         (unbundle,
          [('u', 'update', None,

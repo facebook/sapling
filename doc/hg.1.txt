@@ -602,8 +602,11 @@ tags::
 
     This lists both regular and local tags.
 
-tip::
+tip [-p]::
     Show the tip revision.
+
+    options:
+    -p, --patch      show patch
 
 unbundle <file>::
     (EXPERIMENTAL)
