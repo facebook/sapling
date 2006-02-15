@@ -261,7 +261,7 @@ def make_file(repo, r, pat, node=None,
                 mode)
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
-           changes=None, text=False):
+           changes=None, text=False, opts={}):
     if not changes:
         changes = repo.changes(node1, node2, files, match=match)
     modified, added, removed, deleted, unknown = changes
@@ -296,8 +296,8 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     date1 = util.datestr(change[2])
 
     diffopts = ui.diffopts()
-    showfunc = diffopts['showfunc']
-    ignorews = diffopts['ignorews']
+    showfunc = opts.get('show_function') or diffopts['showfunc']
+    ignorews = opts.get('ignore_all_space') or diffopts['ignorews']
     for f in modified:
         to = None
         if f in mmap:
@@ -1140,7 +1140,7 @@ def diff(ui, repo, *pats, **opts):
     fns, matchfn, anypats = matchpats(repo, pats, opts)
 
     dodiff(sys.stdout, ui, repo, node1, node2, fns, match=matchfn,
-           text=opts['text'])
+           text=opts['text'], opts=opts)
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
@@ -2337,7 +2337,12 @@ table = {
          [('r', 'rev', [], _('revision')),
           ('a', 'text', None, _('treat all files as text')),
           ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('p', 'show-function', None,
+           _('show which function each change is in')),
+          ('w', 'ignore-all-space', None,
+           _('ignore white space when comparing lines')),
+          ('X', 'exclude', [],
+           _('exclude names matching the given patterns'))],
          _('hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...')),
     "^export":
         (export,
