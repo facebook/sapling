@@ -1342,6 +1342,9 @@ class localrepository(object):
 
         if not source:
             return
+
+        self.hook('prechangegroup', throw=True)
+
         changesets = files = revisions = 0
 
         tr = self.transaction()
@@ -1383,6 +1386,9 @@ class localrepository(object):
         self.ui.status(_("added %d changesets"
                          " with %d changes to %d files%s\n")
                          % (changesets, revisions, files, heads))
+
+        self.hook('pretxnchangegroup', throw=True,
+                  node=hex(self.changelog.node(cor+1)))
 
         tr.close()
 
