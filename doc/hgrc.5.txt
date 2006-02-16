@@ -145,37 +145,41 @@ hooks::
     incoming.email = /my/email/hook
     incoming.autobuild = /my/build/hook
 
+  Most hooks are run with environment variables set that give added
+  useful information.  For each hook below, the environment variables
+  it is passed are listed with names of the form "$HG_foo".
+
   changegroup;;
-    Run after a changegroup has been added via push or pull. Passed
-    the ID of the first new changeset in $HG_NODE.
+    Run after a changegroup has been added via push or pull. ID of the
+    first new changeset is in $HG_NODE.
   commit;;
     Run after a changeset has been created in the local repository.
-    Passed the ID of the newly created changeset in environment
-    variable $HG_NODE.  Parent changeset IDs in $HG_P1 and $HG_P2.
+    ID of the newly created changeset is in $HG_NODE.  Parent
+    changeset IDs are in $HG_PARENT1 and $HG_PARENT2.
   incoming;;
     Run after a changeset has been pulled, pushed, or unbundled into
-    the local repository.  Passed the ID of the newly arrived
-    changeset in environment variable $HG_NODE.
+    the local repository.  The ID of the newly arrived changeset is in
+    $HG_NODE.
   precommit;;
     Run before starting a local commit.  Exit status 0 allows the
     commit to proceed.  Non-zero status will cause the commit to fail.
-    Parent changeset IDs in $HG_P1 and $HG_P2.
+    Parent changeset IDs are in $HG_PARENT1 and $HG_PARENT2.
   pretag;;
     Run before creating a tag.  Exit status 0 allows the tag to be
     created.  Non-zero status will cause the tag to fail.  ID of
-    changeset to tag in $HG_NODE.  Name of tag in $HG_TAG.  Tag is
-    local if $HG_LOCAL=1, in repo if $HG_LOCAL=0.
+    changeset to tag is in $HG_NODE.  Name of tag is in $HG_TAG.  Tag
+    is local if $HG_LOCAL=1, in repo if $HG_LOCAL=0.
   pretxncommit;;
     Run after a changeset has been created but the transaction not yet
     committed.  Changeset is visible to hook program.  This lets you
     validate commit message and changes.  Exit status 0 allows the
     commit to proceed.  Non-zero status will cause the transaction to
-    be rolled back.  ID of changeset in $HG_NODE.  Parent changeset
-    IDs in $HG_P1 and $HG_P2.
+    be rolled back.  ID of changeset is in $HG_NODE.  Parent changeset
+    IDs are in $HG_PARENT1 and $HG_PARENT2.
   tag;;
-    Run after a tag is created.  ID of tagged changeset in $HG_NODE.
-    Name of tag in $HG_TAG.  Tag is local if $HG_LOCAL=1, in repo if
-    $HG_LOCAL=0.
+    Run after a tag is created.  ID of tagged changeset is in
+    $HG_NODE.  Name of tag is in $HG_TAG.  Tag is local if
+    $HG_LOCAL=1, in repo if $HG_LOCAL=0.
 
   In earlier releases, the names of hook environment variables did not
   have a "HG_" prefix.  These unprefixed names are still provided in

@@ -382,7 +382,7 @@ class localrepository(object):
         if p2 == nullid: xp2 = ''
         else: xp2 = hex(p2)
 
-        self.hook("precommit", throw=True, p1=xp1, p2=xp2)
+        self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
 
         if not wlock:
             wlock = self.wlock()
@@ -468,14 +468,15 @@ class localrepository(object):
 
         user = user or self.ui.username()
         n = self.changelog.add(mn, changed + remove, text, tr, p1, p2, user, date)
-        self.hook('pretxncommit', throw=True, node=hex(n), p1=xp1, p2=xp2)
+        self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
+                  parent2=xp2)
         tr.close()
 
         self.dirstate.setparents(n)
         self.dirstate.update(new, "n")
         self.dirstate.forget(remove)
 
-        self.hook("commit", node=hex(n), p1=xp1, p2=xp2)
+        self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
         return n
 
     def walk(self, node=None, files=[], match=util.always):
