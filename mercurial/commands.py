@@ -261,7 +261,7 @@ def make_file(repo, r, pat, node=None,
                 mode)
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
-           changes=None, text=False):
+           changes=None, text=False, opts={}):
     if not changes:
         changes = repo.changes(node1, node2, files, match=match)
     modified, added, removed, deleted, unknown = changes
@@ -296,8 +296,8 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     date1 = util.datestr(change[2])
 
     diffopts = ui.diffopts()
-    showfunc = diffopts['showfunc']
-    ignorews = diffopts['ignorews']
+    showfunc = opts.get('show_function') or diffopts['showfunc']
+    ignorews = opts.get('ignore_all_space') or diffopts['ignorews']
     for f in modified:
         to = None
         if f in mmap:
@@ -1140,7 +1140,7 @@ def diff(ui, repo, *pats, **opts):
     fns, matchfn, anypats = matchpats(repo, pats, opts)
 
     dodiff(sys.stdout, ui, repo, node1, node2, fns, match=matchfn,
-           text=opts['text'])
+           text=opts['text'], opts=opts)
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
@@ -2158,13 +2158,15 @@ def tags(ui, repo):
             r = "    ?:?"
         ui.write("%-30s %s\n" % (t, r))
 
-def tip(ui, repo):
+def tip(ui, repo, **opts):
     """show the tip revision
 
     Show the tip revision.
     """
     n = repo.changelog.tip()
     show_changeset(ui, repo, changenode=n)
+    if opts['patch']:
+        dodiff(ui, ui, repo, repo.changelog.parents(n)[0], n)
 
 def unbundle(ui, repo, fname, **opts):
     """apply a changegroup file
@@ -2340,7 +2342,12 @@ table = {
          [('r', 'rev', [], _('revision')),
           ('a', 'text', None, _('treat all files as text')),
           ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('p', 'show-function', None,
+           _('show which function each change is in')),
+          ('w', 'ignore-all-space', None,
+           _('ignore white space when comparing lines')),
+          ('X', 'exclude', [],
+           _('exclude names matching the given patterns'))],
          _('hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...')),
     "^export":
         (export,
@@ -2501,7 +2508,7 @@ table = {
           ('r', 'rev', '', _('revision to tag'))],
          _('hg tag [-r REV] [OPTION]... NAME')),
     "tags": (tags, [], _('hg tags')),
-    "tip": (tip, [], _('hg tip')),
+    "tip": (tip, [('p', 'patch', None, _('show patch'))], _('hg tip')),
     "unbundle":
         (unbundle,
          [('u', 'update', None,

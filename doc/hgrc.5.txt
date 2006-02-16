@@ -150,8 +150,8 @@ hooks::
   it is passed are listed with names of the form "$HG_foo".
 
   changegroup;;
-    Run after a changegroup has been added via push or pull. ID of the
-    first new changeset is in $HG_NODE.
+    Run after a changegroup has been added via push, pull or
+    unbundle. ID of the first new changeset is in $HG_NODE.
   commit;;
     Run after a changeset has been created in the local repository.
     ID of the newly created changeset is in $HG_NODE.  Parent
@@ -160,6 +160,10 @@ hooks::
     Run after a changeset has been pulled, pushed, or unbundled into
     the local repository.  The ID of the newly arrived changeset is in
     $HG_NODE.
+  prechangegroup;;
+    Run before a changegroup is added via push, pull or unbundle.
+    Exit status 0 allows the changegroup to proceed.  Non-zero status
+    will cause the push, pull or unbundle to fail.
   precommit;;
     Run before starting a local commit.  Exit status 0 allows the
     commit to proceed.  Non-zero status will cause the commit to fail.
@@ -169,6 +173,14 @@ hooks::
     created.  Non-zero status will cause the tag to fail.  ID of
     changeset to tag is in $HG_NODE.  Name of tag is in $HG_TAG.  Tag
     is local if $HG_LOCAL=1, in repo if $HG_LOCAL=0.
+  pretxnchangegroup;;
+    Run after a changegroup has been added via push, pull or unbundle,
+    but before the transaction has been committed.  Changegroup is
+    visible to hook program.  This lets you validate incoming changes
+    before accepting them.  Passed the ID of the first new changeset
+    in $NODE.  Exit status 0 allows the transaction to commit.
+    Non-zero status will cause the transaction to be rolled back and
+    the push, pull or unbundle will fail.
   pretxncommit;;
     Run after a changeset has been created but the transaction not yet
     committed.  Changeset is visible to hook program.  This lets you
