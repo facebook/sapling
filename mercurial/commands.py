@@ -2117,7 +2117,7 @@ def tag(ui, repo, name, rev_=None, **opts):
             raise util.Abort(_("%s cannot be used in a tag name") % repr(c))
 
     repo.hook('pretag', throw=True, node=r, tag=name,
-              local=not not opts['local'])
+              local=int(not not opts['local']))
 
     if opts['local']:
         repo.opener("localtags", "a").write("%s %s\n" % (r, name))

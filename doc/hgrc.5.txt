@@ -178,7 +178,7 @@ hooks::
     but before the transaction has been committed.  Changegroup is
     visible to hook program.  This lets you validate incoming changes
     before accepting them.  Passed the ID of the first new changeset
-    in $NODE.  Exit status 0 allows the transaction to commit.
+    in $HG_NODE.  Exit status 0 allows the transaction to commit.
     Non-zero status will cause the transaction to be rolled back and
     the push, pull or unbundle will fail.
   pretxncommit;;
