@@ -147,35 +147,40 @@ hooks::
 
   changegroup;;
     Run after a changegroup has been added via push or pull. Passed
-    the ID of the first new changeset in $NODE.
+    the ID of the first new changeset in $HG_NODE.
   commit;;
     Run after a changeset has been created in the local repository.
     Passed the ID of the newly created changeset in environment
-    variable $NODE.  Parent changeset IDs in $P1 and $P2.
+    variable $HG_NODE.  Parent changeset IDs in $HG_P1 and $HG_P2.
   incoming;;
     Run after a changeset has been pulled, pushed, or unbundled into
     the local repository.  Passed the ID of the newly arrived
-    changeset in environment variable $NODE.
+    changeset in environment variable $HG_NODE.
   precommit;;
     Run before starting a local commit.  Exit status 0 allows the
-    commit to proceed.  Non-zero status will cause the commit to
-    fail.  Parent changeset IDs in $P1 and $P2.
+    commit to proceed.  Non-zero status will cause the commit to fail.
+    Parent changeset IDs in $HG_P1 and $HG_P2.
   pretag;;
     Run before creating a tag.  Exit status 0 allows the tag to be
     created.  Non-zero status will cause the tag to fail.  ID of
-    changeset to tag in $NODE.  Name of tag in $TAG.  Tag is local if
-    $LOCAL=1, in repo if $LOCAL=0.
+    changeset to tag in $HG_NODE.  Name of tag in $HG_TAG.  Tag is
+    local if $HG_LOCAL=1, in repo if $HG_LOCAL=0.
   pretxncommit;;
     Run after a changeset has been created but the transaction not yet
     committed.  Changeset is visible to hook program.  This lets you
     validate commit message and changes.  Exit status 0 allows the
     commit to proceed.  Non-zero status will cause the transaction to
-    be rolled back.  ID of changeset in $NODE.  Parent changeset IDs
-    in $P1 and $P2.
+    be rolled back.  ID of changeset in $HG_NODE.  Parent changeset
+    IDs in $HG_P1 and $HG_P2.
   tag;;
-    Run after a tag is created.  ID of tagged changeset in $NODE.
-    Name of tag in $TAG.  Tag is local if $LOCAL=1, in repo if
-    $LOCAL=0.
+    Run after a tag is created.  ID of tagged changeset in $HG_NODE.
+    Name of tag in $HG_TAG.  Tag is local if $HG_LOCAL=1, in repo if
+    $HG_LOCAL=0.
+
+  In earlier releases, the names of hook environment variables did not
+  have a "HG_" prefix.  These unprefixed names are still provided in
+  the environment for backwards compatibility, but their use is
+  deprecated, and they will be removed in a future release.
 
 http_proxy::
   Used to access web-based Mercurial repositories through a HTTP

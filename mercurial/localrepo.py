@@ -54,7 +54,9 @@ class localrepository(object):
             old = {}
             for k, v in args.items():
                 k = k.upper()
+                old['HG_' + k] = os.environ.get(k, None)
                 old[k] = os.environ.get(k, None)
+                os.environ['HG_' + k] = str(v)
                 os.environ[k] = str(v)
 
             try:
@@ -64,7 +66,7 @@ class localrepository(object):
                 r = os.system(cmd)
             finally:
                 for k, v in old.items():
-                    if v != None:
+                    if v is not None:
                         os.environ[k] = v
                     else:
                         del os.environ[k]
