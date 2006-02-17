@@ -268,6 +268,25 @@ class localrepository(object):
         self.dirstate.read()
         return wlock
 
+    def checkfilemerge(self, filename, text, filelog, manifest1, manifest2):
+        "determine whether a new filenode is needed"
+        fp1 = manifest1.get(filename, nullid)
+        fp2 = manifest2.get(filename, nullid)
+
+        if fp2 != nullid:
+            # is one parent an ancestor of the other?
+            fpa = filelog.ancestor(fp1, fp2)
+            if fpa == fp1:
+                fp1, fp2 = fp2, nullid
+            elif fpa == fp2:
+                fp2 = nullid
+
+            # is the file unmodified from the parent? report existing entry
+            if fp2 == nullid and text == filelog.read(fp1):
+                return (fp1, None, None)
+
+        return (None, fp1, fp2)
+
     def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None):
         orig_parent = self.dirstate.parents()[0] or nullid
         p1 = p1 or self.dirstate.parents()[0] or nullid
@@ -298,27 +317,10 @@ class localrepository(object):
                 r = self.file(f)
                 mfm[f] = tm
 
-                fp1 = m1.get(f, nullid)
-                fp2 = m2.get(f, nullid)
-
-                # is the same revision on two branches of a merge?
-                if fp2 == fp1:
-                    fp2 = nullid
-
-                if fp2 != nullid:
-                    # is one parent an ancestor of the other?
-                    fpa = r.ancestor(fp1, fp2)
-                    if fpa == fp1:
-                        fp1, fp2 = fp2, nullid
-                    elif fpa == fp2:
-                        fp2 = nullid
-
-                    # is the file unmodified from the parent?
-                    if t == r.read(fp1):
-                        # record the proper existing parent in manifest
-                        # no need to add a revision
-                        mm[f] = fp1
-                        continue
+                (entry, fp1, fp2) = self.checkfilemerge(f, t, r, m1, m2)
+                if entry:
+                    mm[f] = entry
+                    continue
 
                 mm[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
                 changed.append(f)
@@ -403,22 +405,9 @@ class localrepository(object):
                 self.ui.debug(_(" %s: copy %s:%s\n") % (f, cp, meta["copyrev"]))
                 fp1, fp2 = nullid, nullid
             else:
-                fp1 = m1.get(f, nullid)
-                fp2 = m2.get(f, nullid)
-
-            if fp2 != nullid:
-                # is one parent an ancestor of the other?
-                fpa = r.ancestor(fp1, fp2)
-                if fpa == fp1:
-                    fp1, fp2 = fp2, nullid
-                elif fpa == fp2:
-                    fp2 = nullid
-
-                # is the file unmodified from the parent?
-                if not meta and t == r.read(fp1) and fp2 == nullid:
-                    # record the proper existing parent in manifest
-                    # no need to add a revision
-                    new[f] = fp1
+                entry, fp1, fp2 = self.checkfilemerge(f, t, r, m1, m2)
+                if entry:
+                    new[f] = entry
                     continue
 
             new[f] = r.add(t, meta, tr, linkrev, fp1, fp2)
