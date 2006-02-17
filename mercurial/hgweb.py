@@ -962,7 +962,7 @@ class hgweb(object):
                 nodes = map(bin, req.form['roots'][0].split(" "))
 
             z = zlib.compressobj()
-            f = self.repo.changegroup(nodes)
+            f = self.repo.changegroup(nodes, 'serve')
             while 1:
                 chunk = f.read(4096)
                 if not chunk:

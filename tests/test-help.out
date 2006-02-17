@@ -171,10 +171,12 @@ diff repository (or selected files)
 
 options:
 
- -r --rev      revision
- -a --text     treat all files as text
- -I --include  include names matching the given patterns
- -X --exclude  exclude names matching the given patterns
+ -r --rev               revision
+ -a --text              treat all files as text
+ -I --include           include names matching the given patterns
+ -p --show-function     show which function each change is in
+ -w --ignore-all-space  ignore white space when comparing lines
+ -X --exclude           exclude names matching the given patterns
 hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
