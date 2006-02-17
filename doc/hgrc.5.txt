@@ -160,6 +160,10 @@ hooks::
     Run after a changeset has been pulled, pushed, or unbundled into
     the local repository.  The ID of the newly arrived changeset is in
     $HG_NODE.
+  outgoing;;
+    Run after sending changes from local repository to another.  ID of
+    first changeset sent is in $HG_NODE.  Source of operation is in
+    $HG_SOURCE; see "preoutgoing" hook for description.
   prechangegroup;;
     Run before a changegroup is added via push, pull or unbundle.
     Exit status 0 allows the changegroup to proceed.  Non-zero status
@@ -168,6 +172,15 @@ hooks::
     Run before starting a local commit.  Exit status 0 allows the
     commit to proceed.  Non-zero status will cause the commit to fail.
     Parent changeset IDs are in $HG_PARENT1 and $HG_PARENT2.
+  preoutgoing;;
+    Run before computing changes to send from the local repository to
+    another.  Non-zero status will cause failure.  This lets you
+    prevent pull over http or ssh.  Also prevents against local pull,
+    push (outbound) or bundle commands, but not effective, since you
+    can just copy files instead then.  Source of operation is in
+    $HG_SOURCE.  If "serve", operation is happening on behalf of
+    remote ssh or http repository.  If "push", "pull" or "bundle",
+    operation is happening on behalf of repository on same system.
   pretag;;
     Run before creating a tag.  Exit status 0 allows the tag to be
     created.  Non-zero status will cause the tag to fail.  ID of

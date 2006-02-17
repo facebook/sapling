@@ -74,3 +74,17 @@ echo '[hooks]' > .hg/hgrc
 echo 'pretxnchangegroup.forbid = echo pretxnchangegroup.forbid hook: tip=`hg -q tip`; exit 1' >> .hg/hgrc
 hg pull ../a
 hg -q tip
+
+# outgoing hooks can see env vars
+rm .hg/hgrc
+echo '[hooks]' > ../a/.hg/hgrc
+echo 'preoutgoing = echo preoutgoing hook: s=$HG_SOURCE' >> ../a/.hg/hgrc
+echo 'outgoing = echo outgoing hook: n=$HG_NODE s=$HG_SOURCE' >> ../a/.hg/hgrc
+hg pull ../a
+hg undo
+
+# preoutgoing hook can prevent outgoing changes
+echo 'preoutgoing.forbid = echo preoutgoing.forbid hook; exit 1' >> ../a/.hg/hgrc
+hg pull ../a
+
+exit 0

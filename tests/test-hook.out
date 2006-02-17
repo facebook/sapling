@@ -71,3 +71,18 @@ abort: pretxnchangegroup.forbid hook exited with status 1
 transaction abort!
 rollback completed
 3:07f3376c1e65
+preoutgoing hook: s=pull
+outgoing hook: n=3cd2c6a5a36c5908aad3bc0d717c29873a05dfc2 s=pull
+pulling from ../a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+rolling back last transaction
+preoutgoing hook: s=pull
+preoutgoing.forbid hook
+pulling from ../a
+searching for changes
+abort: preoutgoing.forbid hook exited with status 1

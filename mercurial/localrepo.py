@@ -957,9 +957,9 @@ class localrepository(object):
             return 1
 
         if heads is None:
-            cg = remote.changegroup(fetch)
+            cg = remote.changegroup(fetch, 'pull')
         else:
-            cg = remote.changegroupsubset(fetch, heads)
+            cg = remote.changegroupsubset(fetch, heads, 'pull')
         return self.addchangegroup(cg)
 
     def push(self, remote, force=False):
@@ -984,10 +984,10 @@ class localrepository(object):
                                  " use push -f to force)\n"))
                 return 1
 
-        cg = self.changegroup(update)
+        cg = self.changegroup(update, 'push')
         return remote.addchangegroup(cg)
 
-    def changegroupsubset(self, bases, heads):
+    def changegroupsubset(self, bases, heads, source):
         """This function generates a changegroup consisting of all the nodes
         that are descendents of any of the bases, and ancestors of any of
         the heads.
@@ -998,6 +998,8 @@ class localrepository(object):
 
         Another wrinkle is doing the reverse, figuring out which changeset in
         the changegroup a particular filenode or manifestnode belongs to."""
+
+        self.hook('preoutgoing', throw=True, source=source)
 
         # Set up some initial variables
         # Make it easy to refer to self.changelog
@@ -1251,14 +1253,19 @@ class localrepository(object):
             # Signal that no more groups are left.
             yield struct.pack(">l", 0)
 
+            self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
+
         return util.chunkbuffer(gengroup())
 
-    def changegroup(self, basenodes):
+    def changegroup(self, basenodes, source):
         """Generate a changegroup of all nodes that we have that a recipient
         doesn't.
 
         This is much easier than the previous function as we can assume that
         the recipient has any changenode we aren't sending them."""
+
+        self.hook('preoutgoing', throw=True, source=source)
+
         cl = self.changelog
         nodes = cl.nodesbetween(basenodes, None)[0]
         revset = dict.fromkeys([cl.rev(n) for n in nodes])
@@ -1310,6 +1317,7 @@ class localrepository(object):
                         yield chnk
 
             yield struct.pack(">l", 0)
+            self.hook('outgoing', node=hex(nodes[0]), source=source)
 
         return util.chunkbuffer(gengroup())
 

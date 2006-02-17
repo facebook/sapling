@@ -622,7 +622,7 @@ def bundle(ui, repo, fname, dest="default-push", **opts):
     dest = ui.expandpath(dest, repo.root)
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other)
-    cg = repo.changegroup(o)
+    cg = repo.changegroup(o, 'bundle')
 
     try:
         f.write("HG10")
@@ -1999,7 +1999,7 @@ def serve(ui, repo, **opts):
                 arg, roots = getarg()
                 nodes = map(bin, roots.split(" "))
 
-                cg = repo.changegroup(nodes)
+                cg = repo.changegroup(nodes, 'serve')
                 while 1:
                     d = cg.read(4096)
                     if not d:
