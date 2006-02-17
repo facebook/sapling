@@ -2548,17 +2548,20 @@ norepo = ("clone init version help debugancestor debugconfig debugdata"
 def find(cmd):
     """Return (aliases, command table entry) for command string."""
     choice = None
+    count = 0
     for e in table.keys():
         aliases = e.lstrip("^").split("|")
         if cmd in aliases:
             return aliases, table[e]
         for a in aliases:
             if a.startswith(cmd):
-                if choice:
-                    raise AmbiguousCommand(cmd)
-                else:
-                    choice = aliases, table[e]
-                    break
+                count += 1
+                choice = aliases, table[e]
+                break
+
+    if count > 1:
+        raise AmbiguousCommand(cmd)
+
     if choice:
         return choice
 
