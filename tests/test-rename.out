@@ -246,3 +246,9 @@ R d1/a
 R d1/b
 R d1/ba
 R d1/d11/a1
+# transitive rename
+A d1/bc
+R d1/b
+# transitive rename --after
+A d1/bc
+R d1/b

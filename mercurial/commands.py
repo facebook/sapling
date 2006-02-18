@@ -818,14 +818,19 @@ def docopy(ui, repo, pats, opts):
         reasons = {'?': _('is not managed'),
                    'a': _('has been marked for add'),
                    'r': _('has been marked for remove')}
-        reason = reasons.get(repo.dirstate.state(abs))
+        state = repo.dirstate.state(abs)
+        reason = reasons.get(state)
         if reason:
+            if state == 'a':
+                origsrc = repo.dirstate.copied(abs)
+                if origsrc is not None:
+                    return origsrc
             if exact:
                 ui.warn(_('%s: not copying - file %s\n') % (rel, reason))
         else:
-            return True
+            return abs
 
-    def copy(abssrc, relsrc, target, exact):
+    def copy(origsrc, abssrc, relsrc, target, exact):
         abstarget = util.canonpath(repo.root, cwd, target)
         reltarget = util.pathto(cwd, abstarget)
         prevsrc = targets.get(abstarget)
@@ -864,7 +869,7 @@ def docopy(ui, repo, pats, opts):
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
-        repo.copy(abssrc, abstarget)
+        repo.copy(origsrc, abstarget)
         copied.append((abssrc, relsrc, exact))
 
     def targetpathfn(pat, dest, srcs):
@@ -938,8 +943,9 @@ def docopy(ui, repo, pats, opts):
     for pat in pats:
         srcs = []
         for tag, abssrc, relsrc, exact in walk(repo, [pat], opts):
-            if okaytocopy(abssrc, relsrc, exact):
-                srcs.append((abssrc, relsrc, exact))
+            origsrc = okaytocopy(abssrc, relsrc, exact)
+            if origsrc:
+                srcs.append((origsrc, abssrc, relsrc, exact))
         if not srcs:
             continue
         copylist.append((tfn(pat, dest, srcs), srcs))
@@ -947,8 +953,8 @@ def docopy(ui, repo, pats, opts):
         raise util.Abort(_('no files to copy'))
 
     for targetpath, srcs in copylist:
-        for abssrc, relsrc, exact in srcs:
-            copy(abssrc, relsrc, targetpath(abssrc), exact)
+        for origsrc, abssrc, relsrc, exact in srcs:
+            copy(origsrc, abssrc, relsrc, targetpath(abssrc), exact)
 
     if errors:
         ui.warn(_('(consider using --after)\n'))

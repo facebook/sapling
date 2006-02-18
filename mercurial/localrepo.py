@@ -597,7 +597,6 @@ class localrepository(object):
             if os.path.exists(p):
                 self.ui.warn(_("%s still exists!\n") % f)
             elif self.dirstate.state(f) == 'a':
-                self.ui.warn(_("%s never committed!\n") % f)
                 self.dirstate.forget([f])
             elif f not in self.dirstate:
                 self.ui.warn(_("%s not tracked!\n") % f)
