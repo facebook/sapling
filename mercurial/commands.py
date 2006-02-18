@@ -2022,6 +2022,16 @@ def serve(ui, repo, **opts):
         if opts[o]:
             ui.setconfig("web", o, opts[o])
 
+    if opts['daemon'] and not opts['daemon_pipefd']:
+        rfd, wfd = os.pipe()
+        args = sys.argv[:]
+        args.append('--daemon-pipefd=' + str(wfd))
+        pid = os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
+                         args[0], args)
+        os.close(wfd)
+        os.read(rfd, 1)
+        os._exit(0)
+
     try:
         httpd = hgweb.create_server(repo)
     except socket.error, inst:
@@ -2040,6 +2050,24 @@ def serve(ui, repo, **opts):
             ui.status(_('listening at http://%s:%d/\n') % (addr, port))
         else:
             ui.status(_('listening at http://%s/\n') % addr)
+
+    if opts['pid_file']:
+        fp = open(opts['pid_file'], 'w')
+        fp.write(str(os.getpid()))
+        fp.close()
+
+    if opts['daemon_pipefd']:
+        wfd = int(opts['daemon_pipefd'])
+        os.write(wfd, 'y')
+        os.close(wfd)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        fd = os.open(util.nulldev, os.O_RDWR)
+        if fd != 0: os.dup2(fd, 0)
+        if fd != 1: os.dup2(fd, 1)
+        if fd != 2: os.dup2(fd, 2)
+        if fd not in (0, 1, 2): os.close(fd)
+
     httpd.serve_forever()
 
 def status(ui, repo, *pats, **opts):
@@ -2476,11 +2504,14 @@ table = {
     "^serve":
         (serve,
          [('A', 'accesslog', '', _('name of access log file to write to')),
+          ('d', 'daemon', None, _('run server in background')),
+          ('', 'daemon-pipefd', '', ''),
           ('E', 'errorlog', '', _('name of error log file to write to')),
           ('p', 'port', 0, _('port to use (default: 8000)')),
           ('a', 'address', '', _('address to use')),
           ('n', 'name', '',
            _('name to show in web pages (default: working dir)')),
+          ('', 'pid-file', '', _('name of file to write process ID to')),
           ('', 'stdio', None, _('for remote clients')),
           ('t', 'templates', '', _('web templates to use')),
           ('', 'style', '', _('template style to use')),

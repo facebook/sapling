@@ -543,10 +543,12 @@ serve [options]::
 
     options:
     -A, --accesslog <file>   name of access log file to write to
+    -d, --daemon             run server in background, as a daemon
     -E, --errorlog <file>    name of error log file to write to
     -a, --address <addr>     address to use
     -p, --port <n>           port to use (default: 8000)
     -n, --name <name>        name to show in web pages (default: working dir)
+    --pid-file <file>        write server process ID to given file
     -t, --templatedir <path> web templates to use
     -6, --ipv6               use IPv6 in addition to IPv4
 
