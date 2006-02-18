@@ -1,0 +1,59 @@
+changeset:   4:2ee31f665a86
+tag:         tip
+parent:      1:96155394af80
+parent:      2:92cc4c306b19
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     merge a/b -> blah
+
+changeset:   3:e16a66a37edd
+parent:      2:92cc4c306b19
+parent:      1:96155394af80
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     merge b/a -> blah
+
+changeset:   2:92cc4c306b19
+parent:      0:5e0375449e74
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     branch b
+
+changeset:   1:96155394af80
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     branch a
+
+changeset:   0:5e0375449e74
+user:        test
+date:        Thu Jan  1 00:00:00 1970 +0000
+summary:     test
+
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0      60      0       0 5e0375449e74 000000000000 000000000000
+     1        60      62      1       1 96155394af80 5e0375449e74 000000000000
+     2       122      62      2       2 92cc4c306b19 5e0375449e74 000000000000
+     3       184      69      3       3 e16a66a37edd 92cc4c306b19 96155394af80
+     4       253      29      3       4 2ee31f665a86 96155394af80 92cc4c306b19
+
+1
+79d7492df40aa0fa093ec4209be78043c181f094 644 a
+2ed2a3912a0b24502043eae84ee4b279c18b90dd 644 b
+2
+2ed2a3912a0b24502043eae84ee4b279c18b90dd 644 a
+79d7492df40aa0fa093ec4209be78043c181f094 644 b
+3
+79d7492df40aa0fa093ec4209be78043c181f094 644 a
+79d7492df40aa0fa093ec4209be78043c181f094 644 b
+4
+79d7492df40aa0fa093ec4209be78043c181f094 644 a
+79d7492df40aa0fa093ec4209be78043c181f094 644 b
+
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       5      0       0 2ed2a3912a0b 000000000000 000000000000
+     1         5       6      1       1 79d7492df40a 2ed2a3912a0b 000000000000
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+2 files, 5 changesets, 4 total revisions
