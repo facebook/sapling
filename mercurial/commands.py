@@ -2022,10 +2022,10 @@ def serve(ui, repo, **opts):
         if opts[o]:
             ui.setconfig("web", o, opts[o])
 
-    if opts['daemon'] and not opts['daemon_pipefd']:
+    if opts['daemon'] and not opts['daemon_pipefds']:
         rfd, wfd = os.pipe()
         args = sys.argv[:]
-        args.append('--daemon-pipefd=' + str(wfd))
+        args.append('--daemon-pipefds=%d,%d' % (rfd, wfd))
         pid = os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
                          args[0], args)
         os.close(wfd)
@@ -2056,8 +2056,9 @@ def serve(ui, repo, **opts):
         fp.write(str(os.getpid()))
         fp.close()
 
-    if opts['daemon_pipefd']:
-        wfd = int(opts['daemon_pipefd'])
+    if opts['daemon_pipefds']:
+        rfd, wfd = [int(x) for x in opts['daemon_pipefds'].split(',')]
+        os.close(rfd)
         os.write(wfd, 'y')
         os.close(wfd)
         sys.stdout.flush()
@@ -2505,7 +2506,7 @@ table = {
         (serve,
          [('A', 'accesslog', '', _('name of access log file to write to')),
           ('d', 'daemon', None, _('run server in background')),
-          ('', 'daemon-pipefd', '', ''),
+          ('', 'daemon-pipefds', '', ''),
           ('E', 'errorlog', '', _('name of error log file to write to')),
           ('p', 'port', 0, _('port to use (default: 8000)')),
           ('a', 'address', '', _('address to use')),
