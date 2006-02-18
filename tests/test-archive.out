@@ -12,4 +12,3 @@ Archive:  archive.zip
     testing: test-archive-TIP/baz/bletch   OK
     testing: test-archive-TIP/foo   OK
 No errors detected in compressed data of archive.zip.
-killed!
