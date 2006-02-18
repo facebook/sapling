@@ -2506,7 +2506,7 @@ table = {
         (serve,
          [('A', 'accesslog', '', _('name of access log file to write to')),
           ('d', 'daemon', None, _('run server in background')),
-          ('', 'daemon-pipefds', '', ''),
+          ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
           ('E', 'errorlog', '', _('name of error log file to write to')),
           ('p', 'port', 0, _('port to use (default: 8000)')),
           ('a', 'address', '', _('address to use')),
