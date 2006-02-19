@@ -7,6 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, cgi, sys, urllib
+import mimetypes
 from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
 demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer util")
@@ -843,6 +844,7 @@ class hgweb(object):
                 'ca': [('cmd', ['archive']), ('node', None)],
                 'tags': [('cmd', ['tags'])],
                 'tip': [('cmd', ['changeset']), ('node', ['tip'])],
+                'static': [('cmd', ['static']), ('file', None)]
             }
 
             for k in shortcuts.iterkeys():
@@ -858,6 +860,7 @@ class hgweb(object):
         expand_form(req.form)
 
         t = self.repo.ui.config("web", "templates", templatepath())
+        static = self.repo.ui.config("web", "static", os.path.join(t,"static"))
         m = os.path.join(t, "map")
         style = self.repo.ui.config("web", "style", "")
         if req.form.has_key('style'):
@@ -980,6 +983,38 @@ class hgweb(object):
                 return
 
             req.write(self.t("error"))
+
+        elif req.form['cmd'][0] == 'static':
+            fname = req.form['file'][0]
+
+            fname = os.path.realpath(os.path.join(static, fname))
+
+            try:
+                # the static dir should be a substring in the real
+                # file path, if it is not, we have something strange
+                # going on => security breach attempt?
+                #
+                # This will either:
+                #   1) find the `static' path at index 0  =  success
+                #   2) find the `static' path at other index  =  error
+                #   3) not find the `static' path  =  ValueError generated
+                if fname.index(static) != 0:
+                    # generate ValueError manually
+                    raise ValueError()
+
+                os.stat(fname)
+
+		ct = mimetypes.guess_type(fname)[0]
+		if ct == None:
+			ct = "text/plain"
+
+                req.write("Content-type: " + ct + "\n\n" + file(fname).read())
+            except ValueError:
+                # security breach attempt
+                req.write(self.t("error"))
+            except OSError, e:
+                if e.errno == errno.ENOENT:
+                    req.write(self.t("error"))
 
         else:
             req.write(self.t("error"))
