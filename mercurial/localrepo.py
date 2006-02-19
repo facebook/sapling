@@ -254,25 +254,25 @@ class localrepository(object):
         else:
             self.ui.warn(_("no undo information available\n"))
 
-    def lock(self, wait=1):
+    def do_lock(self, lockname, wait, releasefn=None, acquirefn=None):
         try:
-            return lock.lock(self.join("lock"), 0)
-        except lock.LockHeld, inst:
-            if wait:
-                self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
-                return lock.lock(self.join("lock"), wait)
-            raise inst
-
-    def wlock(self, wait=1):
-        try:
-            wlock = lock.lock(self.join("wlock"), 0, self.dirstate.write)
+            l = lock.lock(self.join(lockname), 0, releasefn)
         except lock.LockHeld, inst:
             if not wait:
                 raise inst
             self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
-            wlock = lock.lock(self.join("wlock"), wait, self.dirstate.write)
-        self.dirstate.read()
-        return wlock
+            l = lock.lock(self.join(lockname), wait, releasefn)
+        if acquirefn:
+            acquirefn()
+        return l
+
+    def lock(self, wait=1):
+        return self.do_lock("lock", wait)
+
+    def wlock(self, wait=1):
+        return self.do_lock("wlock", wait,
+                            self.dirstate.write,
+                            self.dirstate.read)
 
     def checkfilemerge(self, filename, text, filelog, manifest1, manifest2):
         "determine whether a new filenode is needed"
