@@ -624,12 +624,10 @@ class revlog(object):
             # we store negative distances because heap returns smallest member
             h = [(-dist[node], node)]
             seen = {}
-            earliest = self.count()
             while h:
                 d, n = heapq.heappop(h)
                 if n not in seen:
                     seen[n] = 1
-                    r = self.rev(n)
                     yield (-d, n)
                     for p in self.parents(n):
                         heapq.heappush(h, (-dist[p], p))
@@ -690,11 +688,6 @@ class revlog(object):
         p = self.parents(self.node(revs[0]))[0]
         revs.insert(0, self.rev(p))
 
-        # helper to reconstruct intermediate versions
-        def construct(text, base, rev):
-            bins = [self.chunk(r) for r in xrange(base + 1, rev + 1)]
-            return mdiff.patches(text, bins)
-
         # build deltas
         for d in xrange(0, len(revs) - 1):
             a, b = revs[d], revs[d + 1]
@@ -738,10 +731,10 @@ class revlog(object):
         base = prev = -1
         start = end = measure = 0
         if r:
-            start = self.start(self.base(t))
-            end = self.end(t)
-            measure = self.length(self.base(t))
             base = self.base(t)
+            start = self.start(base)
+            end = self.end(t)
+            measure = self.length(base)
             prev = self.tip()
 
         transaction.add(self.datafile, end)
@@ -793,14 +786,15 @@ class revlog(object):
                     raise RevlogError(_("consistency error adding group"))
                 measure = len(text)
             else:
-                e = (end, len(cdelta), self.base(t), link, p1, p2, node)
+                e = (end, len(cdelta), base, link, p1, p2, node)
                 self.index.append(e)
                 self.nodemap[node] = r
                 dfh.write(cdelta)
                 ifh.write(struct.pack(indexformat, *e))
 
             t, r, chain, prev = r, r + 1, node, node
-            start = self.start(self.base(t))
+            base = self.base(t)
+            start = self.start(base)
             end = self.end(t)
 
         dfh.close()
