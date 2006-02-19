@@ -115,8 +115,8 @@ def walkchangerevs(ui, repo, pats, opts):
                     yield rev
 
         minrev, maxrev = min(revs), max(revs)
-        for file in files:
-            filelog = repo.file(file)
+        for file_ in files:
+            filelog = repo.file(file_)
             # A zero count may be a directory or deleted file, so
             # try to find matching entries on the slow path.
             if filelog.count() == 0:
@@ -127,7 +127,7 @@ def walkchangerevs(ui, repo, pats, opts):
                     if rev < minrev:
                         break
                     fncache.setdefault(rev, [])
-                    fncache[rev].append(file)
+                    fncache[rev].append(file_)
                     wanted[rev] = 1
     if slowpath:
         # The slow path checks files modified in every changeset.
@@ -447,7 +447,6 @@ def help_(ui, cmd=None, with_version=False):
             f = f.lstrip("^")
             if not ui.debugflag and f.startswith("debug"):
                 continue
-            d = ""
             doc = e[0].__doc__
             if not doc:
                 doc = _("(No help text available)")
@@ -1290,6 +1289,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             s = linestate(line, lnum, cstart, cend)
             m[s] = s
 
+    # FIXME: prev isn't used, why ?
     prev = {}
     ucache = {}
     def display(fn, rev, states, prevstates):

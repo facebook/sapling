@@ -231,7 +231,7 @@ class localrepository(object):
                                        self.join("journal"), after)
 
     def recover(self):
-        lock = self.lock()
+        l = self.lock()
         if os.path.exists(self.join("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
             transaction.rollback(self.opener, self.join("journal"))
@@ -245,7 +245,7 @@ class localrepository(object):
     def undo(self, wlock=None):
         if not wlock:
             wlock = self.wlock()
-        lock = self.lock()
+        l = self.lock()
         if os.path.exists(self.join("undo")):
             self.ui.status(_("rolling back last transaction\n"))
             transaction.rollback(self.opener, self.join("undo"))
@@ -311,7 +311,7 @@ class localrepository(object):
 
         if not wlock:
             wlock = self.wlock()
-        lock = self.lock()
+        l = self.lock()
         tr = self.transaction()
         mm = m1.copy()
         mfm = mf1.copy()
@@ -388,7 +388,7 @@ class localrepository(object):
 
         if not wlock:
             wlock = self.wlock()
-        lock = self.lock()
+        l = self.lock()
         tr = self.transaction()
 
         # check in files
@@ -931,7 +931,7 @@ class localrepository(object):
         return subset
 
     def pull(self, remote, heads=None):
-        lock = self.lock()
+        l = self.lock()
 
         # if we have an empty repo, fetch everything
         if self.changelog.tip() == nullid:
@@ -951,7 +951,7 @@ class localrepository(object):
         return self.addchangegroup(cg)
 
     def push(self, remote, force=False):
-        lock = remote.lock()
+        l = remote.lock()
 
         base = {}
         heads = remote.heads()
