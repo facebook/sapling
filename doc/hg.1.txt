@@ -223,9 +223,11 @@ diff [-a] [-r revision] [-r revision] [files ...]::
     probably with undesirable results.
 
     options:
-    -a, --text           treat all files as text
-    -I, --include <pat>  include names matching the given patterns
-    -X, --exclude <pat>  exclude names matching the given patterns
+    -a, --text              treat all files as text
+    -I, --include <pat>     include names matching the given patterns
+    -p, --show-function     show which function each change is in
+    -X, --exclude <pat>     exclude names matching the given patterns
+    -w, --ignore-all-space  ignore white space when comparing lines
 
 export [-o filespec] [revision] ...::
     Print the changeset header and diffs for one or more revisions.
@@ -600,8 +602,11 @@ tags::
 
     This lists both regular and local tags.
 
-tip::
+tip [-p]::
     Show the tip revision.
+
+    options:
+    -p, --patch      show patch
 
 unbundle <file>::
     (EXPERIMENTAL)

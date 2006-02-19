@@ -48,30 +48,36 @@ class localrepository(object):
         except IOError:
             pass
 
-    def hook(self, name, **args):
+    def hook(self, name, throw=False, **args):
         def runhook(name, cmd):
             self.ui.note(_("running hook %s: %s\n") % (name, cmd))
             old = {}
             for k, v in args.items():
                 k = k.upper()
+                old['HG_' + k] = os.environ.get(k, None)
                 old[k] = os.environ.get(k, None)
-                os.environ[k] = v
+                os.environ['HG_' + k] = str(v)
+                os.environ[k] = str(v)
 
-            # Hooks run in the repository root
-            olddir = os.getcwd()
-            os.chdir(self.root)
-            r = os.system(cmd)
-            os.chdir(olddir)
+            try:
+                # Hooks run in the repository root
+                olddir = os.getcwd()
+                os.chdir(self.root)
+                r = os.system(cmd)
+            finally:
+                for k, v in old.items():
+                    if v is not None:
+                        os.environ[k] = v
+                    else:
+                        del os.environ[k]
 
-            for k, v in old.items():
-                if v != None:
-                    os.environ[k] = v
-                else:
-                    del os.environ[k]
+                os.chdir(olddir)
 
             if r:
-                self.ui.warn(_("abort: %s hook failed with status %d!\n") %
-                             (name, r))
+                desc, r = util.explain_exit(r)
+                if throw:
+                    raise util.Abort(_('%s hook %s') % (name, desc))
+                self.ui.warn(_('error: %s hook %s\n') % (name, desc))
                 return False
             return True
 
@@ -268,6 +274,25 @@ class localrepository(object):
         self.dirstate.read()
         return wlock
 
+    def checkfilemerge(self, filename, text, filelog, manifest1, manifest2):
+        "determine whether a new filenode is needed"
+        fp1 = manifest1.get(filename, nullid)
+        fp2 = manifest2.get(filename, nullid)
+
+        if fp2 != nullid:
+            # is one parent an ancestor of the other?
+            fpa = filelog.ancestor(fp1, fp2)
+            if fpa == fp1:
+                fp1, fp2 = fp2, nullid
+            elif fpa == fp2:
+                fp2 = nullid
+
+            # is the file unmodified from the parent? report existing entry
+            if fp2 == nullid and text == filelog.read(fp1):
+                return (fp1, None, None)
+
+        return (None, fp1, fp2)
+
     def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None):
         orig_parent = self.dirstate.parents()[0] or nullid
         p1 = p1 or self.dirstate.parents()[0] or nullid
@@ -298,27 +323,10 @@ class localrepository(object):
                 r = self.file(f)
                 mfm[f] = tm
 
-                fp1 = m1.get(f, nullid)
-                fp2 = m2.get(f, nullid)
-
-                # is the same revision on two branches of a merge?
-                if fp2 == fp1:
-                    fp2 = nullid
-
-                if fp2 != nullid:
-                    # is one parent an ancestor of the other?
-                    fpa = r.ancestor(fp1, fp2)
-                    if fpa == fp1:
-                        fp1, fp2 = fp2, nullid
-                    elif fpa == fp2:
-                        fp2 = nullid
-
-                    # is the file unmodified from the parent?
-                    if t == r.read(fp1):
-                        # record the proper existing parent in manifest
-                        # no need to add a revision
-                        mm[f] = fp1
-                        continue
+                (entry, fp1, fp2) = self.checkfilemerge(f, t, r, m1, m2)
+                if entry:
+                    mm[f] = entry
+                    continue
 
                 mm[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
                 changed.append(f)
@@ -372,8 +380,11 @@ class localrepository(object):
             self.ui.status(_("nothing changed\n"))
             return None
 
-        if not self.hook("precommit"):
-            return None
+        xp1 = hex(p1)
+        if p2 == nullid: xp2 = ''
+        else: xp2 = hex(p2)
+
+        self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
 
         if not wlock:
             wlock = self.wlock()
@@ -403,22 +414,9 @@ class localrepository(object):
                 self.ui.debug(_(" %s: copy %s:%s\n") % (f, cp, meta["copyrev"]))
                 fp1, fp2 = nullid, nullid
             else:
-                fp1 = m1.get(f, nullid)
-                fp2 = m2.get(f, nullid)
-
-            if fp2 != nullid:
-                # is one parent an ancestor of the other?
-                fpa = r.ancestor(fp1, fp2)
-                if fpa == fp1:
-                    fp1, fp2 = fp2, nullid
-                elif fpa == fp2:
-                    fp2 = nullid
-
-                # is the file unmodified from the parent?
-                if not meta and t == r.read(fp1) and fp2 == nullid:
-                    # record the proper existing parent in manifest
-                    # no need to add a revision
-                    new[f] = fp1
+                entry, fp1, fp2 = self.checkfilemerge(f, t, r, m1, m2)
+                if entry:
+                    new[f] = entry
                     continue
 
             new[f] = r.add(t, meta, tr, linkrev, fp1, fp2)
@@ -459,14 +457,15 @@ class localrepository(object):
 
         user = user or self.ui.username()
         n = self.changelog.add(mn, changed + remove, text, tr, p1, p2, user, date)
+        self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
+                  parent2=xp2)
         tr.close()
 
         self.dirstate.setparents(n)
         self.dirstate.update(new, "n")
         self.dirstate.forget(remove)
 
-        if not self.hook("commit", node=hex(n)):
-            return None
+        self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
         return n
 
     def walk(self, node=None, files=[], match=util.always):
@@ -947,9 +946,9 @@ class localrepository(object):
             return 1
 
         if heads is None:
-            cg = remote.changegroup(fetch)
+            cg = remote.changegroup(fetch, 'pull')
         else:
-            cg = remote.changegroupsubset(fetch, heads)
+            cg = remote.changegroupsubset(fetch, heads, 'pull')
         return self.addchangegroup(cg)
 
     def push(self, remote, force=False):
@@ -974,10 +973,10 @@ class localrepository(object):
                                  " use push -f to force)\n"))
                 return 1
 
-        cg = self.changegroup(update)
+        cg = self.changegroup(update, 'push')
         return remote.addchangegroup(cg)
 
-    def changegroupsubset(self, bases, heads):
+    def changegroupsubset(self, bases, heads, source):
         """This function generates a changegroup consisting of all the nodes
         that are descendents of any of the bases, and ancestors of any of
         the heads.
@@ -988,6 +987,8 @@ class localrepository(object):
 
         Another wrinkle is doing the reverse, figuring out which changeset in
         the changegroup a particular filenode or manifestnode belongs to."""
+
+        self.hook('preoutgoing', throw=True, source=source)
 
         # Set up some initial variables
         # Make it easy to refer to self.changelog
@@ -1241,14 +1242,19 @@ class localrepository(object):
             # Signal that no more groups are left.
             yield struct.pack(">l", 0)
 
+            self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
+
         return util.chunkbuffer(gengroup())
 
-    def changegroup(self, basenodes):
+    def changegroup(self, basenodes, source):
         """Generate a changegroup of all nodes that we have that a recipient
         doesn't.
 
         This is much easier than the previous function as we can assume that
         the recipient has any changenode we aren't sending them."""
+
+        self.hook('preoutgoing', throw=True, source=source)
+
         cl = self.changelog
         nodes = cl.nodesbetween(basenodes, None)[0]
         revset = dict.fromkeys([cl.rev(n) for n in nodes])
@@ -1300,6 +1306,7 @@ class localrepository(object):
                         yield chnk
 
             yield struct.pack(">l", 0)
+            self.hook('outgoing', node=hex(nodes[0]), source=source)
 
         return util.chunkbuffer(gengroup())
 
@@ -1335,6 +1342,9 @@ class localrepository(object):
 
         if not source:
             return
+
+        self.hook('prechangegroup', throw=True)
+
         changesets = files = revisions = 0
 
         tr = self.transaction()
@@ -1377,18 +1387,16 @@ class localrepository(object):
                          " with %d changes to %d files%s\n")
                          % (changesets, revisions, files, heads))
 
+        self.hook('pretxnchangegroup', throw=True,
+                  node=hex(self.changelog.node(cor+1)))
+
         tr.close()
 
         if changesets > 0:
-            if not self.hook("changegroup",
-                             node=hex(self.changelog.node(cor+1))):
-                self.ui.warn(_("abort: changegroup hook returned failure!\n"))
-                return 1
+            self.hook("changegroup", node=hex(self.changelog.node(cor+1)))
 
             for i in range(cor + 1, cnr + 1):
                 self.hook("incoming", node=hex(self.changelog.node(i)))
-
-        return
 
     def update(self, node, allow=False, force=False, choose=None,
                moddirstate=True, forcemerge=False, wlock=None):

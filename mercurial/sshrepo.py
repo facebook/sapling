@@ -110,7 +110,7 @@ class sshrepository(remoterepository):
         except:
             raise hg.RepoError(_("unexpected response '%s'") % (d[:400] + "..."))
 
-    def changegroup(self, nodes):
+    def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
         f = self.do_cmd("changegroup", roots=n)
         return self.pipei
