@@ -376,7 +376,11 @@ log [-r revision ...] [-p] [files]::
     options:
     -I, --include <pat>   include names matching the given patterns
     -X, --exclude <pat>   exclude names matching the given patterns
+    -b, --branch          show branches
+    -k, --keyword <str>   search for keywords
     -l, --limit <num>     print no more than this many changes
+    -M, --no-merges       do not show merges
+    -m, --only-merges     only show merges
     -r, --rev <A>         show the specified revision or range
     -p, --patch           show patch
 
