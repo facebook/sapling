@@ -197,6 +197,19 @@ class dirstate(object):
 
     def clear(self):
         self.map = {}
+        self.copies = {}
+        self.markdirty()
+
+    def rebuild(self, parent, files):
+        self.clear()
+        umask = os.umask(0)
+        os.umask(umask)
+        for f, mode in files:
+            if mode:
+                self.map[f] = ('n', ~umask, -1, 0)
+            else:
+                self.map[f] = ('n', ~umask & 0666, -1, 0)
+        self.pl = (parent, nullid)
         self.markdirty()
 
     def write(self):
@@ -406,7 +419,8 @@ class dirstate(object):
             if type_ == 'n':
                 if not st:
                     st = os.stat(fn)
-                if size != st.st_size or (mode ^ st.st_mode) & 0100:
+                if size >= 0 and (size != st.st_size
+                                  or (mode ^ st.st_mode) & 0100):
                     modified.append(fn)
                 elif time != st.st_mtime:
                     lookup.append(fn)

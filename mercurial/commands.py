@@ -985,6 +985,18 @@ def debugancestor(ui, index, rev1, rev2):
     a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
+def debugrebuildstate(ui, repo, rev=None):
+    """rebuild the dirstate as it would look like for the given revision"""
+    if not rev:
+        rev = repo.changelog.tip()
+    else:
+        rev = repo.lookup(rev)
+    change = repo.changelog.read(rev)
+    n = change[0]
+    files = repo.manifest.readflags(n)
+    wlock = self.repo.wlock()
+    repo.dirstate.rebuild(rev, files.iteritems())
+
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
     parent1, parent2 = repo.dirstate.parents()
@@ -2359,6 +2371,10 @@ table = {
            _('forcibly copy over an existing managed file'))],
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
+    "debugrebuildstate":
+        (debugrebuildstate,
+         [('r', 'rev', "", _("revision to rebuild to"))],
+         _('debugrebuildstate [-r REV] [REV]')),
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
     "debugconfig": (debugconfig, [], _('debugconfig')),
     "debugsetparents": (debugsetparents, [], _('debugsetparents REV1 [REV2]')),
