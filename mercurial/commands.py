@@ -994,7 +994,7 @@ def debugrebuildstate(ui, repo, rev=None):
     change = repo.changelog.read(rev)
     n = change[0]
     files = repo.manifest.readflags(n)
-    wlock = self.repo.wlock()
+    wlock = repo.wlock()
     repo.dirstate.rebuild(rev, files.iteritems())
 
 def debugcheckstate(ui, repo):
