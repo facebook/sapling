@@ -508,7 +508,7 @@ class localrepository(object):
             if not wlock:
                 try:
                     wlock = self.wlock(wait=0)
-                except lock.LockHeld:
+                except lock.LockException:
                     wlock = None
             lookup, modified, added, removed, deleted, unknown = (
                 self.dirstate.changes(files, match))

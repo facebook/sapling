@@ -724,8 +724,8 @@ def clone(ui, source, dest=None, **opts):
             # can end up with extra data in the cloned revlogs that's
             # not pointed to by changesets, thus causing verify to
             # fail
-            l1 = lock.lock(os.path.join(source, ".hg", "lock"))
-        except OSError:
+            l1 = other.lock()
+        except lock.LockException:
             copy = False
 
     if copy:
