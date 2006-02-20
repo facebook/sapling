@@ -376,6 +376,7 @@ log [-r revision ...] [-p] [files]::
     options:
     -I, --include <pat>   include names matching the given patterns
     -X, --exclude <pat>   exclude names matching the given patterns
+    -l, --limit <num>     print no more than this many changes
     -r, --rev <A>         show the specified revision or range
     -p, --patch           show patch
 

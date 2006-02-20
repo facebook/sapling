@@ -1599,7 +1599,19 @@ def log(ui, repo, *pats, **opts):
                 self.write(*args)
         def __getattr__(self, key):
             return getattr(self.ui, key)
+
     changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
+
+    if opts['limit']:
+        try:
+            limit = int(opts['limit'])
+        except ValueError:
+            raise util.Abort(_('limit must be a positive integer'))
+        if limit <= 0: raise util.Abort(_('limit must be positive'))
+    else:
+        limit = sys.maxint
+    count = 0
+
     for st, rev, fns in changeiter:
         if st == 'window':
             du = dui(ui)
@@ -1635,6 +1647,8 @@ def log(ui, repo, *pats, **opts):
                 dodiff(du, du, repo, prev, changenode, match=matchfn)
                 du.write("\n\n")
         elif st == 'iter':
+            if count == limit: break
+            count += 1
             for args in du.hunk[rev]:
                 ui.write(*args)
 
@@ -2446,6 +2460,7 @@ table = {
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
           ('b', 'branch', None, _('show branches')),
           ('k', 'keyword', [], _('search for a keyword')),
+          ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
           ('M', 'no-merges', None, _('do not show merges')),
           ('m', 'only-merges', None, _('show only merges')),
