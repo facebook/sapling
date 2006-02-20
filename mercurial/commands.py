@@ -115,8 +115,8 @@ def walkchangerevs(ui, repo, pats, opts):
                     yield rev
 
         minrev, maxrev = min(revs), max(revs)
-        for file in files:
-            filelog = repo.file(file)
+        for file_ in files:
+            filelog = repo.file(file_)
             # A zero count may be a directory or deleted file, so
             # try to find matching entries on the slow path.
             if filelog.count() == 0:
@@ -127,7 +127,7 @@ def walkchangerevs(ui, repo, pats, opts):
                     if rev < minrev:
                         break
                     fncache.setdefault(rev, [])
-                    fncache[rev].append(file)
+                    fncache[rev].append(file_)
                     wanted[rev] = 1
     if slowpath:
         # The slow path checks files modified in every changeset.
@@ -447,7 +447,6 @@ def help_(ui, cmd=None, with_version=False):
             f = f.lstrip("^")
             if not ui.debugflag and f.startswith("debug"):
                 continue
-            d = ""
             doc = e[0].__doc__
             if not doc:
                 doc = _("(No help text available)")
@@ -725,8 +724,8 @@ def clone(ui, source, dest=None, **opts):
             # can end up with extra data in the cloned revlogs that's
             # not pointed to by changesets, thus causing verify to
             # fail
-            l1 = lock.lock(os.path.join(source, ".hg", "lock"))
-        except OSError:
+            l1 = other.lock()
+        except lock.LockException:
             copy = False
 
     if copy:
@@ -985,6 +984,18 @@ def debugancestor(ui, index, rev1, rev2):
     r = revlog.revlog(util.opener(os.getcwd()), index, "")
     a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
+
+def debugrebuildstate(ui, repo, rev=None):
+    """rebuild the dirstate as it would look like for the given revision"""
+    if not rev:
+        rev = repo.changelog.tip()
+    else:
+        rev = repo.lookup(rev)
+    change = repo.changelog.read(rev)
+    n = change[0]
+    files = repo.manifest.readflags(n)
+    wlock = self.repo.wlock()
+    repo.dirstate.rebuild(rev, files.iteritems())
 
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
@@ -1290,6 +1301,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             s = linestate(line, lnum, cstart, cend)
             m[s] = s
 
+    # FIXME: prev isn't used, why ?
     prev = {}
     ucache = {}
     def display(fn, rev, states, prevstates):
@@ -2373,6 +2385,10 @@ table = {
            _('forcibly copy over an existing managed file'))],
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
+    "debugrebuildstate":
+        (debugrebuildstate,
+         [('r', 'rev', "", _("revision to rebuild to"))],
+         _('debugrebuildstate [-r REV] [REV]')),
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
     "debugconfig": (debugconfig, [], _('debugconfig')),
     "debugsetparents": (debugsetparents, [], _('debugsetparents REV1 [REV2]')),

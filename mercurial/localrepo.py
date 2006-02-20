@@ -231,7 +231,7 @@ class localrepository(object):
                                        self.join("journal"), after)
 
     def recover(self):
-        lock = self.lock()
+        l = self.lock()
         if os.path.exists(self.join("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
             transaction.rollback(self.opener, self.join("journal"))
@@ -245,7 +245,7 @@ class localrepository(object):
     def undo(self, wlock=None):
         if not wlock:
             wlock = self.wlock()
-        lock = self.lock()
+        l = self.lock()
         if os.path.exists(self.join("undo")):
             self.ui.status(_("rolling back last transaction\n"))
             transaction.rollback(self.opener, self.join("undo"))
@@ -254,25 +254,25 @@ class localrepository(object):
         else:
             self.ui.warn(_("no undo information available\n"))
 
-    def lock(self, wait=1):
+    def do_lock(self, lockname, wait, releasefn=None, acquirefn=None):
         try:
-            return lock.lock(self.join("lock"), 0)
-        except lock.LockHeld, inst:
-            if wait:
-                self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
-                return lock.lock(self.join("lock"), wait)
-            raise inst
-
-    def wlock(self, wait=1):
-        try:
-            wlock = lock.lock(self.join("wlock"), 0, self.dirstate.write)
+            l = lock.lock(self.join(lockname), 0, releasefn)
         except lock.LockHeld, inst:
             if not wait:
                 raise inst
             self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
-            wlock = lock.lock(self.join("wlock"), wait, self.dirstate.write)
-        self.dirstate.read()
-        return wlock
+            l = lock.lock(self.join(lockname), wait, releasefn)
+        if acquirefn:
+            acquirefn()
+        return l
+
+    def lock(self, wait=1):
+        return self.do_lock("lock", wait)
+
+    def wlock(self, wait=1):
+        return self.do_lock("wlock", wait,
+                            self.dirstate.write,
+                            self.dirstate.read)
 
     def checkfilemerge(self, filename, text, filelog, manifest1, manifest2):
         "determine whether a new filenode is needed"
@@ -311,7 +311,7 @@ class localrepository(object):
 
         if not wlock:
             wlock = self.wlock()
-        lock = self.lock()
+        l = self.lock()
         tr = self.transaction()
         mm = m1.copy()
         mfm = mf1.copy()
@@ -388,7 +388,7 @@ class localrepository(object):
 
         if not wlock:
             wlock = self.wlock()
-        lock = self.lock()
+        l = self.lock()
         tr = self.transaction()
 
         # check in files
@@ -508,7 +508,7 @@ class localrepository(object):
             if not wlock:
                 try:
                     wlock = self.wlock(wait=0)
-                except lock.LockHeld:
+                except lock.LockException:
                     wlock = None
             lookup, modified, added, removed, deleted, unknown = (
                 self.dirstate.changes(files, match))
@@ -931,7 +931,7 @@ class localrepository(object):
         return subset
 
     def pull(self, remote, heads=None):
-        lock = self.lock()
+        l = self.lock()
 
         # if we have an empty repo, fetch everything
         if self.changelog.tip() == nullid:
@@ -951,7 +951,7 @@ class localrepository(object):
         return self.addchangegroup(cg)
 
     def push(self, remote, force=False):
-        lock = remote.lock()
+        l = remote.lock()
 
         base = {}
         heads = remote.heads()
