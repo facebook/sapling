@@ -5,10 +5,14 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, time
+import errno, os, time
 import util
 
-class LockHeld(Exception):
+class LockException(Exception):
+    pass
+class LockHeld(LockException):
+    pass
+class LockUnavailable(LockException):
     pass
 
 class lock(object):
@@ -38,8 +42,11 @@ class lock(object):
         try:
             util.makelock(str(pid), self.f)
             self.held = 1
-        except (OSError, IOError):
-            raise LockHeld(util.readlock(self.f))
+        except (OSError, IOError), why:
+            if why.errno == errno.EEXIST:
+                raise LockHeld(util.readlock(self.f))
+            else:
+                raise LockUnavailable(why)
 
     def release(self):
         if self.held:
