@@ -262,9 +262,9 @@ class localrepository(object):
                 raise inst
             self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
             try:
-                # default to 1024 seconds timeout
+                # default to 600 seconds timeout
                 l = lock.lock(self.join(lockname),
-                              int(self.ui.config("ui", "timeout") or 1024),
+                              int(self.ui.config("ui", "timeout") or 600),
                               releasefn)
             except lock.LockHeld, inst:
                 raise util.Abort(_("timeout while waiting for "

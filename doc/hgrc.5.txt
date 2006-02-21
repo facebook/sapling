@@ -249,7 +249,7 @@ ui::
     command to use for SSH connections. Default is 'ssh'.
   timeout;;
     The timeout used when a lock is held (in seconds), a negative value
-    means no timeout. Default is 1024.
+    means no timeout. Default is 600.
   username;;
     The committer of a changeset created when running "commit".
     Typically a person's name and email address, e.g. "Fred Widget
