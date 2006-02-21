@@ -34,10 +34,12 @@ type "$PATCH" >/dev/null 2>&1 || PATCH=
 FILEMERGE="/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge"
 KDIFF3="kdiff3"
 TKDIFF="tkdiff"
+MELD="meld"
 
 type "$FILEMERGE" >/dev/null 2>&1 || FILEMERGE=
 type "$KDIFF3"    >/dev/null 2>&1 || KDIFF3=
 type "$TKDIFF"    >/dev/null 2>&1 || TKDIFF=
+type "$MELD"      >/dev/null 2>&1 || MELD=
 
 # random part of names
 RAND="$RANDOM$RANDOM"
@@ -124,6 +126,17 @@ if [ -n "$DISPLAY" ]; then
         $TKDIFF "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || failure
         success
     fi
+
+    if [ -n "$MELD" ]; then
+        cp "$BACKUP" "$CHGTEST"
+        # protect our feet - meld allows us to save to the left file
+        cp "$BACKUP" "$LOCAL.tmp.$RAND"
+        # Meld doesn't have automatic merging, so to reduce intervention
+        # use the file with conflicts
+        $MELD "$LOCAL.tmp.$RAND" "$LOCAL" "$OTHER" || failure
+        # Also it doesn't return good error code
+        test "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
+    fi
 fi
 
 # Attempt to do a merge with $EDITOR
@@ -158,6 +171,6 @@ fi
 echo
 echo "hgmerge: unable to find any merge utility!"
 echo "supported programs:"
-echo "merge, FileMerge, tkdiff, kdiff3, diff+patch"
+echo "merge, FileMerge, tkdiff, kdiff3, meld, diff+patch"
 echo
 failure
