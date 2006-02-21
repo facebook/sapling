@@ -101,7 +101,6 @@ if [ -n "$MERGE" -o -n "$DIFF3" ]; then
         failure
     fi
 fi
-cp "$BACKUP" "$LOCAL"
 
 # on MacOS X try FileMerge.app, shipped with Apple's developer tools
 if [ -n "$FILEMERGE" ]; then
@@ -111,7 +110,6 @@ if [ -n "$FILEMERGE" ]; then
     $FILEMERGE -left "$OTHER" -right "$LOCAL" -ancestor "$BASE" -merge "$LOCAL"
     [ $? -ne 0 ] && echo "FileMerge failed to launch" && failure
     test "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
-    failure
 fi
 
 if [ -n "$DISPLAY" ]; then
@@ -129,24 +127,13 @@ if [ -n "$DISPLAY" ]; then
 fi
 
 # Attempt to do a merge with $EDITOR
-if [ -n "$MERGE" ]; then
+if [ -n "$MERGE" -o -n "$DIFF3" ]; then
     echo "conflicts detected in $LOCAL"
-    $MERGE "$LOCAL" "$BASE" "$OTHER" 2>/dev/null || $EDITOR "$LOCAL"
-    success
-fi
-
-if [ -n "$DIFF3" ]; then
-    echo "conflicts detected in $LOCAL"
-    $DIFF3 -m "$BACKUP" "$BASE" "$OTHER" > "$LOCAL" || {
-        case $? in
-            1)
-                $EDITOR "$LOCAL" ;;
-            2)  echo "$DIFF3 failed! Exiting." 1>&2
-                cp "$BACKUP" "$LOCAL"
-                failure ;;
-        esac
-        success
-    }
+    cp "$BACKUP" "$CHGTEST"
+    $EDITOR "$LOCAL" || failure
+    # Some editors do not return meaningful error codes
+    # Do not take any chances
+    test "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
 fi
 
 # attempt to manually merge with diff and patch
@@ -162,7 +149,8 @@ if [ -n "$DIFF" -a -n "$PATCH" ]; then
         success
     else
         # If rejects are empty after using the editor, merge was ok
-        $EDITOR "$LOCAL" "$LOCAL.rej" && test -s "$LOCAL.rej" || success
+        $EDITOR "$LOCAL" "$LOCAL.rej" || failure
+        test -s "$LOCAL.rej" || success
     fi
     failure
 fi
