@@ -17,31 +17,33 @@ fi
 
 # find decent versions of our utilities, insisting on the GNU versions where we
 # need to
-MERGE=merge
-DIFF3=gdiff3
-DIFF=gdiff
-PATCH=gpatch
+MERGE="merge"
+DIFF3="gdiff3"
+DIFF="gdiff"
+PATCH="gpatch"
 
-type $MERGE >/dev/null 2>&1 || MERGE=
-type $DIFF3 >/dev/null 2>&1 || DIFF3=diff3
-type $DIFF  >/dev/null 2>&1 || DIFF=diff
-type $PATCH >/dev/null 2>&1 || PATCH=patch
+type "$MERGE" >/dev/null 2>&1 || MERGE=
+type "$DIFF3" >/dev/null 2>&1 || DIFF3="diff3"
 $DIFF3 --version >/dev/null 2>&1 || DIFF3=
+type "$DIFF"  >/dev/null 2>&1 || DIFF="diff"
+type "$DIFF"  >/dev/null 2>&1 || DIFF=
+type "$PATCH" >/dev/null 2>&1 || PATCH="patch"
+type "$PATCH" >/dev/null 2>&1 || PATCH=
 
 # find optional visual utilities
-FILEMERGE='/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge'
-KDIFF3=kdiff3
-TKDIFF=tkdiff
+FILEMERGE="/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge"
+KDIFF3="kdiff3"
+TKDIFF="tkdiff"
 
-type $FILEMERGE >/dev/null 2>&1 || FILEMERGE=
-type $KDIFF3    >/dev/null 2>&1 || KDIFF3=
-type $TKDIFF    >/dev/null 2>&1 || TKDIFF=
+type "$FILEMERGE" >/dev/null 2>&1 || FILEMERGE=
+type "$KDIFF3"    >/dev/null 2>&1 || KDIFF3=
+type "$TKDIFF"    >/dev/null 2>&1 || TKDIFF=
 
 # random part of names
-RAND="$RANDOM.$RANDOM.$RANDOM.$$"
+RAND="$RANDOM$RANDOM"
 
 # temporary directory for diff+patch merge
-HGTMP="${TMPDIR-/tmp}/hgmerge.$RAND"
+HGTMP="${TMPDIR-'/tmp'}/hgmerge.$RAND"
 
 # backup file
 BACKUP="$LOCAL.orig.$RAND"
@@ -76,19 +78,18 @@ mv "$LOCAL" "$BACKUP"
 cp "$BACKUP" "$LOCAL"
 
 # Attempt to do a non-interactive merge
-if [ -n "$MERGE" ]; then
-    $MERGE "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && success
-    cp "$BACKUP" "$LOCAL"
-elif [ -n "$DIFF3" ]; then
-    echo $DIFF3 -m "$BACKUP" "$BASE" "$OTHER"
-    $DIFF3 -m "$BACKUP" "$BASE" "$OTHER" > "$LOCAL" && success
-    if [ $? -eq 2 ]; then
-        echo "$DIFF3 failed! Exiting." 1>&2
-        cp "$BACKUP" "$LOCAL"
+if [ -n "$MERGE" -o -n "$DIFF3" ]; then
+    if [ -n "$MERGE" ]; then
+        $MERGE "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && success
+    elif [ -n "$DIFF3" ]; then
+        $DIFF3 -m "$BACKUP" "$BASE" "$OTHER" > "$LOCAL" && success
+    fi
+    if [ $? -gt 1 ]; then
+        echo "automatic merge failed! Exiting." 1>&2
         failure
     fi
-    cp "$BACKUP" "$LOCAL"
 fi
+cp "$BACKUP" "$LOCAL"
 
 # on MacOS X try FileMerge.app, shipped with Apple's developer tools
 if [ -n "$FILEMERGE" ]; then
@@ -113,14 +114,14 @@ fi
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
     if [ -n "$KDIFF3" ]; then
-	$KDIFF3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" || failure
-	success
+        $KDIFF3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" || failure
+        success
     fi
 
     # try using tkdiff, which is a bit less sophisticated
     if [ -n "$TKDIFF" ]; then
-	$TKDIFF "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || failure
-	success
+        $TKDIFF "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || failure
+        success
     fi
 fi
 
@@ -149,16 +150,16 @@ fi
 if [ -n "$DIFF" -a -n "$PATCH" ]; then
 
     (umask 077 && mkdir "$HGTMP") || {
-	echo "Could not create temporary directory $HGTMP" 1>&2
-	failure
+        echo "Could not create temporary directory $HGTMP" 1>&2
+        failure
     }
 
     $DIFF -u "$BASE" "$OTHER" > "$HGTMP/diff" || :
     if $PATCH "$LOCAL" < "$HGTMP/diff"; then
-	success
+        success
     else
-	# If rejects are empty after using the editor, merge was ok
-	$EDITOR "$LOCAL" "$LOCAL.rej" && test -s "$LOCAL.rej" || success
+        # If rejects are empty after using the editor, merge was ok
+        $EDITOR "$LOCAL" "$LOCAL.rej" && test -s "$LOCAL.rej" || success
     fi
     failure
 fi
