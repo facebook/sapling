@@ -22,9 +22,9 @@ hg debugindex .hg/data/b.i
 echo "this should show the rename information in the metadata"
 hg debugdata .hg/data/b.d 0 | head -n 3 | tail -n 2
 
-md5sum .hg/data/b.d
+$TESTDIR/md5sum.py .hg/data/b.d
 hg cat b > bsum
-md5sum bsum
+$TESTDIR/md5sum.py bsum
 hg cat a > asum
-md5sum asum
+$TESTDIR/md5sum.py asum
 hg verify

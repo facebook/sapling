@@ -30,5 +30,5 @@ hg history
 hg -v co -m
 
 ls -l ../test[12]/a > foo
-cut -b 0-10 < foo
+cut -b 1-10 < foo
 

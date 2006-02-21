@@ -36,3 +36,4 @@ http_proxy= python getarchive.py "$TIP" zip > archive.zip
 unzip -t archive.zip | sed "s/$QTIP/TIP/"
 
 kill $!
+sleep 1 # wait for server to scream and die
