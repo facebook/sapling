@@ -1660,9 +1660,10 @@ def log(ui, repo, *pats, **opts):
                 du.write("\n\n")
         elif st == 'iter':
             if count == limit: break
-            count += 1
-            for args in du.hunk[rev]:
-                ui.write(*args)
+            if du.hunk[rev]:
+                count += 1
+                for args in du.hunk[rev]:
+                    ui.write(*args)
 
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest
