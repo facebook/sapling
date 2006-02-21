@@ -2225,7 +2225,10 @@ def tip(ui, repo, **opts):
     Show the tip revision.
     """
     n = repo.changelog.tip()
-    show_changeset(ui, repo, changenode=n)
+    br = None
+    if opts['branch']:
+        br = repo.branchlookup([n])
+    show_changeset(ui, repo, changenode=n, brinfo=br)
     if opts['patch']:
         dodiff(ui, ui, repo, repo.changelog.parents(n)[0], n)
 
@@ -2577,7 +2580,11 @@ table = {
           ('r', 'rev', '', _('revision to tag'))],
          _('hg tag [-r REV] [OPTION]... NAME')),
     "tags": (tags, [], _('hg tags')),
-    "tip": (tip, [('p', 'patch', None, _('show patch'))], _('hg tip')),
+    "tip":
+        (tip,
+         [('b', 'branch', None, _('show branches')),
+          ('p', 'patch', None, _('show patch'))],
+         _('hg [-b] [-p] tip')),
     "unbundle":
         (unbundle,
          [('u', 'update', None,
