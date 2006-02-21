@@ -155,5 +155,9 @@ if [ -n "$DIFF" -a -n "$PATCH" ]; then
     failure
 fi
 
-echo "hgmerge: unable to find merge, tkdiff, kdiff3, or diff+patch!"
+echo
+echo "hgmerge: unable to find any merge utility!"
+echo "supported programs:"
+echo "merge, FileMerge, tkdiff, kdiff3, diff+patch"
+echo
 failure
