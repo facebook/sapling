@@ -1637,7 +1637,6 @@ def log(ui, repo, *pats, **opts):
             if opts['only_merges'] and len(parents) != 2:
                 continue
 
-            br = None
             if opts['keyword']:
                 changes = getchange(rev)
                 miss = 0
@@ -1650,6 +1649,7 @@ def log(ui, repo, *pats, **opts):
                 if miss:
                     continue
 
+            br = None
             if opts['branches']:
                 br = repo.branchlookup([repo.changelog.node(rev)])
 
