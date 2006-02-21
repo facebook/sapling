@@ -1650,7 +1650,7 @@ def log(ui, repo, *pats, **opts):
                 if miss:
                     continue
 
-            if opts['branch']:
+            if opts['branches']:
                 br = repo.branchlookup([repo.changelog.node(rev)])
 
             show_changeset(du, repo, rev, brinfo=br)
@@ -1713,7 +1713,7 @@ def outgoing(ui, repo, dest="default-push", **opts):
             dodiff(ui, ui, repo, prev, n)
             ui.write("\n")
 
-def parents(ui, repo, rev=None, branch=None):
+def parents(ui, repo, rev=None, branches=None):
     """show the parents of the working dir or revision
 
     Print the working directory's parent revisions.
@@ -1724,7 +1724,7 @@ def parents(ui, repo, rev=None, branch=None):
         p = repo.dirstate.parents()
 
     br = None
-    if branch is not None:
+    if branches is not None:
         br = repo.branchlookup(p)
     for n in p:
         if n != nullid:
@@ -2226,7 +2226,7 @@ def tip(ui, repo, **opts):
     """
     n = repo.changelog.tip()
     br = None
-    if opts['branch']:
+    if opts['branches']:
         br = repo.branchlookup([n])
     show_changeset(ui, repo, changenode=n, brinfo=br)
     if opts['patch']:
@@ -2443,7 +2443,7 @@ table = {
          _('hg grep [OPTION]... PATTERN [FILE]...')),
     "heads":
         (heads,
-         [('b', 'branches', None, _('find branch info')),
+         [('b', 'branches', None, _('show branches')),
           ('r', 'rev', '', _('show only heads which are descendants of rev'))],
          _('hg heads [-b] [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
@@ -2477,7 +2477,7 @@ table = {
         (log,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('b', 'branch', None, _('show branches')),
+          ('b', 'branches', None, _('show branches')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
@@ -2493,7 +2493,7 @@ table = {
          _('hg outgoing [-p] [-n] [-M] [DEST]')),
     "^parents":
         (parents,
-         [('b', 'branch', None, _('show branches'))],
+         [('b', 'branches', None, _('show branches'))],
          _('hg parents [-b] [REV]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
@@ -2582,7 +2582,7 @@ table = {
     "tags": (tags, [], _('hg tags')),
     "tip":
         (tip,
-         [('b', 'branch', None, _('show branches')),
+         [('b', 'branches', None, _('show branches')),
           ('p', 'patch', None, _('show patch'))],
          _('hg [-b] [-p] tip')),
     "unbundle":
