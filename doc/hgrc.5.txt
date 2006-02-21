@@ -247,6 +247,9 @@ ui::
     remote command to use for clone/push/pull operations. Default is 'hg'.
   ssh;;
     command to use for SSH connections. Default is 'ssh'.
+  timeout;;
+    The timeout used when a lock is held (in seconds), a negative value
+    means no timeout. Default is 1024.
   username;;
     The committer of a changeset created when running "commit".
     Typically a person's name and email address, e.g. "Fred Widget
