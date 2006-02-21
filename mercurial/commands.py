@@ -994,7 +994,7 @@ def debugrebuildstate(ui, repo, rev=None):
     change = repo.changelog.read(rev)
     n = change[0]
     files = repo.manifest.readflags(n)
-    wlock = self.repo.wlock()
+    wlock = repo.wlock()
     repo.dirstate.rebuild(rev, files.iteritems())
 
 def debugcheckstate(ui, repo):
@@ -1637,7 +1637,6 @@ def log(ui, repo, *pats, **opts):
             if opts['only_merges'] and len(parents) != 2:
                 continue
 
-            br = None
             if opts['keyword']:
                 changes = getchange(rev)
                 miss = 0
@@ -1650,7 +1649,8 @@ def log(ui, repo, *pats, **opts):
                 if miss:
                     continue
 
-            if opts['branch']:
+            br = None
+            if opts['branches']:
                 br = repo.branchlookup([repo.changelog.node(rev)])
 
             show_changeset(du, repo, rev, brinfo=br)
@@ -1660,9 +1660,10 @@ def log(ui, repo, *pats, **opts):
                 du.write("\n\n")
         elif st == 'iter':
             if count == limit: break
-            count += 1
-            for args in du.hunk[rev]:
-                ui.write(*args)
+            if du.hunk[rev]:
+                count += 1
+                for args in du.hunk[rev]:
+                    ui.write(*args)
 
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest
@@ -1713,7 +1714,7 @@ def outgoing(ui, repo, dest="default-push", **opts):
             dodiff(ui, ui, repo, prev, n)
             ui.write("\n")
 
-def parents(ui, repo, rev=None, branch=None):
+def parents(ui, repo, rev=None, branches=None):
     """show the parents of the working dir or revision
 
     Print the working directory's parent revisions.
@@ -1724,7 +1725,7 @@ def parents(ui, repo, rev=None, branch=None):
         p = repo.dirstate.parents()
 
     br = None
-    if branch is not None:
+    if branches is not None:
         br = repo.branchlookup(p)
     for n in p:
         if n != nullid:
@@ -2225,7 +2226,10 @@ def tip(ui, repo, **opts):
     Show the tip revision.
     """
     n = repo.changelog.tip()
-    show_changeset(ui, repo, changenode=n)
+    br = None
+    if opts['branches']:
+        br = repo.branchlookup([n])
+    show_changeset(ui, repo, changenode=n, brinfo=br)
     if opts['patch']:
         dodiff(ui, ui, repo, repo.changelog.parents(n)[0], n)
 
@@ -2440,7 +2444,7 @@ table = {
          _('hg grep [OPTION]... PATTERN [FILE]...')),
     "heads":
         (heads,
-         [('b', 'branches', None, _('find branch info')),
+         [('b', 'branches', None, _('show branches')),
           ('r', 'rev', '', _('show only heads which are descendants of rev'))],
          _('hg heads [-b] [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
@@ -2474,7 +2478,7 @@ table = {
         (log,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('b', 'branch', None, _('show branches')),
+          ('b', 'branches', None, _('show branches')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
@@ -2490,7 +2494,7 @@ table = {
          _('hg outgoing [-p] [-n] [-M] [DEST]')),
     "^parents":
         (parents,
-         [('b', 'branch', None, _('show branches'))],
+         [('b', 'branches', None, _('show branches'))],
          _('hg parents [-b] [REV]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
@@ -2577,7 +2581,11 @@ table = {
           ('r', 'rev', '', _('revision to tag'))],
          _('hg tag [-r REV] [OPTION]... NAME')),
     "tags": (tags, [], _('hg tags')),
-    "tip": (tip, [('p', 'patch', None, _('show patch'))], _('hg tip')),
+    "tip":
+        (tip,
+         [('b', 'branches', None, _('show branches')),
+          ('p', 'patch', None, _('show patch'))],
+         _('hg [-b] [-p] tip')),
     "unbundle":
         (unbundle,
          [('u', 'update', None,
