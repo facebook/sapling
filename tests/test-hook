@@ -1,10 +1,90 @@
 #!/bin/sh
 
-hg init
+# commit hooks can see env vars
+hg init a
+cd a
 echo "[hooks]" > .hg/hgrc
-echo 'precommit = echo precommit hook' >> .hg/hgrc
-echo 'commit = echo commit hook: $NODE' >> .hg/hgrc
+echo 'commit = echo commit hook: n=$HG_NODE p1=$HG_PARENT1 p2=$HG_PARENT2' >> .hg/hgrc
 echo 'commit.b = echo commit hook b' >> .hg/hgrc
+echo 'precommit = echo precommit hook: p1=$HG_PARENT1 p2=$HG_PARENT2' >> .hg/hgrc
+echo 'pretxncommit = echo pretxncommit hook: n=$HG_NODE p1=$HG_PARENT1 p2=$HG_PARENT2; hg -q tip' >> .hg/hgrc
 echo a > a
 hg add a
-hg commit -m "test" -d "0 0"
+hg commit -m a -d "0 0"
+
+hg clone . ../b
+cd ../b
+
+# changegroup hooks can see env vars
+echo '[hooks]' > .hg/hgrc
+echo 'prechangegroup = echo prechangegroup hook' >> .hg/hgrc
+echo 'changegroup = echo changegroup hook: n=$HG_NODE' >> .hg/hgrc
+echo 'incoming = echo incoming hook: n=$HG_NODE' >> .hg/hgrc
+
+# pretxncommit and commit hooks can see both parents of merge
+cd ../a
+echo b >> a
+hg commit -m a1 -d "1 0"
+hg update -C 0
+echo b > b
+hg add b
+hg commit -m b -d '1 0'
+hg update -m 1
+hg commit -m merge -d '2 0'
+
+cd ../b
+hg pull ../a
+
+# tag hooks can see env vars
+cd ../a
+echo 'pretag = echo pretag hook: t=$HG_TAG n=$HG_NODE l=$HG_LOCAL' >> .hg/hgrc
+echo 'tag = echo tag hook: t=$HG_TAG n=$HG_NODE l=$HG_LOCAL' >> .hg/hgrc
+hg tag -d '3 0' a
+hg tag -l la
+
+# pretag hook can forbid tagging
+echo 'pretag.forbid = echo pretag.forbid hook; exit 1' >> .hg/hgrc
+hg tag -d '4 0' fa
+hg tag -l fla
+
+# pretxncommit hook can see changeset, can roll back txn, changeset
+# no more there after
+echo 'pretxncommit.forbid = echo pretxncommit.forbid hook: tip=`hg -q tip`; exit 1' >> .hg/hgrc
+echo z > z
+hg add z
+hg -q tip
+hg commit -m 'fail' -d '4 0'
+hg -q tip
+
+# precommit hook can prevent commit
+echo 'precommit.forbid = echo precommit.forbid hook; exit 1' >> .hg/hgrc
+hg commit -m 'fail' -d '4 0'
+hg -q tip
+
+# prechangegroup hook can prevent incoming changes
+cd ../b
+hg -q tip
+echo '[hooks]' > .hg/hgrc
+echo 'prechangegroup.forbid = echo prechangegroup.forbid hook; exit 1' >> .hg/hgrc
+hg pull ../a
+
+# pretxnchangegroup hook can see incoming changes, can roll back txn,
+# incoming changes no longer there after
+echo '[hooks]' > .hg/hgrc
+echo 'pretxnchangegroup.forbid = echo pretxnchangegroup.forbid hook: tip=`hg -q tip`; exit 1' >> .hg/hgrc
+hg pull ../a
+hg -q tip
+
+# outgoing hooks can see env vars
+rm .hg/hgrc
+echo '[hooks]' > ../a/.hg/hgrc
+echo 'preoutgoing = echo preoutgoing hook: s=$HG_SOURCE' >> ../a/.hg/hgrc
+echo 'outgoing = echo outgoing hook: n=$HG_NODE s=$HG_SOURCE' >> ../a/.hg/hgrc
+hg pull ../a
+hg undo
+
+# preoutgoing hook can prevent outgoing changes
+echo 'preoutgoing.forbid = echo preoutgoing.forbid hook; exit 1' >> ../a/.hg/hgrc
+hg pull ../a
+
+exit 0

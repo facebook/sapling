@@ -158,3 +158,16 @@ hg remove d1/b
 hg rename d1 d3
 hg status
 hg update -C
+
+echo "# transitive rename"
+hg rename d1/b d1/bb
+hg rename d1/bb d1/bc
+hg status
+hg update -C
+
+echo "# transitive rename --after"
+hg rename d1/b d1/bb
+mv d1/bb d1/bc
+hg rename --after d1/bb d1/bc
+hg status
+hg update -C

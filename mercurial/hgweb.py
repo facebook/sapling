@@ -660,9 +660,10 @@ class hgweb(object):
         i = self.repo.tagslist()
         i.reverse()
 
-        def entries(**map):
+        def entries(notip=False, **map):
             parity = 0
             for k,n in i:
+                if notip and k == "tip": continue
                 yield {"parity": parity,
                        "tag": k,
                        "tagmanifest": hex(cl.read(n)[0]),
@@ -672,7 +673,8 @@ class hgweb(object):
 
         yield self.t("tags",
                      manifest=hex(mf),
-                     entries=entries)
+                     entries=lambda **x: entries(False, **x),
+                     entriesnotip=lambda **x: entries(True, **x))
 
     def summary(self):
         cl = self.repo.changelog
@@ -962,7 +964,7 @@ class hgweb(object):
                 nodes = map(bin, req.form['roots'][0].split(" "))
 
             z = zlib.compressobj()
-            f = self.repo.changegroup(nodes)
+            f = self.repo.changegroup(nodes, 'serve')
             while 1:
                 chunk = f.read(4096)
                 if not chunk:

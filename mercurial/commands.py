@@ -115,8 +115,8 @@ def walkchangerevs(ui, repo, pats, opts):
                     yield rev
 
         minrev, maxrev = min(revs), max(revs)
-        for file in files:
-            filelog = repo.file(file)
+        for file_ in files:
+            filelog = repo.file(file_)
             # A zero count may be a directory or deleted file, so
             # try to find matching entries on the slow path.
             if filelog.count() == 0:
@@ -127,7 +127,7 @@ def walkchangerevs(ui, repo, pats, opts):
                     if rev < minrev:
                         break
                     fncache.setdefault(rev, [])
-                    fncache[rev].append(file)
+                    fncache[rev].append(file_)
                     wanted[rev] = 1
     if slowpath:
         # The slow path checks files modified in every changeset.
@@ -261,7 +261,7 @@ def make_file(repo, r, pat, node=None,
                 mode)
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
-           changes=None, text=False):
+           changes=None, text=False, opts={}):
     if not changes:
         changes = repo.changes(node1, node2, files, match=match)
     modified, added, removed, deleted, unknown = changes
@@ -296,8 +296,8 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     date1 = util.datestr(change[2])
 
     diffopts = ui.diffopts()
-    showfunc = diffopts['showfunc']
-    ignorews = diffopts['ignorews']
+    showfunc = opts.get('show_function') or diffopts['showfunc']
+    ignorews = opts.get('ignore_all_space') or diffopts['ignorews']
     for f in modified:
         to = None
         if f in mmap:
@@ -447,7 +447,6 @@ def help_(ui, cmd=None, with_version=False):
             f = f.lstrip("^")
             if not ui.debugflag and f.startswith("debug"):
                 continue
-            d = ""
             doc = e[0].__doc__
             if not doc:
                 doc = _("(No help text available)")
@@ -622,7 +621,7 @@ def bundle(ui, repo, fname, dest="default-push", **opts):
     dest = ui.expandpath(dest, repo.root)
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other)
-    cg = repo.changegroup(o)
+    cg = repo.changegroup(o, 'bundle')
 
     try:
         f.write("HG10")
@@ -725,8 +724,8 @@ def clone(ui, source, dest=None, **opts):
             # can end up with extra data in the cloned revlogs that's
             # not pointed to by changesets, thus causing verify to
             # fail
-            l1 = lock.lock(os.path.join(source, ".hg", "lock"))
-        except OSError:
+            l1 = other.lock()
+        except lock.LockException:
             copy = False
 
     if copy:
@@ -818,14 +817,19 @@ def docopy(ui, repo, pats, opts):
         reasons = {'?': _('is not managed'),
                    'a': _('has been marked for add'),
                    'r': _('has been marked for remove')}
-        reason = reasons.get(repo.dirstate.state(abs))
+        state = repo.dirstate.state(abs)
+        reason = reasons.get(state)
         if reason:
+            if state == 'a':
+                origsrc = repo.dirstate.copied(abs)
+                if origsrc is not None:
+                    return origsrc
             if exact:
                 ui.warn(_('%s: not copying - file %s\n') % (rel, reason))
         else:
-            return True
+            return abs
 
-    def copy(abssrc, relsrc, target, exact):
+    def copy(origsrc, abssrc, relsrc, target, exact):
         abstarget = util.canonpath(repo.root, cwd, target)
         reltarget = util.pathto(cwd, abstarget)
         prevsrc = targets.get(abstarget)
@@ -864,7 +868,7 @@ def docopy(ui, repo, pats, opts):
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
-        repo.copy(abssrc, abstarget)
+        repo.copy(origsrc, abstarget)
         copied.append((abssrc, relsrc, exact))
 
     def targetpathfn(pat, dest, srcs):
@@ -938,8 +942,9 @@ def docopy(ui, repo, pats, opts):
     for pat in pats:
         srcs = []
         for tag, abssrc, relsrc, exact in walk(repo, [pat], opts):
-            if okaytocopy(abssrc, relsrc, exact):
-                srcs.append((abssrc, relsrc, exact))
+            origsrc = okaytocopy(abssrc, relsrc, exact)
+            if origsrc:
+                srcs.append((origsrc, abssrc, relsrc, exact))
         if not srcs:
             continue
         copylist.append((tfn(pat, dest, srcs), srcs))
@@ -947,8 +952,8 @@ def docopy(ui, repo, pats, opts):
         raise util.Abort(_('no files to copy'))
 
     for targetpath, srcs in copylist:
-        for abssrc, relsrc, exact in srcs:
-            copy(abssrc, relsrc, targetpath(abssrc), exact)
+        for origsrc, abssrc, relsrc, exact in srcs:
+            copy(origsrc, abssrc, relsrc, targetpath(abssrc), exact)
 
     if errors:
         ui.warn(_('(consider using --after)\n'))
@@ -979,6 +984,18 @@ def debugancestor(ui, index, rev1, rev2):
     r = revlog.revlog(util.opener(os.getcwd()), index, "")
     a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
+
+def debugrebuildstate(ui, repo, rev=None):
+    """rebuild the dirstate as it would look like for the given revision"""
+    if not rev:
+        rev = repo.changelog.tip()
+    else:
+        rev = repo.lookup(rev)
+    change = repo.changelog.read(rev)
+    n = change[0]
+    files = repo.manifest.readflags(n)
+    wlock = repo.wlock()
+    repo.dirstate.rebuild(rev, files.iteritems())
 
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
@@ -1140,7 +1157,7 @@ def diff(ui, repo, *pats, **opts):
     fns, matchfn, anypats = matchpats(repo, pats, opts)
 
     dodiff(sys.stdout, ui, repo, node1, node2, fns, match=matchfn,
-           text=opts['text'])
+           text=opts['text'], opts=opts)
 
 def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     node = repo.lookup(changeset)
@@ -1284,6 +1301,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             s = linestate(line, lnum, cstart, cend)
             m[s] = s
 
+    # FIXME: prev isn't used, why ?
     prev = {}
     ucache = {}
     def display(fn, rev, states, prevstates):
@@ -1593,7 +1611,19 @@ def log(ui, repo, *pats, **opts):
                 self.write(*args)
         def __getattr__(self, key):
             return getattr(self.ui, key)
+
     changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
+
+    if opts['limit']:
+        try:
+            limit = int(opts['limit'])
+        except ValueError:
+            raise util.Abort(_('limit must be a positive integer'))
+        if limit <= 0: raise util.Abort(_('limit must be positive'))
+    else:
+        limit = sys.maxint
+    count = 0
+
     for st, rev, fns in changeiter:
         if st == 'window':
             du = dui(ui)
@@ -1607,7 +1637,6 @@ def log(ui, repo, *pats, **opts):
             if opts['only_merges'] and len(parents) != 2:
                 continue
 
-            br = None
             if opts['keyword']:
                 changes = getchange(rev)
                 miss = 0
@@ -1620,7 +1649,8 @@ def log(ui, repo, *pats, **opts):
                 if miss:
                     continue
 
-            if opts['branch']:
+            br = None
+            if opts['branches']:
                 br = repo.branchlookup([repo.changelog.node(rev)])
 
             show_changeset(du, repo, rev, brinfo=br)
@@ -1629,8 +1659,11 @@ def log(ui, repo, *pats, **opts):
                 dodiff(du, du, repo, prev, changenode, match=matchfn)
                 du.write("\n\n")
         elif st == 'iter':
-            for args in du.hunk[rev]:
-                ui.write(*args)
+            if count == limit: break
+            if du.hunk[rev]:
+                count += 1
+                for args in du.hunk[rev]:
+                    ui.write(*args)
 
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest
@@ -1681,7 +1714,7 @@ def outgoing(ui, repo, dest="default-push", **opts):
             dodiff(ui, ui, repo, prev, n)
             ui.write("\n")
 
-def parents(ui, repo, rev=None):
+def parents(ui, repo, rev=None, branches=None):
     """show the parents of the working dir or revision
 
     Print the working directory's parent revisions.
@@ -1691,9 +1724,12 @@ def parents(ui, repo, rev=None):
     else:
         p = repo.dirstate.parents()
 
+    br = None
+    if branches is not None:
+        br = repo.branchlookup(p)
     for n in p:
         if n != nullid:
-            show_changeset(ui, repo, changenode=n)
+            show_changeset(ui, repo, changenode=n, brinfo=br)
 
 def paths(ui, search=None):
     """show definition of symbolic path names
@@ -1999,7 +2035,7 @@ def serve(ui, repo, **opts):
                 arg, roots = getarg()
                 nodes = map(bin, roots.split(" "))
 
-                cg = repo.changegroup(nodes)
+                cg = repo.changegroup(nodes, 'serve')
                 while 1:
                     d = cg.read(4096)
                     if not d:
@@ -2022,6 +2058,16 @@ def serve(ui, repo, **opts):
         if opts[o]:
             ui.setconfig("web", o, opts[o])
 
+    if opts['daemon'] and not opts['daemon_pipefds']:
+        rfd, wfd = os.pipe()
+        args = sys.argv[:]
+        args.append('--daemon-pipefds=%d,%d' % (rfd, wfd))
+        pid = os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
+                         args[0], args)
+        os.close(wfd)
+        os.read(rfd, 1)
+        os._exit(0)
+
     try:
         httpd = hgweb.create_server(repo)
     except socket.error, inst:
@@ -2040,6 +2086,25 @@ def serve(ui, repo, **opts):
             ui.status(_('listening at http://%s:%d/\n') % (addr, port))
         else:
             ui.status(_('listening at http://%s/\n') % addr)
+
+    if opts['pid_file']:
+        fp = open(opts['pid_file'], 'w')
+        fp.write(str(os.getpid()))
+        fp.close()
+
+    if opts['daemon_pipefds']:
+        rfd, wfd = [int(x) for x in opts['daemon_pipefds'].split(',')]
+        os.close(rfd)
+        os.write(wfd, 'y')
+        os.close(wfd)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        fd = os.open(util.nulldev, os.O_RDWR)
+        if fd != 0: os.dup2(fd, 0)
+        if fd != 1: os.dup2(fd, 1)
+        if fd != 2: os.dup2(fd, 2)
+        if fd not in (0, 1, 2): os.close(fd)
+
     httpd.serve_forever()
 
 def status(ui, repo, *pats, **opts):
@@ -2116,8 +2181,12 @@ def tag(ui, repo, name, rev_=None, **opts):
         if name.find(c) >= 0:
             raise util.Abort(_("%s cannot be used in a tag name") % repr(c))
 
+    repo.hook('pretag', throw=True, node=r, tag=name,
+              local=int(not not opts['local']))
+
     if opts['local']:
         repo.opener("localtags", "a").write("%s %s\n" % (r, name))
+        repo.hook('tag', node=r, tag=name, local=1)
         return
 
     for x in repo.changes():
@@ -2133,6 +2202,7 @@ def tag(ui, repo, name, rev_=None, **opts):
                _("Added tag %s for changeset %s") % (name, r))
     try:
         repo.commit([".hgtags"], message, opts['user'], opts['date'])
+        repo.hook('tag', node=r, tag=name, local=0)
     except ValueError, inst:
         raise util.Abort(str(inst))
 
@@ -2153,13 +2223,18 @@ def tags(ui, repo):
             r = "    ?:?"
         ui.write("%-30s %s\n" % (t, r))
 
-def tip(ui, repo):
+def tip(ui, repo, **opts):
     """show the tip revision
 
     Show the tip revision.
     """
     n = repo.changelog.tip()
-    show_changeset(ui, repo, changenode=n)
+    br = None
+    if opts['branches']:
+        br = repo.branchlookup([n])
+    show_changeset(ui, repo, changenode=n, brinfo=br)
+    if opts['patch']:
+        dodiff(ui, ui, repo, repo.changelog.parents(n)[0], n)
 
 def unbundle(ui, repo, fname, **opts):
     """apply a changegroup file
@@ -2317,6 +2392,10 @@ table = {
            _('forcibly copy over an existing managed file'))],
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
+    "debugrebuildstate":
+        (debugrebuildstate,
+         [('r', 'rev', "", _("revision to rebuild to"))],
+         _('debugrebuildstate [-r REV] [REV]')),
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
     "debugconfig": (debugconfig, [], _('debugconfig')),
     "debugsetparents": (debugsetparents, [], _('debugsetparents REV1 [REV2]')),
@@ -2335,7 +2414,12 @@ table = {
          [('r', 'rev', [], _('revision')),
           ('a', 'text', None, _('treat all files as text')),
           ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('p', 'show-function', None,
+           _('show which function each change is in')),
+          ('w', 'ignore-all-space', None,
+           _('ignore white space when comparing lines')),
+          ('X', 'exclude', [],
+           _('exclude names matching the given patterns'))],
          _('hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...')),
     "^export":
         (export,
@@ -2363,7 +2447,7 @@ table = {
          _('hg grep [OPTION]... PATTERN [FILE]...')),
     "heads":
         (heads,
-         [('b', 'branches', None, _('find branch info')),
+         [('b', 'branches', None, _('show branches')),
           ('r', 'rev', '', _('show only heads which are descendants of rev'))],
          _('hg heads [-b] [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
@@ -2397,8 +2481,9 @@ table = {
         (log,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('b', 'branch', None, _('show branches')),
+          ('b', 'branches', None, _('show branches')),
           ('k', 'keyword', [], _('search for a keyword')),
+          ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
           ('M', 'no-merges', None, _('do not show merges')),
           ('m', 'only-merges', None, _('show only merges')),
@@ -2410,7 +2495,10 @@ table = {
           ('p', 'patch', None, _('show patch')),
           ('n', 'newest-first', None, _('show newest record first'))],
          _('hg outgoing [-p] [-n] [-M] [DEST]')),
-    "^parents": (parents, [], _('hg parents [REV]')),
+    "^parents":
+        (parents,
+         [('b', 'branches', None, _('show branches'))],
+         _('hg parents [-b] [REV]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
         (pull,
@@ -2462,11 +2550,14 @@ table = {
     "^serve":
         (serve,
          [('A', 'accesslog', '', _('name of access log file to write to')),
+          ('d', 'daemon', None, _('run server in background')),
+          ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
           ('E', 'errorlog', '', _('name of error log file to write to')),
           ('p', 'port', 0, _('port to use (default: 8000)')),
           ('a', 'address', '', _('address to use')),
           ('n', 'name', '',
            _('name to show in web pages (default: working dir)')),
+          ('', 'pid-file', '', _('name of file to write process ID to')),
           ('', 'stdio', None, _('for remote clients')),
           ('t', 'templates', '', _('web templates to use')),
           ('', 'style', '', _('template style to use')),
@@ -2494,7 +2585,11 @@ table = {
           ('r', 'rev', '', _('revision to tag'))],
          _('hg tag [-r REV] [OPTION]... NAME')),
     "tags": (tags, [], _('hg tags')),
-    "tip": (tip, [], _('hg tip')),
+    "tip":
+        (tip,
+         [('b', 'branches', None, _('show branches')),
+          ('p', 'patch', None, _('show patch'))],
+         _('hg [-b] [-p] tip')),
     "unbundle":
         (unbundle,
          [('u', 'update', None,
@@ -2534,17 +2629,20 @@ norepo = ("clone init version help debugancestor debugconfig debugdata"
 def find(cmd):
     """Return (aliases, command table entry) for command string."""
     choice = None
+    count = 0
     for e in table.keys():
         aliases = e.lstrip("^").split("|")
         if cmd in aliases:
             return aliases, table[e]
         for a in aliases:
             if a.startswith(cmd):
-                if choice:
-                    raise AmbiguousCommand(cmd)
-                else:
-                    choice = aliases, table[e]
-                    break
+                count += 1
+                choice = aliases, table[e]
+                break
+
+    if count > 1:
+        raise AmbiguousCommand(cmd)
+
     if choice:
         return choice
 

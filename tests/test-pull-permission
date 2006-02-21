@@ -12,9 +12,8 @@ chmod -w .hg
 cd ..
 
 hg clone a b
-cd b
-hg verify
-
-cd ..
 
 chmod +w a/.hg # let test clean up
+
+cd b
+hg verify

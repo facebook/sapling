@@ -43,6 +43,7 @@ static uint32_t ntohl(uint32_t x)
 #endif
 
 static char mpatch_doc[] = "Efficient binary patching.";
+static PyObject *mpatch_Error;
 
 struct frag {
 	int start, end, len;
@@ -65,8 +66,11 @@ static struct flist *lalloc(int size)
 			a = NULL;
 		} else
 			a->head = a->tail = a->base;
+		return a;
 	}
-	return a;
+	if (!PyErr_Occurred())
+		PyErr_NoMemory();
+	return NULL;
 }
 
 static void lfree(struct flist *a)
@@ -215,6 +219,9 @@ static struct flist *decode(char *bin, int len)
 
 	/* assume worst case size, we won't have many of these lists */
 	l = lalloc(len / 12);
+	if (!l)
+		return NULL;
+
 	lt = l->tail;
 
 	while (bin < end) {
@@ -225,6 +232,13 @@ static struct flist *decode(char *bin, int len)
 		lt->data = bin + 12;
 		bin += 12 + lt->len;
 		lt++;
+	}
+
+	if (bin != end) {
+		if (!PyErr_Occurred())
+			PyErr_SetString(mpatch_Error, "patch cannot be decoded");
+		lfree(l);
+		return NULL;
 	}
 
 	l->tail = lt;
@@ -238,6 +252,12 @@ static int calcsize(int len, struct flist *l)
 	struct frag *f = l->head;
 
 	while (f != l->tail) {
+		if (f->start < last || f->end > len) {
+			if (!PyErr_Occurred())
+				PyErr_SetString(mpatch_Error,
+				                "invalid patch");
+			return -1;
+		}
 		outlen += f->start - last;
 		last = f->end;
 		outlen += f->len;
@@ -248,13 +268,19 @@ static int calcsize(int len, struct flist *l)
 	return outlen;
 }
 
-static void apply(char *buf, char *orig, int len, struct flist *l)
+static int apply(char *buf, char *orig, int len, struct flist *l)
 {
 	struct frag *f = l->head;
 	int last = 0;
 	char *p = buf;
 
 	while (f != l->tail) {
+		if (f->start < last || f->end > len) {
+			if (!PyErr_Occurred())
+				PyErr_SetString(mpatch_Error,
+				                "invalid patch");
+			return 0;
+		}
 		memcpy(p, orig + last, f->start - last);
 		p += f->start - last;
 		memcpy(p, f->data, f->len);
@@ -263,6 +289,7 @@ static void apply(char *buf, char *orig, int len, struct flist *l)
 		f++;
 	}
 	memcpy(p, orig + last, len - last);
+	return 1;
 }
 
 /* recursively generate a patch of all bins between start and end */
@@ -304,16 +331,25 @@ patches(PyObject *self, PyObject *args)
 
 	patch = fold(bins, 0, len);
 	if (!patch)
-		return PyErr_NoMemory();
+		return NULL;
 
 	outlen = calcsize(PyString_Size(text), patch);
-	result = PyString_FromStringAndSize(NULL, outlen);
-	if (result) {
-		in = PyString_AsString(text);
-		out = PyString_AsString(result);
-		apply(out, in, PyString_Size(text), patch);
+	if (outlen < 0) {
+		result = NULL;
+		goto cleanup;
 	}
-
+	result = PyString_FromStringAndSize(NULL, outlen);
+	if (!result) {
+		result = NULL;
+		goto cleanup;
+	}
+	in = PyString_AsString(text);
+	out = PyString_AsString(result);
+	if (!apply(out, in, PyString_Size(text), patch)) {
+		Py_DECREF(result);
+		result = NULL;
+	}
+cleanup:
 	lfree(patch);
 	return result;
 }
@@ -327,5 +363,6 @@ PyMODINIT_FUNC
 initmpatch(void)
 {
 	Py_InitModule3("mpatch", methods, mpatch_doc);
+	mpatch_Error = PyErr_NewException("mpatch.mpatchError", NULL, NULL);
 }
 

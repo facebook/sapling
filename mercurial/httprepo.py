@@ -119,7 +119,7 @@ class httprepository(remoterepository):
             self.ui.warn(_("unexpected response:\n") + d[:400] + "\n...\n")
             raise
 
-    def changegroup(self, nodes):
+    def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
         f = self.do_cmd("changegroup", roots=n)
         bytes = 0
