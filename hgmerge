@@ -17,31 +17,35 @@ fi
 
 # find decent versions of our utilities, insisting on the GNU versions where we
 # need to
-MERGE=merge
-DIFF3=gdiff3
-DIFF=gdiff
-PATCH=gpatch
+MERGE="merge"
+DIFF3="gdiff3"
+DIFF="gdiff"
+PATCH="gpatch"
 
-type $MERGE >/dev/null 2>&1 || MERGE=
-type $DIFF3 >/dev/null 2>&1 || DIFF3=diff3
-type $DIFF  >/dev/null 2>&1 || DIFF=diff
-type $PATCH >/dev/null 2>&1 || PATCH=patch
+type "$MERGE" >/dev/null 2>&1 || MERGE=
+type "$DIFF3" >/dev/null 2>&1 || DIFF3="diff3"
 $DIFF3 --version >/dev/null 2>&1 || DIFF3=
+type "$DIFF"  >/dev/null 2>&1 || DIFF="diff"
+type "$DIFF"  >/dev/null 2>&1 || DIFF=
+type "$PATCH" >/dev/null 2>&1 || PATCH="patch"
+type "$PATCH" >/dev/null 2>&1 || PATCH=
 
 # find optional visual utilities
-FILEMERGE='/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge'
-KDIFF3=kdiff3
-TKDIFF=tkdiff
+FILEMERGE="/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge"
+KDIFF3="kdiff3"
+TKDIFF="tkdiff"
+MELD="meld"
 
-type $FILEMERGE >/dev/null 2>&1 || FILEMERGE=
-type $KDIFF3    >/dev/null 2>&1 || KDIFF3=
-type $TKDIFF    >/dev/null 2>&1 || TKDIFF=
+type "$FILEMERGE" >/dev/null 2>&1 || FILEMERGE=
+type "$KDIFF3"    >/dev/null 2>&1 || KDIFF3=
+type "$TKDIFF"    >/dev/null 2>&1 || TKDIFF=
+type "$MELD"      >/dev/null 2>&1 || MELD=
 
 # random part of names
-RAND="$RANDOM.$RANDOM.$RANDOM.$$"
+RAND="$RANDOM$RANDOM"
 
 # temporary directory for diff+patch merge
-HGTMP="${TMPDIR-/tmp}/hgmerge.$RAND"
+HGTMP="${TMPDIR-'/tmp'}/hgmerge.$RAND"
 
 # backup file
 BACKUP="$LOCAL.orig.$RAND"
@@ -68,6 +72,18 @@ failure() {
     exit 1
 }
 
+# Ask if the merge was successful
+ask_if_merged() {
+    while 1; do
+        echo "$LOCAL seems unchanged. Was the merge successful? [y/n]"
+        read answer
+        case answer in
+            y*|Y*) success;;
+            n*|N*) failure;;
+        esac
+    done
+}
+
 # Clean up when interrupted
 trap "failure" 1 2 3 6 15 # HUP INT QUIT ABRT TERM
 
@@ -76,18 +92,16 @@ mv "$LOCAL" "$BACKUP"
 cp "$BACKUP" "$LOCAL"
 
 # Attempt to do a non-interactive merge
-if [ -n "$MERGE" ]; then
-    $MERGE "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && success
-    cp "$BACKUP" "$LOCAL"
-elif [ -n "$DIFF3" ]; then
-    echo $DIFF3 -m "$BACKUP" "$BASE" "$OTHER"
-    $DIFF3 -m "$BACKUP" "$BASE" "$OTHER" > "$LOCAL" && success
-    if [ $? -eq 2 ]; then
-        echo "$DIFF3 failed! Exiting." 1>&2
-        cp "$BACKUP" "$LOCAL"
+if [ -n "$MERGE" -o -n "$DIFF3" ]; then
+    if [ -n "$MERGE" ]; then
+        $MERGE "$LOCAL" "$BASE" "$OTHER" 2> /dev/null && success
+    elif [ -n "$DIFF3" ]; then
+        $DIFF3 -m "$BACKUP" "$BASE" "$OTHER" > "$LOCAL" && success
+    fi
+    if [ $? -gt 1 ]; then
+        echo "automatic merge failed! Exiting." 1>&2
         failure
     fi
-    cp "$BACKUP" "$LOCAL"
 fi
 
 # on MacOS X try FileMerge.app, shipped with Apple's developer tools
@@ -97,71 +111,66 @@ if [ -n "$FILEMERGE" ]; then
     # filemerge prefers the right by default
     $FILEMERGE -left "$OTHER" -right "$LOCAL" -ancestor "$BASE" -merge "$LOCAL"
     [ $? -ne 0 ] && echo "FileMerge failed to launch" && failure
-    if test "$LOCAL" -nt "$CHGTEST"
-    then
-        success
-    else
-        echo "$LOCAL seems unchanged. Was the merge successful?"
-        select answer in yes no
-        do
-            test "$answer" == "yes" && success || failure
-        done
-    fi
-    failure
+    test "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
 fi
 
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
     if [ -n "$KDIFF3" ]; then
-	$KDIFF3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" || failure
-	success
+        $KDIFF3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" || failure
+        success
     fi
 
     # try using tkdiff, which is a bit less sophisticated
     if [ -n "$TKDIFF" ]; then
-	$TKDIFF "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || failure
-	success
+        $TKDIFF "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || failure
+        success
+    fi
+
+    if [ -n "$MELD" ]; then
+        cp "$BACKUP" "$CHGTEST"
+        # protect our feet - meld allows us to save to the left file
+        cp "$BACKUP" "$LOCAL.tmp.$RAND"
+        # Meld doesn't have automatic merging, so to reduce intervention
+        # use the file with conflicts
+        $MELD "$LOCAL.tmp.$RAND" "$LOCAL" "$OTHER" || failure
+        # Also it doesn't return good error code
+        test "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
     fi
 fi
 
 # Attempt to do a merge with $EDITOR
-if [ -n "$MERGE" ]; then
+if [ -n "$MERGE" -o -n "$DIFF3" ]; then
     echo "conflicts detected in $LOCAL"
-    $MERGE "$LOCAL" "$BASE" "$OTHER" 2>/dev/null || $EDITOR "$LOCAL"
-    success
-fi
-
-if [ -n "$DIFF3" ]; then
-    echo "conflicts detected in $LOCAL"
-    $DIFF3 -m "$BACKUP" "$BASE" "$OTHER" > "$LOCAL" || {
-        case $? in
-            1)
-                $EDITOR "$LOCAL" ;;
-            2)  echo "$DIFF3 failed! Exiting." 1>&2
-                cp "$BACKUP" "$LOCAL"
-                failure ;;
-        esac
-        success
-    }
+    cp "$BACKUP" "$CHGTEST"
+    $EDITOR "$LOCAL" || failure
+    # Some editors do not return meaningful error codes
+    # Do not take any chances
+    test "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
 fi
 
 # attempt to manually merge with diff and patch
 if [ -n "$DIFF" -a -n "$PATCH" ]; then
 
     (umask 077 && mkdir "$HGTMP") || {
-	echo "Could not create temporary directory $HGTMP" 1>&2
-	failure
+        echo "Could not create temporary directory $HGTMP" 1>&2
+        failure
     }
 
     $DIFF -u "$BASE" "$OTHER" > "$HGTMP/diff" || :
     if $PATCH "$LOCAL" < "$HGTMP/diff"; then
-	success
+        success
     else
-	# If rejects are empty after using the editor, merge was ok
-	$EDITOR "$LOCAL" "$LOCAL.rej" && test -s "$LOCAL.rej" || success
+        # If rejects are empty after using the editor, merge was ok
+        $EDITOR "$LOCAL" "$LOCAL.rej" || failure
+        test -s "$LOCAL.rej" || success
     fi
     failure
 fi
 
-echo "hgmerge: unable to find merge, tkdiff, kdiff3, or diff+patch!"
+echo
+echo "hgmerge: unable to find any merge utility!"
+echo "supported programs:"
+echo "merge, FileMerge, tkdiff, kdiff3, meld, diff+patch"
+echo
 failure

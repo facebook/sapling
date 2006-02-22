@@ -17,6 +17,10 @@
 #define inline
 #endif
 
+#ifdef __SUNPRO_C
+# define inline
+#endif 
+
 #ifdef _WIN32
 #ifdef _MSC_VER
 #define inline __inline
