@@ -1,0 +1,15 @@
+pulling from ../source
+abort: pretxncommit hook exited with status 1
+transaction abort!
+rollback completed
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 2 changesets, 2 total revisions
