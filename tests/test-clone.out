@@ -4,7 +4,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
-cat: a: No such file or directory
+a not present
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

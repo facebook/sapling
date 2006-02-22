@@ -20,7 +20,7 @@ echo "this should show a revision linked to changeset 1"
 hg debugindex .hg/data/b.i
 
 echo "this should show the rename information in the metadata"
-hg debugdata .hg/data/b.d 0 | head -n 3 | tail -n 2
+hg debugdata .hg/data/b.d 0 | head -3 | tail -2
 
 $TESTDIR/md5sum.py .hg/data/b.d
 hg cat b > bsum
