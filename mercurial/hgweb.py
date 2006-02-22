@@ -1006,11 +1006,8 @@ class hgweb(object):
 
                 os.stat(fname)
 
-		ct = mimetypes.guess_type(fname)[0]
-		if ct == None:
-			ct = "text/plain"
-
-                req.write("Content-type: " + ct + "\n\n" + file(fname).read())
+                ct = mimetypes.guess_type(fname)[0] or "text/plain"
+                req.write("Content-type: %s\n\n" % ct, file(fname).read())
             except ValueError:
                 # security breach attempt
                 req.write(self.t("error"))
