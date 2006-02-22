@@ -235,8 +235,7 @@ class localrepository(object):
         if os.path.exists(self.join("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
             transaction.rollback(self.opener, self.join("journal"))
-            self.manifest = manifest.manifest(self.opener)
-            self.changelog = changelog.changelog(self.opener)
+            self.reload()
             return True
         else:
             self.ui.warn(_("no interrupted transaction available\n"))
@@ -250,9 +249,19 @@ class localrepository(object):
             self.ui.status(_("rolling back last transaction\n"))
             transaction.rollback(self.opener, self.join("undo"))
             util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-            self.dirstate.read()
+            self.reload()
+            self.wreload()
         else:
             self.ui.warn(_("no undo information available\n"))
+
+    def wreload(self):
+        self.dirstate.read()
+
+    def reload(self):
+        self.changelog.load()
+        self.manifest.load()
+        self.tagscache = None
+        self.nodetagscache = None
 
     def do_lock(self, lockname, wait, releasefn=None, acquirefn=None):
         try:
@@ -267,12 +276,12 @@ class localrepository(object):
         return l
 
     def lock(self, wait=1):
-        return self.do_lock("lock", wait)
+        return self.do_lock("lock", wait, acquirefn=self.reload)
 
     def wlock(self, wait=1):
         return self.do_lock("wlock", wait,
                             self.dirstate.write,
-                            self.dirstate.read)
+                            self.wreload)
 
     def checkfilemerge(self, filename, text, filelog, manifest1, manifest2):
         "determine whether a new filenode is needed"

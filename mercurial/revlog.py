@@ -13,7 +13,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "binascii errno heapq mdiff sha struct zlib")
+demandload(globals(), "binascii errno heapq mdiff os sha struct zlib")
 
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
@@ -187,15 +187,33 @@ class revlog(object):
         self.indexfile = indexfile
         self.datafile = datafile
         self.opener = opener
+
+        self.indexstat = None
         self.cache = None
         self.chunkcache = None
+        self.load()
 
+    def load(self):
         try:
-            i = self.opener(self.indexfile).read()
+            f = self.opener(self.indexfile)
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
             i = ""
+        else:
+            try:
+                st = os.fstat(f.fileno())
+            except AttributeError, inst:
+                st = None
+            else:
+                oldst = self.indexstat
+                if (oldst and st.st_dev == oldst.st_dev
+                    and st.st_ino == oldst.st_ino
+                    and st.st_mtime == oldst.st_mtime
+                    and st.st_ctime == oldst.st_ctime):
+                    return
+            self.indexstat = st
+            i = f.read()
 
         if i and i[:4] != "\0\0\0\0":
             raise RevlogError(_("incompatible revlog signature on %s") %
