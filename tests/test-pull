@@ -7,8 +7,7 @@ hg init
 hg addremove
 hg commit -m 1
 hg verify
-serverpid=`mktemp`
-hg serve -p 20059 -d --pid-file=$serverpid
+hg serve -p 20059 -d --pid-file=hg.pid
 cd ..
 
 hg clone http://localhost:20059/ copy
@@ -19,5 +18,4 @@ cat foo
 hg manifest
 hg pull
 
-kill `cat $serverpid`
-rm $serverpid
+kill `cat ../test/hg.pid`

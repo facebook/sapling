@@ -18,8 +18,7 @@ echo "name = test-archive" >> .hg/hgrc
 echo "allowzip = true" >> .hg/hgrc
 echo "allowgz = true" >> .hg/hgrc
 echo "allowbz2 = true" >> .hg/hgrc
-serverpid=`mktemp`
-hg serve -p 20059 -d --pid-file=$serverpid
+hg serve -p 20059 -d --pid-file=hg.pid
 
 TIP=`hg id -v | cut -f1 -d' '`
 QTIP=`hg id -q`
@@ -35,5 +34,4 @@ http_proxy= python getarchive.py "$TIP" bz2 | tar tjf - | sed "s/$QTIP/TIP/"
 http_proxy= python getarchive.py "$TIP" zip > archive.zip
 unzip -t archive.zip | sed "s/$QTIP/TIP/"
 
-kill `cat $serverpid`
-rm $serverpid
+kill `cat hg.pid`
