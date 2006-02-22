@@ -72,6 +72,33 @@ def get_mtime(repo_path):
     else:
         return os.stat(hg_path).st_mtime
 
+def staticfile(directory, fname):
+    fname = os.path.realpath(os.path.join(directory, fname))
+
+    try:
+        # the static dir should be a substring in the real
+        # file path, if it is not, we have something strange
+        # going on => security breach attempt?
+        #
+        # This will either:
+        #   1) find the `static' path at index 0  =  success
+        #   2) find the `static' path at other index  =  error
+        #   3) not find the `static' path  =  ValueError generated
+        if fname.index(directory) != 0:
+            # generate ValueError manually
+            raise ValueError()
+
+        os.stat(fname)
+
+        ct = mimetypes.guess_type(fname)[0] or "text/plain"
+        return "Content-type: %s\n\n%s" % (ct, file(fname).read())
+    except ValueError:
+        # security breach attempt
+        return ""
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            return ""
+
 class hgrequest(object):
     def __init__(self, inp=None, out=None, env=None):
         self.inp = inp or sys.stdin
@@ -988,32 +1015,8 @@ class hgweb(object):
 
         elif req.form['cmd'][0] == 'static':
             fname = req.form['file'][0]
-
-            fname = os.path.realpath(os.path.join(static, fname))
-
-            try:
-                # the static dir should be a substring in the real
-                # file path, if it is not, we have something strange
-                # going on => security breach attempt?
-                #
-                # This will either:
-                #   1) find the `static' path at index 0  =  success
-                #   2) find the `static' path at other index  =  error
-                #   3) not find the `static' path  =  ValueError generated
-                if fname.index(static) != 0:
-                    # generate ValueError manually
-                    raise ValueError()
-
-                os.stat(fname)
-
-                ct = mimetypes.guess_type(fname)[0] or "text/plain"
-                req.write("Content-type: %s\n\n" % ct, file(fname).read())
-            except ValueError:
-                # security breach attempt
-                req.write(self.t("error"))
-            except OSError, e:
-                if e.errno == errno.ENOENT:
-                    req.write(self.t("error"))
+            req.write(staticfile(static, fname)
+                      or tmpl("error", error="%r not found" % fname))
 
         else:
             req.write(self.t("error"))
@@ -1176,4 +1179,10 @@ class hgwebdir(object):
             else:
                 req.write(tmpl("notfound", repo=virtual))
         else:
-            req.write(tmpl("index", entries=entries))
+            if req.form.has_key('static'):
+                static = os.path.join(templatepath(), "static")
+                fname = req.form['static'][0]
+                req.write(staticfile(static, fname)
+                          or tmpl("error", error="%r not found" % fname))
+            else:
+                req.write(tmpl("index", entries=entries))
