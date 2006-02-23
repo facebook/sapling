@@ -82,6 +82,21 @@ def walkchangerevs(ui, repo, pats, opts):
     "iter", rev, None: in-order traversal of the revs earlier iterated
     over with "add" - use to display data'''
 
+    def increasing_windows(start, end, windowsize=8, sizelimit=512):
+        if start < end:
+            while start < end:
+                yield start, min(windowsize, end-start)
+                start += windowsize
+                if windowsize < sizelimit:
+                    windowsize *= 2
+        else:
+            while start > end:
+                yield start, min(windowsize, start-end-1)
+                start -= windowsize
+                if windowsize < sizelimit:
+                    windowsize *= 2
+
+
     files, matchfn, anypats = matchpats(repo, pats, opts)
 
     if repo.changelog.count() == 0:
@@ -90,7 +105,6 @@ def walkchangerevs(ui, repo, pats, opts):
     revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
     wanted = {}
     slowpath = anypats
-    window = 300
     fncache = {}
 
     chcache = {}
@@ -106,7 +120,7 @@ def walkchangerevs(ui, repo, pats, opts):
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog):
-            for i in xrange(filelog.count() - 1, -1, -window):
+            for i, window in increasing_windows(filelog.count()-1, -1):
                 revs = []
                 for j in xrange(max(0, i - window), i + 1):
                     revs.append(filelog.linkrev(filelog.node(j)))
@@ -132,7 +146,7 @@ def walkchangerevs(ui, repo, pats, opts):
     if slowpath:
         # The slow path checks files modified in every changeset.
         def changerevgen():
-            for i in xrange(repo.changelog.count() - 1, -1, -window):
+            for i, window in increasing_windows(repo.changelog.count()-1, -1):
                 for j in xrange(max(0, i - window), i + 1):
                     yield j, getchange(j)[3]
 
@@ -143,7 +157,7 @@ def walkchangerevs(ui, repo, pats, opts):
                 wanted[rev] = 1
 
     def iterate():
-        for i in xrange(0, len(revs), window):
+        for i, window in increasing_windows(0, len(revs)):
             yield 'window', revs[0] < revs[-1], revs[-1]
             nrevs = [rev for rev in revs[i:min(i+window, len(revs))]
                      if rev in wanted]
