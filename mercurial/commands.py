@@ -122,7 +122,7 @@ def walkchangerevs(ui, repo, pats, opts):
         def filerevgen(filelog):
             for i, window in increasing_windows(filelog.count()-1, -1):
                 revs = []
-                for j in xrange(max(0, i - window), i + 1):
+                for j in xrange(i - window, i + 1):
                     revs.append(filelog.linkrev(filelog.node(j)))
                 revs.reverse()
                 for rev in revs:
@@ -147,7 +147,7 @@ def walkchangerevs(ui, repo, pats, opts):
         # The slow path checks files modified in every changeset.
         def changerevgen():
             for i, window in increasing_windows(repo.changelog.count()-1, -1):
-                for j in xrange(max(0, i - window), i + 1):
+                for j in xrange(i - window, i + 1):
                     yield j, getchange(j)[3]
 
         for rev, changefiles in changerevgen():
@@ -159,7 +159,7 @@ def walkchangerevs(ui, repo, pats, opts):
     def iterate():
         for i, window in increasing_windows(0, len(revs)):
             yield 'window', revs[0] < revs[-1], revs[-1]
-            nrevs = [rev for rev in revs[i:min(i+window, len(revs))]
+            nrevs = [rev for rev in revs[i:i+window]
                      if rev in wanted]
             srevs = list(nrevs)
             srevs.sort()
