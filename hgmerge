@@ -45,7 +45,7 @@ type "$MELD"      >/dev/null 2>&1 || MELD=
 RAND="$RANDOM$RANDOM"
 
 # temporary directory for diff+patch merge
-HGTMP="${TMPDIR-'/tmp'}/hgmerge.$RAND"
+HGTMP="${TMPDIR-/tmp}/hgmerge.$RAND"
 
 # backup file
 BACKUP="$LOCAL.orig.$RAND"
@@ -74,10 +74,11 @@ failure() {
 
 # Ask if the merge was successful
 ask_if_merged() {
-    while 1; do
-        echo "$LOCAL seems unchanged. Was the merge successful? [y/n]"
+    while true; do
+        echo "$LOCAL seems unchanged."
+        echo "Was the merge successful? [y/n]"
         read answer
-        case answer in
+        case "$answer" in
             y*|Y*) success;;
             n*|N*) failure;;
         esac
