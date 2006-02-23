@@ -118,13 +118,13 @@ fi
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
     if [ -n "$KDIFF3" ]; then
-        $KDIFF3 --auto "$BASE" "$LOCAL" "$OTHER" -o "$LOCAL" || failure
+        $KDIFF3 --auto "$BASE" "$BACKUP" "$OTHER" -o "$LOCAL" || failure
         success
     fi
 
     # try using tkdiff, which is a bit less sophisticated
     if [ -n "$TKDIFF" ]; then
-        $TKDIFF "$LOCAL" "$OTHER" -a "$BASE" -o "$LOCAL" || failure
+        $TKDIFF "$BACKUP" "$OTHER" -a "$BASE" -o "$LOCAL" || failure
         success
     fi
 
