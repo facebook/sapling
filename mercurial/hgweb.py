@@ -19,7 +19,7 @@ def templatepath():
     for f in "templates", "../templates":
         p = os.path.join(os.path.dirname(__file__), f)
         if os.path.isdir(p):
-            return p
+            return os.path.normpath(p)
 
 def age(x):
     def plural(t, c):
