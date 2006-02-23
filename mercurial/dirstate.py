@@ -213,6 +213,8 @@ class dirstate(object):
         self.markdirty()
 
     def write(self):
+        if not self.dirty:
+            return
         st = self.opener("dirstate", "w", atomic=True)
         st.write("".join(self.pl))
         for f, e in self.map.items():
