@@ -1016,7 +1016,7 @@ class hgweb(object):
         elif req.form['cmd'][0] == 'static':
             fname = req.form['file'][0]
             req.write(staticfile(static, fname)
-                      or tmpl("error", error="%r not found" % fname))
+                      or self.t("error", error="%r not found" % fname))
 
         else:
             req.write(self.t("error"))
