@@ -1975,7 +1975,7 @@ def revert(ui, repo, *pats, **opts):
     files, choose, anypats = matchpats(repo, pats, opts)
     modified, added, removed, deleted, unknown = repo.changes(match=choose)
     repo.forget(added)
-    repo.undelete(removed + deleted)
+    repo.undelete(removed)
 
     return repo.update(node, False, True, choose, False)
 
