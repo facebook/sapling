@@ -519,6 +519,12 @@ class localrepository(object):
                     del mf[fn]
             return mf
 
+        if node1:
+            # read the manifest from node1 before the manifest from node2,
+            # so that we'll hit the manifest cache if we're going through
+            # all the revisions in parent->child order.
+            mf1 = mfmatches(node1)
+
         # are we comparing the working directory?
         if not node2:
             if not wlock:
@@ -556,8 +562,6 @@ class localrepository(object):
         if node1:
             # flush lists from dirstate before comparing manifests
             modified, added = [], []
-
-            mf1 = mfmatches(node1)
 
             for fn in mf2:
                 if mf1.has_key(fn):
