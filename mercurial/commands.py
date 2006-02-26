@@ -276,6 +276,13 @@ def make_file(repo, r, pat, node=None,
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False, opts={}):
+    if node1:
+        # reading the data for node1 early allows it to play nicely
+        # with repo.changes and the revlog cache.
+        change = repo.changelog.read(node1)
+        mmap = repo.manifest.read(change[0])
+        date1 = util.datestr(change[2])
+
     if not changes:
         changes = repo.changes(node1, node2, files, match=match)
     modified, added, removed, deleted, unknown = changes
@@ -296,6 +303,9 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         date2 = util.datestr()
         if not node1:
             node1 = repo.dirstate.parents()[0]
+            change = repo.changelog.read(node1)
+            mmap = repo.manifest.read(change[0])
+            date1 = util.datestr(change[2])
         def read(f):
             return repo.wread(f)
 
@@ -304,10 +314,6 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     else:
         hexfunc = ui.verbose and hex or short
         r = [hexfunc(node) for node in [node1, node2] if node]
-
-    change = repo.changelog.read(node1)
-    mmap = repo.manifest.read(change[0])
-    date1 = util.datestr(change[2])
 
     diffopts = ui.diffopts()
     showfunc = opts.get('show_function') or diffopts['showfunc']
