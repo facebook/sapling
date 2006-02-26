@@ -1022,8 +1022,8 @@ class hgwebdir(object):
             yield tmpl("footer", **map)
 
         m = os.path.join(templater.templatepath(), "map")
-        tmpl = templater(m, common_filters,
-                         {"header": header, "footer": footer})
+        tmpl = templater.templater(m, templater.common_filters,
+                                   {"header": header, "footer": footer})
 
         def entries(**map):
             parity = 0
