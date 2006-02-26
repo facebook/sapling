@@ -105,3 +105,9 @@ common_filters = {
     "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
     }
+
+def templatepath():
+    for f in "templates", "../templates":
+        p = os.path.join(os.path.dirname(__file__), f)
+        if os.path.isdir(p):
+            return os.path.normpath(p)

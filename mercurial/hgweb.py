@@ -15,12 +15,6 @@ demandload(globals(), "mimetypes templater")
 from node import *
 from i18n import gettext as _
 
-def templatepath():
-    for f in "templates", "../templates":
-        p = os.path.join(os.path.dirname(__file__), f)
-        if os.path.isdir(p):
-            return os.path.normpath(p)
-
 def up(p):
     if p[0] != "/":
         p = "/" + p
@@ -783,7 +777,7 @@ class hgweb(object):
 
         expand_form(req.form)
 
-        t = self.repo.ui.config("web", "templates", templatepath())
+        t = self.repo.ui.config("web", "templates", templater.templatepath())
         static = self.repo.ui.config("web", "static", os.path.join(t,"static"))
         m = os.path.join(t, "map")
         style = self.repo.ui.config("web", "style", "")
@@ -1027,7 +1021,7 @@ class hgwebdir(object):
         def footer(**map):
             yield tmpl("footer", **map)
 
-        m = os.path.join(templatepath(), "map")
+        m = os.path.join(templater.templatepath(), "map")
         tmpl = templater(m, common_filters,
                          {"header": header, "footer": footer})
 
@@ -1075,7 +1069,7 @@ class hgwebdir(object):
                 req.write(tmpl("notfound", repo=virtual))
         else:
             if req.form.has_key('static'):
-                static = os.path.join(templatepath(), "static")
+                static = os.path.join(templater.templatepath(), "static")
                 fname = req.form['static'][0]
                 req.write(staticfile(static, fname)
                           or tmpl("error", error="%r not found" % fname))
