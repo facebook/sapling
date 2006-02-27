@@ -10,15 +10,18 @@ class templater(object):
         self.defaults = defaults
 
         for l in file(mapfile):
-            m = re.match(r'(\S+)\s*=\s*"(.*)"$', l)
+            m = re.match(r'(\S+)\s*=\s*(".*"|\'.*\')$', l)
             if m:
-                self.cache[m.group(1)] = m.group(2)
+                self.cache[m.group(1)] = eval(m.group(2))
             else:
                 m = re.match(r'(\S+)\s*=\s*(\S+)', l)
                 if m:
                     self.map[m.group(1)] = os.path.join(self.base, m.group(2))
                 else:
                     raise LookupError(_("unknown map entry '%s'") % l)
+
+    def __contains__(self, key):
+        return key in self.cache
 
     def __call__(self, t, **map):
         m = self.defaults.copy()
@@ -31,7 +34,9 @@ class templater(object):
 
     def template(self, tmpl, filters={}, **map):
         while tmpl:
-            m = re.search(r"#([a-zA-Z0-9]+)((%[a-zA-Z0-9]+)*)((\|[a-zA-Z0-9]+)*)#", tmpl)
+            m = re.search(r"#([a-zA-Z_][a-zA-Z0-9_]*)"
+                          r"((%[a-zA-Z_][a-zA-Z0-9_]*)*)"
+                          r"((\|[a-zA-Z_][a-zA-Z0-9_]*)*)#", tmpl)
             if m:
                 yield tmpl[:m.start(0)]
                 v = map.get(m.group(1), "")
@@ -106,8 +111,10 @@ common_filters = {
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
     }
 
-def templatepath():
-    for f in "templates", "../templates":
-        p = os.path.join(os.path.dirname(__file__), f)
-        if os.path.isdir(p):
+def templatepath(name=None):
+    for f in 'templates', '../templates':
+        fl = f.split('/')
+        if name: fl.append(name)
+        p = os.path.join(os.path.dirname(__file__), *fl)
+        if (name and os.path.exists(p)) or os.path.isdir(p):
             return os.path.normpath(p)
