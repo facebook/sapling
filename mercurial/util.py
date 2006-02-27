@@ -690,3 +690,13 @@ def datestr(date=None, format='%c'):
             (time.strftime(format, time.gmtime(float(t) - tz)),
              -tz / 3600,
              ((-tz % 3600) / 60)))
+
+def shortuser(user):
+    """Return a short representation of a user name or email address."""
+    f = user.find('@')
+    if f >= 0:
+        user = user[:f]
+    f = user.find('<')
+    if f >= 0:
+        user = user[f+1:]
+    return user

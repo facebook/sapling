@@ -104,13 +104,7 @@ class ui(object):
 
     def shortuser(self, user):
         """Return a short representation of a user name or email address."""
-        if not self.verbose:
-            f = user.find('@')
-            if f >= 0:
-                user = user[:f]
-            f = user.find('<')
-            if f >= 0:
-                user = user[f+1:]
+        if not self.verbose: user = util.shortuser(user)
         return user
 
     def expandpath(self, loc, root=""):
