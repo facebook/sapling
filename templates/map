@@ -1,50 +1,50 @@
-default = "changelog"
+default = 'changelog'
 header = header.tmpl
 footer = footer.tmpl
 search = search.tmpl
 changelog = changelog.tmpl
-naventry = "<a href="?cl=#rev#">#label|escape#</a> "
-filedifflink = "<a href="?fd=#node|short#;file=#file|urlescape#">#file|escape#</a> "
-filenodelink = "<a href="?f=#filenode|short#;file=#file|urlescape#">#file|escape#</a> "
-fileellipses = "..."
+naventry = '<a href="?cl=#rev#">#label|escape#</a> '
+filedifflink = '<a href="?fd=#node|short#;file=#file|urlescape#">#file|escape#</a> '
+filenodelink = '<a href="?f=#filenode|short#;file=#file|urlescape#">#file|escape#</a> '
+fileellipses = '...'
 changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
-manifestdirentry = "<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td><a href="?cmd=manifest;manifest=#manifest#;path=#path|urlescape#">#basename|escape#/</a>"
-manifestfileentry = "<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td><a href="?f=#filenode|short#;file=#file|urlescape#">#basename|escape#</a>"
+manifestdirentry = '<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td><a href="?cmd=manifest;manifest=#manifest#;path=#path|urlescape#">#basename|escape#/</a>'
+manifestfileentry = '<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td><a href="?f=#filenode|short#;file=#file|urlescape#">#basename|escape#</a>'
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
-fileline = "<div class="parity#parity#"><span class="lineno">#linenumber#</span>#line|escape#</div>"
+fileline = '<div class="parity#parity#"><span class="lineno">#linenumber#</span>#line|escape#</div>'
 filelogentry = filelogentry.tmpl
-annotateline = "<tr class="parity#parity#"><td class="annotate"><a href="?cs=#node|short#">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>"
-difflineplus = "<span class="plusline">#line|escape#</span>"
-difflineminus = "<span class="minusline">#line|escape#</span>"
-difflineat = "<span class="atline">#line|escape#</span>"
-diffline = "#line|escape#"
-changelogparent = "<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cs=#node|short#">#node|short#</a></td></tr>"
-changesetparent = "<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cs=#node|short#">#node|short#</a></td></tr>"
-filerevparent = "<tr><td class="metatag">parent:</td><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>"
-filerename = "<tr><td class="metatag">parent:</td><td><a href="?f=#node|short#;file=#file|urlescape#">#file|escape#@#node|short#</a></td></tr>"
-filelogrename = "<tr><td align="right">base:&nbsp;</td><td><a href="?f=#node|short#;file=#file|urlescape#">#file|escape#@#node|short#</a></td></tr>"
-fileannotateparent = "<tr><td class="metatag">parent:</td><td><a href="?fa=#filenode|short#;file=#file|urlescape#">#node|short#</a></td></tr>"
-changesetchild = "<tr><th class="child">child #rev#:</th><td class="child"><a href="?cs=#node|short#">#node|short#</a></td></tr>"
-changelogchild = "<tr><th class="child">child #rev#:</th><td class="child"><a href="?cs=#node|short#">#node|short#</a></td></tr>"
-filerevchild = "<tr><td class="metatag">child:</td><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>"
-fileannotatechild = "<tr><td class="metatag">child:</td><td><a href="?fa=#filenode|short#;file=#file|urlescape#">#node|short#</a></td></tr>"
+annotateline = '<tr class="parity#parity#"><td class="annotate"><a href="?cs=#node|short#">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>'
+difflineplus = '<span class="plusline">#line|escape#</span>'
+difflineminus = '<span class="minusline">#line|escape#</span>'
+difflineat = '<span class="atline">#line|escape#</span>'
+diffline = '#line|escape#'
+changelogparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cs=#node|short#">#node|short#</a></td></tr>'
+changesetparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cs=#node|short#">#node|short#</a></td></tr>'
+filerevparent = '<tr><td class="metatag">parent:</td><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
+filerename = '<tr><td class="metatag">parent:</td><td><a href="?f=#node|short#;file=#file|urlescape#">#file|escape#@#node|short#</a></td></tr>'
+filelogrename = '<tr><td align="right">base:&nbsp;</td><td><a href="?f=#node|short#;file=#file|urlescape#">#file|escape#@#node|short#</a></td></tr>'
+fileannotateparent = '<tr><td class="metatag">parent:</td><td><a href="?fa=#filenode|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
+changesetchild = '<tr><th class="child">child #rev#:</th><td class="child"><a href="?cs=#node|short#">#node|short#</a></td></tr>'
+changelogchild = '<tr><th class="child">child #rev#:</th><td class="child"><a href="?cs=#node|short#">#node|short#</a></td></tr>'
+filerevchild = '<tr><td class="metatag">child:</td><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
+fileannotatechild = '<tr><td class="metatag">child:</td><td><a href="?fa=#filenode|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
 tags = tags.tmpl
-tagentry = "<li class="tagEntry parity#parity#"><span class="node">#node#</span> <a href="?cs=#node|short#">#tag|escape#</a></li>"
-diffblock = "<pre class="parity#parity#">#lines#</pre>"
-changelogtag = "<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>"
-changesettag = "<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>"
-filediffparent = "<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cs=#node|short#">#node|short#</a></td></tr>"
-filelogparent = "<tr><td align="right">parent #rev#:&nbsp;</td><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>"
-filediffchild = "<tr><th class="child">child #rev#:</th><td class="child"><a href="?cs=#node|short#">#node|short#</a></td></tr>"
-filelogchild = "<tr><td align="right">child #rev#:&nbsp;</td><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>"
-indexentry = "<tr class="parity#parity#"><td><a href="#url#">#name|escape#</a></td><td>#shortdesc#</td><td>#contact|obfuscate#</td><td>#lastupdate|age# ago</td><td><a href="#url#?cl=tip;style=rss">RSS</a></td></tr>"
+tagentry = '<li class="tagEntry parity#parity#"><span class="node">#node#</span> <a href="?cs=#node|short#">#tag|escape#</a></li>'
+diffblock = '<pre class="parity#parity#">#lines#</pre>'
+changelogtag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'
+changesettag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'
+filediffparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cs=#node|short#">#node|short#</a></td></tr>'
+filelogparent = '<tr><td align="right">parent #rev#:&nbsp;</td><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
+filediffchild = '<tr><th class="child">child #rev#:</th><td class="child"><a href="?cs=#node|short#">#node|short#</a></td></tr>'
+filelogchild = '<tr><td align="right">child #rev#:&nbsp;</td><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
+indexentry = '<tr class="parity#parity#"><td><a href="#url#">#name|escape#</a></td><td>#shortdesc#</td><td>#contact|obfuscate#</td><td>#lastupdate|age# ago</td><td><a href="#url#?cl=tip;style=rss">RSS</a></td></tr>'
 index = index.tmpl
-archiveentry = "<a href="?ca=#node|short#;type=#type|urlescape#">#type|escape#</a> "
+archiveentry = '<a href="?ca=#node|short#;type=#type|urlescape#">#type|escape#</a> '
 notfound = notfound.tmpl
 error = error.tmpl

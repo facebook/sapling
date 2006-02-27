@@ -1,6 +1,32 @@
 import re
 from demandload import demandload
-demandload(globals(), "cgi os time urllib util")
+from i18n import gettext as _
+demandload(globals(), "cStringIO cgi os time urllib util")
+
+esctable = {
+    '\\': '\\',
+    'r': '\r',
+    't': '\t',
+    'n': '\n',
+    'v': '\v',
+    }
+
+def parsestring(s):
+    fp = cStringIO.StringIO()
+    escape = False
+    first = s[0]
+    if len(s) < 2: raise SyntaxError(_('string too short'))
+    if first not in "'\"": raise SyntaxError(_('invalid quote'))
+    if s[-1] != first: raise SyntaxError(_('unmatched quotes'))
+    for c in s[1:-1]:
+        if escape:
+            fp.write(esctable.get(c, c))
+            escape = False
+        elif c == '\\': escape = True
+        elif c == first: raise SyntaxError(_('string ends early'))
+        else: fp.write(c)
+    if escape: raise SyntaxError(_('unterminated escape'))
+    return fp.getvalue()
 
 class templater(object):
     def __init__(self, mapfile, filters={}, defaults={}):
@@ -10,10 +36,16 @@ class templater(object):
         self.filters = filters
         self.defaults = defaults
 
+        i = 0
         for l in file(mapfile):
-            m = re.match(r'(\S+)\s*=\s*(".*"|\'.*\')$', l)
+            i += 1
+            m = re.match(r'(\S+)\s*=\s*(["\'].*["\'])$', l)
             if m:
-                self.cache[m.group(1)] = eval(m.group(2))
+                try:
+                    s = m.group(2)
+                    self.cache[m.group(1)] = parsestring(s)
+                except SyntaxError, inst:
+                    raise SyntaxError('%s:%s: %s' % (mapfile, i, inst.args[0]))
             else:
                 m = re.match(r'(\S+)\s*=\s*(\S+)', l)
                 if m:

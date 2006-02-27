@@ -1,4 +1,4 @@
-default = "changelog"
+default = 'changelog'
 header = header-rss.tmpl
 changelog = changelog-rss.tmpl
 changelogentry = changelogentry-rss.tmpl
