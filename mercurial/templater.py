@@ -144,6 +144,9 @@ def age(x):
         if n >= 2 or s == 1:
             return fmt(t, n)
 
+def isodate(date):
+    return util.datestr(date, format='%Y-%m-%d %H:%M')
+
 def nl2br(text):
     return text.replace('\n', '<br/>\n')
 
@@ -170,6 +173,7 @@ common_filters = {
     "domain": domain,
     "escape": lambda x: cgi.escape(x, True),
     "firstline": (lambda x: x.splitlines(1)[0]),
+    "isodate": isodate,
     "obfuscate": obfuscate,
     "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
     "person": person,
