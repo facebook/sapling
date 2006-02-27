@@ -67,9 +67,9 @@ class templater(object):
             tmpl = self.cache[t] = file(self.map[t]).read()
         return self.template(tmpl, self.filters, **m)
 
-    template_re = re.compile(r"#([a-zA-Z_][a-zA-Z0-9_]*)"
+    template_re = re.compile(r"[#{]([a-zA-Z_][a-zA-Z0-9_]*)"
                              r"((%[a-zA-Z_][a-zA-Z0-9_]*)*)"
-                             r"((\|[a-zA-Z_][a-zA-Z0-9_]*)*)#")
+                             r"((\|[a-zA-Z_][a-zA-Z0-9_]*)*)[#}]")
 
     def template(self, tmpl, filters={}, **map):
         lm = map.copy()
@@ -136,18 +136,34 @@ def nl2br(text):
 def obfuscate(text):
     return ''.join(['&#%d;' % ord(c) for c in text])
 
+def domain(author):
+    f = author.find('@')
+    if f == -1: return ''
+    author = author[f+1:]
+    f = author.find('>')
+    if f >= 0: author = author[:f]
+    return author
+
+def person(author):
+    f = author.find('<')
+    if f == -1: return util.shortuser(author)
+    return author[:f].rstrip()
+
 common_filters = {
-    "escape": lambda x: cgi.escape(x, True),
-    "urlescape": urllib.quote,
-    "strip": lambda x: x.strip(),
+    "addbreaks": nl2br,
     "age": age,
     "date": lambda x: util.datestr(x),
-    "addbreaks": nl2br,
-    "obfuscate": obfuscate,
-    "short": (lambda x: x[:12]),
+    "escape": lambda x: cgi.escape(x, True),
     "firstline": (lambda x: x.splitlines(1)[0]),
+    "domain": domain,
+    "obfuscate": obfuscate,
     "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
+    "person": person,
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
+    "short": (lambda x: x[:12]),
+    "strip": lambda x: x.strip(),
+    "urlescape": urllib.quote,
+    "user": util.shortuser,
     }
 
 def templatepath(name=None):
