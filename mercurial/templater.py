@@ -32,28 +32,33 @@ def parsestring(s, quoted=True):
 
 class templater(object):
     def __init__(self, mapfile, filters={}, defaults={}):
+        self.mapfile = mapfile or 'template'
         self.cache = {}
         self.map = {}
-        self.base = os.path.dirname(mapfile)
+        self.base = (mapfile and os.path.dirname(mapfile)) or ''
         self.filters = filters
         self.defaults = defaults
 
+        if not mapfile:
+            return
         i = 0
         for l in file(mapfile):
+            l = l.rstrip('\r\n')
             i += 1
-            m = re.match(r'(\S+)\s*=\s*(["\'].*["\'])$', l)
+            if l.startswith('#') or not l.strip(): continue
+            m = re.match(r'([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$', l)
             if m:
-                try:
-                    s = m.group(2)
-                    self.cache[m.group(1)] = parsestring(s)
-                except SyntaxError, inst:
-                    raise SyntaxError('%s:%s: %s' % (mapfile, i, inst.args[0]))
-            else:
-                m = re.match(r'(\S+)\s*=\s*(\S+)', l)
-                if m:
-                    self.map[m.group(1)] = os.path.join(self.base, m.group(2))
+                key, val = m.groups()
+                if val[0] in "'\"":
+                    try:
+                        self.cache[key] = parsestring(val)
+                    except SyntaxError, inst:
+                        raise SyntaxError('%s:%s: %s' %
+                                          (mapfile, i, inst.args[0]))
                 else:
-                    raise LookupError(_("unknown map entry '%s'") % l)
+                    self.map[key] = os.path.join(self.base, val)
+            else:
+                raise SyntaxError(_("%s:%s: parse error") % (mapfile, i))
 
     def __contains__(self, key):
         return key in self.cache
@@ -64,7 +69,11 @@ class templater(object):
         try:
             tmpl = self.cache[t]
         except KeyError:
-            tmpl = self.cache[t] = file(self.map[t]).read()
+            try:
+                tmpl = self.cache[t] = file(self.map[t]).read()
+            except IOError, inst:
+                raise IOError(inst.args[0], _('template file %s: %s') %
+                              (self.map[t], inst.args[1]))
         return self.template(tmpl, self.filters, **m)
 
     template_re = re.compile(r"[#{]([a-zA-Z_][a-zA-Z0-9_]*)"
@@ -76,10 +85,15 @@ class templater(object):
         while tmpl:
             m = self.template_re.search(tmpl)
             if m:
-                start = m.start(0)
+                start, end = m.span(0)
+                s, e = tmpl[start], tmpl[end - 1]
+                key = m.group(1)
+                if ((s == '#' and e != '#') or (s == '{' and e != '}')):
+                    raise SyntaxError(_("'%s'/'%s' mismatch expanding '%s'") %
+                                      (s, e, key))
                 if start:
                     yield tmpl[:start]
-                v = map.get(m.group(1), "")
+                v = map.get(key, "")
                 v = callable(v) and v(**map) or v
 
                 format = m.group(2)
@@ -98,7 +112,7 @@ class templater(object):
                         v = filters[f](v)
 
                 yield v
-                tmpl = tmpl[m.end(0):]
+                tmpl = tmpl[end:]
             else:
                 yield tmpl
                 break
@@ -153,9 +167,9 @@ common_filters = {
     "addbreaks": nl2br,
     "age": age,
     "date": lambda x: util.datestr(x),
+    "domain": domain,
     "escape": lambda x: cgi.escape(x, True),
     "firstline": (lambda x: x.splitlines(1)[0]),
-    "domain": domain,
     "obfuscate": obfuscate,
     "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
     "person": person,
