@@ -11,19 +11,21 @@ esctable = {
     'v': '\v',
     }
 
-def parsestring(s):
+def parsestring(s, quoted=True):
     fp = cStringIO.StringIO()
+    if quoted:
+        first = s[0]
+        if len(s) < 2: raise SyntaxError(_('string too short'))
+        if first not in "'\"": raise SyntaxError(_('invalid quote'))
+        if s[-1] != first: raise SyntaxError(_('unmatched quotes'))
+        s = s[1:-1]
     escape = False
-    first = s[0]
-    if len(s) < 2: raise SyntaxError(_('string too short'))
-    if first not in "'\"": raise SyntaxError(_('invalid quote'))
-    if s[-1] != first: raise SyntaxError(_('unmatched quotes'))
-    for c in s[1:-1]:
+    for c in s:
         if escape:
             fp.write(esctable.get(c, c))
             escape = False
         elif c == '\\': escape = True
-        elif c == first: raise SyntaxError(_('string ends early'))
+        elif quoted and c == first: raise SyntaxError(_('string ends early'))
         else: fp.write(c)
     if escape: raise SyntaxError(_('unterminated escape'))
     return fp.getvalue()
