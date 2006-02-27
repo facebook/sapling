@@ -378,12 +378,12 @@ class changeset_templater(object):
             startname = 'start_' + names
             if startname in self.t:
                 yield self.t(startname, **args)
-            def one(v):
+            def one(v, tag=name):
                 try:
                     vargs.update(v)
                 except ValueError:
                     vargs.update([(name, v)])
-                return self.t(name, **vargs)
+                return self.t(tag, **vargs)
             lastname = 'last_' + name
             if lastname in self.t:
                 last = values.pop()
@@ -392,8 +392,7 @@ class changeset_templater(object):
             for v in values:
                 yield one(v)
             if last is not None:
-                name = lastname
-                yield one(last)
+                yield one(last, tag=lastname)
             endname = 'end_' + names
             if endname in self.t:
                 yield self.t(endname, **args)
