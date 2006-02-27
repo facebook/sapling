@@ -696,6 +696,8 @@ def clone(ui, source, dest=None, **opts):
     such as AFS, implement hardlinking incorrectly, but do not report
     errors.  In these cases, use the --pull option to avoid
     hardlinking.
+
+    See pull for valid source format details.
     """
     if dest is None:
         dest = os.path.basename(os.path.normpath(source))
@@ -1713,6 +1715,8 @@ def outgoing(ui, repo, dest="default-push", **opts):
     Show changesets not found in the specified destination repo or the
     default push repo. These are the changesets that would be pushed
     if a push was requested.
+
+    See pull for valid source format details.
     """
     dest = ui.expandpath(dest, repo.root)
     other = hg.repository(ui, dest)
@@ -1854,8 +1858,9 @@ def push(ui, repo, dest="default-push", **opts):
     return r
 
 def rawcommit(ui, repo, *flist, **rc):
-    """raw commit interface (DEPRECATED)
+    """raw commit interface
 
+    (DEPRECATED)
     Lowlevel commit, for use in helper scripts.
 
     This command is not intended to be used by normal users, as it is
@@ -1960,9 +1965,16 @@ def rename(ui, repo, *pats, **opts):
 def revert(ui, repo, *pats, **opts):
     """revert modified files or dirs back to their unmodified states
 
-    Revert any uncommitted modifications made to the named files or
-    directories.  This restores the contents of the affected files to
-    an unmodified state.
+    In its default mode, it reverts any uncommitted modifications made
+    to the named files or directories.  This restores the contents of
+    the affected files to an unmodified state.
+
+    Using the -r option, it reverts the given files or directories to
+    their state as of an earlier revision.  This can be helpful to "roll
+    back" some or all of a change that should not have been committed.
+
+    Revert modifies the working directory.  It does not commit any
+    changes, or change the parent of the current working directory.
 
     If a file has been deleted, it is recreated.  If the executable
     mode of a file was changed, it is reset.
@@ -2367,7 +2379,7 @@ table = {
           ('c', 'changeset', None, _('list the changeset')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         _('hg annotate [OPTION]... FILE...')),
+         _('hg annotate [-r <rev> -u -n -c -d] [files ...]')),
     "bundle":
         (bundle,
          [],
@@ -2442,7 +2454,7 @@ table = {
          [('o', 'output', '', _('print output to file with formatted name')),
           ('a', 'text', None, _('treat all files as text')),
           ('', 'switch-parent', None, _('diff against the second parent'))],
-         _('hg export [-a] [-o OUTFILE] REV...')),
+         _('hg export [-a] [-o filespec] REV...')),
     "forget":
         (forget,
          [('I', 'include', [], _('include names matching the given patterns')),
@@ -2599,13 +2611,13 @@ table = {
           ('d', 'date', '', _('record datecode as commit date')),
           ('u', 'user', '', _('record user as commiter')),
           ('r', 'rev', '', _('revision to tag'))],
-         _('hg tag [-r REV] [OPTION]... NAME')),
+         _('hg tag [-l -m <text> -d <datecode> -u <user> -r <rev>] <name>')),
     "tags": (tags, [], _('hg tags')),
     "tip":
         (tip,
          [('b', 'branches', None, _('show branches')),
           ('p', 'patch', None, _('show patch'))],
-         _('hg [-b] [-p] tip')),
+         _('hg tip [-b] [-p]')),
     "unbundle":
         (unbundle,
          [('u', 'update', None,
