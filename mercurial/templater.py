@@ -1,5 +1,6 @@
+import re
 from demandload import demandload
-demandload(globals(), "cgi os re time urllib util")
+demandload(globals(), "cgi os time urllib util")
 
 class templater(object):
     def __init__(self, mapfile, filters={}, defaults={}):
@@ -32,13 +33,18 @@ class templater(object):
             tmpl = self.cache[t] = file(self.map[t]).read()
         return self.template(tmpl, self.filters, **m)
 
+    template_re = re.compile(r"#([a-zA-Z_][a-zA-Z0-9_]*)"
+                             r"((%[a-zA-Z_][a-zA-Z0-9_]*)*)"
+                             r"((\|[a-zA-Z_][a-zA-Z0-9_]*)*)#")
+
     def template(self, tmpl, filters={}, **map):
+        lm = map.copy()
         while tmpl:
-            m = re.search(r"#([a-zA-Z_][a-zA-Z0-9_]*)"
-                          r"((%[a-zA-Z_][a-zA-Z0-9_]*)*)"
-                          r"((\|[a-zA-Z_][a-zA-Z0-9_]*)*)#", tmpl)
+            m = self.template_re.search(tmpl)
             if m:
-                yield tmpl[:m.start(0)]
+                start = m.start(0)
+                if start:
+                    yield tmpl[:start]
                 v = map.get(m.group(1), "")
                 v = callable(v) and v(**map) or v
 
@@ -48,7 +54,6 @@ class templater(object):
                 if format:
                     q = v.__iter__
                     for i in q():
-                        lm = map.copy()
                         lm.update(i)
                         yield self(format[1:], **lm)
 
@@ -62,7 +67,17 @@ class templater(object):
                 tmpl = tmpl[m.end(0):]
             else:
                 yield tmpl
-                return
+                break
+
+agescales = [("second", 1),
+             ("minute", 60),
+             ("hour", 3600),
+             ("day", 3600 * 24),
+             ("week", 3600 * 24 * 7),
+             ("month", 3600 * 24 * 30),
+             ("year", 3600 * 24 * 365)]
+
+agescales.reverse()
 
 def age(x):
     def plural(t, c):
@@ -76,17 +91,7 @@ def age(x):
     then = x[0]
     delta = max(1, int(now - then))
 
-    scales = [["second", 1],
-              ["minute", 60],
-              ["hour", 3600],
-              ["day", 3600 * 24],
-              ["week", 3600 * 24 * 7],
-              ["month", 3600 * 24 * 30],
-              ["year", 3600 * 24 * 365]]
-
-    scales.reverse()
-
-    for t, s in scales:
+    for t, s in agescales:
         n = delta / s
         if n >= 2 or s == 1:
             return fmt(t, n)
