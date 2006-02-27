@@ -8,6 +8,12 @@ man: $(MAN)
 
 html: $(HTML)
 
+hg.1.txt: hg.1.gendoc.txt
+	touch hg.1.txt
+
+hg.1.gendoc.txt:
+	python gendoc.py > $@
+
 %: %.xml
 	xmlto man $*.xml
 
