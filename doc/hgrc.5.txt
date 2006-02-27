@@ -238,6 +238,10 @@ ui::
     The editor to use during a commit.  Default is $EDITOR or "vi".
   interactive;;
     Allow to prompt the user.  True or False.  Default is True.
+  logtemplate;;
+    Template string for commands that print changesets.
+  logmap;;
+    Template map file for commands that print changesets.
   merge;;
     The conflict resolution program to use during a manual merge.
     Default is "hgmerge".

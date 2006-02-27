@@ -9,7 +9,7 @@ from demandload import demandload
 from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb")
-demandload(globals(), "fancyopts ui hg util lock revlog")
+demandload(globals(), "fancyopts ui hg util lock revlog templater")
 demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
 demandload(globals(), "errno socket version struct atexit sets bz2")
 
@@ -337,63 +337,219 @@ def trimuser(ui, name, rev, revcache):
         user = revcache[rev] = ui.shortuser(name)
     return user
 
-def show_changeset(ui, repo, rev=0, changenode=None, brinfo=None):
-    """show a single changeset or file revision"""
-    log = repo.changelog
-    if changenode is None:
-        changenode = log.node(rev)
-    elif not rev:
-        rev = log.rev(changenode)
+class changeset_templater(object):
+    def __init__(self, ui, repo, mapfile):
+        self.t = templater.templater(mapfile, templater.common_filters)
+        self.ui = ui
+        self.repo = repo
 
-    if ui.quiet:
-        ui.write("%d:%s\n" % (rev, short(changenode)))
-        return
+    def use_template(self, t):
+        self.t.cache['template'] = t
 
-    changes = log.read(changenode)
-    date = util.datestr(changes[2])
+    def write(self, thing):
+        for t in thing:
+            if hasattr(t, '__iter__'):
+                self.write(t)
+            else:
+                self.ui.write(t)
 
-    parents = [(log.rev(p), ui.verbose and hex(p) or short(p))
-               for p in log.parents(changenode)
-               if ui.debugflag or p != nullid]
-    if not ui.debugflag and len(parents) == 1 and parents[0][0] == rev-1:
-        parents = []
+    def show(self, rev=0, changenode=None, brinfo=None):
+        """show a single changeset or file revision"""
+        log = self.repo.changelog
+        if changenode is None:
+            changenode = log.node(rev)
+        elif not rev:
+            rev = log.rev(changenode)
 
-    if ui.verbose:
-        ui.write(_("changeset:   %d:%s\n") % (rev, hex(changenode)))
-    else:
-        ui.write(_("changeset:   %d:%s\n") % (rev, short(changenode)))
+        changes = log.read(changenode)
 
-    for tag in repo.nodetags(changenode):
-        ui.status(_("tag:         %s\n") % tag)
-    for parent in parents:
-        ui.write(_("parent:      %d:%s\n") % parent)
+        def showlist(name, values, plural=None, **args):
+            if plural: names = plural
+            else: names = name + 's'
+            if not values:
+                noname = 'no_' + names
+                if noname in self.t:
+                    yield self.t(noname, **args)
+                return
+            vargs = args.copy()
+            if name not in self.t:
+                yield ' '.join(values)
+                return
+            startname = 'start_' + names
+            if startname in self.t:
+                yield self.t(startname, **args)
+            def one(v):
+                try:
+                    vargs.update(v)
+                except ValueError:
+                    vargs.update([(name, v)])
+                return self.t(name, **vargs)
+            lastname = 'last_' + name
+            if lastname in self.t:
+                last = values.pop()
+            else:
+                last = None
+            for v in values:
+                yield one(v)
+            if last is not None:
+                name = lastname
+                yield one(last)
+            endname = 'end_' + names
+            if endname in self.t:
+                yield self.t(endname, **args)
 
-    if brinfo and changenode in brinfo:
-        br = brinfo[changenode]
-        ui.write(_("branch:      %s\n") % " ".join(br))
-
-    ui.debug(_("manifest:    %d:%s\n") % (repo.manifest.rev(changes[0]),
-                                      hex(changes[0])))
-    ui.status(_("user:        %s\n") % changes[1])
-    ui.status(_("date:        %s\n") % date)
-
-    if ui.debugflag:
-        files = repo.changes(log.parents(changenode)[0], changenode)
-        for key, value in zip([_("files:"), _("files+:"), _("files-:")], files):
-            if value:
-                ui.note("%-12s %s\n" % (key, " ".join(value)))
-    else:
-        ui.note(_("files:       %s\n") % " ".join(changes[3]))
-
-    description = changes[4].strip()
-    if description:
-        if ui.verbose:
-            ui.status(_("description:\n"))
-            ui.status(description)
-            ui.status("\n\n")
+        if brinfo:
+            def showbranches(**args):
+                if changenode in brinfo:
+                    for x in showlist('branch', brinfo[changenode],
+                                      plural='branches', **args):
+                        yield x
         else:
-            ui.status(_("summary:     %s\n") % description.splitlines()[0])
-    ui.status("\n")
+            showbranches = ''
+
+        def showmanifest(**args):
+            args = args.copy()
+            args.update(rev=self.repo.manifest.rev(changes[0]),
+                        node=hex(changes[0]))
+            yield self.t('manifest', **args)
+
+        def showparents(**args):
+            parents = [[('rev', log.rev(p)), ('node', hex(p))]
+                       for p in log.parents(changenode)
+                       if self.ui.debugflag or p != nullid]
+            if (not self.ui.debugflag and len(parents) == 1 and
+                parents[0][0][1] == rev - 1):
+                return
+            for x in showlist('parent', parents, **args):
+                yield x
+
+        def showtags(**args):
+            for x in showlist('tag', self.repo.nodetags(changenode), **args):
+                yield x
+
+        if self.ui.debugflag:
+            files = self.repo.changes(log.parents(changenode)[0], changenode)
+            def showfiles(**args):
+                for x in showlist('file', files[0], **args): yield x
+            def showadds(**args):
+                for x in showlist('file_add', files[1], **args): yield x
+            def showdels(**args):
+                for x in showlist('file_del', files[2], **args): yield x
+        else:
+            def showfiles(**args):
+                for x in showlist('file', changes[3], **args): yield x
+            showadds = ''
+            showdels = ''
+
+        props = {
+            'author': changes[1],
+            'branches': showbranches,
+            'date': changes[2],
+            'desc': changes[4],
+            'file_adds': showadds,
+            'file_dels': showdels,
+            'files': showfiles,
+            'manifest': showmanifest,
+            'node': hex(changenode),
+            'parents': showparents,
+            'rev': rev,
+            'tags': showtags,
+            }
+
+        try:
+            self.write(self.t('template', **props))
+        except KeyError, inst:
+            raise util.Abort(_("%s: no key named '%s'") % (self.t.mapfile,
+                                                           inst.args[0]))
+        except SyntaxError, inst:
+            raise util.Abort(_('%s: %s') % (self.t.mapfile, inst.args[0]))
+
+class changeset_printer(object):
+    def __init__(self, ui, repo):
+        self.ui = ui
+        self.repo = repo
+
+    def show(self, rev=0, changenode=None, brinfo=None):
+        """show a single changeset or file revision"""
+        log = self.repo.changelog
+        if changenode is None:
+            changenode = log.node(rev)
+        elif not rev:
+            rev = log.rev(changenode)
+
+        if self.ui.quiet:
+            self.ui.write("%d:%s\n" % (rev, short(changenode)))
+            return
+
+        changes = log.read(changenode)
+        date = util.datestr(changes[2])
+
+        parents = [(log.rev(p), self.ui.verbose and hex(p) or short(p))
+                   for p in log.parents(changenode)
+                   if self.ui.debugflag or p != nullid]
+        if (not self.ui.debugflag and len(parents) == 1 and
+            parents[0][0] == rev-1):
+            parents = []
+
+        if self.ui.verbose:
+            self.ui.write(_("changeset:   %d:%s\n") % (rev, hex(changenode)))
+        else:
+            self.ui.write(_("changeset:   %d:%s\n") % (rev, short(changenode)))
+
+        for tag in self.repo.nodetags(changenode):
+            self.ui.status(_("tag:         %s\n") % tag)
+        for parent in parents:
+            self.ui.write(_("parent:      %d:%s\n") % parent)
+
+        if brinfo and changenode in brinfo:
+            br = brinfo[changenode]
+            self.ui.write(_("branch:      %s\n") % " ".join(br))
+
+        self.ui.debug(_("manifest:    %d:%s\n") %
+                      (self.repo.manifest.rev(changes[0]), hex(changes[0])))
+        self.ui.status(_("user:        %s\n") % changes[1])
+        self.ui.status(_("date:        %s\n") % date)
+
+        if self.ui.debugflag:
+            files = self.repo.changes(log.parents(changenode)[0], changenode)
+            for key, value in zip([_("files:"), _("files+:"), _("files-:")],
+                                  files):
+                if value:
+                    self.ui.note("%-12s %s\n" % (key, " ".join(value)))
+        else:
+            self.ui.note(_("files:       %s\n") % " ".join(changes[3]))
+
+        description = changes[4].strip()
+        if description:
+            if self.ui.verbose:
+                self.ui.status(_("description:\n"))
+                self.ui.status(description)
+                self.ui.status("\n\n")
+            else:
+                self.ui.status(_("summary:     %s\n") %
+                               description.splitlines()[0])
+        self.ui.status("\n")
+
+def show_changeset(ui, repo, opts):
+    tmpl = opts.get('template')
+    if tmpl:
+        tmpl = templater.parsestring(tmpl, quoted=False)
+    else:
+        tmpl = ui.config('ui', 'logtemplate')
+        if tmpl: tmpl = templater.parsestring(tmpl)
+    mapfile = opts.get('map_file') or ui.config('ui', 'logmap')
+    if tmpl or mapfile:
+        if mapfile:
+            if not os.path.isfile(mapfile):
+                mapname = templater.templatepath(mapfile)
+                if mapname: mapfile = mapname
+        try:
+            t = changeset_templater(ui, repo, mapfile)
+        except SyntaxError, inst:
+            raise util.Abort(inst.args[0])
+        if tmpl: t.use_template(tmpl)
+        return t
+    return changeset_printer(ui, repo)
 
 def show_version(ui):
     """output version and copyright information"""
@@ -1409,8 +1565,9 @@ def heads(ui, repo, **opts):
     br = None
     if opts['branches']:
         br = repo.branchlookup(heads)
+    displayer = show_changeset(ui, repo, opts)
     for n in heads:
-        show_changeset(ui, repo, changenode=n, brinfo=br)
+        displayer.show(changenode=n, brinfo=br)
 
 def identify(ui, repo):
     """print information about the working copy
@@ -1537,11 +1694,12 @@ def incoming(ui, repo, source="default", **opts):
     o = other.changelog.nodesbetween(o)[0]
     if opts['newest_first']:
         o.reverse()
+    displayer = show_changeset(ui, other, opts)
     for n in o:
         parents = [p for p in other.changelog.parents(n) if p != nullid]
         if opts['no_merges'] and len(parents) == 2:
             continue
-        show_changeset(ui, other, changenode=n)
+        displayer.show(changenode=n)
         if opts['patch']:
             prev = (parents and parents[0]) or nullid
             dodiff(ui, ui, other, prev, n)
@@ -1638,9 +1796,11 @@ def log(ui, repo, *pats, **opts):
         limit = sys.maxint
     count = 0
 
+    displayer = show_changeset(ui, repo, opts)
     for st, rev, fns in changeiter:
         if st == 'window':
             du = dui(ui)
+            displayer.ui = du
         elif st == 'add':
             du.bump(rev)
             changenode = repo.changelog.node(rev)
@@ -1667,7 +1827,7 @@ def log(ui, repo, *pats, **opts):
             if opts['branches']:
                 br = repo.branchlookup([repo.changelog.node(rev)])
 
-            show_changeset(du, repo, rev, brinfo=br)
+            displayer.show(rev, brinfo=br)
             if opts['patch']:
                 prev = (parents and parents[0]) or nullid
                 dodiff(du, du, repo, prev, changenode, match=matchfn)
@@ -1718,17 +1878,18 @@ def outgoing(ui, repo, dest="default-push", **opts):
     o = repo.changelog.nodesbetween(o)[0]
     if opts['newest_first']:
         o.reverse()
+    displayer = show_changeset(ui, repo, opts)
     for n in o:
         parents = [p for p in repo.changelog.parents(n) if p != nullid]
         if opts['no_merges'] and len(parents) == 2:
             continue
-        show_changeset(ui, repo, changenode=n)
+        displayer.show(changenode=n)
         if opts['patch']:
             prev = (parents and parents[0]) or nullid
             dodiff(ui, ui, repo, prev, n)
             ui.write("\n")
 
-def parents(ui, repo, rev=None, branches=None):
+def parents(ui, repo, rev=None, branches=None, **opts):
     """show the parents of the working dir or revision
 
     Print the working directory's parent revisions.
@@ -1741,9 +1902,10 @@ def parents(ui, repo, rev=None, branches=None):
     br = None
     if branches is not None:
         br = repo.branchlookup(p)
+    displayer = show_changeset(ui, repo, opts)
     for n in p:
         if n != nullid:
-            show_changeset(ui, repo, changenode=n, brinfo=br)
+            displayer.show(changenode=n, brinfo=br)
 
 def paths(ui, search=None):
     """show definition of symbolic path names
@@ -2246,7 +2408,7 @@ def tip(ui, repo, **opts):
     br = None
     if opts['branches']:
         br = repo.branchlookup([n])
-    show_changeset(ui, repo, changenode=n, brinfo=br)
+    show_changeset(ui, repo, opts).show(changenode=n, brinfo=br)
     if opts['patch']:
         dodiff(ui, ui, repo, repo.changelog.parents(n)[0], n)
 
@@ -2291,7 +2453,7 @@ def undo(ui, repo):
     repo.undo()
 
 def update(ui, repo, node=None, merge=False, clean=False, force=None,
-           branch=None):
+           branch=None, **opts):
     """update or merge working directory
 
     Update the working directory to the specified revision.
@@ -2318,7 +2480,7 @@ def update(ui, repo, node=None, merge=False, clean=False, force=None,
         if len(found) > 1:
             ui.warn(_("Found multiple heads for %s\n") % branch)
             for x in found:
-                show_changeset(ui, repo, changenode=x, brinfo=br)
+                show_changeset(ui, repo, opts).show(changenode=x, brinfo=br)
             return 1
         if len(found) == 1:
             node = found[0]
@@ -2462,7 +2624,9 @@ table = {
     "heads":
         (heads,
          [('b', 'branches', None, _('show branches')),
-          ('r', 'rev', '', _('show only heads which are descendants of rev'))],
+          ('', 'map-file', '', _('display using template map file')),
+          ('r', 'rev', '', _('show only heads which are descendants of rev')),
+          ('t', 'template', '', _('display with template'))],
          _('hg heads [-b] [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id": (identify, [], _('hg identify')),
@@ -2477,8 +2641,10 @@ table = {
          _('hg import [-f] [-p NUM] [-b BASE] PATCH...')),
     "incoming|in": (incoming,
          [('M', 'no-merges', None, _('do not show merges')),
+          ('', 'map-file', '', _('display using template map file')),
+          ('n', 'newest-first', None, _('show newest record first')),
           ('p', 'patch', None, _('show patch')),
-          ('n', 'newest-first', None, _('show newest record first'))],
+          ('t', 'template', '', _('display with template'))],
          _('hg incoming [-p] [-n] [-M] [SOURCE]')),
     "^init": (init, [], _('hg init [DEST]')),
     "locate":
@@ -2500,18 +2666,24 @@ table = {
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
           ('M', 'no-merges', None, _('do not show merges')),
+          ('', 'map-file', '', _('display using template map file')),
           ('m', 'only-merges', None, _('show only merges')),
-          ('p', 'patch', None, _('show patch'))],
+          ('p', 'patch', None, _('show patch')),
+          ('t', 'template', '', _('display with template'))],
          _('hg log [-I] [-X] [-r REV]... [-p] [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "outgoing|out": (outgoing,
          [('M', 'no-merges', None, _('do not show merges')),
           ('p', 'patch', None, _('show patch')),
-          ('n', 'newest-first', None, _('show newest record first'))],
+          ('', 'map-file', '', _('display using template map file')),
+          ('n', 'newest-first', None, _('show newest record first')),
+          ('t', 'template', '', _('display with template'))],
          _('hg outgoing [-p] [-n] [-M] [DEST]')),
     "^parents":
         (parents,
-         [('b', 'branches', None, _('show branches'))],
+         [('b', 'branches', None, _('show branches')),
+          ('', 'map-file', '', _('display using template map file')),
+          ('t', 'template', '', _('display with template'))],
          _('hg parents [-b] [REV]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
@@ -2602,7 +2774,9 @@ table = {
     "tip":
         (tip,
          [('b', 'branches', None, _('show branches')),
-          ('p', 'patch', None, _('show patch'))],
+          ('', 'map-file', '', _('display using template map file')),
+          ('p', 'patch', None, _('show patch')),
+          ('t', 'template', '', _('display with template'))],
          _('hg [-b] [-p] tip')),
     "unbundle":
         (unbundle,
@@ -2613,9 +2787,11 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('b', 'branch', '', _('checkout the head of a specific branch')),
+          ('', 'map-file', '', _('display using template map file')),
           ('m', 'merge', None, _('allow merging of branches')),
           ('C', 'clean', None, _('overwrite locally modified files')),
-          ('f', 'force', None, _('force a merge with outstanding changes'))],
+          ('f', 'force', None, _('force a merge with outstanding changes')),
+          ('t', 'template', '', _('display with template'))],
          _('hg update [-b TAG] [-m] [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),

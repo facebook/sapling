@@ -1,0 +1,4 @@
+template = '{rev}{parents}   {node|short}   {date|isodate}   {author|user}\n  {desc|firstline|strip}\n\n'
+start_parents = ':'
+parent = '{rev},'
+last_parent = '{rev}'
