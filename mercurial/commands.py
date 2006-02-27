@@ -338,15 +338,20 @@ def trimuser(ui, name, rev, revcache):
     return user
 
 class changeset_templater(object):
+    '''use templater module to format changeset information.'''
+
     def __init__(self, ui, repo, mapfile):
         self.t = templater.templater(mapfile, templater.common_filters)
         self.ui = ui
         self.repo = repo
 
     def use_template(self, t):
+        '''set template string to use'''
         self.t.cache['template'] = t
 
     def write(self, thing):
+        '''write expanded template.
+        uses in-order recursive traverse of iterators.'''
         for t in thing:
             if hasattr(t, '__iter__'):
                 self.write(t)
@@ -354,7 +359,7 @@ class changeset_templater(object):
                 self.ui.write(t)
 
     def show(self, rev=0, changenode=None, brinfo=None):
-        """show a single changeset or file revision"""
+        '''show a single changeset or file revision'''
         log = self.repo.changelog
         if changenode is None:
             changenode = log.node(rev)
@@ -364,6 +369,25 @@ class changeset_templater(object):
         changes = log.read(changenode)
 
         def showlist(name, values, plural=None, **args):
+            '''expand set of values.
+            name is name of key in template map.
+            values is list of strings or dicts.
+            plural is plural of name, if not simply name + 's'.
+
+            expansion works like this, given name 'foo'.
+
+            if values is empty, expand 'no_foos'.
+
+            if 'foo' not in template map, return values as a string,
+            joined by space.
+
+            expand 'start_foos'.
+
+            for each value, expand 'foo'. if 'last_foo' in template
+            map, expand it instead of 'foo' for last key.
+
+            expand 'end_foos'.
+            '''
             if plural: names = plural
             else: names = name + 's'
             if not values:
@@ -371,13 +395,13 @@ class changeset_templater(object):
                 if noname in self.t:
                     yield self.t(noname, **args)
                 return
-            vargs = args.copy()
             if name not in self.t:
                 yield ' '.join(values)
                 return
             startname = 'start_' + names
             if startname in self.t:
                 yield self.t(startname, **args)
+            vargs = args.copy()
             def one(v, tag=name):
                 try:
                     vargs.update(v)
@@ -464,12 +488,14 @@ class changeset_templater(object):
             raise util.Abort(_('%s: %s') % (self.t.mapfile, inst.args[0]))
 
 class changeset_printer(object):
+    '''show changeset information when templating not requested.'''
+
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
 
     def show(self, rev=0, changenode=None, brinfo=None):
-        """show a single changeset or file revision"""
+        '''show a single changeset or file revision'''
         log = self.repo.changelog
         if changenode is None:
             changenode = log.node(rev)
@@ -530,6 +556,9 @@ class changeset_printer(object):
         self.ui.status("\n")
 
 def show_changeset(ui, repo, opts):
+    '''show one changeset.  uses template or regular display.  caller
+    can pass in 'map_file' and 'template' options in opts.'''
+
     tmpl = opts.get('template')
     if tmpl:
         tmpl = templater.parsestring(tmpl, quoted=False)

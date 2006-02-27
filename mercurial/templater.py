@@ -1,3 +1,10 @@
+# templater.py - template expansion for output
+#
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
+#
+# This software may be used and distributed according to the terms
+# of the GNU General Public License, incorporated herein by reference.
+
 import re
 from demandload import demandload
 from i18n import gettext as _
@@ -12,6 +19,8 @@ esctable = {
     }
 
 def parsestring(s, quoted=True):
+    '''parse a string using simple c-like syntax.
+    string must be in quotes if quoted is True.'''
     fp = cStringIO.StringIO()
     if quoted:
         first = s[0]
@@ -31,7 +40,30 @@ def parsestring(s, quoted=True):
     return fp.getvalue()
 
 class templater(object):
+    '''template expansion engine.
+
+    template expansion works like this. a map file contains key=value
+    pairs. if value is quoted, it is treated as string. otherwise, it
+    is treated as name of template file.
+
+    templater is asked to expand a key in map. it looks up key, and
+    looks for atrings like this: {foo}. it expands {foo} by looking up
+    foo in map, and substituting it. expansion is recursive: it stops
+    when there is no more {foo} to replace.
+
+    expansion also allows formatting and filtering.
+
+    format uses key to expand each item in list. syntax is
+    {key%format}.
+
+    filter uses function to transform value. syntax is
+    {key|filter1|filter2|...}.'''
+
     def __init__(self, mapfile, filters={}, defaults={}):
+        '''set up template engine.
+        mapfile is name of file to read map definitions from.
+        filters is dict of functions. each transforms a value into another.
+        defaults is dict of default map definitions.'''
         self.mapfile = mapfile or 'template'
         self.cache = {}
         self.map = {}
@@ -64,6 +96,9 @@ class templater(object):
         return key in self.cache
 
     def __call__(self, t, **map):
+        '''perform expansion.
+        t is name of map element to expand.
+        map is added elements to use during expansion.'''
         m = self.defaults.copy()
         m.update(map)
         try:
@@ -127,7 +162,9 @@ agescales = [("second", 1),
 
 agescales.reverse()
 
-def age(x):
+def age(date):
+    '''turn a (timestamp, tzoff) tuple into an age string.'''
+
     def plural(t, c):
         if c == 1:
             return t
@@ -136,7 +173,7 @@ def age(x):
         return "%d %s" % (c, plural(t, c))
 
     now = time.time()
-    then = x[0]
+    then = date[0]
     delta = max(1, int(now - then))
 
     for t, s in agescales:
@@ -145,15 +182,18 @@ def age(x):
             return fmt(t, n)
 
 def isodate(date):
+    '''turn a (timestamp, tzoff) tuple into an iso 8631 date.'''
     return util.datestr(date, format='%Y-%m-%d %H:%M')
 
 def nl2br(text):
+    '''replace raw newlines with xhtml line breaks.'''
     return text.replace('\n', '<br/>\n')
 
 def obfuscate(text):
     return ''.join(['&#%d;' % ord(c) for c in text])
 
 def domain(author):
+    '''get domain of author, or empty string if none.'''
     f = author.find('@')
     if f == -1: return ''
     author = author[f+1:]
@@ -162,6 +202,7 @@ def domain(author):
     return author
 
 def person(author):
+    '''get name of author, or else username.'''
     f = author.find('<')
     if f == -1: return util.shortuser(author)
     return author[:f].rstrip()
@@ -185,6 +226,8 @@ common_filters = {
     }
 
 def templatepath(name=None):
+    '''return location of template file or directory (if no name).
+    returns None if not found.'''
     for f in 'templates', '../templates':
         fl = f.split('/')
         if name: fl.append(name)
