@@ -213,16 +213,16 @@ common_filters = {
     "date": lambda x: util.datestr(x),
     "domain": domain,
     "escape": lambda x: cgi.escape(x, True),
-    "firstline": (lambda x: x.splitlines(1)[0]),
+    "firstline": lambda x: x.splitlines(1)[0].rstrip('\r\n'),
     "isodate": isodate,
     "obfuscate": obfuscate,
-    "permissions": (lambda x: x and "-rwxr-xr-x" or "-rw-r--r--"),
+    "permissions": lambda x: x and "-rwxr-xr-x" or "-rw-r--r--",
     "person": person,
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
-    "short": (lambda x: x[:12]),
+    "short": lambda x: x[:12],
     "strip": lambda x: x.strip(),
-    "urlescape": urllib.quote,
-    "user": util.shortuser,
+    "urlescape": lambda x: urllib.quote(x),
+    "user": lambda x: util.shortuser(x),
     }
 
 def templatepath(name=None):
