@@ -1858,7 +1858,7 @@ def push(ui, repo, dest="default-push", **opts):
     return r
 
 def rawcommit(ui, repo, *flist, **rc):
-    """raw commit interface
+    """raw commit interface (DEPRECATED)
 
     (DEPRECATED)
     Lowlevel commit, for use in helper scripts.
@@ -2379,7 +2379,7 @@ table = {
           ('c', 'changeset', None, _('list the changeset')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         _('hg annotate [-r <rev> -u -n -c -d] [files ...]')),
+         _('hg annotate [-r REV] [-a] [-u] [-n] [-c] [-d] [FILES...]')),
     "bundle":
         (bundle,
          [],
@@ -2454,7 +2454,7 @@ table = {
          [('o', 'output', '', _('print output to file with formatted name')),
           ('a', 'text', None, _('treat all files as text')),
           ('', 'switch-parent', None, _('diff against the second parent'))],
-         _('hg export [-a] [-o filespec] REV...')),
+         _('hg export [-a] [-o OUTFILESPEC] REV...')),
     "forget":
         (forget,
          [('I', 'include', [], _('include names matching the given patterns')),
@@ -2611,7 +2611,7 @@ table = {
           ('d', 'date', '', _('record datecode as commit date')),
           ('u', 'user', '', _('record user as commiter')),
           ('r', 'rev', '', _('revision to tag'))],
-         _('hg tag [-l -m <text> -d <datecode> -u <user> -r <rev>] <name>')),
+         _('hg tag [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME')),
     "tags": (tags, [], _('hg tags')),
     "tip":
         (tip,
