@@ -371,7 +371,7 @@ class localrepository(object):
             self.dirstate.setparents(n, nullid)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False, wlock=None):
+               match=util.always, force=False, lock=None, wlock=None):
         commit = []
         remove = []
         changed = []
@@ -409,7 +409,8 @@ class localrepository(object):
 
         if not wlock:
             wlock = self.wlock()
-        l = self.lock()
+        if not lock:
+            lock = self.lock()
         tr = self.transaction()
 
         # check in files
