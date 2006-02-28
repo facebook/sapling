@@ -430,11 +430,14 @@ class changeset_templater(object):
         else:
             showbranches = ''
 
-        def showmanifest(**args):
-            args = args.copy()
-            args.update(rev=self.repo.manifest.rev(changes[0]),
-                        node=hex(changes[0]))
-            yield self.t('manifest', **args)
+        if self.ui.debugflag:
+            def showmanifest(**args):
+                args = args.copy()
+                args.update(rev=self.repo.manifest.rev(changes[0]),
+                            node=hex(changes[0]))
+                yield self.t('manifest', **args)
+        else:
+            showmanifest = ''
 
         def showparents(**args):
             parents = [[('rev', log.rev(p)), ('node', hex(p))]
