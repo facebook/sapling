@@ -11,7 +11,7 @@ html: $(HTML)
 hg.1.txt: hg.1.gendoc.txt
 	touch hg.1.txt
 
-hg.1.gendoc.txt:
+hg.1.gendoc.txt: ../mercurial/commands.py
 	python gendoc.py > $@
 
 %: %.xml
