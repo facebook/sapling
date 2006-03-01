@@ -2544,7 +2544,7 @@ table = {
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
          _('hg push [-f] [-e FILE] [-r REV]... [--remotecmd FILE] [DEST]')),
-    "rawcommit":
+    "debugrawcommit|rawcommit":
         (rawcommit,
          [('p', 'parent', [], _('parent')),
           ('d', 'date', '', _('date code')),
@@ -2552,7 +2552,7 @@ table = {
           ('F', 'files', '', _('file list')),
           ('m', 'message', '', _('commit message')),
           ('l', 'logfile', '', _('commit message file'))],
-         _('hg rawcommit [OPTION]... [FILE]...')),
+         _('hg debugrawcommit [OPTION]... [FILE]...')),
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":
         (remove,
