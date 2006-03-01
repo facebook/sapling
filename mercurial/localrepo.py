@@ -13,6 +13,8 @@ from demandload import *
 demandload(globals(), "re lock transaction tempfile stat mdiff errno")
 
 class localrepository(object):
+    def __del__(self):
+        self.transhandle = None
     def __init__(self, ui, path=None, create=0):
         if not path:
             p = os.getcwd()
@@ -37,6 +39,7 @@ class localrepository(object):
         self.nodetagscache = None
         self.encodepats = None
         self.decodepats = None
+        self.transhandle = None
 
         if create:
             os.mkdir(self.path)
@@ -215,6 +218,10 @@ class localrepository(object):
         return self.wopener(filename, 'w').write(data)
 
     def transaction(self):
+        tr = self.transhandle
+        if tr != None and tr.running():
+            return tr.nest()
+
         # save dirstate for undo
         try:
             ds = self.opener("dirstate").read()
@@ -222,13 +229,11 @@ class localrepository(object):
             ds = ""
         self.opener("journal.dirstate", "w").write(ds)
 
-        def after():
-            util.rename(self.join("journal"), self.join("undo"))
-            util.rename(self.join("journal.dirstate"),
-                        self.join("undo.dirstate"))
-
-        return transaction.transaction(self.ui.warn, self.opener,
-                                       self.join("journal"), after)
+        tr = transaction.transaction(self.ui.warn, self.opener,
+                                       self.join("journal"), 
+                                       aftertrans(self.path))
+        self.transhandle = tr
+        return tr
 
     def recover(self):
         l = self.lock()
@@ -366,7 +371,7 @@ class localrepository(object):
             self.dirstate.setparents(n, nullid)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False, wlock=None):
+               match=util.always, force=False, lock=None, wlock=None):
         commit = []
         remove = []
         changed = []
@@ -404,7 +409,8 @@ class localrepository(object):
 
         if not wlock:
             wlock = self.wlock()
-        l = self.lock()
+        if not lock:
+            lock = self.lock()
         tr = self.transaction()
 
         # check in files
@@ -1879,3 +1885,13 @@ class localrepository(object):
         if errors[0]:
             self.ui.warn(_("%d integrity errors encountered!\n") % errors[0])
             return 1
+
+# used to avoid circular references so destructors work
+def aftertrans(base):
+    p = base
+    def a():
+        util.rename(os.path.join(p, "journal"), os.path.join(p, "undo"))
+        util.rename(os.path.join(p, "journal.dirstate"),
+                    os.path.join(p, "undo.dirstate"))
+    return a
+

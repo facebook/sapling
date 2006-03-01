@@ -3,23 +3,23 @@ shopt -s extglob
 _hg_command_list()
 {
     "$hg" --debug help 2>/dev/null | \
-	awk 'function command_line(line) {
-		gsub(/,/, "", line)
-		gsub(/:.*/, "", line)
-		split(line, aliases)
-		command = aliases[1]
-		delete aliases[1]
+	awk -F', ' '/^list of commands:/ {commands=1}
+	    commands && /^ [^ ]/ {
+		sub(/ /, "")
+		sub(/:.*/, "")
+		command = $1
+		if (index(command, "debug") == 1) {
+		    for (i=1; i<=NF; i++)
+			debug[j++] = $i
+		    next
+		}
 		print command
-		for (i in aliases)
-		    if (index(command, aliases[i]) != 1)
-			print aliases[i]
+		for (i=2; i<=NF; i++)
+		    if (index(command, $i) != 1)
+			print $i
 	    }
-	    /^list of commands:/ {commands=1}
-	    commands && /^ debug/ {a[i++] = $0; next;}
-	    commands && /^ [^ ]/ {command_line($0)}
 	    /^global options:/ {exit 0}
-	    END {for (i in a) command_line(a[i])}'
-
+	    END {for (i in debug) print debug[i]}'
 }
 
 _hg_option_list()
