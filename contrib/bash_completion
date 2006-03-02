@@ -4,19 +4,22 @@ _hg_command_list()
 {
     "$hg" --debug help 2>/dev/null | \
 	awk -F', ' '/^list of commands:/ {commands=1}
-	    commands && /^ [^ ]/ {
-		sub(/ /, "")
-		sub(/:.*/, "")
-		command = $1
+	    commands==1 && /^ [^ ]/ {
+		line = substr($0, 2)
+		colon = index(line, ":")
+		if (colon > 0)
+		    line = substr(line, 1, colon-1)
+		n = split(line, aliases)
+		command = aliases[1]
 		if (index(command, "debug") == 1) {
-		    for (i=1; i<=NF; i++)
-			debug[j++] = $i
+		    for (i=1; i<=n; i++)
+			debug[j++] = aliases[i]
 		    next
 		}
 		print command
-		for (i=2; i<=NF; i++)
-		    if (index(command, $i) != 1)
-			print $i
+		for (i=2; i<=n; i++)
+		    if (index(command, aliases[i]) != 1)
+			print aliases[i]
 	    }
 	    /^global options:/ {exit 0}
 	    END {for (i in debug) print debug[i]}'
