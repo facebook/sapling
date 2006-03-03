@@ -825,7 +825,8 @@ def commit(ui, repo, *pats, **opts):
     except ValueError, inst:
         raise util.Abort(str(inst))
 
-def docopy(ui, repo, pats, opts):
+def docopy(ui, repo, pats, opts, wlock):
+    # called with the repo lock held
     cwd = repo.getcwd()
     errors = 0
     copied = []
@@ -871,8 +872,16 @@ def docopy(ui, repo, pats, opts):
             if not os.path.isdir(targetdir):
                 os.makedirs(targetdir)
             try:
-                shutil.copyfile(relsrc, reltarget)
-                shutil.copymode(relsrc, reltarget)
+                restore = repo.dirstate.state(abstarget) == 'r'
+                if restore:
+                    repo.undelete([abstarget], wlock)
+                try:
+                    shutil.copyfile(relsrc, reltarget)
+                    shutil.copymode(relsrc, reltarget)
+                    restore = False
+                finally:
+                    if restore:
+                        repo.remove([abstarget], wlock)
             except shutil.Error, inst:
                 raise util.Abort(str(inst))
             except IOError, inst:
@@ -886,7 +895,8 @@ def docopy(ui, repo, pats, opts):
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
-        repo.copy(origsrc, abstarget)
+        if abstarget != origsrc:
+            repo.copy(origsrc, abstarget, wlock)
         copied.append((abssrc, relsrc, exact))
 
     def targetpathfn(pat, dest, srcs):
@@ -994,7 +1004,12 @@ def copy(ui, repo, *pats, **opts):
     should properly record copied files, this information is not yet
     fully used by merge, nor fully reported by log.
     """
-    errs, copied = docopy(ui, repo, pats, opts)
+    try:
+        wlock = repo.wlock(0)
+        errs, copied = docopy(ui, repo, pats, opts, wlock)
+    except lock.LockHeld, inst:
+        ui.warn(_("repository lock held by %s\n") % inst.args[0])
+        errs = 1
     return errs
 
 def debugancestor(ui, index, rev1, rev2):
@@ -1953,13 +1968,18 @@ def rename(ui, repo, *pats, **opts):
     should properly record rename files, this information is not yet
     fully used by merge, nor fully reported by log.
     """
-    errs, copied = docopy(ui, repo, pats, opts)
-    names = []
-    for abs, rel, exact in copied:
-        if ui.verbose or not exact:
-            ui.status(_('removing %s\n') % rel)
-        names.append(abs)
-    repo.remove(names, unlink=True)
+    try:
+        wlock = repo.wlock(0)
+        errs, copied = docopy(ui, repo, pats, opts, wlock)
+        names = []
+        for abs, rel, exact in copied:
+            if ui.verbose or not exact:
+                ui.status(_('removing %s\n') % rel)
+            names.append(abs)
+        repo.remove(names, True, wlock)
+    except lock.LockHeld, inst:
+        ui.warn(_("repository lock held by %s\n") % inst.args[0])
+        errs = 1
     return errs
 
 def revert(ui, repo, *pats, **opts):

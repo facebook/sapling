@@ -171,3 +171,11 @@ mv d1/bb d1/bc
 hg rename --after d1/bb d1/bc
 hg status
 hg update -C
+
+echo "# idempotent renames (d1/b -> d1/bb followed by d1/bb -> d1/b)"
+hg rename d1/b d1/bb
+echo "some stuff added to d1/bb" >> d1/bb
+hg rename d1/bb d1/b
+hg status
+hg debugstate | grep copy
+hg update -C
