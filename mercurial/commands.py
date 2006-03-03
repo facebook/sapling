@@ -2871,6 +2871,7 @@ def dispatch(args):
                                      'anyway\n'))
                         except:
                             pass
+                        raise
                 finally:
                     prof.close()
                     stats = hotshot.stats.load("hg.prof")
