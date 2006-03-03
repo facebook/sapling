@@ -20,6 +20,10 @@ def templatepath():
         p = os.path.join(os.path.dirname(__file__), f)
         if os.path.isdir(p):
             return os.path.normpath(p)
+    else:
+       # executable version (py2exe) doesn't support __file__
+        if hasattr(sys, 'frozen'):
+            return os.path.join(sys.prefix, "templates")
 
 def age(x):
     def plural(t, c):
