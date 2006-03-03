@@ -187,7 +187,7 @@ class bisect(object):
         check_clean(self.ui, self.repo)
         rev = self.next()
         self.ui.write("Now testing %s\n" % hg.hex(rev))
-        return self.repo.update(rev, allow=True, force=True)
+        return self.repo.update(rev, force=True)
 
     def good(self, rev):
         self.goodrevs.append(rev)
@@ -232,7 +232,7 @@ def test(ui, repo, rev):
             b.good(new_rev)
             ui.write("it is good\n")
         anc = b.ancestors()
-        repo.update(new_rev, allow=True, force=True)
+        repo.update(new_rev, force=True)
     for v in anc:
         if v != rev:
             ui.warn("fail to found cset! :(\n")

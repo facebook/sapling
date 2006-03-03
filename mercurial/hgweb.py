@@ -7,6 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, cgi, sys, urllib
+import mimetypes
 from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
 demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer util")
@@ -18,7 +19,7 @@ def templatepath():
     for f in "templates", "../templates":
         p = os.path.join(os.path.dirname(__file__), f)
         if os.path.isdir(p):
-            return p
+            return os.path.normpath(p)
 
 def age(x):
     def plural(t, c):
@@ -70,6 +71,30 @@ def get_mtime(repo_path):
         return os.stat(cl_path).st_mtime
     else:
         return os.stat(hg_path).st_mtime
+
+def staticfile(directory, fname):
+    """return a file inside directory with guessed content-type header
+
+    fname always uses '/' as directory separator and isn't allowed to
+    contain unusual path components.
+    Content-type is guessed using the mimetypes module.
+    Return an empty string if fname is illegal or file not found.
+
+    """
+    parts = fname.split('/')
+    path = directory
+    for part in parts:
+        if (part in ('', os.curdir, os.pardir) or
+            os.sep in part or os.altsep is not None and os.altsep in part):
+            return ""
+        path = os.path.join(path, part)
+    try:
+        os.stat(path)
+        ct = mimetypes.guess_type(path)[0] or "text/plain"
+        return "Content-type: %s\n\n%s" % (ct, file(path).read())
+    except (TypeError, OSError):
+        # illegal fname or unreadable file
+        return ""
 
 class hgrequest(object):
     def __init__(self, inp=None, out=None, env=None):
@@ -660,9 +685,10 @@ class hgweb(object):
         i = self.repo.tagslist()
         i.reverse()
 
-        def entries(**map):
+        def entries(notip=False, **map):
             parity = 0
             for k,n in i:
+                if notip and k == "tip": continue
                 yield {"parity": parity,
                        "tag": k,
                        "tagmanifest": hex(cl.read(n)[0]),
@@ -672,7 +698,8 @@ class hgweb(object):
 
         yield self.t("tags",
                      manifest=hex(mf),
-                     entries=entries)
+                     entries=lambda **x: entries(False, **x),
+                     entriesnotip=lambda **x: entries(True, **x))
 
     def summary(self):
         cl = self.repo.changelog
@@ -843,6 +870,7 @@ class hgweb(object):
                 'ca': [('cmd', ['archive']), ('node', None)],
                 'tags': [('cmd', ['tags'])],
                 'tip': [('cmd', ['changeset']), ('node', ['tip'])],
+                'static': [('cmd', ['static']), ('file', None)]
             }
 
             for k in shortcuts.iterkeys():
@@ -858,6 +886,7 @@ class hgweb(object):
         expand_form(req.form)
 
         t = self.repo.ui.config("web", "templates", templatepath())
+        static = self.repo.ui.config("web", "static", os.path.join(t,"static"))
         m = os.path.join(t, "map")
         style = self.repo.ui.config("web", "style", "")
         if req.form.has_key('style'):
@@ -962,7 +991,7 @@ class hgweb(object):
                 nodes = map(bin, req.form['roots'][0].split(" "))
 
             z = zlib.compressobj()
-            f = self.repo.changegroup(nodes)
+            f = self.repo.changegroup(nodes, 'serve')
             while 1:
                 chunk = f.read(4096)
                 if not chunk:
@@ -980,6 +1009,11 @@ class hgweb(object):
                 return
 
             req.write(self.t("error"))
+
+        elif req.form['cmd'][0] == 'static':
+            fname = req.form['file'][0]
+            req.write(staticfile(static, fname)
+                      or self.t("error", error="%r not found" % fname))
 
         else:
             req.write(self.t("error"))
@@ -1152,4 +1186,10 @@ class hgwebdir(object):
             else:
                 req.write(tmpl("notfound", repo=virtual))
         else:
-            req.write(tmpl("index", entries=entries))
+            if req.form.has_key('static'):
+                static = os.path.join(templatepath(), "static")
+                fname = req.form['static'][0]
+                req.write(staticfile(static, fname)
+                          or tmpl("error", error="%r not found" % fname))
+            else:
+                req.write(tmpl("index", entries=entries))

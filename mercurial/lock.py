@@ -5,17 +5,21 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, time
+import errno, os, time
 import util
 
-class LockHeld(Exception):
+class LockException(Exception):
+    pass
+class LockHeld(LockException):
+    pass
+class LockUnavailable(LockException):
     pass
 
 class lock(object):
-    def __init__(self, file, wait=1, releasefn=None):
+    def __init__(self, file, timeout=-1, releasefn=None):
         self.f = file
         self.held = 0
-        self.wait = wait
+        self.timeout = timeout
         self.releasefn = releasefn
         self.lock()
 
@@ -23,13 +27,16 @@ class lock(object):
         self.release()
 
     def lock(self):
+        timeout = self.timeout
         while 1:
             try:
                 self.trylock()
                 return 1
             except LockHeld, inst:
-                if self.wait:
+                if timeout != 0:
                     time.sleep(1)
+                    if timeout > 0:
+                        timeout -= 1
                     continue
                 raise inst
 
@@ -38,8 +45,11 @@ class lock(object):
         try:
             util.makelock(str(pid), self.f)
             self.held = 1
-        except (OSError, IOError):
-            raise LockHeld(util.readlock(self.f))
+        except (OSError, IOError), why:
+            if why.errno == errno.EEXIST:
+                raise LockHeld(util.readlock(self.f))
+            else:
+                raise LockUnavailable(why)
 
     def release(self):
         if self.held:

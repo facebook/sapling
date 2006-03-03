@@ -13,7 +13,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "binascii errno heapq mdiff sha struct zlib")
+demandload(globals(), "binascii errno heapq mdiff os sha struct zlib")
 
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
@@ -187,15 +187,33 @@ class revlog(object):
         self.indexfile = indexfile
         self.datafile = datafile
         self.opener = opener
+
+        self.indexstat = None
         self.cache = None
         self.chunkcache = None
+        self.load()
 
+    def load(self):
         try:
-            i = self.opener(self.indexfile).read()
+            f = self.opener(self.indexfile)
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
             i = ""
+        else:
+            try:
+                st = os.fstat(f.fileno())
+            except AttributeError, inst:
+                st = None
+            else:
+                oldst = self.indexstat
+                if (oldst and st.st_dev == oldst.st_dev
+                    and st.st_ino == oldst.st_ino
+                    and st.st_mtime == oldst.st_mtime
+                    and st.st_ctime == oldst.st_ctime):
+                    return
+            self.indexstat = st
+            i = f.read()
 
         if i and i[:4] != "\0\0\0\0":
             raise RevlogError(_("incompatible revlog signature on %s") %
@@ -624,12 +642,10 @@ class revlog(object):
             # we store negative distances because heap returns smallest member
             h = [(-dist[node], node)]
             seen = {}
-            earliest = self.count()
             while h:
                 d, n = heapq.heappop(h)
                 if n not in seen:
                     seen[n] = 1
-                    r = self.rev(n)
                     yield (-d, n)
                     for p in self.parents(n):
                         heapq.heappush(h, (-dist[p], p))
@@ -690,11 +706,6 @@ class revlog(object):
         p = self.parents(self.node(revs[0]))[0]
         revs.insert(0, self.rev(p))
 
-        # helper to reconstruct intermediate versions
-        def construct(text, base, rev):
-            bins = [self.chunk(r) for r in xrange(base + 1, rev + 1)]
-            return mdiff.patches(text, bins)
-
         # build deltas
         for d in xrange(0, len(revs) - 1):
             a, b = revs[d], revs[d + 1]
@@ -738,10 +749,10 @@ class revlog(object):
         base = prev = -1
         start = end = measure = 0
         if r:
-            start = self.start(self.base(t))
-            end = self.end(t)
-            measure = self.length(self.base(t))
             base = self.base(t)
+            start = self.start(base)
+            end = self.end(t)
+            measure = self.length(base)
             prev = self.tip()
 
         transaction.add(self.datafile, end)
@@ -793,14 +804,15 @@ class revlog(object):
                     raise RevlogError(_("consistency error adding group"))
                 measure = len(text)
             else:
-                e = (end, len(cdelta), self.base(t), link, p1, p2, node)
+                e = (end, len(cdelta), base, link, p1, p2, node)
                 self.index.append(e)
                 self.nodemap[node] = r
                 dfh.write(cdelta)
                 ifh.write(struct.pack(indexformat, *e))
 
             t, r, chain, prev = r, r + 1, node, node
-            start = self.start(self.base(t))
+            base = self.base(t)
+            start = self.start(base)
             end = self.end(t)
 
         dfh.close()

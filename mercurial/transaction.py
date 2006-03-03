@@ -22,6 +22,7 @@ class transaction(object):
         if os.path.exists(journal):
             raise AssertionError(_("journal already exists - run hg recover"))
 
+        self.count = 1
         self.report = report
         self.opener = opener
         self.after = after
@@ -46,7 +47,17 @@ class transaction(object):
         self.file.write("%s\0%d\n" % (file, offset))
         self.file.flush()
 
+    def nest(self):
+        self.count += 1
+        return self
+
+    def running(self):
+        return self.count > 0
+
     def close(self):
+        self.count -= 1
+        if self.count != 0:
+            return
         self.file.close()
         self.entries = []
         if self.after:

@@ -21,7 +21,7 @@
 # interrupted and can be run repeatedly to copy new commits.
 
 import sys, os, zlib, sha, time
-from mercurial import hg, ui, util, commands
+from mercurial import hg, ui, util
 
 class convert_git:
     def __init__(self, path):
@@ -113,7 +113,7 @@ class convert_mercurial:
         except:
             pass
 
-    def putcommit(self, files, parents, author, date, text):
+    def putcommit(self, files, parents, author, dest, text):
         seen = {}
         pl = []
         for p in parents:
@@ -129,13 +129,8 @@ class convert_mercurial:
         while parents:
             p1 = p2
             p2 = parents.pop(0)
-            self.repo.dirstate.setparents(hg.bin(p1), hg.bin(p2))
-            if len(files) > 0:
-                olddir = os.getcwd()
-                os.chdir(self.path)
-                commands.addremove(self.repo.ui, self.repo, *files)
-                os.chdir(olddir)
-            self.repo.commit(files, text, author, date)
+            self.repo.rawcommit(files, text, author, dest,
+                                hg.bin(p1), hg.bin(p2))
             text = "(octopus merge fixup)\n"
             p2 = hg.hex(self.repo.changelog.tip())
 
@@ -265,6 +260,7 @@ class convert:
         t = self.toposort(parents)
         t = [n for n in t if n not in self.map]
         num = len(t)
+        c = None
 
         for c in t:
             num -= 1
@@ -279,7 +275,7 @@ class convert:
             if v in self.map:
                 ctags[k] = self.map[v]
 
-        if ctags:
+        if c and ctags:
             nrev = self.dest.puttags(ctags)
             # write another hash correspondence to override the previous
             # one so we don't end up with extra tag heads

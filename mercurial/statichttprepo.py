@@ -15,8 +15,10 @@ class rangereader(httprangereader.httprangereader):
     def read(self, size=None):
         try:
             return httprangereader.httprangereader.read(self, size)
+        except urllib2.HTTPError, inst:
+            raise IOError(None, inst)
         except urllib2.URLError, inst:
-            raise IOError(None, str(inst))
+            raise IOError(None, inst.reason[1])
 
 def opener(base):
     """return a function that opens files over http"""

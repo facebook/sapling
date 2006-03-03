@@ -12,6 +12,7 @@ tests/*.err
 build
 dist
 doc/*.[0-9]
+doc/*.[0-9].gendoc.txt
 doc/*.[0-9].{x,ht}ml
 MANIFEST
 patches

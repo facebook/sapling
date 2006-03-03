@@ -179,7 +179,7 @@ def canonpath(root, cwd, myname):
     if root == os.sep:
         rootsep = os.sep
     else:
-    	rootsep = root + os.sep
+        rootsep = root + os.sep
     name = myname
     if not name.startswith(os.sep):
         name = os.path.join(root, cwd, name)
