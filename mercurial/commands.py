@@ -2862,13 +2862,21 @@ def dispatch(args):
             if options['profile']:
                 import hotshot, hotshot.stats
                 prof = hotshot.Profile("hg.prof")
-                r = prof.runcall(d)
-                prof.close()
-                stats = hotshot.stats.load("hg.prof")
-                stats.strip_dirs()
-                stats.sort_stats('time', 'calls')
-                stats.print_stats(40)
-                return r
+                try:
+                    try:
+                        return prof.runcall(d)
+                    except:
+                        try:
+                            u.warn(_('exception raised - generating profile '
+                                     'anyway\n'))
+                        except:
+                            pass
+                finally:
+                    prof.close()
+                    stats = hotshot.stats.load("hg.prof")
+                    stats.strip_dirs()
+                    stats.sort_stats('time', 'calls')
+                    stats.print_stats(40)
             else:
                 return d()
         except:
