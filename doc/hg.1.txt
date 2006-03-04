@@ -296,9 +296,9 @@ heads::
 
     options:
     -b, --branches         show branches
-    --map-file <file>      display using template map file
     -r, --rev <rev>        show only heads which are descendants of rev
-    -t, --template <tpl>   display using template
+    --style <style>        display using style map file
+    --template <tpl>       display using template
 
 identify::
     Print a short summary of the current state of the repo.
@@ -338,10 +338,10 @@ incoming [-p] [source]::
 
     options:
     -M, --no-merges       do not show merges
-    --map-file <file>     display using template map file
     -n, --newest-first    show newest records first
     -p, --patch           show patch
-    -t, --template <tpl>  display using template
+    --style <style>       display using style map file
+    --template <tpl>      display using template
 
     aliases: in
 
@@ -389,12 +389,12 @@ log [-r revision ...] [-p] [files]::
     -b, --branch          show branches
     -k, --keyword <str>   search for keywords
     -l, --limit <num>     print no more than this many changes
-    --map-file <file>     display using template map file
     -M, --no-merges       do not show merges
     -m, --only-merges     only show merges
     -r, --rev <A>         show the specified revision or range
     -p, --patch           show patch
-    -t, --template <tpl>  display using template
+    --style <style>       display using style map file
+    --template <tpl>      display using template
 
     aliases: history
 
@@ -413,10 +413,10 @@ outgoing [-p] [dest]::
 
     options:
     -M, --no-merges       do not show merges
-    --map-file <file>     display using template map file
     -p, --patch           show patch
     -n, --newest-first    show newest records first
-    -t, --template <tpl>  display using template
+    --style <style>       display using style map file
+    --template <tpl>      display using template
 
     aliases: out
 
@@ -425,8 +425,8 @@ parents::
 
     options:
     -b, --branches        show branches
-    --map-file <file>     display using template map file
-    -t, --template <tpl>  display using template
+    --style <style>       display using style map file
+    --template <tpl>      display using template
 
 paths [NAME]::
     Show definition of symbolic path name NAME. If no name is given, show
@@ -635,9 +635,9 @@ tip [-p]::
 
     options:
     -b, --branches         show branches
-    --map-file <file>      display using template map file
     -p, --patch            show patch
-    -t, --template <tpl>   display using template
+    --style <style>        display using style map file
+    --template <tpl>       display using template
 
 unbundle <file>::
     (EXPERIMENTAL)

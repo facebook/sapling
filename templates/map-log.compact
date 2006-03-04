@@ -1,4 +1,4 @@
-template = '{rev}{tags}{parents}   {node|short}   {date|isodate}   {author|user}\n  {desc|firstline|strip}\n\n'
+changelog = '{rev}{tags}{parents}   {node|short}   {date|isodate}   {author|user}\n  {desc|firstline|strip}\n\n'
 start_tags = '['
 tag = '{tag},'
 last_tag = '{tag}]'

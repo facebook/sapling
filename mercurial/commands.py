@@ -341,13 +341,15 @@ class changeset_templater(object):
     '''use templater module to format changeset information.'''
 
     def __init__(self, ui, repo, mapfile):
-        self.t = templater.templater(mapfile, templater.common_filters)
+        self.t = templater.templater(mapfile, templater.common_filters,
+                                     cache={'parent': '{rev}:{node|short} ',
+                                            'manifest': '{rev}:{node|short}'})
         self.ui = ui
         self.repo = repo
 
     def use_template(self, t):
         '''set template string to use'''
-        self.t.cache['template'] = t
+        self.t.cache['changelog'] = t
 
     def write(self, thing):
         '''write expanded template.
@@ -396,7 +398,11 @@ class changeset_templater(object):
                     yield self.t(noname, **args)
                 return
             if name not in self.t:
-                yield ' '.join(values)
+                if isinstance(values[0], str):
+                    yield ' '.join(values)
+                else:
+                    for v in values:
+                        yield dict(v, **args)
                 return
             startname = 'start_' + names
             if startname in self.t:
@@ -483,7 +489,11 @@ class changeset_templater(object):
             }
 
         try:
-            self.write(self.t('template', **props))
+            if self.ui.verbose and 'changelog_verbose' in self.t:
+                key = 'changelog_verbose'
+            else:
+                key = 'changelog'
+            self.write(self.t(key, **props))
         except KeyError, inst:
             raise util.Abort(_("%s: no key named '%s'") % (self.t.mapfile,
                                                            inst.args[0]))
@@ -560,7 +570,7 @@ class changeset_printer(object):
 
 def show_changeset(ui, repo, opts):
     '''show one changeset.  uses template or regular display.  caller
-    can pass in 'map_file' and 'template' options in opts.'''
+    can pass in 'style' and 'template' options in opts.'''
 
     tmpl = opts.get('template')
     if tmpl:
@@ -568,7 +578,7 @@ def show_changeset(ui, repo, opts):
     else:
         tmpl = ui.config('ui', 'logtemplate')
         if tmpl: tmpl = templater.parsestring(tmpl)
-    mapfile = opts.get('map_file') or ui.config('ui', 'logmap')
+    mapfile = opts.get('style') or ui.config('ui', 'logmap')
     if tmpl or mapfile:
         if mapfile:
             if not os.path.isfile(mapfile):
@@ -2655,9 +2665,9 @@ table = {
     "heads":
         (heads,
          [('b', 'branches', None, _('show branches')),
-          ('', 'map-file', '', _('display using template map file')),
+          ('', 'style', '', _('display using template map file')),
           ('r', 'rev', '', _('show only heads which are descendants of rev')),
-          ('t', 'template', '', _('display with template'))],
+          ('', 'template', '', _('display with template'))],
          _('hg heads [-b] [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id": (identify, [], _('hg identify')),
@@ -2672,10 +2682,10 @@ table = {
          _('hg import [-f] [-p NUM] [-b BASE] PATCH...')),
     "incoming|in": (incoming,
          [('M', 'no-merges', None, _('do not show merges')),
-          ('', 'map-file', '', _('display using template map file')),
+          ('', 'style', '', _('display using template map file')),
           ('n', 'newest-first', None, _('show newest record first')),
           ('p', 'patch', None, _('show patch')),
-          ('t', 'template', '', _('display with template'))],
+          ('', 'template', '', _('display with template'))],
          _('hg incoming [-p] [-n] [-M] [SOURCE]')),
     "^init": (init, [], _('hg init [DEST]')),
     "locate":
@@ -2697,24 +2707,24 @@ table = {
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
           ('M', 'no-merges', None, _('do not show merges')),
-          ('', 'map-file', '', _('display using template map file')),
+          ('', 'style', '', _('display using template map file')),
           ('m', 'only-merges', None, _('show only merges')),
           ('p', 'patch', None, _('show patch')),
-          ('t', 'template', '', _('display with template'))],
+          ('', 'template', '', _('display with template'))],
          _('hg log [-I] [-X] [-r REV]... [-p] [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "outgoing|out": (outgoing,
          [('M', 'no-merges', None, _('do not show merges')),
           ('p', 'patch', None, _('show patch')),
-          ('', 'map-file', '', _('display using template map file')),
+          ('', 'style', '', _('display using template map file')),
           ('n', 'newest-first', None, _('show newest record first')),
-          ('t', 'template', '', _('display with template'))],
+          ('', 'template', '', _('display with template'))],
          _('hg outgoing [-p] [-n] [-M] [DEST]')),
     "^parents":
         (parents,
          [('b', 'branches', None, _('show branches')),
-          ('', 'map-file', '', _('display using template map file')),
-          ('t', 'template', '', _('display with template'))],
+          ('', 'style', '', _('display using template map file')),
+          ('', 'template', '', _('display with template'))],
          _('hg parents [-b] [REV]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
@@ -2776,7 +2786,7 @@ table = {
            _('name to show in web pages (default: working dir)')),
           ('', 'pid-file', '', _('name of file to write process ID to')),
           ('', 'stdio', None, _('for remote clients')),
-          ('t', 'templates', '', _('web templates to use')),
+          ('', 'templates', '', _('web templates to use')),
           ('', 'style', '', _('template style to use')),
           ('6', 'ipv6', None, _('use IPv6 in addition to IPv4'))],
          _('hg serve [OPTION]...')),
@@ -2805,9 +2815,9 @@ table = {
     "tip":
         (tip,
          [('b', 'branches', None, _('show branches')),
-          ('', 'map-file', '', _('display using template map file')),
+          ('', 'style', '', _('display using template map file')),
           ('p', 'patch', None, _('show patch')),
-          ('t', 'template', '', _('display with template'))],
+          ('', 'template', '', _('display with template'))],
          _('hg [-b] [-p] tip')),
     "unbundle":
         (unbundle,
@@ -2818,11 +2828,11 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('b', 'branch', '', _('checkout the head of a specific branch')),
-          ('', 'map-file', '', _('display using template map file')),
+          ('', 'style', '', _('display using template map file')),
           ('m', 'merge', None, _('allow merging of branches')),
           ('C', 'clean', None, _('overwrite locally modified files')),
           ('f', 'force', None, _('force a merge with outstanding changes')),
-          ('t', 'template', '', _('display with template'))],
+          ('', 'template', '', _('display with template'))],
          _('hg update [-b TAG] [-m] [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),

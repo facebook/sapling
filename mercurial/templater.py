@@ -59,7 +59,7 @@ class templater(object):
     filter uses function to transform value. syntax is
     {key|filter1|filter2|...}.'''
 
-    def __init__(self, mapfile, filters={}, defaults={}):
+    def __init__(self, mapfile, filters={}, cache={}):
         '''set up template engine.
         mapfile is name of file to read map definitions from.
         filters is dict of functions. each transforms a value into another.
@@ -69,7 +69,8 @@ class templater(object):
         self.map = {}
         self.base = (mapfile and os.path.dirname(mapfile)) or ''
         self.filters = filters
-        self.defaults = defaults
+        self.defaults = {}
+        self.cache = cache
 
         if not mapfile:
             return

@@ -1,4 +1,4 @@
-template = 'changeset:   {rev}:{node}\n{tags}{parents}{manifest}user:        {author}\ndate:        {date|date}\nfiles:       {files}\n{file_adds}{file_dels}description:\n{desc|strip}\n\n\n'
+changelog = 'changeset:   {rev}:{node}\n{tags}{parents}{manifest}user:        {author}\ndate:        {date|date}\nfiles:       {files}\n{file_adds}{file_dels}description:\n{desc|strip}\n\n\n'
 start_file_adds = 'files+:     '
 file_add = ' {file_add}'
 end_file_adds = '\n'
