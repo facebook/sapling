@@ -240,8 +240,8 @@ ui::
     Allow to prompt the user.  True or False.  Default is True.
   logtemplate;;
     Template string for commands that print changesets.
-  logmap;;
-    Template map file for commands that print changesets.
+  style;;
+    Name of style to use for command output.
   merge;;
     The conflict resolution program to use during a manual merge.
     Default is "hgmerge".

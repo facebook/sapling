@@ -76,9 +76,9 @@ class templater(object):
             return
         i = 0
         for l in file(mapfile):
-            l = l.rstrip('\r\n')
+            l = l.strip()
             i += 1
-            if l.startswith('#') or not l.strip(): continue
+            if not l or l[0] in '#;': continue
             m = re.match(r'([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$', l)
             if m:
                 key, val = m.groups()

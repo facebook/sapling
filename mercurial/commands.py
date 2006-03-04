@@ -349,7 +349,7 @@ class changeset_templater(object):
 
     def use_template(self, t):
         '''set template string to use'''
-        self.t.cache['changelog'] = t
+        self.t.cache['changeset'] = t
 
     def write(self, thing):
         '''write expanded template.
@@ -489,10 +489,10 @@ class changeset_templater(object):
             }
 
         try:
-            if self.ui.verbose and 'changelog_verbose' in self.t:
-                key = 'changelog_verbose'
+            if self.ui.verbose and 'changeset_verbose' in self.t:
+                key = 'changeset_verbose'
             else:
-                key = 'changelog'
+                key = 'changeset'
             self.write(self.t(key, **props))
         except KeyError, inst:
             raise util.Abort(_("%s: no key named '%s'") % (self.t.mapfile,
@@ -578,11 +578,12 @@ def show_changeset(ui, repo, opts):
     else:
         tmpl = ui.config('ui', 'logtemplate')
         if tmpl: tmpl = templater.parsestring(tmpl)
-    mapfile = opts.get('style') or ui.config('ui', 'logmap')
+    mapfile = opts.get('style') or ui.config('ui', 'style')
     if tmpl or mapfile:
         if mapfile:
             if not os.path.isfile(mapfile):
-                mapname = templater.templatepath(mapfile)
+                mapname = templater.templatepath('map-cmdline.' + mapfile)
+                if not mapname: mapname = templater.templatepath(mapfile)
                 if mapname: mapfile = mapname
         try:
             t = changeset_templater(ui, repo, mapfile)
