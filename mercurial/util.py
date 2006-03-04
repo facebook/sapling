@@ -363,7 +363,14 @@ def copyfiles(src, dst, hardlink=None):
         else:
             shutil.copy(src, dst)
 
-def opener(base):
+def audit_path(path):
+    """Abort if path contains dangerous components"""
+    parts = os.path.normcase(path).split(os.sep)
+    if (os.path.splitdrive(path)[0] or parts[0] in ('.hg', '')
+        or os.pardir in parts):
+        raise Abort(_("path contains illegal component: %s\n") % path)
+
+def opener(base, audit=True):
     """
     return a function that opens files relative to base
 
@@ -371,6 +378,7 @@ def opener(base):
     remote file access from higher level code.
     """
     p = base
+    audit_p = audit
 
     def mktempcopy(name):
         d, fn = os.path.split(name)
@@ -401,6 +409,8 @@ def opener(base):
             self.close()
 
     def o(path, mode="r", text=False, atomic=False):
+        if audit_p:
+            audit_path(path)
         f = os.path.join(p, path)
 
         if not text:

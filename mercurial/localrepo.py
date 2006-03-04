@@ -1679,6 +1679,7 @@ class localrepository(object):
         remove.sort()
         for f in remove:
             self.ui.note(_("removing %s\n") % f)
+            util.audit_path(f)
             try:
                 util.unlink(self.wjoin(f))
             except OSError, inst:
