@@ -1,0 +1,91 @@
+#!/bin/sh
+
+hg init a
+cd a
+echo a > a
+hg add a
+echo line 1 > b
+echo line 2 >> b
+hg commit -l b -d '1111111111 0' -u 'User Name <user@hostname>'
+hg add b
+echo other 1 > c
+echo other 2 >> c
+echo >> c
+echo other 3 >> c
+hg commit -l c -d '1123456789 0' -u 'A. N. Other <other@place>'
+hg add c
+hg commit -m 'no person' -d '1134567890 0' -u 'other@place'
+echo c >> c
+hg commit -m 'no user, no domain' -d '11445678900 0' -u 'person'
+
+# make sure user/global hgrc does not affect tests
+echo '[ui]' > .hg/hgrc
+echo 'logtemplate =' >> .hg/hgrc
+echo 'style =' >> .hg/hgrc
+
+echo '# default style is like normal output'
+hg log > log.out
+hg log --style default > style.out
+diff -u log.out style.out
+hg log -v > log.out
+hg log -v --style default > style.out
+diff -u log.out style.out
+hg log --debug > log.out
+hg log --debug --style default > style.out
+diff -u log.out style.out
+
+echo '# compact style works'
+hg log --style compact
+hg log -v --style compact
+hg log --debug --style compact
+
+echo '# error if style not readable'
+touch q
+chmod 0 q
+hg log --style ./q
+
+echo '# error if no style'
+hg log --style notexist
+
+echo '# error if style missing key'
+echo 'q = q' > t
+hg log --style ./t
+
+echo '# error if include fails'
+echo 'changeset = q' >> t
+hg log --style ./t
+
+echo '# include works'
+rm -f q
+echo '{rev}' > q
+hg log --style ./t
+
+echo '# ui.style works'
+echo '[ui]' > .hg/hgrc
+echo 'style = t' >> .hg/hgrc
+hg log
+
+echo "# keys work"
+for key in author branches date desc file_adds file_dels files \
+        manifest node parents rev tags; do
+    for mode in '' --verbose --debug; do
+        hg log $mode --template "$key$mode: {$key}\n"
+    done
+done
+
+echo '# filters work'
+hg log --template '{author|domain}\n'
+hg log --template '{author|person}\n'
+hg log --template '{author|user}\n'
+hg log --template '{date|age}\n'
+hg log --template '{date|date}\n'
+hg log --template '{date|isodate}\n'
+hg log --template '{date|rfc822date}\n'
+hg log --template '{desc|firstline}\n'
+hg log --template '{node|short}\n'
+
+echo '# error on syntax'
+echo 'x = "f' >> t
+hg log
+
+echo '# done'

@@ -1,0 +1,232 @@
+transaction abort!
+rollback completed
+abort: date exceeds 32 bits: 11445678900
+# default style is like normal output
+--- log.out	2006-03-05 05:11:40.700065250 +0000
++++ style.out	2006-03-05 05:11:40.816072500 +0000
+@@ -5,6 +5,7 @@
+ manifest:    2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1
+ user:        other@place
+ date:        Wed Dec 14 13:44:50 2005 +0000
++files:       
+ files+:      c
+ description:
+ no person
+@@ -16,6 +17,7 @@
+ manifest:    1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
+ user:        A. N. Other <other@place>
+ date:        Sun Aug  7 23:19:49 2005 +0000
++files:       
+ files+:      b
+ description:
+ other 1
+@@ -30,6 +32,7 @@
+ manifest:    0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+ user:        User Name <user@hostname>
+ date:        Fri Mar 18 01:58:31 2005 +0000
++files:       
+ files+:      a
+ description:
+ line 1
+# compact style works
+2[tip]   cdc488b3baa4   2005-12-14 13:44 +0000   other
+  no person
+
+1   55b647117689   2005-08-07 23:19 +0000   other
+  other 1
+
+0   debcd367d974   2005-03-18 01:58 +0000   user
+  line 1
+
+2[tip]   cdc488b3baa4   2005-12-14 13:44 +0000   other
+  no person
+
+1   55b647117689   2005-08-07 23:19 +0000   other
+  other 1
+
+0   debcd367d974   2005-03-18 01:58 +0000   user
+  line 1
+
+2[tip]:1,-1   cdc488b3baa4   2005-12-14 13:44 +0000   other
+  no person
+
+1:0,-1   55b647117689   2005-08-07 23:19 +0000   other
+  other 1
+
+0:-1,-1   debcd367d974   2005-03-18 01:58 +0000   user
+  line 1
+
+# error if style not readable
+abort: Permission denied - ./q
+# error if no style
+abort: No such file or directory - notexist
+# error if style missing key
+abort: ./t: no key named 'changeset'
+# error if include fails
+abort: template file ./q: Permission denied
+# include works
+2
+1
+0
+# ui.style works
+2
+1
+0
+# keys work
+author: other@place
+author: A. N. Other <other@place>
+author: User Name <user@hostname>
+author--verbose: other@place
+author--verbose: A. N. Other <other@place>
+author--verbose: User Name <user@hostname>
+author--debug: other@place
+author--debug: A. N. Other <other@place>
+author--debug: User Name <user@hostname>
+branches: 
+branches: 
+branches: 
+branches--verbose: 
+branches--verbose: 
+branches--verbose: 
+branches--debug: 
+branches--debug: 
+branches--debug: 
+date: 1134567890.00
+date: 1123456789.00
+date: 1111111111.00
+date--verbose: 1134567890.00
+date--verbose: 1123456789.00
+date--verbose: 1111111111.00
+date--debug: 1134567890.00
+date--debug: 1123456789.00
+date--debug: 1111111111.00
+desc: no person
+desc: other 1
+other 2
+
+other 3
+
+desc: line 1
+line 2
+
+desc--verbose: no person
+desc--verbose: other 1
+other 2
+
+other 3
+
+desc--verbose: line 1
+line 2
+
+desc--debug: no person
+desc--debug: other 1
+other 2
+
+other 3
+
+desc--debug: line 1
+line 2
+
+file_adds: 
+file_adds: 
+file_adds: 
+file_adds--verbose: 
+file_adds--verbose: 
+file_adds--verbose: 
+file_adds--debug: c
+file_adds--debug: b
+file_adds--debug: a
+file_dels: 
+file_dels: 
+file_dels: 
+file_dels--verbose: 
+file_dels--verbose: 
+file_dels--verbose: 
+file_dels--debug: 
+file_dels--debug: 
+file_dels--debug: 
+files: c
+files: b
+files: a
+files--verbose: c
+files--verbose: b
+files--verbose: a
+files--debug: 
+files--debug: 
+files--debug: 
+manifest: 
+manifest: 
+manifest: 
+manifest--verbose: 
+manifest--verbose: 
+manifest--verbose: 
+manifest--debug: 2:6e0e82995c35
+manifest--debug: 1:4e8d705b1e53
+manifest--debug: 0:a0c8bcbbb45c
+node: cdc488b3baa4a2cf316d4d85a3a1f17c5e1695d8
+node: 55b64711768911f37c6d244b12785623aa64e7c3
+node: debcd367d97455db85bba7b583b14b166172de25
+node--verbose: cdc488b3baa4a2cf316d4d85a3a1f17c5e1695d8
+node--verbose: 55b64711768911f37c6d244b12785623aa64e7c3
+node--verbose: debcd367d97455db85bba7b583b14b166172de25
+node--debug: cdc488b3baa4a2cf316d4d85a3a1f17c5e1695d8
+node--debug: 55b64711768911f37c6d244b12785623aa64e7c3
+node--debug: debcd367d97455db85bba7b583b14b166172de25
+parents: 
+parents: 
+parents: 
+parents--verbose: 
+parents--verbose: 
+parents--verbose: 
+parents--debug: 1:55b647117689 -1:000000000000 
+parents--debug: 0:debcd367d974 -1:000000000000 
+parents--debug: -1:000000000000 -1:000000000000 
+rev: 2
+rev: 1
+rev: 0
+rev--verbose: 2
+rev--verbose: 1
+rev--verbose: 0
+rev--debug: 2
+rev--debug: 1
+rev--debug: 0
+tags: tip
+tags: 
+tags: 
+tags--verbose: tip
+tags--verbose: 
+tags--verbose: 
+tags--debug: tip
+tags--debug: 
+tags--debug: 
+# filters work
+place
+place
+hostname
+other
+A. N. Other
+User Name
+other
+other
+user
+2 months
+6 months
+11 months
+Wed Dec 14 13:44:50 2005 +0000
+Sun Aug  7 23:19:49 2005 +0000
+Fri Mar 18 01:58:31 2005 +0000
+2005-12-14 13:44 +0000
+2005-08-07 23:19 +0000
+2005-03-18 01:58 +0000
+Wed, 14 Dec 2005 13:44:50 +0000
+Sun, 07 Aug 2005 23:19:49 +0000
+Fri, 18 Mar 2005 01:58:31 +0000
+no person
+other 1
+line 1
+cdc488b3baa4
+55b647117689
+debcd367d974
+# error on syntax
+abort: t:3: unmatched quotes
+# done
