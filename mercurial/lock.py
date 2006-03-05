@@ -5,8 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import errno, os, time
-import util
+from demandload import *
+demandload(globals(), 'errno os time util')
 
 class LockException(Exception):
     pass
