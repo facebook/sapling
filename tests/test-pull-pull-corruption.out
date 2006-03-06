@@ -1,0 +1,24 @@
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+pulling from ../source2
+pulling from ../source1
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 10 changesets with 10 changes to 1 files
+(run 'hg update' to get a working copy)
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+(run 'hg update' to get a working copy)
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 11 changesets, 11 total revisions

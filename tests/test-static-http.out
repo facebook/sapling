@@ -1,5 +1,5 @@
 255
-abort: <urlopen error (, 'Connection refused')>
+abort: Connection refused
 ls: copy: No such file or directory
 changeset:   0:61c9426e69fe
 tag:         tip

@@ -197,9 +197,24 @@ class dirstate(object):
 
     def clear(self):
         self.map = {}
+        self.copies = {}
+        self.markdirty()
+
+    def rebuild(self, parent, files):
+        self.clear()
+        umask = os.umask(0)
+        os.umask(umask)
+        for f, mode in files:
+            if mode:
+                self.map[f] = ('n', ~umask, -1, 0)
+            else:
+                self.map[f] = ('n', ~umask & 0666, -1, 0)
+        self.pl = (parent, nullid)
         self.markdirty()
 
     def write(self):
+        if not self.dirty:
+            return
         st = self.opener("dirstate", "w", atomic=True)
         st.write("".join(self.pl))
         for f, e in self.map.items():
@@ -270,11 +285,11 @@ class dirstate(object):
         elif not dc:
             dc = self.filterfiles(files)
 
-        def statmatch(file, stat):
-            file = util.pconvert(file)
-            if file not in dc and self.ignore(file):
+        def statmatch(file_, stat):
+            file_ = util.pconvert(file_)
+            if file_ not in dc and self.ignore(file_):
                 return False
-            return match(file)
+            return match(file_)
 
         return self.walkhelper(files=files, statmatch=statmatch, dc=dc)
 
@@ -350,9 +365,9 @@ class dirstate(object):
                 continue
             if stat.S_ISDIR(st.st_mode):
                 cmp1 = (lambda x, y: cmp(x[1], y[1]))
-                sorted = [ x for x in findfiles(f) ]
-                sorted.sort(cmp1)
-                for e in sorted:
+                sorted_ = [ x for x in findfiles(f) ]
+                sorted_.sort(cmp1)
+                for e in sorted_:
                     yield e
             else:
                 ff = util.normpath(ff)
@@ -380,7 +395,7 @@ class dirstate(object):
 
         for src, fn, st in self.statwalk(files, match):
             try:
-                type, mode, size, time = self[fn]
+                type_, mode, size, time = self[fn]
             except KeyError:
                 unknown.append(fn)
                 continue
@@ -399,22 +414,23 @@ class dirstate(object):
                         nonexistent = False
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
-                if nonexistent and type in "nm":
+                if nonexistent and type_ in "nm":
                     deleted.append(fn)
                     continue
             # check the common case first
-            if type == 'n':
+            if type_ == 'n':
                 if not st:
                     st = os.stat(fn)
-                if size != st.st_size or (mode ^ st.st_mode) & 0100:
+                if size >= 0 and (size != st.st_size
+                                  or (mode ^ st.st_mode) & 0100):
                     modified.append(fn)
                 elif time != st.st_mtime:
                     lookup.append(fn)
-            elif type == 'm':
+            elif type_ == 'm':
                 modified.append(fn)
-            elif type == 'a':
+            elif type_ == 'a':
                 added.append(fn)
-            elif type == 'r':
+            elif type_ == 'r':
                 removed.append(fn)
 
         return (lookup, modified, added, removed, deleted, unknown)
