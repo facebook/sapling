@@ -852,7 +852,7 @@ class queue:
 
     def qrepo(self, create=False):
         if create or os.path.isdir(os.path.join(self.path, ".hg")):
-            return hg.repository(ui=self.ui, path=self.path, create=create)
+            return hg.repository(self.ui, path=self.path, create=create)
 
     def restore(self, repo, rev, delete=None, qupdate=None):
         c = repo.changelog.read(rev)

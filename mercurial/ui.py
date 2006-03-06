@@ -12,18 +12,23 @@ demandload(globals(), "re socket sys util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
-                 interactive=True):
+                 interactive=True, parentui=None):
         self.overlay = {}
         self.cdata = ConfigParser.SafeConfigParser()
-        self.readconfig(util.rcpath)
+        self.parentui = parentui and parentui.parentui or parentui
+        if parentui is None:
+            self.readconfig(util.rcpath)
 
-        self.quiet = self.configbool("ui", "quiet")
-        self.verbose = self.configbool("ui", "verbose")
-        self.debugflag = self.configbool("ui", "debug")
-        self.interactive = self.configbool("ui", "interactive", True)
+            self.quiet = self.configbool("ui", "quiet")
+            self.verbose = self.configbool("ui", "verbose")
+            self.debugflag = self.configbool("ui", "debug")
+            self.interactive = self.configbool("ui", "interactive", True)
 
-        self.updateopts(verbose, debug, quiet, interactive)
-        self.diffcache = None
+            self.updateopts(verbose, debug, quiet, interactive)
+            self.diffcache = None
+
+    def __getattr__(self, key):
+        return getattr(self.parentui, key)
 
     def updateopts(self, verbose=False, debug=False, quiet=False,
                  interactive=True):
@@ -49,22 +54,34 @@ class ui(object):
             return self.overlay[(section, name)]
         if self.cdata.has_option(section, name):
             return self.cdata.get(section, name)
-        return default
+        if self.parentui is None:
+            return default
+        else:
+            return self.parentui.config(section, name, default)
 
     def configbool(self, section, name, default=False):
         if self.overlay.has_key((section, name)):
             return self.overlay[(section, name)]
         if self.cdata.has_option(section, name):
             return self.cdata.getboolean(section, name)
-        return default
+        if self.parentui is None:
+            return default
+        else:
+            return self.parentui.configbool(section, name, default)
 
     def configitems(self, section):
+        items = {}
+        if self.parentui is not None:
+            items = dict(self.parentui.configitems(section))
         if self.cdata.has_section(section):
-            return self.cdata.items(section)
-        return []
+            items.update(dict(self.cdata.items(section)))
+        x = items.items()
+        x.sort()
+        return x
 
-    def walkconfig(self):
-        seen = {}
+    def walkconfig(self, seen=None):
+        if seen is None:
+            seen = {}
         for (section, name), value in self.overlay.iteritems():
             yield section, name, value
             seen[section, name] = 1
@@ -73,6 +90,9 @@ class ui(object):
                 if (section, name) in seen: continue
                 yield section, name, value.replace('\n', '\\n')
                 seen[section, name] = 1
+        if self.parentui is not None:
+            for parent in self.parentui.walkconfig(seen):
+                yield parent
 
     def extensions(self):
         return self.configitems("extensions")
@@ -132,6 +152,12 @@ class ui(object):
         for a in args:
             sys.stderr.write(str(a))
 
+    def flush(self):
+        try:
+            sys.stdout.flush()
+        finally:
+            sys.stderr.flush()
+
     def readline(self):
         return sys.stdin.readline()[:-1]
     def prompt(self, msg, pat, default="y"):
@@ -171,3 +197,4 @@ class ui(object):
         os.unlink(name)
 
         return t
+
