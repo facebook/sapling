@@ -26,13 +26,13 @@ echo 'style =' >> .hg/hgrc
 echo '# default style is like normal output'
 hg log > log.out
 hg log --style default > style.out
-diff -u log.out style.out
+diff log.out style.out
 hg log -v > log.out
 hg log -v --style default > style.out
-diff -u log.out style.out
+diff log.out style.out
 hg log --debug > log.out
 hg log --debug --style default > style.out
-diff -u log.out style.out
+diff log.out style.out
 
 echo '# compact style works'
 hg log --style compact
@@ -77,7 +77,7 @@ echo '# filters work'
 hg log --template '{author|domain}\n'
 hg log --template '{author|person}\n'
 hg log --template '{author|user}\n'
-hg log --template '{date|age}\n'
+hg log --template '{date|age}\n' > /dev/null || exit 1
 hg log --template '{date|date}\n'
 hg log --template '{date|isodate}\n'
 hg log --template '{date|rfc822date}\n'
