@@ -49,20 +49,11 @@
 # to = recipient1, recipient2, ...
 # cc = cc1, cc2, ...
 
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
-from email.Utils import parseaddr
-from mercurial import commands
-from mercurial import hg
-from mercurial import ui
+from mercurial.demandload import *
+demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
+                         mercurial:commands,hg,ui
+                         os popen2 smtplib socket sys tempfile time''')
 from mercurial.i18n import gettext as _
-import os
-import popen2
-import smtplib
-import socket
-import sys
-import tempfile
-import time
 
 try:
     # readline gives raw_input editing capabilities, but is not
@@ -149,7 +140,7 @@ def patchbomb(ui, repo, *revs, **opts):
         if opts['diffstat']:
             body += cdiffstat('\n'.join(desc), patch) + '\n\n'
         body += '\n'.join(patch)
-        msg = MIMEText(body)
+        msg = email.MIMEText.MIMEText(body)
         subj = '[PATCH %d of %d] %s' % (idx, total, desc[0].strip())
         if subj.endswith('.'): subj = subj[:-1]
         msg['Subject'] = subj
@@ -194,7 +185,7 @@ def patchbomb(ui, repo, *revs, **opts):
     sender = (opts['from'] or ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
 
-    msg = MIMEMultipart()
+    msg = email.MIMEMultipart.MIMEMultipart()
     msg['Subject'] = '[PATCH 0 of %d] %s' % (
         len(patches),
         opts['subject'] or
@@ -217,13 +208,13 @@ def patchbomb(ui, repo, *revs, **opts):
         if l == '.': break
         body.append(l)
 
-    msg.attach(MIMEText('\n'.join(body) + '\n'))
+    msg.attach(email.MIMEText.MIMEText('\n'.join(body) + '\n'))
 
     ui.write('\n')
 
     if opts['diffstat']:
         d = cdiffstat(_('Final summary:\n'), jumbo)
-        if d: msg.attach(MIMEText(d))
+        if d: msg.attach(email.MIMEText.MIMEText(d))
 
     msgs.insert(0, msg)
 
@@ -241,7 +232,7 @@ def patchbomb(ui, repo, *revs, **opts):
             s.login(username, password)
     parent = None
     tz = time.strftime('%z')
-    sender_addr = parseaddr(sender)[1]
+    sender_addr = email.Utils.parseaddr(sender)[1]
     for m in msgs:
         try:
             m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])

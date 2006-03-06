@@ -89,7 +89,9 @@ try:
           data_files=[('mercurial/templates',
                        ['templates/map'] +
                        glob.glob('templates/map-*') +
-                       glob.glob('templates/*.tmpl'))],
+                       glob.glob('templates/*.tmpl')),
+                      ('mercurial/templates/static',
+                       glob.glob('templates/static/*'))],
           cmdclass=cmdclass,
           scripts=['hg', 'hgmerge'],
           options=dict(bdist_mpkg=dict(zipdist=True,

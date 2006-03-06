@@ -13,6 +13,8 @@ from demandload import *
 demandload(globals(), "re lock transaction tempfile stat mdiff errno")
 
 class localrepository(object):
+    def __del__(self):
+        self.transhandle = None
     def __init__(self, ui, path=None, create=0):
         if not path:
             p = os.getcwd()
@@ -37,6 +39,7 @@ class localrepository(object):
         self.nodetagscache = None
         self.encodepats = None
         self.decodepats = None
+        self.transhandle = None
 
         if create:
             os.mkdir(self.path)
@@ -215,6 +218,10 @@ class localrepository(object):
         return self.wopener(filename, 'w').write(data)
 
     def transaction(self):
+        tr = self.transhandle
+        if tr != None and tr.running():
+            return tr.nest()
+
         # save dirstate for undo
         try:
             ds = self.opener("dirstate").read()
@@ -222,21 +229,18 @@ class localrepository(object):
             ds = ""
         self.opener("journal.dirstate", "w").write(ds)
 
-        def after():
-            util.rename(self.join("journal"), self.join("undo"))
-            util.rename(self.join("journal.dirstate"),
-                        self.join("undo.dirstate"))
-
-        return transaction.transaction(self.ui.warn, self.opener,
-                                       self.join("journal"), after)
+        tr = transaction.transaction(self.ui.warn, self.opener,
+                                       self.join("journal"), 
+                                       aftertrans(self.path))
+        self.transhandle = tr
+        return tr
 
     def recover(self):
-        lock = self.lock()
+        l = self.lock()
         if os.path.exists(self.join("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
             transaction.rollback(self.opener, self.join("journal"))
-            self.manifest = manifest.manifest(self.opener)
-            self.changelog = changelog.changelog(self.opener)
+            self.reload()
             return True
         else:
             self.ui.warn(_("no interrupted transaction available\n"))
@@ -245,34 +249,51 @@ class localrepository(object):
     def undo(self, wlock=None):
         if not wlock:
             wlock = self.wlock()
-        lock = self.lock()
+        l = self.lock()
         if os.path.exists(self.join("undo")):
             self.ui.status(_("rolling back last transaction\n"))
             transaction.rollback(self.opener, self.join("undo"))
             util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-            self.dirstate.read()
+            self.reload()
+            self.wreload()
         else:
             self.ui.warn(_("no undo information available\n"))
 
-    def lock(self, wait=1):
-        try:
-            return lock.lock(self.join("lock"), 0)
-        except lock.LockHeld, inst:
-            if wait:
-                self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
-                return lock.lock(self.join("lock"), wait)
-            raise inst
+    def wreload(self):
+        self.dirstate.read()
 
-    def wlock(self, wait=1):
+    def reload(self):
+        self.changelog.load()
+        self.manifest.load()
+        self.tagscache = None
+        self.nodetagscache = None
+
+    def do_lock(self, lockname, wait, releasefn=None, acquirefn=None):
         try:
-            wlock = lock.lock(self.join("wlock"), 0, self.dirstate.write)
+            l = lock.lock(self.join(lockname), 0, releasefn)
         except lock.LockHeld, inst:
             if not wait:
                 raise inst
             self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
-            wlock = lock.lock(self.join("wlock"), wait, self.dirstate.write)
-        self.dirstate.read()
-        return wlock
+            try:
+                # default to 600 seconds timeout
+                l = lock.lock(self.join(lockname),
+                              int(self.ui.config("ui", "timeout") or 600),
+                              releasefn)
+            except lock.LockHeld, inst:
+                raise util.Abort(_("timeout while waiting for "
+                                   "lock held by %s") % inst.args[0])
+        if acquirefn:
+            acquirefn()
+        return l
+
+    def lock(self, wait=1):
+        return self.do_lock("lock", wait, acquirefn=self.reload)
+
+    def wlock(self, wait=1):
+        return self.do_lock("wlock", wait,
+                            self.dirstate.write,
+                            self.wreload)
 
     def checkfilemerge(self, filename, text, filelog, manifest1, manifest2):
         "determine whether a new filenode is needed"
@@ -311,7 +332,7 @@ class localrepository(object):
 
         if not wlock:
             wlock = self.wlock()
-        lock = self.lock()
+        l = self.lock()
         tr = self.transaction()
         mm = m1.copy()
         mfm = mf1.copy()
@@ -350,7 +371,7 @@ class localrepository(object):
             self.dirstate.setparents(n, nullid)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False, wlock=None):
+               match=util.always, force=False, lock=None, wlock=None):
         commit = []
         remove = []
         changed = []
@@ -388,7 +409,8 @@ class localrepository(object):
 
         if not wlock:
             wlock = self.wlock()
-        lock = self.lock()
+        if not lock:
+            lock = self.lock()
         tr = self.transaction()
 
         # check in files
@@ -503,12 +525,18 @@ class localrepository(object):
                     del mf[fn]
             return mf
 
+        if node1:
+            # read the manifest from node1 before the manifest from node2,
+            # so that we'll hit the manifest cache if we're going through
+            # all the revisions in parent->child order.
+            mf1 = mfmatches(node1)
+
         # are we comparing the working directory?
         if not node2:
             if not wlock:
                 try:
                     wlock = self.wlock(wait=0)
-                except lock.LockHeld:
+                except lock.LockException:
                     wlock = None
             lookup, modified, added, removed, deleted, unknown = (
                 self.dirstate.changes(files, match))
@@ -540,8 +568,6 @@ class localrepository(object):
         if node1:
             # flush lists from dirstate before comparing manifests
             modified, added = [], []
-
-            mf1 = mfmatches(node1)
 
             for fn in mf2:
                 if mf1.has_key(fn):
@@ -597,7 +623,6 @@ class localrepository(object):
             if os.path.exists(p):
                 self.ui.warn(_("%s still exists!\n") % f)
             elif self.dirstate.state(f) == 'a':
-                self.ui.warn(_("%s never committed!\n") % f)
                 self.dirstate.forget([f])
             elif f not in self.dirstate:
                 self.ui.warn(_("%s not tracked!\n") % f)
@@ -932,7 +957,7 @@ class localrepository(object):
         return subset
 
     def pull(self, remote, heads=None):
-        lock = self.lock()
+        l = self.lock()
 
         # if we have an empty repo, fetch everything
         if self.changelog.tip() == nullid:
@@ -951,7 +976,7 @@ class localrepository(object):
             cg = remote.changegroupsubset(fetch, heads, 'pull')
         return self.addchangegroup(cg)
 
-    def push(self, remote, force=False):
+    def push(self, remote, force=False, revs=None):
         lock = remote.lock()
 
         base = {}
@@ -963,17 +988,25 @@ class localrepository(object):
             return 1
 
         update = self.findoutgoing(remote, base)
-        if not update:
+        if revs is not None:
+            msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
+        else:
+            bases, heads = update, self.changelog.heads()
+
+        if not bases:
             self.ui.status(_("no changes found\n"))
             return 1
         elif not force:
-            if len(heads) < len(self.changelog.heads()):
+            if len(bases) < len(heads):
                 self.ui.warn(_("abort: push creates new remote branches!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
                 return 1
 
-        cg = self.changegroup(update, 'push')
+        if revs is None:
+            cg = self.changegroup(update, 'push')
+        else:
+            cg = self.changegroupsubset(update, revs, 'push')
         return remote.addchangegroup(cg)
 
     def changegroupsubset(self, bases, heads, source):
@@ -1646,6 +1679,7 @@ class localrepository(object):
         remove.sort()
         for f in remove:
             self.ui.note(_("removing %s\n") % f)
+            util.audit_path(f)
             try:
                 util.unlink(self.wjoin(f))
             except OSError, inst:
@@ -1852,3 +1886,13 @@ class localrepository(object):
         if errors[0]:
             self.ui.warn(_("%d integrity errors encountered!\n") % errors[0])
             return 1
+
+# used to avoid circular references so destructors work
+def aftertrans(base):
+    p = base
+    def a():
+        util.rename(os.path.join(p, "journal"), os.path.join(p, "undo"))
+        util.rename(os.path.join(p, "journal.dirstate"),
+                    os.path.join(p, "undo.dirstate"))
+    return a
+

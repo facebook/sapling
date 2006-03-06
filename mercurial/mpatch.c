@@ -66,7 +66,7 @@ static struct flist *lalloc(int size)
 			a = NULL;
 		} else
 			a->head = a->tail = a->base;
-			return a;
+		return a;
 	}
 	if (!PyErr_Occurred())
 		PyErr_NoMemory();

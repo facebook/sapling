@@ -246,3 +246,11 @@ R d1/a
 R d1/b
 R d1/ba
 R d1/d11/a1
+# transitive rename
+A d1/bc
+R d1/b
+# transitive rename --after
+A d1/bc
+R d1/b
+# idempotent renames (d1/b -> d1/bb followed by d1/bb -> d1/b)
+M d1/b
