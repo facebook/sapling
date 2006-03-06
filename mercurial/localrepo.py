@@ -10,12 +10,12 @@ import filelog, manifest, changelog, dirstate, repo
 from node import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "re lock transaction tempfile stat mdiff errno")
+demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
 
 class localrepository(object):
     def __del__(self):
         self.transhandle = None
-    def __init__(self, ui, path=None, create=0):
+    def __init__(self, parentui, path=None, create=0):
         if not path:
             p = os.getcwd()
             while not os.path.isdir(os.path.join(p, ".hg")):
@@ -30,7 +30,7 @@ class localrepository(object):
             raise repo.RepoError(_("repository %s not found") % path)
 
         self.root = os.path.abspath(path)
-        self.ui = ui
+        self.ui = ui.ui(parentui=parentui)
         self.opener = util.opener(self.path)
         self.wopener = util.opener(self.root)
         self.manifest = manifest.manifest(self.opener)
@@ -45,7 +45,7 @@ class localrepository(object):
             os.mkdir(self.path)
             os.mkdir(self.join("data"))
 
-        self.dirstate = dirstate.dirstate(self.opener, ui, self.root)
+        self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
         try:
             self.ui.readconfig(self.join("hgrc"))
         except IOError:

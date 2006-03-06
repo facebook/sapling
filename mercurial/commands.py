@@ -780,7 +780,7 @@ def clone(ui, source, dest=None, **opts):
     f.close()
 
     if not opts['noupdate']:
-        update(ui, repo)
+        update(repo.ui, repo)
 
     d.close()
 
@@ -1067,6 +1067,7 @@ def debugconfig(ui):
     """show combined config settings from all hgrc files"""
     try:
         repo = hg.repository(ui)
+        ui = repo.ui
     except hg.RepoError:
         pass
     for section, name, value in ui.walkconfig():
@@ -1777,7 +1778,8 @@ def paths(ui, search=None):
     and $HOME/.hgrc.  If run inside a repository, .hg/hgrc is used, too.
     """
     try:
-        repo = hg.repository(ui=ui)
+        repo = hg.repository(ui)
+        ui = repo.ui
     except hg.RepoError:
         pass
 
@@ -2852,7 +2854,8 @@ def dispatch(args):
 
             if cmd not in norepo.split():
                 path = options["repository"] or ""
-                repo = hg.repository(ui=u, path=path)
+                repo = hg.repository(u, path=path)
+                u = repo.ui
                 for x in external:
                     if hasattr(x, 'reposetup'):
                         x.reposetup(u, repo)
