@@ -1,4 +1,11 @@
 #! /usr/bin/env python
+#
+# Based on python's Tools/scripts/md5sum.py
+#
+# This software may be used and distributed according to the terms
+# of the PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2, which is
+# GPL-compatible.
+
 import sys
 import os
 import md5
