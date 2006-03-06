@@ -152,6 +152,12 @@ class ui(object):
         for a in args:
             sys.stderr.write(str(a))
 
+    def flush(self):
+        try:
+            sys.stdout.flush()
+        finally:
+            sys.stderr.flush()
+
     def readline(self):
         return sys.stdin.readline()[:-1]
     def prompt(self, msg, pat, default="y"):

@@ -2863,27 +2863,30 @@ def dispatch(args):
             else:
                 d = lambda: func(u, *args, **cmdoptions)
 
-            if options['profile']:
-                import hotshot, hotshot.stats
-                prof = hotshot.Profile("hg.prof")
-                try:
+            try:
+                if options['profile']:
+                    import hotshot, hotshot.stats
+                    prof = hotshot.Profile("hg.prof")
                     try:
-                        return prof.runcall(d)
-                    except:
                         try:
-                            u.warn(_('exception raised - generating profile '
-                                     'anyway\n'))
+                            return prof.runcall(d)
                         except:
-                            pass
-                        raise
-                finally:
-                    prof.close()
-                    stats = hotshot.stats.load("hg.prof")
-                    stats.strip_dirs()
-                    stats.sort_stats('time', 'calls')
-                    stats.print_stats(40)
-            else:
-                return d()
+                            try:
+                                u.warn(_('exception raised - generating '
+                                         'profile anyway\n'))
+                            except:
+                                pass
+                            raise
+                    finally:
+                        prof.close()
+                        stats = hotshot.stats.load("hg.prof")
+                        stats.strip_dirs()
+                        stats.sort_stats('time', 'calls')
+                        stats.print_stats(40)
+                else:
+                    return d()
+            finally:
+                u.flush()
         except:
             # enter the debugger when we hit an exception
             if options['debugger']:
