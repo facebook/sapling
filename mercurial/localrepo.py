@@ -85,10 +85,11 @@ class localrepository(object):
             return True
 
         r = True
-        for hname, cmd in self.ui.configitems("hooks"):
-            s = hname.split(".")
-            if s[0] == name and cmd:
-                r = runhook(hname, cmd) and r
+        hooks = [(hname, cmd) for hname, cmd in self.ui.configitems("hooks")
+                 if hname.split(".", 1)[0] == name and cmd]
+        hooks.sort()
+        for hname, cmd in hooks:
+            r = runhook(hname, cmd) and r
         return r
 
     def tags(self):
