@@ -593,12 +593,7 @@ def annotate(ui, repo, *pats, **opts):
     change = repo.changelog.read(node)
     mmap = repo.manifest.read(change[0])
 
-    for src, abs, rel, exact in walk(repo, pats, opts):
-        if abs not in mmap:
-            ui.warn(_("warning: %s is not in the repository!\n") %
-                    ((pats and rel) or abs))
-            continue
-
+    for src, abs, rel, exact in walk(repo, pats, opts, node=node):
         f = repo.file(abs)
         if not opts['text'] and util.binary(f.read(mmap[abs])):
             ui.write(_("%s: binary file\n") % ((pats and rel) or abs))
