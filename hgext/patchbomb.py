@@ -141,7 +141,10 @@ def patchbomb(ui, repo, *revs, **opts):
             body += cdiffstat('\n'.join(desc), patch) + '\n\n'
         body += '\n'.join(patch)
         msg = email.MIMEText.MIMEText(body)
-        subj = '[PATCH %d of %d] %s' % (idx, total, desc[0].strip())
+        if total == 1:
+            subj = '[PATCH] ' + desc[0].strip()
+        else:
+            subj = '[PATCH %d of %d] %s' % (idx, total, desc[0].strip())
         if subj.endswith('.'): subj = subj[:-1]
         msg['Subject'] = subj
         msg['X-Mercurial-Node'] = node
