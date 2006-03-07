@@ -2689,7 +2689,14 @@ def find(cmd):
                 break
 
     if len(choice) > 1:
-        clist = [x[0][0] for x in choice]
+        clist = []
+        for aliases, table_e in choice:
+            if aliases[0].startswith(cmd):
+                clist.append(aliases[0])
+            for a in aliases[1:]:
+                if a.startswith(cmd) and not aliases[0].startswith(a):
+                    clist.append(a)
+        clist.sort()
         raise AmbiguousCommand(cmd, clist)
 
     if choice:
