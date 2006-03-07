@@ -2679,14 +2679,21 @@ norepo = ("clone init version help debugancestor debugconfig debugdata"
 def find(cmd):
     """Return (aliases, command table entry) for command string."""
     choice = []
+    debugchoice = []
     for e in table.keys():
         aliases = e.lstrip("^").split("|")
         if cmd in aliases:
             return aliases, table[e]
         for a in aliases:
             if a.startswith(cmd):
-                choice.append([aliases, table[e]])
+                if aliases[0].startswith("debug"):
+                    debugchoice.append([aliases, table[e]])
+                else:
+                    choice.append([aliases, table[e]])
                 break
+
+    if not choice and debugchoice:
+        choice = debugchoice
 
     if len(choice) > 1:
         clist = []
