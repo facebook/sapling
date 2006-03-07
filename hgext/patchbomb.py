@@ -180,16 +180,8 @@ def patchbomb(ui, repo, *revs, **opts):
         jumbo.extend(p)
         msgs.append(makepatch(p, i + 1, len(patches)))
 
-    ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
-
     sender = (opts['from'] or ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
-
-    msg = email.MIMEMultipart.MIMEMultipart()
-    msg['Subject'] = '[PATCH 0 of %d] %s' % (
-        len(patches),
-        opts['subject'] or
-        prompt('Subject:', rest = ' [PATCH 0 of %d] ' % len(patches)))
 
     def getaddrs(opt, prpt, default = None):
         addrs = opts[opt] or (ui.config('patchbomb', opt) or
@@ -198,25 +190,34 @@ def patchbomb(ui, repo, *revs, **opts):
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
 
-    ui.write(_('Finish with ^D or a dot on a line by itself.\n\n'))
+    if len(patches) > 1:
+        ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
 
-    body = []
+        msg = email.MIMEMultipart.MIMEMultipart()
+        msg['Subject'] = '[PATCH 0 of %d] %s' % (
+            len(patches),
+            opts['subject'] or
+            prompt('Subject:', rest = ' [PATCH 0 of %d] ' % len(patches)))
 
-    while True:
-        try: l = raw_input()
-        except EOFError: break
-        if l == '.': break
-        body.append(l)
+        ui.write(_('Finish with ^D or a dot on a line by itself.\n\n'))
 
-    msg.attach(email.MIMEText.MIMEText('\n'.join(body) + '\n'))
+        body = []
+
+        while True:
+            try: l = raw_input()
+            except EOFError: break
+            if l == '.': break
+            body.append(l)
+
+        msg.attach(email.MIMEText.MIMEText('\n'.join(body) + '\n'))
+
+        if opts['diffstat']:
+            d = cdiffstat(_('Final summary:\n'), jumbo)
+            if d: msg.attach(email.MIMEText.MIMEText(d))
+
+        msgs.insert(0, msg)
 
     ui.write('\n')
-
-    if opts['diffstat']:
-        d = cdiffstat(_('Final summary:\n'), jumbo)
-        if d: msg.attach(email.MIMEText.MIMEText(d))
-
-    msgs.insert(0, msg)
 
     if not opts['test'] and not opts['mbox']:
         s = smtplib.SMTP()
