@@ -28,23 +28,22 @@ AllowNoIcons=true
 DefaultGroupName=Mercurial
 
 [Files]
-Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
+Source: ..\..\msys\1.0\bin\patch.exe; DestDir: {app}
 Source: contrib\mercurial.el; DestDir: {app}/Contrib
-Source: contrib\patchbomb; DestDir: {app}/Contrib
-Source: dist\w9xpopen.exe; DestDir: {app}
+Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
+Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Flags: confirmoverwrite
+Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
 Source: dist\hg.exe; DestDir: {app}
-Source: dist\msvcr71.dll; DestDir: {sys}; Flags: sharedfile uninsnosharedfileprompt
 Source: dist\library.zip; DestDir: {app}
-Source: doc\*.txt; DestDir: {app}\Docs
 Source: dist\mfc71.dll; DestDir: {sys}; Flags: sharedfile uninsnosharedfileprompt
+Source: dist\msvcr71.dll; DestDir: {sys}; Flags: sharedfile uninsnosharedfileprompt
+Source: dist\w9xpopen.exe; DestDir: {app}
+Source: doc\*.txt; DestDir: {app}\Docs
+Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
+Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
 Source: COPYING; DestDir: {app}; DestName: Copying.txt
 Source: comparison.txt; DestDir: {app}\Docs; DestName: Comparison.txt
 Source: notes.txt; DestDir: {app}\Docs; DestName: DesignNotes.txt
-Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
-Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
-Source: ..\..\msys\1.0\bin\patch.exe; DestDir: {app}
-Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Flags: confirmoverwrite
-Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
 
 [INI]
 Filename: {app}\Mercurial.url; Section: InternetShortcut; Key: URL; String: http://www.selenic.com/mercurial/
