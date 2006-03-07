@@ -17,28 +17,26 @@ repomap = {}
 
 class queue:
     def __init__(self, ui, path, patchdir=None):
-        self.opener = util.opener(path)
         self.basepath = path
         if patchdir:
             self.path = patchdir
         else:
             self.path = os.path.join(path, "patches")
+        self.opener = util.opener(self.path)
         self.ui = ui
         self.applied = []
         self.full_series = []
         self.applied_dirty = 0
         self.series_dirty = 0
-        self.series_path = os.path.join(self.path, "series")
-        self.status_path = os.path.join(self.path, "status")
+        self.series_path = "series"
+        self.status_path = "status"
 
-        s = self.series_path
-        if os.path.exists(s):
-            self.full_series = self.opener(s).read().splitlines()
+        if os.path.exists(os.path.join(self.path, self.series_path)):
+            self.full_series = self.opener(self.series_path).read().splitlines()
         self.read_series(self.full_series)
 
-        s = self.status_path
-        if os.path.exists(s):
-            self.applied = self.opener(s).read().splitlines()
+        if os.path.exists(os.path.join(self.path, self.status_path)):
+            self.applied = self.opener(self.status_path).read().splitlines()
 
     def find_series(self, patch):
         pre = re.compile("(\s*)([^#]+)")
@@ -186,7 +184,7 @@ class queue:
             self.ui.warn("Unable to read %s\n" % patch)
             sys.exit(1)
 
-        patchf = self.opener(os.path.join(self.path, patch), "w")
+        patchf = self.opener(patch, "w")
         if comments:
             comments = "\n".join(comments) + '\n\n'
             patchf.write(comments)
@@ -402,7 +400,7 @@ class queue:
         self.read_series(self.full_series)
         self.series_dirty = 1
         self.applied_dirty = 1
-        p = self.opener(os.path.join(self.path, patch), "w")
+        p = self.opener(patch, "w")
         if msg:
             msg = msg + "\n"
             p.write(msg)
@@ -716,7 +714,7 @@ class queue:
         patchparent = self.qparents(repo, top)
         message, comments, user, patchfound = self.readheaders(patch)
 
-        patchf = self.opener(os.path.join(self.path, patch), "w")
+        patchf = self.opener(patch, "w")
         if comments:
             comments = "\n".join(comments) + '\n\n'
             patchf.write(comments)
@@ -835,8 +833,9 @@ class queue:
                 d = root[len(self.path) + 1:]
                 for f in files:
                     fl = os.path.join(d, f)
-                    if (fl not in self.series and fl != "status" and
-                        fl != "series" and not fl.startswith('.')):
+                    if (fl not in self.series and
+                        fl not in (self.status_path, self.series_path)
+                        and not fl.startswith('.')):
                         list.append(fl)
             list.sort()
             if list:
@@ -1012,7 +1011,7 @@ class queue:
                 if not force and os.path.isfile(os.path.join(self.path, patch)):
                     self.ui.warn("patch %s already exists\n" % patch)
                     sys.exit(1)
-                patchf = self.opener(os.path.join(self.path, patch), "w")
+                patchf = self.opener(patch, "w")
                 patchf.write(text)
             if patch in self.series:
                 self.ui.warn("patch %s is already in the series file\n" % patch)
@@ -1205,7 +1204,7 @@ def save(ui, repo, **opts):
         util.copyfiles(path, newpath)
     if opts['empty']:
         try:
-            os.unlink(q.status_path)
+            os.unlink(os.path.join(q.path, q.status_path))
         except:
             pass
     return 0
