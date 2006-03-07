@@ -1771,6 +1771,7 @@ class localrepository(object):
                 raise
             except Exception, inst:
                 err(_("unpacking changeset %s: %s") % (short(n), inst))
+                continue
 
             neededmanifests[changes[0]] = n
 
@@ -1808,10 +1809,14 @@ class localrepository(object):
                 raise
             except Exception, inst:
                 err(_("unpacking manifest %s: %s") % (short(n), inst))
+                continue
 
-            ff = [ l.split('\0') for l in delta.splitlines() ]
-            for f, fn in ff:
-                filenodes.setdefault(f, {})[bin(fn[:40])] = 1
+            try:
+                ff = [ l.split('\0') for l in delta.splitlines() ]
+                for f, fn in ff:
+                    filenodes.setdefault(f, {})[bin(fn[:40])] = 1
+            except (ValueError, TypeError), inst:
+                err(_("broken delta in manifest %s: %s") % (short(n), inst))
 
         self.ui.status(_("crosschecking files in changesets and manifests\n"))
 
@@ -1835,6 +1840,9 @@ class localrepository(object):
             if f == "/dev/null":
                 continue
             files += 1
+            if not f:
+                err(_("file without name in manifest %s") % short(n))
+                continue
             fl = self.file(f)
             checksize(fl, f)
 
@@ -1852,7 +1860,7 @@ class localrepository(object):
                     del filenodes[f][n]
 
                 flr = fl.linkrev(n)
-                if flr not in filelinkrevs[f]:
+                if flr not in filelinkrevs.get(f, []):
                     err(_("%s:%s points to unexpected changeset %d")
                             % (f, short(n), flr))
                 else:
