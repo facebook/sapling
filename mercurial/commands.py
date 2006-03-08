@@ -1920,7 +1920,7 @@ def remove(ui, repo, pat, *pats, **opts):
     def okaytoremove(abs, rel, exact):
         modified, added, removed, deleted, unknown = repo.changes(files=[abs])
         reason = None
-        if modified:
+        if modified and not opts['force']:
             reason = _('is modified')
         elif added:
             reason = _('has been marked for add')
@@ -2564,7 +2564,8 @@ table = {
     "^remove|rm":
         (remove,
          [('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
+          ('f', 'force', None, _('remove file even if modified'))],
          _('hg remove [OPTION]... FILE...')),
     "rename|mv":
         (rename,
