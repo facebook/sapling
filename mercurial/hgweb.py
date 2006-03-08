@@ -851,7 +851,7 @@ class hgweb(object):
 
     def run(self, req=hgrequest()):
         def clean(path):
-            p = os.path.normpath(path)
+            p = util.normpath(path)
             if p[:2] == "..":
                 raise "suspicious path"
             return p
