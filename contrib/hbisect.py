@@ -113,7 +113,8 @@ class bisect(object):
         cl = self.repo.changelog
         if not stop:
             stop = sets.Set([])
-            for g in reversed(self.goodrevs):
+            for i in xrange(len(self.goodrevs)-1, -1, -1):
+                g = self.goodrevs[i]
                 if g in stop:
                     continue
                 stop.update(cl.reachable(g))
