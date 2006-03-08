@@ -2834,12 +2834,15 @@ def dispatch(args):
 
     try:
         try:
-            path = options["repository"]
-            if path:
-                repo = hg.repository(u, path=path)
-            else:
-                repo = None
-                path = ""
+            if options['cwd']:
+                try:
+                    os.chdir(options['cwd'])
+                except OSError, inst:
+                    raise util.Abort('%s: %s' %
+                                     (options['cwd'], inst.strerror))
+
+            path = options["repository"] or ""
+            repo = path and hg.repository(u, path=path) or None
 
             if options['help']:
                 help_(u, cmd, options['version'])
@@ -2850,13 +2853,6 @@ def dispatch(args):
             elif not cmd:
                 help_(u, 'shortlist')
                 sys.exit(0)
-
-            if options['cwd']:
-                try:
-                    os.chdir(options['cwd'])
-                except OSError, inst:
-                    raise util.Abort('%s: %s' %
-                                     (options['cwd'], inst.strerror))
 
             if cmd not in norepo.split():
                 try:
