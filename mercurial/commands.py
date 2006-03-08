@@ -1058,13 +1058,8 @@ def debugcheckstate(ui, repo):
         error = _(".hg/dirstate inconsistent with current parent's manifest")
         raise util.Abort(error)
 
-def debugconfig(ui):
+def debugconfig(ui, repo):
     """show combined config settings from all hgrc files"""
-    try:
-        repo = hg.repository(ui)
-        ui = repo.ui
-    except hg.RepoError:
-        pass
     for section, name, value in ui.walkconfig():
         ui.write('%s.%s=%s\n' % (section, name, value))
 
@@ -1763,7 +1758,7 @@ def parents(ui, repo, rev=None, branches=None):
         if n != nullid:
             show_changeset(ui, repo, changenode=n, brinfo=br)
 
-def paths(ui, search=None):
+def paths(ui, repo, search=None):
     """show definition of symbolic path names
 
     Show definition of symbolic path name NAME. If no name is given, show
@@ -1772,12 +1767,6 @@ def paths(ui, search=None):
     Path names are defined in the [paths] section of /etc/mercurial/hgrc
     and $HOME/.hgrc.  If run inside a repository, .hg/hgrc is used, too.
     """
-    try:
-        repo = hg.repository(ui)
-        ui = repo.ui
-    except hg.RepoError:
-        pass
-
     if search:
         for name, path in ui.configitems("paths"):
             if name == search:
@@ -2668,8 +2657,9 @@ globalopts = [
     ('h', 'help', None, _('display help and exit')),
 ]
 
-norepo = ("clone init version help debugancestor debugconfig debugdata"
-          " debugindex debugindexdot paths")
+norepo = ("clone init version help debugancestor debugdata"
+          " debugindex debugindexdot")
+optionalrepo = ("paths debugconfig")
 
 def find(cmd):
     """Return (aliases, command table entry) for command string."""
@@ -2869,12 +2859,16 @@ def dispatch(args):
                                      (options['cwd'], inst.strerror))
 
             if cmd not in norepo.split():
-                if not repo:
-                    repo = hg.repository(u, path=path)
-                u = repo.ui
-                for x in external:
-                    if hasattr(x, 'reposetup'):
-                        x.reposetup(u, repo)
+                try:
+                    if not repo:
+                        repo = hg.repository(u, path=path)
+                    u = repo.ui
+                    for x in external:
+                        if hasattr(x, 'reposetup'):
+                            x.reposetup(u, repo)
+                except hg.RepoError:
+                    if cmd not in optionalrepo.split():
+                        raise
                 d = lambda: func(u, repo, *args, **cmdoptions)
             else:
                 d = lambda: func(u, *args, **cmdoptions)
