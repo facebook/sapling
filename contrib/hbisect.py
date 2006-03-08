@@ -4,8 +4,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from mercurial.demandload import demandload
-demandload(globals(), "os sys sets")
-from mercurial import hg
+demandload(globals(), "os sys sets mercurial:hg,util")
 
 versionstr = "0.0.3"
 
@@ -30,33 +29,32 @@ class bisect(object):
     """dichotomic search in the DAG of changesets"""
     def __init__(self, ui, repo):
         self.repo = repo
-        self.path = os.path.join(repo.join(""), "bisect")
+        self.path = repo.join("bisect")
+        self.opener = util.opener(self.path)
         self.ui = ui
         self.goodrevs = []
         self.badrev = None
         self.good_dirty = 0
         self.bad_dirty = 0
-        self.good_path = os.path.join(self.path, "good")
-        self.bad_path = os.path.join(self.path, "bad")
+        self.good_path = "good"
+        self.bad_path = "bad"
 
-        s = self.good_path
-        if os.path.exists(s):
-            self.goodrevs = self.repo.opener(s).read().splitlines()
+        if os.path.exists(os.path.join(self.path, self.good_path)):
+            self.goodrevs = self.opener(self.good_path).read().splitlines()
             self.goodrevs = [hg.bin(x) for x in self.goodrevs]
-        s = self.bad_path
-        if os.path.exists(s):
-            r = self.repo.opener(s).read().splitlines()
+        if os.path.exists(os.path.join(self.path, self.bad_path)):
+            r = self.opener(self.bad_path).read().splitlines()
             if r:
                 self.badrev = hg.bin(r.pop(0))
 
     def __del__(self):
         if not os.path.isdir(self.path):
             return
-        f = self.repo.opener(self.good_path, "w")
+        f = self.opener(self.good_path, "w")
         f.write("\n".join([hg.hex(r) for r in  self.goodrevs]))
         if len(self.goodrevs) > 0:
             f.write("\n")
-        f = self.repo.opener(self.bad_path, "w")
+        f = self.opener(self.bad_path, "w")
         if self.badrev:
             f.write(hg.hex(self.badrev) + "\n")
 
@@ -72,7 +70,8 @@ class bisect(object):
     def reset(self):
         """finish a bisection"""
         if os.path.isdir(self.path):
-            sl = [self.bad_path, self.good_path]
+            sl = [os.path.join(self.path, p)
+                  for p in [self.bad_path, self.good_path]]
             for s in sl:
                 if os.path.exists(s):
                     os.unlink(s)
