@@ -2844,6 +2844,13 @@ def dispatch(args):
 
     try:
         try:
+            path = options["repository"]
+            if path:
+                repo = hg.repository(u, path=path)
+            else:
+                repo = None
+                path = ""
+
             if options['help']:
                 help_(u, cmd, options['version'])
                 sys.exit(0)
@@ -2862,8 +2869,8 @@ def dispatch(args):
                                      (options['cwd'], inst.strerror))
 
             if cmd not in norepo.split():
-                path = options["repository"] or ""
-                repo = hg.repository(u, path=path)
+                if not repo:
+                    repo = hg.repository(u, path=path)
                 u = repo.ui
                 for x in external:
                     if hasattr(x, 'reposetup'):
