@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # queue.py - patch queues for mercurial
 #
 # Copyright 2005 Chris Mason <mason@suse.com>
