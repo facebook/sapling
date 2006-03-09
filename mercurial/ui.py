@@ -5,10 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, ConfigParser
+import ConfigParser
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "re socket sys util")
+demandload(globals(), "os re socket sys util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
@@ -26,6 +26,10 @@ class ui(object):
 
             self.updateopts(verbose, debug, quiet, interactive)
             self.diffcache = None
+        else:
+            self.cdata._defaults = parentui.cdata._defaults
+            for key, value in parentui.cdata._sections.iteritems():
+                self.cdata._sections[key] = value.copy()
 
     def __getattr__(self, key):
         return getattr(self.parentui, key)
@@ -197,4 +201,3 @@ class ui(object):
         os.unlink(name)
 
         return t
-
