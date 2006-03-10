@@ -52,7 +52,7 @@
 from mercurial.demandload import *
 demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
                          mercurial:commands,hg,ui
-                         os popen2 smtplib socket sys tempfile time''')
+                         os errno popen2 smtplib socket sys tempfile time''')
 from mercurial.i18n import gettext as _
 
 try:
@@ -254,8 +254,12 @@ def patchbomb(ui, repo, *revs, **opts):
         if opts['test']:
             ui.status('Displaying ', m['Subject'], ' ...\n')
             fp = os.popen(os.getenv('PAGER', 'more'), 'w')
-            fp.write(m.as_string(0))
-            fp.write('\n')
+            try:
+                fp.write(m.as_string(0))
+                fp.write('\n')
+            except IOError, inst:
+                if inst.errno != errno.EPIPE:
+                    raise
             fp.close()
         elif opts['mbox']:
             ui.status('Writing ', m['Subject'], ' ...\n')
