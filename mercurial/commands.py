@@ -2796,44 +2796,26 @@ def dispatch(args):
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)
-    except ParseError, inst:
-        if inst.args[0]:
-            u.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
-            help_(u, inst.args[0])
-        else:
-            u.warn(_("hg: %s\n") % inst.args[1])
-            help_(u, 'shortlist')
-        sys.exit(-1)
-    except AmbiguousCommand, inst:
-        u.warn(_("hg: command '%s' is ambiguous:\n    %s\n") % 
-                (inst.args[0], " ".join(inst.args[1])))
-        sys.exit(1)
-    except UnknownCommand, inst:
-        u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
-        help_(u, 'shortlist')
-        sys.exit(1)
+        if options["time"]:
+            def get_times():
+                t = os.times()
+                if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
+                    t = (t[0], t[1], t[2], t[3], time.clock())
+                return t
+            s = get_times()
+            def print_time():
+                t = get_times()
+                u.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
+                    (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
+            atexit.register(print_time)
 
-    if options["time"]:
-        def get_times():
-            t = os.times()
-            if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
-                t = (t[0], t[1], t[2], t[3], time.clock())
-            return t
-        s = get_times()
-        def print_time():
-            t = get_times()
-            u.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
-                (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
-        atexit.register(print_time)
+        u.updateopts(options["verbose"], options["debug"], options["quiet"],
+                not options["noninteractive"])
 
-    u.updateopts(options["verbose"], options["debug"], options["quiet"],
-              not options["noninteractive"])
+        # enter the debugger before command execution
+        if options['debugger']:
+            pdb.set_trace()
 
-    # enter the debugger before command execution
-    if options['debugger']:
-        pdb.set_trace()
-
-    try:
         try:
             if options['cwd']:
                 try:
@@ -2901,6 +2883,22 @@ def dispatch(args):
             if options['traceback']:
                 traceback.print_exc()
             raise
+    except ParseError, inst:
+        if inst.args[0]:
+            u.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
+            help_(u, inst.args[0])
+        else:
+            u.warn(_("hg: %s\n") % inst.args[1])
+            help_(u, 'shortlist')
+        sys.exit(-1)
+    except AmbiguousCommand, inst:
+        u.warn(_("hg: command '%s' is ambiguous:\n    %s\n") % 
+                (inst.args[0], " ".join(inst.args[1])))
+        sys.exit(1)
+    except UnknownCommand, inst:
+        u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
+        help_(u, 'shortlist')
+        sys.exit(1)
     except hg.RepoError, inst:
         u.warn(_("abort: "), inst, "!\n")
     except revlog.RevlogError, inst:
@@ -2947,13 +2945,6 @@ def dispatch(args):
         u.debug(inst, "\n")
         u.warn(_("%s: invalid arguments\n") % cmd)
         help_(u, cmd)
-    except AmbiguousCommand, inst:
-        u.warn(_("hg: command '%s' is ambiguous:\n    %s\n") % 
-                (inst.args[0], " ".join(inst.args[1])))
-        help_(u, 'shortlist')
-    except UnknownCommand, inst:
-        u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
-        help_(u, 'shortlist')
     except SystemExit:
         # don't catch this in the catch-all below
         raise
