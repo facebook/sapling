@@ -14,9 +14,10 @@ class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True, parentui=None):
         self.overlay = {}
-        self.cdata = ConfigParser.SafeConfigParser()
-        self.parentui = parentui and parentui.parentui or parentui
         if parentui is None:
+            # this is the parent of all ui children
+            self.parentui = None
+            self.cdata = ConfigParser.SafeConfigParser()
             self.readconfig(util.rcpath)
 
             self.quiet = self.configbool("ui", "quiet")
@@ -27,9 +28,15 @@ class ui(object):
             self.updateopts(verbose, debug, quiet, interactive)
             self.diffcache = None
         else:
-            self.cdata._defaults = parentui.cdata._defaults
-            for key, value in parentui.cdata._sections.iteritems():
-                self.cdata._sections[key] = value.copy()
+            # parentui may point to an ui object which is already a child
+            self.parentui = parentui.parentui or parentui
+            parent_cdata = self.parentui.cdata
+            self.cdata = ConfigParser.SafeConfigParser(parent_cdata.defaults())
+            # make interpolation work
+            for section in parent_cdata.sections():
+                self.cdata.add_section(section)
+                for name, value in parent_cdata.items(section, raw=True):
+                    self.cdata.set(section, name, value)
 
     def __getattr__(self, key):
         return getattr(self.parentui, key)
