@@ -24,4 +24,4 @@ hg.1.gendoc.txt: ../mercurial/commands.py
 	asciidoc -b html4 $*.txt || asciidoc -b html $*.txt
 
 clean:
-	$(RM) $(MAN) $(MAN:%=%.xml) $(MAN:%=%.html)
+	$(RM) $(MAN) $(MAN:%=%.xml) $(MAN:%=%.html) *.[0-9].gendoc.txt
