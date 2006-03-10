@@ -2563,9 +2563,9 @@ table = {
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":
         (remove,
-         [('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('f', 'force', None, _('remove file even if modified'))],
+         [('f', 'force', None, _('remove file even if modified')),
+          ('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg remove [OPTION]... FILE...')),
     "rename|mv":
         (rename,
@@ -2574,7 +2574,7 @@ table = {
            _('forcibly copy over an existing managed file')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         _('hg rename [OPTION]... [SOURCE]... DEST')),
+         _('hg rename [OPTION]... SOURCE... DEST')),
     "^revert":
         (revert,
          [('r', 'rev', '', _('revision to revert to')),

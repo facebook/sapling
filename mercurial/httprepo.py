@@ -67,6 +67,9 @@ class httprepository(remoterepository):
     def dev(self):
         return -1
 
+    def lock(self):
+        raise util.Abort(_('operation not supported over http'))
+
     def do_cmd(self, cmd, **args):
         self.ui.debug(_("sending %s command\n") % cmd)
         q = {"cmd": cmd}
