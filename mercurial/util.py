@@ -499,7 +499,7 @@ if os.name == 'nt':
         return pf
 
     try: # ActivePython can create hard links using win32file module
-        import win32file
+        import win32api, win32con, win32file
 
         def os_link(src, dst): # NB will only succeed on NTFS
             win32file.CreateHardLink(dst, src)
@@ -516,8 +516,18 @@ if os.name == 'nt':
             except:
                 return os.stat(pathname).st_nlink
 
+        def testpid(pid):
+            '''return False if pid is dead, True if running or not known'''
+            try:
+                win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION,
+                                     False, pid)
+            except:
+                return True
+
     except ImportError:
-        pass
+        def testpid(pid):
+            '''return False if pid dead, True if running or not known'''
+            return True
 
     def is_exec(f, last):
         return last
@@ -613,6 +623,14 @@ else:
                 return _readlock_file(pathname)
             else:
                 raise
+
+    def testpid(pid):
+        '''return False if pid dead, True if running or not sure'''
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError, inst:
+            return inst.errno != errno.ESRCH
 
     def explain_exit(code):
         """return a 2-tuple (desc, code) describing a process's status"""

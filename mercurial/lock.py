@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from demandload import *
-demandload(globals(), 'errno os time util')
+demandload(globals(), 'errno os socket time util')
 
 class LockException(Exception):
     pass
@@ -16,11 +16,22 @@ class LockUnavailable(LockException):
     pass
 
 class lock(object):
+    # lock is symlink on platforms that support it, file on others.
+
+    # symlink is used because create of directory entry and contents
+    # are atomic even over nfs.
+
+    # old-style lock: symlink to pid
+    # new-style lock: symlink to hostname:pid
+
     def __init__(self, file, timeout=-1, releasefn=None):
         self.f = file
         self.held = 0
         self.timeout = timeout
         self.releasefn = releasefn
+        self.id = None
+        self.host = None
+        self.pid = None
         self.lock()
 
     def __del__(self):
@@ -41,15 +52,50 @@ class lock(object):
                 raise inst
 
     def trylock(self):
-        pid = os.getpid()
+        if self.id is None:
+            self.host = socket.gethostname()
+            self.pid = os.getpid()
+            self.id = '%s:%s' % (self.host, self.pid)
+        while not self.held:
+            try:
+                util.makelock(self.id, self.f)
+                self.held = 1
+            except (OSError, IOError), why:
+                if why.errno == errno.EEXIST:
+                    locker = self.testlock()
+                    if locker:
+                        raise LockHeld(locker)
+                else:
+                    raise LockUnavailable(why)
+
+    def testlock(self):
+        '''return id of locker if lock is valid, else None.'''
+        # if old-style lock, we cannot tell what machine locker is on.
+        # with new-style lock, if locker is on this machine, we can
+        # see if locker is alive.  if locker is on this machine but
+        # not alive, we can safely break lock.
+        locker = util.readlock(self.f)
+        c = locker.find(':')
+        if c == -1:
+            return locker
+        host = locker[:c]
+        if host != self.host:
+            return locker
         try:
-            util.makelock(str(pid), self.f)
-            self.held = 1
-        except (OSError, IOError), why:
-            if why.errno == errno.EEXIST:
-                raise LockHeld(util.readlock(self.f))
-            else:
-                raise LockUnavailable(why)
+            pid = int(locker[c+1:])
+        except:
+            return locker
+        if util.testpid(pid):
+            return locker
+        # if locker dead, break lock.  must do this with another lock
+        # held, or can race and break valid lock.
+        try:
+            l = lock(self.f + '.break')
+            l.trylock()
+            os.unlink(self.f)
+            l.release()
+        except (LockHeld, LockUnavailable):
+            return locker
 
     def release(self):
         if self.held:
