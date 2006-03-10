@@ -64,7 +64,10 @@ class ui(object):
         if self.overlay.has_key((section, name)):
             return self.overlay[(section, name)]
         if self.cdata.has_option(section, name):
-            return self.cdata.get(section, name)
+            try:
+                return self.cdata.get(section, name)
+            except ConfigParser.InterpolationError, inst:
+                raise util.Abort(_("Error in configuration:\n%s") % inst)
         if self.parentui is None:
             return default
         else:
@@ -74,7 +77,10 @@ class ui(object):
         if self.overlay.has_key((section, name)):
             return self.overlay[(section, name)]
         if self.cdata.has_option(section, name):
-            return self.cdata.getboolean(section, name)
+            try:
+                return self.cdata.getboolean(section, name)
+            except ConfigParser.InterpolationError, inst:
+                raise util.Abort(_("Error in configuration:\n%s") % inst)
         if self.parentui is None:
             return default
         else:
@@ -85,7 +91,10 @@ class ui(object):
         if self.parentui is not None:
             items = dict(self.parentui.configitems(section))
         if self.cdata.has_section(section):
-            items.update(dict(self.cdata.items(section)))
+            try:
+                items.update(dict(self.cdata.items(section)))
+            except ConfigParser.InterpolationError, inst:
+                raise util.Abort(_("Error in configuration:\n%s") % inst)
         x = items.items()
         x.sort()
         return x
