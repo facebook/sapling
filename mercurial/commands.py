@@ -489,7 +489,11 @@ class changeset_templater(object):
             }
 
         try:
-            if self.ui.verbose and 'changeset_verbose' in self.t:
+            if self.ui.debugflag and 'changeset_debug' in self.t:
+                key = 'changeset_debug'
+            elif self.ui.quiet and 'changeset_quiet' in self.t:
+                key = 'changeset_quiet'
+            elif self.ui.verbose and 'changeset_verbose' in self.t:
                 key = 'changeset_verbose'
             else:
                 key = 'changeset'
