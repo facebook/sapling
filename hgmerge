@@ -4,10 +4,14 @@
 #
 # This tries to find a way to do three-way merge on the current system.
 # The result ought to end up in $1.
+#
+# Environment variables set by Mercurial:
+# HG_ROOT            repo root
+# HG_FILE            name of file within repo
+# HG_MY_NODE         revision being merged
+# HG_OTHER_NODE      revision being merged
 
 set -e # bail out quickly on failure
-
-echo $1 $2 $3
 
 LOCAL="$1"
 BASE="$2"

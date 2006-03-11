@@ -1636,10 +1636,12 @@ class localrepository(object):
         # merge the tricky bits
         files = merge.keys()
         files.sort()
+        xp1 = hex(p1)
+        xp2 = hex(p2)
         for f in files:
             self.ui.status(_("merging %s\n") % f)
             my, other, flag = merge[f]
-            ret = self.merge3(f, my, other)
+            ret = self.merge3(f, my, other, xp1, xp2)
             if ret:
                 err = True
             util.set_exec(self.wjoin(f), flag)
@@ -1677,7 +1679,7 @@ class localrepository(object):
             self.dirstate.setparents(p1, p2)
         return err
 
-    def merge3(self, fn, my, other):
+    def merge3(self, fn, my, other, p1, p2):
         """perform a 3-way merge in the working directory"""
 
         def temp(prefix, node):
@@ -1700,7 +1702,14 @@ class localrepository(object):
 
         cmd = (os.environ.get("HGMERGE") or self.ui.config("ui", "merge")
                or "hgmerge")
-        r = os.system('%s "%s" "%s" "%s"' % (cmd, a, b, c))
+        r = util.system('%s "%s" "%s" "%s"' % (cmd, a, b, c),
+                        environ={'HG_ROOT': self.root,
+                                 'HG_FILE': fn,
+                                 'HG_MY_NODE': p1,
+                                 'HG_OTHER_NODE': p2,
+                                 'HG_FILE_MY_NODE': hex(my),
+                                 'HG_FILE_OTHER_NODE': hex(other),
+                                 'HG_FILE_BASE_NODE': hex(base)})
         if r:
             self.ui.warn(_("merging %s failed!\n") % fn)
 
