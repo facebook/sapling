@@ -325,6 +325,29 @@ def system(cmd, errprefix=None):
             errmsg = "%s: %s" % (errprefix, errmsg)
         raise Abort(errmsg)
 
+def esystem(cmd, environ={}, cwd=None):
+    '''enhanced shell command execution.
+    run with environment maybe modified, maybe in different dir.'''
+    oldenv = {}
+    for k in environ:
+        oldenv[k] = os.environ.get(k)
+    if cwd is not None:
+        oldcwd = os.getcwd()
+    try:
+        for k, v in environ.iteritems():
+            os.environ[k] = str(v)
+        if cwd is not None and oldcwd != cwd:
+            os.chdir(cwd)
+        return os.system(cmd)
+    finally:
+        for k, v in oldenv.iteritems():
+            if v is None:
+                del os.environ[k]
+            else:
+                os.environ[k] = v
+        if cwd is not None and oldcwd != cwd:
+            os.chdir(oldcwd)
+
 def rename(src, dst):
     """forcibly rename a file"""
     try:

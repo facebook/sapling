@@ -54,28 +54,8 @@ class localrepository(object):
     def hook(self, name, throw=False, **args):
         def runhook(name, cmd):
             self.ui.note(_("running hook %s: %s\n") % (name, cmd))
-            old = {}
-            for k, v in args.items():
-                k = k.upper()
-                old['HG_' + k] = os.environ.get(k, None)
-                old[k] = os.environ.get(k, None)
-                os.environ['HG_' + k] = str(v)
-                os.environ[k] = str(v)
-
-            try:
-                # Hooks run in the repository root
-                olddir = os.getcwd()
-                os.chdir(self.root)
-                r = os.system(cmd)
-            finally:
-                for k, v in old.items():
-                    if v is not None:
-                        os.environ[k] = v
-                    else:
-                        del os.environ[k]
-
-                os.chdir(olddir)
-
+            env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()])
+            r = util.esystem(cmd, environ=env, cwd=self.root)
             if r:
                 desc, r = util.explain_exit(r)
                 if throw:
@@ -231,7 +211,7 @@ class localrepository(object):
         self.opener("journal.dirstate", "w").write(ds)
 
         tr = transaction.transaction(self.ui.warn, self.opener,
-                                       self.join("journal"), 
+                                       self.join("journal"),
                                        aftertrans(self.path))
         self.transhandle = tr
         return tr
