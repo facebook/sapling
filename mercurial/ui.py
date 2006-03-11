@@ -209,7 +209,9 @@ class ui(object):
                   os.environ.get("EDITOR", "vi"))
 
         os.environ["HGUSER"] = self.username()
-        util.system("%s \"%s\"" % (editor, name), errprefix=_("edit failed"))
+        util.system("%s \"%s\"" % (editor, name),
+                    environ={'HGUSER': self.username()},
+                    onerr=util.Abort, errprefix=_("edit failed"))
 
         t = open(name).read()
         t = re.sub("(?m)^HG:.*\n", "", t)

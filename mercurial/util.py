@@ -315,19 +315,13 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
                          (files and filematch(fn)))),
             (inc or exc or (pats and pats != [('glob', '**')])) and True)
 
-def system(cmd, errprefix=None):
-    """execute a shell command that must succeed"""
-    rc = os.system(cmd)
-    if rc:
-        errmsg = "%s %s" % (os.path.basename(cmd.split(None, 1)[0]),
-                            explain_exit(rc)[0])
-        if errprefix:
-            errmsg = "%s: %s" % (errprefix, errmsg)
-        raise Abort(errmsg)
-
-def esystem(cmd, environ={}, cwd=None):
+def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     '''enhanced shell command execution.
-    run with environment maybe modified, maybe in different dir.'''
+    run with environment maybe modified, maybe in different dir.
+
+    if command fails and onerr is None, return status.  if ui object,
+    print error message and return status, else raise onerr object as
+    exception.'''
     oldenv = {}
     for k in environ:
         oldenv[k] = os.environ.get(k)
@@ -338,7 +332,17 @@ def esystem(cmd, environ={}, cwd=None):
             os.environ[k] = str(v)
         if cwd is not None and oldcwd != cwd:
             os.chdir(cwd)
-        return os.system(cmd)
+        rc = os.system(cmd)
+        if rc and onerr:
+            errmsg = '%s %s' % (os.path.basename(cmd.split(None, 1)[0]),
+                                explain_exit(rc)[0])
+            if errprefix:
+                errmsg = '%s: %s' % (errprefix, errmsg)
+            try:
+                onerr.warn(errmsg + '\n')
+            except AttributeError:
+                raise onerr(errmsg)
+        return rc
     finally:
         for k, v in oldenv.iteritems():
             if v is None:
