@@ -2795,7 +2795,10 @@ def dispatch(args):
                     mod = getattr(mod, comp)
                 return mod
             try:
-                mod = importh(x[0])
+                try:
+                    mod = importh("hgext." + x[0])
+                except ImportError:
+                    mod = importh(x[0])
             except Exception, inst:
                 on_exception(Exception, inst)
                 continue
