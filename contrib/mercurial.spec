@@ -10,6 +10,7 @@ BuildRoot: /tmp/build.%{name}-%{version}-%{release}
 
 %define pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')
 %define pythonlib %{_libdir}/python%{pythonver}/site-packages/%{name}
+%define hgext %{_libdir}/python%{pythonver}/site-packages/hgext
 
 %description
 Mercurial is a fast, lightweight source control management system designed
@@ -32,8 +33,10 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc doc/* contrib/patchbomb *.cgi
 %dir %{pythonlib}
+%dir %{hgext}
 %{_bindir}/hgmerge
 %{_bindir}/hg
 %{pythonlib}/templates
 %{pythonlib}/*.py*
 %{pythonlib}/*.so
+%{hgext}/*.py*
