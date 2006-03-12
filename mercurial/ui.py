@@ -48,7 +48,7 @@ class ui(object):
         self.debugflag = (self.debugflag or debug)
         self.interactive = (self.interactive and interactive)
 
-    def readconfig(self, fn):
+    def readconfig(self, fn, root=None):
         if isinstance(fn, basestring):
             fn = [fn]
         for f in fn:
@@ -56,6 +56,12 @@ class ui(object):
                 self.cdata.read(f)
             except ConfigParser.ParsingError, inst:
                 raise util.Abort(_("Failed to parse %s\n%s") % (f, inst))
+        # translate paths relative to root (or home) into absolute paths
+        if root is None:
+            root = os.path.expanduser('~')
+        for name, path in self.configitems("paths"):
+            if path.find("://") == -1 and not os.path.isabs(path):
+                self.cdata.set("paths", name, os.path.join(root, path))
 
     def setconfig(self, section, name, val):
         self.overlay[(section, name)] = val
@@ -153,19 +159,12 @@ class ui(object):
                 user = user[f+1:]
         return user
 
-    def expandpath(self, loc, root=""):
+    def expandpath(self, loc):
         """Return repository location relative to cwd or from [paths]"""
-        if os.path.exists(loc):
+        if loc.find("://") != -1 or os.path.exists(loc):
             return loc
 
-        paths = {}
-        for name, path in self.configitems("paths"):
-            m = path.find("://")
-            if m == -1:
-                    path = os.path.join(root, path)
-            paths[name] = path
-
-        return paths.get(loc, loc)
+        return self.config("paths", loc, loc)
 
     def write(self, *args):
         for a in args:

@@ -47,7 +47,7 @@ class localrepository(object):
 
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
         try:
-            self.ui.readconfig(self.join("hgrc"))
+            self.ui.readconfig(self.join("hgrc"), self.root)
         except IOError:
             pass
 
