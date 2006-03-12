@@ -809,7 +809,7 @@ class localrepository(object):
                 base[h] = 1
 
         if not unknown:
-            return None
+            return []
 
         rep = {}
         reqcnt = 0
