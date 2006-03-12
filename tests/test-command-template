@@ -16,7 +16,7 @@ hg commit -l c -d '1123456789 0' -u 'A. N. Other <other@place>'
 hg add c
 hg commit -m 'no person' -d '1134567890 0' -u 'other@place'
 echo c >> c
-hg commit -m 'no user, no domain' -d '11445678900 0' -u 'person'
+hg commit -m 'no user, no domain' -d '1144567890 0' -u 'person'
 
 # make sure user/global hgrc does not affect tests
 echo '[ui]' > .hg/hgrc
