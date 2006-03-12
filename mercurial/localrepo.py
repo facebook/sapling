@@ -1702,9 +1702,8 @@ class localrepository(object):
 
         cmd = (os.environ.get("HGMERGE") or self.ui.config("ui", "merge")
                or "hgmerge")
-        r = util.system('%s "%s" "%s" "%s"' % (cmd, a, b, c),
-                        environ={'HG_ROOT': self.root,
-                                 'HG_FILE': fn,
+        r = util.system('%s "%s" "%s" "%s"' % (cmd, a, b, c), cwd=self.root,
+                        environ={'HG_FILE': fn,
                                  'HG_MY_NODE': p1,
                                  'HG_OTHER_NODE': p2,
                                  'HG_FILE_MY_NODE': hex(my),
