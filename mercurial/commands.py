@@ -2649,7 +2649,8 @@ table = {
 }
 
 globalopts = [
-    ('R', 'repository', '', _('repository root directory')),
+    ('R', 'repository', '',
+     _('repository root directory or symbolic path name')),
     ('', 'cwd', '', _('change working directory')),
     ('y', 'noninteractive', None,
      _('do not prompt, assume \'yes\' for any required answers')),
@@ -2840,7 +2841,7 @@ def dispatch(args):
                     raise util.Abort('%s: %s' %
                                      (options['cwd'], inst.strerror))
 
-            path = options["repository"] or ""
+            path = u.expandpath(options["repository"]) or ""
             repo = path and hg.repository(u, path=path) or None
 
             if options['help']:
