@@ -1,7 +1,7 @@
 Summary: Mercurial -- a distributed SCM
 Name: mercurial
-Version: 0.7
-Release: 1
+Version: 0.8
+Release: 0
 License: GPL
 Group: Development/Tools
 Source: http://www.selenic.com/mercurial/release/%{name}-%{version}.tar.gz
@@ -31,7 +31,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc doc/* contrib/patchbomb *.cgi
+%doc doc/* *.cgi
 %dir %{pythonlib}
 %dir %{hgext}
 %{_bindir}/hgmerge
