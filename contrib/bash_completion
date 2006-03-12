@@ -15,7 +15,8 @@ _hg_option_list()
 
 _hg_commands()
 {
-    local commands="$("$hg" debugcomplete "$cur")"
+    local commands
+    commands="$("$hg" debugcomplete "$cur" 2>/dev/null)" || commands=""
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$commands' -- "$cur"))
 }
 
