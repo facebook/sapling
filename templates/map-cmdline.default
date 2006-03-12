@@ -1,4 +1,5 @@
 changeset = 'changeset:   {rev}:{node|short}\n{tags}{short_parents}user:        {author}\ndate:        {date|date}\nsummary:     {desc|firstline}\n\n'
+changeset_quiet = '{rev}:{node|short}\n'
 changeset_verbose = 'changeset:   {rev}:{node}\n{tags}{parents}{manifest}user:        {author}\ndate:        {date|date}\nfiles:       {files}\n{file_adds}{file_dels}description:\n{desc|strip}\n\n\n'
 start_file_adds = 'files+:     '
 file_add = ' {file_add}'
