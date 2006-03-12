@@ -718,8 +718,7 @@ def clone(ui, source, dest=None, **opts):
     if opts['remotecmd']:
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
-    if not os.path.exists(source):
-        source = ui.expandpath(source)
+    source = ui.expandpath(source)
 
     d = Dircleanup(dest)
     abspath = source

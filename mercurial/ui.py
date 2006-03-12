@@ -154,6 +154,10 @@ class ui(object):
         return user
 
     def expandpath(self, loc, root=""):
+        """Return repository location relative to cwd or from [paths]"""
+        if os.path.exists(loc):
+            return loc
+
         paths = {}
         for name, path in self.configitems("paths"):
             m = path.find("://")
