@@ -1013,6 +1013,12 @@ def debugancestor(ui, index, rev1, rev2):
     a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
+def debugcomplete(ui, cmd):
+    """returns the completion list associated with the given command"""
+    clist = findpossible(cmd).keys()
+    clist.sort()
+    ui.write("%s\n" % " ".join(clist))
+
 def debugrebuildstate(ui, repo, rev=None):
     """rebuild the dirstate as it would look like for the given revision"""
     if not rev:
@@ -2427,6 +2433,7 @@ table = {
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
+    "debugcomplete": (debugcomplete, [], _('debugcomplete CMD')),
     "debugrebuildstate":
         (debugrebuildstate,
          [('r', 'rev', '', _('revision to rebuild to'))],
@@ -2658,42 +2665,49 @@ globalopts = [
     ('h', 'help', None, _('display help and exit')),
 ]
 
-norepo = ("clone init version help debugancestor debugdata"
+norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot")
 optionalrepo = ("paths debugconfig")
 
-def find(cmd):
-    """Return (aliases, command table entry) for command string."""
-    choice = []
-    debugchoice = []
+def findpossible(cmd):
+    """
+    Return cmd -> (aliases, command table entry)
+    for each matching command
+    """
+    choice = {}
+    debugchoice = {}
     for e in table.keys():
         aliases = e.lstrip("^").split("|")
         if cmd in aliases:
-            return aliases, table[e]
+            choice[cmd] = (aliases, table[e])
+            continue
         for a in aliases:
             if a.startswith(cmd):
                 if aliases[0].startswith("debug"):
-                    debugchoice.append([aliases, table[e]])
+                    debugchoice[a] = (aliases, table[e])
                 else:
-                    choice.append([aliases, table[e]])
+                    choice[a] = (aliases, table[e])
                 break
 
     if not choice and debugchoice:
         choice = debugchoice
 
+    return choice
+
+def find(cmd):
+    """Return (aliases, command table entry) for command string."""
+    choice = findpossible(cmd)
+
+    if choice.has_key(cmd):
+        return choice[cmd]
+
     if len(choice) > 1:
-        clist = []
-        for aliases, table_e in choice:
-            if aliases[0].startswith(cmd):
-                clist.append(aliases[0])
-            for a in aliases[1:]:
-                if a.startswith(cmd) and not aliases[0].startswith(a):
-                    clist.append(a)
+        clist = choice.keys()
         clist.sort()
         raise AmbiguousCommand(cmd, clist)
 
     if choice:
-        return choice[0]
+        return choice.values()[0]
 
     raise UnknownCommand(cmd)
 

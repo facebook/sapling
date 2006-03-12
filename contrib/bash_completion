@@ -1,30 +1,5 @@
 shopt -s extglob
 
-_hg_command_list()
-{
-    "$hg" --debug help 2>/dev/null | \
-	awk -F', ' '/^list of commands:/ {commands=1}
-	    commands==1 && /^ [^ ]/ {
-		line = substr($0, 2)
-		colon = index(line, ":")
-		if (colon > 0)
-		    line = substr(line, 1, colon-1)
-		n = split(line, aliases)
-		command = aliases[1]
-		if (index(command, "debug") == 1) {
-		    for (i=1; i<=n; i++)
-			debug[j++] = aliases[i]
-		    next
-		}
-		print command
-		for (i=2; i<=n; i++)
-		    if (index(command, aliases[i]) != 1)
-			print aliases[i]
-	    }
-	    /^global options:/ {exit 0}
-	    END {for (i in debug) print debug[i]}'
-}
-
 _hg_option_list()
 {
     "$hg" -v help $1 2>/dev/null | \
@@ -40,21 +15,8 @@ _hg_option_list()
 
 _hg_commands()
 {
-    local all commands result
-
-    all=$(_hg_command_list)
-    commands=${all%%$'\n'debug*}
-    result=$(compgen -W '$commands' -- "$cur")
-
-    # hide debug commands from users, but complete them if
-    # there is no other possible command
-    if [ "$result" = "" ]; then
-	local debug
-	debug=debug${all#*$'\n'debug}
-	result=$(compgen -W '$debug' -- "$cur")
-    fi
-
-    COMPREPLY=(${COMPREPLY[@]:-} $result)
+    local commands="$("$hg" debugcomplete "$cur")"
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$commands' -- "$cur"))
 }
 
 _hg_paths()
