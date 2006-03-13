@@ -15,11 +15,7 @@ from i18n import gettext as _
 from demandload import demandload
 demandload(globals(), "util os struct")
 
-from changelog import changelog
-from manifest import manifest
-from filelog import filelog
-from localrepo import localrepository
-from revlog import *
+import localrepo, changelog, manifest, filelog, revlog
 
 def getchunk(source):
     """get a chunk from a group"""
@@ -36,7 +32,7 @@ def getchunk(source):
                           % (len(d), l - 4))
     return d
 
-class bundlerevlog(revlog):
+class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, datafile, bundlefile,
                  linkmapper=None):
         # How it works:
@@ -48,7 +44,7 @@ class bundlerevlog(revlog):
         # len(index[r]). If the tuple is bigger than 7, it is a bundle
         # (it is bigger since we store the node to which the delta is)
         #
-        revlog.__init__(self, opener, indexfile, datafile)
+        revlog.revlog.__init__(self, opener, indexfile, datafile)
         self.bundlefile = bundlefile
         def genchunk():
             while 1:
@@ -80,7 +76,6 @@ class bundlerevlog(revlog):
             if not prev:
                 prev = p1
             # start, size, base is not used, link, p1, p2, delta ref
-            # warning: 
             e = (start, size, None, link, p1, p2, node, prev)
             self.index.append(e)
             self.nodemap[node] = n
@@ -98,7 +93,7 @@ class bundlerevlog(revlog):
         # not against rev - 1
         # XXX: could use some caching
         if not self.bundle(rev):
-            return revlog.chunk(self, rev)
+            return revlog.revlog.chunk(self, rev)
         self.bundlefile.seek(self.start(rev))
         return self.bundlefile.read(self.length(rev))
 
@@ -110,7 +105,7 @@ class bundlerevlog(revlog):
             if revb == rev1:
                 return self.chunk(rev2)
         elif not self.bundle(rev1) and not self.bundle(rev2):
-            return revlog.chunk(self, rev1, rev2)
+            return revlog.revlog.chunk(self, rev1, rev2)
 
         return self.diff(self.revision(self.node(rev1)),
                          self.revision(self.node(rev2)))
@@ -132,14 +127,14 @@ class bundlerevlog(revlog):
             iter_node = self.bundlebase(rev)
             rev = self.rev(iter_node)
         if text is None:
-            text = revlog.revision(self, iter_node)
+            text = revlog.revlog.revision(self, iter_node)
 
         while chain:
             delta = self.chunk(chain.pop())
             text = self.patches(text, [delta])
 
         p1, p2 = self.parents(node)
-        if node != hash(text, p1, p2):
+        if node != revlog.hash(text, p1, p2):
             raise RevlogError(_("integrity check failed on %s:%d")
                           % (self.datafile, self.rev(node)))
 
@@ -155,27 +150,27 @@ class bundlerevlog(revlog):
     def checksize(self):
         raise NotImplementedError
 
-class bundlechangelog(bundlerevlog, changelog):
+class bundlechangelog(bundlerevlog, changelog.changelog):
     def __init__(self, opener, bundlefile):
-        changelog.__init__(self, opener)
+        changelog.changelog.__init__(self, opener)
         bundlerevlog.__init__(self, opener, "00changelog.i", "00changelog.d",
                               bundlefile)
 
-class bundlemanifest(bundlerevlog, manifest):
+class bundlemanifest(bundlerevlog, manifest.manifest):
     def __init__(self, opener, bundlefile, linkmapper):
-        manifest.__init__(self, opener)
+        manifest.manifest.__init__(self, opener)
         bundlerevlog.__init__(self, opener, self.indexfile, self.datafile,
                               bundlefile, linkmapper)
 
-class bundlefilelog(bundlerevlog, filelog):
+class bundlefilelog(bundlerevlog, filelog.filelog):
     def __init__(self, opener, path, bundlefile, linkmapper):
-        filelog.__init__(self, opener, path)
+        filelog.filelog.__init__(self, opener, path)
         bundlerevlog.__init__(self, opener, self.indexfile, self.datafile,
                               bundlefile, linkmapper)
 
-class bundlerepository(localrepository):
+class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
-        localrepository.__init__(self, ui, path)
+        localrepo.localrepository.__init__(self, ui, path)
         f = open(bundlename, "rb")
         s = os.fstat(f.fileno())
         self.bundlefile = f
@@ -209,5 +204,5 @@ class bundlerepository(localrepository):
             return bundlefilelog(self.opener, f, self.bundlefile,
                                  self.changelog.rev)
         else:
-            return filelog(self.opener, f)
+            return filelog.filelog(self.opener, f)
 
