@@ -9,9 +9,9 @@ from demandload import demandload
 from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb")
-demandload(globals(), "fancyopts ui hg util lock revlog templater")
-demandload(globals(), "fnmatch hgweb mdiff random signal time traceback")
-demandload(globals(), "errno socket version struct atexit sets bz2")
+demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
+demandload(globals(), "fnmatch hgweb mdiff random signal tempfile time")
+demandload(globals(), "traceback errno socket version struct atexit sets bz2")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -1757,16 +1757,36 @@ def incoming(ui, repo, source="default", **opts):
     pull repo. These are the changesets that would be pulled if a pull
     was requested.
 
-    Currently only local repositories are supported.
+    For remote repository, using --bundle avoids downloading the changesets
+    twice if the incoming is followed by a pull.
     """
     source = ui.expandpath(source)
     other = hg.repository(ui, source)
-    if not other.local():
-        raise util.Abort(_("incoming doesn't work for remote repositories yet"))
-    o = repo.findincoming(other)
-    if not o:
+    incoming = repo.findincoming(other)
+    if not incoming:
         return
-    o = other.changelog.nodesbetween(o)[0]
+
+    cleanup = None
+    if not other.local() or opts["bundle"]:
+        # create an uncompressed bundle
+        if not opts["bundle"]:
+            # create a temporary bundle
+            fd, fname = tempfile.mkstemp(suffix=".hg",
+                                         prefix="tmp-hg-incoming")
+            f = os.fdopen(fd, "wb")
+            cleanup = fname
+        else:
+            fname = opts["bundle"]
+            f = open(fname, "wb")
+
+        cg = other.changegroup(incoming, "incoming")
+        write_bundle(cg, fname, compress=other.local(), fh=f)
+        f.close()
+        if not other.local():
+            # use a bundlerepo
+            other = bundlerepo.bundlerepository(ui, repo.root, fname)
+
+    o = other.changelog.nodesbetween(incoming)[0]
     if opts['newest_first']:
         o.reverse()
     displayer = show_changeset(ui, other, opts)
@@ -1779,6 +1799,9 @@ def incoming(ui, repo, source="default", **opts):
             prev = (parents and parents[0]) or nullid
             dodiff(ui, ui, other, prev, n)
             ui.write("\n")
+
+    if cleanup:
+        os.unlink(cleanup)
 
 def init(ui, dest="."):
     """create a new repository in the given directory
@@ -2732,9 +2755,10 @@ table = {
          [('M', 'no-merges', None, _('do not show merges')),
           ('', 'style', '', _('display using template map file')),
           ('n', 'newest-first', None, _('show newest record first')),
+          ('', 'bundle', '', _('file to store the bundles into')),
           ('p', 'patch', None, _('show patch')),
           ('', 'template', '', _('display with template'))],
-         _('hg incoming [-p] [-n] [-M] [SOURCE]')),
+         _('hg incoming [-p] [-n] [-M] [--bundle FILENAME] [SOURCE]')),
     "^init": (init, [], _('hg init [DEST]')),
     "locate":
         (locate,
