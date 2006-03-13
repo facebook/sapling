@@ -274,6 +274,32 @@ def make_file(repo, r, pat, node=None,
                               pathname),
                 mode)
 
+def write_bundle(cg, filename, compress=True, fh=None):
+    if fh is None:
+        fh = open(filename, "wb")
+
+    class nocompress(object):
+        def compress(self, x):
+            return x
+        def flush(self):
+            return ""
+    try:
+        if compress:
+            fh.write("HG10")
+            z = bz2.BZ2Compressor(9)
+        else:
+            fh.write("HG11")
+            z = nocompress()
+        while 1:
+            chunk = cg.read(4096)
+            if not chunk:
+                break
+            fh.write(z.compress(chunk))
+        fh.write(z.flush())
+    except:
+        os.unlink(filename)
+        raise
+
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False, opts={}):
     if not node1:
@@ -830,24 +856,11 @@ def bundle(ui, repo, fname, dest="default-push", **opts):
     Unlike import/export, this exactly preserves all changeset
     contents including permissions, rename data, and revision history.
     """
-    f = open(fname, "wb")
     dest = ui.expandpath(dest)
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other)
     cg = repo.changegroup(o, 'bundle')
-
-    try:
-        f.write("HG10")
-        z = bz2.BZ2Compressor(9)
-        while 1:
-            chunk = cg.read(4096)
-            if not chunk:
-                break
-            f.write(z.compress(chunk))
-        f.write(z.flush())
-    except:
-        os.unlink(fname)
-        raise
+    write_bundle(cg, fname)
 
 def cat(ui, repo, file1, *pats, **opts):
     """output the latest or given revisions of files
