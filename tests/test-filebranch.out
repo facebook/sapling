@@ -19,21 +19,23 @@ resolving manifests
 getting bar
 merging foo
 resolving foo
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 we shouldn't have anything but foo in merge state here
 m 644          3 foo
 main: we should have a merge here
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      73      0       0 cdca01651b96 000000000000 000000000000
-     1        73      68      1       1 f6718a9cb7f3 cdca01651b96 000000000000
-     2       141      68      2       2 bdd988058d16 cdca01651b96 000000000000
-     3       209      66      3       3 d8a521142a3c f6718a9cb7f3 bdd988058d16
+     0         0      77      0       0 c36078bec30d 000000000000 000000000000
+     1        77      73      1       1 182b283965f1 c36078bec30d 000000000000
+     2       150      71      2       2 a6aef98656b7 c36078bec30d 000000000000
+     3       221      72      3       3 0c2cc6fc80e2 182b283965f1 a6aef98656b7
 log should show foo and quux changed
-changeset:   3:d8a521142a3c02186ee6c7254738a7e6427ed4c8
+changeset:   3:0c2cc6fc80e2d4ee289bb658dbbe9ad932380fe9
 tag:         tip
-parent:      1:f6718a9cb7f31f1a92d27bd6544c71617d6d4e4f
-parent:      2:bdd988058d16e2d7392958eace7b64817e44a54e
+parent:      1:182b283965f1069c0112784e30e7755ad1c0dd52
+parent:      2:a6aef98656b71154cae9d87408abe6d0218c8045
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 files:       foo quux
 description:
 merge

@@ -5,13 +5,13 @@ cd t
 hg init
 echo 0 > a
 echo 0 > b
-hg ci -A -m m -d "0 0"
+hg ci -A -m m -d "1000000 0"
 touch nottracked
 hg locate a
 hg locate NONEXISTENT
 hg locate
 hg rm a
-hg ci -m m -d "0 0"
+hg ci -m m -d "1000000 0"
 hg locate a
 hg locate NONEXISTENT
 hg locate

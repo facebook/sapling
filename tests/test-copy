@@ -3,11 +3,11 @@
 hg init
 echo a > a
 hg add a
-hg commit -m "1" -d "0 0"
+hg commit -m "1" -d "1000000 0"
 hg status
 hg copy a b
 hg status
-hg --debug commit -m "2" -d "0 0"
+hg --debug commit -m "2" -d "1000000 0"
 echo "we should see two history entries"
 hg history -v
 echo "we should see one log entry for a"
@@ -20,11 +20,11 @@ echo "this should show a revision linked to changeset 1"
 hg debugindex .hg/data/b.i
 
 echo "this should show the rename information in the metadata"
-hg debugdata .hg/data/b.d 0 | head -n 3 | tail -n 2
+hg debugdata .hg/data/b.d 0 | head -3 | tail -2
 
-md5sum .hg/data/b.d
+$TESTDIR/md5sum.py .hg/data/b.d
 hg cat b > bsum
-md5sum bsum
+$TESTDIR/md5sum.py bsum
 hg cat a > asum
-md5sum asum
+$TESTDIR/md5sum.py asum
 hg verify

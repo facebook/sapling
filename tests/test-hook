@@ -10,7 +10,7 @@ echo 'precommit = echo precommit hook: p1=$HG_PARENT1 p2=$HG_PARENT2' >> .hg/hgr
 echo 'pretxncommit = echo pretxncommit hook: n=$HG_NODE p1=$HG_PARENT1 p2=$HG_PARENT2; hg -q tip' >> .hg/hgrc
 echo a > a
 hg add a
-hg commit -m a -d "0 0"
+hg commit -m a -d "1000000 0"
 
 hg clone . ../b
 cd ../b

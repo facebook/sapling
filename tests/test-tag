@@ -3,18 +3,18 @@
 hg init
 echo a > a
 hg add a
-hg commit -m "test" -d "0 0"
+hg commit -m "test" -d "1000000 0"
 hg history
-hg tag -d "0 0" "bleah"
+hg tag -d "1000000 0" "bleah"
 hg history
 
 echo foo >> .hgtags
-hg tag -d "0 0" "bleah2" || echo "failed"
-hg tag -d "0 0" -r 0 "bleah2" 1 || echo "failed"
+hg tag -d "1000000 0" "bleah2" || echo "failed"
+hg tag -d "1000000 0" -r 0 "bleah2" 1 || echo "failed"
 
 hg revert .hgtags
-hg tag -d "0 0" -r 0 "bleah0"
-hg tag -l -d "0 0" "bleah1" 1
+hg tag -d "1000000 0" -r 0 "bleah0"
+hg tag -l -d "1000000 0" "bleah1" 1
 
 cat .hgtags
 cat .hg/localtags

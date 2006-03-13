@@ -1,45 +1,45 @@
 # HG changeset patch
 # User test
-# Node ID b51ca55c20354097ca299529d18b5cd356976ba2
+# Node ID 8ba83d44753d6259db5ce6524974dd1174e90f47
 # Parent  0000000000000000000000000000000000000000
 1
 
-diff -r 000000000000 -r b51ca55c2035 foo
+diff -r 000000000000 -r 8ba83d44753d foo
 --- /dev/null	Thu Jan  1 00:00:00 1970 +0000
-+++ b/foo	Thu Jan  1 00:00:00 1970 +0000
++++ b/foo	Mon Jan 12 13:46:40 1970 +0000
 @@ -0,0 +1,1 @@
 +a
 # HG changeset patch
 # User test
-# Node ID 451c12a24e5a7336921b8d93e280837d7c2b4fc1
-# Parent  b51ca55c20354097ca299529d18b5cd356976ba2
+# Node ID a1fce69c50d97881c5c014ab23f580f720c78678
+# Parent  8ba83d44753d6259db5ce6524974dd1174e90f47
 2
 
-diff -r b51ca55c2035 -r 451c12a24e5a foo
---- a/foo	Thu Jan  1 00:00:00 1970 +0000
+diff -r 8ba83d44753d -r a1fce69c50d9 foo
+--- a/foo	Mon Jan 12 13:46:40 1970 +0000
 +++ /dev/null	Thu Jan  1 00:00:00 1970 +0000
 @@ -1,1 +0,0 @@
 -a
-changeset:   0:b51ca55c2035
+changeset:   0:8ba83d44753d
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
-diff -r 000000000000 -r b51ca55c2035 foo
+diff -r 000000000000 -r 8ba83d44753d foo
 --- /dev/null	Thu Jan  1 00:00:00 1970 +0000
-+++ b/foo	Thu Jan  1 00:00:00 1970 +0000
++++ b/foo	Mon Jan 12 13:46:40 1970 +0000
 @@ -0,0 +1,1 @@
 +a
 
 
-changeset:   1:451c12a24e5a
+changeset:   1:a1fce69c50d9
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
-diff -r b51ca55c2035 -r 451c12a24e5a foo
---- a/foo	Thu Jan  1 00:00:00 1970 +0000
+diff -r 8ba83d44753d -r a1fce69c50d9 foo
+--- a/foo	Mon Jan 12 13:46:40 1970 +0000
 +++ /dev/null	Thu Jan  1 00:00:00 1970 +0000
 @@ -1,1 +0,0 @@
 -a

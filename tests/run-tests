@@ -19,6 +19,9 @@ HGEDITOR=true; export HGEDITOR
 HGMERGE=true; export HGMERGE
 HGUSER="test"; export HGUSER
 
+ECHO_N="echo -n"
+[ -x /usr/ucb/echo ] && ECHO_N="/usr/ucb/echo -n"
+
 umask 022
 
 tests=0
@@ -40,6 +43,7 @@ HGTMP="${TMPDIR-/tmp}/hgtests.$RANDOM.$RANDOM.$RANDOM.$$"
 }
 
 TESTDIR="$PWD"
+export TESTDIR
 INST="$HGTMP/install"
 PYTHONDIR="$INST/lib/python"
 cd ..
@@ -109,7 +113,7 @@ run_one() {
 
 # list of prerequisite programs
 # stuff from coreutils (cat, rm, etc) are not tested
-prereqs="python merge diff grep unzip md5sum gunzip sed"
+prereqs="python merge diff grep unzip gunzip sed"
 missing=''
 for pre in $prereqs ; do
     if type $pre > /dev/null 2>&1 ; then
@@ -134,7 +138,7 @@ if [ -z "$TESTS" ] ; then
 fi
 
 for f in $TESTS ; do
-    echo -n "."
+    $ECHO_N "."
     run_one $f || failed=`expr $failed + 1`
     tests=`expr $tests + 1`
 done

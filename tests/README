@@ -24,7 +24,7 @@ writing tests:
 - changeset hashes will change based on user and date which make
   things like hg history output change
 
-  use commit -m "test" -u test -d "0 0"
+  use commit -m "test" -u test -d "1000000 0"
 
 - diff will show the current time
 

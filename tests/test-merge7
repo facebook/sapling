@@ -9,7 +9,7 @@ cat >test.txt <<"EOF"
 3
 EOF
 hg add test.txt
-hg commit -m "Initial" -d "0 0"
+hg commit -m "Initial" -d "1000000 0"
 
 # clone
 cd ..
@@ -22,7 +22,7 @@ one
 two
 three
 EOF
-hg commit -m "Numbers as words" -d "0 0"
+hg commit -m "Numbers as words" -d "1000000 0"
 
 # change test-b
 cd ../test-b
@@ -31,7 +31,7 @@ cat >test.txt <<"EOF"
 2.5
 3
 EOF
-hg commit -m "2 -> 2.5" -d "0 0"
+hg commit -m "2 -> 2.5" -d "1000000 0"
 
 # now pull and merge from test-a
 hg pull ../test-a
@@ -43,7 +43,7 @@ two-point-five
 three
 EOF
 rm -f *.orig
-hg commit -m "Merge 1" -d "0 0"
+hg commit -m "Merge 1" -d "1000000 0"
 
 # change test-a again
 cd ../test-a
@@ -52,7 +52,7 @@ one
 two-point-one
 three
 EOF
-hg commit -m "two -> two-point-one" -d "0 0"
+hg commit -m "two -> two-point-one" -d "1000000 0"
 
 # pull and merge from test-a again
 cd ../test-b

@@ -60,7 +60,7 @@ class ui(object):
         if root is None:
             root = os.path.expanduser('~')
         for name, path in self.configitems("paths"):
-            if path.find("://") == -1 and not os.path.isabs(path):
+            if path and path.find("://") == -1 and not os.path.isabs(path):
                 self.cdata.set("paths", name, os.path.join(root, path))
 
     def setconfig(self, section, name, val):

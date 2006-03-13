@@ -10,7 +10,7 @@ hg verify
 hg serve -p 20059 -d --pid-file=hg.pid
 cd ..
 
-hg clone http://localhost:20059/ copy
+http_proxy= hg clone http://localhost:20059/ copy
 cd copy
 hg verify
 hg co

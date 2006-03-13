@@ -7,7 +7,7 @@ cd test1
 hg init
 touch a b
 hg add a b
-hg ci -m "added a b" -d "0 0"
+hg ci -m "added a b" -d "1000000 0"
 
 cd ..
 mkdir test2
@@ -17,11 +17,11 @@ hg init
 hg pull ../test1
 hg co
 chmod +x a
-hg ci -m "chmod +x a" -d "0 0"
+hg ci -m "chmod +x a" -d "1000000 0"
 
 cd ../test1
 echo 123 >>a
-hg ci -m "a updated" -d "0 0"
+hg ci -m "a updated" -d "1000000 0"
 
 hg pull ../test2
 hg heads
@@ -30,5 +30,5 @@ hg history
 hg -v co -m
 
 ls -l ../test[12]/a > foo
-cut -b 0-10 < foo
+cut -b 1-10 < foo
 

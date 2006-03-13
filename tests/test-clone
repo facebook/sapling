@@ -16,7 +16,7 @@ hg verify
 # No update
 hg clone -U . ../c
 cd ../c
-cat a
+cat a 2>/dev/null || echo "a not present"
 hg verify
 
 # Default destination

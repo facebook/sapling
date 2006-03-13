@@ -6,14 +6,14 @@ hg init
 hg id
 echo a > a
 hg add a
-hg commit -m "test" -d "0 0"
+hg commit -m "test" -d "1000000 0"
 hg co
 hg identify
 T=`hg tip -v | head -n 1 | cut -d : -f 3`
 echo "$T first" > .hgtags
 cat .hgtags
 hg add .hgtags
-hg commit -m "add tags" -d "0 0"
+hg commit -m "add tags" -d "1000000 0"
 hg tags
 hg identify
 echo bb > a
@@ -25,7 +25,7 @@ hg -v id
 hg status
 echo 1 > b
 hg add b
-hg commit -m "branch" -d "0 0"
+hg commit -m "branch" -d "1000000 0"
 hg id
 hg co -m 1
 hg id
