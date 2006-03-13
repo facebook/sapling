@@ -1,3 +1,3 @@
 321
-cat: sub/b: No such file or directory
-ls: sub: No such file or directory
+sub/b not present
+sub not present

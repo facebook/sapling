@@ -12,5 +12,5 @@ hg commit -m branch2 -d "0 0"
 HGMERGE=merge; export HGMERGE
 hg up -m 1
 hg id
-grep -Ev ">>>|<<<" a
+egrep -v ">>>|<<<" a
 hg status

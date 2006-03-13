@@ -19,7 +19,7 @@ EOF
 
 python dumb.py 2>/dev/null &
 
-hg clone http://localhost:20059/foo copy2
+http_proxy= hg clone http://localhost:20059/foo copy2
 echo $?
 
 kill $!
