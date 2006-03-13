@@ -254,10 +254,14 @@ class revlog(object):
         if node == nullid: return (nullid, nullid)
         return self.index[self.rev(node)][4:6]
 
-    def start(self, rev): return self.index[rev][0]
-    def length(self, rev): return self.index[rev][1]
+    def start(self, rev): return (rev < 0) and -1 or self.index[rev][0]
+    def length(self, rev):
+        if rev < 0:
+            return 0
+        else:
+            return self.index[rev][1]
     def end(self, rev): return self.start(rev) + self.length(rev)
-    def base(self, rev): return self.index[rev][2]
+    def base(self, rev): return (rev < 0) and rev or self.index[rev][2]
 
     def reachable(self, rev, stop=None):
         reachable = {}
@@ -528,12 +532,17 @@ class revlog(object):
     def delta(self, node):
         """return or calculate a delta between a node and its predecessor"""
         r = self.rev(node)
-        b = self.base(r)
-        if r == b:
-            return self.diff(self.revision(self.node(r - 1)),
-                             self.revision(node))
+        return self.revdiff(r - 1, r)
+
+    def revdiff(self, rev1, rev2):
+        """return or calculate a delta between two revisions"""
+        b1 = self.base(rev1)
+        b2 = self.base(rev2)
+        if b1 == b2 and rev1 + 1 == rev2:
+            return self.chunk(rev2)
         else:
-            return self.chunk(r)
+            return self.diff(self.revision(self.node(rev1)),
+                             self.revision(self.node(rev2)))
 
     def revision(self, node):
         """return an uncompressed revision of a given"""
@@ -556,7 +565,7 @@ class revlog(object):
         for r in xrange(base + 1, rev + 1):
             bins.append(self.chunk(r))
 
-        text = mdiff.patches(text, bins)
+        text = self.patches(text, bins)
 
         p1, p2 = self.parents(node)
         if node != hash(text, p1, p2):
@@ -709,20 +718,12 @@ class revlog(object):
         # build deltas
         for d in xrange(0, len(revs) - 1):
             a, b = revs[d], revs[d + 1]
-            na = self.node(a)
             nb = self.node(b)
 
             if infocollect is not None:
                 infocollect(nb)
 
-            # do we need to construct a new delta?
-            if a + 1 != b or self.base(b) == b:
-                ta = self.revision(na)
-                tb = self.revision(nb)
-                d = self.diff(ta, tb)
-            else:
-                d = self.chunk(b)
-
+            d = self.revdiff(a, b)
             p = self.parents(nb)
             meta = nb + p[0] + p[1] + lookup(nb)
             l = struct.pack(">l", len(meta) + len(d) + 4)
