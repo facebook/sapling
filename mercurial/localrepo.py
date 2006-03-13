@@ -166,7 +166,7 @@ class localrepository(object):
         if self.encodepats == None:
             l = []
             for pat, cmd in self.ui.configitems("encode"):
-                mf = util.matcher("", "/", [pat], [], [])[1]
+                mf = util.matcher(self.root, "", [pat], [], [])[1]
                 l.append((mf, cmd))
             self.encodepats = l
 
@@ -184,7 +184,7 @@ class localrepository(object):
         if self.decodepats == None:
             l = []
             for pat, cmd in self.ui.configitems("decode"):
-                mf = util.matcher("", "/", [pat], [], [])[1]
+                mf = util.matcher(self.root, "", [pat], [], [])[1]
                 l.append((mf, cmd))
             self.decodepats = l
 
