@@ -17,7 +17,7 @@ echo fenugreek > fenugreek
 echo fiddlehead > fiddlehead
 echo glob:glob > glob:glob
 hg addremove
-hg commit -m "commit #0" -d "0 0"
+hg commit -m "commit #0" -d "1000000 0"
 hg debugwalk
 cd mammals
 hg debugwalk .

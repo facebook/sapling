@@ -6,12 +6,12 @@ hg init
 echo This is file a1 > a
 echo This is file b1 > b
 hg add a b
-hg commit -m "commit #0" -d "0 0"
+hg commit -m "commit #0" -d "1000000 0"
 echo This is file b22 > b
-hg commit -m"comment #1" -d "0 0"
+hg commit -m"comment #1" -d "1000000 0"
 hg update 0
 rm b
-hg commit -A -m"comment #2" -d "0 0"
+hg commit -A -m"comment #2" -d "1000000 0"
 # in theory, we shouldn't need the "yes k" below, but it prevents
 # this test from hanging when "hg update" erroneously prompts the
 # user for "keep or delete"

@@ -439,8 +439,12 @@ class changeset_templater(object):
             def one(v, tag=name):
                 try:
                     vargs.update(v)
-                except ValueError:
-                    vargs.update([(name, v)])
+                except (AttributeError, ValueError):
+                    try:
+                        for a, b in v:
+                            vargs[a] = b
+                    except ValueError:
+                        vargs[name] = v
                 return self.t(tag, **vargs)
             lastname = 'last_' + name
             if lastname in self.t:
@@ -467,8 +471,8 @@ class changeset_templater(object):
         if self.ui.debugflag:
             def showmanifest(**args):
                 args = args.copy()
-                args.update(rev=self.repo.manifest.rev(changes[0]),
-                            node=hex(changes[0]))
+                args.update(dict(rev=self.repo.manifest.rev(changes[0]),
+                                 node=hex(changes[0])))
                 yield self.t('manifest', **args)
         else:
             showmanifest = ''

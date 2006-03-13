@@ -6,40 +6,40 @@
 43a46
 > files:       
 # compact style works
-3[tip]   2bacb094274c   2006-04-09 07:31 +0000   person
+3[tip]   8c7f028fbabf   1970-01-16 01:06 +0000   person
   no user, no domain
 
-2   cdc488b3baa4   2005-12-14 13:44 +0000   other
+2   259081bc29d1   1970-01-14 21:20 +0000   other
   no person
 
-1   55b647117689   2005-08-07 23:19 +0000   other
+1   1c37ba774509   1970-01-13 17:33 +0000   other
   other 1
 
-0   debcd367d974   2005-03-18 01:58 +0000   user
+0   6eb5362d59ec   1970-01-12 13:46 +0000   user
   line 1
 
-3[tip]   2bacb094274c   2006-04-09 07:31 +0000   person
+3[tip]   8c7f028fbabf   1970-01-16 01:06 +0000   person
   no user, no domain
 
-2   cdc488b3baa4   2005-12-14 13:44 +0000   other
+2   259081bc29d1   1970-01-14 21:20 +0000   other
   no person
 
-1   55b647117689   2005-08-07 23:19 +0000   other
+1   1c37ba774509   1970-01-13 17:33 +0000   other
   other 1
 
-0   debcd367d974   2005-03-18 01:58 +0000   user
+0   6eb5362d59ec   1970-01-12 13:46 +0000   user
   line 1
 
-3[tip]:2,-1   2bacb094274c   2006-04-09 07:31 +0000   person
+3[tip]:2,-1   8c7f028fbabf   1970-01-16 01:06 +0000   person
   no user, no domain
 
-2:1,-1   cdc488b3baa4   2005-12-14 13:44 +0000   other
+2:1,-1   259081bc29d1   1970-01-14 21:20 +0000   other
   no person
 
-1:0,-1   55b647117689   2005-08-07 23:19 +0000   other
+1:0,-1   1c37ba774509   1970-01-13 17:33 +0000   other
   other 1
 
-0:-1,-1   debcd367d974   2005-03-18 01:58 +0000   user
+0:-1,-1   6eb5362d59ec   1970-01-12 13:46 +0000   user
   line 1
 
 # error if style not readable
@@ -85,18 +85,18 @@ branches--debug:
 branches--debug: 
 branches--debug: 
 branches--debug: 
-date: 1144567890.00
-date: 1134567890.00
-date: 1123456789.00
-date: 1111111111.00
-date--verbose: 1144567890.00
-date--verbose: 1134567890.00
-date--verbose: 1123456789.00
-date--verbose: 1111111111.00
-date--debug: 1144567890.00
-date--debug: 1134567890.00
-date--debug: 1123456789.00
-date--debug: 1111111111.00
+date: 1300000.00
+date: 1200000.00
+date: 1100000.00
+date: 1000000.00
+date--verbose: 1300000.00
+date--verbose: 1200000.00
+date--verbose: 1100000.00
+date--verbose: 1000000.00
+date--debug: 1300000.00
+date--debug: 1200000.00
+date--debug: 1100000.00
+date--debug: 1000000.00
 desc: no user, no domain
 desc: no person
 desc: other 1
@@ -175,18 +175,18 @@ manifest--debug: 3:cb5a1327723b
 manifest--debug: 2:6e0e82995c35
 manifest--debug: 1:4e8d705b1e53
 manifest--debug: 0:a0c8bcbbb45c
-node: 2bacb094274c6ad120b419cab77a39e51b69cbaa
-node: cdc488b3baa4a2cf316d4d85a3a1f17c5e1695d8
-node: 55b64711768911f37c6d244b12785623aa64e7c3
-node: debcd367d97455db85bba7b583b14b166172de25
-node--verbose: 2bacb094274c6ad120b419cab77a39e51b69cbaa
-node--verbose: cdc488b3baa4a2cf316d4d85a3a1f17c5e1695d8
-node--verbose: 55b64711768911f37c6d244b12785623aa64e7c3
-node--verbose: debcd367d97455db85bba7b583b14b166172de25
-node--debug: 2bacb094274c6ad120b419cab77a39e51b69cbaa
-node--debug: cdc488b3baa4a2cf316d4d85a3a1f17c5e1695d8
-node--debug: 55b64711768911f37c6d244b12785623aa64e7c3
-node--debug: debcd367d97455db85bba7b583b14b166172de25
+node: 8c7f028fbabf93fde80ef788885370b36abeff33
+node: 259081bc29d176c6ae17af5dd01a3440b3288c97
+node: 1c37ba7745099d0f206b3a663abcfe127b037433
+node: 6eb5362d59ec784e4431d3e140c8cc6e1b77ce82
+node--verbose: 8c7f028fbabf93fde80ef788885370b36abeff33
+node--verbose: 259081bc29d176c6ae17af5dd01a3440b3288c97
+node--verbose: 1c37ba7745099d0f206b3a663abcfe127b037433
+node--verbose: 6eb5362d59ec784e4431d3e140c8cc6e1b77ce82
+node--debug: 8c7f028fbabf93fde80ef788885370b36abeff33
+node--debug: 259081bc29d176c6ae17af5dd01a3440b3288c97
+node--debug: 1c37ba7745099d0f206b3a663abcfe127b037433
+node--debug: 6eb5362d59ec784e4431d3e140c8cc6e1b77ce82
 parents: 
 parents: 
 parents: 
@@ -195,9 +195,9 @@ parents--verbose:
 parents--verbose: 
 parents--verbose: 
 parents--verbose: 
-parents--debug: 2:cdc488b3baa4 -1:000000000000 
-parents--debug: 1:55b647117689 -1:000000000000 
-parents--debug: 0:debcd367d974 -1:000000000000 
+parents--debug: 2:259081bc29d1 -1:000000000000 
+parents--debug: 1:1c37ba774509 -1:000000000000 
+parents--debug: 0:6eb5362d59ec -1:000000000000 
 parents--debug: -1:000000000000 -1:000000000000 
 rev: 3
 rev: 2
@@ -236,26 +236,26 @@ person
 other
 other
 user
-Sun Apr  9 07:31:30 2006 +0000
-Wed Dec 14 13:44:50 2005 +0000
-Sun Aug  7 23:19:49 2005 +0000
-Fri Mar 18 01:58:31 2005 +0000
-2006-04-09 07:31 +0000
-2005-12-14 13:44 +0000
-2005-08-07 23:19 +0000
-2005-03-18 01:58 +0000
-Sun, 09 Apr 2006 07:31:30 +0000
-Wed, 14 Dec 2005 13:44:50 +0000
-Sun, 07 Aug 2005 23:19:49 +0000
-Fri, 18 Mar 2005 01:58:31 +0000
+Fri Jan 16 01:06:40 1970 +0000
+Wed Jan 14 21:20:00 1970 +0000
+Tue Jan 13 17:33:20 1970 +0000
+Mon Jan 12 13:46:40 1970 +0000
+1970-01-16 01:06 +0000
+1970-01-14 21:20 +0000
+1970-01-13 17:33 +0000
+1970-01-12 13:46 +0000
+Fri, 16 Jan 1970 01:06:40 +0000
+Wed, 14 Jan 1970 21:20:00 +0000
+Tue, 13 Jan 1970 17:33:20 +0000
+Mon, 12 Jan 1970 13:46:40 +0000
 no user, no domain
 no person
 other 1
 line 1
-2bacb094274c
-cdc488b3baa4
-55b647117689
-debcd367d974
+8c7f028fbabf
+259081bc29d1
+1c37ba774509
+6eb5362d59ec
 # error on syntax
 abort: t:3: unmatched quotes
 # done

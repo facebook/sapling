@@ -166,7 +166,7 @@ class localrepository(object):
         if self.encodepats == None:
             l = []
             for pat, cmd in self.ui.configitems("encode"):
-                mf = util.matcher("", "/", [pat], [], [])[1]
+                mf = util.matcher(self.root, "", [pat], [], [])[1]
                 l.append((mf, cmd))
             self.encodepats = l
 
@@ -184,7 +184,7 @@ class localrepository(object):
         if self.decodepats == None:
             l = []
             for pat, cmd in self.ui.configitems("decode"):
-                mf = util.matcher("", "/", [pat], [], [])[1]
+                mf = util.matcher(self.root, "", [pat], [], [])[1]
                 l.append((mf, cmd))
             self.decodepats = l
 
@@ -1634,6 +1634,7 @@ class localrepository(object):
                     self.dirstate.update([f], 'n')
 
         # merge the tricky bits
+        failedmerge = []
         files = merge.keys()
         files.sort()
         xp1 = hex(p1)
@@ -1644,6 +1645,7 @@ class localrepository(object):
             ret = self.merge3(f, my, other, xp1, xp2)
             if ret:
                 err = True
+                failedmerge.append(f)
             util.set_exec(self.wjoin(f), flag)
             if moddirstate:
                 if branch_merge:
@@ -1677,6 +1679,16 @@ class localrepository(object):
 
         if moddirstate:
             self.dirstate.setparents(p1, p2)
+
+        stat = ((len(get), _("updated")),
+                (len(merge) - len(failedmerge), _("merged")),
+                (len(remove), _("removed")),
+                (len(failedmerge), _("unresolved")))
+        note = ", ".join([_("%d files %s") % s for s in stat])
+        self.ui.note("%s\n" % note)
+        if moddirstate and branch_merge:
+            self.ui.note(_("(branch merge, don't forget to commit)\n"))
+
         return err
 
     def merge3(self, fn, my, other, p1, p2):

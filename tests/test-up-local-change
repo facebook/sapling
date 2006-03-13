@@ -6,7 +6,7 @@ cd r1
 hg init
 echo a > a
 hg addremove
-hg commit -m "1" -d "0 0"
+hg commit -m "1" -d "1000000 0"
 
 hg clone . ../r2
 cd ../r2
@@ -19,7 +19,7 @@ cd ../r1
 echo b > b
 echo a2 > a
 hg addremove
-hg commit -m "2" -d "0 0"
+hg commit -m "2" -d "1000000 0"
 
 cd ../r2
 hg -q pull ../r1
@@ -43,7 +43,7 @@ hg up 0
 echo b2 > b
 echo a3 > a
 hg addremove
-hg commit -m "3" -d "0 0"
+hg commit -m "3" -d "1000000 0"
 
 cd ../r2
 hg -q pull ../r1

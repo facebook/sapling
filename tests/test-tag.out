@@ -1,19 +1,19 @@
-changeset:   0:acb14030fe0a
+changeset:   0:0acdaf898367
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     test
 
-changeset:   1:863197ef0378
+changeset:   1:c5c60883086f
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
-summary:     Added tag bleah for changeset acb14030fe0a21b60322c440ad2d20cf7685a376
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     Added tag bleah for changeset 0acdaf8983679e0aac16e811534eb49d7ee1f2b4
 
-changeset:   0:acb14030fe0a
+changeset:   0:0acdaf898367
 tag:         bleah
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     test
 
 abort: working copy of .hgtags is changed (please commit .hgtags manually)
@@ -22,8 +22,8 @@ use of 'hg tag NAME [REV]' is deprecated, please use 'hg tag [-r REV] NAME' inst
 abort: use only one form to specify the revision
 failed
 use of 'hg tag NAME [REV]' is deprecated, please use 'hg tag [-r REV] NAME' instead
-acb14030fe0a21b60322c440ad2d20cf7685a376 bleah
-acb14030fe0a21b60322c440ad2d20cf7685a376 bleah0
-863197ef03781c4fc00276d83eb66c4cb9cd91df bleah1
+0acdaf8983679e0aac16e811534eb49d7ee1f2b4 bleah
+0acdaf8983679e0aac16e811534eb49d7ee1f2b4 bleah0
+c5c60883086f5526bd3e36814b94a73a4e75e172 bleah1
 abort: '\n' cannot be used in a tag name
 abort: ':' cannot be used in a tag name

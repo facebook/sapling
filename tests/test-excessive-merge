@@ -6,24 +6,24 @@ echo foo > a
 echo foo > b
 hg add a b
 
-hg ci -m "test" -d "0 0"
+hg ci -m "test" -d "1000000 0"
 
 echo blah > a
 
-hg ci -m "branch a" -d "0 0"
+hg ci -m "branch a" -d "1000000 0"
 
 hg co 0
 
 echo blah > b
 
-hg ci -m "branch b" -d "0 0"
+hg ci -m "branch b" -d "1000000 0"
 HGMERGE=true hg up -m 1
 
-hg ci -m "merge b/a -> blah" -d "0 0"
+hg ci -m "merge b/a -> blah" -d "1000000 0"
 
 hg co 1
 HGMERGE=true hg up -m 2
-hg ci -m "merge a/b -> blah" -d "0 0"
+hg ci -m "merge a/b -> blah" -d "1000000 0"
 
 hg log
 hg debugindex .hg/00changelog.i

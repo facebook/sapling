@@ -12,37 +12,39 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg update' to get a working copy)
-changeset:   2:3ef543305655
+changeset:   2:b833d578451e
 tag:         tip
-parent:      0:22a449e20da5
+parent:      0:4536b1c2ca69
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     chmod +x a
 
-changeset:   1:c6ecefc45368
+changeset:   1:a187cb361a5a
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     a updated
 
-changeset:   2:3ef543305655
+changeset:   2:b833d578451e
 tag:         tip
-parent:      0:22a449e20da5
+parent:      0:4536b1c2ca69
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     chmod +x a
 
-changeset:   1:c6ecefc45368
+changeset:   1:a187cb361a5a
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     a updated
 
-changeset:   0:22a449e20da5
+changeset:   0:4536b1c2ca69
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     added a b
 
 resolving manifests
 merging a
 resolving a
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 -rwxr-x---
 -rwxr-x---

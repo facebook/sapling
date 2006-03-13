@@ -15,5 +15,5 @@ hg commit -d '111111111111 0' -m commit-7
 echo bar > bar
 hg add bar
 rm bar
-hg commit -d "0 0" -m commit-8 2>&1 | sed -e "s:/.*\(/test/.*\):...\1:"
+hg commit -d "1000000 0" -m commit-8 2>&1 | sed -e "s:/.*\(/test/.*\):...\1:"
 exit 0

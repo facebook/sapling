@@ -4,14 +4,14 @@ hg init a
 cd a
 echo a > foo
 hg add foo
-hg commit -m 1 -d "0 0"
+hg commit -m 1 -d "1000000 0"
 rm foo
 hg remove foo
-hg commit -m 2 -d "0 0"
-hg export 0
-hg export 1
-hg log -p -r 0
-hg log -p -r 1
+hg commit -m 2 -d "1000000 0"
+hg export 0 | sed -e "s/Thu Jan 01/Thu Jan  1/"
+hg export 1 | sed -e "s/Thu Jan 01/Thu Jan  1/"
+hg log -p -r 0 | sed -e "s/Thu Jan 01/Thu Jan  1/"
+hg log -p -r 1 | sed -e "s/Thu Jan 01/Thu Jan  1/"
 
 cd ..
 hg clone a b
