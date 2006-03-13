@@ -8,7 +8,7 @@
 from node import *
 from repo import *
 from demandload import *
-demandload(globals(), "localrepo httprepo sshrepo statichttprepo")
+demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
 
 def repository(ui, path=None, create=0):
     if path:
@@ -24,5 +24,13 @@ def repository(ui, path=None, create=0):
                 ui, path.replace("old-http://", "http://"))
         if path.startswith("ssh://"):
             return sshrepo.sshrepository(ui, path)
+        if path.startswith("bundle://"):
+            path = path[9:]
+            s = path.split("+", 1)
+            if  len(s) == 1:
+                repopath, bundlename = "", s[0]
+            else:
+                repopath, bundlename = s
+            return bundlerepo.bundlerepository(ui, repopath, bundlename)
 
     return localrepo.localrepository(ui, path, create)
