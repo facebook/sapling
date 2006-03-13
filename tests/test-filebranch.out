@@ -19,6 +19,8 @@ resolving manifests
 getting bar
 merging foo
 resolving foo
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 we shouldn't have anything but foo in merge state here
 m 644          3 foo
 main: we should have a merge here

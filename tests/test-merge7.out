@@ -24,6 +24,8 @@ merging test.txt
 resolving test.txt
 file test.txt: my fc3148072371 other d40249267ae3 ancestor 8fe46a3eb557
 merging test.txt failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+(branch merge, don't forget to commit)
 one
 <<<<<<<
 two-point-five
