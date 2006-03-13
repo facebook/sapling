@@ -48,7 +48,7 @@ def decompress(bin):
     if t == '\0': return bin
     if t == 'x': return zlib.decompress(bin)
     if t == 'u': return bin[1:]
-    raise RevlogError(_("unknown compression type %s") % t)
+    raise RevlogError(_("unknown compression type %r") % t)
 
 indexformat = ">4l20s20s20s"
 

@@ -1,7 +1,7 @@
 Summary: Mercurial -- a distributed SCM
 Name: mercurial
-Version: 0.7
-Release: 1
+Version: 0.8
+Release: 0
 License: GPL
 Group: Development/Tools
 Source: http://www.selenic.com/mercurial/release/%{name}-%{version}.tar.gz
@@ -10,6 +10,7 @@ BuildRoot: /tmp/build.%{name}-%{version}-%{release}
 
 %define pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')
 %define pythonlib %{_libdir}/python%{pythonver}/site-packages/%{name}
+%define hgext %{_libdir}/python%{pythonver}/site-packages/hgext
 
 %description
 Mercurial is a fast, lightweight source control management system designed
@@ -30,10 +31,12 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc doc/* contrib/patchbomb *.cgi
+%doc doc/* *.cgi
 %dir %{pythonlib}
+%dir %{hgext}
 %{_bindir}/hgmerge
 %{_bindir}/hg
 %{pythonlib}/templates
 %{pythonlib}/*.py*
 %{pythonlib}/*.so
+%{hgext}/*.py*

@@ -10,10 +10,12 @@ import filelog, manifest, changelog, dirstate, repo
 from node import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "re lock transaction tempfile stat mdiff errno")
+demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
 
 class localrepository(object):
-    def __init__(self, ui, path=None, create=0):
+    def __del__(self):
+        self.transhandle = None
+    def __init__(self, parentui, path=None, create=0):
         if not path:
             p = os.getcwd()
             while not os.path.isdir(os.path.join(p, ".hg")):
@@ -28,7 +30,7 @@ class localrepository(object):
             raise repo.RepoError(_("repository %s not found") % path)
 
         self.root = os.path.abspath(path)
-        self.ui = ui
+        self.ui = ui.ui(parentui=parentui)
         self.opener = util.opener(self.path)
         self.wopener = util.opener(self.root)
         self.manifest = manifest.manifest(self.opener)
@@ -37,42 +39,23 @@ class localrepository(object):
         self.nodetagscache = None
         self.encodepats = None
         self.decodepats = None
+        self.transhandle = None
 
         if create:
             os.mkdir(self.path)
             os.mkdir(self.join("data"))
 
-        self.dirstate = dirstate.dirstate(self.opener, ui, self.root)
+        self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
         try:
-            self.ui.readconfig(self.join("hgrc"))
+            self.ui.readconfig(self.join("hgrc"), self.root)
         except IOError:
             pass
 
     def hook(self, name, throw=False, **args):
         def runhook(name, cmd):
             self.ui.note(_("running hook %s: %s\n") % (name, cmd))
-            old = {}
-            for k, v in args.items():
-                k = k.upper()
-                old['HG_' + k] = os.environ.get(k, None)
-                old[k] = os.environ.get(k, None)
-                os.environ['HG_' + k] = str(v)
-                os.environ[k] = str(v)
-
-            try:
-                # Hooks run in the repository root
-                olddir = os.getcwd()
-                os.chdir(self.root)
-                r = os.system(cmd)
-            finally:
-                for k, v in old.items():
-                    if v is not None:
-                        os.environ[k] = v
-                    else:
-                        del os.environ[k]
-
-                os.chdir(olddir)
-
+            env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()])
+            r = util.system(cmd, environ=env, cwd=self.root)
             if r:
                 desc, r = util.explain_exit(r)
                 if throw:
@@ -82,10 +65,11 @@ class localrepository(object):
             return True
 
         r = True
-        for hname, cmd in self.ui.configitems("hooks"):
-            s = hname.split(".")
-            if s[0] == name and cmd:
-                r = runhook(hname, cmd) and r
+        hooks = [(hname, cmd) for hname, cmd in self.ui.configitems("hooks")
+                 if hname.split(".", 1)[0] == name and cmd]
+        hooks.sort()
+        for hname, cmd in hooks:
+            r = runhook(hname, cmd) and r
         return r
 
     def tags(self):
@@ -215,6 +199,10 @@ class localrepository(object):
         return self.wopener(filename, 'w').write(data)
 
     def transaction(self):
+        tr = self.transhandle
+        if tr != None and tr.running():
+            return tr.nest()
+
         # save dirstate for undo
         try:
             ds = self.opener("dirstate").read()
@@ -222,13 +210,11 @@ class localrepository(object):
             ds = ""
         self.opener("journal.dirstate", "w").write(ds)
 
-        def after():
-            util.rename(self.join("journal"), self.join("undo"))
-            util.rename(self.join("journal.dirstate"),
-                        self.join("undo.dirstate"))
-
-        return transaction.transaction(self.ui.warn, self.opener,
-                                       self.join("journal"), after)
+        tr = transaction.transaction(self.ui.warn, self.opener,
+                                       self.join("journal"),
+                                       aftertrans(self.path))
+        self.transhandle = tr
+        return tr
 
     def recover(self):
         l = self.lock()
@@ -366,7 +352,7 @@ class localrepository(object):
             self.dirstate.setparents(n, nullid)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False, wlock=None):
+               match=util.always, force=False, lock=None, wlock=None):
         commit = []
         remove = []
         changed = []
@@ -404,7 +390,8 @@ class localrepository(object):
 
         if not wlock:
             wlock = self.wlock()
-        l = self.lock()
+        if not lock:
+            lock = self.lock()
         tr = self.transaction()
 
         # check in files
@@ -519,6 +506,12 @@ class localrepository(object):
                     del mf[fn]
             return mf
 
+        if node1:
+            # read the manifest from node1 before the manifest from node2,
+            # so that we'll hit the manifest cache if we're going through
+            # all the revisions in parent->child order.
+            mf1 = mfmatches(node1)
+
         # are we comparing the working directory?
         if not node2:
             if not wlock:
@@ -556,8 +549,6 @@ class localrepository(object):
         if node1:
             # flush lists from dirstate before comparing manifests
             modified, added = [], []
-
-            mf1 = mfmatches(node1)
 
             for fn in mf2:
                 if mf1.has_key(fn):
@@ -818,7 +809,7 @@ class localrepository(object):
                 base[h] = 1
 
         if not unknown:
-            return None
+            return []
 
         rep = {}
         reqcnt = 0
@@ -1645,10 +1636,12 @@ class localrepository(object):
         # merge the tricky bits
         files = merge.keys()
         files.sort()
+        xp1 = hex(p1)
+        xp2 = hex(p2)
         for f in files:
             self.ui.status(_("merging %s\n") % f)
             my, other, flag = merge[f]
-            ret = self.merge3(f, my, other)
+            ret = self.merge3(f, my, other, xp1, xp2)
             if ret:
                 err = True
             util.set_exec(self.wjoin(f), flag)
@@ -1669,6 +1662,7 @@ class localrepository(object):
         remove.sort()
         for f in remove:
             self.ui.note(_("removing %s\n") % f)
+            util.audit_path(f)
             try:
                 util.unlink(self.wjoin(f))
             except OSError, inst:
@@ -1685,7 +1679,7 @@ class localrepository(object):
             self.dirstate.setparents(p1, p2)
         return err
 
-    def merge3(self, fn, my, other):
+    def merge3(self, fn, my, other, p1, p2):
         """perform a 3-way merge in the working directory"""
 
         def temp(prefix, node):
@@ -1708,7 +1702,13 @@ class localrepository(object):
 
         cmd = (os.environ.get("HGMERGE") or self.ui.config("ui", "merge")
                or "hgmerge")
-        r = os.system('%s "%s" "%s" "%s"' % (cmd, a, b, c))
+        r = util.system('%s "%s" "%s" "%s"' % (cmd, a, b, c), cwd=self.root,
+                        environ={'HG_FILE': fn,
+                                 'HG_MY_NODE': p1,
+                                 'HG_OTHER_NODE': p2,
+                                 'HG_FILE_MY_NODE': hex(my),
+                                 'HG_FILE_OTHER_NODE': hex(other),
+                                 'HG_FILE_BASE_NODE': hex(base)})
         if r:
             self.ui.warn(_("merging %s failed!\n") % fn)
 
@@ -1759,6 +1759,7 @@ class localrepository(object):
                 raise
             except Exception, inst:
                 err(_("unpacking changeset %s: %s") % (short(n), inst))
+                continue
 
             neededmanifests[changes[0]] = n
 
@@ -1796,10 +1797,14 @@ class localrepository(object):
                 raise
             except Exception, inst:
                 err(_("unpacking manifest %s: %s") % (short(n), inst))
+                continue
 
-            ff = [ l.split('\0') for l in delta.splitlines() ]
-            for f, fn in ff:
-                filenodes.setdefault(f, {})[bin(fn[:40])] = 1
+            try:
+                ff = [ l.split('\0') for l in delta.splitlines() ]
+                for f, fn in ff:
+                    filenodes.setdefault(f, {})[bin(fn[:40])] = 1
+            except (ValueError, TypeError), inst:
+                err(_("broken delta in manifest %s: %s") % (short(n), inst))
 
         self.ui.status(_("crosschecking files in changesets and manifests\n"))
 
@@ -1823,6 +1828,9 @@ class localrepository(object):
             if f == "/dev/null":
                 continue
             files += 1
+            if not f:
+                err(_("file without name in manifest %s") % short(n))
+                continue
             fl = self.file(f)
             checksize(fl, f)
 
@@ -1840,7 +1848,7 @@ class localrepository(object):
                     del filenodes[f][n]
 
                 flr = fl.linkrev(n)
-                if flr not in filelinkrevs[f]:
+                if flr not in filelinkrevs.get(f, []):
                     err(_("%s:%s points to unexpected changeset %d")
                             % (f, short(n), flr))
                 else:
@@ -1875,3 +1883,13 @@ class localrepository(object):
         if errors[0]:
             self.ui.warn(_("%d integrity errors encountered!\n") % errors[0])
             return 1
+
+# used to avoid circular references so destructors work
+def aftertrans(base):
+    p = base
+    def a():
+        util.rename(os.path.join(p, "journal"), os.path.join(p, "undo"))
+        util.rename(os.path.join(p, "journal.dirstate"),
+                    os.path.join(p, "undo.dirstate"))
+    return a
+

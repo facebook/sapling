@@ -1,23 +1,23 @@
 precommit hook: p1=0000000000000000000000000000000000000000 p2=
 pretxncommit hook: n=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b p1=0000000000000000000000000000000000000000 p2=
 0:cb9a9f314b8b
-commit hook b
 commit hook: n=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b p1=0000000000000000000000000000000000000000 p2=
+commit hook b
 precommit hook: p1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b p2=
 pretxncommit hook: n=ab228980c14deea8b9555d91c9581127383e40fd p1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b p2=
 1:ab228980c14d
-commit hook b
 commit hook: n=ab228980c14deea8b9555d91c9581127383e40fd p1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b p2=
+commit hook b
 precommit hook: p1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b p2=
 pretxncommit hook: n=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 p1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b p2=
 2:ee9deb46ab31
-commit hook b
 commit hook: n=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 p1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b p2=
+commit hook b
 precommit hook: p1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 p2=ab228980c14deea8b9555d91c9581127383e40fd
 pretxncommit hook: n=07f3376c1e655977439df2a814e3cc14b27abac2 p1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 p2=ab228980c14deea8b9555d91c9581127383e40fd
 3:07f3376c1e65
-commit hook b
 commit hook: n=07f3376c1e655977439df2a814e3cc14b27abac2 p1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 p2=ab228980c14deea8b9555d91c9581127383e40fd
+commit hook b
 prechangegroup hook
 changegroup hook: n=ab228980c14deea8b9555d91c9581127383e40fd
 incoming hook: n=ab228980c14deea8b9555d91c9581127383e40fd
@@ -34,8 +34,8 @@ pretag hook: t=a n=07f3376c1e655977439df2a814e3cc14b27abac2 l=0
 precommit hook: p1=07f3376c1e655977439df2a814e3cc14b27abac2 p2=
 pretxncommit hook: n=3cd2c6a5a36c5908aad3bc0d717c29873a05dfc2 p1=07f3376c1e655977439df2a814e3cc14b27abac2 p2=
 4:3cd2c6a5a36c
-commit hook b
 commit hook: n=3cd2c6a5a36c5908aad3bc0d717c29873a05dfc2 p1=07f3376c1e655977439df2a814e3cc14b27abac2 p2=
+commit hook b
 tag hook: t=a n=07f3376c1e655977439df2a814e3cc14b27abac2 l=0
 pretag hook: t=la n=3cd2c6a5a36c5908aad3bc0d717c29873a05dfc2 l=1
 tag hook: t=la n=3cd2c6a5a36c5908aad3bc0d717c29873a05dfc2 l=1
@@ -47,11 +47,14 @@ pretag.forbid hook
 abort: pretag.forbid hook exited with status 1
 4:3cd2c6a5a36c
 precommit hook: p1=3cd2c6a5a36c5908aad3bc0d717c29873a05dfc2 p2=
+pretxncommit hook: n=469a61fe67d64df9a5023e4c2b8a0b85c61e9b69 p1=3cd2c6a5a36c5908aad3bc0d717c29873a05dfc2 p2=
+5:469a61fe67d6
 pretxncommit.forbid hook: tip=5:469a61fe67d6
 abort: pretxncommit.forbid hook exited with status 1
 transaction abort!
 rollback completed
 4:3cd2c6a5a36c
+precommit hook: p1=3cd2c6a5a36c5908aad3bc0d717c29873a05dfc2 p2=
 precommit.forbid hook
 abort: precommit.forbid hook exited with status 1
 4:3cd2c6a5a36c

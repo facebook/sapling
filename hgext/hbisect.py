@@ -1,11 +1,13 @@
-#!/usr/bin/env python
+# bisect extension for mercurial
+#
+# Copyright 2005, 2006 Benoit Boissinot <benoit.boissinot@ens-lyon.org>
+# Inspired by git bisect, extension skeleton taken from mq.py.
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
 from mercurial.demandload import demandload
-demandload(globals(), "os sys sets")
-from mercurial import hg
+demandload(globals(), "os sys sets mercurial:hg,util")
 
 versionstr = "0.0.3"
 
@@ -30,33 +32,32 @@ class bisect(object):
     """dichotomic search in the DAG of changesets"""
     def __init__(self, ui, repo):
         self.repo = repo
-        self.path = os.path.join(repo.join(""), "bisect")
+        self.path = repo.join("bisect")
+        self.opener = util.opener(self.path)
         self.ui = ui
         self.goodrevs = []
         self.badrev = None
         self.good_dirty = 0
         self.bad_dirty = 0
-        self.good_path = os.path.join(self.path, "good")
-        self.bad_path = os.path.join(self.path, "bad")
+        self.good_path = "good"
+        self.bad_path = "bad"
 
-        s = self.good_path
-        if os.path.exists(s):
-            self.goodrevs = self.repo.opener(s).read().splitlines()
+        if os.path.exists(os.path.join(self.path, self.good_path)):
+            self.goodrevs = self.opener(self.good_path).read().splitlines()
             self.goodrevs = [hg.bin(x) for x in self.goodrevs]
-        s = self.bad_path
-        if os.path.exists(s):
-            r = self.repo.opener(s).read().splitlines()
+        if os.path.exists(os.path.join(self.path, self.bad_path)):
+            r = self.opener(self.bad_path).read().splitlines()
             if r:
                 self.badrev = hg.bin(r.pop(0))
 
     def __del__(self):
         if not os.path.isdir(self.path):
             return
-        f = self.repo.opener(self.good_path, "w")
+        f = self.opener(self.good_path, "w")
         f.write("\n".join([hg.hex(r) for r in  self.goodrevs]))
         if len(self.goodrevs) > 0:
             f.write("\n")
-        f = self.repo.opener(self.bad_path, "w")
+        f = self.opener(self.bad_path, "w")
         if self.badrev:
             f.write(hg.hex(self.badrev) + "\n")
 
@@ -72,7 +73,8 @@ class bisect(object):
     def reset(self):
         """finish a bisection"""
         if os.path.isdir(self.path):
-            sl = [self.bad_path, self.good_path]
+            sl = [os.path.join(self.path, p)
+                  for p in [self.bad_path, self.good_path]]
             for s in sl:
                 if os.path.exists(s):
                     os.unlink(s)
@@ -92,7 +94,7 @@ class bisect(object):
         if head is None:
             head = self.badrev
         return self.__ancestors_and_nb_ancestors(head, stop)[1]
-        
+
     def ancestors(self, head=None, stop=None):
         """
         returns the set of the ancestors of head (self included)
@@ -101,7 +103,7 @@ class bisect(object):
         if head is None:
             head = self.badrev
         return self.__ancestors_and_nb_ancestors(head, stop)[0]
-        
+
     def __ancestors_and_nb_ancestors(self, head, stop=None):
         """
         if stop is None then ancestors of goodrevs are used as
@@ -114,7 +116,8 @@ class bisect(object):
         cl = self.repo.changelog
         if not stop:
             stop = sets.Set([])
-            for g in reversed(self.goodrevs):
+            for i in xrange(len(self.goodrevs)-1, -1, -1):
+                g = self.goodrevs[i]
                 if g in stop:
                     continue
                 stop.update(cl.reachable(g))
@@ -132,7 +135,7 @@ class bisect(object):
                 for p in parents:
                     d[p][0] += 1
             return d
-        
+
         if head in stop:
             self.ui.warn("Unconsistent state, %s is good and bad\n"
                           % hg.hex(head))
@@ -162,7 +165,8 @@ class bisect(object):
         if not self.goodrevs:
             self.ui.warn("No good revision given\n")
             self.ui.warn("Assuming the first revision is good\n")
-        ancestors, num_ancestors = self.__ancestors_and_nb_ancestors(self.badrev)
+        ancestors, num_ancestors = self.__ancestors_and_nb_ancestors(
+                                    self.badrev)
         tot = len(ancestors)
         if tot == 1:
             if ancestors.pop() != self.badrev:
@@ -261,7 +265,7 @@ for subcommands see "hg bisect help\"
         for cmd in cmds:
             doc = cmdtable[cmd][0].__doc__.splitlines(0)[0].rstrip()
             ui.write(" %-*s   %s\n" % (m, cmd, doc))
-    
+
     b = bisect(ui, repo)
     bisectcmdtable = {
         "init": (b.init, 0, "hg bisect init"),
@@ -271,7 +275,7 @@ for subcommands see "hg bisect help\"
         "reset": (b.reset, 0, "hg bisect reset"),
         "help": (help_, 1, "hg bisect help [<subcommand>]"),
     }
-            
+
     if not bisectcmdtable.has_key(cmd):
         ui.warn("bisect: Unknown sub-command\n")
         return help_()
@@ -281,7 +285,6 @@ for subcommands see "hg bisect help\"
     return bisectcmdtable[cmd][0](*args)
 
 cmdtable = {
-    "bisect": (bisect_run, [], 
-               "hg bisect [help|init|reset|next|good|bad]"),
+    "bisect": (bisect_run, [], "hg bisect [help|init|reset|next|good|bad]"),
     #"bisect-test": (test, [], "hg bisect-test rev"),
 }

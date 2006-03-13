@@ -34,31 +34,28 @@ def get_mtime(repo_path):
         return os.stat(hg_path).st_mtime
 
 def staticfile(directory, fname):
-    fname = os.path.realpath(os.path.join(directory, fname))
+    """return a file inside directory with guessed content-type header
 
-    try:
-        # the static dir should be a substring in the real
-        # file path, if it is not, we have something strange
-        # going on => security breach attempt?
-        #
-        # This will either:
-        #   1) find the `static' path at index 0  =  success
-        #   2) find the `static' path at other index  =  error
-        #   3) not find the `static' path  =  ValueError generated
-        if fname.index(directory) != 0:
-            # generate ValueError manually
-            raise ValueError()
+    fname always uses '/' as directory separator and isn't allowed to
+    contain unusual path components.
+    Content-type is guessed using the mimetypes module.
+    Return an empty string if fname is illegal or file not found.
 
-        os.stat(fname)
-
-        ct = mimetypes.guess_type(fname)[0] or "text/plain"
-        return "Content-type: %s\n\n%s" % (ct, file(fname).read())
-    except ValueError:
-        # security breach attempt
-        return ""
-    except OSError, e:
-        if e.errno == errno.ENOENT:
+    """
+    parts = fname.split('/')
+    path = directory
+    for part in parts:
+        if (part in ('', os.curdir, os.pardir) or
+            os.sep in part or os.altsep is not None and os.altsep in part):
             return ""
+        path = os.path.join(path, part)
+    try:
+        os.stat(path)
+        ct = mimetypes.guess_type(path)[0] or "text/plain"
+        return "Content-type: %s\n\n%s" % (ct, file(path).read())
+    except (TypeError, OSError):
+        # illegal fname or unreadable file
+        return ""
 
 class hgrequest(object):
     def __init__(self, inp=None, out=None, env=None):
@@ -739,7 +736,7 @@ class hgweb(object):
 
     def run(self, req=hgrequest()):
         def clean(path):
-            p = os.path.normpath(path)
+            p = util.normpath(path)
             if p[:2] == "..":
                 raise "suspicious path"
             return p
@@ -1001,17 +998,27 @@ def create_server(repo):
 class hgwebdir(object):
     def __init__(self, config):
         def cleannames(items):
-            return [(name.strip('/'), path) for name, path in items]
+            return [(name.strip(os.sep), path) for name, path in items]
 
-        if type(config) == type([]):
+        if isinstance(config, (list, tuple)):
             self.repos = cleannames(config)
-        elif type(config) == type({}):
+        elif isinstance(config, dict):
             self.repos = cleannames(config.items())
             self.repos.sort()
         else:
             cp = ConfigParser.SafeConfigParser()
             cp.read(config)
-            self.repos = cleannames(cp.items("paths"))
+            self.repos = []
+            if cp.has_section('paths'):
+                self.repos.extend(cleannames(cp.items('paths')))
+            if cp.has_section('collections'):
+                for prefix, root in cp.items('collections'):
+                    for path in util.walkrepos(root):
+                        repo = os.path.normpath(path)
+                        name = repo
+                        if name.startswith(prefix):
+                            name = name[len(prefix):]
+                        self.repos.append((name.lstrip(os.sep), repo))
             self.repos.sort()
 
     def run(self, req=hgrequest()):

@@ -3,7 +3,13 @@
 # hgmerge - default merge helper for Mercurial
 #
 # This tries to find a way to do three-way merge on the current system.
-# The result ought to end up in $1.
+# The result ought to end up in $1.  Script is run in root directory of
+# repository.
+#
+# Environment variables set by Mercurial:
+# HG_FILE            name of file within repo
+# HG_MY_NODE         revision being merged
+# HG_OTHER_NODE      revision being merged
 
 set -e # bail out quickly on failure
 

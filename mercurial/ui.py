@@ -5,25 +5,41 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, ConfigParser
+import ConfigParser
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "re socket sys util")
+demandload(globals(), "os re socket sys util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
-                 interactive=True):
+                 interactive=True, parentui=None):
         self.overlay = {}
-        self.cdata = ConfigParser.SafeConfigParser()
-        self.readconfig(util.rcpath)
+        if parentui is None:
+            # this is the parent of all ui children
+            self.parentui = None
+            self.cdata = ConfigParser.SafeConfigParser()
+            self.readconfig(util.rcpath)
 
-        self.quiet = self.configbool("ui", "quiet")
-        self.verbose = self.configbool("ui", "verbose")
-        self.debugflag = self.configbool("ui", "debug")
-        self.interactive = self.configbool("ui", "interactive", True)
+            self.quiet = self.configbool("ui", "quiet")
+            self.verbose = self.configbool("ui", "verbose")
+            self.debugflag = self.configbool("ui", "debug")
+            self.interactive = self.configbool("ui", "interactive", True)
 
-        self.updateopts(verbose, debug, quiet, interactive)
-        self.diffcache = None
+            self.updateopts(verbose, debug, quiet, interactive)
+            self.diffcache = None
+        else:
+            # parentui may point to an ui object which is already a child
+            self.parentui = parentui.parentui or parentui
+            parent_cdata = self.parentui.cdata
+            self.cdata = ConfigParser.SafeConfigParser(parent_cdata.defaults())
+            # make interpolation work
+            for section in parent_cdata.sections():
+                self.cdata.add_section(section)
+                for name, value in parent_cdata.items(section, raw=True):
+                    self.cdata.set(section, name, value)
+
+    def __getattr__(self, key):
+        return getattr(self.parentui, key)
 
     def updateopts(self, verbose=False, debug=False, quiet=False,
                  interactive=True):
@@ -32,7 +48,7 @@ class ui(object):
         self.debugflag = (self.debugflag or debug)
         self.interactive = (self.interactive and interactive)
 
-    def readconfig(self, fn):
+    def readconfig(self, fn, root=None):
         if isinstance(fn, basestring):
             fn = [fn]
         for f in fn:
@@ -40,6 +56,12 @@ class ui(object):
                 self.cdata.read(f)
             except ConfigParser.ParsingError, inst:
                 raise util.Abort(_("Failed to parse %s\n%s") % (f, inst))
+        # translate paths relative to root (or home) into absolute paths
+        if root is None:
+            root = os.path.expanduser('~')
+        for name, path in self.configitems("paths"):
+            if path.find("://") == -1 and not os.path.isabs(path):
+                self.cdata.set("paths", name, os.path.join(root, path))
 
     def setconfig(self, section, name, val):
         self.overlay[(section, name)] = val
@@ -48,23 +70,44 @@ class ui(object):
         if self.overlay.has_key((section, name)):
             return self.overlay[(section, name)]
         if self.cdata.has_option(section, name):
-            return self.cdata.get(section, name)
-        return default
+            try:
+                return self.cdata.get(section, name)
+            except ConfigParser.InterpolationError, inst:
+                raise util.Abort(_("Error in configuration:\n%s") % inst)
+        if self.parentui is None:
+            return default
+        else:
+            return self.parentui.config(section, name, default)
 
     def configbool(self, section, name, default=False):
         if self.overlay.has_key((section, name)):
             return self.overlay[(section, name)]
         if self.cdata.has_option(section, name):
-            return self.cdata.getboolean(section, name)
-        return default
+            try:
+                return self.cdata.getboolean(section, name)
+            except ConfigParser.InterpolationError, inst:
+                raise util.Abort(_("Error in configuration:\n%s") % inst)
+        if self.parentui is None:
+            return default
+        else:
+            return self.parentui.configbool(section, name, default)
 
     def configitems(self, section):
+        items = {}
+        if self.parentui is not None:
+            items = dict(self.parentui.configitems(section))
         if self.cdata.has_section(section):
-            return self.cdata.items(section)
-        return []
+            try:
+                items.update(dict(self.cdata.items(section)))
+            except ConfigParser.InterpolationError, inst:
+                raise util.Abort(_("Error in configuration:\n%s") % inst)
+        x = items.items()
+        x.sort()
+        return x
 
-    def walkconfig(self):
-        seen = {}
+    def walkconfig(self, seen=None):
+        if seen is None:
+            seen = {}
         for (section, name), value in self.overlay.iteritems():
             yield section, name, value
             seen[section, name] = 1
@@ -73,6 +116,9 @@ class ui(object):
                 if (section, name) in seen: continue
                 yield section, name, value.replace('\n', '\\n')
                 seen[section, name] = 1
+        if self.parentui is not None:
+            for parent in self.parentui.walkconfig(seen):
+                yield parent
 
     def extensions(self):
         return self.configitems("extensions")
@@ -107,15 +153,12 @@ class ui(object):
         if not self.verbose: user = util.shortuser(user)
         return user
 
-    def expandpath(self, loc, root=""):
-        paths = {}
-        for name, path in self.configitems("paths"):
-            m = path.find("://")
-            if m == -1:
-                    path = os.path.join(root, path)
-            paths[name] = path
+    def expandpath(self, loc):
+        """Return repository location relative to cwd or from [paths]"""
+        if loc.find("://") != -1 or os.path.exists(loc):
+            return loc
 
-        return paths.get(loc, loc)
+        return self.config("paths", loc, loc)
 
     def write(self, *args):
         for a in args:
@@ -125,6 +168,12 @@ class ui(object):
         if not sys.stdout.closed: sys.stdout.flush()
         for a in args:
             sys.stderr.write(str(a))
+
+    def flush(self):
+        try:
+            sys.stdout.flush()
+        finally:
+            sys.stderr.flush()
 
     def readline(self):
         return sys.stdin.readline()[:-1]
@@ -157,7 +206,9 @@ class ui(object):
                   os.environ.get("EDITOR", "vi"))
 
         os.environ["HGUSER"] = self.username()
-        util.system("%s \"%s\"" % (editor, name), errprefix=_("edit failed"))
+        util.system("%s \"%s\"" % (editor, name),
+                    environ={'HGUSER': self.username()},
+                    onerr=util.Abort, errprefix=_("edit failed"))
 
         t = open(name).read()
         t = re.sub("(?m)^HG:.*\n", "", t)

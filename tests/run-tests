@@ -53,7 +53,16 @@ else
 fi
 cd "$TESTDIR"
 
-PATH="$INST/bin:$PATH"; export PATH
+BINDIR="$INST/bin"
+PATH="$BINDIR:$PATH"; export PATH
+if [ -n "$PYTHON" ]; then
+    {
+        echo "#!/bin/sh"
+        echo "exec \"$PYTHON"'" "$@"'
+    } > "$BINDIR/python"
+    chmod 755 "$BINDIR/python"
+fi
+
 PYTHONPATH="$PYTHONDIR"; export PYTHONPATH
 
 run_one() {

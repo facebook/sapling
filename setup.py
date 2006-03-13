@@ -5,8 +5,11 @@
 # './setup.py install', or
 # './setup.py --help' for more options
 
-import glob
 import sys
+if not hasattr(sys, 'version_info') or sys.version_info < (2, 3):
+    raise SystemExit, "Mercurial requires python 2.3 or later."
+
+import glob
 from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
 

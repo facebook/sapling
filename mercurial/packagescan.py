@@ -16,8 +16,14 @@ def demandload(scope, modules):
     """ fake demandload function that collects the required modules """
     for m in modules.split():
         mod = None
-        mod = __import__(m,scope,scope)
-        scope[m] = mod
+        try:
+            module, submodules = m.split(':')
+            submodules = submodules.split(',')
+        except:
+            module = m
+            submodules = []
+        mod = __import__(module, scope, scope, submodules)
+        scope[module] = mod
         requiredmodules[mod.__name__] = 1
 
 def getmodules(libpath,packagename):

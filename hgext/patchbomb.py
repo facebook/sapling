@@ -49,20 +49,11 @@
 # to = recipient1, recipient2, ...
 # cc = cc1, cc2, ...
 
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
-from email.Utils import parseaddr
-from mercurial import commands
-from mercurial import hg
-from mercurial import ui
+from mercurial.demandload import *
+demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
+                         mercurial:commands,hg,ui
+                         os errno popen2 smtplib socket sys tempfile time''')
 from mercurial.i18n import gettext as _
-import os
-import popen2
-import smtplib
-import socket
-import sys
-import tempfile
-import time
 
 try:
     # readline gives raw_input editing capabilities, but is not
@@ -149,8 +140,11 @@ def patchbomb(ui, repo, *revs, **opts):
         if opts['diffstat']:
             body += cdiffstat('\n'.join(desc), patch) + '\n\n'
         body += '\n'.join(patch)
-        msg = MIMEText(body)
-        subj = '[PATCH %d of %d] %s' % (idx, total, desc[0].strip())
+        msg = email.MIMEText.MIMEText(body)
+        if total == 1:
+            subj = '[PATCH] ' + desc[0].strip()
+        else:
+            subj = '[PATCH %d of %d] %s' % (idx, total, desc[0].strip())
         if subj.endswith('.'): subj = subj[:-1]
         msg['Subject'] = subj
         msg['X-Mercurial-Node'] = node
@@ -189,16 +183,8 @@ def patchbomb(ui, repo, *revs, **opts):
         jumbo.extend(p)
         msgs.append(makepatch(p, i + 1, len(patches)))
 
-    ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
-
     sender = (opts['from'] or ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
-
-    msg = MIMEMultipart()
-    msg['Subject'] = '[PATCH 0 of %d] %s' % (
-        len(patches),
-        opts['subject'] or
-        prompt('Subject:', rest = ' [PATCH 0 of %d] ' % len(patches)))
 
     def getaddrs(opt, prpt, default = None):
         addrs = opts[opt] or (ui.config('patchbomb', opt) or
@@ -207,25 +193,34 @@ def patchbomb(ui, repo, *revs, **opts):
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
 
-    ui.write(_('Finish with ^D or a dot on a line by itself.\n\n'))
+    if len(patches) > 1:
+        ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
 
-    body = []
+        msg = email.MIMEMultipart.MIMEMultipart()
+        msg['Subject'] = '[PATCH 0 of %d] %s' % (
+            len(patches),
+            opts['subject'] or
+            prompt('Subject:', rest = ' [PATCH 0 of %d] ' % len(patches)))
 
-    while True:
-        try: l = raw_input()
-        except EOFError: break
-        if l == '.': break
-        body.append(l)
+        ui.write(_('Finish with ^D or a dot on a line by itself.\n\n'))
 
-    msg.attach(MIMEText('\n'.join(body) + '\n'))
+        body = []
+
+        while True:
+            try: l = raw_input()
+            except EOFError: break
+            if l == '.': break
+            body.append(l)
+
+        msg.attach(email.MIMEText.MIMEText('\n'.join(body) + '\n'))
+
+        if opts['diffstat']:
+            d = cdiffstat(_('Final summary:\n'), jumbo)
+            if d: msg.attach(email.MIMEText.MIMEText(d))
+
+        msgs.insert(0, msg)
 
     ui.write('\n')
-
-    if opts['diffstat']:
-        d = cdiffstat(_('Final summary:\n'), jumbo)
-        if d: msg.attach(MIMEText(d))
-
-    msgs.insert(0, msg)
 
     if not opts['test'] and not opts['mbox']:
         s = smtplib.SMTP()
@@ -241,7 +236,7 @@ def patchbomb(ui, repo, *revs, **opts):
             s.login(username, password)
     parent = None
     tz = time.strftime('%z')
-    sender_addr = parseaddr(sender)[1]
+    sender_addr = email.Utils.parseaddr(sender)[1]
     for m in msgs:
         try:
             m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
@@ -259,8 +254,12 @@ def patchbomb(ui, repo, *revs, **opts):
         if opts['test']:
             ui.status('Displaying ', m['Subject'], ' ...\n')
             fp = os.popen(os.getenv('PAGER', 'more'), 'w')
-            fp.write(m.as_string(0))
-            fp.write('\n')
+            try:
+                fp.write(m.as_string(0))
+                fp.write('\n')
+            except IOError, inst:
+                if inst.errno != errno.EPIPE:
+                    raise
             fp.close()
         elif opts['mbox']:
             ui.status('Writing ', m['Subject'], ' ...\n')

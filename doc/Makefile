@@ -8,6 +8,12 @@ man: $(MAN)
 
 html: $(HTML)
 
+hg.1.txt: hg.1.gendoc.txt
+	touch hg.1.txt
+
+hg.1.gendoc.txt: ../mercurial/commands.py
+	python gendoc.py > $@
+
 %: %.xml
 	xmlto man $*.xml
 
@@ -18,4 +24,4 @@ html: $(HTML)
 	asciidoc -b html4 $*.txt || asciidoc -b html $*.txt
 
 clean:
-	$(RM) $(MAN) $(MAN:%=%.xml) $(MAN:%=%.html)
+	$(RM) $(MAN) $(MAN:%=%.xml) $(MAN:%=%.html) *.[0-9].gendoc.txt
