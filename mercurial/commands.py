@@ -2492,16 +2492,20 @@ def unbundle(ui, repo, fname, **opts):
     """
     f = urllib.urlopen(fname)
 
-    if f.read(4) != "HG10":
+    header = f.read(4)
+    if header == "HG10":
+        def generator(f):
+            zd = bz2.BZ2Decompressor()
+            for chunk in f:
+                yield zd.decompress(chunk)
+    elif header == "HG11":
+        def generator(f):
+            for chunk in f:
+                yield chunk
+    else:
         raise util.Abort(_("%s: not a Mercurial bundle file") % fname)
-
-    def bzgenerator(f):
-        zd = bz2.BZ2Decompressor()
-        for chunk in f:
-            yield zd.decompress(chunk)
-
-    bzgen = bzgenerator(util.filechunkiter(f, 4096))
-    if repo.addchangegroup(util.chunkbuffer(bzgen)):
+    gen = generator(util.filechunkiter(f, 4096))
+    if repo.addchangegroup(util.chunkbuffer(gen)):
         return 1
 
     if opts['update']:
