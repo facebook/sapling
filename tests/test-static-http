@@ -1,8 +1,7 @@
 #!/bin/sh
 
-http_proxy= hg clone old-http://localhost:20059/ copy > clonefail.out 2>&1
+http_proxy= hg clone old-http://localhost:20059/ copy
 echo $?
-sed 's/[0-9]//g' < clonefail.out
 ls copy
 
 # This server doesn't do range requests so it's basically only good for
