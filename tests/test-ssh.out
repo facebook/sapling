@@ -20,10 +20,10 @@ no changes found
 # updating rc
 # find outgoing
 searching for changes
-changeset:   1:536411b157b4
+changeset:   1:c54836a570be
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     add
 
 # push
@@ -34,10 +34,10 @@ remote: adding manifests
 remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
 # check remote tip
-changeset:   1:536411b157b4
+changeset:   1:c54836a570be
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     add
 
 checking changesets

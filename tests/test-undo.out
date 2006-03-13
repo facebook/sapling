@@ -3,10 +3,10 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
-changeset:   0:acb14030fe0a
+changeset:   0:0acdaf898367
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     test
 
 rolling back last transaction

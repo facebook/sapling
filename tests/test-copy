@@ -3,11 +3,11 @@
 hg init
 echo a > a
 hg add a
-hg commit -m "1" -d "0 0"
+hg commit -m "1" -d "1000000 0"
 hg status
 hg copy a b
 hg status
-hg --debug commit -m "2" -d "0 0"
+hg --debug commit -m "2" -d "1000000 0"
 echo "we should see two history entries"
 hg history -v
 echo "we should see one log entry for a"

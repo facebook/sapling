@@ -8,7 +8,7 @@ echo d1/a1 > d1/d11/a1
 echo d1/b > d1/b
 echo d2/b > d2/b
 hg add d1/a d1/b d1/ba d1/d11/a1 d2/b
-hg commit -m "1" -d "0 0"
+hg commit -m "1" -d "1000000 0"
 
 echo "# rename a single file"
 hg rename d1/d11/a1 d2/c

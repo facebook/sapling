@@ -1,10 +1,10 @@
 255
 abort: Connection refused
 ls: copy: No such file or directory
-changeset:   0:61c9426e69fe
+changeset:   0:53e17d176ae6
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     test
 
 requesting all changes

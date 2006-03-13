@@ -2,37 +2,37 @@ A b
 b
  b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 we should see two history entries
-changeset:   1:3b5b84850bbed12e8ff8c1b87b32dc93c59ae6d8
+changeset:   1:386a3cc01532710ca78aed9a54fa2f459c04f29c
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 files:       b
 description:
 2
 
 
-changeset:   0:c19d34741b0a4ced8e4ba74bb834597d5193851e
+changeset:   0:33aaa84a386bd609094aeb21a97c09436c482ef1
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 files:       a
 description:
 1
 
 
 we should see one log entry for a
-changeset:   0:c19d34741b0a
+changeset:   0:33aaa84a386b
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 this should show a revision linked to changeset 0
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       3      0       0 b789fdd96dc2 000000000000 000000000000
 we should see one log entry for b
-changeset:   1:3b5b84850bbe
+changeset:   1:386a3cc01532
 tag:         tip
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
 this should show a revision linked to changeset 1

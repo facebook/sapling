@@ -39,33 +39,33 @@ three
      2        16      15      2       2 8fe46a3eb557 01365c4cca56 000000000000
      3        31      27      2       3 fc3148072371 7b013192566a 8fe46a3eb557
      4        58      25      4       4 d40249267ae3 8fe46a3eb557 000000000000
-changeset:   4:40d11a4173a8
+changeset:   4:a070d41e8360
 tag:         tip
-parent:      2:96b70246a118
+parent:      2:faaea63e63a9
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     two -> two-point-one
 
-changeset:   3:50c3a7e29886
-parent:      1:d1e159716d41
-parent:      2:96b70246a118
+changeset:   3:451c744aabcc
+parent:      1:e409be6afcc0
+parent:      2:faaea63e63a9
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     Merge 1
 
-changeset:   2:96b70246a118
-parent:      0:b1832b9d912a
+changeset:   2:faaea63e63a9
+parent:      0:095c92b91f1a
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     Numbers as words
 
-changeset:   1:d1e159716d41
+changeset:   1:e409be6afcc0
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2 -> 2.5
 
-changeset:   0:b1832b9d912a
+changeset:   0:095c92b91f1a
 user:        test
-date:        Thu Jan  1 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     Initial
 

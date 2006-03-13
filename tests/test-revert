@@ -4,7 +4,7 @@ hg init
 echo 123 > a
 echo 123 > c
 hg add a c
-hg commit -m "first" -d "0 0" a c
+hg commit -m "first" -d "1000000 0" a c
 echo 123 > b
 echo %% should show b unknown
 hg status
