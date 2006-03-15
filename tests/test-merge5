@@ -12,10 +12,9 @@ hg commit -m"comment #1" -d "1000000 0"
 hg update 0
 rm b
 hg commit -A -m"comment #2" -d "1000000 0"
-# in theory, we shouldn't need the "yes k" below, but it prevents
+# in theory, we shouldn't need the "-y" below, but it prevents
 # this test from hanging when "hg update" erroneously prompts the
 # user for "keep or delete"
-yes k | hg update 1
-# we exit with 0 to avoid the unavoidable SIGPIPE from above causing
-# us to fail this test
+hg update -y 1
+
 exit 0
