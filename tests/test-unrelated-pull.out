@@ -1,6 +1,9 @@
 pulling from ../a
 searching for changes
-warning: pulling from an unrelated repository!
+abort: repository is unrelated
+pulling from ../a
+searching for changes
+warning: repository is unrelated
 adding changesets
 adding manifests
 adding file changes

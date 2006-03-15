@@ -16,4 +16,5 @@ hg add b
 hg commit -m "b" -u b -d "1000000 0"
 
 hg pull ../a
+hg pull -f ../a
 hg heads
