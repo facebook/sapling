@@ -8,7 +8,7 @@
 import re
 from demandload import demandload
 from i18n import gettext as _
-demandload(globals(), "cStringIO cgi os time urllib util")
+demandload(globals(), "cStringIO cgi sys os time urllib util")
 
 esctable = {
     '\\': '\\',
@@ -235,3 +235,7 @@ def templatepath(name=None):
         p = os.path.join(os.path.dirname(__file__), *fl)
         if (name and os.path.exists(p)) or os.path.isdir(p):
             return os.path.normpath(p)
+    else:
+        # executable version (py2exe) doesn't support __file__
+        if hasattr(sys, 'frozen'):
+            return os.path.join(sys.prefix, "templates")
