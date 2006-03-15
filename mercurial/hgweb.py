@@ -797,11 +797,11 @@ class hgweb(object):
                              or uri.strip('/') or self.repo.root)
 
         self.t = templater.templater(m, templater.common_filters,
-                                     {"url": url,
-                                      "repo": self.reponame,
-                                      "header": header,
-                                      "footer": footer,
-                                      })
+                                     defaults={"url": url,
+                                               "repo": self.reponame,
+                                               "header": header,
+                                               "footer": footer,
+                                               })
 
         if not req.form.has_key('cmd'):
             req.form['cmd'] = [self.t.cache['default'],]
@@ -1030,7 +1030,8 @@ class hgwebdir(object):
 
         m = os.path.join(templater.templatepath(), "map")
         tmpl = templater.templater(m, templater.common_filters,
-                                   {"header": header, "footer": footer})
+                                   defaults={"header": header,
+                                             "footer": footer})
 
         def entries(**map):
             parity = 0
