@@ -506,17 +506,18 @@ if os.name == 'nt':
 
     sys.stdout = winstdout(sys.stdout)
 
-    try:
-        import win32api, win32process
-        filename = win32process.GetModuleFileNameEx(win32api.GetCurrentProcess(), 0)
-        systemrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
+    def os_rcpath():
+        '''return default os-specific hgrc search path'''
+        try:
+            import win32api, win32process
+            proc = win32api.GetCurrentProcess()
+            filename = win32process.GetModuleFileNameEx(proc, 0)
+            systemrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
+        except ImportError:
+            systemrc = r'c:\mercurial\mercurial.ini'
 
-    except ImportError:
-        systemrc = r'c:\mercurial\mercurial.ini'
-        pass
-
-    rcpath = (systemrc,
-              os.path.join(os.path.expanduser('~'), 'mercurial.ini'))
+        return [systemrc,
+                os.path.join(os.path.expanduser('~'), 'mercurial.ini')]
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
@@ -591,12 +592,17 @@ else:
                         if f.endswith(".rc")])
         except OSError, inst: pass
         return rcs
-    rcpath = []
-    if len(sys.argv) > 0:
-        rcpath.extend(rcfiles(os.path.dirname(sys.argv[0]) + '/../etc/mercurial'))
-    rcpath.extend(rcfiles('/etc/mercurial'))
-    rcpath.append(os.path.expanduser('~/.hgrc'))
-    rcpath = [os.path.normpath(f) for f in rcpath]
+
+    def os_rcpath():
+        '''return default os-specific hgrc search path'''
+        path = []
+        if len(sys.argv) > 0:
+            path.extend(rcfiles(os.path.dirname(sys.argv[0]) +
+                                  '/../etc/mercurial'))
+        path.extend(rcfiles('/etc/mercurial'))
+        path.append(os.path.expanduser('~/.hgrc'))
+        path = [os.path.normpath(f) for f in path]
+        return path
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
@@ -768,3 +774,29 @@ def walkrepos(path):
                 yield root
                 dirs[:] = []
                 break
+
+_rcpath = None
+
+def rcpath():
+    '''return hgrc search path. if env var HGRCPATH is set, use it.
+    for each item in path, if directory, use files ending in .rc,
+    else use item.
+    make HGRCPATH empty to only look in .hg/hgrc of current repo.
+    if no HGRCPATH, use default os-specific path.'''
+    global _rcpath
+    if _rcpath is None:
+        if 'HGRCPATH' in os.environ:
+            _rcpath = []
+            for p in os.environ['HGRCPATH'].split(os.pathsep):
+                if not p: continue
+                try:
+                    for f in os.listdir(p):
+                        if f.endswith('.rc'):
+                            _rcpath.append(os.path.join(p, f))
+                    continue
+                except:
+                    pass
+                _rcpath.append(p)
+        else:
+            _rcpath = os_rcpath()
+    return _rcpath

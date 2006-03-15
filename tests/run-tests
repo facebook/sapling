@@ -18,6 +18,7 @@ TZ=GMT; export TZ
 HGEDITOR=true; export HGEDITOR
 HGMERGE=true; export HGMERGE
 HGUSER="test"; export HGUSER
+HGRCPATH=""; export HGRCPATH
 
 ECHO_N="echo -n"
 [ -x /usr/ucb/echo ] && ECHO_N="/usr/ucb/echo -n"

@@ -146,6 +146,16 @@ HGMERGE::
 
     (deprecated, use .hgrc)
 
+HGRCPATH::
+    A list of files or directories to search for hgrc files.  Item
+    separator is ":" on Unix, ";" on Windows.  If HGRCPATH is not set,
+    platform default search path is used.  If empty, only .hg/hgrc of
+    current repository is read.
+
+    For each element in path, if a directory, all entries in directory
+    ending with ".rc" are added to path.  Else, element itself is
+    added to path.
+
 HGUSER::
     This is the string used for the author of a commit.
 

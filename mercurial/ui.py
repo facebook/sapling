@@ -18,7 +18,7 @@ class ui(object):
             # this is the parent of all ui children
             self.parentui = None
             self.cdata = ConfigParser.SafeConfigParser()
-            self.readconfig(util.rcpath)
+            self.readconfig(util.rcpath())
 
             self.quiet = self.configbool("ui", "quiet")
             self.verbose = self.configbool("ui", "verbose")
