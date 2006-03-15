@@ -134,10 +134,10 @@ def catcommit(repo, n, prefix, changes=None):
     if lines[-1].startswith('committer:'):
         committer = lines[-1].split(': ')[1].rstrip()
     else:
-        committer = "%s %s %s" % (changes[1], date, date_ar[1])
+        committer = changes[1]
 
     print "author %s %s %s" % (changes[1], date, date_ar[1])
-    print "committer %s" % (committer)
+    print "committer %s %s %s" % (committer, date, date_ar[1])
     print ""
     if prefix != "":
         print "%s%s" % (prefix, changes[4].replace('\n', nlprefix).strip())
