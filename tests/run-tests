@@ -113,7 +113,7 @@ run_one() {
 
 # list of prerequisite programs
 # stuff from coreutils (cat, rm, etc) are not tested
-prereqs="python merge diff grep unzip gunzip sed"
+prereqs="python merge diff grep unzip gunzip bunzip2 sed"
 missing=''
 for pre in $prereqs ; do
     if type $pre > /dev/null 2>&1 ; then
