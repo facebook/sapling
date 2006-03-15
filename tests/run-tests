@@ -20,8 +20,14 @@ HGMERGE=true; export HGMERGE
 HGUSER="test"; export HGUSER
 HGRCPATH=""; export HGRCPATH
 
-ECHO_N="echo -n"
-[ -x /usr/ucb/echo ] && ECHO_N="/usr/ucb/echo -n"
+if [ `echo -n HG` == "-n HG" ]
+then
+    ECHO_N=echo
+    NNL="\c"
+else
+    ECHO_N="echo -n"
+    NNL=
+fi
 
 umask 022
 
@@ -139,7 +145,7 @@ if [ -z "$TESTS" ] ; then
 fi
 
 for f in $TESTS ; do
-    $ECHO_N "."
+    $ECHO_N ".${NNL}"
     run_one $f || failed=`expr $failed + 1`
     tests=`expr $tests + 1`
 done
