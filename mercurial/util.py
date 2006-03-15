@@ -789,14 +789,12 @@ def rcpath():
             _rcpath = []
             for p in os.environ['HGRCPATH'].split(os.pathsep):
                 if not p: continue
-                try:
+                if os.path.isdir(p):
                     for f in os.listdir(p):
                         if f.endswith('.rc'):
                             _rcpath.append(os.path.join(p, f))
-                    continue
-                except:
-                    pass
-                _rcpath.append(p)
+                else:
+                    _rcpath.append(p)
         else:
             _rcpath = os_rcpath()
     return _rcpath
