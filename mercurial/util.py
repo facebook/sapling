@@ -742,7 +742,7 @@ def makedate():
         tz = time.timezone
     return time.mktime(lt), tz
 
-def datestr(date=None, format='%c'):
+def datestr(date=None, format='%a %b %d %H:%M:%S %Y'):
     """represent a (unixtime, offset) tuple as a localized time.
     unixtime is seconds since the epoch, and offset is the time zone's
     number of seconds away from UTC."""
