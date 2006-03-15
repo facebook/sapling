@@ -862,7 +862,7 @@ def bundle(ui, repo, fname, dest="default-push", **opts):
     """
     dest = ui.expandpath(dest)
     other = hg.repository(ui, dest)
-    o = repo.findoutgoing(other)
+    o = repo.findoutgoing(other, force=opts['force'])
     cg = repo.changegroup(o, 'bundle')
     write_bundle(cg, fname)
 
@@ -1766,7 +1766,7 @@ def incoming(ui, repo, source="default", **opts):
     """
     source = ui.expandpath(source)
     other = hg.repository(ui, source)
-    incoming = repo.findincoming(other)
+    incoming = repo.findincoming(other, force=opts["force"])
     if not incoming:
         return
 
@@ -1978,7 +1978,7 @@ def outgoing(ui, repo, dest="default-push", **opts):
     """
     dest = ui.expandpath(dest)
     other = hg.repository(ui, dest)
-    o = repo.findoutgoing(other)
+    o = repo.findoutgoing(other, force=opts['force'])
     o = repo.changelog.nodesbetween(o)[0]
     if opts['newest_first']:
         o.reverse()
@@ -2066,7 +2066,7 @@ def pull(ui, repo, source="default", **opts):
         raise util.Abort(_("pull -r doesn't work for remote repositories yet"))
     elif opts['rev']:
         revs = [other.lookup(rev) for rev in opts['rev']]
-    r = repo.pull(other, heads=revs)
+    r = repo.pull(other, heads=revs, force=opts['force'])
     if not r:
         if opts['update']:
             return update(ui, repo)
@@ -2646,7 +2646,8 @@ table = {
          _('hg annotate [-r REV] [-a] [-u] [-d] [-n] [-c] FILE...')),
     "bundle":
         (bundle,
-         [],
+         [('f', 'force', None,
+           _('run even when remote repository is unrelated'))],
          _('hg bundle FILE DEST')),
     "cat":
         (cat,
@@ -2757,6 +2758,8 @@ table = {
          _('hg import [-p NUM] [-b BASE] [-f] PATCH...')),
     "incoming|in": (incoming,
          [('M', 'no-merges', None, _('do not show merges')),
+          ('f', 'force', None,
+           _('run even when remote repository is unrelated')),
           ('', 'style', '', _('display using template map file')),
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'bundle', '', _('file to store the bundles into')),
@@ -2791,6 +2794,8 @@ table = {
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "outgoing|out": (outgoing,
          [('M', 'no-merges', None, _('do not show merges')),
+          ('f', 'force', None,
+           _('run even when remote repository is unrelated')),
           ('p', 'patch', None, _('show patch')),
           ('', 'style', '', _('display using template map file')),
           ('n', 'newest-first', None, _('show newest record first')),
@@ -2808,6 +2813,8 @@ table = {
          [('u', 'update', None,
            _('update the working directory to tip after pull')),
           ('e', 'ssh', '', _('specify ssh command to use')),
+          ('f', 'force', None,
+           _('run even when remote repository is unrelated')),
           ('r', 'rev', [], _('a specific revision you would like to pull')),
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],

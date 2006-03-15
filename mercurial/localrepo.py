@@ -785,7 +785,7 @@ class localrepository(object):
 
         return r
 
-    def findincoming(self, remote, base=None, heads=None):
+    def findincoming(self, remote, base=None, heads=None, force=False):
         m = self.changelog.nodemap
         search = []
         fetch = {}
@@ -898,7 +898,10 @@ class localrepository(object):
                 raise repo.RepoError(_("already have changeset ") + short(f[:4]))
 
         if base.keys() == [nullid]:
-            self.ui.warn(_("warning: pulling from an unrelated repository!\n"))
+            if force:
+                self.ui.warn(_("warning: repository is unrelated\n"))
+            else:
+                raise util.Abort(_("repository is unrelated"))
 
         self.ui.note(_("found new changesets starting at ") +
                      " ".join([short(f) for f in fetch]) + "\n")
@@ -907,10 +910,10 @@ class localrepository(object):
 
         return fetch.keys()
 
-    def findoutgoing(self, remote, base=None, heads=None):
+    def findoutgoing(self, remote, base=None, heads=None, force=False):
         if base == None:
             base = {}
-            self.findincoming(remote, base, heads)
+            self.findincoming(remote, base, heads, force=force)
 
         self.ui.debug(_("common changesets up to ")
                       + " ".join(map(short, base.keys())) + "\n")
@@ -937,7 +940,7 @@ class localrepository(object):
         # this is the set of all roots we have to push
         return subset
 
-    def pull(self, remote, heads=None):
+    def pull(self, remote, heads=None, force=False):
         l = self.lock()
 
         # if we have an empty repo, fetch everything
@@ -945,7 +948,7 @@ class localrepository(object):
             self.ui.status(_("requesting all changes\n"))
             fetch = [nullid]
         else:
-            fetch = self.findincoming(remote)
+            fetch = self.findincoming(remote, force=force)
 
         if not fetch:
             self.ui.status(_("no changes found\n"))
@@ -962,7 +965,7 @@ class localrepository(object):
 
         base = {}
         heads = remote.heads()
-        inc = self.findincoming(remote, base, heads)
+        inc = self.findincoming(remote, base, heads, force=force)
         if not force and inc:
             self.ui.warn(_("abort: unsynced remote changes!\n"))
             self.ui.status(_("(did you forget to sync? use push -f to force)\n"))
