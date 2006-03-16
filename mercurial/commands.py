@@ -1765,6 +1765,11 @@ def incoming(ui, repo, source="default", **opts):
     twice if the incoming is followed by a pull.
     """
     source = ui.expandpath(source)
+    if opts['ssh']:
+        ui.setconfig("ui", "ssh", opts['ssh'])
+    if opts['remotecmd']:
+        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+
     other = hg.repository(ui, source)
     incoming = repo.findincoming(other, force=opts["force"])
     if not incoming:
@@ -1977,6 +1982,11 @@ def outgoing(ui, repo, dest="default-push", **opts):
     See pull for valid source format details.
     """
     dest = ui.expandpath(dest)
+    if opts['ssh']:
+        ui.setconfig("ui", "ssh", opts['ssh'])
+    if opts['remotecmd']:
+        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other, force=opts['force'])
     o = repo.changelog.nodesbetween(o)[0]
@@ -2764,7 +2774,10 @@ table = {
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'bundle', '', _('file to store the bundles into')),
           ('p', 'patch', None, _('show patch')),
-          ('', 'template', '', _('display with template'))],
+          ('', 'template', '', _('display with template')),
+          ('e', 'ssh', '', _('specify ssh command to use')),
+          ('', 'remotecmd', '',
+           _('specify hg command to run on the remote side'))],
          _('hg incoming [-p] [-n] [-M] [--bundle FILENAME] [SOURCE]')),
     "^init": (init, [], _('hg init [DEST]')),
     "locate":
@@ -2799,7 +2812,10 @@ table = {
           ('p', 'patch', None, _('show patch')),
           ('', 'style', '', _('display using template map file')),
           ('n', 'newest-first', None, _('show newest record first')),
-          ('', 'template', '', _('display with template'))],
+          ('', 'template', '', _('display with template')),
+          ('e', 'ssh', '', _('specify ssh command to use')),
+          ('', 'remotecmd', '',
+           _('specify hg command to run on the remote side'))],
          _('hg outgoing [-M] [-p] [-n] [DEST]')),
     "^parents":
         (parents,
