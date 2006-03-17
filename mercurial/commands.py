@@ -2425,11 +2425,11 @@ def status(ui, repo, *pats, **opts):
         [util.pathto(cwd, x) for x in n]
         for n in repo.changes(files=files, match=matchfn)]
 
-    changetypes = [(_('modified'), 'M', modified),
-                   (_('added'), 'A', added),
-                   (_('removed'), 'R', removed),
-                   (_('deleted'), '!', deleted),
-                   (_('unknown'), '?', unknown)]
+    changetypes = [('modified', 'M', modified),
+                   ('added', 'A', added),
+                   ('removed', 'R', removed),
+                   ('deleted', '!', deleted),
+                   ('unknown', '?', unknown)]
 
     end = opts['print0'] and '\0' or '\n'
 
@@ -2438,7 +2438,7 @@ def status(ui, repo, *pats, **opts):
         if opts['no_status']:
             format = "%%s%s" % end
         else:
-            format = "%s %%s%s" % (char, end);
+            format = "%s %%s%s" % (char, end)
 
         for f in changes:
             ui.write(format % f)
