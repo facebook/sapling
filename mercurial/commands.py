@@ -297,8 +297,10 @@ def write_bundle(cg, filename, compress=True, fh=None):
             fh.write(z.compress(chunk))
         fh.write(z.flush())
     except:
+        fh.close()
         os.unlink(filename)
         raise
+    fh.close()
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False, opts={}):
@@ -1790,7 +1792,6 @@ def incoming(ui, repo, source="default", **opts):
 
         cg = other.changegroup(incoming, "incoming")
         write_bundle(cg, fname, compress=other.local(), fh=f)
-        f.close()
         if not other.local():
             # use a bundlerepo
             other = bundlerepo.bundlerepository(ui, repo.root, fname)
