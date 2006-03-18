@@ -274,20 +274,32 @@ def make_file(repo, r, pat, node=None,
                               pathname),
                 mode)
 
-def write_bundle(cg, filename, compress=True, fh=None):
-    """Write a bundle file, optionally without bz2 compression.
+def write_bundle(cg, filename=None, compress=True):
+    """Write a bundle file and return its filename.
 
-    A file handle (fh) may be passed and is guaranteed to be closed.
+    Existing files will not be overwritten.
+    If no filename is specified, a temporary file is created.
+    bz2 compression can be turned off.
+    The bundle file will be deleted in case of errors.
     """
-    if fh is None:
-        fh = open(filename, "wb")
-
     class nocompress(object):
         def compress(self, x):
             return x
         def flush(self):
             return ""
+
+    fh = None
+    cleanup = None
     try:
+        if filename:
+            if os.path.exists(filename):
+                raise util.Abort(_("file '%s' already exists"), filename)
+            fh = open(filename, "wb")
+        else:
+            fd, filename = tempfile.mkstemp(suffix=".hg", prefix="hg-bundle-")
+            fh = os.fdopen(fd, "wb")
+        cleanup = filename
+
         if compress:
             fh.write("HG10")
             z = bz2.BZ2Compressor(9)
@@ -300,11 +312,13 @@ def write_bundle(cg, filename, compress=True, fh=None):
                 break
             fh.write(z.compress(chunk))
         fh.write(z.flush())
-    except:
-        fh.close()
-        os.unlink(filename)
-        raise
-    fh.close()
+        cleanup = None
+        return filename
+    finally:
+        if fh is not None:
+            fh.close()
+        if cleanup is not None:
+            os.unlink(cleanup)
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False, opts={}):
@@ -1782,41 +1796,37 @@ def incoming(ui, repo, source="default", **opts):
         return
 
     cleanup = None
-    fname = opts["bundle"]
-    if fname:
-        # create a bundle (uncompressed if other repo is not local)
-        f = open(fname, "wb")
-    elif not other.local():
-        # create an uncompressed temporary bundle
-        fd, fname = tempfile.mkstemp(suffix=".hg", prefix="hg-incoming-")
-        f = os.fdopen(fd, "wb")
-        cleanup = fname
+    try:
+        fname = opts["bundle"]
+        if fname or not other.local():
+            # create a bundle (uncompressed if other repo is not local)
+            cg = other.changegroup(incoming, "incoming")
+            fname = cleanup = write_bundle(cg, fname, compress=other.local())
+            # keep written bundle?
+            if opts["bundle"]:
+                cleanup = None
+            if not other.local():
+                # use the created uncompressed bundlerepo
+                other = bundlerepo.bundlerepository(ui, repo.root, fname)
 
-    if fname:
-        cg = other.changegroup(incoming, "incoming")
-        write_bundle(cg, fname, compress=other.local(), fh=f)
-        # write_bundle closed f for us.
-        if not other.local():
-            # use the created uncompressed bundlerepo
-            other = bundlerepo.bundlerepository(ui, repo.root, fname)
-
-    o = other.changelog.nodesbetween(incoming)[0]
-    if opts['newest_first']:
-        o.reverse()
-    displayer = show_changeset(ui, other, opts)
-    for n in o:
-        parents = [p for p in other.changelog.parents(n) if p != nullid]
-        if opts['no_merges'] and len(parents) == 2:
-            continue
-        displayer.show(changenode=n)
-        if opts['patch']:
-            prev = (parents and parents[0]) or nullid
-            dodiff(ui, ui, other, prev, n)
-            ui.write("\n")
-
-    if cleanup:
-        other.close()                   # explicit close for unlink
-        os.unlink(cleanup)
+        o = other.changelog.nodesbetween(incoming)[0]
+        if opts['newest_first']:
+            o.reverse()
+        displayer = show_changeset(ui, other, opts)
+        for n in o:
+            parents = [p for p in other.changelog.parents(n) if p != nullid]
+            if opts['no_merges'] and len(parents) == 2:
+                continue
+            displayer.show(changenode=n)
+            if opts['patch']:
+                prev = (parents and parents[0]) or nullid
+                dodiff(ui, ui, other, prev, n)
+                ui.write("\n")
+    finally:
+        if hasattr(other, 'close'):
+            other.close()
+        if cleanup:
+            os.unlink(cleanup)
 
 def init(ui, dest="."):
     """create a new repository in the given directory
