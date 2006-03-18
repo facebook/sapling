@@ -275,6 +275,10 @@ def make_file(repo, r, pat, node=None,
                 mode)
 
 def write_bundle(cg, filename, compress=True, fh=None):
+    """Write a bundle file, optionally without bz2 compression.
+
+    A file handle (fh) may be passed and is guaranteed to be closed.
+    """
     if fh is None:
         fh = open(filename, "wb")
 
@@ -1792,6 +1796,7 @@ def incoming(ui, repo, source="default", **opts):
 
         cg = other.changegroup(incoming, "incoming")
         write_bundle(cg, fname, compress=other.local(), fh=f)
+        # write_bundle closed f for us.
         if not other.local():
             # use a bundlerepo
             other = bundlerepo.bundlerepository(ui, repo.root, fname)
