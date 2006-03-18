@@ -1782,23 +1782,22 @@ def incoming(ui, repo, source="default", **opts):
         return
 
     cleanup = None
-    if not other.local() or opts["bundle"]:
-        # create an uncompressed bundle
-        if not opts["bundle"]:
-            # create a temporary bundle
-            fd, fname = tempfile.mkstemp(suffix=".hg",
-                                         prefix="tmp-hg-incoming")
-            f = os.fdopen(fd, "wb")
-            cleanup = fname
-        else:
-            fname = opts["bundle"]
-            f = open(fname, "wb")
+    fname = opts["bundle"]
+    if fname:
+        # create a bundle (uncompressed if other repo is not local)
+        f = open(fname, "wb")
+    elif not other.local():
+        # create an uncompressed temporary bundle
+        fd, fname = tempfile.mkstemp(suffix=".hg", prefix="hg-incoming-")
+        f = os.fdopen(fd, "wb")
+        cleanup = fname
 
+    if fname:
         cg = other.changegroup(incoming, "incoming")
         write_bundle(cg, fname, compress=other.local(), fh=f)
         # write_bundle closed f for us.
         if not other.local():
-            # use a bundlerepo
+            # use the created uncompressed bundlerepo
             other = bundlerepo.bundlerepository(ui, repo.root, fname)
 
     o = other.changelog.nodesbetween(incoming)[0]
