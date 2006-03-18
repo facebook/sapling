@@ -65,7 +65,7 @@ class templater(object):
         filters is dict of functions. each transforms a value into another.
         defaults is dict of default map definitions.'''
         self.mapfile = mapfile or 'template'
-        self.cache = cache
+        self.cache = cache.copy()
         self.map = {}
         self.base = (mapfile and os.path.dirname(mapfile)) or ''
         self.filters = filters
