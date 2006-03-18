@@ -1811,6 +1811,7 @@ def incoming(ui, repo, source="default", **opts):
             ui.write("\n")
 
     if cleanup:
+        os.close(fd)
         os.unlink(cleanup)
 
 def init(ui, dest="."):
