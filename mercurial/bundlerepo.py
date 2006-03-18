@@ -206,3 +206,6 @@ class bundlerepository(localrepo.localrepository):
         else:
             return filelog.filelog(self.opener, f)
 
+    def close(self):
+        """Close assigned bundle file immediately."""
+        self.bundlefile.close()
