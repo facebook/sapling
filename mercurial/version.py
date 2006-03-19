@@ -28,8 +28,15 @@ def get_version():
 
 def write_version(version):
     """Overwrite version file."""
-    filename = os.path.join(os.path.dirname(__file__), '__version__.py')
-    f = open(filename, 'w')
+    if version == get_version():
+        return
+    directory = os.path.dirname(__file__)
+    for suffix in ['py', 'pyc', 'pyo']:
+        try:
+            os.unlink(os.path.join(directory, '__version__.%s' % suffix))
+        except OSError:
+            pass
+    f = open(os.path.join(directory, '__version__.py'), 'w')
     f.write("# This file is auto-generated.\n")
     f.write("version = %r\n" % version)
     f.close()
