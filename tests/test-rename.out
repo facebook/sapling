@@ -254,3 +254,19 @@ A d1/bc
 R d1/b
 # idempotent renames (d1/b -> d1/bb followed by d1/bb -> d1/b)
 M d1/b
+# check illegal path components
+abort: path contains illegal component: .hg/foo
+
+abort: ../foo not under root
+abort: path contains illegal component: .hg/foo
+
+! d1/d11/a1
+abort: path contains illegal component: .hg/a1
+
+abort: ../a1 not under root
+abort: path contains illegal component: .hg/a1
+
+! d1/d11/a1
+abort: path contains illegal component: .hg/foo
+
+abort: ../../../foo not under root

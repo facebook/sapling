@@ -179,3 +179,33 @@ hg rename d1/bb d1/b
 hg status
 hg debugstate | grep copy
 hg update -C
+
+echo "# check illegal path components"
+
+hg rename d1/d11/a1 .hg/foo
+hg status
+hg rename d1/d11/a1 ../foo
+hg status
+
+mv d1/d11/a1 .hg/foo
+hg rename --after d1/d11/a1 .hg/foo
+hg status
+hg update -C
+rm .hg/foo
+
+hg rename d1/d11/a1 .hg
+hg status
+hg rename d1/d11/a1 ..
+hg status
+
+mv d1/d11/a1 .hg
+hg rename --after d1/d11/a1 .hg
+hg status
+hg update -C
+rm .hg/a1
+
+(cd d1/d11; hg rename ../../d2/b ../../.hg/foo)
+hg status
+(cd d1/d11; hg rename ../../d2/b ../../../foo)
+hg status
+

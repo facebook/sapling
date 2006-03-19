@@ -185,7 +185,9 @@ def canonpath(root, cwd, myname):
         name = os.path.join(root, cwd, name)
     name = os.path.normpath(name)
     if name.startswith(rootsep):
-        return pconvert(name[len(rootsep):])
+        name = name[len(rootsep):]
+        audit_path(name)
+        return pconvert(name)
     elif name == root:
         return ''
     else:

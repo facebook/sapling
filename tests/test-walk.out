@@ -50,6 +50,9 @@ f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
 f  mammals/skunk                   skunk
+.hg: No such file or directory
+abort: path contains illegal component: .hg
+
 f  beans/black     beans/black
 f  beans/borlotti  beans/borlotti
 f  beans/kidney    beans/kidney
@@ -65,6 +68,13 @@ f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
 f  mammals/skunk                   mammals/skunk
 abort: .. not under root
 abort: beans/../.. not under root
+abort: path contains illegal component: .hg
+
+abort: path contains illegal component: .hg
+
+abort: path contains illegal component: .hg/data
+
+beans/.hg: No such file or directory
 f  fennel      fennel
 f  fenugreek   fenugreek
 f  fiddlehead  fiddlehead
