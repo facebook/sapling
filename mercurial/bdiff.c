@@ -74,7 +74,7 @@ int splitlines(const char *a, int len, struct line **lr)
 		if (*p == '\n' || p == a + len - 1)
 			i++;
 
-	*lr = l = malloc(sizeof(struct line) * i);
+	*lr = l = (struct line *)malloc(sizeof(struct line) * i);
 	if (!l)
 		return -1;
 
@@ -113,7 +113,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 	while (buckets < bn + 1)
 		buckets *= 2;
 
-	h = malloc(buckets * sizeof(struct pos));
+	h = (struct pos *)malloc(buckets * sizeof(struct pos));
 	buckets = buckets - 1;
 	if (!h)
 		return 0;
@@ -237,9 +237,10 @@ static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 
 	/* allocate and fill arrays */
 	t = equatelines(a, an, b, bn);
-	pos = calloc(bn, sizeof(struct pos));
+	pos = (struct pos *)calloc(bn, sizeof(struct pos));
 	/* we can't have more matches than lines in the shorter file */
-	l.head = l.base = malloc(sizeof(struct hunk) * ((an<bn ? an:bn) + 1));
+	l.head = l.base = (struct hunk *)malloc(sizeof(struct hunk) *
+	                                        ((an<bn ? an:bn) + 1));
 
 	if (pos && l.base && t) {
 		/* generate the matching block list */

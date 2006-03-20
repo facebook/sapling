@@ -58,9 +58,9 @@ static struct flist *lalloc(int size)
 {
 	struct flist *a = NULL;
 
-	a = malloc(sizeof(struct flist));
+	a = (struct flist *)malloc(sizeof(struct flist));
 	if (a) {
-		a->base = malloc(sizeof(struct frag) * size);
+		a->base = (struct frag *)malloc(sizeof(struct frag) * size);
 		if (!a->base) {
 			free(a);
 			a = NULL;
