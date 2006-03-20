@@ -1777,12 +1777,14 @@ def import_(ui, repo, patch1, *patches, **opts):
 def incoming(ui, repo, source="default", **opts):
     """show new changesets found in source
 
-    Show new changesets found in the specified repo or the default
-    pull repo. These are the changesets that would be pulled if a pull
+    Show new changesets found in the specified path/URL or the default
+    pull location. These are the changesets that would be pulled if a pull
     was requested.
 
     For remote repository, using --bundle avoids downloading the changesets
     twice if the incoming is followed by a pull.
+
+    See pull for valid source format details.
     """
     source = ui.expandpath(source)
     if opts['ssh']:
@@ -1991,11 +1993,11 @@ def manifest(ui, repo, rev=None):
 def outgoing(ui, repo, dest="default-push", **opts):
     """show changesets not found in destination
 
-    Show changesets not found in the specified destination repo or the
-    default push repo. These are the changesets that would be pushed
+    Show changesets not found in the specified destination repository or
+    the default push location. These are the changesets that would be pushed
     if a push was requested.
 
-    See pull for valid source format details.
+    See pull for valid destination format details.
     """
     dest = ui.expandpath(dest)
     if opts['ssh']:
@@ -2073,10 +2075,19 @@ def pull(ui, repo, source="default", **opts):
       https://[user@]host[:port][/path]
       ssh://[user@]host[:port][/path]
 
-    SSH requires an accessible shell account on the destination machine
-    and a copy of hg in the remote path.  With SSH, paths are relative
-    to the remote user's home directory by default; use two slashes at
-    the start of a path to specify it as relative to the filesystem root.
+    Some notes about using SSH with Mercurial:
+    - SSH requires an accessible shell account on the destination machine
+      and a copy of hg in the remote path or specified with as remotecmd.
+    - /path is relative to the remote user's home directory by default.
+      Use two slashes at the start of a path to specify an absolute path.
+    - Mercurial doesn't use its own compression via SSH; the right thing
+      to do is to configure it in your ~/.ssh/ssh_config, e.g.:
+        Host *.mylocalnetwork.example.com
+          Compression off
+        Host *
+          Compression on
+      Alternatively specify "ssh -C" as your ssh command in your hgrc or
+      with the --ssh command line option.
     """
     source = ui.expandpath(source)
     ui.status(_('pulling from %s\n') % (source))
@@ -2120,8 +2131,8 @@ def push(ui, repo, dest="default-push", **opts):
       local/filesystem/path
       ssh://[user@]host[:port][/path]
 
-    SSH requires an accessible shell account on the destination
-    machine and a copy of hg in the remote path.
+    Look at the help text for the pull command for important details
+    about ssh:// URLs.
     """
     dest = ui.expandpath(dest)
     ui.status('pushing to %s\n' % (dest))
