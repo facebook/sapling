@@ -12,6 +12,7 @@ demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "fnmatch hgweb mdiff random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
+demandload(globals(), "changegroup")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -306,11 +307,17 @@ def write_bundle(cg, filename=None, compress=True):
         else:
             fh.write("HG10UN")
             z = nocompress()
-        while 1:
-            chunk = cg.read(4096)
-            if not chunk:
-                break
-            fh.write(z.compress(chunk))
+        # parse the changegroup data, otherwise we will block
+        # in case of sshrepo because we don't know the end of the stream
+
+        # an empty chunkiter is the end of the changegroup
+        empty = False
+        while not empty:
+            empty = True
+            for chunk in changegroup.chunkiter(cg):
+                empty = False
+                fh.write(z.compress(changegroup.genchunk(chunk)))
+            fh.write(z.compress(changegroup.closechunk()))
         fh.write(z.flush())
         cleanup = None
         return filename

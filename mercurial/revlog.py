@@ -13,7 +13,8 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "binascii errno heapq mdiff os sha struct zlib")
+demandload(globals(), "binascii changegroup errno heapq mdiff os")
+demandload(globals(), "sha struct zlib")
 
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
@@ -708,7 +709,7 @@ class revlog(object):
 
         # if we don't have any revisions touched by these changesets, bail
         if not revs:
-            yield struct.pack(">l", 0)
+            yield changegroup.closechunk()
             return
 
         # add the parent of the first rev
@@ -726,12 +727,9 @@ class revlog(object):
             d = self.revdiff(a, b)
             p = self.parents(nb)
             meta = nb + p[0] + p[1] + lookup(nb)
-            l = struct.pack(">l", len(meta) + len(d) + 4)
-            yield l
-            yield meta
-            yield d
+            yield changegroup.genchunk("%s%s" % (meta, d))
 
-        yield struct.pack(">l", 0)
+        yield changegroup.closechunk()
 
     def addgroup(self, revs, linkmapper, transaction, unique=0):
         """

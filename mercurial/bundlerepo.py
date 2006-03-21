@@ -13,24 +13,9 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "util os struct")
+demandload(globals(), "changegroup util os struct")
 
 import localrepo, changelog, manifest, filelog, revlog
-
-def getchunk(source):
-    """get a chunk from a group"""
-    d = source.read(4)
-    if not d:
-        return ""
-    l = struct.unpack(">l", d)[0]
-    if l <= 4:
-        return ""
-    d = source.read(l - 4)
-    if len(d) < l - 4:
-        raise util.Abort(_("premature EOF reading chunk"
-                           " (got %d bytes, expected %d)")
-                          % (len(d), l - 4))
-    return d
 
 class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, datafile, bundlefile,
@@ -46,16 +31,13 @@ class bundlerevlog(revlog.revlog):
         #
         revlog.revlog.__init__(self, opener, indexfile, datafile)
         self.bundlefile = bundlefile
-        def genchunk():
-            while 1:
+        def chunkpositer():
+            for chunk in changegroup.chunkiter(bundlefile):
                 pos = bundlefile.tell()
-                chunk = getchunk(bundlefile)
-                if not chunk:
-                    break
-                yield chunk, pos + 4 # XXX struct.calcsize(">l") == 4
+                yield chunk, pos - len(chunk)
         n = self.count()
         prev = None
-        for chunk, start in genchunk():
+        for chunk, start in chunkpositer():
             size = len(chunk)
             if size < 80:
                 raise util.Abort("invalid changegroup")
@@ -194,12 +176,12 @@ class bundlerepository(localrepo.localrepository):
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
         while 1:
-                f = getchunk(self.bundlefile)
-                if not f:
-                    break
-                self.bundlefilespos[f] = self.bundlefile.tell()
-                while getchunk(self.bundlefile):
-                    pass
+            f = changegroup.getchunk(self.bundlefile)
+            if not f:
+                break
+            self.bundlefilespos[f] = self.bundlefile.tell()
+            for c in changegroup.chunkiter(self.bundlefile):
+                pass
 
     def dev(self):
         return -1

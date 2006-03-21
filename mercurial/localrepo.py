@@ -5,12 +5,13 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import struct, os, util
+import os, util
 import filelog, manifest, changelog, dirstate, repo
 from node import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
+demandload(globals(), "changegroup")
 
 class localrepository(object):
     def __del__(self):
@@ -1244,7 +1245,7 @@ class localrepository(object):
                 # If any filenodes are left, generate the group for them,
                 # otherwise don't bother.
                 if len(msng_filenode_lst) > 0:
-                    yield struct.pack(">l", len(fname) + 4) + fname
+                    yield changegroup.genchunk(fname)
                     # Sort the filenodes by their revision #
                     msng_filenode_lst.sort(cmp_by_rev_func(filerevlog))
                     # Create a group generator and only pass in a changenode
@@ -1258,7 +1259,7 @@ class localrepository(object):
                     # Don't need this anymore, toss it to free memory.
                     del msng_filenode_set[fname]
             # Signal that no more groups are left.
-            yield struct.pack(">l", 0)
+            yield changegroup.closechunk()
 
             self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
 
@@ -1318,38 +1319,17 @@ class localrepository(object):
                 nodeiter = gennodelst(filerevlog)
                 nodeiter = list(nodeiter)
                 if nodeiter:
-                    yield struct.pack(">l", len(fname) + 4) + fname
+                    yield changegroup.genchunk(fname)
                     lookup = lookuprevlink_func(filerevlog)
                     for chnk in filerevlog.group(nodeiter, lookup):
                         yield chnk
 
-            yield struct.pack(">l", 0)
+            yield changegroup.closechunk()
             self.hook('outgoing', node=hex(nodes[0]), source=source)
 
         return util.chunkbuffer(gengroup())
 
     def addchangegroup(self, source):
-
-        def getchunk():
-            d = source.read(4)
-            if not d:
-                return ""
-            l = struct.unpack(">l", d)[0]
-            if l <= 4:
-                return ""
-            d = source.read(l - 4)
-            if len(d) < l - 4:
-                raise repo.RepoError(_("premature EOF reading chunk"
-                                       " (got %d bytes, expected %d)")
-                                     % (len(d), l - 4))
-            return d
-
-        def getgroup():
-            while 1:
-                c = getchunk()
-                if not c:
-                    break
-                yield c
 
         def csmap(x):
             self.ui.debug(_("add changeset %s\n") % short(x))
@@ -1372,7 +1352,8 @@ class localrepository(object):
         # pull off the changeset group
         self.ui.status(_("adding changesets\n"))
         co = self.changelog.tip()
-        cn = self.changelog.addgroup(getgroup(), csmap, tr, 1) # unique
+        chunkiter = changegroup.chunkiter(source)
+        cn = self.changelog.addgroup(chunkiter, csmap, tr, 1) # unique
         cnr, cor = map(self.changelog.rev, (cn, co))
         if cn == nullid:
             cnr = cor
@@ -1381,18 +1362,20 @@ class localrepository(object):
         # pull off the manifest group
         self.ui.status(_("adding manifests\n"))
         mm = self.manifest.tip()
-        mo = self.manifest.addgroup(getgroup(), revmap, tr)
+        chunkiter = changegroup.chunkiter(source)
+        mo = self.manifest.addgroup(chunkiter, revmap, tr)
 
         # process the files
         self.ui.status(_("adding file changes\n"))
         while 1:
-            f = getchunk()
+            f = changegroup.getchunk(source)
             if not f:
                 break
             self.ui.debug(_("adding %s revisions\n") % f)
             fl = self.file(f)
             o = fl.count()
-            n = fl.addgroup(getgroup(), revmap, tr)
+            chunkiter = changegroup.chunkiter(source)
+            n = fl.addgroup(chunkiter, revmap, tr)
             revisions += fl.count() - o
             files += 1
 
