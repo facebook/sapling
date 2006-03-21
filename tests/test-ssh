@@ -53,6 +53,9 @@ echo "ssh = ../dummyssh" >> .hg/hgrc
 echo "# find outgoing"
 hg out ssh://user@dummy/remote
 
+echo "# find incoming on the remote side"
+hg incoming -R ../remote -e ../dummyssh ssh://user@dummy/local
+
 echo "# push"
 hg push
 

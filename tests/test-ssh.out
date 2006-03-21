@@ -26,6 +26,14 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     add
 
+# find incoming on the remote side
+searching for changes
+changeset:   1:c54836a570be
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     add
+
 # push
 pushing to ssh://user@dummy/remote
 searching for changes
@@ -49,4 +57,5 @@ bleah
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
+Got arguments 1:user@dummy 2:hg -R local serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
