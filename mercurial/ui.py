@@ -8,7 +8,7 @@
 import ConfigParser
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "os re socket sys util")
+demandload(globals(), "os re socket sys util tempfile")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
@@ -195,23 +195,25 @@ class ui(object):
     def debug(self, *msg):
         if self.debugflag: self.write(*msg)
     def edit(self, text, user):
-        import tempfile
-        (fd, name) = tempfile.mkstemp("hg")
-        f = os.fdopen(fd, "w")
-        f.write(text)
-        f.close()
+        (fd, name) = tempfile.mkstemp(prefix="hg-editor-", suffix=".txt")
+        try:
+            f = os.fdopen(fd, "w")
+            f.write(text)
+            f.close()
 
-        editor = (os.environ.get("HGEDITOR") or
-                  self.config("ui", "editor") or
-                  os.environ.get("EDITOR", "vi"))
+            editor = (os.environ.get("HGEDITOR") or
+                    self.config("ui", "editor") or
+                    os.environ.get("EDITOR", "vi"))
 
-        util.system("%s \"%s\"" % (editor, name),
-                    environ={'HGUSER': user},
-                    onerr=util.Abort, errprefix=_("edit failed"))
+            util.system("%s \"%s\"" % (editor, name),
+                        environ={'HGUSER': user},
+                        onerr=util.Abort, errprefix=_("edit failed"))
 
-        t = open(name).read()
-        t = re.sub("(?m)^HG:.*\n", "", t)
-
-        os.unlink(name)
+            f = open(name)
+            t = f.read()
+            f.close()
+            t = re.sub("(?m)^HG:.*\n", "", t)
+        finally:
+            os.unlink(name)
 
         return t
