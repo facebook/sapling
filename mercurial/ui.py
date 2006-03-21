@@ -141,12 +141,26 @@ class ui(object):
         return ret
 
     def username(self):
-        return (os.environ.get("HGUSER") or
-                self.config("ui", "username") or
-                os.environ.get("EMAIL") or
-                (os.environ.get("LOGNAME",
-                                os.environ.get("USERNAME", "unknown"))
-                 + '@' + socket.getfqdn()))
+        """Return default username to be used in commits.
+
+        Searched in this order: $HGUSER, [ui] section of hgrcs, $EMAIL
+        and stop searching if one of these is set.
+        Abort if found username is an empty string to force specifying
+        the commit user elsewhere, e.g. with line option or repo hgrc.
+        If not found, use $LOGNAME or $USERNAME +"@full.hostname".
+        """
+        user = os.environ.get("HGUSER")
+        if user is None:
+            user = self.config("ui", "username")
+        if user is None:
+            user = os.environ.get("EMAIL")
+        if user is None:
+            user = os.environ.get("LOGNAME") or os.environ.get("USERNAME")
+            if user:
+                user = "%s@%s" % (user, socket.getfqdn())
+        if not user:
+            raise util.Abort(_("Please specify a username."))
+        return user
 
     def shortuser(self, user):
         """Return a short representation of a user name or email address."""
