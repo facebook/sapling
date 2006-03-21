@@ -194,7 +194,7 @@ class ui(object):
         if self.verbose: self.write(*msg)
     def debug(self, *msg):
         if self.debugflag: self.write(*msg)
-    def edit(self, text):
+    def edit(self, text, user):
         import tempfile
         (fd, name) = tempfile.mkstemp("hg")
         f = os.fdopen(fd, "w")
@@ -205,9 +205,8 @@ class ui(object):
                   self.config("ui", "editor") or
                   os.environ.get("EDITOR", "vi"))
 
-        os.environ["HGUSER"] = self.username()
         util.system("%s \"%s\"" % (editor, name),
-                    environ={'HGUSER': self.username()},
+                    environ={'HGUSER': user},
                     onerr=util.Abort, errprefix=_("edit failed"))
 
         t = open(name).read()

@@ -442,6 +442,7 @@ class localrepository(object):
         new = new.keys()
         new.sort()
 
+        user = user or self.ui.username()
         if not text:
             edittext = [""]
             if p2 != nullid:
@@ -454,13 +455,12 @@ class localrepository(object):
             # run editor in the repository root
             olddir = os.getcwd()
             os.chdir(self.root)
-            edittext = self.ui.edit("\n".join(edittext))
+            edittext = self.ui.edit("\n".join(edittext), user)
             os.chdir(olddir)
             if not edittext.rstrip():
                 return None
             text = edittext
 
-        user = user or self.ui.username()
         n = self.changelog.add(mn, changed + remove, text, tr, p1, p2, user, date)
         self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                   parent2=xp2)
