@@ -304,7 +304,7 @@ def write_bundle(cg, filename=None, compress=True):
             fh.write("HG10")
             z = bz2.BZ2Compressor(9)
         else:
-            fh.write("HG11")
+            fh.write("HG10UN")
             z = nocompress()
         while 1:
             chunk = cg.read(4096)
@@ -2569,18 +2569,24 @@ def unbundle(ui, repo, fname, **opts):
     """
     f = urllib.urlopen(fname)
 
-    header = f.read(4)
-    if header == "HG10":
+    header = f.read(6)
+    if not header.startswith("HG"):
+        raise util.Abort(_("%s: not a Mercurial bundle file") % fname)
+    elif not header.startswith("HG10"):
+        raise util.Abort(_("%s: unknown bundle version") % fname)
+    elif header == "HG10BZ":
         def generator(f):
             zd = bz2.BZ2Decompressor()
+            zd.decompress("BZ")
             for chunk in f:
                 yield zd.decompress(chunk)
-    elif header == "HG11":
+    elif header == "HG10UN":
         def generator(f):
             for chunk in f:
                 yield chunk
     else:
-        raise util.Abort(_("%s: not a Mercurial bundle file") % fname)
+        raise util.Abort(_("%s: unknown bundle compression type")
+                         % fname)
     gen = generator(util.filechunkiter(f, 4096))
     if repo.addchangegroup(util.chunkbuffer(gen)):
         return 1

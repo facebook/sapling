@@ -174,12 +174,20 @@ class bundlerepository(localrepo.localrepository):
         f = open(bundlename, "rb")
         s = os.fstat(f.fileno())
         self.bundlefile = f
-        header = self.bundlefile.read(4)
-        if header == "HG10":
+        header = self.bundlefile.read(6)
+        if not header.startswith("HG"):
+            raise util.Abort(_("%s: not a Mercurial bundle file") % bundlename)
+        elif not header.startswith("HG10"):
+            raise util.Abort(_("%s: unknown bundle version") % bundlename)
+        elif header == "HG10BZ":
             raise util.Abort(_("%s: compressed bundle not supported")
                              % bundlename)
-        elif header != "HG11":
-            raise util.Abort(_("%s: not a Mercurial bundle file") % bundlename)
+        elif header == "HG10UN":
+            # uncompressed bundle supported
+            pass
+        else:
+            raise util.Abort(_("%s: unknown bundle compression type")
+                             % bundlename)
         self.changelog = bundlechangelog(self.opener, self.bundlefile)
         self.manifest = bundlemanifest(self.opener, self.bundlefile,
                                        self.changelog.rev)
