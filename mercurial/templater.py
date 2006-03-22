@@ -8,7 +8,7 @@
 import re
 from demandload import demandload
 from i18n import gettext as _
-demandload(globals(), "cStringIO cgi sys os time urllib util")
+demandload(globals(), "cStringIO cgi re sys os time urllib util textwrap")
 
 esctable = {
     '\\': '\\',
@@ -181,8 +181,43 @@ def age(date):
         if n >= 2 or s == 1:
             return fmt(t, n)
 
+def stringify(thing):
+    '''turn nested template iterator into string.'''
+    cs = cStringIO.StringIO()
+    def walk(things):
+        for t in things:
+            if hasattr(t, '__iter__'):
+                walk(t)
+            else:
+                cs.write(t)
+    walk(thing)
+    return cs.getvalue()
+
+para_re = re.compile('(\n\n|\n\\s*[-*]\\s*)', re.M)
+space_re = re.compile(r'  +')
+
+def fill(text, width):
+    '''fill many paragraphs.'''
+    def findparas():
+        start = 0
+        while True:
+            m = para_re.search(text, start)
+            if not m:
+                w = len(text)
+                while w > start and text[w-1].isspace(): w -= 1
+                yield text[start:w], text[w:]
+                break
+            yield text[start:m.start(0)], m.group(1)
+            start = m.end(1)
+            
+    fp = cStringIO.StringIO()
+    for para, rest in findparas():
+        fp.write(space_re.sub(' ', textwrap.fill(para, width)))
+        fp.write(rest)
+    return fp.getvalue()
+
 def isodate(date):
-    '''turn a (timestamp, tzoff) tuple into an iso 8631 date.'''
+    '''turn a (timestamp, tzoff) tuple into an iso 8631 date and time.'''
     return util.datestr(date, format='%Y-%m-%d %H:%M')
 
 def nl2br(text):
@@ -201,25 +236,54 @@ def domain(author):
     if f >= 0: author = author[:f]
     return author
 
+def email(author):
+    '''get email of author.'''
+    r = author.find('>')
+    if r == -1: r = None
+    return author[author.find('<')+1:r]
+    
 def person(author):
     '''get name of author, or else username.'''
     f = author.find('<')
     if f == -1: return util.shortuser(author)
     return author[:f].rstrip()
 
+def shortdate(date):
+    '''turn (timestamp, tzoff) tuple into iso 8631 date.'''
+    return util.datestr(date, format='%Y-%m-%d', timezone=False)
+
+def indent(text, prefix):
+    '''indent each non-empty line of text after first with prefix.'''
+    fp = cStringIO.StringIO()
+    lines = text.splitlines()
+    num_lines = len(lines)
+    for i in xrange(num_lines):
+        l = lines[i]
+        if i and l.strip(): fp.write(prefix)
+        fp.write(l)
+        if i < num_lines - 1 or text.endswith('\n'):
+            fp.write('\n')
+    return fp.getvalue()
+
 common_filters = {
     "addbreaks": nl2br,
     "age": age,
     "date": lambda x: util.datestr(x),
     "domain": domain,
+    "email": email,
     "escape": lambda x: cgi.escape(x, True),
+    "fill68": lambda x: fill(x, width=68),
+    "fill76": lambda x: fill(x, width=76),
     "firstline": lambda x: x.splitlines(1)[0].rstrip('\r\n'),
+    "tabindent": lambda x: indent(x, '\t'),
     "isodate": isodate,
     "obfuscate": obfuscate,
     "permissions": lambda x: x and "-rwxr-xr-x" or "-rw-r--r--",
     "person": person,
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
     "short": lambda x: x[:12],
+    "shortdate": shortdate,
+    "stringify": stringify,
     "strip": lambda x: x.strip(),
     "urlescape": lambda x: urllib.quote(x),
     "user": lambda x: util.shortuser(x),
