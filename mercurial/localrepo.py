@@ -78,33 +78,43 @@ class localrepository(object):
         '''return a mapping of tag to node'''
         if not self.tagscache:
             self.tagscache = {}
-            def addtag(self, k, n):
-                try:
-                    bin_n = bin(n)
-                except TypeError:
-                    bin_n = ''
-                self.tagscache[k.strip()] = bin_n
 
-            try:
-                # read each head of the tags file, ending with the tip
-                # and add each tag found to the map, with "newer" ones
-                # taking precedence
-                fl = self.file(".hgtags")
-                h = fl.heads()
-                h.reverse()
-                for r in h:
-                    for l in fl.read(r).splitlines():
-                        if l:
-                            n, k = l.split(" ", 1)
-                            addtag(self, k, n)
-            except KeyError:
-                pass
+            def parsetag(line, context):
+                if not line:
+                    return
+                s = l.split(" ", 1)
+                if len(s) != 2:
+                    self.ui.warn(_("%s: ignoring invalid tag\n") % context)
+                    return
+                node, key = s
+                try:
+                    bin_n = bin(node)
+                except TypeError:
+                    self.ui.warn(_("%s: ignoring invalid tag\n") % context)
+                    return
+                if bin_n not in self.changelog.nodemap:
+                    self.ui.warn(_("%s: ignoring invalid tag\n") % context)
+                    return
+                self.tagscache[key.strip()] = bin_n
+
+            # read each head of the tags file, ending with the tip
+            # and add each tag found to the map, with "newer" ones
+            # taking precedence
+            fl = self.file(".hgtags")
+            h = fl.heads()
+            h.reverse()
+            for r in h:
+                count = 0
+                for l in fl.read(r).splitlines():
+                    count += 1
+                    parsetag(l, ".hgtags:%d" % count)
 
             try:
                 f = self.opener("localtags")
+                count = 0
                 for l in f:
-                    n, k = l.split(" ", 1)
-                    addtag(self, k, n)
+                    count += 1
+                    parsetag(l, "localtags:%d" % count)
             except IOError:
                 pass
 

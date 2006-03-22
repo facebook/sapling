@@ -31,3 +31,13 @@ hg co -m 1
 hg id
 hg status
 
+hg commit -m "merge" -d "1000000 0"
+# invalid tags
+echo "spam" >> .hgtags
+echo >> .hgtags
+echo "foo bar" >> .hgtags
+echo "$T invalid" | sed "s/..../a5a5/" >> .hg/localtags
+hg commit -m "tags" -d "1000000 0"
+hg tags
+hg tip
+

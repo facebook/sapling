@@ -12,3 +12,17 @@ M a
 8216907a933d tip
 8216907a933d+8a3ca90d111d+ tip
 M .hgtags
+.hgtags:2: ignoring invalid tag
+.hgtags:4: ignoring invalid tag
+localtags:1: ignoring invalid tag
+tip                                4:fd868a874787a7b5af31e1675666ce691c803035
+first                              0:0acdaf8983679e0aac16e811534eb49d7ee1f2b4
+changeset:   4:fd868a874787
+.hgtags:2: ignoring invalid tag
+.hgtags:4: ignoring invalid tag
+localtags:1: ignoring invalid tag
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     tags
+
