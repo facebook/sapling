@@ -155,6 +155,13 @@ def globre(pat, head='^', tail='$'):
             group = False
         elif c == ',' and group:
             res += '|'
+        elif c == '\\':
+            p = peek()
+            if p:
+                i += 1
+                res += re.escape(p)
+            else:
+                res += re.escape(c)
         else:
             res += re.escape(c)
     return head + res + tail
