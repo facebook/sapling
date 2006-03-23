@@ -8,7 +8,7 @@
 import ConfigParser
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "os re socket sys util tempfile")
+demandload(globals(), "errno os re socket sys tempfile util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
@@ -179,9 +179,13 @@ class ui(object):
             sys.stdout.write(str(a))
 
     def write_err(self, *args):
-        if not sys.stdout.closed: sys.stdout.flush()
-        for a in args:
-            sys.stderr.write(str(a))
+        try:
+            if not sys.stdout.closed: sys.stdout.flush()
+            for a in args:
+                sys.stderr.write(str(a))
+        except IOError, inst:
+            if inst.errno != errno.EPIPE:
+                raise
 
     def flush(self):
         try:
