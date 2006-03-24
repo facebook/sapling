@@ -34,7 +34,11 @@ class dirstate(object):
         return cwd[len(self.root) + 1:]
 
     def hgignore(self):
-        '''return the contents of .hgignore as a list of patterns.
+        '''return the contents of .hgignore files as a list of patterns.
+
+        the files parsed for patterns include:
+        .hgignore in the repository root
+        any additional files specified in the [ui] section of ~/.hgrc
 
         trailing white space is dropped.
         the escape character is backslash.
@@ -58,36 +62,44 @@ class dirstate(object):
                     elif line[i] == '#': break
                 line = line[:i].rstrip()
                 if line: yield line
+        files = [self.wjoin('.hgignore')]
+        files.extend(self.ui.hgignorefiles())
         pats = []
-        try:
-            fp = open(self.wjoin('.hgignore'))
-            syntax = 'relre:'
-            for line in parselines(fp):
-                if line.startswith('syntax:'):
-                    s = line[7:].strip()
-                    try:
-                        syntax = syntaxes[s]
-                    except KeyError:
-                        self.ui.warn(_(".hgignore: ignoring invalid "
-                                       "syntax '%s'\n") % s)
-                    continue
-                pat = syntax + line
-                for s in syntaxes.values():
-                    if line.startswith(s):
-                        pat = line
-                        break
-                pats.append(pat)
-        except IOError: pass
+        for f in files:
+            try:
+                fp = open(f)
+                syntax = 'relre:'
+                for line in parselines(fp):
+                    if line.startswith('syntax:'):
+                        s = line[7:].strip()
+                        try:
+                            syntax = syntaxes[s]
+                        except KeyError:
+                            self.ui.warn(_("%s: ignoring invalid "
+                                           "syntax '%s'\n") % (f, s))
+                        continue
+                    pat = syntax + line
+                    for s in syntaxes.values():
+                        if line.startswith(s):
+                            pat = line
+                            break
+                    pats.append(pat)
+            except IOError: pass
         return pats
 
     def ignore(self, fn):
-        '''default match function used by dirstate and localrepository.
-        this honours the .hgignore file, and nothing more.'''
+        '''default match function used by dirstate and
+        localrepository.  this honours the repository .hgignore file
+        and any other files specified in the [ui] section of .hgrc.'''
         if self.blockignore:
             return False
         if not self.ignorefunc:
             ignore = self.hgignore()
             if ignore:
+                # FIXME: if there are errors in patterns, matcher will
+                # print out an error containing src ('.hgignore');
+                # really, we want the original source file to be
+                # printed instead.
                 files, self.ignorefunc, anypats = util.matcher(self.root,
                                                                inc=ignore,
                                                                src='.hgignore')

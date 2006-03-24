@@ -236,6 +236,12 @@ ui::
     Print debugging information.  True or False.  Default is False.
   editor;;
     The editor to use during a commit.  Default is $EDITOR or "vi".
+  ignore;;
+    A file to read per-user ignore patterns from. This file should be in
+    the same format as a repository-wide .hgignore file. This option
+    supports hook syntax, so if you want to specify multiple ignore
+    files, you can do so by setting something like
+    "ignore.other = ~/.hgignore2".
   interactive;;
     Allow to prompt the user.  True or False.  Default is True.
   logtemplate;;

@@ -123,6 +123,15 @@ class ui(object):
     def extensions(self):
         return self.configitems("extensions")
 
+    def hgignorefiles(self):
+        result = []
+        cfgitems = self.configitems("ui")
+        for key, value in cfgitems:
+            if key == 'ignore' or key.startswith('ignore.'):
+                path = os.path.expanduser(value)
+                result.append(path)
+        return result
+
     def diffopts(self):
         if self.diffcache:
             return self.diffcache
