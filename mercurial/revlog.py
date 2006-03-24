@@ -743,7 +743,7 @@ class revlog(object):
         #track the base of the current delta log
         r = self.count()
         t = r - 1
-        node = nullid
+        node = None
 
         base = prev = -1
         start = end = measure = 0
@@ -816,6 +816,8 @@ class revlog(object):
 
         dfh.close()
         ifh.close()
+        if node is None:
+            raise RevlogError(_("group to be added is empty"))
         return node
 
     def strip(self, rev, minlink):
