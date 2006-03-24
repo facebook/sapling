@@ -1032,8 +1032,8 @@ def commit(ui, repo, *pats, **opts):
     If a list of files is omitted, all changes reported by "hg status"
     will be committed.
 
-    The HGEDITOR or EDITOR environment variables are used to start an
-    editor to add a commit comment.
+    If no commit message is specified, the editor configured in your hgrc
+    or in the EDITOR environment variable is started to enter a message.
     """
     message = opts['message']
     logfile = opts['logfile']
