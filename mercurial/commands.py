@@ -2015,6 +2015,9 @@ def outgoing(ui, repo, dest="default-push", **opts):
 
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other, force=opts['force'])
+    if not o:
+        ui.status(_("no changes found\n"))
+        return
     o = repo.changelog.nodesbetween(o)[0]
     if opts['newest_first']:
         o.reverse()
