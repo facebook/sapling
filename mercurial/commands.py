@@ -1802,6 +1802,7 @@ def incoming(ui, repo, source="default", **opts):
     other = hg.repository(ui, source)
     incoming = repo.findincoming(other, force=opts["force"])
     if not incoming:
+        ui.status(_("no changes found\n"))
         return
 
     cleanup = None
