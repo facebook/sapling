@@ -11,7 +11,7 @@ from node import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
-demandload(globals(), "changegroup")
+demandload(globals(), "appendfile changegroup")
 
 class localrepository(object):
     def __del__(self):
@@ -1343,10 +1343,10 @@ class localrepository(object):
 
         def csmap(x):
             self.ui.debug(_("add changeset %s\n") % short(x))
-            return self.changelog.count()
+            return cl.count()
 
         def revmap(x):
-            return self.changelog.rev(x)
+            return cl.rev(x)
 
         if not source:
             return
@@ -1357,23 +1357,29 @@ class localrepository(object):
 
         tr = self.transaction()
 
-        oldheads = len(self.changelog.heads())
+        # write changelog and manifest data to temp files so
+        # concurrent readers will not see inconsistent view
+        cl = appendfile.appendchangelog(self.opener)
+
+        oldheads = len(cl.heads())
 
         # pull off the changeset group
         self.ui.status(_("adding changesets\n"))
-        co = self.changelog.tip()
+        co = cl.tip()
         chunkiter = changegroup.chunkiter(source)
-        cn = self.changelog.addgroup(chunkiter, csmap, tr, 1) # unique
-        cnr, cor = map(self.changelog.rev, (cn, co))
+        cn = cl.addgroup(chunkiter, csmap, tr, 1) # unique
+        cnr, cor = map(cl.rev, (cn, co))
         if cn == nullid:
             cnr = cor
         changesets = cnr - cor
 
+        mf = appendfile.appendmanifest(self.opener)
+
         # pull off the manifest group
         self.ui.status(_("adding manifests\n"))
-        mm = self.manifest.tip()
+        mm = mf.tip()
         chunkiter = changegroup.chunkiter(source)
-        mo = self.manifest.addgroup(chunkiter, revmap, tr)
+        mo = mf.addgroup(chunkiter, revmap, tr)
 
         # process the files
         self.ui.status(_("adding file changes\n"))
@@ -1388,6 +1394,15 @@ class localrepository(object):
             n = fl.addgroup(chunkiter, revmap, tr)
             revisions += fl.count() - o
             files += 1
+
+        # write order here is important so concurrent readers will see
+        # consistent view of repo
+        mf.writedata()
+        cl.writedata()
+
+        # make changelog and manifest see real files again
+        self.changelog = changelog.changelog(self.opener)
+        self.manifest = manifest.manifest(self.opener)
 
         newheads = len(self.changelog.heads())
         heads = ""
