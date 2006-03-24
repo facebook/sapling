@@ -292,13 +292,14 @@ common_filters = {
 def templatepath(name=None):
     '''return location of template file or directory (if no name).
     returns None if not found.'''
+    # executable version (py2exe) doesn't support __file__
+    if hasattr(sys, 'frozen'):
+        module = sys.executable
+    else:
+        module = __file__
     for f in 'templates', '../templates':
         fl = f.split('/')
         if name: fl.append(name)
-        p = os.path.join(os.path.dirname(__file__), *fl)
+        p = os.path.join(os.path.dirname(module), *fl)
         if (name and os.path.exists(p)) or os.path.isdir(p):
             return os.path.normpath(p)
-    else:
-        # executable version (py2exe) doesn't support __file__
-        if hasattr(sys, 'frozen'):
-            return os.path.join(sys.prefix, "templates")
