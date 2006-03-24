@@ -1030,7 +1030,7 @@ def commit(ui, repo, *pats, **opts):
     Commit changes to the given files into the repository.
 
     If a list of files is omitted, all changes reported by "hg status"
-    will be commited.
+    will be committed.
 
     The HGEDITOR or EDITOR environment variables are used to start an
     editor to add a commit comment.

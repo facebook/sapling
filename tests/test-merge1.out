@@ -8,12 +8,12 @@ merging b
 Contents of b should be "this is file b1"
 This is file b1
 %% merge fails
-abort: outstanding uncommited changes
+abort: outstanding uncommitted changes
 %% merge expected!
 merging for b
 merging b
 %% merge of b should fail
-abort: outstanding uncommited changes
+abort: outstanding uncommitted changes
 %% merge of b expected
 merging for b
 merging b

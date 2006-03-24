@@ -1441,7 +1441,7 @@ class localrepository(object):
                                "just use 'hg update'"))
         if allow and not forcemerge:
             if modified or added or removed:
-                raise util.Abort(_("outstanding uncommited changes"))
+                raise util.Abort(_("outstanding uncommitted changes"))
         if not forcemerge and not force:
             for f in unknown:
                 if f in m2:

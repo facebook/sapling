@@ -103,7 +103,7 @@ this update spans a branch affecting the following files:
 aborting update spanning branches!
 (use update -m to merge across branches or -C to lose changes)
 failed
-abort: outstanding uncommited changes
+abort: outstanding uncommitted changes
 failed
 resolving manifests
  force None allow 1 moddirstate True linear False
