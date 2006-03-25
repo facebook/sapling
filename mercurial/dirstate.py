@@ -86,9 +86,10 @@ class dirstate(object):
                             pat = line
                             break
                     pats[f].append(pat)
-            except IOError:
+            except IOError, inst:
                 if f != repoignore:
-                    self.ui.warn(_("ignore file %s not found\n") % f)
+                    self.ui.warn(_("skipping unreadable ignore file"
+                                   " '%s': %s\n") % (f, inst.strerror))
         return pats
 
     def ignore(self, fn):
