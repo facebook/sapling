@@ -62,7 +62,8 @@ class dirstate(object):
                     elif line[i] == '#': break
                 line = line[:i].rstrip()
                 if line: yield line
-        files = [self.wjoin('.hgignore')]
+        repoignore = self.wjoin('.hgignore')
+        files = [repoignore]
         files.extend(self.ui.hgignorefiles())
         pats = []
         for f in files:
@@ -84,7 +85,9 @@ class dirstate(object):
                             pat = line
                             break
                     pats.append(pat)
-            except IOError: pass
+            except IOError:
+                if f != repoignore:
+                    self.ui.warn(_("ignore file %s not found\n") % f)
         return pats
 
     def ignore(self, fn):
