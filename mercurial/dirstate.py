@@ -65,9 +65,10 @@ class dirstate(object):
         repoignore = self.wjoin('.hgignore')
         files = [repoignore]
         files.extend(self.ui.hgignorefiles())
-        pats = []
+        pats = {}
         for f in files:
             try:
+                pats[f] = []
                 fp = open(f)
                 syntax = 'relre:'
                 for line in parselines(fp):
@@ -84,7 +85,7 @@ class dirstate(object):
                         if line.startswith(s):
                             pat = line
                             break
-                    pats.append(pat)
+                    pats[f].append(pat)
             except IOError:
                 if f != repoignore:
                     self.ui.warn(_("ignore file %s not found\n") % f)
@@ -99,13 +100,16 @@ class dirstate(object):
         if not self.ignorefunc:
             ignore = self.hgignore()
             if ignore:
-                # FIXME: if there are errors in patterns, matcher will
-                # print out an error containing src ('.hgignore');
-                # really, we want the original source file to be
-                # printed instead.
-                files, self.ignorefunc, anypats = util.matcher(self.root,
-                                                               inc=ignore,
-                                                               src='.hgignore')
+                try:
+                    allpats = []
+                    [allpats.extend(patlist) for patlist in ignore.values()]
+                    files, self.ignorefunc, anypats = (
+                        util.matcher(self.root, inc=allpats, src='.hgignore'))
+                except util.Abort:
+                    # Re-raise an exception where the src is the right file
+                    for f, patlist in ignore.items():
+                        files, self.ignorefunc, anypats = (
+                            util.matcher(self.root, inc=patlist, src=f))
             else:
                 self.ignorefunc = util.never
         return self.ignorefunc(fn)
