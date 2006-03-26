@@ -16,7 +16,7 @@ hg add dir/b.o
 echo "--" ; hg status
 
 echo "*.o" > .hgignore
-echo "--" ; hg status
+echo "--" ; hg status 2>&1 | sed -e 's/abort: .*\.hgignore:/abort: .hgignore:/'
 
 echo ".*\.o" > .hgignore
 echo "--" ; hg status
@@ -29,7 +29,7 @@ echo "--" ; hg status
 #echo "--" ; hg status
 
 echo "syntax: invalid" > .hgignore
-echo "--" ; hg status
+echo "--" ; hg status 2>&1 | sed -e 's/.*\.hgignore:/.hgignore:/'
 
 echo "syntax: glob" > .hgignore
 echo "*.o" >> .hgignore
