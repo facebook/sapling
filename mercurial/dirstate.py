@@ -100,10 +100,10 @@ class dirstate(object):
             return False
         if not self.ignorefunc:
             ignore = self.hgignore()
-            if ignore:
+            allpats = []
+            [allpats.extend(patlist) for patlist in ignore.values()]
+            if allpats:
                 try:
-                    allpats = []
-                    [allpats.extend(patlist) for patlist in ignore.values()]
                     files, self.ignorefunc, anypats = (
                         util.matcher(self.root, inc=allpats, src='.hgignore'))
                 except util.Abort:
