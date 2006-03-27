@@ -37,7 +37,7 @@ class appendfile(object):
         fd, self.tmpname = tempfile.mkstemp()
         self.tmpfp = os.fdopen(fd, 'ab+')
         self.realfp = fp
-        self.offset = 0
+        self.offset = fp.tell()
         # real file is not written by anyone else. cache its size so
         # seek and read can be fast.
         self.fpsize = os.fstat(fp.fileno()).st_size
