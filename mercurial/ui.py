@@ -197,10 +197,10 @@ class ui(object):
                 raise
 
     def flush(self):
-        try:
-            sys.stdout.flush()
-        finally:
-            sys.stderr.flush()
+        try: sys.stdout.flush()
+        except: pass
+        try: sys.stderr.flush()
+        except: pass
 
     def readline(self):
         return sys.stdin.readline()[:-1]
