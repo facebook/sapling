@@ -1244,12 +1244,8 @@ def copy(ui, repo, *pats, **opts):
     should properly record copied files, this information is not yet
     fully used by merge, nor fully reported by log.
     """
-    try:
-        wlock = repo.wlock(0)
-        errs, copied = docopy(ui, repo, pats, opts, wlock)
-    except lock.LockHeld, inst:
-        ui.warn(_("repository lock held by %s\n") % inst.args[0])
-        errs = 1
+    wlock = repo.wlock(0)
+    errs, copied = docopy(ui, repo, pats, opts, wlock)
     return errs
 
 def debugancestor(ui, index, rev1, rev2):
@@ -2256,18 +2252,14 @@ def rename(ui, repo, *pats, **opts):
     should properly record rename files, this information is not yet
     fully used by merge, nor fully reported by log.
     """
-    try:
-        wlock = repo.wlock(0)
-        errs, copied = docopy(ui, repo, pats, opts, wlock)
-        names = []
-        for abs, rel, exact in copied:
-            if ui.verbose or not exact:
-                ui.status(_('removing %s\n') % rel)
-            names.append(abs)
-        repo.remove(names, True, wlock)
-    except lock.LockHeld, inst:
-        ui.warn(_("repository lock held by %s\n") % inst.args[0])
-        errs = 1
+    wlock = repo.wlock(0)
+    errs, copied = docopy(ui, repo, pats, opts, wlock)
+    names = []
+    for abs, rel, exact in copied:
+        if ui.verbose or not exact:
+            ui.status(_('removing %s\n') % rel)
+        names.append(abs)
+    repo.remove(names, True, wlock)
     return errs
 
 def revert(ui, repo, *pats, **opts):
@@ -3252,6 +3244,15 @@ def dispatch(args):
         sys.exit(1)
     except hg.RepoError, inst:
         u.warn(_("abort: "), inst, "!\n")
+    except lock.LockHeld, inst:
+        if inst.errno == errno.ETIMEDOUT:
+            reason = _('timed out waiting for lock held by %s') % inst.locker
+        else:
+            reason = _('lock held by %s') % inst.locker
+        u.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
+    except lock.LockUnavailable, inst:
+        u.warn(_("abort: could not lock %s: %s\n") %
+               (inst.desc or inst.filename, inst.strerror))
     except revlog.RevlogError, inst:
         u.warn(_("abort: "), inst, "!\n")
     except SignalInterrupt:

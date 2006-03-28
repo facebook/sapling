@@ -8,10 +8,16 @@
 from demandload import *
 demandload(globals(), 'errno os socket time util')
 
-class LockException(Exception):
-    pass
+class LockException(IOError):
+    def __init__(self, errno, strerror, filename, desc):
+        IOError.__init__(self, errno, strerror, filename)
+        self.desc = desc
+
 class LockHeld(LockException):
-    pass
+    def __init__(self, errno, filename, desc, locker):
+        LockException.__init__(self, errno, 'Lock held', filename, desc)
+        self.locker = locker
+
 class LockUnavailable(LockException):
     pass
 
@@ -24,7 +30,7 @@ class lock(object):
     # old-style lock: symlink to pid
     # new-style lock: symlink to hostname:pid
 
-    def __init__(self, file, timeout=-1, releasefn=None):
+    def __init__(self, file, timeout=-1, releasefn=None, desc=None):
         self.f = file
         self.held = 0
         self.timeout = timeout
@@ -32,6 +38,7 @@ class lock(object):
         self.id = None
         self.host = None
         self.pid = None
+        self.desc = desc
         self.lock()
 
     def __del__(self):
@@ -49,7 +56,8 @@ class lock(object):
                     if timeout > 0:
                         timeout -= 1
                     continue
-                raise inst
+                raise LockHeld(errno.ETIMEDOUT, inst.filename, self.desc,
+                               inst.locker)
 
     def trylock(self):
         if self.id is None:
@@ -64,9 +72,11 @@ class lock(object):
                 if why.errno == errno.EEXIST:
                     locker = self.testlock()
                     if locker:
-                        raise LockHeld(locker)
+                        raise LockHeld(errno.EAGAIN, self.f, self.desc,
+                                       locker)
                 else:
-                    raise LockUnavailable(why)
+                    raise LockUnavailable(why.errno, why.strerror,
+                                          why.filename, self.desc)
 
     def testlock(self):
         '''return id of locker if lock is valid, else None.'''

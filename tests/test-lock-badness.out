@@ -1,0 +1,4 @@
+adding a
+adding b
+pushing to ../a
+abort: could not lock repository ../a: Permission denied
