@@ -2464,19 +2464,23 @@ def status(ui, repo, *pats, **opts):
     R = removed
     ! = deleted, but still tracked
     ? = not tracked
+    I = ignored (not shown by default)
     """
 
+    show_ignored = opts['ignored'] and True or False
     files, matchfn, anypats = matchpats(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
-    modified, added, removed, deleted, unknown = [
+    modified, added, removed, deleted, unknown, ignored = [
         [util.pathto(cwd, x) for x in n]
-        for n in repo.changes(files=files, match=matchfn)]
+        for n in repo.changes(files=files, match=matchfn,
+                              show_ignored=show_ignored)]
 
     changetypes = [('modified', 'M', modified),
                    ('added', 'A', added),
                    ('removed', 'R', removed),
                    ('deleted', '!', deleted),
-                   ('unknown', '?', unknown)]
+                   ('unknown', '?', unknown),
+                   ('ignored', 'I', ignored)]
 
     end = opts['print0'] and '\0' or '\n'
 
@@ -2952,6 +2956,7 @@ table = {
           ('r', 'removed', None, _('show only removed files')),
           ('d', 'deleted', None, _('show only deleted (but tracked) files')),
           ('u', 'unknown', None, _('show only unknown (not tracked) files')),
+          ('i', 'ignored', None, _('show ignored files')),
           ('n', 'no-status', None, _('hide status prefix')),
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),

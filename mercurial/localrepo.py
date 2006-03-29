@@ -498,7 +498,7 @@ class localrepository(object):
                 yield src, fn
 
     def changes(self, node1=None, node2=None, files=[], match=util.always,
-                wlock=None):
+                wlock=None, show_ignored=None):
         """return changes between two nodes or node and working directory
 
         If node1 is None, use the first dirstate parent instead.
@@ -531,8 +531,8 @@ class localrepository(object):
                     wlock = self.wlock(wait=0)
                 except lock.LockException:
                     wlock = None
-            lookup, modified, added, removed, deleted, unknown = (
-                self.dirstate.changes(files, match))
+            lookup, modified, added, removed, deleted, unknown, ignored = (
+                self.dirstate.changes(files, match, show_ignored))
 
             # are we comparing working dir against its parent?
             if not node1:
@@ -555,7 +555,7 @@ class localrepository(object):
                         del mf2[f]
         else:
             # we are comparing two revisions
-            deleted, unknown = [], []
+            deleted, unknown, ignored = [], [], []
             mf2 = mfmatches(node2)
 
         if node1:
@@ -573,9 +573,12 @@ class localrepository(object):
             removed = mf1.keys()
 
         # sort and return results:
-        for l in modified, added, removed, deleted, unknown:
+        for l in modified, added, removed, deleted, unknown, ignored:
             l.sort()
-        return (modified, added, removed, deleted, unknown)
+        if show_ignored is None:
+            return (modified, added, removed, deleted, unknown)
+        else:
+            return (modified, added, removed, deleted, unknown, ignored)
 
     def add(self, list, wlock=None):
         if not wlock:

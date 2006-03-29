@@ -294,7 +294,7 @@ class dirstate(object):
                 kind))
         return False
 
-    def statwalk(self, files=None, match=util.always, dc=None):
+    def statwalk(self, files=None, match=util.always, dc=None, ignored=False):
         self.lazyread()
 
         # walk all files by default
@@ -307,7 +307,7 @@ class dirstate(object):
 
         def statmatch(file_, stat):
             file_ = util.pconvert(file_)
-            if file_ not in dc and self.ignore(file_):
+            if not ignored and file_ not in dc and self.ignore(file_):
                 return False
             return match(file_)
 
@@ -409,15 +409,18 @@ class dirstate(object):
             if not seen(k) and (statmatch(k, None)):
                 yield 'm', k, None
 
-    def changes(self, files=None, match=util.always):
-        lookup, modified, added, unknown = [], [], [], []
+    def changes(self, files=None, match=util.always, show_ignored=None):
+        lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted = [], []
 
-        for src, fn, st in self.statwalk(files, match):
+        for src, fn, st in self.statwalk(files, match, ignored=show_ignored):
             try:
                 type_, mode, size, time = self[fn]
             except KeyError:
-                unknown.append(fn)
+                if show_ignored and self.ignore(fn):
+                    ignored.append(fn)
+                else:
+                    unknown.append(fn)
                 continue
             if src == 'm':
                 nonexistent = True
@@ -453,4 +456,4 @@ class dirstate(object):
             elif type_ == 'r':
                 removed.append(fn)
 
-        return (lookup, modified, added, removed, deleted, unknown)
+        return (lookup, modified, added, removed, deleted, unknown, ignored)

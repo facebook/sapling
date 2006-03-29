@@ -190,6 +190,7 @@ show changed files in the working directory
     R = removed
     ! = deleted, but still tracked
     ? = not tracked
+    I = ignored (not shown by default)
 
 aliases: st
 
@@ -200,6 +201,7 @@ options:
  -r --removed    show only removed files
  -d --deleted    show only deleted (but tracked) files
  -u --unknown    show only unknown (not tracked) files
+ -i --ignored    show ignored files
  -n --no-status  hide status prefix
  -0 --print0     end filenames with NUL, for use with xargs
  -I --include    include names matching the given patterns
