@@ -26,3 +26,30 @@ hg push ../a
 hg up -m
 hg commit -m "4" -d "1000000 0"
 hg push ../a
+cd ..
+
+hg init c
+cd c
+for i in 0 1 2; do
+    echo $i >> foo
+    hg ci -Am $i -d "1000000 0"
+done
+cd ..
+
+hg clone c d
+cd d
+for i in 0 1; do
+    hg co -C $i
+    echo d-$i >> foo
+    hg ci -m d-$i -d "1000000 0"
+done
+
+HGMERGE=true hg co -m 3
+hg ci -m c-d -d "1000000 0"
+
+hg push ../c
+hg push -r 2 ../c
+hg push -r 3 -r 4 ../c
+hg push -r 5 ../c
+
+exit 0

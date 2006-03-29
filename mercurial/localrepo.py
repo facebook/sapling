@@ -923,6 +923,14 @@ class localrepository(object):
         return fetch.keys()
 
     def findoutgoing(self, remote, base=None, heads=None, force=False):
+        """Return list of nodes that are roots of subsets not in remote
+
+        If base dict is specified, assume that these nodes and their parents
+        exist on the remote side.
+        If a list of heads is specified, return only nodes which are heads
+        or ancestors of these heads, and return a second element which
+        contains all remote heads which get new children.
+        """
         if base == None:
             base = {}
             self.findincoming(remote, base, heads, force=force)
@@ -944,13 +952,23 @@ class localrepository(object):
 
         # find every node whose parents have been pruned
         subset = []
+        # find every remote head that will get new children
+        updated_heads = {}
         for n in remain:
             p1, p2 = self.changelog.parents(n)
             if p1 not in remain and p2 not in remain:
                 subset.append(n)
+            if heads:
+                if p1 in heads:
+                    updated_heads[p1] = True
+                if p2 in heads:
+                    updated_heads[p2] = True
 
         # this is the set of all roots we have to push
-        return subset
+        if heads:
+            return subset, updated_heads.keys()
+        else:
+            return subset
 
     def pull(self, remote, heads=None, force=False):
         l = self.lock()
@@ -976,14 +994,15 @@ class localrepository(object):
         lock = remote.lock()
 
         base = {}
-        heads = remote.heads()
-        inc = self.findincoming(remote, base, heads, force=force)
+        remote_heads = remote.heads()
+        inc = self.findincoming(remote, base, remote_heads, force=force)
         if not force and inc:
             self.ui.warn(_("abort: unsynced remote changes!\n"))
-            self.ui.status(_("(did you forget to sync? use push -f to force)\n"))
+            self.ui.status(_("(did you forget to sync?"
+                             " use push -f to force)\n"))
             return 1
 
-        update = self.findoutgoing(remote, base)
+        update, updated_heads = self.findoutgoing(remote, base, remote_heads)
         if revs is not None:
             msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
         else:
@@ -993,7 +1012,14 @@ class localrepository(object):
             self.ui.status(_("no changes found\n"))
             return 1
         elif not force:
-            if len(bases) < len(heads):
+            if revs is not None:
+                updated_heads = {}
+                for base in msng_cl:
+                    for parent in self.changelog.parents(base):
+                        if parent in remote_heads:
+                            updated_heads[parent] = True
+                updated_heads = updated_heads.keys()
+            if len(updated_heads) < len(heads):
                 self.ui.warn(_("abort: push creates new remote branches!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
