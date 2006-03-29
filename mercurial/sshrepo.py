@@ -130,4 +130,7 @@ class sshrepository(remoterepository):
 
         self.readerr()
         l = int(self.pipei.readline())
-        return self.pipei.read(l) != ""
+        r = self.pipei.read(l)
+        if not r:
+            return 1
+        return int(r)

@@ -2,4 +2,4 @@ removing b
 this update spans a branch affecting the following files:
  b
 aborting update spanning branches!
-(use update -m to merge across branches or -C to lose changes)
+(use 'hg merge' to merge across branches or '-C' to lose changes)

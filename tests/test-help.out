@@ -59,6 +59,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  locate      locate files matching specific patterns
  log         show revision history of entire repository or files
  manifest    output the latest or given revision of the project manifest
+ merge       Merge working directory with another revision
  outgoing    show changesets not found in destination
  parents     show the parents of the working dir or revision
  paths       show definition of symbolic path names
@@ -100,6 +101,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  locate      locate files matching specific patterns
  log         show revision history of entire repository or files
  manifest    output the latest or given revision of the project manifest
+ merge       Merge working directory with another revision
  outgoing    show changesets not found in destination
  parents     show the parents of the working dir or revision
  paths       show definition of symbolic path names

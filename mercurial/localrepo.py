@@ -964,7 +964,7 @@ class localrepository(object):
 
         if not fetch:
             self.ui.status(_("no changes found\n"))
-            return 1
+            return 0
 
         if heads is None:
             cg = remote.changegroup(fetch, 'pull')
@@ -1340,6 +1340,8 @@ class localrepository(object):
         return util.chunkbuffer(gengroup())
 
     def addchangegroup(self, source):
+        """add changegroup to repo.
+        returns number of heads modified or added + 1."""
 
         def csmap(x):
             self.ui.debug(_("add changeset %s\n") % short(x))
@@ -1349,7 +1351,7 @@ class localrepository(object):
             return cl.rev(x)
 
         if not source:
-            return
+            return 0
 
         self.hook('prechangegroup', throw=True)
 
@@ -1423,6 +1425,8 @@ class localrepository(object):
 
             for i in range(cor + 1, cnr + 1):
                 self.hook("incoming", node=hex(self.changelog.node(i)))
+
+        return newheads - oldheads + 1
 
     def update(self, node, allow=False, force=False, choose=None,
                moddirstate=True, forcemerge=False, wlock=None):
@@ -1624,8 +1628,8 @@ class localrepository(object):
                         cf = _(" (resolve)")
                     self.ui.status(" %s%s\n" % (f, cf))
                 self.ui.warn(_("aborting update spanning branches!\n"))
-                self.ui.status(_("(use update -m to merge across branches"
-                                 " or -C to lose changes)\n"))
+                self.ui.status(_("(use 'hg merge' to merge across branches"
+                                 " or '-C' to lose changes)\n"))
                 return 1
             branch_merge = True
 

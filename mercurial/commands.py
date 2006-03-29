@@ -1998,6 +1998,16 @@ def manifest(ui, repo, rev=None):
     for f in files:
         ui.write("%40s %3s %s\n" % (hex(m[f]), mf[f] and "755" or "644", f))
 
+def merge(ui, repo, node=None, **opts):
+    """Merge working directory with another revision
+
+    Merge the contents of the current working directory and the
+    requested revision. Files that changed between either parent are
+    marked as changed for the next commit and a commit must be
+    performed before any further updates are allowed.
+    """
+    return update(ui, repo, node=node, merge=True, **opts)
+    
 def outgoing(ui, repo, dest="default-push", **opts):
     """show changesets not found in destination
 
@@ -2070,6 +2080,19 @@ def paths(ui, repo, search=None):
         for name, path in ui.configitems("paths"):
             ui.write("%s = %s\n" % (name, path))
 
+def postincoming(ui, repo, modheads, optupdate):
+    if modheads == 0:
+        return
+    if optupdate:
+        if modheads == 1:
+            return update(ui, repo)
+        else:
+            ui.status(_("not updating, since new heads added\n"))
+    if modheads > 1:
+        ui.status(_("(run 'hg heads' to see heads, 'hg merge' to merge)\n"))
+    else:
+        ui.status(_("(run 'hg update' to get a working copy)\n"))
+    
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source
 
@@ -2114,14 +2137,8 @@ def pull(ui, repo, source="default", **opts):
         raise util.Abort(_("pull -r doesn't work for remote repositories yet"))
     elif opts['rev']:
         revs = [other.lookup(rev) for rev in opts['rev']]
-    r = repo.pull(other, heads=revs, force=opts['force'])
-    if not r:
-        if opts['update']:
-            return update(ui, repo)
-        else:
-            ui.status(_("(run 'hg update' to get a working copy)\n"))
-
-    return r
+    modheads = repo.pull(other, heads=revs, force=opts['force'])
+    return postincoming(ui, repo, modheads, opts['update'])
 
 def push(ui, repo, dest="default-push", **opts):
     """push changes to the specified destination
@@ -2158,7 +2175,7 @@ def push(ui, repo, dest="default-push", **opts):
     if opts['rev']:
         revs = [repo.lookup(rev) for rev in opts['rev']]
     r = repo.push(other, opts['force'], revs=revs)
-    return r
+    return r == 0
 
 def rawcommit(ui, repo, *flist, **rc):
     """raw commit interface (DEPRECATED)
@@ -2387,7 +2404,7 @@ def serve(ui, repo, **opts):
                 respond("")
 
                 r = repo.addchangegroup(fin)
-                respond("")
+                respond(str(r))
 
     optlist = "name templates style address port ipv6 accesslog errorlog"
     for o in optlist.split():
@@ -2599,13 +2616,8 @@ def unbundle(ui, repo, fname, **opts):
         raise util.Abort(_("%s: unknown bundle compression type")
                          % fname)
     gen = generator(util.filechunkiter(f, 4096))
-    if repo.addchangegroup(util.chunkbuffer(gen)):
-        return 1
-
-    if opts['update']:
-        return update(ui, repo)
-    else:
-        ui.status(_("(run 'hg update' to get a working copy)\n"))
+    modheads = repo.addchangegroup(util.chunkbuffer(gen))
+    return postincoming(ui, repo, modheads, opts['update'])
 
 def undo(ui, repo):
     """undo the last commit or pull
@@ -2849,6 +2861,13 @@ table = {
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg log [OPTION]... [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
+    "merge":
+    (merge,
+     [('b', 'branch', '', _('merge with head of a specific branch')),
+      ('', 'style', '', _('display using template map file')),
+      ('f', 'force', None, _('force a merge with outstanding changes')),
+      ('', 'template', '', _('display with template'))],
+     _('hg merge [-b TAG] [-f] [REV]')),
     "outgoing|out": (outgoing,
          [('M', 'no-merges', None, _('do not show merges')),
           ('f', 'force', None,

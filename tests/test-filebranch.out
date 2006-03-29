@@ -13,7 +13,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files (+1 heads)
-(run 'hg update' to get a working copy)
+(run 'hg heads' to see heads, 'hg merge' to merge)
 merging for foo
 resolving manifests
 getting bar

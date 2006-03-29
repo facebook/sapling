@@ -4,7 +4,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
-(run 'hg update' to get a working copy)
+(run 'hg heads' to see heads, 'hg merge' to merge)
 bar should remain deleted.
 f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644 foo
 pulling from ../A2
@@ -13,6 +13,6 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 0 changes to 0 files (+1 heads)
-(run 'hg update' to get a working copy)
+(run 'hg heads' to see heads, 'hg merge' to merge)
 bar should remain deleted.
 f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644 foo

@@ -8,7 +8,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
-(run 'hg update' to get a working copy)
+(run 'hg heads' to see heads, 'hg merge' to merge)
 pushing to ../a
 searching for changes
 abort: push creates new remote branches!
