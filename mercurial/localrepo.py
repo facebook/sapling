@@ -31,6 +31,7 @@ class localrepository(object):
             raise repo.RepoError(_("repository %s not found") % path)
 
         self.root = os.path.abspath(path)
+        self.origroot = path
         self.ui = ui.ui(parentui=parentui)
         self.opener = util.opener(self.path)
         self.wopener = util.opener(self.root)
@@ -261,32 +262,31 @@ class localrepository(object):
         self.tagscache = None
         self.nodetagscache = None
 
-    def do_lock(self, lockname, wait, releasefn=None, acquirefn=None):
+    def do_lock(self, lockname, wait, releasefn=None, acquirefn=None,
+                desc=None):
         try:
-            l = lock.lock(self.join(lockname), 0, releasefn)
+            l = lock.lock(self.join(lockname), 0, releasefn, desc=desc)
         except lock.LockHeld, inst:
             if not wait:
-                raise inst
-            self.ui.warn(_("waiting for lock held by %s\n") % inst.args[0])
-            try:
-                # default to 600 seconds timeout
-                l = lock.lock(self.join(lockname),
-                              int(self.ui.config("ui", "timeout") or 600),
-                              releasefn)
-            except lock.LockHeld, inst:
-                raise util.Abort(_("timeout while waiting for "
-                                   "lock held by %s") % inst.args[0])
+                raise
+            self.ui.warn(_("waiting for lock on %s held by %s\n") %
+                         (desc, inst.args[0]))
+            # default to 600 seconds timeout
+            l = lock.lock(self.join(lockname),
+                          int(self.ui.config("ui", "timeout") or 600),
+                          releasefn, desc=desc)
         if acquirefn:
             acquirefn()
         return l
 
     def lock(self, wait=1):
-        return self.do_lock("lock", wait, acquirefn=self.reload)
+        return self.do_lock("lock", wait, acquirefn=self.reload,
+                            desc=_('repository %s') % self.origroot)
 
     def wlock(self, wait=1):
-        return self.do_lock("wlock", wait,
-                            self.dirstate.write,
-                            self.wreload)
+        return self.do_lock("wlock", wait, self.dirstate.write,
+                            self.wreload,
+                            desc=_('working directory of %s') % self.origroot)
 
     def checkfilemerge(self, filename, text, filelog, manifest1, manifest2):
         "determine whether a new filenode is needed"
