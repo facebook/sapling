@@ -9,7 +9,7 @@ from node import *
 from remoterepo import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "hg os urllib urllib2 urlparse zlib util")
+demandload(globals(), "hg os urllib urllib2 urlparse zlib util httplib")
 
 class httprepository(remoterepository):
     def __init__(self, ui, path):
@@ -129,8 +129,11 @@ class httprepository(remoterepository):
 
         def zgenerator(f):
             zd = zlib.decompressobj()
-            for chnk in f:
-                yield zd.decompress(chnk)
+            try:
+                for chnk in f:
+                    yield zd.decompress(chnk)
+            except httplib.HTTPException, inst:
+                raise IOError(None, _('connection ended unexpectedly'))
             yield zd.flush()
 
         return util.chunkbuffer(zgenerator(util.filechunkiter(f)))
