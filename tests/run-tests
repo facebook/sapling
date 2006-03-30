@@ -20,7 +20,7 @@ HGMERGE=true; export HGMERGE
 HGUSER="test"; export HGUSER
 HGRCPATH=""; export HGRCPATH
 
-if [ `echo -n HG` == "-n HG" ]
+if [ `echo -n HG` = "-n HG" ]
 then
     ECHO_N=echo
     NNL="\c"
