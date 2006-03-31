@@ -536,7 +536,7 @@ if os.name == 'nt':
         return pf
 
     try: # Mark Hammond's win32all package allows better functionality on Windows
-        import win32api, win32con, win32file, winerror, pywintypes
+        import win32api, win32con, win32file, pywintypes
 
         # create hard links using win32file module
         def os_link(src, dst): # NB will only succeed on NTFS
@@ -558,6 +558,7 @@ if os.name == 'nt':
             '''return True if pid is still running or unable to
             determine, False otherwise'''
             try:
+                import win32process, winerror
                 handle = win32api.OpenProcess(
                     win32con.PROCESS_QUERY_INFORMATION, False, pid)
                 if handle:
