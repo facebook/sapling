@@ -535,9 +535,10 @@ if os.name == 'nt':
             pf = pf[1:-1] # Remove the quotes
         return pf
 
-    try: # ActivePython can create hard links using win32file module
-        import win32api, win32con, win32file
+    try: # Mark Hammond's win32all package allows better functionality on Windows
+        import win32api, win32con, win32file, pywintypes
 
+        # create hard links using win32file module
         def os_link(src, dst): # NB will only succeed on NTFS
             win32file.CreateHardLink(dst, src)
 
@@ -554,12 +555,19 @@ if os.name == 'nt':
                 return os.stat(pathname).st_nlink
 
         def testpid(pid):
-            '''return False if pid is dead, True if running or not known'''
+            '''return True if pid is still running or unable to determine, False otherwise'''
             try:
-                win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION,
-                                     False, pid)
-            except:
-                return True
+                handle = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION, False, pid) 
+                if handle:
+                    status = win32process.GetExitCodeProcess(handle)
+                    if status == win32con.STILL_ACTIVE:
+                        return True
+                    else:
+                        return False
+            except pywintypes.error, details:
+                if details[0] == 87: # ERROR_INVALID_PARAMETER
+                    return False
+            return True
 
     except ImportError:
         def testpid(pid):
