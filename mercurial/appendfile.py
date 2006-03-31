@@ -70,6 +70,7 @@ class appendfile(object):
 
     def write(self, s):
         '''append to temp file.'''
+        self.tmpfp.seek(0, 2)
         self.tmpfp.write(s)
         # all writes are appends, so offset must go to end of file.
         self.offset = self.fpsize + self.tmpfp.tell()
