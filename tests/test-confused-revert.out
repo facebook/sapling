@@ -2,24 +2,24 @@
 A b
 R a
 reverting...
-saving current version of b as b.bak
+saving current version of b as b.orig
 forgetting b
 undeleting a
 %%% should show b unknown and a back to normal
 ? b
-? b.bak
+? b.orig
 merging a
 %%% should show foo-b
 foo-b
 %%% should show a removed and b added
 A b
 R a
-? b.bak
+? b.orig
 reverting...
 forgetting b
 undeleting a
 %%% should show b unknown and a marked modified (merged)
 ? b
-? b.bak
+? b.orig
 %%% should show foo-b
 foo-b

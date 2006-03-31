@@ -13,18 +13,18 @@ R a
 %% should show b added, copy saved, and c modified
 M c
 A b
-saving current version of b as b.bak
+saving current version of b as b.orig
 %% should show b unknown, b.bak unknown, and c modified
 M c
 ? b
-? b.bak
+? b.orig
 %% should show unknown: b b.bak
 ? b
-? b.bak
+? b.orig
 %% should show a b b.bak c e
 a
 b
-b.bak
+b.orig
 c
 e
 %% should save backup to e.0

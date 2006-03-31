@@ -21,7 +21,7 @@ failed
 use of 'hg tag NAME [REV]' is deprecated, please use 'hg tag [-r REV] NAME' instead
 abort: use only one form to specify the revision
 failed
-saving current version of .hgtags as .hgtags.bak
+saving current version of .hgtags as .hgtags.orig
 use of 'hg tag NAME [REV]' is deprecated, please use 'hg tag [-r REV] NAME' instead
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4 bleah
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4 bleah0
