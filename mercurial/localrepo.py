@@ -483,7 +483,7 @@ class localrepository(object):
         self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
         return n
 
-    def walk(self, node=None, files=[], match=util.always):
+    def walk(self, node=None, files=[], match=util.always, badmatch=None):
         if node:
             fdict = dict.fromkeys(files)
             for fn in self.manifest.read(self.changelog.read(node)[0]):
@@ -491,8 +491,12 @@ class localrepository(object):
                 if match(fn):
                     yield 'm', fn
             for fn in fdict:
-                self.ui.warn(_('%s: No such file in rev %s\n') % (
-                    util.pathto(self.getcwd(), fn), short(node)))
+                if badmatch and badmatch(fn):
+                    if match(fn):
+                        yield 'b', fn
+                else:
+                    self.ui.warn(_('%s: No such file in rev %s\n') % (
+                        util.pathto(self.getcwd(), fn), short(node)))
         else:
             for src, fn in self.dirstate.walk(files, match):
                 yield src, fn

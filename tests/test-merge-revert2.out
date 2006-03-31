@@ -3,6 +3,7 @@
 f248da0d4c3e tip
 9eca13a34789
 9eca13a34789+
+reverting file1
 9eca13a34789
 f248da0d4c3e tip
 merge: warning: conflicts during merge
@@ -21,6 +22,7 @@ diff -r f248da0d4c3e file1
 +>>>>>>>
 M file1
 f248da0d4c3e+ tip
+reverting file1
 f248da0d4c3e tip
 f248da0d4c3e tip
 f248da0d4c3e tip

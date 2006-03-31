@@ -3,10 +3,18 @@
 016807e6fdaf tip
 eb43f19ff115
 eb43f19ff115+
+saving current version of file1 as file1.bak
+reverting file1
+? file1.bak
 eb43f19ff115
+? file1.bak
 016807e6fdaf tip
 merging file1
+? file1.bak
 016807e6fdaf tip
+? file1.bak
 016807e6fdaf tip
+? file1.bak
 016807e6fdaf tip
+? file1.bak
 016807e6fdaf tip

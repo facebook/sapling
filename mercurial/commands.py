@@ -43,16 +43,17 @@ def matchpats(repo, pats=[], opts={}, head=''):
     return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
                            opts.get('exclude'), head)
 
-def makewalk(repo, pats, opts, node=None, head=''):
+def makewalk(repo, pats, opts, node=None, head='', badmatch=None):
     files, matchfn, anypats = matchpats(repo, pats, opts, head)
     exact = dict(zip(files, files))
     def walk():
-        for src, fn in repo.walk(node=node, files=files, match=matchfn):
+        for src, fn in repo.walk(node=node, files=files, match=matchfn,
+                                 badmatch=None):
             yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
     return files, matchfn, walk()
 
-def walk(repo, pats, opts, node=None, head=''):
-    files, matchfn, results = makewalk(repo, pats, opts, node, head)
+def walk(repo, pats, opts, node=None, head='', badmatch=None):
+    files, matchfn, results = makewalk(repo, pats, opts, node, head, badmatch)
     for r in results:
         yield r
 
@@ -2003,7 +2004,7 @@ def merge(ui, repo, node=None, **opts):
     performed before any further updates are allowed.
     """
     return update(ui, repo, node=node, merge=True, **opts)
-    
+
 def outgoing(ui, repo, dest="default-push", **opts):
     """show changesets not found in destination
 
@@ -2088,7 +2089,7 @@ def postincoming(ui, repo, modheads, optupdate):
         ui.status(_("(run 'hg heads' to see heads, 'hg merge' to merge)\n"))
     else:
         ui.status(_("(run 'hg update' to get a working copy)\n"))
-    
+
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source
 
@@ -2286,6 +2287,10 @@ def revert(ui, repo, *pats, **opts):
     to the named files or directories.  This restores the contents of
     the affected files to an unmodified state.
 
+    Modified files have backup copies saved before revert.  To disable
+    backups, use --no-backup.  To change the name of backup files, use
+    --backup to give a format string.
+
     Using the -r option, it reverts the given files or directories to
     their state as of an earlier revision.  This can be helpful to "roll
     back" some or all of a change that should not have been committed.
@@ -2300,15 +2305,92 @@ def revert(ui, repo, *pats, **opts):
 
     If no arguments are given, all files in the repository are reverted.
     """
-    node = opts['rev'] and repo.lookup(opts['rev']) or \
-           repo.dirstate.parents()[0]
+    parent = repo.dirstate.parents()[0]
+    node = opts['rev'] and repo.lookup(opts['rev']) or parent
+    mf = repo.manifest.read(repo.changelog.read(node)[0])
 
-    files, choose, anypats = matchpats(repo, pats, opts)
-    modified, added, removed, deleted, unknown = repo.changes(match=choose)
-    repo.forget(added)
-    repo.undelete(removed)
+    def backup(name, exact):
+        bakname = make_filename(repo, repo.changelog,
+                                opts['backup_name'] or '%p.orig',
+                                node=parent, pathname=name)
+        if os.path.exists(name):
+            # if backup already exists and is same as backup we want
+            # to make, do nothing
+            if os.path.exists(bakname):
+                if repo.wread(name) == repo.wread(bakname):
+                    return
+                raise util.Abort(_('cannot save current version of %s - '
+                                   '%s exists and differs') %
+                                 (name, bakname))
+            ui.status(('saving current version of %s as %s\n') %
+                      (name, bakname))
+            shutil.copyfile(name, bakname)
+            shutil.copymode(name, bakname)
 
-    return repo.update(node, False, True, choose, False)
+    wlock = repo.wlock()
+
+    entries = []
+    names = {}
+    for src, abs, rel, exact in walk(repo, pats, opts, badmatch=mf.has_key):
+        names[abs] = True
+        entries.append((abs, rel, exact))
+
+    changes = repo.changes(match=names.has_key, wlock=wlock)
+    modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
+
+    revert = ([], _('reverting %s\n'))
+    add = ([], _('adding %s\n'))
+    remove = ([], _('removing %s\n'))
+    forget = ([], _('forgetting %s\n'))
+    undelete = ([], _('undeleting %s\n'))
+    update = {}
+
+    disptable = (
+        # dispatch table:
+        #   file state
+        #   action if in target manifest
+        #   action if not in target manifest
+        #   make backup if in target manifest
+        #   make backup if not in target manifest
+        (modified, revert, remove, True, True),
+        (added, revert, forget, True, True),
+        (removed, undelete, None, False, False),
+        (deleted, revert, remove, False, False),
+        (unknown, add, None, True, False),
+        )
+
+    for abs, rel, exact in entries:
+        def handle(xlist, dobackup):
+            xlist[0].append(abs)
+            if dobackup and not opts['no_backup']:
+                backup(rel, exact)
+            if ui.verbose or not exact:
+                ui.status(xlist[1] % rel)
+        for table, hitlist, misslist, backuphit, backupmiss in disptable:
+            if abs not in table: continue
+            # file has changed in dirstate
+            if abs in mf:
+                handle(hitlist, backuphit)
+            elif misslist is not None:
+                handle(misslist, backupmiss)
+            else:
+                if exact: ui.warn(_('file not managed: %s\n' % rel))
+            break
+        else:
+            # file has not changed in dirstate
+            if node == parent:
+                if exact: ui.warn(_('no changes needed to %s\n' % rel))
+                continue
+            if abs not in mf:
+                remove[0].append(abs)
+        update[abs] = True
+
+    repo.dirstate.forget(forget[0])
+    r = repo.update(node, False, True, update.has_key, False, wlock=wlock)
+    repo.dirstate.update(add[0], 'a')
+    repo.dirstate.update(undelete[0], 'n')
+    repo.dirstate.update(remove[0], 'r')
+    return r
 
 def root(ui, repo):
     """print the root (top) of the current working dir
@@ -2929,8 +3011,10 @@ table = {
     "^revert":
         (revert,
          [('r', 'rev', '', _('revision to revert to')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('', 'backup-name', '', _('save backup with formatted name')),
+          ('', 'no-backup', None, _('do not save backup copies of files')),
+          ('I', 'include', [], _('include names matching given patterns')),
+          ('X', 'exclude', [], _('exclude names matching given patterns'))],
          _('hg revert [-r REV] [NAME]...')),
     "root": (root, [], _('hg root')),
     "^serve":

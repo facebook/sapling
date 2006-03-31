@@ -3,8 +3,9 @@
 hg init
 echo 123 > a
 echo 123 > c
-hg add a c
-hg commit -m "first" -d "1000000 0" a c
+echo 123 > e
+hg add a c e
+hg commit -m "first" -d "1000000 0" a c e
 echo 123 > b
 echo %% should show b unknown
 hg status
@@ -18,15 +19,25 @@ hg rm a
 echo %% should show a removed, b added and c modified
 hg status
 hg revert a
-echo %% should show b added and c modified
+echo %% should show b added, copy saved, and c modified
 hg status
 hg revert b
-echo %% should show b unknown and c modified
+echo %% should show b unknown, b.bak unknown, and c modified
 hg status
-hg revert c
-echo %% should show b unknown
+hg revert --no-backup c
+echo %% should show unknown: b b.bak
 hg status
-echo %% should show a b and c
+echo %% should show a b b.bak c e
 ls
+echo %% should save backup to e.0
+echo z > e
+hg revert --backup='%p.%R'
+echo %% should say no changes needed
+hg revert a
+echo %% should say file not managed
+echo q > q
+hg revert q
+echo %% should say file not found
+hg revert notfound
 
 true
