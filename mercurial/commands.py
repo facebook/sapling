@@ -407,14 +407,19 @@ class changeset_templater(object):
         '''set template string to use'''
         self.t.cache['changeset'] = t
 
-    def write(self, thing):
+    def write(self, thing, header=False):
         '''write expanded template.
         uses in-order recursive traverse of iterators.'''
         for t in thing:
             if hasattr(t, '__iter__'):
-                self.write(t)
+                self.write(t, header=header)
+            elif header:
+                self.ui.write_header(t)
             else:
                 self.ui.write(t)
+
+    def write_header(self, thing):
+        self.write(thing, header=True)
 
     def show(self, rev=0, changenode=None, brinfo=None):
         '''show a single changeset or file revision'''
@@ -549,6 +554,18 @@ class changeset_templater(object):
             }
 
         try:
+            if self.ui.debugflag and 'header_debug' in self.t:
+                key = 'header_debug'
+            elif self.ui.quiet and 'header_quiet' in self.t:
+                key = 'header_quiet'
+            elif self.ui.verbose and 'header_verbose' in self.t:
+                key = 'header_verbose'
+            elif 'header' in self.t:
+                key = 'header'
+            else:
+                key = ''
+            if key:
+                self.write_header(self.t(key, **props))
             if self.ui.debugflag and 'changeset_debug' in self.t:
                 key = 'changeset_debug'
             elif self.ui.quiet and 'changeset_quiet' in self.t:
@@ -1897,9 +1914,11 @@ def log(ui, repo, *pats, **opts):
         def __init__(self, ui):
             self.ui = ui
             self.hunk = {}
+            self.header = {}
         def bump(self, rev):
             self.rev = rev
             self.hunk[rev] = []
+            self.header[rev] = []
         def note(self, *args):
             if self.verbose:
                 self.write(*args)
@@ -1908,6 +1927,8 @@ def log(ui, repo, *pats, **opts):
                 self.write(*args)
         def write(self, *args):
             self.hunk[self.rev].append(args)
+        def write_header(self, *args):
+            self.header[self.rev].append(args)
         def debug(self, *args):
             if self.debugflag:
                 self.write(*args)
@@ -1964,6 +1985,9 @@ def log(ui, repo, *pats, **opts):
                 du.write("\n\n")
         elif st == 'iter':
             if count == limit: break
+            if du.header[rev]:
+                for args in du.header[rev]:
+                    ui.write_header(*args)
             if du.hunk[rev]:
                 count += 1
                 for args in du.hunk[rev]:

@@ -27,6 +27,8 @@ class ui(object):
 
             self.updateopts(verbose, debug, quiet, interactive)
             self.diffcache = None
+            self.header = []
+            self.prev_header = []
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
@@ -184,8 +186,17 @@ class ui(object):
         return self.config("paths", loc, loc)
 
     def write(self, *args):
+        if self.header:
+            if self.header != self.prev_header:
+                self.prev_header = self.header
+                self.write(*self.header)
+            self.header = []
         for a in args:
             sys.stdout.write(str(a))
+
+    def write_header(self, *args):
+        for a in args:
+            self.header.append(str(a))
 
     def write_err(self, *args):
         try:
