@@ -1,18 +1,5 @@
 shopt -s extglob
 
-_hg_option_list()
-{
-    "$hg" -v help $1 2>/dev/null | \
-	awk '/^ *-/ {
-		for (i = 1; i <= NF; i ++) {
-		    if (index($i, "-") != 1)
-			break;
-		    print $i;
-		}
-	    }'
-}
-
-
 _hg_commands()
 {
     local commands
@@ -89,7 +76,7 @@ _hg()
     done
 
     if [[ "$cur" == -* ]]; then
-	opts=$(_hg_option_list $cmd)
+	opts=$("$hg" debugcomplete --options "$cmd" 2>/dev/null)
 
 	COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur"))
 	return

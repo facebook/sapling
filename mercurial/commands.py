@@ -1272,11 +1272,26 @@ def debugancestor(ui, index, rev1, rev2):
     a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
-def debugcomplete(ui, cmd):
+def debugcomplete(ui, cmd='', **opts):
     """returns the completion list associated with the given command"""
+
+    if opts['options']:
+        options = []
+        otables = [globalopts]
+        if cmd:
+            aliases, entry = find(cmd)
+            otables.append(entry[1])
+        for t in otables:
+            for o in t:
+                if o[0]:
+                    options.append('-%s' % o[0])
+                options.append('--%s' % o[1])
+        ui.write("%s\n" % "\n".join(options))
+        return
+
     clist = findpossible(cmd).keys()
     clist.sort()
-    ui.write("%s\n" % " ".join(clist))
+    ui.write("%s\n" % "\n".join(clist))
 
 def debugrebuildstate(ui, repo, rev=None):
     """rebuild the dirstate as it would look like for the given revision"""
@@ -2853,7 +2868,10 @@ table = {
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
-    "debugcomplete": (debugcomplete, [], _('debugcomplete CMD')),
+    "debugcomplete":
+        (debugcomplete,
+         [('o', 'options', None, _('show the command options'))],
+         _('debugcomplete [-o] CMD')),
     "debugrebuildstate":
         (debugrebuildstate,
          [('r', 'rev', '', _('revision to rebuild to'))],
