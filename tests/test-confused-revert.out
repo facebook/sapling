@@ -2,7 +2,6 @@
 A b
 R a
 reverting...
-saving current version of b as b.orig
 forgetting b
 undeleting a
 %%% should show b unknown and a back to normal

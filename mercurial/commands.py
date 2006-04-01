@@ -2287,9 +2287,8 @@ def revert(ui, repo, *pats, **opts):
     to the named files or directories.  This restores the contents of
     the affected files to an unmodified state.
 
-    Modified files have backup copies saved before revert.  To disable
-    backups, use --no-backup.  To change the name of backup files, use
-    --backup to give a format string.
+    Modified files are saved with a .orig suffix before reverting.
+    To disable these backups, use --no-backup.
 
     Using the -r option, it reverts the given files or directories to
     their state as of an earlier revision.  This can be helpful to "roll
@@ -2308,24 +2307,6 @@ def revert(ui, repo, *pats, **opts):
     parent = repo.dirstate.parents()[0]
     node = opts['rev'] and repo.lookup(opts['rev']) or parent
     mf = repo.manifest.read(repo.changelog.read(node)[0])
-
-    def backup(name, exact):
-        bakname = make_filename(repo, repo.changelog,
-                                opts['backup_name'] or '%p.orig',
-                                node=parent, pathname=name)
-        if os.path.exists(name):
-            # if backup already exists and is same as backup we want
-            # to make, do nothing
-            if os.path.exists(bakname):
-                if repo.wread(name) == repo.wread(bakname):
-                    return
-                raise util.Abort(_('cannot save current version of %s - '
-                                   '%s exists and differs') %
-                                 (name, bakname))
-            ui.status(('saving current version of %s as %s\n') %
-                      (name, bakname))
-            shutil.copyfile(name, bakname)
-            shutil.copymode(name, bakname)
 
     wlock = repo.wlock()
 
@@ -2362,8 +2343,12 @@ def revert(ui, repo, *pats, **opts):
     for abs, rel, exact in entries:
         def handle(xlist, dobackup):
             xlist[0].append(abs)
-            if dobackup and not opts['no_backup']:
-                backup(rel, exact)
+            if dobackup and not opts['no_backup'] and os.path.exists(rel):
+                bakname = "%s.orig" % rel
+                ui.note(_('saving current version of %s as %s\n') %
+                        (rel, bakname))
+                shutil.copyfile(rel, bakname)
+                shutil.copymode(rel, bakname)
             if ui.verbose or not exact:
                 ui.status(xlist[1] % rel)
         for table, hitlist, misslist, backuphit, backupmiss in disptable:
@@ -3011,7 +2996,6 @@ table = {
     "^revert":
         (revert,
          [('r', 'rev', '', _('revision to revert to')),
-          ('', 'backup-name', '', _('save backup with formatted name')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
           ('I', 'include', [], _('include names matching given patterns')),
           ('X', 'exclude', [], _('exclude names matching given patterns'))],
