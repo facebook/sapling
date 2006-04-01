@@ -29,8 +29,8 @@ _hg_status()
 
 _hg_tags()
 {
-    local tags="$("$hg" tags 2>/dev/null |
-	sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//')"
+    local tags="$("$hg" tags -q 2>/dev/null)"
+    local IFS=$'\n'
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$tags' -- "$cur"))
 }
 

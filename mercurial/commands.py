@@ -2691,7 +2691,10 @@ def tags(ui, repo):
             r = "%5d:%s" % (repo.changelog.rev(n), hex(n))
         except KeyError:
             r = "    ?:?"
-        ui.write("%-30s %s\n" % (t, r))
+        if ui.quiet:
+            ui.write("%s\n" % t)
+        else:
+            ui.write("%-30s %s\n" % (t, r))
 
 def tip(ui, repo, **opts):
     """show the tip revision
