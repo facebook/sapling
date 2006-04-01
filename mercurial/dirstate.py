@@ -340,7 +340,13 @@ class dirstate(object):
                 names.sort()
                 # nd is the top of the repository dir tree
                 nd = util.normpath(top[len(self.root) + 1:])
-                if nd == '.': nd = ''
+                if nd == '.':
+                    nd = ''
+                else:
+                    hg = bisect.bisect_left(names, '.hg')
+                    if hg < len(names) and names[hg] == '.hg':
+                        if os.path.isdir(os.path.join(top, '.hg')):
+                            continue
                 for f in names:
                     np = util.pconvert(os.path.join(nd, f))
                     if seen(np):

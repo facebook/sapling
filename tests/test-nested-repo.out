@@ -1,0 +1,8 @@
+# should print nothing
+# should print ? b/x
+? b/x
+# should print A b/x
+A b/x
+# should forget b/x
+forgetting b/x
+# should print nothing
