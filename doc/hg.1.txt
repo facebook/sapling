@@ -210,8 +210,6 @@ RESOURCES
 ---------
 http://selenic.com/mercurial[Main Web Site]
 
-http://www.serpentine.com/mercurial[Wiki site]
-
 http://selenic.com/hg[Source code repository]
 
 http://selenic.com/mailman/listinfo/mercurial[Mailing list]
