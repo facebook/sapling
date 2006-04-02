@@ -1662,7 +1662,7 @@ class localrepository(object):
                     self.ui.status(" %s%s\n" % (f, cf))
                 self.ui.warn(_("aborting update spanning branches!\n"))
                 self.ui.status(_("(use 'hg merge' to merge across branches"
-                                 " or '-C' to lose changes)\n"))
+                                 " or 'hg update -C' to lose changes)\n"))
                 return 1
             branch_merge = True
 
