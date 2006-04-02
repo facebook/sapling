@@ -99,12 +99,37 @@ _hg()
 	return
     fi
 
-    # canonicalize command name
-    cmd=$("$hg" -q help "$cmd" 2>/dev/null | sed -e 's/^hg //; s/ .*//; 1q')
-
-    if [ "$cmd" != status ] && [ "$prev" = -r ] || [ "$prev" = --rev ]; then
-	_hg_tags
+    # try to generate completion candidates for whatever command the user typed
+    local help
+    local canonical=0
+    if _hg_command_specific; then
 	return
+    fi
+
+    # canonicalize the command name and try again
+    help=$("$hg" help "$cmd" 2>/dev/null)
+    if [ $? -ne 0 ]; then
+	# Probably either the command doesn't exist or it's ambiguous
+	return
+    fi
+    cmd=${help#hg }
+    cmd=${cmd%%[$' \n']*}
+    canonical=1
+    _hg_command_specific
+}
+
+_hg_command_specific()
+{
+    if [ "$cmd" != status ] && [ "$prev" = -r ] || [ "$prev" == --rev ]; then
+	if [ $canonical = 1 ]; then
+	    _hg_tags
+	    return 0
+	elif [[ status != "$cmd"* ]]; then
+	    _hg_tags
+	    return 0
+	else
+	    return 1
+	fi
     fi
 
     case "$cmd" in
@@ -152,8 +177,12 @@ _hg()
 	debugdata)
 	    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -f -X "!*.d" -- "$cur"))
 	;;
+	*)
+	    return 1
+	;;
     esac
 
+    return 0
 }
 
 complete -o bashdefault -o default -F _hg hg 2>/dev/null \
