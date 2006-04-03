@@ -22,12 +22,12 @@ hg revert a
 echo %% should show b added, copy saved, and c modified
 hg status
 hg revert b
-echo %% should show b unknown, b.orig unknown, and c modified
+echo %% should show b unknown, and c modified
 hg status
 hg revert --no-backup c
-echo %% should show unknown: b b.orig
+echo %% should show unknown: b
 hg status
-echo %% should show a b b.orig c e
+echo %% should show a b c e
 ls
 echo %% should verbosely save backup to e.orig
 echo z > e

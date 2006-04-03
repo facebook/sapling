@@ -6,19 +6,16 @@ undeleting a
 forgetting b
 %%% should show b unknown and a back to normal
 ? b
-? b.orig
 merging a
 %%% should show foo-b
 foo-b
 %%% should show a removed and b added
 A b
 R a
-? b.orig
 reverting...
 undeleting a
 forgetting b
 %%% should show b unknown and a marked modified (merged)
 ? b
-? b.orig
 %%% should show foo-b
 foo-b

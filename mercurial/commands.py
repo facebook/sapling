@@ -2389,7 +2389,7 @@ def revert(ui, repo, *pats, **opts):
         #   make backup if in target manifest
         #   make backup if not in target manifest
         (modified, revert, remove, True, True),
-        (added, revert, forget, True, True),
+        (added, revert, forget, True, False),
         (removed, undelete, None, False, False),
         (deleted, revert, remove, False, False),
         (unknown, add, None, True, False),
