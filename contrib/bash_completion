@@ -1,3 +1,54 @@
+# bash completion for the Mercurial distributed SCM
+
+# Docs:
+#
+# If you source this file from your .bashrc, bash should be able to
+# complete a command line that uses hg with all the available commands
+# and options and sometimes even arguments.
+#
+# Mercurial allows you to define additional commands through extensions.
+# Bash should be able to automatically figure out the name of these new
+# commands and their options.  If you also want to tell it how to
+# complete non-option arguments, see below for how to define an
+# _hg_cmd_foo function.
+#
+#
+# Notes about completion for specific commands:
+#
+# - the completion function for the email command from the patchbomb
+#   extension will try to call _hg_emails to get a list of e-mail
+#   addresses.  It's up to the user to define this function.  For
+#   example, put the addresses of the lists that you usually patchbomb
+#   in ~/.patchbomb-to and the addresses that you usually use to send
+#   the patchbombs in ~/.patchbomb-from and use something like this:
+#
+#      _hg_emails()
+#      {
+#          if [ -r ~/.patchbomb-$1 ]; then
+#              cat ~/.patchbomb-$1
+#          fi
+#      }
+# 
+#
+# Writing completion functions for additional commands:
+#
+# If it exists, the function _hg_cmd_foo will be called without
+# arguments to generate the completion candidates for the hg command
+# "foo".
+#
+# In addition to the regular completion variables provided by bash,
+# the following variables are also set:
+# - $hg - the hg program being used (e.g. /usr/bin/hg)
+# - $cmd - the name of the hg command being completed
+# - $cmd_index - the index of $cmd in $COMP_WORDS
+# - $cur - the current argument being completed
+# - $prev - the argument before $cur
+# - $global_args - "|"-separated list of global options that accept
+#                  an argument (e.g. '--cwd|-R|--repository')
+# - $canonical - 1 if we canonicalized $cmd before calling the function
+#                0 otherwise
+# 
+
 shopt -s extglob
 
 _hg_commands()
@@ -54,7 +105,7 @@ _hg_count_non_option()
 
 _hg()
 {
-    local cur prev cmd opts i
+    local cur prev cmd cmd_index opts i
     # global options that receive an argument
     local global_args='--cwd|-R|--repository'
     local hg="$1"
@@ -70,6 +121,7 @@ _hg()
 	if [[ ${COMP_WORDS[i]} != -* ]]; then
 	    if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
 		cmd="${COMP_WORDS[i]}"
+		cmd_index=$i
 		break
 	    fi
 	fi
@@ -120,6 +172,11 @@ _hg()
 
 _hg_command_specific()
 {
+    if [ "$(type -t "_hg_cmd_$cmd")" = function ]; then
+	"_hg_cmd_$cmd"
+	return 0
+    fi
+
     if [ "$cmd" != status ] && [ "$prev" = -r ] || [ "$prev" == --rev ]; then
 	if [ $canonical = 1 ]; then
 	    _hg_tags
@@ -187,3 +244,142 @@ _hg_command_specific()
 
 complete -o bashdefault -o default -F _hg hg 2>/dev/null \
     || complete -o default -F _hg hg
+
+
+# Completion for commands provided by extensions
+
+# mq
+_hg_ext_mq_patchlist()
+{
+    local patches=$("$hg" $1 2>/dev/null)
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$patches' -- "$cur"))
+}
+
+_hg_ext_mq_queues()
+{
+    local root=$("$hg" root 2>/dev/null)
+    local n
+    for n in $(cd "$root"/.hg && compgen -d -- "$cur"); do
+	# I think we're usually not interested in the regular "patches" queue
+	# so just filter it.
+	if [ "$n" != patches ] && [ -e "$root/.hg/$n/series" ]; then
+	    COMPREPLY=(${COMPREPLY[@]:-} "$n")
+	fi
+    done
+}
+
+_hg_cmd_qpop()
+{
+    if [[ "$prev" = @(-n|--name) ]]; then
+	_hg_ext_mq_queues
+	return
+    fi
+    _hg_ext_mq_patchlist qapplied
+}
+
+_hg_cmd_qpush()
+{
+    if [[ "$prev" = @(-n|--name) ]]; then
+	_hg_ext_mq_queues
+	return
+    fi
+    _hg_ext_mq_patchlist qunapplied
+}
+
+_hg_cmd_qdelete()
+{
+    _hg_ext_mq_patchlist qseries
+}
+
+_hg_cmd_qsave()
+{
+    if [[ "$prev" = @(-n|--name) ]]; then
+	_hg_ext_mq_queues
+	return
+    fi
+}
+
+_hg_cmd_strip()
+{
+    _hg_tags
+}
+
+_hg_cmd_qcommit()
+{
+    local root=$("$hg" root 2>/dev/null)
+    # this is run in a sub-shell, so we can't use _hg_status
+    local files=$(cd "$root/.hg/patches" 2>/dev/null &&
+                  "$hg" status -nmar 2>/dev/null)
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
+}
+
+
+# hbisect
+_hg_cmd_bisect()
+{
+    local i subcmd
+
+    # find the sub-command
+    for ((i=cmd_index+1; i<=COMP_CWORD; i++)); do
+	if [[ ${COMP_WORDS[i]} != -* ]]; then
+	    if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
+		subcmd="${COMP_WORDS[i]}"
+		break
+	    fi
+	fi
+    done
+
+    if [ -z "$subcmd" ] || [ $COMP_CWORD -eq $i ] || [ "$subcmd" = help ]; then
+	COMPREPLY=(${COMPREPLY[@]:-} 
+		   $(compgen -W 'bad good help init next reset' -- "$cur"))
+	return
+    fi
+
+    case "$subcmd" in
+	good|bad)
+	    _hg_tags
+	    ;;
+    esac
+
+    return
+}
+
+
+# patchbomb
+_hg_cmd_email()
+{
+    case "$prev" in
+	-c|--cc|-t|--to|-f|--from)
+	    # we need an e-mail address. let the user provide a function 
+	    # to get them
+	    if [ "$(type -t _hg_emails)" = function ]; then
+		local arg=to
+		if [[ "$prev" == @(-f|--from) ]]; then
+		    arg=from
+		fi
+		local addresses=$(_hg_emails $arg)
+		COMPREPLY=(${COMPREPLY[@]:-}
+			   $(compgen -W '$addresses' -- "$cur"))
+	    fi
+	    return
+	    ;;
+	-m|--mbox)
+	    # fallback to standard filename completion
+	    return
+	    ;;
+	-s|--subject)
+	    # free form string
+	    return
+	    ;;
+    esac
+
+    _hg_tags
+    return
+}
+
+
+# gpg
+_hg_cmd_sign()
+{
+    _hg_tags
+}
