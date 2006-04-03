@@ -498,7 +498,7 @@ class localrepository(object):
                     self.ui.warn(_('%s: No such file in rev %s\n') % (
                         util.pathto(self.getcwd(), fn), short(node)))
         else:
-            for src, fn in self.dirstate.walk(files, match):
+            for src, fn in self.dirstate.walk(files, match, badmatch=badmatch):
                 yield src, fn
 
     def changes(self, node1=None, node2=None, files=[], match=util.always,

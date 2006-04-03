@@ -37,7 +37,21 @@ hg revert a
 echo %% should say file not managed
 echo q > q
 hg revert q
+rm q
 echo %% should say file not found
 hg revert notfound
+hg rm a
+hg commit -m "second" -d "1000000 0"
+echo z > z
+hg add z
+hg st
+echo %% should add a, forget z
+hg revert -r0
+echo %% should forget a
+hg revert -rtip
+rm -f a *.orig
+echo %% should silently add a
+hg revert -r0 a
+hg st a
 
 true

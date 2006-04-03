@@ -2,8 +2,8 @@
 A b
 R a
 reverting...
-forgetting b
 undeleting a
+forgetting b
 %%% should show b unknown and a back to normal
 ? b
 ? b.orig
@@ -15,8 +15,8 @@ A b
 R a
 ? b.orig
 reverting...
-forgetting b
 undeleting a
+forgetting b
 %%% should show b unknown and a marked modified (merged)
 ? b
 ? b.orig

@@ -294,7 +294,8 @@ class dirstate(object):
                 kind))
         return False
 
-    def statwalk(self, files=None, match=util.always, dc=None, ignored=False):
+    def statwalk(self, files=None, match=util.always, dc=None, ignored=False,
+                 badmatch=None):
         self.lazyread()
 
         # walk all files by default
@@ -311,11 +312,12 @@ class dirstate(object):
                 return False
             return match(file_)
 
-        return self.walkhelper(files=files, statmatch=statmatch, dc=dc)
+        return self.walkhelper(files=files, statmatch=statmatch, dc=dc,
+                               badmatch=badmatch)
 
-    def walk(self, files=None, match=util.always, dc=None):
+    def walk(self, files=None, match=util.always, dc=None, badmatch=None):
         # filter out the stat
-        for src, f, st in self.statwalk(files, match, dc):
+        for src, f, st in self.statwalk(files, match, dc, badmatch=badmatch):
             yield src, f
 
     # walk recursively through the directory tree, finding all files
@@ -330,7 +332,7 @@ class dirstate(object):
     # dc is an optional arg for the current dirstate.  dc is not modified
     # directly by this function, but might be modified by your statmatch call.
     #
-    def walkhelper(self, files, statmatch, dc):
+    def walkhelper(self, files, statmatch, dc, badmatch=None):
         # recursion free walker, faster than os.walk.
         def findfiles(s):
             work = [s]
@@ -379,9 +381,12 @@ class dirstate(object):
                         found = True
                         break
                 if not found:
-                    self.ui.warn('%s: %s\n' % (
-                                 util.pathto(self.getcwd(), ff),
-                                 inst.strerror))
+                    if inst.errno != errno.ENOENT or not badmatch:
+                        self.ui.warn('%s: %s\n' % (
+                            util.pathto(self.getcwd(), ff),
+                            inst.strerror))
+                    elif badmatch and badmatch(ff) and statmatch(ff, None):
+                        yield 'b', ff, None
                 continue
             if stat.S_ISDIR(st.st_mode):
                 cmp1 = (lambda x, y: cmp(x[1], y[1]))

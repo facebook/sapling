@@ -48,7 +48,7 @@ def makewalk(repo, pats, opts, node=None, head='', badmatch=None):
     exact = dict(zip(files, files))
     def walk():
         for src, fn in repo.walk(node=node, files=files, match=matchfn,
-                                 badmatch=None):
+                                 badmatch=badmatch):
             yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
     return files, matchfn, walk()
 
@@ -2349,11 +2349,27 @@ def revert(ui, repo, *pats, **opts):
 
     wlock = repo.wlock()
 
-    entries = []
+    # need all matching names in dirstate and manifest of target rev,
+    # so have to walk both. do not print errors if files exist in one
+    # but not other.
+
     names = {}
+    target_only = {}
+
+    # walk dirstate.
+
     for src, abs, rel, exact in walk(repo, pats, opts, badmatch=mf.has_key):
-        names[abs] = True
-        entries.append((abs, rel, exact))
+        names[abs] = (rel, exact)
+        if src == 'b':
+            target_only[abs] = True
+
+    # walk target manifest.
+
+    for src, abs, rel, exact in walk(repo, pats, opts, node=node,
+                                     badmatch=names.has_key):
+        if abs in names: continue
+        names[abs] = (rel, exact)
+        target_only[abs] = True
 
     changes = repo.changes(match=names.has_key, wlock=wlock)
     modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
@@ -2377,9 +2393,14 @@ def revert(ui, repo, *pats, **opts):
         (removed, undelete, None, False, False),
         (deleted, revert, remove, False, False),
         (unknown, add, None, True, False),
+        (target_only, add, None, False, False),
         )
 
-    for abs, rel, exact in entries:
+    entries = names.items()
+    entries.sort()
+
+    for abs, (rel, exact) in entries:
+        in_mf = abs in mf
         def handle(xlist, dobackup):
             xlist[0].append(abs)
             if dobackup and not opts['no_backup'] and os.path.exists(rel):
@@ -2393,7 +2414,7 @@ def revert(ui, repo, *pats, **opts):
         for table, hitlist, misslist, backuphit, backupmiss in disptable:
             if abs not in table: continue
             # file has changed in dirstate
-            if abs in mf:
+            if in_mf:
                 handle(hitlist, backuphit)
             elif misslist is not None:
                 handle(misslist, backupmiss)
@@ -2405,8 +2426,8 @@ def revert(ui, repo, *pats, **opts):
             if node == parent:
                 if exact: ui.warn(_('no changes needed to %s\n' % rel))
                 continue
-            if abs not in mf:
-                remove[0].append(abs)
+            if not in_mf:
+                handle(remove, False)
         update[abs] = True
 
     repo.dirstate.forget(forget[0])
