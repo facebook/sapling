@@ -2756,7 +2756,9 @@ def undo(ui, repo):
 
     This command is not intended for use on public repositories. Once
     a change is visible for pull by other users, undoing it locally is
-    ineffective.
+    ineffective. Furthemore a race is possible with readers of the
+    repository, for example an ongoing pull from the repository will
+    fail and rollback.
     """
     repo.undo()
 
