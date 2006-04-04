@@ -43,12 +43,23 @@ class localrepository(object):
 
         v = self.ui.revlogopts
         self.revlogversion = int(v.get('format', 0))
+        flags = 0
         for x in v.get('flags', "").split():
-            self.revlogversion |= revlog.flagstr(x)
+            flags |= revlog.flagstr(x)
 
-        self.manifest = manifest.manifest(self.opener, self.revlogversion)
-        self.changelog = changelog.changelog(self.opener, self.revlogversion)
-        self.revlogversion = self.changelog.version
+        v = self.revlogversion | flags
+        self.manifest = manifest.manifest(self.opener, v)
+        self.changelog = changelog.changelog(self.opener, v)
+
+        # the changelog might not have the inline index flag
+        # on.  If the format of the changelog is the same as found in
+        # .hgrc, apply any flags found in the .hgrc as well.
+        # Otherwise, just version from the changelog
+        v = self.changelog.version
+        if v == self.revlogversion:
+            v |= flags
+        self.revlogversion = v
+
         self.tagscache = None
         self.nodetagscache = None
         self.encodepats = None

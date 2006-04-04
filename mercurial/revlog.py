@@ -20,6 +20,14 @@ demandload(globals(), "sha struct zlib")
 REVLOGV0 = 0
 REVLOGNG = 1
 
+# revlog flags
+REVLOGNGINLINEDATA = (1 << 16)
+
+def flagstr(flag):
+    if flag == "inline":
+        return REVLOGNGINLINEDATA
+    raise RevlogError(_("unknown revlog flag %s" % flag))
+
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
 
@@ -234,13 +242,19 @@ class revlog(object):
                 self.indexstat = st
                 if len(i) > 0:
                     v = struct.unpack(versionformat, i[:4])[0]
-                    if v != 0:
-                        flags = v & ~0xFFFF
-                        fmt = v & 0xFFFF
-                        if fmt != REVLOGNG or (flags & ~(REVLOGNGINLINEDATA)):
-                            raise RevlogError(
-                             _("unknown version format %d or flags %x on %s") %
-                             (v, flags, self.indexfile))
+        flags = v & ~0xFFFF
+        fmt = v & 0xFFFF
+        if fmt == 0:
+            if flags:
+                raise RevlogError(_("index %s invalid flags %x for format v0" %
+                                   (self.indexfile, flags)))
+        elif fmt == REVLOGNG:
+            if flags & ~REVLOGNGINLINEDATA:
+                raise RevlogError(_("index %s invalid flags %x for revlogng" %
+                                   (self.indexfile, flags)))
+        else:
+            raise RevlogError(_("index %s invalid format %d" %
+                               (self.indexfile, fmt)))
         self.version = v
         if v == 0:
             self.indexformat = indexformatv0
@@ -248,13 +262,17 @@ class revlog(object):
             self.indexformat = indexformatng
 
         if i:
-            if st and st.st_size > 10000:
+            if not self.inlinedata() and st and st.st_size > 10000:
                 # big index, let's parse it on demand
                 parser = lazyparser(i, self, self.indexformat)
                 self.index = lazyindex(parser)
                 self.nodemap = lazymap(parser)
             else:
                 self.parseindex(i)
+            if self.inlinedata():
+                # we've already got the entire data file read in, save it
+                # in the chunk data
+                self.chunkcache = (0, i)
             if self.version != 0:
                 e = list(self.index[0])
                 type = self.ngtype(e[0])
@@ -270,6 +288,7 @@ class revlog(object):
         l = len(data)
         self.index = []
         self.nodemap =  {nullid: -1}
+        inline = self.inlinedata()
         off = 0
         n = 0
         while off < l:
@@ -278,6 +297,8 @@ class revlog(object):
             self.nodemap[e[-1]] = n
             n += 1
             off += s
+            if inline:
+                off += e[1]
 
     def ngoffset(self, q):
         if q & 0xFFFF:
@@ -297,6 +318,7 @@ class revlog(object):
             p = self.index.p
             p.load()
 
+    def inlinedata(self): return self.version & REVLOGNGINLINEDATA
     def tip(self): return self.node(len(self.index) - 1)
     def count(self): return len(self.index)
     def node(self, rev):
@@ -568,11 +590,17 @@ class revlog(object):
 
     def chunk(self, rev, df=None, cachelen=4096):
         start, length = self.start(rev), self.length(rev)
+        inline = self.inlinedata()
+        if inline:
+            start += (rev + 1) * struct.calcsize(self.indexformat)
         end = start + length
         def loadcache(df):
             cache_length = max(cachelen, length) # 4k
             if not df:
-                df = self.opener(self.datafile)
+                if inline:
+                    df = self.opener(self.indexfile)
+                else:
+                    df = self.opener(self.datafile)
             df.seek(start)
             self.chunkcache = (start, df.read(cache_length))
 
@@ -620,7 +648,11 @@ class revlog(object):
         rev = self.rev(node)
         base = self.base(rev)
 
-        df = self.opener(self.datafile)
+        if self.inlinedata():
+            # we probably have the whole chunk cached
+            df = None
+        else:
+            df = self.opener(self.datafile)
 
         # do we have useful data cached?
         if self.cache and self.cache[1] >= base and self.cache[1] < rev:
@@ -642,6 +674,40 @@ class revlog(object):
 
         self.cache = (node, rev, text)
         return text
+
+    def checkinlinesize(self, fp, tr):
+        if not self.inlinedata():
+            return
+        size = fp.tell()
+        if size < 131072:
+            return
+        tr.add(self.datafile, 0)
+        df = self.opener(self.datafile, 'w')
+        calc = struct.calcsize(self.indexformat)
+        for r in xrange(self.count()):
+            start = self.start(r) + (r + 1) * calc
+            length = self.length(r)
+            fp.seek(start)
+            d = fp.read(length)
+            df.write(d)
+        fp.close()
+        df.close()
+        fp = self.opener(self.indexfile, 'w', atomic=True)
+        self.version &= ~(REVLOGNGINLINEDATA)
+        if self.count():
+            x = self.index[0]
+            e = struct.pack(self.indexformat, *x)[4:]
+            l = struct.pack(versionformat, self.version)
+            fp.write(l)
+            fp.write(e)
+
+        for i in xrange(1, self.count()):
+            x = self.index[i]
+            e = struct.pack(self.indexformat, *x)
+            fp.write(e)
+
+        fp.close()
+        self.chunkcache = None
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
         """add a revision to the log
@@ -698,13 +764,17 @@ class revlog(object):
         self.nodemap[node] = n
         entry = struct.pack(self.indexformat, *e)
 
-        transaction.add(self.datafile, offset)
-        transaction.add(self.indexfile, n * len(entry))
-        f = self.opener(self.datafile, "a")
-        if data[0]:
-            f.write(data[0])
-        f.write(data[1])
-        f = self.opener(self.indexfile, "a")
+        if not self.inlinedata():
+            transaction.add(self.datafile, offset)
+            transaction.add(self.indexfile, n * len(entry))
+            f = self.opener(self.datafile, "a")
+            if data[0]:
+                f.write(data[0])
+            f.write(data[1])
+            f = self.opener(self.indexfile, "a")
+        else:
+            f = self.opener(self.indexfile, "a+")
+            transaction.add(self.indexfile, f.tell())
 
         if len(self.index) == 1 and self.version != 0:
             l = struct.pack(versionformat, self.version)
@@ -712,6 +782,11 @@ class revlog(object):
             entry = entry[4:]
 
         f.write(entry)
+
+        if self.inlinedata():
+            f.write(data[0])
+            f.write(data[1])
+            self.checkinlinesize(f, transaction)
 
         self.cache = (node, n, text)
         return node
@@ -830,8 +905,11 @@ class revlog(object):
 
         ifh = self.opener(self.indexfile, "a+")
         transaction.add(self.indexfile, ifh.tell())
-        transaction.add(self.datafile, end)
-        dfh = self.opener(self.datafile, "a")
+        if self.inlinedata():
+            dfh = None
+        else:
+            transaction.add(self.datafile, end)
+            dfh = self.opener(self.datafile, "a")
 
         # loop through our set of deltas
         chain = None
@@ -885,8 +963,21 @@ class revlog(object):
                          link, self.rev(p1), self.rev(p2), node)
                 self.index.append(e)
                 self.nodemap[node] = r
-                dfh.write(cdelta)
-                ifh.write(struct.pack(self.indexformat, *e))
+                if self.inlinedata():
+                    ifh.write(struct.pack(self.indexformat, *e))
+                    ifh.write(cdelta)
+                    self.checkinlinesize(ifh, transaction)
+                    if not self.inlinedata():
+                        dfh = self.opener(self.datafile, "a")
+                        ifh = self.opener(self.indexfile, "a")
+                else:
+                    if not dfh:
+                        # addrevision switched from inline to conventional
+                        # reopen the index
+                        dfh = self.opener(self.datafile, "a")
+                        ifh = self.opener(self.indexfile, "a")
+                    dfh.write(cdelta)
+                    ifh.write(struct.pack(self.indexformat, *e))
 
             t, r, chain, prev = r, r + 1, node, node
             base = self.base(t)
@@ -915,9 +1006,12 @@ class revlog(object):
 
         # first truncate the files on disk
         end = self.start(rev)
-        df = self.opener(self.datafile, "a")
-        df.truncate(end)
-        end = rev * struct.calcsize(self.indexformat)
+        if not self.inlinedata():
+            df = self.opener(self.datafile, "a")
+            df.truncate(end)
+            end = rev * struct.calcsize(self.indexformat)
+        else:
+            end += rev * struct.calcsize(self.indexformat)
 
         indexf = self.opener(self.indexfile, "a")
         indexf.truncate(end)
@@ -952,6 +1046,12 @@ class revlog(object):
             s = struct.calcsize(self.indexformat)
             i = actual / s
             di = actual - (i * s)
+            if self.inlinedata():
+                databytes = 0
+                for r in xrange(self.count()):
+                    databytes += self.length(r)
+                dd = 0
+                di = actual - self.count() * s - databytes
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
