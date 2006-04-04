@@ -778,6 +778,7 @@ class revlog(object):
             f = self.opener(self.indexfile, "a")
         else:
             f = self.opener(self.indexfile, "a+")
+            f.seek(0, 2)
             transaction.add(self.indexfile, f.tell())
 
         if len(self.index) == 1 and self.version != 0:
@@ -908,6 +909,7 @@ class revlog(object):
             end = self.end(t)
 
         ifh = self.opener(self.indexfile, "a+")
+        ifh.seek(0, 2)
         transaction.add(self.indexfile, ifh.tell())
         if self.inlinedata():
             dfh = None
