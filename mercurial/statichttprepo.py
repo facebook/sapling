@@ -32,6 +32,7 @@ class statichttprepository(localrepo.localrepository):
     def __init__(self, ui, path):
         self.path = (path + "/.hg")
         self.ui = ui
+        self.revlogversion = 0
         self.opener = opener(self.path)
         self.manifest = manifest.manifest(self.opener)
         self.changelog = changelog.changelog(self.opener)

@@ -10,8 +10,8 @@ import filelog, manifest, changelog, dirstate, repo
 from node import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
 demandload(globals(), "appendfile changegroup")
+demandload(globals(), "re lock transaction tempfile stat mdiff errno ui revlog")
 
 class localrepository(object):
     def __del__(self):
@@ -35,8 +35,20 @@ class localrepository(object):
         self.ui = ui.ui(parentui=parentui)
         self.opener = util.opener(self.path)
         self.wopener = util.opener(self.root)
-        self.manifest = manifest.manifest(self.opener)
-        self.changelog = changelog.changelog(self.opener)
+
+        try:
+            self.ui.readconfig(self.join("hgrc"), self.root)
+        except IOError:
+            pass
+
+        v = self.ui.revlogopts
+        self.revlogversion = int(v.get('format', 0))
+        for x in v.get('flags', "").split():
+            self.revlogversion |= revlog.flagstr(x)
+
+        self.manifest = manifest.manifest(self.opener, self.revlogversion)
+        self.changelog = changelog.changelog(self.opener, self.revlogversion)
+        self.revlogversion = self.changelog.version
         self.tagscache = None
         self.nodetagscache = None
         self.encodepats = None
@@ -48,11 +60,6 @@ class localrepository(object):
             os.mkdir(self.join("data"))
 
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
-        try:
-            self.ui.readconfig(self.join("hgrc"), self.root)
-        except IOError:
-            pass
-
     def hook(self, name, throw=False, **args):
         def runhook(name, cmd):
             self.ui.note(_("running hook %s: %s\n") % (name, cmd))
@@ -167,7 +174,7 @@ class localrepository(object):
     def file(self, f):
         if f[0] == '/':
             f = f[1:]
-        return filelog.filelog(self.opener, f)
+        return filelog.filelog(self.opener, f, self.revlogversion)
 
     def getcwd(self):
         return self.dirstate.getcwd()

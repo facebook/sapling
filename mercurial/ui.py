@@ -29,6 +29,7 @@ class ui(object):
             self.diffcache = None
             self.header = []
             self.prev_header = []
+            self.revlogopts = self.configrevlog()
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
@@ -134,6 +135,12 @@ class ui(object):
                 result.append(path)
         return result
 
+    def configrevlog(self):
+        ret = {}
+        for x in self.configitems("revlog"):
+            k = x[0].lower()
+            ret[k] = x[1]
+        return ret
     def diffopts(self):
         if self.diffcache:
             return self.diffcache

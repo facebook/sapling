@@ -1268,7 +1268,7 @@ def copy(ui, repo, *pats, **opts):
 
 def debugancestor(ui, index, rev1, rev2):
     """find the ancestor revision of two revisions in a given index"""
-    r = revlog.revlog(util.opener(os.getcwd(), audit=False), index, "")
+    r = revlog.revlog(util.opener(os.getcwd(), audit=False), index, "", 0)
     a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
@@ -1372,7 +1372,7 @@ def debugstate(ui, repo):
 def debugdata(ui, file_, rev):
     """dump the contents of an data file revision"""
     r = revlog.revlog(util.opener(os.getcwd(), audit=False),
-                      file_[:-2] + ".i", file_)
+                      file_[:-2] + ".i", file_, 0)
     try:
         ui.write(r.revision(r.lookup(rev)))
     except KeyError:
@@ -1380,18 +1380,19 @@ def debugdata(ui, file_, rev):
 
 def debugindex(ui, file_):
     """dump the contents of an index file"""
-    r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "")
+    r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "", 0)
     ui.write("   rev    offset  length   base linkrev" +
              " nodeid       p1           p2\n")
     for i in range(r.count()):
-        e = r.index[i]
+        node = r.node(i)
+        pp = r.parents(node)
         ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
-                i, e[0], e[1], e[2], e[3],
-            short(e[6]), short(e[4]), short(e[5])))
+                i, r.start(i), r.length(i), r.base(i), r.linkrev(node),
+            short(node), short(pp[0]), short(pp[1])))
 
 def debugindexdot(ui, file_):
     """dump an index DAG as a .dot file"""
-    r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "")
+    r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "", 0)
     ui.write("digraph G {\n")
     for i in range(r.count()):
         e = r.index[i]
