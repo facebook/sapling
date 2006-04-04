@@ -694,7 +694,7 @@ class revlog(object):
             df.write(d)
         fp.close()
         df.close()
-        fp = self.opener(self.indexfile, 'w', atomic=True)
+        fp = self.opener(self.indexfile, 'w', atomictemp=True)
         self.version &= ~(REVLOGNGINLINEDATA)
         if self.count():
             x = self.index[0]
@@ -708,7 +708,9 @@ class revlog(object):
             e = struct.pack(self.indexformat, *x)
             fp.write(e)
 
-        fp.close()
+        # if we don't call rename, the temp file will never replace the
+        # real index
+        fp.rename()
         self.chunkcache = None
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):

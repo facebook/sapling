@@ -431,20 +431,33 @@ def opener(base, audit=True):
         os.chmod(temp, st.st_mode)
         return temp
 
-    class atomicfile(file):
-        """the file will only be copied on close"""
-        def __init__(self, name, mode, atomic=False):
+    class atomictempfile(file):
+        """the file will only be copied when rename is called"""
+        def __init__(self, name, mode):
             self.__name = name
             self.temp = mktempcopy(name)
             file.__init__(self, self.temp, mode)
-        def close(self):
+        def rename(self):
             if not self.closed:
                 file.close(self)
                 rename(self.temp, self.__name)
         def __del__(self):
-            self.close()
+            if not self.closed:
+                try:
+                    os.unlink(self.temp)
+                except: pass
+                file.close(self)
 
-    def o(path, mode="r", text=False, atomic=False):
+    class atomicfile(atomictempfile):
+        """the file will only be copied on close"""
+        def __init__(self, name, mode):
+            atomictempfile.__init__(self, name, mode)
+        def close(self):
+            self.rename()
+        def __del__(self):
+            self.rename()
+
+    def o(path, mode="r", text=False, atomic=False, atomictemp=False):
         if audit_p:
             audit_path(path)
         f = os.path.join(p, path)
@@ -462,6 +475,8 @@ def opener(base, audit=True):
             else:
                 if atomic:
                     return atomicfile(f, mode)
+                elif atomictemp:
+                    return atomictempfile(f, mode)
                 if nlink > 1:
                     rename(mktempcopy(f), f)
         return file(f, mode)
