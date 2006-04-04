@@ -135,9 +135,9 @@ class lazyparser(object):
         for x in xrange(lend):
             if self.index[i + x] == None:
                 b = data[off : off + self.s]
-                e = struct.unpack(self.format, b)
-                self.index[i + x] = e
-                self.map[e[-1]] = i + x
+                self.index[i + x] = b
+                n = b[self.shaoffset:self.shaoffset + 20]
+                self.map[n] = i + x
             off += self.s
 
     def findnode(self, node):
@@ -218,7 +218,10 @@ class lazyindex(object):
         self.p.loadindex(pos)
         return self.p.index[pos]
     def __getitem__(self, pos):
-        return self.p.index[pos] or self.load(pos)
+        ret = self.p.index[pos] or self.load(pos)
+        if isinstance(ret, str):
+            ret = struct.unpack(self.p.indexformat, ret)
+        return ret
     def __setitem__(self, pos, item):
         self.p.index[pos] = item
     def __delitem__(self, pos):
@@ -242,11 +245,13 @@ class lazymap(object):
     def __iter__(self):
         yield nullid
         for i in xrange(self.p.l):
-            try:
-                yield self.p.index[i][-1]
-            except:
+            ret = self.p.index[i]
+            if not ret:
                 self.p.loadindex(i)
-                yield self.p.index[i][-1]
+                ret = self.p.index[i]
+            if isinstance(ret, str):
+                ret = struct.unpack(self.p.indexformat, ret)
+            yield ret[-1]
     def __getitem__(self, key):
         try:
             return self.p.map[key]
