@@ -192,4 +192,5 @@ def patch(a, bin):
     return mpatch.patches(a, [bin])
 
 patches = mpatch.patches
+patchedsize = mpatch.patchedsize
 textdiff = bdiff.bdiff

@@ -354,8 +354,44 @@ cleanup:
 	return result;
 }
 
+/* calculate size of a patched file directly */
+static PyObject *
+patchedsize(PyObject *self, PyObject *args)
+{
+	long orig, start, end, len, outlen = 0, last = 0;
+	int patchlen;
+	char *bin, *binend;
+	char decode[12]; /* for dealing with alignment issues */
+
+	if (!PyArg_ParseTuple(args, "ls#", &orig, &bin, &patchlen))
+		return NULL;
+
+	binend = bin + patchlen;
+
+	while (bin < binend) {
+		memcpy(decode, bin, 12);
+		start = ntohl(*(uint32_t *)decode);
+		end = ntohl(*(uint32_t *)(decode + 4));
+		len = ntohl(*(uint32_t *)(decode + 8));
+		bin += 12 + len;
+		outlen += start - last;
+		last = end;
+		outlen += len;
+	}
+
+	if (bin != binend) {
+		if (!PyErr_Occurred())
+			PyErr_SetString(mpatch_Error, "patch cannot be decoded");
+		return NULL;
+	}
+
+	outlen += orig - last;
+	return Py_BuildValue("l", outlen);
+}
+
 static PyMethodDef methods[] = {
 	{"patches", patches, METH_VARARGS, "apply a series of patches\n"},
+	{"patchedsize", patchedsize, METH_VARARGS, "calculed patched size\n"},
 	{NULL, NULL}
 };
 

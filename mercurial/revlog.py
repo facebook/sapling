@@ -342,7 +342,39 @@ class revlog(object):
         if self.version != 0:
             return self.ngoffset(self.index[rev][0])
         return self.index[rev][0]
+
     def end(self, rev): return self.start(rev) + self.length(rev)
+
+    def size(self, rev):
+        """return the length of the uncompressed text for a given revision"""
+        l = -1
+        if self.version != 0:
+            l = self.index[rev][2]
+        if l >= 0:
+            return l
+
+        t = self.revision(self.node(rev))
+        return len(t)
+
+        # alternate implementation, The advantage to this code is it
+        # will be faster for a single revision.  But, the results are not
+        # cached, so finding the size of every revision will be slower.
+        """
+        if self.cache and self.cache[1] == rev:
+            return len(self.cache[2])
+
+        base = self.base(rev)
+        if self.cache and self.cache[1] >= base and self.cache[1] < rev:
+            base = self.cache[1]
+            text = self.cache[2]
+        else:
+            text = self.revision(self.node(base))
+
+        l = len(text)
+        for x in xrange(base + 1, rev + 1):
+            l = mdiff.patchedsize(l, self.chunk(x))
+        return l
+        """
 
     def length(self, rev):
         if rev < 0:
@@ -904,7 +936,7 @@ class revlog(object):
         node = None
 
         base = prev = -1
-        start = end = measure = 0
+        start = end = textlen = 0
         if r:
             end = self.end(t)
 
@@ -949,8 +981,9 @@ class revlog(object):
             if chain == prev:
                 tempd = compress(delta)
                 cdelta = tempd[0] + tempd[1]
+                textlen = mdiff.patchedsize(textlen, delta)
 
-            if chain != prev or (end - start + len(cdelta)) > measure * 2:
+            if chain != prev or (end - start + len(cdelta)) > textlen * 2:
                 # flush our writes here so we can read it in revision
                 if dfh:
                     dfh.flush()
@@ -960,12 +993,12 @@ class revlog(object):
                 chk = self.addrevision(text, transaction, link, p1, p2)
                 if chk != node:
                     raise RevlogError(_("consistency error adding group"))
-                measure = len(text)
+                textlen = len(text)
             else:
                 if self.version == 0:
                     e = (end, len(cdelta), base, link, p1, p2, node)
                 else:
-                    e = (self.offset_type(end, 0), len(cdelta), -1, base,
+                    e = (self.offset_type(end, 0), len(cdelta), textlen, base,
                          link, self.rev(p1), self.rev(p2), node)
                 self.index.append(e)
                 self.nodemap[node] = r
