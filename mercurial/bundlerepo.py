@@ -31,6 +31,7 @@ class bundlerevlog(revlog.revlog):
         #
         revlog.revlog.__init__(self, opener, indexfile, datafile)
         self.bundlefile = bundlefile
+        self.basemap = {}
         def chunkpositer():
             for chunk in changegroup.chunkiter(bundlefile):
                 pos = bundlefile.tell()
@@ -58,7 +59,8 @@ class bundlerevlog(revlog.revlog):
             if not prev:
                 prev = p1
             # start, size, base is not used, link, p1, p2, delta ref
-            e = (start, size, None, link, p1, p2, node, prev)
+            e = (start, size, None, link, p1, p2, node)
+            self.basemap[n] = prev
             self.index.append(e)
             self.nodemap[node] = n
             prev = node
@@ -68,9 +70,9 @@ class bundlerevlog(revlog.revlog):
         """is rev from the bundle"""
         if rev < 0:
             return False
-        return len(self.index[rev]) > 7
-    def bundlebase(self, rev): return self.index[rev][7]
-    def chunk(self, rev):
+        return rev in self.basemap
+    def bundlebase(self, rev): return self.basemap[rev]
+    def chunk(self, rev, df=None):
         # Warning: in case of bundle, the diff is against bundlebase,
         # not against rev - 1
         # XXX: could use some caching
