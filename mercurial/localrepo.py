@@ -168,6 +168,7 @@ class localrepository(object):
             try:
                 return self.changelog.lookup(key)
             except:
+                raise
                 raise repo.RepoError(_("unknown revision '%s'") % key)
 
     def dev(self):
@@ -1456,6 +1457,8 @@ class localrepository(object):
         # make changelog and manifest see real files again
         self.changelog = changelog.changelog(self.opener)
         self.manifest = manifest.manifest(self.opener)
+        self.changelog.checkinlinesize(tr)
+        self.changelog.checkinlinesize(tr)
 
         newheads = len(self.changelog.heads())
         heads = ""

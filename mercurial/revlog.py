@@ -675,9 +675,11 @@ class revlog(object):
         self.cache = (node, rev, text)
         return text
 
-    def checkinlinesize(self, fp, tr):
+    def checkinlinesize(self, tr, fp=None):
         if not self.inlinedata():
             return
+        if not fp:
+            fp = self.opener(self.indexfile, 'r')
         size = fp.tell()
         if size < 131072:
             return
@@ -786,7 +788,7 @@ class revlog(object):
         if self.inlinedata():
             f.write(data[0])
             f.write(data[1])
-            self.checkinlinesize(f, transaction)
+            self.checkinlinesize(transaction, f)
 
         self.cache = (node, n, text)
         return node
@@ -966,7 +968,7 @@ class revlog(object):
                 if self.inlinedata():
                     ifh.write(struct.pack(self.indexformat, *e))
                     ifh.write(cdelta)
-                    self.checkinlinesize(ifh, transaction)
+                    self.checkinlinesize(transaction, ifh)
                     if not self.inlinedata():
                         dfh = self.opener(self.datafile, "a")
                         ifh = self.opener(self.indexfile, "a")

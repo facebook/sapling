@@ -42,9 +42,19 @@ class appendfile(object):
         # seek and read can be fast.
         self.fpsize = os.fstat(fp.fileno()).st_size
 
-    def seek(self, offset):
+    def end(self):
+        self.tmpfp.flush() # make sure the stat is correct
+        return self.fpsize + os.fstat(self.tmpfp.fileno()).st_size
+
+    def seek(self, offset, whence=0):
         '''virtual file offset spans real file and temp file.'''
-        self.offset = offset
+        if whence == 0:
+            self.offset = offset
+        elif whence == 1:
+            self.offset += offset
+        elif whence == 2:
+            self.offset = self.end() + offset
+
         if self.offset < self.fpsize:
             self.realfp.seek(self.offset)
         else:
@@ -103,8 +113,16 @@ class sharedfile(object):
         self.fp = fp
         self.offset = 0
 
-    def seek(self, offset):
-        self.offset = offset
+    def tell(self):
+        return self.offset
+
+    def seek(self, offset, whence=0):
+        if whence == 0:
+            self.offset = offset
+        elif whence == 1:
+            self.offset += offset
+        elif whence == 2:
+            self.offset = self.fp.end() + offset
 
     def read(self, count=-1):
         try:
@@ -143,7 +161,7 @@ class appendopener(object):
         '''open file.  return same cached appendfile object for every
         later call.'''
 
-        assert mode in 'ra'
+        assert mode in 'ra+'
         fp = self.fps.get(name)
         if fp is None:
             fp = appendfile(self.realopener(name, 'a+'))
@@ -165,8 +183,12 @@ class appendchangelog(changelog.changelog, appendopener):
     def __init__(self, opener):
         appendopener.__init__(self, opener)
         changelog.changelog.__init__(self, self)
+    def checkinlinesize(self, fp, tr):
+        return
 
 class appendmanifest(manifest.manifest, appendopener):
     def __init__(self, opener):
         appendopener.__init__(self, opener)
         manifest.manifest.__init__(self, self)
+    def checkinlinesize(self, fp, tr):
+        return
