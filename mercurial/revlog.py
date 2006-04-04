@@ -64,6 +64,7 @@ def decompress(bin):
     raise RevlogError(_("unknown compression type %r") % t)
 
 indexformatv0 = ">4l20s20s20s"
+v0shaoffset = 56
 # index ng:
 # 6 bytes offset
 # 2 bytes flags
@@ -75,48 +76,135 @@ indexformatv0 = ">4l20s20s20s"
 # 4 bytes parent 2 rev
 # 32 bytes: nodeid
 indexformatng = ">Qiiiiii20s12x"
+ngshaoffset = 32
 versionformat = ">i"
 
 class lazyparser(object):
     """
     this class avoids the need to parse the entirety of large indices
-
-    By default we parse and load 1000 entries at a time.
-
-    If no position is specified, we load the whole index, and replace
-    the lazy objects in revlog with the underlying objects for
-    efficiency in cases where we look at most of the nodes.
     """
-    def __init__(self, data, revlog, indexformat):
-        self.data = data
+    def __init__(self, dataf, size, indexformat, shaoffset):
+        self.dataf = dataf
+        self.format = indexformat
         self.s = struct.calcsize(indexformat)
         self.indexformat = indexformat
-        self.l = len(data)/self.s
+        self.datasize = size
+        self.l = size/self.s
         self.index = [None] * self.l
         self.map = {nullid: -1}
+        self.allmap = 0
         self.all = 0
-        self.revlog = revlog
+        self.mapfind_count = 0
+        self.shaoffset = shaoffset
 
-    def load(self, pos=None):
+    def loadmap(self):
+        """
+        during a commit, we need to make sure the rev being added is
+        not a duplicate.  This requires loading the entire index,
+        which is fairly slow.  loadmap can load up just the node map,
+        which takes much less time.
+        """
+        if self.allmap: return
+        start = 0
+        end = self.datasize
+        self.allmap = 1
+        cur = 0
+        count = 0
+        blocksize = self.s * 256
+        self.dataf.seek(0)
+        while cur < end:
+            data = self.dataf.read(blocksize)
+            off = 0
+            for x in xrange(256):
+                n = data[off + self.shaoffset:off + self.shaoffset + 20]
+                self.map[n] = count
+                count += 1
+                if count >= self.l:
+                    break
+                off += self.s
+            cur += blocksize
+
+    def loadblock(self, blockstart, blocksize, data=None):
         if self.all: return
-        if pos is not None:
-            block = pos / 1000
-            i = block * 1000
-            end = min(self.l, i + 1000)
-        else:
-            self.all = 1
-            i = 0
-            end = self.l
-            self.revlog.index = self.index
-            self.revlog.nodemap = self.map
+        if data is None:
+            self.dataf.seek(blockstart)
+            data = self.dataf.read(blocksize)
+        lend = len(data) / self.s
+        i = blockstart / self.s
+        off = 0
+        for x in xrange(lend):
+            if self.index[i + x] == None:
+                b = data[off : off + self.s]
+                e = struct.unpack(self.format, b)
+                self.index[i + x] = e
+                self.map[e[-1]] = i + x
+            off += self.s
 
-        while i < end:
-            if not self.index[i]:
-                d = self.data[i * self.s: (i + 1) * self.s]
-                e = struct.unpack(self.indexformat, d)
-                self.index[i] = e
-                self.map[e[-1]] = i
-            i += 1
+    def findnode(self, node):
+        """search backwards through the index file for a specific node"""
+        if self.allmap: return None
+
+        # hg log will cause many many searches for the manifest
+        # nodes.  After we get called a few times, just load the whole
+        # thing.
+        if self.mapfind_count > 8:
+            self.loadmap()
+            if node in self.map:
+                return node
+            return None
+        self.mapfind_count += 1
+        last = self.l - 1
+        while self.index[last] != None:
+            if last == 0:
+                self.all = 1
+                self.allmap = 1
+                return None
+            last -= 1
+        end = (last + 1) * self.s
+        blocksize = self.s * 256
+        while end >= 0:
+            start = max(end - blocksize, 0)
+            self.dataf.seek(start)
+            data = self.dataf.read(end - start)
+            findend = end - start
+            while True:
+                # we're searching backwards, so weh have to make sure
+                # we don't find a changeset where this node is a parent
+                off = data.rfind(node, 0, findend)
+                findend = off
+                if off >= 0:
+                    i = off / self.s
+                    off = i * self.s
+                    n = data[off + self.shaoffset:off + self.shaoffset + 20]
+                    if n == node:
+                        self.map[n] = i + start / self.s
+                        return node
+                else:
+                    break
+            end -= blocksize
+        return None
+
+    def loadindex(self, i=None, end=None):
+        if self.all: return
+        all = False
+        if i == None:
+            blockstart = 0
+            blocksize = (512 / self.s) * self.s
+            end = self.datasize
+            all = True
+        else:
+            if end:
+                blockstart = i * self.s
+                end = end * self.s
+                blocksize = end - blockstart
+            else:
+                blockstart = (i & ~(32)) * self.s
+                blocksize = self.s * 64
+                end = blockstart + blocksize
+        while blockstart < end:
+            self.loadblock(blockstart, blocksize)
+            blockstart += blocksize
+        if all: self.all = True
 
 class lazyindex(object):
     """a lazy version of the index array"""
@@ -127,7 +215,7 @@ class lazyindex(object):
     def load(self, pos):
         if pos < 0:
             pos += len(self.p.index)
-        self.p.load(pos)
+        self.p.loadindex(pos)
         return self.p.index[pos]
     def __getitem__(self, pos):
         return self.p.index[pos] or self.load(pos)
@@ -143,14 +231,13 @@ class lazymap(object):
     def __init__(self, parser):
         self.p = parser
     def load(self, key):
-        if self.p.all: return
-        n = self.p.data.find(key)
-        if n < 0:
+        n = self.p.findnode(key)
+        if n == None:
             raise KeyError(key)
-        pos = n / self.p.s
-        self.p.load(pos)
     def __contains__(self, key):
-        self.p.load()
+        if key in self.p.map:
+            return True
+        self.p.loadmap()
         return key in self.p.map
     def __iter__(self):
         yield nullid
@@ -158,7 +245,7 @@ class lazymap(object):
             try:
                 yield self.p.index[i][-1]
             except:
-                self.p.load(i)
+                self.p.loadindex(i)
                 yield self.p.index[i][-1]
     def __getitem__(self, key):
         try:
@@ -222,7 +309,8 @@ class revlog(object):
         v = self.defversion
         try:
             f = self.opener(self.indexfile)
-            i = f.read()
+            i = f.read(4)
+            f.seek(0)
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
@@ -241,7 +329,7 @@ class revlog(object):
                     return
                 self.indexstat = st
                 if len(i) > 0:
-                    v = struct.unpack(versionformat, i[:4])[0]
+                    v = struct.unpack(versionformat, i)[0]
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
         if fmt == 0:
@@ -258,16 +346,19 @@ class revlog(object):
         self.version = v
         if v == 0:
             self.indexformat = indexformatv0
+            shaoffset = v0shaoffset
         else:
             self.indexformat = indexformatng
+            shaoffset = ngshaoffset
 
         if i:
             if not self.inlinedata() and st and st.st_size > 10000:
                 # big index, let's parse it on demand
-                parser = lazyparser(i, self, self.indexformat)
+                parser = lazyparser(f, st.st_size, self.indexformat, shaoffset)
                 self.index = lazyindex(parser)
                 self.nodemap = lazymap(parser)
             else:
+                i = f.read()
                 self.parseindex(i)
             if self.inlinedata():
                 # we've already got the entire data file read in, save it
@@ -312,11 +403,23 @@ class revlog(object):
     def offset_type(self, offset, type):
         return long(long(offset) << 16 | type)
 
+    def loadindex(self, start, end):
+        """load a block of indexes all at once from the lazy parser"""
+        if isinstance(self.index, lazyindex):
+            self.index.p.loadindex(start, end)
+
     def loadindexmap(self):
         """loads both the map and the index from the lazy parser"""
         if isinstance(self.index, lazyindex):
             p = self.index.p
-            p.load()
+            p.loadindex()
+            self.nodemap = p.map
+
+    def loadmap(self):
+        """loads the map from the lazy parser"""
+        if isinstance(self.nodemap, lazymap):
+            self.nodemap.p.loadmap()
+            self.nodemap = self.nodemap.p.map
 
     def inlinedata(self): return self.version & REVLOGNGINLINEDATA
     def tip(self): return self.node(len(self.index) - 1)
@@ -690,7 +793,9 @@ class revlog(object):
         if self.cache and self.cache[1] >= base and self.cache[1] < rev:
             base = self.cache[1]
             text = self.cache[2]
+            self.loadindex(base, rev + 1)
         else:
+            self.loadindex(base, rev + 1)
             text = self.chunk(base, df=df)
 
         bins = []
