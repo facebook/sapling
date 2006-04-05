@@ -3154,22 +3154,26 @@ optionalrepo = ("paths debugconfig")
 def findpossible(cmd):
     """
     Return cmd -> (aliases, command table entry)
-    for each matching command
+    for each matching command.
+    Return debug commands (or their aliases) only if no normal command matches.
     """
     choice = {}
     debugchoice = {}
     for e in table.keys():
         aliases = e.lstrip("^").split("|")
+        found = None
         if cmd in aliases:
-            choice[cmd] = (aliases, table[e])
-            continue
-        for a in aliases:
-            if a.startswith(cmd):
-                if aliases[0].startswith("debug"):
-                    debugchoice[a] = (aliases, table[e])
-                else:
-                    choice[a] = (aliases, table[e])
-                break
+            found = cmd
+        else:
+            for a in aliases:
+                if a.startswith(cmd):
+                    found = a
+                    break
+        if found is not None:
+            if aliases[0].startswith("debug"):
+                debugchoice[found] = (aliases, table[e])
+            else:
+                choice[found] = (aliases, table[e])
 
     if not choice and debugchoice:
         choice = debugchoice
