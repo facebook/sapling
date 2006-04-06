@@ -393,7 +393,7 @@ def copyfiles(src, dst, hardlink=None):
         if hardlink:
             try:
                 os_link(src, dst)
-            except:
+            except (IOError, OSError):
                 hardlink = False
                 shutil.copy(src, dst)
         else:
