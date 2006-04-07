@@ -940,6 +940,24 @@ class revlog(object):
 
     def ancestor(self, a, b):
         """calculate the least common ancestor of nodes a and b"""
+
+        # start with some short cuts for the linear cases
+        if a == b:
+            return a
+        ra = self.rev(a)
+        rb = self.rev(b)
+        if ra < rb:
+            last = b
+            first = a
+        else:
+            last = a
+            first = b
+
+        # reachable won't include stop in the list, so we have to use a parent
+        reachable = self.reachable(last, stop=self.parents(first)[0])
+        if first in reachable:
+            return first
+
         # calculate the distance of every node from root
         dist = {nullid: 0}
         for i in xrange(self.count()):
