@@ -822,6 +822,7 @@ class revlog(object):
             return
         if not fp:
             fp = self.opener(self.indexfile, 'r')
+            fp.seek(0, 2)
         size = fp.tell()
         if size < 131072:
             return

@@ -180,15 +180,15 @@ class appendopener(object):
 # not mixed up together.
 
 class appendchangelog(changelog.changelog, appendopener):
-    def __init__(self, opener):
+    def __init__(self, opener, version):
         appendopener.__init__(self, opener)
-        changelog.changelog.__init__(self, self)
+        changelog.changelog.__init__(self, self, version)
     def checkinlinesize(self, fp, tr):
         return
 
 class appendmanifest(manifest.manifest, appendopener):
-    def __init__(self, opener):
+    def __init__(self, opener, version):
         appendopener.__init__(self, opener)
-        manifest.manifest.__init__(self, self)
+        manifest.manifest.__init__(self, self, version)
     def checkinlinesize(self, fp, tr):
         return

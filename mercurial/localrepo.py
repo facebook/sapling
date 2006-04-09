@@ -1413,7 +1413,7 @@ class localrepository(object):
 
         # write changelog and manifest data to temp files so
         # concurrent readers will not see inconsistent view
-        cl = appendfile.appendchangelog(self.opener)
+        cl = appendfile.appendchangelog(self.opener, self.changelog.version)
 
         oldheads = len(cl.heads())
 
@@ -1427,7 +1427,7 @@ class localrepository(object):
             cnr = cor
         changesets = cnr - cor
 
-        mf = appendfile.appendmanifest(self.opener)
+        mf = appendfile.appendmanifest(self.opener, self.manifest.version)
 
         # pull off the manifest group
         self.ui.status(_("adding manifests\n"))
@@ -1455,10 +1455,10 @@ class localrepository(object):
         cl.writedata()
 
         # make changelog and manifest see real files again
-        self.changelog = changelog.changelog(self.opener)
-        self.manifest = manifest.manifest(self.opener)
+        self.changelog = changelog.changelog(self.opener, self.changelog.version)
+        self.manifest = manifest.manifest(self.opener, self.manifest.version)
         self.changelog.checkinlinesize(tr)
-        self.changelog.checkinlinesize(tr)
+        self.manifest.checkinlinesize(tr)
 
         newheads = len(self.changelog.heads())
         heads = ""
