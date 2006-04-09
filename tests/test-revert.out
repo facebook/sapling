@@ -13,17 +13,14 @@ R a
 %% should show b added, copy saved, and c modified
 M c
 A b
-%% should show b unknown, b.orig unknown, and c modified
+%% should show b unknown, and c modified
 M c
 ? b
-? b.orig
-%% should show unknown: b b.orig
+%% should show unknown: b
 ? b
-? b.orig
-%% should show a b b.orig c e
+%% should show a b c e
 a
 b
-b.orig
 c
 e
 %% should verbosely save backup to e.orig
@@ -40,7 +37,6 @@ file not managed: q
 notfound: No such file in rev 095eacd0c0d7
 A z
 ? b
-? b.orig
 ? e.orig
 %% should add a, forget z
 adding a

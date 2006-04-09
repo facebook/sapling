@@ -2390,7 +2390,7 @@ def revert(ui, repo, *pats, **opts):
         #   make backup if in target manifest
         #   make backup if not in target manifest
         (modified, revert, remove, True, True),
-        (added, revert, forget, True, True),
+        (added, revert, forget, True, False),
         (removed, undelete, None, False, False),
         (deleted, revert, remove, False, False),
         (unknown, add, None, True, False),
@@ -2757,7 +2757,9 @@ def undo(ui, repo):
 
     This command is not intended for use on public repositories. Once
     a change is visible for pull by other users, undoing it locally is
-    ineffective.
+    ineffective. Furthemore a race is possible with readers of the
+    repository, for example an ongoing pull from the repository will
+    fail and rollback.
     """
     repo.undo()
 
@@ -2992,12 +2994,10 @@ table = {
          _('hg log [OPTION]... [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "merge":
-    (merge,
-     [('b', 'branch', '', _('merge with head of a specific branch')),
-      ('', 'style', '', _('display using template map file')),
-      ('f', 'force', None, _('force a merge with outstanding changes')),
-      ('', 'template', '', _('display with template'))],
-     _('hg merge [-b TAG] [-f] [REV]')),
+        (merge,
+         [('b', 'branch', '', _('merge with head of a specific branch')),
+          ('f', 'force', None, _('force a merge with outstanding changes'))],
+         _('hg merge [-b TAG] [-f] [REV]')),
     "outgoing|out": (outgoing,
          [('M', 'no-merges', None, _('do not show merges')),
           ('f', 'force', None,
@@ -3123,11 +3123,9 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('b', 'branch', '', _('checkout the head of a specific branch')),
-          ('', 'style', '', _('display using template map file')),
           ('m', 'merge', None, _('allow merging of branches')),
           ('C', 'clean', None, _('overwrite locally modified files')),
-          ('f', 'force', None, _('force a merge with outstanding changes')),
-          ('', 'template', '', _('display with template'))],
+          ('f', 'force', None, _('force a merge with outstanding changes'))],
          _('hg update [-b TAG] [-m] [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),
@@ -3157,22 +3155,26 @@ optionalrepo = ("paths debugconfig")
 def findpossible(cmd):
     """
     Return cmd -> (aliases, command table entry)
-    for each matching command
+    for each matching command.
+    Return debug commands (or their aliases) only if no normal command matches.
     """
     choice = {}
     debugchoice = {}
     for e in table.keys():
         aliases = e.lstrip("^").split("|")
+        found = None
         if cmd in aliases:
-            choice[cmd] = (aliases, table[e])
-            continue
-        for a in aliases:
-            if a.startswith(cmd):
-                if aliases[0].startswith("debug"):
-                    debugchoice[a] = (aliases, table[e])
-                else:
-                    choice[a] = (aliases, table[e])
-                break
+            found = cmd
+        else:
+            for a in aliases:
+                if a.startswith(cmd):
+                    found = a
+                    break
+        if found is not None:
+            if aliases[0].startswith("debug"):
+                debugchoice[found] = (aliases, table[e])
+            else:
+                choice[found] = (aliases, table[e])
 
     if not choice and debugchoice:
         choice = debugchoice

@@ -40,19 +40,19 @@ class sshrepository(remoterepository):
         r = self.do_cmd("between", pairs=("%s-%s" % ("0"*40, "0"*40)))
         l1 = ""
         l2 = "dummy"
-        max_noise = 100
+        max_noise = 500
         while l2 and max_noise:
             l2 = r.readline()
             self.readerr()
             if l1 == "1\n" and l2 == "\n":
                 break
             if l1:
-                ui.status(_("remote: %s") % l1)
+                ui.debug(_("remote: "), l1)
             l1 = l2
             max_noise -= 1
         else:
             if l1:
-                ui.status(_("remote: %s") % l1)
+                ui.debug(_("remote: "), l1)
             raise hg.RepoError(_("no response from remote hg"))
 
     def readerr(self):
