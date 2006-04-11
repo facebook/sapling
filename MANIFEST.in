@@ -8,7 +8,7 @@ include *.txt
 include templates/map templates/map-*[a-z0-9]
 include templates/*.tmpl
 include templates/static/*
-include doc/README doc/Makefile doc/*.txt doc/*.html doc/*.[0-9]
+include doc/README doc/Makefile doc/gendoc.py doc/*.txt doc/*.html doc/*.[0-9]
 recursive-include contrib *
 include README
 include CONTRIBUTORS
