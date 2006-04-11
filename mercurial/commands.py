@@ -3263,10 +3263,10 @@ def dispatch(args):
     external = []
     for x in u.extensions():
         def on_exception(exc, inst):
-            u.warn(_("*** failed to import extension %s\n") % x[1])
-            u.warn("%s\n" % inst)
+            u.warn(_("*** failed to import extension %s: %s\n") % (x[0], inst))
             if "--traceback" in sys.argv[1:]:
                 traceback.print_exc()
+                sys.exit(0)
         if x[1]:
             try:
                 mod = imp.load_source(x[0], x[1])
