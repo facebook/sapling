@@ -3448,7 +3448,7 @@ proc domktag {} {
 	return
     }
     if {[catch {
-	set out [exec hg tag $tag $id]
+	set out [exec hg tag -r $id $tag]
     } err]} {
 	error_popup "Error creating tag: $err"
 	return
