@@ -19,6 +19,16 @@ HGEDITOR=true; export HGEDITOR
 HGMERGE=true; export HGMERGE
 HGUSER="test"; export HGUSER
 HGRCPATH=""; export HGRCPATH
+OS=`uname`
+
+case "$OS" in
+  HP-UX)
+    DIFFOPTS=
+    ;;
+  *)
+    DIFFOPTS=-u
+    ;;
+esac
 
 if [ `echo -n HG` = "-n HG" ]
 then
@@ -101,13 +111,13 @@ run_one() {
 	cat "$ERR"
 	fail=1
     elif [ -r "$OUTOK" ]; then
-	if diff -u "$OUTOK" "$OUT" > /dev/null; then
+	if diff $DIFFOPTS "$OUTOK" "$OUT" > /dev/null; then
 	    : no differences
 	else
 	    cp "$OUT" "$ERR"
 	    echo
 	    echo "$1 output changed:"
-	    diff -u "$OUTOK" "$ERR" || true
+	    diff $DIFFOPTS "$OUTOK" "$ERR" || true
 	    fail=1
 	fi
     fi
