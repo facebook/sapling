@@ -22,7 +22,7 @@ HGRCPATH=""; export HGRCPATH
 OS=`uname`
 
 case "$OS" in
-  HP-UX)
+  HP-UX|SunOS)
     DIFFOPTS=
     ;;
   *)
