@@ -55,3 +55,15 @@ hg --debug up -f -m
 hg parents
 hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
               -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+# test a local add
+cd ..
+hg init a
+hg init b
+echo a > a/a
+echo a > b/a
+hg --cwd a commit -A -m a
+cd b
+hg add a 
+hg pull -u ../a
+hg st
