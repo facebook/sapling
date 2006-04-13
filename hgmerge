@@ -47,6 +47,11 @@ type "$KDIFF3"    >/dev/null 2>&1 || KDIFF3=
 type "$TKDIFF"    >/dev/null 2>&1 || TKDIFF=
 type "$MELD"      >/dev/null 2>&1 || MELD=
 
+# Hack for Solaris
+TEST="/usr/bin/test"
+type "$TEST" >/dev/null 2>&1 || TEST="/bin/test"
+type "$TEST" >/dev/null 2>&1 || TEST="test"
+
 # random part of names
 RAND="$RANDOM$RANDOM"
 
@@ -118,7 +123,7 @@ if [ -n "$FILEMERGE" ]; then
     # filemerge prefers the right by default
     $FILEMERGE -left "$OTHER" -right "$LOCAL" -ancestor "$BASE" -merge "$LOCAL"
     [ $? -ne 0 ] && echo "FileMerge failed to launch" && failure
-    test "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
+    $TEST "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
 fi
 
 if [ -n "$DISPLAY" ]; then
@@ -142,7 +147,7 @@ if [ -n "$DISPLAY" ]; then
         # use the file with conflicts
         $MELD "$LOCAL.tmp.$RAND" "$LOCAL" "$OTHER" || failure
         # Also it doesn't return good error code
-        test "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
+        $TEST "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
     fi
 fi
 
@@ -153,7 +158,7 @@ if [ -n "$MERGE" -o -n "$DIFF3" ]; then
     $EDITOR "$LOCAL" || failure
     # Some editors do not return meaningful error codes
     # Do not take any chances
-    test "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
+    $TEST "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
 fi
 
 # attempt to manually merge with diff and patch
@@ -170,7 +175,7 @@ if [ -n "$DIFF" -a -n "$PATCH" ]; then
     else
         # If rejects are empty after using the editor, merge was ok
         $EDITOR "$LOCAL" "$LOCAL.rej" || failure
-        test -s "$LOCAL.rej" || success
+        $TEST -s "$LOCAL.rej" || success
     fi
     failure
 fi

@@ -14,6 +14,7 @@ versionstr = "0.45"
 
 repomap = {}
 
+commands.norepo += " qversion"
 class queue:
     def __init__(self, ui, path, patchdir=None):
         self.basepath = path

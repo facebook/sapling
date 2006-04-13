@@ -13,26 +13,35 @@ R a
 %% should show b added, copy saved, and c modified
 M c
 A b
-saving current version of b as b.orig
-%% should show b unknown, b.bak unknown, and c modified
+%% should show b unknown, and c modified
 M c
 ? b
-? b.orig
-%% should show unknown: b b.bak
+%% should show unknown: b
 ? b
-? b.orig
-%% should show a b b.bak c e
+%% should show a b c e
 a
 b
-b.orig
 c
 e
-%% should save backup to e.0
-saving current version of e as e.0
+%% should verbosely save backup to e.orig
+saving current version of e as e.orig
 reverting e
+resolving manifests
+getting e
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 %% should say no changes needed
 no changes needed to a
 %% should say file not managed
 file not managed: q
 %% should say file not found
-notfound: No such file or directory
+notfound: No such file in rev 095eacd0c0d7
+A z
+? b
+? e.orig
+%% should add a, forget z
+adding a
+forgetting z
+%% should forget a
+forgetting a
+%% should silently add a
+A a

@@ -48,7 +48,7 @@ def makewalk(repo, pats, opts, node=None, head='', badmatch=None):
     exact = dict(zip(files, files))
     def walk():
         for src, fn in repo.walk(node=node, files=files, match=matchfn,
-                                 badmatch=None):
+                                 badmatch=badmatch):
             yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
     return files, matchfn, walk()
 
@@ -407,14 +407,19 @@ class changeset_templater(object):
         '''set template string to use'''
         self.t.cache['changeset'] = t
 
-    def write(self, thing):
+    def write(self, thing, header=False):
         '''write expanded template.
         uses in-order recursive traverse of iterators.'''
         for t in thing:
             if hasattr(t, '__iter__'):
-                self.write(t)
+                self.write(t, header=header)
+            elif header:
+                self.ui.write_header(t)
             else:
                 self.ui.write(t)
+
+    def write_header(self, thing):
+        self.write(thing, header=True)
 
     def show(self, rev=0, changenode=None, brinfo=None):
         '''show a single changeset or file revision'''
@@ -549,6 +554,18 @@ class changeset_templater(object):
             }
 
         try:
+            if self.ui.debugflag and 'header_debug' in self.t:
+                key = 'header_debug'
+            elif self.ui.quiet and 'header_quiet' in self.t:
+                key = 'header_quiet'
+            elif self.ui.verbose and 'header_verbose' in self.t:
+                key = 'header_verbose'
+            elif 'header' in self.t:
+                key = 'header'
+            else:
+                key = ''
+            if key:
+                self.write_header(self.t(key, **props))
             if self.ui.debugflag and 'changeset_debug' in self.t:
                 key = 'changeset_debug'
             elif self.ui.quiet and 'changeset_quiet' in self.t:
@@ -1255,11 +1272,26 @@ def debugancestor(ui, index, rev1, rev2):
     a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
-def debugcomplete(ui, cmd):
+def debugcomplete(ui, cmd='', **opts):
     """returns the completion list associated with the given command"""
+
+    if opts['options']:
+        options = []
+        otables = [globalopts]
+        if cmd:
+            aliases, entry = find(cmd)
+            otables.append(entry[1])
+        for t in otables:
+            for o in t:
+                if o[0]:
+                    options.append('-%s' % o[0])
+                options.append('--%s' % o[1])
+        ui.write("%s\n" % "\n".join(options))
+        return
+
     clist = findpossible(cmd).keys()
     clist.sort()
-    ui.write("%s\n" % " ".join(clist))
+    ui.write("%s\n" % "\n".join(clist))
 
 def debugrebuildstate(ui, repo, rev=None):
     """rebuild the dirstate as it would look like for the given revision"""
@@ -1897,9 +1929,11 @@ def log(ui, repo, *pats, **opts):
         def __init__(self, ui):
             self.ui = ui
             self.hunk = {}
+            self.header = {}
         def bump(self, rev):
             self.rev = rev
             self.hunk[rev] = []
+            self.header[rev] = []
         def note(self, *args):
             if self.verbose:
                 self.write(*args)
@@ -1908,6 +1942,8 @@ def log(ui, repo, *pats, **opts):
                 self.write(*args)
         def write(self, *args):
             self.hunk[self.rev].append(args)
+        def write_header(self, *args):
+            self.header[self.rev].append(args)
         def debug(self, *args):
             if self.debugflag:
                 self.write(*args)
@@ -1964,6 +2000,9 @@ def log(ui, repo, *pats, **opts):
                 du.write("\n\n")
         elif st == 'iter':
             if count == limit: break
+            if du.header[rev]:
+                for args in du.header[rev]:
+                    ui.write_header(*args)
             if du.hunk[rev]:
                 count += 1
                 for args in du.hunk[rev]:
@@ -2219,7 +2258,7 @@ def recover(ui, repo):
     """
     if repo.recover():
         return repo.verify()
-    return False
+    return 1
 
 def remove(ui, repo, pat, *pats, **opts):
     """remove the specified files on the next commit
@@ -2287,9 +2326,8 @@ def revert(ui, repo, *pats, **opts):
     to the named files or directories.  This restores the contents of
     the affected files to an unmodified state.
 
-    Modified files have backup copies saved before revert.  To disable
-    backups, use --no-backup.  To change the name of backup files, use
-    --backup to give a format string.
+    Modified files are saved with a .orig suffix before reverting.
+    To disable these backups, use --no-backup.
 
     Using the -r option, it reverts the given files or directories to
     their state as of an earlier revision.  This can be helpful to "roll
@@ -2309,31 +2347,29 @@ def revert(ui, repo, *pats, **opts):
     node = opts['rev'] and repo.lookup(opts['rev']) or parent
     mf = repo.manifest.read(repo.changelog.read(node)[0])
 
-    def backup(name, exact):
-        bakname = make_filename(repo, repo.changelog,
-                                opts['backup_name'] or '%p.orig',
-                                node=parent, pathname=name)
-        if os.path.exists(name):
-            # if backup already exists and is same as backup we want
-            # to make, do nothing
-            if os.path.exists(bakname):
-                if repo.wread(name) == repo.wread(bakname):
-                    return
-                raise util.Abort(_('cannot save current version of %s - '
-                                   '%s exists and differs') %
-                                 (name, bakname))
-            ui.status(('saving current version of %s as %s\n') %
-                      (name, bakname))
-            shutil.copyfile(name, bakname)
-            shutil.copymode(name, bakname)
-
     wlock = repo.wlock()
 
-    entries = []
+    # need all matching names in dirstate and manifest of target rev,
+    # so have to walk both. do not print errors if files exist in one
+    # but not other.
+
     names = {}
+    target_only = {}
+
+    # walk dirstate.
+
     for src, abs, rel, exact in walk(repo, pats, opts, badmatch=mf.has_key):
-        names[abs] = True
-        entries.append((abs, rel, exact))
+        names[abs] = (rel, exact)
+        if src == 'b':
+            target_only[abs] = True
+
+    # walk target manifest.
+
+    for src, abs, rel, exact in walk(repo, pats, opts, node=node,
+                                     badmatch=names.has_key):
+        if abs in names: continue
+        names[abs] = (rel, exact)
+        target_only[abs] = True
 
     changes = repo.changes(match=names.has_key, wlock=wlock)
     modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
@@ -2353,23 +2389,32 @@ def revert(ui, repo, *pats, **opts):
         #   make backup if in target manifest
         #   make backup if not in target manifest
         (modified, revert, remove, True, True),
-        (added, revert, forget, True, True),
+        (added, revert, forget, True, False),
         (removed, undelete, None, False, False),
         (deleted, revert, remove, False, False),
         (unknown, add, None, True, False),
+        (target_only, add, None, False, False),
         )
 
-    for abs, rel, exact in entries:
+    entries = names.items()
+    entries.sort()
+
+    for abs, (rel, exact) in entries:
+        in_mf = abs in mf
         def handle(xlist, dobackup):
             xlist[0].append(abs)
-            if dobackup and not opts['no_backup']:
-                backup(rel, exact)
+            if dobackup and not opts['no_backup'] and os.path.exists(rel):
+                bakname = "%s.orig" % rel
+                ui.note(_('saving current version of %s as %s\n') %
+                        (rel, bakname))
+                shutil.copyfile(rel, bakname)
+                shutil.copymode(rel, bakname)
             if ui.verbose or not exact:
                 ui.status(xlist[1] % rel)
         for table, hitlist, misslist, backuphit, backupmiss in disptable:
             if abs not in table: continue
             # file has changed in dirstate
-            if abs in mf:
+            if in_mf:
                 handle(hitlist, backuphit)
             elif misslist is not None:
                 handle(misslist, backupmiss)
@@ -2381,8 +2426,8 @@ def revert(ui, repo, *pats, **opts):
             if node == parent:
                 if exact: ui.warn(_('no changes needed to %s\n' % rel))
                 continue
-            if abs not in mf:
-                remove[0].append(abs)
+            if not in_mf:
+                handle(remove, False)
         update[abs] = True
 
     repo.dirstate.forget(forget[0])
@@ -2652,7 +2697,10 @@ def tags(ui, repo):
             r = "%5d:%s" % (repo.changelog.rev(n), hex(n))
         except KeyError:
             r = "    ?:?"
-        ui.write("%-30s %s\n" % (t, r))
+        if ui.quiet:
+            ui.write("%s\n" % t)
+        else:
+            ui.write("%-30s %s\n" % (t, r))
 
 def tip(ui, repo, **opts):
     """show the tip revision
@@ -2708,7 +2756,9 @@ def undo(ui, repo):
 
     This command is not intended for use on public repositories. Once
     a change is visible for pull by other users, undoing it locally is
-    ineffective.
+    ineffective. Furthemore a race is possible with readers of the
+    repository, for example an ongoing pull from the repository will
+    fail and rollback.
     """
     repo.undo()
 
@@ -2829,7 +2879,10 @@ table = {
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
-    "debugcomplete": (debugcomplete, [], _('debugcomplete CMD')),
+    "debugcomplete":
+        (debugcomplete,
+         [('o', 'options', None, _('show the command options'))],
+         _('debugcomplete [-o] CMD')),
     "debugrebuildstate":
         (debugrebuildstate,
          [('r', 'rev', '', _('revision to rebuild to'))],
@@ -2940,12 +2993,10 @@ table = {
          _('hg log [OPTION]... [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "merge":
-    (merge,
-     [('b', 'branch', '', _('merge with head of a specific branch')),
-      ('', 'style', '', _('display using template map file')),
-      ('f', 'force', None, _('force a merge with outstanding changes')),
-      ('', 'template', '', _('display with template'))],
-     _('hg merge [-b TAG] [-f] [REV]')),
+        (merge,
+         [('b', 'branch', '', _('merge with head of a specific branch')),
+          ('f', 'force', None, _('force a merge with outstanding changes'))],
+         _('hg merge [-b TAG] [-f] [REV]')),
     "outgoing|out": (outgoing,
          [('M', 'no-merges', None, _('do not show merges')),
           ('f', 'force', None,
@@ -3011,7 +3062,6 @@ table = {
     "^revert":
         (revert,
          [('r', 'rev', '', _('revision to revert to')),
-          ('', 'backup-name', '', _('save backup with formatted name')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
           ('I', 'include', [], _('include names matching given patterns')),
           ('X', 'exclude', [], _('exclude names matching given patterns'))],
@@ -3072,11 +3122,9 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('b', 'branch', '', _('checkout the head of a specific branch')),
-          ('', 'style', '', _('display using template map file')),
           ('m', 'merge', None, _('allow merging of branches')),
           ('C', 'clean', None, _('overwrite locally modified files')),
-          ('f', 'force', None, _('force a merge with outstanding changes')),
-          ('', 'template', '', _('display with template'))],
+          ('f', 'force', None, _('force a merge with outstanding changes'))],
          _('hg update [-b TAG] [-m] [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),
@@ -3106,22 +3154,26 @@ optionalrepo = ("paths debugconfig")
 def findpossible(cmd):
     """
     Return cmd -> (aliases, command table entry)
-    for each matching command
+    for each matching command.
+    Return debug commands (or their aliases) only if no normal command matches.
     """
     choice = {}
     debugchoice = {}
     for e in table.keys():
         aliases = e.lstrip("^").split("|")
+        found = None
         if cmd in aliases:
-            choice[cmd] = (aliases, table[e])
-            continue
-        for a in aliases:
-            if a.startswith(cmd):
-                if aliases[0].startswith("debug"):
-                    debugchoice[a] = (aliases, table[e])
-                else:
-                    choice[a] = (aliases, table[e])
-                break
+            found = cmd
+        else:
+            for a in aliases:
+                if a.startswith(cmd):
+                    found = a
+                    break
+        if found is not None:
+            if aliases[0].startswith("debug"):
+                debugchoice[found] = (aliases, table[e])
+            else:
+                choice[found] = (aliases, table[e])
 
     if not choice and debugchoice:
         choice = debugchoice
@@ -3206,38 +3258,32 @@ def dispatch(args):
         u = ui.ui()
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
-        sys.exit(1)
+        return -1
 
     external = []
     for x in u.extensions():
-        def on_exception(exc, inst):
-            u.warn(_("*** failed to import extension %s\n") % x[1])
-            u.warn("%s\n" % inst)
-            if "--traceback" in sys.argv[1:]:
-                traceback.print_exc()
-        if x[1]:
-            try:
+        try:
+            if x[1]:
                 mod = imp.load_source(x[0], x[1])
-            except Exception, inst:
-                on_exception(Exception, inst)
-                continue
-        else:
-            def importh(name):
-                mod = __import__(name)
-                components = name.split('.')
-                for comp in components[1:]:
-                    mod = getattr(mod, comp)
-                return mod
-            try:
+            else:
+                def importh(name):
+                    mod = __import__(name)
+                    components = name.split('.')
+                    for comp in components[1:]:
+                        mod = getattr(mod, comp)
+                    return mod
                 try:
                     mod = importh("hgext." + x[0])
                 except ImportError:
                     mod = importh(x[0])
-            except Exception, inst:
-                on_exception(Exception, inst)
-                continue
+            external.append(mod)
+        except Exception, inst:
+            u.warn(_("*** failed to import extension %s: %s\n") % (x[0], inst))
+            if "--traceback" in sys.argv[1:]:
+                traceback.print_exc()
+                return 1
+            continue
 
-        external.append(mod)
     for x in external:
         cmdtable = getattr(x, 'cmdtable', {})
         for t in cmdtable:
@@ -3279,14 +3325,11 @@ def dispatch(args):
             repo = path and hg.repository(u, path=path) or None
 
             if options['help']:
-                help_(u, cmd, options['version'])
-                sys.exit(0)
+                return help_(u, cmd, options['version'])
             elif options['version']:
-                show_version(u)
-                sys.exit(0)
+                return show_version(u)
             elif not cmd:
-                help_(u, 'shortlist')
-                sys.exit(0)
+                return help_(u, 'shortlist')
 
             if cmd not in norepo.split():
                 try:
@@ -3341,15 +3384,12 @@ def dispatch(args):
         else:
             u.warn(_("hg: %s\n") % inst.args[1])
             help_(u, 'shortlist')
-        sys.exit(-1)
     except AmbiguousCommand, inst:
         u.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
-        sys.exit(1)
     except UnknownCommand, inst:
         u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         help_(u, 'shortlist')
-        sys.exit(1)
     except hg.RepoError, inst:
         u.warn(_("abort: "), inst, "!\n")
     except lock.LockHeld, inst:
@@ -3396,7 +3436,6 @@ def dispatch(args):
             u.warn(_("abort: %s\n") % inst.strerror)
     except util.Abort, inst:
         u.warn(_('abort: '), inst.args[0] % inst.args[1:], '\n')
-        sys.exit(1)
     except TypeError, inst:
         # was this an argument error?
         tb = traceback.extract_tb(sys.exc_info()[2])
@@ -3405,9 +3444,10 @@ def dispatch(args):
         u.debug(inst, "\n")
         u.warn(_("%s: invalid arguments\n") % cmd)
         help_(u, cmd)
-    except SystemExit:
-        # don't catch this in the catch-all below
-        raise
+    except SystemExit, inst:
+        # Commands shouldn't sys.exit directly, but give a return code.
+        # Just in case catch this and and pass exit code to caller.
+        return inst.code
     except:
         u.warn(_("** unknown exception encountered, details follow\n"))
         u.warn(_("** report bug details to mercurial@selenic.com\n"))
@@ -3415,4 +3455,4 @@ def dispatch(args):
                % version.get_version())
         raise
 
-    sys.exit(-1)
+    return -1

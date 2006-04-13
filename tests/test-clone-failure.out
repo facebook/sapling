@@ -6,7 +6,7 @@ abort: error: Connection refused
 abort: repository a not found!
 255
 abort: destination '../a' already exists
-1
+255
 abort: repository a not found!
 255
 abort: destination 'q' already exists

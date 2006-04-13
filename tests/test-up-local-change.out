@@ -101,7 +101,7 @@ this update spans a branch affecting the following files:
  a (resolve)
  b (resolve)
 aborting update spanning branches!
-(use 'hg merge' to merge across branches or '-C' to lose changes)
+(use 'hg merge' to merge across branches or 'hg update -C' to lose changes)
 failed
 abort: outstanding uncommitted changes
 failed

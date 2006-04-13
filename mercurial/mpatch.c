@@ -61,12 +61,12 @@ static struct flist *lalloc(int size)
 	a = (struct flist *)malloc(sizeof(struct flist));
 	if (a) {
 		a->base = (struct frag *)malloc(sizeof(struct frag) * size);
-		if (!a->base) {
-			free(a);
-			a = NULL;
-		} else
+		if (a->base) {
 			a->head = a->tail = a->base;
-		return a;
+			return a;
+		}
+		free(a);
+		a = NULL;
 	}
 	if (!PyErr_Occurred())
 		PyErr_NoMemory();
