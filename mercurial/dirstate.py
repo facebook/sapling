@@ -345,6 +345,9 @@ class dirstate(object):
                 if nd == '.':
                     nd = ''
                 else:
+                    # do not recurse into a repo contained in this
+                    # one. use bisect to find .hg directory so speed
+                    # is good on big directory.
                     hg = bisect.bisect_left(names, '.hg')
                     if hg < len(names) and names[hg] == '.hg':
                         if os.path.isdir(os.path.join(top, '.hg')):
