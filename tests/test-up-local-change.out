@@ -136,3 +136,10 @@ diff -r 802f095af299 a
 @@ -1,1 +1,1 @@ a2
 -a2
 +abc
+adding a
+pulling from ../a
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
