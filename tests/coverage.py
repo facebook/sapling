@@ -348,12 +348,8 @@ class coverage:
             args = self.cexecuted.keys()
         ignore_errors = settings.get('ignore-errors')
         show_missing = settings.get('show-missing')
-        directory = settings.get('directory=')
-        omit = settings.get('omit=')
-        if omit is not None:
-            omit = omit.split(',')
-        else:
-            omit = []
+        directory = settings.get('directory')
+        omit = filter(None, settings.get('omit', '').split(','))
 
         if settings.get('report'):
             self.report(args, show_missing, ignore_errors, omit_prefixes=omit)
@@ -365,7 +361,8 @@ class coverage:
         
     def get_ready(self):
         if self.usecache and not self.cache:
-            self.cache = os.environ.get(self.cache_env, self.cache_default)
+            self.cache = os.path.abspath(os.environ.get(self.cache_env,
+                                                        self.cache_default))
             self.restore()
         self.analysis_cache = {}
         
@@ -408,6 +405,8 @@ class coverage:
     # save().  Save coverage data to the coverage cache.
 
     def save(self):
+        # move to directory that must exist.
+        os.chdir(os.sep)
         if self.usecache and self.cache:
             self.canonicalize_filenames()
             cache = open(self.cache, 'wb')
