@@ -71,10 +71,23 @@ def filter(s, cmd):
             return fn(s, cmd[len(name):].lstrip())
     return pipefilter(s, cmd)
 
+def find_in_path(name, path, default=None):
+    '''find name in search path. path can be string (will be split
+    with os.pathsep), or iterable thing that returns strings.  if name
+    found, return path to name. else return default.'''
+    if isinstance(path, str):
+        path = path.split(os.pathsep)
+    for p in path:
+        p_name = os.path.join(p, name)
+        if os.path.exists(p_name):
+            return p_name
+    return default
+
 def patch(strip, patchname, ui):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
-    fp = os.popen('patch -p%d < "%s"' % (strip, patchname))
+    patcher = find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
+    fp = os.popen('"%s" -p%d < "%s"' % (patcher, strip, patchname))
     files = {}
     for line in fp:
         line = line.rstrip()
