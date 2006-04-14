@@ -1,4 +1,9 @@
 #!/bin/sh -e
+#
+# environment variables:
+#
+# TEST_COVERAGE - set non-empty if you want to print test coverage report
+# COVERAGE_STDLIB - set non-empty to report coverage of standard library
 
 LANG="C"; export LANG
 LC_CTYPE="C"; export LC_CTYPE
@@ -64,7 +69,19 @@ else
 fi
 cd "$TESTDIR"
 
-BINDIR="$INST/bin"
+BINDIR="$INST/bin"; export BINDIR
+if [ -n "$TEST_COVERAGE" ]; then
+    COVERAGE_FILE="$TESTDIR/.coverage"; export COVERAGE_FILE
+    rm -f "$COVERAGE_FILE"
+    mv "$BINDIR/hg" "$BINDIR/hg.py"
+    {
+        echo '#!/bin/sh'
+        echo "exec \"${PYTHON-python}\" \"$TESTDIR/coverage.py\"" \
+            "-x \"$BINDIR/hg.py\" \"\$@\""
+    } > "$BINDIR/hg"
+    chmod 700 "$BINDIR/hg"
+fi
+    
 PATH="$BINDIR:$PATH"; export PATH
 if [ -n "$PYTHON" ]; then
     {
@@ -152,6 +169,17 @@ done
 
 echo
 echo "Ran $tests tests, $failed failed."
+
+if [ -n "$TEST_COVERAGE" ]; then
+    unset PYTHONPATH
+    $ECHO_N "$BINDIR,$TESTDIR,$HGTMP/test-," > "$HGTMP/omit"
+    if [ -z "$COVERAGE_STDLIB" ]; then
+        "${PYTHON-python}" -c 'import sys; print ",".join(sys.path)' \
+            >> "$HGTMP/omit"
+    fi
+    cd "$PYTHONDIR"
+    "${PYTHON-python}" "$TESTDIR/coverage.py" -r --omit="`cat \"$HGTMP/omit\"`"
+fi
 
 if [ $failed -gt 0 ] ; then
     exit 1
