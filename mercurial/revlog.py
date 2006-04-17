@@ -826,7 +826,15 @@ class revlog(object):
         size = fp.tell()
         if size < 131072:
             return
-        tr.add(self.datafile, 0)
+        trinfo = tr.find(self.indexfile)
+        if trinfo == None:
+            raise RevlogError(_("%s not found in the transaction"  %
+                              self.indexfile))
+
+        trindex = trinfo[2]
+        dataoff = self.start(trindex)
+
+        tr.add(self.datafile, dataoff)
         df = self.opener(self.datafile, 'w')
         calc = struct.calcsize(self.indexformat)
         for r in xrange(self.count()):
@@ -854,6 +862,8 @@ class revlog(object):
         # if we don't call rename, the temp file will never replace the
         # real index
         fp.rename()
+
+        tr.replace(self.indexfile, trindex * calc)
         self.chunkcache = None
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
@@ -922,7 +932,7 @@ class revlog(object):
         else:
             f = self.opener(self.indexfile, "a+")
             f.seek(0, 2)
-            transaction.add(self.indexfile, f.tell())
+            transaction.add(self.indexfile, f.tell(), self.count() - 1)
 
         if len(self.index) == 1 and self.version != 0:
             l = struct.pack(versionformat, self.version)
@@ -1071,7 +1081,7 @@ class revlog(object):
 
         ifh = self.opener(self.indexfile, "a+")
         ifh.seek(0, 2)
-        transaction.add(self.indexfile, ifh.tell())
+        transaction.add(self.indexfile, ifh.tell(), self.count())
         if self.inlinedata():
             dfh = None
         else:

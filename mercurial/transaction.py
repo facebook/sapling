@@ -39,11 +39,24 @@ class transaction(object):
             try: os.unlink(self.journal)
             except: pass
 
-    def add(self, file, offset):
+    def add(self, file, offset, data=None):
         if file in self.map: return
-        self.entries.append((file, offset))
-        self.map[file] = 1
+        self.entries.append((file, offset, data))
+        self.map[file] = len(self.entries) - 1
         # add enough data to the journal to do the truncate
+        self.file.write("%s\0%d\n" % (file, offset))
+        self.file.flush()
+
+    def find(self, file):
+        if file in self.map:
+            return self.entries[self.map[file]]
+        return None
+
+    def replace(self, file, offset, data=None):
+        if file not in self.map:
+            raise KeyError(file)
+        index = self.map[file]
+        self.entries[index] = (file, offset, data)
         self.file.write("%s\0%d\n" % (file, offset))
         self.file.flush()
 
@@ -71,7 +84,7 @@ class transaction(object):
 
         self.report(_("transaction abort!\n"))
 
-        for f, o in self.entries:
+        for f, o, ignore in self.entries:
             try:
                 self.opener(f, "a").truncate(o)
             except:
@@ -82,8 +95,12 @@ class transaction(object):
         self.report(_("rollback completed\n"))
 
 def rollback(opener, file):
+    files = {}
     for l in open(file).readlines():
         f, o = l.split('\0')
+        files[f] = o
+    for f in files:
+        o = files[f]
         opener(f, "a").truncate(int(o))
     os.unlink(file)
 
