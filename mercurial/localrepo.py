@@ -1594,8 +1594,9 @@ class localrepository(object):
                         self.ui.debug(_(" remote %s is newer, get\n") % f)
                         get[f] = m2[f]
                         s = 1
-                elif f in umap:
+                elif f in umap or f in added:
                     # this unknown file is the same as the checkout
+                    # we need to reset the dirstate if the file was added
                     get[f] = m2[f]
 
                 if not s and mfw[f] != mf2[f]:

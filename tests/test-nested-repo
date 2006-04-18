@@ -1,0 +1,19 @@
+#!/bin/sh
+
+hg init a
+cd a
+hg init b
+echo x > b/x
+echo '# should print nothing'
+hg st
+echo '# should print ? b/x'
+hg st b/x
+
+hg add b/x
+
+echo '# should print A b/x'
+hg st
+echo '# should forget b/x'
+hg forget
+echo '# should print nothing'
+hg st b

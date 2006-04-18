@@ -2259,7 +2259,7 @@ def recover(ui, repo):
     """
     if repo.recover():
         return repo.verify()
-    return False
+    return 1
 
 def remove(ui, repo, pat, *pats, **opts):
     """remove the specified files on the next commit
@@ -3259,38 +3259,32 @@ def dispatch(args):
         u = ui.ui()
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
-        sys.exit(1)
+        return -1
 
     external = []
     for x in u.extensions():
-        def on_exception(exc, inst):
-            u.warn(_("*** failed to import extension %s\n") % x[1])
-            u.warn("%s\n" % inst)
-            if "--traceback" in sys.argv[1:]:
-                traceback.print_exc()
-        if x[1]:
-            try:
+        try:
+            if x[1]:
                 mod = imp.load_source(x[0], x[1])
-            except Exception, inst:
-                on_exception(Exception, inst)
-                continue
-        else:
-            def importh(name):
-                mod = __import__(name)
-                components = name.split('.')
-                for comp in components[1:]:
-                    mod = getattr(mod, comp)
-                return mod
-            try:
+            else:
+                def importh(name):
+                    mod = __import__(name)
+                    components = name.split('.')
+                    for comp in components[1:]:
+                        mod = getattr(mod, comp)
+                    return mod
                 try:
                     mod = importh("hgext." + x[0])
                 except ImportError:
                     mod = importh(x[0])
-            except Exception, inst:
-                on_exception(Exception, inst)
-                continue
+            external.append(mod)
+        except Exception, inst:
+            u.warn(_("*** failed to import extension %s: %s\n") % (x[0], inst))
+            if "--traceback" in sys.argv[1:]:
+                traceback.print_exc()
+                return 1
+            continue
 
-        external.append(mod)
     for x in external:
         cmdtable = getattr(x, 'cmdtable', {})
         for t in cmdtable:
@@ -3332,14 +3326,11 @@ def dispatch(args):
             repo = path and hg.repository(u, path=path) or None
 
             if options['help']:
-                help_(u, cmd, options['version'])
-                sys.exit(0)
+                return help_(u, cmd, options['version'])
             elif options['version']:
-                show_version(u)
-                sys.exit(0)
+                return show_version(u)
             elif not cmd:
-                help_(u, 'shortlist')
-                sys.exit(0)
+                return help_(u, 'shortlist')
 
             if cmd not in norepo.split():
                 try:
@@ -3394,15 +3385,12 @@ def dispatch(args):
         else:
             u.warn(_("hg: %s\n") % inst.args[1])
             help_(u, 'shortlist')
-        sys.exit(-1)
     except AmbiguousCommand, inst:
         u.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
-        sys.exit(1)
     except UnknownCommand, inst:
         u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         help_(u, 'shortlist')
-        sys.exit(1)
     except hg.RepoError, inst:
         u.warn(_("abort: "), inst, "!\n")
     except lock.LockHeld, inst:
@@ -3449,7 +3437,6 @@ def dispatch(args):
             u.warn(_("abort: %s\n") % inst.strerror)
     except util.Abort, inst:
         u.warn(_('abort: '), inst.args[0] % inst.args[1:], '\n')
-        sys.exit(1)
     except TypeError, inst:
         # was this an argument error?
         tb = traceback.extract_tb(sys.exc_info()[2])
@@ -3458,9 +3445,10 @@ def dispatch(args):
         u.debug(inst, "\n")
         u.warn(_("%s: invalid arguments\n") % cmd)
         help_(u, cmd)
-    except SystemExit:
-        # don't catch this in the catch-all below
-        raise
+    except SystemExit, inst:
+        # Commands shouldn't sys.exit directly, but give a return code.
+        # Just in case catch this and and pass exit code to caller.
+        return inst.code
     except:
         u.warn(_("** unknown exception encountered, details follow\n"))
         u.warn(_("** report bug details to mercurial@selenic.com\n"))
@@ -3468,4 +3456,4 @@ def dispatch(args):
                % version.get_version())
         raise
 
-    sys.exit(-1)
+    return -1

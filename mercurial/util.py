@@ -71,10 +71,23 @@ def filter(s, cmd):
             return fn(s, cmd[len(name):].lstrip())
     return pipefilter(s, cmd)
 
+def find_in_path(name, path, default=None):
+    '''find name in search path. path can be string (will be split
+    with os.pathsep), or iterable thing that returns strings.  if name
+    found, return path to name. else return default.'''
+    if isinstance(path, str):
+        path = path.split(os.pathsep)
+    for p in path:
+        p_name = os.path.join(p, name)
+        if os.path.exists(p_name):
+            return p_name
+    return default
+
 def patch(strip, patchname, ui):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
-    fp = os.popen('patch -p%d < "%s"' % (strip, patchname))
+    patcher = find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
+    fp = os.popen('"%s" -p%d < "%s"' % (patcher, strip, patchname))
     files = {}
     for line in fp:
         line = line.rstrip()
@@ -373,8 +386,10 @@ def unlink(f):
     """unlink and remove the directory if it is empty"""
     os.unlink(f)
     # try removing directories that might now be empty
-    try: os.removedirs(os.path.dirname(f))
-    except: pass
+    try:
+        os.removedirs(os.path.dirname(f))
+    except OSError:
+        pass
 
 def copyfiles(src, dst, hardlink=None):
     """Copy a directory tree using hardlinks if possible"""
@@ -530,18 +545,13 @@ if os.name == 'nt':
 
     sys.stdout = winstdout(sys.stdout)
 
+    def system_rcpath():
+        return [r'c:\mercurial\mercurial.ini']
+
     def os_rcpath():
         '''return default os-specific hgrc search path'''
-        try:
-            import win32api, win32process
-            proc = win32api.GetCurrentProcess()
-            filename = win32process.GetModuleFileNameEx(proc, 0)
-            systemrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
-        except ImportError:
-            systemrc = r'c:\mercurial\mercurial.ini'
-
-        return [systemrc,
-                os.path.join(os.path.expanduser('~'), 'mercurial.ini')]
+        return system_rcpath() + [os.path.join(os.path.expanduser('~'),
+                                               'mercurial.ini')]
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
@@ -550,43 +560,9 @@ if os.name == 'nt':
             pf = pf[1:-1] # Remove the quotes
         return pf
 
-    try: # Mark Hammond's win32all package allows better functionality on Windows
-        import win32api, win32con, win32file, pywintypes
-
-        # create hard links using win32file module
-        def os_link(src, dst): # NB will only succeed on NTFS
-            win32file.CreateHardLink(dst, src)
-
-        def nlinks(pathname):
-            """Return number of hardlinks for the given file."""
-            try:
-                fh = win32file.CreateFile(pathname,
-                    win32file.GENERIC_READ, win32file.FILE_SHARE_READ,
-                    None, win32file.OPEN_EXISTING, 0, None)
-                res = win32file.GetFileInformationByHandle(fh)
-                fh.Close()
-                return res[7]
-            except:
-                return os.stat(pathname).st_nlink
-
-        def testpid(pid):
-            '''return True if pid is still running or unable to
-            determine, False otherwise'''
-            try:
-                import win32process, winerror
-                handle = win32api.OpenProcess(
-                    win32con.PROCESS_QUERY_INFORMATION, False, pid)
-                if handle:
-                    status = win32process.GetExitCodeProcess(handle)
-                    return status == win32con.STILL_ACTIVE
-            except pywintypes.error, details:
-                return details[0] != winerror.ERROR_INVALID_PARAMETER
-            return True
-
-    except ImportError:
-        def testpid(pid):
-            '''return False if pid dead, True if running or not known'''
-            return True
+    def testpid(pid):
+        '''return False if pid dead, True if running or not known'''
+        return True
 
     def is_exec(f, last):
         return last
@@ -611,6 +587,12 @@ if os.name == 'nt':
 
     def explain_exit(code):
         return _("exited with status %d") % code, code
+
+    try:
+        # override functions with win32 versions if possible
+        from util_win32 import *
+    except ImportError:
+        pass
 
 else:
     nulldev = '/dev/null'
