@@ -625,7 +625,10 @@ class queue:
             try:
                 repo.wfile(f, "w").write(t)
             except IOError:
-                os.makedirs(os.path.dirname(repo.wjoin(f)))
+                try:
+                    os.makedirs(os.path.dirname(repo.wjoin(f)))
+                except OSError, err:
+                    if err.errno != errno.EEXIST: raise
                 repo.wfile(f, "w").write(t)
 
         if not wlock:
