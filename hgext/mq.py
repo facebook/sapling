@@ -1108,7 +1108,8 @@ def refresh(ui, repo, **opts):
 
 def diff(ui, repo, *files, **opts):
     """diff of the current patch"""
-    repomap[repo].diff(repo, files)
+    # deep in the dirstate code, the walkhelper method wants a list, not a tuple
+    repomap[repo].diff(repo, list(files))
     return 0
 
 def lastsavename(path):
