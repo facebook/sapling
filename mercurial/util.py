@@ -20,8 +20,12 @@ def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
     (pout, pin) = popen2.popen2(cmd, -1, 'b')
     def writer():
-        pin.write(s)
-        pin.close()
+        try:
+            pin.write(s)
+            pin.close()
+        except IOError, inst:
+            if inst.errno != errno.EPIPE:
+                raise
 
     # we should use select instead on UNIX, but this will work on most
     # systems, including Windows
