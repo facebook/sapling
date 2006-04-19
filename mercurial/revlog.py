@@ -928,6 +928,7 @@ class revlog(object):
             if data[0]:
                 f.write(data[0])
             f.write(data[1])
+            f.close()
             f = self.opener(self.indexfile, "a")
         else:
             f = self.opener(self.indexfile, "a+")
