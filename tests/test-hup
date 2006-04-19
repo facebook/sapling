@@ -9,7 +9,7 @@ P=$!
 Q=$!
 sleep 1
 kill -HUP $P
-sleep 1
+wait
 ls .hg
 
 
