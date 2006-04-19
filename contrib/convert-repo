@@ -73,7 +73,7 @@ class convert_git:
             if n == "parent": parents.append(v)
 
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
-        tz = int(tzs) * (int(tzh) * 3600 + int(tzm))
+        tz = -int(tzs) * (int(tzh) * 3600 + int(tzm))
         date = tm + " " + str(tz)
         return (parents, author, date, message)
 

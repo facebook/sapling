@@ -8,7 +8,7 @@ diffline = '#line#'
 changesetparent = '# parent: #node#'
 changesetchild = '# child: #node#'
 filenodelink = ''
-filerevision = filerevision-raw.tmpl
+filerevision = 'Content-Type: #mimetype#\nContent-Disposition: filename=#file#\n\n#raw#'
 fileline = '#line#'
 diffblock = '#lines#'
 filediff = filediff-raw.tmpl

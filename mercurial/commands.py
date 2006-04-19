@@ -3249,11 +3249,9 @@ def parse(ui, args):
     return (cmd, cmd and i[0] or None, args, options, cmdoptions)
 
 def dispatch(args):
-    signal.signal(signal.SIGTERM, catchterm)
-    try:
-        signal.signal(signal.SIGHUP, catchterm)
-    except AttributeError:
-        pass
+    for name in 'SIGTERM', 'SIGHUP', 'SIGBREAK':
+        num = getattr(signal, name, None)
+        if num: signal.signal(num, catchterm)
 
     try:
         u = ui.ui()
