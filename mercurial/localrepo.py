@@ -168,7 +168,6 @@ class localrepository(object):
             try:
                 return self.changelog.lookup(key)
             except:
-                raise
                 raise repo.RepoError(_("unknown revision '%s'") % key)
 
     def dev(self):
