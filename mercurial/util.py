@@ -201,7 +201,7 @@ def canonpath(root, cwd, myname):
     else:
         rootsep = root + os.sep
     name = myname
-    if not name.startswith(os.sep):
+    if not os.path.isabs(name):
         name = os.path.join(root, cwd, name)
     name = os.path.normpath(name)
     if name.startswith(rootsep):
