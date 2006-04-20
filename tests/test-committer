@@ -1,0 +1,12 @@
+#!/bin/sh
+
+unset HGUSER
+EMAIL="My Name <myname@example.com>"
+export EMAIL
+
+hg init test
+cd test
+touch asdf
+hg add asdf
+hg commit -d '1000000 0' -m commit-1
+hg tip
