@@ -419,7 +419,8 @@ class hgweb(object):
         mt = mimetypes.guess_type(f)[0]
         rawtext = text
         if util.binary(text):
-            text = "(binary:%s)" % (mt or 'data')
+            mt = mt or 'application/octet-stream'
+            text = "(binary:%s)" % mt
         mt = mt or 'text/plain'
 
         def lines():
