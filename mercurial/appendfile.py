@@ -131,13 +131,10 @@ class appendopener(object):
             fp = open(tmpname, 'rb')
             s = fp.read()
             fp.close()
+            os.unlink(tmpname)
             fp = self.realopener(name, 'a')
             fp.write(s)
             fp.close()
-
-    def __del__(self):
-        for tmpname in self.tmpnames.itervalues():
-            os.unlink(tmpname)
 
 # files for changelog and manifest are in different appendopeners, so
 # not mixed up together.
