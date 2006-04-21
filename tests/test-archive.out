@@ -1,14 +1,35 @@
 adding foo
 adding bar
 adding baz/bletch
+test-archive-TIP/.hg_archival.txt
 test-archive-TIP/bar
 test-archive-TIP/baz/bletch
 test-archive-TIP/foo
+test-archive-TIP/.hg_archival.txt
 test-archive-TIP/bar
 test-archive-TIP/baz/bletch
 test-archive-TIP/foo
 Archive:  archive.zip
+    testing: test-archive-TIP/.hg_archival.txt   OK
     testing: test-archive-TIP/bar   OK
     testing: test-archive-TIP/baz/bletch   OK
     testing: test-archive-TIP/foo   OK
 No errors detected in compressed data of archive.zip.
+test/.hg_archival.txt
+test/bar
+test/baz/bletch
+test/foo
+test/.hg_archival.txt
+test/bar
+test/foo
+test-TIP/.hg_archival.txt
+test-TIP/bar
+test-TIP/baz/bletch
+test-TIP/foo
+abort: archive prefix contains illegal components
+Archive:  test.zip
+    testing: test/.hg_archival.txt    OK
+    testing: test/bar                 OK
+    testing: test/baz/bletch          OK
+    testing: test/foo                 OK
+No errors detected in compressed data of test.zip.

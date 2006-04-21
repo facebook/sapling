@@ -36,3 +36,18 @@ unzip -t archive.zip | sed "s/$QTIP/TIP/"
 
 kill `cat hg.pid`
 sleep 1 # wait for server to scream and die
+
+hg archive -t tar test.tar
+tar tf test.tar
+
+hg archive -t tbz2 -X baz test.tar.bz2
+bunzip2 -dc test.tar.bz2 | tar tf -
+
+hg archive -t tgz -p %b-%h test-%h.tar.gz
+gzip -dc test-$QTIP.tar.gz | tar tf - | sed "s/$QTIP/TIP/"
+
+hg archive -t zip -p /illegal test.zip
+hg archive -t zip -p very/../bad test.zip
+
+hg archive -t zip -r 2 test.zip
+unzip -t test.zip
