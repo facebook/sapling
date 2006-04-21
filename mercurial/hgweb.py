@@ -10,8 +10,8 @@ import os, cgi, sys
 import mimetypes
 from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
-demandload(globals(), "zipfile tempfile StringIO tarfile BaseHTTPServer util")
-demandload(globals(), "mimetypes templater")
+demandload(globals(), "tempfile StringIO BaseHTTPServer util")
+demandload(globals(), "archival mimetypes templater")
 from node import *
 from i18n import gettext as _
 
@@ -682,55 +682,23 @@ class hgweb(object):
                      child=self.siblings(cl.children(n), cl.rev),
                      diff=diff)
 
+    archive_specs = {
+        'bz2': ('application/x-tar', 'tbz2', '.tar.bz2', 'x-bzip2'),
+        'gz': ('application/x-tar', 'tgz', '.tar.gz', 'x-gzip'),
+        'zip': ('application/zip', 'zip', '.zip', None),
+        }
+
     def archive(self, req, cnode, type):
-        cs = self.repo.changelog.read(cnode)
-        mnode = cs[0]
-        mf = self.repo.manifest.read(mnode)
-        rev = self.repo.manifest.rev(mnode)
-        reponame = re.sub(r"\W+", "-", self.reponame)
-        name = "%s-%s/" % (reponame, short(cnode))
-
-        files = mf.keys()
-        files.sort()
-
-        if type == 'zip':
-            tmp = tempfile.mkstemp()[1]
-            try:
-                zf = zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED)
-
-                for f in files:
-                    zf.writestr(name + f, self.repo.file(f).read(mf[f]))
-                zf.close()
-
-                f = open(tmp, 'r')
-                req.httphdr('application/zip', name[:-1] + '.zip',
-                        os.path.getsize(tmp))
-                req.write(f.read())
-                f.close()
-            finally:
-                os.unlink(tmp)
-
-        else:
-            tf = tarfile.TarFile.open(mode='w|' + type, fileobj=req.out)
-            mff = self.repo.manifest.readflags(mnode)
-            mtime = int(time.time())
-
-            if type == "gz":
-                encoding = "gzip"
-            else:
-                encoding = "x-bzip2"
-            req.header([('Content-type', 'application/x-tar'),
-                    ('Content-disposition', 'attachment; filename=%s%s%s' %
-                        (name[:-1], '.tar.', type)),
-                    ('Content-encoding', encoding)])
-            for fname in files:
-                rcont = self.repo.file(fname).read(mf[fname])
-                finfo = tarfile.TarInfo(name + fname)
-                finfo.mtime = mtime
-                finfo.size = len(rcont)
-                finfo.mode = mff[fname] and 0755 or 0644
-                tf.addfile(finfo, StringIO.StringIO(rcont))
-            tf.close()
+        reponame = re.sub(r"\W+", "-", os.path.basename(self.reponame))
+        name = "%s-%s" % (reponame, short(cnode))
+        mimetype, artype, extension, encoding = self.archive_specs[type]
+        headers = [('Content-type', mimetype),
+                   ('Content-disposition', 'attachment; filename=%s%s' %
+                    (name, extension))]
+        if encoding:
+            headers.append(('Content-encoding', encoding))
+        req.header(headers)
+        archival.archive(self.repo, req.out, cnode, artype, prefix=name)
 
     # add tags to things
     # tags -> list of changesets corresponding to tags
