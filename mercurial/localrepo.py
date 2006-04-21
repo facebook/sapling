@@ -1386,7 +1386,9 @@ class localrepository(object):
                         yield chnk
 
             yield changegroup.closechunk()
-            self.hook('outgoing', node=hex(nodes[0]), source=source)
+
+            if nodes:
+                self.hook('outgoing', node=hex(nodes[0]), source=source)
 
         return util.chunkbuffer(gengroup())
 
