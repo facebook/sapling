@@ -12,7 +12,7 @@ demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "fnmatch hgweb mdiff random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
-demandload(globals(), "changegroup")
+demandload(globals(), "archival changegroup")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -889,6 +889,46 @@ def annotate(ui, repo, *pats, **opts):
         if pieces:
             for p, l in zip(zip(*pieces), lines):
                 ui.write("%s: %s" % (" ".join(p), l[1]))
+
+def archive(ui, repo, dest, **opts):
+    '''create unversioned archive of a repository revision
+
+    By default, the revision used is the parent of the working
+    directory; use "-r" to specify a different revision.
+
+    To specify the type of archive to create, use "-t".  Valid
+    types are:
+
+    "files" (default): a directory full of files
+    "tar": tar archive, uncompressed
+    "tbz2": tar archive, compressed using bzip2
+    "tgz": tar archive, compressed using gzip
+    "uzip": zip archive, uncompressed
+    "zip": zip archive, compressed using deflate
+
+    The exact name of the destination archive or directory is given
+    using a format string; see "hg help export" for details.
+
+    Each member added to an archive file has a directory prefix
+    prepended.  Use "-p" to specify a format string for the prefix.
+    The default is the basename of the archive, with suffixes removed.
+    '''
+
+    if opts['rev']:
+        node = repo.lookup(opts['rev'])
+    else:
+        node, p2 = repo.dirstate.parents()
+        if p2 != nullid:
+            raise util.Abort(_('uncommitted merge - please provide a '
+                               'specific revision'))
+
+    dest = make_filename(repo, repo.changelog, dest, node)
+    prefix = make_filename(repo, repo.changelog, opts['prefix'], node)
+    if os.path.realpath(dest) == repo.root:
+        raise util.Abort(_('repository root cannot be destination'))
+    _, matchfn, _ = matchpats(repo, [], opts)
+    archival.archive(repo, dest, node, opts.get('type') or 'files',
+                    not opts['no_decode'], matchfn, prefix)
 
 def bundle(ui, repo, fname, dest="default-push", **opts):
     """create a changegroup file
@@ -2839,6 +2879,15 @@ table = {
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg annotate [-r REV] [-a] [-u] [-d] [-n] [-c] FILE...')),
+    'archive':
+        (archive,
+         [('', 'no-decode', None, _('do not pass files through decoders')),
+          ('p', 'prefix', '', _('directory prefix for files in archive')),
+          ('r', 'rev', '', _('revision to distribute')),
+          ('t', 'type', '', _('type of distribution to create')),
+          ('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         _('hg archive [OPTION]... DEST')),
     "bundle":
         (bundle,
          [('f', 'force', None,
@@ -3249,7 +3298,7 @@ def parse(ui, args):
     return (cmd, cmd and i[0] or None, args, options, cmdoptions)
 
 def dispatch(args):
-    for name in 'SIGTERM', 'SIGHUP', 'SIGBREAK':
+    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
         num = getattr(signal, name, None)
         if num: signal.signal(num, catchterm)
 
