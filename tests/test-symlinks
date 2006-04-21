@@ -40,3 +40,18 @@ mkfifo a.c
 # it should show a.c, dir/a.o and dir/b.o deleted
 hg status
 hg status a.c
+
+echo '# test absolute path through symlink outside repo'
+cd ..
+p=`pwd`
+hg init x
+ln -s x y
+cd x
+touch f
+hg add f
+hg status $p/y/f
+
+echo '# try symlink outside repo to file inside'
+ln -s x/f ../z
+# this should fail
+hg status ../z && { echo hg mistakenly exited with status 0; exit 1; } || :

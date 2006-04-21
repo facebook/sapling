@@ -215,6 +215,30 @@ def canonpath(root, cwd, myname):
     elif name == root:
         return ''
     else:
+        # Determine whether `name' is in the hierarchy at or beneath `root',
+        # by iterating name=dirname(name) until that causes no change (can't
+        # check name == '/', because that doesn't work on windows).  For each
+        # `name', compare dev/inode numbers.  If they match, the list `rel'
+        # holds the reversed list of components making up the relative file
+        # name we want.
+        root_st = os.stat(root)
+        rel = []
+        while True:
+            try:
+                name_st = os.stat(name)
+            except OSError:
+                break
+            if os.path.samestat(name_st, root_st):
+                rel.reverse()
+                name = os.path.join(*rel)
+                audit_path(name)
+                return pconvert(name)
+            dirname, basename = os.path.split(name)
+            rel.append(basename)
+            if dirname == name:
+                break
+            name = dirname
+
         raise Abort('%s not under root' % myname)
 
 def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
