@@ -1039,14 +1039,10 @@ class localrepository(object):
             self.ui.status(_("no changes found\n"))
             return 1
         elif not force:
-            if revs is not None:
-                updated_heads = {}
-                for base in msng_cl:
-                    for parent in self.changelog.parents(base):
-                        if parent in remote_heads:
-                            updated_heads[parent] = True
-                updated_heads = updated_heads.keys()
-            if len(updated_heads) < len(heads):
+            # FIXME we don't properly detect creation of new heads
+            # in the push -r case, assume the user knows what he's doing
+            if not revs and len(remote_heads) < len(heads) \
+                   and remote_heads != [nullid]:
                 self.ui.warn(_("abort: push creates new remote branches!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
