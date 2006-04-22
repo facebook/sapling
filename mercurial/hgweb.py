@@ -11,9 +11,21 @@ import mimetypes
 from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
 demandload(globals(), "tempfile StringIO BaseHTTPServer util SocketServer")
-demandload(globals(), "archival mimetypes templater")
+demandload(globals(), "archival mimetypes templater urllib")
 from node import *
 from i18n import gettext as _
+
+def splitURI(uri):
+    """ Return path and query splited from uri
+
+    Just like CGI environment, the path is unquoted, the query is
+    not.
+    """
+    if '?' in uri:
+        path, query = uri.split('?', 1)
+    else:
+        path, query = uri, ''
+    return urllib.unquote(path), query
 
 def up(p):
     if p[0] != "/":
@@ -918,6 +930,7 @@ def create_server(repo):
             BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
 
     class hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
+
         def log_error(self, format, *args):
             errorlog.write("%s - - [%s] %s\n" % (self.address_string(),
                                                  self.log_date_time_string(),
@@ -939,18 +952,15 @@ def create_server(repo):
             self.do_POST()
 
         def do_hgweb(self):
-            query = ""
-            p = self.path.find("?")
-            if p:
-                query = self.path[p + 1:]
-                query = query.replace('+', ' ')
-
+            path_info, query = splitURI(self.path)
+            
             env = {}
             env['GATEWAY_INTERFACE'] = 'CGI/1.1'
             env['REQUEST_METHOD'] = self.command
             env['SERVER_NAME'] = self.server.server_name
             env['SERVER_PORT'] = str(self.server.server_port)
             env['REQUEST_URI'] = "/"
+            env['PATH_INFO'] = path_info
             if query:
                 env['QUERY_STRING'] = query
             host = self.address_string()
@@ -977,7 +987,7 @@ def create_server(repo):
             self.send_response(200, "Script output follows")
 
             if webdir_conf:
-                hgwebobj = hgwebdir(hgwebdir_conf)
+                hgwebobj = hgwebdir(webdir_conf)
             else:
                 hgwebobj = hgweb(repo.__class__(repo.ui, repo.origroot))
             hgwebobj.run(req)
