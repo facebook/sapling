@@ -10,7 +10,7 @@ import os, cgi, sys
 import mimetypes
 from demandload import demandload
 demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
-demandload(globals(), "tempfile StringIO BaseHTTPServer util")
+demandload(globals(), "tempfile StringIO BaseHTTPServer util SocketServer")
 demandload(globals(), "archival mimetypes templater")
 from node import *
 from i18n import gettext as _
@@ -878,7 +878,8 @@ class hgweb(object):
             req.write(self.t("error"))
 
 def create_server(repo):
-
+    use_threads = True
+    
     def openlog(opt, default):
         if opt and opt != '-':
             return open(opt, 'w')
@@ -889,8 +890,25 @@ def create_server(repo):
     use_ipv6 = repo.ui.configbool("web", "ipv6")
     accesslog = openlog(repo.ui.config("web", "accesslog", "-"), sys.stdout)
     errorlog = openlog(repo.ui.config("web", "errorlog", "-"), sys.stderr)
+    
+    if use_threads:
+        try:
+            from threading import activeCount
+        except ImportError:
+            use_threads = False
 
-    class IPv6HTTPServer(BaseHTTPServer.HTTPServer):
+    if use_threads:
+        _mixin = SocketServer.ThreadingMixIn
+    else:
+        if hasattr(os, "fork"):
+            _mixin = SocketServer.ForkingMixIn
+        else:
+            class _mixin: pass
+
+    class MercurialHTTPServer(_mixin, BaseHTTPServer.HTTPServer):
+        pass
+    
+    class IPv6HTTPServer(MercurialHTTPServer):
         address_family = getattr(socket, 'AF_INET6', None)
 
         def __init__(self, *args, **kwargs):
@@ -956,13 +974,12 @@ def create_server(repo):
 
             req = hgrequest(self.rfile, self.wfile, env)
             self.send_response(200, "Script output follows")
-            hg.run(req)
+            hgweb(repo.__class__(repo.ui, repo.origroot)).run(req)
 
-    hg = hgweb(repo)
     if use_ipv6:
         return IPv6HTTPServer((address, port), hgwebhandler)
     else:
-        return BaseHTTPServer.HTTPServer((address, port), hgwebhandler)
+        return MercurialHTTPServer((address, port), hgwebhandler)
 
 # This is a stopgap
 class hgwebdir(object):
