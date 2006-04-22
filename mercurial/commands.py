@@ -2566,7 +2566,7 @@ def serve(ui, repo, **opts):
                 r = repo.addchangegroup(fin)
                 respond(str(r))
 
-    optlist = "name templates style address port ipv6 accesslog errorlog"
+    optlist = "name templates style address port ipv6 accesslog errorlog webdir_conf"
     for o in optlist.split():
         if opts[o]:
             ui.setconfig("web", o, opts[o])
@@ -3127,6 +3127,7 @@ table = {
           ('a', 'address', '', _('address to use')),
           ('n', 'name', '',
            _('name to show in web pages (default: working dir)')),
+          ('D', 'webdir-conf', '', _('name of the webdir config file (serve more than one repo)')),
           ('', 'pid-file', '', _('name of file to write process ID to')),
           ('', 'stdio', None, _('for remote clients')),
           ('t', 'templates', '', _('web templates to use')),

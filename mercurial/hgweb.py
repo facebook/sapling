@@ -888,6 +888,7 @@ def create_server(repo):
     address = repo.ui.config("web", "address", "")
     port = int(repo.ui.config("web", "port", 8000))
     use_ipv6 = repo.ui.configbool("web", "ipv6")
+    webdir_conf = repo.ui.config("web", "webdir_conf")
     accesslog = openlog(repo.ui.config("web", "accesslog", "-"), sys.stdout)
     errorlog = openlog(repo.ui.config("web", "errorlog", "-"), sys.stderr)
     
@@ -974,7 +975,13 @@ def create_server(repo):
 
             req = hgrequest(self.rfile, self.wfile, env)
             self.send_response(200, "Script output follows")
-            hgweb(repo.__class__(repo.ui, repo.origroot)).run(req)
+
+            if webdir_conf:
+                hgwebobj = hgwebdir(hgwebdir_conf)
+            else:
+                hgwebobj = hgweb(repo.__class__(repo.ui, repo.origroot))
+            hgwebobj.run(req)
+ 
 
     if use_ipv6:
         return IPv6HTTPServer((address, port), hgwebhandler)
