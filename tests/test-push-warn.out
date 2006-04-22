@@ -30,9 +30,13 @@ searching for changes
 no changes found
 pushing to ../c
 searching for changes
-abort: push creates new remote branches!
-(did you forget to merge? use push -f to force)
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 2 changes to 1 files (+2 heads)
 pushing to ../c
 searching for changes
-abort: push creates new remote branches!
-(did you forget to merge? use push -f to force)
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
