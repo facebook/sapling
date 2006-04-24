@@ -891,7 +891,7 @@ class hgweb(object):
 
 def create_server(repo):
     use_threads = True
-    
+
     def openlog(opt, default):
         if opt and opt != '-':
             return open(opt, 'w')
@@ -903,7 +903,7 @@ def create_server(repo):
     webdir_conf = repo.ui.config("web", "webdir_conf")
     accesslog = openlog(repo.ui.config("web", "accesslog", "-"), sys.stdout)
     errorlog = openlog(repo.ui.config("web", "errorlog", "-"), sys.stderr)
-    
+
     if use_threads:
         try:
             from threading import activeCount
@@ -920,7 +920,7 @@ def create_server(repo):
 
     class MercurialHTTPServer(_mixin, BaseHTTPServer.HTTPServer):
         pass
-    
+
     class IPv6HTTPServer(MercurialHTTPServer):
         address_family = getattr(socket, 'AF_INET6', None)
 
@@ -953,7 +953,7 @@ def create_server(repo):
 
         def do_hgweb(self):
             path_info, query = splitURI(self.path)
-            
+
             env = {}
             env['GATEWAY_INTERFACE'] = 'CGI/1.1'
             env['REQUEST_METHOD'] = self.command
@@ -991,7 +991,7 @@ def create_server(repo):
             else:
                 hgwebobj = hgweb(repo.__class__(repo.ui, repo.origroot))
             hgwebobj.run(req)
- 
+
 
     if use_ipv6:
         return IPv6HTTPServer((address, port), hgwebhandler)
