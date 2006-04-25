@@ -2566,8 +2566,8 @@ def serve(ui, repo, **opts):
                 r = repo.addchangegroup(fin)
                 respond(str(r))
 
-    optlist = """name templates style address port
-                 ipv6 accesslog errorlog webdir_conf"""
+    optlist = ("name templates style address port ipv6"
+               " accesslog errorlog webdir_conf")
     for o in optlist.split():
         if opts[o]:
             ui.setconfig("web", o, opts[o])
@@ -2998,8 +2998,8 @@ table = {
     "import|patch":
         (import_,
          [('p', 'strip', 1,
-           _('directory strip option for patch. This has the same\n') +
-           _('meaning as the corresponding patch option')),
+           _('directory strip option for patch. This has the same\n'
+             'meaning as the corresponding patch option')),
           ('b', 'base', '', _('base path')),
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes'))],
