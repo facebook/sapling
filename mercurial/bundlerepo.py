@@ -126,7 +126,7 @@ class bundlerevlog(revlog.revlog):
             raise RevlogError(_("integrity check failed on %s:%d")
                           % (self.datafile, self.rev(node)))
 
-        self.cache = (node, rev, text)
+        self.cache = (node, self.rev(node), text)
         return text
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
