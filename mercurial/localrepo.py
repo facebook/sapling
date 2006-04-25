@@ -831,12 +831,17 @@ class localrepository(object):
         if base == None:
             base = {}
 
+        if not heads:
+            heads = remote.heads()
+
+        if self.changelog.tip() == nullid:
+            if heads != [nullid]:
+                return [nullid]
+            return []
+
         # assume we're closer to the tip than the root
         # and start by examining the heads
         self.ui.status(_("searching for changes\n"))
-
-        if not heads:
-            heads = remote.heads()
 
         unknown = []
         for h in heads:
@@ -998,12 +1003,9 @@ class localrepository(object):
     def pull(self, remote, heads=None, force=False):
         l = self.lock()
 
-        # if we have an empty repo, fetch everything
-        if self.changelog.tip() == nullid:
+        fetch = self.findincoming(remote, force=force)
+        if fetch == [nullid]:
             self.ui.status(_("requesting all changes\n"))
-            fetch = [nullid]
-        else:
-            fetch = self.findincoming(remote, force=force)
 
         if not fetch:
             self.ui.status(_("no changes found\n"))
@@ -1037,14 +1039,10 @@ class localrepository(object):
             self.ui.status(_("no changes found\n"))
             return 1
         elif not force:
-            if revs is not None:
-                updated_heads = {}
-                for base in msng_cl:
-                    for parent in self.changelog.parents(base):
-                        if parent in remote_heads:
-                            updated_heads[parent] = True
-                updated_heads = updated_heads.keys()
-            if len(updated_heads) < len(heads):
+            # FIXME we don't properly detect creation of new heads
+            # in the push -r case, assume the user knows what he's doing
+            if not revs and len(remote_heads) < len(heads) \
+                   and remote_heads != [nullid]:
                 self.ui.warn(_("abort: push creates new remote branches!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
@@ -1386,7 +1384,9 @@ class localrepository(object):
                         yield chnk
 
             yield changegroup.closechunk()
-            self.hook('outgoing', node=hex(nodes[0]), source=source)
+
+            if nodes:
+                self.hook('outgoing', node=hex(nodes[0]), source=source)
 
         return util.chunkbuffer(gengroup())
 
