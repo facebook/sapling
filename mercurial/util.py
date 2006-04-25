@@ -574,7 +574,10 @@ if os.name == 'nt':
     sys.stdout = winstdout(sys.stdout)
 
     def system_rcpath():
-        return [r'c:\mercurial\mercurial.ini']
+        try:
+            return system_rcpath_win32()
+        except:
+            return [r'c:\mercurial\mercurial.ini']
 
     def os_rcpath():
         '''return default os-specific hgrc search path'''

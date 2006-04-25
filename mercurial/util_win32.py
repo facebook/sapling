@@ -164,7 +164,7 @@ def testpid(pid):
         return details[0] != winerror.ERROR_INVALID_PARAMETER
     return True
 
-def system_rcpath():
+def system_rcpath_win32():
     '''return default os-specific hgrc search path'''
     proc = win32api.GetCurrentProcess()
     filename = win32process.GetModuleFileNameEx(proc, 0)
