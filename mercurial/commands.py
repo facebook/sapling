@@ -2495,6 +2495,8 @@ def serve(ui, repo, **opts):
     """
 
     if opts["stdio"]:
+        if repo is None:
+            raise hg.RepoError(_('no repo found'))
         fin, fout = sys.stdin, sys.stdout
         sys.stdout = sys.stderr
 
@@ -2572,6 +2574,9 @@ def serve(ui, repo, **opts):
         if opts[o]:
             ui.setconfig("web", o, opts[o])
 
+    if repo is None and not ui.config("web", "webdir_conf"):
+        raise hg.RepoError(_('no repo found'))
+
     if opts['daemon'] and not opts['daemon_pipefds']:
         rfd, wfd = os.pipe()
         args = sys.argv[:]
@@ -2583,7 +2588,7 @@ def serve(ui, repo, **opts):
         os._exit(0)
 
     try:
-        httpd = hgweb.create_server(repo)
+        httpd = hgweb.create_server(ui, repo)
     except socket.error, inst:
         raise util.Abort(_('cannot start server: ') + inst.args[1])
 
@@ -3202,7 +3207,7 @@ globalopts = [
 
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot")
-optionalrepo = ("paths debugconfig")
+optionalrepo = ("paths serve debugconfig")
 
 def findpossible(cmd):
     """
