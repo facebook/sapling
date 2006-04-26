@@ -40,66 +40,47 @@ def find_program(program):
             return name
     return None
 
-# Before we go any further, check for pre-requisite tools
-# stuff from coreutils (cat, rm, etc) are not tested
-for p in required_tools:
-    if os.name == 'nt':
-        p += '.exe'
-    found = find_program(p)
-    if found:
-        vlog("# Found prerequisite", p, "at", found)
-    else:
-        print "WARNING: Did not find prerequisite tool: "+p
-
-# Reset some environment variables to well-known values
-os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
-os.environ['TZ'] = 'GMT'
-
-os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
-os.environ["HGMERGE"]  = sys.executable + ' -c "import sys; sys.exit(0)"'
-os.environ["HGUSER"]   = "test"
-os.environ["HGRCPATH"] = ""
-
-TESTDIR = os.environ["TESTDIR"] = os.getcwd()
-HGTMP   = os.environ["HGTMP"]   = tempfile.mkdtemp("", "hgtests.")
+def check_required_tools():
+    # Before we go any further, check for pre-requisite tools
+    # stuff from coreutils (cat, rm, etc) are not tested
+    for p in required_tools:
+        if os.name == 'nt':
+            p += '.exe'
+        found = find_program(p)
+        if found:
+            vlog("# Found prerequisite", p, "at", found)
+        else:
+            print "WARNING: Did not find prerequisite tool: "+p
 
 def cleanup_exit():
     if verbose:
         print "# Cleaning up HGTMP", HGTMP
     shutil.rmtree(HGTMP, True)
 
-vlog("# Using TESTDIR", TESTDIR)
-vlog("# Using HGTMP", HGTMP)
+def install_hg():
+    vlog("# Performing temporary installation of HG")
+    INST = os.path.join(HGTMP, "install")
+    BINDIR = os.path.join(INST, "bin")
+    PYTHONDIR = os.path.join(INST, "lib", "python")
+    installerrs = os.path.join("tests", "install.err")
 
-os.umask(022)
+    os.chdir("..") # Get back to hg root
+    cmd = '%s setup.py install --home="%s" --install-lib="%s" >%s 2>&1' % \
+        (sys.executable, INST, PYTHONDIR, installerrs)
+    vlog("# Running", cmd)
+    if os.system(cmd) == 0:
+        if not verbose:
+            os.remove(installerrs)
+    else:
+        f = open(installerrs)
+        for line in f:
+            print line,
+        f.close()
+        sys.exit(1)
+    os.chdir(TESTDIR)
 
-vlog("# Performing temporary installation of HG")
-INST = os.path.join(HGTMP, "install")
-BINDIR = os.path.join(INST, "bin")
-PYTHONDIR = os.path.join(INST, "lib", "python")
-installerrs = os.path.join("tests", "install.err")
-
-os.chdir("..") # Get back to hg root
-cmd = '%s setup.py install --home="%s" --install-lib="%s" >%s 2>&1' % \
-    (sys.executable, INST, PYTHONDIR, installerrs)
-vlog("# Running", cmd)
-if os.system(cmd) == 0:
-    if not verbose:
-        os.remove(installerrs)
-else:
-    f = open(installerrs)
-    for line in f:
-        print line,
-    f.close()
-    cleanup_exit()
-    sys.exit(1)
-os.chdir(TESTDIR)
-
-os.environ["PATH"] = "%s%s%s" % (BINDIR, os.pathsep, os.environ["PATH"])
-os.environ["PYTHONPATH"] = PYTHONDIR
-
-tests = 0
-failed = 0
+    os.environ["PATH"] = "%s%s%s" % (BINDIR, os.pathsep, os.environ["PATH"])
+    os.environ["PYTHONPATH"] = PYTHONDIR
 
 def run(cmd, split_lines=True):
     """Run command in a sub-process, capturing the output (stdout and stderr).
@@ -176,17 +157,45 @@ def run_one(test):
     shutil.rmtree(tmpd, True)
     return ret == 0
 
-for test in os.listdir("."):
-    if test.startswith("test-"):
-        if '~' in test or re.search(r'\.(out|err)$', test):
-            continue
-        if not run_one(test):
-            failed += 1
-        tests += 1
 
-print "# Ran %d tests, %d failed." % (tests, failed)
+os.umask(022)
 
-cleanup_exit()
+check_required_tools()
+
+# Reset some environment variables to well-known values so that
+# the tests produce repeatable output.
+os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
+os.environ['TZ'] = 'GMT'
+
+os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+os.environ["HGMERGE"]  = sys.executable + ' -c "import sys; sys.exit(0)"'
+os.environ["HGUSER"]   = "test"
+os.environ["HGRCPATH"] = ""
+
+TESTDIR = os.environ["TESTDIR"] = os.getcwd()
+HGTMP   = os.environ["HGTMP"]   = tempfile.mkdtemp("", "hgtests.")
+vlog("# Using TESTDIR", TESTDIR)
+vlog("# Using HGTMP", HGTMP)
+
+try:
+    install_hg()
+
+    tests = 0
+    failed = 0
+
+    if len(args) == 0:
+        args = os.listdir(".")
+    for test in args:
+        if test.startswith("test-"):
+            if '~' in test or re.search(r'\.(out|err)$', test):
+                continue
+            if not run_one(test):
+                failed += 1
+            tests += 1
+
+    print "\n# Ran %d tests, %d failed." % (tests, failed)
+finally:
+    cleanup_exit()
 
 if failed:
     sys.exit(1)
