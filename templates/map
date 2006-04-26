@@ -35,7 +35,7 @@ changelogchild = '<tr><th class="child">child #rev#:</th><td class="child"><a hr
 filerevchild = '<tr><td class="metatag">child:</td><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
 fileannotatechild = '<tr><td class="metatag">child:</td><td><a href="?fa=#filenode|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
 tags = tags.tmpl
-tagentry = '<li class="tagEntry parity#parity#"><span class="node">#node#</span> <a href="?cs=#node|short#">#tag|escape#</a></li>'
+tagentry = '<li class="tagEntry parity#parity#"><tt class="node">#node#</tt> <a href="?cs=#node|short#">#tag|escape#</a></li>'
 diffblock = '<pre class="parity#parity#">#lines#</pre>'
 changelogtag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'
 changesettag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'

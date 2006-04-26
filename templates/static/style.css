@@ -58,7 +58,6 @@ pre { margin: 0; }
 /* Tag entries */
 #tagEntries { list-style: none; margin: 0; padding: 0; }
 #tagEntries .tagEntry { list-style: none; margin: 0; padding: 0; }
-#tagEntries .tagEntry span.node { font-family: monospace; }
 
 /* Changeset entry */
 #changesetEntry { }
