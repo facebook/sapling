@@ -3447,7 +3447,7 @@ def dispatch(args):
         u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         help_(u, 'shortlist')
     except hg.RepoError, inst:
-        u.warn(_("abort: "), inst, "!\n")
+        u.warn(_("abort: %s!\n") % inst)
     except lock.LockHeld, inst:
         if inst.errno == errno.ETIMEDOUT:
             reason = _('timed out waiting for lock held by %s') % inst.locker
