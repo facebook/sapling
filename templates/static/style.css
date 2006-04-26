@@ -49,11 +49,12 @@ pre { margin: 0; }
   color: #999;
 }
 
-/* Changelog entries */
-.changelogEntry { width: 100%; }
-.changelogEntry th { font-weight: normal; text-align: right; vertical-align: top; }
-.changelogEntry th.age, .changelogEntry th.firstline { font-weight: bold; }
-.changelogEntry th.firstline { text-align: left; width: inherit; }
+/* Changelog/Filelog entries */
+.logEntry { width: 100%; }
+.logEntry .age { width: 15%; }
+.logEntry th { font-weight: normal; text-align: right; vertical-align: top; }
+.logEntry th.age, .logEntry th.firstline { font-weight: bold; }
+.logEntry th.firstline { text-align: left; width: inherit; }
 
 /* Tag entries */
 #tagEntries { list-style: none; margin: 0; padding: 0; }

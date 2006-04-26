@@ -1,20 +1,25 @@
-<table class="parity#parity#" width="100%" cellspacing="0" cellpadding="0">
-<tr>
- <td class="age" align="right" width="15%"><b>#date|age# ago:&nbsp;</b></td>
- <td><b><a href="?cs=#node|short#">#desc|strip|firstline|escape#</a></b></td></tr>
-<tr>
- <td align="right">revision #filerev#:&nbsp;</td>
- <td><a href="?f=#filenode|short#;file=#file|urlescape#">#filenode|short#</a>
-<a href="?fd=#node|short#;file=#file|urlescape#">(diff)</a>
-<a href="?fa=#filenode|short#;file=#file|urlescape#">(annotate)</a>
-</td></tr>
-#rename%filelogrename#
-<tr>
- <td align="right">author:&nbsp;</td>
- <td>#author|obfuscate#</td></tr>
-<tr>
- <td align="right">date:&nbsp;</td>
- <td>#date|date# (#date|age# ago)</td></tr>
+<table class="logEntry parity#parity#">
+ <tr>
+  <th class="age">#date|age# ago:</th>
+  <th class="firstline"><a href="?cs=#node|short#">#desc|strip|firstline|escape#</a></th>
+ </tr>
+ <tr>
+  <th class="revision">revision #filerev#:</td>
+  <td class="node">
+   <a href="?f=#filenode|short#;file=#file|urlescape#">#filenode|short#</a>
+   <a href="?fd=#node|short#;file=#file|urlescape#">(diff)</a>
+   <a href="?fa=#filenode|short#;file=#file|urlescape#">(annotate)</a>
+  </td>
+ </tr>
+ #rename%filelogrename#
+ <tr>
+  <th class="author">author:</th>
+  <td class="author">#author|obfuscate#</td>
+ </tr>
+ <tr>
+  <th class="date">date:</th>
+  <td class="date">#date|date#</td>
+ </tr>
 </table>
 
 
