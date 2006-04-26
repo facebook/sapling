@@ -49,7 +49,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  copy        mark files as copied for the next commit
  diff        diff repository (or selected files)
  export      dump the header and diffs for one or more changesets
- forget      don't add the specified files on the next commit
+ forget      don't add the specified files on the next commit (DEPRECATED)
  grep        search for a pattern in specified files and revisions
  heads       show current repository heads
  help        show help for a given command or all commands
@@ -92,7 +92,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  copy        mark files as copied for the next commit
  diff        diff repository (or selected files)
  export      dump the header and diffs for one or more changesets
- forget      don't add the specified files on the next commit
+ forget      don't add the specified files on the next commit (DEPRECATED)
  grep        search for a pattern in specified files and revisions
  heads       show current repository heads
  help        show help for a given command or all commands

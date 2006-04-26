@@ -1572,10 +1572,15 @@ def export(ui, repo, *changesets, **opts):
         doexport(ui, repo, cset, seqno, total, revwidth, opts)
 
 def forget(ui, repo, *pats, **opts):
-    """don't add the specified files on the next commit
+    """don't add the specified files on the next commit (DEPRECATED)
 
+    (DEPRECATED)
     Undo an 'hg add' scheduled for the next commit.
+
+    This command is now deprecated and will be removed in a future
+    release. Please use revert instead.
     """
+    ui.warn(_("(the forget command is deprecated; use revert instead)\n"))
     forget = []
     for src, abs, rel, exact in walk(repo, pats, opts):
         if repo.dirstate.state(abs) == 'a':
