@@ -14,6 +14,6 @@ hg add b/x
 echo '# should print A b/x'
 hg st
 echo '# should forget b/x'
-hg forget
+hg revert
 echo '# should print nothing'
 hg st b
