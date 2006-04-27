@@ -11,7 +11,7 @@ from demandload import demandload
 demandload(globals(), "os time util")
 
 class changelog(revlog):
-    def __init__(self, opener, defversion=0):
+    def __init__(self, opener, defversion=REVLOGV0):
         revlog.__init__(self, opener, "00changelog.i", "00changelog.d",
                         defversion)
 

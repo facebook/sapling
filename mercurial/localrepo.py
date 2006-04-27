@@ -42,7 +42,7 @@ class localrepository(object):
             pass
 
         v = self.ui.revlogopts
-        self.revlogversion = int(v.get('format', 0))
+        self.revlogversion = int(v.get('format', revlog.REVLOGV0))
         flags = 0
         for x in v.get('flags', "").split():
             flags |= revlog.flagstr(x)
