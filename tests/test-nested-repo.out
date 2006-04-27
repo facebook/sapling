@@ -4,6 +4,5 @@
 # should print A b/x
 A b/x
 # should forget b/x
-(the forget command is deprecated; use revert instead)
 forgetting b/x
 # should print nothing
