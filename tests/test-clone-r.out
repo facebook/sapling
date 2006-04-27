@@ -17,6 +17,7 @@
      4       192      58      3       6 de68e904d169 626a32663c2f 000000000000
      5       250      68      3       7 3b45cc2ab868 de68e904d169 000000000000
      6       318      54      6       8 24d86153a002 f54c32f13478 000000000000
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -27,6 +28,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -37,6 +39,7 @@ adding changesets
 adding manifests
 adding file changes
 added 2 changesets with 2 changes to 1 files
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -47,6 +50,7 @@ adding changesets
 adding manifests
 adding file changes
 added 3 changesets with 3 changes to 1 files
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -57,6 +61,7 @@ adding changesets
 adding manifests
 adding file changes
 added 4 changesets with 4 changes to 1 files
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -67,6 +72,7 @@ adding changesets
 adding manifests
 adding file changes
 added 2 changesets with 2 changes to 1 files
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -77,6 +83,7 @@ adding changesets
 adding manifests
 adding file changes
 added 3 changesets with 3 changes to 1 files
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -87,6 +94,7 @@ adding changesets
 adding manifests
 adding file changes
 added 4 changesets with 5 changes to 2 files
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -97,6 +105,7 @@ adding changesets
 adding manifests
 adding file changes
 added 5 changesets with 6 changes to 3 files
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -107,6 +116,7 @@ adding changesets
 adding manifests
 adding file changes
 added 5 changesets with 5 changes to 2 files
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -119,6 +129,7 @@ adding manifests
 adding file changes
 added 4 changesets with 2 changes to 3 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

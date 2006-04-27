@@ -1,3 +1,4 @@
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -10,6 +11,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     test
 
 rolling back last transaction
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

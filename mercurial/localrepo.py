@@ -1803,11 +1803,16 @@ class localrepository(object):
         filenodes = {}
         changesets = revisions = files = 0
         errors = [0]
+        warnings = [0]
         neededmanifests = {}
 
         def err(msg):
             self.ui.warn(msg + "\n")
             errors[0] += 1
+
+        def warn(msg):
+            self.ui.warn(msg + "\n")
+            warnings[0] += 1
 
         def checksize(obj, name):
             d = obj.checksize()
@@ -1815,6 +1820,17 @@ class localrepository(object):
                 err(_("%s data length off by %d bytes") % (name, d[0]))
             if d[1]:
                 err(_("%s index contains %d extra bytes") % (name, d[1]))
+
+        def checkversion(obj, name):
+            if obj.version != revlog.REVLOGV0:
+                if not revlogv1:
+                    warn(_("warning: `%s' uses revlog format 1") % name)
+            elif revlogv1:
+                warn(_("warning: `%s' uses revlog format 0") % name)
+
+        revlogv1 = self.revlogversion != revlog.REVLOGV0
+        self.ui.status(_("repository uses revlog format %d\n") %
+                       (revlogv1 and 1 or 0))
 
         seen = {}
         self.ui.status(_("checking changesets\n"))
@@ -1850,6 +1866,7 @@ class localrepository(object):
 
         seen = {}
         self.ui.status(_("checking manifests\n"))
+        checkversion(self.manifest, "manifest")
         checksize(self.manifest, "manifest")
 
         for i in range(self.manifest.count()):
@@ -1914,6 +1931,7 @@ class localrepository(object):
                 err(_("file without name in manifest %s") % short(n))
                 continue
             fl = self.file(f)
+            checkversion(fl, f)
             checksize(fl, f)
 
             nodes = {nullid: 1}
@@ -1962,6 +1980,8 @@ class localrepository(object):
         self.ui.status(_("%d files, %d changesets, %d total revisions\n") %
                        (files, changesets, revisions))
 
+        if warnings[0]:
+            self.ui.warn(_("%d warnings encountered!\n") % warnings[0])
         if errors[0]:
             self.ui.warn(_("%d integrity errors encountered!\n") % errors[0])
             return 1

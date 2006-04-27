@@ -44,6 +44,7 @@ copy: a
 566e338d09a089ba737c21e0d3759980  .hg/data/b.d
 60b725f10c9c85c70d97880dfe8191b3  bsum
 60b725f10c9c85c70d97880dfe8191b3  asum
+repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
