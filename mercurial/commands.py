@@ -2978,7 +2978,7 @@ table = {
           ('a', 'text', None, _('treat all files as text')),
           ('', 'switch-parent', None, _('diff against the second parent'))],
          _('hg export [-a] [-o OUTFILESPEC] REV...')),
-    "forget":
+    "debugforget|forget":
         (forget,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
