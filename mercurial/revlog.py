@@ -399,7 +399,7 @@ class revlog(object):
     def ngoffset(self, q):
         if q & 0xFFFF:
             raise RevlogError(_('%s: incompatible revision flag %x') %
-                               (self.indexfile, type))
+                              (self.indexfile, q))
         return long(q >> 16)
 
     def ngtype(self, q):
