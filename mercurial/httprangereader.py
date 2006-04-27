@@ -18,7 +18,8 @@ class httprangereader(object):
         urllib2.install_opener(opener)
         req = urllib2.Request(self.url)
         end = ''
-        if bytes: end = self.pos + bytes
+        if bytes:
+            end = self.pos + bytes - 1
         req.add_header('Range', 'bytes=%d-%s' % (self.pos, end))
         f = urllib2.urlopen(req)
-        return f.read()
+        return f.read(bytes)

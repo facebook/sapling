@@ -333,8 +333,8 @@ class revlog(object):
                     and st.st_ctime == oldst.st_ctime):
                     return
                 self.indexstat = st
-                if len(i) > 0:
-                    v = struct.unpack(versionformat, i)[0]
+            if len(i) > 0:
+                v = struct.unpack(versionformat, i)[0]
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
         if fmt == 0:
