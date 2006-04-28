@@ -3260,11 +3260,8 @@ def find(cmd):
 
     raise UnknownCommand(cmd)
 
-class SignalInterrupt(Exception):
-    """Exception raised on SIGTERM and SIGHUP."""
-
 def catchterm(*args):
-    raise SignalInterrupt
+    raise util.SignalInterrupt
 
 def run():
     sys.exit(dispatch(sys.argv[1:]))
@@ -3464,7 +3461,7 @@ def dispatch(args):
                (inst.desc or inst.filename, inst.strerror))
     except revlog.RevlogError, inst:
         u.warn(_("abort: "), inst, "!\n")
-    except SignalInterrupt:
+    except util.SignalInterrupt:
         u.warn(_("killed!\n"))
     except KeyboardInterrupt:
         try:
