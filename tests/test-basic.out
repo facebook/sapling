@@ -6,7 +6,6 @@ summary:     test
 
 b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3 644 a
 a
-repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

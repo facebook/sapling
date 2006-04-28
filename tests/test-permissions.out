@@ -1,16 +1,13 @@
-repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
-repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 verify failed
-repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

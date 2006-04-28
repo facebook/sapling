@@ -44,6 +44,7 @@ class localrepository(object):
 
         v = self.ui.revlogopts
         self.revlogversion = int(v.get('format', revlog.REVLOGV0))
+        self.revlogv1 = self.revlogversion != revlog.REVLOGV0
         flags = 0
         for x in v.get('flags', "").split():
             flags |= revlog.flagstr(x)
@@ -1886,8 +1887,9 @@ class localrepository(object):
                 warn(_("warning: `%s' uses revlog format 0") % name)
 
         revlogv1 = self.revlogversion != revlog.REVLOGV0
-        self.ui.status(_("repository uses revlog format %d\n") %
-                       (revlogv1 and 1 or 0))
+        if self.ui.verbose or revlogv1 != self.revlogv1:
+            self.ui.status(_("repository uses revlog format %d\n") %
+                           (revlogv1 and 1 or 0))
 
         seen = {}
         self.ui.status(_("checking changesets\n"))
