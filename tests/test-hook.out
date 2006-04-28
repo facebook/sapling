@@ -89,3 +89,43 @@ preoutgoing.forbid hook
 pulling from ../a
 searching for changes
 abort: preoutgoing.forbid hook exited with status 1
+# test python hooks
+error: preoutgoing.broken hook raised an exception: unsupported operand type(s) for +: 'int' and 'dict'
+error: preoutgoing.raise hook raised an exception: exception from hook
+pulling from ../a
+searching for changes
+error: preoutgoing.abort hook failed: raise abort from hook
+abort: raise abort from hook
+pulling from ../a
+searching for changes
+hook args:
+  hooktype preoutgoing
+  source pull
+abort: preoutgoing.fail hook failed
+pulling from ../a
+searching for changes
+abort: preoutgoing.uncallable hook is invalid ("hooktests.uncallable" is not callable)
+pulling from ../a
+searching for changes
+abort: preoutgoing.nohook hook is invalid ("hooktests.nohook" is not defined)
+pulling from ../a
+searching for changes
+abort: preoutgoing.nomodule hook is invalid ("nomodule" not in a module)
+pulling from ../a
+searching for changes
+abort: preoutgoing.badmodule hook is invalid (import of "nomodule" failed)
+pulling from ../a
+searching for changes
+abort: preoutgoing.unreachable hook is invalid (import of "hooktests.container" failed)
+pulling from ../a
+searching for changes
+hook args:
+  hooktype preoutgoing
+  source pull
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+# make sure --traceback works
+Traceback (most recent call last):

@@ -11,7 +11,8 @@ from node import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "appendfile changegroup")
-demandload(globals(), "re lock transaction tempfile stat mdiff errno ui revlog")
+demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
+demandload(globals(), "revlog sys traceback")
 
 class localrepository(object):
     def __del__(self):
@@ -71,7 +72,59 @@ class localrepository(object):
             os.mkdir(self.join("data"))
 
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
+
     def hook(self, name, throw=False, **args):
+        def callhook(hname, funcname):
+            '''call python hook. hook is callable object, looked up as
+            name in python module. if callable returns "true", hook
+            passes, else fails. if hook raises exception, treated as
+            hook failure. exception propagates if throw is "true".'''
+
+            self.ui.note(_("calling hook %s: %s\n") % (hname, funcname))
+            d = funcname.rfind('.')
+            if d == -1:
+                raise util.Abort(_('%s hook is invalid ("%s" not in a module)')
+                                 % (hname, funcname))
+            modname = funcname[:d]
+            try:
+                obj = __import__(modname)
+            except ImportError:
+                raise util.Abort(_('%s hook is invalid '
+                                   '(import of "%s" failed)') %
+                                 (hname, modname))
+            try:
+                for p in funcname.split('.')[1:]:
+                    obj = getattr(obj, p)
+            except AttributeError, err:
+                raise util.Abort(_('%s hook is invalid '
+                                   '("%s" is not defined)') %
+                                 (hname, funcname))
+            if not callable(obj):
+                raise util.Abort(_('%s hook is invalid '
+                                   '("%s" is not callable)') %
+                                 (hname, funcname))
+            try:
+                r = obj(ui=ui, repo=repo, hooktype=name, **args)
+            except (KeyboardInterrupt, util.SignalInterrupt):
+                raise
+            except Exception, exc:
+                if isinstance(exc, util.Abort):
+                    self.ui.warn(_('error: %s hook failed: %s\n') %
+                                 (hname, exc.args[0] % exc.args[1:]))
+                else:
+                    self.ui.warn(_('error: %s hook raised an exception: '
+                                   '%s\n') % (hname, exc))
+                if throw:
+                    raise
+                if "--traceback" in sys.argv[1:]:
+                    traceback.print_exc()
+                return False
+            if not r:
+                if throw:
+                    raise util.Abort(_('%s hook failed') % hname)
+                self.ui.warn(_('error: %s hook failed\n') % hname)
+            return r
+
         def runhook(name, cmd):
             self.ui.note(_("running hook %s: %s\n") % (name, cmd))
             env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()] +
@@ -90,7 +143,10 @@ class localrepository(object):
                  if hname.split(".", 1)[0] == name and cmd]
         hooks.sort()
         for hname, cmd in hooks:
-            r = runhook(hname, cmd) and r
+            if cmd.startswith('python:'):
+                r = callhook(hname, cmd[7:].strip()) and r
+            else:
+                r = runhook(hname, cmd) and r
         return r
 
     def tags(self):

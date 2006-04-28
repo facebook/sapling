@@ -131,11 +131,11 @@ decode/encode::
     **.txt = tempfile: unix2dos -n INFILE OUTFILE
 
 hooks::
-  Commands that get automatically executed by various actions such as
-  starting or finishing a commit. Multiple commands can be run for
-  the same action by appending a suffix to the action. Overriding a
-  site-wide hook can be done by changing its value or setting it to
-  an empty string.
+  Commands or Python functions that get automatically executed by
+  various actions such as starting or finishing a commit. Multiple
+  hooks can be run for the same action by appending a suffix to the
+  action. Overriding a site-wide hook can be done by changing its
+  value or setting it to an empty string.
 
   Example .hg/hgrc:
 
@@ -210,6 +210,21 @@ hooks::
   have a "HG_" prefix.  These unprefixed names are still provided in
   the environment for backwards compatibility, but their use is
   deprecated, and they will be removed in a future release.
+
+  The syntax for Python hooks is as follows:
+
+    hookname = python:modulename.submodule.callable
+
+  Python hooks are run within the Mercurial process.  Each hook is
+  called with at least three keyword arguments: a ui object (keyword
+  "ui"), a repository object (keyword "repo"), and a "hooktype"
+  keyword that tells what kind of hook is used.  Arguments listed as
+  environment variables above are passed as keyword arguments, with no
+  "HG_" prefix, and names in lower case.
+
+  A Python hook must return a "true" value to succeed.  Returning a
+  "false" value or raising an exception is treated as failure of the
+  hook.
 
 http_proxy::
   Used to access web-based Mercurial repositories through a HTTP
