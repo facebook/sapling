@@ -727,7 +727,9 @@ class hgweb(object):
             yield self.t("header", **map)
 
         def footer(**map):
-            yield self.t("footer", **map)
+            yield self.t("footer",
+                         motd=self.repo.ui.config("web", "motd", ""),
+                         **map)
 
         def expand_form(form):
             shortcuts = {
@@ -1006,6 +1008,7 @@ class hgwebdir(object):
         def cleannames(items):
             return [(name.strip(os.sep), path) for name, path in items]
 
+        self.motd = ""
         if isinstance(config, (list, tuple)):
             self.repos = cleannames(config)
         elif isinstance(config, dict):
@@ -1015,6 +1018,8 @@ class hgwebdir(object):
             cp = ConfigParser.SafeConfigParser()
             cp.read(config)
             self.repos = []
+            if cp.has_section('web') and cp.has_option('web', 'motd'):
+                self.motd = cp.get('web', 'motd')
             if cp.has_section('paths'):
                 self.repos.extend(cleannames(cp.items('paths')))
             if cp.has_section('collections'):
@@ -1032,7 +1037,7 @@ class hgwebdir(object):
             yield tmpl("header", **map)
 
         def footer(**map):
-            yield tmpl("footer", **map)
+            yield tmpl("footer", motd=self.motd, **map)
 
         m = os.path.join(templater.templatepath(), "map")
         tmpl = templater.templater(m, templater.common_filters,
