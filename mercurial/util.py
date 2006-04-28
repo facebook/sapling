@@ -16,6 +16,9 @@ from demandload import *
 demandload(globals(), "cStringIO errno popen2 re shutil sys tempfile")
 demandload(globals(), "threading time")
 
+class SignalInterrupt(Exception):
+    """Exception raised on SIGTERM and SIGHUP."""
+
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
     (pout, pin) = popen2.popen2(cmd, -1, 'b')
