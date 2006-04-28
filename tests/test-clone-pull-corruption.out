@@ -8,7 +8,6 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
-repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

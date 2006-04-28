@@ -52,7 +52,6 @@ summary:     test
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       5      0       0 2ed2a3912a0b 000000000000 000000000000
      1         5       6      1       1 79d7492df40a 2ed2a3912a0b 000000000000
-repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

@@ -65,7 +65,6 @@ manifest entries should match tips of all files
 aa27919ee4303cfd575e1fb932dd64d75aa08be4 644 foo
 6128c0f33108e8cfbb4e0824d13ae48b466d7280 644 quux
 everything should be clean now
-repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

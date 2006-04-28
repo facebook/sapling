@@ -6,7 +6,6 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 # verify
-repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -49,7 +48,6 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     add
 
-repository uses revlog format 0
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
