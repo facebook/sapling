@@ -1320,7 +1320,8 @@ class localrepository(object):
             # Signal that no more groups are left.
             yield changegroup.closechunk()
 
-            self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
+            if nodes:
+                self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
 
         return util.chunkbuffer(gengroup())
 
