@@ -103,27 +103,26 @@ def install_hg():
         os.chmod(os.path.join(BINDIR, 'hg'), 0700)
 
 def output_coverage():
-    if coverage:
-        vlog("# Producing coverage report")
-        omit = [BINDIR, TESTDIR, PYTHONDIR]
-        if not options.cover_stdlib:
-            # Exclude as system paths (ignoring empty strings seen on win)
-            omit += [x for x in sys.path if x != '']  
-        omit = ','.join(omit)
-        os.chdir(PYTHONDIR)
-        cmd = '"%s" "%s" -r "--omit=%s"' % (
-            sys.executable, os.path.join(TESTDIR, 'coverage.py'), omit)
+    vlog("# Producing coverage report")
+    omit = [BINDIR, TESTDIR, PYTHONDIR]
+    if not options.cover_stdlib:
+        # Exclude as system paths (ignoring empty strings seen on win)
+        omit += [x for x in sys.path if x != '']  
+    omit = ','.join(omit)
+    os.chdir(PYTHONDIR)
+    cmd = '"%s" "%s" -r "--omit=%s"' % (
+        sys.executable, os.path.join(TESTDIR, 'coverage.py'), omit)
+    vlog("# Running: "+cmd)
+    os.system(cmd)
+    if options.annotate:
+        adir = os.path.join(TESTDIR, 'annotated')
+        if not os.path.isdir(adir):
+            os.mkdir(adir)
+        cmd = '"%s" "%s" -a "--directory=%s" "--omit=%s"' % (
+            sys.executable, os.path.join(TESTDIR, 'coverage.py'),
+            adir, omit)
         vlog("# Running: "+cmd)
         os.system(cmd)
-        if options.annotate:
-            adir = os.path.join(TESTDIR, 'annotated')
-            if not os.path.isdir(adir):
-                os.mkdir(adir)
-            cmd = '"%s" "%s" -a "--directory=%s" "--omit=%s"' % (
-                sys.executable, os.path.join(TESTDIR, 'coverage.py'),
-                adir, omit)
-            vlog("# Running: "+cmd)
-            os.system(cmd)
 
 def run(cmd, split_lines=True):
     """Run command in a sub-process, capturing the output (stdout and stderr).
@@ -242,7 +241,8 @@ try:
             tests += 1
 
     print "\n# Ran %d tests, %d failed." % (tests, failed)
-    output_coverage()
+    if coverage:
+        output_coverage()
 finally:
     cleanup_exit()
 
