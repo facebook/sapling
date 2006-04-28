@@ -293,7 +293,7 @@ class revlog(object):
     remove data, and can use some simple techniques to avoid the need
     for locking while reading.
     """
-    def __init__(self, opener, indexfile, datafile, defversion=0):
+    def __init__(self, opener, indexfile, datafile, defversion=REVLOGV0):
         """
         create a revlog object
 
@@ -337,7 +337,7 @@ class revlog(object):
                 v = struct.unpack(versionformat, i)[0]
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
-        if fmt == 0:
+        if fmt == REVLOGV0:
             if flags:
                 raise RevlogError(_("index %s invalid flags %x for format v0" %
                                    (self.indexfile, flags)))
@@ -349,7 +349,7 @@ class revlog(object):
             raise RevlogError(_("index %s invalid format %d" %
                                (self.indexfile, fmt)))
         self.version = v
-        if v == 0:
+        if v == REVLOGV0:
             self.indexformat = indexformatv0
             shaoffset = v0shaoffset
         else:
@@ -369,7 +369,7 @@ class revlog(object):
                 # we've already got the entire data file read in, save it
                 # in the chunk data
                 self.chunkcache = (0, i)
-            if self.version != 0:
+            if self.version != REVLOGV0:
                 e = list(self.index[0])
                 type = self.ngtype(e[0])
                 e[0] = self.offset_type(0, type)
@@ -399,7 +399,7 @@ class revlog(object):
     def ngoffset(self, q):
         if q & 0xFFFF:
             raise RevlogError(_('%s: incompatible revision flag %x') %
-                               (self.indexfile, type))
+                              (self.indexfile, q))
         return long(q >> 16)
 
     def ngtype(self, q):
@@ -441,13 +441,13 @@ class revlog(object):
         if node == nullid: return (nullid, nullid)
         r = self.rev(node)
         d = self.index[r][-3:-1]
-        if self.version == 0:
+        if self.version == REVLOGV0:
             return d
         return [ self.node(x) for x in d ]
     def start(self, rev):
         if rev < 0:
             return -1
-        if self.version != 0:
+        if self.version != REVLOGV0:
             return self.ngoffset(self.index[rev][0])
         return self.index[rev][0]
 
@@ -456,7 +456,7 @@ class revlog(object):
     def size(self, rev):
         """return the length of the uncompressed text for a given revision"""
         l = -1
-        if self.version != 0:
+        if self.version != REVLOGV0:
             l = self.index[rev][2]
         if l >= 0:
             return l
@@ -911,7 +911,7 @@ class revlog(object):
         if t >= 0:
             offset = self.end(t)
 
-        if self.version == 0:
+        if self.version == REVLOGV0:
             e = (offset, l, base, link, p1, p2, node)
         else:
             e = (self.offset_type(offset, 0), l, len(text),
@@ -935,7 +935,7 @@ class revlog(object):
             f.seek(0, 2)
             transaction.add(self.indexfile, f.tell(), self.count() - 1)
 
-        if len(self.index) == 1 and self.version != 0:
+        if len(self.index) == 1 and self.version != REVLOGV0:
             l = struct.pack(versionformat, self.version)
             f.write(l)
             entry = entry[4:]
@@ -1135,7 +1135,7 @@ class revlog(object):
                     raise RevlogError(_("consistency error adding group"))
                 textlen = len(text)
             else:
-                if self.version == 0:
+                if self.version == REVLOGV0:
                     e = (end, len(cdelta), base, link, p1, p2, node)
                 else:
                     e = (self.offset_type(end, 0), len(cdelta), textlen, base,
