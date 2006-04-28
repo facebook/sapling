@@ -92,7 +92,7 @@ def install_hg():
         if os.path.exists(COVERAGE_FILE):
             os.unlink(COVERAGE_FILE)
         # Create a wrapper script to invoke hg via coverage.py
-        os.rename(os.path.join(BINDIR, "hg"), os.path.join(BINDIR, "_hg.py")) 
+        os.rename(os.path.join(BINDIR, "hg"), os.path.join(BINDIR, "_hg.py"))
         f = open(os.path.join(BINDIR, 'hg'), 'w')
         f.write('#!' + sys.executable + '\n')
         f.write('import sys, os; os.execv(sys.executable, [sys.executable, '+ \
@@ -107,7 +107,7 @@ def output_coverage():
     omit = [BINDIR, TESTDIR, PYTHONDIR]
     if not options.cover_stdlib:
         # Exclude as system paths (ignoring empty strings seen on win)
-        omit += [x for x in sys.path if x != '']  
+        omit += [x for x in sys.path if x != '']
     omit = ','.join(omit)
     os.chdir(PYTHONDIR)
     cmd = '"%s" "%s" -r "--omit=%s"' % (
