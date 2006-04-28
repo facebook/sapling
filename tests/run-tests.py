@@ -15,11 +15,18 @@ from optparse import OptionParser
 
 required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
-parser = OptionParser()
-parser.add_option("-v", "--verbose", action="store_true", dest="verbose",
-    default=False, help="output verbose messages")
+parser = OptionParser("%prog [options] [tests]")
+parser.add_option("-v", "--verbose", action="store_true",
+    help="output verbose messages")
+parser.add_option("-c", "--cover", action="store_true",
+    help="print a test coverage report")
+parser.add_option("-s", "--cover_stdlib", action="store_true",
+    help="print a test coverage report inc. standard libraries")
+parser.add_option("-C", "--annotate", action="store_true",
+    help="output files annotated with coverage")
 (options, args) = parser.parse_args()
 verbose = options.verbose
+coverage = options.cover or options.cover_stdlib or options.annotate
 
 def vlog(*msg):
     if verbose:
@@ -59,9 +66,6 @@ def cleanup_exit():
 
 def install_hg():
     vlog("# Performing temporary installation of HG")
-    INST = os.path.join(HGTMP, "install")
-    BINDIR = os.path.join(INST, "bin")
-    PYTHONDIR = os.path.join(INST, "lib", "python")
     installerrs = os.path.join("tests", "install.err")
 
     os.chdir("..") # Get back to hg root
@@ -81,6 +85,45 @@ def install_hg():
 
     os.environ["PATH"] = "%s%s%s" % (BINDIR, os.pathsep, os.environ["PATH"])
     os.environ["PYTHONPATH"] = PYTHONDIR
+
+    if coverage:
+        vlog("# Installing coverage wrapper")
+        os.environ['COVERAGE_FILE'] = COVERAGE_FILE
+        if os.path.exists(COVERAGE_FILE):
+            os.unlink(COVERAGE_FILE)
+        # Create a wrapper script to invoke hg via coverage.py
+        os.rename(os.path.join(BINDIR, "hg"), os.path.join(BINDIR, "_hg.py")) 
+        f = open(os.path.join(BINDIR, 'hg'), 'w')
+        f.write('#!' + sys.executable + '\n')
+        f.write('import sys, os; os.execv(sys.executable, [sys.executable, '+ \
+            '"%s", "-x", "%s"] + sys.argv[1:])\n' % (
+            os.path.join(TESTDIR, 'coverage.py'),
+            os.path.join(BINDIR, '_hg.py')))
+        f.close()
+        os.chmod(os.path.join(BINDIR, 'hg'), 0700)
+
+def output_coverage():
+    if coverage:
+        vlog("# Producing coverage report")
+        omit = [BINDIR, TESTDIR, PYTHONDIR]
+        if not options.cover_stdlib:
+            # Exclude as system paths (ignoring empty strings seen on win)
+            omit += [x for x in sys.path if x != '']  
+        omit = ','.join(omit)
+        os.chdir(PYTHONDIR)
+        cmd = '"%s" "%s" -r "--omit=%s"' % (
+            sys.executable, os.path.join(TESTDIR, 'coverage.py'), omit)
+        vlog("# Running: "+cmd)
+        os.system(cmd)
+        if options.annotate:
+            adir = os.path.join(TESTDIR, 'annotated')
+            if not os.path.isdir(adir):
+                os.mkdir(adir)
+            cmd = '"%s" "%s" -a "--directory=%s" "--omit=%s"' % (
+                sys.executable, os.path.join(TESTDIR, 'coverage.py'),
+                adir, omit)
+            vlog("# Running: "+cmd)
+            os.system(cmd)
 
 def run(cmd, split_lines=True):
     """Run command in a sub-process, capturing the output (stdout and stderr).
@@ -177,6 +220,11 @@ HGTMP   = os.environ["HGTMP"]   = tempfile.mkdtemp("", "hgtests.")
 vlog("# Using TESTDIR", TESTDIR)
 vlog("# Using HGTMP", HGTMP)
 
+INST = os.path.join(HGTMP, "install")
+BINDIR = os.path.join(INST, "bin")
+PYTHONDIR = os.path.join(INST, "lib", "python")
+COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
+
 try:
     install_hg()
 
@@ -194,6 +242,7 @@ try:
             tests += 1
 
     print "\n# Ran %d tests, %d failed." % (tests, failed)
+    output_coverage()
 finally:
     cleanup_exit()
 

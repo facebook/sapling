@@ -350,6 +350,7 @@ class coverage:
         show_missing = settings.get('show-missing')
         directory = settings.get('directory')
         omit = filter(None, settings.get('omit', '').split(','))
+        omit += ['/<'] # Always skip /<string> etc.
 
         if settings.get('report'):
             self.report(args, show_missing, ignore_errors, omit_prefixes=omit)
