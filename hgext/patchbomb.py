@@ -62,7 +62,7 @@ try:
 except ImportError: pass
 
 def diffstat(patch):
-    fd, name = tempfile.mkstemp()
+    fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
     try:
         p = popen2.Popen3('diffstat -p1 -w79 2>/dev/null > ' + name)
         try:

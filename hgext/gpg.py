@@ -23,11 +23,11 @@ class gpg:
         """ returns of the good and bad signatures"""
         try:
             # create temporary files
-            fd, sigfile = tempfile.mkstemp(prefix="hggpgsig")
+            fd, sigfile = tempfile.mkstemp(prefix="hg-gpg-", suffix=".sig")
             fp = os.fdopen(fd, 'wb')
             fp.write(sig)
             fp.close()
-            fd, datafile = tempfile.mkstemp(prefix="hggpgdata")
+            fd, datafile = tempfile.mkstemp(prefix="hg-gpg-", suffix=".txt")
             fp = os.fdopen(fd, 'wb')
             fp.write(data)
             fp.close()

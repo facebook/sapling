@@ -1824,7 +1824,7 @@ class localrepository(object):
 
         def temp(prefix, node):
             pre = "%s~%s." % (os.path.basename(fn), prefix)
-            (fd, name) = tempfile.mkstemp("", pre)
+            (fd, name) = tempfile.mkstemp(prefix=pre)
             f = os.fdopen(fd, "wb")
             self.wwrite(fn, fl.read(node), f)
             f.close()
