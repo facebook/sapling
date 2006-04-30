@@ -80,8 +80,13 @@ class zipit:
 
     def __init__(self, dest, prefix, compress=True):
         self.prefix = tidyprefix(dest, prefix, ('.zip',))
-        if not isinstance(dest, str) and not hasattr(dest, 'tell'):
-            dest = tellable(dest)
+        if not isinstance(dest, str):
+            try:
+                dest.tell()
+            except AttributeError:
+                dest = tellable(dest)
+            except IOError:
+                dest = tellable(dest)
         self.z = zipfile.ZipFile(dest, 'w',
                                  compress and zipfile.ZIP_DEFLATED or
                                  zipfile.ZIP_STORED)
