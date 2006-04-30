@@ -931,7 +931,7 @@ def archive(ui, repo, dest, **opts):
     prefix = make_filename(repo, repo.changelog, opts['prefix'], node)
     if os.path.realpath(dest) == repo.root:
         raise util.Abort(_('repository root cannot be destination'))
-    _, matchfn, _ = matchpats(repo, [], opts)
+    dummy, matchfn, dummy = matchpats(repo, [], opts)
     archival.archive(repo, dest, node, opts.get('type') or 'files',
                     not opts['no_decode'], matchfn, prefix)
 
@@ -2931,7 +2931,7 @@ table = {
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg annotate [-r REV] [-a] [-u] [-d] [-n] [-c] FILE...')),
-    'archive':
+    "archive":
         (archive,
          [('', 'no-decode', None, _('do not pass files through decoders')),
           ('p', 'prefix', '', _('directory prefix for files in archive')),
