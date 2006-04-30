@@ -303,7 +303,7 @@ def write_bundle(cg, filename=None, compress=True):
                 raise util.Abort(_("file '%s' already exists"), filename)
             fh = open(filename, "wb")
         else:
-            fd, filename = tempfile.mkstemp(suffix=".hg", prefix="hg-bundle-")
+            fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
             fh = os.fdopen(fd, "wb")
         cleanup = filename
 

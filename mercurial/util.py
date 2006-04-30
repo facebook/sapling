@@ -46,11 +46,11 @@ def tempfilter(s, cmd):
     the temporary files generated.'''
     inname, outname = None, None
     try:
-        infd, inname = tempfile.mkstemp(prefix='hgfin')
+        infd, inname = tempfile.mkstemp(prefix='hg-filter-in-')
         fp = os.fdopen(infd, 'wb')
         fp.write(s)
         fp.close()
-        outfd, outname = tempfile.mkstemp(prefix='hgfout')
+        outfd, outname = tempfile.mkstemp(prefix='hg-filter-out-')
         os.close(outfd)
         cmd = cmd.replace('INFILE', inname)
         cmd = cmd.replace('OUTFILE', outname)
@@ -464,7 +464,7 @@ def opener(base, audit=True):
 
     def mktempcopy(name):
         d, fn = os.path.split(name)
-        fd, temp = tempfile.mkstemp(prefix=fn, dir=d)
+        fd, temp = tempfile.mkstemp(prefix=".%s-" % fn, dir=d)
         fp = os.fdopen(fd, "wb")
         try:
             fp.write(file(name, "rb").read())
