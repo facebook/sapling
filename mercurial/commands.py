@@ -962,7 +962,7 @@ def backout(ui, repo, rev, **opts):
     revert(ui, repo, **revert_opts)
     commit_opts = opts.copy()
     commit_opts['addremove'] = False
-    if not commit_opts['message']:
+    if not commit_opts['message'] and not commit_opts['logfile']:
         commit_opts['message'] = _("Backed out changeset %s") % (hex(node))
     commit(ui, repo, **commit_opts)
     def nice(node):
@@ -2940,17 +2940,17 @@ table = {
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg archive [OPTION]... DEST')),
-    'backout':
+    "backout":
         (backout,
-         [('', 'message', '', _('use <text> as commit message')),
-          ('', 'merge', None, _('merge with old dirstate parent after backout')),
+         [('', 'merge', None,
+           _('merge with old dirstate parent after backout')),
+          ('m', 'message', '', _('use <text> as commit message')),
           ('l', 'logfile', '', _('read commit message from <file>')),
           ('d', 'date', '', _('record datecode as commit date')),
           ('u', 'user', '', _('record user as committer')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         _('hg backout [OPTION]... [FILE]...')),
-
+         _('hg backout [OPTION]... REV')),
     "bundle":
         (bundle,
          [('f', 'force', None,
