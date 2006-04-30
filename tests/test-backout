@@ -1,0 +1,51 @@
+#!/bin/sh
+
+echo '# basic operation'
+hg init basic
+cd basic
+echo a > a
+hg commit -d '0 0' -A -m a
+echo b >> a
+hg commit -d '1 0' -m b
+
+hg backout -d '2 0' tip
+cat a
+
+echo '# file that was removed is recreated'
+cd ..
+hg init remove
+cd remove
+
+echo content > a
+hg commit -d '0 0' -A -m a
+
+hg rm a
+hg commit -d '1 0' -m b
+
+hg backout -d '2 0' --merge tip
+cat a
+
+echo '# backout of backout is as if nothing happened'
+
+hg backout -d '3 0' --merge tip
+cat a
+
+echo '# backout with merge'
+cd ..
+hg init merge
+cd merge
+
+echo line 1 > a
+hg commit -d '0 0' -A -m a
+
+echo line 2 >> a
+hg commit -d '1 0' -m b
+
+echo line 3 >> a
+hg commit -d '2 0' -m c
+
+hg backout --merge -d '3 0' 1
+hg commit -d '4 0' -m d
+cat a
+
+exit 0

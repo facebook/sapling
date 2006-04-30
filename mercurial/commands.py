@@ -19,6 +19,11 @@ class UnknownCommand(Exception):
 class AmbiguousCommand(Exception):
     """Exception raised if command shortcut matches more than one command."""
 
+def bail_if_changed(repo):
+    modified, added, removed, deleted, unknown = repo.changes()
+    if modified or added or removed or deleted:
+        raise util.Abort(_("outstanding uncommitted changes"))
+
 def filterfiles(filters, files):
     l = [x for x in files if x in filters]
 
@@ -930,6 +935,44 @@ def archive(ui, repo, dest, **opts):
     archival.archive(repo, dest, node, opts.get('type') or 'files',
                     not opts['no_decode'], matchfn, prefix)
 
+def backout(ui, repo, rev, **opts):
+    '''reverse effect of earlier changeset
+
+    Commit the backed out changes as a new changeset.
+
+    If you back out a changeset other than the tip, a new head is
+    created.  The --merge option remembers the parent of the working
+    directory before starting the backout, then merges the new head
+    with it afterwards, to save you from doing this by hand.  The
+    result of this merge is not committed, as for a normal merge.'''
+
+    bail_if_changed(repo)
+    op1, op2 = repo.dirstate.parents()
+    if op2 != nullid:
+        raise util.Abort(_('outstanding uncommitted merge'))
+    node = repo.lookup(rev)
+    parent, p2 = repo.changelog.parents(node)
+    if parent == nullid:
+        raise util.Abort(_('cannot back out a change with no parents'))
+    if p2 != nullid:
+        raise util.Abort(_('cannot back out a merge'))
+    repo.update(node, force=True)
+    revert_opts = opts.copy()
+    revert_opts['rev'] = hex(parent)
+    revert(ui, repo, **revert_opts)
+    commit_opts = opts.copy()
+    commit_opts['addremove'] = False
+    if not commit_opts['message']:
+        commit_opts['message'] = _("Backed out changeset %s") % (hex(node))
+    commit(ui, repo, **commit_opts)
+    def nice(node):
+        return '%d:%s' % (repo.changelog.rev(node), short(node))
+    ui.status(_('changeset %s backs out changeset %s\n') %
+              (nice(repo.changelog.tip()), nice(node)))
+    if opts['merge'] and op1 != node:
+        ui.status(_('merging with changeset %s\n') % nice(op1))
+        update(ui, repo, hex(op1), **opts)
+
 def bundle(ui, repo, fname, dest="default-push", **opts):
     """create a changegroup file
 
@@ -1797,9 +1840,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     patches = (patch1,) + patches
 
     if not opts['force']:
-        modified, added, removed, deleted, unknown = repo.changes()
-        if modified or added or removed or deleted:
-            raise util.Abort(_("outstanding uncommitted changes"))
+        bail_if_changed(repo)
 
     d = opts["base"]
     strip = opts["strip"]
@@ -2899,6 +2940,17 @@ table = {
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg archive [OPTION]... DEST')),
+    'backout':
+        (backout,
+         [('', 'message', '', _('use <text> as commit message')),
+          ('', 'merge', None, _('merge with old dirstate parent after backout')),
+          ('l', 'logfile', '', _('read commit message from <file>')),
+          ('d', 'date', '', _('record datecode as commit date')),
+          ('u', 'user', '', _('record user as committer')),
+          ('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         _('hg backout [OPTION]... [FILE]...')),
+
     "bundle":
         (bundle,
          [('f', 'force', None,
