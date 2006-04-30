@@ -54,4 +54,18 @@ echo %% should silently add a
 hg revert -r0 a
 hg st a
 
+hg update -C
+chmod +x c
+hg revert
+echo %% should print non-executable
+test -x c || echo non-executable
+
+chmod +x c
+hg commit -d '1000001 0' -m exe
+
+chmod -x c
+hg revert
+echo %% should print executable
+test -x c && echo executable
+
 true

@@ -45,3 +45,9 @@ forgetting z
 forgetting a
 %% should silently add a
 A a
+reverting c
+%% should print non-executable
+non-executable
+reverting c
+%% should print executable
+executable
