@@ -12,7 +12,7 @@ demandload(globals(), "errno os re socket sys tempfile util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
-                 interactive=True, parentui=None):
+                 interactive=True, traceback=False, parentui=None):
         self.overlay = {}
         if parentui is None:
             # this is the parent of all ui children
@@ -24,6 +24,7 @@ class ui(object):
             self.verbose = self.configbool("ui", "verbose")
             self.debugflag = self.configbool("ui", "debug")
             self.interactive = self.configbool("ui", "interactive", True)
+            self.traceback = traceback
 
             self.updateopts(verbose, debug, quiet, interactive)
             self.diffcache = None
@@ -45,11 +46,12 @@ class ui(object):
         return getattr(self.parentui, key)
 
     def updateopts(self, verbose=False, debug=False, quiet=False,
-                 interactive=True):
+                   interactive=True, traceback=False):
         self.quiet = (self.quiet or quiet) and not verbose and not debug
         self.verbose = (self.verbose or verbose) or debug
         self.debugflag = (self.debugflag or debug)
         self.interactive = (self.interactive and interactive)
+        self.traceback = self.traceback or traceback
 
     def readconfig(self, fn, root=None):
         if isinstance(fn, basestring):

@@ -3365,7 +3365,7 @@ def dispatch(args):
         if num: signal.signal(num, catchterm)
 
     try:
-        u = ui.ui()
+        u = ui.ui(traceback='--traceback' in sys.argv[1:])
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
@@ -3389,7 +3389,7 @@ def dispatch(args):
             external.append(mod)
         except Exception, inst:
             u.warn(_("*** failed to import extension %s: %s\n") % (x[0], inst))
-            if "--traceback" in sys.argv[1:]:
+            if u.traceback:
                 traceback.print_exc()
                 return 1
             continue
@@ -3417,7 +3417,7 @@ def dispatch(args):
             atexit.register(print_time)
 
         u.updateopts(options["verbose"], options["debug"], options["quiet"],
-                not options["noninteractive"])
+                     not options["noninteractive"], options["traceback"])
 
         # enter the debugger before command execution
         if options['debugger']:
@@ -3484,7 +3484,7 @@ def dispatch(args):
             # enter the debugger when we hit an exception
             if options['debugger']:
                 pdb.post_mortem(sys.exc_info()[2])
-            if options['traceback']:
+            if u.traceback:
                 traceback.print_exc()
             raise
     except ParseError, inst:
