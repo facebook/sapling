@@ -83,9 +83,7 @@ class zipit:
         if not isinstance(dest, str):
             try:
                 dest.tell()
-            except AttributeError:
-                dest = tellable(dest)
-            except IOError:
+            except (AttributeError, IOError):
                 dest = tellable(dest)
         self.z = zipfile.ZipFile(dest, 'w',
                                  compress and zipfile.ZIP_DEFLATED or
