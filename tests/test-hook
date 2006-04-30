@@ -126,7 +126,7 @@ class container:
 EOF
 
 echo '# test python hooks'
-PYTHONPATH="$PWD:$PYTHONPATH"
+PYTHONPATH="`pwd`:$PYTHONPATH"
 export PYTHONPATH
 
 echo '[hooks]' > ../a/.hg/hgrc
