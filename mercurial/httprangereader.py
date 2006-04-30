@@ -22,4 +22,7 @@ class httprangereader(object):
             end = self.pos + bytes - 1
         req.add_header('Range', 'bytes=%d-%s' % (self.pos, end))
         f = urllib2.urlopen(req)
-        return f.read(bytes)
+        data = f.read()
+        if bytes:
+            data = data[:bytes]
+        return data
