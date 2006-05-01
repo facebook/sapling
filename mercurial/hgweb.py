@@ -1010,8 +1010,10 @@ class hgwebdir(object):
             return [(name.strip(os.sep), path) for name, path in items]
 
         self.motd = ""
+        self.repos_sorted = ('name', False)
         if isinstance(config, (list, tuple)):
             self.repos = cleannames(config)
+            self.repos_sorted = ('', False)
         elif isinstance(config, dict):
             self.repos = cleannames(config.items())
             self.repos.sort()
@@ -1078,14 +1080,15 @@ class hgwebdir(object):
                 row = dict(contact=contact or "unknown",
                            contact_sort=contact.upper() or "unknown",
                            name=name,
-                           name_sort=name.upper(),
+                           name_sort=name,
                            url=url,
                            description=description or "unknown",
                            description_sort=description.upper() or "unknown",
                            lastchange=d,
                            lastchange_sort=d[1]-d[0],
                            archives=archivelist(u, "tip", url))
-                if not sortcolumn:
+                if (not sortcolumn
+                    or (sortcolumn, descending) == self.repos_sorted):
                     # fast path for unsorted output
                     row['parity'] = parity
                     parity = 1 - parity
@@ -1121,14 +1124,14 @@ class hgwebdir(object):
                           or tmpl("error", error="%r not found" % fname))
             else:
                 sortable = ["name", "description", "contact", "lastchange"]
-                sortcolumn = ""
+                sortcolumn, descending = self.repos_sorted
                 if req.form.has_key('sort'):
                     sortcolumn = req.form['sort'][0]
-                descending = sortcolumn.startswith('-')
-                if descending:
-                    sortcolumn = sortcolumn[1:]
-                if sortcolumn not in sortable:
-                    sortcolumn = ""
+                    descending = sortcolumn.startswith('-')
+                    if descending:
+                        sortcolumn = sortcolumn[1:]
+                    if sortcolumn not in sortable:
+                        sortcolumn = ""
 
                 sort = [("sort_%s" % column,
                          "%s%s" % ((not descending and column == sortcolumn)
