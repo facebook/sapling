@@ -293,7 +293,8 @@ class hgweb(object):
         yield self.t('changelog',
                      changenav=changenav,
                      manifest=hex(mf),
-                     rev=pos, changesets=count, entries=changelist)
+                     rev=pos, changesets=count, entries=changelist,
+                     archives=self.archivelist("tip"))
 
     def search(self, query):
 
