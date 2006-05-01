@@ -1,5 +1,6 @@
 a { text-decoration:none; }
 .age { white-space:nowrap; }
+.indexlinks { white-space:nowrap; }
 .parity0 { background-color: #dddddd; }
 .parity1 { background-color: #eeeeee; }
 .lineno { width: 60px; color: #aaaaaa; font-size: smaller; 
