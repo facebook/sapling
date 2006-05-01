@@ -1050,7 +1050,8 @@ class hgwebdir(object):
                 if ui.configbool("web", "allow" + i, False):
                     yield {"type" : i, "node": nodeid, "url": url}
 
-        def entries(**map):
+        def entries(sortcolumn="", descending=False, **map):
+            rows = []
             parity = 0
             for name, path in self.repos:
                 u = ui.ui()
@@ -1069,17 +1070,36 @@ class hgwebdir(object):
                 except OSError:
                     continue
 
-                yield dict(contact=(get("ui", "username") or # preferred
-                                    get("web", "contact") or # deprecated
-                                    get("web", "author", "unknown")), # also
-                           name=get("web", "name", name),
+                contact = (get("ui", "username") or # preferred
+                           get("web", "contact") or # deprecated
+                           get("web", "author", "")) # also
+                description = get("web", "description", "")
+                name = get("web", "name", name)
+                row = dict(contact=contact or "unknown",
+                           contact_sort=contact.upper() or "unknown",
+                           name=name,
+                           name_sort=name.upper(),
                            url=url,
-                           parity=parity,
-                           shortdesc=get("web", "description", "unknown"),
-                           lastupdate=d,
+                           description=description or "unknown",
+                           description_sort=description.upper() or "unknown",
+                           lastchange=d,
+                           lastchange_sort=d[1]-d[0],
                            archives=archivelist(u, "tip", url))
-
-                parity = 1 - parity
+                if not sortcolumn:
+                    # fast path for unsorted output
+                    row['parity'] = parity
+                    parity = 1 - parity
+                    yield row
+                else:
+                    rows.append((row["%s_sort" % sortcolumn], row))
+            if rows:
+                rows.sort()
+                if descending:
+                    rows.reverse()
+                for key, row in rows:
+                    row['parity'] = parity
+                    parity = 1 - parity
+                    yield row
 
         virtual = req.env.get("PATH_INFO", "").strip('/')
         if virtual:
@@ -1100,4 +1120,20 @@ class hgwebdir(object):
                 req.write(staticfile(static, fname)
                           or tmpl("error", error="%r not found" % fname))
             else:
-                req.write(tmpl("index", entries=entries))
+                sortable = ["name", "description", "contact", "lastchange"]
+                sortcolumn = ""
+                if req.form.has_key('sort'):
+                    sortcolumn = req.form['sort'][0]
+                descending = sortcolumn.startswith('-')
+                if descending:
+                    sortcolumn = sortcolumn[1:]
+                if sortcolumn not in sortable:
+                    sortcolumn = ""
+
+                sort = [("sort_%s" % column,
+                         "%s%s" % ((not descending and column == sortcolumn)
+                                   and "-" or "", column))
+                        for column in sortable]
+                req.write(tmpl("index", entries=entries,
+                               sortcolumn=sortcolumn, descending=descending,
+                               **dict(sort)))
