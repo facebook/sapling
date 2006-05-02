@@ -1,3 +1,6 @@
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pulling from ../B1
 searching for changes
 adding changesets
@@ -5,6 +8,8 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 bar should remain deleted.
 f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644 foo
 pulling from ../A2
@@ -14,5 +19,7 @@ adding manifests
 adding file changes
 added 1 changesets with 0 changes to 0 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 bar should remain deleted.
 f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644 foo

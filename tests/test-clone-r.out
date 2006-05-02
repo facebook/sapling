@@ -1,3 +1,5 @@
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 2 files removed, 0 files unresolved
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       3      0       0 362fef284ce2 000000000000 000000000000
      1         3       5      1       1 125144f7e028 362fef284ce2 000000000000
@@ -27,6 +29,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -37,6 +40,7 @@ adding changesets
 adding manifests
 adding file changes
 added 2 changesets with 2 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -47,6 +51,7 @@ adding changesets
 adding manifests
 adding file changes
 added 3 changesets with 3 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -57,6 +62,7 @@ adding changesets
 adding manifests
 adding file changes
 added 4 changesets with 4 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -67,6 +73,7 @@ adding changesets
 adding manifests
 adding file changes
 added 2 changesets with 2 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -77,6 +84,7 @@ adding changesets
 adding manifests
 adding file changes
 added 3 changesets with 3 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -87,6 +95,7 @@ adding changesets
 adding manifests
 adding file changes
 added 4 changesets with 5 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -97,6 +106,7 @@ adding changesets
 adding manifests
 adding file changes
 added 5 changesets with 6 changes to 3 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -107,6 +117,7 @@ adding changesets
 adding manifests
 adding file changes
 added 5 changesets with 5 changes to 2 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

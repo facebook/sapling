@@ -1,4 +1,5 @@
 unknown
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 0acdaf898367 tip
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4 first
 tip                                1:8a3ca90d111dc784e6575d373105be12570e8776
@@ -6,10 +7,13 @@ first                              0:0acdaf8983679e0aac16e811534eb49d7ee1f2b4
 8a3ca90d111d tip
 M a
 8a3ca90d111d+ tip
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 0acdaf898367+ first
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4+ first
 M a
 8216907a933d tip
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 8216907a933d+8a3ca90d111d+ tip
 M .hgtags
 .hgtags:2: ignoring invalid tag

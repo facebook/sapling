@@ -1,3 +1,4 @@
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pulling from ../test-a
 searching for changes
 adding changesets
@@ -8,6 +9,10 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 merge: warning: conflicts during merge
 merging test.txt
 merging test.txt failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+There are unresolved merges, you can redo the full merge using:
+  hg update -C 1
+  hg merge 2
 pulling from ../test-a
 searching for changes
 adding changesets
@@ -25,7 +30,9 @@ resolving test.txt
 file test.txt: my fc3148072371 other d40249267ae3 ancestor 8fe46a3eb557
 merging test.txt failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-(branch merge, don't forget to commit)
+There are unresolved merges, you can redo the full merge using:
+  hg update -C 3
+  hg merge 4
 one
 <<<<<<<
 two-point-five
