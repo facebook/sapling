@@ -1,14 +1,19 @@
 1:f248da0d4c3e
 0:9eca13a34789
 f248da0d4c3e tip
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 9eca13a34789
 9eca13a34789+
 reverting file1
 9eca13a34789
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 f248da0d4c3e tip
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 merge: warning: conflicts during merge
 merging file1
 merging file1 failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+There are unresolved merges with locally modified files.
 diff -r f248da0d4c3e file1
 --- a/file1
 +++ b/file1
@@ -25,4 +30,5 @@ f248da0d4c3e+ tip
 reverting file1
 f248da0d4c3e tip
 f248da0d4c3e tip
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 f248da0d4c3e tip

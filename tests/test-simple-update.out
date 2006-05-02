@@ -4,6 +4,8 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pulling from ../branch
 searching for changes
 adding changesets
@@ -16,6 +18,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 2 changesets, 2 total revisions
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 foo
 bar
 6f4310b00b9a147241b071a60c28a650827fb03d 644 foo

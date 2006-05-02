@@ -1,10 +1,17 @@
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 %% no merges expected
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 %% merge should fail
 abort: 'b' already exists in the working dir and differs from remote
 %% merge of b expected
 merging for b
 merging b
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 %%
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 Contents of b should be "this is file b1"
 This is file b1
 %% merge fails
@@ -12,8 +19,13 @@ abort: outstanding uncommitted changes
 %% merge expected!
 merging for b
 merging b
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 %% merge of b should fail
 abort: outstanding uncommitted changes
 %% merge of b expected
 merging for b
 merging b
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)

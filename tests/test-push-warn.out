@@ -1,3 +1,4 @@
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to ../a
 searching for changes
 abort: unsynced remote changes!
@@ -13,6 +14,8 @@ pushing to ../a
 searching for changes
 abort: push creates new remote branches!
 (did you forget to merge? use push -f to force)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 pushing to ../a
 searching for changes
 adding changesets
@@ -20,7 +23,12 @@ adding manifests
 adding file changes
 added 2 changesets with 1 changes to 1 files
 adding foo
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 merging foo
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 pushing to ../c
 searching for changes
 abort: push creates new remote branches!

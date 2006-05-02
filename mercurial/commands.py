@@ -956,7 +956,7 @@ def backout(ui, repo, rev, **opts):
         raise util.Abort(_('cannot back out a change with no parents'))
     if p2 != nullid:
         raise util.Abort(_('cannot back out a merge'))
-    repo.update(node, force=True)
+    repo.update(node, force=True, show_stats=False)
     revert_opts = opts.copy()
     revert_opts['rev'] = hex(parent)
     revert(ui, repo, **revert_opts)
@@ -2518,7 +2518,8 @@ def revert(ui, repo, *pats, **opts):
         update[abs] = True
 
     repo.dirstate.forget(forget[0])
-    r = repo.update(node, False, True, update.has_key, False, wlock=wlock)
+    r = repo.update(node, False, True, update.has_key, False, wlock=wlock,
+                    show_stats=False)
     repo.dirstate.update(add[0], 'a')
     repo.dirstate.update(undelete[0], 'n')
     repo.dirstate.update(remove[0], 'r')

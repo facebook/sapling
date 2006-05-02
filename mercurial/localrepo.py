@@ -1540,7 +1540,7 @@ class localrepository(object):
         return newheads - oldheads + 1
 
     def update(self, node, allow=False, force=False, choose=None,
-               moddirstate=True, forcemerge=False, wlock=None):
+               moddirstate=True, forcemerge=False, wlock=None, show_stats=True):
         pl = self.dirstate.parents()
         if not force and pl[1] != nullid:
             self.ui.warn(_("aborting: outstanding uncommitted merges\n"))
@@ -1808,14 +1808,27 @@ class localrepository(object):
         if moddirstate:
             self.dirstate.setparents(p1, p2)
 
-        stat = ((len(get), _("updated")),
-                (len(merge) - len(failedmerge), _("merged")),
-                (len(remove), _("removed")),
-                (len(failedmerge), _("unresolved")))
-        note = ", ".join([_("%d files %s") % s for s in stat])
-        self.ui.note("%s\n" % note)
-        if moddirstate and branch_merge:
-            self.ui.note(_("(branch merge, don't forget to commit)\n"))
+        if show_stats:
+            stats = ((len(get), _("updated")),
+                     (len(merge) - len(failedmerge), _("merged")),
+                     (len(remove), _("removed")),
+                     (len(failedmerge), _("unresolved")))
+            note = ", ".join([_("%d files %s") % s for s in stats])
+            self.ui.status("%s\n" % note)
+        if moddirstate:
+            if branch_merge:
+                if failedmerge:
+                    self.ui.status(_("There are unresolved merges,"
+                                    " you can redo the full merge using:\n"
+                                    "  hg update -C %s\n"
+                                    "  hg merge %s\n"
+                                    % (self.changelog.rev(p1),
+                                        self.changelog.rev(p2))))
+                else:
+                    self.ui.status(_("(branch merge, don't forget to commit)\n"))
+            elif failedmerge:
+                self.ui.status(_("There are unresolved merges with"
+                                 " locally modified files.\n"))
 
         return err
 

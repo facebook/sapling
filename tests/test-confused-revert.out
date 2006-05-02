@@ -6,7 +6,11 @@ undeleting a
 forgetting b
 %%% should show b unknown and a back to normal
 ? b
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 merging a
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 %%% should show foo-b
 foo-b
 %%% should show a removed and b added
