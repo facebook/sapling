@@ -16,9 +16,9 @@ import win32api
 from demandload import *
 from i18n import gettext as _
 demandload(globals(), 'errno os pywintypes win32con win32file win32process')
-demandload(globals(), 'winerror')
+demandload(globals(), 'cStringIO winerror')
 
-class WinError(OSError):
+class WinError:
     winerror_map = {
         winerror.ERROR_ACCESS_DENIED: errno.EACCES,
         winerror.ERROR_ACCOUNT_DISABLED: errno.EACCES,
@@ -105,7 +105,7 @@ class WinError(OSError):
         winerror.ERROR_OUTOFMEMORY: errno.ENOMEM,
         winerror.ERROR_PASSWORD_EXPIRED: errno.EACCES,
         winerror.ERROR_PATH_BUSY: errno.EBUSY,
-        winerror.ERROR_PATH_NOT_FOUND: errno.ENOTDIR,
+        winerror.ERROR_PATH_NOT_FOUND: errno.ENOENT,
         winerror.ERROR_PIPE_BUSY: errno.EBUSY,
         winerror.ERROR_PIPE_CONNECTED: errno.EPIPE,
         winerror.ERROR_PIPE_LISTENING: errno.EPIPE,
@@ -129,6 +129,19 @@ class WinError(OSError):
 
     def __init__(self, err):
         self.win_errno, self.win_function, self.win_strerror = err
+        if self.win_strerror.endswith('.'):
+            self.win_strerror = self.win_strerror[:-1]
+
+class WinIOError(WinError, IOError):
+    def __init__(self, err, filename=None):
+        WinError.__init__(self, err)
+        IOError.__init__(self, self.winerror_map.get(self.win_errno, 0),
+                         self.win_strerror)
+        self.filename = filename
+
+class WinOSError(WinError, OSError):
+    def __init__(self, err):
+        WinError.__init__(self, err)
         OSError.__init__(self, self.winerror_map.get(self.win_errno, 0),
                          self.win_strerror)
 
@@ -137,7 +150,7 @@ def os_link(src, dst):
     try:
         win32file.CreateHardLink(dst, src)
     except pywintypes.error, details:
-        raise WinError(details)
+        raise WinOSError(details)
 
 def nlinks(pathname):
     """Return number of hardlinks for the given file."""
@@ -169,3 +182,99 @@ def system_rcpath_win32():
     proc = win32api.GetCurrentProcess()
     filename = win32process.GetModuleFileNameEx(proc, 0)
     return [os.path.join(os.path.dirname(filename), 'mercurial.ini')]
+
+class posixfile(object):
+    '''file object with posix-like semantics.  on windows, normal
+    files can not be deleted or renamed if they are open. must open
+    with win32file.FILE_SHARE_DELETE. this flag does not exist on
+    windows <= nt.'''
+
+    # tried to use win32file._open_osfhandle to pass fd to os.fdopen,
+    # but does not work at all. wrap win32 file api instead.
+
+    def __init__(self, name, mode='rb'):
+        access = 0
+        if 'r' in mode or '+' in mode:
+            access |= win32file.GENERIC_READ
+        if 'w' in mode or 'a' in mode:
+            access |= win32file.GENERIC_WRITE
+        if 'r' in mode:
+            creation = win32file.OPEN_EXISTING
+        elif 'a' in mode:
+            creation = win32file.OPEN_ALWAYS
+        else:
+            creation = win32file.CREATE_ALWAYS
+        try:
+            self.handle = win32file.CreateFile(name,
+                                               access,
+                                               win32file.FILE_SHARE_READ |
+                                               win32file.FILE_SHARE_WRITE |
+                                               win32file.FILE_SHARE_DELETE,
+                                               None,
+                                               creation,
+                                               win32file.FILE_ATTRIBUTE_NORMAL,
+                                               0)
+        except pywintypes.error, err:
+            raise WinIOError(err, name)
+        self.closed = False
+        self.name = name
+        self.mode = mode
+
+    def read(self, count=-1):
+        try:
+            cs = cStringIO.StringIO()
+            while count:
+                wincount = int(count)
+                if wincount == -1:
+                    wincount = 1048576
+                val, data = win32file.ReadFile(self.handle, wincount)
+                if not data: break
+                cs.write(data)
+                if count != -1:
+                    count -= len(data)
+            return cs.getvalue()
+        except pywintypes.error, err:
+            raise WinIOError(err)
+
+    def write(self, data):
+        try:
+            if 'a' in self.mode:
+                win32file.SetFilePointer(self.handle, 0, win32file.FILE_END)
+            nwrit = 0
+            while nwrit < len(data):
+                val, nwrit = win32file.WriteFile(self.handle, data)
+                data = data[nwrit:]
+        except pywintypes.error, err:
+            raise WinIOError(err)
+
+    def seek(self, pos, whence=0):
+        try:
+            win32file.SetFilePointer(self.handle, int(pos), whence)
+        except pywintypes.error, err:
+            raise WinIOError(err)
+
+    def tell(self):
+        try:
+            return win32file.SetFilePointer(self.handle, 0,
+                                            win32file.FILE_CURRENT)
+        except pywintypes.error, err:
+            raise WinIOError(err)
+
+    def close(self):
+        if not self.closed:
+            self.handle = None
+            self.closed = True
+
+    def flush(self):
+        try:
+            win32file.FlushFileBuffers(self.handle)
+        except pywintypes.error, err:
+            raise WinIOError(err)
+
+    def truncate(self, pos=0):
+        try:
+            win32file.SetFilePointer(self.handle, int(pos),
+                                     win32file.FILE_BEGIN)
+            win32file.SetEndOfFile(self.handle)
+        except pywintypes.error, err:
+            raise WinIOError(err)

@@ -57,7 +57,7 @@ class sshrepository(remoterepository):
 
     def readerr(self):
         while 1:
-            size = os.fstat(self.pipee.fileno())[stat.ST_SIZE]
+            size = util.fstat(self.pipee).st_size
             if size == 0: break
             l = self.pipee.readline()
             if not l: break

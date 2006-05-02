@@ -160,7 +160,7 @@ class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
         localrepo.localrepository.__init__(self, ui, path)
         f = open(bundlename, "rb")
-        s = os.fstat(f.fileno())
+        s = util.fstat(f)
         self.bundlefile = f
         header = self.bundlefile.read(6)
         if not header.startswith("HG"):

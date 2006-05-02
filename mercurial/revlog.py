@@ -14,7 +14,7 @@ from node import *
 from i18n import gettext as _
 from demandload import demandload
 demandload(globals(), "binascii changegroup errno heapq mdiff os")
-demandload(globals(), "sha struct zlib")
+demandload(globals(), "sha struct util zlib")
 
 # revlog version strings
 REVLOGV0 = 0
@@ -322,7 +322,7 @@ class revlog(object):
             i = ""
         else:
             try:
-                st = os.fstat(f.fileno())
+                st = util.fstat(f)
             except AttributeError, inst:
                 st = None
             else:
