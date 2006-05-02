@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from demandload import *
-demandload(globals(), "cStringIO changelog errno manifest os tempfile")
+demandload(globals(), "cStringIO changelog errno manifest os tempfile util")
 
 # writes to metadata files are ordered.  reads: changelog, manifest,
 # normal files.  writes: normal files, manifest, changelog.
@@ -36,19 +36,21 @@ class appendfile(object):
     def __init__(self, fp, tmpname):
         if tmpname:
             self.tmpname = tmpname
-            self.tmpfp = open(self.tmpname, 'ab+')
+            self.tmpfp = util.posixfile(self.tmpname, 'ab+')
         else:
             fd, self.tmpname = tempfile.mkstemp(prefix="hg-appendfile-")
-            self.tmpfp = os.fdopen(fd, 'ab+')
+            os.close(fd)
+            self.tmpfp = util.posixfile(self.tmpname, 'ab+')
         self.realfp = fp
         self.offset = fp.tell()
         # real file is not written by anyone else. cache its size so
         # seek and read can be fast.
-        self.realsize = os.fstat(fp.fileno()).st_size
+        self.realsize = util.fstat(fp).st_size
+        self.name = fp.name
 
     def end(self):
         self.tmpfp.flush() # make sure the stat is correct
-        return self.realsize + os.fstat(self.tmpfp.fileno()).st_size
+        return self.realsize + util.fstat(self.tmpfp).st_size
 
     def tell(self):
         return self.offset

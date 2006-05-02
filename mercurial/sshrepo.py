@@ -9,7 +9,7 @@ from node import *
 from remoterepo import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "hg os re stat")
+demandload(globals(), "hg os re stat util")
 
 class sshrepository(remoterepository):
     def __init__(self, ui, path):
@@ -57,7 +57,7 @@ class sshrepository(remoterepository):
 
     def readerr(self):
         while 1:
-            size = os.fstat(self.pipee.fileno())[stat.ST_SIZE]
+            size = util.fstat(self.pipee).st_size
             if size == 0: break
             l = self.pipee.readline()
             if not l: break

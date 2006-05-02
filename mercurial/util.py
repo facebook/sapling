@@ -409,8 +409,18 @@ def rename(src, dst):
     """forcibly rename a file"""
     try:
         os.rename(src, dst)
-    except:
-        os.unlink(dst)
+    except OSError, err:
+        # on windows, rename to existing file is not allowed, so we
+        # must delete destination first. but if file is open, unlink
+        # schedules it for delete but does not delete it. rename
+        # happens immediately even for open files, so we create
+        # temporary file, delete it, rename destination to that name,
+        # then delete that. then rename is safe to do.
+        fd, temp = tempfile.mkstemp(dir=os.path.dirname(dst) or '.')
+        os.close(fd)
+        os.unlink(temp)
+        os.rename(dst, temp)
+        os.unlink(temp)
         os.rename(src, dst)
 
 def unlink(f):
@@ -452,90 +462,13 @@ def audit_path(path):
         or os.pardir in parts):
         raise Abort(_("path contains illegal component: %s\n") % path)
 
-def opener(base, audit=True):
-    """
-    return a function that opens files relative to base
-
-    this function is used to hide the details of COW semantics and
-    remote file access from higher level code.
-    """
-    p = base
-    audit_p = audit
-
-    def mktempcopy(name):
-        d, fn = os.path.split(name)
-        fd, temp = tempfile.mkstemp(prefix=".%s-" % fn, dir=d)
-        fp = os.fdopen(fd, "wb")
-        try:
-            fp.write(file(name, "rb").read())
-        except:
-            try: os.unlink(temp)
-            except: pass
-            raise
-        fp.close()
-        st = os.lstat(name)
-        os.chmod(temp, st.st_mode)
-        return temp
-
-    class atomictempfile(file):
-        """the file will only be copied when rename is called"""
-        def __init__(self, name, mode):
-            self.__name = name
-            self.temp = mktempcopy(name)
-            file.__init__(self, self.temp, mode)
-        def rename(self):
-            if not self.closed:
-                file.close(self)
-                rename(self.temp, self.__name)
-        def __del__(self):
-            if not self.closed:
-                try:
-                    os.unlink(self.temp)
-                except: pass
-                file.close(self)
-
-    class atomicfile(atomictempfile):
-        """the file will only be copied on close"""
-        def __init__(self, name, mode):
-            atomictempfile.__init__(self, name, mode)
-        def close(self):
-            self.rename()
-        def __del__(self):
-            self.rename()
-
-    def o(path, mode="r", text=False, atomic=False, atomictemp=False):
-        if audit_p:
-            audit_path(path)
-        f = os.path.join(p, path)
-
-        if not text:
-            mode += "b" # for that other OS
-
-        if mode[0] != "r":
-            try:
-                nlink = nlinks(f)
-            except OSError:
-                d = os.path.dirname(f)
-                if not os.path.isdir(d):
-                    os.makedirs(d)
-            else:
-                if atomic:
-                    return atomicfile(f, mode)
-                elif atomictemp:
-                    return atomictempfile(f, mode)
-                if nlink > 1:
-                    rename(mktempcopy(f), f)
-        return file(f, mode)
-
-    return o
-
 def _makelock_file(info, pathname):
     ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
     os.write(ld, info)
     os.close(ld)
 
 def _readlock_file(pathname):
-    return file(pathname).read()
+    return posixfile(pathname).read()
 
 def nlinks(pathname):
     """Return number of hardlinks for the given file."""
@@ -546,6 +479,15 @@ if hasattr(os, 'link'):
 else:
     def os_link(src, dst):
         raise OSError(0, _("Hardlinks not supported"))
+
+def fstat(fp):
+    '''stat file object that may not have fileno method.'''
+    try:
+        return os.fstat(fp.fileno())
+    except AttributeError:
+        return os.stat(fp.name)
+
+posixfile = file
 
 # Platform specific variants
 if os.name == 'nt':
@@ -724,6 +666,84 @@ else:
             val = os.WSTOPSIG(code)
             return _("stopped by signal %d") % val, val
         raise ValueError(_("invalid exit code"))
+
+def opener(base, audit=True):
+    """
+    return a function that opens files relative to base
+
+    this function is used to hide the details of COW semantics and
+    remote file access from higher level code.
+    """
+    p = base
+    audit_p = audit
+
+    def mktempcopy(name):
+        d, fn = os.path.split(name)
+        fd, temp = tempfile.mkstemp(prefix='.%s-' % fn, dir=d)
+        os.close(fd)
+        fp = posixfile(temp, "wb")
+        try:
+            fp.write(posixfile(name, "rb").read())
+        except:
+            try: os.unlink(temp)
+            except: pass
+            raise
+        fp.close()
+        st = os.lstat(name)
+        os.chmod(temp, st.st_mode)
+        return temp
+
+    class atomictempfile(posixfile):
+        """the file will only be copied when rename is called"""
+        def __init__(self, name, mode):
+            self.__name = name
+            self.temp = mktempcopy(name)
+            posixfile.__init__(self, self.temp, mode)
+        def rename(self):
+            if not self.closed:
+                posixfile.close(self)
+                rename(self.temp, self.__name)
+        def __del__(self):
+            if not self.closed:
+                try:
+                    os.unlink(self.temp)
+                except: pass
+                posixfile.close(self)
+
+    class atomicfile(atomictempfile):
+        """the file will only be copied on close"""
+        def __init__(self, name, mode):
+            atomictempfile.__init__(self, name, mode)
+        def close(self):
+            self.rename()
+        def __del__(self):
+            self.rename()
+
+    def o(path, mode="r", text=False, atomic=False, atomictemp=False):
+        if audit_p:
+            audit_path(path)
+        f = os.path.join(p, path)
+
+        if not text:
+            mode += "b" # for that other OS
+
+        if mode[0] != "r":
+            try:
+                nlink = nlinks(f)
+            except OSError:
+                d = os.path.dirname(f)
+                if not os.path.isdir(d):
+                    os.makedirs(d)
+            else:
+                if atomic:
+                    return atomicfile(f, mode)
+                elif atomictemp:
+                    return atomictempfile(f, mode)
+                if nlink > 1:
+                    rename(mktempcopy(f), f)
+        return posixfile(f, mode)
+
+    return o
 
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
