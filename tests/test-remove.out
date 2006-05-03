@@ -1,3 +1,6 @@
+abort: no files specified
+undeleting foo
+removing foo
 # HG changeset patch
 # User test
 # Node ID 8ba83d44753d6259db5ce6524974dd1174e90f47
