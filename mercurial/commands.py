@@ -2929,7 +2929,7 @@ table = {
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg add [OPTION]... [FILE]...')),
-    "addremove":
+    "debugaddremove|addremove":
         (addremove,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
@@ -2989,7 +2989,8 @@ table = {
          _('hg clone [OPTION]... SOURCE [DEST]')),
     "^commit|ci":
         (commit,
-         [('A', 'addremove', None, _('run addremove during commit')),
+         [('A', 'addremove', None,
+           _('mark new/missing files as added/removed before committing')),
           ('m', 'message', '', _('use <text> as commit message')),
           ('l', 'logfile', '', _('read the commit message from <file>')),
           ('d', 'date', '', _('record datecode as commit date')),
