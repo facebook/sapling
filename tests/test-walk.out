@@ -1,3 +1,4 @@
+(the addremove command is deprecated; use add and remove --after instead)
 adding beans/black
 adding beans/borlotti
 adding beans/kidney

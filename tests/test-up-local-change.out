@@ -1,3 +1,4 @@
+(the addremove command is deprecated; use add and remove --after instead)
 adding a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -7,6 +8,7 @@ diff -r 33aaa84a386b a
 @@ -1,1 +1,1 @@ a
 -a
 +abc
+(the addremove command is deprecated; use add and remove --after instead)
 adding b
 M a
 changeset:   0:33aaa84a386b
@@ -88,6 +90,7 @@ diff -r 802f095af299 a
 -a2
 +abc
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+(the addremove command is deprecated; use add and remove --after instead)
 adding b
 M a
 changeset:   1:802f095af299

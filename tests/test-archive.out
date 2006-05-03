@@ -1,5 +1,8 @@
+(the addremove command is deprecated; use add and remove --after instead)
 adding foo
+(the addremove command is deprecated; use add and remove --after instead)
 adding bar
+(the addremove command is deprecated; use add and remove --after instead)
 adding baz/bletch
 test-archive-TIP/.hg_archival.txt
 test-archive-TIP/bar

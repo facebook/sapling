@@ -1,4 +1,6 @@
+(the addremove command is deprecated; use add and remove --after instead)
 adding foo
+(the addremove command is deprecated; use add and remove --after instead)
 adding bomb
 adding a.c
 adding dir/a.o
