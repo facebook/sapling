@@ -8,6 +8,7 @@
 import re
 from demandload import demandload
 from i18n import gettext as _
+from node import *
 demandload(globals(), "cStringIO cgi re sys os time urllib util textwrap")
 
 esctable = {
@@ -209,7 +210,7 @@ def fill(text, width):
                 break
             yield text[start:m.start(0)], m.group(1)
             start = m.end(1)
-            
+
     fp = cStringIO.StringIO()
     for para, rest in findparas():
         fp.write(space_re.sub(' ', textwrap.fill(para, width)))
@@ -241,7 +242,7 @@ def email(author):
     r = author.find('>')
     if r == -1: r = None
     return author[author.find('<')+1:r]
-    
+
 def person(author):
     '''get name of author, or else username.'''
     f = author.find('<')
@@ -292,6 +293,7 @@ common_filters = {
 def templatepath(name=None):
     '''return location of template file or directory (if no name).
     returns None if not found.'''
+
     # executable version (py2exe) doesn't support __file__
     if hasattr(sys, 'frozen'):
         module = sys.executable
@@ -303,3 +305,193 @@ def templatepath(name=None):
         p = os.path.join(os.path.dirname(module), *fl)
         if (name and os.path.exists(p)) or os.path.isdir(p):
             return os.path.normpath(p)
+
+class changeset_templater(object):
+    '''format changeset information.'''
+
+    def __init__(self, ui, repo, mapfile, dest=None):
+        self.t = templater(mapfile, common_filters,
+                           cache={'parent': '{rev}:{node|short} ',
+                                  'manifest': '{rev}:{node|short}'})
+        self.ui = ui
+        self.dest = dest
+        self.repo = repo
+
+    def use_template(self, t):
+        '''set template string to use'''
+        self.t.cache['changeset'] = t
+
+    def write(self, thing, header=False):
+        '''write expanded template.
+        uses in-order recursive traverse of iterators.'''
+        dest = self.dest or self.ui
+        for t in thing:
+            if hasattr(t, '__iter__'):
+                self.write(t, header=header)
+            elif header:
+                dest.write_header(t)
+            else:
+                dest.write(t)
+
+    def write_header(self, thing):
+        self.write(thing, header=True)
+
+    def show(self, rev=0, changenode=None, brinfo=None):
+        '''show a single changeset or file revision'''
+        log = self.repo.changelog
+        if changenode is None:
+            changenode = log.node(rev)
+        elif not rev:
+            rev = log.rev(changenode)
+
+        changes = log.read(changenode)
+
+        def showlist(name, values, plural=None, **args):
+            '''expand set of values.
+            name is name of key in template map.
+            values is list of strings or dicts.
+            plural is plural of name, if not simply name + 's'.
+
+            expansion works like this, given name 'foo'.
+
+            if values is empty, expand 'no_foos'.
+
+            if 'foo' not in template map, return values as a string,
+            joined by space.
+
+            expand 'start_foos'.
+
+            for each value, expand 'foo'. if 'last_foo' in template
+            map, expand it instead of 'foo' for last key.
+
+            expand 'end_foos'.
+            '''
+            if plural: names = plural
+            else: names = name + 's'
+            if not values:
+                noname = 'no_' + names
+                if noname in self.t:
+                    yield self.t(noname, **args)
+                return
+            if name not in self.t:
+                if isinstance(values[0], str):
+                    yield ' '.join(values)
+                else:
+                    for v in values:
+                        yield dict(v, **args)
+                return
+            startname = 'start_' + names
+            if startname in self.t:
+                yield self.t(startname, **args)
+            vargs = args.copy()
+            def one(v, tag=name):
+                try:
+                    vargs.update(v)
+                except (AttributeError, ValueError):
+                    try:
+                        for a, b in v:
+                            vargs[a] = b
+                    except ValueError:
+                        vargs[name] = v
+                return self.t(tag, **vargs)
+            lastname = 'last_' + name
+            if lastname in self.t:
+                last = values.pop()
+            else:
+                last = None
+            for v in values:
+                yield one(v)
+            if last is not None:
+                yield one(last, tag=lastname)
+            endname = 'end_' + names
+            if endname in self.t:
+                yield self.t(endname, **args)
+
+        if brinfo:
+            def showbranches(**args):
+                if changenode in brinfo:
+                    for x in showlist('branch', brinfo[changenode],
+                                      plural='branches', **args):
+                        yield x
+        else:
+            showbranches = ''
+
+        if self.ui.debugflag:
+            def showmanifest(**args):
+                args = args.copy()
+                args.update(dict(rev=self.repo.manifest.rev(changes[0]),
+                                 node=hex(changes[0])))
+                yield self.t('manifest', **args)
+        else:
+            showmanifest = ''
+
+        def showparents(**args):
+            parents = [[('rev', log.rev(p)), ('node', hex(p))]
+                       for p in log.parents(changenode)
+                       if self.ui.debugflag or p != nullid]
+            if (not self.ui.debugflag and len(parents) == 1 and
+                parents[0][0][1] == rev - 1):
+                return
+            for x in showlist('parent', parents, **args):
+                yield x
+
+        def showtags(**args):
+            for x in showlist('tag', self.repo.nodetags(changenode), **args):
+                yield x
+
+        if self.ui.debugflag:
+            files = self.repo.changes(log.parents(changenode)[0], changenode)
+            def showfiles(**args):
+                for x in showlist('file', files[0], **args): yield x
+            def showadds(**args):
+                for x in showlist('file_add', files[1], **args): yield x
+            def showdels(**args):
+                for x in showlist('file_del', files[2], **args): yield x
+        else:
+            def showfiles(**args):
+                for x in showlist('file', changes[3], **args): yield x
+            showadds = ''
+            showdels = ''
+
+        props = {
+            'author': changes[1],
+            'branches': showbranches,
+            'date': changes[2],
+            'desc': changes[4],
+            'file_adds': showadds,
+            'file_dels': showdels,
+            'files': showfiles,
+            'manifest': showmanifest,
+            'node': hex(changenode),
+            'parents': showparents,
+            'rev': rev,
+            'tags': showtags,
+            }
+
+        try:
+            if self.ui.debugflag and 'header_debug' in self.t:
+                key = 'header_debug'
+            elif self.ui.quiet and 'header_quiet' in self.t:
+                key = 'header_quiet'
+            elif self.ui.verbose and 'header_verbose' in self.t:
+                key = 'header_verbose'
+            elif 'header' in self.t:
+                key = 'header'
+            else:
+                key = ''
+            if key:
+                self.write_header(self.t(key, **props))
+            if self.ui.debugflag and 'changeset_debug' in self.t:
+                key = 'changeset_debug'
+            elif self.ui.quiet and 'changeset_quiet' in self.t:
+                key = 'changeset_quiet'
+            elif self.ui.verbose and 'changeset_verbose' in self.t:
+                key = 'changeset_verbose'
+            else:
+                key = 'changeset'
+            self.write(self.t(key, **props))
+        except KeyError, inst:
+            raise util.Abort(_("%s: no key named '%s'") % (self.t.mapfile,
+                                                           inst.args[0]))
+        except SyntaxError, inst:
+            raise util.Abort(_('%s: %s') % (self.t.mapfile, inst.args[0]))
