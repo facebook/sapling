@@ -809,13 +809,19 @@ def add(ui, repo, *pats, **opts):
     repo.add(names)
 
 def addremove(ui, repo, *pats, **opts):
-    """add all new files, delete all missing files
+    """add all new files, delete all missing files (DEPRECATED)
 
+    (DEPRECATED)
     Add all new files and remove all missing files from the repository.
 
     New files are ignored if they match any of the patterns in .hgignore. As
     with add, these changes take effect at the next commit.
+
+    This command is now deprecated and will be removed in a future
+    release. Please use add and remove --after instead.
     """
+    ui.warn(_('(the addremove command is deprecated; use add and remove '
+              '--after instead)\n'))
     return addremove_lock(ui, repo, pats, opts)
 
 def addremove_lock(ui, repo, pats, opts, wlock=None):
@@ -1153,7 +1159,7 @@ def commit(ui, repo, *pats, **opts):
                              (logfile, inst.strerror))
 
     if opts['addremove']:
-        addremove(ui, repo, *pats, **opts)
+        addremove_lock(ui, repo, pats, opts)
     fns, match, anypats = matchpats(repo, pats, opts)
     if pats:
         modified, added, removed, deleted, unknown = (
@@ -1894,7 +1900,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         files = util.patch(strip, pf, ui)
 
         if len(files) > 0:
-            addremove(ui, repo, *files)
+            addremove_lock(ui, repo, files, {})
         repo.commit(files, message, user)
 
 def incoming(ui, repo, source="default", **opts):
