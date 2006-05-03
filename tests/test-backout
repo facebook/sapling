@@ -28,7 +28,7 @@ cat a
 echo '# backout of backout is as if nothing happened'
 
 hg backout -d '3 0' --merge tip
-cat a
+cat a 2>/dev/null || echo cat: a: No such file or directory
 
 echo '# backout with merge'
 cd ..
