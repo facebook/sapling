@@ -69,7 +69,7 @@ export TESTDIR
 INST="$HGTMP/install"
 PYTHONDIR="$INST/lib/python"
 cd ..
-if ${PYTHON-python} setup.py install --home="$INST" \
+if ${PYTHON-python} setup.py clean --all install --force --home="$INST" \
   --install-lib="$PYTHONDIR" > tests/install.err 2>&1
 then
     rm tests/install.err

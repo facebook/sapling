@@ -69,8 +69,9 @@ def install_hg():
     installerrs = os.path.join("tests", "install.err")
 
     os.chdir("..") # Get back to hg root
-    cmd = '%s setup.py install --home="%s" --install-lib="%s" >%s 2>&1' % \
-        (sys.executable, INST, PYTHONDIR, installerrs)
+    cmd = ('%s setup.py clean --all'
+           ' install --force --home="%s" --install-lib="%s" >%s 2>&1'
+           % (sys.executable, INST, PYTHONDIR, installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
         if not verbose:
