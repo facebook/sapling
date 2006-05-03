@@ -2347,7 +2347,7 @@ def recover(ui, repo):
         return repo.verify()
     return 1
 
-def remove(ui, repo, pat, *pats, **opts):
+def remove(ui, repo, *pats, **opts):
     """remove the specified files on the next commit
 
     Schedule the indicated files for removal from the repository.
@@ -2355,29 +2355,36 @@ def remove(ui, repo, pat, *pats, **opts):
     This command schedules the files to be removed at the next commit.
     This only removes files from the current branch, not from the
     entire project history.  If the files still exist in the working
-    directory, they will be deleted from it.
+    directory, they will be deleted from it.  If invoked with --after,
+    files that have been manually deleted are marked as removed.
     """
     names = []
+    if not opts['after'] and not pats:
+        raise util.Abort(_('no files specified'))
     def okaytoremove(abs, rel, exact):
         modified, added, removed, deleted, unknown = repo.changes(files=[abs])
         reason = None
-        if modified and not opts['force']:
+        if not deleted and opts['after']:
+            reason = _('is still present')
+        elif modified and not opts['force']:
             reason = _('is modified')
         elif added:
             reason = _('has been marked for add')
         elif unknown:
             reason = _('is not managed')
+        elif removed:
+            return False
         if reason:
             if exact:
                 ui.warn(_('not removing %s: file %s\n') % (rel, reason))
         else:
             return True
-    for src, abs, rel, exact in walk(repo, (pat,) + pats, opts):
+    for src, abs, rel, exact in walk(repo, pats, opts):
         if okaytoremove(abs, rel, exact):
             if ui.verbose or not exact:
                 ui.status(_('removing %s\n') % rel)
             names.append(abs)
-    repo.remove(names, unlink=True)
+    repo.remove(names, unlink=not opts['after'])
 
 def rename(ui, repo, *pats, **opts):
     """rename files; equivalent of copy + remove
@@ -3161,7 +3168,8 @@ table = {
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":
         (remove,
-         [('f', 'force', None, _('remove file even if modified')),
+         [('', 'after', None, _('record remove that has already occurred')),
+          ('f', 'force', None, _('remove file even if modified')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg remove [OPTION]... FILE...')),
