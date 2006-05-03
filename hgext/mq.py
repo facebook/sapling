@@ -1233,34 +1233,28 @@ def reposetup(ui, repo):
     repomap[repo] = queue(ui, repo.join(""))
 
 cmdtable = {
-    "qapplied": (applied, [], 'hg qapplied [patch]'),
+    "qapplied": (applied, [], 'hg qapplied [PATCH]'),
     "qcommit|qci":
         (commit,
-         [('A', 'addremove', None, _('run addremove during commit')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('m', 'message', '', _('use <text> as commit message')),
-          ('l', 'logfile', '', _('read the commit message from <file>')),
-          ('d', 'date', '', _('record datecode as commit date')),
-          ('u', 'user', '', _('record user as commiter'))],
-         'hg qcommit [options] [files]'),
-    "^qdiff": (diff, [], 'hg qdiff [files]'),
-    "qdelete": (delete, [], 'hg qdelete [patch]'),
+         commands.table["^commit|ci"][1],
+         'hg qcommit [OPTION]... [FILE]...'),
+    "^qdiff": (diff, [], 'hg qdiff [FILE]...'),
+    "qdelete": (delete, [], 'hg qdelete PATCH'),
     "^qimport":
         (qimport,
          [('e', 'existing', None, 'import file in patch dir'),
           ('n', 'name', '', 'patch file name'),
           ('f', 'force', None, 'overwrite existing files')],
-         'hg qimport'),
+         'hg qimport [-e] [-n NAME] [-f] FILE...'),
     "^qinit":
         (init,
          [('c', 'create-repo', None, 'create patch repository')],
-         'hg [-c] qinit'),
+         'hg qinit [-c]'),
     "qnew":
         (new,
          [('m', 'message', '', 'commit message'),
           ('f', 'force', None, 'force')],
-         'hg qnew [-m message ] patch'),
+         'hg qnew [-m TEXT] [-f] PATCH'),
     "qnext": (next, [], 'hg qnext'),
     "qprev": (prev, [], 'hg qprev'),
     "^qpop":
@@ -1268,7 +1262,7 @@ cmdtable = {
          [('a', 'all', None, 'pop all patches'),
           ('n', 'name', '', 'queue name to pop'),
           ('f', 'force', None, 'forget any local changes')],
-         'hg qpop [options] [patch/index]'),
+         'hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]'),
     "^qpush":
         (push,
          [('f', 'force', None, 'apply if the patch has rejects'),
@@ -1276,16 +1270,16 @@ cmdtable = {
           ('a', 'all', None, 'apply all patches'),
           ('m', 'merge', None, 'merge from another queue'),
           ('n', 'name', '', 'merge queue name')],
-         'hg qpush [options] [patch/index]'),
+         'hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]'),
     "^qrefresh":
         (refresh,
          [('s', 'short', None, 'short refresh')],
-         'hg qrefresh'),
+         'hg qrefresh [-s]'),
     "qrestore":
         (restore,
          [('d', 'delete', None, 'delete save entry'),
           ('u', 'update', None, 'update queue working dir')],
-         'hg qrestore rev'),
+         'hg qrestore [-d] [-u] REV'),
     "qsave":
         (save,
          [('m', 'message', '', 'commit message'),
@@ -1293,19 +1287,19 @@ cmdtable = {
           ('n', 'name', '', 'copy directory name'),
           ('e', 'empty', None, 'clear queue status file'),
           ('f', 'force', None, 'force copy')],
-         'hg qsave'),
+         'hg qsave [-m TEXT] [-c] [-n NAME] [-e] [-f]'),
     "qseries":
         (series,
          [('m', 'missing', None, 'print patches not in series')],
-         'hg qseries'),
+         'hg qseries [-m]'),
     "^strip":
         (strip,
          [('f', 'force', None, 'force multi-head removal'),
           ('b', 'backup', None, 'bundle unrelated changesets'),
           ('n', 'nobackup', None, 'no backups')],
-         'hg strip rev'),
+         'hg strip [-f] [-b] [-n] REV'),
     "qtop": (top, [], 'hg qtop'),
-    "qunapplied": (unapplied, [], 'hg qunapplied [patch]'),
+    "qunapplied": (unapplied, [], 'hg qunapplied [PATCH]'),
     "qversion": (version, [], 'hg qversion')
 }
 
