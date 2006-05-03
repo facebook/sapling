@@ -44,10 +44,7 @@ from mercurial.i18n import gettext as _
 from mercurial.node import *
 demandload(globals(), 'cStringIO mercurial:templater,util os re time')
 
-try:
-    import MySQLdb
-except ImportError:
-    raise util.Abort(_('python mysql support not available'))
+MySQLdb = None
 
 def buglist(ids):
     return '(' + ','.join(map(str, ids)) + ')'
@@ -275,6 +272,13 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
     '''add comment to bugzilla for each changeset that refers to a
     bugzilla bug id. only add a comment once per bug, so same change
     seen multiple times does not fill bug with duplicate data.'''
+    try:
+        import MySQLdb as mysql
+        global MySQLdb
+        MySQLdb = mysql
+    except ImportError, err:
+        raise util.Abort(_('python mysql support not available: %s') % err)
+
     if node is None:
         raise util.Abort(_('hook type %s does not pass a changeset id') %
                          hooktype)
