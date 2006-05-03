@@ -29,8 +29,8 @@ f = urllib2.urlopen('http://127.0.0.1:20059/?cmd=archive;node=%s;type=%s'
                     % (node, archive))
 sys.stdout.write(f.read())
 EOF
-http_proxy= python getarchive.py "$TIP" gz | gunzip -dc - | tar tf - | sed "s/$QTIP/TIP/"
-http_proxy= python getarchive.py "$TIP" bz2 | bunzip2 -dc - | tar tf - | sed "s/$QTIP/TIP/"
+http_proxy= python getarchive.py "$TIP" gz | gunzip | tar tf - | sed "s/$QTIP/TIP/"
+http_proxy= python getarchive.py "$TIP" bz2 | bunzip2 | tar tf - | sed "s/$QTIP/TIP/"
 http_proxy= python getarchive.py "$TIP" zip > archive.zip
 unzip -t archive.zip | sed "s/$QTIP/TIP/"
 
