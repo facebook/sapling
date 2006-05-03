@@ -268,6 +268,7 @@ def indent(text, prefix):
 
 common_filters = {
     "addbreaks": nl2br,
+    "basename": os.path.basename,
     "age": age,
     "date": lambda x: util.datestr(x),
     "domain": domain,
@@ -336,15 +337,16 @@ class changeset_templater(object):
     def write_header(self, thing):
         self.write(thing, header=True)
 
-    def show(self, rev=0, changenode=None, brinfo=None):
+    def show(self, rev=0, changenode=None, brinfo=None, changes=None,
+             **props):
         '''show a single changeset or file revision'''
         log = self.repo.changelog
         if changenode is None:
             changenode = log.node(rev)
         elif not rev:
             rev = log.rev(changenode)
-
-        changes = log.read(changenode)
+        if changes is None:
+            changes = log.read(changenode)
 
         def showlist(name, values, plural=None, **args):
             '''expand set of values.
@@ -453,7 +455,7 @@ class changeset_templater(object):
             showadds = ''
             showdels = ''
 
-        props = {
+        defprops = {
             'author': changes[1],
             'branches': showbranches,
             'date': changes[2],
@@ -467,6 +469,8 @@ class changeset_templater(object):
             'rev': rev,
             'tags': showtags,
             }
+        props = props.copy()
+        props.update(defprops)
 
         try:
             if self.ui.debugflag and 'header_debug' in self.t:
