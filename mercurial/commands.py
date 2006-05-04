@@ -2232,21 +2232,24 @@ def rename(ui, repo, *pats, **opts):
     return errs
 
 def revert(ui, repo, *pats, **opts):
-    """revert modified files or dirs back to their unmodified states
+    """revert modified files or dirs to their states as of some revision
 
-    In its default mode, it reverts any uncommitted modifications made
-    to the named files or directories.  This restores the contents of
-    the affected files to an unmodified state.
+    By default, revert the named files or directories to the contents
+    they had in the parent of the working directory.  This restores
+    the contents of the affected files to an unmodified state.
 
     Modified files are saved with a .orig suffix before reverting.
     To disable these backups, use --no-backup.
 
-    Using the -r option, it reverts the given files or directories to
-    their state as of an earlier revision.  This can be helpful to "roll
+    Using the -r option, revert the given files or directories to
+    their contents as of a specific revision.  This can be helpful to"roll
     back" some or all of a change that should not have been committed.
 
     Revert modifies the working directory.  It does not commit any
-    changes, or change the parent of the current working directory.
+    changes, or change the parent of the working directory.  If you
+    revert to a revision other than the parent of the working
+    directory, the reverted files will thus appear modified
+    afterwards.
 
     If a file has been deleted, it is recreated.  If the executable
     mode of a file was changed, it is reset.
