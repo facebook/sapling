@@ -44,7 +44,7 @@
 # To configure other defaults, add a section like this to your hgrc
 # file:
 #
-# [patchbomb]
+# [email]
 # from = My Name <my@email>
 # to = recipient1, recipient2, ...
 # cc = cc1, cc2, ...
@@ -183,11 +183,13 @@ def patchbomb(ui, repo, *revs, **opts):
         jumbo.extend(p)
         msgs.append(makepatch(p, i + 1, len(patches)))
 
-    sender = (opts['from'] or ui.config('patchbomb', 'from') or
+    sender = (opts['from'] or ui.config('email', 'from') or
+              ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
 
     def getaddrs(opt, prpt, default = None):
-        addrs = opts[opt] or (ui.config('patchbomb', opt) or
+        addrs = opts[opt] or (ui.config('email', opt) or
+                              ui.config('patchbomb', opt) or
                               prompt(prpt, default = default)).split(',')
         return [a.strip() for a in addrs if a.strip()]
     to = getaddrs('to', 'To')
