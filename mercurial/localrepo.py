@@ -105,7 +105,7 @@ class localrepository(object):
                                    '("%s" is not callable)') %
                                  (hname, funcname))
             try:
-                r = obj(ui=ui, repo=repo, hooktype=name, **args)
+                r = obj(ui=self.ui, repo=self, hooktype=name, **args)
             except (KeyboardInterrupt, util.SignalInterrupt):
                 raise
             except Exception, exc:
