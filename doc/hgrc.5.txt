@@ -130,6 +130,12 @@ decode/encode::
     # them to the working dir
     **.txt = tempfile: unix2dos -n INFILE OUTFILE
 
+email::
+  Settings for extensions that send email messages.
+  from;;
+    Optional.  Email address to use in "From" header and SMTP envelope
+    of outgoing messages.
+
 hooks::
   Commands or Python functions that get automatically executed by
   various actions such as starting or finishing a commit. Multiple
@@ -239,6 +245,24 @@ http_proxy::
     Optional.  Password to authenticate with at the proxy server.
   user;;
     Optional.  User name to authenticate with at the proxy server.
+
+smtp::
+  Configuration for extensions that need to send email messages.
+  host;;
+    Optional.  Host name of mail server.  Default: "mail".
+  port;;
+    Optional.  Port to connect to on mail server.  Default: 25.
+  tls;;
+    Optional.  Whether to connect to mail server using TLS.  True or
+    False.  Default: False.
+  username;;
+    Optional.  User name to authenticate to SMTP server with.
+    If username is specified, password must also be specified.
+    Default: none.
+  password;;
+    Optional.  Password to authenticate to SMTP server with.
+    If username is specified, password must also be specified.
+    Default: none.
 
 paths::
   Assigns symbolic names to repositories.  The left side is the

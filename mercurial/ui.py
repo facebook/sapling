@@ -8,7 +8,7 @@
 import ConfigParser
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "errno os re socket sys tempfile util")
+demandload(globals(), "errno os re smtplib socket sys tempfile util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
@@ -264,3 +264,17 @@ class ui(object):
             os.unlink(name)
 
         return t
+
+    def sendmail(self):
+        s = smtplib.SMTP()
+        s.connect(host = self.config('smtp', 'host', 'mail'),
+                  port = int(self.config('smtp', 'port', 25)))
+        if self.configbool('smtp', 'tls'):
+            s.ehlo()
+            s.starttls()
+            s.ehlo()
+        username = self.config('smtp', 'username')
+        password = self.config('smtp', 'password')
+        if username and password:
+            s.login(username, password)
+        return s
