@@ -511,5 +511,5 @@ class stringio(object):
 
     write_header = write
 
-    def getvalue(self):
-        return self.fp.getvalue()
+    def __getattr__(self, key):
+        return getattr(self.fp, key)
