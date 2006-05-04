@@ -1,18 +1,124 @@
+# notify.py - email notifications for mercurial
+#
+# Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
+#
+# This software may be used and distributed according to the terms
+# of the GNU General Public License, incorporated herein by reference.
+#
+# hook extension to email notifications to people when changesets are
+# committed to a repo they subscribe to.
+#
+# default mode is to print messages to stdout, for testing and
+# configuring.
+#
+# to use, configure notify extension and enable in hgrc like this:
+#
+#   [extensions]
+#   hgext.notify =
+#
+#   [hooks]
+#   # one email for each incoming changeset
+#   incoming.notify = python:hgext.notify.hook
+#   # batch emails when many changesets incoming at one time
+#   changegroup.notify = python:hgext.notify.hook
+#
+#   [notify]
+#   # config items go in here
+#
+# config items:
+#
+# REQUIRED:
+#   config = /path/to/file # file containing subscriptions
+#
+# OPTIONAL:
+#   test = True            # print messages to stdout for testing
+#   strip = 3              # number of slashes to strip for url paths
+#   domain = example.com   # domain to use if committer missing domain
+#   style = ...            # style file to use when formatting email
+#   template = ...         # template to use when formatting email
+#   incoming = ...         # template to use when run as incoming hook
+#   changegroup = ...      # template when run as changegroup hook
+#   maxdiff = 300          # max lines of diffs to include (0=none, -1=all)
+#   maxsubject = 67        # truncate subject line longer than this
+#   [email]
+#   from = user@host.com   # email address to send as if none given
+#   [web]
+#   baseurl = http://hgserver/... # root of hg web site for browsing commits
+#
+# notify config file has same format as regular hgrc. it has two
+# sections so you can express subscriptions in whatever way is handier
+# for you.
+#
+#   [usersubs]
+#   # key is subscriber email, value is ","-separated list of glob patterns
+#   user@host = pattern
+#
+#   [reposubs]
+#   # key is glob pattern, value is ","-separated list of subscriber emails
+#   pattern = user@host
+#
+# glob patterns are matched against path to repo root.
+#
+# if you like, you can put notify config file in repo that users can
+# push changes to, they can manage their own subscriptions.
+
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'email.MIMEText mercurial:templater,util fnmatch socket')
-demandload(globals(), 'time')
+demandload(globals(), 'email.Parser mercurial:commands,templater,util')
+demandload(globals(), 'fnmatch socket time')
+
+# template for single changeset can include email headers.
+single_template = '''
+Subject: changeset in {webroot}: {desc|firstline|strip}
+From: {author}
+
+changeset {node|short} in {root}
+details: {baseurl}{webroot}?cmd=changeset;node={node|short}
+description:
+\t{desc|tabindent|strip}
+'''.lstrip()
+
+# template for multiple changesets should not contain email headers,
+# because only first set of headers will be used and result will look
+# strange.
+multiple_template = '''
+changeset {node|short} in {root}
+details: {baseurl}{webroot}?cmd=changeset;node={node|short}
+summary: {desc|firstline}
+'''
+
+deftemplates = {
+    'changegroup': multiple_template,
+    }
 
 class notifier(object):
-    def __init__(self, ui, repo):
+    '''email notification class.'''
+
+    def __init__(self, ui, repo, hooktype):
         self.ui = ui
         self.ui.readconfig(self.ui.config('notify', 'config'))
         self.repo = repo
-        self.stripcount = self.ui.config('notify', 'strip')
+        self.stripcount = int(self.ui.config('notify', 'strip', 0))
         self.root = self.strip(self.repo.root)
+        self.domain = self.ui.config('notify', 'domain')
+        self.sio = templater.stringio()
+        self.subs = self.subscribers()
+
+        mapfile = self.ui.config('notify', 'style')
+        template = (self.ui.config('notify', hooktype) or
+                    self.ui.config('notify', 'template'))
+        self.t = templater.changeset_templater(self.ui, self.repo, mapfile,
+                                               self.sio)
+        if not mapfile and not template:
+            template = deftemplates.get(hooktype) or single_template
+        if template:
+            template = templater.parsestring(template, quoted=False)
+            self.t.use_template(template)
 
     def strip(self, path):
+        '''strip leading slashes from local path, turn into web-safe path.'''
+
         path = util.pconvert(path)
         count = self.stripcount
         while path and count >= 0:
@@ -23,73 +129,130 @@ class notifier(object):
             count -= 1
         return path
 
+    def fixmail(self, addr):
+        '''try to clean up email addresses.'''
+
+        addr = templater.email(addr.strip())
+        a = addr.find('@localhost')
+        if a != -1:
+            addr = addr[:a]
+        if '@' not in addr:
+            return addr + '@' + self.domain
+        return addr
+
     def subscribers(self):
-        subs = []
-        for user, pat in self.ui.configitems('usersubs'):
-            if fnmatch.fnmatch(self.root, pat):
-                subs.append(user)
+        '''return list of email addresses of subscribers to this repo.'''
+
+        subs = {}
+        for user, pats in self.ui.configitems('usersubs'):
+            for pat in pats.split(','):
+                if fnmatch.fnmatch(self.repo.root, pat.strip()):
+                    subs[self.fixmail(user)] = 1
         for pat, users in self.ui.configitems('reposubs'):
-            if fnmatch.fnmatch(self.root, pat):
-                subs.extend([u.strip() for u in users.split(',')])
+            if fnmatch.fnmatch(self.repo.root, pat):
+                for user in users.split(','):
+                    subs[self.fixmail(user)] = 1
+        subs = subs.keys()
         subs.sort()
         return subs
-
-    def seen(self, node):
-        pass
 
     def url(self, path=None):
         return self.ui.config('web', 'baseurl') + (path or self.root)
 
-    def message(self, node, changes):
-        sio = templater.stringio()
-        seen = self.seen(node)
-        if seen:
-            seen = self.strip(seen)
-            sio.write('Changeset %s merged to %s\n' %
-                      (short(node), self.url()))
-            sio.write('First seen in %s\n' % self.url(seen))
-        else:
-            sio.write('Changeset %s new to %s\n' % (short(node), self.url()))
-        sio.write('Committed by %s at %s\n' %
-                  (changes[1], templater.isodate(changes[2])))
-        sio.write('See %s?cmd=changeset;node=%s for full details\n' %
-                  (self.url(), short(node)))
-        sio.write('\nDescription:\n')
-        sio.write(templater.indent(changes[4], '  '))
-        msg = email.MIMEText.MIMEText(sio.getvalue(), 'plain')
-        firstline = changes[4].lstrip().split('\n', 1)[0].rstrip()
-        subject = '%s %s: %s' % (self.root, self.repo.rev(node), firstline)
-        if seen:
-            subject = '[merge] ' + subject
-        if subject.endswith('.'):
-            subject = subject[:-1]
-        if len(subject) > 67:
-            subject = subject[:64] + '...'
-        msg['Subject'] = subject
-        msg['X-Hg-Repo'] = self.root
-        if '@' in changes[1]:
-            msg['From'] = changes[1]
-        else:
-            msg['From'] = self.ui.config('email', 'from')
-        msg['Message-Id'] = '<hg.%s.%s.%s@%s>' % (hex(node),
-                                                  int(time.time()),
-                                                  hash(self.repo.root),
-                                                  socket.getfqdn())
-        return msg
-
     def node(self, node):
-        mail = self.ui.sendmail()
-        changes = self.repo.changelog.read(node)
-        fromaddr = self.ui.config('email', 'from', changes[1])
-        msg = self.message(node, changes)
-        subs = self.subscribers()
-        msg['To'] = ', '.join(subs)
-        msgtext = msg.as_string(0)
-        mail.sendmail(templater.email(fromaddr),
-                      [templater.email(s) for s in subs],
-                      msgtext)
+        '''format one changeset.'''
 
+        self.t.show(changenode=node, changes=self.repo.changelog.read(node),
+                    baseurl=self.ui.config('web', 'baseurl'),
+                    root=self.repo.root,
+                    webroot=self.root)
+
+    def send(self, node, count):
+        '''send message.'''
+
+        p = email.Parser.Parser()
+        self.sio.seek(0)
+        msg = p.parse(self.sio)
+
+        def fix_subject():
+            '''try to make subject line exist and be useful.'''
+
+            subject = msg['Subject']
+            if not subject:
+                if count > 1:
+                    subject = _('%s: %d new changesets') % (self.root, count)
+                else:
+                    changes = self.repo.changelog.read(node)
+                    s = changes[4].lstrip().split('\n', 1)[0].rstrip()
+                    subject = '%s: %s' % (self.root, s)
+            maxsubject = int(self.ui.config('notify', 'maxsubject', 67))
+            if maxsubject and len(subject) > maxsubject:
+                subject = subject[:maxsubject-3] + '...'
+            del msg['Subject']
+            msg['Subject'] = subject
+
+        def fix_sender():
+            '''try to make message have proper sender.'''
+
+            sender = msg['From']
+            if not sender:
+                sender = self.ui.config('email', 'from') or self.ui.username()
+            if '@' not in sender or '@localhost' in sender:
+                sender = self.fixmail(sender)
+            del msg['From']
+            msg['From'] = sender
+
+        fix_subject()
+        fix_sender()
+
+        msg['X-Hg-Notification'] = 'changeset ' + short(node)
+        if not msg['Message-Id']:
+            msg['Message-Id'] = ('<hg.%s.%s.%s@%s>' %
+                                 (short(node), int(time.time()),
+                                  hash(self.repo.root), socket.getfqdn()))
+
+        msgtext = msg.as_string(0)
+        if self.ui.configbool('notify', 'test', True):
+            self.ui.write(msgtext)
+            if not msgtext.endswith('\n'):
+                self.ui.write('\n')
+        else:
+            mail = self.ui.sendmail()
+            mail.sendmail(templater.email(msg['From']), self.subs, msgtext)
+
+    def diff(self, node):
+        maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
+        if maxdiff == 0:
+            return
+        fp = templater.stringio()
+        commands.dodiff(fp, self.ui, self.repo, node,
+                        self.repo.changelog.tip())
+        difflines = fp.getvalue().splitlines(1)
+        if maxdiff > 0 and len(difflines) > maxdiff:
+            self.sio.write(_('\ndiffs (truncated from %d to %d lines):\n\n') %
+                           (len(difflines), maxdiff))
+            difflines = difflines[:maxdiff]
+        elif difflines:
+            self.sio.write(_('\ndiffs (%d lines):\n\n') % len(difflines))
+        self.sio.write(*difflines)
 
 def hook(ui, repo, hooktype, node=None, **kwargs):
-    n = notifier(ui, repo)
-    n.node(bin(node))
+    '''send email notifications to interested subscribers.
+
+    if used as changegroup hook, send one email for all changesets in
+    changegroup. else send one email per changeset.'''
+    n = notifier(ui, repo, hooktype)
+    if not n.subs: return True
+    node = bin(node)
+    if hooktype == 'changegroup':
+        start = repo.changelog.rev(node)
+        end = repo.changelog.count()
+        count = end - start
+        for rev in xrange(start, end):
+            n.node(repo.changelog.node(rev))
+    else:
+        count = 1
+        n.node(node)
+    n.diff(node)
+    n.send(node, count)
+    return True
