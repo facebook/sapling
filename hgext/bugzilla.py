@@ -43,7 +43,7 @@
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'cStringIO mercurial:templater,util os re time')
+demandload(globals(), 'mercurial:templater,util os re time')
 
 try:
     import MySQLdb
@@ -241,23 +241,9 @@ class bugzilla(object):
                 count -= 1
             return root
 
-        class stringio(object):
-            '''wrap cStringIO.'''
-            def __init__(self):
-                self.fp = cStringIO.StringIO()
-
-            def write(self, *args):
-                for a in args:
-                    self.fp.write(a)
-
-            write_header = write
-
-            def getvalue(self):
-                return self.fp.getvalue()
-
         mapfile = self.ui.config('bugzilla', 'style')
         tmpl = self.ui.config('bugzilla', 'template')
-        sio = stringio()
+        sio = templater.stringio()
         t = templater.changeset_templater(self.ui, self.repo, mapfile, sio)
         if not mapfile and not tmpl:
             tmpl = _('changeset {node|short} in repo {root} refers '

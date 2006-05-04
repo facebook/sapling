@@ -499,3 +499,17 @@ class changeset_templater(object):
                                                            inst.args[0]))
         except SyntaxError, inst:
             raise util.Abort(_('%s: %s') % (self.t.mapfile, inst.args[0]))
+
+class stringio(object):
+    '''wrap cStringIO for use by changeset_templater.'''
+    def __init__(self):
+        self.fp = cStringIO.StringIO()
+
+    def write(self, *args):
+        for a in args:
+            self.fp.write(a)
+
+    write_header = write
+
+    def getvalue(self):
+        return self.fp.getvalue()
