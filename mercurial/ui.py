@@ -242,7 +242,8 @@ class ui(object):
     def debug(self, *msg):
         if self.debugflag: self.write(*msg)
     def edit(self, text, user):
-        (fd, name) = tempfile.mkstemp(prefix="hg-editor-", suffix=".txt")
+        (fd, name) = tempfile.mkstemp(prefix="hg-editor-", suffix=".txt",
+                                      text=True)
         try:
             f = os.fdopen(fd, "w")
             f.write(text)
