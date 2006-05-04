@@ -30,7 +30,6 @@
 # OPTIONAL:
 #   bzuser = ...    # bugzilla user id to record comments with
 #   db = bugs       # database to connect to
-#   hgweb = http:// # root of hg web site for browsing commits
 #   notify = ...    # command to run to get bugzilla to send mail
 #   regexp = ...    # regexp to match bug ids (must contain one "()" group)
 #   strip = 0       # number of slashes to strip for url paths
@@ -38,6 +37,8 @@
 #   template = ...  # template to use when formatting comments
 #   timeout = 5     # database connection timeout (seconds)
 #   user = bugs     # user to connect to database as
+#   [web]
+#   baseurl = http://hgserver/... # root of hg web site for browsing commits
 
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
@@ -266,7 +267,7 @@ class bugzilla(object):
             t.use_template(tmpl)
         t.show(changenode=node, changes=changes,
                bug=str(bugid),
-               hgweb=self.ui.config('bugzilla', 'hgweb'),
+               hgweb=self.ui.config('web', 'baseurl'),
                root=self.repo.root,
                webroot=webroot(self.repo.root))
         self.add_comment(bugid, sio.getvalue(), templater.email(changes[1]))

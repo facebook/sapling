@@ -300,6 +300,10 @@ web::
   allowzip;;
     Whether to allow .zip downloading of repo revisions. Default is false.
     This feature creates temporary files.
+  baseurl;;
+    Base URL to use when publishing URLs in other locations, so
+    third-party tools like email notification hooks can construct URLs.
+    Example: "http://hgserver/repos/"
   description;;
     Textual description of the repository's purpose or contents.
     Default is "unknown".
