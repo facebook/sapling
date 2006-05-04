@@ -3,7 +3,7 @@ A simple testing framework
 To run the tests, do:
 
 cd tests/
-./run-tests
+python run-tests.py
 
 This finds all scripts in the test directory named test-* and executes
 them. The scripts can be either shell scripts or Python. Each test is

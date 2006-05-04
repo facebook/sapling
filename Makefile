@@ -16,10 +16,10 @@ dist:	tests doc
 	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py sdist --force-manifest
 
 tests:
-	cd tests && ./run-tests
+	cd tests && $(PYTHON) run-tests.py
 
 test-%:
-	cd tests && ./run-tests $@
+	cd tests && $(PYTHON) run-tests.py $@
 
 doc:
 	$(MAKE) -C doc
