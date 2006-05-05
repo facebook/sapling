@@ -136,6 +136,18 @@ email::
     Optional.  Email address to use in "From" header and SMTP envelope
     of outgoing messages.
 
+extensions::
+  Mercurial has an extension mechanism for adding new features. To
+  enable an extension, create an entry for it in this section.
+
+  If you know that the extension is already in Python's search path,
+  you can give the name of the module, followed by "=", with nothing
+  after the "=".
+
+  Otherwise, give a name that you choose, followed by "=", followed by
+  the path to the ".py" file (including the file name extension) that
+  defines the extension.
+
 hooks::
   Commands or Python functions that get automatically executed by
   various actions such as starting or finishing a commit. Multiple
