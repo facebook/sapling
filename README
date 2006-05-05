@@ -11,13 +11,16 @@ Setting up Mercurial:
  $ tar xvzf mercurial-<ver>.tar.gz
  $ cd mercurial-<ver>
 
+ When installing, change python to python2.3 or python2.4 if 2.2 is the
+ default on your system.
+
  To install system-wide:
 
- $ python setup.py install   # change python to python2.3 if 2.2 is default
+ $ python setup.py install --force
 
  To install in your home directory (~/bin and ~/lib, actually), run:
 
- $ python2.3 setup.py install --home=~
+ $ python setup.py install --home=${HOME} --force
  $ export PYTHONPATH=${HOME}/lib/python  # (or lib64/ on some systems)
  $ export PATH=${HOME}/bin:$PATH         # add these to your .bashrc
 
@@ -30,10 +33,12 @@ Setting up Mercurial:
 
 Setting up a Mercurial project:
 
- $ cd project/
- $ hg init         # creates .hg
- $ hg addremove    # add all unknown files and remove all missing files
- $ hg commit       # commit all changes, edit changelog entry
+ $ hg init project     # creates project directory
+ $ cd project
+                       # copy files in, edit them
+ $ hg add              # add all unknown files
+ $ hg remove --after   # remove deleted files
+ $ hg commit           # commit all changes, edit changelog entry
 
  Mercurial will look for a file named .hgignore in the root of your
  repository which contains a set of regular expressions to ignore in
@@ -47,7 +52,7 @@ Branching and merging:
  $ hg commit
  $ cd ../linux
  $ hg pull ../linux-work     # pull changesets from linux-work
- $ hg update -m              # merge the new tip from linux-work into
+ $ hg merge                  # merge the new tip from linux-work into
                              # our working directory
  $ hg commit                 # commit the result of the merge
 
@@ -55,8 +60,7 @@ Importing patches:
 
  Fast:
  $ patch < ../p/foo.patch
- $ hg addremove
- $ hg commit
+ $ hg commit -A
 
  Faster:
  $ patch < ../p/foo.patch
@@ -87,7 +91,7 @@ Network support:
 
  # merge changes from a remote machine
  bar$ hg pull http://foo/
- bar$ hg update -m        # merge changes into your working directory
+ bar$ hg merge   # merge changes into your working directory
 
  # Set up a CGI server on your webserver
  foo$ cp hgweb.cgi ~/public_html/hg/index.cgi
