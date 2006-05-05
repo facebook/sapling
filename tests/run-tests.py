@@ -176,18 +176,20 @@ def run_one(test):
     ret, out = run(cmd)
     vlog("# Ret was:", ret)
 
-    if ret == 0:
-        # If reference output file exists, check test output against it
-        if os.path.exists(ref):
-            f = open(ref, "r")
-            ref_out = f.read().splitlines()
-            f.close()
-            if out != ref_out:
-                ret = 1
-                print "\nERROR: %s output changed" % (test)
-                show_diff(ref_out, out)
-    else:
+    diffret = 0
+    # If reference output file exists, check test output against it
+    if os.path.exists(ref):
+        f = open(ref, "r")
+        ref_out = f.read().splitlines()
+        f.close()
+        if out != ref_out:
+            diffret = 1
+            print "\nERROR: %s output changed" % (test)
+            show_diff(ref_out, out)
+    if ret:
         print "\nERROR: %s failed with error code %d" % (test, ret)
+    elif diffret:
+        ret = diffret
 
     if ret != 0: # Save errors to a file for diagnosis
         f = open(err, "w")
