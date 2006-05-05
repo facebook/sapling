@@ -2234,9 +2234,11 @@ def rename(ui, repo, *pats, **opts):
 def revert(ui, repo, *pats, **opts):
     """revert modified files or dirs to their states as of some revision
 
-    By default, revert the named files or directories to the contents
-    they had in the parent of the working directory.  This restores
-    the contents of the affected files to an unmodified state.
+    With no revision specified, revert the named files or directories
+    to the contents they had in the parent of the working directory.
+    This restores the contents of the affected files to an unmodified
+    state.  If the working directory has two parents, you must
+    explicitly specify the revision to revert to.
 
     Modified files are saved with a .orig suffix before reverting.
     To disable these backups, use --no-backup.
@@ -2258,8 +2260,14 @@ def revert(ui, repo, *pats, **opts):
 
     If no arguments are given, all files in the repository are reverted.
     """
-    parent = repo.dirstate.parents()[0]
-    node = opts['rev'] and repo.lookup(opts['rev']) or parent
+    parent, p2 = repo.dirstate.parents()
+    if opts['rev']:
+        node = repo.lookup(opts['rev'])
+    elif p2 != nullid:
+        raise util.Abort(_('working dir has two parents; '
+                           'you must specify the revision to revert to'))
+    else:
+        node = parent
     mf = repo.manifest.read(repo.changelog.read(node)[0])
 
     wlock = repo.wlock()
