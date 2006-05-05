@@ -1,0 +1,92 @@
+HGIGNORE(5)
+===========
+Vadim Gelfer <vadim.gelfer@gmail.com>
+
+NAME
+----
+hgignore - syntax for Mercurial ignore files
+
+SYNOPSIS
+--------
+
+The Mercurial system uses a file called .hgignore in the root
+directory of a repository to control its behavior when it finds files
+that it is not currently managing.
+
+DESCRIPTION
+-----------
+
+Mercurial ignores every unmanaged file that matches any pattern in an
+ignore file.  The patterns in an ignore file do not apply to files
+managed by Mercurial.  To control Mercurial's handling of files that
+it manages, see the hg(1) man page.  Look for the "-I" and "-X"
+options.
+
+In addition, a Mercurial configuration file can point to a set of
+per-user or global ignore files.  See the hgrc(5) man page for details
+of how to configure these files.  Look for the "ignore" entry in the
+"ui" section.
+
+SYNTAX
+------
+
+An ignore file is a plain text file consisting of a list of patterns,
+with one pattern per line.  Empty lines are skipped.  The "#"
+character is treated as a comment character, and the "\" character is
+treated as an escape character.
+
+Mercurial supports several pattern syntaxes.  The default syntax used
+is Python/Perl-style regular expressions.
+
+To change the syntax used, use a line of the following form:
+
+syntax: NAME
+
+where NAME is one of the following:
+
+regexp::
+  Regular expression, Python/Perl syntax.
+glob::
+  Shell-style glob.
+
+The chosen syntax stays in effect when parsing all patterns that
+follow, until another syntax is selected.
+
+Neither glob nor regexp patterns are rooted.  A glob-syntax pattern of
+the form "*.c" will match a file ending in ".c" in any directory, and
+a regexp pattern of the form "\.c$" will do the same.  To root a
+regexp pattern, start it with "^".
+
+EXAMPLE
+-------
+
+Here is an example ignore file.
+
+  # use glob syntax.
+  syntax: glob
+
+  *.elc
+  *.pyc
+  *~
+  .*.swp
+
+  # switch to regexp syntax.
+  syntax: regexp
+  ^\.pc/
+
+AUTHOR
+------
+Vadim Gelfer <vadim.gelfer@gmail.com>
+
+Mercurial was written by Matt Mackall <mpm@selenic.com>.
+
+SEE ALSO
+--------
+hg(1), hgrc(5)
+
+COPYING
+-------
+This manual page is copyright 2006 Vadim Gelfer.
+Mercurial is copyright 2005, 2006 Matt Mackall.
+Free use of this software is granted under the terms of the GNU General
+Public License (GPL).

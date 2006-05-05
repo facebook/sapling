@@ -180,7 +180,7 @@ FILES
 -----
  .hgignore::
     This file contains regular expressions (one per line) that describe file
-    names that should be ignored by hg.
+    names that should be ignored by hg. For details, see hgignore(5).
 
  .hgtags::
     This file contains changeset hash values and text tag names (one of each
@@ -200,7 +200,7 @@ when you find them.
 
 SEE ALSO
 --------
-hgrc(5)
+hgignore(5), hgrc(5)
 
 AUTHOR
 ------
