@@ -16,7 +16,9 @@ foo-b
 %%% should show a removed and b added
 A b
 R a
-reverting...
+%%% revert should fail
+abort: working dir has two parents; you must specify the revision to revert to
+%%% revert should be ok now
 undeleting a
 forgetting b
 %%% should show b unknown and a marked modified (merged)
