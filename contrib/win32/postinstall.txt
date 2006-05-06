@@ -8,6 +8,22 @@ file that comes with this package.
 Release Notes
 -------------
 
+2006-04-07  v0.8.1
+
+* Major changes from 0.8 to 0.8.1:
+
+  - new extensions:
+    mq (manage a queue of patches, like quilt only better)
+    email (send changes as series of email patches)
+  - new command: merge (replaces "update -m")
+  - improved commands: log (--limit option added), pull/push ("-r" works
+    on specific revisions), revert (rewritten, much better)
+  - comprehensive hook support
+  - output templating added, supporting e.g. GNU changelog style
+  - Windows, Mac OS X: prebuilt binary packages, better support
+  - many reliability, performance, and memory usage improvements
+
+
 2006-01-29  v0.8 
 
 * Upgrade notes:
