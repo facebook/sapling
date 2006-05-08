@@ -687,7 +687,13 @@ def opener(base, audit=True):
         os.close(fd)
         fp = posixfile(temp, "wb")
         try:
-            fp.write(posixfile(name, "rb").read())
+            try:
+                s = posixfile(name, "rb").read()
+            except IOError, inst:
+                if not getattr(inst, 'filename', None):
+                    inst.filename = name
+                raise
+            fp.write(s)
         except:
             try: os.unlink(temp)
             except: pass
