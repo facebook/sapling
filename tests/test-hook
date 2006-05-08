@@ -81,7 +81,7 @@ echo '[hooks]' > ../a/.hg/hgrc
 echo 'preoutgoing = echo preoutgoing hook: s=$HG_SOURCE' >> ../a/.hg/hgrc
 echo 'outgoing = echo outgoing hook: n=$HG_NODE s=$HG_SOURCE' >> ../a/.hg/hgrc
 hg pull ../a
-hg undo
+hg rollback
 
 # preoutgoing hook can prevent outgoing changes
 echo 'preoutgoing.forbid = echo preoutgoing.forbid hook; exit 1' >> ../a/.hg/hgrc

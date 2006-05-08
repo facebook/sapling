@@ -2232,7 +2232,7 @@ def rename(ui, repo, *pats, **opts):
     return errs
 
 def revert(ui, repo, *pats, **opts):
-    """revert modified files or dirs to their states as of some revision
+    """revert files or dirs to their states as of some revision
 
     With no revision specified, revert the named files or directories
     to the contents they had in the parent of the working directory.
@@ -2360,6 +2360,35 @@ def revert(ui, repo, *pats, **opts):
     repo.dirstate.update(undelete[0], 'n')
     repo.dirstate.update(remove[0], 'r')
     return r
+
+def rollback(ui, repo):
+    """roll back the last transaction in this repository
+
+    Roll back the last transaction in this repository, restoring the
+    project to its state prior to the transaction.
+
+    Transactions are used to encapsulate the effects of all commands
+    that create new changesets or propagate existing changesets into a
+    repository. For example, the following commands are transactional,
+    and their effects can be rolled back:
+
+      commit
+      import
+      pull
+      push (with this repository as destination)
+      unbundle
+
+    This command should be used with care. There is only one level of
+    rollback, and there is no way to undo a rollback.
+
+    This command is not intended for use on public repositories. Once
+    changes are visible for pull by other users, rolling a transaction
+    back locally is ineffective (someone else may already have pulled
+    the changes). Furthermore, a race is possible with readers of the
+    repository; for example an in-progress pull from the repository
+    may fail if a rollback is performed.
+    """
+    repo.undo()
 
 def root(ui, repo):
     """print the root (top) of the current working dir
@@ -2676,19 +2705,12 @@ def unbundle(ui, repo, fname, **opts):
     return postincoming(ui, repo, modheads, opts['update'])
 
 def undo(ui, repo):
-    """undo the last commit or pull
+    """undo the last commit or pull (DEPRECATED)
 
-    Roll back the last pull or commit transaction on the
-    repository, restoring the project to its earlier state.
-
-    This command should be used with care. There is only one level of
-    undo and there is no redo.
-
-    This command is not intended for use on public repositories. Once
-    a change is visible for pull by other users, undoing it locally is
-    ineffective. Furthemore a race is possible with readers of the
-    repository, for example an ongoing pull from the repository will
-    fail and rollback.
+    (DEPRECATED)
+    This command is now deprecated and will be removed in a future
+    release. Please use the rollback command instead.  For usage
+    instructions, see the rollback command.
     """
     repo.undo()
 
@@ -3018,6 +3040,7 @@ table = {
           ('I', 'include', [], _('include names matching given patterns')),
           ('X', 'exclude', [], _('exclude names matching given patterns'))],
          _('hg revert [-r REV] [NAME]...')),
+    "rollback": (rollback, [], _('hg rollback')),
     "root": (root, [], _('hg root')),
     "^serve":
         (serve,

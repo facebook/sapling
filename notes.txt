@@ -121,7 +121,7 @@ changeset entry gets added last. We keep a transaction log of the name
 of each file touched and its length prior to the transaction. On
 abort, we simply truncate each file to its prior length. This is one
 of the nice properties of the append-only structure of the revlogs.
-We can also reuse this journal for "undo".
+We can also reuse this journal for "rollback".
 
 Merging between repositories:
 
