@@ -210,6 +210,7 @@ class notifier(object):
             msg['Message-Id'] = ('<hg.%s.%s.%s@%s>' %
                                  (short(node), int(time.time()),
                                   hash(self.repo.root), socket.getfqdn()))
+        msg['To'] = self.subs
 
         msgtext = msg.as_string(0)
         if self.ui.configbool('notify', 'test', True):
