@@ -100,14 +100,13 @@ def printargs(args):
     print 'hook args:'
     for k, v in a:
        print ' ', k, v
-    return True
 
 def passhook(**args):
     printargs(args)
-    return True
 
 def failhook(**args):
     printargs(args)
+    return True
 
 class LocalException(Exception):
     pass

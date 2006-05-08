@@ -78,8 +78,12 @@ class localrepository(object):
         def callhook(hname, funcname):
             '''call python hook. hook is callable object, looked up as
             name in python module. if callable returns "true", hook
-            passes, else fails. if hook raises exception, treated as
-            hook failure. exception propagates if throw is "true".'''
+            fails, else passes. if hook raises exception, treated as
+            hook failure. exception propagates if throw is "true".
+
+            reason for "true" meaning "hook failed" is so that
+            unmodified commands (e.g. mercurial.commands.update) can
+            be run as hooks without wrappers to convert return values.'''
 
             self.ui.note(_("calling hook %s: %s\n") % (hname, funcname))
             d = funcname.rfind('.')
@@ -119,11 +123,11 @@ class localrepository(object):
                     raise
                 if self.ui.traceback:
                     traceback.print_exc()
-                return False
-            if not r:
+                return True
+            if r:
                 if throw:
                     raise util.Abort(_('%s hook failed') % hname)
-                self.ui.warn(_('error: %s hook failed\n') % hname)
+                self.ui.warn(_('warning: %s hook failed\n') % hname)
             return r
 
         def runhook(name, cmd):
@@ -135,19 +139,18 @@ class localrepository(object):
                 desc, r = util.explain_exit(r)
                 if throw:
                     raise util.Abort(_('%s hook %s') % (name, desc))
-                self.ui.warn(_('error: %s hook %s\n') % (name, desc))
-                return False
-            return True
+                self.ui.warn(_('warning: %s hook %s\n') % (name, desc))
+            return r
 
-        r = True
+        r = False
         hooks = [(hname, cmd) for hname, cmd in self.ui.configitems("hooks")
                  if hname.split(".", 1)[0] == name and cmd]
         hooks.sort()
         for hname, cmd in hooks:
             if cmd.startswith('python:'):
-                r = callhook(hname, cmd[7:].strip()) and r
+                r = callhook(hname, cmd[7:].strip()) or r
             else:
-                r = runhook(hname, cmd) and r
+                r = runhook(hname, cmd) or r
         return r
 
     def tags(self):

@@ -255,4 +255,3 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
         n.node(node)
     n.diff(node)
     n.send(node, count)
-    return True

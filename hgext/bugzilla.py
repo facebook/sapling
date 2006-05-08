@@ -278,7 +278,6 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
             for id in ids:
                 bz.update(id, bin_node, changes)
             bz.notify(ids)
-        return True
     except MySQLdb.MySQLError, err:
         raise util.Abort(_('database error: %s') % err[1])
 
