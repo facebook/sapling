@@ -225,7 +225,8 @@ class notifier(object):
         if maxdiff == 0:
             return
         fp = templater.stringio()
-        commands.dodiff(fp, self.ui, self.repo, node,
+        prev = self.repo.changelog.parents(node)[0]
+        commands.dodiff(fp, self.ui, self.repo, prev,
                         self.repo.changelog.tip())
         difflines = fp.getvalue().splitlines(1)
         if maxdiff > 0 and len(difflines) > maxdiff:
