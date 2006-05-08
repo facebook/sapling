@@ -1079,7 +1079,7 @@ class localrepository(object):
             cg = remote.changegroup(fetch, 'pull')
         else:
             cg = remote.changegroupsubset(fetch, heads, 'pull')
-        return self.addchangegroup(cg)
+        return self.addchangegroup(cg, 'pull')
 
     def push(self, remote, force=False, revs=None):
         lock = remote.lock()
@@ -1116,7 +1116,7 @@ class localrepository(object):
             cg = self.changegroup(update, 'push')
         else:
             cg = self.changegroupsubset(update, revs, 'push')
-        return remote.addchangegroup(cg)
+        return remote.addchangegroup(cg, 'push')
 
     def changegroupsubset(self, bases, heads, source):
         """This function generates a changegroup consisting of all the nodes
@@ -1455,7 +1455,7 @@ class localrepository(object):
 
         return util.chunkbuffer(gengroup())
 
-    def addchangegroup(self, source):
+    def addchangegroup(self, source, srctype):
         """add changegroup to repo.
         returns number of heads modified or added + 1."""
 
@@ -1469,7 +1469,7 @@ class localrepository(object):
         if not source:
             return 0
 
-        self.hook('prechangegroup', throw=True, source=source)
+        self.hook('prechangegroup', throw=True, source=srctype)
 
         changesets = files = revisions = 0
 
@@ -1534,17 +1534,17 @@ class localrepository(object):
                          % (changesets, revisions, files, heads))
 
         self.hook('pretxnchangegroup', throw=True,
-                  node=hex(self.changelog.node(cor+1)), source=source)
+                  node=hex(self.changelog.node(cor+1)), source=srctype)
 
         tr.close()
 
         if changesets > 0:
             self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
-                      source=source)
+                      source=srctype)
 
             for i in range(cor + 1, cnr + 1):
                 self.hook("incoming", node=hex(self.changelog.node(i)),
-                          source=source)
+                          source=srctype)
 
         return newheads - oldheads + 1
 

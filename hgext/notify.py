@@ -40,6 +40,8 @@
 #   changegroup = ...      # template when run as changegroup hook
 #   maxdiff = 300          # max lines of diffs to include (0=none, -1=all)
 #   maxsubject = 67        # truncate subject line longer than this
+#   sources = serve        # notify if source of incoming changes in this list
+#                          # (serve == ssh or http, push, pull, bundle)
 #   [email]
 #   from = user@host.com   # email address to send as if none given
 #   [web]
@@ -167,6 +169,11 @@ class notifier(object):
                     root=self.repo.root,
                     webroot=self.root)
 
+    def skipsource(self, source):
+        '''true if incoming changes from this source should be skipped.'''
+        ok_sources = self.ui.config('notify', 'sources', 'serve').split()
+        return source not in ok_sources
+
     def send(self, node, count):
         '''send message.'''
 
@@ -210,7 +217,7 @@ class notifier(object):
             msg['Message-Id'] = ('<hg.%s.%s.%s@%s>' %
                                  (short(node), int(time.time()),
                                   hash(self.repo.root), socket.getfqdn()))
-        msg['To'] = self.subs
+        msg['To'] = ', '.join(self.subs)
 
         msgtext = msg.as_string(0)
         if self.ui.configbool('notify', 'test', True):
@@ -238,13 +245,14 @@ class notifier(object):
             self.sio.write(_('\ndiffs (%d lines):\n\n') % len(difflines))
         self.sio.write(*difflines)
 
-def hook(ui, repo, hooktype, node=None, **kwargs):
+def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     '''send email notifications to interested subscribers.
 
     if used as changegroup hook, send one email for all changesets in
     changegroup. else send one email per changeset.'''
     n = notifier(ui, repo, hooktype)
-    if not n.subs: return True
+    if not n.subs or n.skipsource(source):
+        return
     node = bin(node)
     if hooktype == 'changegroup':
         start = repo.changelog.rev(node)

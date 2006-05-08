@@ -2477,7 +2477,7 @@ def serve(ui, repo, **opts):
                     continue
                 respond("")
 
-                r = repo.addchangegroup(fin)
+                r = repo.addchangegroup(fin, 'serve')
                 respond(str(r))
 
     optlist = ("name templates style address port ipv6"
@@ -2701,7 +2701,7 @@ def unbundle(ui, repo, fname, **opts):
         raise util.Abort(_("%s: unknown bundle compression type")
                          % fname)
     gen = generator(util.filechunkiter(f, 4096))
-    modheads = repo.addchangegroup(util.chunkbuffer(gen))
+    modheads = repo.addchangegroup(util.chunkbuffer(gen), 'unbundle')
     return postincoming(ui, repo, modheads, opts['update'])
 
 def undo(ui, repo):
