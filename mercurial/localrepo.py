@@ -43,11 +43,15 @@ class localrepository(object):
             pass
 
         v = self.ui.revlogopts
-        self.revlogversion = int(v.get('format', revlog.REVLOGV0))
+        self.revlogversion = int(v.get('format', revlog.REVLOG_DEFAULT_FORMAT))
         self.revlogv1 = self.revlogversion != revlog.REVLOGV0
+        fl = v.get('flags', None)
         flags = 0
-        for x in v.get('flags', "").split():
-            flags |= revlog.flagstr(x)
+        if fl != None:
+            for x in fl.split():
+                flags |= revlog.flagstr(x)
+        elif self.revlogv1:
+            flags = revlog.REVLOG_DEFAULT_FLAGS
 
         v = self.revlogversion | flags
         self.manifest = manifest.manifest(self.opener, v)

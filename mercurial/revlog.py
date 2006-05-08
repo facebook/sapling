@@ -22,6 +22,10 @@ REVLOGNG = 1
 
 # revlog flags
 REVLOGNGINLINEDATA = (1 << 16)
+REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
+
+REVLOG_DEFAULT_FORMAT = REVLOGNG
+REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 
 def flagstr(flag):
     if flag == "inline":
@@ -293,7 +297,8 @@ class revlog(object):
     remove data, and can use some simple techniques to avoid the need
     for locking while reading.
     """
-    def __init__(self, opener, indexfile, datafile, defversion=REVLOGV0):
+    def __init__(self, opener, indexfile, datafile,
+                 defversion=REVLOG_DEFAULT_VERSION):
         """
         create a revlog object
 

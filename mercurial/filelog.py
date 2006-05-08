@@ -11,7 +11,7 @@ from demandload import *
 demandload(globals(), "bdiff")
 
 class filelog(revlog):
-    def __init__(self, opener, path, defversion=0):
+    def __init__(self, opener, path, defversion=REVLOG_DEFAULT_VERSION):
         revlog.__init__(self, opener,
                         os.path.join("data", self.encodedir(path + ".i")),
                         os.path.join("data", self.encodedir(path + ".d")),
