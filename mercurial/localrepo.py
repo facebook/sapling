@@ -1469,7 +1469,7 @@ class localrepository(object):
         if not source:
             return 0
 
-        self.hook('prechangegroup', throw=True)
+        self.hook('prechangegroup', throw=True, source=source)
 
         changesets = files = revisions = 0
 
@@ -1534,15 +1534,17 @@ class localrepository(object):
                          % (changesets, revisions, files, heads))
 
         self.hook('pretxnchangegroup', throw=True,
-                  node=hex(self.changelog.node(cor+1)))
+                  node=hex(self.changelog.node(cor+1)), source=source)
 
         tr.close()
 
         if changesets > 0:
-            self.hook("changegroup", node=hex(self.changelog.node(cor+1)))
+            self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
+                      source=source)
 
             for i in range(cor + 1, cnr + 1):
-                self.hook("incoming", node=hex(self.changelog.node(i)))
+                self.hook("incoming", node=hex(self.changelog.node(i)),
+                          source=source)
 
         return newheads - oldheads + 1
 
