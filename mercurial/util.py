@@ -231,7 +231,7 @@ def canonpath(root, cwd, myname):
                 name_st = os.stat(name)
             except OSError:
                 break
-            if os.path.samestat(name_st, root_st):
+            if samestat(name_st, root_st):
                 rel.reverse()
                 name = os.path.join(*rel)
                 audit_path(name)
@@ -561,6 +561,9 @@ if os.name == 'nt':
     makelock = _makelock_file
     readlock = _readlock_file
 
+    def samestat(s1, s2):
+        return False
+
     def explain_exit(code):
         return _("exited with status %d") % code, code
 
@@ -627,6 +630,7 @@ else:
         return path
 
     normpath = os.path.normpath
+    samestat = os.path.samestat
 
     def makelock(info, pathname):
         try:

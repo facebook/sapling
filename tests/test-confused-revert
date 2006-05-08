@@ -41,8 +41,11 @@ hg remove a
 echo "%%% should show a removed and b added"
 hg status
 
-echo "reverting..."
+echo "%%% revert should fail"
 hg revert
+
+echo "%%% revert should be ok now"
+hg revert -r2
 
 echo "%%% should show b unknown and a marked modified (merged)"
 hg status

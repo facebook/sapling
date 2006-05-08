@@ -2,9 +2,9 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 [Setup]
-AppCopyright=Copyright 2005 Matt Mackall and others
+AppCopyright=Copyright 2005, 2006 Matt Mackall and others
 AppName=Mercurial
-AppVerName=Mercurial version 0.8
+AppVerName=Mercurial version 0.8.1
 InfoAfterFile=contrib/win32/postinstall.txt
 LicenseFile=COPYING
 ShowLanguageDialog=yes
@@ -14,12 +14,12 @@ AppSupportURL=http://www.selenic.com/mercurial
 AppUpdatesURL=http://www.selenic.com/mercurial
 AppID={{4B95A5F1-EF59-4B08-BED8-C891C46121B3}
 AppContact=mercurial@selenic.com
-OutputBaseFilename=Mercurial-0.8
+OutputBaseFilename=Mercurial-0.8.1
 DefaultDirName={sd}\Mercurial
 SourceDir=C:\hg\hg-release
-VersionInfoVersion=0.8
+VersionInfoVersion=0.8.1
 VersionInfoDescription=Mercurial distributed SCM
-VersionInfoCopyright=Copyright 2005 Matt Mackall and others
+VersionInfoCopyright=Copyright 2005, 2006 Matt Mackall and others
 VersionInfoCompany=Matt Mackall and others
 InternalCompressLevel=max
 SolidCompression=true

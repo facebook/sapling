@@ -30,7 +30,6 @@
 # OPTIONAL:
 #   bzuser = ...    # bugzilla user id to record comments with
 #   db = bugs       # database to connect to
-#   hgweb = http:// # root of hg web site for browsing commits
 #   notify = ...    # command to run to get bugzilla to send mail
 #   regexp = ...    # regexp to match bug ids (must contain one "()" group)
 #   strip = 0       # number of slashes to strip for url paths
@@ -38,11 +37,13 @@
 #   template = ...  # template to use when formatting comments
 #   timeout = 5     # database connection timeout (seconds)
 #   user = bugs     # user to connect to database as
+#   [web]
+#   baseurl = http://hgserver/... # root of hg web site for browsing commits
 
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'cStringIO mercurial:templater,util os re time')
+demandload(globals(), 'mercurial:templater,util os re time')
 
 MySQLdb = None
 
@@ -237,23 +238,9 @@ class bugzilla(object):
                 count -= 1
             return root
 
-        class stringio(object):
-            '''wrap cStringIO.'''
-            def __init__(self):
-                self.fp = cStringIO.StringIO()
-
-            def write(self, *args):
-                for a in args:
-                    self.fp.write(a)
-
-            write_header = write
-
-            def getvalue(self):
-                return self.fp.getvalue()
-
         mapfile = self.ui.config('bugzilla', 'style')
         tmpl = self.ui.config('bugzilla', 'template')
-        sio = stringio()
+        sio = templater.stringio()
         t = templater.changeset_templater(self.ui, self.repo, mapfile, sio)
         if not mapfile and not tmpl:
             tmpl = _('changeset {node|short} in repo {root} refers '
@@ -263,7 +250,7 @@ class bugzilla(object):
             t.use_template(tmpl)
         t.show(changenode=node, changes=changes,
                bug=str(bugid),
-               hgweb=self.ui.config('bugzilla', 'hgweb'),
+               hgweb=self.ui.config('web', 'baseurl'),
                root=self.repo.root,
                webroot=webroot(self.repo.root))
         self.add_comment(bugid, sio.getvalue(), templater.email(changes[1]))

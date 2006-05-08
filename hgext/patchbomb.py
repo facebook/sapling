@@ -31,20 +31,10 @@
 # the messages directly. This can be reviewed e.g. with "mutt -R -f mbox",
 # and finally sent with "formail -s sendmail -bm -t < mbox".
 #
-# To configure a default mail host, add a section like this to your
-# hgrc file:
-#
-# [smtp]
-# host = my_mail_host
-# port = 1025
-# tls = yes # or omit if not needed
-# username = user     # if SMTP authentication required
-# password = password # if SMTP authentication required - PLAINTEXT
-#
 # To configure other defaults, add a section like this to your hgrc
 # file:
 #
-# [patchbomb]
+# [email]
 # from = My Name <my@email>
 # to = recipient1, recipient2, ...
 # cc = cc1, cc2, ...
@@ -52,7 +42,7 @@
 from mercurial.demandload import *
 demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
                          mercurial:commands,hg,ui
-                         os errno popen2 smtplib socket sys tempfile time''')
+                         os errno popen2 socket sys tempfile time''')
 from mercurial.i18n import gettext as _
 
 try:
@@ -183,11 +173,13 @@ def patchbomb(ui, repo, *revs, **opts):
         jumbo.extend(p)
         msgs.append(makepatch(p, i + 1, len(patches)))
 
-    sender = (opts['from'] or ui.config('patchbomb', 'from') or
+    sender = (opts['from'] or ui.config('email', 'from') or
+              ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
 
     def getaddrs(opt, prpt, default = None):
-        addrs = opts[opt] or (ui.config('patchbomb', opt) or
+        addrs = opts[opt] or (ui.config('email', opt) or
+                              ui.config('patchbomb', opt) or
                               prompt(prpt, default = default)).split(',')
         return [a.strip() for a in addrs if a.strip()]
     to = getaddrs('to', 'To')
@@ -223,17 +215,7 @@ def patchbomb(ui, repo, *revs, **opts):
     ui.write('\n')
 
     if not opts['test'] and not opts['mbox']:
-        s = smtplib.SMTP()
-        s.connect(host = ui.config('smtp', 'host', 'mail'),
-                  port = int(ui.config('smtp', 'port', 25)))
-        if ui.configbool('smtp', 'tls'):
-            s.ehlo()
-            s.starttls()
-            s.ehlo()
-        username = ui.config('smtp', 'username')
-        password = ui.config('smtp', 'password')
-        if username and password:
-            s.login(username, password)
+        mail = ui.sendmail()
     parent = None
     tz = time.strftime('%z')
     sender_addr = email.Utils.parseaddr(sender)[1]
@@ -271,9 +253,9 @@ def patchbomb(ui, repo, *revs, **opts):
             fp.close()
         else:
             ui.status('Sending ', m['Subject'], ' ...\n')
-            s.sendmail(sender, to + cc, m.as_string(0))
+            mail.sendmail(sender, to + cc, m.as_string(0))
     if not opts['test'] and not opts['mbox']:
-        s.close()
+        mail.close()
 
 cmdtable = {
     'email':
