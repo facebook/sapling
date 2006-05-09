@@ -14,7 +14,9 @@ clean:
 	find . -name '*.py[co]' -exec rm -f '{}' ';'
 	$(MAKE) -C doc clean
 
-dist:	tests doc
+dist:	tests dist-notests
+
+dist-notests:	doc
 	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py sdist --force-manifest
 
 tests:
@@ -27,5 +29,5 @@ doc:
 	$(MAKE) -C doc
 
 
-.PHONY: all clean dist tests doc
+.PHONY: all clean dist dist-notests tests doc
 
