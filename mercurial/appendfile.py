@@ -130,13 +130,19 @@ class appendopener(object):
         tmpnames = self.tmpnames.items()
         tmpnames.sort()
         for name, tmpname in tmpnames:
-            fp = open(tmpname, 'rb')
-            s = fp.read()
-            fp.close()
+            ifp = open(tmpname, 'rb')
+            ofp = self.realopener(name, 'a')
+            for chunk in util.filechunkiter(ifp):
+                ofp.write(chunk)
+            ifp.close()
             os.unlink(tmpname)
-            fp = self.realopener(name, 'a')
-            fp.write(s)
-            fp.close()
+            del self.tmpnames[name]
+            ofp.close()
+
+    def cleanup(self):
+        '''delete temp files (this discards unwritten data!)'''
+        for tmpname in self.tmpnames.values():
+            os.unlink(tmpname)
 
 # files for changelog and manifest are in different appendopeners, so
 # not mixed up together.

@@ -1477,46 +1477,57 @@ class localrepository(object):
 
         # write changelog and manifest data to temp files so
         # concurrent readers will not see inconsistent view
-        cl = appendfile.appendchangelog(self.opener, self.changelog.version)
+        cl = None
+        try:
+            cl = appendfile.appendchangelog(self.opener, self.changelog.version)
 
-        oldheads = len(cl.heads())
+            oldheads = len(cl.heads())
 
-        # pull off the changeset group
-        self.ui.status(_("adding changesets\n"))
-        co = cl.tip()
-        chunkiter = changegroup.chunkiter(source)
-        cn = cl.addgroup(chunkiter, csmap, tr, 1) # unique
-        cnr, cor = map(cl.rev, (cn, co))
-        if cn == nullid:
-            cnr = cor
-        changesets = cnr - cor
-
-        mf = appendfile.appendmanifest(self.opener, self.manifest.version)
-
-        # pull off the manifest group
-        self.ui.status(_("adding manifests\n"))
-        mm = mf.tip()
-        chunkiter = changegroup.chunkiter(source)
-        mo = mf.addgroup(chunkiter, revmap, tr)
-
-        # process the files
-        self.ui.status(_("adding file changes\n"))
-        while 1:
-            f = changegroup.getchunk(source)
-            if not f:
-                break
-            self.ui.debug(_("adding %s revisions\n") % f)
-            fl = self.file(f)
-            o = fl.count()
+            # pull off the changeset group
+            self.ui.status(_("adding changesets\n"))
+            co = cl.tip()
             chunkiter = changegroup.chunkiter(source)
-            n = fl.addgroup(chunkiter, revmap, tr)
-            revisions += fl.count() - o
-            files += 1
+            cn = cl.addgroup(chunkiter, csmap, tr, 1) # unique
+            cnr, cor = map(cl.rev, (cn, co))
+            if cn == nullid:
+                cnr = cor
+            changesets = cnr - cor
 
-        # write order here is important so concurrent readers will see
-        # consistent view of repo
-        mf.writedata()
-        cl.writedata()
+            mf = None
+            try:
+                mf = appendfile.appendmanifest(self.opener,
+                                               self.manifest.version)
+
+                # pull off the manifest group
+                self.ui.status(_("adding manifests\n"))
+                mm = mf.tip()
+                chunkiter = changegroup.chunkiter(source)
+                mo = mf.addgroup(chunkiter, revmap, tr)
+
+                # process the files
+                self.ui.status(_("adding file changes\n"))
+                while 1:
+                    f = changegroup.getchunk(source)
+                    if not f:
+                        break
+                    self.ui.debug(_("adding %s revisions\n") % f)
+                    fl = self.file(f)
+                    o = fl.count()
+                    chunkiter = changegroup.chunkiter(source)
+                    n = fl.addgroup(chunkiter, revmap, tr)
+                    revisions += fl.count() - o
+                    files += 1
+
+                # write order here is important so concurrent readers will see
+                # consistent view of repo
+                mf.writedata()
+            finally:
+                if mf:
+                    mf.cleanup()
+            cl.writedata()
+        finally:
+            if cl:
+                cl.cleanup()
 
         # make changelog and manifest see real files again
         self.changelog = changelog.changelog(self.opener, self.changelog.version)

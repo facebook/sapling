@@ -2712,6 +2712,7 @@ def undo(ui, repo):
     release. Please use the rollback command instead.  For usage
     instructions, see the rollback command.
     """
+    ui.warn(_('(the undo command is deprecated; use rollback instead)\n'))
     repo.undo()
 
 def update(ui, repo, node=None, merge=False, clean=False, force=None,
