@@ -130,14 +130,14 @@ class appendopener(object):
         tmpnames = self.tmpnames.items()
         tmpnames.sort()
         for name, tmpname in tmpnames:
-            fp = open(tmpname, 'rb')
-            s = fp.read()
-            fp.close()
+            ifp = open(tmpname, 'rb')
+            ofp = self.realopener(name, 'a')
+            for chunk in util.filechunkiter(ifp):
+                ofp.write(chunk)
+            ifp.close()
             os.unlink(tmpname)
             del self.tmpnames[name]
-            fp = self.realopener(name, 'a')
-            fp.write(s)
-            fp.close()
+            ofp.close()
 
     def cleanup(self):
         '''delete temp files (this discards unwritten data!)'''
