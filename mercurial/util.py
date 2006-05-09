@@ -685,20 +685,22 @@ def opener(base, audit=True):
         d, fn = os.path.split(name)
         fd, temp = tempfile.mkstemp(prefix='.%s-' % fn, dir=d)
         os.close(fd)
-        fp = posixfile(temp, "wb")
+        ofp = posixfile(temp, "wb")
         try:
             try:
-                s = posixfile(name, "rb").read()
+                ifp = posixfile(name, "rb")
             except IOError, inst:
                 if not getattr(inst, 'filename', None):
                     inst.filename = name
                 raise
-            fp.write(s)
+            for chunk in filechunkiter(ifp):
+                ofp.write(chunk)
+            ifp.close()
+            ofp.close()
         except:
             try: os.unlink(temp)
             except: pass
             raise
-        fp.close()
         st = os.lstat(name)
         os.chmod(temp, st.st_mode)
         return temp
