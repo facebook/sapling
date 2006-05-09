@@ -134,9 +134,15 @@ class appendopener(object):
             s = fp.read()
             fp.close()
             os.unlink(tmpname)
+            del self.tmpnames[name]
             fp = self.realopener(name, 'a')
             fp.write(s)
             fp.close()
+
+    def cleanup(self):
+        '''delete temp files (this discards unwritten data!)'''
+        for tmpname in self.tmpnames.values():
+            os.unlink(tmpname)
 
 # files for changelog and manifest are in different appendopeners, so
 # not mixed up together.
