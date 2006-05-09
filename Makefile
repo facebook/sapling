@@ -2,17 +2,29 @@ PREFIX=/usr/local
 export PREFIX
 PYTHON=python
 
-all:
+all: local build doc
+
+local:
 	$(PYTHON) setup.py build_ext -i
 
-install: all
-	$(PYTHON) setup.py install --home="$(PREFIX)"
-	cd doc && $(MAKE) $(MFLAGS) install
+build:
+	$(PYTHON) setup.py build
+
+doc:
+	$(MAKE) -C doc
 
 clean:
 	-$(PYTHON) setup.py clean --all # ignore errors of this command
 	find . -name '*.py[co]' -exec rm -f '{}' ';'
 	$(MAKE) -C doc clean
+
+install: all
+	$(PYTHON) setup.py install --prefix="$(PREFIX)" --force
+	cd doc && $(MAKE) $(MFLAGS) install
+
+install-home: all
+	$(PYTHON) setup.py install --home="$(HOME)" --force
+	cd doc && $(MAKE) $(MFLAGS) PREFIX="$(HOME)" install
 
 dist:	tests dist-notests
 
@@ -25,9 +37,6 @@ tests:
 test-%:
 	cd tests && $(PYTHON) run-tests.py $@
 
-doc:
-	$(MAKE) -C doc
 
-
-.PHONY: all clean dist dist-notests tests doc
+.PHONY: all local build doc clean install install-home dist dist-notests tests
 
