@@ -21,6 +21,7 @@ class gpg:
 
     def verify(self, data, sig):
         """ returns of the good and bad signatures"""
+        sigfile = datafile = None
         try:
             # create temporary files
             fd, sigfile = tempfile.mkstemp(prefix="hg-gpg-", suffix=".sig")
@@ -34,12 +35,11 @@ class gpg:
             gpgcmd = ("%s --logger-fd 1 --status-fd 1 --verify "
                       "\"%s\" \"%s\"" % (self.path, sigfile, datafile))
             ret = util.filter("", gpgcmd)
-        except:
+        finally:
             for f in (sigfile, datafile):
                 try:
                     if f: os.unlink(f)
                 except: pass
-            raise
         keys = []
         key, fingerprint = None, None
         err = ""
