@@ -1,11 +1,13 @@
-# This Makefile is only used by developers.
+PREFIX=/usr/local
+export PREFIX
 PYTHON=python
 
 all:
 	$(PYTHON) setup.py build_ext -i
 
-install:
-	@echo "Read the file README for install instructions."
+install: all
+	$(PYTHON) setup.py install --home="$(PREFIX)"
+	cd doc && $(MAKE) $(MFLAGS) install
 
 clean:
 	-$(PYTHON) setup.py clean --all # ignore errors of this command
