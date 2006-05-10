@@ -220,6 +220,10 @@ class posixfile(object):
         self.name = name
         self.mode = mode
 
+    def __iter__(self):
+        for line in self.read().splitlines(True):
+            yield line
+
     def read(self, count=-1):
         try:
             cs = cStringIO.StringIO()
