@@ -9,20 +9,15 @@ from demandload import demandload
 import struct, bdiff, util, mpatch
 demandload(globals(), "re")
 
-
-def splitnewlines(text, keepends=False):
+def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
-    i = 0
-    lines = []
-    while True:
-        n = text.find('\n', i)
-        if n == -1:
-            last = text[i:]
-            if last:
-                lines.append(last)
-            return lines
-        lines.append(text[i:keepends and n+1 or n])
-        i = n + 1
+    lines = [l + '\n' for l in text.split('\n')]
+    if lines:
+        if lines[-1] == '\n':
+            lines.pop()
+        else:
+            lines[-1] = lines[-1][:-1]
+    return lines
 
 def unidiff(a, ad, b, bd, fn, r=None, text=False,
             showfunc=False, ignorews=False):
@@ -33,7 +28,7 @@ def unidiff(a, ad, b, bd, fn, r=None, text=False,
     if not text and (util.binary(a) or util.binary(b)):
         l = ['Binary file %s has changed\n' % fn]
     elif not a:
-        b = splitnewlines(b, keepends=True)
+        b = splitnewlines(b)
         if a is None:
             l1 = "--- %s\t%s\n" % ("/dev/null", epoch)
         else:
@@ -42,7 +37,7 @@ def unidiff(a, ad, b, bd, fn, r=None, text=False,
         l3 = "@@ -0,0 +1,%d @@\n" % len(b)
         l = [l1, l2, l3] + ["+" + e for e in b]
     elif not b:
-        a = splitnewlines(a, keepends=True)
+        a = splitnewlines(a)
         l1 = "--- %s\t%s\n" % ("a/" + fn, ad)
         if b is None:
             l2 = "+++ %s\t%s\n" % ("/dev/null", epoch)
@@ -51,8 +46,8 @@ def unidiff(a, ad, b, bd, fn, r=None, text=False,
         l3 = "@@ -1,%d +0,0 @@\n" % len(a)
         l = [l1, l2, l3] + ["-" + e for e in a]
     else:
-        al = splitnewlines(a, keepends=True)
-        bl = splitnewlines(b, keepends=True)
+        al = splitnewlines(a)
+        bl = splitnewlines(b)
         l = list(bunidiff(a, b, al, bl, "a/" + fn, "b/" + fn,
                           showfunc=showfunc, ignorews=ignorews))
         if not l: return ""
