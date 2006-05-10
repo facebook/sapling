@@ -756,13 +756,20 @@ def archive(ui, repo, dest, **opts):
 def backout(ui, repo, rev, **opts):
     '''reverse effect of earlier changeset
 
-    Commit the backed out changes as a new changeset.
+    Commit the backed out changes as a new changeset.  The new
+    changeset is a child of the backed out changeset.
 
     If you back out a changeset other than the tip, a new head is
-    created.  The --merge option remembers the parent of the working
-    directory before starting the backout, then merges the new head
-    with it afterwards, to save you from doing this by hand.  The
-    result of this merge is not committed, as for a normal merge.'''
+    created.  This head is the parent of the working directory.  If
+    you back out an old changeset, your working directory will appear
+    old after the backout.  You should merge the backout changeset
+    with another head.
+
+    The --merge option remembers the parent of the working directory
+    before starting the backout, then merges the new head with that
+    changeset afterwards.  This saves you from doing the merge by
+    hand.  The result of this merge is not committed, as for a normal
+    merge.'''
 
     bail_if_changed(repo)
     op1, op2 = repo.dirstate.parents()
