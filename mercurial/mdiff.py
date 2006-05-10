@@ -10,6 +10,20 @@ import struct, bdiff, util, mpatch
 demandload(globals(), "re")
 
 
+def splitnewlines(text, keepends=False):
+    '''like str.splitlines, but only split on newlines.'''
+    i = 0
+    lines = []
+    while True:
+        n = text.find('\n', i)
+        if n == -1:
+            last = text[i:]
+            if last:
+                lines.append(last)
+            return lines
+        lines.append(text[i:keepends and n+1 or n])
+        i = n + 1
+
 def unidiff(a, ad, b, bd, fn, r=None, text=False,
             showfunc=False, ignorews=False):
 
@@ -19,7 +33,7 @@ def unidiff(a, ad, b, bd, fn, r=None, text=False,
     if not text and (util.binary(a) or util.binary(b)):
         l = ['Binary file %s has changed\n' % fn]
     elif not a:
-        b = b.splitlines(1)
+        b = splitnewlines(b, keepends=True)
         if a is None:
             l1 = "--- %s\t%s\n" % ("/dev/null", epoch)
         else:
@@ -28,7 +42,7 @@ def unidiff(a, ad, b, bd, fn, r=None, text=False,
         l3 = "@@ -0,0 +1,%d @@\n" % len(b)
         l = [l1, l2, l3] + ["+" + e for e in b]
     elif not b:
-        a = a.splitlines(1)
+        a = splitnewlines(a, keepends=True)
         l1 = "--- %s\t%s\n" % ("a/" + fn, ad)
         if b is None:
             l2 = "+++ %s\t%s\n" % ("/dev/null", epoch)
@@ -37,8 +51,8 @@ def unidiff(a, ad, b, bd, fn, r=None, text=False,
         l3 = "@@ -1,%d +0,0 @@\n" % len(a)
         l = [l1, l2, l3] + ["-" + e for e in a]
     else:
-        al = a.splitlines(1)
-        bl = b.splitlines(1)
+        al = splitnewlines(a, keepends=True)
+        bl = splitnewlines(b, keepends=True)
         l = list(bunidiff(a, b, al, bl, "a/" + fn, "b/" + fn,
                           showfunc=showfunc, ignorews=ignorews))
         if not l: return ""
