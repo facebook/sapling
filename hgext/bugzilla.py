@@ -214,6 +214,7 @@ class bugzilla(object):
                 break
             start = m.end()
             for id in bugzilla._split_re.split(m.group(1)):
+                if not id: continue
                 ids[int(id)] = 1
         ids = ids.keys()
         if ids:
