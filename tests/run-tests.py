@@ -182,10 +182,12 @@ def run_one(test):
         f = open(ref, "r")
         ref_out = f.read().splitlines()
         f.close()
-        if out != ref_out:
-            diffret = 1
-            print "\nERROR: %s output changed" % (test)
-            show_diff(ref_out, out)
+    else:
+        ref_out = ''
+    if out != ref_out:
+        diffret = 1
+        print "\nERROR: %s output changed" % (test)
+        show_diff(ref_out, out)
     if ret:
         print "\nERROR: %s failed with error code %d" % (test, ret)
     elif diffret:
