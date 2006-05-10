@@ -34,10 +34,25 @@ def vlog(*msg):
             print m,
         print
 
+def splitnewlines(text):
+    '''like str.splitlines, but only split on newlines.
+    keep line endings.'''
+    i = 0
+    lines = []
+    while True:
+        n = text.find('\n', i)
+        if n == -1:
+            last = text[i:]
+            if last:
+                lines.append(last)
+            return lines
+        lines.append(text[i:n+1])
+        i = n + 1
+
 def show_diff(expected, output):
     for line in difflib.unified_diff(expected, output,
             "Expected output", "Test output", lineterm=''):
-        print line
+        sys.stdout.write(line)
 
 def find_program(program):
     """Search PATH for a executable program"""
@@ -125,7 +140,7 @@ def output_coverage():
         vlog("# Running: "+cmd)
         os.system(cmd)
 
-def run(cmd, split_lines=True):
+def run(cmd):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return the exist code, and output."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
@@ -141,9 +156,7 @@ def run(cmd, split_lines=True):
         proc.tochild.close()
         output = proc.fromchild.read()
         ret = proc.wait()
-    if split_lines:
-        output = output.splitlines()
-    return ret, output
+    return ret, splitnewlines(output)
 
 def run_one(test):
     vlog("# Test", test)
@@ -180,10 +193,10 @@ def run_one(test):
     # If reference output file exists, check test output against it
     if os.path.exists(ref):
         f = open(ref, "r")
-        ref_out = f.read().splitlines()
+        ref_out = splitnewlines(f.read())
         f.close()
     else:
-        ref_out = ''
+        ref_out = ['']
     if out != ref_out:
         diffret = 1
         print "\nERROR: %s output changed" % (test)
@@ -194,10 +207,9 @@ def run_one(test):
         ret = diffret
 
     if ret != 0: # Save errors to a file for diagnosis
-        f = open(err, "w")
+        f = open(err, "wb")
         for line in out:
             f.write(line)
-            f.write("\n")
         f.close()
 
     os.chdir(TESTDIR)
