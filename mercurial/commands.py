@@ -3096,7 +3096,7 @@ table = {
          [('u', 'update', None,
            _('update the working directory to tip after unbundle'))],
          _('hg unbundle [-u] FILE')),
-    "undo": (undo, [], _('hg undo')),
+    "debugundo|undo": (undo, [], _('hg undo')),
     "^update|up|checkout|co":
         (update,
          [('b', 'branch', '', _('checkout the head of a specific branch')),
