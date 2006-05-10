@@ -3021,7 +3021,7 @@ table = {
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":
         (remove,
-         [('', 'after', None, _('record remove that has already occurred')),
+         [('A', 'after', None, _('record remove that has already occurred')),
           ('f', 'force', None, _('remove file even if modified')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
