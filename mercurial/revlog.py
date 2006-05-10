@@ -87,6 +87,13 @@ class lazyparser(object):
     """
     this class avoids the need to parse the entirety of large indices
     """
+
+    # lazyparser is not safe to use on windows if win32 extensions not
+    # available. it keeps file handle open, which make it not possible
+    # to break hardlinks on local cloned repos.
+    safe_to_use = os.name != 'nt' or (not util.is_win_9x() and
+                                      hasattr(util, 'win32api'))
+
     def __init__(self, dataf, size, indexformat, shaoffset):
         self.dataf = dataf
         self.format = indexformat
@@ -362,7 +369,8 @@ class revlog(object):
             shaoffset = ngshaoffset
 
         if i:
-            if not self.inlinedata() and st and st.st_size > 10000:
+            if (lazyparser.safe_to_use and not self.inlinedata() and
+                st and st.st_size > 10000):
                 # big index, let's parse it on demand
                 parser = lazyparser(f, st.st_size, self.indexformat, shaoffset)
                 self.index = lazyindex(parser)
