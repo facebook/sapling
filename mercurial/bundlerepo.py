@@ -124,7 +124,7 @@ class bundlerevlog(revlog.revlog):
         p1, p2 = self.parents(node)
         if node != revlog.hash(text, p1, p2):
             raise revlog.RevlogError(_("integrity check failed on %s:%d")
-                          % (self.datafile, self.rev(node)))
+                                     % (self.datafile, self.rev(node)))
 
         self.cache = (node, self.rev(node), text)
         return text
