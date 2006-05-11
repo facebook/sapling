@@ -789,6 +789,7 @@ def backout(ui, repo, rev, **opts):
     commit_opts['addremove'] = False
     if not commit_opts['message'] and not commit_opts['logfile']:
         commit_opts['message'] = _("Backed out changeset %s") % (hex(node))
+        commit_opts['force_editor'] = True
     commit(ui, repo, **commit_opts)
     def nice(node):
         return '%d:%s' % (repo.changelog.rev(node), short(node))
@@ -987,7 +988,8 @@ def commit(ui, repo, *pats, **opts):
     else:
         files = []
     try:
-        repo.commit(files, message, opts['user'], opts['date'], match)
+        repo.commit(files, message, opts['user'], opts['date'], match,
+                    force_editor=opts.get('force_editor'))
     except ValueError, inst:
         raise util.Abort(str(inst))
 

@@ -446,7 +446,8 @@ class localrepository(object):
             self.dirstate.setparents(n, nullid)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False, lock=None, wlock=None):
+               match=util.always, force=False, lock=None, wlock=None,
+               force_editor=False):
         commit = []
         remove = []
         changed = []
@@ -535,8 +536,11 @@ class localrepository(object):
         new.sort()
 
         user = user or self.ui.username()
-        if not text:
-            edittext = [""]
+        if not text or force_editor:
+            edittext = []
+            if text:
+                edittext.append(text)
+            edittext.append("")
             if p2 != nullid:
                 edittext.append("HG: branch merge")
             edittext.extend(["HG: changed %s" % f for f in changed])
