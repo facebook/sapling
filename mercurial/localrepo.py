@@ -1592,6 +1592,7 @@ class localrepository(object):
         if allow and not forcemerge:
             if modified or added or removed:
                 raise util.Abort(_("outstanding uncommitted changes"))
+
         if not forcemerge and not force:
             for f in unknown:
                 if f in m2:
@@ -1765,6 +1766,13 @@ class localrepository(object):
                 return 1
             branch_merge = True
 
+        xp1 = hex(p1)
+        xp2 = hex(p2)
+        if p2 == nullid: xxp2 = ''
+        else: xxp2 = xp2
+
+        self.hook('preupdate', throw=True, parent1=xp1, parent2=xxp2)
+
         # get the files we don't need to change
         files = get.keys()
         files.sort()
@@ -1785,8 +1793,6 @@ class localrepository(object):
         failedmerge = []
         files = merge.keys()
         files.sort()
-        xp1 = hex(p1)
-        xp2 = hex(p2)
         for f in files:
             self.ui.status(_("merging %s\n") % f)
             my, other, flag = merge[f]
@@ -1850,6 +1856,7 @@ class localrepository(object):
                 self.ui.status(_("There are unresolved merges with"
                                  " locally modified files.\n"))
 
+        self.hook('update', parent1=xp1, parent2=xxp2, error=int(err))
         return err
 
     def merge3(self, fn, my, other, p1, p2):

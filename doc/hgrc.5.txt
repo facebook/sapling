@@ -219,10 +219,20 @@ hooks::
     commit to proceed.  Non-zero status will cause the transaction to
     be rolled back.  ID of changeset is in $HG_NODE.  Parent changeset
     IDs are in $HG_PARENT1 and $HG_PARENT2.
+  preupdate;;
+    Run before updating the working directory.  Exit status 0 allows
+    the update to proceed.  Non-zero status will prevent the update.
+    Changeset ID of first new parent is in $HG_PARENT1.  If merge, ID
+    of second new parent is in $HG_PARENT2.
   tag;;
     Run after a tag is created.  ID of tagged changeset is in
     $HG_NODE.  Name of tag is in $HG_TAG.  Tag is local if
     $HG_LOCAL=1, in repo if $HG_LOCAL=0.
+  update;;
+    Run after updating the working directory.  Changeset ID of first
+    new parent is in $HG_PARENT1.  If merge, ID of second new parent
+    is in $HG_PARENT2.  If update succeeded, $HG_ERROR=0.  If update
+    failed (e.g. because conflicts not resolved), $HG_ERROR=1.
 
   In earlier releases, the names of hook environment variables did not
   have a "HG_" prefix.  These unprefixed names are still provided in
