@@ -1,0 +1,46 @@
+#!/bin/sh
+
+mkdir test
+cd test
+hg init
+for i in 0 1 2 3 4 5 6 7 8; do
+	echo $i >> foo
+	hg commit -A -m $i -d "1000000 0"
+done
+hg verify
+hg serve -p 20059 -d --pid-file=hg.pid
+cd ..
+
+hg init new
+# http incoming
+http_proxy= hg -R new incoming http://localhost:20059/
+# local incoming
+hg -R new incoming test
+
+# test with --bundle
+http_proxy= hg -R new incoming --bundle test.hg http://localhost:20059/
+hg -R new incoming --bundle test2.hg test
+
+# test the resulting bundles
+hg init temp
+hg init temp2
+hg -R temp unbundle test.hg
+hg -R temp2 unbundle test2.hg
+hg -R temp tip
+hg -R temp2 tip
+
+rm -rf temp temp2 new
+
+# test outgoing
+hg clone test test-dev
+cd test-dev
+for i in 9 10 11 12 13; do
+	echo $i >> foo
+	hg commit -A -m $i -d "1000000 0"
+done
+hg verify
+cd ..
+hg -R test-dev outgoing test
+http_proxy= hg -R test-dev outgoing http://localhost:20059/
+
+kill `cat test/hg.pid`

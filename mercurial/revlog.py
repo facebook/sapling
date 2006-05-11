@@ -87,6 +87,13 @@ class lazyparser(object):
     """
     this class avoids the need to parse the entirety of large indices
     """
+
+    # lazyparser is not safe to use on windows if win32 extensions not
+    # available. it keeps file handle open, which make it not possible
+    # to break hardlinks on local cloned repos.
+    safe_to_use = os.name != 'nt' or (not util.is_win_9x() and
+                                      hasattr(util, 'win32api'))
+
     def __init__(self, dataf, size, indexformat, shaoffset):
         self.dataf = dataf
         self.format = indexformat
@@ -362,18 +369,14 @@ class revlog(object):
             shaoffset = ngshaoffset
 
         if i:
-            if not self.inlinedata() and st and st.st_size > 10000:
+            if (lazyparser.safe_to_use and not self.inlinedata() and
+                st and st.st_size > 10000):
                 # big index, let's parse it on demand
                 parser = lazyparser(f, st.st_size, self.indexformat, shaoffset)
                 self.index = lazyindex(parser)
                 self.nodemap = lazymap(parser)
             else:
-                i = f.read()
-                self.parseindex(i)
-            if self.inlinedata():
-                # we've already got the entire data file read in, save it
-                # in the chunk data
-                self.chunkcache = (0, i)
+                self.parseindex(f, st)
             if self.version != REVLOGV0:
                 e = list(self.index[0])
                 type = self.ngtype(e[0])
@@ -384,22 +387,49 @@ class revlog(object):
             self.index = []
 
 
-    def parseindex(self, data):
+    def parseindex(self, fp, st):
         s = struct.calcsize(self.indexformat)
-        l = len(data)
         self.index = []
         self.nodemap =  {nullid: -1}
         inline = self.inlinedata()
-        off = 0
         n = 0
-        while off < l:
-            e = struct.unpack(self.indexformat, data[off:off + s])
-            self.index.append(e)
-            self.nodemap[e[-1]] = n
-            n += 1
-            off += s
-            if inline:
-                off += e[1]
+        leftover = None
+        while True:
+            if st:
+                data = fp.read(65536)
+            else:
+                # hack for httprangereader, it doesn't do partial reads well
+                data = fp.read()
+            if not data:
+                break
+            if n == 0 and self.inlinedata():
+                # cache the first chunk
+                self.chunkcache = (0, data)
+            off = 0
+            l = len(data)
+            while off < l:
+                if l - off < s:
+                    leftover = data[off:]
+                    break
+                if leftover:
+                    cur = leftover + data[off:off + s - len(leftover)]
+                    off += s - len(leftover)
+                    leftover = None
+                else:
+                    cur = data[off:off + s]
+                    off += s
+                e = struct.unpack(self.indexformat, cur)
+                self.index.append(e)
+                self.nodemap[e[-1]] = n
+                n += 1
+                if inline:
+                    off += e[1]
+                    if off > l:
+                        # some things don't seek well, just read it
+                        fp.read(off - l)
+            if not st:
+                break
+                
 
     def ngoffset(self, q):
         if q & 0xFFFF:

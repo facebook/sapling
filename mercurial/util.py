@@ -489,6 +489,13 @@ def fstat(fp):
 
 posixfile = file
 
+def is_win_9x():
+    '''return true if run on windows 95, 98 or me.'''
+    try:
+        return sys.getwindowsversion()[3] == 1
+    except AttributeError:
+        return os.name == 'nt' and 'command' in os.environ.get('comspec', '')
+
 # Platform specific variants
 if os.name == 'nt':
     demandload(globals(), "msvcrt")
@@ -570,6 +577,8 @@ if os.name == 'nt':
     try:
         # override functions with win32 versions if possible
         from util_win32 import *
+        if not is_win_9x():
+            posixfile = posixfile_nt
     except ImportError:
         pass
 

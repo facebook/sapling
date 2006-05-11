@@ -183,11 +183,11 @@ def system_rcpath_win32():
     filename = win32process.GetModuleFileNameEx(proc, 0)
     return [os.path.join(os.path.dirname(filename), 'mercurial.ini')]
 
-class posixfile(object):
+class posixfile_nt(object):
     '''file object with posix-like semantics.  on windows, normal
     files can not be deleted or renamed if they are open. must open
     with win32file.FILE_SHARE_DELETE. this flag does not exist on
-    windows <= nt.'''
+    windows < nt, so do not use this class there.'''
 
     # tried to use win32file._open_osfhandle to pass fd to os.fdopen,
     # but does not work at all. wrap win32 file api instead.
@@ -219,6 +219,10 @@ class posixfile(object):
         self.closed = False
         self.name = name
         self.mode = mode
+
+    def __iter__(self):
+        for line in self.read().splitlines(True):
+            yield line
 
     def read(self, count=-1):
         try:
