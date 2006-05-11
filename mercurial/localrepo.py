@@ -1564,8 +1564,7 @@ class localrepository(object):
                moddirstate=True, forcemerge=False, wlock=None, show_stats=True):
         pl = self.dirstate.parents()
         if not force and pl[1] != nullid:
-            self.ui.warn(_("aborting: outstanding uncommitted merges\n"))
-            return 1
+            raise util.Abort(_("outstanding uncommitted merges"))
 
         err = False
 
