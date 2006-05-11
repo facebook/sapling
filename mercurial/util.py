@@ -588,7 +588,7 @@ else:
     def os_rcpath():
         '''return default os-specific hgrc search path'''
         path = []
-        if len(sys.argv) > 0:
+        if len(getattr(sys, 'argv', [])) > 0:
             path.extend(rcfiles(os.path.dirname(sys.argv[0]) +
                                   '/../etc/mercurial'))
         path.extend(rcfiles('/etc/mercurial'))
