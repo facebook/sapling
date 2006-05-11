@@ -242,24 +242,28 @@ PYTHONDIR = os.path.join(INST, "lib", "python")
 COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
 try:
-    install_hg()
+    try:
+        install_hg()
 
-    tests = 0
-    failed = 0
+        tests = 0
+        failed = 0
 
-    if len(args) == 0:
-        args = os.listdir(".")
-    for test in args:
-        if test.startswith("test-"):
-            if '~' in test or re.search(r'\.(out|err)$', test):
-                continue
-            if not run_one(test):
-                failed += 1
-            tests += 1
+        if len(args) == 0:
+            args = os.listdir(".")
+        for test in args:
+            if test.startswith("test-"):
+                if '~' in test or re.search(r'\.(out|err)$', test):
+                    continue
+                if not run_one(test):
+                    failed += 1
+                tests += 1
 
-    print "\n# Ran %d tests, %d failed." % (tests, failed)
-    if coverage:
-        output_coverage()
+        print "\n# Ran %d tests, %d failed." % (tests, failed)
+        if coverage:
+            output_coverage()
+    except KeyboardInterrupt:
+        failed = True
+        print "\ninterrupted!"
 finally:
     cleanup_exit()
 
