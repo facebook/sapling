@@ -1544,8 +1544,9 @@ class localrepository(object):
                          " with %d changes to %d files%s\n")
                          % (changesets, revisions, files, heads))
 
-        self.hook('pretxnchangegroup', throw=True,
-                  node=hex(self.changelog.node(cor+1)), source=srctype)
+        if changesets > 0:
+            self.hook('pretxnchangegroup', throw=True,
+                      node=hex(self.changelog.node(cor+1)), source=srctype)
 
         tr.close()
 
