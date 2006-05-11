@@ -50,7 +50,7 @@ class bundlerevlog(revlog.revlog):
                 continue
             for p in (p1, p2):
                 if not p in self.nodemap:
-                    raise RevlogError(_("unknown parent %s") % short(p1))
+                    raise revlog.RevlogError(_("unknown parent %s") % short(p1))
             if linkmapper is None:
                 link = n
             else:
@@ -76,12 +76,12 @@ class bundlerevlog(revlog.revlog):
             return False
         return rev in self.basemap
     def bundlebase(self, rev): return self.basemap[rev]
-    def chunk(self, rev, df=None):
+    def chunk(self, rev, df=None, cachelen=4096):
         # Warning: in case of bundle, the diff is against bundlebase,
         # not against rev - 1
         # XXX: could use some caching
         if not self.bundle(rev):
-            return revlog.revlog.chunk(self, rev)
+            return revlog.revlog.chunk(self, rev, df, cachelen)
         self.bundlefile.seek(self.start(rev))
         return self.bundlefile.read(self.length(rev))
 
@@ -123,7 +123,7 @@ class bundlerevlog(revlog.revlog):
 
         p1, p2 = self.parents(node)
         if node != revlog.hash(text, p1, p2):
-            raise RevlogError(_("integrity check failed on %s:%d")
+            raise revlog.RevlogError(_("integrity check failed on %s:%d")
                           % (self.datafile, self.rev(node)))
 
         self.cache = (node, self.rev(node), text)
@@ -160,7 +160,6 @@ class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
         localrepo.localrepository.__init__(self, ui, path)
         f = open(bundlename, "rb")
-        s = util.fstat(f)
         self.bundlefile = f
         header = self.bundlefile.read(6)
         if not header.startswith("HG"):
