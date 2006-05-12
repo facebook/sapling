@@ -2277,6 +2277,7 @@ def revert(ui, repo, *pats, **opts):
                            'you must specify the revision to revert to'))
     else:
         node = parent
+    pmf = None
     mf = repo.manifest.read(repo.changelog.read(node)[0])
 
     wlock = repo.wlock()
@@ -2359,7 +2360,12 @@ def revert(ui, repo, *pats, **opts):
                 if exact: ui.warn(_('no changes needed to %s\n' % rel))
                 continue
             if not in_mf:
-                handle(remove, False)
+                if pmf is None:
+                    # only need parent manifest in this unlikely case,
+                    # so do not read by default
+                    pmf = repo.manifest.read(repo.changelog.read(parent)[0])
+                if abs in pmf:
+                    handle(remove, False)
         update[abs] = True
 
     repo.dirstate.forget(forget[0])
