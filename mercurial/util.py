@@ -205,6 +205,8 @@ def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
     if root == os.sep:
         rootsep = os.sep
+    elif root.endswith(os.sep):
+        rootsep = root
     else:
         rootsep = root + os.sep
     name = myname
