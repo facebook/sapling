@@ -281,7 +281,8 @@ class queue:
                 message = '\n'.join(message)
 
             try:
-                f = os.popen("patch -p1 --no-backup-if-mismatch < '%s'" % (pf))
+                pp = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
+                f = os.popen("%s -p1 --no-backup-if-mismatch < '%s'" % (pp, pf))
             except:
                 self.ui.warn("patch failed, unable to continue (try -v)\n")
                 err = 1
