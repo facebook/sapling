@@ -1,0 +1,203 @@
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+4 files, 9 changesets, 7 total revisions
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 0 changesets with 0 changes to 4 files
+(run 'hg update' to get a working copy)
+adding changesets
+adding manifests
+adding file changes
+added 9 changesets with 7 changes to 4 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+changeset:   8:836ac62537ab
+tag:         tip
+parent:      3:ac69c658229d
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.3m
+
+changeset:   7:80fe151401c2
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3m
+
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+4 files, 9 changesets, 7 total revisions
+changeset:   8:836ac62537ab
+tag:         tip
+parent:      3:ac69c658229d
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.3m
+
+changeset:   7:80fe151401c2
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3m
+
+changeset:   6:1e3f6b843bd6
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3
+
+changeset:   5:024e4e7df376
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.2
+
+changeset:   4:5f4f3ceb285e
+parent:      0:5649c9d34dd8
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.1
+
+changeset:   3:ac69c658229d
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.3
+
+changeset:   2:d62976ca1e50
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.2
+
+changeset:   1:10b2180f755b
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.1
+
+changeset:   0:5649c9d34dd8
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.0
+
+pulling from bundle://../full.hg
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 9 changesets with 7 changes to 4 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 4 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   8:836ac62537ab
+tag:         tip
+parent:      3:ac69c658229d
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.3m
+
+changeset:   7:80fe151401c2
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3m
+
+changeset:   6:1e3f6b843bd6
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3
+
+changeset:   5:024e4e7df376
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.2
+
+changeset:   4:5f4f3ceb285e
+parent:      0:5649c9d34dd8
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.1
+
+changeset:   3:ac69c658229d
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.3
+
+changeset:   2:d62976ca1e50
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.2
+
+changeset:   1:10b2180f755b
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.1
+
+changeset:   0:5649c9d34dd8
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.0
+
+searching for changes
+changeset:   4:5f4f3ceb285e
+parent:      0:5649c9d34dd8
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.1
+
+changeset:   5:024e4e7df376
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.2
+
+changeset:   6:1e3f6b843bd6
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3
+
+changeset:   7:80fe151401c2
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3m
+
+changeset:   8:836ac62537ab
+tag:         tip
+parent:      3:ac69c658229d
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.3m
+
+searching for changes
+changeset:   4:5f4f3ceb285e
+parent:      0:5649c9d34dd8
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.1
+
+changeset:   5:024e4e7df376
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.2
+
+changeset:   6:1e3f6b843bd6
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3
+
+changeset:   7:80fe151401c2
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3m
+
+changeset:   8:836ac62537ab
+tag:         tip
+parent:      3:ac69c658229d
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.3m
+
