@@ -1,0 +1,52 @@
+What is "hg purge"?
+===================
+"purge" is a simple extension for the Mercurial source control management
+system (http://www.selenic.com/mercurial).
+This extension adds a "purge" command to "hg" that removes files not known
+to mercurial, this is useful to test local and uncommitted changes in the
+otherwise clean source tree.
+
+This means that Mercurial will delete:
+ - Unknown files: files marked with "?" by "hg status"
+ - Ignored files: files usually ignored by Mercurial because they match a
+   pattern in a ".hgignore" file
+ - Empty directories: infact Mercurial ignores directories unless they
+   contain files under source control managment
+But it will leave untouched:
+ - Unmodified files tracked by Mercurial
+ - Modified files tracked by Mercurial
+ - New files added to the repository (with "hg add")
+
+Be careful with "hg purge", you could irreversibly delete some files you
+forgot to add to the repository. If you only want to print the list of
+files that this program would delete use:
+  hg purge -vn
+
+
+How to install
+==============
+Put the "purge.py" file in a directory of your choice, then enable the
+extension putting a line like:
+  purge=/path/you/choose/purge.py
+in the "[extensions]" section of a configuration file read by "hg". For
+more information on these files read the man page for "hgrc":
+  man 5 hgrc
+
+
+How to use "hg purge"
+====================
+For help on the usage of "hg purge" use:
+  hg help purge
+
+
+License
+=======
+Copyright (C) 2006 - Marco Barisione <marco@barisione.org>
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+A copy of the GNU General Public License is distributed along
+with this program in the file COPYING.GPL.
