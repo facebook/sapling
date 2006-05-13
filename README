@@ -25,6 +25,10 @@ files that this program would delete use:
 
 How to install
 ==============
+Obviously you need an installed version of Mercurial to use this extension.
+"purge" has been tested with Mercurial 0.8.1 and 0.9 but it may work with
+other versions as well.
+
 Put the "purge.py" file in a directory of your choice. Enable the extension
 inserting an instruction like "purge=/path/you/choose/purge.py" in the
 "[extensions]" section of a configuration file read by "hg".
