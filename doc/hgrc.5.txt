@@ -289,7 +289,15 @@ smtp::
 paths::
   Assigns symbolic names to repositories.  The left side is the
   symbolic name, and the right gives the directory or URL that is the
-  location of the repository.
+  location of the repository.  Default paths can be declared by
+ setting the following entries.
+  default;;
+    Directory or URL to use when pulling if no source is specified.
+    Default is set to repository from which the current repository
+    was cloned.
+  default-push;;
+    Optional.  Directory or URL to use when pushing if no destination
+    is specified.
 
 ui::
   User interface controls.
