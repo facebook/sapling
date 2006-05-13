@@ -25,11 +25,18 @@ files that this program would delete use:
 
 How to install
 ==============
-Put the "purge.py" file in a directory of your choice, then enable the
-extension putting a line like:
-  purge=/path/you/choose/purge.py
-in the "[extensions]" section of a configuration file read by "hg". For
-more information on these files read the man page for "hgrc":
+Put the "purge.py" file in a directory of your choice. Enable the extension
+inserting an instruction like "purge=/path/you/choose/purge.py" in the
+"[extensions]" section of a configuration file read by "hg".
+
+For instance if you installed the script in "/home/USER/hg-purge/", you
+can create a file named  ".hgrc" in your home directory with the following
+content:
+  [extensions]
+  purge=/home/USER/hg-purge/purge.py
+Note that using "~/USER/hg-purge/purge.py" does not work with hg 0.9.
+
+For more information on the configuration files see the man page for "hgrc":
   man 5 hgrc
 
 
