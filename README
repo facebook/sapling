@@ -3,7 +3,7 @@ What is "hg purge"?
 "purge" is a simple extension for the Mercurial source control management
 system (http://www.selenic.com/mercurial).
 This extension adds a "purge" command to "hg" that removes files not known
-to mercurial, this is useful to test local and uncommitted changes in the
+to Mercurial, this is useful to test local and uncommitted changes in the
 otherwise clean source tree.
 
 This means that Mercurial will delete:
@@ -22,7 +22,10 @@ forgot to add to the repository. If you only want to print the list of
 files that this program would delete use:
   hg purge -vn
 
-"hg purge" was inspired by the "cvspurge" script contained in CVS utilities
+To get the most recent version of "hg purge" visit its home page:
+  http://www.barisione.org/apps.html#hg-purge
+
+This program was inspired by the "cvspurge" script contained in CVS utilities
 (http://www.red-bean.com/cvsutils/).
 
 
