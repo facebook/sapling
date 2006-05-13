@@ -684,7 +684,7 @@ class hgweb(object):
         mf = self.repo.manifest.read(cs[0])
 
         def diff(**map):
-            yield self.diff(p1, n, file)
+            yield self.diff(p1, n, [file])
 
         yield self.t("filediff",
                      file=file,
