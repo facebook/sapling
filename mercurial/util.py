@@ -213,7 +213,7 @@ def canonpath(root, cwd, myname):
     if not os.path.isabs(name):
         name = os.path.join(root, cwd, name)
     name = os.path.normpath(name)
-    if name.startswith(rootsep):
+    if name != rootsep and name.startswith(rootsep):
         name = name[len(rootsep):]
         audit_path(name)
         return pconvert(name)
