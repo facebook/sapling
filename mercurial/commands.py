@@ -3136,6 +3136,7 @@ globalopts = [
      _('do not prompt, assume \'yes\' for any required answers')),
     ('q', 'quiet', None, _('suppress output')),
     ('v', 'verbose', None, _('enable additional output')),
+    ('', 'config', [], _('set/override config option')),
     ('', 'debug', None, _('enable debugging output')),
     ('', 'debugger', None, _('start debugger')),
     ('', 'traceback', None, _('print traceback on exception')),
@@ -3300,7 +3301,8 @@ def dispatch(args):
             atexit.register(print_time)
 
         u.updateopts(options["verbose"], options["debug"], options["quiet"],
-                     not options["noninteractive"], options["traceback"])
+                     not options["noninteractive"], options["traceback"],
+                     options["config"])
 
         # enter the debugger before command execution
         if options['debugger']:

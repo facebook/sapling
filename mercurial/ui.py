@@ -47,12 +47,23 @@ class ui(object):
         return getattr(self.parentui, key)
 
     def updateopts(self, verbose=False, debug=False, quiet=False,
-                   interactive=True, traceback=False):
+                   interactive=True, traceback=False, config=[]):
         self.quiet = (self.quiet or quiet) and not verbose and not debug
         self.verbose = (self.verbose or verbose) or debug
         self.debugflag = (self.debugflag or debug)
         self.interactive = (self.interactive and interactive)
         self.traceback = self.traceback or traceback
+        for cfg in config:
+            try:
+                name, value = cfg.split('=', 1)
+                section, name = name.split('.', 1)
+                if not self.cdata.has_section(section):
+                    self.cdata.add_section(section)
+                if not section or not name:
+                    raise IndexError
+                self.cdata.set(section, name, value)
+            except (IndexError, ValueError):
+                raise util.Abort(_('malformed --config option: %s') % cfg)
 
     def readconfig(self, fn, root=None):
         if isinstance(fn, basestring):
