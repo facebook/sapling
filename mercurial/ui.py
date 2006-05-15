@@ -271,8 +271,10 @@ class ui(object):
 
     def sendmail(self):
         s = smtplib.SMTP()
-        s.connect(host = self.config('smtp', 'host', 'mail'),
-                  port = int(self.config('smtp', 'port', 25)))
+        mailhost = self.config('smtp', 'host')
+        if not mailhost:
+            raise util.Abort(_('no [smtp]host in hgrc - cannot send mail'))
+        s.connect(host=mailhost, port=int(self.config('smtp', 'port', 25)))
         if self.configbool('smtp', 'tls'):
             s.ehlo()
             s.starttls()
