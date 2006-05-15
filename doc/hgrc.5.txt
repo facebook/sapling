@@ -234,10 +234,9 @@ hooks::
     is in $HG_PARENT2.  If update succeeded, $HG_ERROR=0.  If update
     failed (e.g. because conflicts not resolved), $HG_ERROR=1.
 
-  In earlier releases, the names of hook environment variables did not
-  have a "HG_" prefix.  These unprefixed names are still provided in
-  the environment for backwards compatibility, but their use is
-  deprecated, and they will be removed in a future release.
+  Note: In earlier releases, the names of hook environment variables
+  did not have a "HG_" prefix.  The old unprefixed names are no longer
+  provided in the environment.
 
   The syntax for Python hooks is as follows:
 

@@ -136,8 +136,7 @@ class localrepository(object):
 
         def runhook(name, cmd):
             self.ui.note(_("running hook %s: %s\n") % (name, cmd))
-            env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()] +
-                       [(k.upper(), v) for k, v in args.iteritems()])
+            env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()])
             r = util.system(cmd, environ=env, cwd=self.root)
             if r:
                 desc, r = util.explain_exit(r)
