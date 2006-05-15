@@ -8,7 +8,7 @@
 import ConfigParser
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "errno os re smtplib socket sys tempfile util")
+demandload(globals(), "errno getpass os re smtplib socket sys tempfile util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
@@ -224,15 +224,18 @@ class ui(object):
 
     def readline(self):
         return sys.stdin.readline()[:-1]
-    def prompt(self, msg, pat, default="y"):
+    def prompt(self, msg, pat=None, default="y"):
         if not self.interactive: return default
         while 1:
             self.write(msg, " ")
             r = self.readline()
-            if re.match(pat, r):
+            if not pat or re.match(pat, r):
                 return r
             else:
                 self.write(_("unrecognized response\n"))
+    def getpass(self, prompt=None, default=None):
+        if not self.interactive: return default
+        return getpass.getpass(prompt or _('password: '))
     def status(self, *msg):
         if not self.quiet: self.write(*msg)
     def warn(self, *msg):
