@@ -797,7 +797,7 @@ def backout(ui, repo, rev, **opts):
               (nice(repo.changelog.tip()), nice(node)))
     if opts['merge'] and op1 != node:
         ui.status(_('merging with changeset %s\n') % nice(op1))
-        update(ui, repo, hex(op1), **opts)
+        doupdate(ui, repo, hex(op1), **opts)
 
 def bundle(ui, repo, fname, dest="default-push", **opts):
     """create a changegroup file
@@ -947,7 +947,7 @@ def clone(ui, source, dest=None, **opts):
     f.close()
 
     if not opts['noupdate']:
-        update(repo.ui, repo)
+        doupdate(repo.ui, repo)
 
     d.close()
 
@@ -1956,7 +1956,7 @@ def merge(ui, repo, node=None, **opts):
     marked as changed for the next commit and a commit must be
     performed before any further updates are allowed.
     """
-    return update(ui, repo, node=node, merge=True, **opts)
+    return doupdate(ui, repo, node=node, merge=True, **opts)
 
 def outgoing(ui, repo, dest="default-push", **opts):
     """show changesets not found in destination
@@ -2035,7 +2035,7 @@ def postincoming(ui, repo, modheads, optupdate):
         return
     if optupdate:
         if modheads == 1:
-            return update(ui, repo)
+            return doupdate(ui, repo)
         else:
             ui.status(_("not updating, since new heads added\n"))
     if modheads > 1:
@@ -2740,15 +2740,19 @@ def update(ui, repo, node=None, merge=False, clean=False, force=None,
     there is a linear relationship between the current version and the
     requested version, the result is the requested version.
 
-    Otherwise the result is a merge between the contents of the
-    current working directory and the requested version. Files that
-    changed between either parent are marked as changed for the next
-    commit and a commit must be performed before any further updates
-    are allowed.
+    To merge the working directory with another revision, use the
+    merge command.
 
     By default, update will refuse to run if doing so would require
     merging or discarding local changes.
     """
+    if merge:
+        ui.warn(_('(the -m/--merge option is deprecated; '
+                  'use the merge command instead)\n'))
+    return doupdate(ui, repo, node, merge, clean, force, branch, **opts)
+
+def doupdate(ui, repo, node=None, merge=False, clean=False, force=None,
+             branch=None, **opts):
     if branch:
         br = repo.branchlookup(branch=branch)
         found = []
@@ -3115,7 +3119,7 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('b', 'branch', '', _('checkout the head of a specific branch')),
-          ('m', 'merge', None, _('allow merging of branches')),
+          ('m', 'merge', None, _('allow merging of branches (DEPRECATED)')),
           ('C', 'clean', None, _('overwrite locally modified files')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
          _('hg update [-b TAG] [-m] [-C] [-f] [REV]')),

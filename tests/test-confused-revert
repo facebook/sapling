@@ -28,7 +28,7 @@ hg co -C 0
 echo foo-b > a
 hg commit -m "2b" -d "1000000 0"
 
-HGMERGE=true hg update -m 1
+HGMERGE=true hg merge 1
 
 echo "%%% should show foo-b"
 cat a

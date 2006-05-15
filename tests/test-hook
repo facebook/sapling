@@ -29,7 +29,7 @@ hg update -C 0
 echo b > b
 hg add b
 hg commit -m b -d '1 0'
-hg update -m 1
+hg merge 1
 hg commit -m merge -d '2 0'
 
 cd ../b

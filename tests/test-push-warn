@@ -23,7 +23,7 @@ hg commit -m "3" -d "1000000 0"
 hg push ../a
 hg pull ../a
 hg push ../a
-hg up -m
+hg merge
 hg commit -m "4" -d "1000000 0"
 hg push ../a
 cd ..
@@ -44,7 +44,7 @@ for i in 0 1; do
     hg ci -m d-$i -d "1000000 0"
 done
 
-HGMERGE=true hg co -m 3
+HGMERGE=true hg merge 3
 hg ci -m c-d -d "1000000 0"
 
 hg push ../c

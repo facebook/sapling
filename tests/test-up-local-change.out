@@ -112,7 +112,7 @@ failed
 abort: outstanding uncommitted changes
 failed
 resolving manifests
- force None allow 1 moddirstate True linear False
+ force False allow True moddirstate True linear False
  ancestor a0c8bcbbb45c local 1165e8bd193e remote 4096f2872392
  a versions differ, resolve
  b versions differ, resolve

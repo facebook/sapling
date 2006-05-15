@@ -27,7 +27,7 @@ hg pull ../test2
 hg heads
 hg history
 
-hg -v co -m
+hg -v merge
 
 ls -l ../test[12]/a > foo
 cut -b 1-10 < foo
