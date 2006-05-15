@@ -405,19 +405,17 @@ class revlog(object):
             if n == 0 and self.inlinedata():
                 # cache the first chunk
                 self.chunkcache = (0, data)
+            if leftover:
+                data = leftover + data
+                leftover = None
             off = 0
             l = len(data)
             while off < l:
                 if l - off < s:
                     leftover = data[off:]
                     break
-                if leftover:
-                    cur = leftover + data[off:off + s - len(leftover)]
-                    off += s - len(leftover)
-                    leftover = None
-                else:
-                    cur = data[off:off + s]
-                    off += s
+                cur = data[off:off + s]
+                off += s
                 e = struct.unpack(self.indexformat, cur)
                 self.index.append(e)
                 self.nodemap[e[-1]] = n
