@@ -135,6 +135,20 @@ email::
   from;;
     Optional.  Email address to use in "From" header and SMTP envelope
     of outgoing messages.
+  method;;
+    Optional.  Method to use to send email messages.  If value is
+    "smtp" (default), use SMTP (see section "[mail]" for
+    configuration).  Otherwise, use as name of program to run that
+    acts like sendmail (takes "-f" option for sender, list of
+    recipients on command line, message on stdin).  Normally, setting
+    this to "sendmail" or "/usr/sbin/sendmail" is enough to use
+    sendmail to send messages.
+
+  Email example:
+
+    [email]
+    from = Joseph User <joe.user@example.com>
+    method = /usr/sbin/sendmail
 
 extensions::
   Mercurial has an extension mechanism for adding new features. To
