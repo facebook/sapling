@@ -16,7 +16,7 @@ import win32api
 from demandload import *
 from i18n import gettext as _
 demandload(globals(), 'errno os pywintypes win32con win32file win32process')
-demandload(globals(), 'cStringIO winerror')
+demandload(globals(), 'cStringIO win32com.shell:shell,shellcon winerror')
 
 class WinError:
     winerror_map = {
@@ -182,6 +182,17 @@ def system_rcpath_win32():
     proc = win32api.GetCurrentProcess()
     filename = win32process.GetModuleFileNameEx(proc, 0)
     return [os.path.join(os.path.dirname(filename), 'mercurial.ini')]
+
+def user_rcpath():
+    '''return os-specific hgrc search path to the user dir'''
+    userdir = os.path.expanduser('~')
+    if userdir == '~':
+        # We are on win < nt: fetch the APPDATA directory location and use
+        # the parent directory as the user home dir.
+        appdir = shell.SHGetPathFromIDList(
+            qshell.SHGetSpecialFolderLocation(0, shellcon.CSIDL_APPDATA))
+        userdir = os.path.dirname(appdir)
+    return os.path.join(userdir, 'mercurial.ini')
 
 class posixfile_nt(object):
     '''file object with posix-like semantics.  on windows, normal
