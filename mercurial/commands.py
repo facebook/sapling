@@ -1305,10 +1305,11 @@ def debugindexdot(ui, file_):
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "", 0)
     ui.write("digraph G {\n")
     for i in range(r.count()):
-        e = r.index[i]
-        ui.write("\t%d -> %d\n" % (r.rev(e[4]), i))
-        if e[5] != nullid:
-            ui.write("\t%d -> %d\n" % (r.rev(e[5]), i))
+        node = r.node(i)
+        pp = r.parents(node)
+        ui.write("\t%d -> %d\n" % (r.rev(pp[0]), i))
+        if pp[1] != nullid:
+            ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
 
 def debugrename(ui, repo, file, rev=None):
