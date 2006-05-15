@@ -180,7 +180,11 @@ def testpid(pid):
 def system_rcpath_win32():
     '''return default os-specific hgrc search path'''
     proc = win32api.GetCurrentProcess()
-    filename = win32process.GetModuleFileNameEx(proc, 0)
+    try:
+        # This will fail on windows < NT
+        filename = win32process.GetModuleFileNameEx(proc, 0)
+    except:
+        filename = win32api.GetModuleFileName(0)
     return [os.path.join(os.path.dirname(filename), 'mercurial.ini')]
 
 def user_rcpath():
