@@ -85,7 +85,8 @@ class Purge(object):
 
     def _relative_name(self, name):
         splitted_path = self._split_path(name)[len(self._hg_root):]
-        return self._join_path(splitted_path)
+        # Even on Windows self._repo.dirstate.state() wants '/'.
+        return self._join_path(splitted_path).replace('\\', '/')
 
     def _split_path(self, path):
         ret = []
