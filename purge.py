@@ -33,15 +33,15 @@ class Purge(object):
         self._act = act
         self._abort_on_err = abort_on_err
 
-    def purge(self, ui, repo, paths=None):
+    def purge(self, ui, repo, dirs=None):
         self._repo = repo
         self._ui = ui
         self._hg_root = self._split_path(repo.root)
 
-        if not paths:
-            paths = [repo.root]
+        if not dirs:
+            dirs = [repo.root]
 
-        for path in paths:
+        for path in dirs:
             path = os.path.abspath(path)
             for root, dirs, files in os.walk(path, topdown=False):
                 if '.hg' in self._split_path(root):
@@ -129,7 +129,7 @@ class Purge(object):
         return ret
 
 
-def purge(ui, repo, *paths, **opts):
+def purge(ui, repo, *dirs, **opts):
     '''removes files not tracked by mercurial
 
     Delete files not known to mercurial, this is useful to test local and
@@ -137,8 +137,8 @@ def purge(ui, repo, *paths, **opts):
 
     This means that purge will delete:
      - Unknown files: files marked with "?" by "hg status"
-     - Ignored files: files usually ignored by Mercurial because they match a
-       pattern in a ".hgignore" file
+     - Ignored files: files usually ignored by Mercurial because they match
+       a pattern in a ".hgignore" file
      - Empty directories: infact Mercurial ignores directories unless they
        contain files under source control managment
     But it will leave untouched:
@@ -146,8 +146,8 @@ def purge(ui, repo, *paths, **opts):
      - Modified tracked files
      - New files added to the repository (with "hg add")
 
-    If names are given, only files matching the names are considered, else
-    all files in the repository directory are considered.
+    If directories are given on the command line, only files in these
+    directories are considered.
 
     Be careful with purge, you could irreversibly delete some files you
     forgot to add to the repository. If you only want to print the list of
@@ -156,7 +156,7 @@ def purge(ui, repo, *paths, **opts):
     act = not opts['nothing']
     abort_on_err = bool(opts['abort_on_err'])
     p = Purge(act, abort_on_err)
-    p.purge(ui, repo, paths)
+    p.purge(ui, repo, dirs)
 
 
 cmdtable = {
@@ -164,5 +164,5 @@ cmdtable = {
                  [('a', 'abort-on-err', None, _('abort if an error occurs')),
                   ('n', 'nothing',      None, _('do nothing on files, useful with --verbose')),
                  ],
-                 _('hg purge [OPTIONS] [NAME]'))
+                 _('hg purge [OPTIONS] [DIR]'))
 }
