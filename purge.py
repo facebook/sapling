@@ -23,30 +23,6 @@ from mercurial import hg, util
 import os
 
 class Purge(object):
-    '''removes files not tracked by mercurial
-
-    Delete files not known to mercurial, this is useful to test local and
-    uncommitted changes in the otherwise clean source tree.
-
-    This means that purge will delete:
-     - Unknown files: files marked with "?" by "hg status"
-     - Ignored files: files usually ignored by Mercurial because they match a
-       pattern in a ".hgignore" file
-     - Empty directories: infact Mercurial ignores directories unless they
-       contain files under source control managment
-    But it will leave untouched:
-     - Unmodified tracked files
-     - Modified tracked files
-     - New files added to the repository (with "hg add")
-
-    If names are given, only files matching the names are considered, else
-    all files in the repository directory are considered.
-
-    Be careful with purge, you could irreversibly delete some files you
-    forgot to add to the repository. If you only want to print the list of
-    files that this program would delete use the -vn options.
-    '''
-
     def __init__(self, act=True, abort_on_err=False):
         self._repo = None
         self._ui = None
@@ -135,26 +111,45 @@ class Purge(object):
                 ret = part
         return ret
 
-    def from_command(ui, repo, *paths, **opts):
-        act = True
-        if opts['nothing']:
-            act = False
 
-        abort_on_err = True
-        if not opts['abort_on_err']:
-            abort_on_err = False
+def purge(ui, repo, *paths, **opts):
+    '''removes files not tracked by mercurial
 
-        p = Purge(act, abort_on_err)
-        p.purge(ui, repo, paths)
+    Delete files not known to mercurial, this is useful to test local and
+    uncommitted changes in the otherwise clean source tree.
 
-    # The docstring of from_command() is used by hg to print the help
-    # of the command.
-    from_command.__doc__ = __doc__
-    from_command = staticmethod(from_command)
+    This means that purge will delete:
+     - Unknown files: files marked with "?" by "hg status"
+     - Ignored files: files usually ignored by Mercurial because they match a
+       pattern in a ".hgignore" file
+     - Empty directories: infact Mercurial ignores directories unless they
+       contain files under source control managment
+    But it will leave untouched:
+     - Unmodified tracked files
+     - Modified tracked files
+     - New files added to the repository (with "hg add")
+
+    If names are given, only files matching the names are considered, else
+    all files in the repository directory are considered.
+
+    Be careful with purge, you could irreversibly delete some files you
+    forgot to add to the repository. If you only want to print the list of
+    files that this program would delete use the -vn options.
+    '''
+    act = True
+    if opts['nothing']:
+        act = False
+
+    abort_on_err = True
+    if not opts['abort_on_err']:
+        abort_on_err = False
+
+    p = Purge(act, abort_on_err)
+    p.purge(ui, repo, paths)
 
 
 cmdtable = {
-    'purge':    (Purge.from_command,
+    'purge':    (purge,
                  [('a', 'abort-on-err', None, 'abort if an error occurs'),
                   ('n', 'nothing',      None, 'do nothing on files, useful with --verbose'),
                  ],
