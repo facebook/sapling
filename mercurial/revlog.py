@@ -1137,7 +1137,7 @@ class revlog(object):
 
             for p in (p1, p2):
                 if not p in self.nodemap:
-                    raise RevlogError(_("unknown parent %s") % short(p1))
+                    raise RevlogError(_("unknown parent %s") % short(p))
 
             if not chain:
                 # retrieve the parent revision of the delta chain
