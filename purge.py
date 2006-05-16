@@ -83,12 +83,24 @@ class Purge(object):
             except OSError, e:
                 self._error('"%s" cannot be removed' % name)
 
-    def _relative_name(self, name):
-        splitted_path = self._split_path(name)[len(self._hg_root):]
+    def _relative_name(self, path):
+        '''
+        Returns "path" but relative to the root directory of the
+        repository and with '\\' replaced with '/'.
+        This is needed because this is the format required by
+        self._repo.dirstate.state().
+        '''
+        splitted_path = self._split_path(path)[len(self._hg_root):]
         # Even on Windows self._repo.dirstate.state() wants '/'.
         return self._join_path(splitted_path).replace('\\', '/')
 
     def _split_path(self, path):
+        '''
+        Retruns a list of the single files/directories in "path".
+        For instance:
+          '/home/user/test' -> ['/', 'home', 'user', 'test']
+          'C:\\Mercurial'   -> ['C:\\', 'Mercurial']
+        '''
         ret = []
         while True:
             head, tail = os.path.split(path)
@@ -102,6 +114,9 @@ class Purge(object):
         return ret
 
     def _join_path(self, splitted_path):
+        '''
+        Joins a list returned by _split_path().
+        '''
         ret = ''
         for part in splitted_path:
             if ret:
