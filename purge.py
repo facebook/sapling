@@ -60,7 +60,7 @@ class Purge(object):
         if self._abort_on_err:
             raise util.Abort(msg)
         else:
-            ui.warn('warning: ' + msg + '\n')
+            self._ui.warn('warning: ' + msg + '\n')
 
     def _remove_file(self, name):
         relative_name = self._relative_name(name)
@@ -73,7 +73,7 @@ class Purge(object):
             try:
                 os.remove(name)
             except OSError, e:
-                error('"%s" cannot be removed' % name)
+                self._error('"%s" cannot be removed' % name)
 
     def _remove_dir(self, name):
         self._ui.note(name + '\n')
@@ -81,7 +81,7 @@ class Purge(object):
             try:
                 os.rmdir(name)
             except OSError, e:
-                error('"%s" cannot be removed' % name)
+                self._error('"%s" cannot be removed' % name)
 
     def _relative_name(self, name):
         splitted_path = self._split_path(name)[len(self._hg_root):]
