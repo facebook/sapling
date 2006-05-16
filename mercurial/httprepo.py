@@ -103,7 +103,10 @@ class httprepository(remoterepository):
         q.update(args)
         qs = urllib.urlencode(q)
         cu = "%s?%s" % (self.url, qs)
-        resp = urllib2.urlopen(cu)
+        try:
+            resp = urllib2.urlopen(cu)
+        except httplib.HTTPException, inst:
+            raise IOError(None, _('http error while sending %s command') % cmd)
         proto = resp.headers['content-type']
 
         # accept old "text/plain" and "application/hg-changegroup" for now
