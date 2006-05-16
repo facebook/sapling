@@ -22,6 +22,9 @@
 from mercurial import hg, util
 import os
 
+def _(s):
+    return s
+
 class Purge(object):
     def __init__(self, act=True, abort_on_err=False):
         self._repo = None
@@ -60,7 +63,7 @@ class Purge(object):
         if self._abort_on_err:
             raise util.Abort(msg)
         else:
-            self._ui.warn('warning: ' + msg + '\n')
+            self._ui.warn(_('warning: %s\n') % msg)
 
     def _remove_file(self, name):
         relative_name = self._relative_name(name)
@@ -73,7 +76,7 @@ class Purge(object):
             try:
                 os.remove(name)
             except OSError, e:
-                self._error('"%s" cannot be removed' % name)
+                self._error(_('%s cannot be removed') % name)
 
     def _remove_dir(self, name):
         self._ui.note(name + '\n')
@@ -81,7 +84,7 @@ class Purge(object):
             try:
                 os.rmdir(name)
             except OSError, e:
-                self._error('"%s" cannot be removed' % name)
+                self._error(_('%s cannot be removed') % name)
 
     def _relative_name(self, path):
         '''
@@ -158,8 +161,8 @@ def purge(ui, repo, *paths, **opts):
 
 cmdtable = {
     'purge':    (purge,
-                 [('a', 'abort-on-err', None, 'abort if an error occurs'),
-                  ('n', 'nothing',      None, 'do nothing on files, useful with --verbose'),
+                 [('a', 'abort-on-err', None, _('abort if an error occurs')),
+                  ('n', 'nothing',      None, _('do nothing on files, useful with --verbose')),
                  ],
-                 'hg purge [OPTIONS] [NAME]')
+                 _('hg purge [OPTIONS] [NAME]'))
 }
