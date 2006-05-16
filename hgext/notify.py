@@ -228,14 +228,13 @@ class notifier(object):
             mail = self.ui.sendmail()
             mail.sendmail(templater.email(msg['From']), self.subs, msgtext)
 
-    def diff(self, node):
+    def diff(self, node, ref):
         maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
         if maxdiff == 0:
             return
         fp = templater.stringio()
         prev = self.repo.changelog.parents(node)[0]
-        commands.dodiff(fp, self.ui, self.repo, prev,
-                        self.repo.changelog.tip())
+        commands.dodiff(fp, self.ui, self.repo, prev, ref)
         difflines = fp.getvalue().splitlines(1)
         if maxdiff > 0 and len(difflines) > maxdiff:
             self.sio.write(_('\ndiffs (truncated from %d to %d lines):\n\n') %
@@ -260,8 +259,9 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         count = end - start
         for rev in xrange(start, end):
             n.node(repo.changelog.node(rev))
+        n.diff(node, repo.changelog.tip())
     else:
         count = 1
         n.node(node)
-    n.diff(node)
+        n.diff(node, node)
     n.send(node, count)
