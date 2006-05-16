@@ -134,7 +134,7 @@ def purge(ui, repo, *paths, **opts):
     forgot to add to the repository. If you only want to print the list of
     files that this program would delete use the -vn options.
     '''
-    act = bool(opts['nothing'])
+    act = not opts['nothing']
     abort_on_err = bool(opts['abort_on_err'])
     p = Purge(act, abort_on_err)
     p.purge(ui, repo, paths)
