@@ -68,8 +68,7 @@ class Purge(object):
         # directory.
         if self._repo.dirstate.state(relative_name) != '?':
             return
-        if self._ui.verbose:
-            self._ui.status(name + '\n')
+        self._ui.note(name + '\n')
         if self._act:
             try:
                 os.remove(name)
@@ -77,8 +76,7 @@ class Purge(object):
                 error('"%s" cannot be removed' % name)
 
     def _remove_dir(self, name):
-        if self._ui.verbose:
-            self._ui.status(name + '\n')
+        self._ui.note(name + '\n')
         if self._act:
             try:
                 os.rmdir(name)
