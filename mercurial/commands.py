@@ -1392,7 +1392,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
 
     fp.write("# HG changeset patch\n")
     fp.write("# User %s\n" % change[1])
-    fp.write("# Timestamp %d %d\n" % (change[2][0], change[2][1]))
+    fp.write("# Date %d %d\n" % change[2])
     fp.write("# Node ID %s\n" % hex(node))
     fp.write("# Parent  %s\n" % hex(prev))
     if len(parents) > 1:
@@ -1705,8 +1705,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                 if line.startswith("# User "):
                     user = line[7:]
                     ui.debug(_('User: %s\n') % user)
-                elif line.startswith("# Timestamp "):
-                    date = line[12:]
+                elif line.startswith("# Date "):
+                    date = line[7:]
                 elif not line.startswith("# ") and line:
                     message.append(line)
                     hgpatch = False

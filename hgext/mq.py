@@ -120,8 +120,8 @@ class queue:
                 # parse values when importing the result of an hg export
                 if line.startswith("# User "):
                     user = line[7:]
-                elif line.startswith("# Timestamp "):
-                    date = line[12:]
+                elif line.startswith("# Date "):
+                    date = line[7:]
                 elif not line.startswith("# ") and line:
                     message.append(line)
                     format = None
