@@ -205,13 +205,15 @@ def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
     if root == os.sep:
         rootsep = os.sep
+    elif root.endswith(os.sep):
+        rootsep = root
     else:
         rootsep = root + os.sep
     name = myname
     if not os.path.isabs(name):
         name = os.path.join(root, cwd, name)
     name = os.path.normpath(name)
-    if name.startswith(rootsep):
+    if name != rootsep and name.startswith(rootsep):
         name = name[len(rootsep):]
         audit_path(name)
         return pconvert(name)
@@ -533,8 +535,16 @@ if os.name == 'nt':
 
     def os_rcpath():
         '''return default os-specific hgrc search path'''
-        return system_rcpath() + [os.path.join(os.path.expanduser('~'),
-                                               'mercurial.ini')]
+        path = system_rcpath()
+        path.append(user_rcpath())
+        userprofile = os.environ.get('USERPROFILE')
+        if userprofile:
+            path.append(os.path.join(userprofile, 'mercurial.ini'))
+        return path
+
+    def user_rcpath():
+         '''return os-specific hgrc search path to the user dir'''
+         return os.path.join(os.path.expanduser('~'), 'mercurial.ini')
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
@@ -597,7 +607,8 @@ else:
     def os_rcpath():
         '''return default os-specific hgrc search path'''
         path = []
-        if len(sys.argv) > 0:
+        # old mod_python does not set sys.argv
+        if len(getattr(sys, 'argv', [])) > 0:
             path.extend(rcfiles(os.path.dirname(sys.argv[0]) +
                                   '/../etc/mercurial'))
         path.extend(rcfiles('/etc/mercurial'))

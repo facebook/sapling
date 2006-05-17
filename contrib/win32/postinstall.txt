@@ -4,9 +4,46 @@ Welcome to Mercurial for Windows!
 For configuration and usage directions, please read the ReadMe.html
 file that comes with this package.
 
-
 Release Notes
 -------------
+
+2006-05-10  v0.9
+
+* Major changes between Mercurial 0.8.1 and 0.9:
+
+  - The repository file format has been improved.
+    - This has resulted in an average 40% reduction in disk space    usage.
+    - The new format (called RevlogNG) is now the default.
+    - Mercurial works perfectly with both the old and new repository
+      file formats. It can transfer changes transparently between
+      repositories of either format.
+    - To use the new repository format, simply use `hg clone --pull` to
+      clone an existing repository.
+    - Note: Versions 0.8.1 and earlier of Mercurial cannot read
+      RevlogNG repositories directly, but they can `clone`, `pull`
+      from, and `push` to servers that are serving RevlogNG
+      repositories.
+  - Memory usage has been improved by over 50% for many common operations.
+  - Substantial performance improvements on large repositories.
+  - New commands:
+    - 'archive' - generate a directory tree snapshot, tarball, or zip
+      file of a revision
+  - Deprecated commands:
+    - 'addremove' - replaced by 'add' and 'remove --after'
+    - 'forget' - replaced by 'revert'
+    - 'undo' - replaced by 'rollback'
+  - New extensions:
+    - Bugzilla integration hook
+    - Email notification hook
+  - Nested repositories are now supported. Mercurial will not recurse
+    into a subdirectory that contains a '.hg' directory. It is treated
+    as a separate repository.
+  - The standalone web server, 'hg serve', is now threaded, so it can
+    talk to multiple clients at a time.
+  - The web server can now display a "message of the day".
+  - Support added for hooks written in Python.
+  - Many improvements and clarifications to built-in help.
+
 
 2006-04-07  v0.8.1
 

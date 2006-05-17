@@ -756,13 +756,20 @@ def archive(ui, repo, dest, **opts):
 def backout(ui, repo, rev, **opts):
     '''reverse effect of earlier changeset
 
-    Commit the backed out changes as a new changeset.
+    Commit the backed out changes as a new changeset.  The new
+    changeset is a child of the backed out changeset.
 
     If you back out a changeset other than the tip, a new head is
-    created.  The --merge option remembers the parent of the working
-    directory before starting the backout, then merges the new head
-    with it afterwards, to save you from doing this by hand.  The
-    result of this merge is not committed, as for a normal merge.'''
+    created.  This head is the parent of the working directory.  If
+    you back out an old changeset, your working directory will appear
+    old after the backout.  You should merge the backout changeset
+    with another head.
+
+    The --merge option remembers the parent of the working directory
+    before starting the backout, then merges the new head with that
+    changeset afterwards.  This saves you from doing the merge by
+    hand.  The result of this merge is not committed, as for a normal
+    merge.'''
 
     bail_if_changed(repo)
     op1, op2 = repo.dirstate.parents()
@@ -782,6 +789,7 @@ def backout(ui, repo, rev, **opts):
     commit_opts['addremove'] = False
     if not commit_opts['message'] and not commit_opts['logfile']:
         commit_opts['message'] = _("Backed out changeset %s") % (hex(node))
+        commit_opts['force_editor'] = True
     commit(ui, repo, **commit_opts)
     def nice(node):
         return '%d:%s' % (repo.changelog.rev(node), short(node))
@@ -789,7 +797,7 @@ def backout(ui, repo, rev, **opts):
               (nice(repo.changelog.tip()), nice(node)))
     if opts['merge'] and op1 != node:
         ui.status(_('merging with changeset %s\n') % nice(op1))
-        update(ui, repo, hex(op1), **opts)
+        doupdate(ui, repo, hex(op1), **opts)
 
 def bundle(ui, repo, fname, dest="default-push", **opts):
     """create a changegroup file
@@ -939,7 +947,7 @@ def clone(ui, source, dest=None, **opts):
     f.close()
 
     if not opts['noupdate']:
-        update(repo.ui, repo)
+        doupdate(repo.ui, repo)
 
     d.close()
 
@@ -980,7 +988,8 @@ def commit(ui, repo, *pats, **opts):
     else:
         files = []
     try:
-        repo.commit(files, message, opts['user'], opts['date'], match)
+        repo.commit(files, message, opts['user'], opts['date'], match,
+                    force_editor=opts.get('force_editor'))
     except ValueError, inst:
         raise util.Abort(str(inst))
 
@@ -1296,10 +1305,11 @@ def debugindexdot(ui, file_):
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "", 0)
     ui.write("digraph G {\n")
     for i in range(r.count()):
-        e = r.index[i]
-        ui.write("\t%d -> %d\n" % (r.rev(e[4]), i))
-        if e[5] != nullid:
-            ui.write("\t%d -> %d\n" % (r.rev(e[5]), i))
+        node = r.node(i)
+        pp = r.parents(node)
+        ui.write("\t%d -> %d\n" % (r.rev(pp[0]), i))
+        if pp[1] != nullid:
+            ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
 
 def debugrename(ui, repo, file, rev=None):
@@ -1947,7 +1957,7 @@ def merge(ui, repo, node=None, **opts):
     marked as changed for the next commit and a commit must be
     performed before any further updates are allowed.
     """
-    return update(ui, repo, node=node, merge=True, **opts)
+    return doupdate(ui, repo, node=node, merge=True, **opts)
 
 def outgoing(ui, repo, dest="default-push", **opts):
     """show changesets not found in destination
@@ -2026,7 +2036,7 @@ def postincoming(ui, repo, modheads, optupdate):
         return
     if optupdate:
         if modheads == 1:
-            return update(ui, repo)
+            return doupdate(ui, repo)
         else:
             ui.status(_("not updating, since new heads added\n"))
     if modheads > 1:
@@ -2268,6 +2278,7 @@ def revert(ui, repo, *pats, **opts):
                            'you must specify the revision to revert to'))
     else:
         node = parent
+    pmf = None
     mf = repo.manifest.read(repo.changelog.read(node)[0])
 
     wlock = repo.wlock()
@@ -2350,7 +2361,12 @@ def revert(ui, repo, *pats, **opts):
                 if exact: ui.warn(_('no changes needed to %s\n' % rel))
                 continue
             if not in_mf:
-                handle(remove, False)
+                if pmf is None:
+                    # only need parent manifest in this unlikely case,
+                    # so do not read by default
+                    pmf = repo.manifest.read(repo.changelog.read(parent)[0])
+                if abs in pmf:
+                    handle(remove, False)
         update[abs] = True
 
     repo.dirstate.forget(forget[0])
@@ -2725,15 +2741,19 @@ def update(ui, repo, node=None, merge=False, clean=False, force=None,
     there is a linear relationship between the current version and the
     requested version, the result is the requested version.
 
-    Otherwise the result is a merge between the contents of the
-    current working directory and the requested version. Files that
-    changed between either parent are marked as changed for the next
-    commit and a commit must be performed before any further updates
-    are allowed.
+    To merge the working directory with another revision, use the
+    merge command.
 
     By default, update will refuse to run if doing so would require
     merging or discarding local changes.
     """
+    if merge:
+        ui.warn(_('(the -m/--merge option is deprecated; '
+                  'use the merge command instead)\n'))
+    return doupdate(ui, repo, node, merge, clean, force, branch, **opts)
+
+def doupdate(ui, repo, node=None, merge=False, clean=False, force=None,
+             branch=None, **opts):
     if branch:
         br = repo.branchlookup(branch=branch)
         found = []
@@ -3100,7 +3120,7 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('b', 'branch', '', _('checkout the head of a specific branch')),
-          ('m', 'merge', None, _('allow merging of branches')),
+          ('m', 'merge', None, _('allow merging of branches (DEPRECATED)')),
           ('C', 'clean', None, _('overwrite locally modified files')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
          _('hg update [-b TAG] [-m] [-C] [-f] [REV]')),
@@ -3116,6 +3136,7 @@ globalopts = [
      _('do not prompt, assume \'yes\' for any required answers')),
     ('q', 'quiet', None, _('suppress output')),
     ('v', 'verbose', None, _('enable additional output')),
+    ('', 'config', [], _('set/override config option')),
     ('', 'debug', None, _('enable debugging output')),
     ('', 'debugger', None, _('start debugger')),
     ('', 'traceback', None, _('print traceback on exception')),
@@ -3280,7 +3301,8 @@ def dispatch(args):
             atexit.register(print_time)
 
         u.updateopts(options["verbose"], options["debug"], options["quiet"],
-                     not options["noninteractive"], options["traceback"])
+                     not options["noninteractive"], options["traceback"],
+                     options["config"])
 
         # enter the debugger before command execution
         if options['debugger']:

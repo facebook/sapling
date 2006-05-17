@@ -11,6 +11,25 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "hg os urllib urllib2 urlparse zlib util httplib")
 
+class passwordmgr(urllib2.HTTPPasswordMgr):
+    def __init__(self, ui):
+        urllib2.HTTPPasswordMgr.__init__(self)
+        self.ui = ui
+
+    def find_user_password(self, realm, authuri):
+        authinfo = urllib2.HTTPPasswordMgr.find_user_password(
+            self, realm, authuri)
+        if authinfo != (None, None):
+            return authinfo
+
+        self.ui.write(_("http authorization required\n"))
+        self.ui.status(_("realm: %s\n") % realm)
+        user = self.ui.prompt(_("user:"), default=None)
+        passwd = self.ui.getpass()
+
+        self.add_password(realm, authuri, user, passwd)
+        return (user, passwd)
+
 class httprepository(remoterepository):
     def __init__(self, ui, path):
         # fix missing / after hostname
@@ -53,13 +72,21 @@ class httprepository(remoterepository):
         if host and not no_proxy:
             proxy_handler = urllib2.ProxyHandler({"http" : "http://" + host})
 
-        authinfo = None
+        proxyauthinfo = None
         if user and passwd:
             passmgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
             passmgr.add_password(None, host, user, passwd)
-            authinfo = urllib2.ProxyBasicAuthHandler(passmgr)
+            proxyauthinfo = urllib2.ProxyBasicAuthHandler(passmgr)
 
-        opener = urllib2.build_opener(proxy_handler, authinfo)
+        if ui.interactive:
+            passmgr = passwordmgr(ui)
+            opener = urllib2.build_opener(
+                proxy_handler, proxyauthinfo,
+                urllib2.HTTPBasicAuthHandler(passmgr),
+                urllib2.HTTPDigestAuthHandler(passmgr))
+        else:
+            opener = urllib2.build_opener(proxy_handler, proxyauthinfo)
+
         # 1.0 here is the _protocol_ version
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
         urllib2.install_opener(opener)
@@ -76,7 +103,10 @@ class httprepository(remoterepository):
         q.update(args)
         qs = urllib.urlencode(q)
         cu = "%s?%s" % (self.url, qs)
-        resp = urllib2.urlopen(cu)
+        try:
+            resp = urllib2.urlopen(cu)
+        except httplib.HTTPException, inst:
+            raise IOError(None, _('http error while sending %s command') % cmd)
         proto = resp.headers['content-type']
 
         # accept old "text/plain" and "application/hg-changegroup" for now

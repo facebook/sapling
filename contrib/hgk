@@ -196,6 +196,7 @@ proc parsecommit {id contents listed olds} {
     }
     foreach line [split $contents "\n"] {
 	if {$inhdr} {
+	    set line [split $line]
 	    if {$line == {}} {
 		set inhdr 0
 	    } else {
@@ -203,11 +204,11 @@ proc parsecommit {id contents listed olds} {
 		if {$tag == "author"} {
 		    set x [expr {[llength $line] - 2}]
 		    set audate [lindex $line $x]
-		    set auname [lrange $line 1 [expr {$x - 1}]]
+		    set auname [join [lrange $line 1 [expr {$x - 1}]]]
 		} elseif {$tag == "committer"} {
 		    set x [expr {[llength $line] - 2}]
 		    set comdate [lindex $line $x]
-		    set comname [lrange $line 1 [expr {$x - 1}]]
+		    set comname [join [lrange $line 1 [expr {$x - 1}]]]
 		}
 	    }
 	} else {

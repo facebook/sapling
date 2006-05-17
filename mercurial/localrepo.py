@@ -136,8 +136,7 @@ class localrepository(object):
 
         def runhook(name, cmd):
             self.ui.note(_("running hook %s: %s\n") % (name, cmd))
-            env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()] +
-                       [(k.upper(), v) for k, v in args.iteritems()])
+            env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()])
             r = util.system(cmd, environ=env, cwd=self.root)
             if r:
                 desc, r = util.explain_exit(r)
@@ -446,7 +445,8 @@ class localrepository(object):
             self.dirstate.setparents(n, nullid)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False, lock=None, wlock=None):
+               match=util.always, force=False, lock=None, wlock=None,
+               force_editor=False):
         commit = []
         remove = []
         changed = []
@@ -535,8 +535,11 @@ class localrepository(object):
         new.sort()
 
         user = user or self.ui.username()
-        if not text:
-            edittext = [""]
+        if not text or force_editor:
+            edittext = []
+            if text:
+                edittext.append(text)
+            edittext.append("")
             if p2 != nullid:
                 edittext.append("HG: branch merge")
             edittext.extend(["HG: changed %s" % f for f in changed])
@@ -1544,8 +1547,9 @@ class localrepository(object):
                          " with %d changes to %d files%s\n")
                          % (changesets, revisions, files, heads))
 
-        self.hook('pretxnchangegroup', throw=True,
-                  node=hex(self.changelog.node(cor+1)), source=srctype)
+        if changesets > 0:
+            self.hook('pretxnchangegroup', throw=True,
+                      node=hex(self.changelog.node(cor+1)), source=srctype)
 
         tr.close()
 
@@ -1563,8 +1567,7 @@ class localrepository(object):
                moddirstate=True, forcemerge=False, wlock=None, show_stats=True):
         pl = self.dirstate.parents()
         if not force and pl[1] != nullid:
-            self.ui.warn(_("aborting: outstanding uncommitted merges\n"))
-            return 1
+            raise util.Abort(_("outstanding uncommitted merges"))
 
         err = False
 
@@ -1592,6 +1595,7 @@ class localrepository(object):
         if allow and not forcemerge:
             if modified or added or removed:
                 raise util.Abort(_("outstanding uncommitted changes"))
+
         if not forcemerge and not force:
             for f in unknown:
                 if f in m2:
@@ -1765,6 +1769,13 @@ class localrepository(object):
                 return 1
             branch_merge = True
 
+        xp1 = hex(p1)
+        xp2 = hex(p2)
+        if p2 == nullid: xxp2 = ''
+        else: xxp2 = xp2
+
+        self.hook('preupdate', throw=True, parent1=xp1, parent2=xxp2)
+
         # get the files we don't need to change
         files = get.keys()
         files.sort()
@@ -1785,8 +1796,6 @@ class localrepository(object):
         failedmerge = []
         files = merge.keys()
         files.sort()
-        xp1 = hex(p1)
-        xp2 = hex(p2)
         for f in files:
             self.ui.status(_("merging %s\n") % f)
             my, other, flag = merge[f]
@@ -1850,6 +1859,7 @@ class localrepository(object):
                 self.ui.status(_("There are unresolved merges with"
                                  " locally modified files.\n"))
 
+        self.hook('update', parent1=xp1, parent2=xxp2, error=int(err))
         return err
 
     def merge3(self, fn, my, other, p1, p2):

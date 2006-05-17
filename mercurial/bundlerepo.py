@@ -13,7 +13,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "changegroup util os struct")
+demandload(globals(), "changegroup util os struct bz2 tempfile")
 
 import localrepo, changelog, manifest, filelog, revlog
 
@@ -50,7 +50,7 @@ class bundlerevlog(revlog.revlog):
                 continue
             for p in (p1, p2):
                 if not p in self.nodemap:
-                    raise RevlogError(_("unknown parent %s") % short(p1))
+                    raise revlog.RevlogError(_("unknown parent %s") % short(p1))
             if linkmapper is None:
                 link = n
             else:
@@ -76,12 +76,12 @@ class bundlerevlog(revlog.revlog):
             return False
         return rev in self.basemap
     def bundlebase(self, rev): return self.basemap[rev]
-    def chunk(self, rev, df=None):
+    def chunk(self, rev, df=None, cachelen=4096):
         # Warning: in case of bundle, the diff is against bundlebase,
         # not against rev - 1
         # XXX: could use some caching
         if not self.bundle(rev):
-            return revlog.revlog.chunk(self, rev)
+            return revlog.revlog.chunk(self, rev, df, cachelen)
         self.bundlefile.seek(self.start(rev))
         return self.bundlefile.read(self.length(rev))
 
@@ -123,8 +123,8 @@ class bundlerevlog(revlog.revlog):
 
         p1, p2 = self.parents(node)
         if node != revlog.hash(text, p1, p2):
-            raise RevlogError(_("integrity check failed on %s:%d")
-                          % (self.datafile, self.rev(node)))
+            raise revlog.RevlogError(_("integrity check failed on %s:%d")
+                                     % (self.datafile, self.rev(node)))
 
         self.cache = (node, self.rev(node), text)
         return text
@@ -159,19 +159,38 @@ class bundlefilelog(bundlerevlog, filelog.filelog):
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
         localrepo.localrepository.__init__(self, ui, path)
-        f = open(bundlename, "rb")
-        s = util.fstat(f)
-        self.bundlefile = f
+        self.tempfile = None
+        self.bundlefile = open(bundlename, "rb")
         header = self.bundlefile.read(6)
         if not header.startswith("HG"):
             raise util.Abort(_("%s: not a Mercurial bundle file") % bundlename)
         elif not header.startswith("HG10"):
             raise util.Abort(_("%s: unknown bundle version") % bundlename)
         elif header == "HG10BZ":
-            raise util.Abort(_("%s: compressed bundle not supported")
-                             % bundlename)
+            fdtemp, temp = tempfile.mkstemp(prefix="hg-bundle-",
+                                            suffix=".hg10un", dir=self.path)
+            self.tempfile = temp
+            fptemp = os.fdopen(fdtemp, 'wb')
+            def generator(f):
+                zd = bz2.BZ2Decompressor()
+                zd.decompress("BZ")
+                for chunk in f:
+                    yield zd.decompress(chunk)
+            gen = generator(util.filechunkiter(self.bundlefile, 4096))
+
+            try:
+                fptemp.write("HG10UN")
+                for chunk in gen:
+                    fptemp.write(chunk)
+            finally:
+                fptemp.close()
+                self.bundlefile.close()
+
+            self.bundlefile = open(self.tempfile, "rb")
+            # seek right after the header
+            self.bundlefile.seek(6)
         elif header == "HG10UN":
-            # uncompressed bundle supported
+            # nothing to do
             pass
         else:
             raise util.Abort(_("%s: unknown bundle compression type")
@@ -205,3 +224,9 @@ class bundlerepository(localrepo.localrepository):
     def close(self):
         """Close assigned bundle file immediately."""
         self.bundlefile.close()
+
+    def __del__(self):
+        if not self.bundlefile.closed:
+            self.bundlefile.close()
+        if self.tempfile is not None:
+            os.unlink(self.tempfile)

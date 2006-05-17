@@ -10,7 +10,7 @@ hg co 0
 echo "something else" > a
 hg commit -m branch2 -d "1000000 0"
 HGMERGE=merge; export HGMERGE
-hg up -m 1
+hg merge 1
 hg id
 egrep -v ">>>|<<<" a
 hg status

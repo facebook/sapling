@@ -17,12 +17,12 @@ hg co 0
 echo blah > b
 
 hg ci -m "branch b" -d "1000000 0"
-HGMERGE=true hg up -m 1
+HGMERGE=true hg merge 1
 
 hg ci -m "merge b/a -> blah" -d "1000000 0"
 
 hg co 1
-HGMERGE=true hg up -m 2
+HGMERGE=true hg merge 2
 hg ci -m "merge a/b -> blah" -d "1000000 0"
 
 hg log

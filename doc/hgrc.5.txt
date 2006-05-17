@@ -135,6 +135,20 @@ email::
   from;;
     Optional.  Email address to use in "From" header and SMTP envelope
     of outgoing messages.
+  method;;
+    Optional.  Method to use to send email messages.  If value is
+    "smtp" (default), use SMTP (see section "[mail]" for
+    configuration).  Otherwise, use as name of program to run that
+    acts like sendmail (takes "-f" option for sender, list of
+    recipients on command line, message on stdin).  Normally, setting
+    this to "sendmail" or "/usr/sbin/sendmail" is enough to use
+    sendmail to send messages.
+
+  Email example:
+
+    [email]
+    from = Joseph User <joe.user@example.com>
+    method = /usr/sbin/sendmail
 
 extensions::
   Mercurial has an extension mechanism for adding new features. To
@@ -219,15 +233,24 @@ hooks::
     commit to proceed.  Non-zero status will cause the transaction to
     be rolled back.  ID of changeset is in $HG_NODE.  Parent changeset
     IDs are in $HG_PARENT1 and $HG_PARENT2.
+  preupdate;;
+    Run before updating the working directory.  Exit status 0 allows
+    the update to proceed.  Non-zero status will prevent the update.
+    Changeset ID of first new parent is in $HG_PARENT1.  If merge, ID
+    of second new parent is in $HG_PARENT2.
   tag;;
     Run after a tag is created.  ID of tagged changeset is in
     $HG_NODE.  Name of tag is in $HG_TAG.  Tag is local if
     $HG_LOCAL=1, in repo if $HG_LOCAL=0.
+  update;;
+    Run after updating the working directory.  Changeset ID of first
+    new parent is in $HG_PARENT1.  If merge, ID of second new parent
+    is in $HG_PARENT2.  If update succeeded, $HG_ERROR=0.  If update
+    failed (e.g. because conflicts not resolved), $HG_ERROR=1.
 
-  In earlier releases, the names of hook environment variables did not
-  have a "HG_" prefix.  These unprefixed names are still provided in
-  the environment for backwards compatibility, but their use is
-  deprecated, and they will be removed in a future release.
+  Note: In earlier releases, the names of hook environment variables
+  did not have a "HG_" prefix.  The old unprefixed names are no longer
+  provided in the environment.
 
   The syntax for Python hooks is as follows:
 
@@ -279,7 +302,15 @@ smtp::
 paths::
   Assigns symbolic names to repositories.  The left side is the
   symbolic name, and the right gives the directory or URL that is the
-  location of the repository.
+  location of the repository.  Default paths can be declared by
+ setting the following entries.
+  default;;
+    Directory or URL to use when pulling if no source is specified.
+    Default is set to repository from which the current repository
+    was cloned.
+  default-push;;
+    Optional.  Directory or URL to use when pushing if no destination
+    is specified.
 
 ui::
   User interface controls.

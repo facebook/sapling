@@ -14,4 +14,4 @@ echo 'stationary' >>b/vehicle
 "$HG" commit -m 'Clarifying the vehicle.'
 "$HG" update -C 1
 chmod a-w b/vehicle
-"$HG" update -m 2 2>&1 | sed 's|^\(.*[ 	]\).*/\([^/]*/[^/]*/[^/]*\)$|\1\2|g'
+"$HG" merge 2 2>&1 | sed 's|^\(.*[ 	]\).*/\([^/]*/[^/]*/[^/]*\)$|\1\2|g'

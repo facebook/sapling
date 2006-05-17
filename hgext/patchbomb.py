@@ -254,8 +254,6 @@ def patchbomb(ui, repo, *revs, **opts):
         else:
             ui.status('Sending ', m['Subject'], ' ...\n')
             mail.sendmail(sender, to + cc, m.as_string(0))
-    if not opts['test'] and not opts['mbox']:
-        mail.close()
 
 cmdtable = {
     'email':

@@ -27,7 +27,7 @@ echo 1 > b
 hg add b
 hg commit -m "branch" -d "1000000 0"
 hg id
-hg co -m 1
+hg merge 1
 hg id
 hg status
 

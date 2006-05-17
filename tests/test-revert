@@ -68,4 +68,16 @@ hg revert
 echo %% should print executable
 test -x c && echo executable
 
+echo %% issue 241
+hg init a
+cd a
+echo a >> a
+hg commit -A -d '1 0' -m a
+echo a >> a
+hg commit -d '2 0' -m a
+hg update 0
+mkdir b
+echo b > b/b
+hg revert -rtip
+
 true

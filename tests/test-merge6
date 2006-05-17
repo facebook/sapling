@@ -33,14 +33,14 @@ hg clone B1 B2
 
 cd A1
 hg pull ../B1
-hg update -m
+hg merge
 hg commit -m "commit test" -d "1000000 0"
 echo bar should remain deleted.
 hg manifest
 
 cd ../B2
 hg pull ../A2
-hg update -m
+hg merge
 hg commit -m "commit test" -d "1000000 0"
 echo bar should remain deleted.
 hg manifest

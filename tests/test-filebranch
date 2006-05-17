@@ -41,7 +41,7 @@ hg debugstate | cut -b 1-16,35-
 
 echo merging
 hg pull ../a
-env HGMERGE=../merge hg update -vm
+env HGMERGE=../merge hg merge -v
 
 echo 2m > foo
 echo 2b > baz

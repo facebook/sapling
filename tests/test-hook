@@ -29,7 +29,7 @@ hg update -C 0
 echo b > b
 hg add b
 hg commit -m b -d '1 0'
-hg update -m 1
+hg merge 1
 hg commit -m merge -d '2 0'
 
 cd ../b
@@ -60,6 +60,14 @@ hg -q tip
 echo 'precommit.forbid = echo precommit.forbid hook; exit 1' >> .hg/hgrc
 hg commit -m 'fail' -d '4 0'
 hg -q tip
+
+# preupdate hook can prevent update
+echo 'preupdate = echo preupdate hook: p1=$HG_PARENT1 p2=$HG_PARENT2' >> .hg/hgrc
+hg update 1
+
+# update hook
+echo 'update = echo update hook: p1=$HG_PARENT1 p2=$HG_PARENT2 err=$HG_ERROR' >> .hg/hgrc
+hg update
 
 # prechangegroup hook can prevent incoming changes
 cd ../b
