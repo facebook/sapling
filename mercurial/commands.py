@@ -1392,6 +1392,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
 
     fp.write("# HG changeset patch\n")
     fp.write("# User %s\n" % change[1])
+    fp.write("# Timestamp %d %d\n" % (change[2][0], change[2][1]))
     fp.write("# Node ID %s\n" % hex(node))
     fp.write("# Parent  %s\n" % hex(prev))
     if len(parents) > 1:
@@ -1687,6 +1688,7 @@ def import_(ui, repo, patch1, *patches, **opts):
 
         message = []
         user = None
+        date = None
         hgpatch = False
         for line in file(pf):
             line = line.rstrip()
@@ -1703,6 +1705,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                 if line.startswith("# User "):
                     user = line[7:]
                     ui.debug(_('User: %s\n') % user)
+                elif line.startswith("# Timestamp "):
+                    date = line[12:]
                 elif not line.startswith("# ") and line:
                     message.append(line)
                     hgpatch = False
@@ -1723,7 +1727,7 @@ def import_(ui, repo, patch1, *patches, **opts):
 
         if len(files) > 0:
             addremove_lock(ui, repo, files, {})
-        repo.commit(files, message, user)
+        repo.commit(files, message, user, date)
 
 def incoming(ui, repo, source="default", **opts):
     """show new changesets found in source
