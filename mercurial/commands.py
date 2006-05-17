@@ -1713,14 +1713,14 @@ def import_(ui, repo, patch1, *patches, **opts):
             elif line == '# HG changeset patch':
                 hgpatch = True
                 message = []       # We may have collected garbage
-            else:
+            elif message or line:
                 message.append(line)
 
         # make sure message isn't empty
         if not message:
             message = _("imported patch %s\n") % patch
         else:
-            message = "%s\n" % '\n'.join(message)
+            message = '\n'.join(message).rstrip()
         ui.debug(_('message:\n%s\n') % message)
 
         files = util.patch(strip, pf, ui)

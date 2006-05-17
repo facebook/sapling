@@ -139,7 +139,7 @@ class queue:
                 # when looking for tags (subject: from: etc) they
                 # end once you find a blank line in the source
                 format = "tagdone"
-            else:
+            elif message or line:
                 message.append(line)
             comments.append(line)
 

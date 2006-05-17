@@ -550,12 +550,15 @@ class localrepository(object):
             # run editor in the repository root
             olddir = os.getcwd()
             os.chdir(self.root)
-            edittext = self.ui.edit("\n".join(edittext), user)
+            text = self.ui.edit("\n".join(edittext), user)
             os.chdir(olddir)
-            if not edittext.rstrip():
-                return None
-            text = edittext
 
+        lines = [line.rstrip() for line in text.rstrip().splitlines()]
+        while lines and not lines[0]:
+            del lines[0]
+        if not lines:
+            return None
+        text = '\n'.join(lines)
         n = self.changelog.add(mn, changed + remove, text, tr, p1, p2, user, date)
         self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                   parent2=xp2)
