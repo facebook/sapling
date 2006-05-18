@@ -734,7 +734,7 @@ def opener(base, audit=True):
         def rename(self):
             if not self.closed:
                 posixfile.close(self)
-                rename(self.temp, self.__name)
+                rename(self.temp, localpath(self.__name))
         def __del__(self):
             if not self.closed:
                 try:
