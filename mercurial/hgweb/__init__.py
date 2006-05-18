@@ -8,12 +8,12 @@
 
 import os, cgi, sys
 import mimetypes
-from demandload import demandload
-demandload(globals(), "mdiff time re socket zlib errno ui hg ConfigParser")
-demandload(globals(), "tempfile StringIO BaseHTTPServer util SocketServer")
-demandload(globals(), "archival mimetypes templater urllib")
-from node import *
-from i18n import gettext as _
+from mercurial.demandload import demandload
+demandload(globals(), "time re socket zlib errno ConfigParser tempfile")
+demandload(globals(), "StringIO BaseHTTPServer SocketServer urllib")
+demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,templater")
+from mercurial.node import *
+from mercurial.i18n import gettext as _
 
 def splitURI(uri):
     """ Return path and query splited from uri
