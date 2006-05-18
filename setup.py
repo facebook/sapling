@@ -57,6 +57,8 @@ try:
             self.includes += mercurial.packagescan.getmodules(self.build_lib,
                                                               'mercurial')
             self.includes += mercurial.packagescan.getmodules(self.build_lib,
+                                                              'mercurial/hgweb')
+            self.includes += mercurial.packagescan.getmodules(self.build_lib,
                                                               'hgext')
             build_exe.finalize_options(self)
 except ImportError:
@@ -85,7 +87,7 @@ setup(name='mercurial',
         url='http://selenic.com/mercurial',
         description='Scalable distributed SCM',
         license='GNU GPL',
-        packages=['mercurial', 'hgext'],
+        packages=['mercurial', 'mercurial.hgweb', 'hgext'],
         ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
                     Extension('mercurial.bdiff', ['mercurial/bdiff.c'])],
         data_files=[('mercurial/templates',
