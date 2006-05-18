@@ -2189,34 +2189,42 @@ def remove(ui, repo, *pats, **opts):
     entire project history.  If the files still exist in the working
     directory, they will be deleted from it.  If invoked with --after,
     files that have been manually deleted are marked as removed.
+
+    Modified files and added files are not removed by default.  To
+    remove them, use the -f/--force option.
     """
     names = []
     if not opts['after'] and not pats:
         raise util.Abort(_('no files specified'))
-    def okaytoremove(abs, rel, exact):
-        modified, added, removed, deleted, unknown = repo.changes(files=[abs])
+    files, matchfn, anypats = matchpats(repo, pats, opts)
+    exact = dict.fromkeys(files)
+    mardu = map(dict.fromkeys, repo.changes(files=files, match=matchfn))
+    modified, added, removed, deleted, unknown = mardu
+    remove, forget = [], []
+    for src, abs, rel, exact in walk(repo, pats, opts):
         reason = None
-        if not deleted and opts['after']:
+        if abs not in deleted and opts['after']:
             reason = _('is still present')
-        elif modified and not opts['force']:
-            reason = _('is modified')
-        elif added:
-            reason = _('has been marked for add')
-        elif unknown:
+        elif abs in modified and not opts['force']:
+            reason = _('is modified (use -f to force removal)')
+        elif abs in added:
+            if opts['force']:
+                forget.append(abs)
+                continue
+            reason = _('has been marked for add (use -f to force removal)')
+        elif abs in unknown:
             reason = _('is not managed')
-        elif removed:
-            return False
+        elif abs in removed:
+            continue
         if reason:
             if exact:
                 ui.warn(_('not removing %s: file %s\n') % (rel, reason))
         else:
-            return True
-    for src, abs, rel, exact in walk(repo, pats, opts):
-        if okaytoremove(abs, rel, exact):
             if ui.verbose or not exact:
                 ui.status(_('removing %s\n') % rel)
-            names.append(abs)
-    repo.remove(names, unlink=not opts['after'])
+            remove.append(abs)
+    repo.forget(forget)
+    repo.remove(remove, unlink=not opts['after'])
 
 def rename(ui, repo, *pats, **opts):
     """rename files; equivalent of copy + remove
