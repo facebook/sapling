@@ -90,8 +90,14 @@ hg
       other Mercurial commands should work fine for you.</p>
 
     <h1>Configuration notes</h1>
-    <p>The default editor is 'vi'. You can set the EDITOR environment variable
-    (or HGEDITOR) to specify your preference. </p>
+    <p>The default editor for commit messages is 'vi'. You can set the EDITOR
+    (or HGEDITOR) environment variable to specify your preference or set it in
+    mercurial.ini:</p>
+    <pre>
+[ui]
+editor = whatever
+</pre>
+
 
     <h1>Reporting problems</h1>
 
