@@ -173,7 +173,7 @@ class bisect(object):
                 self.ui.warn("Could not find the first bad revision\n")
                 sys.exit(1)
             self.ui.write(
-                "The first bad revision is : %s\n" % hg.hex(self.badrev))
+                "The first bad revision is: %s\n" % hg.hex(self.badrev))
             sys.exit(0)
         self.ui.write("%d revisions left\n" % tot)
         best_rev = None
