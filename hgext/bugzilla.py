@@ -22,13 +22,16 @@
 #
 # config items:
 #
+# section name is 'bugzilla'.
+#  [bugzilla]
+#
 # REQUIRED:
 #   host = bugzilla # mysql server where bugzilla database lives
 #   password = **   # user's password
 #   version = 2.16  # version of bugzilla installed
 #
 # OPTIONAL:
-#   bzuser = ...    # bugzilla user id to record comments with
+#   bzuser = ...    # fallback bugzilla user name to record comments with
 #   db = bugs       # database to connect to
 #   notify = ...    # command to run to get bugzilla to send mail
 #   regexp = ...    # regexp to match bug ids (must contain one "()" group)
@@ -39,6 +42,15 @@
 #   user = bugs     # user to connect to database as
 #   [web]
 #   baseurl = http://hgserver/... # root of hg web site for browsing commits
+#
+# if hg committer names are not same as bugzilla user names, use
+# "usermap" feature to map from committer email to bugzilla user name.
+# usermap can be in hgrc or separate config file.
+#
+#   [bugzilla]
+#   usermap = filename # cfg file with "committer"="bugzilla user" info
+#   [usermap]
+#   committer_email = bugzilla_user_name
 
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
@@ -60,6 +72,9 @@ class bugzilla_2_16(object):
         passwd = self.ui.config('bugzilla', 'password')
         db = self.ui.config('bugzilla', 'db', 'bugs')
         timeout = int(self.ui.config('bugzilla', 'timeout', 5))
+        usermap = self.ui.config('bugzilla', 'usermap')
+        if usermap:
+            self.ui.readconfig(usermap)
         self.ui.note(_('connecting to %s:%s as %s, password %s\n') %
                      (host, db, user, '*' * len(passwd)))
         self.conn = MySQLdb.connect(host=host, user=user, passwd=passwd,
@@ -139,18 +154,29 @@ class bugzilla_2_16(object):
             self.user_ids[user] = userid
             return userid
 
-    def add_comment(self, bugid, text, prefuser):
+    def map_committer(self, user):
+        '''map name of committer to bugzilla user name.'''
+        for committer, bzuser in self.ui.configitems('usermap'):
+            if committer.lower() == user.lower():
+                return bzuser
+        return user
+
+    def add_comment(self, bugid, text, committer):
         '''add comment to bug. try adding comment as committer of
         changeset, otherwise as default bugzilla user.'''
+        user = self.map_committer(committer)
         try:
-            userid = self.get_user_id(prefuser)
+            userid = self.get_user_id(user)
         except KeyError:
             try:
                 defaultuser = self.ui.config('bugzilla', 'bzuser')
+                if not defaultuser:
+                    raise util.Abort(_('cannot find bugzilla user id for %s') %
+                                     user)
                 userid = self.get_user_id(defaultuser)
             except KeyError:
-                raise util.Abort(_('cannot find user id for %s or %s') %
-                                 (prefuser, defaultuser))
+                raise util.Abort(_('cannot find bugzilla user id for %s or %s') %
+                                 (user, defaultuser))
         now = time.strftime('%Y-%m-%d %H:%M:%S')
         self.run('''insert into longdescs
                     (bug_id, who, bug_when, thetext)
