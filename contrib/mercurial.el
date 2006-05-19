@@ -382,14 +382,17 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
       (set-buffer hg-prev-buffer))
     (let ((path (or default (buffer-file-name))))
       (if (or (not path) current-prefix-arg)
-	  (expand-file-name
-	   (read-file-name (format "File, directory or pattern%s: "
-				   (or prompt ""))
-			   (and path (file-name-directory path))
-			   nil nil
-			   (and path (file-name-nondirectory path))
-			   'hg-file-history))
-	path))))
+          (expand-file-name
+           (eval (list* 'read-file-name
+                        (format "File, directory or pattern%s: "
+                                (or prompt ""))
+                        (and path (file-name-directory path))
+                        nil nil
+                        (and path (file-name-nondirectory path))
+                        (if hg-running-xemacs
+                            (cons (quote 'hg-file-history) nil)
+                          nil))))
+        path))))
 
 (defun hg-read-config ()
   "Return an alist of (key . value) pairs of Mercurial config data.
