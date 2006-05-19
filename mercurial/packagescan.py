@@ -10,6 +10,8 @@ import glob
 import os
 import sys
 import ihooks
+import types
+import string
 
 # Install this module as fake demandload module
 sys.modules['mercurial.demandload'] = sys.modules[__name__]
@@ -20,18 +22,43 @@ sys.modules['mercurial.demandload'] = sys.modules[__name__]
 # module is imported.
 requiredmodules = {} 
 def demandload(scope, modules):
-    """ fake demandload function that collects the required modules """
+    """ fake demandload function that collects the required modules 
+        foo            import foo
+        foo bar        import foo, bar
+        foo.bar        import foo.bar
+        foo:bar        from foo import bar
+        foo:bar,quux   from foo import bar, quux
+        foo.bar:quux   from foo.bar import quux"""
+
     for m in modules.split():
         mod = None
         try:
-            module, submodules = m.split(':')
-            submodules = submodules.split(',')
+            module, fromlist = m.split(':')
+            fromlist = fromlist.split(',')
         except:
             module = m
-            submodules = []
-        mod = __import__(module, scope, scope, submodules)
-        scope[module] = mod
-        requiredmodules[mod.__name__] = 1
+            fromlist = []
+        mod = __import__(module, scope, scope, fromlist)
+        if fromlist == []:
+            # mod is only the top package, but we need all packages
+            comp = module.split('.')
+            i = 1
+            mn = comp[0]
+            while True:
+                # mn and mod.__name__ might not be the same
+                scope[mn] = mod
+                requiredmodules[mod.__name__] = 1
+                if len(comp) == i: break
+                mod = getattr(mod,comp[i]) 
+                mn = string.join(comp[:i+1],'.')
+                i += 1
+        else:
+            # mod is the last package in the component list
+            requiredmodules[mod.__name__] = 1
+            for f in fromlist:
+                scope[f] = getattr(mod,f)
+                if type(scope[f]) == types.ModuleType:
+                    requiredmodules[scope[f].__name__] = 1
 
 def scan(libpath,packagename):
     """ helper for finding all required modules of package <packagename> """
