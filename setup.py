@@ -56,6 +56,7 @@ try:
             else:
                 self.includes = self.includes.split(',')
             mercurial.packagescan.scan(self.build_lib,'mercurial')
+            mercurial.packagescan.scan(self.build_lib,'mercurial/hgweb')
             mercurial.packagescan.scan(self.build_lib,'hgext')
             self.includes += mercurial.packagescan.getmodules()
             build_exe.finalize_options(self)
@@ -85,7 +86,7 @@ setup(name='mercurial',
         url='http://selenic.com/mercurial',
         description='Scalable distributed SCM',
         license='GNU GPL',
-        packages=['mercurial', 'hgext'],
+        packages=['mercurial', 'mercurial.hgweb', 'hgext'],
         ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
                     Extension('mercurial.bdiff', ['mercurial/bdiff.c'])],
         data_files=[('mercurial/templates',

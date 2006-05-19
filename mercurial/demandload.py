@@ -81,6 +81,10 @@ class _replacer_from(_replacer):
 
         return getattr(importer.module(), target)
 
+    def __call__(self, *args, **kwargs):
+        target = object.__getattribute__(self, 'module')()
+        return target(*args, **kwargs)
+
 def demandload(scope, modules):
     '''import modules into scope when each is first used.
 

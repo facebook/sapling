@@ -3,6 +3,7 @@
 hg init a
 cd a
 echo a > foo
+hg rm foo
 hg add foo
 hg commit -m 1 -d "1000000 0"
 hg remove
@@ -16,6 +17,16 @@ hg export 0
 hg export 1
 hg log -p -r 0
 hg log -p -r 1
+
+echo a > a
+hg add a
+hg rm a
+hg rm -f a
+echo b > b
+hg ci -A -m 3 -d "1000001 0"
+echo c >> b
+hg rm b
+hg rm -f b
 
 cd ..
 hg clone a b

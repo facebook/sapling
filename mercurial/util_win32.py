@@ -194,7 +194,7 @@ def user_rcpath():
         # We are on win < nt: fetch the APPDATA directory location and use
         # the parent directory as the user home dir.
         appdir = shell.SHGetPathFromIDList(
-            qshell.SHGetSpecialFolderLocation(0, shellcon.CSIDL_APPDATA))
+            shell.SHGetSpecialFolderLocation(0, shellcon.CSIDL_APPDATA))
         userdir = os.path.dirname(appdir)
     return os.path.join(userdir, 'mercurial.ini')
 

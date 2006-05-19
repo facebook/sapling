@@ -94,7 +94,7 @@ def patch(strip, patchname, ui):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
     patcher = find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-    fp = os.popen('"%s" -p%d < "%s"' % (patcher, strip, patchname))
+    fp = os.popen('%s -p%d < "%s"' % (patcher, strip, patchname))
     files = {}
     for line in fp:
         line = line.rstrip()
@@ -734,7 +734,7 @@ def opener(base, audit=True):
         def rename(self):
             if not self.closed:
                 posixfile.close(self)
-                rename(self.temp, self.__name)
+                rename(self.temp, localpath(self.__name))
         def __del__(self):
             if not self.closed:
                 try:

@@ -102,6 +102,7 @@ class queue:
         message = []
         comments = []
         user = None
+        date = None
         format = None
         subject = None
         diffstart = 0
@@ -119,6 +120,8 @@ class queue:
                 # parse values when importing the result of an hg export
                 if line.startswith("# User "):
                     user = line[7:]
+                elif line.startswith("# Date "):
+                    date = line[7:]
                 elif not line.startswith("# ") and line:
                     message.append(line)
                     format = None
@@ -136,7 +139,7 @@ class queue:
                 # when looking for tags (subject: from: etc) they
                 # end once you find a blank line in the source
                 format = "tagdone"
-            else:
+            elif message or line:
                 message.append(line)
             comments.append(line)
 
@@ -149,7 +152,7 @@ class queue:
         if format and format.startswith("tag") and subject:
             message.insert(0, "")
             message.insert(0, subject)
-        return (message, comments, user, diffstart > 1)
+        return (message, comments, user, date, diffstart > 1)
 
     def mergeone(self, repo, mergeq, head, patch, rev, wlock):
         # first try just applying the patch
@@ -179,7 +182,7 @@ class queue:
             self.ui.warn("repo commit failed\n")
             sys.exit(1)
         try:
-            message, comments, user, patchfound = mergeq.readheaders(patch)
+            message, comments, user, date, patchfound = mergeq.readheaders(patch)
         except:
             self.ui.warn("Unable to read %s\n" % patch)
             sys.exit(1)
@@ -267,7 +270,7 @@ class queue:
             pf = os.path.join(patchdir, patch)
 
             try:
-                message, comments, user, patchfound = self.readheaders(patch)
+                message, comments, user, date, patchfound = self.readheaders(patch)
             except:
                 self.ui.warn("Unable to read %s\n" % pf)
                 err = 1
@@ -326,7 +329,7 @@ class queue:
             if len(files) > 0:
                 commands.addremove_lock(self.ui, repo, files,
                                         opts={}, wlock=wlock)
-            n = repo.commit(files, message, user, force=1, lock=lock,
+            n = repo.commit(files, message, user, date, force=1, lock=lock,
                             wlock=wlock)
 
             if n == None:
@@ -716,7 +719,7 @@ class queue:
         top = revlog.bin(top)
         cparents = repo.changelog.parents(top)
         patchparent = self.qparents(repo, top)
-        message, comments, user, patchfound = self.readheaders(patch)
+        message, comments, user, date, patchfound = self.readheaders(patch)
 
         patchf = self.opener(patch, "w")
         if comments:

@@ -6,40 +6,40 @@
 43a46
 > files:       
 # compact style works
-3[tip]   8c7f028fbabf   1970-01-16 01:06 +0000   person
+3[tip]   10e46f2dcbf4   1970-01-16 01:06 +0000   person
   no user, no domain
 
-2   259081bc29d1   1970-01-14 21:20 +0000   other
+2   97054abb4ab8   1970-01-14 21:20 +0000   other
   no person
 
-1   1c37ba774509   1970-01-13 17:33 +0000   other
+1   b608e9d1a3f0   1970-01-13 17:33 +0000   other
   other 1
 
-0   6eb5362d59ec   1970-01-12 13:46 +0000   user
+0   1e4e1b8f71e0   1970-01-12 13:46 +0000   user
   line 1
 
-3[tip]   8c7f028fbabf   1970-01-16 01:06 +0000   person
+3[tip]   10e46f2dcbf4   1970-01-16 01:06 +0000   person
   no user, no domain
 
-2   259081bc29d1   1970-01-14 21:20 +0000   other
+2   97054abb4ab8   1970-01-14 21:20 +0000   other
   no person
 
-1   1c37ba774509   1970-01-13 17:33 +0000   other
+1   b608e9d1a3f0   1970-01-13 17:33 +0000   other
   other 1
 
-0   6eb5362d59ec   1970-01-12 13:46 +0000   user
+0   1e4e1b8f71e0   1970-01-12 13:46 +0000   user
   line 1
 
-3[tip]:2,-1   8c7f028fbabf   1970-01-16 01:06 +0000   person
+3[tip]:2,-1   10e46f2dcbf4   1970-01-16 01:06 +0000   person
   no user, no domain
 
-2:1,-1   259081bc29d1   1970-01-14 21:20 +0000   other
+2:1,-1   97054abb4ab8   1970-01-14 21:20 +0000   other
   no person
 
-1:0,-1   1c37ba774509   1970-01-13 17:33 +0000   other
+1:0,-1   b608e9d1a3f0   1970-01-13 17:33 +0000   other
   other 1
 
-0:-1,-1   6eb5362d59ec   1970-01-12 13:46 +0000   user
+0:-1,-1   1e4e1b8f71e0   1970-01-12 13:46 +0000   user
   line 1
 
 # error if style not readable
@@ -103,30 +103,24 @@ desc: other 1
 other 2
 
 other 3
-
 desc: line 1
 line 2
-
 desc--verbose: no user, no domain
 desc--verbose: no person
 desc--verbose: other 1
 other 2
 
 other 3
-
 desc--verbose: line 1
 line 2
-
 desc--debug: no user, no domain
 desc--debug: no person
 desc--debug: other 1
 other 2
 
 other 3
-
 desc--debug: line 1
 line 2
-
 file_adds: 
 file_adds: 
 file_adds: 
@@ -175,18 +169,18 @@ manifest--debug: 3:cb5a1327723b
 manifest--debug: 2:6e0e82995c35
 manifest--debug: 1:4e8d705b1e53
 manifest--debug: 0:a0c8bcbbb45c
-node: 8c7f028fbabf93fde80ef788885370b36abeff33
-node: 259081bc29d176c6ae17af5dd01a3440b3288c97
-node: 1c37ba7745099d0f206b3a663abcfe127b037433
-node: 6eb5362d59ec784e4431d3e140c8cc6e1b77ce82
-node--verbose: 8c7f028fbabf93fde80ef788885370b36abeff33
-node--verbose: 259081bc29d176c6ae17af5dd01a3440b3288c97
-node--verbose: 1c37ba7745099d0f206b3a663abcfe127b037433
-node--verbose: 6eb5362d59ec784e4431d3e140c8cc6e1b77ce82
-node--debug: 8c7f028fbabf93fde80ef788885370b36abeff33
-node--debug: 259081bc29d176c6ae17af5dd01a3440b3288c97
-node--debug: 1c37ba7745099d0f206b3a663abcfe127b037433
-node--debug: 6eb5362d59ec784e4431d3e140c8cc6e1b77ce82
+node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+node: 97054abb4ab824450e9164180baf491ae0078465
+node: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
+node: 1e4e1b8f71e05681d422154f5421e385fec3454f
+node--verbose: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+node--verbose: 97054abb4ab824450e9164180baf491ae0078465
+node--verbose: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
+node--verbose: 1e4e1b8f71e05681d422154f5421e385fec3454f
+node--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+node--debug: 97054abb4ab824450e9164180baf491ae0078465
+node--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
+node--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
 parents: 
 parents: 
 parents: 
@@ -195,9 +189,9 @@ parents--verbose:
 parents--verbose: 
 parents--verbose: 
 parents--verbose: 
-parents--debug: 2:259081bc29d1 -1:000000000000 
-parents--debug: 1:1c37ba774509 -1:000000000000 
-parents--debug: 0:6eb5362d59ec -1:000000000000 
+parents--debug: 2:97054abb4ab8 -1:000000000000 
+parents--debug: 1:b608e9d1a3f0 -1:000000000000 
+parents--debug: 0:1e4e1b8f71e0 -1:000000000000 
 parents--debug: -1:000000000000 -1:000000000000 
 rev: 3
 rev: 2
@@ -252,10 +246,10 @@ no user, no domain
 no person
 other 1
 line 1
-8c7f028fbabf
-259081bc29d1
-1c37ba774509
-6eb5362d59ec
+10e46f2dcbf4
+97054abb4ab8
+b608e9d1a3f0
+1e4e1b8f71e0
 # error on syntax
 abort: t:3: unmatched quotes
 # done

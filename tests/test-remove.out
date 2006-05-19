@@ -1,8 +1,10 @@
+not removing foo: file is not managed
 abort: no files specified
 undeleting foo
 removing foo
 # HG changeset patch
 # User test
+# Date 1000000 0
 # Node ID 8ba83d44753d6259db5ce6524974dd1174e90f47
 # Parent  0000000000000000000000000000000000000000
 1
@@ -14,6 +16,7 @@ diff -r 000000000000 -r 8ba83d44753d foo
 +a
 # HG changeset patch
 # User test
+# Date 1000000 0
 # Node ID a1fce69c50d97881c5c014ab23f580f720c78678
 # Parent  8ba83d44753d6259db5ce6524974dd1174e90f47
 2
@@ -48,4 +51,8 @@ diff -r 8ba83d44753d -r a1fce69c50d9 foo
 -a
 
 
-0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+not removing a: file has been marked for add (use -f to force removal)
+adding a
+adding b
+not removing b: file is modified (use -f to force removal)
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
