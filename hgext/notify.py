@@ -123,7 +123,7 @@ class notifier(object):
 
         path = util.pconvert(path)
         count = self.stripcount
-        while path and count >= 0:
+        while count > 0:
             c = path.find('/')
             if c == -1:
                 break
