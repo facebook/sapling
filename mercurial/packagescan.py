@@ -1,5 +1,6 @@
 # packagescan.py - Helper module for identifing used modules.
 # Used for the py2exe distutil.
+# This module must be the first mercurial module imported in setup.py
 #
 # Copyright 2005 Volker Kleinfeld <Volker.Kleinfeld@gmx.de>
 #
@@ -8,10 +9,16 @@
 import glob
 import os
 import sys
-import demandload
 import ihooks
 
-requiredmodules = {} # Will contain the modules imported by demandload
+# Install this module as fake demandload module
+sys.modules['mercurial.demandload'] = sys.modules[__name__]
+
+# Requiredmodules contains the modules imported by demandload.
+# Please note that demandload can be invoked before the 
+# mercurial.packagescan.scan method is invoked in case a mercurial
+# module is imported.
+requiredmodules = {} 
 def demandload(scope, modules):
     """ fake demandload function that collects the required modules """
     for m in modules.split():
@@ -26,7 +33,7 @@ def demandload(scope, modules):
         scope[module] = mod
         requiredmodules[mod.__name__] = 1
 
-def getmodules(libpath,packagename):
+def scan(libpath,packagename):
     """ helper for finding all required modules of package <packagename> """
     # Use the package in the build directory
     libpath = os.path.abspath(libpath)
@@ -45,8 +52,6 @@ def getmodules(libpath,packagename):
     pymodulefiles = glob.glob('*.py')
     extmodulefiles = glob.glob('*.pyd')
     os.chdir(cwd)
-    # Install a fake demandload module
-    sys.modules['mercurial.demandload'] = sys.modules['mercurial.packagescan']
     # Import all python modules and by that run the fake demandload
     for m in pymodulefiles:
         if m == '__init__.py': continue
@@ -62,8 +67,9 @@ def getmodules(libpath,packagename):
         fullname = packagename+'.'+mname
         __import__(fullname,tmp,tmp)
         requiredmodules[fullname] = 1
-    includes = requiredmodules.keys()
-    return includes
+
+def getmodules():
+    return requiredmodules.keys()
 
 def importfrom(filename):
     """
