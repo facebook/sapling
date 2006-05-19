@@ -36,11 +36,14 @@ installed.
     files override per-installation options.
 
 (Unix)    $HOME/.hgrc::
-(Windows) C:\Documents and Settings\USERNAME\Mercurial.ini
+(Windows) C:\Documents and Settings\USERNAME\Mercurial.ini::
+(Windows) $HOME\Mercurial.ini::
     Per-user configuration file, for the user running Mercurial.
     Options in this file apply to all Mercurial commands executed by
     any user in any directory.  Options in this file override
     per-installation and per-system options.
+    On Windows system, one of these is chosen exclusively according
+    to definition of HOME environment variable.
 
 (Unix, Windows) <repo>/.hg/hgrc::
     Per-repository configuration options that only apply in a
