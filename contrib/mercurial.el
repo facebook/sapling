@@ -391,6 +391,16 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
 			   'hg-file-history))
 	path))))
 
+(defun hg-read-number (&optional prompt default)
+  "Read a integer value."
+  (save-excursion
+    (if (or (not default) current-prefix-arg)
+        (string-to-number
+         (eval (list* 'read-string
+                      (or prompt "") 
+                      (if default (cons (format "%d" default) nil) nil))))
+      default)))
+
 (defun hg-read-config ()
   "Return an alist of (key . value) pairs of Mercurial config data.
 Each key is of the form (section . name)."
@@ -950,36 +960,55 @@ With a prefix argument, prompt for the path to forget."
     (kill-entire-line))
   (run-hooks 'hg-log-mode-hook))
 
-(defun hg-log (path &optional rev1 rev2)
-  "Display the revision history of PATH, between REV1 and REV2.
-REV1 defaults to hg-log-limit changes from the tip revision, while
-REV2 defaults to the tip.
+(defun hg-log (path &optional rev1 rev2 log-limit)
+  "Display the revision history of PATH.
+History is displayed between REV1 and REV2.
+Number of displayed changesets is limited to LOG-LIMIT.
+REV1 defaults to the tip, while
+REV2 defaults to `hg-rev-completion-limit' changes from the tip revision.
+LOG-LIMIT defaults to `hg-log-limit'.
 With a prefix argument, prompt for each parameter."
   (interactive (list (hg-read-file-name " to log")
-		     (hg-read-rev " to start with" "-1")
-		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
+                     (hg-read-rev " to start with"
+                                  "tip")
+                     (hg-read-rev " to end with"
+                                  (format "%d" (- hg-rev-completion-limit)))
+                     (hg-read-number "Output limited to: "
+                                     hg-log-limit)))
   (let ((a-path (hg-abbrev-file-name path))
-	(r1 (or rev1 (format "-%d" hg-log-limit)))
-	(r2 (or rev2 rev1 "-1")))
+        (r1 (or rev1 (format "-%d" hg-rev-completion-limit)))
+        (r2 (or rev2 rev1 "tip"))
+        (limit (format "%d" (or log-limit hg-log-limit))))
     (hg-view-output ((if (equal r1 r2)
-			 (format "Mercurial: Log of rev %s of %s" rev1 a-path)
-		       (format "Mercurial: Log from rev %s to %s of %s"
-			       r1 r2 a-path)))
-      (let ((revs (format "%s:%s" r1 r2)))
-	(if (> (length path) (length (hg-root path)))
-	    (call-process (hg-binary) nil t nil "log" "-r" revs path)
-	  (call-process (hg-binary) nil t nil "log" "-r" revs)))
+                         (format "Mercurial: Log of rev %s of %s" rev1 a-path)
+                       (format 
+                        "Mercurial: at most %s log(s) from rev %s to %s of %s"
+                        limit r1 r2 a-path)))
+      (eval (list* 'call-process (hg-binary) nil t nil
+                   "log"
+                   "-r" (format "%s:%s" r1 r2)
+                   "-l" limit
+                   (if (> (length path) (length (hg-root path)))
+                       (cons path nil)
+                     nil)))
       (hg-log-mode))))
 
-(defun hg-log-repo (path &optional rev1 rev2)
+(defun hg-log-repo (path &optional rev1 rev2 log-limit)
   "Display the revision history of the repository containing PATH.
-History is displayed between REV1, which defaults to the tip, and
-REV2, which defaults to the initial revision.
-Variable hg-log-limit controls the number of log entries displayed."
+History is displayed between REV1 and REV2.
+Number of displayed changesets is limited to LOG-LIMIT,
+REV1 defaults to the tip, while
+REV2 defaults to `hg-rev-completion-limit' changes from the tip revision.
+LOG-LIMIT defaults to `hg-log-limit'.
+With a prefix argument, prompt for each parameter."
   (interactive (list (hg-read-file-name " to log")
-		     (hg-read-rev " to start with" "tip")
-		     (hg-read-rev " to end with" (format "-%d" hg-log-limit))))
-  (hg-log (hg-root path) rev1 rev2))
+                     (hg-read-rev " to start with"
+                                  "tip")
+                     (hg-read-rev " to end with" 
+                                  (format "%d" (- hg-rev-completion-limit)))
+                     (hg-read-number "Output limited to: "
+                                     hg-log-limit)))
+  (hg-log (hg-root path) rev1 rev2 log-limit))
 
 (defun hg-outgoing (&optional repo)
   "Display changesets present locally that are not present in REPO."
