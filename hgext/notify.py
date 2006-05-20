@@ -99,7 +99,9 @@ class notifier(object):
 
     def __init__(self, ui, repo, hooktype):
         self.ui = ui
-        self.ui.readconfig(self.ui.config('notify', 'config'))
+        cfg = self.ui.config('notify', 'config')
+        if cfg:
+            self.ui.readconfig(cfg)
         self.repo = repo
         self.stripcount = int(self.ui.config('notify', 'strip', 0))
         self.root = self.strip(self.repo.root)
@@ -225,6 +227,8 @@ class notifier(object):
             if not msgtext.endswith('\n'):
                 self.ui.write('\n')
         else:
+            self.ui.status(_('notify: sending %d subscribers %d changes\n') %
+                             (len(self.subs), count))
             mail = self.ui.sendmail()
             mail.sendmail(templater.email(msg['From']), self.subs, msgtext)
 
@@ -250,7 +254,12 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     if used as changegroup hook, send one email for all changesets in
     changegroup. else send one email per changeset.'''
     n = notifier(ui, repo, hooktype)
-    if not n.subs or n.skipsource(source):
+    if not n.subs:
+        ui.debug(_('notify: no subscribers to this repo\n'))
+        return
+    if n.skipsource(source):
+        ui.debug(_('notify: changes have source "%s" - skipping\n') %
+                  source)
         return
     node = bin(node)
     if hooktype == 'changegroup':
