@@ -3291,6 +3291,9 @@ def dispatch(args):
             continue
 
     for x in external:
+        uisetup = getattr(x, 'uisetup', None)
+        if uisetup:
+            uisetup(u)
         cmdtable = getattr(x, 'cmdtable', {})
         for t in cmdtable:
             if t in table:
