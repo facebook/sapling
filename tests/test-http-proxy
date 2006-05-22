@@ -1,0 +1,30 @@
+#!/bin/sh
+
+hg init a
+cd a
+echo a > a
+hg ci -Ama -d '1123456789 0'
+hg serve -p 20059 -d --pid-file=hg.pid
+
+cd ..
+("$TESTDIR/tinyproxy.py" 20060 localhost >/dev/null 2>&1 </dev/null &
+echo $! > proxy.pid)
+sleep 2
+
+echo %% url for proxy
+http_proxy=http://localhost:20060/ hg --config http_proxy.always=True clone http://localhost:20059/ b
+
+echo %% host:port for proxy
+http_proxy=localhost:20060 hg clone --config http_proxy.always=True http://localhost:20059/ c
+
+echo %% proxy url with user name and password
+http_proxy=http://user:passwd@localhost:20060 hg clone --config http_proxy.always=True http://localhost:20059/ d
+
+echo %% url with user name and password
+http_proxy=http://user:passwd@localhost:20060 hg clone --config http_proxy.always=True http://user:passwd@localhost:20059/ e
+
+echo %% bad host:port for proxy
+http_proxy=localhost:20061 hg clone --config http_proxy.always=True http://localhost:20059/ f
+
+kill $(cat proxy.pid a/hg.pid)
+exit 0

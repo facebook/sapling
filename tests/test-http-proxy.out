@@ -1,0 +1,31 @@
+adding a
+%% url for proxy
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+%% host:port for proxy
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+%% proxy url with user name and password
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+%% url with user name and password
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+%% bad host:port for proxy
+abort: error: Connection refused

@@ -22,6 +22,9 @@ class passwordmgr(urllib2.HTTPPasswordMgr):
         if authinfo != (None, None):
             return authinfo
 
+        if not ui.interactive:
+            raise util.Abort(_('http authorization required'))
+
         self.ui.write(_("http authorization required\n"))
         self.ui.status(_("realm: %s\n") % realm)
         user = self.ui.prompt(_("user:"), default=None)
@@ -30,37 +33,95 @@ class passwordmgr(urllib2.HTTPPasswordMgr):
         self.add_password(realm, authuri, user, passwd)
         return (user, passwd)
 
+def netlocsplit(netloc):
+    '''split [user[:passwd]@]host[:port] into 4-tuple.'''
+
+    a = netloc.find('@')
+    if a == -1:
+        user, passwd = None, None
+    else:
+        userpass, netloc = netloc[:a], netloc[a+1:]
+        c = userpass.find(':')
+        if c == -1:
+            user, passwd = urllib.unquote(userpass), None
+        else:
+            user = urllib.unquote(userpass[:c])
+            passwd = urllib.unquote(userpass[c+1:])
+    c = netloc.find(':')
+    if c == -1:
+        host, port = netloc, None
+    else:
+        host, port = netloc[:c], netloc[c+1:]
+    return host, port, user, passwd
+
+def netlocunsplit(host, port, user=None, passwd=None):
+    '''turn host, port, user, passwd into [user[:passwd]@]host[:port].'''
+    if port:
+        hostport = host + ':' + port
+    else:
+        hostport = host
+    if user:
+        if passwd:
+            userpass = urllib.quote(user) + ':' + urllib.quote(passwd)
+        else:
+            userpass = urllib.quote(user)
+        return userpass + '@' + hostport
+    return hostport
+
 class httprepository(remoterepository):
     def __init__(self, ui, path):
-        # fix missing / after hostname
-        s = urlparse.urlsplit(path)
-        partial = s[2]
-        if not partial: partial = "/"
-        self.url = urlparse.urlunsplit((s[0], s[1], partial, '', ''))
+        scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
+        if query or frag:
+            raise util.Abort(_('unsupported URL component: "%s"') %
+                             (query or frag))
+        if not urlpath: urlpath = '/'
+        host, port, user, passwd = netlocsplit(netloc)
+
+        # urllib cannot handle URLs with embedded user or passwd
+        self.url = urlparse.urlunsplit((scheme, netlocunsplit(host, port),
+                                        urlpath, '', ''))
         self.ui = ui
-        no_list = [ "localhost", "127.0.0.1" ]
-        host = ui.config("http_proxy", "host")
-        if host is None:
-            host = os.environ.get("http_proxy")
-        if host and host.startswith('http://'):
-            host = host[7:]
-        user = ui.config("http_proxy", "user")
-        passwd = ui.config("http_proxy", "passwd")
-        no = ui.config("http_proxy", "no")
-        if no is None:
-            no = os.environ.get("no_proxy")
-        if no:
-            no_list = no_list + no.split(",")
 
-        no_proxy = 0
-        for h in no_list:
-            if (path.startswith("http://" + h + "/") or
-                path.startswith("http://" + h + ":") or
-                path == "http://" + h):
-                no_proxy = 1
+        proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
+        proxyauthinfo = None
+        handler = urllib2.BaseHandler()
 
-        # Note: urllib2 takes proxy values from the environment and those will
-        # take precedence
+        if proxyurl:
+            # proxy can be proper url or host[:port]
+            if not (proxyurl.startswith('http:') or
+                    proxyurl.startswith('https:')):
+                proxyurl = 'http://' + proxyurl + '/'
+            snpqf = urlparse.urlsplit(proxyurl)
+            proxyscheme, proxynetloc, proxypath, proxyquery, proxyfrag = snpqf
+            hpup = netlocsplit(proxynetloc)
+
+            proxyhost, proxyport, proxyuser, proxypasswd = hpup
+            if not proxyuser:
+                proxyuser = ui.config("http_proxy", "user")
+                proxypasswd = ui.config("http_proxy", "passwd")
+
+            # see if we should use a proxy for this url
+            no_list = [ "localhost", "127.0.0.1" ]
+            no_list.extend([p.strip().lower() for
+                            p in ui.config("http_proxy", "no", '').split(',')
+                            if p.strip()])
+            no_list.extend([p.strip().lower() for
+                            p in os.getenv("no_proxy", '').split(',')
+                            if p.strip()])
+            # "http_proxy.always" config is for running tests on localhost
+            if (not ui.configbool("http_proxy", "always") and
+                host.lower() in no_list):
+                ui.debug(_('disabling proxy for %s\n') % host)
+            else:
+                proxyurl = urlparse.urlunsplit((
+                    proxyscheme, netlocunsplit(proxyhost, proxyport,
+                                               proxyuser, proxypasswd or ''),
+                    proxypath, proxyquery, proxyfrag))
+                handler = urllib2.ProxyHandler({scheme: proxyurl})
+                ui.debug(_('proxying through %s\n') % proxyurl)
+
+        # urllib2 takes proxy values from the environment and those
+        # will take precedence if found, so drop them
         for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
             try:
                 if os.environ.has_key(env):
@@ -68,24 +129,15 @@ class httprepository(remoterepository):
             except OSError:
                 pass
 
-        proxy_handler = urllib2.BaseHandler()
-        if host and not no_proxy:
-            proxy_handler = urllib2.ProxyHandler({"http" : "http://" + host})
+        passmgr = passwordmgr(ui)
+        if user:
+            ui.debug(_('will use user %s for http auth\n') % user)
+            passmgr.add_password(None, host, user, passwd or '')
 
-        proxyauthinfo = None
-        if user and passwd:
-            passmgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-            passmgr.add_password(None, host, user, passwd)
-            proxyauthinfo = urllib2.ProxyBasicAuthHandler(passmgr)
-
-        if ui.interactive:
-            passmgr = passwordmgr(ui)
-            opener = urllib2.build_opener(
-                proxy_handler, proxyauthinfo,
-                urllib2.HTTPBasicAuthHandler(passmgr),
-                urllib2.HTTPDigestAuthHandler(passmgr))
-        else:
-            opener = urllib2.build_opener(proxy_handler, proxyauthinfo)
+        opener = urllib2.build_opener(
+            handler,
+            urllib2.HTTPBasicAuthHandler(passmgr),
+            urllib2.HTTPDigestAuthHandler(passmgr))
 
         # 1.0 here is the _protocol_ version
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
