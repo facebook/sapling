@@ -106,7 +106,9 @@ class httprepository(remoterepository):
         try:
             resp = urllib2.urlopen(cu)
         except httplib.HTTPException, inst:
-            raise IOError(None, _('http error while sending %s command') % cmd)
+            self.ui.debug(_('http error while sending %s command\n') % cmd)
+            self.ui.print_exc()
+            raise IOError(None, inst)
         proto = resp.headers['content-type']
 
         # accept old "text/plain" and "application/hg-changegroup" for now
