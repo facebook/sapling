@@ -13,7 +13,6 @@ tests/annotated
 tests/*.err
 build
 dist
-Output/Mercurial-[0-9.]*.exe
 doc/*.[0-9]
 doc/*.[0-9].gendoc.txt
 doc/*.[0-9].{x,ht}ml
@@ -23,3 +22,4 @@ mercurial/__version__.py
 
 syntax: regexp
 ^\.pc/
+Output/Mercurial-[0-9.]*.exe
