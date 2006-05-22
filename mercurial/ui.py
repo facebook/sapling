@@ -9,7 +9,7 @@ import ConfigParser
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno getpass os re smtplib socket sys tempfile")
-demandload(globals(), "templater util")
+demandload(globals(), "templater traceback util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
@@ -335,3 +335,11 @@ class ui(object):
         else:
             mail = sendmail(self, method)
         return mail
+
+    def print_exc(self):
+        '''print exception traceback if traceback printing enabled.
+        only to call in exception handler. returns true if traceback
+        printed.'''
+        if self.traceback:
+            traceback.print_exc()
+        return self.traceback

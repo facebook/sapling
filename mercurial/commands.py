@@ -3299,10 +3299,8 @@ def dispatch(args):
             external.append(mod)
         except Exception, inst:
             u.warn(_("*** failed to import extension %s: %s\n") % (x[0], inst))
-            if u.traceback:
-                traceback.print_exc()
+            if u.print_exc():
                 return 1
-            continue
 
     for x in external:
         uisetup = getattr(x, 'uisetup', None)
@@ -3398,8 +3396,7 @@ def dispatch(args):
             # enter the debugger when we hit an exception
             if options['debugger']:
                 pdb.post_mortem(sys.exc_info()[2])
-            if u.traceback:
-                traceback.print_exc()
+            u.print_exc()
             raise
     except ParseError, inst:
         if inst.args[0]:

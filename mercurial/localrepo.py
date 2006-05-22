@@ -12,7 +12,7 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "appendfile changegroup")
 demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
-demandload(globals(), "revlog traceback")
+demandload(globals(), "revlog")
 
 class localrepository(object):
     def __del__(self):
@@ -125,8 +125,7 @@ class localrepository(object):
                                    '%s\n') % (hname, exc))
                 if throw:
                     raise
-                if self.ui.traceback:
-                    traceback.print_exc()
+                self.ui.print_exc()
                 return True
             if r:
                 if throw:
