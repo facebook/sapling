@@ -94,7 +94,7 @@ def patch(strip, patchname, ui):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
     patcher = find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-    fp = os.popen('"%s" -p%d < "%s"' % (patcher, strip, patchname))
+    fp = os.popen('%s -p%d < "%s"' % (patcher, strip, patchname))
     files = {}
     for line in fp:
         line = line.rstrip()

@@ -166,37 +166,44 @@ class localrepository(object):
                     return
                 s = l.split(" ", 1)
                 if len(s) != 2:
-                    self.ui.warn(_("%s: ignoring invalid tag\n") % context)
+                    self.ui.warn(_("%s: cannot parse entry\n") % context)
                     return
                 node, key = s
+                key = key.strip()
                 try:
                     bin_n = bin(node)
                 except TypeError:
-                    self.ui.warn(_("%s: ignoring invalid tag\n") % context)
+                    self.ui.warn(_("%s: node '%s' is not well formed\n") %
+                                 (context, node))
                     return
                 if bin_n not in self.changelog.nodemap:
-                    self.ui.warn(_("%s: ignoring invalid tag\n") % context)
+                    self.ui.warn(_("%s: tag '%s' refers to unknown node\n") %
+                                 (context, key))
                     return
-                self.tagscache[key.strip()] = bin_n
+                self.tagscache[key] = bin_n
 
-            # read each head of the tags file, ending with the tip
+            # read the tags file from each head, ending with the tip,
             # and add each tag found to the map, with "newer" ones
             # taking precedence
+            heads = self.heads()
+            heads.reverse()
             fl = self.file(".hgtags")
-            h = fl.heads()
-            h.reverse()
-            for r in h:
+            for node in heads:
+                change = self.changelog.read(node)
+                rev = self.changelog.rev(node)
+                fn, ff = self.manifest.find(change[0], '.hgtags')
+                if fn is None: continue
                 count = 0
-                for l in fl.read(r).splitlines():
+                for l in fl.read(fn).splitlines():
                     count += 1
-                    parsetag(l, ".hgtags:%d" % count)
-
+                    parsetag(l, _(".hgtags (rev %d:%s), line %d") %
+                             (rev, short(node), count))
             try:
                 f = self.opener("localtags")
                 count = 0
                 for l in f:
                     count += 1
-                    parsetag(l, "localtags:%d" % count)
+                    parsetag(l, _("localtags, line %d") % count)
             except IOError:
                 pass
 

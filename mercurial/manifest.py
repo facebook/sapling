@@ -43,48 +43,61 @@ class manifest(revlog):
     def diff(self, a, b):
         return mdiff.textdiff(str(a), str(b))
 
+    def _search(self, m, s, lo=0, hi=None):
+        '''return a tuple (start, end) that says where to find s within m.
+
+        If the string is found m[start:end] are the line containing
+        that string.  If start == end the string was not found and
+        they indicate the proper sorted insertion point.  This was
+        taken from bisect_left, and modified to find line start/end as
+        it goes along.
+
+        m should be a buffer or a string
+        s is a string'''
+        def advance(i, c):
+            while i < lenm and m[i] != c:
+                i += 1
+            return i
+        lenm = len(m)
+        if not hi:
+            hi = lenm
+        while lo < hi:
+            mid = (lo + hi) // 2
+            start = mid
+            while start > 0 and m[start-1] != '\n':
+                start -= 1
+            end = advance(start, '\0')
+            if m[start:end] < s:
+                # we know that after the null there are 40 bytes of sha1
+                # this translates to the bisect lo = mid + 1
+                lo = advance(end + 40, '\n') + 1
+            else:
+                # this translates to the bisect hi = mid
+                hi = start
+        end = advance(lo, '\0')
+        found = m[lo:end]
+        if cmp(s, found) == 0:
+            # we know that after the null there are 40 bytes of sha1
+            end = advance(end + 40, '\n')
+            return (lo, end+1)
+        else:
+            return (lo, lo)
+
+    def find(self, node, f):
+        '''look up entry for a single file efficiently.
+        return (node, flag) pair if found, (None, None) if not.'''
+        if self.mapcache and node == self.mapcache[0]:
+            return self.mapcache[1].get(f), self.mapcache[2].get(f)
+        text = self.revision(node)
+        start, end = self._search(text, f)
+        if start == end:
+            return None, None
+        l = text[start:end]
+        f, n = l.split('\0')
+        return bin(n[:40]), n[40:-1] == 'x'
+
     def add(self, map, flags, transaction, link, p1=None, p2=None,
             changed=None):
-
-        # returns a tuple (start, end).  If the string is found
-        # m[start:end] are the line containing that string.  If start == end
-        # the string was not found and they indicate the proper sorted 
-        # insertion point.  This was taken from bisect_left, and modified
-        # to find line start/end as it goes along.
-        #
-        # m should be a buffer or a string
-        # s is a string
-        #
-        def manifestsearch(m, s, lo=0, hi=None):
-            def advance(i, c):
-                while i < lenm and m[i] != c:
-                    i += 1
-                return i
-            lenm = len(m)
-            if not hi:
-                hi = lenm
-            while lo < hi:
-                mid = (lo + hi) // 2
-                start = mid
-                while start > 0 and m[start-1] != '\n':
-                    start -= 1
-                end = advance(start, '\0')
-                if m[start:end] < s:
-                    # we know that after the null there are 40 bytes of sha1
-                    # this translates to the bisect lo = mid + 1
-                    lo = advance(end + 40, '\n') + 1
-                else:
-                    # this translates to the bisect hi = mid
-                    hi = start
-            end = advance(lo, '\0')
-            found = m[lo:end]
-            if cmp(s, found) == 0: 
-                # we know that after the null there are 40 bytes of sha1
-                end = advance(end + 40, '\n')
-                return (lo, end+1)
-            else:
-                return (lo, lo)
-
         # apply the changes collected during the bisect loop to our addlist
         # return a delta suitable for addrevision
         def addlistdelta(addlist, x):
@@ -137,7 +150,7 @@ class manifest(revlog):
             for w in work:
                 f = w[0]
                 # bs will either be the index of the item or the insert point
-                start, end = manifestsearch(addbuf, f, start)
+                start, end = self._search(addbuf, f, start)
                 if w[1] == 0:
                     l = "%s\000%s%s\n" % (f, hex(map[f]),
                                           flags[f] and "x" or '')

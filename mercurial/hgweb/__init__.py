@@ -519,7 +519,8 @@ class hgweb(object):
         mnode = hex(mn)
         mf = man.read(mn)
         rev = man.rev(mn)
-        node = self.repo.changelog.node(rev)
+        changerev = man.linkrev(mn)
+        node = self.repo.changelog.node(changerev)
         mff = man.readflags(mn)
 
         files = {}
