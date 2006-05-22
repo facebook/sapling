@@ -24,6 +24,9 @@ It has the following prerequisites, at least as I build it:
   ISTool
       http://www.istool.org/default.aspx/
 
+  add_path (you need only add_path.exe in the zip file)
+      http://www.barisione.org/apps.html#add_path
+
 And, of course, Mercurial itself.
 
 Once you have all this installed and built, clone a copy of the
@@ -34,7 +37,8 @@ In a shell, build a standalone copy of the hg.exe program:
 
   python setup.py build -c mingw32 py2exe -b 1
 
-Copy mfc71.dll into the dist directory that just got created.
+Copy mfc71.dll and add_path.exe into the dist directory that just
+got created.
 
 Run ISTool, and open the C:\hg\hg-release\contrib\win32\mercurial.iss
 file.
