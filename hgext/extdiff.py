@@ -101,7 +101,7 @@ def extdiff(ui, repo, *pats, **opts):
     '''use external program to diff repository (or selected files)
 
     Show differences between revisions for the specified files, using
-    an external program.  The default program used is "diff -Pnru".
+    an external program.  The default program used is "diff -Npru".
     To select a different program, use the -p option.  The program
     will be passed the names of two directories to compare.  To pass
     additional options to the program, use the -o option.  These will
