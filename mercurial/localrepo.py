@@ -899,6 +899,21 @@ class localrepository(object):
         return r
 
     def findincoming(self, remote, base=None, heads=None, force=False):
+        """Return list of roots of the subsets of missing nodes from remote
+
+        If base dict is specified, assume that these nodes and their parents
+        exist on the remote side and that no child of a node of base exists
+        in both remote and self.
+        Furthermore base will be updated to include the nodes that exists
+        in self and remote but no children exists in self and remote.
+        If a list of heads is specified, return only nodes which are heads
+        or ancestors of these heads.
+
+        All the ancestors of base are in self and in remote.
+        All the descendants of the list returned are missing in self.
+        (and so we know that the rest of the nodes are missing in remote, see
+        outgoing)
+        """
         m = self.changelog.nodemap
         search = []
         fetch = {}
@@ -911,6 +926,7 @@ class localrepository(object):
             heads = remote.heads()
 
         if self.changelog.tip() == nullid:
+            base[nullid] = 1
             if heads != [nullid]:
                 return [nullid]
             return []
@@ -929,7 +945,7 @@ class localrepository(object):
         if not unknown:
             return []
 
-        rep = {}
+        req = dict.fromkeys(unknown)
         reqcnt = 0
 
         # search through remote branches
@@ -946,12 +962,12 @@ class localrepository(object):
 
                 self.ui.debug(_("examining %s:%s\n")
                               % (short(n[0]), short(n[1])))
-                if n[0] == nullid:
-                    break
-                if n in seenbranch:
+                if n[0] == nullid: # found the end of the branch
+                    pass
+                elif n in seenbranch:
                     self.ui.debug(_("branch already found\n"))
                     continue
-                if n[1] and n[1] in m: # do we know the base?
+                elif n[1] and n[1] in m: # do we know the base?
                     self.ui.debug(_("found incomplete branch %s:%s\n")
                                   % (short(n[0]), short(n[1])))
                     search.append(n) # schedule branch range for scanning
@@ -962,14 +978,14 @@ class localrepository(object):
                             self.ui.debug(_("found new changeset %s\n") %
                                           short(n[1]))
                             fetch[n[1]] = 1 # earliest unknown
-                            base[n[2]] = 1 # latest known
-                            continue
+                        for p in n[2:4]:
+                            if p in m:
+                                base[p] = 1 # latest known
 
-                    for a in n[2:4]:
-                        if a not in rep:
-                            r.append(a)
-                            rep[a] = 1
-
+                    for p in n[2:4]:
+                        if p not in req and p not in m:
+                            r.append(p)
+                            req[p] = 1
                 seen[n[0]] = 1
 
             if r:
@@ -980,12 +996,7 @@ class localrepository(object):
                     for b in remote.branches(r[p:p+10]):
                         self.ui.debug(_("received %s:%s\n") %
                                       (short(b[0]), short(b[1])))
-                        if b[0] in m:
-                            self.ui.debug(_("found base node %s\n")
-                                          % short(b[0]))
-                            base[b[0]] = 1
-                        elif b[0] not in seen:
-                            unknown.append(b)
+                        unknown.append(b)
 
         # do binary search on the branches we found
         while search:
