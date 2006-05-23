@@ -109,6 +109,10 @@ class ui(object):
         else:
             return self.parentui.configbool(section, name, default)
 
+    def has_config(self, section):
+        '''tell whether section exists in config.'''
+        return self.cdata.has_section(section)
+
     def configitems(self, section):
         items = {}
         if self.parentui is not None:
@@ -179,7 +183,8 @@ class ui(object):
         and stop searching if one of these is set.
         Abort if found username is an empty string to force specifying
         the commit user elsewhere, e.g. with line option or repo hgrc.
-        If not found, use $LOGNAME or $USERNAME +"@full.hostname".
+        If not found, use ($LOGNAME or $USER or $LNAME or
+        $USERNAME) +"@full.hostname".
         """
         user = os.environ.get("HGUSER")
         if user is None:
@@ -187,11 +192,10 @@ class ui(object):
         if user is None:
             user = os.environ.get("EMAIL")
         if user is None:
-            user = os.environ.get("LOGNAME") or os.environ.get("USERNAME")
-            if user:
-                user = "%s@%s" % (user, socket.getfqdn())
-        if not user:
-            raise util.Abort(_("Please specify a username."))
+            try:
+                user = '%s@%s' % (getpass.getuser(), socket.getfqdn())
+            except KeyError:
+                raise util.Abort(_("Please specify a username."))
         return user
 
     def shortuser(self, user):
