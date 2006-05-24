@@ -1,0 +1,72 @@
+adding init
+adding x
+adding y
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+adding x
+adding y
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 3 changes to 3 files
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 3 changes to 3 files
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+searching for changes
+changeset:   4:fdb3c546e859
+tag:         tip
+parent:      1:1f703b3fcbc6
+parent:      2:de997049e034
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     m2
+
+searching for changes
+changeset:   3:f40f830c0024
+parent:      2:de997049e034
+parent:      1:1f703b3fcbc6
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     m1
+
+searching for changes
+changeset:   3:f40f830c0024
+tag:         tip
+parent:      2:de997049e034
+parent:      1:1f703b3fcbc6
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     m1
+
+searching for changes
+changeset:   3:fdb3c546e859
+tag:         tip
+parent:      1:1f703b3fcbc6
+parent:      2:de997049e034
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     m2
+
+pulling from a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 0 changes to 0 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+pulling from a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 0 changes to 0 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)

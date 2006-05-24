@@ -4,6 +4,7 @@ syntax: glob
 *.orig
 *.rej
 *~
+*.o
 *.so
 *.pyc
 *.swp
@@ -12,6 +13,7 @@ tests/.coverage*
 tests/annotated
 tests/*.err
 build
+contrib/hgsh/hgsh
 dist
 doc/*.[0-9]
 doc/*.[0-9].gendoc.txt
