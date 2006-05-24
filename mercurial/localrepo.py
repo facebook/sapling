@@ -1508,12 +1508,10 @@ class localrepository(object):
 
             # pull off the changeset group
             self.ui.status(_("adding changesets\n"))
-            co = cl.tip()
+            cor = cl.count() - 1
             chunkiter = changegroup.chunkiter(source)
-            cn = cl.addgroup(chunkiter, csmap, tr, 1) # unique
-            cnr, cor = map(cl.rev, (cn, co))
-            if cn == nullid:
-                cnr = cor
+            cl.addgroup(chunkiter, csmap, tr, 1) # unique
+            cnr = cl.count() - 1
             changesets = cnr - cor
 
             mf = None
@@ -1523,9 +1521,8 @@ class localrepository(object):
 
                 # pull off the manifest group
                 self.ui.status(_("adding manifests\n"))
-                mm = mf.tip()
                 chunkiter = changegroup.chunkiter(source)
-                mo = mf.addgroup(chunkiter, revmap, tr)
+                mf.addgroup(chunkiter, revmap, tr)
 
                 # process the files
                 self.ui.status(_("adding file changes\n"))
@@ -1537,7 +1534,7 @@ class localrepository(object):
                     fl = self.file(f)
                     o = fl.count()
                     chunkiter = changegroup.chunkiter(source)
-                    n = fl.addgroup(chunkiter, revmap, tr)
+                    fl.addgroup(chunkiter, revmap, tr)
                     revisions += fl.count() - o
                     files += 1
 
