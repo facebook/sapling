@@ -26,12 +26,13 @@ def _(s):
     return s
 
 class Purge(object):
-    def __init__(self, act=True, abort_on_err=False):
+    def __init__(self, act=True, abort_on_err=False, eol='\n'):
         self._repo = None
         self._ui = None
         self._hg_root = None
         self._act = act
         self._abort_on_err = abort_on_err
+        self._eol = eol
 
     def purge(self, ui, repo, dirs=None):
         self._repo = repo
@@ -71,20 +72,24 @@ class Purge(object):
         # directory.
         if self._repo.dirstate.state(relative_name) != '?':
             return
-        self._ui.note(name + '\n')
+        self._ui.note(_('Removing file %s\n') % name)
         if self._act:
             try:
                 os.remove(name)
             except OSError, e:
                 self._error(_('%s cannot be removed') % name)
+        else:
+            self._ui.write('%s%s' % (name, self._eol))
 
     def _remove_dir(self, name):
-        self._ui.note(name + '\n')
+        self._ui.note(_('Removing directory %s\n') % name)
         if self._act:
             try:
                 os.rmdir(name)
             except OSError, e:
                 self._error(_('%s cannot be removed') % name)
+        else:
+            self._ui.write('%s%s' % (name, self._eol))
 
     def _relative_name(self, path):
         '''
@@ -153,16 +158,21 @@ def purge(ui, repo, *dirs, **opts):
     forgot to add to the repository. If you only want to print the list of
     files that this program would delete use the -vn options.
     '''
-    act = not opts['nothing']
+    act = not opts['print']
     abort_on_err = bool(opts['abort_on_err'])
-    p = Purge(act, abort_on_err)
+    eol = opts['print0'] and '\0' or '\n'
+    if eol == '\0':
+        # --print0 implies --print
+        act = False
+    p = Purge(act, abort_on_err, eol)
     p.purge(ui, repo, dirs)
 
 
 cmdtable = {
     'purge':    (purge,
                  [('a', 'abort-on-err', None, _('abort if an error occurs')),
-                  ('n', 'nothing',      None, _('do nothing on files, useful with --verbose')),
+                  ('p', 'print',        None, _('print the file names instead of deleting them')),
+                  ('0', 'print0',       None, _('end filenames with NUL, for use with xargs (implies -p)')),
                  ],
                  _('hg purge [OPTIONS] [DIR]'))
 }
