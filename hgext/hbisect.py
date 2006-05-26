@@ -6,8 +6,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+from mercurial.i18n import gettext as _
 from mercurial.demandload import demandload
-demandload(globals(), "os sys sets mercurial:hg,util")
+demandload(globals(), "os sys sets mercurial:hg,util,commands")
 
 versionstr = "0.0.3"
 
@@ -17,9 +18,8 @@ def lookup_rev(ui, repo, rev=None):
         return repo.lookup(rev)
     parents = [p for p in repo.dirstate.parents() if p != hg.nullid]
     if len(parents) != 1:
-        ui.warn("unexpected number of parents\n")
-        ui.warn("please commit or revert\n")
-        sys.exit(1)
+        raise util.Abort(_("unexpected number of parents, "
+                           "please commit or revert"))
     return parents.pop()
 
 def check_clean(ui, repo):
@@ -64,8 +64,7 @@ class bisect(object):
     def init(self):
         """start a new bisection"""
         if os.path.isdir(self.path):
-            self.ui.warn("bisect directory already exists\n")
-            return 1
+            raise util.Abort(_("bisect directory already exists\n"))
         os.mkdir(self.path)
         check_clean(self.ui, self.repo)
         return 0
@@ -137,9 +136,8 @@ class bisect(object):
             return d
 
         if head in stop:
-            self.ui.warn("Unconsistent state, %s is good and bad\n"
-                          % hg.hex(head))
-            sys.exit(1)
+            raise util.Abort(_("Unconsistent state, %s:%s is good and bad")
+                             % (cl.rev(head), hg.short(head)))
         n_child = num_children(head)
         for i in xrange(cl.rev(head)+1):
             n = cl.node(i)
@@ -160,22 +158,20 @@ class bisect(object):
 
     def next(self):
         if not self.badrev:
-            self.ui.warn("You should give at least one bad\n")
-            sys.exit(1)
+            raise util.Abort(_("You should give at least one bad revision"))
         if not self.goodrevs:
-            self.ui.warn("No good revision given\n")
-            self.ui.warn("Assuming the first revision is good\n")
+            self.ui.warn(_("No good revision given\n"))
+            self.ui.warn(_("Marking the first revision as good\n"))
         ancestors, num_ancestors = self.__ancestors_and_nb_ancestors(
                                     self.badrev)
         tot = len(ancestors)
         if tot == 1:
             if ancestors.pop() != self.badrev:
-                self.ui.warn("Could not find the first bad revision\n")
-                sys.exit(1)
-            self.ui.write(
-                "The first bad revision is: %s\n" % hg.hex(self.badrev))
-            sys.exit(0)
-        self.ui.write("%d revisions left\n" % tot)
+                raise util.Abort(_("Could not find the first bad revision"))
+            self.ui.write(_("The first bad revision is:\n"))
+            displayer = commands.show_changeset(self.ui, self.repo, {})
+            displayer.show(changenode=self.badrev)
+            return None
         best_rev = None
         best_len = -1
         for n in ancestors:
@@ -184,14 +180,24 @@ class bisect(object):
             if l > best_len:
                 best_len = l
                 best_rev = n
+        assert best_rev is not None
+        nb_tests = 0
+        q, r = divmod(tot, 2)
+        while q:
+            nb_tests += 1
+            q, r = divmod(q, 2)
+        msg = _("Testing changeset %s:%s (%s changesets remaining, "
+                "~%s tests)\n") % (self.repo.changelog.rev(best_rev),
+                                   hg.short(best_rev), tot, nb_tests)
+        self.ui.write(msg)
         return best_rev
 
     def autonext(self):
         """find and update to the next revision to test"""
         check_clean(self.ui, self.repo)
         rev = self.next()
-        self.ui.write("Now testing %s\n" % hg.hex(rev))
-        return self.repo.update(rev, force=True)
+        if rev is not None:
+            return self.repo.update(rev, force=True)
 
     def good(self, rev):
         self.goodrevs.append(rev)
@@ -202,7 +208,7 @@ class bisect(object):
         rev = lookup_rev(self.ui, self.repo, rev)
         self.good(rev)
         if self.badrev:
-            self.autonext()
+            return self.autonext()
 
     def bad(self, rev):
         self.badrev = rev
@@ -236,7 +242,7 @@ def test(ui, repo, rev):
             b.good(new_rev)
             ui.write("it is good\n")
         anc = b.ancestors()
-        repo.update(new_rev, force=True)
+        #repo.update(new_rev, force=True)
     for v in anc:
         if v != rev:
             ui.warn("fail to found cset! :(\n")
@@ -258,7 +264,7 @@ for subcommands see "hg bisect help\"
             ui.write(synopsis + "\n")
             ui.write("\n" + doc + "\n")
             return
-        ui.write("list of subcommands for the bisect extension\n\n")
+        ui.write(_("list of subcommands for the bisect extension\n\n"))
         cmds = cmdtable.keys()
         cmds.sort()
         m = max([len(c) for c in cmds])
@@ -268,23 +274,23 @@ for subcommands see "hg bisect help\"
 
     b = bisect(ui, repo)
     bisectcmdtable = {
-        "init": (b.init, 0, "hg bisect init"),
-        "bad": (b.autobad, 1, "hg bisect bad [<rev>]"),
-        "good": (b.autogood, 1, "hg bisect good [<rev>]"),
-        "next": (b.autonext, 0, "hg bisect next"),
-        "reset": (b.reset, 0, "hg bisect reset"),
-        "help": (help_, 1, "hg bisect help [<subcommand>]"),
+        "init": (b.init, 0, _("hg bisect init")),
+        "bad": (b.autobad, 1, _("hg bisect bad [<rev>]")),
+        "good": (b.autogood, 1, _("hg bisect good [<rev>]")),
+        "next": (b.autonext, 0, _("hg bisect next")),
+        "reset": (b.reset, 0, _("hg bisect reset")),
+        "help": (help_, 1, _("hg bisect help [<subcommand>]")),
     }
 
     if not bisectcmdtable.has_key(cmd):
-        ui.warn("bisect: Unknown sub-command\n")
+        ui.warn(_("bisect: Unknown sub-command\n"))
         return help_()
     if len(args) > bisectcmdtable[cmd][1]:
-        ui.warn("bisect: Too many arguments\n")
+        ui.warn(_("bisect: Too many arguments\n"))
         return help_()
     return bisectcmdtable[cmd][0](*args)
 
 cmdtable = {
-    "bisect": (bisect_run, [], "hg bisect [help|init|reset|next|good|bad]"),
+    "bisect": (bisect_run, [], _("hg bisect [help|init|reset|next|good|bad]")),
     #"bisect-test": (test, [], "hg bisect-test rev"),
 }
