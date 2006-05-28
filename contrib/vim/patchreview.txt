@@ -1,0 +1,97 @@
+*patchreview.txt* Vim global plugin for doing single or multipatch code reviews
+
+            Author: Manpreet Singh (junkblocker-CAT-yahoo-DOG-com)
+                    (Replace -CAT- and -DOG- with @ and . first)
+            Copyright (C) 2006 by Manpreet Singh
+            License : This file is placed in the public domain.
+
+=============================================================================
+
+CONTENTS	                               *patchreview* *patchreview-contents*
+
+  1. Contents.........................................: |patchreview-contents|
+  2. Introduction.....................................: |patchreview-intro|
+  3. PatchReview options..............................: |patchreview-options|
+  4. PatchReview Usage................................: |patchreview-usage|
+     4.1 PatchReview Usage............................: |:PatchReview|
+     4.2 PatchReview Usage............................: |:PatchReviewCleanup|
+
+=============================================================================
+
+PatchReview Introduction                                  *patchreview-intro*
+
+The Patch Review plugin allows single or multipatch code review to be done in
+VIM. VIM provides the |:diffpatch| command to do single file reviews but can
+not handle patch files containing multiple patches as is common with software
+development projects. This plugin provides that missing functionality. It also
+tries to improve on |:diffpatch|'s behaviour of creating the patched files in
+the same directory as original file which can lead to project workspace
+pollution.
+
+=============================================================================
+
+PatchReview Options                                     *patchreview-options*
+
+  g:patchreview_filterdiff : Optional path to filterdiff binary. PatchReview
+                             tries to locate filterdiff on system path
+                             automatically. If the binary is not on system
+                             path, this option tell PatchReview the full path
+                             to the binary.  This option, if specified,
+                             overrides the default filterdiff binary on the
+                             path.
+
+     examples:
+        (On Windows with Cygwin)
+
+           let g:patchreview_filterdiff = 'c:\\cygwin\\bin\\filterdiff.exe'
+
+        (On *nix systems)
+
+           let g:patchreview_filterdiff = '/usr/bin/filterdiff'
+
+  g:patchreview_patch      : Optional path to patch binary. PatchReview tries
+                             to locate patch on system path automatically. If
+                             the binary is not on system path, this option
+                             tell PatchReview the full path to the binary.
+                             This option, if specified, overrides the default
+                             patch binary on the path.
+
+     examples:
+        (On Windows with Cygwin)
+
+           let g:patchreview_patch = 'c:\\cygwin\\bin\\patch.exe'
+
+        (On *nix systems)
+
+           let g:patchreview_patch = '/usr/bin/gpatch'
+
+
+  g:patchreview_tmpdir : Optional path where the plugin can save temporary
+                         files.  If this is not specified, the plugin tries to
+                         use TMP, TEMP and TMPDIR environment variables in
+                         succession.
+
+    examples:
+        (On Windows)      let g:patchreview_tmpdir = 'c:\\tmp'
+        (On *nix systems) let g:patchreview_tmpdir = '~/tmp'
+
+=============================================================================
+
+PatchReview Usage                                          *patchreview-usage*
+                                                                *:PatchReview*
+
+  :PatchReview patchfile_path [optional_source_directory]
+
+    Perform a patch review in the current directory based on the supplied
+    patchfile_path. If optional_source_directory is specified, patchreview is
+    done on that directory. Othewise, the current directory is assumed to be
+    the source directory.
+                                                          *:PatchReviewCleanup*
+
+  :PatchReviewCleanup
+
+    After you are done using the :PatchReview command, you can cleanup the
+    temporary files in the temporary directory using this command.
+
+=============================================================================
+vim: ft=help:ts=2:sts=2:sw=2:tw=78:tw=78
