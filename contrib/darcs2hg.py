@@ -13,7 +13,9 @@
 # -----------------------------------------------------------------------------
 
 import os, sys
+import tempfile
 import xml.dom.minidom as xml_dom
+from time import strptime, mktime
 
 DARCS_REPO = None
 HG_REPO    = None
@@ -25,7 +27,7 @@ USAGE = """\
     HGREPO must not exist, as it will be created and filled up (this will avoid
     overwriting valuable data.
 
-""" % (os.path.basename(__file__))
+""" % (os.path.basename(sys.argv[0]))
 
 # ------------------------------------------------------------------------------
 #
@@ -70,8 +72,9 @@ def darcs_changes(darcsRepo):
 		else: name = name[0].childNodes[0].data
 		if not comm: comm = ""
 		else: comm = comm[0].childNodes[0].data
-		res.append([name, comm])
-	return res
+		author = patch_node.getAttribute("author")
+		date = patch_node.getAttribute("date")
+		yield author, date, name, comm
 
 def darcs_pull(hg_repo, darcs_repo, change):
 	cmd("darcs pull '%s' --all --patches='%s'" % (darcs_repo, change), hg_repo)
@@ -82,11 +85,13 @@ def darcs_pull(hg_repo, darcs_repo, change):
 #
 # ------------------------------------------------------------------------------
 
-def hg_commit( hg_repo, text ):
-	writefile("/tmp/msg", text)
-	cmd("hg add -X _darcs *", hg_repo)
-	cmd("hg commit -l /tmp/msg", hg_repo)
-	os.unlink("/tmp/msg")
+def hg_commit( hg_repo, text, author, date ):
+	fd, tmpfile = tempfile.mkstemp(prefix="darcs2hg_")
+	writefile(tmpfile, text)
+	cmd("hg add -X _darcs", hg_repo)
+	cmd("hg remove -X _darcs --after", hg_repo)
+	cmd("hg commit -l %s -u '%s' -d '%s 0'"  % (tmpfile, author, date), hg_repo)
+	os.unlink(tmpfile)
 
 # ------------------------------------------------------------------------------
 #
@@ -115,10 +120,11 @@ if __name__ == "__main__":
 	cmd("hg init '%s'" % (hg_repo))
 	cmd("darcs initialize", hg_repo)
 	# Get the changes from the Darcs repository
-	for summary, description in darcs_changes(darcs_repo):
+	for author, date, summary, description in darcs_changes(darcs_repo):
 		text = summary + "\n" + description
 		darcs_pull(hg_repo, darcs_repo, summary)
-		hg_commit(hg_repo, text)
+		epoch = int(mktime(strptime(date, '%Y%m%d%H%M%S')))
+		hg_commit(hg_repo, text, author, epoch)
 
 # EOF
 
