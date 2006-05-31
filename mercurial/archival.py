@@ -156,7 +156,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
         if matchfn and not matchfn(name): return
         if decode:
             fp = cStringIO.StringIO()
-            repo.wwrite(None, data, fp)
+            repo.wwrite(name, data, fp)
             data = fp.getvalue()
         archiver.addfile(name, mode, data)
 
