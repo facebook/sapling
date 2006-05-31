@@ -10,9 +10,11 @@ from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
-demandload(globals(), "fnmatch hgweb mdiff random signal tempfile time")
+demandload(globals(), "fnmatch mdiff random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
 demandload(globals(), "archival changegroup")
+demandload(globals(), "mercurial.hgweb.server:create_server")
+demandload(globals(), "mercurial.hgweb:hgweb,hgwebdir")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -2542,7 +2544,7 @@ def serve(ui, repo, **opts):
         os._exit(0)
 
     try:
-        httpd = hgweb.create_server(ui, repo, hgweb.hgwebdir, hgweb.hgweb)
+        httpd = create_server(ui, repo, hgwebdir, hgweb)
     except socket.error, inst:
         raise util.Abort(_('cannot start server: ') + inst.args[1])
 
