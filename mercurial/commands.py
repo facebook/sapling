@@ -2542,7 +2542,7 @@ def serve(ui, repo, **opts):
         os._exit(0)
 
     try:
-        httpd = hgweb.create_server(ui, repo)
+        httpd = hgweb.create_server(ui, repo, hgweb.hgwebdir, hgweb.hgweb)
     except socket.error, inst:
         raise util.Abort(_('cannot start server: ') + inst.args[1])
 

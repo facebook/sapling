@@ -10,22 +10,11 @@ import os, cgi, sys
 import mimetypes
 from mercurial.demandload import demandload
 demandload(globals(), "time re socket zlib errno ConfigParser tempfile")
-demandload(globals(), "StringIO BaseHTTPServer SocketServer urllib")
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,templater")
+demandload(globals(), "mercurial.hgweb.request:hgrequest")
+demandload(globals(), "mercurial.hgweb.server:create_server")
 from mercurial.node import *
 from mercurial.i18n import gettext as _
-
-def splitURI(uri):
-    """ Return path and query splited from uri
-
-    Just like CGI environment, the path is unquoted, the query is
-    not.
-    """
-    if '?' in uri:
-        path, query = uri.split('?', 1)
-    else:
-        path, query = uri, ''
-    return urllib.unquote(path), query
 
 def up(p):
     if p[0] != "/":
@@ -68,39 +57,6 @@ def staticfile(directory, fname):
     except (TypeError, OSError):
         # illegal fname or unreadable file
         return ""
-
-class hgrequest(object):
-    def __init__(self, inp=None, out=None, env=None):
-        self.inp = inp or sys.stdin
-        self.out = out or sys.stdout
-        self.env = env or os.environ
-        self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
-
-    def write(self, *things):
-        for thing in things:
-            if hasattr(thing, "__iter__"):
-                for part in thing:
-                    self.write(part)
-            else:
-                try:
-                    self.out.write(str(thing))
-                except socket.error, inst:
-                    if inst[0] != errno.ECONNRESET:
-                        raise
-
-    def header(self, headers=[('Content-type','text/html')]):
-        for header in headers:
-            self.out.write("%s: %s\r\n" % header)
-        self.out.write("\r\n")
-
-    def httphdr(self, type, file="", size=0):
-
-        headers = [('Content-type', type)]
-        if file:
-            headers.append(('Content-disposition', 'attachment; filename=%s' % file))
-        if size > 0:
-            headers.append(('Content-length', str(size)))
-        self.header(headers)
 
 class hgweb(object):
     def __init__(self, repo, name=None):
@@ -892,117 +848,6 @@ class hgweb(object):
 
         else:
             req.write(self.t("error"))
-
-def create_server(ui, repo):
-    use_threads = True
-
-    def openlog(opt, default):
-        if opt and opt != '-':
-            return open(opt, 'w')
-        return default
-
-    address = ui.config("web", "address", "")
-    port = int(ui.config("web", "port", 8000))
-    use_ipv6 = ui.configbool("web", "ipv6")
-    webdir_conf = ui.config("web", "webdir_conf")
-    accesslog = openlog(ui.config("web", "accesslog", "-"), sys.stdout)
-    errorlog = openlog(ui.config("web", "errorlog", "-"), sys.stderr)
-
-    if use_threads:
-        try:
-            from threading import activeCount
-        except ImportError:
-            use_threads = False
-
-    if use_threads:
-        _mixin = SocketServer.ThreadingMixIn
-    else:
-        if hasattr(os, "fork"):
-            _mixin = SocketServer.ForkingMixIn
-        else:
-            class _mixin: pass
-
-    class MercurialHTTPServer(_mixin, BaseHTTPServer.HTTPServer):
-        pass
-
-    class IPv6HTTPServer(MercurialHTTPServer):
-        address_family = getattr(socket, 'AF_INET6', None)
-
-        def __init__(self, *args, **kwargs):
-            if self.address_family is None:
-                raise hg.RepoError(_('IPv6 not available on this system'))
-            BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
-
-    class hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
-
-        def log_error(self, format, *args):
-            errorlog.write("%s - - [%s] %s\n" % (self.address_string(),
-                                                 self.log_date_time_string(),
-                                                 format % args))
-
-        def log_message(self, format, *args):
-            accesslog.write("%s - - [%s] %s\n" % (self.address_string(),
-                                                  self.log_date_time_string(),
-                                                  format % args))
-
-        def do_POST(self):
-            try:
-                self.do_hgweb()
-            except socket.error, inst:
-                if inst[0] != errno.EPIPE:
-                    raise
-
-        def do_GET(self):
-            self.do_POST()
-
-        def do_hgweb(self):
-            path_info, query = splitURI(self.path)
-
-            env = {}
-            env['GATEWAY_INTERFACE'] = 'CGI/1.1'
-            env['REQUEST_METHOD'] = self.command
-            env['SERVER_NAME'] = self.server.server_name
-            env['SERVER_PORT'] = str(self.server.server_port)
-            env['REQUEST_URI'] = "/"
-            env['PATH_INFO'] = path_info
-            if query:
-                env['QUERY_STRING'] = query
-            host = self.address_string()
-            if host != self.client_address[0]:
-                env['REMOTE_HOST'] = host
-                env['REMOTE_ADDR'] = self.client_address[0]
-
-            if self.headers.typeheader is None:
-                env['CONTENT_TYPE'] = self.headers.type
-            else:
-                env['CONTENT_TYPE'] = self.headers.typeheader
-            length = self.headers.getheader('content-length')
-            if length:
-                env['CONTENT_LENGTH'] = length
-            accept = []
-            for line in self.headers.getallmatchingheaders('accept'):
-                if line[:1] in "\t\n\r ":
-                    accept.append(line.strip())
-                else:
-                    accept = accept + line[7:].split(',')
-            env['HTTP_ACCEPT'] = ','.join(accept)
-
-            req = hgrequest(self.rfile, self.wfile, env)
-            self.send_response(200, "Script output follows")
-
-            if webdir_conf:
-                hgwebobj = hgwebdir(webdir_conf)
-            elif repo is not None:
-                hgwebobj = hgweb(repo.__class__(repo.ui, repo.origroot))
-            else:
-                raise hg.RepoError(_('no repo found'))
-            hgwebobj.run(req)
-
-
-    if use_ipv6:
-        return IPv6HTTPServer((address, port), hgwebhandler)
-    else:
-        return MercurialHTTPServer((address, port), hgwebhandler)
 
 # This is a stopgap
 class hgwebdir(object):
