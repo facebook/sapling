@@ -1196,8 +1196,6 @@ class revlog(object):
             start = self.start(base)
             end = self.end(t)
 
-        if node is None:
-            raise RevlogError(_("group to be added is empty"))
         return node
 
     def strip(self, rev, minlink):

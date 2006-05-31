@@ -1510,7 +1510,8 @@ class localrepository(object):
             self.ui.status(_("adding changesets\n"))
             cor = cl.count() - 1
             chunkiter = changegroup.chunkiter(source)
-            cl.addgroup(chunkiter, csmap, tr, 1) # unique
+            if cl.addgroup(chunkiter, csmap, tr, 1) is None:
+                raise util.Abort(_("received changelog group is empty"))
             cnr = cl.count() - 1
             changesets = cnr - cor
 
@@ -1522,6 +1523,10 @@ class localrepository(object):
                 # pull off the manifest group
                 self.ui.status(_("adding manifests\n"))
                 chunkiter = changegroup.chunkiter(source)
+                # no need to check for empty manifest group here:
+                # if the result of the merge of 1 and 2 is the same in 3 and 4,
+                # no new manifest will be created and the manifest group will
+                # be empty during the pull
                 mf.addgroup(chunkiter, revmap, tr)
 
                 # process the files
@@ -1534,7 +1539,8 @@ class localrepository(object):
                     fl = self.file(f)
                     o = fl.count()
                     chunkiter = changegroup.chunkiter(source)
-                    fl.addgroup(chunkiter, revmap, tr)
+                    if fl.addgroup(chunkiter, revmap, tr) is None:
+                        raise util.Abort(_("received file revlog group is empty"))
                     revisions += fl.count() - o
                     files += 1
 
