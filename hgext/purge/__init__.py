@@ -169,10 +169,11 @@ def purge(ui, repo, *dirs, **opts):
 
 
 cmdtable = {
-    'purge':    (purge,
-                 [('a', 'abort-on-err', None, _('abort if an error occurs')),
-                  ('p', 'print',        None, _('print the file names instead of deleting them')),
-                  ('0', 'print0',       None, _('end filenames with NUL, for use with xargs (implies -p)')),
-                 ],
-                 _('hg purge [OPTIONS] [DIR]'))
+    'purge':
+        (purge,
+         [('a', 'abort-on-err', None, _('abort if an error occurs')),
+          ('p', 'print', None, _('print the file names instead of deleting them')),
+          ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
+                                  ' (implies -p)'))],
+         _('hg purge [OPTION]... [DIR]...'))
 }
