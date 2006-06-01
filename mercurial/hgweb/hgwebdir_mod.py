@@ -10,7 +10,9 @@ import os
 from mercurial.demandload import demandload
 demandload(globals(), "ConfigParser")
 demandload(globals(), "mercurial:ui,hg,util,templater")
+demandload(globals(), "mercurial.hgweb.hgweb_mod:hgweb")
 demandload(globals(), "mercurial.hgweb.request:hgrequest")
+demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
 from mercurial.i18n import gettext as _
 
 # This is a stopgap
