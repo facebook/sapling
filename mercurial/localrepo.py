@@ -303,7 +303,7 @@ class localrepository(object):
         if tr != None and tr.running():
             return tr.nest()
 
-        # save dirstate for undo
+        # save dirstate for rollback
         try:
             ds = self.opener("dirstate").read()
         except IOError:
@@ -327,7 +327,7 @@ class localrepository(object):
             self.ui.warn(_("no interrupted transaction available\n"))
             return False
 
-    def undo(self, wlock=None):
+    def rollback(self, wlock=None):
         if not wlock:
             wlock = self.wlock()
         l = self.lock()
@@ -338,7 +338,7 @@ class localrepository(object):
             self.reload()
             self.wreload()
         else:
-            self.ui.warn(_("no undo information available\n"))
+            self.ui.warn(_("no rollback information available\n"))
 
     def wreload(self):
         self.dirstate.read()

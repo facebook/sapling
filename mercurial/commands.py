@@ -2432,7 +2432,7 @@ def rollback(ui, repo):
     repository; for example an in-progress pull from the repository
     may fail if a rollback is performed.
     """
-    repo.undo()
+    repo.rollback()
 
 def root(ui, repo):
     """print the root (top) of the current working dir
@@ -2757,7 +2757,7 @@ def undo(ui, repo):
     instructions, see the rollback command.
     """
     ui.warn(_('(the undo command is deprecated; use rollback instead)\n'))
-    repo.undo()
+    repo.rollback()
 
 def update(ui, repo, node=None, merge=False, clean=False, force=None,
            branch=None, **opts):
