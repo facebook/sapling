@@ -624,8 +624,8 @@ class hgweb(object):
                      diff=diff)
 
     archive_specs = {
-        'bz2': ('application/x-tar', 'tbz2', '.tar.bz2', 'x-bzip2'),
-        'gz': ('application/x-tar', 'tgz', '.tar.gz', 'x-gzip'),
+        'bz2': ('application/x-tar', 'tbz2', '.tar.bz2', None),
+        'gz': ('application/x-tar', 'tgz', '.tar.gz', None),
         'zip': ('application/zip', 'zip', '.zip', None),
         }
 
