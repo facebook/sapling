@@ -145,34 +145,30 @@ class ui(object):
         return self.configitems("extensions")
 
     def hgignorefiles(self):
-        result = []
-        cfgitems = self.configitems("ui")
-        for key, value in cfgitems:
-            if key == 'ignore' or key.startswith('ignore.'):
-                path = os.path.expanduser(value)
-                result.append(path)
-        return result
+        ret = []
+        for k, v in self.configitems("ui"):
+            if k == 'ignore' or k.startswith('ignore.'):
+                ret.append(os.path.expanduser(v))
+        return ret
 
     def configrevlog(self):
         ret = {}
-        for x in self.configitems("revlog"):
-            k = x[0].lower()
-            ret[k] = x[1]
+        for k, v in self.configitems("revlog"):
+            ret[k.lower()] = v
         return ret
+
     def diffopts(self):
         if self.diffcache:
             return self.diffcache
         ret = { 'showfunc' : True, 'ignorews' : False}
-        for x in self.configitems("diff"):
-            k = x[0].lower()
-            v = x[1]
+        for k, v in self.configitems("diff"):
             if v:
                 v = v.lower()
                 if v == 'true':
-                    value = True
+                    v = True
                 else:
-                    value = False
-                ret[k] = value
+                    v = False
+                ret[k.lower()] = v
         self.diffcache = ret
         return ret
 
