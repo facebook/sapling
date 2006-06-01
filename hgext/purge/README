@@ -20,7 +20,7 @@ But it will leave untouched:
 Be careful with "hg purge", you could irreversibly delete some files you
 forgot to add to the repository. If you only want to print the list of
 files that this program would delete use:
-  hg purge -vn
+  hg purge --print
 
 To get the most recent version of "hg purge" visit its home page:
   http://www.barisione.org/apps.html#hg-purge
@@ -31,20 +31,11 @@ This program was inspired by the "cvspurge" script contained in CVS utilities
 
 How to install
 ==============
-Obviously you need an installed version of Mercurial to use this extension.
-"purge" has been tested with Mercurial 0.8.1 and 0.9 but it may work with
-other versions as well.
+The purge extension is distributed with Mercurial, to activate it you need to
+put these lines in your ~/.hgrc:
 
-Put the "purge.py" file in a directory of your choice. Enable the extension
-inserting an instruction like "purge=/path/you/choose/purge.py" in the
-"[extensions]" section of a configuration file read by "hg".
-
-For instance if you installed the script in "/home/USER/hg-purge/", you
-can create a file named  ".hgrc" in your home directory with the following
-content:
   [extensions]
-  purge=/home/USER/hg-purge/purge.py
-Note that using "~/USER/hg-purge/purge.py" does not work with hg 0.9.
+  hgext.purge=
 
 For more information on the configuration files see the man page for "hgrc":
   man 5 hgrc
@@ -66,4 +57,4 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 A copy of the GNU General Public License is distributed along
-with this program in the file COPYING.GPL.
+with Mercurial in the file COPYING.

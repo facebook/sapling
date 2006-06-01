@@ -104,7 +104,7 @@ class Purge(object):
 
     def _split_path(self, path):
         '''
-        Retruns a list of the single files/directories in "path".
+        Returns a list of the single files/directories in "path".
         For instance:
           '/home/user/test' -> ['/', 'home', 'user', 'test']
           'C:\\Mercurial'   -> ['C:\\', 'Mercurial']
@@ -144,7 +144,7 @@ def purge(ui, repo, *dirs, **opts):
      - Unknown files: files marked with "?" by "hg status"
      - Ignored files: files usually ignored by Mercurial because they match
        a pattern in a ".hgignore" file
-     - Empty directories: infact Mercurial ignores directories unless they
+     - Empty directories: in fact Mercurial ignores directories unless they
        contain files under source control managment
     But it will leave untouched:
      - Unmodified tracked files
@@ -156,7 +156,7 @@ def purge(ui, repo, *dirs, **opts):
 
     Be careful with purge, you could irreversibly delete some files you
     forgot to add to the repository. If you only want to print the list of
-    files that this program would delete use the -vn options.
+    files that this program would delete use the --print option.
     '''
     act = not opts['print']
     abort_on_err = bool(opts['abort_on_err'])
