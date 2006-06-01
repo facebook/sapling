@@ -24,3 +24,4 @@ mercurial/__version__.py
 
 syntax: regexp
 ^\.pc/
+Output/Mercurial-[0-9.]*.exe

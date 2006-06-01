@@ -38,6 +38,7 @@ Source: dist\library.zip; DestDir: {app}
 Source: dist\mfc71.dll; DestDir: {sys}; Flags: sharedfile uninsnosharedfileprompt
 Source: dist\msvcr71.dll; DestDir: {sys}; Flags: sharedfile uninsnosharedfileprompt
 Source: dist\w9xpopen.exe; DestDir: {app}
+Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.txt; DestDir: {app}\Docs
 Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
@@ -55,3 +56,9 @@ Type: files; Name: {app}\Mercurial.url
 Name: {group}\Uninstall Mercurial; Filename: {uninstallexe}
 Name: {group}\Mercurial Command Reference; Filename: {app}\Docs\hg.1.txt
 Name: {group}\Mercurial Web Site; Filename: {app}\Mercurial.url
+
+[Run]
+Filename: "{app}\add_path.exe"; Parameters: "{app}"; Flags: postinstall; Description: "Add the installation path to the search path"
+
+[UninstallRun]
+Filename: "{app}\add_path.exe"; Parameters: "/del {app}"
