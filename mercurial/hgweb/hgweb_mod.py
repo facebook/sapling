@@ -48,9 +48,10 @@ class hgweb(object):
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
     def archivelist(self, nodeid):
-        al = self.repo.ui.config("web", "allow_archive", "").split()
+        allowed = (self.repo.ui.config("web", "allow_archive", "")
+                   .replace(",", " ").split())
         for i in self.archives:
-            if i in al or self.repo.ui.configbool("web", "allow" + i, False):
+            if i in allowed or self.repo.ui.configbool("web", "allow" + i):
                 yield {"type" : i, "node" : nodeid, "url": ""}
 
     def listfiles(self, files, mf):
