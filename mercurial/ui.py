@@ -142,7 +142,10 @@ class ui(object):
                 yield parent
 
     def extensions(self):
-        return self.configitems("extensions")
+        ret = self.configitems("extensions")
+        for i, (k, v) in enumerate(ret):
+            if v: ret[i] = (k, os.path.expanduser(v))
+        return ret
 
     def hgignorefiles(self):
         result = []

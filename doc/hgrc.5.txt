@@ -165,6 +165,14 @@ extensions::
   the path to the ".py" file (including the file name extension) that
   defines the extension.
 
+  Example for ~/.hgrc:
+
+    [extensions]
+    # (the mq extension will get loaded from mercurial's path)
+    hgext.mq =
+    # (this extension will get loaded from the file specified)
+    myfeature = ~/.hgext/myfeature.py
+
 hooks::
   Commands or Python functions that get automatically executed by
   various actions such as starting or finishing a commit. Multiple
