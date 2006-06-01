@@ -362,15 +362,20 @@ web::
     Where to output the access log. Default is stdout.
   address;;
     Interface address to bind to. Default is all.
+  allow_archive;;
+    List of archive format (bz2, gz, zip) allowed for downloading.
+    Default is empty.
   allowbz2;;
-    Whether to allow .tar.bz2 downloading of repo revisions. Default is false.
+    (DEPRECATED) Whether to allow .tar.bz2 downloading of repo revisions.
+    Default is false.
   allowgz;;
-    Whether to allow .tar.gz downloading of repo revisions. Default is false.
+    (DEPRECATED) Whether to allow .tar.gz downloading of repo revisions.
+    Default is false.
   allowpull;;
     Whether to allow pulling from the repository. Default is true.
   allowzip;;
-    Whether to allow .zip downloading of repo revisions. Default is false.
-    This feature creates temporary files.
+    (DEPRECATED) Whether to allow .zip downloading of repo revisions.
+    Default is false. This feature creates temporary files.
   baseurl;;
     Base URL to use when publishing URLs in other locations, so
     third-party tools like email notification hooks can construct URLs.

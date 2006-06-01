@@ -58,8 +58,9 @@ class hgwebdir(object):
                                              "footer": footer})
 
         def archivelist(ui, nodeid, url):
+            al = ui.config("web", "allow_archive", "").split()
             for i in ['zip', 'gz', 'bz2']:
-                if ui.configbool("web", "allow" + i, False):
+                if i in al or ui.configbool("web", "allow" + i, False):
                     yield {"type" : i, "node": nodeid, "url": url}
 
         def entries(sortcolumn="", descending=False, **map):
