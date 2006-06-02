@@ -65,7 +65,7 @@ def scan(libpath,packagename):
     # Use the package in the build directory
     libpath = os.path.abspath(libpath)
     sys.path.insert(0,libpath)
-    packdir = os.path.join(libpath,packagename)
+    packdir = os.path.join(libpath,packagename.replace('.', '/'))
     # A normal import would not find the package in
     # the build directory. ihook is used to force the import.
     # After the package is imported the import scope for

@@ -56,7 +56,7 @@ try:
             else:
                 self.includes = self.includes.split(',')
             mercurial.packagescan.scan(self.build_lib,'mercurial')
-            mercurial.packagescan.scan(self.build_lib,'mercurial/hgweb')
+            mercurial.packagescan.scan(self.build_lib,'mercurial.hgweb')
             mercurial.packagescan.scan(self.build_lib,'hgext')
             self.includes += mercurial.packagescan.getmodules()
             build_exe.finalize_options(self)
