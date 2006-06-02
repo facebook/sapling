@@ -10,7 +10,7 @@ from mercurial.demandload import demandload
 import os, sys, errno
 demandload(globals(), "urllib BaseHTTPServer socket SocketServer")
 demandload(globals(), "mercurial:ui,hg,util,templater")
-demandload(globals(), "mercurial.hgweb.request:hgrequest")
+demandload(globals(), "hgweb_mod:hgweb hgwebdir_mod:hgwebdir request:hgrequest")
 from mercurial.i18n import gettext as _
 
 def _splitURI(uri):
@@ -87,7 +87,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_response(200, "Script output follows")
         self.server.make_and_run_handler(req)
 
-def create_server(ui, repo, webdirmaker, repoviewmaker):
+def create_server(ui, repo):
     use_threads = True
 
     def openlog(opt, default):
@@ -123,8 +123,8 @@ def create_server(ui, repo, webdirmaker, repoviewmaker):
             self.errorlog = errorlog
             self.repo = repo
             self.webdir_conf = webdir_conf
-            self.webdirmaker = webdirmaker
-            self.repoviewmaker = repoviewmaker
+            self.webdirmaker = hgwebdir
+            self.repoviewmaker = hgweb
 
         def make_and_run_handler(self, req):
             if self.webdir_conf:
