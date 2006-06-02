@@ -1,4 +1,4 @@
-# hgweb.py - web interface to a mercurial repository
+# hgweb/common.py - Utility functions needed by hgweb_mod and hgwebdir_mod
 #
 # Copyright 21 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>
 # Copyright 2005 Matt Mackall <mpm@selenic.com>

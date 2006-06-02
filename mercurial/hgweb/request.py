@@ -1,4 +1,4 @@
-# hgweb.py - web interface to a mercurial repository
+# hgweb/request.py - An http request from either CGI or the standalone server.
 #
 # Copyright 21 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>
 # Copyright 2005 Matt Mackall <mpm@selenic.com>
