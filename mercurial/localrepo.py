@@ -1498,8 +1498,8 @@ class localrepository(object):
 
         tr = self.transaction()
 
-        # write changelog and manifest data to temp files so
-        # concurrent readers will not see inconsistent view
+        # write changelog data to temp files so concurrent readers will not see
+        # inconsistent view
         cl = None
         try:
             cl = appendfile.appendchangelog(self.opener, self.changelog.version)
@@ -1515,51 +1515,38 @@ class localrepository(object):
             cnr = cl.count() - 1
             changesets = cnr - cor
 
-            mf = None
-            try:
-                mf = appendfile.appendmanifest(self.opener,
-                                               self.manifest.version)
+            # pull off the manifest group
+            self.ui.status(_("adding manifests\n"))
+            chunkiter = changegroup.chunkiter(source)
+            # no need to check for empty manifest group here:
+            # if the result of the merge of 1 and 2 is the same in 3 and 4,
+            # no new manifest will be created and the manifest group will
+            # be empty during the pull
+            self.manifest.addgroup(chunkiter, revmap, tr)
 
-                # pull off the manifest group
-                self.ui.status(_("adding manifests\n"))
+            # process the files
+            self.ui.status(_("adding file changes\n"))
+            while 1:
+                f = changegroup.getchunk(source)
+                if not f:
+                    break
+                self.ui.debug(_("adding %s revisions\n") % f)
+                fl = self.file(f)
+                o = fl.count()
                 chunkiter = changegroup.chunkiter(source)
-                # no need to check for empty manifest group here:
-                # if the result of the merge of 1 and 2 is the same in 3 and 4,
-                # no new manifest will be created and the manifest group will
-                # be empty during the pull
-                mf.addgroup(chunkiter, revmap, tr)
+                if fl.addgroup(chunkiter, revmap, tr) is None:
+                    raise util.Abort(_("received file revlog group is empty"))
+                revisions += fl.count() - o
+                files += 1
 
-                # process the files
-                self.ui.status(_("adding file changes\n"))
-                while 1:
-                    f = changegroup.getchunk(source)
-                    if not f:
-                        break
-                    self.ui.debug(_("adding %s revisions\n") % f)
-                    fl = self.file(f)
-                    o = fl.count()
-                    chunkiter = changegroup.chunkiter(source)
-                    if fl.addgroup(chunkiter, revmap, tr) is None:
-                        raise util.Abort(_("received file revlog group is empty"))
-                    revisions += fl.count() - o
-                    files += 1
-
-                # write order here is important so concurrent readers will see
-                # consistent view of repo
-                mf.writedata()
-            finally:
-                if mf:
-                    mf.cleanup()
             cl.writedata()
         finally:
             if cl:
                 cl.cleanup()
 
-        # make changelog and manifest see real files again
+        # make changelog see real files again
         self.changelog = changelog.changelog(self.opener, self.changelog.version)
-        self.manifest = manifest.manifest(self.opener, self.manifest.version)
         self.changelog.checkinlinesize(tr)
-        self.manifest.checkinlinesize(tr)
 
         newheads = len(self.changelog.heads())
         heads = ""
