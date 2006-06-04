@@ -2476,13 +2476,13 @@ def serve(ui, repo, **opts):
             cmd = fin.readline()[:-1]
             if cmd == '':
                 return
-            if cmd == "heads":
+            elif cmd == "heads":
                 h = repo.heads()
                 respond(" ".join(map(hex, h)) + "\n")
-            if cmd == "lock":
+            elif cmd == "lock":
                 lock = repo.lock()
                 respond("")
-            if cmd == "unlock":
+            elif cmd == "unlock":
                 if lock:
                     lock.release()
                 lock = None
@@ -2523,6 +2523,9 @@ def serve(ui, repo, **opts):
 
                 r = repo.addchangegroup(fin, 'serve')
                 respond(str(r))
+
+            else:
+                respond("")
 
     optlist = ("name templates style address port ipv6"
                " accesslog errorlog webdir_conf")
