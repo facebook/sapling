@@ -13,7 +13,7 @@ demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "fnmatch mdiff random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
 demandload(globals(), "archival changegroup")
-demandload(globals(), "hgweb.server")
+demandload(globals(), "hgweb.server sshserver")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -2452,76 +2452,8 @@ def serve(ui, repo, **opts):
     if opts["stdio"]:
         if repo is None:
             raise hg.RepoError(_('no repo found'))
-        fin, fout = sys.stdin, sys.stdout
-        sys.stdout = sys.stderr
-
-        # Prevent insertion/deletion of CRs
-        util.set_binary(fin)
-        util.set_binary(fout)
-
-        def getarg():
-            argline = fin.readline()[:-1]
-            arg, l = argline.split()
-            val = fin.read(int(l))
-            return arg, val
-        def respond(v):
-            fout.write("%d\n" % len(v))
-            fout.write(v)
-            fout.flush()
-
-        lock = None
-
-        while 1:
-            cmd = fin.readline()[:-1]
-            if cmd == '':
-                return
-            if cmd == "heads":
-                h = repo.heads()
-                respond(" ".join(map(hex, h)) + "\n")
-            if cmd == "lock":
-                lock = repo.lock()
-                respond("")
-            if cmd == "unlock":
-                if lock:
-                    lock.release()
-                lock = None
-                respond("")
-            elif cmd == "branches":
-                arg, nodes = getarg()
-                nodes = map(bin, nodes.split(" "))
-                r = []
-                for b in repo.branches(nodes):
-                    r.append(" ".join(map(hex, b)) + "\n")
-                respond("".join(r))
-            elif cmd == "between":
-                arg, pairs = getarg()
-                pairs = [map(bin, p.split("-")) for p in pairs.split(" ")]
-                r = []
-                for b in repo.between(pairs):
-                    r.append(" ".join(map(hex, b)) + "\n")
-                respond("".join(r))
-            elif cmd == "changegroup":
-                nodes = []
-                arg, roots = getarg()
-                nodes = map(bin, roots.split(" "))
-
-                cg = repo.changegroup(nodes, 'serve')
-                while 1:
-                    d = cg.read(4096)
-                    if not d:
-                        break
-                    fout.write(d)
-
-                fout.flush()
-
-            elif cmd == "addchangegroup":
-                if not lock:
-                    respond("not locked")
-                    continue
-                respond("")
-
-                r = repo.addchangegroup(fin, 'serve')
-                respond(str(r))
+        s = sshserver.sshserver(ui, repo)
+        s.serve_forever()
 
     optlist = ("name templates style address port ipv6"
                " accesslog errorlog webdir_conf")
