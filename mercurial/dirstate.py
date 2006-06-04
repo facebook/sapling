@@ -14,6 +14,8 @@ from demandload import *
 demandload(globals(), "time bisect stat util re errno")
 
 class dirstate(object):
+    format = ">cllll"
+
     def __init__(self, opener, ui, root):
         self.opener = opener
         self.root = root
@@ -164,10 +166,11 @@ class dirstate(object):
         self.pl = [st[:20], st[20: 40]]
 
         pos = 40
+        e_size = struct.calcsize(self.format)
         while pos < len(st):
-            e = struct.unpack(">cllll", st[pos:pos+17])
+            e = struct.unpack(self.format, st[pos:pos+e_size])
             l = e[4]
-            pos += 17
+            pos += e_size
             f = st[pos:pos + l]
             if '\0' in f:
                 f, c = f.split('\0')
@@ -241,7 +244,7 @@ class dirstate(object):
             c = self.copied(f)
             if c:
                 f = f + "\0" + c
-            e = struct.pack(">cllll", e[0], e[1], e[2], e[3], len(f))
+            e = struct.pack(self.format, e[0], e[1], e[2], e[3], len(f))
             st.write(e + f)
         self.dirty = 0
 
