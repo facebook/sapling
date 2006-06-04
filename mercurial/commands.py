@@ -1680,6 +1680,8 @@ def import_(ui, repo, patch1, *patches, **opts):
     unless the -f option is used.  The importer neither parses nor
     discards mail headers, so use -f only to override the "mailness"
     safety check, not to import a real mail message.
+
+    To read a patch from standard input, use patch name "-".
     """
     patches = (patch1,) + patches
 
@@ -1698,51 +1700,70 @@ def import_(ui, repo, patch1, *patches, **opts):
                         '(---|\*\*\*)[ \t])')
 
     for patch in patches:
-        ui.status(_("applying %s\n") % patch)
         pf = os.path.join(d, patch)
 
         message = []
         user = None
         date = None
         hgpatch = False
-        for line in file(pf):
-            line = line.rstrip()
-            if (not message and not hgpatch and
-                   mailre.match(line) and not opts['force']):
-                if len(line) > 35:
-                    line = line[:32] + '...'
-                raise util.Abort(_('first line looks like a '
-                                   'mail header: ') + line)
-            if diffre.match(line):
-                break
-            elif hgpatch:
-                # parse values when importing the result of an hg export
-                if line.startswith("# User "):
-                    user = line[7:]
-                    ui.debug(_('User: %s\n') % user)
-                elif line.startswith("# Date "):
-                    date = line[7:]
-                elif not line.startswith("# ") and line:
-                    message.append(line)
-                    hgpatch = False
-            elif line == '# HG changeset patch':
-                hgpatch = True
-                message = []       # We may have collected garbage
-            elif message or line:
-                message.append(line)
-
-        # make sure message isn't empty
-        if not message:
-            message = _("imported patch %s\n") % patch
+        if pf == '-':
+            f = sys.stdin
+            fd, tmpname = tempfile.mkstemp(prefix='hg-patch-')
+            pf = tmpname
+            tmpfp = os.fdopen(fd, 'w')
+            ui.status(_("applying patch from stdin\n"))
         else:
-            message = '\n'.join(message).rstrip()
-        ui.debug(_('message:\n%s\n') % message)
+            f = open(pf)
+            tmpfp, tmpname = None, None
+            ui.status(_("applying %s\n") % patch)
+        try:
+            while True:
+                line = f.readline()
+                if not line: break
+                if tmpfp: tmpfp.write(line)
+                line = line.rstrip()
+                if (not message and not hgpatch and
+                       mailre.match(line) and not opts['force']):
+                    if len(line) > 35:
+                        line = line[:32] + '...'
+                    raise util.Abort(_('first line looks like a '
+                                       'mail header: ') + line)
+                if diffre.match(line):
+                    if tmpfp:
+                        for chunk in util.filechunkiter(f):
+                            tmpfp.write(chunk)
+                    break
+                elif hgpatch:
+                    # parse values when importing the result of an hg export
+                    if line.startswith("# User "):
+                        user = line[7:]
+                        ui.debug(_('User: %s\n') % user)
+                    elif line.startswith("# Date "):
+                        date = line[7:]
+                    elif not line.startswith("# ") and line:
+                        message.append(line)
+                        hgpatch = False
+                elif line == '# HG changeset patch':
+                    hgpatch = True
+                    message = []       # We may have collected garbage
+                elif message or line:
+                    message.append(line)
 
-        files = util.patch(strip, pf, ui)
+            # make sure message isn't empty
+            if not message:
+                message = _("imported patch %s\n") % patch
+            else:
+                message = '\n'.join(message).rstrip()
+            ui.debug(_('message:\n%s\n') % message)
 
-        if len(files) > 0:
-            addremove_lock(ui, repo, files, {})
-        repo.commit(files, message, user, date)
+            if tmpfp: tmpfp.close()
+            files = util.patch(strip, pf, ui)
+
+            if len(files) > 0:
+                addremove_lock(ui, repo, files, {})
+            repo.commit(files, message, user, date)
+        finally:
+            if tmpname: os.unlink(tmpname)
 
 def incoming(ui, repo, source="default", **opts):
     """show new changesets found in source
