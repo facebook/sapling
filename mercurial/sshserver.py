@@ -44,6 +44,7 @@ class sshserver(object):
         if cmd:
             impl = getattr(self, 'do_' + cmd, None)
             if impl: impl()
+            else: self.respond("")
         return cmd != ''
 
     def do_heads(self):
