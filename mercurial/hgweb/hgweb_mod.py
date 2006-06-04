@@ -591,7 +591,6 @@ class hgweb(object):
         count = cl.count()
         start = max(0, count - self.maxchanges)
         end = min(count, start + self.maxchanges)
-        pos = end - 1
 
         yield self.t("summary",
                  desc = self.repo.ui.config("web", "description", "unknown"),
@@ -629,10 +628,10 @@ class hgweb(object):
         'zip': ('application/zip', 'zip', '.zip', None),
         }
 
-    def archive(self, req, cnode, type):
+    def archive(self, req, cnode, type_):
         reponame = re.sub(r"\W+", "-", os.path.basename(self.reponame))
         name = "%s-%s" % (reponame, short(cnode))
-        mimetype, artype, extension, encoding = self.archive_specs[type]
+        mimetype, artype, extension, encoding = self.archive_specs[type_]
         headers = [('Content-type', mimetype),
                    ('Content-disposition', 'attachment; filename=%s%s' %
                     (name, extension))]
@@ -649,7 +648,7 @@ class hgweb(object):
         def clean(path):
             p = util.normpath(path)
             if p[:2] == "..":
-                raise "suspicious path"
+                raise Exception("suspicious path")
             return p
 
         def header(**map):
@@ -804,11 +803,11 @@ class hgweb(object):
 
         elif cmd == 'archive':
             changeset = self.repo.lookup(req.form['node'][0])
-            type = req.form['type'][0]
+            type_ = req.form['type'][0]
             allowed = self.repo.ui.config("web", "allow_archive", "").split()
-            if (type in self.archives and (type in allowed or
-                self.repo.ui.configbool("web", "allow" + type, False))):
-                self.archive(req, changeset, type)
+            if (type_ in self.archives and (type_ in allowed or
+                self.repo.ui.configbool("web", "allow" + type_, False))):
+                self.archive(req, changeset, type_)
                 return
 
             req.write(self.t("error"))

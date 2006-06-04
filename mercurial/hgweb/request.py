@@ -7,7 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from mercurial.demandload import demandload
-demandload(globals(), "socket sys cgi os")
+demandload(globals(), "socket sys cgi os errno")
 from mercurial.i18n import gettext as _
 
 class hgrequest(object):
