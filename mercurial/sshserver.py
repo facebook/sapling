@@ -1,4 +1,4 @@
-# commands.py - command processing for mercurial
+# sshserver.py - ssh protocol server support for mercurial
 #
 # Copyright 2005 Matt Mackall <mpm@selenic.com>
 #
