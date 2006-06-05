@@ -142,38 +142,34 @@ class ui(object):
                 yield parent
 
     def extensions(self):
-        ret = self.configitems("extensions")
-        for i, (k, v) in enumerate(ret):
-            if v: ret[i] = (k, os.path.expanduser(v))
-        return ret
+        result = self.configitems("extensions")
+        for i, (key, value) in enumerate(result):
+            if value:
+                result[i] = (key, os.path.expanduser(value))
+        return result
 
     def hgignorefiles(self):
-        ret = []
-        for k, v in self.configitems("ui"):
-            if k == 'ignore' or k.startswith('ignore.'):
-                ret.append(os.path.expanduser(v))
-        return ret
+        result = []
+        for key, value in self.configitems("ui"):
+            if key == 'ignore' or key.startswith('ignore.'):
+                result.append(os.path.expanduser(value))
+        return result
 
     def configrevlog(self):
-        ret = {}
-        for k, v in self.configitems("revlog"):
-            ret[k.lower()] = v
-        return ret
+        result = {}
+        for key, value in self.configitems("revlog"):
+            result[key.lower()] = value
+        return result
 
     def diffopts(self):
         if self.diffcache:
             return self.diffcache
-        ret = { 'showfunc' : True, 'ignorews' : False}
-        for k, v in self.configitems("diff"):
-            if v:
-                v = v.lower()
-                if v == 'true':
-                    v = True
-                else:
-                    v = False
-                ret[k.lower()] = v
-        self.diffcache = ret
-        return ret
+        result = {'showfunc': True, 'ignorews': False}
+        for key, value in self.configitems("diff"):
+            if value:
+                result[key.lower()] = (value.lower() == 'true')
+        self.diffcache = result
+        return result
 
     def username(self):
         """Return default username to be used in commits.
