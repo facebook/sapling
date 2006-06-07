@@ -2353,7 +2353,7 @@ def revert(ui, repo, *pats, **opts):
         names[abs] = (rel, exact)
         target_only[abs] = True
 
-    changes = repo.changes(match=names.has_key, wlock=wlock)
+    changes = repo.changes(node, match=names.has_key, wlock=wlock)
     modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
 
     revert = ([], _('reverting %s\n'))
