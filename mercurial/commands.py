@@ -2326,8 +2326,11 @@ def revert(ui, repo, *pats, **opts):
                            'you must specify the revision to revert to'))
     else:
         node = parent
-    pmf = None
     mf = repo.manifest.read(repo.changelog.read(node)[0])
+    if node == parent:
+        pmf = mf
+    else:
+        pmf = None
 
     wlock = repo.wlock()
 
@@ -2353,7 +2356,7 @@ def revert(ui, repo, *pats, **opts):
         names[abs] = (rel, exact)
         target_only[abs] = True
 
-    changes = repo.changes(node, match=names.has_key, wlock=wlock)
+    changes = repo.changes(match=names.has_key, wlock=wlock)
     modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
 
     revert = ([], _('reverting %s\n'))
@@ -2382,9 +2385,10 @@ def revert(ui, repo, *pats, **opts):
     entries.sort()
 
     for abs, (rel, exact) in entries:
-        in_mf = abs in mf
+        mfentry = mf.get(abs)
         def handle(xlist, dobackup):
             xlist[0].append(abs)
+            update[abs] = 1
             if dobackup and not opts['no_backup'] and os.path.exists(rel):
                 bakname = "%s.orig" % rel
                 ui.note(_('saving current version of %s as %s\n') %
@@ -2396,7 +2400,7 @@ def revert(ui, repo, *pats, **opts):
         for table, hitlist, misslist, backuphit, backupmiss in disptable:
             if abs not in table: continue
             # file has changed in dirstate
-            if in_mf:
+            if mfentry:
                 handle(hitlist, backuphit)
             elif misslist is not None:
                 handle(misslist, backupmiss)
@@ -2408,14 +2412,18 @@ def revert(ui, repo, *pats, **opts):
             if node == parent:
                 if exact: ui.warn(_('no changes needed to %s\n' % rel))
                 continue
-            if not in_mf:
-                if pmf is None:
-                    # only need parent manifest in this unlikely case,
-                    # so do not read by default
-                    pmf = repo.manifest.read(repo.changelog.read(parent)[0])
-                if abs in pmf:
+            if pmf is None:
+                # only need parent manifest in this unlikely case,
+                # so do not read by default
+                pmf = repo.manifest.read(repo.changelog.read(parent)[0])
+            if abs in pmf:
+                if mfentry:
+                    # if version of file is same in parent and target
+                    # manifests, do nothing
+                    if pmf[abs] != mfentry:
+                        handle(revert, False)
+                else:
                     handle(remove, False)
-        update[abs] = True
 
     repo.dirstate.forget(forget[0])
     r = repo.update(node, False, True, update.has_key, False, wlock=wlock,

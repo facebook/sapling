@@ -1,5 +1,6 @@
 # basic operation
 adding a
+reverting a
 changeset 2:b38a34ddfd9f backs out changeset 1:a820f4f40a57
 a
 # file that was removed is recreated
@@ -13,6 +14,7 @@ changeset 3:0dd8a0ed5e99 backs out changeset 2:44cd84c7349a
 cat: a: No such file or directory
 # backout with merge
 adding a
+reverting a
 changeset 3:6c77ecc28460 backs out changeset 1:314f55b1bf23
 merging with changeset 2:b66ea5b77abb
 merging a
