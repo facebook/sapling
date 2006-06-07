@@ -3238,7 +3238,11 @@ def dispatch(args):
     for x in u.extensions():
         try:
             if x[1]:
-                mod = imp.load_source(x[0], x[1])
+                # the module will be loaded in sys.modules
+                # choose an unique name so that it doesn't
+                # conflicts with other modules
+                module_name = "hgext_%s" % x[0].replace('.', '_')
+                mod = imp.load_source(module_name, x[1])
             else:
                 def importh(name):
                     mod = __import__(name)
