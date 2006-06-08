@@ -251,9 +251,7 @@ try:
         if len(args) == 0:
             args = os.listdir(".")
         for test in args:
-            if test.startswith("test-"):
-                if '~' in test or re.search(r'\.(out|err)$', test):
-                    continue
+            if test.startswith("test-") and not '~' in test and not '.' in test:
                 if not run_one(test):
                     failed += 1
                 tests += 1
