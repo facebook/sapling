@@ -51,7 +51,7 @@ def splitnewlines(text):
 
 def show_diff(expected, output):
     for line in difflib.unified_diff(expected, output,
-            "Expected output", "Test output", lineterm=''):
+            "Expected output", "Test output"):
         sys.stdout.write(line)
 
 def find_program(program):
