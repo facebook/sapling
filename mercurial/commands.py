@@ -1271,10 +1271,30 @@ def debugcheckstate(ui, repo):
         error = _(".hg/dirstate inconsistent with current parent's manifest")
         raise util.Abort(error)
 
-def debugconfig(ui, repo):
-    """show combined config settings from all hgrc files"""
+def debugconfig(ui, repo, *values):
+    """show combined config settings from all hgrc files
+
+    With no args, print names and values of all config items.
+
+    With one arg of the form section.name, print just the value of
+    that config item.
+
+    With multiple args, print names and values of all config items
+    with matching section names."""
+
+    if values:
+        if len([v for v in values if '.' in v]) > 1:
+            raise util.Abort(_('only one config item permitted'))
     for section, name, value in ui.walkconfig():
-        ui.write('%s.%s=%s\n' % (section, name, value))
+        sectname = section + '.' + name
+        if values:
+            for v in values:
+                if v == section:
+                    ui.write('%s=%s\n' % (sectname, value))
+                elif v == sectname:
+                    ui.write(value, '\n')
+        else:
+            ui.write('%s=%s\n' % (sectname, value))
 
 def debugsetparents(ui, repo, rev1, rev2=None):
     """manually set the parents of the current working directory
@@ -2870,7 +2890,7 @@ table = {
          [('r', 'rev', '', _('revision to rebuild to'))],
          _('debugrebuildstate [-r REV] [REV]')),
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
-    "debugconfig": (debugconfig, [], _('debugconfig')),
+    "debugconfig": (debugconfig, [], _('debugconfig [NAME]...')),
     "debugsetparents": (debugsetparents, [], _('debugsetparents REV1 [REV2]')),
     "debugstate": (debugstate, [], _('debugstate')),
     "debugdata": (debugdata, [], _('debugdata FILE REV')),
