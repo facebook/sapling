@@ -671,8 +671,9 @@ def addremove_lock(ui, repo, pats, opts, wlock=None):
             remove.append(abs)
             if ui.verbose or not exact:
                 ui.status(_('removing %s\n') % ((pats and rel) or abs))
-    repo.add(add, wlock=wlock)
-    repo.remove(remove, wlock=wlock)
+    if not opts.get('dry_run'):
+        repo.add(add, wlock=wlock)
+        repo.remove(remove, wlock=wlock)
 
 def annotate(ui, repo, *pats, **opts):
     """show changeset information per file line
@@ -2808,7 +2809,8 @@ table = {
     "debugaddremove|addremove":
         (addremove,
          [('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
+          ('n', 'dry-run', None, _('print what would be done'))],
          _('hg addremove [OPTION]... [FILE]...')),
     "^annotate":
         (annotate,
