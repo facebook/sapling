@@ -1066,7 +1066,7 @@ def docopy(ui, repo, pats, opts, wlock):
                 os.makedirs(targetdir)
             try:
                 restore = repo.dirstate.state(abstarget) == 'r'
-                if restore and not dry_run:
+                if restore and not opts['dry_run']:
                     repo.undelete([abstarget], wlock)
                 try:
                     if not opts['dry_run']:
