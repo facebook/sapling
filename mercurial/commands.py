@@ -2808,13 +2808,13 @@ table = {
         (add,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('n', 'dry-run', None, _('print what would be done'))],
+          ('n', 'dry-run', None, _('do not perform actions, just print output'))],
          _('hg add [OPTION]... [FILE]...')),
     "debugaddremove|addremove":
         (addremove,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('n', 'dry-run', None, _('print what would be done'))],
+          ('n', 'dry-run', None, _('do not perform actions, just print output'))],
          _('hg addremove [OPTION]... [FILE]...')),
     "^annotate":
         (annotate,
@@ -2887,7 +2887,7 @@ table = {
            _('forcibly copy over an existing managed file')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('n', 'dry-run', None, _('print what would be done'))],
+          ('n', 'dry-run', None, _('do not perform actions, just print output'))],
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
     "debugcomplete":
@@ -3070,7 +3070,7 @@ table = {
            _('forcibly copy over an existing managed file')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('n', 'dry-run', None, _('print what would be done'))],
+          ('n', 'dry-run', None, _('do not perform actions, just print output'))],
          _('hg rename [OPTION]... SOURCE... DEST')),
     "^revert":
         (revert,
@@ -3078,7 +3078,7 @@ table = {
           ('', 'no-backup', None, _('do not save backup copies of files')),
           ('I', 'include', [], _('include names matching given patterns')),
           ('X', 'exclude', [], _('exclude names matching given patterns')),
-          ('n', 'dry-run', None, _('print what would be done'))],
+          ('n', 'dry-run', None, _('do not perform actions, just print output'))],
          _('hg revert [-r REV] [NAME]...')),
     "rollback": (rollback, [], _('hg rollback')),
     "root": (root, [], _('hg root')),
