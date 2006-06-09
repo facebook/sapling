@@ -1055,22 +1055,23 @@ def docopy(ui, repo, pats, opts, wlock):
                 ui.warn(_('%s: not overwriting - file exists\n') %
                         reltarget)
                 return
-            if not opts['after']:
+            if not opts['after'] and not opts['dry_run']:
                 os.unlink(reltarget)
         if opts['after']:
             if not os.path.exists(reltarget):
                 return
         else:
             targetdir = os.path.dirname(reltarget) or '.'
-            if not os.path.isdir(targetdir):
+            if not os.path.isdir(targetdir) and not opts['dry_run']:
                 os.makedirs(targetdir)
             try:
                 restore = repo.dirstate.state(abstarget) == 'r'
-                if restore:
+                if restore and not dry_run:
                     repo.undelete([abstarget], wlock)
                 try:
-                    shutil.copyfile(relsrc, reltarget)
-                    shutil.copymode(relsrc, reltarget)
+                    if not opts['dry_run']:
+                        shutil.copyfile(relsrc, reltarget)
+                        shutil.copymode(relsrc, reltarget)
                     restore = False
                 finally:
                     if restore:
@@ -1088,7 +1089,7 @@ def docopy(ui, repo, pats, opts, wlock):
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
-        if abstarget != origsrc:
+        if abstarget != origsrc and not opts['dry_run']:
             repo.copy(origsrc, abstarget, wlock)
         copied.append((abssrc, relsrc, exact))
 
@@ -1172,10 +1173,9 @@ def docopy(ui, repo, pats, opts, wlock):
     if not copylist:
         raise util.Abort(_('no files to copy'))
 
-    if not opts.get('dry_run'):
-        for targetpath, srcs in copylist:
-            for origsrc, abssrc, relsrc, exact in srcs:
-                copy(origsrc, abssrc, relsrc, targetpath(abssrc), exact)
+    for targetpath, srcs in copylist:
+        for origsrc, abssrc, relsrc, exact in srcs:
+            copy(origsrc, abssrc, relsrc, targetpath(abssrc), exact)
 
     if errors:
         ui.warn(_('(consider using --after)\n'))
@@ -2309,7 +2309,8 @@ def rename(ui, repo, *pats, **opts):
         if ui.verbose or not exact:
             ui.status(_('removing %s\n') % rel)
         names.append(abs)
-    repo.remove(names, True, wlock)
+    if not opts['dry_run']:
+        repo.remove(names, True, wlock)
     return errs
 
 def revert(ui, repo, *pats, **opts):
@@ -3066,7 +3067,8 @@ table = {
           ('f', 'force', None,
            _('forcibly copy over an existing managed file')),
           ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
+          ('n', 'dry-run', None, _('print what would be done'))],
          _('hg rename [OPTION]... SOURCE... DEST')),
     "^revert":
         (revert,
