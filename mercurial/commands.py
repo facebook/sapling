@@ -2417,8 +2417,9 @@ def revert(ui, repo, *pats, **opts):
                 bakname = "%s.orig" % rel
                 ui.note(_('saving current version of %s as %s\n') %
                         (rel, bakname))
-                shutil.copyfile(rel, bakname)
-                shutil.copymode(rel, bakname)
+                if not opts.get('dry_run'):
+                    shutil.copyfile(rel, bakname)
+                    shutil.copymode(rel, bakname)
             if ui.verbose or not exact:
                 ui.status(xlist[1] % rel)
         for table, hitlist, misslist, backuphit, backupmiss in disptable:
@@ -2449,13 +2450,14 @@ def revert(ui, repo, *pats, **opts):
                 else:
                     handle(remove, False)
 
-    repo.dirstate.forget(forget[0])
-    r = repo.update(node, False, True, update.has_key, False, wlock=wlock,
-                    show_stats=False)
-    repo.dirstate.update(add[0], 'a')
-    repo.dirstate.update(undelete[0], 'n')
-    repo.dirstate.update(remove[0], 'r')
-    return r
+    if not opts.get('dry_run'):
+        repo.dirstate.forget(forget[0])
+        r = repo.update(node, False, True, update.has_key, False, wlock=wlock,
+                        show_stats=False)
+        repo.dirstate.update(add[0], 'a')
+        repo.dirstate.update(undelete[0], 'n')
+        repo.dirstate.update(remove[0], 'r')
+        return r
 
 def rollback(ui, repo):
     """roll back the last transaction in this repository
@@ -3075,7 +3077,8 @@ table = {
          [('r', 'rev', '', _('revision to revert to')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
           ('I', 'include', [], _('include names matching given patterns')),
-          ('X', 'exclude', [], _('exclude names matching given patterns'))],
+          ('X', 'exclude', [], _('exclude names matching given patterns')),
+          ('n', 'dry-run', None, _('print what would be done'))],
          _('hg revert [-r REV] [NAME]...')),
     "rollback": (rollback, [], _('hg rollback')),
     "root": (root, [], _('hg root')),
