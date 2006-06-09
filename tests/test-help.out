@@ -136,6 +136,7 @@ options:
 
  -I --include  include names matching the given patterns
  -X --exclude  exclude names matching the given patterns
+ -n --dry-run  do not perform actions, just print output
 hg add: option --skjdfks not recognized
 hg add [OPTION]... [FILE]...
 
@@ -151,6 +152,7 @@ options:
 
  -I --include  include names matching the given patterns
  -X --exclude  exclude names matching the given patterns
+ -n --dry-run  do not perform actions, just print output
 hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...
 
 diff repository (or selected files)
