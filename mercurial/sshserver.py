@@ -51,6 +51,18 @@ class sshserver(object):
         h = self.repo.heads()
         self.respond(" ".join(map(hex, h)) + "\n")
 
+    def do_hello(self):
+        '''the hello command returns a set of lines describing various
+        interesting things about the server, in an RFC822-like format.
+        Currently the only one defined is "capabilities", which
+        consists of a line in the form:
+
+        capabilities: space separated list of tokens
+        '''
+
+        r = "capabilities:\n"
+        self.respond(r)
+
     def do_lock(self):
         self.lock = self.repo.lock()
         self.respond("")
