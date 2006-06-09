@@ -3158,6 +3158,7 @@ globalopts = [
     ('', 'config', [], _('set/override config option')),
     ('', 'debug', None, _('enable debugging output')),
     ('', 'debugger', None, _('start debugger')),
+    ('', 'lsprof', None, _('print improved command execution profile')),
     ('', 'traceback', None, _('print traceback on exception')),
     ('', 'time', None, _('time how long the command takes')),
     ('', 'profile', None, _('print command execution profile')),
@@ -3385,6 +3386,22 @@ def dispatch(args):
                         stats.strip_dirs()
                         stats.sort_stats('time', 'calls')
                         stats.print_stats(40)
+                elif options['lsprof']:
+                    try:
+                        from mercurial import lsprof
+                    except ImportError:
+                        raise util.Abort(_(
+                            'lsprof not available - install from '
+                            'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
+                    p = lsprof.Profiler()
+                    p.enable(subcalls=True)
+                    try:
+                        return d()
+                    finally:
+                        p.disable()
+                        stats = lsprof.Stats(p.getstats())
+                        stats.sort()
+                        stats.pprint(top=10, file=sys.stderr, climit=5)
                 else:
                     return d()
             finally:
