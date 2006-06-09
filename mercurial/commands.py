@@ -641,7 +641,8 @@ def add(ui, repo, *pats, **opts):
         elif repo.dirstate.state(abs) == '?':
             ui.status(_('adding %s\n') % rel)
             names.append(abs)
-    repo.add(names)
+    if not opts['dry_run']:
+        repo.add(names)
 
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files (DEPRECATED)
@@ -2801,7 +2802,8 @@ table = {
     "^add":
         (add,
          [('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
+          ('n', 'dry-run', None, _('print what would be done'))],
          _('hg add [OPTION]... [FILE]...')),
     "debugaddremove|addremove":
         (addremove,
