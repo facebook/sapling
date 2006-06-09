@@ -1172,9 +1172,10 @@ def docopy(ui, repo, pats, opts, wlock):
     if not copylist:
         raise util.Abort(_('no files to copy'))
 
-    for targetpath, srcs in copylist:
-        for origsrc, abssrc, relsrc, exact in srcs:
-            copy(origsrc, abssrc, relsrc, targetpath(abssrc), exact)
+    if not opts.get('dry_run'):
+        for targetpath, srcs in copylist:
+            for origsrc, abssrc, relsrc, exact in srcs:
+                copy(origsrc, abssrc, relsrc, targetpath(abssrc), exact)
 
     if errors:
         ui.warn(_('(consider using --after)\n'))
@@ -2882,7 +2883,8 @@ table = {
           ('f', 'force', None,
            _('forcibly copy over an existing managed file')),
           ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
+          ('n', 'dry-run', None, _('print what would be done'))],
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
     "debugcomplete":
