@@ -1550,8 +1550,8 @@ class localrepository(object):
 
         newheads = len(self.changelog.heads())
         heads = ""
-        if oldheads and newheads > oldheads:
-            heads = _(" (+%d heads)") % (newheads - oldheads)
+        if oldheads and newheads != oldheads:
+            heads = _(" (%+d heads)") % (newheads - oldheads)
 
         self.ui.status(_("added %d changesets"
                          " with %d changes to %d files%s\n")
