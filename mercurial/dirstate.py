@@ -168,15 +168,17 @@ class dirstate(object):
         pos = 40
         e_size = struct.calcsize(self.format)
         while pos < len(st):
-            e = struct.unpack(self.format, st[pos:pos+e_size])
+            newpos = pos + e_size
+            e = struct.unpack(self.format, st[pos:newpos])
             l = e[4]
-            pos += e_size
-            f = st[pos:pos + l]
+            pos = newpos
+            newpos = pos + l
+            f = st[pos:newpos]
             if '\0' in f:
                 f, c = f.split('\0')
                 self.copies[f] = c
             self.map[f] = e[:4]
-            pos += l
+            pos = newpos
 
     def copy(self, source, dest):
         self.lazyread()
