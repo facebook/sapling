@@ -3295,6 +3295,8 @@ def dispatch(args):
                 except ImportError:
                     mod = importh(x[0])
             external.append(mod)
+        except (util.SignalInterrupt, KeyboardInterrupt):
+            raise
         except Exception, inst:
             u.warn(_("*** failed to import extension %s: %s\n") % (x[0], inst))
             if u.print_exc():
