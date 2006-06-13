@@ -155,30 +155,40 @@ class dirstate(object):
         if self.map is None:
             self.read()
 
-    def read(self):
-        self.map = {}
-        self.pl = [nullid, nullid]
-        try:
-            st = self.opener("dirstate").read()
-            if not st: return
-        except: return
-
+    def parse(self, st):
         self.pl = [st[:20], st[20: 40]]
 
+        # deref fields so they will be local in loop
+        map = self.map
+        copies = self.copies
+        format = self.format
+        unpack = struct.unpack
+
         pos = 40
-        e_size = struct.calcsize(self.format)
+        e_size = struct.calcsize(format)
+
         while pos < len(st):
             newpos = pos + e_size
-            e = struct.unpack(self.format, st[pos:newpos])
+            e = unpack(format, st[pos:newpos])
             l = e[4]
             pos = newpos
             newpos = pos + l
             f = st[pos:newpos]
             if '\0' in f:
                 f, c = f.split('\0')
-                self.copies[f] = c
-            self.map[f] = e[:4]
+                copies[f] = c
+            map[f] = e[:4]
             pos = newpos
+
+    def read(self):
+        self.map = {}
+        self.pl = [nullid, nullid]
+        try:
+            st = self.opener("dirstate").read()
+            if st:
+                self.parse(st)
+        except IOError, err:
+            if err.errno != errno.ENOENT: raise
 
     def copy(self, source, dest):
         self.lazyread()
