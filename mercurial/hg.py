@@ -8,6 +8,7 @@
 from node import *
 from repo import *
 from demandload import *
+from i18n import gettext as _
 demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
 
 def repository(ui, path=None, create=0):
@@ -17,11 +18,18 @@ def repository(ui, path=None, create=0):
         if path.startswith("https://"):
             return httprepo.httpsrepository(ui, path)
         if path.startswith("hg://"):
+            ui.warn(_("hg:// syntax is deprecated, "
+                      "please use http:// instead\n"))
             return httprepo.httprepository(
                 ui, path.replace("hg://", "http://"))
         if path.startswith("old-http://"):
+            ui.warn(_("old-http:// syntax is deprecated, "
+                      "please use static-http:// instead\n"))
             return statichttprepo.statichttprepository(
                 ui, path.replace("old-http://", "http://"))
+        if path.startswith("static-http://"):
+            return statichttprepo.statichttprepository(
+                ui, path.replace("static-http://", "http://"))
         if path.startswith("ssh://"):
             return sshrepo.sshrepository(ui, path)
         if path.startswith("bundle://"):
