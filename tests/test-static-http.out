@@ -19,6 +19,6 @@ crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
 foo
-pulling from old-http://localhost:20059/remote
+pulling from static-http://localhost:20059/remote
 searching for changes
 no changes found
