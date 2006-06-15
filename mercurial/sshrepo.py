@@ -51,8 +51,6 @@ class sshrepository(remoterepository):
             lines.append(l)
             max_noise -= 1
         else:
-            if l1:
-                ui.debug(_("remote: "), l1)
             raise hg.RepoError(_("no response from remote hg"))
 
         self.capabilities = ()
