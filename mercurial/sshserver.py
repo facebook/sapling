@@ -8,7 +8,7 @@
 from demandload import demandload
 from i18n import gettext as _
 from node import *
-demandload(globals(), "sys util")
+demandload(globals(), "os sys tempfile util")
 
 class sshserver(object):
     def __init__(self, ui, repo):
@@ -60,14 +60,18 @@ class sshserver(object):
         capabilities: space separated list of tokens
         '''
 
-        r = "capabilities:\n"
+        r = "capabilities: unbundle\n"
         self.respond(r)
 
     def do_lock(self):
+        '''DEPRECATED - allowing remote client to lock repo is not safe'''
+
         self.lock = self.repo.lock()
         self.respond("")
 
     def do_unlock(self):
+        '''DEPRECATED'''
+
         if self.lock:
             self.lock.release()
         self.lock = None
@@ -104,6 +108,8 @@ class sshserver(object):
         self.fout.flush()
 
     def do_addchangegroup(self):
+        '''DEPRECATED'''
+
         if not self.lock:
             self.respond("not locked")
             return
@@ -111,3 +117,53 @@ class sshserver(object):
         self.respond("")
         r = self.repo.addchangegroup(self.fin, 'serve')
         self.respond(str(r))
+
+    def do_unbundle(self):
+        their_heads = self.getarg()[1].split()
+
+        def check_heads():
+            heads = map(hex, self.repo.heads())
+            return their_heads == [hex('force')] or their_heads == heads
+
+        # fail early if possible
+        if not check_heads():
+            self.respond(_('unsynced changes'))
+            return
+
+        self.respond('')
+
+        # write bundle data to temporary file because it can be big
+
+        try:
+            fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
+            fp = os.fdopen(fd, 'wb+')
+
+            count = int(self.fin.readline())
+            while count:
+                fp.write(self.fin.read(count))
+                count = int(self.fin.readline())
+
+            was_locked = self.lock is not None
+            if not was_locked:
+                self.lock = self.repo.lock()
+            try:
+                if not check_heads():
+                    # someone else committed/pushed/unbundled while we
+                    # were transferring data
+                    self.respond(_('unsynced changes'))
+                    return
+                self.respond('')
+
+                # push can proceed
+
+                fp.seek(0)
+                r = self.repo.addchangegroup(fp, 'serve')
+                self.respond(str(r))
+            finally:
+                if not was_locked:
+                    self.lock.release()
+                    self.lock = None
+        finally:
+            fp.close()
+            os.unlink(tempname)
+
