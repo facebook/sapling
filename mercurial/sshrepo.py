@@ -144,7 +144,7 @@ class sshrepository(remoterepository):
     def addchangegroup(self, cg, source):
         d = self.call("addchangegroup")
         if d:
-            raise hg.RepoError(_("push refused: %s"), d)
+            raise hg.RepoError(_("push refused: %s") % d)
 
         while 1:
             d = cg.read(4096)
