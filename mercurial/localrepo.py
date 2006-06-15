@@ -15,6 +15,8 @@ demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
 demandload(globals(), "revlog")
 
 class localrepository(object):
+    capabilities = ()
+
     def __del__(self):
         self.transhandle = None
     def __init__(self, parentui, path=None, create=0):
@@ -1105,8 +1107,20 @@ class localrepository(object):
         return self.addchangegroup(cg, 'pull')
 
     def push(self, remote, force=False, revs=None):
-        lock = remote.lock()
+        # there are two ways to push to remote repo:
+        #
+        # addchangegroup assumes local user can lock remote
+        # repo (local filesystem, old ssh servers).
+        #
+        # unbundle assumes local user cannot lock remote repo (new ssh
+        # servers, http servers).
 
+        if 'unbundle' in remote.capabilities:
+            self.push_unbundle(remote, force, revs)
+        else:
+            self.push_addchangegroup(remote, force, revs)
+
+    def prepush(self, remote, force, revs):
         base = {}
         remote_heads = remote.heads()
         inc = self.findincoming(remote, base, remote_heads, force=force)
@@ -1114,7 +1128,7 @@ class localrepository(object):
             self.ui.warn(_("abort: unsynced remote changes!\n"))
             self.ui.status(_("(did you forget to sync?"
                              " use push -f to force)\n"))
-            return 1
+            return None, 1
 
         update, updated_heads = self.findoutgoing(remote, base, remote_heads)
         if revs is not None:
@@ -1124,7 +1138,7 @@ class localrepository(object):
 
         if not bases:
             self.ui.status(_("no changes found\n"))
-            return 1
+            return None, 1
         elif not force:
             # FIXME we don't properly detect creation of new heads
             # in the push -r case, assume the user knows what he's doing
@@ -1133,13 +1147,35 @@ class localrepository(object):
                 self.ui.warn(_("abort: push creates new remote branches!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
-                return 1
+                return None, 1
 
         if revs is None:
             cg = self.changegroup(update, 'push')
         else:
             cg = self.changegroupsubset(update, revs, 'push')
-        return remote.addchangegroup(cg, 'push')
+        return cg, remote_heads
+
+    def push_addchangegroup(self, remote, force, revs):
+        lock = remote.lock()
+
+        ret = self.prepush(remote, force, revs)
+        if ret[0] is not None:
+            cg, remote_heads = ret
+            return remote.addchangegroup(cg, 'push')
+        return ret[1]
+
+    def push_unbundle(self, remote, force, revs):
+        # local repo finds heads on server, finds out what revs it
+        # must push.  once revs transferred, if server finds it has
+        # different heads (someone else won commit/push race), server
+        # aborts.
+
+        ret = self.prepush(remote, force, revs)
+        if ret[0] is not None:
+            cg, remote_heads = ret
+            if force: remote_heads = ['force']
+            return remote.unbundle(cg, remote_heads, 'push')
+        return ret[1]
 
     def changegroupsubset(self, bases, heads, source):
         """This function generates a changegroup consisting of all the nodes

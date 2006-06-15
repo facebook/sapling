@@ -66,5 +66,18 @@ hg tip
 hg verify
 hg cat foo
 
+echo z > z
+hg ci -A -m z -d '1000001 0' z
+
+cd ../local
+echo r > r
+hg ci -A -m z -d '1000002 0' r
+
+echo "# push should fail"
+hg push
+
+echo "# push should succeed"
+hg push -f
+
 cd ..
 cat dummylog

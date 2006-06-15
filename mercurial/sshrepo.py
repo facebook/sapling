@@ -141,11 +141,36 @@ class sshrepository(remoterepository):
         f = self.do_cmd("changegroup", roots=n)
         return self.pipei
 
+    def unbundle(self, cg, heads, source):
+        d = self.call("unbundle", heads=' '.join(map(hex, heads)))
+        if d:
+            raise hg.RepoError(_("push refused: %s") % d)
+
+        while 1:
+            d = cg.read(4096)
+            if not d: break
+            self.pipeo.write(str(len(d)) + '\n')
+            self.pipeo.write(d)
+            self.readerr()
+
+        self.pipeo.write('0\n')
+        self.pipeo.flush()
+
+        self.readerr()
+        d = self.pipei.readline()
+        if d != '\n':
+            return 1
+
+        l = int(self.pipei.readline())
+        r = self.pipei.read(l)
+        if not r:
+            return 1
+        return int(r)
+
     def addchangegroup(self, cg, source):
         d = self.call("addchangegroup")
         if d:
-            raise hg.RepoError(_("push refused: %s"), d)
-
+            raise hg.RepoError(_("push refused: %s") % d)
         while 1:
             d = cg.read(4096)
             if not d: break

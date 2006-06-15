@@ -71,6 +71,7 @@ def netlocunsplit(host, port, user=None, passwd=None):
 
 class httprepository(remoterepository):
     def __init__(self, ui, path):
+        self.capabilities = ()
         scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
         if query or frag:
             raise util.Abort(_('unsupported URL component: "%s"') %
@@ -233,6 +234,9 @@ class httprepository(remoterepository):
             yield zd.flush()
 
         return util.chunkbuffer(zgenerator(util.filechunkiter(f)))
+
+    def unbundle(self, cg, heads, source):
+        raise util.Abort(_('operation not supported over http'))
 
 class httpsrepository(httprepository):
     pass
