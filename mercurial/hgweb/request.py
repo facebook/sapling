@@ -16,6 +16,7 @@ class hgrequest(object):
         self.out = out or sys.stdout
         self.env = env or os.environ
         self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
+        self.will_close = True
 
     def write(self, *things):
         for thing in things:
@@ -29,16 +30,30 @@ class hgrequest(object):
                     if inst[0] != errno.ECONNRESET:
                         raise
 
+    def done(self):
+        if self.will_close:
+            self.inp.close()
+            self.out.close()
+        else:
+            self.out.flush()
+
     def header(self, headers=[('Content-type','text/html')]):
         for header in headers:
             self.out.write("%s: %s\r\n" % header)
         self.out.write("\r\n")
 
-    def httphdr(self, type, file="", size=0):
+    def httphdr(self, type, filename=None, length=0):
 
         headers = [('Content-type', type)]
-        if file:
-            headers.append(('Content-disposition', 'attachment; filename=%s' % file))
-        if size > 0:
-            headers.append(('Content-length', str(size)))
+        if filename:
+            headers.append(('Content-disposition', 'attachment; filename=%s' %
+                            filename))
+        # we do not yet support http 1.1 chunked transfer, so we have
+        # to force connection to close if content-length not known
+        if length:
+            headers.append(('Content-length', str(length)))
+            self.will_close = False
+        else:
+            headers.append(('Connection', 'close'))
+            self.will_close = True
         self.header(headers)

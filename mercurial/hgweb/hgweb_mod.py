@@ -10,7 +10,7 @@ import os
 import os.path
 import mimetypes
 from mercurial.demandload import demandload
-demandload(globals(), "re zlib ConfigParser")
+demandload(globals(), "re zlib ConfigParser cStringIO")
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,templater")
 demandload(globals(), "mercurial.hgweb.request:hgrequest")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
@@ -761,26 +761,32 @@ class hgweb(object):
                                    req.form['filenode'][0]))
 
         elif cmd == 'heads':
-            req.httphdr("application/mercurial-0.1")
-            h = self.repo.heads()
-            req.write(" ".join(map(hex, h)) + "\n")
+            resp = " ".join(map(hex, self.repo.heads())) + "\n"
+            req.httphdr("application/mercurial-0.1", length=len(resp))
+            req.write(resp)
 
         elif cmd == 'branches':
-            req.httphdr("application/mercurial-0.1")
             nodes = []
             if req.form.has_key('nodes'):
                 nodes = map(bin, req.form['nodes'][0].split(" "))
+            resp = cStringIO.StringIO()
             for b in self.repo.branches(nodes):
-                req.write(" ".join(map(hex, b)) + "\n")
+                resp.write(" ".join(map(hex, b)) + "\n")
+            resp = resp.getvalue()
+            req.httphdr("application/mercurial-0.1", length=len(resp))
+            req.write(resp)
 
         elif cmd == 'between':
-            req.httphdr("application/mercurial-0.1")
             nodes = []
             if req.form.has_key('pairs'):
                 pairs = [map(bin, p.split("-"))
                          for p in req.form['pairs'][0].split(" ")]
+            resp = cStringIO.StringIO()
             for b in self.repo.between(pairs):
-                req.write(" ".join(map(hex, b)) + "\n")
+                resp.write(" ".join(map(hex, b)) + "\n")
+            resp = resp.getvalue()
+            req.httphdr("application/mercurial-0.1", length=len(resp))
+            req.write(resp)
 
         elif cmd == 'changegroup':
             req.httphdr("application/mercurial-0.1")
@@ -819,3 +825,4 @@ class hgweb(object):
 
         else:
             req.write(self.t("error"))
+        req.done()

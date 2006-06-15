@@ -27,6 +27,7 @@ def _splitURI(uri):
 
 class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
     def __init__(self, *args, **kargs):
+        self.protocol_version = 'HTTP/1.1'
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kargs)
 
     def log_error(self, format, *args):
@@ -85,7 +86,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
 
         req = hgrequest(self.rfile, self.wfile, env)
         self.send_response(200, "Script output follows")
-        self.server.make_and_run_handler(req)
+        self.close_connection = self.server.make_and_run_handler(req)
 
 def create_server(ui, repo):
     use_threads = True
@@ -135,6 +136,7 @@ def create_server(ui, repo):
             else:
                 raise hg.RepoError(_('no repo found'))
             hgwebobj.run(req)
+            return req.will_close
 
     class IPv6HTTPServer(MercurialHTTPServer):
         address_family = getattr(socket, 'AF_INET6', None)
