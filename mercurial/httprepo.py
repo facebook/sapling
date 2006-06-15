@@ -10,6 +10,7 @@ from remoterepo import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "hg os urllib urllib2 urlparse zlib util httplib")
+demandload(globals(), "keepalive")
 
 class passwordmgr(urllib2.HTTPPasswordMgr):
     def __init__(self, ui):
@@ -84,7 +85,7 @@ class httprepository(remoterepository):
 
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
         proxyauthinfo = None
-        handler = urllib2.BaseHandler()
+        handler = keepalive.HTTPHandler()
 
         if proxyurl:
             # proxy can be proper url or host[:port]
@@ -161,7 +162,10 @@ class httprepository(remoterepository):
             self.ui.debug(_('http error while sending %s command\n') % cmd)
             self.ui.print_exc()
             raise IOError(None, inst)
-        proto = resp.headers['content-type']
+        try:
+            proto = resp.getheader('content-type')
+        except AttributeError:
+            proto = resp.headers['content-type']
 
         # accept old "text/plain" and "application/hg-changegroup" for now
         if not proto.startswith('application/mercurial') and \
@@ -178,8 +182,16 @@ class httprepository(remoterepository):
 
         return resp
 
+    def do_read(self, cmd, **args):
+        fp = self.do_cmd(cmd, **args)
+        try:
+            return fp.read()
+        finally:
+            # if using keepalive, allow connection to be reused
+            fp.close()
+
     def heads(self):
-        d = self.do_cmd("heads").read()
+        d = self.do_read("heads")
         try:
             return map(bin, d[:-1].split(" "))
         except:
@@ -188,7 +200,7 @@ class httprepository(remoterepository):
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
-        d = self.do_cmd("branches", nodes=n).read()
+        d = self.do_read("branches", nodes=n)
         try:
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
@@ -198,7 +210,7 @@ class httprepository(remoterepository):
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
-        d = self.do_cmd("between", pairs=n).read()
+        d = self.do_read("between", pairs=n)
         try:
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
