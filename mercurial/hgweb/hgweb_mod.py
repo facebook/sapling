@@ -37,6 +37,8 @@ class hgweb(object):
         self.mtime = -1
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
+        self.templatepath = self.repo.ui.config("web", "templates",
+                                                templater.templatepath())
 
     def refresh(self):
         mtime = get_mtime(self.repo.root)
@@ -644,13 +646,13 @@ class hgweb(object):
     # tags -> list of changesets corresponding to tags
     # find tag, changeset, file
 
-    def run(self, req=hgrequest()):
-        def clean(path):
-            p = util.normpath(path)
-            if p[:2] == "..":
-                raise Exception("suspicious path")
-            return p
+    def cleanpath(self, path):
+        p = util.normpath(path)
+        if p[:2] == "..":
+            raise Exception("suspicious path")
+        return p
 
+    def run(self, req=hgrequest()):
         def header(**map):
             yield self.t("header", **map)
 
@@ -686,15 +688,13 @@ class hgweb(object):
 
         expand_form(req.form)
 
-        t = self.repo.ui.config("web", "templates", templater.templatepath())
-        static = self.repo.ui.config("web", "static", os.path.join(t,"static"))
-        m = os.path.join(t, "map")
+        m = os.path.join(self.templatepath, "map")
         style = self.repo.ui.config("web", "style", "")
         if req.form.has_key('style'):
             style = req.form['style'][0]
         if style:
             b = os.path.basename("map-" + style)
-            p = os.path.join(t, b)
+            p = os.path.join(self.templatepath, b)
             if os.path.isfile(p):
                 m = p
 
@@ -719,110 +719,117 @@ class hgweb(object):
             req.form['cmd'] = [self.t.cache['default'],]
 
         cmd = req.form['cmd'][0]
-        if cmd == 'changelog':
-            hi = self.repo.changelog.count() - 1
-            if req.form.has_key('rev'):
-                hi = req.form['rev'][0]
-                try:
-                    hi = self.repo.changelog.rev(self.repo.lookup(hi))
-                except hg.RepoError:
-                    req.write(self.search(hi)) # XXX redirect to 404 page?
-                    return
 
-            req.write(self.changelog(hi))
-
-        elif cmd == 'changeset':
-            req.write(self.changeset(req.form['node'][0]))
-
-        elif cmd == 'manifest':
-            req.write(self.manifest(req.form['manifest'][0],
-                                    clean(req.form['path'][0])))
-
-        elif cmd == 'tags':
-            req.write(self.tags())
-
-        elif cmd == 'summary':
-            req.write(self.summary())
-
-        elif cmd == 'filediff':
-            req.write(self.filediff(clean(req.form['file'][0]),
-                                    req.form['node'][0]))
-
-        elif cmd == 'file':
-            req.write(self.filerevision(clean(req.form['file'][0]),
-                                        req.form['filenode'][0]))
-
-        elif cmd == 'annotate':
-            req.write(self.fileannotate(clean(req.form['file'][0]),
-                                        req.form['filenode'][0]))
-
-        elif cmd == 'filelog':
-            req.write(self.filelog(clean(req.form['file'][0]),
-                                   req.form['filenode'][0]))
-
-        elif cmd == 'heads':
-            resp = " ".join(map(hex, self.repo.heads())) + "\n"
-            req.httphdr("application/mercurial-0.1", length=len(resp))
-            req.write(resp)
-
-        elif cmd == 'branches':
-            nodes = []
-            if req.form.has_key('nodes'):
-                nodes = map(bin, req.form['nodes'][0].split(" "))
-            resp = cStringIO.StringIO()
-            for b in self.repo.branches(nodes):
-                resp.write(" ".join(map(hex, b)) + "\n")
-            resp = resp.getvalue()
-            req.httphdr("application/mercurial-0.1", length=len(resp))
-            req.write(resp)
-
-        elif cmd == 'between':
-            nodes = []
-            if req.form.has_key('pairs'):
-                pairs = [map(bin, p.split("-"))
-                         for p in req.form['pairs'][0].split(" ")]
-            resp = cStringIO.StringIO()
-            for b in self.repo.between(pairs):
-                resp.write(" ".join(map(hex, b)) + "\n")
-            resp = resp.getvalue()
-            req.httphdr("application/mercurial-0.1", length=len(resp))
-            req.write(resp)
-
-        elif cmd == 'changegroup':
-            req.httphdr("application/mercurial-0.1")
-            nodes = []
-            if not self.allowpull:
-                return
-
-            if req.form.has_key('roots'):
-                nodes = map(bin, req.form['roots'][0].split(" "))
-
-            z = zlib.compressobj()
-            f = self.repo.changegroup(nodes, 'serve')
-            while 1:
-                chunk = f.read(4096)
-                if not chunk:
-                    break
-                req.write(z.compress(chunk))
-
-            req.write(z.flush())
-
-        elif cmd == 'archive':
-            changeset = self.repo.lookup(req.form['node'][0])
-            type_ = req.form['type'][0]
-            allowed = self.repo.ui.config("web", "allow_archive", "").split()
-            if (type_ in self.archives and (type_ in allowed or
-                self.repo.ui.configbool("web", "allow" + type_, False))):
-                self.archive(req, changeset, type_)
-                return
-
-            req.write(self.t("error"))
-
-        elif cmd == 'static':
-            fname = req.form['file'][0]
-            req.write(staticfile(static, fname)
-                      or self.t("error", error="%r not found" % fname))
-
+        method = getattr(self, 'do_' + cmd, None)
+        if method:
+            method(req)
         else:
             req.write(self.t("error"))
         req.done()
+
+    def do_changelog(self, req):
+        hi = self.repo.changelog.count() - 1
+        if req.form.has_key('rev'):
+            hi = req.form['rev'][0]
+            try:
+                hi = self.repo.changelog.rev(self.repo.lookup(hi))
+            except hg.RepoError:
+                req.write(self.search(hi)) # XXX redirect to 404 page?
+                return
+
+        req.write(self.changelog(hi))
+
+    def do_changeset(self, req):
+        req.write(self.changeset(req.form['node'][0]))
+
+    def do_manifest(self, req):
+        req.write(self.manifest(req.form['manifest'][0],
+                                self.cleanpath(req.form['path'][0])))
+
+    def do_tags(self, req):
+        req.write(self.tags())
+
+    def do_summary(self, req):
+        req.write(self.summary())
+
+    def do_filediff(self, req):
+        req.write(self.filediff(self.cleanpath(req.form['file'][0]),
+                                req.form['node'][0]))
+
+    def do_file(self, req):
+        req.write(self.filerevision(self.cleanpath(req.form['file'][0]),
+                                    req.form['filenode'][0]))
+
+    def do_annotate(self, req):
+        req.write(self.fileannotate(self.cleanpath(req.form['file'][0]),
+                                    req.form['filenode'][0]))
+
+    def do_filelog(self, req):
+        req.write(self.filelog(self.cleanpath(req.form['file'][0]),
+                               req.form['filenode'][0]))
+
+    def do_heads(self, req):
+        resp = " ".join(map(hex, self.repo.heads())) + "\n"
+        req.httphdr("application/mercurial-0.1", length=len(resp))
+        req.write(resp)
+
+    def do_branches(self, req):
+        nodes = []
+        if req.form.has_key('nodes'):
+            nodes = map(bin, req.form['nodes'][0].split(" "))
+        resp = cStringIO.StringIO()
+        for b in self.repo.branches(nodes):
+            resp.write(" ".join(map(hex, b)) + "\n")
+        resp = resp.getvalue()
+        req.httphdr("application/mercurial-0.1", length=len(resp))
+        req.write(resp)
+
+    def do_between(self, req):
+        nodes = []
+        if req.form.has_key('pairs'):
+            pairs = [map(bin, p.split("-"))
+                     for p in req.form['pairs'][0].split(" ")]
+        resp = cStringIO.StringIO()
+        for b in self.repo.between(pairs):
+            resp.write(" ".join(map(hex, b)) + "\n")
+        resp = resp.getvalue()
+        req.httphdr("application/mercurial-0.1", length=len(resp))
+        req.write(resp)
+
+    def do_changegroup(self, req):
+        req.httphdr("application/mercurial-0.1")
+        nodes = []
+        if not self.allowpull:
+            return
+
+        if req.form.has_key('roots'):
+            nodes = map(bin, req.form['roots'][0].split(" "))
+
+        z = zlib.compressobj()
+        f = self.repo.changegroup(nodes, 'serve')
+        while 1:
+            chunk = f.read(4096)
+            if not chunk:
+                break
+            req.write(z.compress(chunk))
+
+        req.write(z.flush())
+
+    def do_archive(self, req):
+        changeset = self.repo.lookup(req.form['node'][0])
+        type_ = req.form['type'][0]
+        allowed = self.repo.ui.config("web", "allow_archive", "").split()
+        if (type_ in self.archives and (type_ in allowed or
+            self.repo.ui.configbool("web", "allow" + type_, False))):
+            self.archive(req, changeset, type_)
+            return
+
+        req.write(self.t("error"))
+
+    def do_static(self, req):
+        fname = req.form['file'][0]
+        static = self.repo.ui.config("web", "static",
+                                     os.path.join(self.templatepath,
+                                                  "static"))
+        req.write(staticfile(static, fname)
+                  or self.t("error", error="%r not found" % fname))
