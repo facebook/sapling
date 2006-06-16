@@ -471,7 +471,7 @@ class dirstate(object):
             # check the common case first
             if type_ == 'n':
                 if not st:
-                    st = os.stat(self.wjoin(fn))
+                    st = os.lstat(self.wjoin(fn))
                 if size >= 0 and (size != st.st_size
                                   or (mode ^ st.st_mode) & 0100):
                     modified.append(fn)
