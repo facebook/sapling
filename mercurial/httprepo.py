@@ -71,7 +71,7 @@ def netlocunsplit(host, port, user=None, passwd=None):
 
 class httprepository(remoterepository):
     def __init__(self, ui, path):
-        self.capabilities = ()
+        self.caps = None
         scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
         if query or frag:
             raise util.Abort(_('unsupported URL component: "%s"') %
@@ -144,6 +144,18 @@ class httprepository(remoterepository):
         # 1.0 here is the _protocol_ version
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
         urllib2.install_opener(opener)
+
+    # look up capabilities only when needed
+
+    def get_caps(self):
+        if self.caps is None:
+            try:
+                self.caps = self.do_read('capabilities').split()
+            except hg.RepoError:
+                self.caps = ()
+        return self.caps
+
+    capabilities = property(get_caps)
 
     def dev(self):
         return -1

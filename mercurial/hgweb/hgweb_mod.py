@@ -833,3 +833,9 @@ class hgweb(object):
                                                   "static"))
         req.write(staticfile(static, fname)
                   or self.t("error", error="%r not found" % fname))
+
+    def do_capabilities(self, req):
+        resp = ''
+        req.httphdr("application/mercurial-0.1", length=len(resp))
+        req.write(resp)
+
