@@ -712,7 +712,8 @@ code by typing `M-x find-library mercurial RET'."
     (let ((pos (point)))
       (insert (documentation 'hg-mode))
       (goto-char pos)
-      (kill-line))))
+      (end-of-line 1)
+      (delete-region pos (point)))))
 
 (defun hg-add (path)
   "Add PATH to the Mercurial repository on the next commit.
@@ -959,8 +960,8 @@ With a prefix argument, prompt for the path to forget."
 (defun hg-log-mode ()
   "Mode for viewing a Mercurial change log."
   (goto-char (point-min))
-  (when (looking-at "^searching for changes")
-    (kill-entire-line))
+  (when (looking-at "^searching for changes.*$")
+    (delete-region (match-beginning 0) (match-end 0)))
   (run-hooks 'hg-log-mode-hook))
 
 (defun hg-log (path &optional rev1 rev2 log-limit)
