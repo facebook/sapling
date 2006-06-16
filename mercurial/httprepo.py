@@ -23,7 +23,7 @@ class passwordmgr(urllib2.HTTPPasswordMgr):
         if authinfo != (None, None):
             return authinfo
 
-        if not ui.interactive:
+        if not self.ui.interactive:
             raise util.Abort(_('http authorization required'))
 
         self.ui.write(_("http authorization required\n"))
