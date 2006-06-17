@@ -380,7 +380,7 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
   (save-excursion
     (while hg-prev-buffer
       (set-buffer hg-prev-buffer))
-    (let ((path (or default (buffer-file-name))))
+    (let ((path (or default (buffer-file-name) default-directory)))
       (if (or (not path) current-prefix-arg)
           (expand-file-name
            (eval (list* 'read-file-name
@@ -1086,7 +1086,11 @@ prompts for a path to check."
   (interactive (list (hg-read-file-name)))
   (if (or path (not hg-root))
       (let ((root (do ((prev nil dir)
-		       (dir (file-name-directory (or path buffer-file-name ""))
+		       (dir (file-name-directory
+                             (or
+                              path
+                              buffer-file-name
+                              (expand-file-name default-directory)))
 			    (file-name-directory (directory-file-name dir))))
 		      ((equal prev dir))
 		    (when (file-directory-p (concat dir ".hg"))
