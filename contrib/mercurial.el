@@ -895,37 +895,54 @@ Key bindings
 (defun hg-diff (path &optional rev1 rev2)
   "Show the differences between REV1 and REV2 of PATH.
 When called interactively, the default behaviour is to treat REV1 as
-the tip revision, REV2 as the current edited version of the file, and
+the \"parent\" revision, REV2 as the current edited version of the file, and
 PATH as the file edited in the current buffer.
 With a prefix argument, prompt for all of these."
   (interactive (list (hg-read-file-name " to diff")
-		     (hg-read-rev " to start with")
+                     (let ((rev1 (hg-read-rev " to start with" 'parent)))
+		       (and (not (eq rev1 'parent)) rev1))
 		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
 		       (and (not (eq rev2 'working-dir)) rev2))))
   (hg-sync-buffers path)
   (let ((a-path (hg-abbrev-file-name path))
-	(r1 (or rev1 "tip"))
+        ;; none revision is specified explicitly
+        (none (and (not rev1) (not rev2)))
+        ;; only one revision is specified explicitly
+        (one (or (and (or (equal rev1 rev2) (not rev2)) rev1) 
+                 (and (not rev1) rev2)))
 	diff)
     (hg-view-output ((cond
-		      ((and (equal r1 "tip") (not rev2))
-		       (format "Mercurial: Diff against tip of %s" a-path))
-		      ((equal r1 rev2)
-		       (format "Mercurial: Diff of rev %s of %s" r1 a-path))
+		      (none
+		       (format "Mercurial: Diff against parent of %s" a-path))
+		      (one
+		       (format "Mercurial: Diff of rev %s of %s" one a-path))
 		      (t
 		       (format "Mercurial: Diff from rev %s to %s of %s"
-			       r1 (or rev2 "Current") a-path))))
-      (if rev2
-	  (call-process (hg-binary) nil t nil "diff" "-r" r1 "-r" rev2 path)
-	(call-process (hg-binary) nil t nil "diff" "-r" r1 path))
+			       rev1 rev2 a-path))))
+      (cond
+       (none 
+        (call-process (hg-binary) nil t nil "diff" path))
+       (one
+        (call-process (hg-binary) nil t nil "diff" "-r" one path))
+       (t
+        (call-process (hg-binary) nil t nil "diff" "-r" rev1 "-r" rev2 path)))
       (diff-mode)
       (setq diff (not (= (point-min) (point-max))))
       (font-lock-fontify-buffer))
     diff))
 
-(defun hg-diff-repo ()
-  "Show the differences between the working copy and the tip revision."
-  (interactive)
-  (hg-diff (hg-root)))
+(defun hg-diff-repo (path &optional rev1 rev2)
+  "Show the differences between REV1 and REV2 of repository containing PATH.
+When called interactively, the default behaviour is to treat REV1 as
+the \"parent\" revision, REV2 as the current edited version of the file, and
+PATH as the `hg-root' of the current buffer.
+With a prefix argument, prompt for all of these."
+  (interactive (list (hg-read-file-name " to diff")
+                     (let ((rev1 (hg-read-rev " to start with" 'parent)))
+		       (and (not (eq rev1 'parent)) rev1))
+		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
+		       (and (not (eq rev2 'working-dir)) rev2))))
+  (hg-diff (hg-root path) rev1 rev2))
 
 (defun hg-forget (path)
   "Lose track of PATH, which has been added, but not yet committed.
