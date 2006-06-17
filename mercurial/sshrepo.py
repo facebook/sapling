@@ -136,8 +136,7 @@ class sshrepository(remoterepository):
 
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
-        f = self.do_cmd("changegroup", roots=n)
-        return self.pipei
+        return self.do_cmd("changegroup", roots=n)
 
     def unbundle(self, cg, heads, source):
         d = self.call("unbundle", heads=' '.join(map(hex, heads)))
