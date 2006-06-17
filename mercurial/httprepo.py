@@ -12,13 +12,13 @@ from demandload import *
 demandload(globals(), "hg os urllib urllib2 urlparse zlib util httplib")
 demandload(globals(), "keepalive")
 
-class passwordmgr(urllib2.HTTPPasswordMgr):
+class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
-        urllib2.HTTPPasswordMgr.__init__(self)
+        urllib2.HTTPPasswordMgrWithDefaultRealm.__init__(self)
         self.ui = ui
 
     def find_user_password(self, realm, authuri):
-        authinfo = urllib2.HTTPPasswordMgr.find_user_password(
+        authinfo = urllib2.HTTPPasswordMgrWithDefaultRealm.find_user_password(
             self, realm, authuri)
         if authinfo != (None, None):
             return authinfo
@@ -133,7 +133,8 @@ class httprepository(remoterepository):
 
         passmgr = passwordmgr(ui)
         if user:
-            ui.debug(_('will use user %s for http auth\n') % user)
+            ui.debug(_('will use user %s, password %s for http auth\n') %
+                     (user, '*' * len(passwd)))
             passmgr.add_password(None, host, user, passwd or '')
 
         opener = urllib2.build_opener(

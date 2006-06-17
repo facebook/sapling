@@ -99,7 +99,7 @@ EXTRA ATTRIBUTES AND METHODS
 
 """
 
-# $Id: keepalive.py,v 1.13 2005/10/22 21:57:28 mstenner Exp $
+# $Id: keepalive.py,v 1.14 2006/04/04 21:00:32 mstenner Exp $
 
 import urllib2
 import httplib
@@ -249,12 +249,14 @@ class HTTPHandler(urllib2.HTTPHandler):
         r._url = req.get_full_url()
         r._connection = h
         r.code = r.status
+        r.headers = r.msg
+        r.msg = r.reason
         
         if r.status == 200 or not HANDLE_ERRORS:
             return r
         else:
-            return self.parent.error('http', req, r, r.status, r.reason, r.msg)
-
+            return self.parent.error('http', req, r,
+                                     r.status, r.msg, r.headers)
 
     def _reuse_connection(self, h, req, host):
         """start the transaction with a re-used connection
@@ -371,7 +373,7 @@ class HTTPResponse(httplib.HTTPResponse):
         self.close()
         
     def info(self):
-        return self.msg
+        return self.headers
 
     def geturl(self):
         return self._url

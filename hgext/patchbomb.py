@@ -217,7 +217,14 @@ def patchbomb(ui, repo, *revs, **opts):
     if not opts['test'] and not opts['mbox']:
         mail = ui.sendmail()
     parent = None
-    tz = time.strftime('%z')
+
+    # Calculate UTC offset
+    if time.daylight: offset = time.altzone
+    else: offset = time.timezone
+    if offset <= 0: sign, offset = '+', -offset
+    else: sign = '-'
+    offset = '%s%02d%02d' % (sign, offset / 3600, (offset % 3600) / 60)
+
     sender_addr = email.Utils.parseaddr(sender)[1]
     for m in msgs:
         try:
@@ -228,7 +235,8 @@ def patchbomb(ui, repo, *revs, **opts):
             m['In-Reply-To'] = parent
         else:
             parent = m['Message-Id']
-        m['Date'] = time.strftime('%a, %e %b %Y %T ', time.localtime(start_time)) + tz
+        m['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(start_time)) + ' ' + offset
+
         start_time += 1
         m['From'] = sender
         m['To'] = ', '.join(to)

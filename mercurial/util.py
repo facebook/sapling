@@ -474,7 +474,7 @@ def _readlock_file(pathname):
 
 def nlinks(pathname):
     """Return number of hardlinks for the given file."""
-    return os.stat(pathname).st_nlink
+    return os.lstat(pathname).st_nlink
 
 if hasattr(os, 'link'):
     os_link = os.link
@@ -625,10 +625,10 @@ else:
 
     def is_exec(f, last):
         """check whether a file is executable"""
-        return (os.stat(f).st_mode & 0100 != 0)
+        return (os.lstat(f).st_mode & 0100 != 0)
 
     def set_exec(f, mode):
-        s = os.stat(f).st_mode
+        s = os.lstat(f).st_mode
         if (s & 0100 != 0) == mode:
             return
         if mode:

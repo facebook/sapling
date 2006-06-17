@@ -242,7 +242,7 @@ class localrepository(object):
                 raise repo.RepoError(_("unknown revision '%s'") % key)
 
     def dev(self):
-        return os.stat(self.path).st_dev
+        return os.lstat(self.path).st_dev
 
     def local(self):
         return True

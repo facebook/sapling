@@ -162,7 +162,7 @@ def nlinks(pathname):
         fh.Close()
         return res[7]
     except pywintypes.error:
-        return os.stat(pathname).st_nlink
+        return os.lstat(pathname).st_nlink
 
 def testpid(pid):
     '''return True if pid is still running or unable to
