@@ -1772,11 +1772,15 @@ def import_(ui, repo, patch1, *patches, **opts):
                 elif message or line:
                     message.append(line)
 
-            # make sure message isn't empty
-            if not message:
-                message = _("imported patch %s\n") % patch
-            else:
+            if opts['message']:
+                # pickup the cmdline msg
+                message = opts['message']
+            elif message:
+                # pickup the patch msg
                 message = '\n'.join(message).rstrip()
+            else:
+                # launch the editor
+                message = None
             ui.debug(_('message:\n%s\n') % message)
 
             if tmpfp: tmpfp.close()
@@ -2960,10 +2964,11 @@ table = {
          [('p', 'strip', 1,
            _('directory strip option for patch. This has the same\n'
              'meaning as the corresponding patch option')),
+          ('m', 'message', '', _('use <text> as commit message')),
           ('b', 'base', '', _('base path')),
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes'))],
-         _('hg import [-p NUM] [-b BASE] [-f] PATCH...')),
+         _('hg import [-p NUM] [-b BASE] [-m MESSAGE] [-f] PATCH...')),
     "incoming|in": (incoming,
          [('M', 'no-merges', None, _('do not show merges')),
           ('f', 'force', None,
