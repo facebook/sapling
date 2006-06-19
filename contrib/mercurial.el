@@ -380,7 +380,7 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
   (save-excursion
     (while hg-prev-buffer
       (set-buffer hg-prev-buffer))
-    (let ((path (or default (buffer-file-name))))
+    (let ((path (or default (buffer-file-name) default-directory)))
       (if (or (not path) current-prefix-arg)
           (expand-file-name
            (eval (list* 'read-file-name
@@ -712,7 +712,9 @@ code by typing `M-x find-library mercurial RET'."
     (let ((pos (point)))
       (insert (documentation 'hg-mode))
       (goto-char pos)
-      (kill-line))))
+      (end-of-line 1)
+      (delete-region pos (point)))
+    (cd (hg-root))))
 
 (defun hg-add (path)
   "Add PATH to the Mercurial repository on the next commit.
@@ -721,7 +723,11 @@ With a prefix argument, prompt for the path to add."
   (let ((buf (current-buffer))
 	(update (equal buffer-file-name path)))
     (hg-view-output (hg-output-buffer-name)
-      (apply 'call-process (hg-binary) nil t nil (list "add" path)))
+      (apply 'call-process (hg-binary) nil t nil (list "add" path))
+      ;; "hg add" shows pathes relative NOT TO ROOT BUT TO REPOSITORY
+      (replace-regexp " \\.\\.." " " nil 0 (buffer-size))
+      (goto-char 0)
+      (cd (hg-root path)))
     (when update
       (with-current-buffer buf
 	(hg-mode-line)))))
@@ -890,42 +896,61 @@ Key bindings
 	    (search-forward hg-commit-message-start)
 	    (add-text-properties (match-beginning 0) (match-end 0)
 				 '(read-only t)))
-	  (hg-commit-mode))))))
+	  (hg-commit-mode)
+          (cd root))))))
 
 (defun hg-diff (path &optional rev1 rev2)
   "Show the differences between REV1 and REV2 of PATH.
 When called interactively, the default behaviour is to treat REV1 as
-the tip revision, REV2 as the current edited version of the file, and
+the \"parent\" revision, REV2 as the current edited version of the file, and
 PATH as the file edited in the current buffer.
 With a prefix argument, prompt for all of these."
   (interactive (list (hg-read-file-name " to diff")
-		     (hg-read-rev " to start with")
+                     (let ((rev1 (hg-read-rev " to start with" 'parent)))
+		       (and (not (eq rev1 'parent)) rev1))
 		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
 		       (and (not (eq rev2 'working-dir)) rev2))))
   (hg-sync-buffers path)
   (let ((a-path (hg-abbrev-file-name path))
-	(r1 (or rev1 "tip"))
+        ;; none revision is specified explicitly
+        (none (and (not rev1) (not rev2)))
+        ;; only one revision is specified explicitly
+        (one (or (and (or (equal rev1 rev2) (not rev2)) rev1) 
+                 (and (not rev1) rev2)))
 	diff)
     (hg-view-output ((cond
-		      ((and (equal r1 "tip") (not rev2))
-		       (format "Mercurial: Diff against tip of %s" a-path))
-		      ((equal r1 rev2)
-		       (format "Mercurial: Diff of rev %s of %s" r1 a-path))
+		      (none
+		       (format "Mercurial: Diff against parent of %s" a-path))
+		      (one
+		       (format "Mercurial: Diff of rev %s of %s" one a-path))
 		      (t
 		       (format "Mercurial: Diff from rev %s to %s of %s"
-			       r1 (or rev2 "Current") a-path))))
-      (if rev2
-	  (call-process (hg-binary) nil t nil "diff" "-r" r1 "-r" rev2 path)
-	(call-process (hg-binary) nil t nil "diff" "-r" r1 path))
+			       rev1 rev2 a-path))))
+      (cond
+       (none 
+        (call-process (hg-binary) nil t nil "diff" path))
+       (one
+        (call-process (hg-binary) nil t nil "diff" "-r" one path))
+       (t
+        (call-process (hg-binary) nil t nil "diff" "-r" rev1 "-r" rev2 path)))
       (diff-mode)
       (setq diff (not (= (point-min) (point-max))))
-      (font-lock-fontify-buffer))
+      (font-lock-fontify-buffer)
+      (cd (hg-root path)))
     diff))
 
-(defun hg-diff-repo ()
-  "Show the differences between the working copy and the tip revision."
-  (interactive)
-  (hg-diff (hg-root)))
+(defun hg-diff-repo (path &optional rev1 rev2)
+  "Show the differences between REV1 and REV2 of repository containing PATH.
+When called interactively, the default behaviour is to treat REV1 as
+the \"parent\" revision, REV2 as the current edited version of the file, and
+PATH as the `hg-root' of the current buffer.
+With a prefix argument, prompt for all of these."
+  (interactive (list (hg-read-file-name " to diff")
+                     (let ((rev1 (hg-read-rev " to start with" 'parent)))
+		       (and (not (eq rev1 'parent)) rev1))
+		     (let ((rev2 (hg-read-rev " to end with" 'working-dir)))
+		       (and (not (eq rev2 'working-dir)) rev2))))
+  (hg-diff (hg-root path) rev1 rev2))
 
 (defun hg-forget (path)
   "Lose track of PATH, which has been added, but not yet committed.
@@ -936,7 +961,11 @@ With a prefix argument, prompt for the path to forget."
   (let ((buf (current-buffer))
 	(update (equal buffer-file-name path)))
     (hg-view-output (hg-output-buffer-name)
-      (apply 'call-process (hg-binary) nil t nil (list "forget" path)))
+      (apply 'call-process (hg-binary) nil t nil (list "forget" path))
+      ;; "hg forget" shows pathes relative NOT TO ROOT BUT TO REPOSITORY
+      (replace-regexp " \\.\\.." " " nil 0 (buffer-size))
+      (goto-char 0)
+      (cd (hg-root path)))
     (when update
       (with-current-buffer buf
 	(hg-mode-line)))))
@@ -950,7 +979,8 @@ With a prefix argument, prompt for the path to forget."
 			    (or repo hg-incoming-repository))))
     (call-process (hg-binary) nil t nil "incoming"
 		  (or repo hg-incoming-repository))
-    (hg-log-mode)))
+    (hg-log-mode)
+    (cd (hg-root))))
 
 (defun hg-init ()
   (interactive)
@@ -959,8 +989,8 @@ With a prefix argument, prompt for the path to forget."
 (defun hg-log-mode ()
   "Mode for viewing a Mercurial change log."
   (goto-char (point-min))
-  (when (looking-at "^searching for changes")
-    (kill-entire-line))
+  (when (looking-at "^searching for changes.*$")
+    (delete-region (match-beginning 0) (match-end 0)))
   (run-hooks 'hg-log-mode-hook))
 
 (defun hg-log (path &optional rev1 rev2 log-limit)
@@ -994,7 +1024,8 @@ With a prefix argument, prompt for each parameter."
                    (if (> (length path) (length (hg-root path)))
                        (cons path nil)
                      nil)))
-      (hg-log-mode))))
+      (hg-log-mode)
+      (cd (hg-root path)))))
 
 (defun hg-log-repo (path &optional rev1 rev2 log-limit)
   "Display the revision history of the repository containing PATH.
@@ -1023,7 +1054,8 @@ With a prefix argument, prompt for each parameter."
 			    (or repo hg-outgoing-repository))))
     (call-process (hg-binary) nil t nil "outgoing"
 		  (or repo hg-outgoing-repository))
-    (hg-log-mode)))
+    (hg-log-mode)
+    (cd (hg-root))))
 
 (defun hg-pull (&optional repo)
   "Pull changes from repository REPO.
@@ -1034,7 +1066,8 @@ This does not update the working directory."
 			   (hg-abbrev-file-name
 			    (or repo hg-incoming-repository))))
     (call-process (hg-binary) nil t nil "pull"
-		  (or repo hg-incoming-repository))))
+		  (or repo hg-incoming-repository))
+    (cd (hg-root))))
 
 (defun hg-push (&optional repo)
   "Push changes to repository REPO."
@@ -1044,7 +1077,8 @@ This does not update the working directory."
 			   (hg-abbrev-file-name
 			    (or repo hg-outgoing-repository))))
     (call-process (hg-binary) nil t nil "push"
-		  (or repo hg-outgoing-repository))))
+		  (or repo hg-outgoing-repository))
+    (cd (hg-root))))
 
 (defun hg-revert-buffer-internal ()
   (let ((ctx (hg-buffer-context)))
@@ -1085,7 +1119,11 @@ prompts for a path to check."
   (interactive (list (hg-read-file-name)))
   (if (or path (not hg-root))
       (let ((root (do ((prev nil dir)
-		       (dir (file-name-directory (or path buffer-file-name ""))
+		       (dir (file-name-directory
+                             (or
+                              path
+                              buffer-file-name
+                              (expand-file-name default-directory)))
 			    (file-name-directory (directory-file-name dir))))
 		      ((equal prev dir))
 		    (when (file-directory-p (concat dir ".hg"))
@@ -1112,7 +1150,8 @@ Names are displayed relative to the repository root."
 				 "*"))
 			     (hg-abbrev-file-name root)))
       (apply 'call-process (hg-binary) nil t nil
-	     (list "--cwd" root "status" path)))))
+	     (list "--cwd" root "status" path))
+      (cd (hg-root path)))))
 
 (defun hg-undo ()
   (interactive)
