@@ -381,6 +381,14 @@ web::
     Default is false.
   allowpull;;
     Whether to allow pulling from the repository. Default is true.
+  allow_push;;
+    Whether to allow pushing to the repository.  If empty or not set,
+    push is not allowed.  If the special value "*", any remote user
+    can push, including unauthenticated users.  Otherwise, the remote
+    user must have been authenticated, and the authenticated user name
+    must be present in this list (separated by whitespace or ",").
+    The contents of the allow_push list are examined after the
+    deny_push list.
   allowzip;;
     (DEPRECATED) Whether to allow .zip downloading of repo revisions.
     Default is false. This feature creates temporary files.
@@ -391,6 +399,13 @@ web::
   contact;;
     Name or email address of the person in charge of the repository.
     Default is "unknown".
+  deny_push;;
+    Whether to deny pushing to the repository.  If empty or not set,
+    push is not denied.  If the special value "*", all remote users
+    are denied push.  Otherwise, unauthenticated users are all denied,
+    and any authenticated user name present in this list (separated by
+    whitespace or ",") is also denied.  The contents of the deny_push
+    list are examined before the allow_push list.
   description;;
     Textual description of the repository's purpose or contents.
     Default is "unknown".
@@ -407,6 +422,9 @@ web::
     Maximum number of files to list per changeset. Default is 10.
   port;;
     Port to listen on. Default is 8000.
+  push_ssl;;
+    Whether to require that inbound pushes be transported over SSL to
+    prevent password sniffing.  Default is true.
   style;;
     Which template map style to use.
   templates;;

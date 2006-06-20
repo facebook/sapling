@@ -45,9 +45,9 @@ class hgrequest(object):
             self.out.write("%s: %s\r\n" % header)
         self.out.write("\r\n")
 
-    def httphdr(self, type, filename=None, length=0):
-
-        headers = [('Content-type', type)]
+    def httphdr(self, type, filename=None, length=0, headers={}):
+        headers = headers.items()
+        headers.append(('Content-type', type))
         if filename:
             headers.append(('Content-disposition', 'attachment; filename=%s' %
                             filename))
