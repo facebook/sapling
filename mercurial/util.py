@@ -822,16 +822,22 @@ class chunkbuffer(object):
         s, self.buf = self.buf[:l], buffer(self.buf, l)
         return s
 
-def filechunkiter(f, size = 65536):
-    """Create a generator that produces all the data in the file size
-    (default 65536) bytes at a time.  Chunks may be less than size
-    bytes if the chunk is the last chunk in the file, or the file is a
-    socket or some other type of file that sometimes reads less data
-    than is requested."""
-    s = f.read(size)
-    while len(s) > 0:
+def filechunkiter(f, size=65536, limit=None):
+    """Create a generator that produces the data in the file size
+    (default 65536) bytes at a time, up to optional limit (default is
+    to read all data).  Chunks may be less than size bytes if the
+    chunk is the last chunk in the file, or the file is a socket or
+    some other type of file that sometimes reads less data than is
+    requested."""
+    assert size >= 0
+    assert limit is None or limit >= 0
+    while True:
+        if limit is None: nbytes = size
+        else: nbytes = min(limit, size)
+        s = nbytes and f.read(nbytes)
+        if not s: break
+        if limit: limit -= len(s)
         yield s
-        s = f.read(size)
 
 def makedate():
     lt = time.localtime()
