@@ -477,6 +477,13 @@ class revlog(object):
         if self.version == REVLOGV0:
             return d
         return [ self.node(x) for x in d ]
+    def parentrevs(self, rev):
+        if rev == -1:
+            return (-1, -1)
+        d = self.index[rev][-3:-1]
+        if self.version == REVLOGV0:
+            return [ self.rev(x) for x in d ]
+        return d
     def start(self, rev):
         if rev < 0:
             return -1
