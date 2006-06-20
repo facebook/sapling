@@ -10,7 +10,7 @@ from remoterepo import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "hg os urllib urllib2 urlparse zlib util httplib")
-demandload(globals(), "keepalive tempfile socket")
+demandload(globals(), "errno keepalive tempfile socket")
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
@@ -192,6 +192,10 @@ class httprepository(remoterepository):
         cu = "%s?%s" % (self.url, qs)
         try:
             resp = urllib2.urlopen(urllib2.Request(cu, data, headers))
+        except urllib2.HTTPError, inst:
+            if inst.code == 401:
+                raise util.Abort(_('authorization failed'))
+            raise
         except httplib.HTTPException, inst:
             self.ui.debug(_('http error while sending %s command\n') % cmd)
             self.ui.print_exc()
@@ -278,17 +282,22 @@ class httprepository(remoterepository):
             for chunk in util.filechunkiter(cg):
                 fp.write(chunk)
             length = fp.tell()
-            rfp = self.do_cmd(
-                'unbundle', data=fp,
-                headers={'content-length': length,
-                         'content-type': 'application/octet-stream'},
-                heads=' '.join(map(hex, heads)))
             try:
-                ret = int(rfp.readline())
-                self.ui.write(rfp.read())
-                return ret
-            finally:
-                rfp.close()
+                rfp = self.do_cmd(
+                    'unbundle', data=fp,
+                    headers={'content-length': length,
+                             'content-type': 'application/octet-stream'},
+                    heads=' '.join(map(hex, heads)))
+                try:
+                    ret = int(rfp.readline())
+                    self.ui.write(rfp.read())
+                    return ret
+                finally:
+                    rfp.close()
+            except socket.error, err:
+                if err[0] in (errno.ECONNRESET, errno.EPIPE):
+                    raise util.Abort(_('push failed: %s'), err[1])
+                raise util.Abort(err[1])
         finally:
             fp.close()
             os.unlink(tempname)
