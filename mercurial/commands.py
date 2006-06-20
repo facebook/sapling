@@ -8,7 +8,7 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), "os re sys signal shutil imp urllib pdb stat")
+demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "fnmatch mdiff random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
@@ -385,16 +385,14 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         def read(f):
             return repo.file(f).read(mmap2[f])
     else:
+        tz = util.makedate()[1]
         _date2 = util.datestr()
-        _tz = util.makedate()[1]
         def date2(f):
             try:
-                _f = repo.wopener(f)
+                return util.datestr((os.lstat(repo.wjoin(f)).st_mtime, tz))
             except IOError, err:
-                if err[0] != errno.ENOENT:
-                    raise
+                if err.errno != errno.ENOENT: raise
                 return _date2
-            return util.datestr((os.fstat(_f.fileno())[stat.ST_MTIME], _tz))
         def read(f):
             return repo.wread(f)
 
