@@ -18,6 +18,9 @@ class hgrequest(object):
         self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
         self.will_close = True
 
+    def read(self, count=-1):
+        return self.inp.read(count)
+
     def write(self, *things):
         for thing in things:
             if hasattr(thing, "__iter__"):

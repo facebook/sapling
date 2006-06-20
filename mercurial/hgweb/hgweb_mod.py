@@ -10,7 +10,7 @@ import os
 import os.path
 import mimetypes
 from mercurial.demandload import demandload
-demandload(globals(), "re zlib ConfigParser cStringIO")
+demandload(globals(), "re zlib ConfigParser cStringIO sys tempfile")
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,templater")
 demandload(globals(), "mercurial.hgweb.request:hgrequest")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
@@ -835,7 +835,57 @@ class hgweb(object):
                   or self.t("error", error="%r not found" % fname))
 
     def do_capabilities(self, req):
-        resp = ''
+        resp = 'unbundle'
         req.httphdr("application/mercurial-0.1", length=len(resp))
         req.write(resp)
 
+    def do_unbundle(self, req):
+        their_heads = req.form['heads'][0].split(' ')
+
+        def check_heads():
+            heads = map(hex, self.repo.heads())
+            return their_heads == [hex('force')] or their_heads == heads
+
+        req.httphdr("application/mercurial-0.1")
+
+        # fail early if possible
+        if not check_heads():
+            req.write('0\n')
+            req.write(_('unsynced changes\n'))
+            return
+
+        # do not lock repo until all changegroup data is
+        # streamed. save to temporary file.
+
+        fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
+        fp = os.fdopen(fd, 'wb+')
+        try:
+            length = int(req.env['CONTENT_LENGTH'])
+            for s in util.filechunkiter(req, limit=length):
+                fp.write(s)
+
+            lock = self.repo.lock()
+            try:
+                if not check_heads():
+                    req.write('0\n')
+                    req.write(_('unsynced changes\n'))
+                    return
+
+                fp.seek(0)
+
+                # send addchangegroup output to client
+
+                old_stdout = sys.stdout
+                sys.stdout = cStringIO.StringIO()
+
+                try:
+                    ret = self.repo.addchangegroup(fp, 'serve')
+                    req.write('%d\n' % ret)
+                    req.write(sys.stdout.getvalue())
+                finally:
+                    sys.stdout = old_stdout
+            finally:
+                lock.release()
+        finally:
+            fp.close()
+            os.unlink(tempname)
