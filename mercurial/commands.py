@@ -8,7 +8,7 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), "os re sys signal shutil imp urllib pdb")
+demandload(globals(), "os re sys signal shutil imp urllib pdb stat")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "fnmatch mdiff random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
@@ -379,11 +379,22 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     if node2:
         change = repo.changelog.read(node2)
         mmap2 = repo.manifest.read(change[0])
-        date2 = util.datestr(change[2])
+        _date2 = util.datestr(change[2])
+        def date2(f):
+            return _date2
         def read(f):
             return repo.file(f).read(mmap2[f])
     else:
-        date2 = util.datestr()
+        _date2 = util.datestr()
+        _tz = util.makedate()[1]
+        def date2(f):
+            try:
+                _f = repo.wopener(f)
+            except IOError, err:
+                if err[0] != errno.ENOENT:
+                    raise
+                return _date2
+            return util.datestr((os.fstat(_f.fileno())[stat.ST_MTIME], _tz))
         def read(f):
             return repo.wread(f)
 
@@ -401,17 +412,17 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text,
+        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
                                showfunc=showfunc, ignorews=ignorews))
     for f in added:
         to = None
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text,
+        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
                                showfunc=showfunc, ignorews=ignorews))
     for f in removed:
         to = repo.file(f).read(mmap[f])
         tn = None
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text,
+        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
                                showfunc=showfunc, ignorews=ignorews))
 
 def trimuser(ui, name, rev, revcache):
