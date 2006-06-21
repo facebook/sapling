@@ -18,7 +18,7 @@ class sshrepository(remoterepository):
 
         m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?', path)
         if not m:
-            raise hg.RepoError(_("couldn't parse destination %s") % path)
+            raise hg.RepoError(_("couldn't parse location %s") % path)
 
         self.user = m.group(2)
         self.host = m.group(3)

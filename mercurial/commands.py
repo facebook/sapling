@@ -2151,7 +2151,6 @@ def pull(ui, repo, source="default", **opts):
       with the --ssh command line option.
     """
     source = ui.expandpath(source)
-    ui.status(_('pulling from %s\n') % (source))
 
     if opts['ssh']:
         ui.setconfig("ui", "ssh", opts['ssh'])
@@ -2159,6 +2158,7 @@ def pull(ui, repo, source="default", **opts):
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
     other = hg.repository(ui, source)
+    ui.status(_('pulling from %s\n') % (source))
     revs = None
     if opts['rev'] and not other.local():
         raise util.Abort(_("pull -r doesn't work for remote repositories yet"))
@@ -2190,7 +2190,6 @@ def push(ui, repo, dest="default-push", **opts):
     about ssh:// URLs.
     """
     dest = ui.expandpath(dest)
-    ui.status('pushing to %s\n' % (dest))
 
     if opts['ssh']:
         ui.setconfig("ui", "ssh", opts['ssh'])
@@ -2198,6 +2197,7 @@ def push(ui, repo, dest="default-push", **opts):
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
     other = hg.repository(ui, dest)
+    ui.status('pushing to %s\n' % (dest))
     revs = None
     if opts['rev']:
         revs = [repo.lookup(rev) for rev in opts['rev']]
