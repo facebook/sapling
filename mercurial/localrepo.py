@@ -617,6 +617,7 @@ class localrepository(object):
                     del mf[fn]
             return mf
 
+        modified, added, removed, deleted, unknown, ignored = [],[],[],[],[],[]
         compareworking = False
         if not node1 or node1 == self.dirstate.parents()[0]:
             compareworking = True
