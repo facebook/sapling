@@ -1115,9 +1115,8 @@ class localrepository(object):
         # servers, http servers).
 
         if 'unbundle' in remote.capabilities:
-            self.push_unbundle(remote, force, revs)
-        else:
-            self.push_addchangegroup(remote, force, revs)
+            return self.push_unbundle(remote, force, revs)
+        return self.push_addchangegroup(remote, force, revs)
 
     def prepush(self, remote, force, revs):
         base = {}

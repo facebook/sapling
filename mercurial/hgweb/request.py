@@ -18,6 +18,9 @@ class hgrequest(object):
         self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
         self.will_close = True
 
+    def read(self, count=-1):
+        return self.inp.read(count)
+
     def write(self, *things):
         for thing in things:
             if hasattr(thing, "__iter__"):
@@ -42,9 +45,9 @@ class hgrequest(object):
             self.out.write("%s: %s\r\n" % header)
         self.out.write("\r\n")
 
-    def httphdr(self, type, filename=None, length=0):
-
-        headers = [('Content-type', type)]
+    def httphdr(self, type, filename=None, length=0, headers={}):
+        headers = headers.items()
+        headers.append(('Content-type', type))
         if filename:
             headers.append(('Content-disposition', 'attachment; filename=%s' %
                             filename))

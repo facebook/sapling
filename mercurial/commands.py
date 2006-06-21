@@ -379,11 +379,20 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     if node2:
         change = repo.changelog.read(node2)
         mmap2 = repo.manifest.read(change[0])
-        date2 = util.datestr(change[2])
+        _date2 = util.datestr(change[2])
+        def date2(f):
+            return _date2
         def read(f):
             return repo.file(f).read(mmap2[f])
     else:
-        date2 = util.datestr()
+        tz = util.makedate()[1]
+        _date2 = util.datestr()
+        def date2(f):
+            try:
+                return util.datestr((os.lstat(repo.wjoin(f)).st_mtime, tz))
+            except IOError, err:
+                if err.errno != errno.ENOENT: raise
+                return _date2
         def read(f):
             return repo.wread(f)
 
@@ -401,17 +410,17 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text,
+        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
                                showfunc=showfunc, ignorews=ignorews))
     for f in added:
         to = None
         tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text,
+        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
                                showfunc=showfunc, ignorews=ignorews))
     for f in removed:
         to = repo.file(f).read(mmap[f])
         tn = None
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, r, text=text,
+        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
                                showfunc=showfunc, ignorews=ignorews))
 
 def trimuser(ui, name, rev, revcache):

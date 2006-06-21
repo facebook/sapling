@@ -10,7 +10,7 @@ from remoterepo import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "hg os urllib urllib2 urlparse zlib util httplib")
-demandload(globals(), "keepalive")
+demandload(globals(), "errno keepalive tempfile socket")
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
@@ -69,6 +69,22 @@ def netlocunsplit(host, port, user=None, passwd=None):
         return userpass + '@' + hostport
     return hostport
 
+class httpconnection(keepalive.HTTPConnection):
+    # must be able to send big bundle as stream.
+
+    def send(self, data):
+        if isinstance(data, str):
+            keepalive.HTTPConnection.send(self, data)
+        else:
+            # if auth required, some data sent twice, so rewind here
+            data.seek(0)
+            for chunk in util.filechunkiter(data):
+                keepalive.HTTPConnection.send(self, chunk)
+
+class httphandler(keepalive.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(httpconnection, req)
+
 class httprepository(remoterepository):
     def __init__(self, ui, path):
         self.caps = None
@@ -86,7 +102,7 @@ class httprepository(remoterepository):
 
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
         proxyauthinfo = None
-        handler = keepalive.HTTPHandler()
+        handler = httphandler()
 
         if proxyurl:
             # proxy can be proper url or host[:port]
@@ -154,6 +170,8 @@ class httprepository(remoterepository):
                 self.caps = self.do_read('capabilities').split()
             except hg.RepoError:
                 self.caps = ()
+            self.ui.debug(_('capabilities: %s\n') %
+                          (' '.join(self.caps or ['none'])))
         return self.caps
 
     capabilities = property(get_caps)
@@ -165,13 +183,19 @@ class httprepository(remoterepository):
         raise util.Abort(_('operation not supported over http'))
 
     def do_cmd(self, cmd, **args):
+        data = args.pop('data', None)
+        headers = args.pop('headers', {})
         self.ui.debug(_("sending %s command\n") % cmd)
         q = {"cmd": cmd}
         q.update(args)
         qs = urllib.urlencode(q)
         cu = "%s?%s" % (self.url, qs)
         try:
-            resp = urllib2.urlopen(cu)
+            resp = urllib2.urlopen(urllib2.Request(cu, data, headers))
+        except urllib2.HTTPError, inst:
+            if inst.code == 401:
+                raise util.Abort(_('authorization failed'))
+            raise
         except httplib.HTTPException, inst:
             self.ui.debug(_('http error while sending %s command\n') % cmd)
             self.ui.print_exc()
@@ -249,7 +273,34 @@ class httprepository(remoterepository):
         return util.chunkbuffer(zgenerator(util.filechunkiter(f)))
 
     def unbundle(self, cg, heads, source):
-        raise util.Abort(_('operation not supported over http'))
+        # have to stream bundle to a temp file because we do not have
+        # http 1.1 chunked transfer.
+
+        fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
+        fp = os.fdopen(fd, 'wb+')
+        try:
+            for chunk in util.filechunkiter(cg):
+                fp.write(chunk)
+            length = fp.tell()
+            try:
+                rfp = self.do_cmd(
+                    'unbundle', data=fp,
+                    headers={'content-length': length,
+                             'content-type': 'application/octet-stream'},
+                    heads=' '.join(map(hex, heads)))
+                try:
+                    ret = int(rfp.readline())
+                    self.ui.write(rfp.read())
+                    return ret
+                finally:
+                    rfp.close()
+            except socket.error, err:
+                if err[0] in (errno.ECONNRESET, errno.EPIPE):
+                    raise util.Abort(_('push failed: %s'), err[1])
+                raise util.Abort(err[1])
+        finally:
+            fp.close()
+            os.unlink(tempname)
 
 class httpsrepository(httprepository):
     pass

@@ -10,7 +10,7 @@ import os
 import os.path
 import mimetypes
 from mercurial.demandload import demandload
-demandload(globals(), "re zlib ConfigParser cStringIO")
+demandload(globals(), "re zlib ConfigParser cStringIO sys tempfile")
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,templater")
 demandload(globals(), "mercurial.hgweb.request:hgrequest")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
@@ -835,7 +835,97 @@ class hgweb(object):
                   or self.t("error", error="%r not found" % fname))
 
     def do_capabilities(self, req):
-        resp = ''
+        resp = 'unbundle'
         req.httphdr("application/mercurial-0.1", length=len(resp))
         req.write(resp)
 
+    def check_perm(self, req, op, default):
+        '''check permission for operation based on user auth.
+        return true if op allowed, else false.
+        default is policy to use if no config given.'''
+
+        user = req.env.get('REMOTE_USER')
+
+        deny = self.repo.ui.config('web', 'deny_' + op, '')
+        deny = deny.replace(',', ' ').split()
+
+        if deny and (not user or deny == ['*'] or user in deny):
+            return False
+
+        allow = self.repo.ui.config('web', 'allow_' + op, '')
+        allow = allow.replace(',', ' ').split()
+
+        return (allow and (allow == ['*'] or user in allow)) or default
+
+    def do_unbundle(self, req):
+        def bail(response, headers={}):
+            length = int(req.env['CONTENT_LENGTH'])
+            for s in util.filechunkiter(req, limit=length):
+                # drain incoming bundle, else client will not see
+                # response when run outside cgi script
+                pass
+            req.httphdr("application/mercurial-0.1", headers=headers)
+            req.write('0\n')
+            req.write(response)
+
+        # require ssl by default, auth info cannot be sniffed and
+        # replayed
+        ssl_req = self.repo.ui.configbool('web', 'push_ssl', True)
+        if ssl_req and not req.env.get('HTTPS'):
+            bail(_('ssl required\n'))
+            return
+
+        # do not allow push unless explicitly allowed
+        if not self.check_perm(req, 'push', False):
+            bail(_('push not authorized\n'),
+                 headers={'status': '401 Unauthorized'})
+            return
+
+        req.httphdr("application/mercurial-0.1")
+
+        their_heads = req.form['heads'][0].split(' ')
+
+        def check_heads():
+            heads = map(hex, self.repo.heads())
+            return their_heads == [hex('force')] or their_heads == heads
+
+        # fail early if possible
+        if not check_heads():
+            bail(_('unsynced changes\n'))
+            return
+
+        # do not lock repo until all changegroup data is
+        # streamed. save to temporary file.
+
+        fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
+        fp = os.fdopen(fd, 'wb+')
+        try:
+            length = int(req.env['CONTENT_LENGTH'])
+            for s in util.filechunkiter(req, limit=length):
+                fp.write(s)
+
+            lock = self.repo.lock()
+            try:
+                if not check_heads():
+                    req.write('0\n')
+                    req.write(_('unsynced changes\n'))
+                    return
+
+                fp.seek(0)
+
+                # send addchangegroup output to client
+
+                old_stdout = sys.stdout
+                sys.stdout = cStringIO.StringIO()
+
+                try:
+                    ret = self.repo.addchangegroup(fp, 'serve')
+                    req.write('%d\n' % ret)
+                    req.write(sys.stdout.getvalue())
+                finally:
+                    sys.stdout = old_stdout
+            finally:
+                lock.release()
+        finally:
+            fp.close()
+            os.unlink(tempname)
