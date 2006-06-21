@@ -10,11 +10,10 @@ This contains helper routines that are independent of the SCM core and hide
 platform-specific details from the core.
 """
 
-import os, errno
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "cStringIO errno popen2 re shutil sys tempfile")
-demandload(globals(), "threading time")
+demandload(globals(), "os threading time")
 
 class SignalInterrupt(Exception):
     """Exception raised on SIGTERM and SIGHUP."""

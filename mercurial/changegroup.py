@@ -6,10 +6,9 @@ changegroup.py - Mercurial changegroup manipulation functions
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
-import struct
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "util")
+demandload(globals(), "struct util")
 
 def getchunk(source):
     """get a chunk from a changegroup"""
