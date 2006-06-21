@@ -5,10 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os
 from revlog import *
 from demandload import *
-demandload(globals(), "bdiff")
+demandload(globals(), "bdiff os")
 
 class filelog(revlog):
     def __init__(self, opener, path, defversion=REVLOG_DEFAULT_VERSION):

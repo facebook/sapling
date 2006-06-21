@@ -6,8 +6,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from demandload import demandload
-import struct, bdiff, util, mpatch
-demandload(globals(), "re")
+import bdiff, mpatch
+demandload(globals(), "re struct util")
 
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''

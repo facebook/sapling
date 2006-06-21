@@ -5,14 +5,13 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, util
-import filelog, manifest, changelog, dirstate, repo
 from node import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "appendfile changegroup")
+demandload(globals(), "changelog dirstate filelog manifest repo")
 demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
-demandload(globals(), "revlog")
+demandload(globals(), "os revlog util")
 
 class localrepository(object):
     capabilities = ()

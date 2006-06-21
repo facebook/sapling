@@ -5,11 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import ConfigParser
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno getpass os re smtplib socket sys tempfile")
-demandload(globals(), "templater traceback util")
+demandload(globals(), "ConfigParser templater traceback util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,

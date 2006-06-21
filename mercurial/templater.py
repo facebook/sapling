@@ -5,7 +5,6 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import re
 from demandload import demandload
 from i18n import gettext as _
 from node import *
@@ -194,11 +193,16 @@ def stringify(thing):
     walk(thing)
     return cs.getvalue()
 
-para_re = re.compile('(\n\n|\n\\s*[-*]\\s*)', re.M)
-space_re = re.compile(r'  +')
+para_re = None
+space_re = None
 
 def fill(text, width):
     '''fill many paragraphs.'''
+    global para_re, space_re
+    if para_re is None:
+        para_re = re.compile('(\n\n|\n\\s*[-*]\\s*)', re.M)
+        space_re = re.compile(r'  +')
+        
     def findparas():
         start = 0
         while True:
