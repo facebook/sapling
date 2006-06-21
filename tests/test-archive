@@ -51,3 +51,5 @@ hg archive -t zip -p very/../bad test.zip
 
 hg archive -t zip -r 2 test.zip
 unzip -t test.zip
+
+hg archive -t tar - | tar tf - | sed "s/$QTIP/TIP/"

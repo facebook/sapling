@@ -36,3 +36,7 @@ Archive:  test.zip
     testing: test/baz/bletch          OK
     testing: test/foo                 OK
 No errors detected in compressed data of test.zip.
+test-TIP/.hg_archival.txt
+test-TIP/bar
+test-TIP/baz/bletch
+test-TIP/foo

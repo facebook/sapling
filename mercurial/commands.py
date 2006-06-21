@@ -780,12 +780,19 @@ def archive(ui, repo, dest, **opts):
                                'specific revision'))
 
     dest = make_filename(repo, repo.changelog, dest, node)
-    prefix = make_filename(repo, repo.changelog, opts['prefix'], node)
     if os.path.realpath(dest) == repo.root:
         raise util.Abort(_('repository root cannot be destination'))
     dummy, matchfn, dummy = matchpats(repo, [], opts)
-    archival.archive(repo, dest, node, opts.get('type') or 'files',
-                    not opts['no_decode'], matchfn, prefix)
+    kind = opts.get('type') or 'files'
+    prefix = opts['prefix']
+    if dest == '-':
+        if kind == 'files':
+            raise util.Abort(_('cannot archive plain files to stdout'))
+        dest = sys.stdout
+        if not prefix: prefix = os.path.basename(repo.root) + '-%h'
+    prefix = make_filename(repo, repo.changelog, prefix, node)
+    archival.archive(repo, dest, node, kind, not opts['no_decode'],
+                     matchfn, prefix)
 
 def backout(ui, repo, rev, **opts):
     '''reverse effect of earlier changeset
