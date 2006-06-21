@@ -10,35 +10,60 @@ from repo import *
 from demandload import *
 from i18n import gettext as _
 demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
+demandload(globals(), "os util")
+
+def bundle(ui, path):
+    if path.startswith('bundle://'):
+        path = path[9:]
+    else:
+        path = path[7:]
+    s = path.split("+", 1)
+    if len(s) == 1:
+        repopath, bundlename = "", s[0]
+    else:
+        repopath, bundlename = s
+    return bundlerepo.bundlerepository(ui, repopath, bundlename)
+
+def hg(ui, path):
+    ui.warn(_("hg:// syntax is deprecated, please use http:// instead\n"))
+    return httprepo.httprepository(ui, path.replace("hg://", "http://"))
+
+def local_(ui, path, create=0):
+    if path.startswith('file:'):
+        path = path[5:]
+    return localrepo.localrepository(ui, path, create)
+
+def old_http(ui, path):
+    ui.warn(_("old-http:// syntax is deprecated, "
+              "please use static-http:// instead\n"))
+    return statichttprepo.statichttprepository(
+        ui, path.replace("old-http://", "http://"))
+
+def static_http(ui, path):
+    return statichttprepo.statichttprepository(
+        ui, path.replace("static-http://", "http://"))
+
+schemes = {
+    'bundle': bundle,
+    'file': local_,
+    'hg': hg,
+    'http': lambda ui, path: httprepo.httprepository(ui, path),
+    'https': lambda ui, path: httprepo.httpsrepository(ui, path),
+    'old-http': old_http,
+    'ssh': lambda ui, path: sshrepo.sshrepository(ui, path),
+    'static-http': static_http,
+    }
 
 def repository(ui, path=None, create=0):
-    if path:
-        if path.startswith("http://"):
-            return httprepo.httprepository(ui, path)
-        if path.startswith("https://"):
-            return httprepo.httpsrepository(ui, path)
-        if path.startswith("hg://"):
-            ui.warn(_("hg:// syntax is deprecated, "
-                      "please use http:// instead\n"))
-            return httprepo.httprepository(
-                ui, path.replace("hg://", "http://"))
-        if path.startswith("old-http://"):
-            ui.warn(_("old-http:// syntax is deprecated, "
-                      "please use static-http:// instead\n"))
-            return statichttprepo.statichttprepository(
-                ui, path.replace("old-http://", "http://"))
-        if path.startswith("static-http://"):
-            return statichttprepo.statichttprepository(
-                ui, path.replace("static-http://", "http://"))
-        if path.startswith("ssh://"):
-            return sshrepo.sshrepository(ui, path)
-        if path.startswith("bundle://"):
-            path = path[9:]
-            s = path.split("+", 1)
-            if  len(s) == 1:
-                repopath, bundlename = "", s[0]
-            else:
-                repopath, bundlename = s
-            return bundlerepo.bundlerepository(ui, repopath, bundlename)
-
-    return localrepo.localrepository(ui, path, create)
+    scheme = path
+    if scheme:
+        c = scheme.find(':')
+        scheme = c >= 0 and scheme[:c]
+    try:
+        ctor = schemes.get(scheme) or schemes['file']
+        if create:
+            return ctor(ui, path, create)
+        return ctor(ui, path)
+    except TypeError:
+        raise util.Abort(_('cannot create new repository over "%s" protocol') %
+                         scheme)
