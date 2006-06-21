@@ -37,10 +37,10 @@ class tarit:
     '''write archive to tar file or stream.  can write uncompressed,
     or compress with gzip or bzip2.'''
 
-    def __init__(self, dest, prefix, kind=''):
+    def __init__(self, dest, prefix, mtime, kind=''):
         self.prefix = tidyprefix(dest, prefix, ['.tar', '.tar.bz2', '.tar.gz',
                                                 '.tgz', 'tbz2'])
-        self.mtime = int(time.time())
+        self.mtime = mtime
         if isinstance(dest, str):
             self.z = tarfile.open(dest, mode='w:'+kind)
         else:
@@ -78,7 +78,7 @@ class zipit:
     '''write archive to zip file or stream.  can write uncompressed,
     or compressed with deflate.'''
 
-    def __init__(self, dest, prefix, compress=True):
+    def __init__(self, dest, prefix, mtime, compress=True):
         self.prefix = tidyprefix(dest, prefix, ('.zip',))
         if not isinstance(dest, str):
             try:
@@ -88,7 +88,7 @@ class zipit:
         self.z = zipfile.ZipFile(dest, 'w',
                                  compress and zipfile.ZIP_DEFLATED or
                                  zipfile.ZIP_STORED)
-        self.date_time = time.gmtime(time.time())[:6]
+        self.date_time = time.gmtime(mtime)[:6]
 
     def addfile(self, name, mode, data):
         i = zipfile.ZipInfo(self.prefix + name, self.date_time)
@@ -106,7 +106,7 @@ class zipit:
 class fileit:
     '''write archive as files in directory.'''
 
-    def __init__(self, name, prefix):
+    def __init__(self, name, prefix, mtime):
         if prefix:
             raise util.Abort(_('cannot give prefix when archiving to files'))
         self.basedir = name
@@ -130,14 +130,14 @@ class fileit:
 archivers = {
     'files': fileit,
     'tar': tarit,
-    'tbz2': lambda name, prefix: tarit(name, prefix, 'bz2'),
-    'tgz': lambda name, prefix: tarit(name, prefix, 'gz'),
-    'uzip': lambda name, prefix: zipit(name, prefix, False),
+    'tbz2': lambda name, prefix, mtime: tarit(name, prefix, mtime, 'bz2'),
+    'tgz': lambda name, prefix, mtime: tarit(name, prefix, mtime, 'gz'),
+    'uzip': lambda name, prefix, mtime: zipit(name, prefix, mtime, False),
     'zip': zipit,
     }
 
 def archive(repo, dest, node, kind, decode=True, matchfn=None,
-            prefix=None):
+            prefix=None, mtime=None):
     '''create archive of repo as it was at node.
 
     dest can be name of directory, name of archive file, or file
@@ -160,8 +160,9 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
             data = fp.getvalue()
         archiver.addfile(name, mode, data)
 
-    archiver = archivers[kind](dest, prefix)
-    mn = repo.changelog.read(node)[0]
+    change = repo.changelog.read(node)
+    mn = change[0]
+    archiver = archivers[kind](dest, prefix, mtime or change[2][0])
     mf = repo.manifest.read(mn).items()
     mff = repo.manifest.readflags(mn)
     mf.sort()
