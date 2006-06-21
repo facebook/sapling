@@ -618,7 +618,11 @@ class localrepository(object):
                     del mf[fn]
             return mf
 
-        if node1:
+        compareworking = False
+        if not node1 or node1 == self.dirstate.parents()[0]:
+            compareworking = True
+
+        if not compareworking:
             # read the manifest from node1 before the manifest from node2,
             # so that we'll hit the manifest cache if we're going through
             # all the revisions in parent->child order.
@@ -635,7 +639,7 @@ class localrepository(object):
                 self.dirstate.changes(files, match, show_ignored))
 
             # are we comparing working dir against its parent?
-            if not node1:
+            if compareworking:
                 if lookup:
                     # do a full compare of any files that might have changed
                     mf2 = mfmatches(self.dirstate.parents()[0])
@@ -658,11 +662,15 @@ class localrepository(object):
             deleted, unknown, ignored = [], [], []
             mf2 = mfmatches(node2)
 
-        if node1:
+        if not compareworking:
             # flush lists from dirstate before comparing manifests
             modified, added = [], []
 
-            for fn in mf2:
+            # make sure to sort the files so we talk to the disk in a
+            # reasonable order
+            mf2keys = mf2.keys()
+            mf2keys.sort()
+            for fn in mf2keys:
                 if mf1.has_key(fn):
                     if mf1[fn] != mf2[fn] and (mf2[fn] != "" or fcmp(fn, mf1)):
                         modified.append(fn)
