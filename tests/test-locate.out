@@ -1,13 +1,21 @@
 adding a
 adding b
+adding t/x
 a
 NONEXISTENT: No such file or directory
 a
 b
+t/x
 a: No such file or directory
 NONEXISTENT: No such file or directory
 b
+t/x
 a
-NONEXISTENT: No such file in rev 14467d15ef43
+NONEXISTENT: No such file in rev 9449ae447738
 a
+t/x
 b
+% -I/-X with relative path should work
+b
+t/x
+t/x

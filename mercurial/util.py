@@ -356,10 +356,12 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     filematch = matchfn(files, '(?:/|$)') or always
     incmatch = always
     if inc:
-        incmatch = matchfn(map(patkind, inc), '(?:/|$)')
+        inckinds = [patkind(canonpath(canonroot, cwd, i)) for i in inc]
+        incmatch = matchfn(inckinds, '(?:/|$)')
     excmatch = lambda fn: False
     if exc:
-        excmatch = matchfn(map(patkind, exc), '(?:/|$)')
+        exckinds = [patkind(canonpath(canonroot, cwd, x)) for x in exc]
+        excmatch = matchfn(exckinds, '(?:/|$)')
 
     return (roots,
             lambda fn: (incmatch(fn) and not excmatch(fn) and
