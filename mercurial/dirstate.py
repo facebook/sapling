@@ -285,8 +285,9 @@ class dirstate(object):
                 continue
             while bs < blen:
                 s = b[bs]
-                if len(s) > len(x) and s.startswith(x) and s[len(x)] == '/':
-                    ret[s] = self.map[s]
+                if len(s) > len(x) and s.startswith(x):
+                    if s[len(x)] == '/':
+                        ret[s] = self.map[s]
                 else:
                     break
                 bs += 1
