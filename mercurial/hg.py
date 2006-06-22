@@ -55,6 +55,7 @@ schemes = {
     }
 
 def repository(ui, path=None, create=0):
+    if not path: path = ''
     scheme = path
     if scheme:
         c = scheme.find(':')
