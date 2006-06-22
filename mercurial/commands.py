@@ -390,7 +390,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         def date2(f):
             try:
                 return util.datestr((os.lstat(repo.wjoin(f)).st_mtime, tz))
-            except IOError, err:
+            except OSError, err:
                 if err.errno != errno.ENOENT: raise
                 return _date2
         def read(f):
