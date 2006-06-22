@@ -10,7 +10,6 @@
 */
 
 #include <Python.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -39,6 +38,7 @@ static uint32_t htonl(uint32_t x)
 #else
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <stdint.h>
 #endif
 
 struct line {
