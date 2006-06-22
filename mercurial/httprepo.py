@@ -176,9 +176,6 @@ class httprepository(remoterepository):
 
     capabilities = property(get_caps)
 
-    def dev(self):
-        return -1
-
     def lock(self):
         raise util.Abort(_('operation not supported over http'))
 

@@ -6,6 +6,9 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 class remoterepository(object):
+    def dev(self):
+        return -1
+
     def local(self):
         return False
 

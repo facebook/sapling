@@ -79,9 +79,6 @@ class sshrepository(remoterepository):
         except:
             pass
 
-    def dev(self):
-        return -1
-
     def do_cmd(self, cmd, **args):
         self.ui.debug(_("sending %s command\n") % cmd)
         self.pipeo.write("%s\n" % cmd)
