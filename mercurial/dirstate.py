@@ -279,15 +279,11 @@ class dirstate(object):
         blen = len(b)
 
         for x in unknown:
-            bs = bisect.bisect(b, x)
-            if bs != 0 and  b[bs-1] == x:
-                ret[x] = self.map[x]
-                continue
+            bs = bisect.bisect(b, "%s%s" % (x, '/'))
             while bs < blen:
                 s = b[bs]
                 if len(s) > len(x) and s.startswith(x):
-                    if s[len(x)] == '/':
-                        ret[s] = self.map[s]
+                    ret[s] = self.map[s]
                 else:
                     break
                 bs += 1
