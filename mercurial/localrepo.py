@@ -619,7 +619,7 @@ class localrepository(object):
 
         modified, added, removed, deleted, unknown, ignored = [],[],[],[],[],[]
         compareworking = False
-        if not node1 or node1 == self.dirstate.parents()[0]:
+        if not node1 or (not node2 and node1 == self.dirstate.parents()[0]):
             compareworking = True
 
         if not compareworking:
