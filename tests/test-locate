@@ -5,6 +5,7 @@ cd t
 hg init
 echo 0 > a
 echo 0 > b
+echo 0 > t.h
 mkdir t
 echo 0 > t/x
 hg ci -A -m m -d "1000000 0"
@@ -24,3 +25,7 @@ echo % -I/-X with relative path should work
 cd t
 hg locate
 hg locate -I ../t
+# test issue294
+cd ..
+rm -rf t
+hg locate t
