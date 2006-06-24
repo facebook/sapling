@@ -836,9 +836,14 @@ def backout(ui, repo, rev, **opts):
         return '%d:%s' % (repo.changelog.rev(node), short(node))
     ui.status(_('changeset %s backs out changeset %s\n') %
               (nice(repo.changelog.tip()), nice(node)))
-    if opts['merge'] and op1 != node:
-        ui.status(_('merging with changeset %s\n') % nice(op1))
-        doupdate(ui, repo, hex(op1), **opts)
+    if op1 != node:
+        if opts['merge']:
+            ui.status(_('merging with changeset %s\n') % nice(op1))
+            doupdate(ui, repo, hex(op1), **opts)
+        else:
+            ui.status(_('the backout changeset is a new head - '
+                        'do not forget to merge\n'))
+            ui.status(_('(use "backout -m" if you want to auto-merge)\n'))
 
 def bundle(ui, repo, fname, dest="default-push", **opts):
     """create a changegroup file

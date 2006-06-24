@@ -26,4 +26,6 @@ adding a
 adding b
 reverting a
 changeset 3:4cbb1e70196a backs out changeset 1:22bca4c721e5
-b
+the backout changeset is a new head - do not forget to merge
+(use "backout -m" if you want to auto-merge)
+b: No such file or directory
