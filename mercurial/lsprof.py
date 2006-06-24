@@ -4,7 +4,13 @@
 # small modifications made
 
 import sys
-from _lsprof import Profiler, profiler_entry, profiler_subentry
+try:
+    from _lsprof import Profiler, profiler_entry, profiler_subentry
+except ImportError, inst:
+    import packagescan
+    if packagescan.scan_in_progress:
+        raise packagescan.SkipPackage('_lsprof not available')
+    raise
 
 __all__ = ['profile', 'Stats']
 
