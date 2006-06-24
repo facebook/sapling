@@ -202,7 +202,10 @@ class ui(object):
         if loc.find("://") != -1 or os.path.exists(loc):
             return loc
 
-        return self.config("paths", loc, default or loc)
+        path = self.config("paths", loc)
+        if not path and default is not None:
+            path = self.config("paths", default)
+        return path
 
     def write(self, *args):
         if self.header:
