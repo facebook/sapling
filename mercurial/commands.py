@@ -845,7 +845,7 @@ def backout(ui, repo, rev, **opts):
                         'do not forget to merge\n'))
             ui.status(_('(use "backout -m" if you want to auto-merge)\n'))
 
-def bundle(ui, repo, fname, dest="default-push", **opts):
+def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
 
     Generate a compressed changegroup file collecting all changesets
@@ -860,7 +860,7 @@ def bundle(ui, repo, fname, dest="default-push", **opts):
     Unlike import/export, this exactly preserves all changeset
     contents including permissions, rename data, and revision history.
     """
-    dest = ui.expandpath(dest)
+    dest = ui.expandpath(dest or 'default-push', dest or 'default')
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other, force=opts['force'])
     cg = repo.changegroup(o, 'bundle')
@@ -2047,7 +2047,7 @@ def merge(ui, repo, node=None, **opts):
     """
     return doupdate(ui, repo, node=node, merge=True, **opts)
 
-def outgoing(ui, repo, dest="default-push", **opts):
+def outgoing(ui, repo, dest=None, **opts):
     """show changesets not found in destination
 
     Show changesets not found in the specified destination repository or
@@ -2056,7 +2056,7 @@ def outgoing(ui, repo, dest="default-push", **opts):
 
     See pull for valid destination format details.
     """
-    dest = ui.expandpath(dest)
+    dest = ui.expandpath(dest or 'default-push', dest or 'default')
     if opts['ssh']:
         ui.setconfig("ui", "ssh", opts['ssh'])
     if opts['remotecmd']:
@@ -2179,7 +2179,7 @@ def pull(ui, repo, source="default", **opts):
     modheads = repo.pull(other, heads=revs, force=opts['force'])
     return postincoming(ui, repo, modheads, opts['update'])
 
-def push(ui, repo, dest="default-push", **opts):
+def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
 
     Push changes from the local repository to the given destination.
@@ -2201,7 +2201,7 @@ def push(ui, repo, dest="default-push", **opts):
     Look at the help text for the pull command for important details
     about ssh:// URLs.
     """
-    dest = ui.expandpath(dest)
+    dest = ui.expandpath(dest or 'default-push', dest or 'default')
 
     if opts['ssh']:
         ui.setconfig("ui", "ssh", opts['ssh'])

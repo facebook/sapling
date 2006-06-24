@@ -197,12 +197,12 @@ class ui(object):
         if not self.verbose: user = util.shortuser(user)
         return user
 
-    def expandpath(self, loc):
+    def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
         if loc.find("://") != -1 or os.path.exists(loc):
             return loc
 
-        return self.config("paths", loc, loc)
+        return self.config("paths", loc, default or loc)
 
     def write(self, *args):
         if self.header:
