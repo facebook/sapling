@@ -50,8 +50,7 @@ class hgweb(object):
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
     def archivelist(self, nodeid):
-        allowed = (self.repo.ui.config("web", "allow_archive", "")
-                   .replace(",", " ").split())
+        allowed = self.repo.ui.configlist("web", "allow_archive")
         for i in self.archives:
             if i in allowed or self.repo.ui.configbool("web", "allow" + i):
                 yield {"type" : i, "node" : nodeid, "url": ""}
@@ -818,7 +817,7 @@ class hgweb(object):
     def do_archive(self, req):
         changeset = self.repo.lookup(req.form['node'][0])
         type_ = req.form['type'][0]
-        allowed = self.repo.ui.config("web", "allow_archive", "").split()
+        allowed = self.repo.ui.configlist("web", "allow_archive")
         if (type_ in self.archives and (type_ in allowed or
             self.repo.ui.configbool("web", "allow" + type_, False))):
             self.archive(req, changeset, type_)
