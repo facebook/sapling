@@ -120,9 +120,8 @@ class httprepository(remoterepository):
 
             # see if we should use a proxy for this url
             no_list = [ "localhost", "127.0.0.1" ]
-            no_list.extend([p.strip().lower() for
-                            p in ui.config("http_proxy", "no", '').split(',')
-                            if p.strip()])
+            no_list.extend([p.lower() for
+                            p in ui.configlist("http_proxy", "no")])
             no_list.extend([p.strip().lower() for
                             p in os.getenv("no_proxy", '').split(',')
                             if p.strip()])

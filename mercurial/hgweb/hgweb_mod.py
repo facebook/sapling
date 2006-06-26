@@ -845,15 +845,11 @@ class hgweb(object):
 
         user = req.env.get('REMOTE_USER')
 
-        deny = self.repo.ui.config('web', 'deny_' + op, '')
-        deny = deny.replace(',', ' ').split()
-
+        deny = self.repo.ui.configlist('web', 'deny_' + op)
         if deny and (not user or deny == ['*'] or user in deny):
             return False
 
-        allow = self.repo.ui.config('web', 'allow_' + op, '')
-        allow = allow.replace(',', ' ').split()
-
+        allow = self.repo.ui.configlist('web', 'allow_' + op)
         return (allow and (allow == ['*'] or user in allow)) or default
 
     def do_unbundle(self, req):
