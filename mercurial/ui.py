@@ -205,7 +205,7 @@ class ui(object):
         path = self.config("paths", loc)
         if not path and default is not None:
             path = self.config("paths", default)
-        return path
+        return path or loc
 
     def write(self, *args):
         if self.header:
