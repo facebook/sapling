@@ -95,6 +95,15 @@ class ui(object):
         else:
             return self.parentui.config(section, name, default)
 
+    def configlist(self, section, name, default=None):
+        """Return a list of comma/space separated strings"""
+        result = self.config(section, name)
+        if result is None:
+            return []
+        else:
+            return result.replace(",", " ").split()
+
+
     def configbool(self, section, name, default=False):
         if self.overlay.has_key((section, name)):
             return self.overlay[(section, name)]
