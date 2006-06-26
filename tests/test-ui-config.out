@@ -1,0 +1,29 @@
+[('bool1', 'true'), ('bool2', 'false'), ('string', 'string value')]
+[('list1', 'foo'), ('list2', 'foo bar baz'), ('list3', 'alice, bob'), ('list4', 'foo bar baz alice, bob')]
+---
+'string value'
+'true'
+'false'
+None
+---
+Not a boolean: string value
+True
+False
+False
+False
+True
+---
+['foo']
+['foo', 'bar', 'baz']
+['alice', 'bob']
+['foo', 'bar', 'baz', 'alice', 'bob']
+['foo', 'bar', 'baz', 'alice', 'bob']
+[]
+[]
+['foo']
+['foo']
+['foo', 'bar']
+['foo', 'bar']
+['foo bar']
+['foo', 'bar']
+---

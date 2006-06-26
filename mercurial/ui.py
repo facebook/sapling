@@ -99,10 +99,10 @@ class ui(object):
         """Return a list of comma/space separated strings"""
         result = self.config(section, name)
         if result is None:
-            return []
-        else:
-            return result.replace(",", " ").split()
-
+            result = default or []
+        if isinstance(result, basestring):
+            result = result.replace(",", " ").split()
+        return result
 
     def configbool(self, section, name, default=False):
         if self.overlay.has_key((section, name)):
