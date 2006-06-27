@@ -59,7 +59,7 @@ class _wsgirequest(object):
     def write(self, *things):
         if self.server_write is None:
             if not self.headers:
-                raise RuntimeError("request.write called before headers sent.")
+                self.header()
             self.server_write = self.start_response('200 Script output follows',
                                                     self.headers)
             self.start_response = None

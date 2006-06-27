@@ -196,7 +196,7 @@ def create_server(ui, repo):
         def __init__(self, *args, **kwargs):
             if self.address_family is None:
                 raise hg.RepoError(_('IPv6 not available on this system'))
-            super(IPv6HTTPServer, self).__init__(*args, **kargs)
+            super(IPv6HTTPServer, self).__init__(*args, **kwargs)
 
     if use_ipv6:
         return IPv6HTTPServer((address, port), _hgwebhandler)
