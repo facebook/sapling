@@ -76,13 +76,14 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         length = self.headers.getheader('content-length')
         if length:
             env['CONTENT_LENGTH'] = length
-        accept = []
-        for line in self.headers.getallmatchingheaders('accept'):
-            if line[:1] in "\t\n\r ":
-                accept.append(line.strip())
-            else:
-                accept = accept + line[7:].split(',')
-        env['HTTP_ACCEPT'] = ','.join(accept)
+        for header in [h for h in self.headers.keys() \
+                       if h not in ('content-type', 'content-length')]:
+            hkey = 'HTTP_' + header.replace('-', '_').upper()
+            hval = self.headers.getheader(header)
+            hval = hval.replace('\n', '').strip()
+            if hval:
+                env[hkey] = hval
+        env['SERVER_PROTOCOL'] = self.request_version
 
         req = hgrequest(self.rfile, self.wfile, env)
         self.send_response(200, "Script output follows")
