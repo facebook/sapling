@@ -57,20 +57,21 @@ class _wsgirequest(object):
         return self.inp.read(count)
 
     def write(self, *things):
-        if self.server_write is None:
-            if not self.headers:
-                self.header()
-            self.server_write = self.start_response('200 Script output follows',
-                                                    self.headers)
-            self.start_response = None
-            self.headers = None
         for thing in things:
             if hasattr(thing, "__iter__"):
                 for part in thing:
                     self.write(part)
             else:
+                thing = str(thing)
+                if self.server_write is None:
+                    if not self.headers:
+                        raise RuntimeError("request.write called before headers sent (%s)." % thing)
+                    self.server_write = self.start_response('200 Script output follows',
+                                                            self.headers)
+                    self.start_response = None
+                    self.headers = None
                 try:
-                    self.server_write(str(thing))
+                    self.server_write(thing)
                 except socket.error, inst:
                     if inst[0] != errno.ECONNRESET:
                         raise

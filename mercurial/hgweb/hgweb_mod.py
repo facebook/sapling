@@ -10,7 +10,7 @@ import os
 import os.path
 import mimetypes
 from mercurial.demandload import demandload
-demandload(globals(), "re zlib ConfigParser cStringIO sys tempfile")
+demandload(globals(), "re zlib ConfigParser mimetools cStringIO sys tempfile")
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,templater")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
 from mercurial.node import *
@@ -652,7 +652,10 @@ class hgweb(object):
 
     def run(self, req):
         def header(**map):
-            yield self.t("header", **map)
+            header_file = cStringIO.StringIO(''.join(self.t("header", **map)))
+            msg = mimetools.Message(header_file, 0)
+            req.header(msg.items())
+            yield header_file.read()
 
         def footer(**map):
             yield self.t("footer",
@@ -828,7 +831,7 @@ class hgweb(object):
         static = self.repo.ui.config("web", "static",
                                      os.path.join(self.templatepath,
                                                   "static"))
-        req.write(staticfile(static, fname)
+        req.write(staticfile(static, fname, req)
                   or self.t("error", error="%r not found" % fname))
 
     def do_capabilities(self, req):
