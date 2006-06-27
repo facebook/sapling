@@ -60,8 +60,16 @@ def demandload(scope, modules):
                 if type(scope[f]) == types.ModuleType:
                     requiredmodules[scope[f].__name__] = 1
 
+class SkipPackage(Exception):
+    def __init__(self, reason):
+        self.reason = reason
+
+scan_in_progress = False
+
 def scan(libpath,packagename):
     """ helper for finding all required modules of package <packagename> """
+    global scan_in_progress
+    scan_in_progress = True
     # Use the package in the build directory
     libpath = os.path.abspath(libpath)
     sys.path.insert(0,libpath)
@@ -85,7 +93,11 @@ def scan(libpath,packagename):
         tmp = {}
         mname,ext = os.path.splitext(m)
         fullname = packagename+'.'+mname
-        __import__(fullname,tmp,tmp)
+        try:
+            __import__(fullname,tmp,tmp)
+        except SkipPackage, inst:
+            print >> sys.stderr, 'skipping %s: %s' % (fullname, inst.reason)
+            continue
         requiredmodules[fullname] = 1
     # Import all extension modules and by that run the fake demandload
     for m in extmodulefiles:

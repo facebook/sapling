@@ -48,4 +48,16 @@ hg backout --merge -d '3 0' 1
 hg commit -d '4 0' -m d
 cat a
 
+echo '# backout should not back out subsequent changesets'
+hg init onecs
+cd onecs
+echo 1 > a
+hg commit -d '0 0' -A -m a
+echo 2 >> a
+hg commit -d '1 0' -m b
+echo 1 > b
+hg commit -d '2 0' -A -m c
+hg backout -d '3 0' 1
+hg locate b
+
 exit 0

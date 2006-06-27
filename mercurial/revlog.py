@@ -477,6 +477,13 @@ class revlog(object):
         if self.version == REVLOGV0:
             return d
         return [ self.node(x) for x in d ]
+    def parentrevs(self, rev):
+        if rev == -1:
+            return (-1, -1)
+        d = self.index[rev][-3:-1]
+        if self.version == REVLOGV0:
+            return [ self.rev(x) for x in d ]
+        return d
     def start(self, rev):
         if rev < 0:
             return -1
@@ -706,19 +713,19 @@ class revlog(object):
         """
         if start is None:
             start = nullid
-        reachable = {start: 1}
-        heads = {start: 1}
         startrev = self.rev(start)
+        reachable = {startrev: 1}
+        heads = {startrev: 1}
 
+        parentrevs = self.parentrevs
         for r in xrange(startrev + 1, self.count()):
-            n = self.node(r)
-            for pn in self.parents(n):
-                if pn in reachable:
-                    reachable[n] = 1
-                    heads[n] = 1
-                if pn in heads:
-                    del heads[pn]
-        return heads.keys()
+            for p in parentrevs(r):
+                if p in reachable:
+                    reachable[r] = 1
+                    heads[r] = 1
+                if p in heads:
+                    del heads[p]
+        return [self.node(r) for r in heads]
 
     def children(self, node):
         """find the children of a given node"""

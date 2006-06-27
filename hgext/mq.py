@@ -1000,6 +1000,7 @@ class queue:
             self.ui.warn("-n option not valid when importing multiple files\n")
             sys.exit(1)
         i = 0
+        added = []
         for filename in files:
             if existing:
                 if not patch:
@@ -1028,8 +1029,12 @@ class queue:
             self.read_series(self.full_series)
             self.ui.warn("adding %s to series file\n" % patch)
             i += 1
+            added.append(patch)
             patch = None
         self.series_dirty = 1
+        qrepo = self.qrepo()
+        if qrepo:
+            qrepo.add(added)
 
 def delete(ui, repo, patch, **opts):
     """remove a patch from the series file"""

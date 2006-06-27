@@ -95,6 +95,15 @@ class ui(object):
         else:
             return self.parentui.config(section, name, default)
 
+    def configlist(self, section, name, default=None):
+        """Return a list of comma/space separated strings"""
+        result = self.config(section, name)
+        if result is None:
+            result = default or []
+        if isinstance(result, basestring):
+            result = result.replace(",", " ").split()
+        return result
+
     def configbool(self, section, name, default=False):
         if self.overlay.has_key((section, name)):
             return self.overlay[(section, name)]
@@ -197,12 +206,15 @@ class ui(object):
         if not self.verbose: user = util.shortuser(user)
         return user
 
-    def expandpath(self, loc):
+    def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
         if loc.find("://") != -1 or os.path.exists(loc):
             return loc
 
-        return self.config("paths", loc, loc)
+        path = self.config("paths", loc)
+        if not path and default is not None:
+            path = self.config("paths", default)
+        return path or loc
 
     def write(self, *args):
         if self.header:

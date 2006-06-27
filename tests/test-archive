@@ -15,9 +15,7 @@ hg addremove
 hg commit -m 3
 echo "[web]" >> .hg/hgrc
 echo "name = test-archive" >> .hg/hgrc
-echo "allowzip = true" >> .hg/hgrc
-echo "allowgz = true" >> .hg/hgrc
-echo "allowbz2 = true" >> .hg/hgrc
+echo "allow_archive = gz bz2, zip" >> .hg/hgrc
 hg serve -p 20059 -d --pid-file=hg.pid
 
 TIP=`hg id -v | cut -f1 -d' '`
