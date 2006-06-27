@@ -37,12 +37,20 @@ clean:
 	rm -f MANIFEST mercurial/__version__.py mercurial/*.so tests/*.err
 	$(MAKE) -C doc clean
 
-install: all
+install: install-bin install-doc
+
+install-bin: build
 	$(PYTHON) setup.py install --prefix="$(PREFIX)" --force
+
+install-doc: doc
 	cd doc && $(MAKE) $(MFLAGS) install
 
-install-home: all
+install-home: install-home-bin install-home-doc
+
+install-home-bin: build
 	$(PYTHON) setup.py install --home="$(HOME)" --force
+
+install-home-doc: doc
 	cd doc && $(MAKE) $(MFLAGS) PREFIX="$(HOME)" install
 
 dist:	tests dist-notests
@@ -57,5 +65,5 @@ test-%:
 	cd tests && $(PYTHON) run-tests.py $@
 
 
-.PHONY: help all local build doc clean install install-home dist dist-notests tests
-
+.PHONY: help all local build doc clean install install-bin install-doc \
+	install-home install-home-bin install-home-doc dist dist-notests tests
