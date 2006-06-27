@@ -650,7 +650,7 @@ def add(ui, repo, *pats, **opts):
         elif repo.dirstate.state(abs) == '?':
             ui.status(_('adding %s\n') % rel)
             names.append(abs)
-    if not opts['dry_run']:
+    if not opts.get('dry_run'):
         repo.add(names)
 
 def addremove(ui, repo, *pats, **opts):
@@ -1076,21 +1076,21 @@ def docopy(ui, repo, pats, opts, wlock):
                 ui.warn(_('%s: not overwriting - file exists\n') %
                         reltarget)
                 return
-            if not opts['after'] and not opts['dry_run']:
+            if not opts['after'] and not opts.get('dry_run'):
                 os.unlink(reltarget)
         if opts['after']:
             if not os.path.exists(reltarget):
                 return
         else:
             targetdir = os.path.dirname(reltarget) or '.'
-            if not os.path.isdir(targetdir) and not opts['dry_run']:
+            if not os.path.isdir(targetdir) and not opts.get('dry_run'):
                 os.makedirs(targetdir)
             try:
                 restore = repo.dirstate.state(abstarget) == 'r'
-                if restore and not opts['dry_run']:
+                if restore and not opts.get('dry_run'):
                     repo.undelete([abstarget], wlock)
                 try:
-                    if not opts['dry_run']:
+                    if not opts.get('dry_run'):
                         shutil.copyfile(relsrc, reltarget)
                         shutil.copymode(relsrc, reltarget)
                     restore = False
@@ -1110,7 +1110,7 @@ def docopy(ui, repo, pats, opts, wlock):
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
-        if abstarget != origsrc and not opts['dry_run']:
+        if abstarget != origsrc and not opts.get('dry_run'):
             repo.copy(origsrc, abstarget, wlock)
         copied.append((abssrc, relsrc, exact))
 
@@ -2334,7 +2334,7 @@ def rename(ui, repo, *pats, **opts):
         if ui.verbose or not exact:
             ui.status(_('removing %s\n') % rel)
         names.append(abs)
-    if not opts['dry_run']:
+    if not opts.get('dry_run'):
         repo.remove(names, True, wlock)
     return errs
 
