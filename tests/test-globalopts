@@ -62,7 +62,7 @@ echo %% --time
 hg --cwd a --time tip 2>&1 | grep '^Time:' | sed 's/[0-9][0-9]*/x/g'
 
 echo %% --version
-hg --version -q | sed 's/version \([a-f0-9+]*\|unknown\)/version xxx/'
+hg --version -q | sed 's/version [^)]*/version xxx/'
 
 echo %% -h/--help
 hg -h
