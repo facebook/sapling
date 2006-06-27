@@ -109,6 +109,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.saved_status = None
         self.saved_headers = []
         self.sent_headers = False
+        self.length = None
         req = self.server.reqmaker(env, self._start_response)
         for data in req:
             if data:
@@ -120,8 +121,15 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         saved_status = self.saved_status.split(None, 1)
         saved_status[0] = int(saved_status[0])
         self.send_response(*saved_status)
+        should_close = True
         for h in self.saved_headers:
             self.send_header(*h)
+            if h[0].lower() == 'content-length':
+                should_close = False
+                self.length = int(h[1])
+        if should_close:
+            self.send_header('Connection', 'close')
+        self.close_connection = should_close
         self.end_headers()
         self.sent_headers = True
 
@@ -129,7 +137,9 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         code, msg = http_status.split(None, 1)
         code = int(code)
         self.saved_status = http_status
-        self.saved_headers = headers
+        bad_headers = ('connection', 'transfer-encoding')
+        self.saved_headers = [ h for h in headers \
+                               if h[0].lower() not in bad_headers ]
         return self._write
 
     def _write(self, data):
@@ -137,6 +147,10 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
             raise AssertionError("data written before start_response() called")
         elif not self.sent_headers:
             self.send_headers()
+        if self.length is not None:
+            if len(data) > self.length:
+                raise AssertionError("Content-length header sent, but more bytes than specified are being written.")
+            self.length = self.length - len(data)
         self.wfile.write(data)
         self.wfile.flush()
 
