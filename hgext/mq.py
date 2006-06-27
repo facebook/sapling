@@ -214,7 +214,6 @@ class queue:
                 return pp[0]
             if p1 in arevs:
                 return pp[1]
-            return None
         return pp[0]
 
     def mergepatch(self, repo, mergeq, series, wlock):
