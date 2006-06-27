@@ -10,7 +10,7 @@ from mercurial.demandload import demandload
 import os, sys, errno
 demandload(globals(), "urllib BaseHTTPServer socket SocketServer")
 demandload(globals(), "mercurial:ui,hg,util,templater")
-demandload(globals(), "hgweb_mod:hgweb hgwebdir_mod:hgwebdir request:hgrequest")
+demandload(globals(), "hgweb_mod:hgweb hgwebdir_mod:hgwebdir request:wsgiapplication")
 from mercurial.i18n import gettext as _
 
 def _splitURI(uri):
@@ -24,6 +24,17 @@ def _splitURI(uri):
     else:
         path, query = uri, ''
     return urllib.unquote(path), query
+
+class _error_logger(object):
+    def __init__(self, handler):
+        self.handler = handler
+    def flush(self):
+        pass
+    def write(str):
+        self.writelines(str.split('\n'))
+    def writelines(seq):
+        for msg in seq:
+            self.handler.log_error("HG error:  %s", msg)
 
 class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
     def __init__(self, *args, **kargs):
@@ -84,10 +95,50 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
             if hval:
                 env[hkey] = hval
         env['SERVER_PROTOCOL'] = self.request_version
+        env['wsgi.version'] = (1, 0)
+        env['wsgi.url_scheme'] = 'http'
+        env['wsgi.input'] = self.rfile
+        env['wsgi.errors'] = _error_logger(self)
+        env['wsgi.multithread'] = isinstance(self.server,
+                                             SocketServer.ThreadingMixIn)
+        env['wsgi.multiprocess'] = isinstance(self.server,
+                                              SocketServer.ForkingMixIn)
+        env['wsgi.run_once'] = 0
 
-        req = hgrequest(self.rfile, self.wfile, env)
-        self.send_response(200, "Script output follows")
-        self.close_connection = self.server.make_and_run_handler(req)
+        self.close_connection = True
+        self.saved_status = None
+        self.saved_headers = []
+        self.sent_headers = False
+        req = self.server.reqmaker(env, self._start_response)
+        for data in req:
+            if data:
+                self._write(data)
+
+    def send_headers(self):
+        if not self.saved_status:
+            raise AssertionError("Sending headers before start_response() called")
+        saved_status = self.saved_status.split(None, 1)
+        saved_status[0] = int(saved_status[0])
+        self.send_response(*saved_status)
+        for h in self.saved_headers:
+            self.send_header(*h)
+        self.end_headers()
+        self.sent_headers = True
+
+    def _start_response(self, http_status, headers, exc_info=None):
+        code, msg = http_status.split(None, 1)
+        code = int(code)
+        self.saved_status = http_status
+        self.saved_headers = headers
+        return self._write
+
+    def _write(self, data):
+        if not self.saved_status:
+            raise AssertionError("data written before start_response() called")
+        elif not self.sent_headers:
+            self.send_headers()
+        self.wfile.write(data)
+        self.wfile.flush()
 
 def create_server(ui, repo):
     use_threads = True
@@ -127,8 +178,9 @@ def create_server(ui, repo):
             self.webdir_conf = webdir_conf
             self.webdirmaker = hgwebdir
             self.repoviewmaker = hgweb
+            self.reqmaker = wsgiapplication(self.make_handler)
 
-        def make_and_run_handler(self, req):
+        def make_handler(self):
             if self.webdir_conf:
                 hgwebobj = self.webdirmaker(self.webdir_conf)
             elif self.repo is not None:
@@ -136,8 +188,7 @@ def create_server(ui, repo):
                                                              repo.origroot))
             else:
                 raise hg.RepoError(_('no repo found'))
-            hgwebobj.run(req)
-            return req.will_close
+            return hgwebobj
 
     class IPv6HTTPServer(MercurialHTTPServer):
         address_family = getattr(socket, 'AF_INET6', None)

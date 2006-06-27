@@ -12,7 +12,6 @@ import mimetypes
 from mercurial.demandload import demandload
 demandload(globals(), "re zlib ConfigParser cStringIO sys tempfile")
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,templater")
-demandload(globals(), "mercurial.hgweb.request:hgrequest")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
 from mercurial.node import *
 from mercurial.i18n import gettext as _
@@ -652,7 +651,7 @@ class hgweb(object):
             raise Exception("suspicious path")
         return p
 
-    def run(self, req=hgrequest()):
+    def run(self, req):
         def header(**map):
             yield self.t("header", **map)
 
@@ -725,7 +724,6 @@ class hgweb(object):
             method(req)
         else:
             req.write(self.t("error"))
-        req.done()
 
     def do_changelog(self, req):
         hi = self.repo.changelog.count() - 1

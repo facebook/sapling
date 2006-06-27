@@ -6,7 +6,9 @@ import cgitb, sys
 cgitb.enable()
 
 # sys.path.insert(0, "/path/to/python/lib") # if not a system-wide install
-from mercurial import hgweb
+from mercurial.hgweb.hgwebdir_mod import hgwebdir
+from mercurial.hgweb.request import wsgiapplication
+import mercurial.hgweb.wsgicgi as wsgicgi
 
 # The config file looks like this.  You can have paths to individual
 # repos, collections of repos in a directory tree, or both.
@@ -27,5 +29,7 @@ from mercurial import hgweb
 # Alternatively you can pass a list of ('virtual/path', '/real/path') tuples
 # or use a dictionary with entries like 'virtual/path': '/real/path'
 
-h = hgweb.hgwebdir("hgweb.config")
-h.run()
+def make_web_app():
+    return hgwebdir("hgweb.config")
+
+wsgicgi.launch(wsgiapplication(make_web_app))

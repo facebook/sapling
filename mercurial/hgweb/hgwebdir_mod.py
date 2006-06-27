@@ -11,7 +11,6 @@ from mercurial.demandload import demandload
 demandload(globals(), "ConfigParser")
 demandload(globals(), "mercurial:ui,hg,util,templater")
 demandload(globals(), "mercurial.hgweb.hgweb_mod:hgweb")
-demandload(globals(), "mercurial.hgweb.request:hgrequest")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
 from mercurial.i18n import gettext as _
 
@@ -47,7 +46,7 @@ class hgwebdir(object):
                         self.repos.append((name.lstrip(os.sep), repo))
             self.repos.sort()
 
-    def run(self, req=hgrequest()):
+    def run(self, req):
         def header(**map):
             yield tmpl("header", **map)
 
