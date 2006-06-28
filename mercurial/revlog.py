@@ -743,6 +743,8 @@ class revlog(object):
 
     def lookup(self, id):
         """locate a node based on revision number or subset of hex nodeid"""
+        if id in self.nodemap:
+            return id
         if type(id) == type(0):
             rev = id
             if rev < 0: rev = self.count() + rev
