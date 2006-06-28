@@ -248,11 +248,11 @@ def revrange(ui, repo, revs):
             seen[rev] = 1
             yield str(rev)
 
-def make_filename(repo, r, pat, node=None,
+def make_filename(repo, pat, node,
                   total=None, seqno=None, revwidth=None, pathname=None):
     node_expander = {
         'H': lambda: hex(node),
-        'R': lambda: str(r.rev(node)),
+        'R': lambda: str(repo.changelog.rev(node)),
         'h': lambda: short(node),
         }
     expander = {
@@ -292,7 +292,7 @@ def make_filename(repo, r, pat, node=None,
         raise util.Abort(_("invalid format spec '%%%s' in output file name"),
                     inst.args[0])
 
-def make_file(repo, r, pat, node=None,
+def make_file(repo, pat, node=None,
               total=None, seqno=None, revwidth=None, mode='wb', pathname=None):
     if not pat or pat == '-':
         return 'w' in mode and sys.stdout or sys.stdin
@@ -300,7 +300,7 @@ def make_file(repo, r, pat, node=None,
         return pat
     if hasattr(pat, 'read') and 'r' in mode:
         return pat
-    return open(make_filename(repo, r, pat, node, total, seqno, revwidth,
+    return open(make_filename(repo, pat, node, total, seqno, revwidth,
                               pathname),
                 mode)
 
@@ -779,7 +779,7 @@ def archive(ui, repo, dest, **opts):
             raise util.Abort(_('uncommitted merge - please provide a '
                                'specific revision'))
 
-    dest = make_filename(repo, repo.changelog, dest, node)
+    dest = make_filename(repo, dest, node)
     if os.path.realpath(dest) == repo.root:
         raise util.Abort(_('repository root cannot be destination'))
     dummy, matchfn, dummy = matchpats(repo, [], opts)
@@ -790,7 +790,7 @@ def archive(ui, repo, dest, **opts):
             raise util.Abort(_('cannot archive plain files to stdout'))
         dest = sys.stdout
         if not prefix: prefix = os.path.basename(repo.root) + '-%h'
-    prefix = make_filename(repo, repo.changelog, prefix, node)
+    prefix = make_filename(repo, prefix, node)
     archival.archive(repo, dest, node, kind, not opts['no_decode'],
                      matchfn, prefix)
 
@@ -891,7 +891,7 @@ def cat(ui, repo, file1, *pats, **opts):
     for src, abs, rel, exact in walk(repo, (file1,) + pats, opts, node):
         r = repo.file(abs)
         n = mf[abs]
-        fp = make_file(repo, r, opts['output'], node=n, pathname=abs)
+        fp = make_file(repo, opts['output'], node, pathname=abs)
         fp.write(r.read(n))
 
 def clone(ui, source, dest=None, **opts):
@@ -1443,8 +1443,7 @@ def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
     prev = (parents and parents[0]) or nullid
     change = repo.changelog.read(node)
 
-    fp = make_file(repo, repo.changelog, opts['output'],
-                   node=node, total=total, seqno=seqno,
+    fp = make_file(repo, opts['output'], node, total=total, seqno=seqno,
                    revwidth=revwidth)
     if fp != sys.stdout:
         ui.note("%s\n" % fp.name)
