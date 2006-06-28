@@ -119,3 +119,6 @@ class filectx(object):
         # hard for renames
         c = self._filelog.children(self._filenode)
         return [ filectx(self._repo, self._path, fileid=x) for x in c ]
+
+    def annotate(self):
+        return self._filelog.annotate(self._filenode)

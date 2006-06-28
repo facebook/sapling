@@ -701,15 +701,18 @@ def annotate(ui, repo, *pats, **opts):
 
     ucache = {}
     def getname(rev):
-        cl = repo.changelog.read(repo.changelog.node(rev))
-        return trimuser(ui, cl[1], rev, ucache)
+        try:
+            return ucache[rev]
+        except:
+            u = trimuser(ui, repo.changectx(rev).user(), rev, ucache)
+            ucache[rev] = u
+            return u
 
     dcache = {}
     def getdate(rev):
         datestr = dcache.get(rev)
         if datestr is None:
-            cl = repo.changelog.read(repo.changelog.node(rev))
-            datestr = dcache[rev] = util.datestr(cl[2])
+            datestr = dcache[rev] = util.datestr(repo.changectx(rev).date())
         return datestr
 
     if not pats:
@@ -720,20 +723,15 @@ def annotate(ui, repo, *pats, **opts):
     if not opts['user'] and not opts['changeset'] and not opts['date']:
         opts['number'] = 1
 
-    if opts['rev']:
-        node = repo.changelog.lookup(opts['rev'])
-    else:
-        node = repo.dirstate.parents()[0]
-    change = repo.changelog.read(node)
-    mmap = repo.manifest.read(change[0])
+    ctx = repo.changectx(opts['rev'] or repo.dirstate.parents()[0])
 
     for src, abs, rel, exact in walk(repo, pats, opts, node=node):
-        f = repo.file(abs)
-        if not opts['text'] and util.binary(f.read(mmap[abs])):
+        fctx = ctx.filectx(abs)
+        if not opts['text'] and util.binary(fctx.data()):
             ui.write(_("%s: binary file\n") % ((pats and rel) or abs))
             continue
 
-        lines = f.annotate(mmap[abs])
+        lines = fctx.annotate()
         pieces = []
 
         for o, f in opmap:
