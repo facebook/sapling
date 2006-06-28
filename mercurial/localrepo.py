@@ -9,7 +9,7 @@ from node import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "appendfile changegroup")
-demandload(globals(), "changelog dirstate filelog manifest repo")
+demandload(globals(), "changelog dirstate filelog manifest repo context")
 demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
 demandload(globals(), "os revlog util")
 
@@ -256,6 +256,14 @@ class localrepository(object):
         if f[0] == '/':
             f = f[1:]
         return filelog.filelog(self.opener, f, self.revlogversion)
+
+    def changectx(self, changeid):
+        return context.changectx(self, changeid)
+
+    def filectx(self, path, changeid=None, fileid=None):
+        """changeid can be a changeset revision, node, or tag.
+           fileid can be a file revision or node."""
+        return context.filectx(self, path, changeid, fileid)
 
     def getcwd(self):
         return self.dirstate.getcwd()
