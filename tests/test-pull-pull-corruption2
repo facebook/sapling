@@ -20,5 +20,6 @@ hg -R version2 pull source1 &
 sleep 1
 
 hg clone --pull -U version2 corrupted
+wait
 hg -R corrupted verify
 hg -R version2 verify
