@@ -684,7 +684,7 @@ See changes that can be pushed        G    C-c h .      hg-outgoing
 Push changes                          G    C-c h >      hg-push"
   (unless vc-make-backup-files
     (set (make-local-variable 'backup-inhibited) t))
-    (run-hooks 'hg-mode-hook))
+  (run-hooks 'hg-mode-hook))
 
 (defun hg-find-file-hook ()
   (when (hg-mode-line)
