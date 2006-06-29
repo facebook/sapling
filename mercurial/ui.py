@@ -172,7 +172,8 @@ class ui(object):
     def diffopts(self):
         if self.diffcache:
             return self.diffcache
-        result = {'showfunc': True, 'ignorews': False}
+        result = {'showfunc': True, 'ignorews': False,
+                  'ignorewsamount': False, 'ignoreblanklines': False}
         for key, value in self.configitems("diff"):
             if value:
                 result[key.lower()] = (value.lower() == 'true')

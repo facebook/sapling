@@ -133,21 +133,29 @@ class hgweb(object):
         diffopts = self.repo.ui.diffopts()
         showfunc = diffopts['showfunc']
         ignorews = diffopts['ignorews']
+        ignorewsamount = diffopts['ignorewsamount']
+        ignoreblanklines = diffopts['ignoreblanklines']
         for f in modified:
             to = r.file(f).read(mmap1[f])
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
-                            showfunc=showfunc, ignorews=ignorews), f, tn)
+                            showfunc=showfunc, ignorews=ignorews,
+                            ignorewsamount=ignorewsamount,
+                            ignoreblanklines=ignoreblanklines), f, tn)
         for f in added:
             to = None
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
-                            showfunc=showfunc, ignorews=ignorews), f, tn)
+                            showfunc=showfunc, ignorews=ignorews,
+                            ignorewsamount=ignorewsamount,
+                            ignoreblanklines=ignoreblanklines), f, tn)
         for f in removed:
             to = r.file(f).read(mmap1[f])
             tn = None
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
-                            showfunc=showfunc, ignorews=ignorews), f, tn)
+                            showfunc=showfunc, ignorews=ignorews,
+                            ignorewsamount=ignorewsamount,
+                            ignoreblanklines=ignoreblanklines), f, tn)
 
     def changelog(self, pos):
         def changenav(**map):

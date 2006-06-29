@@ -405,23 +405,33 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     diffopts = ui.diffopts()
     showfunc = opts.get('show_function') or diffopts['showfunc']
     ignorews = opts.get('ignore_all_space') or diffopts['ignorews']
+    ignorewsamount = opts.get('ignore_space_change') or \
+                     diffopts['ignorewsamount']
+    ignoreblanklines = opts.get('ignore_blank_lines') or \
+                     diffopts['ignoreblanklines']
     for f in modified:
         to = None
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
         fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
-                               showfunc=showfunc, ignorews=ignorews))
+                               showfunc=showfunc, ignorews=ignorews,
+                               ignorewsamount=ignorewsamount,
+                               ignoreblanklines=ignoreblanklines))
     for f in added:
         to = None
         tn = read(f)
         fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
-                               showfunc=showfunc, ignorews=ignorews))
+                               showfunc=showfunc, ignorews=ignorews,
+                               ignorewsamount=ignorewsamount,
+                               ignoreblanklines=ignoreblanklines))
     for f in removed:
         to = repo.file(f).read(mmap[f])
         tn = None
         fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
-                               showfunc=showfunc, ignorews=ignorews))
+                               showfunc=showfunc, ignorews=ignorews,
+                               ignorewsamount=ignorewsamount,
+                               ignoreblanklines=ignoreblanklines))
 
 def trimuser(ui, name, rev, revcache):
     """trim the name of the user who committed a change"""
@@ -3018,6 +3028,10 @@ table = {
            _('show which function each change is in')),
           ('w', 'ignore-all-space', None,
            _('ignore white space when comparing lines')),
+          ('b', 'ignore-space-change', None,
+           _('ignore changes in the amount of white space')),
+          ('B', 'ignore-blank-lines', None,
+           _('ignore changes whose lines are all blank')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...')),
