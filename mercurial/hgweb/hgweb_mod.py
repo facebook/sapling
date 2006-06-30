@@ -650,12 +650,27 @@ class hgweb(object):
             raise Exception("suspicious path")
         return p
 
-    def run(self, req):
+    def run(self):
+        if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
+            raise RuntimeError("This function is only intended to be called while running as a CGI script.")
+        import mercurial.hgweb.wsgicgi as wsgicgi
+        from request import wsgiapplication
+        def make_web_app():
+            return self
+        wsgicgi.launch(wsgiapplication(make_web_app))
+
+    def run_wsgi(self, req):
         def header(**map):
             header_file = cStringIO.StringIO(''.join(self.t("header", **map)))
             msg = mimetools.Message(header_file, 0)
             req.header(msg.items())
             yield header_file.read()
+
+        def rawfileheader(**map):
+            req.header([('Content-type', map['mimetype']),
+                        ('Content-disposition', 'filename=%s' % map['file']),
+                        ('Content-length', str(len(map['raw'])))])
+            yield ''
 
         def footer(**map):
             yield self.t("footer",
@@ -714,6 +729,7 @@ class hgweb(object):
                                                "repo": self.reponame,
                                                "header": header,
                                                "footer": footer,
+                                               "rawfileheader": rawfileheader,
                                                })
 
         if not req.form.has_key('cmd'):

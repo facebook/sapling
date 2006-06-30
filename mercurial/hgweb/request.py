@@ -48,7 +48,7 @@ class _wsgirequest(object):
         self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
         self.start_response = start_response
         self.headers = []
-        destination.run(self)
+        destination.run_wsgi(self)
 
     def __iter__(self):
         return iter([])

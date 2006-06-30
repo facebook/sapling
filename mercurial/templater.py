@@ -202,7 +202,7 @@ def fill(text, width):
     if para_re is None:
         para_re = re.compile('(\n\n|\n\\s*[-*]\\s*)', re.M)
         space_re = re.compile(r'  +')
-        
+
     def findparas():
         start = 0
         while True:

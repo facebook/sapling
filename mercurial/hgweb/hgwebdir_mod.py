@@ -46,7 +46,16 @@ class hgwebdir(object):
                         self.repos.append((name.lstrip(os.sep), repo))
             self.repos.sort()
 
-    def run(self, req):
+    def run(self):
+        if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
+            raise RuntimeError("This function is only intended to be called while running as a CGI script.")
+        import mercurial.hgweb.wsgicgi as wsgicgi
+        from request import wsgiapplication
+        def make_web_app():
+            return self
+        wsgicgi.launch(wsgiapplication(make_web_app))
+
+    def run_wsgi(self, req):
         def header(**map):
             header_file = cStringIO.StringIO(''.join(tmpl("header", **map)))
             msg = mimetools.Message(header_file, 0)
@@ -124,7 +133,7 @@ class hgwebdir(object):
             real = dict(self.repos).get(virtual)
             if real:
                 try:
-                    hgweb(real).run(req)
+                    hgweb(real).run_wsgi(req)
                 except IOError, inst:
                     req.write(tmpl("error", error=inst.strerror))
                 except hg.RepoError, inst:
