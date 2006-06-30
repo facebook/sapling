@@ -20,6 +20,7 @@ class hgwebdir(object):
         def cleannames(items):
             return [(name.strip(os.sep), path) for name, path in items]
 
+        self.origconfig = config
         self.motd = ""
         self.repos_sorted = ('name', False)
         if isinstance(config, (list, tuple)):
@@ -46,7 +47,16 @@ class hgwebdir(object):
                         self.repos.append((name.lstrip(os.sep), repo))
             self.repos.sort()
 
-    def run(self, req):
+    def run(self):
+        if os.environ['GATEWAY_INTERFACE'][0:6] != "CGI/1.":
+            raise RuntimeError("This function is only intended to be called while running as a CGI script.")
+        import mercurial.hgweb.wsgicgi as wsgicgi
+        from request import wsgiapplication
+        def make_web_app():
+            return self.__class__(self.origconfig)
+        wsgicgi.launch(wsgiapplication(make_web_app))
+
+    def run_wsgi(self, req):
         def header(**map):
             header_file = cStringIO.StringIO(''.join(tmpl("header", **map)))
             msg = mimetools.Message(header_file, 0)
