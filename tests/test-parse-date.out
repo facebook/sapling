@@ -6,6 +6,12 @@ merging with changeset 2:99a1acecff55
 abort: invalid date: 'should fail'
 transaction abort!
 rollback completed
+abort: date exceeds 32 bits: 100000000000000000
+transaction abort!
+rollback completed
+abort: impossible time zone offset: 1400000
+transaction abort!
+rollback completed
 Sun Jun 11 00:26:40 2006 -0400
 Sat Apr 15 13:30:00 2006 +0200
 Sat Apr 15 13:30:00 2006 +0000

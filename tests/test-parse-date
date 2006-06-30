@@ -11,4 +11,6 @@ hg backout --merge -d "2006-04-15 13:30 +0200" -m "rev 3" 1
 hg ci -d "1150000000 14400" -m "rev 4 (merge)"
 echo "fail" >> a
 hg ci -d "should fail" -m "fail"
+hg ci -d "100000000000000000 1400" -m "fail"
+hg ci -d "100000 1400000" -m "fail"
 hg log --template '{date|date}\n'
