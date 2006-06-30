@@ -3034,7 +3034,7 @@ table = {
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
          _('hg incoming [-p] [-n] [-M] [-r REV]...'
-           '[--bundle FILENAME] [SOURCE]')),
+           ' [--bundle FILENAME] [SOURCE]')),
     "^init": (init, [], _('hg init [DEST]')),
     "locate":
         (locate,
