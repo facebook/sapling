@@ -9,7 +9,7 @@ It is very boring to read, but computers don't
 care about things like that.
 ENDSOME
 hg add sometext.txt
-hg commit -m "Just some text"
+hg commit -d "1 0" -m "Just some text"
 hg serve -p 20059 -A access.log -E error.log -d --pid-file=hg.pid
 ("$TESTDIR/get-with-headers.py" localhost:20059 '/?f=f165dc289438;file=sometext.txt;style=raw' content-type content-length content-disposition) >getoutput.txt &
 
