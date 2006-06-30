@@ -859,6 +859,37 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True):
         s += " %+03d%02d" % (-tz / 3600, ((-tz % 3600) / 60))
     return s
 
+def strdate(string, format='%a %b %d %H:%M:%S %Y'):
+    """parse a localized time string and return a (unixtime, offset) tuple.
+    if the string cannot be parsed, ValueError is raised."""
+    def hastimezone(string):
+        return (string[-4:].isdigit() and
+               (string[-5] == '+' or string[-5] == '-') and
+               string[-6].isspace())
+
+    if hastimezone(string):
+        date, tz = string.rsplit(None, 1)
+        tz = int(tz)
+        offset = - 3600 * (tz / 100) - 60 * (tz % 100)
+    else:
+        date, offset = string, 0
+    when = int(time.mktime(time.strptime(date, format))) + offset
+    return when, offset
+
+def parsedate(string, formats=('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M')):
+    """parse a localized time string and return a (unixtime, offset) tuple.
+    The date may be a "unixtime offset" string or in one of the specified
+    formats."""
+    try:
+        when, offset = map(int, string.split(' '))
+        return when, offset
+    except ValueError: pass
+    for format in formats:
+        try:
+            return strdate(string, format)
+        except ValueError: pass
+    raise ValueError(_('invalid date: %r') % string)
+
 def shortuser(user):
     """Return a short representation of a user name or email address."""
     f = user.find('@')
