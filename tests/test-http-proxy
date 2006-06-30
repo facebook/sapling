@@ -26,5 +26,5 @@ http_proxy=http://user:passwd@localhost:20060 hg clone --config http_proxy.alway
 echo %% bad host:port for proxy
 http_proxy=localhost:20061 hg clone --config http_proxy.always=True http://localhost:20059/ f
 
-kill $(cat proxy.pid a/hg.pid)
+kill `cat proxy.pid a/hg.pid`
 exit 0
