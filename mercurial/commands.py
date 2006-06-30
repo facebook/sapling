@@ -1875,7 +1875,10 @@ def incoming(ui, repo, source="default", **opts):
                 # use the created uncompressed bundlerepo
                 other = bundlerepo.bundlerepository(ui, repo.root, fname)
 
-        o = other.changelog.nodesbetween(incoming)[0]
+        revs = None
+        if opts['rev']:
+            revs = [other.lookup(rev) for rev in opts['rev']]
+        o = other.changelog.nodesbetween(incoming, revs)[0]
         if opts['newest_first']:
             o.reverse()
         displayer = show_changeset(ui, other, opts)
@@ -2085,13 +2088,16 @@ def outgoing(ui, repo, dest=None, **opts):
         ui.setconfig("ui", "ssh", opts['ssh'])
     if opts['remotecmd']:
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+    revs = None
+    if opts['rev']:
+        revs = [repo.lookup(rev) for rev in opts['rev']]
 
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other, force=opts['force'])
     if not o:
         ui.status(_("no changes found\n"))
         return
-    o = repo.changelog.nodesbetween(o)[0]
+    o = repo.changelog.nodesbetween(o, revs)[0]
     if opts['newest_first']:
         o.reverse()
     displayer = show_changeset(ui, repo, opts)
@@ -3022,11 +3028,13 @@ table = {
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'bundle', '', _('file to store the bundles into')),
           ('p', 'patch', None, _('show patch')),
+          ('r', 'rev', [], _('a specific revision you would like to pull')),
           ('', 'template', '', _('display with template')),
           ('e', 'ssh', '', _('specify ssh command to use')),
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
-         _('hg incoming [-p] [-n] [-M] [--bundle FILENAME] [SOURCE]')),
+         _('hg incoming [-p] [-n] [-M] [-r REV]...'
+           '[--bundle FILENAME] [SOURCE]')),
     "^init": (init, [], _('hg init [DEST]')),
     "locate":
         (locate,
@@ -3064,12 +3072,13 @@ table = {
            _('run even when remote repository is unrelated')),
           ('p', 'patch', None, _('show patch')),
           ('', 'style', '', _('display using template map file')),
+          ('r', 'rev', [], _('a specific revision you would like to push')),
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'template', '', _('display with template')),
           ('e', 'ssh', '', _('specify ssh command to use')),
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
-         _('hg outgoing [-M] [-p] [-n] [DEST]')),
+         _('hg outgoing [-M] [-p] [-n] [-r REV]... [DEST]')),
     "^parents":
         (parents,
          [('b', 'branches', None, _('show branches')),
