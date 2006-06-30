@@ -214,7 +214,6 @@ class queue:
                 return pp[0]
             if p1 in arevs:
                 return pp[1]
-            return None
         return pp[0]
 
     def mergepatch(self, repo, mergeq, series, wlock):
@@ -386,15 +385,21 @@ class queue:
             self.ui.write("Local changes found, refresh first\n")
             sys.exit(1)
     def new(self, repo, patch, msg=None, force=None):
-        if not force:
-            self.check_localchanges(repo)
+        commitfiles = []
+        (c, a, r, d, u) = repo.changes(None, None)
+        if c or a or d or r:
+            if not force:
+                raise util.Abort(_("Local changes found, refresh first"))
+            else:
+                commitfiles = c + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
         insert = self.series_end()
         if msg:
-            n = repo.commit([], "[mq]: %s" % msg, force=True, wlock=wlock)
+            n = repo.commit(commitfiles, "[mq]: %s" % msg, force=True,
+                            wlock=wlock)
         else:
-            n = repo.commit([],
+            n = repo.commit(commitfiles,
                             "New patch: %s" % patch, force=True, wlock=wlock)
         if n == None:
             self.ui.warn("repo commit failed\n")
@@ -412,6 +417,8 @@ class queue:
         wlock = None
         r = self.qrepo()
         if r: r.add([patch])
+        if commitfiles:
+            self.refresh(repo, short=True)
 
     def strip(self, repo, rev, update=True, backup="all", wlock=None):
         def limitheads(chlog, stop):

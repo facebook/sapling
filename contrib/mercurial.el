@@ -653,7 +653,7 @@ The Mercurial mode user interface is based on that of VC mode, so if
 you're already familiar with VC, the same keybindings and functions
 will generally work.
 
-Below is a list of many common SCM tasks.  In the list, `G/L'
+Below is a list of many common SCM tasks.  In the list, `G/L\'
 indicates whether a key binding is global (G) to a repository or local
 (L) to a file.  Many commands take a prefix argument.
 
@@ -682,6 +682,8 @@ Pull changes                          G    C-c h <      hg-pull
 Update working directory after pull   G    C-c h u      hg-update
 See changes that can be pushed        G    C-c h .      hg-outgoing
 Push changes                          G    C-c h >      hg-push"
+  (unless vc-make-backup-files
+    (set (make-local-variable 'backup-inhibited) t))
   (run-hooks 'hg-mode-hook))
 
 (defun hg-find-file-hook ()
@@ -729,6 +731,8 @@ With a prefix argument, prompt for the path to add."
       (goto-char 0)
       (cd (hg-root path)))
     (when update
+      (unless vc-make-backup-files
+	(set (make-local-variable 'backup-inhibited) t))
       (with-current-buffer buf
 	(hg-mode-line)))))
 
@@ -968,6 +972,7 @@ With a prefix argument, prompt for the path to forget."
       (cd (hg-root path)))
     (when update
       (with-current-buffer buf
+	(set (make-local-variable 'backup-inhibited) nil)
 	(hg-mode-line)))))
 
 (defun hg-incoming (&optional repo)

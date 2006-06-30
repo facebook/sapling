@@ -10,13 +10,48 @@ from mercurial.demandload import demandload
 demandload(globals(), "socket sys cgi os errno")
 from mercurial.i18n import gettext as _
 
-class hgrequest(object):
-    def __init__(self, inp=None, out=None, env=None):
-        self.inp = inp or sys.stdin
-        self.out = out or sys.stdout
-        self.env = env or os.environ
+class wsgiapplication(object):
+    def __init__(self, destmaker):
+        self.destmaker = destmaker
+
+    def __call__(self, wsgienv, start_response):
+        return _wsgirequest(self.destmaker(), wsgienv, start_response)
+
+class _wsgioutputfile(object):
+    def __init__(self, request):
+        self.request = request
+
+    def write(self, data):
+        self.request.write(data)
+    def writelines(self, lines):
+        for line in lines:
+            self.write(line)
+    def flush(self):
+        return None
+    def close(self):
+        return None
+
+class _wsgirequest(object):
+    def __init__(self, destination, wsgienv, start_response):
+        version = wsgienv['wsgi.version']
+        if (version < (1,0)) or (version >= (2, 0)):
+            raise RuntimeError("Unknown and unsupported WSGI version %d.%d" \
+                               % version)
+        self.inp = wsgienv['wsgi.input']
+        self.out = _wsgioutputfile(self)
+        self.server_write = None
+        self.err = wsgienv['wsgi.errors']
+        self.threaded = wsgienv['wsgi.multithread']
+        self.multiprocess = wsgienv['wsgi.multiprocess']
+        self.run_once = wsgienv['wsgi.run_once']
+        self.env = wsgienv
         self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
-        self.will_close = True
+        self.start_response = start_response
+        self.headers = []
+        destination.run(self)
+
+    def __iter__(self):
+        return iter([])
 
     def read(self, count=-1):
         return self.inp.read(count)
@@ -27,23 +62,22 @@ class hgrequest(object):
                 for part in thing:
                     self.write(part)
             else:
+                thing = str(thing)
+                if self.server_write is None:
+                    if not self.headers:
+                        raise RuntimeError("request.write called before headers sent (%s)." % thing)
+                    self.server_write = self.start_response('200 Script output follows',
+                                                            self.headers)
+                    self.start_response = None
+                    self.headers = None
                 try:
-                    self.out.write(str(thing))
+                    self.server_write(thing)
                 except socket.error, inst:
                     if inst[0] != errno.ECONNRESET:
                         raise
 
-    def done(self):
-        if self.will_close:
-            self.inp.close()
-            self.out.close()
-        else:
-            self.out.flush()
-
     def header(self, headers=[('Content-type','text/html')]):
-        for header in headers:
-            self.out.write("%s: %s\r\n" % header)
-        self.out.write("\r\n")
+        self.headers.extend(headers)
 
     def httphdr(self, type, filename=None, length=0, headers={}):
         headers = headers.items()
@@ -51,12 +85,6 @@ class hgrequest(object):
         if filename:
             headers.append(('Content-disposition', 'attachment; filename=%s' %
                             filename))
-        # we do not yet support http 1.1 chunked transfer, so we have
-        # to force connection to close if content-length not known
         if length:
             headers.append(('Content-length', str(length)))
-            self.will_close = False
-        else:
-            headers.append(('Connection', 'close'))
-            self.will_close = True
         self.header(headers)

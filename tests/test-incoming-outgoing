@@ -14,8 +14,10 @@ cd ..
 hg init new
 # http incoming
 http_proxy= hg -R new incoming http://localhost:20059/
+http_proxy= hg -R new incoming -r 4 http://localhost:20059/
 # local incoming
 hg -R new incoming test
+hg -R new incoming -r 4 test
 
 # test with --bundle
 http_proxy= hg -R new incoming --bundle test.hg http://localhost:20059/
@@ -42,5 +44,6 @@ hg verify
 cd ..
 hg -R test-dev outgoing test
 http_proxy= hg -R test-dev outgoing http://localhost:20059/
+http_proxy= hg -R test-dev outgoing -r 11 http://localhost:20059/
 
 kill `cat test/hg.pid`

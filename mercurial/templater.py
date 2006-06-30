@@ -225,6 +225,10 @@ def isodate(date):
     '''turn a (timestamp, tzoff) tuple into an iso 8631 date and time.'''
     return util.datestr(date, format='%Y-%m-%d %H:%M')
 
+def hgdate(date):
+    '''turn a (timestamp, tzoff) tuple into an hg cset timestamp.'''
+    return "%d %d" % date
+
 def nl2br(text):
     '''replace raw newlines with xhtml line breaks.'''
     return text.replace('\n', '<br/>\n')
@@ -282,6 +286,7 @@ common_filters = {
     "fill76": lambda x: fill(x, width=76),
     "firstline": lambda x: x.splitlines(1)[0].rstrip('\r\n'),
     "tabindent": lambda x: indent(x, '\t'),
+    "hgdate": hgdate,
     "isodate": isodate,
     "obfuscate": obfuscate,
     "permissions": lambda x: x and "-rwxr-xr-x" or "-rw-r--r--",

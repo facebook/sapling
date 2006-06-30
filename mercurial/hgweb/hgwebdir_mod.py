@@ -8,10 +8,9 @@
 
 import os
 from mercurial.demandload import demandload
-demandload(globals(), "ConfigParser")
+demandload(globals(), "ConfigParser mimetools cStringIO")
 demandload(globals(), "mercurial:ui,hg,util,templater")
 demandload(globals(), "mercurial.hgweb.hgweb_mod:hgweb")
-demandload(globals(), "mercurial.hgweb.request:hgrequest")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
 from mercurial.i18n import gettext as _
 
@@ -47,9 +46,12 @@ class hgwebdir(object):
                         self.repos.append((name.lstrip(os.sep), repo))
             self.repos.sort()
 
-    def run(self, req=hgrequest()):
+    def run(self, req):
         def header(**map):
-            yield tmpl("header", **map)
+            header_file = cStringIO.StringIO(''.join(tmpl("header", **map)))
+            msg = mimetools.Message(header_file, 0)
+            req.header(msg.items())
+            yield header_file.read()
 
         def footer(**map):
             yield tmpl("footer", motd=self.motd, **map)
@@ -133,7 +135,7 @@ class hgwebdir(object):
             if req.form.has_key('static'):
                 static = os.path.join(templater.templatepath(), "static")
                 fname = req.form['static'][0]
-                req.write(staticfile(static, fname)
+                req.write(staticfile(static, fname, req)
                           or tmpl("error", error="%r not found" % fname))
             else:
                 sortable = ["name", "description", "contact", "lastchange"]

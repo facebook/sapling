@@ -17,7 +17,7 @@ def get_mtime(repo_path):
     else:
         return os.stat(hg_path).st_mtime
 
-def staticfile(directory, fname):
+def staticfile(directory, fname, req):
     """return a file inside directory with guessed content-type header
 
     fname always uses '/' as directory separator and isn't allowed to
@@ -36,7 +36,9 @@ def staticfile(directory, fname):
     try:
         os.stat(path)
         ct = mimetypes.guess_type(path)[0] or "text/plain"
-        return "Content-type: %s\n\n%s" % (ct, file(path).read())
+        req.header([('Content-type', ct),
+                    ('Content-length', os.path.getsize(path))])
+        return file(path).read()
     except (TypeError, OSError):
         # illegal fname or unreadable file
         return ""

@@ -1,0 +1,81 @@
+#!/bin/sh
+
+hg init a
+echo line 1 > a/a
+hg --cwd a ci -d '0 0' -Ama
+
+echo line 2 >> a/a
+hg --cwd a ci -u someone -d '1 0' -m'second change'
+
+echo % import exported patch
+hg clone -r0 a b
+hg --cwd a export tip > tip.patch
+hg --cwd b import ../tip.patch
+echo % message should be same
+hg --cwd b tip | grep 'second change'
+echo % committer should be same
+hg --cwd b tip | grep someone
+rm -rf b
+
+echo % import of plain diff should fail without message
+hg clone -r0 a b
+hg --cwd a diff -r0:1 > tip.patch
+hg --cwd b import ../tip.patch
+rm -rf b
+
+echo % import of plain diff should be ok with message
+hg clone -r0 a b
+hg --cwd a diff -r0:1 > tip.patch
+hg --cwd b import -mpatch ../tip.patch
+rm -rf b
+
+echo % import from stdin
+hg clone -r0 a b
+hg --cwd a export tip | hg --cwd b import -
+rm -rf b
+
+echo % override commit message
+hg clone -r0 a b
+hg --cwd a export tip | hg --cwd b import -m 'override' -
+hg --cwd b tip | grep override
+rm -rf b
+
+cat > mkmsg.py <<EOF
+import email.Message, sys
+msg = email.Message.Message()
+msg.set_payload('email commit message\n' + open('tip.patch').read())
+msg['Subject'] = 'email patch'
+msg['From'] = 'email patcher'
+sys.stdout.write(msg.as_string())
+EOF
+
+echo % plain diff in email, subject, message body
+hg clone -r0 a b
+hg --cwd a diff -r0:1 > tip.patch
+python mkmsg.py > msg.patch
+hg --cwd b import ../msg.patch
+hg --cwd b tip | grep email
+rm -rf b
+
+echo % plain diff in email, no subject, message body
+hg clone -r0 a b
+grep -v '^Subject:' msg.patch | hg --cwd b import -
+rm -rf b
+
+echo % plain diff in email, subject, no message body
+hg clone -r0 a b
+grep -v '^email ' msg.patch | hg --cwd b import -
+rm -rf b
+
+echo % plain diff in email, no subject, no message body, should fail
+hg clone -r0 a b
+grep -v '^\(Subject\|email\)' msg.patch | hg --cwd b import -
+rm -rf b
+
+echo % hg export in email, should use patch header
+hg clone -r0 a b
+hg --cwd a export tip > tip.patch
+python mkmsg.py | hg --cwd b import -
+hg --cwd b tip | grep second
+rm -rf b
+

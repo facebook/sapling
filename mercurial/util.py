@@ -859,6 +859,49 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True):
         s += " %+03d%02d" % (-tz / 3600, ((-tz % 3600) / 60))
     return s
 
+def strdate(string, format='%a %b %d %H:%M:%S %Y'):
+    """parse a localized time string and return a (unixtime, offset) tuple.
+    if the string cannot be parsed, ValueError is raised."""
+    def hastimezone(string):
+        return (string[-4:].isdigit() and
+               (string[-5] == '+' or string[-5] == '-') and
+               string[-6].isspace())
+
+    if hastimezone(string):
+        date, tz = string.rsplit(None, 1)
+        tz = int(tz)
+        offset = - 3600 * (tz / 100) - 60 * (tz % 100)
+    else:
+        date, offset = string, 0
+    when = int(time.mktime(time.strptime(date, format))) + offset
+    return when, offset
+
+def parsedate(string, formats=('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M')):
+    """parse a localized time string and return a (unixtime, offset) tuple.
+    The date may be a "unixtime offset" string or in one of the specified
+    formats."""
+    try:
+        when, offset = map(int, string.split(' '))
+    except ValueError:
+        for format in formats:
+            try:
+                when, offset = strdate(string, format)
+            except ValueError:
+                pass
+            else:
+                break
+        else:
+            raise ValueError(_('invalid date: %r') % string)
+    # validate explicit (probably user-specified) date and
+    # time zone offset. values must fit in signed 32 bits for
+    # current 32-bit linux runtimes. timezones go from UTC-12
+    # to UTC+14
+    if abs(when) > 0x7fffffff:
+        raise ValueError(_('date exceeds 32 bits: %d') % when)
+    if offset < -50400 or offset > 43200:
+        raise ValueError(_('impossible time zone offset: %d') % offset)
+    return when, offset
+
 def shortuser(user):
     """Return a short representation of a user name or email address."""
     f = user.find('@')
