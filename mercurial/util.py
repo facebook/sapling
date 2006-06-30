@@ -882,13 +882,25 @@ def parsedate(string, formats=('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M')):
     formats."""
     try:
         when, offset = map(int, string.split(' '))
-        return when, offset
-    except ValueError: pass
-    for format in formats:
-        try:
-            return strdate(string, format)
-        except ValueError: pass
-    raise ValueError(_('invalid date: %r') % string)
+    except ValueError:
+        for format in formats:
+            try:
+                when, offset = strdate(string, format)
+            except ValueError:
+                pass
+            else:
+                break
+        else:
+            raise ValueError(_('invalid date: %r') % string)
+    # validate explicit (probably user-specified) date and
+    # time zone offset. values must fit in signed 32 bits for
+    # current 32-bit linux runtimes. timezones go from UTC-12
+    # to UTC+14
+    if abs(when) > 0x7fffffff:
+        raise ValueError(_('date exceeds 32 bits: %d') % when)
+    if offset < -50400 or offset > 43200:
+        raise ValueError(_('impossible time zone offset: %d') % offset)
+    return when, offset
 
 def shortuser(user):
     """Return a short representation of a user name or email address."""

@@ -39,16 +39,7 @@ class changelog(revlog):
     def add(self, manifest, list, desc, transaction, p1=None, p2=None,
                   user=None, date=None):
         if date:
-            # validate explicit (probably user-specified) date and
-            # time zone offset. values must fit in signed 32 bits for
-            # current 32-bit linux runtimes. timezones go from UTC-12
-            # to UTC+14
-            when, offset = util.parsedate(date)
-            if abs(when) > 0x7fffffff:
-                raise ValueError(_('date exceeds 32 bits: %d') % when)
-            if offset < -50400 or offset > 43200:
-                raise ValueError(_('impossible time zone offset: %d') % offset)
-            parseddate = "%d %d" % (when, offset)
+            parseddate = "%d %d" % util.parsedate(date)
         else:
             parseddate = "%d %d" % util.makedate()
         list.sort()
