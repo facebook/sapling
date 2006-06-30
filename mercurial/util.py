@@ -868,7 +868,7 @@ def strdate(string, format='%a %b %d %H:%M:%S %Y'):
                string[-6].isspace())
 
     if hastimezone(string):
-        date, tz = string.rsplit(None, 1)
+        date, tz = string[:-6], string[-5:]
         tz = int(tz)
         offset = - 3600 * (tz / 100) - 60 * (tz % 100)
     else:
