@@ -1,0 +1,97 @@
+#!/bin/sh
+
+hg init test
+
+cat >hgweb.cgi <<HGWEB
+#!/usr/bin/env python
+#
+# An example CGI script to use hgweb, edit as necessary
+
+import cgitb, os, sys
+cgitb.enable()
+
+# sys.path.insert(0, "/path/to/python/lib") # if not a system-wide install
+from mercurial import hgweb
+
+h = hgweb.hgweb("test", "Empty test repository")
+h.run()
+HGWEB
+chmod 755 hgweb.cgi
+
+cat >hgweb.config <<HGWEBDIRCONF
+[paths]
+test = test
+HGWEBDIRCONF
+
+cat >hgwebdir.cgi <<HGWEBDIR
+#!/usr/bin/env python
+#
+# An example CGI script to export multiple hgweb repos, edit as necessary
+
+import cgitb, sys
+cgitb.enable()
+
+# sys.path.insert(0, "/path/to/python/lib") # if not a system-wide install
+from mercurial import hgweb
+
+# The config file looks like this.  You can have paths to individual
+# repos, collections of repos in a directory tree, or both.
+#
+# [paths]
+# virtual/path = /real/path
+# virtual/path = /real/path
+#
+# [collections]
+# /prefix/to/strip/off = /root/of/tree/full/of/repos
+#
+# collections example: say directory tree /foo contains repos /foo/bar,
+# /foo/quux/baz.  Give this config section:
+#   [collections]
+#   /foo = /foo
+# Then repos will list as bar and quux/baz.
+
+# Alternatively you can pass a list of ('virtual/path', '/real/path') tuples
+# or use a dictionary with entries like 'virtual/path': '/real/path'
+
+h = hgweb.hgwebdir("hgweb.config")
+h.run()
+HGWEBDIR
+chmod 755 hgwebdir.cgi
+
+declare -x DOCUMENT_ROOT="/var/www/hg"
+declare -x GATEWAY_INTERFACE="CGI/1.1"
+declare -x HTTP_ACCEPT="text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5"
+declare -x HTTP_ACCEPT_CHARSET="ISO-8859-1,utf-8;q=0.7,*;q=0.7"
+declare -x HTTP_ACCEPT_ENCODING="gzip,deflate"
+declare -x HTTP_ACCEPT_LANGUAGE="en-us,en;q=0.5"
+declare -x HTTP_CACHE_CONTROL="max-age=0"
+declare -x HTTP_CONNECTION="keep-alive"
+declare -x HTTP_HOST="hg.omnifarious.org"
+declare -x HTTP_KEEP_ALIVE="300"
+declare -x HTTP_USER_AGENT="Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.8.0.4) Gecko/20060608 Ubuntu/dapper-security Firefox/1.5.0.4"
+declare -x OLDPWD
+declare -x PATH="/sbin:/usr/sbin:/bin:/usr/bin:/usr/X11R6/bin"
+declare -x PATH_INFO="/"
+declare -x PATH_TRANSLATED="/var/www/hg/index.html"
+declare -x PWD="/home/hopper/hg_public"
+declare -x QUERY_STRING=""
+declare -x REMOTE_ADDR="127.0.0.2"
+declare -x REMOTE_PORT="44703"
+declare -x REQUEST_METHOD="GET"
+declare -x REQUEST_URI="/test/"
+declare -x SCRIPT_FILENAME="/home/hopper/hg_public/test.cgi"
+declare -x SCRIPT_NAME="/test"
+declare -x SCRIPT_URI="http://hg.omnifarious.org/test/"
+declare -x SCRIPT_URL="/test/"
+declare -x SERVER_ADDR="127.0.0.1"
+declare -x SERVER_ADMIN="eric@localhost"
+declare -x SERVER_NAME="hg.omnifarious.org"
+declare -x SERVER_PORT="80"
+declare -x SERVER_PROTOCOL="HTTP/1.1"
+declare -x SERVER_SIGNATURE="<address>Apache/2.0.53 (Fedora) Server at hg.omnifarious.org Port 80</address>\
+"
+declare -x SERVER_SOFTWARE="Apache/2.0.53 (Fedora)"
+./hgweb.cgi >page1 2>&1 ; echo $?
+./hgwebdir.cgi >page2 2>&1 ; echo $?
+fgrep -i error page1 page2 && exit 1
+exit 0
