@@ -134,7 +134,7 @@ class hgwebdir(object):
             real = dict(self.repos).get(virtual)
             if real:
                 try:
-                    hgweb(real).run(req)
+                    hgweb(real).run_wsgi(req)
                 except IOError, inst:
                     req.write(tmpl("error", error=inst.strerror))
                 except hg.RepoError, inst:
