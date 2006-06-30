@@ -657,6 +657,12 @@ class hgweb(object):
             req.header(msg.items())
             yield header_file.read()
 
+        def rawfileheader(**map):
+            req.header([('Content-type', map['mimetype']),
+                        ('Content-disposition', 'filename=%s' % map['file']),
+                        ('Content-length', str(len(map['raw'])))])
+            yield ''
+
         def footer(**map):
             yield self.t("footer",
                          motd=self.repo.ui.config("web", "motd", ""),
@@ -714,6 +720,7 @@ class hgweb(object):
                                                "repo": self.reponame,
                                                "header": header,
                                                "footer": footer,
+                                               "rawfileheader": rawfileheader,
                                                })
 
         if not req.form.has_key('cmd'):
