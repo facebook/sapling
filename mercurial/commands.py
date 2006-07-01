@@ -919,13 +919,10 @@ def clone(ui, source, dest=None, **opts):
     if os.path.exists(dest):
         raise util.Abort(_("destination '%s' already exists"), dest)
 
-    dest = os.path.realpath(dest)
-
     class Dircleanup(object):
         def __init__(self, dir_):
             self.rmtree = shutil.rmtree
             self.dir_ = dir_
-            os.mkdir(dir_)
         def close(self):
             self.dir_ = None
         def __del__(self):
@@ -938,13 +935,24 @@ def clone(ui, source, dest=None, **opts):
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
     source = ui.expandpath(source)
+    src_repo = hg.repository(ui, source)
 
-    d = Dircleanup(dest)
+    dest_repo = None
+    try:
+        dest_repo = hg.repository(ui, dest)
+        raise util.Abort(_("destination '%s' already exists." % dest))
+    except hg.RepoError:
+        dest_repo = hg.repository(ui, dest, create=1)
+
+    dest_path = None
+    d = None
+    if dest_repo.local():
+        dest_path = os.path.realpath(dest)
+        d = Dircleanup(dest_path)
+
     abspath = source
-    other = hg.repository(ui, source)
-
     copy = False
-    if other.dev() != -1:
+    if src_repo.local() and dest_repo.local():
         abspath = os.path.abspath(source)
         if not opts['pull'] and not opts['rev']:
             copy = True
@@ -955,47 +963,57 @@ def clone(ui, source, dest=None, **opts):
             # can end up with extra data in the cloned revlogs that's
             # not pointed to by changesets, thus causing verify to
             # fail
-            l1 = other.lock()
+            l1 = src_repo.lock()
         except lock.LockException:
             copy = False
 
     if copy:
         # we lock here to avoid premature writing to the target
-        os.mkdir(os.path.join(dest, ".hg"))
-        l2 = lock.lock(os.path.join(dest, ".hg", "lock"))
+        l2 = lock.lock(os.path.join(dest_path, ".hg", "lock"))
 
+	# we need to remove the (empty) data dir in dest so copyfiles can do it's work
+	os.rmdir( os.path.join(dest_path, ".hg", "data") )
         files = "data 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
         for f in files.split():
             src = os.path.join(source, ".hg", f)
-            dst = os.path.join(dest, ".hg", f)
+            dst = os.path.join(dest_path, ".hg", f)
             try:
                 util.copyfiles(src, dst)
             except OSError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
 
-        repo = hg.repository(ui, dest)
+	# we need to re-init the repo after manually copying the data into it
+        dest_repo = hg.repository(ui, dest)
 
     else:
         revs = None
         if opts['rev']:
-            if not other.local():
+            if not src_repo.local():
                 error = _("clone -r not supported yet for remote repositories.")
                 raise util.Abort(error)
             else:
-                revs = [other.lookup(rev) for rev in opts['rev']]
-        repo = hg.repository(ui, dest, create=1)
-        repo.pull(other, heads = revs)
+                revs = [src_repo.lookup(rev) for rev in opts['rev']]
 
-    f = repo.opener("hgrc", "w", text=True)
-    f.write("[paths]\n")
-    f.write("default = %s\n" % abspath)
-    f.close()
+        if dest_repo.local():
+            dest_repo.pull(src_repo, heads = revs)
+        elif src_repo.local():
+            src_repo.push(dest_repo, revs = revs)
+        else:
+            error = _("clone from remote to remote not supported.")
+            raise util.Abort(error)
 
-    if not opts['noupdate']:
-        doupdate(repo.ui, repo)
+    if dest_repo.local():
+        f = dest_repo.opener("hgrc", "w", text=True)
+        f.write("[paths]\n")
+        f.write("default = %s\n" % abspath)
+        f.close()
 
-    d.close()
+        if not opts['noupdate']:
+            doupdate(dest_repo.ui, dest_repo)
+
+    if d:
+        d.close()
 
 def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
@@ -1905,8 +1923,6 @@ def init(ui, dest="."):
 
     If no directory is given, the current directory is used.
     """
-    if not os.path.exists(dest):
-        os.mkdir(dest)
     hg.repository(ui, dest, create=1)
 
 def locate(ui, repo, *pats, **opts):

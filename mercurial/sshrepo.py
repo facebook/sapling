@@ -12,7 +12,7 @@ from demandload import *
 demandload(globals(), "hg os re stat util")
 
 class sshrepository(remoterepository):
-    def __init__(self, ui, path):
+    def __init__(self, ui, path, create=0):
         self.url = path
         self.ui = ui
 
@@ -30,6 +30,25 @@ class sshrepository(remoterepository):
 
         sshcmd = self.ui.config("ui", "ssh", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd", "hg")
+
+        if create:
+            try:
+                self.validate_repo(ui, sshcmd, args, remotecmd)
+                return # the repo is good, nothing more to do
+            except hg.RepoError:
+                pass
+
+            cmd = '%s %s "%s init %s"'
+            cmd = cmd % (sshcmd, args, remotecmd, self.path)
+
+            ui.note('running %s\n' % cmd)
+            res = os.system(cmd)
+            if res != 0:
+                raise hg.RepoError(_("could not create remote repo"))
+
+        self.validate_repo(ui, sshcmd, args, remotecmd)
+
+    def validate_repo(self, ui, sshcmd, args, remotecmd):
         cmd = '%s %s "%s -R %s serve --stdio"'
         cmd = cmd % (sshcmd, args, remotecmd, self.path)
 

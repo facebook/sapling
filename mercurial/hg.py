@@ -33,6 +33,9 @@ def local_(ui, path, create=0):
         path = path[5:]
     return localrepo.localrepository(ui, path, create)
 
+def ssh_(ui, path, create=0):
+    return sshrepo.sshrepository(ui, path, create)
+
 def old_http(ui, path):
     ui.warn(_("old-http:// syntax is deprecated, "
               "please use static-http:// instead\n"))
@@ -50,7 +53,7 @@ schemes = {
     'http': lambda ui, path: httprepo.httprepository(ui, path),
     'https': lambda ui, path: httprepo.httpsrepository(ui, path),
     'old-http': old_http,
-    'ssh': lambda ui, path: sshrepo.sshrepository(ui, path),
+    'ssh': ssh_,
     'static-http': static_http,
     }
 
