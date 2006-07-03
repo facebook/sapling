@@ -932,10 +932,11 @@ class hgweb(object):
 
                 try:
                     ret = self.repo.addchangegroup(fp, 'serve')
-                    req.write('%d\n' % ret)
-                    req.write(sys.stdout.getvalue())
                 finally:
+                    val = sys.stdout.getvalue()
                     sys.stdout = old_stdout
+                req.write('%d\n' % ret)
+                req.write(val)
             finally:
                 lock.release()
         finally:

@@ -27,6 +27,7 @@ def launch(application):
 
     headers_set = []
     headers_sent = []
+    out = sys.stdout
 
     def write(data):
         if not headers_set:
@@ -35,13 +36,13 @@ def launch(application):
         elif not headers_sent:
              # Before the first output, send the stored headers
              status, response_headers = headers_sent[:] = headers_set
-             sys.stdout.write('Status: %s\r\n' % status)
+             out.write('Status: %s\r\n' % status)
              for header in response_headers:
-                 sys.stdout.write('%s: %s\r\n' % header)
-             sys.stdout.write('\r\n')
+                 out.write('%s: %s\r\n' % header)
+             out.write('\r\n')
 
-        sys.stdout.write(data)
-        sys.stdout.flush()
+        out.write(data)
+        out.flush()
 
     def start_response(status,response_headers,exc_info=None):
         if exc_info:
