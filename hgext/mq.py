@@ -5,6 +5,30 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+'''patch management and development
+
+This extension lets you work with a stack of patches in a Mercurial
+repository.  It manages two stacks of patches - all known patches, and
+applied patches (subset of known patches).
+
+Known patches are represented as patch files in the .hg/patches
+directory.  Applied patches are both patch files and changesets.
+
+Common tasks (use "hg help command" for more details):
+
+prepare repository to work with patches   qinit
+create new patch                          qnew
+import existing patch                     qimport
+
+print patch series                        qseries
+print applied patches                     qapplied
+print name of top applied patch           qtop
+
+add known patch to applied stack          qpush
+remove patch from applied stack           qpop
+refresh contents of top applied patch     qrefresh
+'''
+
 from mercurial.demandload import *
 demandload(globals(), "os sys re struct traceback errno bz2")
 from mercurial.i18n import gettext as _
