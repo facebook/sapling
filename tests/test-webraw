@@ -17,4 +17,5 @@ sleep 5
 kill `cat hg.pid`
 sleep 1 # wait for server to scream and die
 cat getoutput.txt
-cat access.log error.log | sed 's/^\([^[]*\[\)[^]]*\(\].*\)$/\1date\2/g'
+cat access.log error.log | \
+  sed 's/^[^ ]*\( [^[]*\[\)[^]]*\(\].*\)$/host\1date\2/'
