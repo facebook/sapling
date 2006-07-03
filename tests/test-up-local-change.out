@@ -43,7 +43,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
-abort: there is nothing to merge, just use 'hg update'
+abort: there is nothing to merge, just use 'hg update' or look at 'hg heads'
 failed
 changeset:   0:33aaa84a386b
 user:        test
