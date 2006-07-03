@@ -63,11 +63,11 @@ def repository(ui, path=None, create=0):
     if scheme:
         c = scheme.find(':')
         scheme = c >= 0 and scheme[:c]
-    try:
-        ctor = schemes.get(scheme) or schemes['file']
-        if create:
+    ctor = schemes.get(scheme) or schemes['file']
+    if create:
+        try:
             return ctor(ui, path, create)
-        return ctor(ui, path)
-    except TypeError:
-        raise util.Abort(_('cannot create new repository over "%s" protocol') %
-                         scheme)
+        except TypeError:
+            raise util.Abort(_('cannot create new repository over "%s" protocol') %
+                             scheme)
+    return ctor(ui, path)
