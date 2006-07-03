@@ -534,14 +534,22 @@ def show_version(ui):
         "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
     ))
 
-def help_(ui, cmd=None, with_version=False):
-    """show help for a given command or all commands"""
+def help_(ui, name=None, with_version=False):
+    """show help for a command, extension, or list of commands
+
+    With no arguments, print a list of commands and short help.
+    
+    Given a command name, print help for that command.
+
+    Given an extension name, print help for that extension, and the
+    commands it provides."""
     option_lists = []
-    if cmd and cmd != 'shortlist':
+
+    def helpcmd(name):
         if with_version:
             show_version(ui)
             ui.write('\n')
-        aliases, i = find(cmd)
+        aliases, i = findcmd(name)
         # synopsis
         ui.write("%s\n\n" % i[2])
 
@@ -561,30 +569,15 @@ def help_(ui, cmd=None, with_version=False):
             # options
             if i[1]:
                 option_lists.append(("options", i[1]))
-
-    else:
-        # program name
-        if ui.verbose or with_version:
-            show_version(ui)
-        else:
-            ui.status(_("Mercurial Distributed SCM\n"))
-        ui.status('\n')
-
-        # list of commands
-        if cmd == "shortlist":
-            ui.status(_('basic commands (use "hg help" '
-                        'for the full list or option "-v" for details):\n\n'))
-        elif ui.verbose:
-            ui.status(_('list of commands:\n\n'))
-        else:
-            ui.status(_('list of commands (use "hg help -v" '
-                        'to show aliases and global options):\n\n'))
-
+        
+    def helplist(select=None):
         h = {}
         cmds = {}
         for c, e in table.items():
-            f = c.split("|")[0]
-            if cmd == "shortlist" and not f.startswith("^"):
+            f = c.split("|", 1)[0]
+            if select and not select(f):
+                continue
+            if name == "shortlist" and not f.startswith("^"):
                 continue
             f = f.lstrip("^")
             if not ui.debugflag and f.startswith("debug"):
@@ -604,6 +597,53 @@ def help_(ui, cmd=None, with_version=False):
                 ui.write(" %s:\n      %s\n"%(commands, h[f]))
             else:
                 ui.write(' %-*s   %s\n' % (m, f, h[f]))
+
+    def helpext(name):
+        try:
+            mod = findext(name)
+        except KeyError:
+            raise UnknownCommand(name)
+
+        doc = (mod.__doc__ or _('No help text available')).splitlines(0)
+        ui.write(_('%s extension - %s\n') % (name.split('.')[-1], doc[0]))
+        for d in doc[1:]:
+            ui.write(d, '\n')
+
+        ui.status('\n')
+        if ui.verbose:
+            ui.status(_('list of commands:\n\n'))
+        else:
+            ui.status(_('list of commands (use "hg help -v %s" '
+                        'to show aliases and global options):\n\n') % name)
+
+        modcmds = dict.fromkeys([c.split('|', 1)[0] for c in mod.cmdtable])
+        helplist(modcmds.has_key)
+
+    if name and name != 'shortlist':
+        try:
+            helpcmd(name)
+        except UnknownCommand:
+            helpext(name)
+
+    else:
+        # program name
+        if ui.verbose or with_version:
+            show_version(ui)
+        else:
+            ui.status(_("Mercurial Distributed SCM\n"))
+        ui.status('\n')
+
+        # list of commands
+        if name == "shortlist":
+            ui.status(_('basic commands (use "hg help" '
+                        'for the full list or option "-v" for details):\n\n'))
+        elif ui.verbose:
+            ui.status(_('list of commands:\n\n'))
+        else:
+            ui.status(_('list of commands (use "hg help -v" '
+                        'to show aliases and global options):\n\n'))
+
+        helplist()
 
     # global options
     if ui.verbose:
@@ -1254,7 +1294,7 @@ def debugcomplete(ui, cmd='', **opts):
         options = []
         otables = [globalopts]
         if cmd:
-            aliases, entry = find(cmd)
+            aliases, entry = findcmd(cmd)
             otables.append(entry[1])
         for t in otables:
             for o in t:
@@ -3274,7 +3314,7 @@ def findpossible(cmd):
 
     return choice
 
-def find(cmd):
+def findcmd(cmd):
     """Return (aliases, command table entry) for command string."""
     choice = findpossible(cmd)
 
@@ -3311,7 +3351,7 @@ def parse(ui, args):
 
     if args:
         cmd, args = args[0], args[1:]
-        aliases, i = find(cmd)
+        aliases, i = findcmd(cmd)
         cmd = aliases[0]
         defaults = ui.config("defaults", cmd)
         if defaults:
@@ -3338,6 +3378,19 @@ def parse(ui, args):
 
     return (cmd, cmd and i[0] or None, args, options, cmdoptions)
 
+external = {}
+
+def findext(name):
+    '''return module with given extension name'''
+    try:
+        return external[name]
+    except KeyError:
+        dotname = '.' + name
+        for k, v in external.iteritems():
+            if k.endswith('.' + name) or v.__name__ == name:
+                return v
+        raise KeyError(name)
+    
 def dispatch(args):
     for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
         num = getattr(signal, name, None)
@@ -3349,7 +3402,6 @@ def dispatch(args):
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
 
-    external = []
     for x in u.extensions():
         try:
             if x[1]:
@@ -3366,10 +3418,12 @@ def dispatch(args):
                         mod = getattr(mod, comp)
                     return mod
                 try:
-                    mod = importh("hgext." + x[0])
+                    name = 'hgext.' + x[0]
+                    mod = importh(name)
                 except ImportError:
-                    mod = importh(x[0])
-            external.append(mod)
+                    name = x[0]
+                    mod = importh(name)
+            external[name] = mod
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
@@ -3377,7 +3431,7 @@ def dispatch(args):
             if u.print_exc():
                 return 1
 
-    for x in external:
+    for x in external.itervalues():
         uisetup = getattr(x, 'uisetup', None)
         if uisetup:
             uisetup(u)
@@ -3433,7 +3487,7 @@ def dispatch(args):
                     if not repo:
                         repo = hg.repository(u, path=path)
                     u = repo.ui
-                    for x in external:
+                    for x in external.itervalues():
                         if hasattr(x, 'reposetup'):
                             x.reposetup(u, repo)
                 except hg.RepoError:
