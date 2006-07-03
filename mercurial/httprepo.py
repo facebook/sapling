@@ -20,16 +20,22 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def find_user_password(self, realm, authuri):
         authinfo = urllib2.HTTPPasswordMgrWithDefaultRealm.find_user_password(
             self, realm, authuri)
-        if authinfo != (None, None):
-            return authinfo
+        user, passwd = authinfo
+        if user and passwd:
+            return (user, passwd)
 
         if not self.ui.interactive:
             raise util.Abort(_('http authorization required'))
 
         self.ui.write(_("http authorization required\n"))
         self.ui.status(_("realm: %s\n") % realm)
-        user = self.ui.prompt(_("user:"), default=None)
-        passwd = self.ui.getpass()
+        if user:
+            self.ui.status(_("user: %s\n") % user)
+        else:
+            user = self.ui.prompt(_("user:"), default=None)
+
+        if not passwd:
+            passwd = self.ui.getpass()
 
         self.add_password(realm, authuri, user, passwd)
         return (user, passwd)
@@ -148,8 +154,8 @@ class httprepository(remoterepository):
 
         passmgr = passwordmgr(ui)
         if user:
-            ui.debug(_('will use user %s, password %s for http auth\n') %
-                     (user, '*' * len(passwd)))
+            ui.debug(_('http auth: user %s, password %s\n') %
+                     (user, passwd and '*' * len(passwd) or 'not set'))
             passmgr.add_password(None, host, user, passwd or '')
 
         opener = urllib2.build_opener(
