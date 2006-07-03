@@ -91,6 +91,22 @@ class httphandler(keepalive.HTTPHandler):
     def http_open(self, req):
         return self.do_open(httpconnection, req)
 
+class httpsconnection(httplib.HTTPSConnection):
+    # must be able to send big bundle as stream.
+
+    def send(self, data):
+        if isinstance(data, str):
+            httplib.HTTPSConnection.send(self, data)
+        else:
+            # if auth required, some data sent twice, so rewind here
+            data.seek(0)
+            for chunk in util.filechunkiter(data):
+                httplib.HTTPSConnection.send(self, chunk)
+
+class httpshandler(urllib2.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(httpsconnection, req)
+
 class httprepository(remoterepository):
     def __init__(self, ui, path):
         self.caps = None
@@ -160,6 +176,7 @@ class httprepository(remoterepository):
 
         opener = urllib2.build_opener(
             handler,
+            httpshandler(),
             urllib2.HTTPBasicAuthHandler(passmgr),
             urllib2.HTTPDigestAuthHandler(passmgr))
 
