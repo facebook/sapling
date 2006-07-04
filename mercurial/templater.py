@@ -221,6 +221,13 @@ def fill(text, width):
         fp.write(rest)
     return fp.getvalue()
 
+def firstline(text):
+    '''return the first line of text'''
+    try:
+        return text.splitlines(1)[0].rstrip('\r\n')
+    except IndexError:
+        return ''
+
 def isodate(date):
     '''turn a (timestamp, tzoff) tuple into an iso 8631 date and time.'''
     return util.datestr(date, format='%Y-%m-%d %H:%M')
@@ -284,7 +291,7 @@ common_filters = {
     "escape": lambda x: cgi.escape(x, True),
     "fill68": lambda x: fill(x, width=68),
     "fill76": lambda x: fill(x, width=76),
-    "firstline": lambda x: x.splitlines(1)[0].rstrip('\r\n'),
+    "firstline": firstline,
     "tabindent": lambda x: indent(x, '\t'),
     "hgdate": hgdate,
     "isodate": isodate,
