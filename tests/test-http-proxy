@@ -5,10 +5,12 @@ cd a
 echo a > a
 hg ci -Ama -d '1123456789 0'
 hg serve -p 20059 -d --pid-file=hg.pid
+cat hg.pid >> $DAEMON_PIDS
 
 cd ..
-("$TESTDIR/tinyproxy.py" 20060 localhost >/dev/null 2>&1 </dev/null &
+("$TESTDIR/tinyproxy.py" 20060 localhost >proxy.log 2>&1 </dev/null &
 echo $! > proxy.pid)
+cat proxy.pid >> $DAEMON_PIDS
 sleep 2
 
 echo %% url for proxy
@@ -26,5 +28,4 @@ http_proxy=http://user:passwd@localhost:20060 hg clone --config http_proxy.alway
 echo %% bad host:port for proxy
 http_proxy=localhost:20061 hg clone --config http_proxy.always=True http://localhost:20059/ f
 
-kill `cat proxy.pid a/hg.pid`
 exit 0

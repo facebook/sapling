@@ -2649,7 +2649,7 @@ def serve(ui, repo, **opts):
 
     if opts['pid_file']:
         fp = open(opts['pid_file'], 'w')
-        fp.write(str(os.getpid()))
+        fp.write(str(os.getpid()) + '\n')
         fp.close()
 
     if opts['daemon_pipefds']:

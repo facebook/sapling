@@ -7,16 +7,24 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, sys, shutil, re
-import tempfile
 import difflib
+import errno
+import optparse
+import os
 import popen2
-from optparse import OptionParser
+import re
+import shutil
+import signal
+import sys
+import tempfile
+import time
 
 required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
-parser = OptionParser("%prog [options] [tests]")
+parser = optparse.OptionParser("%prog [options] [tests]")
 parser.add_option("-v", "--verbose", action="store_true",
+    help="output verbose messages")
+parser.add_option("-t", "--timeout", type="int",
     help="output verbose messages")
 parser.add_option("-c", "--cover", action="store_true",
     help="print a test coverage report")
@@ -24,6 +32,7 @@ parser.add_option("-s", "--cover_stdlib", action="store_true",
     help="print a test coverage report inc. standard libraries")
 parser.add_option("-C", "--annotate", action="store_true",
     help="output files annotated with coverage")
+parser.set_defaults(timeout=30)
 (options, args) = parser.parse_args()
 verbose = options.verbose
 coverage = options.cover or options.cover_stdlib or options.annotate
@@ -159,6 +168,12 @@ def output_coverage():
         vlog("# Running: "+cmd)
         os.system(cmd)
 
+class Timeout(Exception):
+    pass
+
+def alarmed(signum, frame):
+    raise Timeout
+
 def run(cmd):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return the exist code, and output."""
@@ -172,9 +187,17 @@ def run(cmd):
             ret = 0
     else:
         proc = popen2.Popen4(cmd)
-        proc.tochild.close()
-        output = proc.fromchild.read()
-        ret = proc.wait()
+        try:
+            output = ''
+            proc.tochild.close()
+            output = proc.fromchild.read()
+            ret = proc.wait()
+        except Timeout:
+            vlog('# Process %d timed out - killing it' % proc.pid)
+            os.kill(proc.pid, signal.SIGTERM)
+            ret = proc.wait()
+            if ret == 0:
+                ret = signal.SIGTERM << 8
     return ret, splitnewlines(output)
 
 def run_one(test):
@@ -204,9 +227,15 @@ def run_one(test):
     if os.name == 'nt' and test.endswith(".bat"):
         cmd = 'cmd /c call "%s"' % (os.path.join(TESTDIR, test))
 
+    if options.timeout > 0:
+        signal.alarm(options.timeout)
+
     vlog("# Running", cmd)
     ret, out = run(cmd)
     vlog("# Ret was:", ret)
+
+    if options.timeout > 0:
+        signal.alarm(0)
 
     diffret = 0
     # If reference output file exists, check test output against it
@@ -231,6 +260,30 @@ def run_one(test):
             f.write(line)
         f.close()
 
+    # Kill off any leftover daemon processes
+    try:
+        fp = file(DAEMON_PIDS)
+        for line in fp:
+            try:
+                pid = int(line)
+            except ValueError:
+                continue
+            try:
+                os.kill(pid, 0)
+                vlog('# Killing daemon process %d' % pid)
+                os.kill(pid, signal.SIGTERM)
+                time.sleep(0.25)
+                os.kill(pid, 0)
+                vlog('# Daemon process %d is stuck - really killing it' % pid)
+                os.kill(pid, signal.SIGKILL)
+            except OSError, err:
+                if err.errno != errno.ESRCH:
+                    raise
+        fp.close()
+        os.unlink(DAEMON_PIDS)
+    except IOError:
+        pass
+
     os.chdir(TESTDIR)
     shutil.rmtree(tmpd, True)
     return ret == 0
@@ -252,6 +305,8 @@ os.environ["HGRCPATH"] = ""
 
 TESTDIR = os.environ["TESTDIR"] = os.getcwd()
 HGTMP   = os.environ["HGTMP"]   = tempfile.mkdtemp("", "hgtests.")
+DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
+
 vlog("# Using TESTDIR", TESTDIR)
 vlog("# Using HGTMP", HGTMP)
 
@@ -263,6 +318,15 @@ COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 try:
     try:
         install_hg()
+
+        if options.timeout > 0:
+            try:
+                signal.signal(signal.SIGALRM, alarmed)
+                vlog('# Running tests with %d-second timeout' %
+                     options.timeout)
+            except AttributeError:
+                print 'WARNING: cannot run tests with timeouts'
+                options.timeout = 0
 
         tests = 0
         failed = 0

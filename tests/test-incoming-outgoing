@@ -9,6 +9,7 @@ for i in 0 1 2 3 4 5 6 7 8; do
 done
 hg verify
 hg serve -p 20059 -d --pid-file=hg.pid
+cat hg.pid >> $DAEMON_PIDS
 cd ..
 
 hg init new
@@ -45,5 +46,3 @@ cd ..
 hg -R test-dev outgoing test
 http_proxy= hg -R test-dev outgoing http://localhost:20059/
 http_proxy= hg -R test-dev outgoing -r 11 http://localhost:20059/
-
-kill `cat test/hg.pid`
