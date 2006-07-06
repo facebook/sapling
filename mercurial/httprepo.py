@@ -87,25 +87,31 @@ class httpconnection(keepalive.HTTPConnection):
             for chunk in util.filechunkiter(data):
                 keepalive.HTTPConnection.send(self, chunk)
 
-class httphandler(keepalive.HTTPHandler):
+class basehttphandler(keepalive.HTTPHandler):
     def http_open(self, req):
         return self.do_open(httpconnection, req)
 
-class httpsconnection(httplib.HTTPSConnection):
-    # must be able to send big bundle as stream.
+has_https = hasattr(urllib2, 'HTTPSHandler')
+if has_https:
+    class httpsconnection(httplib.HTTPSConnection):
+        response_class = keepalive.HTTPResponse
+        # must be able to send big bundle as stream.
 
-    def send(self, data):
-        if isinstance(data, str):
-            httplib.HTTPSConnection.send(self, data)
-        else:
-            # if auth required, some data sent twice, so rewind here
-            data.seek(0)
-            for chunk in util.filechunkiter(data):
-                httplib.HTTPSConnection.send(self, chunk)
+        def send(self, data):
+            if isinstance(data, str):
+                httplib.HTTPSConnection.send(self, data)
+            else:
+                # if auth required, some data sent twice, so rewind here
+                data.seek(0)
+                for chunk in util.filechunkiter(data):
+                    httplib.HTTPSConnection.send(self, chunk)
 
-class httpshandler(urllib2.HTTPSHandler):
-    def https_open(self, req):
-        return self.do_open(httpsconnection, req)
+    class httphandler(basehttphandler, urllib2.HTTPSHandler):
+        def https_open(self, req):
+            return self.do_open(httpsconnection, req)
+else:
+    class httphandler(basehttphandler):
+        pass
 
 class httprepository(remoterepository):
     def __init__(self, ui, path):
@@ -176,7 +182,6 @@ class httprepository(remoterepository):
 
         opener = urllib2.build_opener(
             handler,
-            httpshandler(),
             urllib2.HTTPBasicAuthHandler(passmgr),
             urllib2.HTTPDigestAuthHandler(passmgr))
 
@@ -322,4 +327,8 @@ class httprepository(remoterepository):
             os.unlink(tempname)
 
 class httpsrepository(httprepository):
-    pass
+    def __init__(self, ui, path):
+        if not has_https:
+            raise util.Abort(_('Python support for SSL and HTTPS '
+                               'is not installed'))
+        httprepository.__init__(self, ui, path)
