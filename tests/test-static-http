@@ -20,6 +20,7 @@ run()
 EOF
 
 python dumb.py 2>/dev/null &
+echo $! >> $DAEMON_PIDS
 
 mkdir remote
 cd remote

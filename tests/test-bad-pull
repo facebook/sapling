@@ -18,6 +18,7 @@ run()
 EOF
 
 python dumb.py 2>/dev/null &
+echo $! >> $DAEMON_PIDS
 
 http_proxy= hg clone http://localhost:20059/foo copy2 2>&1 | \
     sed -e 's/404.*/404/' -e 's/Date:.*/Date:/'
