@@ -3371,12 +3371,12 @@ external = {}
 def findext(name):
     '''return module with given extension name'''
     try:
-        return external[name]
+        return sys.modules[external[name]]
     except KeyError:
         dotname = '.' + name
         for k, v in external.iteritems():
-            if k.endswith('.' + name) or v.__name__ == name:
-                return v
+            if k.endswith('.' + name) or v == name:
+                return sys.modules[v]
         raise KeyError(name)
     
 def dispatch(args):
@@ -3390,14 +3390,14 @@ def dispatch(args):
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
 
-    for x in u.extensions():
+    for ext_name, load_from_name in u.extensions():
         try:
-            if x[1]:
+            if load_from_name:
                 # the module will be loaded in sys.modules
                 # choose an unique name so that it doesn't
                 # conflicts with other modules
-                module_name = "hgext_%s" % x[0].replace('.', '_')
-                mod = imp.load_source(module_name, x[1])
+                module_name = "hgext_%s" % ext_name.replace('.', '_')
+                mod = imp.load_source(module_name, load_from_name)
             else:
                 def importh(name):
                     mod = __import__(name)
@@ -3406,12 +3406,10 @@ def dispatch(args):
                         mod = getattr(mod, comp)
                     return mod
                 try:
-                    name = 'hgext.' + x[0]
-                    mod = importh(name)
+                    mod = importh("hgext.%s" % ext_name)
                 except ImportError:
-                    name = x[0]
-                    mod = importh(name)
-            external[name] = mod
+                    mod = importh(ext_name)
+            external[ext_name] = mod.__name__
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
@@ -3419,14 +3417,15 @@ def dispatch(args):
             if u.print_exc():
                 return 1
 
-    for x in external.itervalues():
-        uisetup = getattr(x, 'uisetup', None)
+    for name in external.itervalues():
+        mod = sys.modules[name]
+        uisetup = getattr(mod, 'uisetup', None)
         if uisetup:
             uisetup(u)
-        cmdtable = getattr(x, 'cmdtable', {})
+        cmdtable = getattr(mod, 'cmdtable', {})
         for t in cmdtable:
             if t in table:
-                u.warn(_("module %s overrides %s\n") % (x.__name__, t))
+                u.warn(_("module %s overrides %s\n") % (name, t))
         table.update(cmdtable)
 
     try:
@@ -3475,9 +3474,10 @@ def dispatch(args):
                     if not repo:
                         repo = hg.repository(u, path=path)
                     u = repo.ui
-                    for x in external.itervalues():
-                        if hasattr(x, 'reposetup'):
-                            x.reposetup(u, repo)
+                    for name in external.itervalues():
+                        mod = sys.modules[name]
+                        if hasattr(mod, 'reposetup'):
+                            mod.reposetup(u, repo)
                 except hg.RepoError:
                     if cmd not in optionalrepo.split():
                         raise
