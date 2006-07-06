@@ -1,6 +1,6 @@
 to build a new macosx binary package:
 
-install macpython from http://undefined.org/python/
+install macpython from http://www.python.org/download/mac
 
 install py2app from http://pythonmac.org/packages/
 
