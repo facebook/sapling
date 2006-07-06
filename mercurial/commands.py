@@ -765,7 +765,7 @@ def annotate(ui, repo, *pats, **opts):
 
     ctx = repo.changectx(opts['rev'] or repo.dirstate.parents()[0])
 
-    for src, abs, rel, exact in walk(repo, pats, opts, node=node):
+    for src, abs, rel, exact in walk(repo, pats, opts, node=ctx.node()):
         fctx = ctx.filectx(abs)
         if not opts['text'] and util.binary(fctx.data()):
             ui.write(_("%s: binary file\n") % ((pats and rel) or abs))
