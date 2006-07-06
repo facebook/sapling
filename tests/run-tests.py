@@ -79,6 +79,23 @@ def cleanup_exit():
         print "# Cleaning up HGTMP", HGTMP
     shutil.rmtree(HGTMP, True)
 
+def use_correct_python():
+    # some tests run python interpreter. they must use same
+    # interpreter we use or bad things will happen.
+    exedir, exename = os.path.split(sys.executable)
+    if exename == 'python':
+        path = find_program('python')
+        if os.path.dirname(path) == exedir:
+            return
+    vlog('# Making python executable in test path use correct Python')
+    my_python = os.path.join(BINDIR, 'python')
+    try:
+        os.symlink(sys.executable, my_python)
+    except AttributeError:
+        # windows fallback
+        shutil.copyfile(sys.executable, my_python)
+        shutil.copymode(sys.executable, my_python)
+            
 def install_hg():
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
@@ -101,6 +118,8 @@ def install_hg():
 
     os.environ["PATH"] = "%s%s%s" % (BINDIR, os.pathsep, os.environ["PATH"])
     os.environ["PYTHONPATH"] = PYTHONDIR
+
+    use_correct_python()
 
     if coverage:
         vlog("# Installing coverage wrapper")
