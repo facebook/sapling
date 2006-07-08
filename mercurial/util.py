@@ -620,7 +620,7 @@ else:
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
         pf = output_line[14:]
-        if pf.startswith("'") and pf.endswith("'") and pf.find(" ") >= 0:
+        if pf.startswith("'") and pf.endswith("'") and " " in pf:
             pf = pf[1:-1] # Remove the quotes
         return pf
 

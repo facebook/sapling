@@ -231,7 +231,7 @@ def revrange(ui, repo, revs):
     """Yield revision as strings from a list of revision specifications."""
     seen = {}
     for spec in revs:
-        if spec.find(revrangesep) >= 0:
+        if revrangesep in spec:
             start, end = spec.split(revrangesep, 1)
             start = revfix(repo, start, 0)
             end = revfix(repo, end, repo.changelog.count() - 1)
@@ -2742,7 +2742,7 @@ def tag(ui, repo, name, rev_=None, **opts):
 
     disallowed = (revrangesep, '\r', '\n')
     for c in disallowed:
-        if name.find(c) >= 0:
+        if c in name:
             raise util.Abort(_("%s cannot be used in a tag name") % repr(c))
 
     repo.hook('pretag', throw=True, node=r, tag=name,

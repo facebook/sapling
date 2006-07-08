@@ -462,7 +462,7 @@ class hgweb(object):
                 continue
             remain = f[l:]
             if "/" in remain:
-                short = remain[:remain.find("/") + 1] # bleah
+                short = remain[:remain.index("/") + 1] # bleah
                 files[short] = (f, None)
             else:
                 short = os.path.basename(remain)

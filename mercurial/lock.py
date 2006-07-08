@@ -85,14 +85,14 @@ class lock(object):
         # see if locker is alive.  if locker is on this machine but
         # not alive, we can safely break lock.
         locker = util.readlock(self.f)
-        c = locker.find(':')
-        if c == -1:
+        try:
+            host, pid = locker.split(":", 1)
+        except ValueError:
             return locker
-        host = locker[:c]
         if host != self.host:
             return locker
         try:
-            pid = int(locker[c+1:])
+            pid = int(pid)
         except:
             return locker
         if util.testpid(pid):
