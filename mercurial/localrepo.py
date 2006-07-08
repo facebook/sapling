@@ -74,8 +74,8 @@ class localrepository(object):
         self.transhandle = None
 
         if create:
-	    if not os.path.exists(path):
-		os.mkdir(path)
+            if not os.path.exists(path):
+                os.mkdir(path)
             os.mkdir(self.path)
             os.mkdir(self.join("data"))
 
