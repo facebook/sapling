@@ -74,8 +74,8 @@ class localrepository(object):
         self.transhandle = None
 
         if create:
-	    if not os.path.exists(path):
-		os.mkdir(path)
+            if not os.path.exists(path):
+                os.mkdir(path)
             os.mkdir(self.path)
             os.mkdir(self.join("data"))
 
@@ -101,9 +101,13 @@ class localrepository(object):
             try:
                 obj = __import__(modname)
             except ImportError:
-                raise util.Abort(_('%s hook is invalid '
-                                   '(import of "%s" failed)') %
-                                 (hname, modname))
+                try:
+                    # extensions are loaded with hgext_ prefix
+                    obj = __import__("hgext_%s" % modname)
+                except ImportError:
+                    raise util.Abort(_('%s hook is invalid '
+                                       '(import of "%s" failed)') %
+                                     (hname, modname))
             try:
                 for p in funcname.split('.')[1:]:
                     obj = getattr(obj, p)

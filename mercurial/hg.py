@@ -61,8 +61,7 @@ def repository(ui, path=None, create=0):
     if not path: path = ''
     scheme = path
     if scheme:
-        c = scheme.find(':')
-        scheme = c >= 0 and scheme[:c]
+        scheme = scheme.split(":", 1)[0]
     ctor = schemes.get(scheme) or schemes['file']
     if create:
         try:

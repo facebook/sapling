@@ -20,7 +20,8 @@ def splitnewlines(text):
     return lines
 
 def unidiff(a, ad, b, bd, fn, r=None, text=False,
-            showfunc=False, ignorews=False):
+            showfunc=False, ignorews=False, ignorewsamount=False,
+            ignoreblanklines=False):
 
     if not a and not b: return ""
     epoch = util.datestr((0, 0))
@@ -49,7 +50,9 @@ def unidiff(a, ad, b, bd, fn, r=None, text=False,
         al = splitnewlines(a)
         bl = splitnewlines(b)
         l = list(bunidiff(a, b, al, bl, "a/" + fn, "b/" + fn,
-                          showfunc=showfunc, ignorews=ignorews))
+                          showfunc=showfunc, ignorews=ignorews,
+                          ignorewsamount=ignorewsamount,
+                          ignoreblanklines=ignoreblanklines))
         if not l: return ""
         # difflib uses a space, rather than a tab
         l[0] = "%s\t%s\n" % (l[0][:-2], ad)
@@ -72,8 +75,10 @@ def unidiff(a, ad, b, bd, fn, r=None, text=False,
 # context is the number of context lines
 # showfunc enables diff -p output
 # ignorews ignores all whitespace changes in the diff
+# ignorewsamount ignores changes in the amount of whitespace
+# ignoreblanklines ignores changes whose lines are all blank
 def bunidiff(t1, t2, l1, l2, header1, header2, context=3, showfunc=False,
-             ignorews=False):
+             ignorews=False, ignorewsamount=False, ignoreblanklines=False):
     def contextend(l, len):
         ret = l + context
         if ret > len:
@@ -116,6 +121,11 @@ def bunidiff(t1, t2, l1, l2, header1, header2, context=3, showfunc=False,
 
     if showfunc:
         funcre = re.compile('\w')
+    if ignorewsamount:
+        wsamountre = re.compile('[ \t]+')
+        wsappendedre = re.compile(' \n')
+    if ignoreblanklines:
+        wsblanklinesre = re.compile('\n')
     if ignorews:
         wsre = re.compile('[ \t]')
 
@@ -148,6 +158,20 @@ def bunidiff(t1, t2, l1, l2, header1, header2, context=3, showfunc=False,
         # and deals with the special first match case described above
         if not old and not new:
             continue
+
+        if ignoreblanklines:
+            wsold = wsblanklinesre.sub('', "".join(old))
+            wsnew = wsblanklinesre.sub('', "".join(new))
+            if wsold == wsnew:
+                continue
+
+        if ignorewsamount:
+            wsold = wsamountre.sub(' ', "".join(old))
+            wsold = wsappendedre.sub('\n', wsold)
+            wsnew = wsamountre.sub(' ', "".join(new))
+            wsnew = wsappendedre.sub('\n', wsnew)
+            if wsold == wsnew:
+                continue
 
         if ignorews:
             wsold = wsre.sub('', "".join(old))

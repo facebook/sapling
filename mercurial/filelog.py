@@ -34,14 +34,14 @@ class filelog(revlog):
         t = self.revision(node)
         if not t.startswith('\1\n'):
             return t
-        s = t.find('\1\n', 2)
+        s = t.index('\1\n', 2)
         return t[s+2:]
 
     def readmeta(self, node):
         t = self.revision(node)
         if not t.startswith('\1\n'):
             return {}
-        s = t.find('\1\n', 2)
+        s = t.index('\1\n', 2)
         mt = t[2:s]
         m = {}
         for l in mt.splitlines():

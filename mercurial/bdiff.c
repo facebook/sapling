@@ -65,7 +65,7 @@ static inline uint32_t rol32(uint32_t word, unsigned int shift)
 
 int splitlines(const char *a, int len, struct line **lr)
 {
-	int h, i;
+	int g, h, i;
 	const char *p, *b = a;
 	struct line *l;
 
@@ -82,7 +82,16 @@ int splitlines(const char *a, int len, struct line **lr)
 	/* build the line array and calculate hashes */
 	h = 0;
 	for (p = a; p < a + len; p++) {
-		h = *p + rol32(h, 7); /* a simple hash from GNU diff */
+		/*
+		 * a simple hash from GNU diff, with better collision
+		 * resistance from hashpjw. this slows down common
+		 * case by 10%, but speeds up worst case by 100x.
+		 */
+		h = *p + rol32(h, 7);
+		if ((g = h & 0xf0000000)) {
+			h ^= g >> 24;
+			h ^= g;
+		}
 		if (*p == '\n' || p == a + len - 1) {
 			l->len = p - b + 1;
 			l->h = h * l->len;

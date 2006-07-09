@@ -76,7 +76,7 @@ class ui(object):
         if root is None:
             root = os.path.expanduser('~')
         for name, path in self.configitems("paths"):
-            if path and path.find("://") == -1 and not os.path.isabs(path):
+            if path and "://" not in path and not os.path.isabs(path):
                 self.cdata.set("paths", name, os.path.join(root, path))
 
     def setconfig(self, section, name, val):
@@ -172,7 +172,8 @@ class ui(object):
     def diffopts(self):
         if self.diffcache:
             return self.diffcache
-        result = {'showfunc': True, 'ignorews': False}
+        result = {'showfunc': True, 'ignorews': False,
+                  'ignorewsamount': False, 'ignoreblanklines': False}
         for key, value in self.configitems("diff"):
             if value:
                 result[key.lower()] = (value.lower() == 'true')
@@ -208,7 +209,7 @@ class ui(object):
 
     def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
-        if loc.find("://") != -1 or os.path.exists(loc):
+        if "://" in loc or os.path.exists(loc):
             return loc
 
         path = self.config("paths", loc)
