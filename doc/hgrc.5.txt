@@ -309,6 +309,9 @@ smtp::
     Optional.  Password to authenticate to SMTP server with.
     If username is specified, password must also be specified.
     Default: none.
+  local_hostname;;
+    Optional.  It's the hostname that the sender can use to identify itself
+    to the MTA.
 
 paths::
   Assigns symbolic names to repositories.  The left side is the

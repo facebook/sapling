@@ -298,7 +298,8 @@ class ui(object):
         def smtp():
             '''send mail using smtp.'''
 
-            s = smtplib.SMTP()
+            local_hostname = self.config('smtp', 'local_hostname')
+            s = smtplib.SMTP(local_hostname=local_hostname)
             mailhost = self.config('smtp', 'host')
             if not mailhost:
                 raise util.Abort(_('no [smtp]host in hgrc - cannot send mail'))
