@@ -74,7 +74,8 @@ def darcs_changes(darcsRepo):
 		else: comm = comm[0].childNodes[0].data
 		author = patch_node.getAttribute("author")
 		date = patch_node.getAttribute("date")
-		yield author, date, name, comm
+        hash = patch_node.getAttribute("hash")
+        yield hash, author, date, name, comm
 
 def darcs_pull(hg_repo, darcs_repo, change):
 	cmd("darcs pull '%s' --all --patches='%s'" % (darcs_repo, change), hg_repo)
@@ -120,9 +121,9 @@ if __name__ == "__main__":
 	cmd("hg init '%s'" % (hg_repo))
 	cmd("darcs initialize", hg_repo)
 	# Get the changes from the Darcs repository
-	for author, date, summary, description in darcs_changes(darcs_repo):
+	for hash, author, date, summary, description in darcs_changes(darcs_repo):
 		text = summary + "\n" + description
-		darcs_pull(hg_repo, darcs_repo, summary)
+		darcs_pull(hg_repo, darcs_repo, hash)
 		epoch = int(mktime(strptime(date, '%Y%m%d%H%M%S')))
 		hg_commit(hg_repo, text, author, epoch)
 
