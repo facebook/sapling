@@ -4,12 +4,11 @@
 # -----------------------------------------------------------------------------
 # Project   : Basic Darcs to Mercurial conversion script
 # -----------------------------------------------------------------------------
-# Author    : Sebastien Pierre <sebastien@xprima.com>
+# Authors   : Sebastien Pierre                           <sebastien@xprima.com>
+#             TK Soh                                      <teekaysoh@gmail.com>
+# -----------------------------------------------------------------------------
 # Creation  : 24-May-2006
-# Last mod  : 26-May-2006
-# History   :
-#             26-May-2006 - Updated
-#             24-May-2006 - First implementation
+# Last mod  : 01-Jun-2006
 # -----------------------------------------------------------------------------
 
 import os, sys
@@ -35,7 +34,7 @@ USAGE = """\
 #
 # ------------------------------------------------------------------------------
 
-def cmd(text, path=None):
+def cmd(text, path=None, silent=False):
 	"""Executes a command, in the given directory (if any), and returns the
 	command result as a string."""
 	cwd = None
@@ -43,7 +42,7 @@ def cmd(text, path=None):
 		path = os.path.abspath(path)
 		cwd  = os.getcwd()
 		os.chdir(path)
-	print text
+	if not silent: print "> ", text
 	res = os.popen(text).read()
 	if path:
 		os.chdir(cwd)
@@ -52,6 +51,12 @@ def cmd(text, path=None):
 def writefile(path, data):
 	"""Writes the given data into the given file."""
 	f = file(path, "w") ; f.write(data)  ; f.close()
+
+def error( *args ):
+	sys.stderr.write("ERROR:")
+	for a in args: sys.stderr.write(str(a))
+	sys.stderr.write("\n")
+	sys.exit(-1)
 
 # ------------------------------------------------------------------------------
 #
@@ -64,7 +69,6 @@ def darcs_changes(darcsRepo):
 	chronological list of changes as (change name, change summary)."""
 	changes    = cmd("darcs changes --reverse --xml-output", darcsRepo)
 	doc        = xml_dom.parseString(changes)
-	res        = []
 	for patch_node in doc.childNodes[0].childNodes:
 		name = filter(lambda n:n.nodeName == "name", patch_node.childNodes)
 		comm = filter(lambda n:n.nodeName == "comment", patch_node.childNodes)
@@ -111,7 +115,7 @@ if __name__ == "__main__":
 		sys.exit(-1)
 	# Initializes the target repo
 	if not os.path.isdir(darcs_repo + "/_darcs"):
-		print "No darcs directory found at: " + darc_repo
+		print "No darcs directory found at: " + darcs_repo
 		sys.exit(-1)
 	if not os.path.isdir(hg_repo):
 		os.mkdir(hg_repo)
@@ -128,4 +132,3 @@ if __name__ == "__main__":
 		hg_commit(hg_repo, text, author, epoch)
 
 # EOF
-
