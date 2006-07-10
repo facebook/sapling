@@ -1,77 +1,44 @@
 " vim600: set foldmethod=marker:
 "
-" Vim plugin to assist in working with CVS-controlled files.
+" Vim plugin to assist in working with HG-controlled files.
 "
 " Last Change:   2006/02/22
 " Version:       1.76
-" Maintainer:    Bob Hiestand <bob.hiestand@gmail.com>
+" Maintainer:    Mathieu Clabaut <mathieu.clabaut@gmail.com>
 " License:       This file is placed in the public domain.
 " Credits: {{{1
-"                Mathieu Clabaut for many suggestions and improvements.
-"
-"                Suresh Govindachar and Jeeva Chelladhurai for finding waaaay
-"                too many bugs.
-"
-"                Suresh Govindachar (again!) for finding the
-"                fully-folded-last-line-delete bug.
-"
-"                Albrecht Gass for the Delete-on-Hide behavior suggestion.
-"
-"                Joe MacDonald for finding the CVS log message header bug and
-"                pointing out that buffer refreshes are needed after CVS
-"                \%(un\)\?edit.
-"
-"                Srinath Avadhanula for the suggestion and original patch for
-"                the CVSCommitOnWrite option and mapping hot key.
-"
-"                John Sivak for helping to debug Windows issues and suggesting
-"                the CVSEditors and CVSWatchers commands.
-"
-"                Igor Levko for the patch to recognize numerical sticky tags.
-"
-"                Domink Strasser for the patch to correct the status line for
-"                CVSAdd'd files.
-"
-"                Weerapong Sirikanya for finding a bug with CVSCommit and
-"                autochdir.
-"
-"                David Gotz for finding a bug with CVSVimDiff buffer splitting
-"                and original buffer restoration.
-"
-"                CJ van den Berg for the patch to not change working directory
-"                when editing a non-CVS file.
-"
-"                Luca Gerli for noticing bad behavior for keywords in files
-"                after commit if split windows are used.
+"                Bob Hiestand <bob.hiestand@gmail.com> for the fabulous
+"                cvscommand.vim from which this script was directly created by
+"                means of sed commands and minor tweaks.
 
 " Section: Documentation {{{1
 "
-" Provides functions to invoke various CVS commands on the current file
+" Provides functions to invoke various HG commands on the current file
 " (either the current buffer, or, in the case of an directory buffer, the file
 " on the current line).  The output of the commands is captured in a new
-" scratch window.  For convenience, if the functions are invoked on a CVS
-" output window, the original file is used for the cvs operation instead after
-" the window is split.  This is primarily useful when running CVSCommit and
-" you need to see the changes made, so that CVSDiff is usable and shows up in
+" scratch window.  For convenience, if the functions are invoked on a HG
+" output window, the original file is used for the hg operation instead after
+" the window is split.  This is primarily useful when running HGCommit and
+" you need to see the changes made, so that HGDiff is usable and shows up in
 " another window.
 "
 " Command documentation {{{2
 "
-" CVSAdd           Performs "cvs add" on the current file.
+" HGAdd           Performs "hg add" on the current file.
 "
-" CVSAnnotate      Performs "cvs annotate" on the current file.  If an
+" HGAnnotate      Performs "hg annotate" on the current file.  If an
 "                  argument is given, the argument is used as a revision
 "                  number to display.  If not given an argument, it uses the
 "                  most recent version of the file on the current branch.
-"                  Additionally, if the current buffer is a CVSAnnotate buffer
+"                  Additionally, if the current buffer is a HGAnnotate buffer
 "                  already, the version number on the current line is used.
 "
-"                  If the 'CVSCommandAnnotateParent' variable is set to a
+"                  If the 'HGCommandAnnotateParent' variable is set to a
 "                  non-zero value, the version previous to the one on the
 "                  current line is used instead.  This allows one to navigate
 "                  back to examine the previous version of a line.
 "
-" CVSCommit[!]     If called with arguments, this performs "cvs commit" using
+" HGCommit[!]     If called with arguments, this performs "hg commit" using
 "                  the arguments as the log message.
 "
 "                  If '!' is used, an empty log message is committed.
@@ -83,40 +50,34 @@
 "                  message.  The commit can be abandoned if the log message
 "                  buffer is deleted or wiped before being written.
 "
-" CVSDiff          With no arguments, this performs "cvs diff" on the current
-"                  file.  With one argument, "cvs diff" is performed on the
+" HGDiff          With no arguments, this performs "hg diff" on the current
+"                  file.  With one argument, "hg diff" is performed on the
 "                  current file against the specified revision.  With two
-"                  arguments, cvs diff is performed between the specified
+"                  arguments, hg diff is performed between the specified
 "                  revisions of the current file.  This command uses the
-"                  'CVSCommandDiffOpt' variable to specify diff options.  If
+"                  'HGCommandDiffOpt' variable to specify diff options.  If
 "                  that variable does not exist, then 'wbBc' is assumed.  If
 "                  you wish to have no options, then set it to the empty
 "                  string.
 "
-" CVSEdit          Performs "cvs edit" on the current file.
+" HGGotoOriginal  Returns the current window to the source buffer if the
+"                  current buffer is a HG output buffer.
 "
-" CVSEditors       Performs "cvs editors" on the current file.
+" HGLog           Performs "hg log" on the current file.
 "
-" CVSGotoOriginal  Returns the current window to the source buffer if the
-"                  current buffer is a CVS output buffer.
-"
-" CVSLog           Performs "cvs log" on the current file.
-"
-" CVSRevert        Replaces the modified version of the current file with the
+" HGRevert        Replaces the modified version of the current file with the
 "                  most recent version from the repository.
 "
-" CVSReview        Retrieves a particular version of the current file.  If no
+" HGReview        Retrieves a particular version of the current file.  If no
 "                  argument is given, the most recent version of the file on
 "                  the current branch is retrieved.  The specified revision is
 "                  retrieved into a new buffer.
 "
-" CVSStatus        Performs "cvs status" on the current file.
+" HGStatus        Performs "hg status" on the current file.
 "
-" CVSUnedit        Performs "cvs unedit" on the current file.
+" HGUpdate        Performs "hg update" on the current file.
 "
-" CVSUpdate        Performs "cvs update" on the current file.
-"
-" CVSVimDiff       With no arguments, this prompts the user for a revision and
+" HGVimDiff       With no arguments, this prompts the user for a revision and
 "                  then uses vimdiff to display the differences between the
 "                  current file and the specified revision.  If no revision is
 "                  specified, the most recent version of the file on the
@@ -139,171 +100,150 @@
 "                  command on a different file will close the previous vimdiff
 "                  buffers.
 "
-" CVSWatch         Takes an argument which must be one of [on|off|add|remove].
-"                  Performs "cvs watch" with the given argument on the current
-"                  file.
-"
-" CVSWatchers      Performs "cvs watchers" on the current file.
-"
-" CVSWatchAdd      Alias for "CVSWatch add"
-"
-" CVSWatchOn       Alias for "CVSWatch on"
-"
-" CVSWatchOff      Alias for "CVSWatch off"
-"
-" CVSWatchRemove   Alias for "CVSWatch remove"
 "
 " Mapping documentation: {{{2
 "
 " By default, a mapping is defined for each command.  User-provided mappings
 " can be used instead by mapping to <Plug>CommandName, for instance:
 "
-" nnoremap ,ca <Plug>CVSAdd
+" nnoremap ,ca <Plug>HGAdd
 "
 " The default mappings are as follow:
 "
-"   <Leader>ca CVSAdd
-"   <Leader>cn CVSAnnotate
-"   <Leader>cc CVSCommit
-"   <Leader>cd CVSDiff
-"   <Leader>ce CVSEdit
-"   <Leader>ci CVSEditors
-"   <Leader>cg CVSGotoOriginal
-"   <Leader>cG CVSGotoOriginal!
-"   <Leader>cl CVSLog
-"   <Leader>cr CVSReview
-"   <Leader>cs CVSStatus
-"   <Leader>ct CVSUnedit
-"   <Leader>cu CVSUpdate
-"   <Leader>cv CVSVimDiff
-"   <Leader>cwv CVSWatchers
-"   <Leader>cwa CVSWatchAdd
-"   <Leader>cwn CVSWatchOn
-"   <Leader>cwa CVSWatchOff
-"   <Leader>cwr CVSWatchRemove
+"   <Leader>hga HGAdd
+"   <Leader>hgn HGAnnotate
+"   <Leader>hgc HGCommit
+"   <Leader>hgd HGDiff
+"   <Leader>hgg HGGotoOriginal
+"   <Leader>hgG HGGotoOriginal!
+"   <Leader>hgl HGLog
+"   <Leader>hgr HGReview
+"   <Leader>hgs HGStatus
+"   <Leader>hgu HGUpdate
+"   <Leader>hgv HGVimDiff
 "
 " Options documentation: {{{2
 "
 " Several variables are checked by the script to determine behavior as follow:
 "
-" CVSCommandAnnotateParent
+" HGCommandAnnotateParent
 "   This variable, if set to a non-zero value, causes the zero-argument form
-"   of CVSAnnotate when invoked on a CVSAnnotate buffer to go to the version
+"   of HGAnnotate when invoked on a HGAnnotate buffer to go to the version
 "   previous to that displayed on the current line.  If not set, it defaults
 "   to 0.
 "
-" CVSCommandCommitOnWrite
-"   This variable, if set to a non-zero value, causes the pending cvs commit
+" HGCommandCommitOnWrite
+"   This variable, if set to a non-zero value, causes the pending hg commit
 "   to take place immediately as soon as the log message buffer is written.
-"   If set to zero, only the CVSCommit mapping will cause the pending commit
+"   If set to zero, only the HGCommit mapping will cause the pending commit
 "   to occur.  If not set, it defaults to 1.
 "
-" CVSCommandDeleteOnHide
-"   This variable, if set to a non-zero value, causes the temporary CVS result
+" HGCommandDeleteOnHide
+"   This variable, if set to a non-zero value, causes the temporary HG result
 "   buffers to automatically delete themselves when hidden.
 "
-" CVSCommandDiffOpt
+" HGCommandDiffOpt
 "   This variable, if set, determines the options passed to the diff command
-"   of CVS.  If not set, it defaults to 'wbBc'.
+"   of HG.  If not set, it defaults to 'wbBc'.
 "
-" CVSCommandDiffSplit
-"   This variable overrides the CVSCommandSplit variable, but only for buffers
-"   created with CVSVimDiff.
+" HGCommandDiffSplit
+"   This variable overrides the HGCommandSplit variable, but only for buffers
+"   created with HGVimDiff.
 "
-" CVSCommandEdit
+" HGCommandEdit
 "   This variable controls whether the original buffer is replaced ('edit') or
 "   split ('split').  If not set, it defaults to 'edit'.
 "
-" CVSCommandEnableBufferSetup
-"   This variable, if set to a non-zero value, activates CVS buffer management
-"   mode.  This mode means that two buffer variables, 'CVSRevision' and
-"   'CVSBranch', are set if the file is CVS-controlled.  This is useful for
+" HGCommandEnableBufferSetup
+"   This variable, if set to a non-zero value, activates HG buffer management
+"   mode.  This mode means that two buffer variables, 'HGRevision' and
+"   'HGBranch', are set if the file is HG-controlled.  This is useful for
 "   displaying version information in the status bar.
 "
-" CVSCommandInteractive
+" HGCommandInteractive
 "   This variable, if set to a non-zero value, causes appropriate functions (for
-"   the moment, only CVSReview) to query the user for a revision to use
+"   the moment, only HGReview) to query the user for a revision to use
 "   instead of the current revision if none is specified.
 "
-" CVSCommandNameMarker
+" HGCommandNameMarker
 "   This variable, if set, configures the special attention-getting characters
-"   that appear on either side of the cvs buffer type in the buffer name.
-"   This has no effect unless 'CVSCommandNameResultBuffers' is set to a true
+"   that appear on either side of the hg buffer type in the buffer name.
+"   This has no effect unless 'HGCommandNameResultBuffers' is set to a true
 "   value.  If not set, it defaults to '_'.  
 "
-" CVSCommandNameResultBuffers
-"   This variable, if set to a true value, causes the cvs result buffers to be
-"   named in the old way ('<source file name> _<cvs command>_').  If not set
+" HGCommandNameResultBuffers
+"   This variable, if set to a true value, causes the hg result buffers to be
+"   named in the old way ('<source file name> _<hg command>_').  If not set
 "   or set to a false value, the result buffer is nameless.
 "
-" CVSCommandSplit
+" HGCommandSplit
 "   This variable controls the orientation of the various window splits that
-"   may occur (such as with CVSVimDiff, when using a CVS command on a CVS
-"   command buffer, or when the 'CVSCommandEdit' variable is set to 'split'.
+"   may occur (such as with HGVimDiff, when using a HG command on a HG
+"   command buffer, or when the 'HGCommandEdit' variable is set to 'split'.
 "   If set to 'horizontal', the resulting windows will be on stacked on top of
 "   one another.  If set to 'vertical', the resulting windows will be
 "   side-by-side.  If not set, it defaults to 'horizontal' for all but
-"   CVSVimDiff windows.
+"   HGVimDiff windows.
 "
 " Event documentation {{{2
-"   For additional customization, cvscommand.vim uses User event autocommand
-"   hooks.  Each event is in the CVSCommand group, and different patterns
+"   For additional customization, hgcommand.vim uses User event autocommand
+"   hooks.  Each event is in the HGCommand group, and different patterns
 "   match the various hooks.
 "
 "   For instance, the following could be added to the vimrc to provide a 'q'
-"   mapping to quit a CVS buffer:
+"   mapping to quit a HG buffer:
 "
-"   augroup CVSCommand
-"     au CVSCommand User CVSBufferCreated silent! nmap <unique> <buffer> q :bwipeout<cr> 
+"   augroup HGCommand
+"     au HGCommand User HGBufferCreated silent! nmap <unique> <buffer> q :bwipeout<cr> 
 "   augroup END
 "
 "   The following hooks are available:
 "
-"   CVSBufferCreated           This event is fired just after a cvs command
+"   HGBufferCreated           This event is fired just after a hg command
 "                              result buffer is created and filled with the
-"                              result of a cvs command.  It is executed within
+"                              result of a hg command.  It is executed within
 "                              the context of the new buffer.
 "
-"   CVSBufferSetup             This event is fired just after CVS buffer setup
+"   HGBufferSetup             This event is fired just after HG buffer setup
 "                              occurs, if enabled.
 "
-"   CVSPluginInit              This event is fired when the CVSCommand plugin
+"   HGPluginInit              This event is fired when the HGCommand plugin
 "                              first loads.
 "
-"   CVSPluginFinish            This event is fired just after the CVSCommand
+"   HGPluginFinish            This event is fired just after the HGCommand
 "                              plugin loads.
 "
-"   CVSVimDiffFinish           This event is fired just after the CVSVimDiff
+"   HGVimDiffFinish           This event is fired just after the HGVimDiff
 "                              command executes to allow customization of,
 "                              for instance, window placement and focus.
 "
 " Section: Plugin header {{{1
 
-" loaded_cvscommand is set to 1 when the initialization begins, and 2 when it
+" loaded_hgcommand is set to 1 when the initialization begins, and 2 when it
 " completes.  This allows various actions to only be taken by functions after
 " system initialization.
 
-if exists("loaded_cvscommand")
+if exists("loaded_hgcommand")
    finish
 endif
-let loaded_cvscommand = 1
+let loaded_hgcommand = 1
 
 if v:version < 602
-  echohl WarningMsg|echomsg "CVSCommand 1.69 or later requires VIM 6.2 or later"|echohl None
+  echohl WarningMsg|echomsg "HGCommand 1.69 or later requires VIM 6.2 or later"|echohl None
   finish
 endif
 
 " Section: Event group setup {{{1
 
-augroup CVSCommand
+augroup HGCommand
 augroup END
 
 " Section: Plugin initialization {{{1
-silent do CVSCommand User CVSPluginInit
+silent do HGCommand User HGPluginInit
 
 " Section: Script variable initialization {{{1
 
-let s:CVSCommandEditFileRunning = 0
+let s:HGCommandEditFileRunning = 0
 unlet! s:vimDiffRestoreCmd
 unlet! s:vimDiffSourceBuffer
 unlet! s:vimDiffBufferCount
@@ -311,24 +251,24 @@ unlet! s:vimDiffScratchList
 
 " Section: Utility functions {{{1
 
-" Function: s:CVSResolveLink() {{{2
+" Function: s:HGResolveLink() {{{2
 " Fully resolve the given file name to remove shortcuts or symbolic links.
 
-function! s:CVSResolveLink(fileName)
+function! s:HGResolveLink(fileName)
   let resolved = resolve(a:fileName)
   if resolved != a:fileName
-    let resolved = s:CVSResolveLink(resolved)
+    let resolved = s:HGResolveLink(resolved)
   endif
   return resolved
 endfunction
 
-" Function: s:CVSChangeToCurrentFileDir() {{{2
-" Go to the directory in which the current CVS-controlled file is located.
-" If this is a CVS command buffer, first switch to the original file.
+" Function: s:HGChangeToCurrentFileDir() {{{2
+" Go to the directory in which the current HG-controlled file is located.
+" If this is a HG command buffer, first switch to the original file.
 
-function! s:CVSChangeToCurrentFileDir(fileName)
+function! s:HGChangeToCurrentFileDir(fileName)
   let oldCwd=getcwd()
-  let fileName=s:CVSResolveLink(a:fileName)
+  let fileName=s:HGResolveLink(a:fileName)
   let newCwd=fnamemodify(fileName, ':h')
   if strlen(newCwd) > 0
     execute 'cd' escape(newCwd, ' ')
@@ -336,11 +276,11 @@ function! s:CVSChangeToCurrentFileDir(fileName)
   return oldCwd
 endfunction
 
-" Function: s:CVSGetOption(name, default) {{{2
+" Function: s:HGGetOption(name, default) {{{2
 " Grab a user-specified option to override the default provided.  Options are
 " searched in the window, buffer, then global spaces.
 
-function! s:CVSGetOption(name, default)
+function! s:HGGetOption(name, default)
   if exists("s:" . a:name . "Override")
     execute "return s:".a:name."Override"
   elseif exists("w:" . a:name)
@@ -354,19 +294,19 @@ function! s:CVSGetOption(name, default)
   endif
 endfunction
 
-" Function: s:CVSEditFile(name, origBuffNR) {{{2
+" Function: s:HGEditFile(name, origBuffNR) {{{2
 " Wrapper around the 'edit' command to provide some helpful error text if the
 " current buffer can't be abandoned.  If name is provided, it is used;
 " otherwise, a nameless scratch buffer is used.
 " Returns: 0 if successful, -1 if an error occurs.
 
-function! s:CVSEditFile(name, origBuffNR)
+function! s:HGEditFile(name, origBuffNR)
   "Name parameter will be pasted into expression.
   let name = escape(a:name, ' *?\')
 
-  let editCommand = s:CVSGetOption('CVSCommandEdit', 'edit')
+  let editCommand = s:HGGetOption('HGCommandEdit', 'edit')
   if editCommand != 'edit'
-    if s:CVSGetOption('CVSCommandSplit', 'horizontal') == 'horizontal'
+    if s:HGGetOption('HGCommandSplit', 'horizontal') == 'horizontal'
       if name == ""
         let editCommand = 'rightbelow new'
       else
@@ -388,28 +328,28 @@ function! s:CVSEditFile(name, origBuffNR)
   endif
 
   " Protect against useless buffer set-up
-  let s:CVSCommandEditFileRunning = s:CVSCommandEditFileRunning + 1
+  let s:HGCommandEditFileRunning = s:HGCommandEditFileRunning + 1
   try
     execute editCommand
   finally
-    let s:CVSCommandEditFileRunning = s:CVSCommandEditFileRunning - 1
+    let s:HGCommandEditFileRunning = s:HGCommandEditFileRunning - 1
   endtry
 
-  let b:CVSOrigBuffNR=a:origBuffNR
-  let b:CVSCommandEdit='split'
+  let b:HGOrigBuffNR=a:origBuffNR
+  let b:HGCommandEdit='split'
 endfunction
 
-" Function: s:CVSCreateCommandBuffer(cmd, cmdName, statusText, filename) {{{2
+" Function: s:HGCreateCommandBuffer(cmd, cmdName, statusText, filename) {{{2
 " Creates a new scratch buffer and captures the output from execution of the
 " given command.  The name of the scratch buffer is returned.
 
-function! s:CVSCreateCommandBuffer(cmd, cmdName, statusText, origBuffNR)
+function! s:HGCreateCommandBuffer(cmd, cmdName, statusText, origBuffNR)
   let fileName=bufname(a:origBuffNR)
 
   let resultBufferName=''
 
-  if s:CVSGetOption("CVSCommandNameResultBuffers", 0)
-    let nameMarker = s:CVSGetOption("CVSCommandNameMarker", '_')
+  if s:HGGetOption("HGCommandNameResultBuffers", 0)
+    let nameMarker = s:HGGetOption("HGCommandNameMarker", '_')
     if strlen(a:statusText) > 0
       let bufName=a:cmdName . ' -- ' . a:statusText
     else
@@ -424,28 +364,29 @@ function! s:CVSCreateCommandBuffer(cmd, cmdName, statusText, origBuffNR)
     endwhile
   endif
 
-  let cvsCommand = s:CVSGetOption("CVSCommandCVSExec", "cvs") . " " . a:cmd
-  let cvsOut = system(cvsCommand)
+  let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " " . a:cmd
+  echomsg "DBG :".hgCommand
+  let hgOut = system(hgCommand)
   " HACK:  diff command does not return proper error codes
-  if v:shell_error && a:cmdName != 'cvsdiff'
-    if strlen(cvsOut) == 0
-      echoerr "CVS command failed"
+  if v:shell_error && a:cmdName != 'hgdiff'
+    if strlen(hgOut) == 0
+      echoerr "HG command failed"
     else
-      echoerr "CVS command failed:  " . cvsOut
+      echoerr "HG command failed:  " . hgOut
     endif
     return -1
   endif
-  if strlen(cvsOut) == 0
+  if strlen(hgOut) == 0
     " Handle case of no output.  In this case, it is important to check the
-    " file status, especially since cvs edit/unedit may change the attributes
+    " file status, especially since hg edit/unedit may change the attributes
     " of the file with no visible output.
 
-    echomsg "No output from CVS command"
+    echomsg "No output from HG command"
     checktime
     return -1
   endif
 
-  if s:CVSEditFile(resultBufferName, a:origBuffNR) == -1
+  if s:HGEditFile(resultBufferName, a:origBuffNR) == -1
     return -1
   endif
 
@@ -453,11 +394,11 @@ function! s:CVSCreateCommandBuffer(cmd, cmdName, statusText, origBuffNR)
   set noswapfile
   set filetype=
 
-  if s:CVSGetOption("CVSCommandDeleteOnHide", 0)
+  if s:HGGetOption("HGCommandDeleteOnHide", 0)
     set bufhidden=delete
   endif
 
-  silent 0put=cvsOut
+  silent 0put=hgOut
 
   " The last command left a blank line at the end of the buffer.  If the
   " last line is folded (a side effect of the 'put') then the attempt to
@@ -475,22 +416,22 @@ function! s:CVSCreateCommandBuffer(cmd, cmdName, statusText, origBuffNR)
 
   " Define the environment and execute user-defined hooks.
 
-  let b:CVSSourceFile=fileName
-  let b:CVSCommand=a:cmdName
+  let b:HGSourceFile=fileName
+  let b:HGCommand=a:cmdName
   if a:statusText != ""
-    let b:CVSStatusText=a:statusText
+    let b:HGStatusText=a:statusText
   endif
 
-  silent do CVSCommand User CVSBufferCreated
+  silent do HGCommand User HGBufferCreated
   return bufnr("%")
 endfunction
 
-" Function: s:CVSBufferCheck(cvsBuffer) {{{2
-" Attempts to locate the original file to which CVS operations were applied
+" Function: s:HGBufferCheck(hgBuffer) {{{2
+" Attempts to locate the original file to which HG operations were applied
 " for a given buffer.
 
-function! s:CVSBufferCheck(cvsBuffer)
-  let origBuffer = getbufvar(a:cvsBuffer, "CVSOrigBuffNR")
+function! s:HGBufferCheck(hgBuffer)
+  let origBuffer = getbufvar(a:hgBuffer, "HGOrigBuffNR")
   if origBuffer
     if bufexists(origBuffer)
       return origBuffer
@@ -500,52 +441,54 @@ function! s:CVSBufferCheck(cvsBuffer)
     endif
   else
     " No original buffer
-    return a:cvsBuffer
+    return a:hgBuffer
   endif
 endfunction
 
-" Function: s:CVSCurrentBufferCheck() {{{2
-" Attempts to locate the original file to which CVS operations were applied
+" Function: s:HGCurrentBufferCheck() {{{2
+" Attempts to locate the original file to which HG operations were applied
 " for the current buffer.
 
-function! s:CVSCurrentBufferCheck()
-  return s:CVSBufferCheck(bufnr("%"))
+function! s:HGCurrentBufferCheck()
+  return s:HGBufferCheck(bufnr("%"))
 endfunction
 
-" Function: s:CVSToggleDeleteOnHide() {{{2
-" Toggles on and off the delete-on-hide behavior of CVS buffers
+" Function: s:HGToggleDeleteOnHide() {{{2
+" Toggles on and off the delete-on-hide behavior of HG buffers
 
-function! s:CVSToggleDeleteOnHide()
-  if exists("g:CVSCommandDeleteOnHide")
-    unlet g:CVSCommandDeleteOnHide
+function! s:HGToggleDeleteOnHide()
+  if exists("g:HGCommandDeleteOnHide")
+    unlet g:HGCommandDeleteOnHide
   else
-    let g:CVSCommandDeleteOnHide=1
+    let g:HGCommandDeleteOnHide=1
   endif
 endfunction
 
-" Function: s:CVSDoCommand(cvscmd, cmdName, statusText) {{{2
-" General skeleton for CVS function execution.
+" Function: s:HGDoCommand(hgcmd, cmdName, statusText) {{{2
+" General skeleton for HG function execution.
 " Returns: name of the new command buffer containing the command results
 
-function! s:CVSDoCommand(cmd, cmdName, statusText)
-  let cvsBufferCheck=s:CVSCurrentBufferCheck()
-  if cvsBufferCheck == -1 
+function! s:HGDoCommand(cmd, cmdName, statusText)
+  let hgBufferCheck=s:HGCurrentBufferCheck()
+  if hgBufferCheck == -1 
     echo "Original buffer no longer exists, aborting."
     return -1
   endif
 
-  let fileName=bufname(cvsBufferCheck)
+  let fileName=bufname(hgBufferCheck)
   if isdirectory(fileName)
     let fileName=fileName . "/" . getline(".")
   endif
-  let realFileName = fnamemodify(s:CVSResolveLink(fileName), ':t')
-  let oldCwd=s:CVSChangeToCurrentFileDir(fileName)
+  let realFileName = fnamemodify(s:HGResolveLink(fileName), ':t')
+  let oldCwd=s:HGChangeToCurrentFileDir(fileName)
   try
-    if !filereadable('CVS/Root')
-      throw fileName . ' is not a CVS-controlled file.'
-    endif
+     " TODO
+    "if !filereadable('HG/Root')
+      "throw fileName . ' is not a HG-controlled file.'
+    "endif
     let fullCmd = a:cmd . ' "' . realFileName . '"'
-    let resultBuffer=s:CVSCreateCommandBuffer(fullCmd, a:cmdName, a:statusText, cvsBufferCheck)
+    "echomsg "DEBUG".fullCmd
+    let resultBuffer=s:HGCreateCommandBuffer(fullCmd, a:cmdName, a:statusText, hgBufferCheck)
     return resultBuffer
   catch
     echoerr v:exception
@@ -556,54 +499,66 @@ function! s:CVSDoCommand(cmd, cmdName, statusText)
 endfunction
 
 
-" Function: s:CVSGetStatusVars(revision, branch, repository) {{{2
+" Function: s:HGGetStatusVars(revision, branch, repository) {{{2
 "
-" Obtains a CVS revision number and branch name.  The 'revisionVar',
+" Obtains a HG revision number and branch name.  The 'revisionVar',
 " 'branchVar'and 'repositoryVar' arguments, if non-empty, contain the names of variables to hold
 " the corresponding results.
 "
 " Returns: string to be exec'd that sets the multiple return values.
 
-function! s:CVSGetStatusVars(revisionVar, branchVar, repositoryVar)
-  let cvsBufferCheck=s:CVSCurrentBufferCheck()
-  if cvsBufferCheck == -1 
+function! s:HGGetStatusVars(revisionVar, branchVar, repositoryVar)
+  let hgBufferCheck=s:HGCurrentBufferCheck()
+  if hgBufferCheck == -1 
     return ""
   endif
-  let fileName=bufname(cvsBufferCheck)
-  let realFileName = fnamemodify(s:CVSResolveLink(fileName), ':t')
-  let oldCwd=s:CVSChangeToCurrentFileDir(fileName)
+  let fileName=bufname(hgBufferCheck)
+  let realFileName = fnamemodify(s:HGResolveLink(fileName), ':t')
+  let oldCwd=s:HGChangeToCurrentFileDir(fileName)
   try
-    if !filereadable('CVS/Root')
-      return ""
-    endif
-    let cvsCommand = s:CVSGetOption("CVSCommandCVSExec", "cvs") . " status " . escape(realFileName, ' *?\')
-    let statustext=system(cvsCommand)
+     ""TODO
+    "if !filereadable('HG/Root')
+      "return ""
+    "endif
+    let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " status -mardui " . fileName
+    let statustext=system(hgCommand)
     if(v:shell_error)
       return ""
     endif
-    let revision=substitute(statustext, '^\_.*Working revision:\s*\(\d\+\%(\.\d\+\)\+\|New file!\)\_.*$', '\1', "")
-
-    " We can still be in a CVS-controlled directory without this being a CVS
-    " file
-    if match(revision, '^New file!$') >= 0 
+    if match(statustext, '^[?I]') >= 0 
       let revision="NEW"
-    elseif match(revision, '^\d\+\.\d\+\%(\.\d\+\.\d\+\)*$') >=0
-    else
-      return ""
+    elseif match(statustext, '^[R]') >= 0 
+      let revision="REMOVED"
+    elseif match(statustext, '^[D]') >= 0 
+      let revision="DELETED"
+    elseif match(statustext, '^[A]') >= 0 
+      let revision="ADDED"
     endif
 
-    let returnExpression = "let " . a:revisionVar . "='" . revision . "'"
+    let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " parents -b  " 
+    let statustext=system(hgCommand)
+    if(v:shell_error)
+        return ""
+    endif
+    if exists('revision')
+      let returnExpression = "let " . a:revisionVar . "='" . revision . "'"
+    else
+      let revision=substitute(statustext, '^changeset:\s*\(\d\+\):.*\_$\_.*$', '\1', "")
+      let returnExpression = "let " . a:revisionVar . "='" . revision . "'"
+    endif
 
-    if a:branchVar != ""
-      let branch=substitute(statustext, '^\_.*Sticky Tag:\s\+\(\d\+\%(\.\d\+\)\+\|\a[A-Za-z0-9-_]*\|(none)\).*$', '\1', "")
+    if a:branchVar != "" && match(statustext, '^\_.*\_^branch:') >= 0
+      let branch=substitute(statustext, '^\_.*\_^branch:\s*\(\S\+\)\n\_.*$', '\1', "")
       let returnExpression=returnExpression . " | let " . a:branchVar . "='" . branch . "'"
     endif
-
     if a:repositoryVar != ""
-      let repository=substitute(statustext, '^\_.*Repository revision:\s*\(\d\+\%(\.\d\+\)\+\|New file!\|No revision control file\)\_.*$', '\1', "")
-      let repository=substitute(repository, '^New file!\|No revision control file$', 'NEW', "")
+      let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " root  " 
+      let roottext=system(hgCommand)
+      let repository=substitute(roottext,'^.*/\([^/\n\r]*\)\n\_.*$','\1','')
       let returnExpression=returnExpression . " | let " . a:repositoryVar . "='" . repository . "'"
     endif
+
+
 
     return returnExpression
   finally
@@ -611,22 +566,22 @@ function! s:CVSGetStatusVars(revisionVar, branchVar, repositoryVar)
   endtry
 endfunction
 
-" Function: s:CVSSetupBuffer() {{{2
-" Attempts to set the b:CVSBranch, b:CVSRevision and b:CVSRepository variables.
+" Function: s:HGSetupBuffer() {{{2
+" Attempts to set the b:HGBranch, b:HGRevision and b:HGRepository variables.
 
-function! s:CVSSetupBuffer()
-  if (exists("b:CVSBufferSetup") && b:CVSBufferSetup)
+function! s:HGSetupBuffer()
+  if (exists("b:HGBufferSetup") && b:HGBufferSetup)
     " This buffer is already set up.
     return
   endif
 
-  if !s:CVSGetOption("CVSCommandEnableBufferSetup", 0)
+  if !s:HGGetOption("HGCommandEnableBufferSetup", 0)
         \ || @% == ""
-        \ || s:CVSCommandEditFileRunning > 0
-        \ || exists("b:CVSOrigBuffNR")
-    unlet! b:CVSRevision
-    unlet! b:CVSBranch
-    unlet! b:CVSRepository
+        \ || s:HGCommandEditFileRunning > 0
+        \ || exists("b:HGOrigBuffNR")
+    unlet! b:HGRevision
+    unlet! b:HGBranch
+    unlet! b:HGRepository
     return
   endif
 
@@ -638,47 +593,48 @@ function! s:CVSSetupBuffer()
   let branch=""
   let repository=""
 
-  exec s:CVSGetStatusVars('revision', 'branch', 'repository')
+  exec s:HGGetStatusVars('revision', 'branch', 'repository')
+  "echomsg "DBG ".revision."#".branch."#".repository
   if revision != ""
-    let b:CVSRevision=revision
+    let b:HGRevision=revision
   else
-    unlet! b:CVSRevision
+    unlet! b:HGRevision
   endif
   if branch != ""
-    let b:CVSBranch=branch
+    let b:HGBranch=branch
   else
-    unlet! b:CVSBranch
+    unlet! b:HGBranch
   endif
   if repository != ""
-     let b:CVSRepository=repository
+     let b:HGRepository=repository
   else
-     unlet! b:CVSRepository
+     unlet! b:HGRepository
   endif
-  silent do CVSCommand User CVSBufferSetup
-  let b:CVSBufferSetup=1
+  silent do HGCommand User HGBufferSetup
+  let b:HGBufferSetup=1
 endfunction
 
-" Function: s:CVSMarkOrigBufferForSetup(cvsbuffer) {{{2
-" Resets the buffer setup state of the original buffer for a given CVS buffer.
-" Returns:  The CVS buffer number in a passthrough mode.
+" Function: s:HGMarkOrigBufferForSetup(hgbuffer) {{{2
+" Resets the buffer setup state of the original buffer for a given HG buffer.
+" Returns:  The HG buffer number in a passthrough mode.
 
-function! s:CVSMarkOrigBufferForSetup(cvsBuffer)
+function! s:HGMarkOrigBufferForSetup(hgBuffer)
   checktime
-  if a:cvsBuffer != -1
-    let origBuffer = s:CVSBufferCheck(a:cvsBuffer)
+  if a:hgBuffer != -1
+    let origBuffer = s:HGBufferCheck(a:hgBuffer)
     "This should never not work, but I'm paranoid
-    if origBuffer != a:cvsBuffer
-      call setbufvar(origBuffer, "CVSBufferSetup", 0)
+    if origBuffer != a:hgBuffer
+      call setbufvar(origBuffer, "HGBufferSetup", 0)
     endif
   endif
-  return a:cvsBuffer
+  return a:hgBuffer
 endfunction
 
-" Function: s:CVSOverrideOption(option, [value]) {{{2
-" Provides a temporary override for the given CVS option.  If no value is
+" Function: s:HGOverrideOption(option, [value]) {{{2
+" Provides a temporary override for the given HG option.  If no value is
 " passed, the override is disabled.
 
-function! s:CVSOverrideOption(option, ...)
+function! s:HGOverrideOption(option, ...)
   if a:0 == 0
     unlet! s:{a:option}Override
   else
@@ -686,14 +642,14 @@ function! s:CVSOverrideOption(option, ...)
   endif
 endfunction
 
-" Function: s:CVSWipeoutCommandBuffers() {{{2
-" Clears all current CVS buffers of the specified type for a given source.
+" Function: s:HGWipeoutCommandBuffers() {{{2
+" Clears all current HG buffers of the specified type for a given source.
 
-function! s:CVSWipeoutCommandBuffers(originalBuffer, cvsCommand)
+function! s:HGWipeoutCommandBuffers(originalBuffer, hgCommand)
   let buffer = 1
   while buffer <= bufnr('$')
-    if getbufvar(buffer, 'CVSOrigBuffNR') == a:originalBuffer
-      if getbufvar(buffer, 'CVSCommand') == a:cvsCommand
+    if getbufvar(buffer, 'HGOrigBuffNR') == a:originalBuffer
+      if getbufvar(buffer, 'HGCommand') == a:hgCommand
         execute 'bw' buffer
       endif
     endif
@@ -703,104 +659,92 @@ endfunction
 
 " Section: Public functions {{{1
 
-" Function: CVSGetRevision() {{{2
-" Global function for retrieving the current buffer's CVS revision number.
+" Function: HGGetRevision() {{{2
+" Global function for retrieving the current buffer's HG revision number.
 " Returns: Revision number or an empty string if an error occurs.
 
-function! CVSGetRevision()
+function! HGGetRevision()
   let revision=""
-  exec s:CVSGetStatusVars('revision', '', '')
+  exec s:HGGetStatusVars('revision', '', '')
   return revision
 endfunction
 
-" Function: CVSDisableBufferSetup() {{{2
+" Function: HGDisableBufferSetup() {{{2
 " Global function for deactivating the buffer autovariables.
 
-function! CVSDisableBufferSetup()
-  let g:CVSCommandEnableBufferSetup=0
-  silent! augroup! CVSCommandPlugin
+function! HGDisableBufferSetup()
+  let g:HGCommandEnableBufferSetup=0
+  silent! augroup! HGCommandPlugin
 endfunction
 
-" Function: CVSEnableBufferSetup() {{{2
+" Function: HGEnableBufferSetup() {{{2
 " Global function for activating the buffer autovariables.
 
-function! CVSEnableBufferSetup()
-  let g:CVSCommandEnableBufferSetup=1
-  augroup CVSCommandPlugin
+function! HGEnableBufferSetup()
+  let g:HGCommandEnableBufferSetup=1
+  augroup HGCommandPlugin
     au!
-    au BufEnter * call s:CVSSetupBuffer()
+    au BufEnter * call s:HGSetupBuffer()
   augroup END
 
   " Only auto-load if the plugin is fully loaded.  This gives other plugins a
   " chance to run.
-  if g:loaded_cvscommand == 2
-    call s:CVSSetupBuffer()
+  if g:loaded_hgcommand == 2
+    call s:HGSetupBuffer()
   endif
 endfunction
 
-" Function: CVSGetStatusLine() {{{2
-" Default (sample) status line entry for CVS files.  This is only useful if
-" CVS-managed buffer mode is on (see the CVSCommandEnableBufferSetup variable
+" Function: HGGetStatusLine() {{{2
+" Default (sample) status line entry for HG files.  This is only useful if
+" HG-managed buffer mode is on (see the HGCommandEnableBufferSetup variable
 " for how to do this).
 
-function! CVSGetStatusLine()
-  if exists('b:CVSSourceFile')
+function! HGGetStatusLine()
+  if exists('b:HGSourceFile')
     " This is a result buffer
-    let value='[' . b:CVSCommand . ' ' . b:CVSSourceFile
-    if exists('b:CVSStatusText')
-      let value=value . ' ' . b:CVSStatusText
+    let value='[' . b:HGCommand . ' ' . b:HGSourceFile
+    if exists('b:HGStatusText')
+      let value=value . ' ' . b:HGStatusText
     endif
     let value = value . ']'
     return value
   endif
 
-  if exists('b:CVSRevision')
-        \ && b:CVSRevision != ''
-        \ && exists('b:CVSBranch')
-        \ && b:CVSBranch != ''
-        \ && exists('b:CVSRepository')
-        \ && b:CVSRepository != ''
-        \ && exists('g:CVSCommandEnableBufferSetup')
-        \ && g:CVSCommandEnableBufferSetup
-    if b:CVSRevision == b:CVSRepository
-      return '[CVS ' . b:CVSBranch . '/' . b:CVSRevision . ']'
-    else
-      return '[CVS ' . b:CVSBranch . '/' . b:CVSRevision . '/' . b:CVSRepository . ']'
-    endif
+  if exists('b:HGRevision')
+        \ && b:HGRevision != ''
+        \ && exists('b:HGBranch')
+        \ && b:HGBranch != ''
+        \ && exists('b:HGRepository')
+        \ && b:HGRepository != ''
+        \ && exists('g:HGCommandEnableBufferSetup')
+        \ && g:HGCommandEnableBufferSetup
+   return '[HG ' . b:HGRepository . '/' . b:HGBranch .'/' . b:HGRevision . ']'
   else
     return ''
   endif
 endfunction
 
-" Section: CVS command functions {{{1
+" Section: HG command functions {{{1
 
-" Function: s:CVSAdd() {{{2
-function! s:CVSAdd()
-  return s:CVSMarkOrigBufferForSetup(s:CVSDoCommand('add', 'cvsadd', ''))
+" Function: s:HGAdd() {{{2
+function! s:HGAdd()
+  return s:HGMarkOrigBufferForSetup(s:HGDoCommand('add', 'hgadd', ''))
 endfunction
 
-" Function: s:CVSAnnotate(...) {{{2
-function! s:CVSAnnotate(...)
+" Function: s:HGAnnotate(...) {{{2
+function! s:HGAnnotate(...)
   if a:0 == 0
-    if &filetype == "CVSAnnotate"
-      " This is a CVSAnnotate buffer.  Perform annotation of the version
+    if &filetype == "HGAnnotate"
+      " This is a HGAnnotate buffer.  Perform annotation of the version
       " indicated by the current line.
-      let revision = substitute(getline("."),'\(^[0-9.]*\).*','\1','')
-      let revmin = substitute(revision,'^[0-9.]*\.\([0-9]\+\)','\1','')
-      let revmaj = substitute(revision,'^\([0-9.]*\)\.[0-9]\+','\1','')
-      if s:CVSGetOption('CVSCommandAnnotateParent', 0) != 0
-        let revmin = revmin - 1
-      endif
-      if revmin == 0
-        " Jump to ancestor branch
-        let revision = substitute(revmaj,'^\([0-9.]*\)\.[0-9]\+','\1','')
-      else
-        let revision=revmaj . "." .  revmin
+      let revision = substitute(getline("."),'\(^[0-9]*\):.*','\1','')
+      if s:HGGetOption('HGCommandAnnotateParent', 0) != 0 && revision > 0
+        let revision = revision - 1
       endif
     else
-      let revision=CVSGetRevision()
+      let revision=HGGetRevision()
       if revision == ""
-        echoerr "Unable to obtain CVS version information."
+        echoerr "Unable to obtain HG version information."
         return -1
       endif
     endif
@@ -813,27 +757,26 @@ function! s:CVSAnnotate(...)
     return -1
   endif
 
-  let resultBuffer=s:CVSDoCommand('-q annotate -r ' . revision, 'cvsannotate', revision) 
+  let resultBuffer=s:HGDoCommand('annotate -ndu -r ' . revision, 'hgannotate', revision) 
+  echomsg "DBG: ".resultBuffer
   if resultBuffer !=  -1
-    set filetype=CVSAnnotate
-    " Remove header lines from standard error
-    silent v/^\d\+\%(\.\d\+\)\+/d
+    set filetype=HGAnnotate
   endif
 
   return resultBuffer
 endfunction
 
-" Function: s:CVSCommit() {{{2
-function! s:CVSCommit(...)
+" Function: s:HGCommit() {{{2
+function! s:HGCommit(...)
   " Handle the commit message being specified.  If a message is supplied, it
   " is used; if bang is supplied, an empty message is used; otherwise, the
   " user is provided a buffer from which to edit the commit message.
   if a:2 != "" || a:1 == "!"
-    return s:CVSMarkOrigBufferForSetup(s:CVSDoCommand('commit -m "' . a:2 . '"', 'cvscommit', ''))
+    return s:HGMarkOrigBufferForSetup(s:HGDoCommand('commit -m "' . a:2 . '"', 'hgcommit', ''))
   endif
 
-  let cvsBufferCheck=s:CVSCurrentBufferCheck()
-  if cvsBufferCheck ==  -1
+  let hgBufferCheck=s:HGCurrentBufferCheck()
+  if hgBufferCheck ==  -1
     echo "Original buffer no longer exists, aborting."
     return -1
   endif
@@ -847,8 +790,8 @@ function! s:CVSCommit(...)
 
     let messageFileName = tempname()
 
-    let fileName=bufname(cvsBufferCheck)
-    let realFilePath=s:CVSResolveLink(fileName)
+    let fileName=bufname(hgBufferCheck)
+    let realFilePath=s:HGResolveLink(fileName)
     let newCwd=fnamemodify(realFilePath, ':h')
     if strlen(newCwd) == 0
       " Account for autochdir being in effect, which will make this blank, but
@@ -858,7 +801,7 @@ function! s:CVSCommit(...)
 
     let realFileName=fnamemodify(realFilePath, ':t')
 
-    if s:CVSEditFile(messageFileName, cvsBufferCheck) == -1
+    if s:HGEditFile(messageFileName, hgBufferCheck) == -1
       return
     endif
 
@@ -866,49 +809,49 @@ function! s:CVSCommit(...)
     let autoPattern = '\c' . messageFileName
 
     " Ensure existance of group
-    augroup CVSCommit
+    augroup HGCommit
     augroup END
 
-    execute 'au CVSCommit BufDelete' autoPattern 'call delete("' . messageFileName . '")'
-    execute 'au CVSCommit BufDelete' autoPattern 'au! CVSCommit * ' autoPattern
+    execute 'au HGCommit BufDelete' autoPattern 'call delete("' . messageFileName . '")'
+    execute 'au HGCommit BufDelete' autoPattern 'au! HGCommit * ' autoPattern
 
     " Create a commit mapping.  The mapping must clear all autocommands in case
-    " it is invoked when CVSCommandCommitOnWrite is active, as well as to not
+    " it is invoked when HGCommandCommitOnWrite is active, as well as to not
     " invoke the buffer deletion autocommand.
 
-    execute 'nnoremap <silent> <buffer> <Plug>CVSCommit '.
-          \ ':au! CVSCommit * ' . autoPattern . '<CR>'.
-          \ ':g/^CVS:/d<CR>'.
+    execute 'nnoremap <silent> <buffer> <Plug>HGCommit '.
+          \ ':au! HGCommit * ' . autoPattern . '<CR>'.
+          \ ':g/^HG:/d<CR>'.
           \ ':update<CR>'.
-          \ ':call <SID>CVSFinishCommit("' . messageFileName . '",' .
+          \ ':call <SID>HGFinishCommit("' . messageFileName . '",' .
           \                             '"' . newCwd . '",' .
           \                             '"' . realFileName . '",' .
-          \                             cvsBufferCheck . ')<CR>'
+          \                             hgBufferCheck . ')<CR>'
 
-    silent 0put ='CVS: ----------------------------------------------------------------------'
-    silent put =\"CVS: Enter Log.  Lines beginning with `CVS:' are removed automatically\"
-    silent put ='CVS: Type <leader>cc (or your own <Plug>CVSCommit mapping)'
+    silent 0put ='HG: ----------------------------------------------------------------------'
+    silent put =\"HG: Enter Log.  Lines beginning with `HG:' are removed automatically\"
+    silent put ='HG: Type <leader>cc (or your own <Plug>HGCommit mapping)'
 
-    if s:CVSGetOption('CVSCommandCommitOnWrite', 1) == 1
-      execute 'au CVSCommit BufWritePre' autoPattern 'g/^CVS:/d'
-      execute 'au CVSCommit BufWritePost' autoPattern 'call s:CVSFinishCommit("' . messageFileName . '", "' . newCwd . '", "' . realFileName . '", ' . cvsBufferCheck . ') | au! * ' autoPattern
-      silent put ='CVS: or write this buffer'
+    if s:HGGetOption('HGCommandCommitOnWrite', 1) == 1
+      execute 'au HGCommit BufWritePre' autoPattern 'g/^HG:/d'
+      execute 'au HGCommit BufWritePost' autoPattern 'call s:HGFinishCommit("' . messageFileName . '", "' . newCwd . '", "' . realFileName . '", ' . hgBufferCheck . ') | au! * ' autoPattern
+      silent put ='HG: or write this buffer'
     endif
 
-    silent put ='CVS: to finish this commit operation'
-    silent put ='CVS: ----------------------------------------------------------------------'
+    silent put ='HG: to finish this commit operation'
+    silent put ='HG: ----------------------------------------------------------------------'
     $
-    let b:CVSSourceFile=fileName
-    let b:CVSCommand='CVSCommit'
-    set filetype=cvs
+    let b:HGSourceFile=fileName
+    let b:HGCommand='HGCommit'
+    set filetype=hg
   finally
     let &shellslash = shellSlashBak
   endtry
 
 endfunction
 
-" Function: s:CVSDiff(...) {{{2
-function! s:CVSDiff(...)
+" Function: s:HGDiff(...) {{{2
+function! s:HGDiff(...)
   if a:0 == 1
     let revOptions = '-r' . a:1
     let caption = a:1 . ' -> current'
@@ -920,34 +863,25 @@ function! s:CVSDiff(...)
     let caption = ''
   endif
 
-  let cvsdiffopt=s:CVSGetOption('CVSCommandDiffOpt', 'wbBc')
+  let hgdiffopt=s:HGGetOption('HGCommandDiffOpt', 'w')
 
-  if cvsdiffopt == ""
+  if hgdiffopt == ""
     let diffoptionstring=""
   else
-    let diffoptionstring=" -" . cvsdiffopt . " "
+    let diffoptionstring=" -" . hgdiffopt . " "
   endif
 
-  let resultBuffer = s:CVSDoCommand('diff ' . diffoptionstring . revOptions , 'cvsdiff', caption)
+  let resultBuffer = s:HGDoCommand('diff ' . diffoptionstring . revOptions , 'hgdiff', caption)
   if resultBuffer != -1 
     set filetype=diff
   endif
   return resultBuffer
 endfunction
 
-" Function: s:CVSEdit() {{{2
-function! s:CVSEdit()
-  return s:CVSDoCommand('edit', 'cvsedit', '')
-endfunction
 
-" Function: s:CVSEditors() {{{2
-function! s:CVSEditors()
-  return s:CVSDoCommand('editors', 'cvseditors', '')
-endfunction
-
-" Function: s:CVSGotoOriginal(["!]) {{{2
-function! s:CVSGotoOriginal(...)
-  let origBuffNR = s:CVSCurrentBufferCheck()
+" Function: s:HGGotoOriginal(["!]) {{{2
+function! s:HGGotoOriginal(...)
+  let origBuffNR = s:HGCurrentBufferCheck()
   if origBuffNR > 0
     let origWinNR = bufwinnr(origBuffNR)
     if origWinNR == -1
@@ -960,7 +894,7 @@ function! s:CVSGotoOriginal(...)
         let buffnr = 1
         let buffmaxnr = bufnr("$")
         while buffnr <= buffmaxnr
-          if getbufvar(buffnr, "CVSOrigBuffNR") == origBuffNR
+          if getbufvar(buffnr, "HGOrigBuffNR") == origBuffNR
             execute "bw" buffnr
           endif
           let buffnr = buffnr + 1
@@ -970,26 +904,26 @@ function! s:CVSGotoOriginal(...)
   endif
 endfunction
 
-" Function: s:CVSFinishCommit(messageFile, targetDir, targetFile) {{{2
-function! s:CVSFinishCommit(messageFile, targetDir, targetFile, origBuffNR)
+" Function: s:HGFinishCommit(messageFile, targetDir, targetFile) {{{2
+function! s:HGFinishCommit(messageFile, targetDir, targetFile, origBuffNR)
   if filereadable(a:messageFile)
     let oldCwd=getcwd()
     if strlen(a:targetDir) > 0
       execute 'cd' escape(a:targetDir, ' ')
     endif
-    let resultBuffer=s:CVSCreateCommandBuffer('commit -F "' . a:messageFile . '" "'. a:targetFile . '"', 'cvscommit', '', a:origBuffNR)
+    let resultBuffer=s:HGCreateCommandBuffer('commit -F "' . a:messageFile . '" "'. a:targetFile . '"', 'hgcommit', '', a:origBuffNR)
     execute 'cd' escape(oldCwd, ' ')
     execute 'bw' escape(a:messageFile, ' *?\')
     silent execute 'call delete("' . a:messageFile . '")'
-    return s:CVSMarkOrigBufferForSetup(resultBuffer)
+    return s:HGMarkOrigBufferForSetup(resultBuffer)
   else
     echoerr "Can't read message file; no commit is possible."
     return -1
   endif
 endfunction
 
-" Function: s:CVSLog() {{{2
-function! s:CVSLog(...)
+" Function: s:HGLog() {{{2
+function! s:HGLog(...)
   if a:0 == 0
     let versionOption = ""
     let caption = ''
@@ -998,23 +932,23 @@ function! s:CVSLog(...)
     let caption = a:1
   endif
 
-  let resultBuffer=s:CVSDoCommand('log' . versionOption, 'cvslog', caption)
+  let resultBuffer=s:HGDoCommand('log' . versionOption, 'hglog', caption)
   if resultBuffer != ""
     set filetype=rcslog
   endif
   return resultBuffer
 endfunction
 
-" Function: s:CVSRevert() {{{2
-function! s:CVSRevert()
-  return s:CVSMarkOrigBufferForSetup(s:CVSDoCommand('update -C', 'cvsrevert', ''))
+" Function: s:HGRevert() {{{2
+function! s:HGRevert()
+  return s:HGMarkOrigBufferForSetup(s:HGDoCommand('revert', 'hgrevert', ''))
 endfunction
 
-" Function: s:CVSReview(...) {{{2
-function! s:CVSReview(...)
+" Function: s:HGReview(...) {{{2
+function! s:HGReview(...)
   if a:0 == 0
     let versiontag=""
-    if s:CVSGetOption('CVSCommandInteractive', 0)
+    if s:HGGetOption('HGCommandInteractive', 0)
       let versiontag=input('Revision:  ')
     endif
     if versiontag == ""
@@ -1028,69 +962,65 @@ function! s:CVSReview(...)
     let versionOption=" -r " . versiontag . " "
   endif
 
-  let resultBuffer = s:CVSDoCommand('-q update -p' . versionOption, 'cvsreview', versiontag)
+  let resultBuffer = s:HGDoCommand('cat' . versionOption, 'hgreview', versiontag)
   if resultBuffer > 0
-    let &filetype=getbufvar(b:CVSOrigBuffNR, '&filetype')
+    let &filetype=getbufvar(b:HGOrigBuffNR, '&filetype')
   endif
 
   return resultBuffer
 endfunction
 
-" Function: s:CVSStatus() {{{2
-function! s:CVSStatus()
-  return s:CVSDoCommand('status', 'cvsstatus', '')
+" Function: s:HGStatus() {{{2
+function! s:HGStatus()
+  return s:HGDoCommand('status', 'hgstatus', '')
 endfunction
 
-" Function: s:CVSUnedit() {{{2
-function! s:CVSUnedit()
-  return s:CVSDoCommand('unedit', 'cvsunedit', '')
+
+" Function: s:HGUpdate() {{{2
+function! s:HGUpdate()
+  return s:HGMarkOrigBufferForSetup(s:HGDoCommand('update', 'update', ''))
 endfunction
 
-" Function: s:CVSUpdate() {{{2
-function! s:CVSUpdate()
-  return s:CVSMarkOrigBufferForSetup(s:CVSDoCommand('update', 'update', ''))
-endfunction
-
-" Function: s:CVSVimDiff(...) {{{2
-function! s:CVSVimDiff(...)
-  let originalBuffer = s:CVSCurrentBufferCheck()
-  let s:CVSCommandEditFileRunning = s:CVSCommandEditFileRunning + 1
+" Function: s:HGVimDiff(...) {{{2
+function! s:HGVimDiff(...)
+  let originalBuffer = s:HGCurrentBufferCheck()
+  let s:HGCommandEditFileRunning = s:HGCommandEditFileRunning + 1
   try
     " If there's already a VimDiff'ed window, restore it.
-    " There may only be one CVSVimDiff original window at a time.
+    " There may only be one HGVimDiff original window at a time.
 
     if exists("s:vimDiffSourceBuffer") && s:vimDiffSourceBuffer != originalBuffer
       " Clear the existing vimdiff setup by removing the result buffers.
-      call s:CVSWipeoutCommandBuffers(s:vimDiffSourceBuffer, 'vimdiff')
+      call s:HGWipeoutCommandBuffers(s:vimDiffSourceBuffer, 'vimdiff')
     endif
 
     " Split and diff
     if(a:0 == 2)
       " Reset the vimdiff system, as 2 explicit versions were provided.
       if exists('s:vimDiffSourceBuffer')
-        call s:CVSWipeoutCommandBuffers(s:vimDiffSourceBuffer, 'vimdiff')
+        call s:HGWipeoutCommandBuffers(s:vimDiffSourceBuffer, 'vimdiff')
       endif
-      let resultBuffer = s:CVSReview(a:1)
+      let resultBuffer = s:HGReview(a:1)
       if resultBuffer < 0
-        echomsg "Can't open CVS revision " . a:1
+        echomsg "Can't open HG revision " . a:1
         return resultBuffer
       endif
-      let b:CVSCommand = 'vimdiff'
+      let b:HGCommand = 'vimdiff'
       diffthis
       let s:vimDiffBufferCount = 1
       let s:vimDiffScratchList = '{'. resultBuffer . '}'
       " If no split method is defined, cheat, and set it to vertical.
       try
-        call s:CVSOverrideOption('CVSCommandSplit', s:CVSGetOption('CVSCommandDiffSplit', s:CVSGetOption('CVSCommandSplit', 'vertical')))
-        let resultBuffer=s:CVSReview(a:2)
+        call s:HGOverrideOption('HGCommandSplit', s:HGGetOption('HGCommandDiffSplit', s:HGGetOption('HGCommandSplit', 'vertical')))
+        let resultBuffer=s:HGReview(a:2)
       finally
-        call s:CVSOverrideOption('CVSCommandSplit')
+        call s:HGOverrideOption('HGCommandSplit')
       endtry
       if resultBuffer < 0
-        echomsg "Can't open CVS revision " . a:1
+        echomsg "Can't open HG revision " . a:1
         return resultBuffer
       endif
-      let b:CVSCommand = 'vimdiff'
+      let b:HGCommand = 'vimdiff'
       diffthis
       let s:vimDiffBufferCount = 2
       let s:vimDiffScratchList = s:vimDiffScratchList . '{'. resultBuffer . '}'
@@ -1098,22 +1028,22 @@ function! s:CVSVimDiff(...)
       " Add new buffer
       try
         " Force splitting behavior, otherwise why use vimdiff?
-        call s:CVSOverrideOption("CVSCommandEdit", "split")
-        call s:CVSOverrideOption("CVSCommandSplit", s:CVSGetOption('CVSCommandDiffSplit', s:CVSGetOption('CVSCommandSplit', 'vertical')))
+        call s:HGOverrideOption("HGCommandEdit", "split")
+        call s:HGOverrideOption("HGCommandSplit", s:HGGetOption('HGCommandDiffSplit', s:HGGetOption('HGCommandSplit', 'vertical')))
         if(a:0 == 0)
-          let resultBuffer=s:CVSReview()
+          let resultBuffer=s:HGReview()
         else
-          let resultBuffer=s:CVSReview(a:1)
+          let resultBuffer=s:HGReview(a:1)
         endif
       finally
-        call s:CVSOverrideOption("CVSCommandEdit")
-        call s:CVSOverrideOption("CVSCommandSplit")
+        call s:HGOverrideOption("HGCommandEdit")
+        call s:HGOverrideOption("HGCommandSplit")
       endtry
       if resultBuffer < 0
-        echomsg "Can't open current CVS revision"
+        echomsg "Can't open current HG revision"
         return resultBuffer
       endif
-      let b:CVSCommand = 'vimdiff'
+      let b:HGCommand = 'vimdiff'
       diffthis
 
       if !exists('s:vimDiffBufferCount')
@@ -1121,7 +1051,7 @@ function! s:CVSVimDiff(...)
         let s:vimDiffBufferCount = 2
         let s:vimDiffScratchList = '{' . resultBuffer . '}'
 
-        " This could have been invoked on a CVS result buffer, not the
+        " This could have been invoked on a HG result buffer, not the
         " original buffer.
         wincmd W
         execute 'buffer' originalBuffer
@@ -1151,168 +1081,115 @@ function! s:CVSVimDiff(...)
     let saveModeline = getbufvar(currentBuffer, '&modeline')
     try
       call setbufvar(currentBuffer, '&modeline', 0)
-      silent do CVSCommand User CVSVimDiffFinish
+      silent do HGCommand User HGVimDiffFinish
     finally
       call setbufvar(currentBuffer, '&modeline', saveModeline)
     endtry
     return resultBuffer
   finally
-    let s:CVSCommandEditFileRunning = s:CVSCommandEditFileRunning - 1
+    let s:HGCommandEditFileRunning = s:HGCommandEditFileRunning - 1
   endtry
-endfunction
-
-" Function: s:CVSWatch(onoff) {{{2
-function! s:CVSWatch(onoff)
-  if a:onoff !~ '^\c\%(on\|off\|add\|remove\)$'
-    echoerr "Argument to CVSWatch must be one of [on|off|add|remove]"
-    return -1
-  end
-  return s:CVSDoCommand('watch ' . tolower(a:onoff), 'cvswatch', '')
-endfunction
-
-" Function: s:CVSWatchers() {{{2
-function! s:CVSWatchers()
-  return s:CVSDoCommand('watchers', 'cvswatchers', '')
 endfunction
 
 " Section: Command definitions {{{1
 " Section: Primary commands {{{2
-com! CVSAdd call s:CVSAdd()
-com! -nargs=? CVSAnnotate call s:CVSAnnotate(<f-args>)
-com! -bang -nargs=? CVSCommit call s:CVSCommit(<q-bang>, <q-args>)
-com! -nargs=* CVSDiff call s:CVSDiff(<f-args>)
-com! CVSEdit call s:CVSEdit()
-com! CVSEditors call s:CVSEditors()
-com! -bang CVSGotoOriginal call s:CVSGotoOriginal(<q-bang>)
-com! -nargs=? CVSLog call s:CVSLog(<f-args>)
-com! CVSRevert call s:CVSRevert()
-com! -nargs=? CVSReview call s:CVSReview(<f-args>)
-com! CVSStatus call s:CVSStatus()
-com! CVSUnedit call s:CVSUnedit()
-com! CVSUpdate call s:CVSUpdate()
-com! -nargs=* CVSVimDiff call s:CVSVimDiff(<f-args>)
-com! -nargs=1 CVSWatch call s:CVSWatch(<f-args>)
-com! CVSWatchAdd call s:CVSWatch('add')
-com! CVSWatchOn call s:CVSWatch('on')
-com! CVSWatchOff call s:CVSWatch('off')
-com! CVSWatchRemove call s:CVSWatch('remove')
-com! CVSWatchers call s:CVSWatchers()
+com! HGAdd call s:HGAdd()
+com! -nargs=? HGAnnotate call s:HGAnnotate(<f-args>)
+com! -bang -nargs=? HGCommit call s:HGCommit(<q-bang>, <q-args>)
+com! -nargs=* HGDiff call s:HGDiff(<f-args>)
+com! -bang HGGotoOriginal call s:HGGotoOriginal(<q-bang>)
+com! -nargs=? HGLog call s:HGLog(<f-args>)
+com! HGRevert call s:HGRevert()
+com! -nargs=? HGReview call s:HGReview(<f-args>)
+com! HGStatus call s:HGStatus()
+com! HGUpdate call s:HGUpdate()
+com! -nargs=* HGVimDiff call s:HGVimDiff(<f-args>)
 
-" Section: CVS buffer management commands {{{2
-com! CVSDisableBufferSetup call CVSDisableBufferSetup()
-com! CVSEnableBufferSetup call CVSEnableBufferSetup()
+" Section: HG buffer management commands {{{2
+com! HGDisableBufferSetup call HGDisableBufferSetup()
+com! HGEnableBufferSetup call HGEnableBufferSetup()
 
-" Allow reloading cvscommand.vim
-com! CVSReload unlet! loaded_cvscommand | runtime plugin/cvscommand.vim
+" Allow reloading hgcommand.vim
+com! HGReload unlet! loaded_hgcommand | runtime plugin/hgcommand.vim
 
 " Section: Plugin command mappings {{{1
-nnoremap <silent> <Plug>CVSAdd :CVSAdd<CR>
-nnoremap <silent> <Plug>CVSAnnotate :CVSAnnotate<CR>
-nnoremap <silent> <Plug>CVSCommit :CVSCommit<CR>
-nnoremap <silent> <Plug>CVSDiff :CVSDiff<CR>
-nnoremap <silent> <Plug>CVSEdit :CVSEdit<CR>
-nnoremap <silent> <Plug>CVSEditors :CVSEditors<CR>
-nnoremap <silent> <Plug>CVSGotoOriginal :CVSGotoOriginal<CR>
-nnoremap <silent> <Plug>CVSClearAndGotoOriginal :CVSGotoOriginal!<CR>
-nnoremap <silent> <Plug>CVSLog :CVSLog<CR>
-nnoremap <silent> <Plug>CVSRevert :CVSRevert<CR>
-nnoremap <silent> <Plug>CVSReview :CVSReview<CR>
-nnoremap <silent> <Plug>CVSStatus :CVSStatus<CR>
-nnoremap <silent> <Plug>CVSUnedit :CVSUnedit<CR>
-nnoremap <silent> <Plug>CVSUpdate :CVSUpdate<CR>
-nnoremap <silent> <Plug>CVSVimDiff :CVSVimDiff<CR>
-nnoremap <silent> <Plug>CVSWatchers :CVSWatchers<CR>
-nnoremap <silent> <Plug>CVSWatchAdd :CVSWatchAdd<CR>
-nnoremap <silent> <Plug>CVSWatchOn :CVSWatchOn<CR>
-nnoremap <silent> <Plug>CVSWatchOff :CVSWatchOff<CR>
-nnoremap <silent> <Plug>CVSWatchRemove :CVSWatchRemove<CR>
+nnoremap <silent> <Plug>HGAdd :HGAdd<CR>
+nnoremap <silent> <Plug>HGAnnotate :HGAnnotate<CR>
+nnoremap <silent> <Plug>HGCommit :HGCommit<CR>
+nnoremap <silent> <Plug>HGDiff :HGDiff<CR>
+nnoremap <silent> <Plug>HGGotoOriginal :HGGotoOriginal<CR>
+nnoremap <silent> <Plug>HGClearAndGotoOriginal :HGGotoOriginal!<CR>
+nnoremap <silent> <Plug>HGLog :HGLog<CR>
+nnoremap <silent> <Plug>HGRevert :HGRevert<CR>
+nnoremap <silent> <Plug>HGReview :HGReview<CR>
+nnoremap <silent> <Plug>HGStatus :HGStatus<CR>
+nnoremap <silent> <Plug>HGUpdate :HGUpdate<CR>
+nnoremap <silent> <Plug>HGVimDiff :HGVimDiff<CR>
+nnoremap <silent> <Plug>HGWatchers :HGWatchers<CR>
+nnoremap <silent> <Plug>HGWatchAdd :HGWatchAdd<CR>
+nnoremap <silent> <Plug>HGWatchOn :HGWatchOn<CR>
+nnoremap <silent> <Plug>HGWatchOff :HGWatchOff<CR>
+nnoremap <silent> <Plug>HGWatchRemove :HGWatchRemove<CR>
 
 " Section: Default mappings {{{1
-if !hasmapto('<Plug>CVSAdd')
-  nmap <unique> <Leader>ca <Plug>CVSAdd
+if !hasmapto('<Plug>HGAdd')
+  nmap <unique> <Leader>hga <Plug>HGAdd
 endif
-if !hasmapto('<Plug>CVSAnnotate')
-  nmap <unique> <Leader>cn <Plug>CVSAnnotate
+if !hasmapto('<Plug>HGAnnotate')
+  nmap <unique> <Leader>hgn <Plug>HGAnnotate
 endif
-if !hasmapto('<Plug>CVSClearAndGotoOriginal')
-  nmap <unique> <Leader>cG <Plug>CVSClearAndGotoOriginal
+if !hasmapto('<Plug>HGClearAndGotoOriginal')
+  nmap <unique> <Leader>hgG <Plug>HGClearAndGotoOriginal
 endif
-if !hasmapto('<Plug>CVSCommit')
-  nmap <unique> <Leader>cc <Plug>CVSCommit
+if !hasmapto('<Plug>HGCommit')
+  nmap <unique> <Leader>hgc <Plug>HGCommit
 endif
-if !hasmapto('<Plug>CVSDiff')
-  nmap <unique> <Leader>cd <Plug>CVSDiff
+if !hasmapto('<Plug>HGDiff')
+  nmap <unique> <Leader>hgd <Plug>HGDiff
 endif
-if !hasmapto('<Plug>CVSEdit')
-  nmap <unique> <Leader>ce <Plug>CVSEdit
+if !hasmapto('<Plug>HGGotoOriginal')
+  nmap <unique> <Leader>hgg <Plug>HGGotoOriginal
 endif
-if !hasmapto('<Plug>CVSEditors')
-  nmap <unique> <Leader>ci <Plug>CVSEditors
+if !hasmapto('<Plug>HGLog')
+  nmap <unique> <Leader>hgl <Plug>HGLog
 endif
-if !hasmapto('<Plug>CVSGotoOriginal')
-  nmap <unique> <Leader>cg <Plug>CVSGotoOriginal
+if !hasmapto('<Plug>HGRevert')
+  nmap <unique> <Leader>hgq <Plug>HGRevert
 endif
-if !hasmapto('<Plug>CVSLog')
-  nmap <unique> <Leader>cl <Plug>CVSLog
+if !hasmapto('<Plug>HGReview')
+  nmap <unique> <Leader>hgr <Plug>HGReview
 endif
-if !hasmapto('<Plug>CVSRevert')
-  nmap <unique> <Leader>cq <Plug>CVSRevert
+if !hasmapto('<Plug>HGStatus')
+  nmap <unique> <Leader>hgs <Plug>HGStatus
 endif
-if !hasmapto('<Plug>CVSReview')
-  nmap <unique> <Leader>cr <Plug>CVSReview
+if !hasmapto('<Plug>HGUpdate')
+  nmap <unique> <Leader>hgu <Plug>HGUpdate
 endif
-if !hasmapto('<Plug>CVSStatus')
-  nmap <unique> <Leader>cs <Plug>CVSStatus
-endif
-if !hasmapto('<Plug>CVSUnedit')
-  nmap <unique> <Leader>ct <Plug>CVSUnedit
-endif
-if !hasmapto('<Plug>CVSUpdate')
-  nmap <unique> <Leader>cu <Plug>CVSUpdate
-endif
-if !hasmapto('<Plug>CVSVimDiff')
-  nmap <unique> <Leader>cv <Plug>CVSVimDiff
-endif
-if !hasmapto('<Plug>CVSWatchers')
-  nmap <unique> <Leader>cwv <Plug>CVSWatchers
-endif
-if !hasmapto('<Plug>CVSWatchAdd')
-  nmap <unique> <Leader>cwa <Plug>CVSWatchAdd
-endif
-if !hasmapto('<Plug>CVSWatchOn')
-  nmap <unique> <Leader>cwn <Plug>CVSWatchOn
-endif
-if !hasmapto('<Plug>CVSWatchOff')
-  nmap <unique> <Leader>cwf <Plug>CVSWatchOff
-endif
-if !hasmapto('<Plug>CVSWatchRemove')
-  nmap <unique> <Leader>cwr <Plug>CVSWatchRemove
+if !hasmapto('<Plug>HGVimDiff')
+  nmap <unique> <Leader>hgv <Plug>HGVimDiff
 endif
 
 " Section: Menu items {{{1
-silent! aunmenu Plugin.CVS
-amenu <silent> &Plugin.CVS.&Add        <Plug>CVSAdd
-amenu <silent> &Plugin.CVS.A&nnotate   <Plug>CVSAnnotate
-amenu <silent> &Plugin.CVS.&Commit     <Plug>CVSCommit
-amenu <silent> &Plugin.CVS.&Diff       <Plug>CVSDiff
-amenu <silent> &Plugin.CVS.&Edit       <Plug>CVSEdit
-amenu <silent> &Plugin.CVS.Ed&itors    <Plug>CVSEditors
-amenu <silent> &Plugin.CVS.&Log        <Plug>CVSLog
-amenu <silent> &Plugin.CVS.Revert      <Plug>CVSRevert
-amenu <silent> &Plugin.CVS.&Review     <Plug>CVSReview
-amenu <silent> &Plugin.CVS.&Status     <Plug>CVSStatus
-amenu <silent> &Plugin.CVS.Unedi&t     <Plug>CVSUnedit
-amenu <silent> &Plugin.CVS.&Update     <Plug>CVSUpdate
-amenu <silent> &Plugin.CVS.&VimDiff    <Plug>CVSVimDiff
-amenu <silent> &Plugin.CVS.&Watchers   <Plug>CVSWatchers
-amenu <silent> &Plugin.CVS.WatchAdd    <Plug>CVSWatchAdd
-amenu <silent> &Plugin.CVS.WatchOn     <Plug>CVSWatchOn
-amenu <silent> &Plugin.CVS.WatchOff    <Plug>CVSWatchOff
-amenu <silent> &Plugin.CVS.WatchRemove <Plug>CVSWatchRemove
+silent! aunmenu Plugin.HG
+amenu <silent> &Plugin.HG.&Add        <Plug>HGAdd
+amenu <silent> &Plugin.HG.A&nnotate   <Plug>HGAnnotate
+amenu <silent> &Plugin.HG.&Commit     <Plug>HGCommit
+amenu <silent> &Plugin.HG.&Diff       <Plug>HGDiff
+amenu <silent> &Plugin.HG.&Log        <Plug>HGLog
+amenu <silent> &Plugin.HG.Revert      <Plug>HGRevert
+amenu <silent> &Plugin.HG.&Review     <Plug>HGReview
+amenu <silent> &Plugin.HG.&Status     <Plug>HGStatus
+amenu <silent> &Plugin.HG.&Update     <Plug>HGUpdate
+amenu <silent> &Plugin.HG.&VimDiff    <Plug>HGVimDiff
+amenu <silent> &Plugin.HG.&Watchers   <Plug>HGWatchers
+amenu <silent> &Plugin.HG.WatchAdd    <Plug>HGWatchAdd
+amenu <silent> &Plugin.HG.WatchOn     <Plug>HGWatchOn
+amenu <silent> &Plugin.HG.WatchOff    <Plug>HGWatchOff
+amenu <silent> &Plugin.HG.WatchRemove <Plug>HGWatchRemove
 
 " Section: Autocommands to restore vimdiff state {{{1
-function! s:CVSVimDiffRestore(vimDiffBuff)
-  let s:CVSCommandEditFileRunning = s:CVSCommandEditFileRunning + 1
+function! s:HGVimDiffRestore(vimDiffBuff)
+  let s:HGCommandEditFileRunning = s:HGCommandEditFileRunning + 1
   try
     if exists("s:vimDiffSourceBuffer")
       if a:vimDiffBuff == s:vimDiffSourceBuffer
@@ -1366,22 +1243,23 @@ function! s:CVSVimDiffRestore(vimDiffBuff)
       endif
     endif
   finally
-    let s:CVSCommandEditFileRunning = s:CVSCommandEditFileRunning - 1
+    let s:HGCommandEditFileRunning = s:HGCommandEditFileRunning - 1
   endtry
 endfunction
 
-augroup CVSVimDiffRestore
+augroup HGVimDiffRestore
   au!
-  au BufUnload * call s:CVSVimDiffRestore(expand("<abuf>"))
+  au BufUnload * call s:HGVimDiffRestore(expand("<abuf>"))
 augroup END
 
 " Section: Optional activation of buffer management {{{1
 
-if s:CVSGetOption('CVSCommandEnableBufferSetup', 0)
-  call CVSEnableBufferSetup()
+if s:HGGetOption('HGCommandEnableBufferSetup', 0)
+  call HGEnableBufferSetup()
 endif
 
 " Section: Plugin completion {{{1
 
-let loaded_cvscommand=2
-silent do CVSCommand User CVSPluginFinish
+let loaded_hgcommand=2
+silent do HGCommand User HGPluginFinish
+" vim:se expandtab sts=2 sw=2:
