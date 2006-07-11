@@ -2228,15 +2228,15 @@ def pull(ui, repo, source="default", **opts):
     Valid URLs are of the form:
 
       local/filesystem/path
-      http://[user@]host[:port][/path]
-      https://[user@]host[:port][/path]
-      ssh://[user@]host[:port][/path]
+      http://[user@]host[:port]/[path]
+      https://[user@]host[:port]/[path]
+      ssh://[user@]host[:port]/[path]
 
     Some notes about using SSH with Mercurial:
     - SSH requires an accessible shell account on the destination machine
       and a copy of hg in the remote path or specified with as remotecmd.
-    - /path is relative to the remote user's home directory by default.
-      Use two slashes at the start of a path to specify an absolute path.
+    - path is relative to the remote user's home directory by default.
+      Use a slash at the start of a path to specify an absolute path.
     - Mercurial doesn't use its own compression via SSH; the right thing
       to do is to configure it in your ~/.ssh/ssh_config, e.g.:
         Host *.mylocalnetwork.example.com
@@ -2280,7 +2280,7 @@ def push(ui, repo, dest=None, **opts):
     Valid URLs are of the form:
 
       local/filesystem/path
-      ssh://[user@]host[:port][/path]
+      ssh://[user@]host[:port]/[path]
 
     Look at the help text for the pull command for important details
     about ssh:// URLs.
