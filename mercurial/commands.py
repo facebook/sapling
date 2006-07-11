@@ -951,6 +951,10 @@ def clone(ui, source, dest=None, **opts):
     hardlinking.
 
     See pull for valid source format details.
+
+    It is possible to specify an ssh:// URL as the destination, but no
+    .hg/hgrc will be created on the remote side. Look at the help text
+    for the pull command for important details about ssh:// URLs.
     """
     if dest is None:
         dest = os.path.basename(os.path.normpath(source))
@@ -1960,6 +1964,10 @@ def init(ui, dest="."):
     directory does not exist, it is created.
 
     If no directory is given, the current directory is used.
+
+    It is possible to specify an ssh:// URL as the destination.
+    Look at the help text for the pull command for important details
+    about ssh:// URLs.
     """
     hg.repository(ui, dest, create=1)
 
@@ -2236,7 +2244,8 @@ def pull(ui, repo, source="default", **opts):
     - SSH requires an accessible shell account on the destination machine
       and a copy of hg in the remote path or specified with as remotecmd.
     - path is relative to the remote user's home directory by default.
-      Use a slash at the start of a path to specify an absolute path.
+      Use an extra slash at the start of a path to specify an absolute path:
+        ssh://example.com//tmp/repository
     - Mercurial doesn't use its own compression via SSH; the right thing
       to do is to configure it in your ~/.ssh/ssh_config, e.g.:
         Host *.mylocalnetwork.example.com
@@ -2284,6 +2293,9 @@ def push(ui, repo, dest=None, **opts):
 
     Look at the help text for the pull command for important details
     about ssh:// URLs.
+
+    Pushing to http:// and https:// URLs is possible, too, if this
+    feature is enabled on the remote Mercurial server.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
 
