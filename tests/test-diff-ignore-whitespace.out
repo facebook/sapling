@@ -1,0 +1,140 @@
+adding foo
+>>> two diffs showing three added lines <<<
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,5 @@ hello world
++
+ hello world
++
+ goodbye world
++
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,5 @@ hello world
++
+ hello world
++
+ goodbye world
++
+>>> no diffs <<<
+>>> four diffs showing added space first on the first line <<<
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+-hello world
++	 hello world
+ goodbye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+-hello world
++	 hello world
+ goodbye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+-hello world
++	 hello world
+ goodbye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+-hello world
++	 hello world
+ goodbye world
+>>> two diffs showing space appended to the first line <<<
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+-hello world
++hello world	 
+ goodbye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+-hello world
++hello world	 
+ goodbye world
+>>> no diffs <<<
+>>> four diffs showing space inserted into "goodbye" <<<
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+ hello world
+-goodbye world
++good bye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+ hello world
+-goodbye world
++good bye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+ hello world
+-goodbye world
++good bye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+ hello world
+-goodbye world
++good bye world
+>>> two diffs showing changed whitespace amount in the last line <<<
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+ hello world
+-goodbye world
++goodbye		  	world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,2 @@ hello world
+ hello world
+-goodbye world
++goodbye		  	world
+>>> no diffs <<<
+>>> four diffs showing added blank line w/horizontal space <<<
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,3 @@ hello world
+ hello world
++ 	
+ goodbye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,3 @@ hello world
+ hello world
++ 	
+ goodbye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,3 @@ hello world
+ hello world
++ 	
+ goodbye world
+diff -r 540c40a65b78 foo
+--- a/foo
++++ b/foo
+@@ -1,2 +1,3 @@ hello world
+ hello world
++ 	
+ goodbye world
