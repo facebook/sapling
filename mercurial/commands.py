@@ -956,107 +956,15 @@ def clone(ui, source, dest=None, **opts):
     .hg/hgrc will be created on the remote side. Look at the help text
     for the pull command for important details about ssh:// URLs.
     """
-    if dest is None:
-        dest = os.path.basename(os.path.normpath(source))
-
-    if os.path.exists(dest):
-        raise util.Abort(_("destination '%s' already exists"), dest)
-
-    class Dircleanup(object):
-        def __init__(self, dir_):
-            self.rmtree = shutil.rmtree
-            self.dir_ = dir_
-        def close(self):
-            self.dir_ = None
-        def __del__(self):
-            if self.dir_:
-                self.rmtree(self.dir_, True)
-
     if opts['ssh']:
         ui.setconfig("ui", "ssh", opts['ssh'])
     if opts['remotecmd']:
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
-    source = ui.expandpath(source)
-    src_repo = hg.repository(ui, source)
-
-    dest_repo = None
-    try:
-        dest_repo = hg.repository(ui, dest)
-        raise util.Abort(_("destination '%s' already exists." % dest))
-    except hg.RepoError:
-        dest_repo = hg.repository(ui, dest, create=1)
-
-    dest_path = None
-    d = None
-    if dest_repo.local():
-        dest_path = os.path.realpath(dest)
-        d = Dircleanup(dest_path)
-
-    abspath = source
-    copy = False
-    if src_repo.local() and dest_repo.local():
-        abspath = os.path.abspath(source)
-        if not opts['pull'] and not opts['rev']:
-            copy = True
-
-    if copy:
-        try:
-            # we use a lock here because if we race with commit, we
-            # can end up with extra data in the cloned revlogs that's
-            # not pointed to by changesets, thus causing verify to
-            # fail
-            l1 = src_repo.lock()
-        except lock.LockException:
-            copy = False
-
-    if copy:
-        # we lock here to avoid premature writing to the target
-        l2 = lock.lock(os.path.join(dest_path, ".hg", "lock"))
-
-	# we need to remove the (empty) data dir in dest so copyfiles can do it's work
-	os.rmdir( os.path.join(dest_path, ".hg", "data") )
-        files = "data 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
-        for f in files.split():
-            src = os.path.join(source, ".hg", f)
-            dst = os.path.join(dest_path, ".hg", f)
-            try:
-                util.copyfiles(src, dst)
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    raise
-
-	# we need to re-init the repo after manually copying the data into it
-        dest_repo = hg.repository(ui, dest)
-
-    else:
-        revs = None
-        if opts['rev']:
-            if not src_repo.local():
-                error = _("clone -r not supported yet for remote repositories.")
-                raise util.Abort(error)
-            else:
-                revs = [src_repo.lookup(rev) for rev in opts['rev']]
-
-        if dest_repo.local():
-            dest_repo.pull(src_repo, heads = revs)
-        elif src_repo.local():
-            src_repo.push(dest_repo, revs = revs)
-        else:
-            error = _("clone from remote to remote not supported.")
-            raise util.Abort(error)
-
-    if dest_repo.local():
-        f = dest_repo.opener("hgrc", "w", text=True)
-        f.write("[paths]\n")
-        f.write("default = %s\n" % abspath)
-        f.close()
-
-        if not opts['noupdate']:
-            doupdate(dest_repo.ui, dest_repo)
-
-    if d:
-        d.close()
+    hg.clone(ui, ui.expandpath(source), dest,
+             pull=opts['pull'],
+             rev=opts['rev'],
+             update=not opts['noupdate'])
 
 def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
