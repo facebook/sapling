@@ -6,7 +6,7 @@
 " Version:       1.76
 " Maintainer:    Mathieu Clabaut <mathieu.clabaut@gmail.com>
 " License:       This file is placed in the public domain.
-" Credits: {{{1
+" Credits:
 "                Bob Hiestand <bob.hiestand@gmail.com> for the fabulous
 "                cvscommand.vim from which this script was directly created by
 "                means of sed commands and minor tweaks.
@@ -22,213 +22,7 @@
 " You still can read the documentation at the end of this file. Locate it by
 " searching the "hgcommand-contents" string (and set ft=help to have
 " appropriate syntaxic coloration). 
-" 
-" Section: Documentation : detail {{{1
-"
-" Provides functions to invoke various HG commands on the current file
-" (either the current buffer, or, in the case of an directory buffer, the file
-" on the current line).  The output of the commands is captured in a new
-" scratch window.  For convenience, if the functions are invoked on a HG
-" output window, the original file is used for the hg operation instead after
-" the window is split.  This is primarily useful when running HGCommit and
-" you need to see the changes made, so that HGDiff is usable and shows up in
-" another window.
-"
-" Command documentation {{{2
-"
-" HGAdd           Performs "hg add" on the current file.
-"
-" HGAnnotate      Performs "hg annotate" on the current file.  If an
-"                  argument is given, the argument is used as a revision
-"                  number to display.  If not given an argument, it uses the
-"                  most recent version of the file on the current branch.
-"                  Additionally, if the current buffer is a HGAnnotate buffer
-"                  already, the version number on the current line is used.
-"
-"                  If the 'HGCommandAnnotateParent' variable is set to a
-"                  non-zero value, the version previous to the one on the
-"                  current line is used instead.  This allows one to navigate
-"                  back to examine the previous version of a line.
-"
-" HGCommit[!]     If called with arguments, this performs "hg commit" using
-"                  the arguments as the log message.
-"
-"                  If '!' is used, an empty log message is committed.
-"
-"                  If called with no arguments, this is a two-step command.
-"                  The first step opens a buffer to accept a log message.
-"                  When that buffer is written, it is automatically closed and
-"                  the file is committed using the information from that log
-"                  message.  The commit can be abandoned if the log message
-"                  buffer is deleted or wiped before being written.
-"
-" HGDiff          With no arguments, this performs "hg diff" on the current
-"                  file.  With one argument, "hg diff" is performed on the
-"                  current file against the specified revision.  With two
-"                  arguments, hg diff is performed between the specified
-"                  revisions of the current file.  This command uses the
-"                  'HGCommandDiffOpt' variable to specify diff options.  If
-"                  that variable does not exist, then 'wbBc' is assumed.  If
-"                  you wish to have no options, then set it to the empty
-"                  string.
-"
-" HGGotoOriginal  Returns the current window to the source buffer if the
-"                  current buffer is a HG output buffer.
-"
-" HGLog           Performs "hg log" on the current file.
-"
-" HGRevert        Replaces the modified version of the current file with the
-"                  most recent version from the repository.
-"
-" HGReview        Retrieves a particular version of the current file.  If no
-"                  argument is given, the most recent version of the file on
-"                  the current branch is retrieved.  The specified revision is
-"                  retrieved into a new buffer.
-"
-" HGStatus        Performs "hg status" on the current file.
-"
-" HGUpdate        Performs "hg update" on the current file.
-"
-" HGVimDiff       With no arguments, this prompts the user for a revision and
-"                  then uses vimdiff to display the differences between the
-"                  current file and the specified revision.  If no revision is
-"                  specified, the most recent version of the file on the
-"                  current branch is used.  With one argument, that argument
-"                  is used as the revision as above.  With two arguments, the
-"                  differences between the two revisions is displayed using
-"                  vimdiff.
-"
-"                  With either zero or one argument, the original buffer is used
-"                  to perform the vimdiff.  When the other buffer is closed, the
-"                  original buffer will be returned to normal mode.
-"
-"                  Once vimdiff mode is started using the above methods,
-"                  additional vimdiff buffers may be added by passing a single
-"                  version argument to the command.  There may be up to 4
-"                  vimdiff buffers total.
-"
-"                  Using the 2-argument form of the command resets the vimdiff
-"                  to only those 2 versions.  Additionally, invoking the
-"                  command on a different file will close the previous vimdiff
-"                  buffers.
-"
-"
-" Mapping documentation: {{{2
-"
-" By default, a mapping is defined for each command.  User-provided mappings
-" can be used instead by mapping to <Plug>CommandName, for instance:
-"
-" nnoremap ,ca <Plug>HGAdd
-"
-" The default mappings are as follow:
-"
-"   <Leader>hga HGAdd
-"   <Leader>hgn HGAnnotate
-"   <Leader>hgc HGCommit
-"   <Leader>hgd HGDiff
-"   <Leader>hgg HGGotoOriginal
-"   <Leader>hgG HGGotoOriginal!
-"   <Leader>hgl HGLog
-"   <Leader>hgr HGReview
-"   <Leader>hgs HGStatus
-"   <Leader>hgu HGUpdate
-"   <Leader>hgv HGVimDiff
-"
-" Options documentation: {{{2
-"
-" Several variables are checked by the script to determine behavior as follow:
-"
-" HGCommandAnnotateParent
-"   This variable, if set to a non-zero value, causes the zero-argument form
-"   of HGAnnotate when invoked on a HGAnnotate buffer to go to the version
-"   previous to that displayed on the current line.  If not set, it defaults
-"   to 0.
-"
-" HGCommandCommitOnWrite
-"   This variable, if set to a non-zero value, causes the pending hg commit
-"   to take place immediately as soon as the log message buffer is written.
-"   If set to zero, only the HGCommit mapping will cause the pending commit
-"   to occur.  If not set, it defaults to 1.
-"
-" HGCommandDeleteOnHide
-"   This variable, if set to a non-zero value, causes the temporary HG result
-"   buffers to automatically delete themselves when hidden.
-"
-" HGCommandDiffOpt
-"   This variable, if set, determines the options passed to the diff command
-"   of HG.  If not set, it defaults to 'wbBc'.
-"
-" HGCommandDiffSplit
-"   This variable overrides the HGCommandSplit variable, but only for buffers
-"   created with HGVimDiff.
-"
-" HGCommandEdit
-"   This variable controls whether the original buffer is replaced ('edit') or
-"   split ('split').  If not set, it defaults to 'edit'.
-"
-" HGCommandEnableBufferSetup
-"   This variable, if set to a non-zero value, activates HG buffer management
-"   mode.  This mode means that two buffer variables, 'HGRevision' and
-"   'HGBranch', are set if the file is HG-controlled.  This is useful for
-"   displaying version information in the status bar.
-"
-" HGCommandInteractive
-"   This variable, if set to a non-zero value, causes appropriate functions (for
-"   the moment, only HGReview) to query the user for a revision to use
-"   instead of the current revision if none is specified.
-"
-" HGCommandNameMarker
-"   This variable, if set, configures the special attention-getting characters
-"   that appear on either side of the hg buffer type in the buffer name.
-"   This has no effect unless 'HGCommandNameResultBuffers' is set to a true
-"   value.  If not set, it defaults to '_'.  
-"
-" HGCommandNameResultBuffers
-"   This variable, if set to a true value, causes the hg result buffers to be
-"   named in the old way ('<source file name> _<hg command>_').  If not set
-"   or set to a false value, the result buffer is nameless.
-"
-" HGCommandSplit
-"   This variable controls the orientation of the various window splits that
-"   may occur (such as with HGVimDiff, when using a HG command on a HG
-"   command buffer, or when the 'HGCommandEdit' variable is set to 'split'.
-"   If set to 'horizontal', the resulting windows will be on stacked on top of
-"   one another.  If set to 'vertical', the resulting windows will be
-"   side-by-side.  If not set, it defaults to 'horizontal' for all but
-"   HGVimDiff windows.
-"
-" Event documentation {{{2
-"   For additional customization, hgcommand.vim uses User event autocommand
-"   hooks.  Each event is in the HGCommand group, and different patterns
-"   match the various hooks.
-"
-"   For instance, the following could be added to the vimrc to provide a 'q'
-"   mapping to quit a HG buffer:
-"
-"   augroup HGCommand
-"     au HGCommand User HGBufferCreated silent! nmap <unique> <buffer> q :bwipeout<cr> 
-"   augroup END
-"
-"   The following hooks are available:
-"
-"   HGBufferCreated           This event is fired just after a hg command
-"                              result buffer is created and filled with the
-"                              result of a hg command.  It is executed within
-"                              the context of the new buffer.
-"
-"   HGBufferSetup             This event is fired just after HG buffer setup
-"                              occurs, if enabled.
-"
-"   HGPluginInit              This event is fired when the HGCommand plugin
-"                              first loads.
-"
-"   HGPluginFinish            This event is fired just after the HGCommand
-"                              plugin loads.
-"
-"   HGVimDiffFinish           This event is fired just after the HGVimDiff
-"                              command executes to allow customization of,
-"                              for instance, window placement and focus.
-"
+
 " Section: Plugin header {{{1
 
 " loaded_hgcommand is set to 1 when the initialization begins, and 2 when it
@@ -1422,18 +1216,16 @@ Mercurial: http://www.selenic.com/mercurial
    system designed for efficient handling of very large distributed projects.
 
 ==============================================================================
-1. Contents						*hgcommand-contents*
+1. Contents						  *hgcommand-contents*
 
 	Installation		: |hgcommand-install|
         HGCommand Intro	        : |hgcommand|
 	HGCommand Manual	: |hgcommand-manual|
 	Customization		: |hgcommand-customize|
-	SSH "integration"	: |hgcommand-ssh|
 	Bugs			: |hgcommand-bugs|
 
 ==============================================================================
-                                                           *hgcommand-install*
-2. HGCommand Installation				
+2. HGCommand Installation				   *hgcommand-install*
 
    In order to install the plugin, place the hgcommand.vim file into a plugin' 
    directory in your runtime path (please see |add-global-plugin| and 
@@ -1444,537 +1236,444 @@ Mercurial: http://www.selenic.com/mercurial
    details.
 
                                                          *hgcommand-auto-help*
-   The help file is automagically generated when the |vimspell| script is 
+   The help file is automagically generated when the |hgcommand| script is 
    loaded for the first time.
 
 ==============================================================================
 
-3. HGCommand Intro					*hgcommand*
-							*hgcommand-intro*
+3. HGCommand Intro					           *hgcommand*
+                                                             *hgcommand-intro*
 
-The HGCommand plugin provides global ex commands for manipulating
-HG-controlled source files.  In general, each command operates on the current
-buffer and accomplishes a separate hg function, such as update, commit, log,
-and others (please see |hgcommand-commands| for a list of all available
-commands).  The results of each operation are displayed in a scratch buffer.
-Several buffer variables are defined for those scratch buffers (please see
-|hgcommand-buffer-variables|).
+   The HGCommand plugin provides global ex commands for manipulating 
+   HG-controlled source files.  In general, each command operates on the 
+   current buffer and accomplishes a separate hg function, such as update, 
+   commit, log, and others (please see |hgcommand-commands| for a list of all
+   available commands).  The results of each operation are displayed in a 
+   scratch buffer.  Several buffer variables are defined for those scratch 
+   buffers (please see |hgcommand-buffer-variables|).
 
-The notion of "current file" means either the current buffer, or, in the case
-of a directory buffer, the file on the current line within the buffer.
+   The notion of "current file" means either the current buffer, or, in the 
+   case of a directory buffer, the file on the current line within the buffer.
 
-For convenience, any HGCommand invoked on a HGCommand scratch buffer acts as
-though it was invoked on the original file and splits the screen so that the
-output appears in a new window.
+   For convenience, any HGCommand invoked on a HGCommand scratch buffer acts 
+   as though it was invoked on the original file and splits the screen so that 
+   the output appears in a new window.
 
-Many of the commands accept revisions as arguments.  By default, most operate
-on the most recent revision on the current branch if no revision is specified
-(though see |HGCommandInteractive| to prompt instead).
+   Many of the commands accept revisions as arguments.  By default, most 
+   operate on the most recent revision on the current branch if no revision is 
+   specified (though see |HGCommandInteractive| to prompt instead).
 
-Each HGCommand is mapped to a key sequence starting with the <Leader>
-keystroke.  The default mappings may be overridden by supplying different
-mappings before the plugin is loaded, such as in the vimrc, in the standard
-fashion for plugin mappings.  For examples, please see
-|hgcommand-mappings-override|.
+   Each HGCommand is mapped to a key sequence starting with the <Leader> 
+   keystroke.  The default mappings may be overridden by supplying different 
+   mappings before the plugin is loaded, such as in the vimrc, in the standard 
+   fashion for plugin mappings.  For examples, please see 
+   |hgcommand-mappings-override|.
 
-The HGCommand plugin may be configured in several ways.  For more details,
-please see |hgcommand-customize|.
+   The HGCommand plugin may be configured in several ways.  For more details, 
+   please see |hgcommand-customize|.
 
 ==============================================================================
+4. HGCommand Manual					    *hgcommand-manual*
 
-4. HGCommand Manual					*hgcommand-manual*
+4.1 HGCommand commands					  *hgcommand-commands*
 
-4.1 HGCommand commands					*hgcommand-commands*
+   HGCommand defines the following commands:
 
-HGCommand defines the following commands:
+      |:HGAdd|
+      |:HGAnnotate|
+      |:HGCommit|
+      |:HGDiff|
+      |:HGGotoOriginal|
+      |:HGLog|
+      |:HGRevert|
+      |:HGReview|
+      |:HGStatus|
+      |:HGUpdate|
+      |:HGVimDiff|
 
-|:HGAdd|
-|:HGAnnotate|
-|:HGCommit|
-|:HGDiff|
-|:HGGotoOriginal|
-|:HGLog|
-|:HGRevert|
-|:HGReview|
-|:HGStatus|
-|:HGUnedit|
-|:HGUpdate|
-|:HGVimDiff|
+:HGAdd							              *:HGAdd*
 
-:HGAdd							*:HGAdd*
+   This command performs "hg add" on the current file.  Please note, this does 
+   not commit the newly-added file.
 
-This command performs "hg add" on the current file.  Please note, this does
-not commit the newly-added file.
+:HGAnnotate						         *:HGAnnotate*
 
-:HGAnnotate						*:HGAnnotate*
+   This command performs "hg annotate" on the current file.  If an argument is 
+   given, the argument is used as a revision number to display.  If not given 
+   an argument, it uses the most recent version of the file on the current 
+   branch.  Additionally, if the current buffer is a HGAnnotate buffer 
+   already, the version number on the current line is used.
 
-This command performs "hg annotate" on the current file.  If an argument is
-given, the argument is used as a revision number to display.  If not given an
-argument, it uses the most recent version of the file on the current branch.
-Additionally, if the current buffer is a HGAnnotate buffer already, the
-version number on the current line is used.
+   If the |HGCommandAnnotateParent| variable is set to a non-zero value, the 
+   version previous to the one on the current line is used instead.  This 
+   allows one to navigate back to examine the previous version of a line.
 
-If the |HGCommandAnnotateParent| variable is set to a non-zero value, the
-version previous to the one on the current line is used instead.  This allows
-one to navigate back to examine the previous version of a line.
-
-The filetype of the HGCommand scratch buffer is set to 'HGAnnotate', to take
-advantage of the bundled syntax file.
+   The filetype of the HGCommand scratch buffer is set to 'HGAnnotate', to 
+   take advantage of the bundled syntax file.
 
 
-:HGCommit[!]						*:HGCommit*
+:HGCommit[!]						           *:HGCommit*
 
-If called with arguments, this performs "hg commit" using the arguments as
-the log message.
+   If called with arguments, this performs "hg commit" using the arguments as 
+   the log message.
 
-If '!' is used with no arguments, an empty log message is committed.
+   If '!' is used with no arguments, an empty log message is committed.
 
-If called with no arguments, this is a two-step command.  The first step opens
-a buffer to accept a log message.  When that buffer is written, it is
-automatically closed and the file is committed using the information from that
-log message.  The commit can be abandoned if the log message buffer is deleted
-or wiped before being written.
+   If called with no arguments, this is a two-step command.  The first step 
+   opens a buffer to accept a log message.  When that buffer is written, it is 
+   automatically closed and the file is committed using the information from 
+   that log message.  The commit can be abandoned if the log message buffer is 
+   deleted or wiped before being written.
 
-Alternatively, the mapping that is used to invoke :HGCommit (by default
-<Leader>hgc) can be used in the log message buffer to immediately commit.  
-This
-is useful if the |HGCommandCommitOnWrite| variable is set to 0 to disable the
-normal commit-on-write behavior.
+   Alternatively, the mapping that is used to invoke :HGCommit (by default 
+   <Leader>hgc) can be used in the log message buffer to immediately commit.  
+   This is useful if the |HGCommandCommitOnWrite| variable is set to 0 to 
+   disable the normal commit-on-write behavior.
 
-:HGDiff						*:HGDiff*
+:HGDiff						                     *:HGDiff*
 
-With no arguments, this performs "hg diff" on the current file against the
-current repository version.
+   With no arguments, this performs "hg diff" on the current file against the 
+   current repository version.
 
-With one argument, "hg diff" is performed on the current file against the
-specified revision.
+   With one argument, "hg diff" is performed on the current file against the 
+   specified revision.
 
-With two arguments, hg diff is performed between the specified
-revisions of the current file.
+   With two arguments, hg diff is performed between the specified revisions of 
+   the current file.
 
-This command uses the 'HGCommandDiffOpt' variable to specify diff options.
-If that variable does not exist, then 'wbBc' is assumed.  If you wish to have
-no options, then set it to the empty string.
+   This command uses the 'HGCommandDiffOpt' variable to specify diff options.  
+   If that variable does not exist, then 'wbBc' is assumed.  If you wish to 
+   have no options, then set it to the empty string.
 
 
-This command performs "hg edit" on the current file.
+:HGGotoOriginal					             *:HGGotoOriginal*
 
-:HGGotoOriginal					*:HGGotoOriginal*
-
-This command returns the current window to the source buffer, if the current
-buffer is a HG command output buffer.
+   This command returns the current window to the source buffer, if the 
+   current buffer is a HG command output buffer.
 
 :HGGotoOriginal!
 
-Like ":HGGotoOriginal" but also executes :bufwipeout on all HG command
-output buffers for the source buffer.
+   Like ":HGGotoOriginal" but also executes :bufwipeout on all HG command 
+   output buffers for the source buffer.
 
-:HGLog							*:HGLog*
+:HGLog							              *:HGLog*
 
-Performs "hg log" on the current file.
+   Performs "hg log" on the current file.
 
-If an argument is given, it is passed as an argument to the "-r" option of
-"hg log".
+   If an argument is given, it is passed as an argument to the "-r" option of 
+   "hg log".
 
-:HGRevert						*:HGRevert*
+:HGRevert						           *:HGRevert*
 
-Replaces the current file with the most recent version from the repository in
-order to wipe out any undesired changes.
+   Replaces the current file with the most recent version from the repository 
+   in order to wipe out any undesired changes.
+ 
+:HGReview						           *:HGReview*
 
-:HGReview						*:HGReview*
+   Retrieves a particular version of the current file.  If no argument is 
+   given, the most recent version of the file on the current branch is 
+   retrieved.  Otherwise, the specified version is retrieved.
 
-Retrieves a particular version of the current file.  If no argument is given,
-the most recent version of the file on the current branch is retrieved.
-Otherwise, the specified version is retrieved.
+:HGStatus					 	           *:HGStatus*
 
-:HGStatus						*:HGStatus*
+   Performs "hg status" on the current file.
 
-Performs "hg status" on the current file.
+:HGUpdate						           *:HGUpdate*
 
-:HGUnedit						*:HGUnedit*
+   Performs "hg update" on the current file.  This intentionally does not 
+   automatically reload the current buffer, though vim should prompt the user 
+   to do so if the underlying file is altered by this command.
 
-Performs "hg unedit" on the current file.  Again, yes, the output buffer here
-is basically useless.
+:HGVimDiff						          *:HGVimDiff*
 
-:HGUpdate						*:HGUpdate*
+   With no arguments, this prompts the user for a revision and then uses 
+   vimdiff to display the differences between the current file and the 
+   specified revision.  If no revision is specified, the most recent version 
+   of the file on the current branch is used.
 
-Performs "hg update" on the current file.  This intentionally does not
-automatically reload the current buffer, though vim should prompt the user to
-do so if the underlying file is altered by this command.
+   With one argument, that argument is used as the revision as above.  With 
+   two arguments, the differences between the two revisions is displayed using 
+   vimdiff.
 
-:HGVimDiff						*:HGVimDiff*
+   With either zero or one argument, the original buffer is used to perform 
+   the vimdiff.  When the other buffer is closed, the original buffer will be 
+   returned to normal mode.
 
-With no arguments, this prompts the user for a revision and then uses vimdiff
-to display the differences between the current file and the specified
-revision.  If no revision is specified, the most recent version of the file on
-the current branch is used.
+   Once vimdiff mode is started using the above methods, additional vimdiff 
+   buffers may be added by passing a single version argument to the command.  
+   There may be up to 4 vimdiff buffers total.
 
-With one argument, that argument is used as the revision as above.  With two
-arguments, the differences between the two revisions is displayed using
-vimdiff.
-
-With either zero or one argument, the original buffer is used to perform the
-vimdiff.  When the other buffer is closed, the original buffer will be
-returned to normal mode.
-
-Once vimdiff mode is started using the above methods, additional vimdiff
-buffers may be added by passing a single version argument to the command.
-There may be up to 4 vimdiff buffers total.
-
-Using the 2-argument form of the command resets the vimdiff to only those 2
-versions.  Additionally, invoking the command on a different file will close
-the previous vimdiff buffers.
+   Using the 2-argument form of the command resets the vimdiff to only those 2 
+   versions.  Additionally, invoking the command on a different file will 
+   close the previous vimdiff buffers.
 
 
-4.2 Mappings						*hgcommand-mappings*
+4.2 Mappings						  *hgcommand-mappings*
 
-By default, a mapping is defined for each command.  These mappings execute the
-default (no-argument) form of each command.
+   By default, a mapping is defined for each command.  These mappings execute 
+   the default (no-argument) form of each command.
 
-<Leader>hga HGAdd
-<Leader>hgn HGAnnotate
-<Leader>hgc HGCommit
-<Leader>hgd HGDiff
-<Leader>hgg HGGotoOriginal
-<Leader>hgG HGGotoOriginal!
-<Leader>hgl HGLog
-<Leader>hgr HGReview
-<Leader>hgs HGStatus
-<Leader>hgt HGUnedit
-<Leader>hgu HGUpdate
-<Leader>hgv HGVimDiff
+      <Leader>hga HGAdd
+      <Leader>hgn HGAnnotate
+      <Leader>hgc HGCommit
+      <Leader>hgd HGDiff
+      <Leader>hgg HGGotoOriginal
+      <Leader>hgG HGGotoOriginal!
+      <Leader>hgl HGLog
+      <Leader>hgr HGReview
+      <Leader>hgs HGStatus
+      <Leader>hgu HGUpdate
+      <Leader>hgv HGVimDiff
 
-						*hgcommand-mappings-override*
+                                                 *hgcommand-mappings-override*
 
-The default mappings can be overriden by user-provided instead by mapping to
-<Plug>CommandName.  This is especially useful when these mappings collide with
-other existing mappings (vim will warn of this during plugin initialization,
-but will not clobber the existing mappings).
+   The default mappings can be overriden by user-provided instead by mapping 
+   to <Plug>CommandName.  This is especially useful when these mappings 
+   collide with other existing mappings (vim will warn of this during plugin 
+   initialization, but will not clobber the existing mappings).
 
-For instance, to override the default mapping for :HGAdd to set it to '\add',
-add the following to the vimrc:
+   For instance, to override the default mapping for :HGAdd to set it to 
+   '\add', add the following to the vimrc: >
 
-nmap \add <Plug>HGAdd
+      nmap \add <Plug>HGAdd
+<
+4.3 Automatic buffer variables			  *hgcommand-buffer-variables*
 
-4.3 Automatic buffer variables			*hgcommand-buffer-variables*
+   Several buffer variables are defined in each HGCommand result buffer.	
+   These may be useful for additional customization in callbacks defined in 
+   the event handlers (please see |hgcommand-events|).
 
-Several buffer variables are defined in each HGCommand result buffer.	These
-may be useful for additional customization in callbacks defined in the event
-handlers (please see |hgcommand-events|).
+   The following variables are automatically defined:
 
-The following variables are automatically defined:
+b:hgOrigBuffNR						      *b:hgOrigBuffNR*
 
-b:hgOrigBuffNR						*b:hgOrigBuffNR*
+   This variable is set to the buffer number of the source file.
 
-This variable is set to the buffer number of the source file.
+b:hgcmd						                     *b:hgcmd*
 
-b:hgcmd						*b:hgcmd*
-
-This variable is set to the name of the hg command that created the result
-buffer.
+   This variable is set to the name of the hg command that created the result 
+   buffer.
 ==============================================================================
 
-5. Configuration and customization			*hgcommand-customize*
-							*hgcommand-config*
+5. Configuration and customization			 *hgcommand-customize*
+                                                            *hgcommand-config*
 
-The HGCommand plugin can be configured in two ways:  by setting configuration
-variables (see |hgcommand-options|) or by defining HGCommand event handlers
-(see |hgcommand-events|).  Additionally, the HGCommand plugin provides
-several option for naming the HG result buffers (see |hgcommand-naming|) and
-supported a customized status line (see |hgcommand-statusline| and
-|hgcommand-buffer-management|).
+   The HGCommand plugin can be configured in two ways:  by setting 
+   configuration variables (see |hgcommand-options|) or by defining HGCommand 
+   event handlers (see |hgcommand-events|).  Additionally, the HGCommand 
+   plugin provides several option for naming the HG result buffers (see 
+   |hgcommand-naming|) and supported a customized status line (see 
+   |hgcommand-statusline| and |hgcommand-buffer-management|).
 
-5.1 HGCommand configuration variables			*hgcommand-options*
+5.1 HGCommand configuration variables			   *hgcommand-options*
 
-Several variables affect the plugin's behavior.  These variables are checked
-at time of execution, and may be defined at the window, buffer, or global
-level and are checked in that order of precedence.
+   Several variables affect the plugin's behavior.  These variables are 
+   checked at time of execution, and may be defined at the window, buffer, or 
+   global level and are checked in that order of precedence.
 
 
-The following variables are available:
+   The following variables are available:
 
-|HGCommandAnnotateParent|
-|HGCommandCommitOnWrite|
-|HGCommandHGExec|
-|HGCommandDeleteOnHide|
-|HGCommandDiffOpt|
-|HGCommandDiffSplit|
-|HGCommandEdit|
-|HGCommandEnableBufferSetup|
-|HGCommandInteractive|
-|HGCommandNameMarker|
-|HGCommandNameResultBuffers|
-|HGCommandSplit|
+      |HGCommandAnnotateParent|
+      |HGCommandCommitOnWrite|
+      |HGCommandHGExec|
+      |HGCommandDeleteOnHide|
+      |HGCommandDiffOpt|
+      |HGCommandDiffSplit|
+      |HGCommandEdit|
+      |HGCommandEnableBufferSetup|
+      |HGCommandInteractive|
+      |HGCommandNameMarker|
+      |HGCommandNameResultBuffers|
+      |HGCommandSplit|
 
-HGCommandAnnotateParent			*HGCommandAnnotateParent*
+HGCommandAnnotateParent			             *HGCommandAnnotateParent*
 
-This variable, if set to a non-zero value, causes the zero-argument form of
-HGAnnotate when invoked on a HGAnnotate buffer to go to the version previous
-to that displayed on the current line.  If not set, it defaults to 0.
+   This variable, if set to a non-zero value, causes the zero-argument form of 
+   HGAnnotate when invoked on a HGAnnotate buffer to go to the version 
+   previous to that displayed on the current line. If not set, it defaults to 
+   0.
 
-HGCommandCommitOnWrite				*HGCommandCommitOnWrite*
+HGCommandCommitOnWrite				      *HGCommandCommitOnWrite*
 
-This variable, if set to a non-zero value, causes the pending hg commit
-to take place immediately as soon as the log message buffer is written.
-If set to zero, only the HGCommit mapping will cause the pending commit to
-occur.	If not set, it defaults to 1.
+   This variable, if set to a non-zero value, causes the pending hg commit to 
+   take place immediately as soon as the log message buffer is written.  If 
+   set to zero, only the HGCommit mapping will cause the pending commit to 
+   occur.  If not set, it defaults to 1.
 
-HGCommandHGExec				*HGCommandHGExec*
+HGCommandHGExec				                     *HGCommandHGExec*
 
-This variable controls the executable used for all HG commands  If not set,
-it defaults to "hg".
+   This variable controls the executable used for all HG commands.  If not 
+   set, it defaults to "hg".
 
-HGCommandDeleteOnHide				*HGCommandDeleteOnHide*
+HGCommandDeleteOnHide				       *HGCommandDeleteOnHide*
 
-This variable, if set to a non-zero value, causes the temporary HG result
-buffers to automatically delete themselves when hidden.
+   This variable, if set to a non-zero value, causes the temporary HG result 
+   buffers to automatically delete themselves when hidden.
 
-HGCommandDiffOpt				*HGCommandDiffOpt*
+HGCommandDiffOpt				            *HGCommandDiffOpt*
 
-This variable, if set, determines the options passed to the diff command of
-HG.  If not set, it defaults to 'wbBc'.
+   This variable, if set, determines the options passed to the diff command of 
+   HG.  If not set, it defaults to 'w'.
 
-HGCommandDiffSplit				*HGCommandDiffSplit*
+HGCommandDiffSplit				          *HGCommandDiffSplit*
 
-This variable overrides the |HGCommandSplit| variable, but only for buffers
-created with |:HGVimDiff|.
+   This variable overrides the |HGCommandSplit| variable, but only for buffers 
+   created with |:HGVimDiff|.
 
-HGCommandEdit					*HGCommandEdit*
+HGCommandEdit					               *HGCommandEdit*
 
-This variable controls whether the original buffer is replaced ('edit') or
-split ('split').  If not set, it defaults to 'edit'.
+   This variable controls whether the original buffer is replaced ('edit') or 
+   split ('split').  If not set, it defaults to 'edit'.
 
-HGCommandEnableBufferSetup			*HGCommandEnableBufferSetup*
+HGCommandEnableBufferSetup			  *HGCommandEnableBufferSetup*
 
-This variable, if set to a non-zero value, activates HG buffer management
-mode see (|hgcommand-buffer-management|).  This mode means that two buffer
-variables, 'HGRevision' and 'HGBranch', are set if the file is
-HG-controlled.  This is useful for displaying version information in the
-status bar.
+   This variable, if set to a non-zero value, activates HG buffer management 
+   mode see (|hgcommand-buffer-management|).  This mode means that three 
+   buffer variables, 'HGRepository', 'HGRevision' and 'HGBranch', are set if 
+   the file is HG-controlled.  This is useful for displaying version 
+   information in the status bar.
 
-HGCommandInteractive				*HGCommandInteractive*
+HGCommandInteractive				        *HGCommandInteractive*
 
-This variable, if set to a non-zero value, causes appropriate commands (for
-the moment, only |:HGReview|) to query the user for a revision to use instead
-of the current revision if none is specified.
+   This variable, if set to a non-zero value, causes appropriate commands (for 
+   the moment, only |:HGReview|) to query the user for a revision to use 
+   instead of the current revision if none is specified.
 
-HGCommandNameMarker				*HGCommandNameMarker*
+HGCommandNameMarker				         *HGCommandNameMarker*
 
-This variable, if set, configures the special attention-getting characters
-that appear on either side of the hg buffer type in the buffer name.  This
-has no effect unless |HGCommandNameResultBuffers| is set to a true value.  If
-not set, it defaults to '_'.  
+   This variable, if set, configures the special attention-getting characters 
+   that appear on either side of the hg buffer type in the buffer name.  This 
+   has no effect unless |HGCommandNameResultBuffers| is set to a true value.  
+   If not set, it defaults to '_'.  
 
-HGCommandNameResultBuffers			*HGCommandNameResultBuffers*
+HGCommandNameResultBuffers			  *HGCommandNameResultBuffers*
 
-This variable, if set to a true value, causes the hg result buffers to be
-named in the old way ('<source file name> _<hg command>_').  If not set
-or set to a false value, the result buffer is nameless.
+   This variable, if set to a true value, causes the hg result buffers to be 
+   named in the old way ('<source file name> _<hg command>_').  If not set or 
+   set to a false value, the result buffer is nameless.
 
-HGCommandSplit					*HGCommandSplit*
+HGCommandSplit					              *HGCommandSplit*
 
-This variable controls the orientation of the various window splits that
-may occur (such as with HGVimDiff, when using a HG command on a HG
-command buffer, or when the |HGCommandEdit| variable is set to 'split'.
-If set to 'horizontal', the resulting windows will be on stacked on top of
-one another.  If set to 'vertical', the resulting windows will be
-side-by-side.  If not set, it defaults to 'horizontal' for all but
-HGVimDiff windows.
+   This variable controls the orientation of the various window splits that 
+   may occur (such as with HGVimDiff, when using a HG command on a HG command 
+   buffer, or when the |HGCommandEdit| variable is set to 'split'.  If set to 
+   'horizontal', the resulting windows will be on stacked on top of one 
+   another.  If set to 'vertical', the resulting windows will be side-by-side.  
+   If not set, it defaults to 'horizontal' for all but HGVimDiff windows.
 
-5.2 HGCommand events				*hgcommand-events*
+5.2 HGCommand events				            *hgcommand-events*
 
-For additional customization, HGCommand can trigger user-defined events.
-Event handlers are provided by defining User event autocommands (see
-|autocommand|, |User|) in the HGCommand group with patterns matching the
-event name.
+   For additional customization, HGCommand can trigger user-defined events.  
+   Event handlers are provided by defining User event autocommands (see 
+   |autocommand|, |User|) in the HGCommand group with patterns matching the 
+   event name.
 
-For instance, the following could be added to the vimrc to provide a 'q'
-mapping to quit a HGCommand scratch buffer:
+   For instance, the following could be added to the vimrc to provide a 'q' 
+   mapping to quit a HGCommand scratch buffer: >
 
-augroup HGCommand
-  au HGCommand User HGBufferCreated silent! nmap <unique> <buffer> q: bwipeout<cr>
-augroup END
+      augroup HGCommand
+         au HGCommand User HGBufferCreated silent! nmap <unique> <buffer> q:
+         bwipeout<cr>
+      augroup END
+<
 
-The following hooks are available:
+   The following hooks are available:
 
-HGBufferCreated		This event is fired just after a hg command
-				result buffer is created and filled with the
-				result of a hg command.  It is executed within
-				the context of the HG command buffer.  The
-				HGCommand buffer variables may be useful for
-				handlers of this event (please see
-				|hgcommand-buffer-variables|).
+HGBufferCreated		This event is fired just after a hg command result
+                        buffer is created and filled with the result of a hg 
+                        command.  It is executed within the context of the HG 
+                        command buffer.  The HGCommand buffer variables may be 
+                        useful for handlers of this event (please see 
+                        |hgcommand-buffer-variables|).
 
-HGBufferSetup			This event is fired just after HG buffer setup
-				occurs, if enabled.
+HGBufferSetup		This event is fired just after HG buffer setup occurs,
+                        if enabled.
 
-HGPluginInit			This event is fired when the HGCommand plugin
-				first loads.
+HGPluginInit		This event is fired when the HGCommand plugin first
+                        loads.
 
-HGPluginFinish			This event is fired just after the HGCommand
-				plugin loads.
+HGPluginFinish		This event is fired just after the HGCommand plugin
+                        loads.
 
-HGVimDiffFinish		This event is fired just after the HGVimDiff
-				command executes to allow customization of,
-				for instance, window placement and focus.
+HGVimDiffFinish		This event is fired just after the HGVimDiff command
+                        executes to allow customization of, for instance, 
+                        window placement and focus.
 
-5.3 HGCommand buffer naming				*hgcommand-naming*
+5.3 HGCommand buffer naming				    *hgcommand-naming*
 
-By default, the buffers containing the result of HG commands are nameless
-scratch buffers.  It is intended that buffer variables of those buffers be
-used to customize the statusline option so that the user may fully control the
-display of result buffers.
+   By default, the buffers containing the result of HG commands are nameless 
+   scratch buffers.  It is intended that buffer variables of those buffers be 
+   used to customize the statusline option so that the user may fully control 
+   the display of result buffers.
 
-If the old-style naming is desired, please enable the
-|HGCommandNameResultBuffers| variable.  Then, each result buffer will receive
-a unique name that includes the source file name, the HG command, and any
-extra data (such as revision numbers) that were part of the command.
+   If the old-style naming is desired, please enable the 
+   |HGCommandNameResultBuffers| variable.  Then, each result buffer will 
+   receive a unique name that includes the source file name, the HG command, 
+   and any extra data (such as revision numbers) that were part of the 
+   command.
 
 5.4 HGCommand status line support			*hgcommand-statusline*
 
-It is intended that the user will customize the |'statusline'| option to
-include HG result buffer attributes.  A sample function that may be used in
-the |'statusline'| option is provided by the plugin, HGGetStatusLine().  In
-order to use that function in the status line, do something like the
-following:
+   It is intended that the user will customize the |'statusline'| option to 
+   include HG result buffer attributes.  A sample function that may be used in 
+   the |'statusline'| option is provided by the plugin, HGGetStatusLine().  In 
+   order to use that function in the status line, do something like the 
+   following: >
 
-set statusline=%<%f\ %{HGGetStatusLine()}\ %h%m%r%=%l,%c%V\ %P
+      set statusline=%<%f\ %{HGGetStatusLine()}\ %h%m%r%=%l,%c%V\ %P
+<
+   of which %{HGGetStatusLine()} is the relevant portion.
 
-of which %{HGGetStatusLine()} is the relevant portion.
+   The sample HGGetStatusLine() function handles both HG result buffers and 
+   HG-managed files if HGCommand buffer management is enabled (please see 
+   |hgcommand-buffer-management|).
 
-The sample HGGetStatusLine() function handles both HG result buffers and
-HG-managed files if HGCommand buffer management is enabled (please see
-|hgcommand-buffer-management|).
+5.5 HGCommand buffer management		         *hgcommand-buffer-management*
 
-5.5 HGCommand buffer management		*hgcommand-buffer-management*
+   The HGCommand plugin can operate in buffer management mode, which means 
+   that it attempts to set two buffer variables ('HGRevision' and 'HGBranch') 
+   upon entry into a buffer.  This is rather slow because it means that 'hg 
+   status' will be invoked at each entry into a buffer (during the |BufEnter| 
+   autocommand).
 
-The HGCommand plugin can operate in buffer management mode, which means that
-it attempts to set two buffer variables ('HGRevision' and 'HGBranch') upon
-entry into a buffer.  This is rather slow because it means that 'hg status'
-will be invoked at each entry into a buffer (during the |BufEnter|
-autocommand).
-
-This mode is disabled by default.  In order to enable it, set the
-|HGCommandEnableBufferSetup| variable to a true (non-zero) value.  Enabling
-this mode simply provides the buffer variables mentioned above.  The user must
-explicitly include those in the |'statusline'| option if they are to appear in
-the status line (but see |hgcommand-statusline| for a simple way to do that).
-
-==============================================================================
-
-6. SSH "integration"					*hgcommand-ssh*
-
-The following instructions are intended for use in integrating the
-hgcommand.vim plugin with an SSH-based HG environment.
-
-Familiarity with SSH and HG are assumed.
-
-These instructions assume that the intent is to have a message box pop up in
-order to allow the user to enter a passphrase.  If, instead, the user is
-comfortable using certificate-based authentication, then only instructions
-6.1.1 and 6.1.2 (and optionally 6.1.4) need to be followed; ssh should then
-work transparently.
-
-6.1 Environment settings				*hgcommand-ssh-env*
-
-6.1.1 HGROOT should be set to something like:
-
-	:ext:user@host:/path_to_repository
-
-6.1.2 HG_RSH should be set to:
-
-	ssh
-
-	Together, those settings tell HG to use ssh as the transport when
-	performing HG calls.
-
-6.1.3 SSH_ASKPASS should be set to the password-dialog program.  In my case,
-	running gnome, it's set to:
-
-	/usr/libexec/openssh/gnome-ssh-askpass
-
-	This tells SSH how to get passwords if no input is available.
-
-6.1.4 OPTIONAL.  You may need to set SSH_SERVER to the location of the hg
-	executable on the remote (server) machine.
-
-6.2 HG wrapper program				*hgcommand-ssh-wrapper*
-
-Now you need to convince SSH to use the password-dialog program.  This means
-you need to execute SSH (and therefore HG) without standard input.  The
-following script is a simple perl wrapper that dissasociates the HG command
-from the current terminal.  Specific steps to do this may vary from system to
-system; the following example works for me on linux.
-
-#!/usr/bin/perl -w
-use strict;
-use POSIX qw(setsid);
-open STDIN, '/dev/null';
-fork and do {wait; exit;};
-setsid;
-exec('hg', @ARGV);
-
-6.3 Configuring hgcommand.vim			*hgcommand-ssh-config*
-
-At this point, you should be able to use your wrapper script to invoke HG with
-various commands, and get the password dialog.  All that's left is to make HG
-use your newly-created wrapper script.
-
-6.3.1 Tell hgcommand.vim what HG executable to use.  The easiest way to do this
-	is globally, by putting the following in your .vimrc:
-
-	let HGCommandHGExec=/path/to/hg/wrapper/script
-
-6.4 Where to go from here			*hgcommand-ssh-other*
-
-The script given above works even when non-SSH HG connections are used,
-except possibly when interactively entering the message for HG commit log
-(depending on the editor you use... VIM works fine).  Since the hgcommand.vim
-plugin handles that message without a terminal, the wrapper script can be used
-all the time.
-
-This allows mixed-mode operation, where some work is done with SSH-based HG
-repositories, and others with pserver or local access.
-
-It is possible, though beyond the scope of the plugin, to dynamically set the
-HG executable based on the HGROOT for the file being edited.  The user
-events provided (such as HGBufferCreated and HGBufferSetup) can be used to
-set a buffer-local value (b:HGCommandHGExec) to override the HG executable
-on a file-by-file basis.  Alternatively, much the same can be done (less
-automatically) by the various project-oriented plugins out there.
-
-It is highly recommended for ease-of-use that certificates with no passphrase
-or ssh-agent are employed so that the user is not given the password prompt
-too often.
+   This mode is disabled by default.  In order to enable it, set the 
+   |HGCommandEnableBufferSetup| variable to a true (non-zero) value.  Enabling 
+   this mode simply provides the buffer variables mentioned above.  The user 
+   must explicitly include those in the |'statusline'| option if they are to 
+   appear in the status line (but see |hgcommand-statusline| for a simple way
+   to do that).
 
 ==============================================================================
-9. Tips							*hgcommand-tips*
+9. Tips							      *hgcommand-tips*
 
-9.1 Split window annotation, by Michael Anderson
+9.1 Split window annotation, by Michael Anderson >
 
-:nmap <Leader>hgN :vs<CR><C-w>h<Leader>hgn:vertical res 40<CR>
+   :nmap <Leader>hgN :vs<CR><C-w>h<Leader>hgn:vertical res 40<CR>
                  \ggdddd:set scb<CR>:set nowrap<CR><C-w>lgg:set scb<CR>
                  \:set nowrap<CR>
+<
 
-This splits the buffer vertically, puts an annotation on the left (minus the
-header) with the width set to 40. An editable/normal copy is placed on the
-right.  The two versions are scroll locked so they  move as one. and wrapping
-is turned off so that the lines line up correctly. The advantages are...
+   This splits the buffer vertically, puts an annotation on the left (minus 
+   the header) with the width set to 40. An editable/normal copy is placed on 
+   the right.  The two versions are scroll locked so they  move as one. and 
+   wrapping is turned off so that the lines line up correctly. The advantages 
+   are...
 
-1) You get a versioning on the right.
-2) You can still edit your own code.
-3) Your own code still has syntax highlighting.
+   1) You get a versioning on the right.
+   2) You can still edit your own code.
+   3) Your own code still has syntax highlighting.
 
 ==============================================================================
 
-8. Known bugs						*hgcommand-bugs*
+8. Known bugs						      *hgcommand-bugs*
 
-Please let me know if you run across any.
+   Please let me know if you run across any.
 
-HGVimDiff, when using the original (real) source buffer as one of the diff
-buffers, uses some hacks to try to restore the state of the original buffer
-when the scratch buffer containing the other version is destroyed.  There may
-still be bugs in here, depending on many configuration details.
+   HGVimDiff, when using the original (real) source buffer as one of the diff 
+   buffers, uses some hacks to try to restore the state of the original buffer 
+   when the scratch buffer containing the other version is destroyed.  There 
+   may still be bugs in here, depending on many configuration details.
 
 ==============================================================================
 === END_DOC
