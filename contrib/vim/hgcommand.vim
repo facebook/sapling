@@ -1048,11 +1048,6 @@ nnoremap <silent> <Plug>HGReview :HGReview<CR>
 nnoremap <silent> <Plug>HGStatus :HGStatus<CR>
 nnoremap <silent> <Plug>HGUpdate :HGUpdate<CR>
 nnoremap <silent> <Plug>HGVimDiff :HGVimDiff<CR>
-nnoremap <silent> <Plug>HGWatchers :HGWatchers<CR>
-nnoremap <silent> <Plug>HGWatchAdd :HGWatchAdd<CR>
-nnoremap <silent> <Plug>HGWatchOn :HGWatchOn<CR>
-nnoremap <silent> <Plug>HGWatchOff :HGWatchOff<CR>
-nnoremap <silent> <Plug>HGWatchRemove :HGWatchRemove<CR>
 
 " Section: Default mappings {{{1
 if !hasmapto('<Plug>HGAdd')
@@ -1104,11 +1099,6 @@ amenu <silent> &Plugin.HG.&Review     <Plug>HGReview
 amenu <silent> &Plugin.HG.&Status     <Plug>HGStatus
 amenu <silent> &Plugin.HG.&Update     <Plug>HGUpdate
 amenu <silent> &Plugin.HG.&VimDiff    <Plug>HGVimDiff
-amenu <silent> &Plugin.HG.&Watchers   <Plug>HGWatchers
-amenu <silent> &Plugin.HG.WatchAdd    <Plug>HGWatchAdd
-amenu <silent> &Plugin.HG.WatchOn     <Plug>HGWatchOn
-amenu <silent> &Plugin.HG.WatchOff    <Plug>HGWatchOff
-amenu <silent> &Plugin.HG.WatchRemove <Plug>HGWatchRemove
 
 " Section: Autocommands to restore vimdiff state {{{1
 function! s:HGVimDiffRestore(vimDiffBuff)
