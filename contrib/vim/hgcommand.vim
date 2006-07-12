@@ -375,8 +375,8 @@ endfunction
 " Function: s:HGSetupBuffer() {{{2
 " Attempts to set the b:HGBranch, b:HGRevision and b:HGRepository variables.
 
-function! s:HGSetupBuffer()
-  if (exists("b:HGBufferSetup") && b:HGBufferSetup)
+function! s:HGSetupBuffer(...)
+  if (exists("b:HGBufferSetup") && b:HGBufferSetup && !exists('a:1'))
     " This buffer is already set up.
     return
   endif
@@ -608,6 +608,8 @@ function! HGEnableBufferSetup()
   augroup HGCommandPlugin
     au!
     au BufEnter * call s:HGSetupBuffer()
+    " Force resetting up buffer on external file change (HG update)
+    au FileChangedShell * call s:HGSetupBuffer(1)
   augroup END
 
   " Only auto-load if the plugin is fully loaded.  This gives other plugins a
@@ -752,7 +754,8 @@ function! s:HGCommit(...)
           \ ':call <SID>HGFinishCommit("' . messageFileName . '",' .
           \                             '"' . newCwd . '",' .
           \                             '"' . realFileName . '",' .
-          \                             hgBufferCheck . ')<CR>'
+          \                             hgBufferCheck . ')<CR>'.
+          \ ':call <SID>HGBufferSetup(1)<CR>'
 
     silent 0put ='HG: ----------------------------------------------------------------------'
     silent put =\"HG: Enter Log.  Lines beginning with `HG:' are removed automatically\"
@@ -905,6 +908,7 @@ endfunction
 " Function: s:HGUpdate() {{{2
 function! s:HGUpdate()
   return s:HGMarkOrigBufferForSetup(s:HGDoCommand('update', 'update', ''))
+  call s:HGSetupBuffer(1)
 endfunction
 
 " Function: s:HGVimDiff(...) {{{2
@@ -1170,7 +1174,7 @@ augroup END
 
 " Section: Optional activation of buffer management {{{1
 
-if s:HGGetOption('HGCommandEnableBufferSetup', 0)
+if s:HGGetOption('HGCommandEnableBufferSetup', 1)
   call HGEnableBufferSetup()
 endif
 
@@ -1630,8 +1634,8 @@ HGVimDiffFinish		This event is fired just after the HGVimDiff command
    status' will be invoked at each entry into a buffer (during the |BufEnter| 
    autocommand).
 
-   This mode is disabled by default.  In order to enable it, set the 
-   |HGCommandEnableBufferSetup| variable to a true (non-zero) value.  Enabling 
+   This mode is enablmed by default.  In order to disable it, set the 
+   |HGCommandEnableBufferSetup| variable to a false (zero) value.  Enabling 
    this mode simply provides the buffer variables mentioned above.  The user 
    must explicitly include those in the |'statusline'| option if they are to 
    appear in the status line (but see |hgcommand-statusline| for a simple way
