@@ -244,13 +244,20 @@ static void run_shell(int argc, char **argv)
     exit(EX_OSFILE);
 }
 
+enum cmdline {
+    hg_init,
+    hg_serve,
+};
+
+    
 /*
  * paranoid wrapper, runs hg executable in server mode.
  */
 static void serve_data(int argc, char **argv)
 {
     char *hg_root = HG_ROOT;
-    char *repo, *abspath;
+    char *repo, *repo_root;
+    enum cmdline cmd;
     char *nargv[6];
     struct stat st;
     size_t repolen;
@@ -275,7 +282,12 @@ static void serve_data(int argc, char **argv)
         goto badargs;
     }
 
-    if (sscanf(argv[2], "hg -R %as serve --stdio", &repo) != 1) {
+    if (sscanf(argv[2], "hg init %as", &repo) == 1) {
+	cmd = hg_init;
+    }
+    else if (sscanf(argv[2], "hg -R %as serve --stdio", &repo) == 1) {
+	cmd = hg_serve;
+    } else {
         goto badargs;
     }
 
@@ -286,7 +298,7 @@ static void serve_data(int argc, char **argv)
     }
 
     if (hg_root) {
-        if (asprintf(&abspath, "%s/%s/.hg/data", hg_root, repo) == -1) {
+        if (asprintf(&repo_root, "%s/%s/", hg_root, repo) == -1) {
             goto badargs;
         }
 
@@ -296,16 +308,26 @@ static void serve_data(int argc, char **argv)
          * symlink that looks safe, but really breaks us out of tree.
          */
 
-        if (strstr(abspath, "/../") != NULL) {
+        if (strstr(repo_root, "/../") != NULL) {
             goto badargs;
         }
 
-        /* verify that we really are looking at valid repo. */
+	/* only hg init expects no repo. */
 
-        if (stat(abspath, &st) == -1) {
-            perror(repo);
-            exit(EX_DATAERR);
-        }
+	if (cmd != hg_init) {
+	    char *abs_path;
+	    
+	    if (asprintf(&abs_path, "%s.hg/data", repo_root) == -1) {
+		goto badargs;
+	    }
+
+	    /* verify that we really are looking at valid repo. */
+
+	    if (stat(abs_path, &st) == -1) {
+		perror(repo);
+		exit(EX_DATAERR);
+	    }
+	}
 
         if (chdir(hg_root) == -1) {
             perror(hg_root);
@@ -314,11 +336,22 @@ static void serve_data(int argc, char **argv)
     }
 
     i = 0;
-    nargv[i++] = HG;
-    nargv[i++] = "-R";
-    nargv[i++] = repo;
-    nargv[i++] = "serve";
-    nargv[i++] = "--stdio";
+
+    switch (cmd) {
+    case hg_serve:
+	nargv[i++] = HG;
+	nargv[i++] = "-R";
+	nargv[i++] = repo;
+	nargv[i++] = "serve";
+	nargv[i++] = "--stdio";
+	break;
+    case hg_init:
+	nargv[i++] = HG;
+	nargv[i++] = "init";
+	nargv[i++] = repo;
+	break;
+    }
+    
     nargv[i] = NULL;
 
     if (debug) {
