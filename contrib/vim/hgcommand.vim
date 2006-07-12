@@ -635,13 +635,16 @@ function! HGGetStatusLine()
 
   if exists('b:HGRevision')
         \ && b:HGRevision != ''
-        \ && exists('b:HGBranch')
-        \ && b:HGBranch != ''
         \ && exists('b:HGRepository')
         \ && b:HGRepository != ''
         \ && exists('g:HGCommandEnableBufferSetup')
         \ && g:HGCommandEnableBufferSetup
-   return '[HG ' . b:HGRepository . '/' . b:HGBranch .'/' . b:HGRevision . ']'
+    if !exists('b:HGBranch')
+      let l:branch=''
+    else
+      let l:branch=b:HGBranch
+    endif
+    return '[HG ' . b:HGRepository . '/' . l:branch .'/' . b:HGRevision . ']'
   else
     return ''
   endif
