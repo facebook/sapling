@@ -88,7 +88,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True):
 
     If an exception is raised, the partly cloned/updated destination
     repository will be deleted.
-    
+
     Keyword arguments:
 
     dest: URL of destination repository to create (defaults to base

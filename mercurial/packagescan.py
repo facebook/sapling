@@ -17,12 +17,12 @@ import string
 sys.modules['mercurial.demandload'] = sys.modules[__name__]
 
 # Requiredmodules contains the modules imported by demandload.
-# Please note that demandload can be invoked before the 
+# Please note that demandload can be invoked before the
 # mercurial.packagescan.scan method is invoked in case a mercurial
 # module is imported.
-requiredmodules = {} 
+requiredmodules = {}
 def demandload(scope, modules):
-    """ fake demandload function that collects the required modules 
+    """ fake demandload function that collects the required modules
         foo            import foo
         foo bar        import foo, bar
         foo.bar        import foo.bar
@@ -49,7 +49,7 @@ def demandload(scope, modules):
                 scope[mn] = mod
                 requiredmodules[mod.__name__] = 1
                 if len(comp) == i: break
-                mod = getattr(mod,comp[i]) 
+                mod = getattr(mod,comp[i])
                 mn = string.join(comp[:i+1],'.')
                 i += 1
         else:

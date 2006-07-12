@@ -548,7 +548,7 @@ def help_(ui, name=None, with_version=False):
     """show help for a command, extension, or list of commands
 
     With no arguments, print a list of commands and short help.
-    
+
     Given a command name, print help for that command.
 
     Given an extension name, print help for that extension, and the
@@ -579,7 +579,7 @@ def help_(ui, name=None, with_version=False):
             # options
             if i[1]:
                 option_lists.append(("options", i[1]))
-        
+
     def helplist(select=None):
         h = {}
         cmds = {}
@@ -3300,7 +3300,7 @@ def findext(name):
             if k.endswith('.' + name) or v == name:
                 return sys.modules[v]
         raise KeyError(name)
-    
+
 def dispatch(args):
     for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
         num = getattr(signal, name, None)

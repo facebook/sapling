@@ -427,7 +427,7 @@ class revlog(object):
                         fp.read(off - l)
             if not st:
                 break
-                
+
 
     def ngoffset(self, q):
         if q & 0xFFFF:

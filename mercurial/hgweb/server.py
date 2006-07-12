@@ -129,7 +129,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
                 self.length = int(h[1])
         # The value of the Connection header is a list of case-insensitive
         # tokens separated by commas and optional whitespace.
-        if 'close' in [token.strip().lower() for token in 
+        if 'close' in [token.strip().lower() for token in
                        self.headers.get('connection', '').split(',')]:
             should_close = True
         if should_close:

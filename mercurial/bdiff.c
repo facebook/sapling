@@ -19,7 +19,7 @@
 
 #ifdef __SUNPRO_C
 # define inline
-#endif 
+#endif
 
 #ifdef _WIN32
 #ifdef _MSC_VER

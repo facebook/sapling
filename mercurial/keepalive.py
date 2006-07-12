@@ -9,9 +9,9 @@
 #   Lesser General Public License for more details.
 #
 #   You should have received a copy of the GNU Lesser General Public
-#   License along with this library; if not, write to the 
-#      Free Software Foundation, Inc., 
-#      59 Temple Place, Suite 330, 
+#   License along with this library; if not, write to the
+#      Free Software Foundation, Inc.,
+#      59 Temple Place, Suite 330,
 #      Boston, MA  02111-1307  USA
 
 # This file is part of urlgrabber, a high-level cross-protocol url-grabber
@@ -24,7 +24,7 @@
 >>> keepalive_handler = HTTPHandler()
 >>> opener = urllib2.build_opener(keepalive_handler)
 >>> urllib2.install_opener(opener)
->>> 
+>>>
 >>> fo = urllib2.urlopen('http://www.python.org')
 
 If a connection to a given host is requested, and all of the existing
@@ -111,7 +111,7 @@ DEBUG = None
 import sys
 if sys.version_info < (2, 4): HANDLE_ERRORS = 1
 else: HANDLE_ERRORS = 0
-    
+
 class ConnectionManager:
     """
     The connection manager must be able to:
@@ -151,7 +151,7 @@ class ConnectionManager:
     def set_ready(self, connection, ready):
         try: self._readymap[connection] = ready
         except KeyError: pass
-        
+
     def get_ready_conn(self, host):
         conn = None
         self._lock.acquire()
@@ -175,7 +175,7 @@ class ConnectionManager:
 class HTTPHandler(urllib2.HTTPHandler):
     def __init__(self):
         self._cm = ConnectionManager()
-        
+
     #### Connection Management
     def open_connections(self):
         """return a list of connected hosts and the number of connections
@@ -189,14 +189,14 @@ class HTTPHandler(urllib2.HTTPHandler):
         for h in self._cm.get_all(host):
             self._cm.remove(h)
             h.close()
-        
+
     def close_all(self):
         """close all open connections"""
         for host, conns in self._cm.get_all().items():
             for h in conns:
                 self._cm.remove(h)
                 h.close()
-        
+
     def _request_closed(self, request, host, connection):
         """tells us that this request is now closed and the the
         connection is ready for another request"""
@@ -205,7 +205,7 @@ class HTTPHandler(urllib2.HTTPHandler):
     def _remove_connection(self, host, connection, close=0):
         if close: connection.close()
         self._cm.remove(connection)
-        
+
     #### Transaction Execution
     def http_open(self, req):
         return self.do_open(HTTPConnection, req)
@@ -239,7 +239,7 @@ class HTTPHandler(urllib2.HTTPHandler):
                 r = h.getresponse()
         except (socket.error, httplib.HTTPException), err:
             raise urllib2.URLError(err)
-            
+
         # if not a persistent connection, don't try to reuse it
         if r.will_close: self._cm.remove(h)
 
@@ -251,7 +251,7 @@ class HTTPHandler(urllib2.HTTPHandler):
         r.code = r.status
         r.headers = r.msg
         r.msg = r.reason
-        
+
         if r.status == 200 or not HANDLE_ERRORS:
             return r
         else:
@@ -287,7 +287,7 @@ class HTTPHandler(urllib2.HTTPHandler):
             self._cm.remove(h)
             h.close()
             raise
-                    
+
         if r is None or r.version == 9:
             # httplib falls back to assuming HTTP 0.9 if it gets a
             # bad header back.  This is most likely to happen if
@@ -342,7 +342,7 @@ class HTTPResponse(httplib.HTTPResponse):
     # although read() never adds to the buffer.
     # Both readline and readlines have been stolen with almost no
     # modification from socket.py
-    
+
 
     def __init__(self, sock, debuglevel=0, strict=0, method=None):
         if method: # the httplib in python 2.3 uses the method arg
@@ -371,7 +371,7 @@ class HTTPResponse(httplib.HTTPResponse):
     def close_connection(self):
         self._handler._remove_connection(self._host, self._connection, close=1)
         self.close()
-        
+
     def info(self):
         return self.headers
 
@@ -425,7 +425,7 @@ class HTTPResponse(httplib.HTTPResponse):
 class HTTPConnection(httplib.HTTPConnection):
     # use the modified response class
     response_class = HTTPResponse
-    
+
 #########################################################################
 #####   TEST FUNCTIONS
 #########################################################################
@@ -459,7 +459,7 @@ def error_handler(url):
 def continuity(url):
     import md5
     format = '%25s: %s'
-    
+
     # first fetch the file with the normal http handler
     opener = urllib2.build_opener()
     urllib2.install_opener(opener)
@@ -506,7 +506,7 @@ def comp(N, url):
     t2 = fetch(N, url)
     print '  TIME: %.3f s' % t2
     print '  improvement factor: %.2f' % (t1/t2, )
-    
+
 def fetch(N, url, delay=0):
     import time
     lens = []
@@ -538,7 +538,7 @@ def test_timeout(url):
     fo = urllib2.urlopen(url)
     data1 = fo.read()
     fo.close()
- 
+
     i = 20
     print "  waiting %i seconds for the server to close the connection" % i
     while i > 0:
@@ -560,7 +560,7 @@ def test_timeout(url):
 
     DEBUG = dbbackup
 
-    
+
 def test(url, N=10):
     print "checking error hander (do this on a non-200)"
     try: error_handler(url)
@@ -576,7 +576,7 @@ def test(url, N=10):
     print
     print "performing dropped-connection check"
     test_timeout(url)
-    
+
 if __name__ == '__main__':
     import time
     import sys
