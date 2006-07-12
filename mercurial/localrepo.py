@@ -162,6 +162,52 @@ class localrepository(object):
                 r = runhook(hname, cmd) or r
         return r
 
+    tag_disallowed = ':\r\n'
+
+    def tag(self, name, node, local=False, message=None, user=None, date=None):
+        '''tag a revision with a symbolic name.
+
+        if local is True, the tag is stored in a per-repository file.
+        otherwise, it is stored in the .hgtags file, and a new
+        changeset is committed with the change.
+
+        keyword arguments:
+
+        local: whether to store tag in non-version-controlled file
+        (default False)
+
+        message: commit message to use if committing
+
+        user: name of user to use if committing
+
+        date: date tuple to use if committing'''
+
+        for c in self.tag_disallowed:
+            if c in name:
+                raise util.Abort(_('%r cannot be used in a tag name') % c)
+
+        self.hook('pretag', throw=True, node=node, tag=name, local=local)
+
+        if local:
+            self.opener('localtags', 'a').write('%s %s\n' % (node, name))
+            self.hook('tag', node=node, tag=name, local=local)
+            return
+
+        for x in self.changes():
+            if '.hgtags' in x:
+                raise util.Abort(_('working copy of .hgtags is changed '
+                                   '(please commit .hgtags manually)'))
+
+        self.wfile('.hgtags', 'ab').write('%s %s\n' % (node, name))
+        if self.dirstate.state('.hgtags') == '?':
+            self.add(['.hgtags'])
+
+        if not message:
+            message = _('Added tag %s for changeset %s') % (name, node)
+
+        self.commit(['.hgtags'], message, user, date)
+        self.hook('tag', node=node, tag=name, local=local)
+
     def tags(self):
         '''return a mapping of tag to node'''
         if not self.tagscache:

@@ -2653,35 +2653,8 @@ def tag(ui, repo, name, rev_=None, **opts):
     else:
         r = hex(repo.changelog.tip())
 
-    disallowed = (revrangesep, '\r', '\n')
-    for c in disallowed:
-        if c in name:
-            raise util.Abort(_("%s cannot be used in a tag name") % repr(c))
-
-    repo.hook('pretag', throw=True, node=r, tag=name,
-              local=int(not not opts['local']))
-
-    if opts['local']:
-        repo.opener("localtags", "a").write("%s %s\n" % (r, name))
-        repo.hook('tag', node=r, tag=name, local=1)
-        return
-
-    for x in repo.changes():
-        if ".hgtags" in x:
-            raise util.Abort(_("working copy of .hgtags is changed "
-                               "(please commit .hgtags manually)"))
-
-    repo.wfile(".hgtags", "ab").write("%s %s\n" % (r, name))
-    if repo.dirstate.state(".hgtags") == '?':
-        repo.add([".hgtags"])
-
-    message = (opts['message'] or
-               _("Added tag %s for changeset %s") % (name, r))
-    try:
-        repo.commit([".hgtags"], message, opts['user'], opts['date'])
-        repo.hook('tag', node=r, tag=name, local=0)
-    except ValueError, inst:
-        raise util.Abort(str(inst))
+    repo.tag(name, r, opts['local'], opts['message'], opts['user'],
+             opts['date'])
 
 def tags(ui, repo):
     """list repository tags

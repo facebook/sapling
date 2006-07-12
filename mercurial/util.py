@@ -378,6 +378,13 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     if command fails and onerr is None, return status.  if ui object,
     print error message and return status, else raise onerr object as
     exception.'''
+    def py2shell(val):
+        'convert python object into string that is useful to shell'
+        if val in (None, False):
+            return '0'
+        if val == True:
+            return '1'
+        return str(val)
     oldenv = {}
     for k in environ:
         oldenv[k] = os.environ.get(k)
@@ -385,7 +392,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
         oldcwd = os.getcwd()
     try:
         for k, v in environ.iteritems():
-            os.environ[k] = str(v)
+            os.environ[k] = py2shell(v)
         if cwd is not None and oldcwd != cwd:
             os.chdir(cwd)
         rc = os.system(cmd)
