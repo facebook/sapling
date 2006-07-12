@@ -956,11 +956,7 @@ def clone(ui, source, dest=None, **opts):
     .hg/hgrc will be created on the remote side. Look at the help text
     for the pull command for important details about ssh:// URLs.
     """
-    if opts['ssh']:
-        ui.setconfig("ui", "ssh", opts['ssh'])
-    if opts['remotecmd']:
-        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
-
+    ui.setconfig_remoteopts(**opts)
     hg.clone(ui, ui.expandpath(source), dest,
              pull=opts['pull'],
              rev=opts['rev'],
@@ -1818,10 +1814,7 @@ def incoming(ui, repo, source="default", **opts):
     See pull for valid source format details.
     """
     source = ui.expandpath(source)
-    if opts['ssh']:
-        ui.setconfig("ui", "ssh", opts['ssh'])
-    if opts['remotecmd']:
-        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+    ui.setconfig_remoteopts(**opts)
 
     other = hg.repository(ui, source)
     incoming = repo.findincoming(other, force=opts["force"])
@@ -1865,7 +1858,7 @@ def incoming(ui, repo, source="default", **opts):
         if cleanup:
             os.unlink(cleanup)
 
-def init(ui, dest="."):
+def init(ui, dest=".", **opts):
     """create a new repository in the given directory
 
     Initialize a new repository in the given directory.  If the given
@@ -1877,6 +1870,7 @@ def init(ui, dest="."):
     Look at the help text for the pull command for important details
     about ssh:// URLs.
     """
+    ui.setconfig_remoteopts(**opts)
     hg.repository(ui, dest, create=1)
 
 def locate(ui, repo, *pats, **opts):
@@ -2054,10 +2048,7 @@ def outgoing(ui, repo, dest=None, **opts):
     See pull for valid destination format details.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    if opts['ssh']:
-        ui.setconfig("ui", "ssh", opts['ssh'])
-    if opts['remotecmd']:
-        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+    ui.setconfig_remoteopts(**opts)
     revs = None
     if opts['rev']:
         revs = [repo.lookup(rev) for rev in opts['rev']]
@@ -2164,11 +2155,7 @@ def pull(ui, repo, source="default", **opts):
       with the --ssh command line option.
     """
     source = ui.expandpath(source)
-
-    if opts['ssh']:
-        ui.setconfig("ui", "ssh", opts['ssh'])
-    if opts['remotecmd']:
-        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+    ui.setconfig_remoteopts(**opts)
 
     other = hg.repository(ui, source)
     ui.status(_('pulling from %s\n') % (source))
@@ -2206,11 +2193,7 @@ def push(ui, repo, dest=None, **opts):
     feature is enabled on the remote Mercurial server.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
-
-    if opts['ssh']:
-        ui.setconfig("ui", "ssh", opts['ssh'])
-    if opts['remotecmd']:
-        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+    ui.setconfig_remoteopts(**opts)
 
     other = hg.repository(ui, dest)
     ui.status('pushing to %s\n' % (dest))
@@ -3013,7 +2996,12 @@ table = {
            _('specify hg command to run on the remote side'))],
          _('hg incoming [-p] [-n] [-M] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
-    "^init": (init, [], _('hg init [DEST]')),
+    "^init":
+        (init,
+         [('e', 'ssh', '', _('specify ssh command to use')),
+          ('', 'remotecmd', '',
+           _('specify hg command to run on the remote side'))],
+         _('hg init [-e FILE] [--remotecmd FILE] [DEST]')),
     "locate":
         (locate,
          [('r', 'rev', '', _('search the repository as it stood at rev')),
@@ -3074,7 +3062,7 @@ table = {
           ('r', 'rev', [], _('a specific revision you would like to pull')),
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
-         _('hg pull [-u] [-e FILE] [-r REV]... [--remotecmd FILE] [SOURCE]')),
+         _('hg pull [-u] [-r REV]... [-e FILE] [--remotecmd FILE] [SOURCE]')),
     "^push":
         (push,
          [('f', 'force', None, _('force push')),
@@ -3082,7 +3070,7 @@ table = {
           ('r', 'rev', [], _('a specific revision you would like to push')),
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
-         _('hg push [-f] [-e FILE] [-r REV]... [--remotecmd FILE] [DEST]')),
+         _('hg push [-f] [-r REV]... [-e FILE] [--remotecmd FILE] [DEST]')),
     "debugrawcommit|rawcommit":
         (rawcommit,
          [('p', 'parent', [], _('parent')),

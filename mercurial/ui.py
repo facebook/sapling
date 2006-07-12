@@ -217,6 +217,12 @@ class ui(object):
             path = self.config("paths", default)
         return path or loc
 
+    def setconfig_remoteopts(self, **opts):
+        if opts.get('ssh'):
+            self.setconfig("ui", "ssh", opts['ssh'])
+        if opts.get('remotecmd'):
+            self.setconfig("ui", "remotecmd", opts['remotecmd'])
+
     def write(self, *args):
         if self.header:
             if self.header != self.prev_header:
