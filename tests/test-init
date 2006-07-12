@@ -1,0 +1,52 @@
+#!/bin/sh
+
+# This test tries to exercise the ssh functionality with a dummy script
+
+cat <<'EOF' > dummyssh
+#!/bin/sh
+# this attempts to deal with relative pathnames
+cd `dirname $0`
+
+# check for proper args
+if [ $1 != "user@dummy" ] ; then
+	exit -1
+fi
+
+# check that we're in the right directory
+if [ ! -x dummyssh ] ; then
+	exit -1
+fi
+
+echo Got arguments 1:$1 2:$2 3:$3 4:$4 5:$5 >> dummylog
+$2
+EOF
+chmod +x dummyssh
+
+echo "# creating 'local'"
+hg init local
+echo this > local/foo
+hg ci --cwd local -A -m "init" -d "1000000 0"
+
+echo "# init+push to remote2"
+hg init -e ./dummyssh ssh://user@dummy/remote2
+hg incoming -R remote2 local
+hg push -R local -e ./dummyssh ssh://user@dummy/remote2
+
+echo "# clone to remote1"
+hg clone -e ./dummyssh local ssh://user@dummy/remote1
+
+echo "# output of dummyssh"
+cat dummylog
+
+echo "# comparing repositories"
+hg tip -q -R local
+hg tip -q -R remote1
+hg tip -q -R remote2
+
+echo "# check names for repositories (clashes with URL schemes, special chars)"
+for i in bundle file hg http https old-http ssh static-http " " "with space"; do
+  echo "# hg init \"$i\""
+  hg init "$i"
+  test -d "$i" -a -d "$i/.hg" -a -d "$i/.hg/data" && echo "ok" || echo "failed"
+done
+

@@ -1,0 +1,56 @@
+# creating 'local'
+adding foo
+# init+push to remote2
+changeset:   0:c4e059d443be
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     init
+
+pushing to ssh://user@dummy/remote2
+searching for changes
+remote: adding changesets
+remote: adding manifests
+remote: adding file changes
+remote: added 1 changesets with 1 changes to 1 files
+# clone to remote1
+searching for changes
+remote: abort: repository remote1 not found!
+remote: adding changesets
+remote: adding manifests
+remote: adding file changes
+remote: added 1 changesets with 1 changes to 1 files
+# output of dummyssh
+Got arguments 1:user@dummy 2:hg -R remote2 serve --stdio 3: 4: 5:
+Got arguments 1:user@dummy 2:hg init remote2 3: 4: 5:
+Got arguments 1:user@dummy 2:hg -R remote2 serve --stdio 3: 4: 5:
+Got arguments 1:user@dummy 2:hg -R remote2 serve --stdio 3: 4: 5:
+Got arguments 1:user@dummy 2:hg -R remote1 serve --stdio 3: 4: 5:
+Got arguments 1:user@dummy 2:hg -R remote1 serve --stdio 3: 4: 5:
+Got arguments 1:user@dummy 2:hg init remote1 3: 4: 5:
+Got arguments 1:user@dummy 2:hg -R remote1 serve --stdio 3: 4: 5:
+# comparing repositories
+0:c4e059d443be
+0:c4e059d443be
+0:c4e059d443be
+# check names for repositories (clashes with URL schemes, special chars)
+# hg init "bundle"
+ok
+# hg init "file"
+ok
+# hg init "hg"
+ok
+# hg init "http"
+ok
+# hg init "https"
+ok
+# hg init "old-http"
+ok
+# hg init "ssh"
+ok
+# hg init "static-http"
+ok
+# hg init " "
+ok
+# hg init "with space"
+ok
