@@ -3,7 +3,8 @@
 # GNU diff is the reference for all of these results.
 
 hgdiff() {
-    hg diff "$@" | sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+    hg diff "$@" | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+                  -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 }
 
 test_added_blank_lines() {
