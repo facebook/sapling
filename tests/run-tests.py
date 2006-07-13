@@ -19,7 +19,7 @@ import sys
 import tempfile
 import time
 
-required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
+required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed", "merge"]
 
 parser = optparse.OptionParser("%prog [options] [tests]")
 parser.add_option("-v", "--verbose", action="store_true",
