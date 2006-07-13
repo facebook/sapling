@@ -15,6 +15,10 @@ from demandload import *
 demandload(globals(), "cStringIO errno popen2 re shutil sys tempfile")
 demandload(globals(), "os threading time")
 
+# used by parsedate
+defaultdateformats = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
+                      '%a %b %d %H:%M:%S %Y')
+
 class SignalInterrupt(Exception):
     """Exception raised on SIGTERM and SIGHUP."""
 
@@ -883,10 +887,12 @@ def strdate(string, format='%a %b %d %H:%M:%S %Y'):
     when = int(time.mktime(time.strptime(date, format))) + offset
     return when, offset
 
-def parsedate(string, formats=('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M')):
+def parsedate(string, formats=None):
     """parse a localized time string and return a (unixtime, offset) tuple.
     The date may be a "unixtime offset" string or in one of the specified
     formats."""
+    if not formats:
+        formats = defaultdateformats
     try:
         when, offset = map(int, string.split(' '))
     except ValueError:
