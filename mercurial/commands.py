@@ -959,6 +959,7 @@ def clone(ui, source, dest=None, **opts):
     ui.setconfig_remoteopts(**opts)
     hg.clone(ui, ui.expandpath(source), dest,
              pull=opts['pull'],
+             stream=opts['stream'],
              rev=opts['rev'],
              update=not opts['noupdate'])
 
@@ -2850,6 +2851,7 @@ table = {
           ('r', 'rev', [],
            _('a changeset you would like to have after cloning')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
+          ('', 'stream', None, _('use streaming protocol (fast over LAN)')),
           ('e', 'ssh', '', _('specify ssh command to use')),
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],

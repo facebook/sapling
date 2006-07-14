@@ -12,7 +12,7 @@ cat hg.pid >> $DAEMON_PIDS
 cd ..
 
 echo % clone via stream
-http_proxy= hg clone http://localhost:20059/ copy 2>&1 | \
+http_proxy= hg clone --stream http://localhost:20059/ copy 2>&1 | \
   sed -e 's/[0-9][0-9.]*/XXX/g'
 cd copy
 hg verify
@@ -20,6 +20,6 @@ hg verify
 cd ..
 
 echo % clone via pull
-http_proxy= hg clone --pull http://localhost:20059/ copy-pull
+http_proxy= hg clone http://localhost:20059/ copy-pull
 cd copy-pull
 hg verify

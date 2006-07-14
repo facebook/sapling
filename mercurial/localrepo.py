@@ -2225,9 +2225,8 @@ class localrepository(repo.repository):
         self.reload()
         return len(self.heads()) + 1
         
-    def clone(self, remote, heads=[], pull=False):
+    def clone(self, remote, heads=[], stream=False):
         '''clone remote repository.
-        if possible, changes are streamed from remote server.
 
         keyword arguments:
         heads: list of revs to clone (forces use of pull)
@@ -2240,7 +2239,7 @@ class localrepository(repo.repository):
         # and format flags on "stream" capability, and stream only if
         # compatible.
 
-        if not pull and not heads and remote.capable('stream'):
+        if stream and not heads and remote.capable('stream'):
             return self.stream_in(remote)
         return self.pull(remote, heads)
 
