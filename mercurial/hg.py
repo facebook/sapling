@@ -179,7 +179,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True):
             revs = [src_repo.lookup(r) for r in rev]
 
         if dest_repo.local():
-            dest_repo.pull(src_repo, heads=revs)
+            dest_repo.clone(src_repo, heads=revs, pull=pull)
         elif src_repo.local():
             src_repo.push(dest_repo, revs=revs)
         else:

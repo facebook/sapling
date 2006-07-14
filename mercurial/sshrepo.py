@@ -198,3 +198,6 @@ class sshrepository(remoterepository):
         if not r:
             return 1
         return int(r)
+
+    def stream_out(self):
+        return self.do_cmd('stream_out')

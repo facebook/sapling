@@ -1,5 +1,15 @@
 # creating 'remote'
-# clone remote
+# clone remote via stream
+streaming all changes
+XXX files to transfer, XXX bytes of data
+transferred XXX bytes in XXX seconds (XXX KB/sec)
+XXX files updated, XXX files merged, XXX files removed, XXX files unresolved
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
+# clone remote via pull
 requesting all changes
 adding changesets
 adding manifests
@@ -67,6 +77,7 @@ remote: adding changesets
 remote: adding manifests
 remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
+Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:

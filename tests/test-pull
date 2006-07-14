@@ -11,7 +11,7 @@ hg serve -p 20059 -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS
 cd ..
 
-http_proxy= hg clone http://localhost:20059/ copy
+http_proxy= hg clone --pull http://localhost:20059/ copy
 cd copy
 hg verify
 hg co
