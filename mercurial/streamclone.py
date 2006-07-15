@@ -59,6 +59,13 @@ def walkrepo(root):
 def stream_out(repo, fileobj):
     '''stream out all metadata files in repository.
     writes to file-like object, must support write() and optional flush().'''
+
+    if not repo.ui.configbool('server', 'stream'):
+        fileobj.write('1\n')
+        return
+
+    fileobj.write('0\n')
+
     # get consistent snapshot of repo. lock during scan so lock not
     # needed while we stream, and commits can happen.
     lock = repo.lock()

@@ -60,8 +60,10 @@ class sshserver(object):
         capabilities: space separated list of tokens
         '''
 
-        r = "capabilities: unbundle stream=%d\n" % (self.repo.revlogversion,)
-        self.respond(r)
+        caps = ['unbundle']
+        if self.ui.configbool('server', 'stream'):
+            caps.append('stream=%d' % self.repo.revlogversion)
+        self.respond("capabilities: %s\n" % (' '.join(caps),))
 
     def do_lock(self):
         '''DEPRECATED - allowing remote client to lock repo is not safe'''

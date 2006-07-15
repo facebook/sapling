@@ -2204,8 +2204,11 @@ class localrepository(repo.repository):
             return 1
 
     def stream_in(self, remote):
-        self.ui.status(_('streaming all changes\n'))
         fp = remote.stream_out()
+        resp = int(fp.readline())
+        if resp != 0:
+            raise util.Abort(_('operation forbidden by server'))
+        self.ui.status(_('streaming all changes\n'))
         total_files, total_bytes = map(int, fp.readline().split(' ', 1))
         self.ui.status(_('%d files to transfer, %s of data\n') %
                        (total_files, util.bytecount(total_bytes)))
@@ -2230,14 +2233,15 @@ class localrepository(repo.repository):
 
         keyword arguments:
         heads: list of revs to clone (forces use of pull)
-        pull: force use of pull, even if remote can stream'''
+        stream: use streaming clone if possible'''
 
-        # now, all clients that can stream can read repo formats
-        # supported by all servers that can stream.
+        # now, all clients that can request uncompressed clones can
+        # read repo formats supported by all servers that can serve
+        # them.
 
         # if revlog format changes, client will have to check version
-        # and format flags on "stream" capability, and stream only if
-        # compatible.
+        # and format flags on "stream" capability, and use
+        # uncompressed only if compatible.
 
         if stream and not heads and remote.capable('stream'):
             return self.stream_in(remote)

@@ -97,7 +97,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
     pull: always pull from source repository, even in local case
 
-    stream: stream from repository (fast over LAN, slow over WAN)
+    stream: stream raw data uncompressed from repository (fast over
+    LAN, slow over WAN)
 
     rev: revision to clone up to (implies pull=True)
 

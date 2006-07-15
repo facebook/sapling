@@ -27,11 +27,13 @@ hg init remote
 cd remote
 echo this > foo
 hg ci -A -m "init" -d "1000000 0" foo
+echo '[server]' > .hg/hgrc
+echo 'stream = True' >> .hg/hgrc
 
 cd ..
 
 echo "# clone remote via stream"
-hg clone -e ./dummyssh --stream ssh://user@dummy/remote local-stream 2>&1 | \
+hg clone -e ./dummyssh --uncompressed ssh://user@dummy/remote local-stream 2>&1 | \
   sed -e 's/[0-9][0-9.]*/XXX/g'
 cd local-stream
 hg verify

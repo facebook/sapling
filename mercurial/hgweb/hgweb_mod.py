@@ -860,7 +860,10 @@ class hgweb(object):
                   or self.t("error", error="%r not found" % fname))
 
     def do_capabilities(self, req):
-        resp = 'unbundle stream=%d' % (self.repo.revlogversion,)
+        caps = ['unbundle']
+        if self.repo.ui.configbool('server', 'stream'):
+            caps.append('stream=%d' % self.repo.revlogversion)
+        resp = ' '.join(caps)
         req.httphdr("application/mercurial-0.1", length=len(resp))
         req.write(resp)
 
