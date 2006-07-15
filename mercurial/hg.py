@@ -74,7 +74,8 @@ def repository(ui, path=None, create=0):
                              scheme)
     return ctor(ui, path)
 
-def clone(ui, source, dest=None, pull=False, rev=None, update=True):
+def clone(ui, source, dest=None, pull=False, rev=None, update=True,
+          stream=False):
     """Make a copy of an existing repository.
 
     Create a copy of an existing repository in a new directory.  The
@@ -95,6 +96,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True):
     name of source repository)
 
     pull: always pull from source repository, even in local case
+
+    stream: stream from repository (fast over LAN, slow over WAN)
 
     rev: revision to clone up to (implies pull=True)
 
@@ -179,7 +182,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True):
             revs = [src_repo.lookup(r) for r in rev]
 
         if dest_repo.local():
-            dest_repo.pull(src_repo, heads=revs)
+            dest_repo.clone(src_repo, heads=revs, stream=stream)
         elif src_repo.local():
             src_repo.push(dest_repo, revs=revs)
         else:
