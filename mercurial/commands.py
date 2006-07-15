@@ -3308,7 +3308,7 @@ def dispatch(args):
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
-            u.warn(_("*** failed to import extension %s: %s\n") % (x[0], inst))
+            u.warn(_("*** failed to import extension %s: %s\n") % (ext_name, inst))
             if u.print_exc():
                 return 1
 
