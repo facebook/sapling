@@ -8,17 +8,19 @@
 from node import *
 from i18n import gettext as _
 from demandload import *
+import repo
 demandload(globals(), "appendfile changegroup")
-demandload(globals(), "changelog dirstate filelog manifest repo context")
+demandload(globals(), "changelog dirstate filelog manifest context")
 demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
-demandload(globals(), "os revlog util")
+demandload(globals(), "os revlog time util")
 
-class localrepository(object):
+class localrepository(repo.repository):
     capabilities = ()
 
     def __del__(self):
         self.transhandle = None
     def __init__(self, parentui, path=None, create=0):
+        repo.repository.__init__(self)
         if not path:
             p = os.getcwd()
             while not os.path.isdir(os.path.join(p, ".hg")):
@@ -1183,7 +1185,7 @@ class localrepository(object):
         # unbundle assumes local user cannot lock remote repo (new ssh
         # servers, http servers).
 
-        if 'unbundle' in remote.capabilities:
+        if remote.capable('unbundle'):
             return self.push_unbundle(remote, force, revs)
         return self.push_addchangegroup(remote, force, revs)
 
@@ -2200,6 +2202,46 @@ class localrepository(object):
         if errors[0]:
             self.ui.warn(_("%d integrity errors encountered!\n") % errors[0])
             return 1
+
+    def stream_in(self, remote):
+        self.ui.status(_('streaming all changes\n'))
+        fp = remote.stream_out()
+        total_files, total_bytes = map(int, fp.readline().split(' ', 1))
+        self.ui.status(_('%d files to transfer, %s of data\n') %
+                       (total_files, util.bytecount(total_bytes)))
+        start = time.time()
+        for i in xrange(total_files):
+            name, size = fp.readline().split('\0', 1)
+            size = int(size)
+            self.ui.debug('adding %s (%s)\n' % (name, util.bytecount(size)))
+            ofp = self.opener(name, 'w')
+            for chunk in util.filechunkiter(fp, limit=size):
+                ofp.write(chunk)
+            ofp.close()
+        elapsed = time.time() - start
+        self.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
+                       (util.bytecount(total_bytes), elapsed,
+                        util.bytecount(total_bytes / elapsed)))
+        self.reload()
+        return len(self.heads()) + 1
+        
+    def clone(self, remote, heads=[], stream=False):
+        '''clone remote repository.
+
+        keyword arguments:
+        heads: list of revs to clone (forces use of pull)
+        pull: force use of pull, even if remote can stream'''
+
+        # now, all clients that can stream can read repo formats
+        # supported by all servers that can stream.
+
+        # if revlog format changes, client will have to check version
+        # and format flags on "stream" capability, and stream only if
+        # compatible.
+
+        if stream and not heads and remote.capable('stream'):
+            return self.stream_in(remote)
+        return self.pull(remote, heads)
 
 # used to avoid circular references so destructors work
 def aftertrans(base):

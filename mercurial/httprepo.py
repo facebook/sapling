@@ -326,6 +326,9 @@ class httprepository(remoterepository):
             fp.close()
             os.unlink(tempname)
 
+    def stream_out(self):
+        return self.do_cmd('stream_out')
+
 class httpsrepository(httprepository):
     def __init__(self, ui, path):
         if not has_https:

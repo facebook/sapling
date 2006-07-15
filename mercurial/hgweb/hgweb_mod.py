@@ -11,7 +11,8 @@ import os.path
 import mimetypes
 from mercurial.demandload import demandload
 demandload(globals(), "re zlib ConfigParser mimetools cStringIO sys tempfile")
-demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,templater")
+demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone")
+demandload(globals(), "mercurial:templater")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
 from mercurial.node import *
 from mercurial.i18n import gettext as _
@@ -859,7 +860,7 @@ class hgweb(object):
                   or self.t("error", error="%r not found" % fname))
 
     def do_capabilities(self, req):
-        resp = 'unbundle'
+        resp = 'unbundle stream=%d' % (self.repo.revlogversion,)
         req.httphdr("application/mercurial-0.1", length=len(resp))
         req.write(resp)
 
@@ -950,3 +951,7 @@ class hgweb(object):
         finally:
             fp.close()
             os.unlink(tempname)
+
+    def do_stream_out(self, req):
+        req.httphdr("application/mercurial-0.1")
+        streamclone.stream_out(self.repo, req)

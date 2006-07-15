@@ -8,7 +8,7 @@
 from demandload import demandload
 from i18n import gettext as _
 from node import *
-demandload(globals(), "os sys tempfile util")
+demandload(globals(), "os streamclone sys tempfile util")
 
 class sshserver(object):
     def __init__(self, ui, repo):
@@ -60,7 +60,7 @@ class sshserver(object):
         capabilities: space separated list of tokens
         '''
 
-        r = "capabilities: unbundle\n"
+        r = "capabilities: unbundle stream=%d\n" % (self.repo.revlogversion,)
         self.respond(r)
 
     def do_lock(self):
@@ -167,3 +167,5 @@ class sshserver(object):
             fp.close()
             os.unlink(tempname)
 
+    def do_stream_out(self):
+        streamclone.stream_out(self.repo, self.fout)

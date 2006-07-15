@@ -13,8 +13,18 @@ echo $! > proxy.pid)
 cat proxy.pid >> $DAEMON_PIDS
 sleep 2
 
-echo %% url for proxy
-http_proxy=http://localhost:20060/ hg --config http_proxy.always=True clone http://localhost:20059/ b
+echo %% url for proxy, stream
+http_proxy=http://localhost:20060/ hg --config http_proxy.always=True clone --stream http://localhost:20059/ b | \
+  sed -e 's/[0-9][0-9.]*/XXX/g'
+cd b
+hg verify
+cd ..
+
+echo %% url for proxy, pull
+http_proxy=http://localhost:20060/ hg --config http_proxy.always=True clone http://localhost:20059/ b-pull
+cd b-pull
+hg verify
+cd ..
 
 echo %% host:port for proxy
 http_proxy=localhost:20060 hg clone --config http_proxy.always=True http://localhost:20059/ c

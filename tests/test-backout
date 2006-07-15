@@ -60,4 +60,40 @@ hg commit -d '2 0' -A -m c
 hg backout -d '3 0' 1
 hg locate b
 
+cd ..
+hg init m
+cd m
+echo a > a
+hg commit -d '0 0' -A -m a
+echo b > b
+hg commit -d '1 0' -A -m b
+echo c > c
+hg commit -d '2 0' -A -m b
+hg update 1
+echo d > d
+hg commit -d '3 0' -A -m c
+hg merge 2
+hg commit -d '4 0' -A -m d
+
+echo '# backout of merge should fail'
+
+hg backout 4
+
+echo '# backout of merge with bad parent should fail'
+
+hg backout --parent 0 4
+
+echo '# backout of non-merge with parent should fail'
+
+hg backout --parent 0 3
+
+echo '# backout with valid parent should be ok'
+
+hg backout -d '5 0' --parent 2 4
+
+hg rollback
+hg update -C
+
+hg backout -d '6 0' --parent 3 4
+
 exit 0
