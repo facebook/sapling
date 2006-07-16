@@ -51,9 +51,11 @@ class changectx(object):
         node, flag = self._repo.manifest.find(self.changeset()[0], path)
         return node
 
-    def filectx(self, path):
+    def filectx(self, path, fileid=None):
         """get a file context from this changeset"""
-        return filectx(self._repo, path, fileid=self.filenode(path))
+        if fileid is None:
+            fileid = self.filenode(path)
+        return filectx(self._repo, path, fileid=fileid)
 
     def filectxs(self):
         """generate a file context for each file in this changeset's
