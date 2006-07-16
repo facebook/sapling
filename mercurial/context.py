@@ -39,12 +39,12 @@ class changectx(object):
 
     def parents(self):
         """return contexts for each parent changeset"""
-        p = self.repo.changelog.parents(self._node)
+        p = self._repo.changelog.parents(self._node)
         return [ changectx(self._repo, x) for x in p ]
 
     def children(self):
         """return contexts for each child changeset"""
-        c = self.repo.changelog.children(self._node)
+        c = self._repo.changelog.children(self._node)
         return [ changectx(self._repo, x) for x in c ]
 
     def filenode(self, path):
@@ -77,10 +77,10 @@ class filectx(object):
 
         if self._id:
             # if given a changeset id, go ahead and look up the file
-            self._changeset = changectx(repo, self._id)
+            self._changeset = changectx(self._repo, self._id)
             node, flag = self._repo.manifest.find(self._changeset[0], path)
             self._node = node
-            self._filelog = self.repo.file(self._path)
+            self._filelog = self._repo.file(self._path)
         elif self._fileid:
             # else be lazy
             self._filelog = self._repo.file(self._path)
