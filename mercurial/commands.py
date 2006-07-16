@@ -128,13 +128,17 @@ def walkchangerevs(ui, repo, pats, opts):
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog):
+            cl_count = repo.changelog.count()
             for i, window in increasing_windows(filelog.count()-1, -1):
                 revs = []
                 for j in xrange(i - window, i + 1):
                     revs.append(filelog.linkrev(filelog.node(j)))
                 revs.reverse()
                 for rev in revs:
-                    yield rev
+                    # only yield rev for which we have the changelog, it can
+                    # happen while doing "hg log" during a pull or commit
+                    if rev < cl_count:
+                        yield rev
 
         minrev, maxrev = min(revs), max(revs)
         for file_ in files:
