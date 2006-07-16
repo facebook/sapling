@@ -10,6 +10,20 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "array bisect struct")
 
+class manifestflags(dict):
+    def __init__(self, mapping={}):
+        dict.__init__(self, mapping)
+    def execf(self, f):
+        "test for executable in manifest flags"
+        return self.get(f, False)
+    def linkf(self, f):
+        "test for symlink in manifest flags"
+        return False
+    def set(self, f, execf=False, linkf=False):
+        self[f] = execf
+    def copy(self):
+        return manifestflags(dict.copy(self))
+
 class manifest(revlog):
     def __init__(self, opener, defversion=REVLOGV0):
         self.mapcache = None
@@ -23,7 +37,7 @@ class manifest(revlog):
             return self.mapcache[1]
         text = self.revision(node)
         map = {}
-        flag = {}
+        flag = manifestflags()
         self.listcache = array.array('c', text)
         lines = text.splitlines(1)
         for l in lines:
