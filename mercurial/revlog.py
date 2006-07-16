@@ -746,10 +746,7 @@ class revlog(object):
         if id in self.nodemap:
             return id
         if type(id) == type(0):
-            rev = id
-            if rev < 0: rev = self.count() + rev
-            if rev < 0 or rev >= self.count(): return None
-            return self.node(rev)
+            return self.node(id)
         try:
             rev = int(id)
             if str(rev) != id: raise ValueError
