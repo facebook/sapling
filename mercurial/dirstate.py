@@ -238,8 +238,8 @@ class dirstate(object):
         self.clear()
         umask = os.umask(0)
         os.umask(umask)
-        for f, mode in files:
-            if mode:
+        for f in files:
+            if files.execf(f):
                 self.map[f] = ('n', ~umask, -1, 0)
             else:
                 self.map[f] = ('n', ~umask & 0666, -1, 0)

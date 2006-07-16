@@ -481,9 +481,8 @@ class localrepository(object):
         for f in files:
             try:
                 t = self.wread(f)
-                tm = util.is_exec(self.wjoin(f), mfm.get(f, False))
+                mfm.set(f, util.is_exec(self.wjoin(f), mfm.execf(f)))
                 r = self.file(f)
-                mfm[f] = tm
 
                 (entry, fp1, fp2) = self.checkfilemerge(f, t, r, m1, m2)
                 if entry:
@@ -562,7 +561,7 @@ class localrepository(object):
         for f in commit:
             self.ui.note(f + "\n")
             try:
-                mf1[f] = util.is_exec(self.wjoin(f), mf1.get(f, False))
+                mf1.set(f, util.is_exec(self.wjoin(f), mf1.execf(f)))
                 t = self.wread(f)
             except IOError:
                 self.ui.warn(_("trouble committing %s!\n") % f)
@@ -806,7 +805,7 @@ class localrepository(object):
             else:
                 t = self.file(f).read(m[f])
                 self.wwrite(f, t)
-                util.set_exec(self.wjoin(f), mf[f])
+                util.set_exec(self.wjoin(f), mf.execf(f))
                 self.dirstate.update([f], "n")
 
     def copy(self, source, dest, wlock=None):
@@ -1737,7 +1736,7 @@ class localrepository(object):
 
         for f in added + modified + unknown:
             mw[f] = ""
-            mfw[f] = util.is_exec(self.wjoin(f), mfw.get(f, False))
+            mfw.set(f, util.is_exec(self.wjoin(f), mfw.execf(f)))
 
         if moddirstate and not wlock:
             wlock = self.wlock()
@@ -1777,7 +1776,7 @@ class localrepository(object):
                         self.ui.debug(_(" %s versions differ, resolve\n") % f)
                         # merge executable bits
                         # "if we changed or they changed, change in merge"
-                        a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
+                        a, b, c = mfa.execf(f), mfw.execf(f), mf2.execf(f)
                         mode = ((a^b) | (a^c)) ^ a
                         merge[f] = (m1.get(f, nullid), m2[f], mode)
                         s = 1
@@ -1796,9 +1795,9 @@ class localrepository(object):
                 if not s and mfw[f] != mf2[f]:
                     if force:
                         self.ui.debug(_(" updating permissions for %s\n") % f)
-                        util.set_exec(self.wjoin(f), mf2[f])
+                        util.set_exec(self.wjoin(f), mf2.execf(f))
                     else:
-                        a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
+                        a, b, c = mfa.execf(f), mfw.execf(f), mf2.execf(f)
                         mode = ((a^b) | (a^c)) ^ a
                         if mode != b:
                             self.ui.debug(_(" updating permissions for %s\n")
@@ -1898,7 +1897,7 @@ class localrepository(object):
             self.ui.note(_("getting %s\n") % f)
             t = self.file(f).read(get[f])
             self.wwrite(f, t)
-            util.set_exec(self.wjoin(f), mf2[f])
+            util.set_exec(self.wjoin(f), mf2.execf(f))
             if moddirstate:
                 if branch_merge:
                     self.dirstate.update([f], 'n', st_mtime=-1)
