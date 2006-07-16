@@ -469,7 +469,8 @@ class revlog(object):
             return self.nodemap[node]
         except KeyError:
             raise RevlogError(_('%s: no node %s') % (self.indexfile, hex(node)))
-    def linkrev(self, node): return self.index[self.rev(node)][-4]
+    def linkrev(self, node):
+        return (node == nullid) and -1 or self.index[self.rev(node)][-4]
     def parents(self, node):
         if node == nullid: return (nullid, nullid)
         r = self.rev(node)
