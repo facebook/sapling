@@ -79,10 +79,10 @@ class filectx(object):
 
         if self._id:
             # if given a changeset id, go ahead and look up the file
-            self._changeset = changectx(self._repo, self._id)
+            self._changeset = self._repo.changelog.read(self._id)
             node, flag = self._repo.manifest.find(self._changeset[0], path)
-            self._node = node
             self._filelog = self._repo.file(self._path)
+            self._filenode = node
         elif self._fileid:
             # else be lazy
             self._filelog = self._repo.file(self._path)
