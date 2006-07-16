@@ -15,12 +15,15 @@ class manifestflags(dict):
         dict.__init__(self, mapping)
     def execf(self, f):
         "test for executable in manifest flags"
-        return self.get(f, False)
+        return "x" in self.get(f, "")
     def linkf(self, f):
         "test for symlink in manifest flags"
-        return False
+        return "l" in self.get(f, "")
     def set(self, f, execf=False, linkf=False):
-        self[f] = execf
+        fl = ""
+        if execf: fl = "x"
+        if linkf: fl = "l"
+        self[f] = fl
     def copy(self):
         return manifestflags(dict.copy(self))
 
@@ -43,7 +46,7 @@ class manifest(revlog):
         for l in lines:
             (f, n) = l.split('\0')
             map[f] = bin(n[:40])
-            flag[f] = (n[40:-1] == "x")
+            flag[f] = n[40:-1]
         self.mapcache = (node, map, flag)
         return map
 
@@ -137,9 +140,7 @@ class manifest(revlog):
 
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
-            text = ["%s\000%s%s\n" %
-                            (f, hex(map[f]), flags[f] and "x" or '')
-                            for f in files]
+            text = ["%s\000%s%s\n" % (f, hex(map[f]), flags[f]) for f in files]
             self.listcache = array.array('c', "".join(text))
             cachedelta = None
         else:
@@ -165,8 +166,7 @@ class manifest(revlog):
                 # bs will either be the index of the item or the insert point
                 start, end = self._search(addbuf, f, start)
                 if w[1] == 0:
-                    l = "%s\000%s%s\n" % (f, hex(map[f]),
-                                          flags[f] and "x" or '')
+                    l = "%s\000%s%s\n" % (f, hex(map[f]), flags[f])
                 else:
                     l = ""
                 if start == end and w[1] == 1:
