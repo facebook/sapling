@@ -60,7 +60,7 @@ def stream_out(repo, fileobj):
     '''stream out all metadata files in repository.
     writes to file-like object, must support write() and optional flush().'''
 
-    if not repo.ui.configbool('server', 'stream'):
+    if not repo.ui.configbool('server', 'uncompressed'):
         fileobj.write('1\n')
         return
 

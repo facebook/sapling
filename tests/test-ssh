@@ -28,7 +28,7 @@ cd remote
 echo this > foo
 hg ci -A -m "init" -d "1000000 0" foo
 echo '[server]' > .hg/hgrc
-echo 'stream = True' >> .hg/hgrc
+echo 'uncompressed = True' >> .hg/hgrc
 
 cd ..
 

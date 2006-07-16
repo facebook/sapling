@@ -328,7 +328,7 @@ paths::
 
 server::
   Controls generic server settings.
-  stream;;
+  uncompressed;;
     Whether to allow clients to clone a repo using the uncompressed
     streaming protocol.  This transfers about 40% more data than a
     regular clone, but uses less memory and CPU on both server and

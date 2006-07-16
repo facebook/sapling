@@ -61,7 +61,7 @@ class sshserver(object):
         '''
 
         caps = ['unbundle']
-        if self.ui.configbool('server', 'stream'):
+        if self.ui.configbool('server', 'uncompressed'):
             caps.append('stream=%d' % self.repo.revlogversion)
         self.respond("capabilities: %s\n" % (' '.join(caps),))
 

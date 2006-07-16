@@ -861,7 +861,7 @@ class hgweb(object):
 
     def do_capabilities(self, req):
         caps = ['unbundle']
-        if self.repo.ui.configbool('server', 'stream'):
+        if self.repo.ui.configbool('server', 'uncompressed'):
             caps.append('stream=%d' % self.repo.revlogversion)
         resp = ' '.join(caps)
         req.httphdr("application/mercurial-0.1", length=len(resp))
