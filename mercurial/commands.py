@@ -932,7 +932,7 @@ def cat(ui, repo, file1, *pats, **opts):
     %d   dirname of file being printed, or '.' if in repo root
     %p   root-relative path name of file being printed
     """
-    ctx = repo.changectx(opts['rev'] or -1)
+    ctx = repo.changectx(opts['rev'] or "-1")
     for src, abs, rel, exact in walk(repo, (file1,) + pats, opts, ctx.node()):
         fp = make_file(repo, opts['output'], ctx.node(), pathname=abs)
         fp.write(ctx.filectx(abs).data())
