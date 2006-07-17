@@ -40,7 +40,8 @@ def walkrepo(root):
         yield x
     # write manifest before changelog
     meta = list(walk(root, False))
-    meta.sort(reverse=True)
+    meta.sort()
+    meta.reverse()
     for x in meta:
         yield x
 
