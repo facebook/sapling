@@ -2076,13 +2076,28 @@ def outgoing(ui, repo, dest=None, **opts):
             dodiff(ui, ui, repo, prev, n)
             ui.write("\n")
 
-def parents(ui, repo, rev=None, branches=None, **opts):
+def parents(ui, repo, file_=None, rev=None, branches=None, **opts):
     """show the parents of the working dir or revision
 
     Print the working directory's parent revisions.
     """
+    # legacy
+    if file_ and not rev:
+        try:
+            rev = repo.lookup(file_)
+            file_ = None
+        except hg.RepoError:
+            pass
+        else:
+            ui.warn(_("'hg parent REV' is deprecated, "
+                      "please use 'hg parents -r REV instead\n"))
+
     if rev:
-        p = repo.changelog.parents(repo.lookup(rev))
+        if file_:
+            ctx = repo.filectx(file_, changeid=rev)
+        else:
+            ctx = repo.changectx(rev)
+        p = [cp.node() for cp in ctx.parents()]
     else:
         p = repo.dirstate.parents()
 
@@ -3025,9 +3040,10 @@ table = {
     "^parents":
         (parents,
          [('b', 'branches', None, _('show branches')),
+          ('r', 'rev', '', _('show parents from the specified rev')),
           ('', 'style', '', _('display using template map file')),
           ('', 'template', '', _('display with template'))],
-         _('hg parents [-b] [REV]')),
+         _('hg parents [-b] [-r REV] [FILE]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
         (pull,
