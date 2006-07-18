@@ -844,7 +844,7 @@ function! s:HGFinishCommit(messageFile, targetDir, targetFile, origBuffNR)
     if strlen(a:targetDir) > 0
       execute 'cd' escape(a:targetDir, ' ')
     endif
-    let resultBuffer=s:HGCreateCommandBuffer('commit -F "' . a:messageFile . '" "'. a:targetFile . '"', 'hgcommit', '', a:origBuffNR)
+    let resultBuffer=s:HGCreateCommandBuffer('commit -l "' . a:messageFile . '" "'. a:targetFile . '"', 'hgcommit', '', a:origBuffNR)
     execute 'cd' escape(oldCwd, ' ')
     execute 'bw' escape(a:messageFile, ' *?\')
     silent execute 'call delete("' . a:messageFile . '")'
