@@ -171,7 +171,7 @@ function! s:HGCreateCommandBuffer(cmd, cmdName, statusText, origBuffNR)
   endif
 
   let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " " . a:cmd
-  echomsg "DBG :".hgCommand
+  "echomsg "DBG :".hgCommand
   let hgOut = system(hgCommand)
   " HACK:  diff command does not return proper error codes
   if v:shell_error && a:cmdName != 'hgdiff'
@@ -319,13 +319,17 @@ function! s:HGGetStatusVars(revisionVar, branchVar, repositoryVar)
     return ""
   endif
   let fileName=bufname(hgBufferCheck)
-  let realFileName = fnamemodify(s:HGResolveLink(fileName), ':t')
+  let fileNameWithoutLink=s:HGResolveLink(fileName)
+  let realFileName = fnamemodify(fileNameWithoutLink, ':t')
   let oldCwd=s:HGChangeToCurrentFileDir(fileName)
   try
-     ""TODO
-    "if !filereadable('HG/Root')
-      "return ""
-    "endif
+    let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " root  " 
+    let roottext=system(hgCommand)
+    " Suppress ending null char ! Does it work in window ?
+    let roottext=substitute(roottext, '.$', '', "")
+    if match(getcwd()."/".fileNameWithoutLink, roottext) == -1
+      return ""
+    endif
     let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " status -mardui " . fileName
     let statustext=system(hgCommand)
     if(v:shell_error)
@@ -686,7 +690,7 @@ function! s:HGAnnotate(...)
   endif
 
   let resultBuffer=s:HGDoCommand('annotate -ndu -r ' . revision, 'hgannotate', revision) 
-  echomsg "DBG: ".resultBuffer
+  "echomsg "DBG: ".resultBuffer
   if resultBuffer !=  -1
     set filetype=HGAnnotate
   endif
