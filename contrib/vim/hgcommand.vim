@@ -322,7 +322,7 @@ function! s:HGGetStatusVars(revisionVar, branchVar, repositoryVar)
   let fileName=bufname(hgBufferCheck)
   let fileNameWithoutLink=s:HGResolveLink(fileName)
   let realFileName = fnamemodify(fileNameWithoutLink, ':t')
-  let oldCwd=s:HGChangeToCurrentFileDir(fileName)
+  let oldCwd=s:HGChangeToCurrentFileDir(realFileName)
   try
     let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " root  " 
     let roottext=system(hgCommand)
@@ -332,13 +332,13 @@ function! s:HGGetStatusVars(revisionVar, branchVar, repositoryVar)
       return ""
     endif
     let returnExpression = ""
-    let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " status -mardui " . fileName
+    if a:repositoryVar != ""
+      let returnExpression=returnExpression . " | let " . a:repositoryVar . "='" . roottext . "'"
+    endif
+    let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " status -mardui " . realFileName
     let statustext=system(hgCommand)
     if(v:shell_error)
       return ""
-    endif
-    if a:repositoryVar != ""
-      let returnExpression=returnExpression . " | let " . a:repositoryVar . "='" . roottext . "'"
     endif
     if match(statustext, '^[?I]') >= 0 
       let revision="NEW"
@@ -1676,6 +1676,11 @@ HGVimDiffFinish		This event is fired just after the HGVimDiff command
    when the scratch buffer containing the other version is destroyed.  There 
    may still be bugs in here, depending on many configuration details.
 
+==============================================================================
+
+9. TODO  						      *hgcommand-todo*
+
+   Integrate symlink tracking once HG will support them.
 ==============================================================================
 === END_DOC
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
