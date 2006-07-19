@@ -195,6 +195,7 @@ show changed files in the working directory
     ! = deleted, but still tracked
     ? = not tracked
     I = ignored (not shown by default)
+      = the previous added file was copied from here
 
 aliases: st
 
@@ -207,6 +208,7 @@ options:
  -u --unknown    show only unknown (not tracked) files
  -i --ignored    show ignored files
  -n --no-status  hide status prefix
+ -C --copies     show source of copied files
  -0 --print0     end filenames with NUL, for use with xargs
  -I --include    include names matching the given patterns
  -X --exclude    exclude names matching the given patterns
