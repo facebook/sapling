@@ -317,7 +317,7 @@ paths::
   Assigns symbolic names to repositories.  The left side is the
   symbolic name, and the right gives the directory or URL that is the
   location of the repository.  Default paths can be declared by
- setting the following entries.
+  setting the following entries.
   default;;
     Directory or URL to use when pulling if no source is specified.
     Default is set to repository from which the current repository
@@ -325,6 +325,18 @@ paths::
   default-push;;
     Optional.  Directory or URL to use when pushing if no destination
     is specified.
+
+server::
+  Controls generic server settings.
+  uncompressed;;
+    Whether to allow clients to clone a repo using the uncompressed
+    streaming protocol.  This transfers about 40% more data than a
+    regular clone, but uses less memory and CPU on both server and
+    client.  Over a LAN (100Mbps or better) or a very fast WAN, an
+    uncompressed streaming clone is a lot faster (~10x) than a regular
+    clone.  Over most WAN connections (anything slower than about
+    6Mbps), uncompressed streaming is slower, because of the extra
+    data transfer overhead.  Default is False.
 
 ui::
   User interface controls.

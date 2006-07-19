@@ -40,7 +40,8 @@ def walkrepo(root):
         yield x
     # write manifest before changelog
     meta = list(walk(root, False))
-    meta.sort(reverse=True)
+    meta.sort()
+    meta.reverse()
     for x in meta:
         yield x
 
@@ -59,6 +60,13 @@ def walkrepo(root):
 def stream_out(repo, fileobj):
     '''stream out all metadata files in repository.
     writes to file-like object, must support write() and optional flush().'''
+
+    if not repo.ui.configbool('server', 'uncompressed'):
+        fileobj.write('1\n')
+        return
+
+    fileobj.write('0\n')
+
     # get consistent snapshot of repo. lock during scan so lock not
     # needed while we stream, and commits can happen.
     lock = repo.lock()

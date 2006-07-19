@@ -128,13 +128,17 @@ def walkchangerevs(ui, repo, pats, opts):
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog):
+            cl_count = repo.changelog.count()
             for i, window in increasing_windows(filelog.count()-1, -1):
                 revs = []
                 for j in xrange(i - window, i + 1):
                     revs.append(filelog.linkrev(filelog.node(j)))
                 revs.reverse()
                 for rev in revs:
-                    yield rev
+                    # only yield rev for which we have the changelog, it can
+                    # happen while doing "hg log" during a pull or commit
+                    if rev < cl_count:
+                        yield rev
 
         minrev, maxrev = min(revs), max(revs)
         for file_ in files:
@@ -970,7 +974,7 @@ def clone(ui, source, dest=None, **opts):
     ui.setconfig_remoteopts(**opts)
     hg.clone(ui, ui.expandpath(source), dest,
              pull=opts['pull'],
-             stream=opts['stream'],
+             stream=opts['uncompressed'],
              rev=opts['rev'],
              update=not opts['noupdate'])
 
@@ -2863,7 +2867,8 @@ table = {
           ('r', 'rev', [],
            _('a changeset you would like to have after cloning')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
-          ('', 'stream', None, _('use streaming protocol (fast over LAN)')),
+          ('', 'uncompressed', None,
+           _('use uncompressed transfer (fast over LAN)')),
           ('e', 'ssh', '', _('specify ssh command to use')),
           ('', 'remotecmd', '',
            _('specify hg command to run on the remote side'))],
@@ -3322,7 +3327,7 @@ def dispatch(args):
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
-            u.warn(_("*** failed to import extension %s: %s\n") % (x[0], inst))
+            u.warn(_("*** failed to import extension %s: %s\n") % (ext_name, inst))
             if u.print_exc():
                 return 1
 
@@ -3513,7 +3518,9 @@ def dispatch(args):
         return inst.code
     except:
         u.warn(_("** unknown exception encountered, details follow\n"))
-        u.warn(_("** report bug details to mercurial@selenic.com\n"))
+        u.warn(_("** report bug details to "
+                 "http://www.selenic.com/mercurial/bts\n"))
+        u.warn(_("** or mercurial@selenic.com\n"))
         u.warn(_("** Mercurial Distributed SCM (version %s)\n")
                % version.get_version())
         raise
