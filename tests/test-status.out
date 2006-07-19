@@ -101,3 +101,10 @@ R removed
 ! deleted
 ? ignored
 ? unknown
+hg status -C:
+A added
+A copied
+  modified
+R removed
+! deleted
+? unknown

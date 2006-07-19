@@ -2609,6 +2609,7 @@ def status(ui, repo, *pats, **opts):
     ! = deleted, but still tracked
     ? = not tracked
     I = ignored (not shown by default)
+      = the previous added file was copied from here
     """
 
     show_ignored = opts['ignored'] and True or False
@@ -2637,6 +2638,9 @@ def status(ui, repo, *pats, **opts):
 
         for f in changes:
             ui.write(format % f)
+            if (opts.get('copies') and not opts.get('no_status')
+                and opt == 'added' and repo.dirstate.copies.has_key(f)):
+                ui.write('  %s%s' % (repo.dirstate.copies[f], end))
 
 def tag(ui, repo, name, rev_=None, **opts):
     """add a tag for the current tip or a given revision
@@ -3126,6 +3130,7 @@ table = {
           ('u', 'unknown', None, _('show only unknown (not tracked) files')),
           ('i', 'ignored', None, _('show ignored files')),
           ('n', 'no-status', None, _('hide status prefix')),
+          ('C', 'copies', None, _('show source of copied files')),
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),
           ('I', 'include', [], _('include names matching the given patterns')),
