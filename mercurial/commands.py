@@ -766,8 +766,11 @@ def backout(ui, repo, rev, **opts):
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
 
-    Generate a compressed changegroup file collecting all changesets
+    Generate a compressed changegroup file collecting changesets.
     not found in the other repository.
+
+    If no destination repository is specified the destination is
+    assumed to have all the node specified by --base.
 
     This file can then be transferred using conventional means and
     applied to another repository with the unbundle command. This is
@@ -778,11 +781,34 @@ def bundle(ui, repo, fname, dest=None, **opts):
     Unlike import/export, this exactly preserves all changeset
     contents including permissions, rename data, and revision history.
     """
-    dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    setremoteconfig(ui, opts)
-    other = hg.repository(ui, dest)
-    o = repo.findoutgoing(other, force=opts['force'])
-    cg = repo.changegroup(o, 'bundle')
+    revs = opts.get('rev') or None
+    if revs:
+        revs = [repo.lookup(rev) for rev in revs]
+    base = opts.get('base')
+    if base:
+        if dest:
+            raise util.Abort(_("--base is incompatible with specifiying "
+                               "a destination"))
+        o = []
+        for n in base:
+            o.extend(repo.changelog.children(repo.lookup(n)))
+        # add common ancestor
+        if revs:
+            all = o + revs
+        else:
+            all = o + repo.changelog.heads()
+        ancestor = reduce(lambda a, b: repo.changelog.ancestor(a, b), all)
+        o.append(ancestor)
+    else:
+        setremoteconfig(ui, opts)
+        dest = ui.expandpath(dest or 'default-push', dest or 'default')
+        other = hg.repository(ui, dest)
+        o = repo.findoutgoing(other, force=opts['force'])
+
+    if revs:
+        cg = repo.changegroupsubset(o, revs, 'bundle')
+    else:
+        cg = repo.changegroup(o, 'bundle')
     write_bundle(cg, fname)
 
 def cat(ui, repo, file1, *pats, **opts):
@@ -2789,8 +2815,12 @@ table = {
         (bundle,
          [('f', 'force', None,
            _('run even when remote repository is unrelated')),
+          ('r', 'rev', [],
+           _('a changeset you would like to bundle')),
+          ('', 'base', [],
+           _('a base changeset to specify instead of a destination')),
          ] + remoteopts,
-         _('hg bundle FILE DEST')),
+         _('hg bundle [--base REV]... [--rev REV]... FILE [DEST]')),
     "cat":
         (cat,
          [('o', 'output', '', _('print output to file with formatted name')),
