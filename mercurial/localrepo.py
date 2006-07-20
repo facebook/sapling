@@ -1792,7 +1792,7 @@ class localrepository(object):
                     # we need to reset the dirstate if the file was added
                     get[f] = m2[f]
 
-                if not s and mfw[f] != mf2[f]:
+                if not s and mfw.execf(f) != mf2.execf(f):
                     if force:
                         self.ui.debug(_(" updating permissions for %s\n") % f)
                         util.set_exec(self.wjoin(f), mf2.execf(f))

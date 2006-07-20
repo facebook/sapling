@@ -13,6 +13,10 @@ demandload(globals(), "array bisect struct")
 class manifestflags(dict):
     def __init__(self, mapping={}):
         dict.__init__(self, mapping)
+    def __getitem__(self, f):
+        raise "oops"
+    def flags(self, f):
+        return dict.__getitem__(self, f)
     def execf(self, f):
         "test for executable in manifest flags"
         return "x" in self.get(f, "")
@@ -140,7 +144,7 @@ class manifest(revlog):
 
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
-            text = ["%s\000%s%s\n" % (f, hex(map[f]), flags[f]) for f in files]
+            text = ["%s\000%s%s\n" % (f, hex(map[f]), flags.flags(f)) for f in files]
             self.listcache = array.array('c', "".join(text))
             cachedelta = None
         else:
@@ -166,7 +170,7 @@ class manifest(revlog):
                 # bs will either be the index of the item or the insert point
                 start, end = self._search(addbuf, f, start)
                 if w[1] == 0:
-                    l = "%s\000%s%s\n" % (f, hex(map[f]), flags[f])
+                    l = "%s\000%s%s\n" % (f, hex(map[f]), flags.flags(f))
                 else:
                     l = ""
                 if start == end and w[1] == 1:
