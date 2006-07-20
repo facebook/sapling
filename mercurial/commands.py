@@ -2599,37 +2599,44 @@ def serve(ui, repo, **opts):
 def status(ui, repo, *pats, **opts):
     """show changed files in the working directory
 
-    Show changed files in the repository.  If names are
-    given, only files that match are shown.
+    Show status of files in the repository.  If names are given, only
+    files that match are shown.  Files that are clean or ignored, are
+    not listed unless -c (clean), -i (ignored) or -A is given.
 
     The codes used to show the status of files are:
     M = modified
     A = added
     R = removed
+    C = clean
     ! = deleted, but still tracked
     ? = not tracked
     I = ignored (not shown by default)
       = the previous added file was copied from here
     """
 
-    show_ignored = opts['ignored'] and True or False
+    all = opts['all']
+    
     files, matchfn, anypats = matchpats(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
-    modified, added, removed, deleted, unknown, ignored = [
+    modified, added, removed, deleted, unknown, ignored, clean = [
         [util.pathto(cwd, x) for x in n]
-        for n in repo.changes(files=files, match=matchfn,
-                              show_ignored=show_ignored)]
+        for n in repo.status(files=files, match=matchfn,
+                             list_ignored=all or opts['ignored'],
+                             list_clean=all or opts['clean'])]
 
-    changetypes = [('modified', 'M', modified),
+    changetypes = (('modified', 'M', modified),
                    ('added', 'A', added),
                    ('removed', 'R', removed),
                    ('deleted', '!', deleted),
                    ('unknown', '?', unknown),
-                   ('ignored', 'I', ignored)]
+                   ('ignored', 'I', ignored))
+
+    explicit_changetypes = changetypes + (('clean', 'C', clean),)
 
     end = opts['print0'] and '\0' or '\n'
 
-    for opt, char, changes in ([ct for ct in changetypes if opts[ct[0]]]
+    for opt, char, changes in ([ct for ct in explicit_changetypes
+                                if all or opts[ct[0]]]
                                or changetypes):
         if opts['no_status']:
             format = "%%s%s" % end
@@ -2638,7 +2645,7 @@ def status(ui, repo, *pats, **opts):
 
         for f in changes:
             ui.write(format % f)
-            if (opts.get('copies') and not opts.get('no_status')
+            if ((all or opts.get('copies')) and not opts.get('no_status')
                 and opt == 'added' and repo.dirstate.copies.has_key(f)):
                 ui.write('  %s%s' % (repo.dirstate.copies[f], end))
 
@@ -3123,10 +3130,12 @@ table = {
          _('hg serve [OPTION]...')),
     "^status|st":
         (status,
-         [('m', 'modified', None, _('show only modified files')),
+         [('A', 'all', None, _('show status of all files')),
+          ('m', 'modified', None, _('show only modified files')),
           ('a', 'added', None, _('show only added files')),
           ('r', 'removed', None, _('show only removed files')),
           ('d', 'deleted', None, _('show only deleted (but tracked) files')),
+          ('c', 'clean', None, _('show only files without changes')),
           ('u', 'unknown', None, _('show only unknown (not tracked) files')),
           ('i', 'ignored', None, _('show ignored files')),
           ('n', 'no-status', None, _('hide status prefix')),

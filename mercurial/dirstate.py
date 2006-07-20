@@ -434,15 +434,16 @@ class dirstate(object):
             if not seen(k) and (statmatch(k, None)):
                 yield 'm', k, None
 
-    def changes(self, files=None, match=util.always, show_ignored=None):
+    def status(self, files=None, match=util.always, list_ignored=False,
+               list_clean=False):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
-        removed, deleted = [], []
+        removed, deleted, clean = [], [], []
 
-        for src, fn, st in self.statwalk(files, match, ignored=show_ignored):
+        for src, fn, st in self.statwalk(files, match, ignored=list_ignored):
             try:
                 type_, mode, size, time = self[fn]
             except KeyError:
-                if show_ignored and self.ignore(fn):
+                if list_ignored and self.ignore(fn):
                     ignored.append(fn)
                 else:
                     unknown.append(fn)
@@ -473,6 +474,8 @@ class dirstate(object):
                     modified.append(fn)
                 elif time != st.st_mtime:
                     lookup.append(fn)
+                elif list_clean:
+                    clean.append(fn)
             elif type_ == 'm':
                 modified.append(fn)
             elif type_ == 'a':
@@ -480,4 +483,5 @@ class dirstate(object):
             elif type_ == 'r':
                 removed.append(fn)
 
-        return (lookup, modified, added, removed, deleted, unknown, ignored)
+        return (lookup, modified, added, removed, deleted, unknown, ignored,
+                clean)
