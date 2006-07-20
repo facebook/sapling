@@ -1279,6 +1279,15 @@ def reposetup(ui, repo):
             return oldlookup(key)
         except hg.RepoError:
             q = repomap[repo]
+
+            qpatchnames = { 'qtip': -1, 'qbase': 0 }
+            if key in qpatchnames:
+                if len(q.applied) == 0:
+                    self.ui.warn('No patches applied\n')
+                    raise
+                patch = q.applied[qpatchnames[key]].split(':')[0]
+                return revlog.bin(patch)
+
             patch = q.isapplied(key)
             if not patch:
                 raise
