@@ -1272,6 +1272,19 @@ def version(ui, q=None):
 
 def reposetup(ui, repo):
     repomap[repo] = queue(ui, repo.join(""))
+    oldlookup = repo.lookup
+
+    def qlookup(key):
+        try:
+            return oldlookup(key)
+        except hg.RepoError:
+            q = repomap[repo]
+            patch = q.isapplied(key)
+            if not patch:
+                raise
+            return revlog.bin(patch[1])
+
+    repo.lookup = qlookup
 
 cmdtable = {
     "qapplied": (applied, [], 'hg qapplied [PATCH]'),
