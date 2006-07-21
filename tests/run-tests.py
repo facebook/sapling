@@ -334,7 +334,9 @@ try:
         if len(args) == 0:
             args = os.listdir(".")
         for test in args:
-            if test.startswith("test-") and not '~' in test and not '.' in test:
+            if (test.startswith("test-") and '~' not in test and
+                ('.' not in test or test.endswith('.py') or 
+                 test.endswith('.bat'))):
                 if not run_one(test):
                     failed += 1
                 tests += 1
