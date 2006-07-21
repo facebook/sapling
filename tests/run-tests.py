@@ -244,7 +244,7 @@ def run_one(test):
         ref_out = splitnewlines(f.read())
         f.close()
     else:
-        ref_out = ['']
+        ref_out = []
     if out != ref_out:
         diffret = 1
         print "\nERROR: %s output changed" % (test)
