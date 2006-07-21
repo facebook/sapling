@@ -198,6 +198,7 @@ def create_server(ui, repo):
             self.webdirmaker = hgwebdir
             self.repoviewmaker = hgweb
             self.reqmaker = wsgiapplication(self.make_handler)
+            self.daemon_threads = True
 
         def make_handler(self):
             if self.webdir_conf:
