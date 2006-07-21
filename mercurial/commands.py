@@ -2675,7 +2675,7 @@ def tag(ui, repo, name, rev_=None, **opts):
         if p1 == nullid:
             raise util.Abort(_('no revision to tag'))
         if p2 != nullid:
-            raise util.Abort(_('outstanding uncommited merges'))
+            raise util.Abort(_('outstanding uncommitted merges'))
         r = hex(p1)
 
     repo.tag(name, r, opts['local'], opts['message'], opts['user'],
