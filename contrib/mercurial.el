@@ -380,7 +380,9 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
   (save-excursion
     (while hg-prev-buffer
       (set-buffer hg-prev-buffer))
-    (let ((path (or default (buffer-file-name) default-directory)))
+    (let ((path (or default
+                    (buffer-file-name)
+                    (expand-file-name default-directory))))
       (if (or (not path) current-prefix-arg)
           (expand-file-name
            (eval (list* 'read-file-name
