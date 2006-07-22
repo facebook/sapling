@@ -972,7 +972,8 @@ With a prefix argument, prompt for the path to forget."
       (cd (hg-root path)))
     (when update
       (with-current-buffer buf
-	(set (make-local-variable 'backup-inhibited) nil)
+        (when (local-variable-p 'backup-inhibited)
+          (kill-local-variable 'backup-inhibited))
 	(hg-mode-line)))))
 
 (defun hg-incoming (&optional repo)
