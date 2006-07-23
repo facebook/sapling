@@ -710,17 +710,11 @@ def add(ui, repo, *pats, **opts):
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files (DEPRECATED)
 
-    (DEPRECATED)
     Add all new files and remove all missing files from the repository.
 
     New files are ignored if they match any of the patterns in .hgignore. As
     with add, these changes take effect at the next commit.
-
-    This command is now deprecated and will be removed in a future
-    release. Please use add and remove --after instead.
     """
-    ui.warn(_('(the addremove command is deprecated; use add and remove '
-              '--after instead)\n'))
     return addremove_lock(ui, repo, pats, opts)
 
 def addremove_lock(ui, repo, pats, opts, wlock=None):
@@ -2815,7 +2809,7 @@ table = {
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
           ('n', 'dry-run', None, _('do not perform actions, just print output'))],
          _('hg add [OPTION]... [FILE]...')),
-    "debugaddremove|addremove":
+    "addremove":
         (addremove,
          [('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
