@@ -2651,7 +2651,7 @@ def tag(ui, repo, name, rev_=None, **opts):
     very useful to compare different revision, to go back to significant
     earlier versions or to mark branch points as releases, etc.
 
-    If no revision is given, the tip is used.
+    If no revision is given, the parent of the working directory is used.
 
     To facilitate version control, distribution, and merging of tags,
     they are stored as a file named ".hgtags" which is managed
@@ -2671,7 +2671,12 @@ def tag(ui, repo, name, rev_=None, **opts):
     if rev_:
         r = hex(repo.lookup(rev_))
     else:
-        r = hex(repo.changelog.tip())
+        p1, p2 = repo.dirstate.parents()
+        if p1 == nullid:
+            raise util.Abort(_('no revision to tag'))
+        if p2 != nullid:
+            raise util.Abort(_('outstanding uncommitted merges'))
+        r = hex(p1)
 
     repo.tag(name, r, opts['local'], opts['message'], opts['user'],
              opts['date'])
