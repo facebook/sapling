@@ -517,7 +517,8 @@ def getuser():
     try:
         return getpass.getuser()
     except ImportError:
-        return getuser_fallback and getuser_fallback()
+        if getuser_fallback:
+            return getuser_fallback()
     raise util.Abort(_('user name not available - set USERNAME '
                        'environment variable'))
 
