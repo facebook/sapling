@@ -12,7 +12,7 @@ platform-specific details from the core.
 
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "cStringIO errno popen2 re shutil sys tempfile")
+demandload(globals(), "cStringIO errno getpass popen2 re shutil sys tempfile")
 demandload(globals(), "os threading time")
 
 # used by parsedate
@@ -509,6 +509,17 @@ def is_win_9x():
         return sys.getwindowsversion()[3] == 1
     except AttributeError:
         return os.name == 'nt' and 'command' in os.environ.get('comspec', '')
+
+getuser_fallback = None
+
+def getuser():
+    '''return name of current user'''
+    try:
+        return getpass.getuser()
+    except ImportError:
+        return getuser_fallback and getuser_fallback()
+    raise util.Abort(_('user name not available - set USERNAME '
+                       'environment variable'))
 
 # Platform specific variants
 if os.name == 'nt':

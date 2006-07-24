@@ -197,7 +197,7 @@ class ui(object):
             user = os.environ.get("EMAIL")
         if user is None:
             try:
-                user = '%s@%s' % (getpass.getuser(), socket.getfqdn())
+                user = '%s@%s' % (util.getuser(), socket.getfqdn())
             except KeyError:
                 raise util.Abort(_("Please specify a username."))
         return user
