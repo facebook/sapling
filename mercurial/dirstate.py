@@ -347,12 +347,16 @@ class dirstate(object):
         # recursion free walker, faster than os.walk.
         def findfiles(s):
             work = [s]
+            # self.root may end with a path separator when self.root == '/'
+            root_subtract_len = len(self.root)
+            if not self.root.endswith('/'):
+                root_subtract_len += 1
             while work:
                 top = work.pop()
                 names = os.listdir(top)
                 names.sort()
                 # nd is the top of the repository dir tree
-                nd = util.normpath(top[len(self.root) + 1:])
+                nd = util.normpath(top[root_subtract_len:])
                 if nd == '.':
                     nd = ''
                 else:
