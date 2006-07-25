@@ -1,14 +1,32 @@
 #header#
+<title>#repo|escape#: Shortlog</title>
+<link rel="alternate" type="application/rss+xml"
+   href="?cmd=changelog;style=rss" title="RSS feed for #repo|escape#">
+</head>
+<body>
 
+<div class="page_header">
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="?cmd=summary;style=gitweb">#repo|escape#</a> / shortlog
+</div>
+
+<form action="#">
+<div class="search">
+<input type="hidden" name="repo" value="#repo|escape#"  />
+<input type="hidden" name="style" value="gitweb"  />
+<input type="hidden" name="cmd" value="changelog"  />
+<input type="text" name="rev"  />
+</div>
+</form>
+</div>
 <div class="page_nav">
-<a href="?cmd=summary;style=gitweb">summary</a> | <a href="?cmd=changelog;style=gitweb">log</a> | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?cmd=manifest;manifest=#manifest#;path=/;style=gitweb">manifest</a>#archives%archiveentry#
+<a href="?cmd=summary;style=gitweb">summary</a> | shortlog | <a href="?cmd=changelog;rev=#rev#;style=gitweb">changelog</a> | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?cmd=manifest;manifest=#manifest#;path=/;style=gitweb">manifest</a>#archives%archiveentry#<br/>
 <br/>
 
-#changenav%naventry#<br/>
+#changenav%navshortentry#<br/>
 </div>
 
 <table cellspacing="0">
-#entries#
+#entries%shortlogentry#
 </table>
 
 #footer#

@@ -46,6 +46,7 @@ class hgweb(object):
             self.mtime = mtime
             self.repo = hg.repository(self.repo.ui, self.repo.root)
             self.maxchanges = int(self.repo.ui.config("web", "maxchanges", 10))
+            self.maxshortchanges = int(self.repo.ui.config("web", "maxshortchanges", 60))
             self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
@@ -158,7 +159,7 @@ class hgweb(object):
                             ignorewsamount=ignorewsamount,
                             ignoreblanklines=ignoreblanklines), f, tn)
 
-    def changelog(self, pos):
+    def changelog(self, pos, shortlog=False):
         def changenav(**map):
             def seq(factor, maxchanges=None):
                 if maxchanges:
@@ -173,8 +174,9 @@ class hgweb(object):
 
             l = []
             last = 0
-            for f in seq(1, self.maxchanges):
-                if f < self.maxchanges or f <= last:
+            maxchanges = shortlog and self.maxshortchanges or self.maxchanges
+            for f in seq(1, maxchanges):
+                if f < maxchanges or f <= last:
                     continue
                 if f > count:
                     break
@@ -219,14 +221,15 @@ class hgweb(object):
             for e in l:
                 yield e
 
+        maxchanges = shortlog and self.maxshortchanges or self.maxchanges
         cl = self.repo.changelog
         mf = cl.read(cl.tip())[0]
         count = cl.count()
-        start = max(0, pos - self.maxchanges + 1)
-        end = min(count, start + self.maxchanges)
+        start = max(0, pos - maxchanges + 1)
+        end = min(count, start + maxchanges)
         pos = end - 1
 
-        yield self.t('changelog',
+        yield self.t(shortlog and 'shortlog' or 'changelog',
                      changenav=changenav,
                      manifest=hex(mf),
                      rev=pos, changesets=count, entries=changelist,
@@ -690,6 +693,7 @@ class hgweb(object):
         def expand_form(form):
             shortcuts = {
                 'cl': [('cmd', ['changelog']), ('rev', None)],
+                'sl': [('cmd', ['shortlog']), ('rev', None)],
                 'cs': [('cmd', ['changeset']), ('node', None)],
                 'f': [('cmd', ['file']), ('filenode', None)],
                 'fl': [('cmd', ['filelog']), ('filenode', None)],
@@ -764,6 +768,18 @@ class hgweb(object):
                 return
 
         req.write(self.changelog(hi))
+
+    def do_shortlog(self, req):
+        hi = self.repo.changelog.count() - 1
+        if req.form.has_key('rev'):
+            hi = req.form['rev'][0]
+            try:
+                hi = self.repo.changelog.rev(self.repo.lookup(hi))
+            except hg.RepoError:
+                req.write(self.search(hi)) # XXX redirect to 404 page?
+                return
+
+        req.write(self.changelog(hi, shortlog = True))
 
     def do_changeset(self, req):
         req.write(self.changeset(req.form['node'][0]))
