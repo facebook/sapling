@@ -38,6 +38,8 @@ rm -rf empty
 hg init empty
 cd empty
 hg -R bundle://../full.hg log
+echo '[hooks]' >> .hg/hgrc
+echo 'changegroup = echo changegroup: u=$HG_URL' >> .hg/hgrc
 #doesn't work (yet ?)
 #hg -R bundle://../full.hg verify
 hg pull bundle://../full.hg

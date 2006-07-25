@@ -28,3 +28,9 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
+/home/bos/hg/hg/hg-url/tests/test-http: line 27: cd: test: No such file or directory
+adding bar
+% pull
+pulling from http://localhost:20059/
+searching for changes
+no changes found

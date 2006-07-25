@@ -23,3 +23,13 @@ echo % clone via pull
 http_proxy= hg clone http://localhost:20059/ copy-pull
 cd copy-pull
 hg verify
+
+cd test
+echo bar > bar
+hg commit -A -d '1 0' -m 2
+
+echo % pull
+cd ../copy-pull
+echo '[hooks]' >> .hg/hgrc
+echo 'changegroup = echo changegroup: u=$HG_URL' >> .hg/hgrc
+hg pull

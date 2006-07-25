@@ -83,6 +83,9 @@ class localrepository(repo.repository):
 
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
 
+    def url(self):
+        return 'file:' + self.root
+
     def hook(self, name, throw=False, **args):
         def callhook(hname, funcname):
             '''call python hook. hook is callable object, looked up as
@@ -1185,7 +1188,7 @@ class localrepository(repo.repository):
             cg = remote.changegroup(fetch, 'pull')
         else:
             cg = remote.changegroupsubset(fetch, heads, 'pull')
-        return self.addchangegroup(cg, 'pull')
+        return self.addchangegroup(cg, 'pull', remote.url())
 
     def push(self, remote, force=False, revs=None):
         # there are two ways to push to remote repo:
@@ -1241,7 +1244,7 @@ class localrepository(repo.repository):
         ret = self.prepush(remote, force, revs)
         if ret[0] is not None:
             cg, remote_heads = ret
-            return remote.addchangegroup(cg, 'push')
+            return remote.addchangegroup(cg, 'push', self.url())
         return ret[1]
 
     def push_unbundle(self, remote, force, revs):
@@ -1594,7 +1597,7 @@ class localrepository(repo.repository):
 
         return util.chunkbuffer(gengroup())
 
-    def addchangegroup(self, source, srctype):
+    def addchangegroup(self, source, srctype, url):
         """add changegroup to repo.
         returns number of heads modified or added + 1."""
 
@@ -1608,7 +1611,7 @@ class localrepository(repo.repository):
         if not source:
             return 0
 
-        self.hook('prechangegroup', throw=True, source=srctype)
+        self.hook('prechangegroup', throw=True, source=srctype, url=url)
 
         changesets = files = revisions = 0
 
@@ -1675,17 +1678,18 @@ class localrepository(repo.repository):
 
         if changesets > 0:
             self.hook('pretxnchangegroup', throw=True,
-                      node=hex(self.changelog.node(cor+1)), source=srctype)
+                      node=hex(self.changelog.node(cor+1)), source=srctype,
+                      url=url)
 
         tr.close()
 
         if changesets > 0:
             self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
-                      source=srctype)
+                      source=srctype, url=url)
 
             for i in range(cor + 1, cnr + 1):
                 self.hook("incoming", node=hex(self.changelog.node(i)),
-                          source=srctype)
+                          source=srctype, url=url)
 
         return newheads - oldheads + 1
 

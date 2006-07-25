@@ -2763,7 +2763,8 @@ def unbundle(ui, repo, fname, **opts):
         raise util.Abort(_("%s: unknown bundle compression type")
                          % fname)
     gen = generator(util.filechunkiter(f, 4096))
-    modheads = repo.addchangegroup(util.chunkbuffer(gen), 'unbundle')
+    modheads = repo.addchangegroup(util.chunkbuffer(gen), 'unbundle',
+                                   'bundle:' + fname)
     return postincoming(ui, repo, modheads, opts['update'])
 
 def undo(ui, repo):

@@ -19,6 +19,12 @@ crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
 foo
+adding quux
+changegroup: u=static-http://localhost:20059/remote
 pulling from static-http://localhost:20059/remote
 searching for changes
-no changes found
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)

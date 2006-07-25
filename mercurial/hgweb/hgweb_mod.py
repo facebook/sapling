@@ -904,9 +904,13 @@ class hgweb(object):
         # require ssl by default, auth info cannot be sniffed and
         # replayed
         ssl_req = self.repo.ui.configbool('web', 'push_ssl', True)
-        if ssl_req and not req.env.get('HTTPS'):
-            bail(_('ssl required\n'))
-            return
+        if ssl_req:
+            if not req.env.get('HTTPS'):
+                bail(_('ssl required\n'))
+                return
+            proto = 'https'
+        else:
+            proto = 'http'
 
         # do not allow push unless explicitly allowed
         if not self.check_perm(req, 'push', False):
@@ -952,7 +956,9 @@ class hgweb(object):
                 sys.stdout = cStringIO.StringIO()
 
                 try:
-                    ret = self.repo.addchangegroup(fp, 'serve')
+                    url = 'remote:%s:%s' % (proto,
+                                            req.env.get('REMOTE_HOST', ''))
+                    ret = self.repo.addchangegroup(fp, 'serve', url)
                 finally:
                     val = sys.stdout.getvalue()
                     sys.stdout = old_stdout

@@ -81,6 +81,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     0.0
 
+changegroup: u=bundle:../full.hg
 pulling from bundle://../full.hg
 requesting all changes
 adding changesets

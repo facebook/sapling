@@ -159,6 +159,10 @@ class bundlefilelog(bundlerevlog, filelog.filelog):
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
         localrepo.localrepository.__init__(self, ui, path)
+
+        self._url = 'bundle:' + bundlename
+        if path: self._url += '+' + path
+
         self.tempfile = None
         self.bundlefile = open(bundlename, "rb")
         header = self.bundlefile.read(6)
@@ -207,6 +211,9 @@ class bundlerepository(localrepo.localrepository):
             self.bundlefilespos[f] = self.bundlefile.tell()
             for c in changegroup.chunkiter(self.bundlefile):
                 pass
+
+    def url(self):
+        return self._url
 
     def dev(self):
         return -1
