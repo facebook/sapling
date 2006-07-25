@@ -609,7 +609,8 @@ class hgweb(object):
                  lastchange = (0, 0), # FIXME
                  manifest = hex(mf),
                  tags = tagentries,
-                 shortlog = changelist)
+                 shortlog = changelist,
+                 archives=self.archivelist("tip"))
 
     def filediff(self, file, changeset):
         cl = self.repo.changelog
