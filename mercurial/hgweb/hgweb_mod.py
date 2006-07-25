@@ -37,6 +37,7 @@ class hgweb(object):
         self.mtime = -1
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
+        self.stripecount = 1
         self.templatepath = self.repo.ui.config("web", "templates",
                                                 templater.templatepath())
 
@@ -46,6 +47,7 @@ class hgweb(object):
             self.mtime = mtime
             self.repo = hg.repository(self.repo.ui, self.repo.root)
             self.maxchanges = int(self.repo.ui.config("web", "maxchanges", 10))
+            self.stripecount = int(self.repo.ui.config("web", "stripes", 1))
             self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
@@ -265,7 +267,7 @@ class hgweb(object):
                 hn = hex(n)
 
                 yield self.t('searchentry',
-                             parity=count & 1,
+                             parity=self.stripes(count),
                              author=changes[1],
                              parent=self.siblings(cl.parents(n), cl.rev),
                              child=self.siblings(cl.children(n), cl.rev),
@@ -376,7 +378,7 @@ class hgweb(object):
             for l, t in enumerate(text.splitlines(1)):
                 yield {"line": t,
                        "linenumber": "% 6d" % (l + 1),
-                       "parity": l & 1}
+                       "parity": self.stripes(l)}
 
         yield self.t("filerevision",
                      file=f,
@@ -409,7 +411,7 @@ class hgweb(object):
         mfn = cs[0]
 
         def annotate(**map):
-            parity = 1
+            parity = 0
             last = None
             for r, l in fl.annotate(n):
                 try:
@@ -489,10 +491,10 @@ class hgweb(object):
                 yield {"file": full,
                        "manifest": mnode,
                        "filenode": hex(fnode),
-                       "parity": parity,
+                       "parity": self.stripes(parity),
                        "basename": f,
                        "permissions": mff[full]}
-                parity = 1 - parity
+                parity += 1
 
         def dirlist(**map):
             parity = 0
@@ -503,11 +505,11 @@ class hgweb(object):
                 if fnode:
                     continue
 
-                yield {"parity": parity,
+                yield {"parity": self.stripes(parity),
                        "path": os.path.join(path, f),
                        "manifest": mnode,
                        "basename": f[:-1]}
-                parity = 1 - parity
+                parity += 1
 
         yield self.t("manifest",
                      manifest=mnode,
@@ -530,12 +532,12 @@ class hgweb(object):
             parity = 0
             for k,n in i:
                 if notip and k == "tip": continue
-                yield {"parity": parity,
+                yield {"parity": self.stripes(parity),
                        "tag": k,
                        "tagmanifest": hex(cl.read(n)[0]),
                        "date": cl.read(n)[2],
                        "node": hex(n)}
-                parity = 1 - parity
+                parity += 1
 
         yield self.t("tags",
                      manifest=hex(mf),
@@ -565,12 +567,12 @@ class hgweb(object):
                 t = c[2]
 
                 yield self.t("tagentry",
-                             parity = parity,
+                             parity = self.stripes(parity),
                              tag = k,
                              node = hex(n),
                              date = t,
                              tagmanifest = hex(m))
-                parity = 1 - parity
+                parity += 1
 
         def changelist(**map):
             parity = 0
@@ -751,6 +753,13 @@ class hgweb(object):
             method(req)
         else:
             req.write(self.t("error"))
+
+    def stripes(self, parity):
+        "make horizontal stripes for easier reading"
+        if self.stripecount:
+            return (1 + parity / self.stripecount) & 1
+        else:
+            return 0
 
     def do_changelog(self, req):
         hi = self.repo.changelog.count() - 1

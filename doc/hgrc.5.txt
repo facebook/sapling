@@ -440,6 +440,9 @@ web::
   push_ssl;;
     Whether to require that inbound pushes be transported over SSL to
     prevent password sniffing.  Default is true.
+  stripes;;
+    How many lines a "zebra stripe" should span in multiline output.
+    Default is 1; set to 0 to disable.
   style;;
     Which template map style to use.
   templates;;
