@@ -40,6 +40,25 @@ def relpath(repo, args):
         return [util.normpath(os.path.join(cwd, x)) for x in args]
     return args
 
+def logmessage(**opts):
+    """ get the log message according to -m and -l option """
+    message = opts['message']
+    logfile = opts['logfile']
+
+    if message and logfile:
+        raise util.Abort(_('options --message and --logfile are mutually '
+                           'exclusive'))
+    if not message and logfile:
+        try:
+            if logfile == '-':
+                message = sys.stdin.read()
+            else:
+                message = open(logfile).read()
+        except IOError, inst:
+            raise util.Abort(_("can't read commit message '%s': %s") %
+                             (logfile, inst.strerror))
+    return message
+
 def matchpats(repo, pats=[], opts={}, head=''):
     cwd = repo.getcwd()
     if not pats and cwd:
@@ -989,21 +1008,7 @@ def commit(ui, repo, *pats, **opts):
     If no commit message is specified, the editor configured in your hgrc
     or in the EDITOR environment variable is started to enter a message.
     """
-    message = opts['message']
-    logfile = opts['logfile']
-
-    if message and logfile:
-        raise util.Abort(_('options --message and --logfile are mutually '
-                           'exclusive'))
-    if not message and logfile:
-        try:
-            if logfile == '-':
-                message = sys.stdin.read()
-            else:
-                message = open(logfile).read()
-        except IOError, inst:
-            raise util.Abort(_("can't read commit message '%s': %s") %
-                             (logfile, inst.strerror))
+    message = logmessage(**opts)
 
     if opts['addremove']:
         addremove_lock(ui, repo, pats, opts)
