@@ -4,32 +4,31 @@ hg init test
 cd test
 echo foo>foo
 hg commit -A -d '0 0' -m 1
-hg --config server.uncompressed=True serve -p 20059 -d --pid-file=hg1.pid
-cat hg1.pid >> $DAEMON_PIDS
-hg serve -p 20060 -d --pid-file=hg2.pid
-cat hg2.pid >> $DAEMON_PIDS
+hg --config server.uncompressed=True serve -p 20059 -d --pid-file=../hg1.pid
+hg serve -p 20060 -d --pid-file=../hg2.pid
 cd ..
+cat hg1.pid hg2.pid >> $DAEMON_PIDS
 
 echo % clone via stream
 http_proxy= hg clone --uncompressed http://localhost:20059/ copy 2>&1 | \
   sed -e 's/[0-9][0-9.]*/XXX/g'
-cd copy
-hg verify
+hg verify -R copy
 
 echo % try to clone via stream, should use pull instead
 http_proxy= hg clone --uncompressed http://localhost:20060/ copy2
 
 echo % clone via pull
 http_proxy= hg clone http://localhost:20059/ copy-pull
-cd copy-pull
-hg verify
+hg verify -R copy-pull
 
 cd test
 echo bar > bar
 hg commit -A -d '1 0' -m 2
+cd ..
 
 echo % pull
-cd ../copy-pull
+cd copy-pull
 echo '[hooks]' >> .hg/hgrc
 echo 'changegroup = echo changegroup: u=$HG_URL' >> .hg/hgrc
 hg pull
+cd ..
