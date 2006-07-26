@@ -1280,28 +1280,30 @@ def version(ui, q=None):
 
 def reposetup(ui, repo):
     repomap[repo] = queue(ui, repo.join(""))
-    oldlookup = repo.lookup
+    oldtags = repo.tags
 
-    def qlookup(key):
-        try:
-            return oldlookup(key)
-        except hg.RepoError:
-            q = repomap[repo]
+    def qtags():
+        if repo.tagscache:
+            return repo.tagscache
 
-            qpatchnames = { 'qtip': -1, 'qbase': 0 }
-            if key in qpatchnames:
-                if len(q.applied) == 0:
-                    self.ui.warn('No patches applied\n')
-                    raise
-                patch = q.applied[qpatchnames[key]].split(':')[0]
-                return revlog.bin(patch)
+        tagscache = oldtags()
 
-            patch = q.isapplied(key)
-            if not patch:
-                raise
-            return revlog.bin(patch[1])
+        q = repomap[repo]
+        if len(q.applied) == 0:
+            return tagscache
 
-    repo.lookup = qlookup
+        mqtags = [patch.split(':') for patch in q.applied]
+        mqtags.append((mqtags[-1][0], 'qtip'))
+        mqtags.append((mqtags[0][0], 'qbase'))
+        for patch in mqtags:
+            if patch[1] in tagscache:
+                repo.ui.warn('Tag %s overrides mq patch of the same name\n' % patch[1])
+            else:
+                tagscache[patch[1]] = revlog.bin(patch[0])
+
+        return tagscache
+
+    repo.tags = qtags
 
 cmdtable = {
     "qapplied": (applied, [], 'hg qapplied [PATCH]'),
