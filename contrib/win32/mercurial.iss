@@ -4,7 +4,7 @@
 [Setup]
 AppCopyright=Copyright 2005, 2006 Matt Mackall and others
 AppName=Mercurial
-AppVerName=Mercurial version 0.9
+AppVerName=Mercurial version 0.9.1
 InfoAfterFile=contrib/win32/postinstall.txt
 LicenseFile=COPYING
 ShowLanguageDialog=yes
@@ -14,10 +14,10 @@ AppSupportURL=http://www.selenic.com/mercurial
 AppUpdatesURL=http://www.selenic.com/mercurial
 AppID={{4B95A5F1-EF59-4B08-BED8-C891C46121B3}
 AppContact=mercurial@selenic.com
-OutputBaseFilename=Mercurial-0.9
+OutputBaseFilename=Mercurial-0.9.1
 DefaultDirName={sd}\Mercurial
 SourceDir=C:\hg\hg-release
-VersionInfoVersion=0.9
+VersionInfoVersion=0.9.1
 VersionInfoDescription=Mercurial distributed SCM
 VersionInfoCopyright=Copyright 2005, 2006 Matt Mackall and others
 VersionInfoCompany=Matt Mackall and others
