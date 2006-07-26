@@ -140,7 +140,7 @@ email::
     of outgoing messages.
   method;;
     Optional.  Method to use to send email messages.  If value is
-    "smtp" (default), use SMTP (see section "[mail]" for
+    "smtp" (default), use SMTP (see section "[smtp]" for
     configuration).  Otherwise, use as name of program to run that
     acts like sendmail (takes "-f" option for sender, list of
     recipients on command line, message on stdin).  Normally, setting
