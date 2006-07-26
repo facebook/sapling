@@ -38,6 +38,7 @@
 # from = My Name <my@email>
 # to = recipient1, recipient2, ...
 # cc = cc1, cc2, ...
+# bcc = bcc1, bcc2, ...
 
 from mercurial.demandload import *
 demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
@@ -185,6 +186,10 @@ def patchbomb(ui, repo, *revs, **opts):
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
 
+    bcc = opts['bcc'] or (ui.config('email', 'bcc') or
+                          ui.config('patchbomb', 'bcc') or '').split(',')
+    bcc = [a.strip() for a in bcc if a.strip()]
+
     if len(patches) > 1:
         ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
 
@@ -240,7 +245,8 @@ def patchbomb(ui, repo, *revs, **opts):
         start_time += 1
         m['From'] = sender
         m['To'] = ', '.join(to)
-        if cc: m['Cc'] = ', '.join(cc)
+        if cc: m['Cc']  = ', '.join(cc)
+        if bcc: m['Bcc'] = ', '.join(bcc)
         if opts['test']:
             ui.status('Displaying ', m['Subject'], ' ...\n')
             fp = os.popen(os.getenv('PAGER', 'more'), 'w')
@@ -261,12 +267,13 @@ def patchbomb(ui, repo, *revs, **opts):
             fp.close()
         else:
             ui.status('Sending ', m['Subject'], ' ...\n')
-            mail.sendmail(sender, to + cc, m.as_string(0))
+            mail.sendmail(sender, to + bcc + cc, m.as_string(0))
 
 cmdtable = {
     'email':
     (patchbomb,
-     [('c', 'cc', [], 'email addresses of copy recipients'),
+     [('', 'bcc', [], 'email addresses of blind copy recipients'),
+      ('c', 'cc', [], 'email addresses of copy recipients'),
       ('d', 'diffstat', None, 'add diffstat output to messages'),
       ('f', 'from', '', 'email address of sender'),
       ('', 'plain', None, 'omit hg patch header'),
