@@ -257,7 +257,7 @@ class queue:
         head = self.qparents(repo)
 
         for patch in series:
-            patch = mergeq.lookup(patch)
+            patch = mergeq.lookup(patch, strict=True)
             if not patch:
                 self.ui.warn("patch %s does not exist\n" % patch)
                 return (1, None)
@@ -380,7 +380,7 @@ class queue:
         return (err, n)
 
     def delete(self, repo, patch):
-        patch = self.lookup(patch)
+        patch = self.lookup(patch, strict=True)
         info = self.isapplied(patch)
         if info:
             self.ui.warn("cannot delete applied patch %s\n" % patch)
@@ -418,7 +418,7 @@ class queue:
                 commitfiles = c + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
-        insert = self.series_end()
+        insert = self.full_series_end()
         if msg:
             n = repo.commit(commitfiles, "[mq]: %s" % msg, force=True,
                             wlock=wlock)
@@ -442,7 +442,7 @@ class queue:
         r = self.qrepo()
         if r: r.add([patch])
         if commitfiles:
-            self.refresh(repo, short=True)
+            self.refresh(repo, msg=None, short=True)
 
     def strip(self, repo, rev, update=True, backup="all", wlock=None):
         def limitheads(chlog, stop):
@@ -530,6 +530,9 @@ class queue:
         revnum = chlog.rev(rev)
 
         if update:
+            (c, a, r, d, u) = repo.changes(None, None)
+            if c or a or d or r:
+                raise util.Abort(_("Local changes found"))
             urev = self.qparents(repo, rev)
             repo.update(urev, allow=False, force=True, wlock=wlock)
             repo.dirstate.write()
@@ -598,25 +601,79 @@ class queue:
                 return (i, a[0], a[1])
         return None
 
-    def lookup(self, patch):
+    # if the exact patch name does not exist, we try a few 
+    # variations.  If strict is passed, we try only #1
+    #
+    # 1) a number to indicate an offset in the series file
+    # 2) a unique substring of the patch name was given
+    # 3) patchname[-+]num to indicate an offset in the series file
+    def lookup(self, patch, strict=False):
+        def partial_name(s):
+            count = 0
+            if s in self.series:
+                return s
+            for x in self.series:
+                if s in x:
+                    count += 1
+                    last = x
+                if count > 1:
+                    return None
+            if count:
+                return last
+            if len(self.series) > 0 and len(self.applied) > 0:
+                if s == 'qtip':
+                    return self.series[self.series_end()-1]
+                if s == 'qbase':
+                    return self.series[0]
+            return None
         if patch == None:
             return None
-        if patch in self.series:
-            return patch
+
+        # we don't want to return a partial match until we make
+        # sure the file name passed in does not exist (checked below)
+        res = partial_name(patch)
+        if res and res == patch:
+            return res
+
         if not os.path.isfile(os.path.join(self.path, patch)):
             try:
                 sno = int(patch)
             except(ValueError, OverflowError):
-                self.ui.warn("patch %s not in series\n" % patch)
-                sys.exit(1)
-            if sno >= len(self.series):
-                self.ui.warn("patch number %d is out of range\n" % sno)
-                sys.exit(1)
-            patch = self.series[sno]
-        else:
-            self.ui.warn("patch %s not in series\n" % patch)
-            sys.exit(1)
-        return patch
+                pass
+            else:
+                if sno < len(self.series):
+                    patch = self.series[sno]
+                    return patch
+            if not strict:
+                # return any partial match made above
+                if res:
+                    return res
+                minus = patch.rsplit('-', 1)
+                if len(minus) > 1:
+                    res = partial_name(minus[0])
+                    if res:
+                        i = self.series.index(res)
+                        try:
+                            off = int(minus[1] or 1)
+                        except(ValueError, OverflowError):
+                            pass
+                        else:
+                            if i - off >= 0:
+                                return self.series[i - off]
+                plus = patch.rsplit('+', 1)
+                if len(plus) > 1:
+                    res = partial_name(plus[0])
+                    if res:
+                        i = self.series.index(res)
+                        try:
+                            off = int(plus[1] or 1)
+                        except(ValueError, OverflowError):
+                            pass
+                        else:
+                            if i + off < len(self.series):
+                                return self.series[i + off]
+        self.ui.warn("patch %s not in series\n" % patch)
+        sys.exit(1)
 
     def push(self, repo, patch=None, force=False, list=False,
              mergeq=None, wlock=None):
@@ -654,7 +711,8 @@ class queue:
             self.ui.write("Now at: %s\n" % top)
         return ret[0]
 
-    def pop(self, repo, patch=None, force=False, update=True, wlock=None):
+    def pop(self, repo, patch=None, force=False, update=True, all=False,
+            wlock=None):
         def getfile(f, rev):
             t = repo.file(f).read(rev)
             try:
@@ -695,7 +753,17 @@ class queue:
         self.applied_dirty = 1;
         end = len(self.applied)
         if not patch:
-            info = [len(self.applied) - 1] + self.applied[-1].split(':')
+            if all:
+                popi = 0
+            else:
+                popi = len(self.applied) - 1
+        else:
+            popi = info[0] + 1
+            if popi >= end:
+                self.ui.warn("qpop: %s is already at the top\n" % patch)
+                return
+        info = [ popi ] + self.applied[popi].split(':')
+
         start = info[0]
         rev = revlog.bin(info[1])
 
@@ -739,7 +807,7 @@ class queue:
         qp = self.qparents(repo, top)
         commands.dodiff(sys.stdout, self.ui, repo, qp, None, files)
 
-    def refresh(self, repo, short=False):
+    def refresh(self, repo, msg=None, short=False):
         if len(self.applied) == 0:
             self.ui.write("No patches applied\n")
             return
@@ -822,10 +890,14 @@ class queue:
             repo.dirstate.update(c, 'n')
             repo.dirstate.forget(forget)
 
-            if not message:
-                message = "patch queue: %s\n" % patch
+            if not msg:
+                if not message:
+                    message = "patch queue: %s\n" % patch
+                else:
+                    message = "\n".join(message)
             else:
-                message = "\n".join(message)
+                message = msg
+
             self.strip(repo, top, update=False, backup='strip', wlock=wlock)
             n = repo.commit(filelist, message, changes[1], force=1, wlock=wlock)
             self.applied[-1] = revlog.hex(n) + ':' + patch
@@ -976,6 +1048,15 @@ class queue:
         self.applied.append(revlog.hex(n) + ":" + '.hg.patches.save.line')
         self.applied_dirty = 1
 
+    def full_series_end(self):
+        if len(self.applied) > 0:
+            (top, p) = self.applied[-1].split(':')
+            end = self.find_series(p)
+            if end == None:
+                return len(self.full_series)
+            return end + 1
+        return 0
+
     def series_end(self):
         end = 0
         if len(self.applied) > 0:
@@ -1063,7 +1144,7 @@ class queue:
             if patch in self.series:
                 self.ui.warn("patch %s is already in the series file\n" % patch)
                 sys.exit(1)
-            index = self.series_end() + i
+            index = self.full_series_end() + i
             self.full_series[index:index] = [patch]
             self.read_series(self.full_series)
             self.ui.warn("adding %s to series file\n" % patch)
@@ -1144,14 +1225,16 @@ def prev(ui, repo, **opts):
 def new(ui, repo, patch, **opts):
     """create a new patch"""
     q = repomap[repo]
-    q.new(repo, patch, msg=opts['message'], force=opts['force'])
+    message=commands.logmessage(**opts)
+    q.new(repo, patch, msg=message, force=opts['force'])
     q.save_dirty()
     return 0
 
 def refresh(ui, repo, **opts):
     """update the current patch"""
     q = repomap[repo]
-    q.refresh(repo, short=opts['short'])
+    message=commands.logmessage(**opts)
+    q.refresh(repo, msg=message, short=opts['short'])
     q.save_dirty()
     return 0
 
@@ -1216,9 +1299,7 @@ def pop(ui, repo, patch=None, **opts):
         localupdate = False
     else:
         q = repomap[repo]
-    if opts['all'] and len(q.applied) > 0:
-        patch = q.applied[0].split(':')[1]
-    q.pop(repo, patch, force=opts['force'], update=localupdate)
+    q.pop(repo, patch, force=opts['force'], update=localupdate, all=opts['all'])
     q.save_dirty()
     return 0
 
@@ -1234,7 +1315,8 @@ def restore(ui, repo, rev, **opts):
 def save(ui, repo, **opts):
     """save current queue state"""
     q = repomap[repo]
-    ret = q.save(repo, msg=opts['message'])
+    message=commands.logmessage(**opts)
+    ret = q.save(repo, msg=message)
     if ret:
         return ret
     q.save_dirty()
@@ -1325,9 +1407,10 @@ cmdtable = {
          'hg qinit [-c]'),
     "qnew":
         (new,
-         [('m', 'message', '', 'commit message'),
+         [('m', 'message', '', _('use <text> as commit message')),
+          ('l', 'logfile', '', _('read the commit message from <file>')),
           ('f', 'force', None, 'force')],
-         'hg qnew [-m TEXT] [-f] PATCH'),
+         'hg qnew [-m TEXT] [-l FILE] [-f] PATCH'),
     "qnext": (next, [], 'hg qnext'),
     "qprev": (prev, [], 'hg qprev'),
     "^qpop":
@@ -1346,8 +1429,10 @@ cmdtable = {
          'hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]'),
     "^qrefresh":
         (refresh,
-         [('s', 'short', None, 'short refresh')],
-         'hg qrefresh [-s]'),
+         [('m', 'message', '', _('change commit message with <text>')),
+          ('l', 'logfile', '', _('change commit message with <file> content')),
+          ('s', 'short', None, 'short refresh')],
+         'hg qrefresh [-m TEXT] [-l FILE] [-s]'),
     "qrestore":
         (restore,
          [('d', 'delete', None, 'delete save entry'),
@@ -1355,12 +1440,13 @@ cmdtable = {
          'hg qrestore [-d] [-u] REV'),
     "qsave":
         (save,
-         [('m', 'message', '', 'commit message'),
+         [('m', 'message', '', _('use <text> as commit message')),
+          ('l', 'logfile', '', _('read the commit message from <file>')),
           ('c', 'copy', None, 'copy patch directory'),
           ('n', 'name', '', 'copy directory name'),
           ('e', 'empty', None, 'clear queue status file'),
           ('f', 'force', None, 'force copy')],
-         'hg qsave [-m TEXT] [-c] [-n NAME] [-e] [-f]'),
+         'hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]'),
     "qseries":
         (series,
          [('m', 'missing', None, 'print patches not in series')],
