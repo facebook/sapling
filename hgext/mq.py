@@ -708,7 +708,8 @@ class queue:
             self.ui.write("Now at: %s\n" % top)
         return ret[0]
 
-    def pop(self, repo, patch=None, force=False, update=True, wlock=None):
+    def pop(self, repo, patch=None, force=False, update=True, all=False,
+            wlock=None):
         def getfile(f, rev):
             t = repo.file(f).read(rev)
             try:
@@ -749,7 +750,17 @@ class queue:
         self.applied_dirty = 1;
         end = len(self.applied)
         if not patch:
-            info = [len(self.applied) - 1] + self.applied[-1].split(':')
+            if all:
+                popi = 0
+            else:
+                popi = len(self.applied) - 1
+        else:
+            popi = info[0] + 1
+            if popi >= end:
+                self.ui.warn("qpop: %s is already at the top\n" % patch)
+                return
+        info = [ popi ] + self.applied[popi].split(':')
+
         start = info[0]
         rev = revlog.bin(info[1])
 
@@ -1276,9 +1287,7 @@ def pop(ui, repo, patch=None, **opts):
         localupdate = False
     else:
         q = repomap[repo]
-    if opts['all'] and len(q.applied) > 0:
-        patch = q.applied[0].split(':')[1]
-    q.pop(repo, patch, force=opts['force'], update=localupdate)
+    q.pop(repo, patch, force=opts['force'], update=localupdate, all=opts['all'])
     q.save_dirty()
     return 0
 
