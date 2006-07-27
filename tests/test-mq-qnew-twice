@@ -1,0 +1,13 @@
+#!/bin/sh
+
+HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
+echo "[extensions]" >> $HGTMP/.hgrc
+echo "mq=" >> $HGTMP/.hgrc
+
+hg init a
+cd a
+hg qnew first.patch
+hg qnew first.patch
+
+touch ../first.patch
+hg qimport ../first.patch

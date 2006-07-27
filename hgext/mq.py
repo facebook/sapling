@@ -409,6 +409,8 @@ class queue:
             self.ui.write("Local changes found, refresh first\n")
             sys.exit(1)
     def new(self, repo, patch, msg=None, force=None):
+        if os.path.exists(os.path.join(self.path, patch)):
+            raise util.Abort(_('patch "%s" already exists') % patch)
         commitfiles = []
         (c, a, r, d, u) = repo.changes(None, None)
         if c or a or d or r:
@@ -1137,13 +1139,12 @@ class queue:
                 if not patch:
                     patch = os.path.split(filename)[1]
                 if not force and os.path.isfile(os.path.join(self.path, patch)):
-                    self.ui.warn("patch %s already exists\n" % patch)
-                    sys.exit(1)
+                    raise util.Abort(_('patch "%s" already exists') % patch)
                 patchf = self.opener(patch, "w")
                 patchf.write(text)
             if patch in self.series:
-                self.ui.warn("patch %s is already in the series file\n" % patch)
-                sys.exit(1)
+                raise util.Abort(_('patch %s is already in the series file')
+                                 % patch)
             index = self.full_series_end() + i
             self.full_series[index:index] = [patch]
             self.read_series(self.full_series)
