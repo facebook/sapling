@@ -188,8 +188,7 @@ def patchbomb(ui, repo, *revs, **opts):
     if len(patches) > 1:
         ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
 
-        msg = email.MIMEMultipart.MIMEMultipart()
-        msg['Subject'] = '[PATCH 0 of %d] %s' % (
+        subj = '[PATCH 0 of %d] %s' % (
             len(patches),
             opts['subject'] or
             prompt('Subject:', rest = ' [PATCH 0 of %d] ' % len(patches)))
@@ -204,11 +203,14 @@ def patchbomb(ui, repo, *revs, **opts):
             if l == '.': break
             body.append(l)
 
-        msg.attach(email.MIMEText.MIMEText('\n'.join(body) + '\n'))
-
         if opts['diffstat']:
             d = cdiffstat(_('Final summary:\n'), jumbo)
-            if d: msg.attach(email.MIMEText.MIMEText(d))
+            if d: body.append('\n' + d)
+
+        body = '\n'.join(body) + '\n'
+
+        msg = email.MIMEText.MIMEText(body)
+        msg['Subject'] = subj
 
         msgs.insert(0, msg)
 
