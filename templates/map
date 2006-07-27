@@ -3,7 +3,10 @@ header = header.tmpl
 footer = footer.tmpl
 search = search.tmpl
 changelog = changelog.tmpl
+shortlog = shortlog.tmpl
+shortlogentry = shortlogentry.tmpl
 naventry = '<a href="?cl=#rev#">#label|escape#</a> '
+navshortentry = '<a href="?sl=#rev#">#label|escape#</a> '
 filedifflink = '<a href="?fd=#node|short#;file=#file|urlescape#">#file|escape#</a> '
 filenodelink = '<a href="?f=#filenode|short#;file=#file|urlescape#">#file|escape#</a> '
 fileellipses = '...'
