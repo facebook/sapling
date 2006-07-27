@@ -13,7 +13,7 @@ demandload(globals(), "hg os re stat util")
 
 class sshrepository(remoterepository):
     def __init__(self, ui, path, create=0):
-        self.url = path
+        self._url = path
         self.ui = ui
 
         m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?', path)
@@ -47,6 +47,9 @@ class sshrepository(remoterepository):
                 raise hg.RepoError(_("could not create remote repo"))
 
         self.validate_repo(ui, sshcmd, args, remotecmd)
+
+    def url(self):
+        return self._url
 
     def validate_repo(self, ui, sshcmd, args, remotecmd):
         cmd = '%s %s "%s -R %s serve --stdio"'
@@ -180,7 +183,7 @@ class sshrepository(remoterepository):
             return 1
         return int(r)
 
-    def addchangegroup(self, cg, source):
+    def addchangegroup(self, cg, source, url):
         d = self.call("addchangegroup")
         if d:
             raise hg.RepoError(_("push refused: %s") % d)

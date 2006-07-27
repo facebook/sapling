@@ -852,6 +852,8 @@ class queue:
         else:
             start = self.series.index(patch) + 1
         for p in self.series[start:]:
+            if self.ui.verbose:
+                self.ui.write("%d " % self.series.index(p))
             self.ui.write("%s\n" % p)
 
     def qseries(self, repo, missing=None):
@@ -999,8 +1001,11 @@ class queue:
 
     def appliedname(self, index):
         p = self.applied[index]
+        pname = p.split(':')[1]
         if not self.ui.verbose:
-            p = p.split(':')[1]
+            p = pname
+        else:
+            p = str(self.series.index(pname)) + " " + p
         return p
 
     def top(self, repo):
@@ -1015,7 +1020,10 @@ class queue:
         if end == len(self.series):
             self.ui.write("All patches applied\n")
         else:
-            self.ui.write(self.series[end] + '\n')
+            p = self.series[end]
+            if self.ui.verbose:
+                self.ui.write("%d " % self.series.index(p))
+            self.ui.write(p + '\n')
 
     def prev(self, repo):
         if len(self.applied) > 1:
@@ -1272,6 +1280,30 @@ def version(ui, q=None):
 
 def reposetup(ui, repo):
     repomap[repo] = queue(ui, repo.join(""))
+    oldtags = repo.tags
+
+    def qtags():
+        if repo.tagscache:
+            return repo.tagscache
+
+        tagscache = oldtags()
+
+        q = repomap[repo]
+        if len(q.applied) == 0:
+            return tagscache
+
+        mqtags = [patch.split(':') for patch in q.applied]
+        mqtags.append((mqtags[-1][0], 'qtip'))
+        mqtags.append((mqtags[0][0], 'qbase'))
+        for patch in mqtags:
+            if patch[1] in tagscache:
+                repo.ui.warn('Tag %s overrides mq patch of the same name\n' % patch[1])
+            else:
+                tagscache[patch[1]] = revlog.bin(patch[0])
+
+        return tagscache
+
+    repo.tags = qtags
 
 cmdtable = {
     "qapplied": (applied, [], 'hg qapplied [PATCH]'),

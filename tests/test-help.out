@@ -185,13 +185,15 @@ hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
 
-    Show changed files in the repository.  If names are
-    given, only files that match are shown.
+    Show status of files in the repository.  If names are given, only
+    files that match are shown.  Files that are clean or ignored, are
+    not listed unless -c (clean), -i (ignored) or -A is given.
 
     The codes used to show the status of files are:
     M = modified
     A = added
     R = removed
+    C = clean
     ! = deleted, but still tracked
     ? = not tracked
     I = ignored (not shown by default)
@@ -201,10 +203,12 @@ aliases: st
 
 options:
 
+ -A --all        show status of all files
  -m --modified   show only modified files
  -a --added      show only added files
  -r --removed    show only removed files
  -d --deleted    show only deleted (but tracked) files
+ -c --clean      show only files without changes
  -u --unknown    show only unknown (not tracked) files
  -i --ignored    show ignored files
  -n --no-status  hide status prefix

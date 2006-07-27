@@ -344,6 +344,10 @@ class dirstate(object):
     # directly by this function, but might be modified by your statmatch call.
     #
     def walkhelper(self, files, statmatch, dc, badmatch=None):
+        # self.root may end with a path separator when self.root == '/'
+        common_prefix_len = len(self.root)
+        if not self.root.endswith('/'):
+            common_prefix_len += 1
         # recursion free walker, faster than os.walk.
         def findfiles(s):
             work = [s]
@@ -352,7 +356,7 @@ class dirstate(object):
                 names = os.listdir(top)
                 names.sort()
                 # nd is the top of the repository dir tree
-                nd = util.normpath(top[len(self.root) + 1:])
+                nd = util.normpath(top[common_prefix_len:])
                 if nd == '.':
                     nd = ''
                 else:
@@ -434,15 +438,16 @@ class dirstate(object):
             if not seen(k) and (statmatch(k, None)):
                 yield 'm', k, None
 
-    def changes(self, files=None, match=util.always, show_ignored=None):
+    def status(self, files=None, match=util.always, list_ignored=False,
+               list_clean=False):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
-        removed, deleted = [], []
+        removed, deleted, clean = [], [], []
 
-        for src, fn, st in self.statwalk(files, match, ignored=show_ignored):
+        for src, fn, st in self.statwalk(files, match, ignored=list_ignored):
             try:
                 type_, mode, size, time = self[fn]
             except KeyError:
-                if show_ignored and self.ignore(fn):
+                if list_ignored and self.ignore(fn):
                     ignored.append(fn)
                 else:
                     unknown.append(fn)
@@ -473,6 +478,8 @@ class dirstate(object):
                     modified.append(fn)
                 elif time != st.st_mtime:
                     lookup.append(fn)
+                elif list_clean:
+                    clean.append(fn)
             elif type_ == 'm':
                 modified.append(fn)
             elif type_ == 'a':
@@ -480,4 +487,5 @@ class dirstate(object):
             elif type_ == 'r':
                 removed.append(fn)
 
-        return (lookup, modified, added, removed, deleted, unknown, ignored)
+        return (lookup, modified, added, removed, deleted, unknown, ignored,
+                clean)

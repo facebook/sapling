@@ -138,9 +138,16 @@ email::
   from;;
     Optional.  Email address to use in "From" header and SMTP envelope
     of outgoing messages.
+  to;;
+    Optional.  Email address(es) of recipient(s).
+  cc;;
+    Optional.  Email address(es) to send carbon copies to.
+  bcc;;
+    Optional.  Email address(es) to send blind carbon copies to.
+    Cannot be set interactively.
   method;;
     Optional.  Method to use to send email messages.  If value is
-    "smtp" (default), use SMTP (see section "[mail]" for
+    "smtp" (default), use SMTP (see section "[smtp]" for
     configuration).  Otherwise, use as name of program to run that
     acts like sendmail (takes "-f" option for sender, list of
     recipients on command line, message on stdin).  Normally, setting
@@ -194,7 +201,8 @@ hooks::
 
   changegroup;;
     Run after a changegroup has been added via push, pull or
-    unbundle. ID of the first new changeset is in $HG_NODE.
+    unbundle. ID of the first new changeset is in $HG_NODE.  URL from
+    which changes came is in $HG_URL.
   commit;;
     Run after a changeset has been created in the local repository.
     ID of the newly created changeset is in $HG_NODE.  Parent
@@ -202,7 +210,7 @@ hooks::
   incoming;;
     Run after a changeset has been pulled, pushed, or unbundled into
     the local repository.  The ID of the newly arrived changeset is in
-    $HG_NODE.
+    $HG_NODE.  URL that was source of changes came is in $HG_URL.
   outgoing;;
     Run after sending changes from local repository to another.  ID of
     first changeset sent is in $HG_NODE.  Source of operation is in
@@ -210,7 +218,8 @@ hooks::
   prechangegroup;;
     Run before a changegroup is added via push, pull or unbundle.
     Exit status 0 allows the changegroup to proceed.  Non-zero status
-    will cause the push, pull or unbundle to fail.
+    will cause the push, pull or unbundle to fail.  URL from which
+    changes will come is in $HG_URL.
   precommit;;
     Run before starting a local commit.  Exit status 0 allows the
     commit to proceed.  Non-zero status will cause the commit to fail.
@@ -236,7 +245,8 @@ hooks::
     before accepting them.  Passed the ID of the first new changeset
     in $HG_NODE.  Exit status 0 allows the transaction to commit.
     Non-zero status will cause the transaction to be rolled back and
-    the push, pull or unbundle will fail.
+    the push, pull or unbundle will fail.  URL that was source of
+    changes is in $HG_URL.
   pretxncommit;;
     Run after a changeset has been created but the transaction not yet
     committed.  Changeset is visible to hook program.  This lets you
@@ -440,6 +450,9 @@ web::
   push_ssl;;
     Whether to require that inbound pushes be transported over SSL to
     prevent password sniffing.  Default is true.
+  stripes;;
+    How many lines a "zebra stripe" should span in multiline output.
+    Default is 1; set to 0 to disable.
   style;;
     Which template map style to use.
   templates;;

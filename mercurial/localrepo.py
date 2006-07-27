@@ -83,6 +83,9 @@ class localrepository(repo.repository):
 
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
 
+    def url(self):
+        return 'file:' + self.root
+
     def hook(self, name, throw=False, **args):
         def callhook(hname, funcname):
             '''call python hook. hook is callable object, looked up as
@@ -658,9 +661,9 @@ class localrepository(repo.repository):
             for src, fn in self.dirstate.walk(files, match, badmatch=badmatch):
                 yield src, fn
 
-    def changes(self, node1=None, node2=None, files=[], match=util.always,
-                wlock=None, show_ignored=None):
-        """return changes between two nodes or node and working directory
+    def status(self, node1=None, node2=None, files=[], match=util.always,
+                wlock=None, list_ignored=False, list_clean=False):
+        """return status of files between two nodes or node and working directory
 
         If node1 is None, use the first dirstate parent instead.
         If node2 is None, compare node1 with working directory.
@@ -679,7 +682,9 @@ class localrepository(repo.repository):
                     del mf[fn]
             return mf
 
-        modified, added, removed, deleted, unknown, ignored = [],[],[],[],[],[]
+        modified, added, removed, deleted, unknown = [], [], [], [], []
+        ignored, clean = [], []
+
         compareworking = False
         if not node1 or (not node2 and node1 == self.dirstate.parents()[0]):
             compareworking = True
@@ -697,8 +702,9 @@ class localrepository(repo.repository):
                     wlock = self.wlock(wait=0)
                 except lock.LockException:
                     wlock = None
-            lookup, modified, added, removed, deleted, unknown, ignored = (
-                self.dirstate.changes(files, match, show_ignored))
+            (lookup, modified, added, removed, deleted, unknown,
+             ignored, clean) = self.dirstate.status(files, match,
+                                                    list_ignored, list_clean)
 
             # are we comparing working dir against its parent?
             if compareworking:
@@ -721,12 +727,11 @@ class localrepository(repo.repository):
                         del mf2[f]
         else:
             # we are comparing two revisions
-            deleted, unknown, ignored = [], [], []
             mf2 = mfmatches(node2)
 
         if not compareworking:
             # flush lists from dirstate before comparing manifests
-            modified, added = [], []
+            modified, added, clean = [], [], []
 
             # make sure to sort the files so we talk to the disk in a
             # reasonable order
@@ -736,6 +741,8 @@ class localrepository(repo.repository):
                 if mf1.has_key(fn):
                     if mf1[fn] != mf2[fn] and (mf2[fn] != "" or fcmp(fn, mf1)):
                         modified.append(fn)
+                    elif list_clean:
+                        clean.append(fn)
                     del mf1[fn]
                 else:
                     added.append(fn)
@@ -743,12 +750,19 @@ class localrepository(repo.repository):
             removed = mf1.keys()
 
         # sort and return results:
-        for l in modified, added, removed, deleted, unknown, ignored:
+        for l in modified, added, removed, deleted, unknown, ignored, clean:
             l.sort()
-        if show_ignored is None:
-            return (modified, added, removed, deleted, unknown)
+        return (modified, added, removed, deleted, unknown, ignored, clean)
+
+    def changes(self, node1=None, node2=None, files=[], match=util.always,
+                wlock=None, list_ignored=False, list_clean=False):
+        '''DEPRECATED - use status instead'''
+        marduit = self.status(node1, node2, files, match, wlock,
+                              list_ignored, list_clean)
+        if list_ignored:
+            return marduit[:-1]
         else:
-            return (modified, added, removed, deleted, unknown, ignored)
+            return marduit[:-2]
 
     def add(self, list, wlock=None):
         if not wlock:
@@ -1174,7 +1188,7 @@ class localrepository(repo.repository):
             cg = remote.changegroup(fetch, 'pull')
         else:
             cg = remote.changegroupsubset(fetch, heads, 'pull')
-        return self.addchangegroup(cg, 'pull')
+        return self.addchangegroup(cg, 'pull', remote.url())
 
     def push(self, remote, force=False, revs=None):
         # there are two ways to push to remote repo:
@@ -1230,7 +1244,7 @@ class localrepository(repo.repository):
         ret = self.prepush(remote, force, revs)
         if ret[0] is not None:
             cg, remote_heads = ret
-            return remote.addchangegroup(cg, 'push')
+            return remote.addchangegroup(cg, 'push', self.url())
         return ret[1]
 
     def push_unbundle(self, remote, force, revs):
@@ -1583,7 +1597,7 @@ class localrepository(repo.repository):
 
         return util.chunkbuffer(gengroup())
 
-    def addchangegroup(self, source, srctype):
+    def addchangegroup(self, source, srctype, url):
         """add changegroup to repo.
         returns number of heads modified or added + 1."""
 
@@ -1597,7 +1611,7 @@ class localrepository(repo.repository):
         if not source:
             return 0
 
-        self.hook('prechangegroup', throw=True, source=srctype)
+        self.hook('prechangegroup', throw=True, source=srctype, url=url)
 
         changesets = files = revisions = 0
 
@@ -1664,17 +1678,18 @@ class localrepository(repo.repository):
 
         if changesets > 0:
             self.hook('pretxnchangegroup', throw=True,
-                      node=hex(self.changelog.node(cor+1)), source=srctype)
+                      node=hex(self.changelog.node(cor+1)), source=srctype,
+                      url=url)
 
         tr.close()
 
         if changesets > 0:
             self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
-                      source=srctype)
+                      source=srctype, url=url)
 
             for i in range(cor + 1, cnr + 1):
                 self.hook("incoming", node=hex(self.changelog.node(i)),
-                          source=srctype)
+                          source=srctype, url=url)
 
         return newheads - oldheads + 1
 
