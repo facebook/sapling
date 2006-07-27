@@ -139,12 +139,13 @@ email::
     Optional.  Email address to use in "From" header and SMTP envelope
     of outgoing messages.
   to;;
-    Optional.  Email address(es) of recipient(s).
+    Optional.  Comma-separated list of recipients' email addresses.
   cc;;
-    Optional.  Email address(es) to send carbon copies to.
+    Optional.  Comma-separated list of carbon copy recipients'
+    email addresses.
   bcc;;
-    Optional.  Email address(es) to send blind carbon copies to.
-    Cannot be set interactively.
+    Optional.  Comma-separated list of blind carbon copy
+    recipients' email addresses.  Cannot be set interactively.
   method;;
     Optional.  Method to use to send email messages.  If value is
     "smtp" (default), use SMTP (see section "[smtp]" for
