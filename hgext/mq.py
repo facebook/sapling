@@ -257,7 +257,7 @@ class queue:
         head = self.qparents(repo)
 
         for patch in series:
-            patch = mergeq.lookup(patch)
+            patch = mergeq.lookup(patch, strict=True)
             if not patch:
                 self.ui.warn("patch %s does not exist\n" % patch)
                 return (1, None)
@@ -380,7 +380,7 @@ class queue:
         return (err, n)
 
     def delete(self, repo, patch):
-        patch = self.lookup(patch)
+        patch = self.lookup(patch, strict=True)
         info = self.isapplied(patch)
         if info:
             self.ui.warn("cannot delete applied patch %s\n" % patch)
@@ -598,25 +598,79 @@ class queue:
                 return (i, a[0], a[1])
         return None
 
-    def lookup(self, patch):
+    # if the exact patch name does not exist, we try a few 
+    # variations.  If strict is passed, we try only #1
+    #
+    # 1) a number to indicate an offset in the series file
+    # 2) a unique substring of the patch name was given
+    # 3) patchname[-+]num to indicate an offset in the series file
+    def lookup(self, patch, strict=False):
+        def partial_name(s):
+            count = 0
+            if s in self.series:
+                return s
+            for x in self.series:
+                if s in x:
+                    count += 1
+                    last = x
+                if count > 1:
+                    return None
+            if count:
+                return last
+            if len(self.series) > 0 and len(self.applied) > 0:
+                if s == 'qtip':
+                    return self.series[self.series_end()-1]
+                if s == 'qbase':
+                    return self.series[0]
+            return None
         if patch == None:
             return None
-        if patch in self.series:
-            return patch
+
+        # we don't want to return a partial match until we make
+        # sure the file name passed in does not exist (checked below)
+        res = partial_name(patch)
+        if res and res == patch:
+            return res
+
         if not os.path.isfile(os.path.join(self.path, patch)):
             try:
                 sno = int(patch)
             except(ValueError, OverflowError):
-                self.ui.warn("patch %s not in series\n" % patch)
-                sys.exit(1)
-            if sno >= len(self.series):
-                self.ui.warn("patch number %d is out of range\n" % sno)
-                sys.exit(1)
-            patch = self.series[sno]
-        else:
-            self.ui.warn("patch %s not in series\n" % patch)
-            sys.exit(1)
-        return patch
+                pass
+            else:
+                if sno < len(self.series):
+                    patch = self.series[sno]
+                    return patch
+            if not strict:
+                # return any partial match made above
+                if res:
+                    return res
+                minus = patch.rsplit('-', 1)
+                if len(minus) > 1:
+                    res = partial_name(minus[0])
+                    if res:
+                        i = self.series.index(res)
+                        try:
+                            off = int(minus[1] or 1)
+                        except(ValueError, OverflowError):
+                            pass
+                        else:
+                            if i - off >= 0:
+                                return self.series[i - off]
+                plus = patch.rsplit('+', 1)
+                if len(plus) > 1:
+                    res = partial_name(plus[0])
+                    if res:
+                        i = self.series.index(res)
+                        try:
+                            off = int(plus[1] or 1)
+                        except(ValueError, OverflowError):
+                            pass
+                        else:
+                            if i + off < len(self.series):
+                                return self.series[i + off]
+        self.ui.warn("patch %s not in series\n" % patch)
+        sys.exit(1)
 
     def push(self, repo, patch=None, force=False, list=False,
              mergeq=None, wlock=None):
