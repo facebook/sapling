@@ -59,11 +59,9 @@ dist-notests:	doc
 	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py sdist --force-manifest
 
 tests:
-	@ls tests/test-* | grep -v '[.~]' | xargs chmod +x
 	cd tests && $(PYTHON) run-tests.py
 
 test-%:
-	@chmod +x tests/$@
 	cd tests && $(PYTHON) run-tests.py $@
 
 
