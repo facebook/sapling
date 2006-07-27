@@ -418,7 +418,7 @@ class queue:
                 commitfiles = c + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
-        insert = self.series_end()
+        insert = self.full_series_end()
         if msg:
             n = repo.commit(commitfiles, "[mq]: %s" % msg, force=True,
                             wlock=wlock)
@@ -1045,6 +1045,15 @@ class queue:
         self.applied.append(revlog.hex(n) + ":" + '.hg.patches.save.line')
         self.applied_dirty = 1
 
+    def full_series_end(self):
+        if len(self.applied) > 0:
+            (top, p) = self.applied[-1].split(':')
+            end = self.find_series(p)
+            if end == None:
+                return len(self.full_series)
+            return end + 1
+        return 0
+
     def series_end(self):
         end = 0
         if len(self.applied) > 0:
@@ -1132,7 +1141,7 @@ class queue:
             if patch in self.series:
                 self.ui.warn("patch %s is already in the series file\n" % patch)
                 sys.exit(1)
-            index = self.series_end() + i
+            index = self.full_series_end() + i
             self.full_series[index:index] = [patch]
             self.read_series(self.full_series)
             self.ui.warn("adding %s to series file\n" % patch)
