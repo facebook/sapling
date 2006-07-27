@@ -187,8 +187,7 @@ class queue:
             return (err, n)
 
         if n is None:
-            self.ui.warn("apply failed for patch %s\n" % patch)
-            sys.exit(1)
+            raise util.Abort(_("apply failed for patch %s") % patch)
 
         self.ui.warn("patch didn't work out, merging %s\n" % patch)
 
@@ -199,17 +198,14 @@ class queue:
         c = repo.changelog.read(rev)
         ret = repo.update(rev, allow=True, wlock=wlock)
         if ret:
-            self.ui.warn("update returned %d\n" % ret)
-            sys.exit(1)
+            raise util.Abort(_("update returned %d") % ret)
         n = repo.commit(None, c[4], c[1], force=1, wlock=wlock)
         if n == None:
-            self.ui.warn("repo commit failed\n")
-            sys.exit(1)
+            raise util.Abort(_("repo commit failed"))
         try:
             message, comments, user, date, patchfound = mergeq.readheaders(patch)
         except:
-            self.ui.warn("Unable to read %s\n" % patch)
-            sys.exit(1)
+            raise util.Abort(_("unable to read %s") % patch)
 
         patchf = self.opener(patch, "w")
         if comments:
@@ -356,8 +352,7 @@ class queue:
                             wlock=wlock)
 
             if n == None:
-                self.ui.warn("repo commit failed\n")
-                sys.exit(1)
+                raise util.Abort(_("repo commit failed"))
 
             if update_status:
                 self.applied.append(revlog.hex(n) + ":" + patch)
@@ -383,11 +378,9 @@ class queue:
         patch = self.lookup(patch, strict=True)
         info = self.isapplied(patch)
         if info:
-            self.ui.warn("cannot delete applied patch %s\n" % patch)
-            sys.exit(1)
+            raise util.Abort(_("cannot delete applied patch %s") % patch)
         if patch not in self.series:
-            self.ui.warn("patch %s not in series file\n" % patch)
-            sys.exit(1)
+            raise util.Abort(_("patch %s not in series file") % patch)
         i = self.find_series(patch)
         del self.full_series[i]
         self.read_series(self.full_series)
@@ -399,15 +392,13 @@ class queue:
             top = revlog.bin(top)
             pp = repo.dirstate.parents()
             if top not in pp:
-                self.ui.warn("queue top not at dirstate parents. top %s dirstate %s %s\n" %( revlog.short(top), revlog.short(pp[0]), revlog.short(pp[1])))
-                sys.exit(1)
+                raise util.Abort(_("queue top not at same revision as working directory"))
             return top
         return None
     def check_localchanges(self, repo):
         (c, a, r, d, u) = repo.changes(None, None)
         if c or a or d or r:
-            self.ui.write("Local changes found, refresh first\n")
-            sys.exit(1)
+            raise util.Abort(_("local changes found, refresh first"))
     def new(self, repo, patch, msg=None, force=None):
         if os.path.exists(os.path.join(self.path, patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
@@ -415,9 +406,8 @@ class queue:
         (c, a, r, d, u) = repo.changes(None, None)
         if c or a or d or r:
             if not force:
-                raise util.Abort(_("Local changes found, refresh first"))
-            else:
-                commitfiles = c + a + r
+                raise util.Abort(_("local changes found, refresh first"))
+            commitfiles = c + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
         insert = self.full_series_end()
@@ -428,8 +418,7 @@ class queue:
             n = repo.commit(commitfiles,
                             "New patch: %s" % patch, force=True, wlock=wlock)
         if n == None:
-            self.ui.warn("repo commit failed\n")
-            sys.exit(1)
+            raise util.Abort(_("repo commit failed"))
         self.full_series[insert:insert] = [patch]
         self.applied.append(revlog.hex(n) + ":" + patch)
         self.read_series(self.full_series)
@@ -534,7 +523,7 @@ class queue:
         if update:
             (c, a, r, d, u) = repo.changes(None, None)
             if c or a or d or r:
-                raise util.Abort(_("Local changes found"))
+                raise util.Abort(_("local changes found"))
             urev = self.qparents(repo, rev)
             repo.update(urev, allow=False, force=True, wlock=wlock)
             repo.dirstate.write()
@@ -674,8 +663,7 @@ class queue:
                         else:
                             if i + off < len(self.series):
                                 return self.series[i + off]
-        self.ui.warn("patch %s not in series\n" % patch)
-        sys.exit(1)
+        raise util.Abort(_("patch %s not in series") % patch)
 
     def push(self, repo, patch=None, force=False, list=False,
              mergeq=None, wlock=None):
@@ -683,10 +671,10 @@ class queue:
             wlock = repo.wlock()
         patch = self.lookup(patch)
         if patch and self.isapplied(patch):
-            self.ui.warn("patch %s is already applied\n" % patch)
+            self.ui.warn(_("patch %s is already applied\n") % patch)
             sys.exit(1)
         if self.series_end() == len(self.series):
-            self.ui.warn("File series fully applied\n")
+            self.ui.warn(_("patch series fully applied\n"))
             sys.exit(1)
         if not force:
             self.check_localchanges(repo)
@@ -735,10 +723,9 @@ class queue:
                 patch = self.lookup(patch)
             info = self.isapplied(patch)
             if not info:
-                self.ui.warn("patch %s is not applied\n" % patch)
-                sys.exit(1)
+                raise util.Abort(_("patch %s is not applied") % patch)
         if len(self.applied) == 0:
-            self.ui.warn("No patches applied\n")
+            self.ui.warn(_("no patches applied\n"))
             sys.exit(1)
 
         if not update:
@@ -912,15 +899,14 @@ class queue:
 
     def init(self, repo, create=False):
         if os.path.isdir(self.path):
-            raise util.Abort("patch queue directory already exists")
+            raise util.Abort(_("patch queue directory already exists"))
         os.mkdir(self.path)
         if create:
             return self.qrepo(create=True)
 
     def unapplied(self, repo, patch=None):
         if patch and patch not in self.series:
-            self.ui.warn("%s not in the series file\n" % patch)
-            sys.exit(1)
+            raise util.Abort(_("patch %s is not in series file") % patch)
         if not patch:
             start = self.series_end()
         else:
@@ -1072,8 +1058,7 @@ class queue:
 
     def qapplied(self, repo, patch=None):
         if patch and patch not in self.series:
-            self.ui.warn("%s not in the series file\n" % patch)
-            sys.exit(1)
+            raise util.Abort(_("patch %s is not in series file") % patch)
         if not patch:
             end = len(self.applied)
         else:
@@ -1119,8 +1104,8 @@ class queue:
 
     def qimport(self, repo, files, patch=None, existing=None, force=None):
         if len(files) > 1 and patch:
-            self.ui.warn("-n option not valid when importing multiple files\n")
-            sys.exit(1)
+            raise util.Abort(_('option "-n" not valid when importing multiple '
+                               'files'))
         i = 0
         added = []
         for filename in files:
@@ -1128,17 +1113,15 @@ class queue:
                 if not patch:
                     patch = filename
                 if not os.path.isfile(os.path.join(self.path, patch)):
-                    self.ui.warn("patch %s does not exist\n" % patch)
-                    sys.exit(1)
+                    raise util.Abort(_("patch %s does not exist") % patch)
             else:
                 try:
                     text = file(filename).read()
                 except IOError:
-                    self.ui.warn("Unable to read %s\n" % patch)
-                    sys.exit(1)
+                    raise util.Abort(_("unable to read %s") % patch)
                 if not patch:
                     patch = os.path.split(filename)[1]
-                if not force and os.path.isfile(os.path.join(self.path, patch)):
+                if not force and os.path.exists(os.path.join(self.path, patch)):
                     raise util.Abort(_('patch "%s" already exists') % patch)
                 patchf = self.opener(patch, "w")
                 patchf.write(text)
@@ -1327,13 +1310,11 @@ def save(ui, repo, **opts):
             newpath = os.path.join(q.basepath, opts['name'])
             if os.path.exists(newpath):
                 if not os.path.isdir(newpath):
-                    ui.warn("destination %s exists and is not a directory\n" %
-                            newpath)
-                    sys.exit(1)
+                    raise util.Abort(_('destination %s exists and is not '
+                                       'a directory') % newpath)
                 if not opts['force']:
-                    ui.warn("destination %s exists, use -f to force\n" %
-                            newpath)
-                    sys.exit(1)
+                    raise util.Abort(_('destination %s exists, '
+                                       'use -f to force') % newpath)
         else:
             newpath = savename(path)
         ui.warn("copy %s to %s\n" % (path, newpath))
