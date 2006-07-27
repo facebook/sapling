@@ -20,6 +20,7 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 rolling back last transaction
+changegroup: u=remote:http
 % expect authorization error: all users denied
 pushing to http://localhost:20059/
 searching for changes

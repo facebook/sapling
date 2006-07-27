@@ -17,6 +17,8 @@ if [ ! -x dummyssh ] ; then
 	exit -1
 fi
 
+SSH_CLIENT='127.0.0.1 1 2'
+export SSH_CLIENT
 echo Got arguments 1:$1 2:$2 3:$3 4:$4 5:$5 >> dummylog
 $2
 EOF
@@ -29,6 +31,8 @@ echo this > foo
 hg ci -A -m "init" -d "1000000 0" foo
 echo '[server]' > .hg/hgrc
 echo 'uncompressed = True' >> .hg/hgrc
+echo '[hooks]' >> .hg/hgrc
+echo 'changegroup = echo changegroup in remote: u=$HG_URL >> ../dummylog' >> .hg/hgrc
 
 cd ..
 
@@ -45,6 +49,9 @@ hg clone -e ./dummyssh ssh://user@dummy/remote local
 echo "# verify"
 cd local
 hg verify
+
+echo '[hooks]' >> .hg/hgrc
+echo 'changegroup = echo changegroup in local: u=$HG_URL >> ../dummylog' >> .hg/hgrc
 
 echo "# empty default pull"
 hg paths

@@ -30,6 +30,7 @@ def opener(base):
 
 class statichttprepository(localrepo.localrepository):
     def __init__(self, ui, path):
+        self._url = path
         self.path = (path + "/.hg")
         self.ui = ui
         self.revlogversion = 0
@@ -40,6 +41,9 @@ class statichttprepository(localrepo.localrepository):
         self.nodetagscache = None
         self.encodepats = None
         self.decodepats = None
+
+    def url(self):
+        return 'static-' + self._url
 
     def dev(self):
         return -1

@@ -37,6 +37,7 @@ class hgweb(object):
         self.mtime = -1
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
+        self.stripecount = 1
         self.templatepath = self.repo.ui.config("web", "templates",
                                                 templater.templatepath())
 
@@ -46,6 +47,8 @@ class hgweb(object):
             self.mtime = mtime
             self.repo = hg.repository(self.repo.ui, self.repo.root)
             self.maxchanges = int(self.repo.ui.config("web", "maxchanges", 10))
+            self.stripecount = int(self.repo.ui.config("web", "stripes", 1))
+            self.maxshortchanges = int(self.repo.ui.config("web", "maxshortchanges", 60))
             self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
@@ -158,7 +161,7 @@ class hgweb(object):
                             ignorewsamount=ignorewsamount,
                             ignoreblanklines=ignoreblanklines), f, tn)
 
-    def changelog(self, pos):
+    def changelog(self, pos, shortlog=False):
         def changenav(**map):
             def seq(factor, maxchanges=None):
                 if maxchanges:
@@ -173,8 +176,9 @@ class hgweb(object):
 
             l = []
             last = 0
-            for f in seq(1, self.maxchanges):
-                if f < self.maxchanges or f <= last:
+            maxchanges = shortlog and self.maxshortchanges or self.maxchanges
+            for f in seq(1, maxchanges):
+                if f < maxchanges or f <= last:
                     continue
                 if f > count:
                     break
@@ -219,14 +223,15 @@ class hgweb(object):
             for e in l:
                 yield e
 
+        maxchanges = shortlog and self.maxshortchanges or self.maxchanges
         cl = self.repo.changelog
         mf = cl.read(cl.tip())[0]
         count = cl.count()
-        start = max(0, pos - self.maxchanges + 1)
-        end = min(count, start + self.maxchanges)
+        start = max(0, pos - maxchanges + 1)
+        end = min(count, start + maxchanges)
         pos = end - 1
 
-        yield self.t('changelog',
+        yield self.t(shortlog and 'shortlog' or 'changelog',
                      changenav=changenav,
                      manifest=hex(mf),
                      rev=pos, changesets=count, entries=changelist,
@@ -265,7 +270,7 @@ class hgweb(object):
                 hn = hex(n)
 
                 yield self.t('searchentry',
-                             parity=count & 1,
+                             parity=self.stripes(count),
                              author=changes[1],
                              parent=self.siblings(cl.parents(n), cl.rev),
                              child=self.siblings(cl.children(n), cl.rev),
@@ -376,7 +381,7 @@ class hgweb(object):
             for l, t in enumerate(text.splitlines(1)):
                 yield {"line": t,
                        "linenumber": "% 6d" % (l + 1),
-                       "parity": l & 1}
+                       "parity": self.stripes(l)}
 
         yield self.t("filerevision",
                      file=f,
@@ -409,7 +414,7 @@ class hgweb(object):
         mfn = cs[0]
 
         def annotate(**map):
-            parity = 1
+            parity = 0
             last = None
             for r, l in fl.annotate(n):
                 try:
@@ -489,10 +494,10 @@ class hgweb(object):
                 yield {"file": full,
                        "manifest": mnode,
                        "filenode": hex(fnode),
-                       "parity": parity,
+                       "parity": self.stripes(parity),
                        "basename": f,
                        "permissions": mff[full]}
-                parity = 1 - parity
+                parity += 1
 
         def dirlist(**map):
             parity = 0
@@ -503,11 +508,11 @@ class hgweb(object):
                 if fnode:
                     continue
 
-                yield {"parity": parity,
+                yield {"parity": self.stripes(parity),
                        "path": os.path.join(path, f),
                        "manifest": mnode,
                        "basename": f[:-1]}
-                parity = 1 - parity
+                parity += 1
 
         yield self.t("manifest",
                      manifest=mnode,
@@ -530,12 +535,12 @@ class hgweb(object):
             parity = 0
             for k,n in i:
                 if notip and k == "tip": continue
-                yield {"parity": parity,
+                yield {"parity": self.stripes(parity),
                        "tag": k,
                        "tagmanifest": hex(cl.read(n)[0]),
                        "date": cl.read(n)[2],
                        "node": hex(n)}
-                parity = 1 - parity
+                parity += 1
 
         yield self.t("tags",
                      manifest=hex(mf),
@@ -565,12 +570,12 @@ class hgweb(object):
                 t = c[2]
 
                 yield self.t("tagentry",
-                             parity = parity,
+                             parity = self.stripes(parity),
                              tag = k,
                              node = hex(n),
                              date = t,
                              tagmanifest = hex(m))
-                parity = 1 - parity
+                parity += 1
 
         def changelist(**map):
             parity = 0
@@ -609,7 +614,8 @@ class hgweb(object):
                  lastchange = (0, 0), # FIXME
                  manifest = hex(mf),
                  tags = tagentries,
-                 shortlog = changelist)
+                 shortlog = changelist,
+                 archives=self.archivelist("tip"))
 
     def filediff(self, file, changeset):
         cl = self.repo.changelog
@@ -689,6 +695,7 @@ class hgweb(object):
         def expand_form(form):
             shortcuts = {
                 'cl': [('cmd', ['changelog']), ('rev', None)],
+                'sl': [('cmd', ['shortlog']), ('rev', None)],
                 'cs': [('cmd', ['changeset']), ('node', None)],
                 'f': [('cmd', ['file']), ('filenode', None)],
                 'fl': [('cmd', ['filelog']), ('filenode', None)],
@@ -752,6 +759,13 @@ class hgweb(object):
         else:
             req.write(self.t("error"))
 
+    def stripes(self, parity):
+        "make horizontal stripes for easier reading"
+        if self.stripecount:
+            return (1 + parity / self.stripecount) & 1
+        else:
+            return 0
+
     def do_changelog(self, req):
         hi = self.repo.changelog.count() - 1
         if req.form.has_key('rev'):
@@ -763,6 +777,18 @@ class hgweb(object):
                 return
 
         req.write(self.changelog(hi))
+
+    def do_shortlog(self, req):
+        hi = self.repo.changelog.count() - 1
+        if req.form.has_key('rev'):
+            hi = req.form['rev'][0]
+            try:
+                hi = self.repo.changelog.rev(self.repo.lookup(hi))
+            except hg.RepoError:
+                req.write(self.search(hi)) # XXX redirect to 404 page?
+                return
+
+        req.write(self.changelog(hi, shortlog = True))
 
     def do_changeset(self, req):
         req.write(self.changeset(req.form['node'][0]))
@@ -895,9 +921,13 @@ class hgweb(object):
         # require ssl by default, auth info cannot be sniffed and
         # replayed
         ssl_req = self.repo.ui.configbool('web', 'push_ssl', True)
-        if ssl_req and not req.env.get('HTTPS'):
-            bail(_('ssl required\n'))
-            return
+        if ssl_req:
+            if not req.env.get('HTTPS'):
+                bail(_('ssl required\n'))
+                return
+            proto = 'https'
+        else:
+            proto = 'http'
 
         # do not allow push unless explicitly allowed
         if not self.check_perm(req, 'push', False):
@@ -943,7 +973,9 @@ class hgweb(object):
                 sys.stdout = cStringIO.StringIO()
 
                 try:
-                    ret = self.repo.addchangegroup(fp, 'serve')
+                    url = 'remote:%s:%s' % (proto,
+                                            req.env.get('REMOTE_HOST', ''))
+                    ret = self.repo.addchangegroup(fp, 'serve', url)
                 finally:
                     val = sys.stdout.getvalue()
                     sys.stdout = old_stdout

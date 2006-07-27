@@ -344,6 +344,10 @@ class dirstate(object):
     # directly by this function, but might be modified by your statmatch call.
     #
     def walkhelper(self, files, statmatch, dc, badmatch=None):
+        # self.root may end with a path separator when self.root == '/'
+        common_prefix_len = len(self.root)
+        if not self.root.endswith('/'):
+            common_prefix_len += 1
         # recursion free walker, faster than os.walk.
         def findfiles(s):
             work = [s]
@@ -352,7 +356,7 @@ class dirstate(object):
                 names = os.listdir(top)
                 names.sort()
                 # nd is the top of the repository dir tree
-                nd = util.normpath(top[len(self.root) + 1:])
+                nd = util.normpath(top[common_prefix_len:])
                 if nd == '.':
                     nd = ''
                 else:

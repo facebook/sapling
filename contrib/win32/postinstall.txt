@@ -7,6 +7,62 @@ file that comes with this package.
 Release Notes
 -------------
 
+2006-07-24  v0.9.1
+
+Major changes between Mercurial 0.9 and 0.9.1:
+
+ New features:
+ - You can now configure your 'hgweb' server to let remote users
+   'push' changes over http.
+ - You can now 'import' a patch in a mail message by saving the mail
+   message, and importing it.  This works for patches sent either
+   inline or as attachments.
+ - The 'diff' command now accepts '-rA:B' syntax as a synonym for
+   '-r A -r B', and adds '-b' and '-B' options.
+
+ New contributions and extensions:
+ - The 'acl' extension lets you lock down parts of a repository
+   against incoming changes
+ - The 'extdiff' extension lets you run your favourite graphical
+   change viewer
+ - Comprehensive integration with the 'vim' editor
+ - A restricted shell for 'ssh'-hosted repositories
+ - An importer for 'darcs' repositories
+
+ New hooks added:
+ - 'preupdate' is run before an update or merge in the working
+   directory.
+ - 'update' is run after an update or merge in the working
+   directory.
+
+ Behaviour changes:
+ - NOTE: Mercurial as installed by the Windows binary
+   installer no longer performs automatic line-ending conversion for
+   Unix/Linux compatibility.  To re-enable this feature, edit your
+   'mercurial.ini' file after you upgrade.
+ - The Windows binary installer now automatically adds 'hg' to your
+   '%PATH%'.
+ - The 'backout' command now runs an editor by default, to let you
+   modify the commit message for a backed-out changeset.
+ - An earlier problem with parsing of tags has been fixed.
+   This makes tag parsing slower but more reliable.
+
+ Memory usage and performance improvements:
+ - The 'remove' command has been rewritten to be hundreds of times
+   faster in large repositories.
+ - It is now possible to 'clone' a repository very quickly over a
+   LAN, if the server is configured to allow it.  See the new 'server'
+   section in the 'hgrc' documentation.
+
+ Other changes of note:
+ - Mercurial will now print help for an extension if you type 'hg
+   help EXT_NAME'.
+ - The usual array of bug fixes and documentation improvements.
+ - The integrated web server is now more WSGI-compliant.
+ - Work has begun to solidify Mercurial's API for use by third-party
+   packages.
+
+
 2006-05-10  v0.9
 
 * Major changes between Mercurial 0.8.1 and 0.9:

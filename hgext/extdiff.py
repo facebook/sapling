@@ -22,6 +22,9 @@
 #   cmd.vdiff = kdiff3
 #   # add new command called meld, runs meld (no need to name twice)
 #   cmd.meld =
+#   # add new command called vimdiff, runs gvimdiff with DirDiff plugin
+#   #(see http://www.vim.org/scripts/script.php?script_id=102)
+#   cmd.vimdiff = LC_ALL=C gvim -f '+bdel 1 2' '+ execute "DirDiff ".argv(0)." ".argv(1)'
 #
 # you can use -I/-X and list of file or directory names like normal
 # "hg diff" command. extdiff makes snapshots of only needed files, so

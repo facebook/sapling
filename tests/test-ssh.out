@@ -83,5 +83,7 @@ Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R local serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
+changegroup in remote: u=remote:ssh:127.0.0.1
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
+changegroup in remote: u=remote:ssh:127.0.0.1
