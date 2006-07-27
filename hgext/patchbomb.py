@@ -130,8 +130,13 @@ def patchbomb(ui, repo, *revs, **opts):
             while patch and not patch[0].strip(): patch.pop(0)
         if opts['diffstat']:
             body += cdiffstat('\n'.join(desc), patch) + '\n\n'
-        body += '\n'.join(patch)
-        msg = email.MIMEText.MIMEText(body)
+        if opts['attach']:
+            msg = email.MIMEMultipart.MIMEMultipart()
+            if body: msg.attach(email.MIMEText.MIMEText(body, 'plain'))
+            msg.attach(email.MIMEText.MIMEText('\n'.join(patch), 'x-patch'))
+        else:
+            body += '\n'.join(patch)
+            msg = email.MIMEText.MIMEText(body)
         if total == 1:
             subj = '[PATCH] ' + desc[0].strip()
         else:
@@ -274,7 +279,8 @@ def patchbomb(ui, repo, *revs, **opts):
 cmdtable = {
     'email':
     (patchbomb,
-     [('', 'bcc', [], 'email addresses of blind copy recipients'),
+     [('a', 'attach', None, 'send patches as inline attachments'),
+      ('', 'bcc', [], 'email addresses of blind copy recipients'),
       ('c', 'cc', [], 'email addresses of copy recipients'),
       ('d', 'diffstat', None, 'add diffstat output to messages'),
       ('f', 'from', '', 'email address of sender'),
