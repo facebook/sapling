@@ -2,7 +2,7 @@ include hg
 recursive-include mercurial *.py
 include hgweb.cgi hgwebdir.cgi
 include hgeditor rewrite-log
-include tests/README tests/coverage.py tests/run-tests.py tests/md5sum.py tests/test-*[a-z0-9] tests/*.out
+include tests/README tests/*.py tests/test-*[a-z0-9] tests/*.out
 prune tests/*.err
 include *.txt
 include templates/map templates/map-*[a-z0-9]
@@ -10,8 +10,10 @@ include templates/*.tmpl
 include templates/static/*
 include doc/README doc/Makefile doc/gendoc.py doc/*.txt doc/*.html doc/*.[0-9]
 recursive-include contrib *
+recursive-include hgext *
 include README
 include CONTRIBUTORS
 include COPYING
 include Makefile
 include MANIFEST.in
+prune *.elc *.orig *.rej *~ *.o *.so *.pyc *.swp *.prof
