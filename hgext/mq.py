@@ -530,6 +530,9 @@ class queue:
         revnum = chlog.rev(rev)
 
         if update:
+            (c, a, r, d, u) = repo.changes(None, None)
+            if c or a or d or r:
+                raise util.Abort(_("Local changes found"))
             urev = self.qparents(repo, rev)
             repo.update(urev, allow=False, force=True, wlock=wlock)
             repo.dirstate.write()
