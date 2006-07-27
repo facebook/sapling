@@ -45,6 +45,7 @@ demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
                          mercurial:commands,hg,ui
                          os errno popen2 socket sys tempfile time''')
 from mercurial.i18n import gettext as _
+from mercurial.node import *
 
 try:
     # readline gives raw_input editing capabilities, but is not
@@ -133,7 +134,20 @@ def patchbomb(ui, repo, *revs, **opts):
         if opts['attach']:
             msg = email.MIMEMultipart.MIMEMultipart()
             if body: msg.attach(email.MIMEText.MIMEText(body, 'plain'))
-            msg.attach(email.MIMEText.MIMEText('\n'.join(patch), 'x-patch'))
+            p = email.MIMEText.MIMEText('\n'.join(patch), 'x-patch')
+            node = bin(node)
+            # if node is mq patch, it will have patch file name as tag
+            patchname = [t for t in repo.nodetags(node)
+                         if t.endswith('.patch') or t.endswith('.diff')]
+            if patchname:
+                patchname = patchname[0]
+            elif total > 1:
+                patchname = commands.make_filename(repo, '%b-%n.patch',
+                                                   node, idx, total)
+            else:
+                patchname = commands.make_filename(repo, '%b.patch', node)
+            p['Content-Disposition'] = 'inline; filename=' + patchname
+            msg.attach(p)
         else:
             body += '\n'.join(patch)
             msg = email.MIMEText.MIMEText(body)
