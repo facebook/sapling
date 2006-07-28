@@ -3440,6 +3440,11 @@ def dispatch(args):
             else:
                 d = lambda: func(u, *args, **cmdoptions)
 
+            # reupdate the options, repo/.hg/hgrc may have changed them
+            u.updateopts(options["verbose"], options["debug"], options["quiet"],
+                         not options["noninteractive"], options["traceback"],
+                         options["config"])
+
             try:
                 if options['profile']:
                     import hotshot, hotshot.stats
