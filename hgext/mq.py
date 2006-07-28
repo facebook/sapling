@@ -276,8 +276,6 @@ class queue:
         # TODO unify with commands.py
         if not patchdir:
             patchdir = self.path
-        pwd = os.getcwd()
-        os.chdir(repo.root)
         err = 0
         if not wlock:
             wlock = repo.wlock()
@@ -304,7 +302,8 @@ class queue:
 
             try:
                 pp = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-                f = os.popen("%s -p1 --no-backup-if-mismatch < '%s'" % (pp, pf))
+                f = os.popen("%s -d '%s' -p1 --no-backup-if-mismatch < '%s'" %
+                             (pp, repo.root, pf))
             except:
                 self.ui.warn("patch failed, unable to continue (try -v)\n")
                 err = 1
@@ -371,7 +370,6 @@ class queue:
                 err = 1
                 break
         tr.close()
-        os.chdir(pwd)
         return (err, n)
 
     def delete(self, repo, patch):
