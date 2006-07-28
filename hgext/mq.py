@@ -38,7 +38,8 @@ versionstr = "0.45"
 
 repomap = {}
 
-commands.norepo += " qversion"
+commands.norepo += " qclone qversion"
+
 class queue:
     def __init__(self, ui, path, patchdir=None):
         self.basepath = path
@@ -1177,6 +1178,52 @@ def init(ui, repo, **opts):
         r.add(['.hgignore', 'series'])
     return 0
 
+def clone(ui, source, dest=None, **opts):
+    '''clone main and patch repository at same time
+
+    If source is local, destination will have no patches applied.  If
+    source is remote, this command can not check if patches are
+    applied in source, so cannot guarantee that patches are not
+    applied in destination.  If you clone remote repository, be sure
+    before that it has no patches applied.
+
+    Source patch repository is looked for in <src>/.hg/patches by
+    default.  Use -p <url> to change.
+    '''
+    ui.setconfig_remoteopts(**opts)
+    if dest is None:
+        dest = hg.defaultdest(source)
+    sr = hg.repository(ui, ui.expandpath(source))
+    qbase, destrev = None, None
+    if sr.local():
+        reposetup(ui, sr)
+        sq = repomap[sr]
+        if sq.applied:
+            qbase = revlog.bin(sq.applied[0].split(':')[0])
+            if not hg.islocal(dest):
+                destrev = sr.parents(qbase)[0]
+    ui.note(_('cloning main repo\n'))
+    sr, dr = hg.clone(ui, sr, dest,
+                      pull=opts['pull'],
+                      rev=destrev,
+                      update=False,
+                      stream=opts['uncompressed'])
+    ui.note(_('cloning patch repo\n'))
+    spr, dpr = hg.clone(ui, opts['patches'] or (sr.url() + '/.hg/patches'),
+                        dr.url() + '/.hg/patches',
+                        pull=opts['pull'],
+                        update=not opts['noupdate'],
+                        stream=opts['uncompressed'])
+    if dr.local():
+        if qbase:
+            ui.note(_('stripping applied patches from destination repo\n'))
+            reposetup(ui, dr)
+            dq = repomap[dr]
+            dq.strip(dr, qbase, update=False, backup=None)
+        if not opts['noupdate']:
+            ui.note(_('updating destination repo\n'))
+            dr.update(dr.changelog.tip())
+
 def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository"""
     q = repomap[repo]
@@ -1369,6 +1416,16 @@ def reposetup(ui, repo):
 
 cmdtable = {
     "qapplied": (applied, [], 'hg qapplied [PATCH]'),
+    "qclone": (clone,
+               [('', 'pull', None, _('use pull protocol to copy metadata')),
+                ('U', 'noupdate', None, _('do not update the new working directories')),
+                ('', 'uncompressed', None,
+                 _('use uncompressed transfer (fast over LAN)')),
+                ('e', 'ssh', '', _('specify ssh command to use')),
+                ('p', 'patches', '', _('location of source patch repo')),
+                ('', 'remotecmd', '',
+                 _('specify hg command to run on the remote side'))],
+               'hg qclone [OPTION]... SOURCE [DEST]'),
     "qcommit|qci":
         (commit,
          commands.table["^commit|ci"][1],
