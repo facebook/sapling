@@ -57,6 +57,23 @@ schemes = {
     'static-http': static_http,
     }
 
+remote_schemes = [
+    'bundle',
+    'hg',
+    'http',
+    'https',
+    'old-http',
+    'ssh',
+    'static-http',
+    ]
+
+def islocal(repo):
+    '''return true if repo or path is local'''
+    if isinstance(repo, str):
+        c = repo.find(':')
+        return c <= 0 or repo[:c] not in remote_schemes
+    return repo.local()
+
 def repository(ui, path=None, create=0):
     scheme = None
     if path:
@@ -74,6 +91,10 @@ def repository(ui, path=None, create=0):
                              scheme)
     return ctor(ui, path)
 
+def defaultdest(source):
+    '''return default destination of clone if none is given'''
+    return os.path.basename(os.path.normpath(source))
+    
 def clone(ui, source, dest=None, pull=False, rev=None, update=True,
           stream=False):
     """Make a copy of an existing repository.
@@ -90,7 +111,9 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     If an exception is raised, the partly cloned/updated destination
     repository will be deleted.
 
-    Keyword arguments:
+    Arguments:
+
+    source: repository object or URL
 
     dest: URL of destination repository to create (defaults to base
     name of source repository)
@@ -105,8 +128,24 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     update: update working directory after clone completes, if
     destination is local repository
     """
+    if isinstance(source, str):
+        src_repo = repository(ui, source)
+    else:
+        src_repo = source
+        source = src_repo.url()
+
     if dest is None:
-        dest = os.path.basename(os.path.normpath(source))
+        dest = defaultdest(source)
+
+    def localpath(path):
+        if path.startswith('file://'):
+            return path[7:]
+        if path.startswith('file:'):
+            return path[5:]
+        return path
+
+    dest = localpath(dest)
+    source = localpath(source)
 
     if os.path.exists(dest):
         raise util.Abort(_("destination '%s' already exists"), dest)
@@ -121,8 +160,6 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
-    src_repo = repository(ui, source)
-
     dest_repo = None
     try:
         dest_repo = repository(ui, dest)
@@ -133,7 +170,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     dest_path = None
     dir_cleanup = None
     if dest_repo.local():
-        dest_path = os.path.realpath(dest)
+        dest_path = os.path.realpath(dest_repo.root)
         dir_cleanup = DirCleanup(dest_path)
 
     abspath = source
