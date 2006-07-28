@@ -353,13 +353,13 @@ function! s:HGGetStatusVars(revisionVar, branchVar, repositoryVar)
       let hgCommand = s:HGGetOption("HGCommandHGExec", "hg") . " parents -b  " 
       let statustext=system(hgCommand)
       if(v:shell_error)
-	  return ""
+          return ""
       endif
       let revision=substitute(statustext, '^changeset:\s*\(\d\+\):.*\_$\_.*$', '\1', "")
 
       if a:branchVar != "" && match(statustext, '^\_.*\_^branch:') >= 0
-	let branch=substitute(statustext, '^\_.*\_^branch:\s*\(\S\+\)\n\_.*$', '\1', "")
-	let returnExpression=returnExpression . " | let " . a:branchVar . "='" . branch . "'"
+        let branch=substitute(statustext, '^\_.*\_^branch:\s*\(\S\+\)\n\_.*$', '\1', "")
+        let returnExpression=returnExpression . " | let " . a:branchVar . "='" . branch . "'"
       endif
     endif
     if (exists('revision'))
@@ -478,111 +478,96 @@ endfunction
 "   1 if new document installed, 0 otherwise.
 " Note: Cleaned and generalized by guo-peng Wen
 "'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+" Helper function to make mkdir as portable as possible
+function! s:HGFlexiMkdir(dir)
+  if exists("*mkdir") " we can use Vim's own mkdir()
+    call mkdir(a:dir)
+  elseif !exists("+shellslash")
+    call system('mkdir -p "'.a:dir.'"')
+  else " M$
+    let l:ssl = &shellslash
+    try
+      set shellslash
+      call system('mkdir "'.a:dir.'"')
+    finally
+      let &shellslash = l:ssl
+    endtry
+  endif
+endfunction
 
 function! s:HGInstallDocumentation(full_name, revision)
-    " Name of the document path based on the system we use:
-    if (has("unix"))
-        " On UNIX like system, using forward slash:
-        let l:slash_char = '/'
-        let l:mkdir_cmd  = ':silent !mkdir -p '
-    else
-        " On M$ system, use backslash. Also mkdir syntax is different.
-        " This should only work on W2K and up.
-        let l:slash_char = '\'
-        let l:mkdir_cmd  = ':silent !mkdir '
-    endif
-
-    let l:doc_path = l:slash_char . 'doc'
-    let l:doc_home = l:slash_char . '.vim' . l:slash_char . 'doc'
-
-    " Figure out document path based on full name of this script:
-    let l:vim_plugin_path = fnamemodify(a:full_name, ':h')
-    let l:vim_doc_path    = fnamemodify(a:full_name, ':h:h') . l:doc_path
-    if (!(filewritable(l:vim_doc_path) == 2))
-        echomsg "Doc path: " . l:vim_doc_path
-        execute l:mkdir_cmd . '"' . l:vim_doc_path . '"'
-        if (!(filewritable(l:vim_doc_path) == 2))
-            " Try a default configuration in user home:
-            let l:vim_doc_path = expand("~") . l:doc_home
-            if (!(filewritable(l:vim_doc_path) == 2))
-                execute l:mkdir_cmd . '"' . l:vim_doc_path . '"'
-                if (!(filewritable(l:vim_doc_path) == 2))
-                    " Put a warning:
-                    echomsg "Unable to open documentation directory"
-                    echomsg " type :help add-local-help for more informations."
-                    return 0
-                endif
-            endif
+  " Figure out document path based on full name of this script:
+  let l:vim_plugin_path = fnamemodify(a:full_name, ':h')
+  let l:vim_doc_path  = fnamemodify(a:full_name, ':h:h') . "/doc"
+  if filewritable(l:vim_doc_path) != 2
+    echomsg "hgcommand: Trying to update docs at: " . l:vim_doc_path
+    silent! call <SID>HGFlexiMkdir(l:vim_doc_path)
+    if filewritable(l:vim_doc_path) != 2
+      " Try first item in 'runtimepath':
+      let l:vimfiles = matchstr(&runtimepath, '[^,]\+\ze,')
+      let l:vim_doc_path = l:vimfiles . "/doc"
+      if filewritable(l:vim_doc_path) != 2
+        echomsg "hgcommand: Trying to update docs at: " . l:vim_doc_path
+        silent! call <SID>HGFlexiMkdir(l:vim_doc_path)
+        if filewritable(l:vim_doc_path) != 2
+          " Put a warning:
+          echomsg "Unable to open documentation directory"
+          echomsg " type `:help add-local-help' for more information."
+          return 0
         endif
+      endif
     endif
+  endif
 
-    " Exit if we have problem to access the document directory:
-    if (!isdirectory(l:vim_plugin_path)
-        \ || !isdirectory(l:vim_doc_path)
-        \ || filewritable(l:vim_doc_path) != 2)
-        return 0
-    endif
+  " Full name of script and documentation file:
+  let l:script_name = fnamemodify(a:full_name, ':t')
+  let l:doc_name  = fnamemodify(a:full_name, ':t:r') . '.txt'
+  let l:doc_file  = l:vim_doc_path . "/" . l:doc_name
 
-    " Full name of script and documentation file:
-    let l:script_name = fnamemodify(a:full_name, ':t')
-    let l:doc_name    = fnamemodify(a:full_name, ':t:r') . '.txt'
-    let l:plugin_file = l:vim_plugin_path . l:slash_char . l:script_name
-    let l:doc_file    = l:vim_doc_path    . l:slash_char . l:doc_name
+  " Bail out if document file is still up to date:
+  if filereadable(l:doc_file)  && getftime(a:full_name) < getftime(l:doc_file)
+    return 0
+  endif
 
-    " Bail out if document file is still up to date:
-    if (filereadable(l:doc_file)  &&
-        \ getftime(l:plugin_file) < getftime(l:doc_file))
-        return 0
-    endif
+  " Create a new buffer & read in the plugin file (me):
+  setl nomodeline
+  1 new!
+  setl noswapfile modifiable
+  sil exe 'read ' . a:full_name
 
-    " Prepare window position restoring command:
-    if (strlen(@%))
-        let l:go_back = 'b ' . bufnr("%")
-    else
-        let l:go_back = 'enew!'
-    endif
+  setl modeline
+  let l:buf = bufnr("%")
 
-    " Create a new buffer & read in the plugin file (me):
-    setl nomodeline
-    exe 'enew!'
-    exe 'r ' . l:plugin_file
+  norm zR
+  norm gg
 
-    setl modeline
-    let l:buf = bufnr("%")
-    setl noswapfile modifiable
+  " Delete from first line to a line starts with
+  " === START_DOC
+  sil 1,/^=\{3,}\s\+START_DOC\C/ d
 
-    norm zR
-    norm gg
+  " Delete from a line starts with
+  " === END_DOC
+  " to the end of the documents:
+  sil /^=\{3,}\s\+END_DOC\C/,$ d
 
-    " Delete from first line to a line starts with
-    " === START_DOC
-    1,/^=\{3,}\s\+START_DOC\C/ d
+  " Remove fold marks:
+  sil %s/{\{3}[1-9]/  /e
 
-    " Delete from a line starts with
-    " === END_DOC
-    " to the end of the documents:
-    /^=\{3,}\s\+END_DOC\C/,$ d
+  " Add modeline for help doc: the modeline string is mangled intentionally
+  " to avoid it be recognized by VIM:
+  call append(line('$'), '')
+  call append(line('$'), ' v' . 'im:tw=78:ts=8:ft=help:norl:')
 
-    " Remove fold marks:
-    %s/{\{3}[1-9]/    /
+  " Replace revision:
+  sil exe "normal :1s/#version#/ v" . a:revision . "/\<CR>"
 
-    " Add modeline for help doc: the modeline string is mangled intentionally
-    " to avoid it be recognized by VIM:
-    call append(line('$'), '')
-    call append(line('$'), ' v' . 'im:tw=78:ts=8:ft=help:norl:')
+  " Save the help document and wipe out buffer:
+  sil exe 'wq! ' . l:doc_file . ' | bw ' . l:buf
 
-    " Replace revision:
-    exe "normal :1s/#version#/ v" . a:revision . "/\<CR>"
+  " Build help tags:
+  sil exe 'helptags ' . l:vim_doc_path
 
-    " Save the help document:
-    exe 'w! ' . l:doc_file
-    exe l:go_back
-    exe 'bw ' . l:buf
-
-    " Build help tags:
-    exe 'helptags ' . l:vim_doc_path
-
-    return 1
+  return 1
 endfunction
 
 " Section: Public functions {{{1
@@ -1185,12 +1170,15 @@ endif
 " Section: Doc installation {{{1
 "
   let s:revision="0.1"
-  silent! let s:install_status =
-      \ s:HGInstallDocumentation(expand('<sfile>:p'), s:revision)
-  if (s:install_status == 1)
-      echom expand("<sfile>:t:r") . ' v' . s:revision .
-		\ ': Help-documentation installed.'
+  if s:HGInstallDocumentation(escape(expand('<sfile>:p'), ' '), s:revision)
+      echom expand('<sfile>:t:r') . ' v' . s:revision .
+                \ ': Help-documentation installed.'
   endif
+
+  " delete one-time vars and functions
+  delfunction <SID>HGInstallDocumentation
+  delfunction <SID>HGFlexiMkdir
+  unlet s:revision
 
 
 " Section: Plugin completion {{{1
@@ -1638,7 +1626,7 @@ HGVimDiffFinish		This event is fired just after the HGVimDiff command
    status' will be invoked at each entry into a buffer (during the |BufEnter| 
    autocommand).
 
-   This mode is enablmed by default.  In order to disable it, set the 
+   This mode is enabled by default.  In order to disable it, set the 
    |HGCommandEnableBufferSetup| variable to a false (zero) value.  Enabling 
    this mode simply provides the buffer variables mentioned above.  The user 
    must explicitly include those in the |'statusline'| option if they are to 
