@@ -432,25 +432,16 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
                      diffopts['ignorewsamount']
     ignoreblanklines = opts.get('ignore_blank_lines') or \
                      diffopts['ignoreblanklines']
-    for f in modified:
+
+    all = modified + added + removed
+    all.sort()
+    for f in all:
         to = None
+        tn = None
         if f in mmap:
             to = repo.file(f).read(mmap[f])
-        tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
-                               showfunc=showfunc, ignorews=ignorews,
-                               ignorewsamount=ignorewsamount,
-                               ignoreblanklines=ignoreblanklines))
-    for f in added:
-        to = None
-        tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
-                               showfunc=showfunc, ignorews=ignorews,
-                               ignorewsamount=ignorewsamount,
-                               ignoreblanklines=ignoreblanklines))
-    for f in removed:
-        to = repo.file(f).read(mmap[f])
-        tn = None
+        if f not in removed:
+            tn = read(f)
         fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
                                showfunc=showfunc, ignorews=ignorews,
                                ignorewsamount=ignorewsamount,
