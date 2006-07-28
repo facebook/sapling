@@ -41,13 +41,15 @@ HGTMP="${TMPDIR-/tmp}/hgeditor.$RANDOM.$RANDOM.$RANDOM.$$"
 
 cat "$1" > "$HGTMP/msg"
 
-CHECKSUM=`md5sum "$HGTMP/msg"`
+MD5=$(which md5sum 2>/dev/null) || \
+    MD5=$(which md5 2>/dev/null) 
+[ -x "${MD5}" ] && CHECKSUM=`${MD5} "$HGTMP/msg"`
 if [ -s "$HGTMP/diff" ]; then
     $EDITOR "$HGTMP/msg" "$HGTMP/diff" || exit $?
 else
     $EDITOR "$HGTMP/msg" || exit $?
 fi
-echo "$CHECKSUM" | md5sum -c >/dev/null 2>&1 && exit 13
+[ -x "${MD5}" ] && (echo "$CHECKSUM" | ${MD5} -c >/dev/null 2>&1 && exit 13)
 
 mv "$HGTMP/msg" "$1"
 
