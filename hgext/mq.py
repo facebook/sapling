@@ -36,8 +36,6 @@ from mercurial import ui, hg, revlog, commands, util
 
 versionstr = "0.45"
 
-repomap = {}
-
 commands.norepo += " qclone qversion"
 
 class queue:
@@ -1141,24 +1139,24 @@ class queue:
 
 def delete(ui, repo, patch, **opts):
     """remove a patch from the series file"""
-    q = repomap[repo]
+    q = repo.mq
     q.delete(repo, patch)
     q.save_dirty()
     return 0
 
 def applied(ui, repo, patch=None, **opts):
     """print the patches already applied"""
-    repomap[repo].qapplied(repo, patch)
+    repo.mq.qapplied(repo, patch)
     return 0
 
 def unapplied(ui, repo, patch=None, **opts):
     """print the patches not yet applied"""
-    repomap[repo].unapplied(repo, patch)
+    repo.mq.unapplied(repo, patch)
     return 0
 
 def qimport(ui, repo, *filename, **opts):
     """import a patch"""
-    q = repomap[repo]
+    q = repo.mq
     q.qimport(repo, filename, patch=opts['name'],
               existing=opts['existing'], force=opts['force'])
     q.save_dirty()
@@ -1166,7 +1164,7 @@ def qimport(ui, repo, *filename, **opts):
 
 def init(ui, repo, **opts):
     """init a new queue repository"""
-    q = repomap[repo]
+    q = repo.mq
     r = q.init(repo, create=opts['create_repo'])
     q.save_dirty()
     if r:
@@ -1226,34 +1224,34 @@ def clone(ui, source, dest=None, **opts):
 
 def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository"""
-    q = repomap[repo]
+    q = repo.mq
     r = q.qrepo()
     if not r: raise util.Abort('no queue repository')
     commands.commit(r.ui, r, *pats, **opts)
 
 def series(ui, repo, **opts):
     """print the entire series file"""
-    repomap[repo].qseries(repo, missing=opts['missing'])
+    repo.mq.qseries(repo, missing=opts['missing'])
     return 0
 
 def top(ui, repo, **opts):
     """print the name of the current patch"""
-    repomap[repo].top(repo)
+    repo.mq.top(repo)
     return 0
 
 def next(ui, repo, **opts):
     """print the name of the next patch"""
-    repomap[repo].next(repo)
+    repo.mq.next(repo)
     return 0
 
 def prev(ui, repo, **opts):
     """print the name of the previous patch"""
-    repomap[repo].prev(repo)
+    repo.mq.prev(repo)
     return 0
 
 def new(ui, repo, patch, **opts):
     """create a new patch"""
-    q = repomap[repo]
+    q = repo.mq
     message=commands.logmessage(**opts)
     q.new(repo, patch, msg=message, force=opts['force'])
     q.save_dirty()
@@ -1261,7 +1259,7 @@ def new(ui, repo, patch, **opts):
 
 def refresh(ui, repo, **opts):
     """update the current patch"""
-    q = repomap[repo]
+    q = repo.mq
     message=commands.logmessage(**opts)
     q.refresh(repo, msg=message, short=opts['short'])
     q.save_dirty()
@@ -1270,7 +1268,7 @@ def refresh(ui, repo, **opts):
 def diff(ui, repo, *files, **opts):
     """diff of the current patch"""
     # deep in the dirstate code, the walkhelper method wants a list, not a tuple
-    repomap[repo].diff(repo, list(files))
+    repo.mq.diff(repo, list(files))
     return 0
 
 def lastsavename(path):
@@ -1299,7 +1297,7 @@ def savename(path):
 
 def push(ui, repo, patch=None, **opts):
     """push the next patch onto the stack"""
-    q = repomap[repo]
+    q = repo.mq
     mergeq = None
 
     if opts['all']:
@@ -1327,7 +1325,7 @@ def pop(ui, repo, patch=None, **opts):
         ui.warn('using patch queue: %s\n' % q.path)
         localupdate = False
     else:
-        q = repomap[repo]
+        q = repo.mq
     q.pop(repo, patch, force=opts['force'], update=localupdate, all=opts['all'])
     q.save_dirty()
     return 0
@@ -1335,7 +1333,7 @@ def pop(ui, repo, patch=None, **opts):
 def restore(ui, repo, rev, **opts):
     """restore the queue state saved by a rev"""
     rev = repo.lookup(rev)
-    q = repomap[repo]
+    q = repo.mq
     q.restore(repo, rev, delete=opts['delete'],
               qupdate=opts['update'])
     q.save_dirty()
@@ -1343,7 +1341,7 @@ def restore(ui, repo, rev, **opts):
 
 def save(ui, repo, **opts):
     """save current queue state"""
-    q = repomap[repo]
+    q = repo.mq
     message=commands.logmessage(**opts)
     ret = q.save(repo, msg=message)
     if ret:
@@ -1379,7 +1377,7 @@ def strip(ui, repo, rev, **opts):
         backup = 'strip'
     elif opts['nobackup']:
         backup = 'none'
-    repomap[repo].strip(repo, rev, backup=backup)
+    repo.mq.strip(repo, rev, backup=backup)
     return 0
 
 def version(ui, q=None):
@@ -1395,7 +1393,7 @@ def reposetup(ui, repo):
 
             tagscache = super(self.__class__, self).tags()
 
-            q = repomap[repo]
+            q = self.mq
             if not q.applied:
                 return tagscache
 
@@ -1411,7 +1409,7 @@ def reposetup(ui, repo):
             return tagscache
 
     repo.__class__ = MqRepo
-    repomap[repo] = queue(ui, repo.join(""))
+    repo.mq = queue(ui, repo.join(""))
 
 cmdtable = {
     "qapplied": (applied, [], 'hg qapplied [PATCH]'),
