@@ -1195,9 +1195,8 @@ def clone(ui, source, dest=None, **opts):
     qbase, destrev = None, None
     if sr.local():
         reposetup(ui, sr)
-        sq = repomap[sr]
-        if sq.applied:
-            qbase = revlog.bin(sq.applied[0].split(':')[0])
+        if sr.mq.applied:
+            qbase = revlog.bin(sr.mq.applied[0].split(':')[0])
             if not hg.islocal(dest):
                 destrev = sr.parents(qbase)[0]
     ui.note(_('cloning main repo\n'))
@@ -1216,8 +1215,7 @@ def clone(ui, source, dest=None, **opts):
         if qbase:
             ui.note(_('stripping applied patches from destination repo\n'))
             reposetup(ui, dr)
-            dq = repomap[dr]
-            dq.strip(dr, qbase, update=False, backup=None)
+            dr.mq.strip(dr, qbase, update=False, backup=None)
         if not opts['noupdate']:
             ui.note(_('updating destination repo\n'))
             dr.update(dr.changelog.tip())
