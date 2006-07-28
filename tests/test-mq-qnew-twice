@@ -11,3 +11,5 @@ hg qnew first.patch
 
 touch ../first.patch
 hg qimport ../first.patch
+
+exit 0
