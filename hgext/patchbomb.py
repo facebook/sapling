@@ -135,17 +135,17 @@ def patchbomb(ui, repo, *revs, **opts):
             msg = email.MIMEMultipart.MIMEMultipart()
             if body: msg.attach(email.MIMEText.MIMEText(body, 'plain'))
             p = email.MIMEText.MIMEText('\n'.join(patch), 'x-patch')
-            node = bin(node)
+            binnode = bin(node)
             # if node is mq patch, it will have patch file name as tag
-            patchname = [t for t in repo.nodetags(node)
+            patchname = [t for t in repo.nodetags(binnode)
                          if t.endswith('.patch') or t.endswith('.diff')]
             if patchname:
                 patchname = patchname[0]
             elif total > 1:
                 patchname = commands.make_filename(repo, '%b-%n.patch',
-                                                   node, idx, total)
+                                                   binnode, idx, total)
             else:
-                patchname = commands.make_filename(repo, '%b.patch', node)
+                patchname = commands.make_filename(repo, '%b.patch', binnode)
             p['Content-Disposition'] = 'inline; filename=' + patchname
             msg.attach(p)
         else:
