@@ -1388,31 +1388,30 @@ def version(ui, q=None):
     return 0
 
 def reposetup(ui, repo):
-    repomap[repo] = queue(ui, repo.join(""))
-    oldtags = repo.tags
+    class MqRepo(repo.__class__):
+        def tags(self):
+            if self.tagscache:
+                return self.tagscache
 
-    def qtags():
-        if repo.tagscache:
-            return repo.tagscache
+            tagscache = super(self.__class__, self).tags()
 
-        tagscache = oldtags()
+            q = repomap[repo]
+            if not q.applied:
+                return tagscache
 
-        q = repomap[repo]
-        if len(q.applied) == 0:
+            mqtags = [patch.split(':') for patch in q.applied]
+            mqtags.append((mqtags[-1][0], 'qtip'))
+            mqtags.append((mqtags[0][0], 'qbase'))
+            for patch in mqtags:
+                if patch[1] in tagscache:
+                    self.ui.warn('Tag %s overrides mq patch of the same name\n' % patch[1])
+                else:
+                    tagscache[patch[1]] = revlog.bin(patch[0])
+
             return tagscache
 
-        mqtags = [patch.split(':') for patch in q.applied]
-        mqtags.append((mqtags[-1][0], 'qtip'))
-        mqtags.append((mqtags[0][0], 'qbase'))
-        for patch in mqtags:
-            if patch[1] in tagscache:
-                repo.ui.warn('Tag %s overrides mq patch of the same name\n' % patch[1])
-            else:
-                tagscache[patch[1]] = revlog.bin(patch[0])
-
-        return tagscache
-
-    repo.tags = qtags
+    repo.__class__ = MqRepo
+    repomap[repo] = queue(ui, repo.join(""))
 
 cmdtable = {
     "qapplied": (applied, [], 'hg qapplied [PATCH]'),
