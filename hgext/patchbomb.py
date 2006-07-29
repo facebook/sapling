@@ -288,6 +288,7 @@ def patchbomb(ui, repo, *revs, **opts):
             fp.close()
         else:
             ui.status('Sending ', m['Subject'], ' ...\n')
+            m.__delitem__('bcc')
             mail.sendmail(sender, to + bcc + cc, m.as_string(0))
 
 cmdtable = {
