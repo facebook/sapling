@@ -50,7 +50,7 @@ class bisect(object):
             if r:
                 self.badrev = hg.bin(r.pop(0))
 
-    def __del__(self):
+    def write(self):
         if not os.path.isdir(self.path):
             return
         f = self.opener(self.good_path, "w")
@@ -288,7 +288,10 @@ for subcommands see "hg bisect help\"
     if len(args) > bisectcmdtable[cmd][1]:
         ui.warn(_("bisect: Too many arguments\n"))
         return help_()
-    return bisectcmdtable[cmd][0](*args)
+    try:
+        return bisectcmdtable[cmd][0](*args)
+    finally:
+        b.write()
 
 cmdtable = {
     "bisect": (bisect_run, [], _("hg bisect [help|init|reset|next|good|bad]")),
