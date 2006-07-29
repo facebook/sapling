@@ -344,7 +344,11 @@ class queue:
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
             if len(files) > 0:
-                commands.addremove_lock(self.ui, repo, files,
+                cwd = repo.getcwd()
+                cfiles = files
+                if cwd:
+                    cfiles = [util.pathto(cwd, f) for f in files]
+                commands.addremove_lock(self.ui, repo, cfiles,
                                         opts={}, wlock=wlock)
             n = repo.commit(files, message, user, date, force=1, lock=lock,
                             wlock=wlock)
