@@ -287,7 +287,8 @@ def make_filename(repo, pat, node,
         if node:
             expander.update(node_expander)
         if node and revwidth is not None:
-            expander['r'] = lambda: str(r.rev(node)).zfill(revwidth)
+            expander['r'] = (lambda:
+                    str(repo.changelog.rev(node)).zfill(revwidth))
         if total is not None:
             expander['N'] = lambda: str(total)
         if seqno is not None:
