@@ -1,0 +1,114 @@
+#!/bin/sh
+
+HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
+echo "[extensions]" >> $HGTMP/.hgrc
+echo "mq=" >> $HGTMP/.hgrc
+
+echo % help
+hg help mq
+
+hg init a
+cd a
+echo a > a
+mkdir b
+echo z > b/z
+hg ci -Ama
+
+echo % qinit
+
+hg qinit
+
+cd ..
+hg init b
+
+echo % -R qinit
+
+hg -R b qinit
+
+hg init c
+
+echo % qinit -c
+
+hg --cwd c qinit -c
+hg -R c/.hg/patches st
+
+echo % qnew implies add
+
+hg -R c qnew test.patch
+hg -R c/.hg/patches st
+
+cd a
+
+echo % qnew -m
+
+hg qnew -m 'foo bar' test.patch
+cat .hg/patches/test.patch
+
+echo % qrefresh
+
+echo a >> a
+hg qrefresh
+sed -e "s/\(^diff -r \)\([a-f0-9]* \)/\1 x/" \
+    -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/test.patch
+
+echo % qpop
+
+hg qpop
+
+echo % qpush
+
+hg qpush
+
+cd ..
+
+echo % pop/push outside repo
+
+hg -R a qpop
+hg -R a qpush
+
+cd a
+hg qnew test2.patch
+
+echo % qrefresh in subdir
+
+cd b
+echo a > a
+hg add a
+hg qrefresh
+
+echo % pop/push -a in subdir
+
+hg qpop -a
+hg --traceback qpush -a
+
+echo % qseries
+hg qseries
+
+echo % qapplied
+hg qapplied
+
+echo % qtop
+hg qtop
+
+echo % qprev
+hg qprev
+
+echo % qnext
+hg qnext
+
+echo % pop, qnext, qprev, qapplied
+hg qpop
+hg qnext
+hg qprev
+hg qapplied
+
+echo % qunapplied
+hg qunapplied
+
+echo % strip
+cd ../../b
+echo x>x
+hg ci -Ama
+hg strip tip 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg unbundle .hg/strip-backup/*
