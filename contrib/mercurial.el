@@ -718,7 +718,11 @@ code by typing `M-x find-library mercurial RET'."
       (goto-char pos)
       (end-of-line 1)
       (delete-region pos (point)))
-    (cd (hg-root))))
+    (let ((hg-root-dir (hg-root)))
+      (if (not hg-root-dir)
+	  (error "error: %s: directory is not part of a Mercurial repository."
+		 default-directory)
+	(cd (hg-root))))))
 
 (defun hg-add (path)
   "Add PATH to the Mercurial repository on the next commit.
