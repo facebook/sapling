@@ -1,0 +1,17 @@
+#!/bin/sh
+
+HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
+echo "[extensions]" >> $HGTMP/.hgrc
+echo "mq=" >> $HGTMP/.hgrc
+
+hg init foo
+cd foo
+echo foo > foo
+hg add foo
+
+# mq may keep a reference to the repository so __del__ will not be called
+# and .hg/journal.dirstate will not be deleted:
+HGEDITOR=false hg ci
+HGEDITOR=false hg ci
+
+exit 0
