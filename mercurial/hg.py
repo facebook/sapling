@@ -12,86 +12,43 @@ from i18n import gettext as _
 demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
 demandload(globals(), "errno lock os shutil util")
 
-def bundle(ui, path):
-    if path.startswith('bundle://'):
-        path = path[9:]
-    else:
-        path = path[7:]
-    s = path.split("+", 1)
-    if len(s) == 1:
-        repopath, bundlename = "", s[0]
-    else:
-        repopath, bundlename = s
-    return bundlerepo.bundlerepository(ui, repopath, bundlename)
-
-def hg(ui, path):
-    ui.warn(_("hg:// syntax is deprecated, please use http:// instead\n"))
-    return httprepo.httprepository(ui, path.replace("hg://", "http://"))
-
-def local_(ui, path, create=0):
-    if path.startswith('file:'):
-        path = path[5:]
-    if not create and os.path.isfile(path):
-        return bundlerepo.bundlerepository(ui, '', path)
-    return localrepo.localrepository(ui, path, create)
-
-def ssh_(ui, path, create=0):
-    return sshrepo.sshrepository(ui, path, create)
-
-def old_http(ui, path):
-    ui.warn(_("old-http:// syntax is deprecated, "
-              "please use static-http:// instead\n"))
-    return statichttprepo.statichttprepository(
-        ui, path.replace("old-http://", "http://"))
-
-def static_http(ui, path):
-    return statichttprepo.statichttprepository(
-        ui, path.replace("static-http://", "http://"))
+def _local(path):
+    return os.path.isfile(util.drop_scheme('file', path)) and bundlerepo or localrepo
 
 schemes = {
-    'bundle': bundle,
-    'file': local_,
-    'hg': hg,
-    'http': lambda ui, path: httprepo.httprepository(ui, path),
-    'https': lambda ui, path: httprepo.httpsrepository(ui, path),
-    'old-http': old_http,
-    'ssh': ssh_,
-    'static-http': static_http,
+    'bundle': bundlerepo,
+    'file': _local,
+    'hg': httprepo,
+    'http': httprepo,
+    'https': httprepo,
+    'old-http': statichttprepo,
+    'ssh': sshrepo,
+    'static-http': statichttprepo,
     }
 
-remote_schemes = [
-    'bundle',
-    'hg',
-    'http',
-    'https',
-    'old-http',
-    'ssh',
-    'static-http',
-    ]
-
-def islocal(repo):
-    '''return true if repo or path is local'''
-    if isinstance(repo, str):
-        c = repo.find(':')
-        return c <= 0 or repo[:c] not in remote_schemes
-    return repo.local()
-
-def repository(ui, path=None, create=0):
-    scheme = None
+def _lookup(path):
+    scheme = 'file'
     if path:
         c = path.find(':')
         if c > 0:
-            scheme = schemes.get(path[:c])
-    else:
-        path = ''
-    ctor = scheme or schemes['file']
-    if create:
+            scheme = path[:c]
+    thing = schemes.get(scheme) or schemes['file']
+    try:
+        return thing(path)
+    except TypeError:
+        return thing
+    
+def islocal(repo):
+    '''return true if repo or path is local'''
+    if isinstance(repo, str):
         try:
-            return ctor(ui, path, create)
-        except TypeError:
-            raise util.Abort(_('cannot create new repository over "%s" protocol') %
-                             scheme)
-    return ctor(ui, path)
+            return _lookup(repo).islocal(repo)
+        except AttributeError:
+            return False
+    return repo.local()
+
+def repository(ui, path=None, create=False):
+    return _lookup(path).instance(ui, path, create)
 
 def defaultdest(source):
     '''return default destination of clone if none is given'''

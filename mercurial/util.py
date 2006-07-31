@@ -996,3 +996,11 @@ def bytecount(nbytes):
         if nbytes >= divisor * multiplier:
             return format % (nbytes / float(divisor))
     return units[-1][2] % nbytes
+
+def drop_scheme(scheme, path):
+    sc = scheme + ':'
+    if path.startswith(sc):
+        path = path[len(sc):]
+        if path.startswith('//'):
+            path = path[2:]
+    return path

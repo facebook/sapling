@@ -2271,3 +2271,8 @@ def aftertrans(base):
                     os.path.join(p, "undo.dirstate"))
     return a
 
+def instance(ui, path, create):
+    return localrepository(ui, util.drop_scheme('file', path), create)
+    
+def islocal(path):
+    return True

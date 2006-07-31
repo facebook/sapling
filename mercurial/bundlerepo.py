@@ -237,3 +237,18 @@ class bundlerepository(localrepo.localrepository):
             self.bundlefile.close()
         if self.tempfile is not None:
             os.unlink(self.tempfile)
+
+def instance(ui, path, create):
+    if create:
+        raise util.Abort(_('cannot create new bundle repository'))
+    path = util.drop_scheme('file', path)
+    if path.startswith('bundle:'):
+        path = util.drop_scheme('bundle', path)
+        s = path.split("+", 1)
+        if len(s) == 1:
+            repopath, bundlename = "", s[0]
+        else:
+            repopath, bundlename = s
+    else:
+        repopath, bundlename = '', path
+    return bundlerepository(ui, repopath, bundlename)

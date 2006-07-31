@@ -204,3 +204,5 @@ class sshrepository(remoterepository):
 
     def stream_out(self):
         return self.do_cmd('stream_out')
+
+instance = sshrepository
