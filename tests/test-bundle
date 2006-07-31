@@ -30,9 +30,13 @@ cd ..
 hg init empty
 hg -R test bundle full.hg empty
 hg -R test unbundle full.hg
-hg -R empty unbundle full.hg
 hg -R empty heads
 hg -R empty verify
+
+hg --cwd test pull ../full.hg
+hg --cwd empty pull ../full.hg
+hg -R empty rollback
+hg --cwd empty pull ../full.hg
 
 rm -rf empty
 hg init empty

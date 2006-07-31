@@ -31,6 +31,8 @@ def hg(ui, path):
 def local_(ui, path, create=0):
     if path.startswith('file:'):
         path = path[5:]
+    if not create and os.path.isfile(path):
+        return bundlerepo.bundlerepository(ui, '', path)
     return localrepo.localrepository(ui, path, create)
 
 def ssh_(ui, path, create=0):
