@@ -548,6 +548,13 @@ def show_changeset(ui, repo, opts):
         return t
     return changeset_printer(ui, repo)
 
+def setremoteconfig(ui, opts):
+    "copy remote options to ui tree"
+    if opts.get('ssh'):
+        ui.setconfig("ui", "ssh", opts['ssh'])
+    if opts.get('remotecmd'):
+        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+
 def show_version(ui):
     """output version and copyright information"""
     ui.write(_("Mercurial Distributed SCM (version %s)\n")
@@ -982,7 +989,7 @@ def clone(ui, source, dest=None, **opts):
     .hg/hgrc will be created on the remote side. Look at the help text
     for the pull command for important details about ssh:// URLs.
     """
-    ui.setconfig_remoteopts(**opts)
+    setremoteconfig(ui, opts)
     hg.clone(ui, ui.expandpath(source), dest,
              pull=opts['pull'],
              stream=opts['uncompressed'],
@@ -1827,7 +1834,7 @@ def incoming(ui, repo, source="default", **opts):
     See pull for valid source format details.
     """
     source = ui.expandpath(source)
-    ui.setconfig_remoteopts(**opts)
+    setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
     incoming = repo.findincoming(other, force=opts["force"])
@@ -1883,7 +1890,7 @@ def init(ui, dest=".", **opts):
     Look at the help text for the pull command for important details
     about ssh:// URLs.
     """
-    ui.setconfig_remoteopts(**opts)
+    setremoteconfig(ui, opts)
     hg.repository(ui, dest, create=1)
 
 def locate(ui, repo, *pats, **opts):
@@ -2061,7 +2068,7 @@ def outgoing(ui, repo, dest=None, **opts):
     See pull for valid destination format details.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    ui.setconfig_remoteopts(**opts)
+    setremoteconfig(ui, opts)
     revs = None
     if opts['rev']:
         revs = [repo.lookup(rev) for rev in opts['rev']]
@@ -2183,7 +2190,7 @@ def pull(ui, repo, source="default", **opts):
       with the --ssh command line option.
     """
     source = ui.expandpath(source)
-    ui.setconfig_remoteopts(**opts)
+    setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
     ui.status(_('pulling from %s\n') % (source))
@@ -2221,7 +2228,7 @@ def push(ui, repo, dest=None, **opts):
     feature is enabled on the remote Mercurial server.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    ui.setconfig_remoteopts(**opts)
+    setremoteconfig(ui, opts)
 
     other = hg.repository(ui, dest)
     ui.status('pushing to %s\n' % (dest))
