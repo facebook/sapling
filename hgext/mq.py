@@ -1393,7 +1393,7 @@ def reposetup(ui, repo):
             if self.tagscache:
                 return self.tagscache
 
-            tagscache = super(self.__class__, self).tags()
+            tagscache = super(MqRepo, self).tags()
 
             q = self.mq
             if not q.applied:
