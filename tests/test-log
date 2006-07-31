@@ -1,0 +1,30 @@
+#!/bin/sh
+
+hg init a
+
+cd a
+echo a > a
+hg ci -Ama -d '1 0'
+
+hg cp a b
+hg ci -mb -d '2 0'
+
+mkdir dir
+hg mv b dir
+hg ci -mc -d '3 0'
+
+hg mv a b
+hg ci -md -d '4 0'
+
+hg mv dir/b e
+hg ci -me -d '5 0'
+
+hg log a
+echo % -f, directory
+hg log -f dir
+echo % -f, but no args
+hg log -f
+echo % one rename
+hg log -vf a
+echo % many renames
+hg log -vf e

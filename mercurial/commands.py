@@ -125,6 +125,7 @@ def walkchangerevs(ui, repo, pats, opts):
 
 
     files, matchfn, anypats = matchpats(repo, pats, opts)
+    follow = opts.get('follow')
 
     if repo.changelog.count() == 0:
         return [], False, matchfn
@@ -144,37 +145,54 @@ def walkchangerevs(ui, repo, pats, opts):
     if not slowpath and not files:
         # No files, no patterns.  Display all revs.
         wanted = dict(zip(revs, revs))
+    copies = []
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
-        def filerevgen(filelog):
+        def filerevgen(filelog, node):
             cl_count = repo.changelog.count()
-            for i, window in increasing_windows(filelog.count()-1, -1):
+            if node is None:
+                last = filelog.count() - 1
+            else:
+                last = filelog.rev(node)
+            for i, window in increasing_windows(last, -1):
                 revs = []
                 for j in xrange(i - window, i + 1):
-                    revs.append(filelog.linkrev(filelog.node(j)))
+                    n = filelog.node(j)
+                    revs.append((filelog.linkrev(n),
+                                 follow and filelog.renamed(n)))
                 revs.reverse()
                 for rev in revs:
                     # only yield rev for which we have the changelog, it can
                     # happen while doing "hg log" during a pull or commit
-                    if rev < cl_count:
+                    if rev[0] < cl_count:
                         yield rev
-
+        def iterfiles():
+            for filename in files:
+                yield filename, None
+            for filename_node in copies:
+                yield filename_node
         minrev, maxrev = min(revs), max(revs)
-        for file_ in files:
+        for file_, node in iterfiles():
             filelog = repo.file(file_)
             # A zero count may be a directory or deleted file, so
             # try to find matching entries on the slow path.
             if filelog.count() == 0:
                 slowpath = True
                 break
-            for rev in filerevgen(filelog):
+            for rev, copied in filerevgen(filelog, node):
                 if rev <= maxrev:
                     if rev < minrev:
                         break
                     fncache.setdefault(rev, [])
                     fncache[rev].append(file_)
                     wanted[rev] = 1
+                    if follow and copied:
+                        copies.append(copied)
     if slowpath:
+        if follow:
+            raise util.Abort(_('can only follow copies/renames for explicit '
+                               'file names'))
+
         # The slow path checks files modified in every changeset.
         def changerevgen():
             for i, window in increasing_windows(repo.changelog.count()-1, -1):
@@ -1930,7 +1948,12 @@ def locate(ui, repo, *pats, **opts):
 def log(ui, repo, *pats, **opts):
     """show revision history of entire repository or files
 
-    Print the revision history of the specified files or the entire project.
+    Print the revision history of the specified files or the entire
+    project.
+
+    File history is shown without following rename or copy history of
+    files.  Use -f/--follow to follow history across renames and
+    copies.
 
     By default this command outputs: changeset id and hash, tags,
     non-trivial parents, user, date and time, and a summary for each
@@ -3043,6 +3066,8 @@ table = {
     "^log|history":
         (log,
          [('b', 'branches', None, _('show branches')),
+          ('f', 'follow', None,
+           _('follow file history across copies and renames')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),

@@ -1,0 +1,78 @@
+adding a
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     a
+
+% -f, directory
+abort: can only follow copies/renames for explicit file names
+% -f, but no args
+changeset:   4:8c1c8408f737
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+summary:     e
+
+changeset:   3:c4ba038c90ce
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     d
+
+changeset:   2:21fba396af4c
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     c
+
+changeset:   1:c0296dabce9b
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     b
+
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     a
+
+% one rename
+changeset:   0:8580ff50825a50c8f716709acdf8de0deddcd6ab
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+files:       a
+description:
+a
+
+
+% many renames
+changeset:   4:8c1c8408f7371319750ea2d4fa7969828effbcf4
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+files:       dir/b e
+description:
+e
+
+
+changeset:   2:21fba396af4c801f9717de6c415b6cc9620437e8
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+files:       b dir/b
+description:
+c
+
+
+changeset:   1:c0296dabce9bf0cd3fdd608de26693c91cd6bbf4
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+files:       b
+description:
+b
+
+
+changeset:   0:8580ff50825a50c8f716709acdf8de0deddcd6ab
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+files:       a
+description:
+a
+
+
