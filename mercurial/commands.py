@@ -3352,9 +3352,8 @@ def findext(name):
     try:
         return sys.modules[external[name]]
     except KeyError:
-        dotname = '.' + name
         for k, v in external.iteritems():
-            if k.endswith('.' + name) or v == name:
+            if k.endswith('.' + name) or k.endswith('/' + name) or v == name:
                 return sys.modules[v]
         raise KeyError(name)
 
