@@ -29,6 +29,7 @@ list of commands (use "hg help -v mq" to show aliases and global options):
  qcommit      commit changes in the queue repository
  qdelete      remove a patch from the series file
  qdiff        diff of the current patch
+ qfold        fold the named patches into the current patch
  qheader      Print the header of the topmost or specified patch
  qimport      import a patch
  qinit        init a new queue repository

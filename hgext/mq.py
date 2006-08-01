@@ -1,3 +1,4 @@
+
 # queue.py - patch queues for mercurial
 #
 # Copyright 2005 Chris Mason <mason@suse.com>
@@ -270,6 +271,48 @@ class queue:
                 return (err, head)
         return (0, head)
 
+    def patch(self, repo, patchfile):
+        '''Apply patchfile  to the working directory.
+        patchfile: file name of patch'''
+        try:
+            pp = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
+            f = os.popen("%s -d '%s' -p1 --no-backup-if-mismatch < '%s'" %
+                         (pp, repo.root, patchfile))
+        except:
+            self.ui.warn("patch failed, unable to continue (try -v)\n")
+            return (None, [], False)
+        files = []
+        fuzz = False
+        for l in f:
+            l = l.rstrip('\r\n');
+            if self.ui.verbose:
+                self.ui.warn(l + "\n")
+            if l[:14] == 'patching file ':
+                pf = os.path.normpath(l[14:])
+                # when patch finds a space in the file name, it puts
+                # single quotes around the filename.  strip them off
+                if pf[0] == "'" and pf[-1] == "'":
+                    pf = pf[1:-1]
+                if pf not in files:
+                    files.append(pf)
+                printed_file = False
+                file_str = l
+            elif l.find('with fuzz') >= 0:
+                if not printed_file:
+                    self.ui.warn(file_str + '\n')
+                    printed_file = True
+                self.ui.warn(l + '\n')
+                fuzz = True
+            elif l.find('saving rejects to file') >= 0:
+                self.ui.warn(l + '\n')
+            elif l.find('FAILED') >= 0:
+                if not printed_file:
+                    self.ui.warn(file_str + '\n')
+                    printed_file = True
+                self.ui.warn(l + '\n')
+
+        return (not f.close(), files, fuzz)
+        
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, wlock=None):
         # TODO unify with commands.py
@@ -299,44 +342,8 @@ class queue:
                     message.append("\nimported patch %s" % patch)
                 message = '\n'.join(message)
 
-            try:
-                pp = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-                f = os.popen("%s -d '%s' -p1 --no-backup-if-mismatch < '%s'" %
-                             (pp, repo.root, pf))
-            except:
-                self.ui.warn("patch failed, unable to continue (try -v)\n")
-                err = 1
-                break
-            files = []
-            fuzz = False
-            for l in f:
-                l = l.rstrip('\r\n');
-                if self.ui.verbose:
-                    self.ui.warn(l + "\n")
-                if l[:14] == 'patching file ':
-                    pf = os.path.normpath(l[14:])
-                    # when patch finds a space in the file name, it puts
-                    # single quotes around the filename.  strip them off
-                    if pf[0] == "'" and pf[-1] == "'":
-                        pf = pf[1:-1]
-                    if pf not in files:
-                        files.append(pf)
-                    printed_file = False
-                    file_str = l
-                elif l.find('with fuzz') >= 0:
-                    if not printed_file:
-                        self.ui.warn(file_str + '\n')
-                        printed_file = True
-                    self.ui.warn(l + '\n')
-                    fuzz = True
-                elif l.find('saving rejects to file') >= 0:
-                    self.ui.warn(l + '\n')
-                elif l.find('FAILED') >= 0:
-                    if not printed_file:
-                        self.ui.warn(file_str + '\n')
-                        printed_file = True
-                    self.ui.warn(l + '\n')
-            patcherr = f.close()
+            (patcherr, files, fuzz) = self.patch(repo, pf)
+            patcherr = not patcherr
 
             if merge and len(files) > 0:
                 # Mark as merged and update dirstate parent info
@@ -1289,6 +1296,47 @@ def diff(ui, repo, *files, **opts):
     repo.mq.diff(repo, list(files))
     return 0
 
+def fold(ui, repo, *files):
+    """fold the named patches into the current patch
+    Patches must not yet be applied."""
+    q = repo.mq
+
+    if not files:
+        raise util.Abort(_('qfold requires at least one patch name'))
+    if not q.check_toppatch(repo):
+        raise util.Abort(_('No patches applied\n'))
+
+    parent = q.lookup('qtip')
+    patches = []
+    messages = []
+    for f in files:
+        patch = q.lookup(f)
+        if patch in patches or patch == parent:
+            self.ui.warn(_('Skipping already folded patch %s') % patch)
+        if q.isapplied(patch):
+            raise util.Abort(_('qfold cannot fold already applied patch %s') % patch)
+        patches.append(patch)
+
+    for patch in patches:
+        messages.append(q.readheaders(patch)[0])
+        pf = os.path.join(q.path, patch)
+        (patchsuccess, files, fuzz) = q.patch(repo, pf)
+        if not patchsuccess:
+            raise util.Abort(_('Error folding patch %s') % patch)
+
+    message = q.readheaders(parent)[0]
+    for msg in messages:
+        message.append('* * *')
+        message.extend(msg)
+    message = '\n'.join(message)
+
+    q.refresh(repo, msg=message)
+
+    for patch in patches:
+        q.delete(repo, patch)
+
+    q.save_dirty()
+
 def header(ui, repo, patch=None):
     """Print the header of the topmost or specified patch"""
     q = repo.mq
@@ -1462,6 +1510,7 @@ cmdtable = {
          'hg qcommit [OPTION]... [FILE]...'),
     "^qdiff": (diff, [], 'hg qdiff [FILE]...'),
     "qdelete": (delete, [], 'hg qdelete PATCH'),
+    'qfold': (fold, [], 'hg qfold PATCH...'),
     'qheader': (header, [],
                 _('hg qheader [PATCH]')),
     "^qimport":
