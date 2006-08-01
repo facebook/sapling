@@ -811,6 +811,16 @@ class queue:
         message, comments, user, date, patchfound = self.readheaders(patch)
 
         patchf = self.opener(patch, "w")
+        msg = msg.rstrip()
+        if msg:
+            if comments:
+                # Remove existing message.
+                ci = 0
+                for mi in range(len(message)):
+                    while message[mi] != comments[ci]:
+                        ci += 1
+                    del comments[ci]
+            comments.append(msg)
         if comments:
             comments = "\n".join(comments) + '\n\n'
             patchf.write(comments)
