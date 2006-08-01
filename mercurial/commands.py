@@ -1832,9 +1832,13 @@ def import_(ui, repo, patch1, *patches, **opts):
             if not diffs_seen:
                 raise util.Abort(_('no diffs found'))
 
-            files = util.patch(strip, tmpname, ui)
+            files = util.patch(strip, tmpname, ui, cwd=repo.root)
             if len(files) > 0:
-                addremove_lock(ui, repo, files, {})
+                cfiles = files
+                cwd = repo.getcwd()
+                if cwd:
+                    cfiles = [util.pathto(cwd, f) for f in files]
+                addremove_lock(ui, repo, cfiles, {})
             repo.commit(files, message, user, date)
         finally:
             os.unlink(tmpname)

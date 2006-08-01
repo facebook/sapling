@@ -93,11 +93,15 @@ def find_in_path(name, path, default=None):
             return p_name
     return default
 
-def patch(strip, patchname, ui):
+def patch(strip, patchname, ui, cwd=None):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
     patcher = find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-    fp = os.popen('%s -p%d < "%s"' % (patcher, strip, patchname))
+    args = []
+    if cwd:
+        args.append('-d "%s"' % cwd)
+    fp = os.popen('%s %s -p%d < "%s"' % (patcher, ' '.join(args), strip,
+                                         patchname))
     files = {}
     for line in fp:
         line = line.rstrip()
