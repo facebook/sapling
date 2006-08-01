@@ -1184,7 +1184,12 @@ def qimport(ui, repo, *filename, **opts):
     return 0
 
 def init(ui, repo, **opts):
-    """init a new queue repository"""
+    """init a new queue repository
+
+    The queue repository is unversioned by default. If -c is
+    specified, qinit will create a separate nested repository
+    for patches. Use qcommit to commit changes to this queue
+    repository."""
     q = repo.mq
     r = q.init(repo, create=opts['create_repo'])
     q.save_dirty()
@@ -1269,7 +1274,19 @@ def prev(ui, repo, **opts):
     return 0
 
 def new(ui, repo, patch, **opts):
-    """create a new patch"""
+    """create a new patch
+
+    qnew creates a new patch on top of the currently-applied patch
+    (if any). It will refuse to run if there are any outstanding
+    changes unless -f is specified, in which case the patch will
+    be initialised with them.
+
+    -m or -l set the patch header as well as the commit message.
+    If neither is specified, the patch header is empty and the
+    commit message is 'New patch: PATCH'
+
+    If -f is specified, the patch will be initialized with any
+    uncommitted changes. Otherwise, if there outsta"""
     q = repo.mq
     message=commands.logmessage(**opts)
     q.new(repo, patch, msg=message, force=opts['force'])
@@ -1476,7 +1493,7 @@ def strip(ui, repo, rev, **opts):
     return 0
 
 def version(ui, q=None):
-    """print the version number"""
+    """print the version number of the mq extension"""
     ui.write("mq version %s\n" % versionstr)
     return 0
 
@@ -1546,7 +1563,7 @@ cmdtable = {
         (new,
          [('m', 'message', '', _('use <text> as commit message')),
           ('l', 'logfile', '', _('read the commit message from <file>')),
-          ('f', 'force', None, 'force')],
+          ('f', 'force', None, _('import uncommitted changes into patch'))],
          'hg qnew [-m TEXT] [-l FILE] [-f] PATCH'),
     "qnext": (next, [], 'hg qnext'),
     "qprev": (prev, [], 'hg qprev'),
