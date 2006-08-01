@@ -1273,6 +1273,12 @@ def refresh(ui, repo, **opts):
     """update the current patch"""
     q = repo.mq
     message=commands.logmessage(**opts)
+    if opts['edit']:
+        if message:
+            raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
+        patch = q.applied[-1].split(':')[1]
+        (message, comment, user, date, hasdiff) = q.readheaders(patch)
+        message = ui.edit('\n'.join(message), user or ui.username())
     q.refresh(repo, msg=message, short=opts['short'])
     q.save_dirty()
     return 0
@@ -1475,10 +1481,11 @@ cmdtable = {
          'hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]'),
     "^qrefresh":
         (refresh,
-         [('m', 'message', '', _('change commit message with <text>')),
+         [('e', 'edit', None, _('edit commit message')),
+          ('m', 'message', '', _('change commit message with <text>')),
           ('l', 'logfile', '', _('change commit message with <file> content')),
           ('s', 'short', None, 'short refresh')],
-         'hg qrefresh [-m TEXT] [-l FILE] [-s]'),
+         'hg qrefresh [-e] [-m TEXT] [-l FILE] [-s]'),
     "qrestore":
         (restore,
          [('d', 'delete', None, 'delete save entry'),
