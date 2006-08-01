@@ -997,10 +997,21 @@ def clone(ui, source, dest=None, **opts):
     .hg/hgrc file, as the default to be used for future pulls.
 
     For efficiency, hardlinks are used for cloning whenever the source
-    and destination are on the same filesystem.  Some filesystems,
-    such as AFS, implement hardlinking incorrectly, but do not report
-    errors.  In these cases, use the --pull option to avoid
-    hardlinking.
+    and destination are on the same filesystem (note this applies only
+    to the repository data, not to the checked out files).  Some
+    filesystems, such as AFS, implement hardlinking incorrectly, but
+    do not report errors.  In these cases, use the --pull option to
+    avoid hardlinking.
+
+    You can safely clone repositories and checked out files using full
+    hardlinks with
+
+      $ cp -al REPO REPOCLONE
+
+    which is the fastest way to clone. However, the operation is not
+    atomic (making sure REPO is not modified during the operation is
+    up to you) and you have to make sure your editor breaks hardlinks
+    (Emacs and most Linux Kernel tools do so).
 
     See pull for valid source format details.
 
@@ -2929,7 +2940,7 @@ table = {
         (clone,
          [('U', 'noupdate', None, _('do not update the new working directory')),
           ('r', 'rev', [],
-           _('a changeset you would like to have after cloning')),
+           _('a changeset you would like to have after cloning (note this forces the usage of --pull)')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
