@@ -2940,7 +2940,9 @@ table = {
         (clone,
          [('U', 'noupdate', None, _('do not update the new working directory')),
           ('r', 'rev', [],
-           _('a changeset you would like to have after cloning (note this forces the usage of --pull)')),
+           _('a changeset you would like to have after cloning \n'
+             '                    '
+             '(note this forces --pull and thus is slower)')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
