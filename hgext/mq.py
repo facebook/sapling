@@ -382,13 +382,19 @@ class queue:
         tr.close()
         return (err, n)
 
-    def delete(self, repo, patch):
+    def delete(self, repo, patch, force=False):
         patch = self.lookup(patch, strict=True)
         info = self.isapplied(patch)
         if info:
             raise util.Abort(_("cannot delete applied patch %s") % patch)
         if patch not in self.series:
             raise util.Abort(_("patch %s not in series file") % patch)
+        if force:
+            r = self.qrepo()
+            if r:
+                r.remove([patch], True)
+            else:
+                os.unlink(os.path.join(self.path, patch))
         i = self.find_series(patch)
         del self.full_series[i]
         self.read_series(self.full_series)
@@ -1159,9 +1165,12 @@ class queue:
             qrepo.add(added)
 
 def delete(ui, repo, patch, **opts):
-    """remove a patch from the series file"""
+    """remove a patch from the series file
+
+    The patch must not be applied.
+    With -f, deletes the patch file as well as the series entry."""
     q = repo.mq
-    q.delete(repo, patch)
+    q.delete(repo, patch, force=opts.get('force'))
     q.save_dirty()
     return 0
 
@@ -1559,7 +1568,10 @@ cmdtable = {
          commands.table["^commit|ci"][1],
          'hg qcommit [OPTION]... [FILE]...'),
     "^qdiff": (diff, [], 'hg qdiff [FILE]...'),
-    "qdelete": (delete, [], 'hg qdelete PATCH'),
+    "qdelete":
+        (delete,
+         [('f', 'force', None, _('delete patch file'))],
+          'hg qdelete [-f] PATCH'),
     'qfold': (fold, [], 'hg qfold PATCH...'),
     'qheader': (header, [],
                 _('hg qheader [PATCH]')),
