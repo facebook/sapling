@@ -1289,6 +1289,21 @@ def diff(ui, repo, *files, **opts):
     repo.mq.diff(repo, list(files))
     return 0
 
+def header(ui, repo, patch=None):
+    """Print the header of the topmost or specified patch"""
+    q = repo.mq
+
+    if patch:
+        patch = q.lookup(patch)
+    else:
+        if not q.applied:
+            ui.write('No patches applied\n')
+            return
+        patch = q.lookup('qtip')
+    message = repo.mq.readheaders(patch)[0]
+
+    ui.write('\n'.join(message) + '\n')
+
 def lastsavename(path):
     (dir, base) = os.path.split(path)
     names = os.listdir(dir)
@@ -1447,6 +1462,8 @@ cmdtable = {
          'hg qcommit [OPTION]... [FILE]...'),
     "^qdiff": (diff, [], 'hg qdiff [FILE]...'),
     "qdelete": (delete, [], 'hg qdelete PATCH'),
+    'qheader': (header, [],
+                _('hg qheader [PATCH]')),
     "^qimport":
         (qimport,
          [('e', 'existing', None, 'import file in patch dir'),
