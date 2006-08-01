@@ -92,7 +92,7 @@ def darcs_tip(darcs_repo):
 
 def darcs_pull(hg_repo, darcs_repo, chash):
 	old_tip = darcs_tip(darcs_repo)
-	res     = cmd("darcs pull '%s' --all --match='hash %s'" % (darcs_repo, chash), hg_repo)
+	res     = cmd("darcs pull \"%s\" --all --match=\"hash %s\"" % (darcs_repo, chash), hg_repo)
 	print res
 	new_tip = darcs_tip(darcs_repo)
 	if not new_tip != old_tip + 1:
@@ -110,7 +110,8 @@ def hg_commit( hg_repo, text, author, date ):
 	old_tip = hg_tip(hg_repo)
 	cmd("hg add -X _darcs", hg_repo)
 	cmd("hg remove -X _darcs --after", hg_repo)
-	res = cmd("hg commit -l %s -u '%s' -d '%s 0'"  % (tmpfile, author, date), hg_repo)
+	res = cmd("hg commit -l %s -u \"%s\" -d \"%s 0\""  % (tmpfile, author, date), hg_repo)
+	os.close(fd)
 	os.unlink(tmpfile)
 	new_tip = hg_tip(hg_repo)
 	if not new_tip == old_tip + 1:
@@ -156,7 +157,7 @@ if __name__ == "__main__":
 		print "Given HG repository must not exist when no SKIP is specified."
 		sys.exit(-1)
 	if skip == None:
-		cmd("hg init '%s'" % (hg_repo))
+		cmd("hg init \"%s\"" % (hg_repo))
 		cmd("darcs initialize", hg_repo)
 	# Get the changes from the Darcs repository
 	change_number = 0
