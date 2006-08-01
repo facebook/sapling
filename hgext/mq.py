@@ -1411,6 +1411,56 @@ def pop(ui, repo, patch=None, **opts):
     q.save_dirty()
     return 0
 
+def rename(ui, repo, patch, name=None, **opts):
+    """rename a patch
+
+    With one argument, renames the current patch to PATCH1.
+    With two arguments, renames PATCH1 to PATCH2."""
+
+    q = repo.mq
+
+    if not name:
+        name = patch
+        patch = None
+
+    if name in q.series:
+        raise util.Abort(_('A patch named %s already exists in the series file') % name)
+
+    absdest = os.path.join(q.path, name)
+    if os.path.exists(absdest):
+        raise util.Abort(_('%s already exists') % absdest)
+    
+    if patch:
+        patch = q.lookup(patch)
+    else:
+        if not q.applied:
+            ui.write(_('No patches applied\n'))
+            return
+        patch = q.lookup('qtip')
+
+    if ui.verbose:
+        ui.write('Renaming %s to %s\n' % (patch, name))
+    i = q.find_series(patch)
+    q.full_series[i] = name
+    q.read_series(q.full_series)
+    q.series_dirty = 1
+
+    info = q.isapplied(patch)
+    if info:
+        q.applied[info[0]] = info[1] + ':' + name
+    q.applied_dirty = 1
+
+    util.rename(os.path.join(q.path, patch), absdest)
+    r = q.qrepo()
+    if r:
+        wlock = r.wlock()
+        if r.dirstate.state(name) == 'r':
+            r.undelete([name], wlock)
+        r.copy(patch, name, wlock)
+        r.remove([patch], False, wlock)
+
+    q.save_dirty()
+
 def restore(ui, repo, rev, **opts):
     """restore the queue state saved by a rev"""
     rev = repo.lookup(rev)
@@ -1552,6 +1602,8 @@ cmdtable = {
           ('l', 'logfile', '', _('change commit message with <file> content')),
           ('s', 'short', None, 'short refresh')],
          'hg qrefresh [-e] [-m TEXT] [-l FILE] [-s]'),
+    'qrename':
+        (rename, [], 'hg qrename PATCH1 [PATCH2]'),
     "qrestore":
         (restore,
          [('d', 'delete', None, 'delete save entry'),
