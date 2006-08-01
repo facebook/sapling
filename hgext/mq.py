@@ -1296,15 +1296,24 @@ def diff(ui, repo, *files, **opts):
     repo.mq.diff(repo, list(files))
     return 0
 
-def fold(ui, repo, *files):
+def fold(ui, repo, *files, **opts):
     """fold the named patches into the current patch
-    Patches must not yet be applied."""
+
+    Patches must not yet be applied.
+    The header for each folded patch will be concatenated with
+    the current patch header, separated by a line of '* * *'."""
+
     q = repo.mq
 
     if not files:
         raise util.Abort(_('qfold requires at least one patch name'))
     if not q.check_toppatch(repo):
         raise util.Abort(_('No patches applied\n'))
+
+    message=commands.logmessage(**opts)
+    if opts['edit']:
+        if message:
+            raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
 
     parent = q.lookup('qtip')
     patches = []
@@ -1318,17 +1327,22 @@ def fold(ui, repo, *files):
         patches.append(patch)
 
     for patch in patches:
-        messages.append(q.readheaders(patch)[0])
+        if not message:
+            messages.append(q.readheaders(patch)[0])
         pf = os.path.join(q.path, patch)
         (patchsuccess, files, fuzz) = q.patch(repo, pf)
         if not patchsuccess:
             raise util.Abort(_('Error folding patch %s') % patch)
 
-    message = q.readheaders(parent)[0]
-    for msg in messages:
-        message.append('* * *')
-        message.extend(msg)
-    message = '\n'.join(message)
+    if not message:
+        message, comments, user = q.readheaders(parent)[0:3]
+        for msg in messages:
+            message.append('* * *')
+            message.extend(msg)
+        message = '\n'.join(message)
+
+    if opts['edit']:
+        message = ui.edit(message, user or ui.username())
 
     q.refresh(repo, msg=message)
 
@@ -1510,7 +1524,12 @@ cmdtable = {
          'hg qcommit [OPTION]... [FILE]...'),
     "^qdiff": (diff, [], 'hg qdiff [FILE]...'),
     "qdelete": (delete, [], 'hg qdelete PATCH'),
-    'qfold': (fold, [], 'hg qfold PATCH...'),
+    'qfold':
+        (fold,
+         [('e', 'edit', None, _('edit patch header')),
+          ('m', 'message', '', _('set patch header to <text>')),
+          ('l', 'logfile', '', _('set patch header to contents of <file>'))],
+         'hg qfold [-e] [-m <text>] [-l <file] PATCH...'),
     'qheader': (header, [],
                 _('hg qheader [PATCH]')),
     "^qimport":
