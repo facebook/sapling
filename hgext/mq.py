@@ -1602,7 +1602,7 @@ cmdtable = {
           ('l', 'logfile', '', _('change commit message with <file> content')),
           ('s', 'short', None, 'short refresh')],
          'hg qrefresh [-e] [-m TEXT] [-l FILE] [-s]'),
-    'qrename':
+    'qrename|qmv':
         (rename, [], 'hg qrename PATCH1 [PATCH2]'),
     "qrestore":
         (restore,
