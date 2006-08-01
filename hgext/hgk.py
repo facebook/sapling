@@ -334,6 +334,3 @@ cmdtable = {
                            ('n', 'max-count', 0, 'max-count')],
                  "hg debug-rev-list [options] revs"),
 }
-
-def reposetup(ui, repo):
-    pass
