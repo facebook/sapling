@@ -934,17 +934,23 @@ class queue:
                 self.ui.write("%d " % self.series.index(p))
             self.ui.write("%s\n" % p)
 
-    def qseries(self, repo, missing=None):
+    def qseries(self, repo, missing=None, summary=False):
         start = self.series_end()
         if not missing:
-            for p in self.series[:start]:
+            for i in range(len(self.series)):
+                patch = self.series[i]
                 if self.ui.verbose:
-                    self.ui.write("%d A " % self.series.index(p))
-                self.ui.write("%s\n" % p)
-            for p in self.series[start:]:
-                if self.ui.verbose:
-                    self.ui.write("%d U " % self.series.index(p))
-                self.ui.write("%s\n" %  p)
+                    if i < start:
+                        status = 'A'
+                    else:
+                        status = 'U'
+                    self.ui.write('%d %s ' % (i, status))
+                if summary:
+                    msg = self.readheaders(patch)[0]
+                    msg = msg and ': ' + msg[0] or ': '
+                else:
+                    msg = ''
+                self.ui.write('%s%s\n' % (patch, msg))
         else:
             list = []
             for root, dirs, files in os.walk(self.path):
@@ -1255,7 +1261,7 @@ def commit(ui, repo, *pats, **opts):
 
 def series(ui, repo, **opts):
     """print the entire series file"""
-    repo.mq.qseries(repo, missing=opts['missing'])
+    repo.mq.qseries(repo, missing=opts['missing'], summary=opts['summary'])
     return 0
 
 def top(ui, repo, **opts):
@@ -1604,7 +1610,8 @@ cmdtable = {
          'hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]'),
     "qseries":
         (series,
-         [('m', 'missing', None, 'print patches not in series')],
+         [('m', 'missing', None, 'print patches not in series'),
+          ('s', 'summary', None, _('print first line of patch header'))],
          'hg qseries [-m]'),
     "^strip":
         (strip,
