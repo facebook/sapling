@@ -1321,7 +1321,13 @@ def diff(ui, repo, *files, **opts):
 def fold(ui, repo, *files, **opts):
     """fold the named patches into the current patch
 
-    Patches must not yet be applied.
+    Patches must not yet be applied. Each patch will be successively
+    applied to the current patch in the order given. If all the
+    patches apply successfully, the current patch will be refreshed
+    with the new cumulative patch, and the folded patches will
+    be deleted. With -f/--force, the folded patch files will
+    be removed afterwards.
+
     The header for each folded patch will be concatenated with
     the current patch header, separated by a line of '* * *'."""
 
@@ -1369,7 +1375,7 @@ def fold(ui, repo, *files, **opts):
     q.refresh(repo, msg=message)
 
     for patch in patches:
-        q.delete(repo, patch)
+        q.delete(repo, patch, force=opts['force'])
 
     q.save_dirty()
 
@@ -1602,6 +1608,7 @@ cmdtable = {
     'qfold':
         (fold,
          [('e', 'edit', None, _('edit patch header')),
+          ('f', 'force', None, _('delete folded patch files')),
           ('m', 'message', '', _('set patch header to <text>')),
           ('l', 'logfile', '', _('set patch header to contents of <file>'))],
          'hg qfold [-e] [-m <text>] [-l <file] PATCH...'),
