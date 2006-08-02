@@ -1013,6 +1013,10 @@ def clone(ui, source, dest=None, **opts):
     up to you) and you have to make sure your editor breaks hardlinks
     (Emacs and most Linux Kernel tools do so).
 
+    If you use the -r option to clone up to a specific revision, no
+    subsequent revisions will be present in the cloned repository.
+    This option implies --pull, even on local repositories.
+
     See pull for valid source format details.
 
     It is possible to specify an ssh:// URL as the destination, but no
@@ -2940,9 +2944,7 @@ table = {
         (clone,
          [('U', 'noupdate', None, _('do not update the new working directory')),
           ('r', 'rev', [],
-           _('a changeset you would like to have after cloning \n'
-             '                    '
-             '(note this forces --pull and thus is slower)')),
+           _('a changeset you would like to have after cloning')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
