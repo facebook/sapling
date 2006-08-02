@@ -1228,7 +1228,7 @@ def clone(ui, source, dest=None, **opts):
     Source patch repository is looked for in <src>/.hg/patches by
     default.  Use -p <url> to change.
     '''
-    commands.setremoteconfig(**opts)
+    commands.setremoteconfig(ui, opts)
     if dest is None:
         dest = hg.defaultdest(source)
     sr = hg.repository(ui, ui.expandpath(source))
