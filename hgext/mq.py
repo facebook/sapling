@@ -57,7 +57,7 @@ class queue:
 
         if os.path.exists(os.path.join(self.path, self.series_path)):
             self.full_series = self.opener(self.series_path).read().splitlines()
-        self.read_series(self.full_series)
+        self.parse_series()
 
         if os.path.exists(os.path.join(self.path, self.status_path)):
             self.applied = self.opener(self.status_path).read().splitlines()
@@ -75,18 +75,12 @@ class queue:
             index += 1
         return None
 
-    def read_series(self, list):
-        def matcher(list):
-            pre = re.compile("(\s*)([^#]+)")
-            for l in list:
-                m = pre.match(l)
-                if m:
-                    s = m.group(2)
-                    s = s.rstrip()
-                    if len(s) > 0:
-                        yield s
+    def parse_series(self):
         self.series = []
-        self.series = [ x for x in matcher(list) ]
+        for l in self.full_series:
+            s = l.split('#', 1)[0].strip()
+            if s:
+                self.series.append(s)
 
     def save_dirty(self):
         if self.applied_dirty:
@@ -397,7 +391,7 @@ class queue:
                 os.unlink(os.path.join(self.path, patch))
         i = self.find_series(patch)
         del self.full_series[i]
-        self.read_series(self.full_series)
+        self.parse_series()
         self.series_dirty = 1
 
     def check_toppatch(self, repo):
@@ -435,7 +429,7 @@ class queue:
             raise util.Abort(_("repo commit failed"))
         self.full_series[insert:insert] = [patch]
         self.applied.append(revlog.hex(n) + ":" + patch)
-        self.read_series(self.full_series)
+        self.parse_series()
         self.series_dirty = 1
         self.applied_dirty = 1
         p = self.opener(patch, "w")
@@ -1012,7 +1006,7 @@ class queue:
         self.ui.warn("restoring status: %s\n" % lines[0])
         self.full_series = series
         self.applied = applied
-        self.read_series(self.full_series)
+        self.parse_series()
         self.series_dirty = 1
         self.applied_dirty = 1
         heads = repo.changelog.heads()
@@ -1159,7 +1153,7 @@ class queue:
                                  % patch)
             index = self.full_series_end() + i
             self.full_series[index:index] = [patch]
-            self.read_series(self.full_series)
+            self.parse_series()
             self.ui.warn("adding %s to series file\n" % patch)
             i += 1
             added.append(patch)
@@ -1487,7 +1481,7 @@ def rename(ui, repo, patch, name=None, **opts):
         ui.write('Renaming %s to %s\n' % (patch, name))
     i = q.find_series(patch)
     q.full_series[i] = name
-    q.read_series(q.full_series)
+    q.parse_series()
     q.series_dirty = 1
 
     info = q.isapplied(patch)
