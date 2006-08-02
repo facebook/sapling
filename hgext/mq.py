@@ -1291,10 +1291,7 @@ def new(ui, repo, patch, **opts):
 
     -m or -l set the patch header as well as the commit message.
     If neither is specified, the patch header is empty and the
-    commit message is 'New patch: PATCH'
-
-    If -f is specified, the patch will be initialized with any
-    uncommitted changes. Otherwise, if there outsta"""
+    commit message is 'New patch: PATCH'"""
     q = repo.mq
     message=commands.logmessage(**opts)
     q.new(repo, patch, msg=message, force=opts['force'])
