@@ -614,17 +614,16 @@ class queue:
     # 3) patchname[-+]num to indicate an offset in the series file
     def lookup(self, patch, strict=False):
         def partial_name(s):
-            count = 0
             if s in self.series:
                 return s
-            for x in self.series:
-                if s in x:
-                    count += 1
-                    last = x
-                if count > 1:
-                    return None
-            if count:
-                return last
+            matches = [x for x in self.series if s in x]
+            if len(matches) > 1:
+                self.ui.warn(_('patch name "%s" is ambiguous:\n') % s)
+                for m in matches:
+                    self.ui.warn('  %s\n' % m)
+                return None
+            if matches:
+                return matches[0]
             if len(self.series) > 0 and len(self.applied) > 0:
                 if s == 'qtip':
                     return self.series[self.series_end()-1]
