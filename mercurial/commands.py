@@ -942,7 +942,8 @@ def backout(ui, repo, rev, **opts):
         else:
             ui.status(_('the backout changeset is a new head - '
                         'do not forget to merge\n'))
-            ui.status(_('(use "backout -m" if you want to auto-merge)\n'))
+            ui.status(_('(use "backout --merge" '
+                        'if you want to auto-merge)\n'))
 
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
