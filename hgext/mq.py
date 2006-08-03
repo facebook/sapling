@@ -67,7 +67,7 @@ class queue:
 
         if os.path.exists(os.path.join(self.path, self.series_path)):
             self.full_series = self.opener(self.series_path).read().splitlines()
-        self.read_series(self.full_series)
+        self.parse_series()
 
         if os.path.exists(os.path.join(self.path, self.status_path)):
             self.applied = [StatusEntry(l)
@@ -86,34 +86,21 @@ class queue:
             index += 1
         return None
 
-    def read_series(self, list):
-        def matcher(list):
-            pre = re.compile("(\s*)([^#]+)")
-            for l in list:
-                m = pre.match(l)
-                if m:
-                    s = m.group(2)
-                    s = s.rstrip()
-                    if len(s) > 0:
-                        yield s
+    def parse_series(self):
         self.series = []
-        self.series = [ x for x in matcher(list) ]
+        for l in self.full_series:
+            s = l.split('#', 1)[0].strip()
+            if s:
+                self.series.append(s)
 
     def save_dirty(self):
-        if self.applied_dirty:
-            if len(self.applied) > 0:
-                nl = "\n"
-            else:
-                nl = ""
-            f = self.opener(self.status_path, "w")
-            f.write("\n".join([str(x) for x in self.applied]) + nl)
-        if self.series_dirty:
-            if len(self.full_series) > 0:
-                nl = "\n"
-            else:
-                nl = ""
-            f = self.opener(self.series_path, "w")
-            f.write("\n".join(self.full_series) + nl)
+        def write_list(items, path):
+            fp = self.opener(path, 'w')
+            for i in items:
+                print >> fp, i
+            fp.close()
+        if self.applied_dirty: write_list(map(str, self.applied), self.status_path)
+        if self.series_dirty: write_list(self.full_series, self.series_path)
 
     def readheaders(self, patch):
         def eatdiff(lines):
@@ -406,7 +393,7 @@ class queue:
                 os.unlink(os.path.join(self.path, patch))
         i = self.find_series(patch)
         del self.full_series[i]
-        self.read_series(self.full_series)
+        self.parse_series()
         self.series_dirty = 1
 
     def check_toppatch(self, repo):
@@ -443,7 +430,7 @@ class queue:
             raise util.Abort(_("repo commit failed"))
         self.full_series[insert:insert] = [patch]
         self.applied.append(StatusEntry(revlog.hex(n), patch))
-        self.read_series(self.full_series)
+        self.parse_series()
         self.series_dirty = 1
         self.applied_dirty = 1
         p = self.opener(patch, "w")
@@ -941,10 +928,7 @@ class queue:
             start = self.series_end()
         else:
             start = self.series.index(patch) + 1
-        for p in self.series[start:]:
-            if self.ui.verbose:
-                self.ui.write("%d " % self.series.index(p))
-            self.ui.write("%s\n" % p)
+        return [(i, self.series[i]) for i in xrange(start, len(self.series))]
 
     def qseries(self, repo, missing=None, summary=False):
         start = self.series_end()
@@ -1019,7 +1003,7 @@ class queue:
         self.ui.warn("restoring status: %s\n" % lines[0])
         self.full_series = series
         self.applied = applied
-        self.read_series(self.full_series)
+        self.parse_series()
         self.series_dirty = 1
         self.applied_dirty = 1
         heads = repo.changelog.heads()
@@ -1165,7 +1149,7 @@ class queue:
                                  % patch)
             index = self.full_series_end() + i
             self.full_series[index:index] = [patch]
-            self.read_series(self.full_series)
+            self.parse_series()
             self.ui.warn("adding %s to series file\n" % patch)
             i += 1
             added.append(patch)
@@ -1192,8 +1176,10 @@ def applied(ui, repo, patch=None, **opts):
 
 def unapplied(ui, repo, patch=None, **opts):
     """print the patches not yet applied"""
-    repo.mq.unapplied(repo, patch)
-    return 0
+    for i, p in repo.mq.unapplied(repo, patch):
+        if ui.verbose:
+            ui.write("%d " % i)
+        ui.write("%s\n" % p)
 
 def qimport(ui, repo, *filename, **opts):
     """import a patch"""
@@ -1234,7 +1220,7 @@ def clone(ui, source, dest=None, **opts):
     Source patch repository is looked for in <src>/.hg/patches by
     default.  Use -p <url> to change.
     '''
-    commands.setremoteconfig(**opts)
+    commands.setremoteconfig(ui, opts)
     if dest is None:
         dest = hg.defaultdest(source)
     sr = hg.repository(ui, ui.expandpath(source))
@@ -1303,10 +1289,7 @@ def new(ui, repo, patch, **opts):
 
     -m or -l set the patch header as well as the commit message.
     If neither is specified, the patch header is empty and the
-    commit message is 'New patch: PATCH'
-
-    If -f is specified, the patch will be initialized with any
-    uncommitted changes. Otherwise, if there outsta"""
+    commit message is 'New patch: PATCH'"""
     q = repo.mq
     message=commands.logmessage(**opts)
     q.new(repo, patch, msg=message, force=opts['force'])
@@ -1336,7 +1319,13 @@ def diff(ui, repo, *files, **opts):
 def fold(ui, repo, *files, **opts):
     """fold the named patches into the current patch
 
-    Patches must not yet be applied.
+    Patches must not yet be applied. Each patch will be successively
+    applied to the current patch in the order given. If all the
+    patches apply successfully, the current patch will be refreshed
+    with the new cumulative patch, and the folded patches will
+    be deleted. With -f/--force, the folded patch files will
+    be removed afterwards.
+
     The header for each folded patch will be concatenated with
     the current patch header, separated by a line of '* * *'."""
 
@@ -1384,7 +1373,7 @@ def fold(ui, repo, *files, **opts):
     q.refresh(repo, msg=message)
 
     for patch in patches:
-        q.delete(repo, patch)
+        q.delete(repo, patch, force=opts['force'])
 
     q.save_dirty()
 
@@ -1493,7 +1482,7 @@ def rename(ui, repo, patch, name=None, **opts):
         ui.write('Renaming %s to %s\n' % (patch, name))
     i = q.find_series(patch)
     q.full_series[i] = name
-    q.read_series(q.full_series)
+    q.parse_series()
     q.series_dirty = 1
 
     info = q.isapplied(patch)
@@ -1617,6 +1606,7 @@ cmdtable = {
     'qfold':
         (fold,
          [('e', 'edit', None, _('edit patch header')),
+          ('f', 'force', None, _('delete folded patch files')),
           ('m', 'message', '', _('set patch header to <text>')),
           ('l', 'logfile', '', _('set patch header to contents of <file>'))],
          'hg qfold [-e] [-m <text>] [-l <file] PATCH...'),
