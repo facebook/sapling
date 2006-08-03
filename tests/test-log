@@ -28,3 +28,38 @@ echo % one rename
 hg log -vf a
 echo % many renames
 hg log -vf e
+
+# log --follow tests
+hg init ../follow
+cd ../follow
+echo base > base
+hg ci -Ambase -d '1 0'
+
+echo r1 >> base
+hg ci -Amr1 -d '1 0'
+echo r2 >> base
+hg ci -Amr2 -d '1 0'
+
+hg up -C 1
+echo b1 > b1
+hg ci -Amb1 -d '1 0'
+
+echo % log -f
+hg log -f
+
+hg up -C 0
+echo b2 > b2
+hg ci -Amb2 -d '1 0'
+
+echo % log -f -r 1:tip
+hg log -f -r 1:tip
+
+hg up -C 3
+hg merge tip
+hg ci -mm12 -d '1 0'
+
+echo postm >> b1
+hg ci -Amb1.1 -d'1 0'
+
+echo % log --follow-first
+hg log --follow-first
