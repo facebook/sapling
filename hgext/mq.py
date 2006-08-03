@@ -921,10 +921,7 @@ class queue:
             start = self.series_end()
         else:
             start = self.series.index(patch) + 1
-        for p in self.series[start:]:
-            if self.ui.verbose:
-                self.ui.write("%d " % self.series.index(p))
-            self.ui.write("%s\n" % p)
+        return [(i, self.series[i]) for i in xrange(start, len(self.series))]
 
     def qseries(self, repo, missing=None, summary=False):
         start = self.series_end()
@@ -1173,8 +1170,10 @@ def applied(ui, repo, patch=None, **opts):
 
 def unapplied(ui, repo, patch=None, **opts):
     """print the patches not yet applied"""
-    repo.mq.unapplied(repo, patch)
-    return 0
+    for i, p in repo.mq.unapplied(repo, patch):
+        if ui.verbose:
+            ui.write("%d " % i)
+        ui.write("%s\n" % p)
 
 def qimport(ui, repo, *filename, **opts):
     """import a patch"""
