@@ -49,12 +49,13 @@ def islocal(repo):
     return repo.local()
 
 def repository(ui, path=None, create=False):
+    """return a repository object for the specified path"""
     return _lookup(path).instance(ui, path, create)
 
 def defaultdest(source):
     '''return default destination of clone if none is given'''
     return os.path.basename(os.path.normpath(source))
-    
+
 def clone(ui, source, dest=None, pull=False, rev=None, update=True,
           stream=False):
     """Make a copy of an existing repository.
