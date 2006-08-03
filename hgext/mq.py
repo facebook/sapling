@@ -83,20 +83,13 @@ class queue:
                 self.series.append(s)
 
     def save_dirty(self):
-        if self.applied_dirty:
-            if len(self.applied) > 0:
-                nl = "\n"
-            else:
-                nl = ""
-            f = self.opener(self.status_path, "w")
-            f.write("\n".join(self.applied) + nl)
-        if self.series_dirty:
-            if len(self.full_series) > 0:
-                nl = "\n"
-            else:
-                nl = ""
-            f = self.opener(self.series_path, "w")
-            f.write("\n".join(self.full_series) + nl)
+        def write_list(items, path):
+            fp = self.opener(path, 'w')
+            for i in items:
+                print >> fp, i
+            fp.close()
+        if self.applied_dirty: write_list(self.applied, self.status_path)
+        if self.series_dirty: write_list(self.full_series, self.series_path)
 
     def readheaders(self, patch):
         def eatdiff(lines):
