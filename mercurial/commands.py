@@ -130,7 +130,17 @@ def walkchangerevs(ui, repo, pats, opts):
     if repo.changelog.count() == 0:
         return [], False, matchfn
 
-    revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
+    if follow:
+        p = repo.dirstate.parents()[0]
+        if p == nullid:
+            ui.warn(_('No working directory revision; defaulting to tip\n'))
+            start = 'tip'
+        else:
+            start = repo.changelog.rev(p)
+        defrange = '%s:0' % start
+    else:
+        defrange = 'tip:0'
+    revs = map(int, revrange(ui, repo, opts['rev'] or [defrange]))
     wanted = {}
     slowpath = anypats
     fncache = {}
@@ -2016,6 +2026,10 @@ def log(ui, repo, *pats, **opts):
     files.  Use -f/--follow with a file name to follow history across
     renames and copies. --follow without a file name will only show
     ancestors or descendants of the starting revision.
+
+    If no revision range is specified, the default is tip:0 unless
+    --follow is set, in which case the working directory parent is
+    used as the starting revision.
 
     By default this command outputs: changeset id and hash, tags,
     non-trivial parents, user, date and time, and a summary for each
