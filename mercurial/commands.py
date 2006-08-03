@@ -125,7 +125,7 @@ def walkchangerevs(ui, repo, pats, opts):
 
 
     files, matchfn, anypats = matchpats(repo, pats, opts)
-    follow = opts.get('follow')
+    follow = opts.get('follow') or opts.get('follow_first')
 
     if repo.changelog.count() == 0:
         return [], False, matchfn
@@ -217,13 +217,17 @@ def walkchangerevs(ui, repo, pats, opts):
 
     def iterate():
         class followfilter:
-            def __init__(self):
+            def __init__(self, onlyfirst=False):
                 self.startrev = -1
                 self.roots = []
+                self.onlyfirst = onlyfirst
 
             def match(self, rev):
                 def realparents(rev):
-                    return filter(lambda x: x != -1, repo.changelog.parentrevs(rev))
+                    if self.onlyfirst:
+                        return repo.changelog.parentrevs(rev)[0:1]
+                    else:
+                        return filter(lambda x: x != -1, repo.changelog.parentrevs(rev))
 
                 if self.startrev == -1:
                     self.startrev = rev
@@ -249,7 +253,7 @@ def walkchangerevs(ui, repo, pats, opts):
                 return False
 
         if follow and not files:
-            ff = followfilter()
+            ff = followfilter(onlyfirst=opts.get('follow_first'))
             def want(rev):
                 if rev not in wanted:
                     return False
@@ -2025,7 +2029,8 @@ def log(ui, repo, *pats, **opts):
     File history is shown without following rename or copy history of
     files.  Use -f/--follow with a file name to follow history across
     renames and copies. --follow without a file name will only show
-    ancestors or descendants of the starting revision.
+    ancestors or descendants of the starting revision. --follow-first
+    only follows the first parent of merge revisions.
 
     If no revision range is specified, the default is tip:0 unless
     --follow is set, in which case the working directory parent is
@@ -3144,6 +3149,8 @@ table = {
          [('b', 'branches', None, _('show branches')),
           ('f', 'follow', None,
            _('follow changeset history, or file history across copies and renames')),
+          ('', 'follow-first', None,
+           _('only follow the first parent of merge changesets')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
