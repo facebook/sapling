@@ -179,11 +179,11 @@ class queue:
         self.ui.warn("patch didn't work out, merging %s\n" % patch)
 
         # apply failed, strip away that rev and merge.
-        repo.update(head, allow=False, force=True, wlock=wlock)
+        hg.update(repo, head, allow=False, force=True, wlock=wlock)
         self.strip(repo, n, update=False, backup='strip', wlock=wlock)
 
         c = repo.changelog.read(rev)
-        ret = repo.update(rev, allow=True, wlock=wlock)
+        ret = hg.update(repo, rev, allow=True, wlock=wlock)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
         n = repo.commit(None, c[4], c[1], force=1, wlock=wlock)
@@ -299,7 +299,7 @@ class queue:
                 self.ui.warn(l + '\n')
 
         return (not f.close(), files, fuzz)
-        
+
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, wlock=None):
         # TODO unify with commands.py
@@ -526,7 +526,7 @@ class queue:
             if c or a or d or r:
                 raise util.Abort(_("local changes found"))
             urev = self.qparents(repo, rev)
-            repo.update(urev, allow=False, force=True, wlock=wlock)
+            hg.update(repo, urev, allow=False, force=True, wlock=wlock)
             repo.dirstate.write()
 
         # save is a list of all the branches we are truncating away
@@ -1023,7 +1023,7 @@ class queue:
                 if not r:
                     self.ui.warn("Unable to load queue repository\n")
                     return 1
-                r.update(qpp[0], allow=False, force=True)
+                hg.update(r, qpp[0], allow=False, force=True)
 
     def save(self, repo, msg=None):
         if len(self.applied) == 0:
@@ -1245,7 +1245,7 @@ def clone(ui, source, dest=None, **opts):
             dr.mq.strip(dr, qbase, update=False, backup=None)
         if not opts['noupdate']:
             ui.note(_('updating destination repo\n'))
-            dr.update(dr.changelog.tip())
+            hg.update(dr, dr.changelog.tip())
 
 def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository"""

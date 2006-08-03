@@ -10,7 +10,7 @@ from repo import *
 from demandload import *
 from i18n import gettext as _
 demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
-demandload(globals(), "errno lock os shutil util")
+demandload(globals(), "errno lock os shutil util merge")
 
 def _local(path):
     return (os.path.isfile(path and util.drop_scheme('file', path)) and
@@ -38,7 +38,7 @@ def _lookup(path):
         return thing(path)
     except TypeError:
         return thing
-    
+
 def islocal(repo):
     '''return true if repo or path is local'''
     if isinstance(repo, str):
@@ -200,8 +200,17 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dest_lock.release()
 
         if update:
-            dest_repo.update(dest_repo.changelog.tip())
+            merge.update(dest_repo, dest_repo.changelog.tip())
     if dir_cleanup:
         dir_cleanup.close()
 
     return src_repo, dest_repo
+
+
+# This should instead be several functions with short arglists, like
+# update/merge/revert
+
+def update(repo, node, allow=False, force=False, choose=None,
+           moddirstate=True, forcemerge=False, wlock=None, show_stats=True):
+    return merge.update(repo, node, allow, force, choose, moddirstate,
+                        forcemerge, wlock, show_stats)

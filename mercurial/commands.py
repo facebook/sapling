@@ -921,7 +921,7 @@ def backout(ui, repo, rev, **opts):
         if opts['parent']:
             raise util.Abort(_('cannot use --parent on non-merge changeset'))
         parent = p1
-    repo.update(node, force=True, show_stats=False)
+    hg.update(repo, node, force=True, show_stats=False)
     revert_opts = opts.copy()
     revert_opts['rev'] = hex(parent)
     revert(ui, repo, **revert_opts)
@@ -2542,8 +2542,8 @@ def revert(ui, repo, *pats, **opts):
 
     if not opts.get('dry_run'):
         repo.dirstate.forget(forget[0])
-        r = repo.update(node, False, True, update.has_key, False, wlock=wlock,
-                        show_stats=False)
+        r = hg.update(repo, node, False, True, update.has_key, False,
+                      wlock=wlock, show_stats=False)
         repo.dirstate.update(add[0], 'a')
         repo.dirstate.update(undelete[0], 'n')
         repo.dirstate.update(remove[0], 'r')
@@ -2867,7 +2867,7 @@ def doupdate(ui, repo, node=None, merge=False, clean=False, force=None,
             return 1
     else:
         node = node and repo.lookup(node) or repo.changelog.tip()
-    return repo.update(node, allow=merge, force=clean, forcemerge=force)
+    return hg.update(repo, node, allow=merge, force=clean, forcemerge=force)
 
 def verify(ui, repo):
     """verify the integrity of the repository
