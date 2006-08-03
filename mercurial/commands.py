@@ -206,10 +206,51 @@ def walkchangerevs(ui, repo, pats, opts):
                 wanted[rev] = 1
 
     def iterate():
+        class followfilter:
+            def __init__(self):
+                self.startrev = -1
+                self.roots = []
+
+            def match(self, rev):
+                def realparents(rev):
+                    return filter(lambda x: x != -1, repo.changelog.parentrevs(rev))
+
+                if self.startrev == -1:
+                    self.startrev = rev
+                    return True
+
+                if rev > self.startrev:
+                    # forward: all descendants
+                    if not self.roots:
+                        self.roots.append(self.startrev)
+                    for parent in realparents(rev):
+                        if parent in self.roots:
+                            self.roots.append(rev)
+                            return True
+                else:
+                    # backwards: all parents
+                    if not self.roots:
+                        self.roots.extend(realparents(self.startrev))
+                    if rev in self.roots:
+                        self.roots.remove(rev)
+                        self.roots.extend(realparents(rev))
+                        return True
+
+                return False
+
+        if follow and not files:
+            ff = followfilter()
+            def want(rev):
+                if rev not in wanted:
+                    return False
+                return ff.match(rev)
+        else:
+            def want(rev):
+                return rev in wanted
+
         for i, window in increasing_windows(0, len(revs)):
             yield 'window', revs[0] < revs[-1], revs[-1]
-            nrevs = [rev for rev in revs[i:i+window]
-                     if rev in wanted]
+            nrevs = [rev for rev in revs[i:i+window] if want(rev)]
             srevs = list(nrevs)
             srevs.sort()
             for rev in srevs:
@@ -1972,8 +2013,9 @@ def log(ui, repo, *pats, **opts):
     project.
 
     File history is shown without following rename or copy history of
-    files.  Use -f/--follow to follow history across renames and
-    copies.
+    files.  Use -f/--follow with a file name to follow history across
+    renames and copies. --follow without a file name will only show
+    ancestors or descendants of the starting revision.
 
     By default this command outputs: changeset id and hash, tags,
     non-trivial parents, user, date and time, and a summary for each
@@ -3087,7 +3129,7 @@ table = {
         (log,
          [('b', 'branches', None, _('show branches')),
           ('f', 'follow', None,
-           _('follow file history across copies and renames')),
+           _('follow changeset history, or file history across copies and renames')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
