@@ -1,11 +1,12 @@
 adding a
+adding d1/d2/a
 % import exported patch
 requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
 patching file a
 % message should be same
@@ -17,8 +18,8 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
 patching file a
 transaction abort!
@@ -28,8 +29,8 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
 patching file a
 % import from stdin
@@ -37,8 +38,8 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 patching file a
 % override commit message
@@ -46,8 +47,8 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 patching file a
 summary:     override
@@ -56,8 +57,8 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../msg.patch
 patching file a
 user:        email patcher
@@ -67,8 +68,8 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 patching file a
 % plain diff in email, subject, no message body
@@ -76,8 +77,8 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 patching file a
 % plain diff in email, no subject, no message body, should fail
@@ -85,8 +86,8 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 patching file a
 transaction abort!
@@ -96,8 +97,22 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 patching file a
 summary:     second change
+% hg import in a subdirectory
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying ../../../tip.patch
+patching file a
+% message should be 'subdir change'
+summary:     subdir change
+% committer should be 'someoneelse'
+user:        someoneelse
+% should be empty

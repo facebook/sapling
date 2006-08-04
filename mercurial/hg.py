@@ -13,7 +13,8 @@ demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
 demandload(globals(), "errno lock os shutil util")
 
 def _local(path):
-    return os.path.isfile(util.drop_scheme('file', path)) and bundlerepo or localrepo
+    return (os.path.isfile(path and util.drop_scheme('file', path)) and
+            bundlerepo or localrepo)
 
 schemes = {
     'bundle': bundlerepo,
