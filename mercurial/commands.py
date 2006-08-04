@@ -2789,8 +2789,8 @@ def tag(ui, repo, name, rev_=None, **opts):
     necessary.  The file '.hg/localtags' is used for local tags (not
     shared among repositories).
     """
-    if name == "tip":
-        raise util.Abort(_("the name 'tip' is reserved"))
+    if name in ['tip', '.']:
+        raise util.Abort(_("the name '%s' is reserved") % name)
     if rev_ is not None:
         ui.warn(_("use of 'hg tag NAME [REV]' is deprecated, "
                   "please use 'hg tag [-r REV] NAME' instead\n"))
