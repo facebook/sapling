@@ -938,7 +938,7 @@ def backout(ui, repo, rev, **opts):
     if op1 != node:
         if opts['merge']:
             ui.status(_('merging with changeset %s\n') % nice(op1))
-            doupdate(ui, repo, hex(op1), **opts)
+            doupdate(ui, repo, hex(op1), merge=True)
         else:
             ui.status(_('the backout changeset is a new head - '
                         'do not forget to merge\n'))
@@ -2826,7 +2826,7 @@ def undo(ui, repo):
     repo.rollback()
 
 def update(ui, repo, node=None, merge=False, clean=False, force=None,
-           branch=None, **opts):
+           branch=None):
     """update or merge working directory
 
     Update the working directory to the specified revision.
@@ -2844,10 +2844,10 @@ def update(ui, repo, node=None, merge=False, clean=False, force=None,
     if merge:
         ui.warn(_('(the -m/--merge option is deprecated; '
                   'use the merge command instead)\n'))
-    return doupdate(ui, repo, node, merge, clean, force, branch, **opts)
+    return doupdate(ui, repo, node, merge, clean, force, branch)
 
 def doupdate(ui, repo, node=None, merge=False, clean=False, force=None,
-             branch=None, **opts):
+             branch=None):
     if branch:
         br = repo.branchlookup(branch=branch)
         found = []
@@ -2857,7 +2857,7 @@ def doupdate(ui, repo, node=None, merge=False, clean=False, force=None,
         if len(found) > 1:
             ui.warn(_("Found multiple heads for %s\n") % branch)
             for x in found:
-                show_changeset(ui, repo, opts).show(changenode=x, brinfo=br)
+                show_changeset(ui, repo, {}).show(changenode=x, brinfo=br)
             return 1
         if len(found) == 1:
             node = found[0]
