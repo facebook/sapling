@@ -284,11 +284,7 @@ class queue:
             if self.ui.verbose:
                 self.ui.warn(l + "\n")
             if l[:14] == 'patching file ':
-                pf = os.path.normpath(l[14:])
-                # when patch finds a space in the file name, it puts
-                # single quotes around the filename.  strip them off
-                if pf[0] == "'" and pf[-1] == "'":
-                    pf = pf[1:-1]
+                pf = os.path.normpath(util.parse_patch_output(l))
                 if pf not in files:
                     files.append(pf)
                 printed_file = False
