@@ -272,8 +272,8 @@ class queue:
         patchfile: file name of patch'''
         try:
             pp = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-            f = os.popen("%s -d '%s' -p1 --no-backup-if-mismatch < '%s'" %
-                         (pp, repo.root, patchfile))
+            f = os.popen("%s -d %s -p1 --no-backup-if-mismatch < %s" %
+                         (pp, util.shellquote(repo.root), util.shellquote(patchfile)))
         except:
             self.ui.warn("patch failed, unable to continue (try -v)\n")
             return (None, [], False)
