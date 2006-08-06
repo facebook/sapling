@@ -954,11 +954,10 @@ class queue:
                         and not fl.startswith('.')):
                         msng_list.append(fl)
             msng_list.sort()
-            if msng_list:
-                for x in msng_list:
-                    if self.ui.verbose:
-                        self.ui.write("D ")
-                    self.ui.write("%s\n" % x)
+            for x in msng_list:
+                if self.ui.verbose:
+                    self.ui.write("D ")
+                self.ui.write("%s\n" % x)
 
     def issaveline(self, l):
         name = l.split(':')[1]
