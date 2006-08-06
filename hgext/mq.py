@@ -304,7 +304,7 @@ class queue:
                 self.ui.warn(l + '\n')
 
         return (not f.close(), files, fuzz)
-        
+
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, wlock=None):
         # TODO unify with commands.py
@@ -1285,7 +1285,7 @@ def new(ui, repo, patch, **opts):
     If neither is specified, the patch header is empty and the
     commit message is 'New patch: PATCH'"""
     q = repo.mq
-    message=commands.logmessage(**opts)
+    message = commands.logmessage(**opts)
     q.new(repo, patch, msg=message, force=opts['force'])
     q.save_dirty()
     return 0
@@ -1293,7 +1293,7 @@ def new(ui, repo, patch, **opts):
 def refresh(ui, repo, **opts):
     """update the current patch"""
     q = repo.mq
-    message=commands.logmessage(**opts)
+    message = commands.logmessage(**opts)
     if opts['edit']:
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
@@ -1330,7 +1330,7 @@ def fold(ui, repo, *files, **opts):
     if not q.check_toppatch(repo):
         raise util.Abort(_('No patches applied\n'))
 
-    message=commands.logmessage(**opts)
+    message = commands.logmessage(**opts)
     if opts['edit']:
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
@@ -1507,7 +1507,7 @@ def restore(ui, repo, rev, **opts):
 def save(ui, repo, **opts):
     """save current queue state"""
     q = repo.mq
-    message=commands.logmessage(**opts)
+    message = commands.logmessage(**opts)
     ret = q.save(repo, msg=message)
     if ret:
         return ret
