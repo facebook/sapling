@@ -539,7 +539,6 @@ class queue:
         saveheads = []
         savebases = {}
 
-        tip = chlog.tip()
         heads = limitheads(chlog, rev)
         seen = {}
 
@@ -570,7 +569,7 @@ class queue:
                         savebases[x] = 1
 
         # create a changegroup for all the branches we need to keep
-        if backup is "all":
+        if backup == "all":
             backupch = repo.changegroupsubset([rev], chlog.heads(), 'strip')
             bundle(backupch)
         if saveheads:
@@ -585,7 +584,7 @@ class queue:
         if saveheads:
             self.ui.status("adding branch\n")
             commands.unbundle(self.ui, repo, chgrpfile, update=False)
-            if backup is not "strip":
+            if backup != "strip":
                 os.unlink(chgrpfile)
 
     def isapplied(self, patch):
@@ -805,7 +804,6 @@ class queue:
             return
         wlock = repo.wlock()
         self.check_toppatch(repo)
-        qp = self.qparents(repo)
         (top, patch) = (self.applied[-1].rev, self.applied[-1].name)
         top = revlog.bin(top)
         cparents = repo.changelog.parents(top)
@@ -1341,7 +1339,7 @@ def fold(ui, repo, *files, **opts):
     for f in files:
         patch = q.lookup(f)
         if patch in patches or patch == parent:
-            self.ui.warn(_('Skipping already folded patch %s') % patch)
+            ui.warn(_('Skipping already folded patch %s') % patch)
         if q.isapplied(patch):
             raise util.Abort(_('qfold cannot fold already applied patch %s') % patch)
         patches.append(patch)
