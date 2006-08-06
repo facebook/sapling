@@ -505,9 +505,9 @@ class queue:
             # we go in two steps here so the strip loop happens in a
             # sensible order.  When stripping many files, this helps keep
             # our disk access patterns under control.
-            list = seen.keys()
-            list.sort()
-            for f in list:
+            seen_list = seen.keys()
+            seen_list.sort()
+            for f in seen_list:
                 ff = repo.file(f)
                 filerev = seen[f]
                 if filerev != 0:
@@ -944,7 +944,7 @@ class queue:
                     msg = ''
                 self.ui.write('%s%s\n' % (patch, msg))
         else:
-            list = []
+            msng_list = []
             for root, dirs, files in os.walk(self.path):
                 d = root[len(self.path) + 1:]
                 for f in files:
@@ -952,10 +952,10 @@ class queue:
                     if (fl not in self.series and
                         fl not in (self.status_path, self.series_path)
                         and not fl.startswith('.')):
-                        list.append(fl)
-            list.sort()
-            if list:
-                for x in list:
+                        msng_list.append(fl)
+            msng_list.sort()
+            if msng_list:
+                for x in msng_list:
                     if self.ui.verbose:
                         self.ui.write("D ")
                     self.ui.write("%s\n" % x)
@@ -988,11 +988,10 @@ class queue:
             elif datastart != None:
                 l = lines[i].rstrip()
                 se = StatusEntry(l)
-                id = se.rev
-                file = se.name
-                if id:
+                file_ = se.name
+                if se.rev:
                     applied.append(se)
-                series.append(file)
+                series.append(file_)
         if datastart == None:
             self.ui.warn("No saved patch data found\n")
             return 1
@@ -1389,20 +1388,20 @@ def header(ui, repo, patch=None):
     ui.write('\n'.join(message) + '\n')
 
 def lastsavename(path):
-    (dir, base) = os.path.split(path)
-    names = os.listdir(dir)
+    (directory, base) = os.path.split(path)
+    names = os.listdir(directory)
     namere = re.compile("%s.([0-9]+)" % base)
-    max = None
+    maxindex = None
     maxname = None
     for f in names:
         m = namere.match(f)
         if m:
             index = int(m.group(1))
-            if max == None or index > max:
-                max = index
+            if maxindex == None or index > maxindex:
+                maxindex = index
                 maxname = f
     if maxname:
-        return (os.path.join(dir, maxname), max)
+        return (os.path.join(directory, maxname), maxindex)
     return (None, None)
 
 def savename(path):
