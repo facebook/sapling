@@ -42,7 +42,11 @@ commands.norepo += " qclone qversion"
 class StatusEntry:
     def __init__(self, rev, name=None):
         if not name:
-            self.rev, self.name = rev.split(':')
+            fields = rev.split(':')
+            if len(fields) == 2:
+                self.rev, self.name = fields
+            else:
+                self.rev, self.name = None, None
         else:
             self.rev, self.name = rev, name
 
@@ -958,8 +962,7 @@ class queue:
                 self.ui.write("%s\n" % x)
 
     def issaveline(self, l):
-        name = l.split(':')[1]
-        if name == '.hg.patches.save.line':
+        if l.name == '.hg.patches.save.line':
             return True
 
     def qrepo(self, create=False):
@@ -1039,8 +1042,8 @@ class queue:
             pp = r.dirstate.parents()
             msg += "\nDirstate: %s %s" % (hg.hex(pp[0]), hg.hex(pp[1]))
         msg += "\n\nPatch Data:\n"
-        text = msg + "\n".join(str(self.applied)) + '\n' + (ar and "\n".join(ar)
-                                                       + '\n' or "")
+        text = msg + "\n".join([str(x) for x in self.applied]) + '\n' + (ar and
+                   "\n".join(ar) + '\n' or "")
         n = repo.commit(None, text, user=None, force=1)
         if not n:
             self.ui.warn("repo commit failed\n")
