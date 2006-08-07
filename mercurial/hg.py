@@ -214,3 +214,8 @@ def update(repo, node, allow=False, force=False, choose=None,
            moddirstate=True, forcemerge=False, wlock=None, show_stats=True):
     return merge.update(repo, node, allow, force, choose, moddirstate,
                         forcemerge, wlock, show_stats)
+
+def verify(repo):
+    """verify the consistency of a repository"""
+    import verify as _verify
+    return _verify.verify(repo)

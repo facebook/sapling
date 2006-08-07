@@ -2325,7 +2325,7 @@ def recover(ui, repo):
     operation. It should only be necessary when Mercurial suggests it.
     """
     if repo.recover():
-        return repo.verify()
+        return hg.verify(repo)
     return 1
 
 def remove(ui, repo, *pats, **opts):
@@ -2879,7 +2879,7 @@ def verify(ui, repo):
     the changelog, manifest, and tracked files, as well as the
     integrity of their crosslinks and indices.
     """
-    return repo.verify()
+    return hg.verify(repo)
 
 # Command options and aliases are listed here, alphabetically
 
