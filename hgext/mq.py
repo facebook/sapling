@@ -39,7 +39,7 @@ versionstr = "0.45"
 
 commands.norepo += " qclone qversion"
 
-class StatusEntry:
+class statusentry:
     def __init__(self, rev, name=None):
         if not name:
             fields = rev.split(':')
@@ -74,7 +74,7 @@ class queue:
         self.parse_series()
 
         if os.path.exists(os.path.join(self.path, self.status_path)):
-            self.applied = [StatusEntry(l)
+            self.applied = [statusentry(l)
                             for l in self.opener(self.status_path).read().splitlines()]
 
     def find_series(self, patch):
@@ -247,7 +247,7 @@ class queue:
             pname = ".hg.patches.merge.marker"
             n = repo.commit(None, '[mq]: merge marker', user=None, force=1,
                             wlock=wlock)
-            self.applied.append(StatusEntry(revlog.hex(n), pname))
+            self.applied.append(statusentry(revlog.hex(n), pname))
             self.applied_dirty = 1
 
         head = self.qparents(repo)
@@ -265,7 +265,7 @@ class queue:
             rev = revlog.bin(info[1])
             (err, head) = self.mergeone(repo, mergeq, head, patch, rev, wlock)
             if head:
-                self.applied.append(StatusEntry(revlog.hex(head), patch))
+                self.applied.append(statusentry(revlog.hex(head), patch))
                 self.applied_dirty = 1
             if err:
                 return (err, head)
@@ -360,7 +360,7 @@ class queue:
                 raise util.Abort(_("repo commit failed"))
 
             if update_status:
-                self.applied.append(StatusEntry(revlog.hex(n), patch))
+                self.applied.append(statusentry(revlog.hex(n), patch))
 
             if patcherr:
                 if not patchfound:
@@ -429,7 +429,7 @@ class queue:
         if n == None:
             raise util.Abort(_("repo commit failed"))
         self.full_series[insert:insert] = [patch]
-        self.applied.append(StatusEntry(revlog.hex(n), patch))
+        self.applied.append(statusentry(revlog.hex(n), patch))
         self.parse_series()
         self.series_dirty = 1
         self.applied_dirty = 1
@@ -904,7 +904,7 @@ class queue:
 
             self.strip(repo, top, update=False, backup='strip', wlock=wlock)
             n = repo.commit(filelist, message, changes[1], force=1, wlock=wlock)
-            self.applied[-1] = StatusEntry(revlog.hex(n), patch)
+            self.applied[-1] = statusentry(revlog.hex(n), patch)
             self.applied_dirty = 1
         else:
             commands.dodiff(patchf, self.ui, repo, patchparent, None)
@@ -987,7 +987,7 @@ class queue:
                 qpp = [ hg.bin(x) for x in l ]
             elif datastart != None:
                 l = lines[i].rstrip()
-                se = StatusEntry(l)
+                se = statusentry(l)
                 file_ = se.name
                 if se.rev:
                     applied.append(se)
@@ -1048,7 +1048,7 @@ class queue:
         if not n:
             self.ui.warn("repo commit failed\n")
             return 1
-        self.applied.append(StatusEntry(revlog.hex(n),'.hg.patches.save.line'))
+        self.applied.append(statusentry(revlog.hex(n),'.hg.patches.save.line'))
         self.applied_dirty = 1
 
     def full_series_end(self):
@@ -1482,7 +1482,7 @@ def rename(ui, repo, patch, name=None, **opts):
 
     info = q.isapplied(patch)
     if info:
-        q.applied[info[0]] = StatusEntry(info[1], name)
+        q.applied[info[0]] = statusentry(info[1], name)
     q.applied_dirty = 1
 
     util.rename(os.path.join(q.path, patch), absdest)
@@ -1552,12 +1552,12 @@ def version(ui, q=None):
     return 0
 
 def reposetup(ui, repo):
-    class MqRepo(repo.__class__):
+    class mqrepo(repo.__class__):
         def tags(self):
             if self.tagscache:
                 return self.tagscache
 
-            tagscache = super(MqRepo, self).tags()
+            tagscache = super(mqrepo, self).tags()
 
             q = self.mq
             if not q.applied:
@@ -1574,7 +1574,7 @@ def reposetup(ui, repo):
 
             return tagscache
 
-    repo.__class__ = MqRepo
+    repo.__class__ = mqrepo
     repo.mq = queue(ui, repo.join(""))
 
 cmdtable = {
