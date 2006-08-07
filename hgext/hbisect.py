@@ -197,7 +197,7 @@ class bisect(object):
         check_clean(self.ui, self.repo)
         rev = self.next()
         if rev is not None:
-            return self.repo.update(rev, force=True)
+            return hg.update(self.repo, rev, force=True)
 
     def good(self, rev):
         self.goodrevs.append(rev)
