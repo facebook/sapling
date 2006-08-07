@@ -1,0 +1,16 @@
+#!/bin/sh
+
+HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
+echo "[extensions]" >> $HGTMP/.hgrc
+echo "mq=" >> $HGTMP/.hgrc
+
+hg init a
+cd a
+
+echo 'base' > base
+hg ci -Ambase -d '1 0'
+
+hg qnew -mmqbase mqbase
+
+hg qsave
+hg qrestore 2
