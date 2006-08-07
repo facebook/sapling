@@ -48,7 +48,8 @@ def merge3(repo, fn, my, other, p1, p2):
     return r
 
 def update(repo, node, allow=False, force=False, choose=None,
-           moddirstate=True, forcemerge=False, wlock=None, show_stats=True):
+           moddirstate=True, forcemerge=False, wlock=None, show_stats=True,
+           remind=True):
     pl = repo.dirstate.parents()
     if not force and pl[1] != nullid:
         raise util.Abort(_("outstanding uncommitted merges"))
@@ -337,7 +338,7 @@ def update(repo, node, allow=False, force=False, choose=None,
                                 "  hg merge %s\n"
                                 % (repo.changelog.rev(p1),
                                     repo.changelog.rev(p2))))
-            else:
+            elif remind:
                 repo.ui.status(_("(branch merge, don't forget to commit)\n"))
         elif failedmerge:
             repo.ui.status(_("There are unresolved merges with"

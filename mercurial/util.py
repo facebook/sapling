@@ -99,9 +99,9 @@ def patch(strip, patchname, ui, cwd=None):
     patcher = find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
     args = []
     if cwd:
-        args.append('-d "%s"' % cwd)
-    fp = os.popen('%s %s -p%d < "%s"' % (patcher, ' '.join(args), strip,
-                                         patchname))
+        args.append('-d %s' % shellquote(cwd))
+    fp = os.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
+                                       shellquote(patchname)))
     files = {}
     for line in fp:
         line = line.rstrip()
@@ -611,6 +611,9 @@ if os.name == 'nt':
     def samestat(s1, s2):
         return False
 
+    def shellquote(s):
+        return '"%s"' % s.replace('"', '\\"')
+
     def explain_exit(code):
         return _("exited with status %d") % code, code
 
@@ -699,6 +702,9 @@ else:
                 return _readlock_file(pathname)
             else:
                 raise
+
+    def shellquote(s):
+        return "'%s'" % s.replace("'", "'\\''")
 
     def testpid(pid):
         '''return False if pid dead, True if running or not sure'''

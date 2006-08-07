@@ -292,6 +292,10 @@ class localrepository(repo.repository):
         try:
             return self.tags()[key]
         except KeyError:
+            if key == '.':
+                key = self.dirstate.parents()[0]
+                if key == nullid:
+                    raise repo.RepoError(_("no revision checked out"))
             try:
                 return self.changelog.lookup(key)
             except:
@@ -1692,6 +1696,7 @@ class localrepository(repo.repository):
                           source=srctype, url=url)
 
         return newheads - oldheads + 1
+
 
     def stream_in(self, remote):
         fp = remote.stream_out()

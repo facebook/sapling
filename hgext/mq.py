@@ -39,6 +39,16 @@ versionstr = "0.45"
 
 commands.norepo += " qclone qversion"
 
+class StatusEntry:
+    def __init__(self, rev, name=None):
+        if not name:
+            self.rev, self.name = rev.split(':')
+        else:
+            self.rev, self.name = rev, name
+
+    def __str__(self):
+        return self.rev + ':' + self.name
+
 class queue:
     def __init__(self, ui, path, patchdir=None):
         self.basepath = path
@@ -60,7 +70,8 @@ class queue:
         self.parse_series()
 
         if os.path.exists(os.path.join(self.path, self.status_path)):
-            self.applied = self.opener(self.status_path).read().splitlines()
+            self.applied = [StatusEntry(l)
+                            for l in self.opener(self.status_path).read().splitlines()]
 
     def find_series(self, patch):
         pre = re.compile("(\s*)([^#]+)")
@@ -88,7 +99,7 @@ class queue:
             for i in items:
                 print >> fp, i
             fp.close()
-        if self.applied_dirty: write_list(self.applied, self.status_path)
+        if self.applied_dirty: write_list(map(str, self.applied), self.status_path)
         if self.series_dirty: write_list(self.full_series, self.series_path)
 
     def readheaders(self, patch):
@@ -209,12 +220,10 @@ class queue:
                 return p1
             if len(self.applied) == 0:
                 return None
-            (top, patch) = self.applied[-1].split(':')
-            top = revlog.bin(top)
-            return top
+            return revlog.bin(self.applied[-1].rev)
         pp = repo.changelog.parents(rev)
         if pp[1] != revlog.nullid:
-            arevs = [ x.split(':')[0] for x in self.applied ]
+            arevs = [ x.rev for x in self.applied ]
             p0 = revlog.hex(pp[0])
             p1 = revlog.hex(pp[1])
             if p0 in arevs:
@@ -234,7 +243,7 @@ class queue:
             pname = ".hg.patches.merge.marker"
             n = repo.commit(None, '[mq]: merge marker', user=None, force=1,
                             wlock=wlock)
-            self.applied.append(revlog.hex(n) + ":" + pname)
+            self.applied.append(StatusEntry(revlog.hex(n), pname))
             self.applied_dirty = 1
 
         head = self.qparents(repo)
@@ -252,7 +261,7 @@ class queue:
             rev = revlog.bin(info[1])
             (err, head) = self.mergeone(repo, mergeq, head, patch, rev, wlock)
             if head:
-                self.applied.append(revlog.hex(head) + ":" + patch)
+                self.applied.append(StatusEntry(revlog.hex(head), patch))
                 self.applied_dirty = 1
             if err:
                 return (err, head)
@@ -263,8 +272,8 @@ class queue:
         patchfile: file name of patch'''
         try:
             pp = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-            f = os.popen("%s -d '%s' -p1 --no-backup-if-mismatch < '%s'" %
-                         (pp, repo.root, patchfile))
+            f = os.popen("%s -d %s -p1 --no-backup-if-mismatch < %s" %
+                         (pp, util.shellquote(repo.root), util.shellquote(patchfile)))
         except:
             self.ui.warn("patch failed, unable to continue (try -v)\n")
             return (None, [], False)
@@ -275,11 +284,7 @@ class queue:
             if self.ui.verbose:
                 self.ui.warn(l + "\n")
             if l[:14] == 'patching file ':
-                pf = os.path.normpath(l[14:])
-                # when patch finds a space in the file name, it puts
-                # single quotes around the filename.  strip them off
-                if pf[0] == "'" and pf[-1] == "'":
-                    pf = pf[1:-1]
+                pf = os.path.normpath(util.parse_patch_output(l))
                 if pf not in files:
                     files.append(pf)
                 printed_file = False
@@ -351,7 +356,7 @@ class queue:
                 raise util.Abort(_("repo commit failed"))
 
             if update_status:
-                self.applied.append(revlog.hex(n) + ":" + patch)
+                self.applied.append(StatusEntry(revlog.hex(n), patch))
 
             if patcherr:
                 if not patchfound:
@@ -389,8 +394,7 @@ class queue:
 
     def check_toppatch(self, repo):
         if len(self.applied) > 0:
-            (top, patch) = self.applied[-1].split(':')
-            top = revlog.bin(top)
+            top = revlog.bin(self.applied[-1].rev)
             pp = repo.dirstate.parents()
             if top not in pp:
                 raise util.Abort(_("queue top not at same revision as working directory"))
@@ -421,7 +425,7 @@ class queue:
         if n == None:
             raise util.Abort(_("repo commit failed"))
         self.full_series[insert:insert] = [patch]
-        self.applied.append(revlog.hex(n) + ":" + patch)
+        self.applied.append(StatusEntry(revlog.hex(n), patch))
         self.parse_series()
         self.series_dirty = 1
         self.applied_dirty = 1
@@ -501,9 +505,9 @@ class queue:
             # we go in two steps here so the strip loop happens in a
             # sensible order.  When stripping many files, this helps keep
             # our disk access patterns under control.
-            list = seen.keys()
-            list.sort()
-            for f in list:
+            seen_list = seen.keys()
+            seen_list.sort()
+            for f in seen_list:
                 ff = repo.file(f)
                 filerev = seen[f]
                 if filerev != 0:
@@ -535,7 +539,6 @@ class queue:
         saveheads = []
         savebases = {}
 
-        tip = chlog.tip()
         heads = limitheads(chlog, rev)
         seen = {}
 
@@ -566,7 +569,7 @@ class queue:
                         savebases[x] = 1
 
         # create a changegroup for all the branches we need to keep
-        if backup is "all":
+        if backup == "all":
             backupch = repo.changegroupsubset([rev], chlog.heads(), 'strip')
             bundle(backupch)
         if saveheads:
@@ -581,16 +584,15 @@ class queue:
         if saveheads:
             self.ui.status("adding branch\n")
             commands.unbundle(self.ui, repo, chgrpfile, update=False)
-            if backup is not "strip":
+            if backup != "strip":
                 os.unlink(chgrpfile)
 
     def isapplied(self, patch):
         """returns (index, rev, patch)"""
         for i in xrange(len(self.applied)):
-            p = self.applied[i]
-            a = p.split(':')
-            if a[1] == patch:
-                return (i, a[0], a[1])
+            a = self.applied[i]
+            if a.name == patch:
+                return (i, a.rev, a.name)
         return None
 
     # if the exact patch name does not exist, we try a few 
@@ -693,7 +695,7 @@ class queue:
             ret = self.mergepatch(repo, mergeq, s, wlock)
         else:
             ret = self.apply(repo, s, list, wlock=wlock)
-        top = self.applied[-1].split(':')[1]
+        top = self.applied[-1].name
         if ret[0]:
             self.ui.write("Errors during apply, please fix and refresh %s\n" %
                           top)
@@ -730,7 +732,7 @@ class queue:
 
         if not update:
             parents = repo.dirstate.parents()
-            rr = [ revlog.bin(x.split(':')[0]) for x in self.applied ]
+            rr = [ revlog.bin(x.rev) for x in self.applied ]
             for p in parents:
                 if p in rr:
                     self.ui.warn("qpop: forcing dirstate update\n")
@@ -751,7 +753,7 @@ class queue:
             if popi >= end:
                 self.ui.warn("qpop: %s is already at the top\n" % patch)
                 return
-        info = [ popi ] + self.applied[popi].split(':')
+        info = [ popi ] + [self.applied[popi].rev, self.applied[popi].name]
 
         start = info[0]
         rev = revlog.bin(info[1])
@@ -784,7 +786,7 @@ class queue:
         self.strip(repo, rev, update=False, backup='strip', wlock=wlock)
         del self.applied[start:end]
         if len(self.applied):
-            self.ui.write("Now at: %s\n" % self.applied[-1].split(':')[1])
+            self.ui.write("Now at: %s\n" % self.applied[-1].name)
         else:
             self.ui.write("Patch queue now empty\n")
 
@@ -802,8 +804,7 @@ class queue:
             return
         wlock = repo.wlock()
         self.check_toppatch(repo)
-        qp = self.qparents(repo)
-        (top, patch) = self.applied[-1].split(':')
+        (top, patch) = (self.applied[-1].rev, self.applied[-1].name)
         top = revlog.bin(top)
         cparents = repo.changelog.parents(top)
         patchparent = self.qparents(repo, top)
@@ -899,7 +900,7 @@ class queue:
 
             self.strip(repo, top, update=False, backup='strip', wlock=wlock)
             n = repo.commit(filelist, message, changes[1], force=1, wlock=wlock)
-            self.applied[-1] = revlog.hex(n) + ':' + patch
+            self.applied[-1] = StatusEntry(revlog.hex(n), patch)
             self.applied_dirty = 1
         else:
             commands.dodiff(patchf, self.ui, repo, patchparent, None)
@@ -921,10 +922,7 @@ class queue:
             start = self.series_end()
         else:
             start = self.series.index(patch) + 1
-        for p in self.series[start:]:
-            if self.ui.verbose:
-                self.ui.write("%d " % self.series.index(p))
-            self.ui.write("%s\n" % p)
+        return [(i, self.series[i]) for i in xrange(start, len(self.series))]
 
     def qseries(self, repo, missing=None, summary=False):
         start = self.series_end()
@@ -944,7 +942,7 @@ class queue:
                     msg = ''
                 self.ui.write('%s%s\n' % (patch, msg))
         else:
-            list = []
+            msng_list = []
             for root, dirs, files in os.walk(self.path):
                 d = root[len(self.path) + 1:]
                 for f in files:
@@ -952,13 +950,12 @@ class queue:
                     if (fl not in self.series and
                         fl not in (self.status_path, self.series_path)
                         and not fl.startswith('.')):
-                        list.append(fl)
-            list.sort()
-            if list:
-                for x in list:
-                    if self.ui.verbose:
-                        self.ui.write("D ")
-                    self.ui.write("%s\n" % x)
+                        msng_list.append(fl)
+            msng_list.sort()
+            for x in msng_list:
+                if self.ui.verbose:
+                    self.ui.write("D ")
+                self.ui.write("%s\n" % x)
 
     def issaveline(self, l):
         name = l.split(':')[1]
@@ -987,12 +984,11 @@ class queue:
                 qpp = [ hg.bin(x) for x in l ]
             elif datastart != None:
                 l = lines[i].rstrip()
-                index = l.index(':')
-                id = l[:index]
-                file = l[index + 1:]
-                if id:
-                    applied.append(l)
-                series.append(file)
+                se = StatusEntry(l)
+                file_ = se.name
+                if se.rev:
+                    applied.append(se)
+                series.append(file_)
         if datastart == None:
             self.ui.warn("No saved patch data found\n")
             return 1
@@ -1043,18 +1039,18 @@ class queue:
             pp = r.dirstate.parents()
             msg += "\nDirstate: %s %s" % (hg.hex(pp[0]), hg.hex(pp[1]))
         msg += "\n\nPatch Data:\n"
-        text = msg + "\n".join(self.applied) + '\n' + (ar and "\n".join(ar)
+        text = msg + "\n".join(str(self.applied)) + '\n' + (ar and "\n".join(ar)
                                                        + '\n' or "")
         n = repo.commit(None, text, user=None, force=1)
         if not n:
             self.ui.warn("repo commit failed\n")
             return 1
-        self.applied.append(revlog.hex(n) + ":" + '.hg.patches.save.line')
+        self.applied.append(StatusEntry(revlog.hex(n),'.hg.patches.save.line'))
         self.applied_dirty = 1
 
     def full_series_end(self):
         if len(self.applied) > 0:
-            (top, p) = self.applied[-1].split(':')
+            p = self.applied[-1].name
             end = self.find_series(p)
             if end == None:
                 return len(self.full_series)
@@ -1064,7 +1060,7 @@ class queue:
     def series_end(self):
         end = 0
         if len(self.applied) > 0:
-            (top, p) = self.applied[-1].split(':')
+            p = self.applied[-1].name
             try:
                 end = self.series.index(p)
             except ValueError:
@@ -1084,8 +1080,7 @@ class queue:
             self.ui.write("%s\n" % p)
 
     def appliedname(self, index):
-        p = self.applied[index]
-        pname = p.split(':')[1]
+        pname = self.applied[index].name
         if not self.ui.verbose:
             p = pname
         else:
@@ -1173,8 +1168,10 @@ def applied(ui, repo, patch=None, **opts):
 
 def unapplied(ui, repo, patch=None, **opts):
     """print the patches not yet applied"""
-    repo.mq.unapplied(repo, patch)
-    return 0
+    for i, p in repo.mq.unapplied(repo, patch):
+        if ui.verbose:
+            ui.write("%d " % i)
+        ui.write("%s\n" % p)
 
 def qimport(ui, repo, *filename, **opts):
     """import a patch"""
@@ -1223,7 +1220,7 @@ def clone(ui, source, dest=None, **opts):
     if sr.local():
         reposetup(ui, sr)
         if sr.mq.applied:
-            qbase = revlog.bin(sr.mq.applied[0].split(':')[0])
+            qbase = revlog.bin(sr.mq.applied[0].rev)
             if not hg.islocal(dest):
                 destrev = sr.parents(qbase)[0]
     ui.note(_('cloning main repo\n'))
@@ -1286,7 +1283,7 @@ def new(ui, repo, patch, **opts):
     If neither is specified, the patch header is empty and the
     commit message is 'New patch: PATCH'"""
     q = repo.mq
-    message=commands.logmessage(**opts)
+    message = commands.logmessage(**opts)
     q.new(repo, patch, msg=message, force=opts['force'])
     q.save_dirty()
     return 0
@@ -1294,11 +1291,11 @@ def new(ui, repo, patch, **opts):
 def refresh(ui, repo, **opts):
     """update the current patch"""
     q = repo.mq
-    message=commands.logmessage(**opts)
+    message = commands.logmessage(**opts)
     if opts['edit']:
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
-        patch = q.applied[-1].split(':')[1]
+        patch = q.applied[-1].name
         (message, comment, user, date, hasdiff) = q.readheaders(patch)
         message = ui.edit('\n'.join(message), user or ui.username())
     q.refresh(repo, msg=message, short=opts['short'])
@@ -1331,7 +1328,7 @@ def fold(ui, repo, *files, **opts):
     if not q.check_toppatch(repo):
         raise util.Abort(_('No patches applied\n'))
 
-    message=commands.logmessage(**opts)
+    message = commands.logmessage(**opts)
     if opts['edit']:
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
@@ -1342,7 +1339,7 @@ def fold(ui, repo, *files, **opts):
     for f in files:
         patch = q.lookup(f)
         if patch in patches or patch == parent:
-            self.ui.warn(_('Skipping already folded patch %s') % patch)
+            ui.warn(_('Skipping already folded patch %s') % patch)
         if q.isapplied(patch):
             raise util.Abort(_('qfold cannot fold already applied patch %s') % patch)
         patches.append(patch)
@@ -1388,20 +1385,20 @@ def header(ui, repo, patch=None):
     ui.write('\n'.join(message) + '\n')
 
 def lastsavename(path):
-    (dir, base) = os.path.split(path)
-    names = os.listdir(dir)
+    (directory, base) = os.path.split(path)
+    names = os.listdir(directory)
     namere = re.compile("%s.([0-9]+)" % base)
-    max = None
+    maxindex = None
     maxname = None
     for f in names:
         m = namere.match(f)
         if m:
             index = int(m.group(1))
-            if max == None or index > max:
-                max = index
+            if maxindex == None or index > maxindex:
+                maxindex = index
                 maxname = f
     if maxname:
-        return (os.path.join(dir, maxname), max)
+        return (os.path.join(directory, maxname), maxindex)
     return (None, None)
 
 def savename(path):
@@ -1482,7 +1479,7 @@ def rename(ui, repo, patch, name=None, **opts):
 
     info = q.isapplied(patch)
     if info:
-        q.applied[info[0]] = info[1] + ':' + name
+        q.applied[info[0]] = StatusEntry(info[1], name)
     q.applied_dirty = 1
 
     util.rename(os.path.join(q.path, patch), absdest)
@@ -1508,7 +1505,7 @@ def restore(ui, repo, rev, **opts):
 def save(ui, repo, **opts):
     """save current queue state"""
     q = repo.mq
-    message=commands.logmessage(**opts)
+    message = commands.logmessage(**opts)
     ret = q.save(repo, msg=message)
     if ret:
         return ret
@@ -1563,7 +1560,7 @@ def reposetup(ui, repo):
             if not q.applied:
                 return tagscache
 
-            mqtags = [patch.split(':') for patch in q.applied]
+            mqtags = [(patch.rev, patch.name) for patch in q.applied]
             mqtags.append((mqtags[-1][0], 'qtip'))
             mqtags.append((mqtags[0][0], 'qbase'))
             for patch in mqtags:

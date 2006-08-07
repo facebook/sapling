@@ -40,7 +40,7 @@ def relpath(repo, args):
         return [util.normpath(os.path.join(cwd, x)) for x in args]
     return args
 
-def logmessage(**opts):
+def logmessage(opts):
     """ get the log message according to -m and -l option """
     message = opts['message']
     logfile = opts['logfile']
@@ -125,12 +125,22 @@ def walkchangerevs(ui, repo, pats, opts):
 
 
     files, matchfn, anypats = matchpats(repo, pats, opts)
-    follow = opts.get('follow')
+    follow = opts.get('follow') or opts.get('follow_first')
 
     if repo.changelog.count() == 0:
         return [], False, matchfn
 
-    revs = map(int, revrange(ui, repo, opts['rev'] or ['tip:0']))
+    if follow:
+        p = repo.dirstate.parents()[0]
+        if p == nullid:
+            ui.warn(_('No working directory revision; defaulting to tip\n'))
+            start = 'tip'
+        else:
+            start = repo.changelog.rev(p)
+        defrange = '%s:0' % start
+    else:
+        defrange = 'tip:0'
+    revs = map(int, revrange(ui, repo, opts['rev'] or [defrange]))
     wanted = {}
     slowpath = anypats
     fncache = {}
@@ -206,10 +216,55 @@ def walkchangerevs(ui, repo, pats, opts):
                 wanted[rev] = 1
 
     def iterate():
+        class followfilter:
+            def __init__(self, onlyfirst=False):
+                self.startrev = -1
+                self.roots = []
+                self.onlyfirst = onlyfirst
+
+            def match(self, rev):
+                def realparents(rev):
+                    if self.onlyfirst:
+                        return repo.changelog.parentrevs(rev)[0:1]
+                    else:
+                        return filter(lambda x: x != -1, repo.changelog.parentrevs(rev))
+
+                if self.startrev == -1:
+                    self.startrev = rev
+                    return True
+
+                if rev > self.startrev:
+                    # forward: all descendants
+                    if not self.roots:
+                        self.roots.append(self.startrev)
+                    for parent in realparents(rev):
+                        if parent in self.roots:
+                            self.roots.append(rev)
+                            return True
+                else:
+                    # backwards: all parents
+                    if not self.roots:
+                        self.roots.extend(realparents(self.startrev))
+                    if rev in self.roots:
+                        self.roots.remove(rev)
+                        self.roots.extend(realparents(rev))
+                        return True
+
+                return False
+
+        if follow and not files:
+            ff = followfilter(onlyfirst=opts.get('follow_first'))
+            def want(rev):
+                if rev not in wanted:
+                    return False
+                return ff.match(rev)
+        else:
+            def want(rev):
+                return rev in wanted
+
         for i, window in increasing_windows(0, len(revs)):
             yield 'window', revs[0] < revs[-1], revs[-1]
-            nrevs = [rev for rev in revs[i:i+window]
-                     if rev in wanted]
+            nrevs = [rev for rev in revs[i:i+window] if want(rev)]
             srevs = list(nrevs)
             srevs.sort()
             for rev in srevs:
@@ -1041,7 +1096,7 @@ def commit(ui, repo, *pats, **opts):
     If no commit message is specified, the editor configured in your hgrc
     or in the EDITOR environment variable is started to enter a message.
     """
-    message = logmessage(**opts)
+    message = logmessage(opts)
 
     if opts['addremove']:
         addremove_lock(ui, repo, pats, opts)
@@ -1972,8 +2027,14 @@ def log(ui, repo, *pats, **opts):
     project.
 
     File history is shown without following rename or copy history of
-    files.  Use -f/--follow to follow history across renames and
-    copies.
+    files.  Use -f/--follow with a file name to follow history across
+    renames and copies. --follow without a file name will only show
+    ancestors or descendants of the starting revision. --follow-first
+    only follows the first parent of merge revisions.
+
+    If no revision range is specified, the default is tip:0 unless
+    --follow is set, in which case the working directory parent is
+    used as the starting revision.
 
     By default this command outputs: changeset id and hash, tags,
     non-trivial parents, user, date and time, and a summary for each
@@ -2728,8 +2789,8 @@ def tag(ui, repo, name, rev_=None, **opts):
     necessary.  The file '.hg/localtags' is used for local tags (not
     shared among repositories).
     """
-    if name == "tip":
-        raise util.Abort(_("the name 'tip' is reserved"))
+    if name in ['tip', '.']:
+        raise util.Abort(_("the name '%s' is reserved") % name)
     if rev_ is not None:
         ui.warn(_("use of 'hg tag NAME [REV]' is deprecated, "
                   "please use 'hg tag [-r REV] NAME' instead\n"))
@@ -3087,7 +3148,9 @@ table = {
         (log,
          [('b', 'branches', None, _('show branches')),
           ('f', 'follow', None,
-           _('follow file history across copies and renames')),
+           _('follow changeset history, or file history across copies and renames')),
+          ('', 'follow-first', None,
+           _('only follow the first parent of merge changesets')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),

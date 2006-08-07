@@ -76,3 +76,76 @@ description:
 a
 
 
+adding base
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding b1
+% log -f
+changeset:   3:e62f78d544b4
+tag:         tip
+parent:      1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1
+
+changeset:   1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     r1
+
+changeset:   0:67e992f2c4f3
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     base
+
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding b2
+% log -f -r 1:tip
+changeset:   1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     r1
+
+changeset:   2:60c670bf5b30
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     r2
+
+changeset:   3:e62f78d544b4
+parent:      1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1
+
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% log --follow-first
+changeset:   6:2404bbcab562
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1.1
+
+changeset:   5:302e9dd6890d
+parent:      3:e62f78d544b4
+parent:      4:ddb82e70d1a1
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     m12
+
+changeset:   3:e62f78d544b4
+parent:      1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1
+
+changeset:   1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     r1
+
+changeset:   0:67e992f2c4f3
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     base
+
