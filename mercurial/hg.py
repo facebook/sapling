@@ -222,8 +222,8 @@ def merge(repo, node, force=None, remind=True, wlock=None):
 
 def revert(repo, node, choose):
     """revert changes to revision in node without updating dirstate"""
-    return _merge.update(repo, node, force=True, choose=choose,
-                        moddirstate=False, show_stats=False)
+    return _merge.update(repo, node, force=True, partial=choose,
+                         show_stats=False)
 
 def verify(repo):
     """verify the consistency of a repository"""

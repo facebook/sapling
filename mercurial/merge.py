@@ -47,9 +47,8 @@ def merge3(repo, fn, my, other, p1, p2):
     os.unlink(c)
     return r
 
-def update(repo, node, branchmerge=False, force=False, choose=None,
-           moddirstate=True, forcemerge=False, wlock=None, show_stats=True,
-           remind=True):
+def update(repo, node, branchmerge=False, force=False, partial=None,
+           forcemerge=False, wlock=None, show_stats=True, remind=True):
     pl = repo.dirstate.parents()
     if not force and pl[1] != nullid:
         raise util.Abort(_("outstanding uncommitted merges"))
@@ -93,8 +92,8 @@ def update(repo, node, branchmerge=False, force=False, choose=None,
     # resolve the manifest to determine which files
     # we care about merging
     repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(_(" force %s branchmerge %s moddirstate %s linear %s\n") %
-                  (force, branchmerge, moddirstate, linear_path))
+    repo.ui.debug(_(" force %s branchmerge %s partial %s linear %s\n") %
+                  (force, branchmerge, partial and True or False, linear_path))
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
                   (short(man), short(m1n), short(m2n)))
 
@@ -111,8 +110,7 @@ def update(repo, node, branchmerge=False, force=False, choose=None,
         mw[f] = ""
         mfw[f] = util.is_exec(repo.wjoin(f), mfw.get(f, False))
 
-    if moddirstate and not wlock:
-        wlock = repo.wlock()
+    if not partial and not wlock: wlock = repo.wlock()
 
     for f in deleted + removed:
         if f in mw:
@@ -123,12 +121,12 @@ def update(repo, node, branchmerge=False, force=False, choose=None,
         # the file, then we need to remove it from the dirstate, to
         # prevent the dirstate from listing the file when it is no
         # longer in the manifest.
-        if moddirstate and linear_path and f not in m2:
+        if not partial and linear_path and f not in m2:
             repo.dirstate.forget((f,))
 
     # Compare manifests
     for f, n in mw.iteritems():
-        if choose and not choose(f):
+        if partial and not partial(f):
             continue
         if f in m2:
             s = 0
@@ -204,7 +202,7 @@ def update(repo, node, branchmerge=False, force=False, choose=None,
                 repo.ui.debug(_("working dir created %s, keeping\n") % f)
 
     for f, n in m2.iteritems():
-        if choose and not choose(f):
+        if partial and not partial(f):
             continue
         if f[0] == "/":
             continue
@@ -269,7 +267,7 @@ def update(repo, node, branchmerge=False, force=False, choose=None,
         t = repo.file(f).read(get[f])
         repo.wwrite(f, t)
         util.set_exec(repo.wjoin(f), mf2[f])
-        if moddirstate:
+        if not partial:
             if branchmerge:
                 repo.dirstate.update([f], 'n', st_mtime=-1)
             else:
@@ -287,7 +285,7 @@ def update(repo, node, branchmerge=False, force=False, choose=None,
             err = True
             failedmerge.append(f)
         util.set_exec(repo.wjoin(f), flag)
-        if moddirstate:
+        if not partial:
             if branchmerge:
                 # We've done a branch merge, mark this file as merged
                 # so that we properly record the merger later
@@ -311,13 +309,13 @@ def update(repo, node, branchmerge=False, force=False, choose=None,
             if inst.errno != errno.ENOENT:
                 repo.ui.warn(_("update failed to remove %s: %s!\n") %
                              (f, inst.strerror))
-    if moddirstate:
+    if not partial:
         if branchmerge:
             repo.dirstate.update(remove, 'r')
         else:
             repo.dirstate.forget(remove)
 
-    if moddirstate:
+    if not partial:
         repo.dirstate.setparents(p1, p2)
 
     if show_stats:
@@ -327,7 +325,7 @@ def update(repo, node, branchmerge=False, force=False, choose=None,
                  (len(failedmerge), _("unresolved")))
         note = ", ".join([_("%d files %s") % s for s in stats])
         repo.ui.status("%s\n" % note)
-    if moddirstate:
+    if not partial:
         if branchmerge:
             if failedmerge:
                 repo.ui.status(_("There are unresolved merges,"
