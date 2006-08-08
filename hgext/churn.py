@@ -11,8 +11,9 @@
 #
 # <alias email> <actual email>
 
-import time, sys, signal, os
-from mercurial import hg, mdiff, fancyopts, commands, ui, util, templater
+from mercurial.demandload import *
+demandload(globals(), 'time sys signal os')
+demandload(globals(), 'mercurial:hg,mdiff,fancyopts,commands,ui,util,templater')
 
 def __gather(ui, repo, node1, node2):
     def dirtywork(f, mmap1, mmap2):
@@ -130,13 +131,11 @@ def churn(ui, repo, aliases):
         amap = get_aliases(f)
         f.close()
     
-    os.chdir(repo.root)
     stats = gather_stats(ui, repo, amap)
 
     # make a list of tuples (name, lines) and sort it in descending order
     ordered = stats.items()
-    ordered.sort(cmp=lambda x,y:cmp(x[1], y[1]))
-    ordered.reverse()
+    ordered.sort(cmp=lambda x,y:cmp(y[1], x[1]))
 
     maximum = ordered[0][1]
 
