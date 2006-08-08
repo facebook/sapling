@@ -21,5 +21,5 @@ hg --cwd b parents -q
 
 echo c > c/c
 hg --cwd c commit -d '3 0' -Amc
-hg --cwd c fetch ../a
+hg --cwd c fetch -d '4 0' -m 'automated merge' ../a
 ls c
