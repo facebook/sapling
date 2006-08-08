@@ -217,7 +217,7 @@ def clean(repo, node, wlock=None, show_stats=True):
 
 def merge(repo, node, force=None, remind=True, wlock=None):
     """branch merge with node, resolving changes"""
-    return _merge.update(repo, node, branchmerge=True, forcemerge=force,
+    return _merge.update(repo, node, branchmerge=True, force=force,
                          remind=remind, wlock=wlock)
 
 def revert(repo, node, choose, wlock):

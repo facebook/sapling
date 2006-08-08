@@ -48,7 +48,10 @@ def merge3(repo, fn, my, other, p1, p2):
     return r
 
 def update(repo, node, branchmerge=False, force=False, partial=None,
-           forcemerge=False, wlock=None, show_stats=True, remind=True):
+           wlock=None, show_stats=True, remind=True):
+
+    overwrite = force and not branchmerge
+    forcemerge = force and branchmerge
 
     if not wlock:
         wlock = repo.wlock()
@@ -56,7 +59,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     ### check phase
 
     pl = repo.dirstate.parents()
-    if not force and pl[1] != nullid:
+    if not overwrite and pl[1] != nullid:
         raise util.Abort(_("outstanding uncommitted merges"))
 
     p1, p2 = pl[0], node
@@ -68,8 +71,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         raise util.Abort(_("there is nothing to merge, just use "
                            "'hg update' or look at 'hg heads'"))
 
-    if not force and not linear_path and not branchmerge:
-        raise util.Abort(_("this update spans a branch, use 'hg merge' "
+    if not overwrite and not linear_path and not branchmerge:
+        raise util.Abort(_("update spans branches, use 'hg merge' "
                            "or 'hg update -C' to lose changes"))
 
     modified, added, removed, deleted, unknown = repo.changes()
@@ -87,7 +90,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     ma = repo.manifest.read(man)
     mfa = repo.manifest.readflags(man)
 
-    if not forcemerge and not force:
+    if not forcemerge and not overwrite:
         for f in unknown:
             if f in m2:
                 t1 = repo.wread(f)
@@ -99,8 +102,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     # resolve the manifest to determine which files
     # we care about merging
     repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(_(" force %s branchmerge %s partial %s linear %s\n") %
-                  (force, branchmerge, partial and True or False, linear_path))
+    repo.ui.debug(_(" overwrite %s branchmerge %s partial %s linear %s\n") %
+                  (overwrite, branchmerge, partial and True or False, linear_path))
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
                   (short(man), short(m1n), short(m2n)))
 
@@ -159,7 +162,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time?
-                elif force or m2[f] != a or (p2 == pa and mw[f] == m1[f]):
+                elif overwrite or m2[f] != a or (p2 == pa and mw[f] == m1[f]):
                     repo.ui.debug(_(" remote %s is newer, get\n") % f)
                     get[f] = m2[f]
                     s = 1
@@ -169,7 +172,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 get[f] = m2[f]
 
             if not s and mfw[f] != mf2[f]:
-                if force:
+                if overwrite:
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
                     util.set_exec(repo.wjoin(f), mf2[f])
                 else:
@@ -183,7 +186,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         elif f in ma:
             if n != ma[f]:
                 r = _("d")
-                if not force and (linear_path or branchmerge):
+                if not overwrite and (linear_path or branchmerge):
                     r = repo.ui.prompt(
                         (_(" local changed %s which remote deleted\n") % f) +
                          _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
@@ -194,7 +197,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 remove.append(f) # other deleted it
         else:
             # file is created on branch or in working directory
-            if force and f not in umap:
+            if overwrite and f not in umap:
                 repo.ui.debug(_("remote deleted %s, clobbering\n") % f)
                 remove.append(f)
             elif n == m1.get(f, nullid): # same as parent
@@ -213,7 +216,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             continue
         if f in ma and n != ma[f]:
             r = _("k")
-            if not force and (linear_path or branchmerge):
+            if not overwrite and (linear_path or branchmerge):
                 r = repo.ui.prompt(
                     (_("remote changed %s which local deleted\n") % f) +
                      _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
@@ -223,7 +226,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             repo.ui.debug(_("remote created %s\n") % f)
             get[f] = n
         else:
-            if force or p2 == pa: # going backwards?
+            if overwrite or p2 == pa: # going backwards?
                 repo.ui.debug(_("local deleted %s, recreating\n") % f)
                 get[f] = n
             else:
@@ -231,12 +234,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     del mw, m1, m2, ma
 
-    if force:
+    if overwrite:
         for f in merge:
             get[f] = merge[f][1]
         merge = {}
 
-    if linear_path or force:
+    if linear_path or overwrite:
         # we don't need to do any magic, just jump to the new rev
         p1, p2 = p2, nullid
 
