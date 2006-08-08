@@ -36,7 +36,7 @@ def fetch(ui, repo, source='default', **opts):
         if newheads:
             ui.status(_('merging with new head %d:%s\n') %
                       (repo.changelog.rev(newheads[0]), short(newheads[0])))
-            err = repo.update(newheads[0], allow=True, remind=False)
+            err = hg.update(repo, newheads[0], allow=True, remind=False)
         if not err and len(newheads) > 1:
             ui.status(_('not merging with %d other new heads '
                         '(use "hg heads" and "hg merge" to merge them)') %

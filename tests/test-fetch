@@ -1,0 +1,25 @@
+#!/bin/sh
+
+HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
+echo "[extensions]" >> $HGTMP/.hgrc
+echo "fetch=" >> $HGTMP/.hgrc
+
+hg init a
+echo a > a/a
+hg --cwd a commit -d '1 0' -Ama
+
+hg clone a b
+hg clone a c
+
+echo b > a/b
+hg --cwd a commit -d '2 0' -Amb
+hg --cwd a parents -q
+
+echo % should pull one change
+hg --cwd b fetch ../a
+hg --cwd b parents -q
+
+echo c > c/c
+hg --cwd c commit -d '3 0' -Amc
+hg --cwd c fetch ../a
+ls c

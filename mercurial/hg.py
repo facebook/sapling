@@ -211,9 +211,10 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 # update/merge/revert
 
 def update(repo, node, allow=False, force=False, choose=None,
-           moddirstate=True, forcemerge=False, wlock=None, show_stats=True):
+           moddirstate=True, forcemerge=False, wlock=None, show_stats=True,
+           remind=True):
     return merge.update(repo, node, allow, force, choose, moddirstate,
-                        forcemerge, wlock, show_stats)
+                        forcemerge, wlock, show_stats, remind)
 
 def verify(repo):
     """verify the consistency of a repository"""
