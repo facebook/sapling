@@ -1698,7 +1698,8 @@ class localrepository(repo.repository):
         return newheads - oldheads + 1
 
     def update(self, node, allow=False, force=False, choose=None,
-               moddirstate=True, forcemerge=False, wlock=None, show_stats=True):
+               moddirstate=True, forcemerge=False, wlock=None,
+               show_stats=True, remind=True):
         pl = self.dirstate.parents()
         if not force and pl[1] != nullid:
             raise util.Abort(_("outstanding uncommitted merges"))
@@ -1987,8 +1988,9 @@ class localrepository(repo.repository):
                                     "  hg merge %s\n"
                                     % (self.changelog.rev(p1),
                                         self.changelog.rev(p2))))
-                else:
-                    self.ui.status(_("(branch merge, don't forget to commit)\n"))
+                elif remind:
+                    self.ui.status(_("(branch merge, don't forget "
+                                     "to commit)\n"))
             elif failedmerge:
                 self.ui.status(_("There are unresolved merges with"
                                  " locally modified files.\n"))
