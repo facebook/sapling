@@ -70,6 +70,9 @@ def fetch(ui, repo, source='default', **opts):
                            '(use "hg update" to check out tip)'))
     if p2 != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
+    mod, add, rem = repo.status()[:3]
+    if mod or add or rem:
+        raise util.Abort(_('outstanding uncommitted changes'))
     if len(repo.heads()) > 1:
         raise util.Abort(_('multiple heads in this repository '
                            '(use "hg heads" and "hg merge" to merge them)'))
