@@ -53,12 +53,30 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not wlock:
         wlock = repo.wlock()
 
+    ### check phase
+
     pl = repo.dirstate.parents()
     if not force and pl[1] != nullid:
         raise util.Abort(_("outstanding uncommitted merges"))
 
     p1, p2 = pl[0], node
     pa = repo.changelog.ancestor(p1, p2)
+
+    # is there a linear path from p1 to p2?
+    linear_path = (pa == p1 or pa == p2)
+    if branchmerge and linear_path:
+        raise util.Abort(_("there is nothing to merge, just use "
+                           "'hg update' or look at 'hg heads'"))
+
+    if not force and not linear_path and not branchmerge:
+        raise util.Abort(_("this update spans a branch, use 'hg merge' "
+                           "or 'hg update -C' to lose changes"))
+
+    modified, added, removed, deleted, unknown = repo.changes()
+    if branchmerge and not forcemerge:
+        if modified or added or removed:
+            raise util.Abort(_("outstanding uncommitted changes"))
+
     m1n = repo.changelog.read(p1)[0]
     m2n = repo.changelog.read(p2)[0]
     man = repo.manifest.ancestor(m1n, m2n)
@@ -68,19 +86,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     mf2 = repo.manifest.readflags(m2n)
     ma = repo.manifest.read(man)
     mfa = repo.manifest.readflags(man)
-
-    modified, added, removed, deleted, unknown = repo.changes()
-
-    # is this a jump, or a merge?  i.e. is there a linear path
-    # from p1 to p2?
-    linear_path = (pa == p1 or pa == p2)
-
-    if branchmerge and linear_path:
-        raise util.Abort(_("there is nothing to merge, just use "
-                           "'hg update' or look at 'hg heads'"))
-    if branchmerge and not forcemerge:
-        if modified or added or removed:
-            raise util.Abort(_("outstanding uncommitted changes"))
 
     if not forcemerge and not force:
         for f in unknown:
@@ -234,21 +239,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if linear_path or force:
         # we don't need to do any magic, just jump to the new rev
         p1, p2 = p2, nullid
-    else:
-        if not branchmerge:
-            repo.ui.status(_("this update spans a branch"
-                             " affecting the following files:\n"))
-            fl = merge.keys() + get.keys()
-            fl.sort()
-            for f in fl:
-                cf = ""
-                if f in merge:
-                    cf = _(" (resolve)")
-                repo.ui.status(" %s%s\n" % (f, cf))
-            repo.ui.warn(_("aborting update spanning branches!\n"))
-            repo.ui.status(_("(use 'hg merge' to merge across branches"
-                             " or 'hg update -C' to lose changes)\n"))
-            return 1
 
     xp1 = hex(p1)
     xp2 = hex(p2)
