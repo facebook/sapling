@@ -47,7 +47,7 @@ def merge3(repo, fn, my, other, p1, p2):
     os.unlink(c)
     return r
 
-def update(repo, node, allow=False, force=False, choose=None,
+def update(repo, node, branchmerge=False, force=False, choose=None,
            moddirstate=True, forcemerge=False, wlock=None, show_stats=True,
            remind=True):
     pl = repo.dirstate.parents()
@@ -74,10 +74,10 @@ def update(repo, node, allow=False, force=False, choose=None,
     # from p1 to p2?
     linear_path = (pa == p1 or pa == p2)
 
-    if allow and linear_path:
+    if branchmerge and linear_path:
         raise util.Abort(_("there is nothing to merge, just use "
                            "'hg update' or look at 'hg heads'"))
-    if allow and not forcemerge:
+    if branchmerge and not forcemerge:
         if modified or added or removed:
             raise util.Abort(_("outstanding uncommitted changes"))
 
@@ -93,8 +93,8 @@ def update(repo, node, allow=False, force=False, choose=None,
     # resolve the manifest to determine which files
     # we care about merging
     repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(_(" force %s allow %s moddirstate %s linear %s\n") %
-                  (force, allow, moddirstate, linear_path))
+    repo.ui.debug(_(" force %s branchmerge %s moddirstate %s linear %s\n") %
+                  (force, branchmerge, moddirstate, linear_path))
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
                   (short(man), short(m1n), short(m2n)))
 
@@ -180,7 +180,7 @@ def update(repo, node, allow=False, force=False, choose=None,
         elif f in ma:
             if n != ma[f]:
                 r = _("d")
-                if not force and (linear_path or allow):
+                if not force and (linear_path or branchmerge):
                     r = repo.ui.prompt(
                         (_(" local changed %s which remote deleted\n") % f) +
                          _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
@@ -210,7 +210,7 @@ def update(repo, node, allow=False, force=False, choose=None,
             continue
         if f in ma and n != ma[f]:
             r = _("k")
-            if not force and (linear_path or allow):
+            if not force and (linear_path or branchmerge):
                 r = repo.ui.prompt(
                     (_("remote changed %s which local deleted\n") % f) +
                      _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
@@ -235,10 +235,9 @@ def update(repo, node, allow=False, force=False, choose=None,
 
     if linear_path or force:
         # we don't need to do any magic, just jump to the new rev
-        branch_merge = False
         p1, p2 = p2, nullid
     else:
-        if not allow:
+        if not branchmerge:
             repo.ui.status(_("this update spans a branch"
                              " affecting the following files:\n"))
             fl = merge.keys() + get.keys()
@@ -252,7 +251,6 @@ def update(repo, node, allow=False, force=False, choose=None,
             repo.ui.status(_("(use 'hg merge' to merge across branches"
                              " or 'hg update -C' to lose changes)\n"))
             return 1
-        branch_merge = True
 
     xp1 = hex(p1)
     xp2 = hex(p2)
@@ -272,7 +270,7 @@ def update(repo, node, allow=False, force=False, choose=None,
         repo.wwrite(f, t)
         util.set_exec(repo.wjoin(f), mf2[f])
         if moddirstate:
-            if branch_merge:
+            if branchmerge:
                 repo.dirstate.update([f], 'n', st_mtime=-1)
             else:
                 repo.dirstate.update([f], 'n')
@@ -290,7 +288,7 @@ def update(repo, node, allow=False, force=False, choose=None,
             failedmerge.append(f)
         util.set_exec(repo.wjoin(f), flag)
         if moddirstate:
-            if branch_merge:
+            if branchmerge:
                 # We've done a branch merge, mark this file as merged
                 # so that we properly record the merger later
                 repo.dirstate.update([f], 'm')
@@ -314,7 +312,7 @@ def update(repo, node, allow=False, force=False, choose=None,
                 repo.ui.warn(_("update failed to remove %s: %s!\n") %
                              (f, inst.strerror))
     if moddirstate:
-        if branch_merge:
+        if branchmerge:
             repo.dirstate.update(remove, 'r')
         else:
             repo.dirstate.forget(remove)
@@ -330,7 +328,7 @@ def update(repo, node, allow=False, force=False, choose=None,
         note = ", ".join([_("%d files %s") % s for s in stats])
         repo.ui.status("%s\n" % note)
     if moddirstate:
-        if branch_merge:
+        if branchmerge:
             if failedmerge:
                 repo.ui.status(_("There are unresolved merges,"
                                 " you can redo the full merge using:\n"
