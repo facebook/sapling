@@ -220,10 +220,10 @@ def merge(repo, node, force=None, remind=True, wlock=None):
     return _merge.update(repo, node, branchmerge=True, forcemerge=force,
                          remind=remind, wlock=wlock)
 
-def revert(repo, node, choose):
+def revert(repo, node, choose, wlock):
     """revert changes to revision in node without updating dirstate"""
     return _merge.update(repo, node, force=True, partial=choose,
-                         show_stats=False)
+                         show_stats=False, wlock=wlock)
 
 def verify(repo):
     """verify the consistency of a repository"""

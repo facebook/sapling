@@ -49,6 +49,10 @@ def merge3(repo, fn, my, other, p1, p2):
 
 def update(repo, node, branchmerge=False, force=False, partial=None,
            forcemerge=False, wlock=None, show_stats=True, remind=True):
+
+    if not wlock:
+        wlock = repo.wlock()
+
     pl = repo.dirstate.parents()
     if not force and pl[1] != nullid:
         raise util.Abort(_("outstanding uncommitted merges"))
@@ -109,8 +113,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     for f in added + modified + unknown:
         mw[f] = ""
         mfw[f] = util.is_exec(repo.wjoin(f), mfw.get(f, False))
-
-    if not partial and not wlock: wlock = repo.wlock()
 
     for f in deleted + removed:
         if f in mw:

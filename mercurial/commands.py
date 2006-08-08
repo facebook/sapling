@@ -2606,7 +2606,7 @@ def revert(ui, repo, *pats, **opts):
 
     if not opts.get('dry_run'):
         repo.dirstate.forget(forget[0])
-        r = hg.revert(repo, node, update.has_key)
+        r = hg.revert(repo, node, update.has_key, wlock)
         repo.dirstate.update(add[0], 'a')
         repo.dirstate.update(undelete[0], 'n')
         repo.dirstate.update(remove[0], 'r')
