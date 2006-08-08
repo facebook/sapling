@@ -24,13 +24,13 @@ def fetch(ui, repo, source='default', **opts):
         if modheads == 0:
             return 0
         if modheads == 1:
-            return commands.doupdate(ui, repo)
+            return hg.update(repo, repo.changelog.tip())
         newheads = repo.heads(parent)
         newchildren = [n for n in repo.heads(parent) if n != parent]
         newparent = parent
         if newchildren:
-            commands.doupdate(ui, repo, node=hex(newchildren[0]))
             newparent = newchildren[0]
+            hg.update(repo, newparent)
         newheads = [n for n in repo.heads() if n != newparent]
         err = False
         if newheads:
