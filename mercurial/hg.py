@@ -10,7 +10,7 @@ from repo import *
 from demandload import *
 from i18n import gettext as _
 demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
-demandload(globals(), "errno lock os shutil util merge@_merge")
+demandload(globals(), "errno lock os shutil util merge@_merge verify@_verify")
 
 def _local(path):
     return (os.path.isfile(path and util.drop_scheme('file', path)) and
@@ -227,5 +227,4 @@ def revert(repo, node, choose):
 
 def verify(repo):
     """verify the consistency of a repository"""
-    import verify as _verify
     return _verify.verify(repo)
