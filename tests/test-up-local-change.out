@@ -17,7 +17,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- force None allow None moddirstate True linear True
+ force False allow False moddirstate True linear True
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
  a versions differ, resolve
 remote created b
@@ -33,7 +33,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
 resolving manifests
- force None allow None moddirstate True linear True
+ force False allow False moddirstate True linear True
  ancestor a0c8bcbbb45c local 1165e8bd193e remote a0c8bcbbb45c
 remote deleted b
 removing b
@@ -51,7 +51,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- force None allow None moddirstate True linear True
+ force False allow False moddirstate True linear True
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
  a versions differ, resolve
 remote created b
@@ -99,7 +99,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
 resolving manifests
- force None allow None moddirstate True linear False
+ force False allow False moddirstate True linear False
  ancestor a0c8bcbbb45c local 1165e8bd193e remote 4096f2872392
  a versions differ, resolve
  b versions differ, resolve

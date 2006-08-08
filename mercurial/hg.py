@@ -10,7 +10,7 @@ from repo import *
 from demandload import *
 from i18n import gettext as _
 demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
-demandload(globals(), "errno lock os shutil util merge")
+demandload(globals(), "errno lock os shutil util merge@_merge")
 
 def _local(path):
     return (os.path.isfile(path and util.drop_scheme('file', path)) and
@@ -200,20 +200,30 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dest_lock.release()
 
         if update:
-            merge.update(dest_repo, dest_repo.changelog.tip())
+            _merge.update(dest_repo, dest_repo.changelog.tip())
     if dir_cleanup:
         dir_cleanup.close()
 
     return src_repo, dest_repo
 
+def update(repo, node):
+    """update the working directory to node, merging linear changes"""
+    return _merge.update(repo, node)
 
-# This should instead be several functions with short arglists, like
-# update/merge/revert
+def clean(repo, node, wlock=None, show_stats=True):
+    """forcibly switch the working directory to node, clobbering changes"""
+    return _merge.update(repo, node, force=True, wlock=wlock,
+                         show_stats=show_stats)
 
-def update(repo, node, allow=False, force=False, choose=None,
-           moddirstate=True, forcemerge=False, wlock=None, show_stats=True):
-    return merge.update(repo, node, allow, force, choose, moddirstate,
-                        forcemerge, wlock, show_stats)
+def merge(repo, node, force=None, remind=True, wlock=None):
+    """branch merge with node, resolving changes"""
+    return _merge.update(repo, node, allow=True, forcemerge=force,
+                         remind=remind, wlock=wlock)
+
+def revert(repo, node, choose):
+    """revert changes to revision in node without updating dirstate"""
+    return _merge.update(repo, node, force=True, choose=choose,
+                        moddirstate=False, show_stats=False)
 
 def verify(repo):
     """verify the consistency of a repository"""

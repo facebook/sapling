@@ -976,7 +976,7 @@ def backout(ui, repo, rev, **opts):
         if opts['parent']:
             raise util.Abort(_('cannot use --parent on non-merge changeset'))
         parent = p1
-    hg.update(repo, node, force=True, show_stats=False) # backout
+    hg.clean(repo, node, show_stats=False)
     revert_opts = opts.copy()
     revert_opts['rev'] = hex(parent)
     revert(ui, repo, **revert_opts)
@@ -994,7 +994,7 @@ def backout(ui, repo, rev, **opts):
         if opts['merge']:
             ui.status(_('merging with changeset %s\n') % nice(op1))
             n = _lookup(repo, hex(op1))
-            hg.update(repo, n, allow=True) # merge
+            hg.merge(repo, n)
         else:
             ui.status(_('the backout changeset is a new head - '
                         'do not forget to merge\n'))
@@ -2163,7 +2163,7 @@ def merge(ui, repo, node=None, force=None, branch=None):
     """
 
     node = _lookup(repo, node, branch)
-    hg.update(repo, node, allow=True, forcemerge=force) # merge
+    return hg.merge(repo, node, force=force)
 
 def outgoing(ui, repo, dest=None, **opts):
     """show changesets not found in destination
@@ -2606,8 +2606,7 @@ def revert(ui, repo, *pats, **opts):
 
     if not opts.get('dry_run'):
         repo.dirstate.forget(forget[0])
-        r = hg.update(repo, node, False, True, update.has_key, False,
-                      wlock=wlock, show_stats=False) # revert
+        r = hg.revert(repo, node, update.has_key)
         repo.dirstate.update(add[0], 'a')
         repo.dirstate.update(undelete[0], 'n')
         repo.dirstate.update(remove[0], 'r')
@@ -2905,11 +2904,15 @@ def update(ui, repo, node=None, merge=False, clean=False, force=None,
     By default, update will refuse to run if doing so would require
     merging or discarding local changes.
     """
+    node = _lookup(repo, node, branch)
     if merge:
         ui.warn(_('(the -m/--merge option is deprecated; '
                   'use the merge command instead)\n'))
-    node = _lookup(repo, node, branch)
-    return hg.update(repo, node, allow=merge, force=clean, forcemerge=force)
+        return hg.merge(repo, node, force=force)
+    elif clean:
+        return hg.clean(repo, node)
+    else:
+        return hg.update(repo, node)
 
 def _lookup(repo, node, branch=None):
     if branch:

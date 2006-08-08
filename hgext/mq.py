@@ -190,11 +190,11 @@ class queue:
         self.ui.warn("patch didn't work out, merging %s\n" % patch)
 
         # apply failed, strip away that rev and merge.
-        hg.update(repo, head, allow=False, force=True, wlock=wlock)
+        hg.clean(repo, head, wlock=wlock)
         self.strip(repo, n, update=False, backup='strip', wlock=wlock)
 
         c = repo.changelog.read(rev)
-        ret = hg.update(repo, rev, allow=True, wlock=wlock)
+        ret = hg.merge(repo, rev, wlock=wlock)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
         n = repo.commit(None, c[4], c[1], force=1, wlock=wlock)
@@ -530,7 +530,7 @@ class queue:
             if c or a or d or r:
                 raise util.Abort(_("local changes found"))
             urev = self.qparents(repo, rev)
-            hg.update(repo, urev, allow=False, force=True, wlock=wlock)
+            hg.clean(repo, urev, wlock=wlock)
             repo.dirstate.write()
 
         # save is a list of all the branches we are truncating away
@@ -1019,7 +1019,7 @@ class queue:
                 if not r:
                     self.ui.warn("Unable to load queue repository\n")
                     return 1
-                hg.update(r, qpp[0], allow=False, force=True)
+                hg.clean(r, qpp[0])
 
     def save(self, repo, msg=None):
         if len(self.applied) == 0:
