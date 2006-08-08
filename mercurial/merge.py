@@ -57,8 +57,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not force and pl[1] != nullid:
         raise util.Abort(_("outstanding uncommitted merges"))
 
-    err = False
-
     p1, p2 = pl[0], node
     pa = repo.changelog.ancestor(p1, p2)
     m1n = repo.changelog.read(p1)[0]
@@ -276,7 +274,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 repo.dirstate.update([f], 'n')
 
     # merge the tricky bits
-    failedmerge = []
+    unresolved = []
     files = merge.keys()
     files.sort()
     for f in files:
@@ -284,8 +282,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         my, other, flag = merge[f]
         ret = merge3(repo, f, my, other, xp1, xp2)
         if ret:
-            err = True
-            failedmerge.append(f)
+            unresolved.append(f)
         util.set_exec(repo.wjoin(f), flag)
         if not partial:
             if branchmerge:
@@ -322,14 +319,14 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     if show_stats:
         stats = ((len(get), _("updated")),
-                 (len(merge) - len(failedmerge), _("merged")),
+                 (len(merge) - len(unresolved), _("merged")),
                  (len(remove), _("removed")),
-                 (len(failedmerge), _("unresolved")))
+                 (len(unresolved), _("unresolved")))
         note = ", ".join([_("%d files %s") % s for s in stats])
         repo.ui.status("%s\n" % note)
     if not partial:
         if branchmerge:
-            if failedmerge:
+            if unresolved:
                 repo.ui.status(_("There are unresolved merges,"
                                 " you can redo the full merge using:\n"
                                 "  hg update -C %s\n"
@@ -338,10 +335,10 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                                     repo.changelog.rev(p2))))
             elif remind:
                 repo.ui.status(_("(branch merge, don't forget to commit)\n"))
-        elif failedmerge:
+        elif unresolved:
             repo.ui.status(_("There are unresolved merges with"
                              " locally modified files.\n"))
 
-    repo.hook('update', parent1=xp1, parent2=xxp2, error=int(err))
-    return err
+    repo.hook('update', parent1=xp1, parent2=xxp2, error=len(unresolved))
+    return len(unresolved)
 
