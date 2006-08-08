@@ -976,7 +976,7 @@ def backout(ui, repo, rev, **opts):
         if opts['parent']:
             raise util.Abort(_('cannot use --parent on non-merge changeset'))
         parent = p1
-    hg.update(repo, node, force=True, show_stats=False)
+    hg.update(repo, node, force=True, show_stats=False) # backout
     revert_opts = opts.copy()
     revert_opts['rev'] = hex(parent)
     revert(ui, repo, **revert_opts)
@@ -993,7 +993,8 @@ def backout(ui, repo, rev, **opts):
     if op1 != node:
         if opts['merge']:
             ui.status(_('merging with changeset %s\n') % nice(op1))
-            doupdate(ui, repo, hex(op1), merge=True)
+            n = _lookup(repo, hex(op1))
+            hg.update(repo, n, allow=True) # merge
         else:
             ui.status(_('the backout changeset is a new head - '
                         'do not forget to merge\n'))
@@ -2152,7 +2153,7 @@ def manifest(ui, repo, rev=None):
     for f in files:
         ui.write("%40s %3s %s\n" % (hex(m[f]), mf[f] and "755" or "644", f))
 
-def merge(ui, repo, node=None, **opts):
+def merge(ui, repo, node=None, force=None, branch=None):
     """Merge working directory with another revision
 
     Merge the contents of the current working directory and the
@@ -2160,7 +2161,9 @@ def merge(ui, repo, node=None, **opts):
     marked as changed for the next commit and a commit must be
     performed before any further updates are allowed.
     """
-    return doupdate(ui, repo, node=node, merge=True, **opts)
+
+    node = _lookup(repo, node, branch)
+    hg.update(repo, node, allow=True, forcemerge=force) # merge
 
 def outgoing(ui, repo, dest=None, **opts):
     """show changesets not found in destination
@@ -2254,7 +2257,7 @@ def postincoming(ui, repo, modheads, optupdate):
         return
     if optupdate:
         if modheads == 1:
-            return doupdate(ui, repo)
+            return hg.update(repo, repo.changelog.tip()) # update
         else:
             ui.status(_("not updating, since new heads added\n"))
     if modheads > 1:
@@ -2604,7 +2607,7 @@ def revert(ui, repo, *pats, **opts):
     if not opts.get('dry_run'):
         repo.dirstate.forget(forget[0])
         r = hg.update(repo, node, False, True, update.has_key, False,
-                      wlock=wlock, show_stats=False)
+                      wlock=wlock, show_stats=False) # revert
         repo.dirstate.update(add[0], 'a')
         repo.dirstate.update(undelete[0], 'n')
         repo.dirstate.update(remove[0], 'r')
@@ -2905,10 +2908,10 @@ def update(ui, repo, node=None, merge=False, clean=False, force=None,
     if merge:
         ui.warn(_('(the -m/--merge option is deprecated; '
                   'use the merge command instead)\n'))
-    return doupdate(ui, repo, node, merge, clean, force, branch)
+    node = _lookup(repo, node, branch)
+    return hg.update(repo, node, allow=merge, force=clean, forcemerge=force)
 
-def doupdate(ui, repo, node=None, merge=False, clean=False, force=None,
-             branch=None):
+def _lookup(repo, node, branch=None):
     if branch:
         br = repo.branchlookup(branch=branch)
         found = []
@@ -2916,19 +2919,19 @@ def doupdate(ui, repo, node=None, merge=False, clean=False, force=None,
             if branch in br[x]:
                 found.append(x)
         if len(found) > 1:
-            ui.warn(_("Found multiple heads for %s\n") % branch)
+            repo.ui.warn(_("Found multiple heads for %s\n") % branch)
             for x in found:
                 show_changeset(ui, repo, {}).show(changenode=x, brinfo=br)
-            return 1
+            raise util.Abort("")
         if len(found) == 1:
             node = found[0]
-            ui.warn(_("Using head %s for branch %s\n") % (short(node), branch))
+            repo.ui.warn(_("Using head %s for branch %s\n")
+                         % (short(node), branch))
         else:
-            ui.warn(_("branch %s not found\n") % (branch))
-            return 1
+            raise util.Abort(_("branch %s not found\n") % (branch))
     else:
         node = node and repo.lookup(node) or repo.changelog.tip()
-    return hg.update(repo, node, allow=merge, force=clean, forcemerge=force)
+    return node
 
 def verify(ui, repo):
     """verify the integrity of the repository
