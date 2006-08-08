@@ -46,7 +46,7 @@ def fetch(ui, repo, source='default', **opts):
             message = (commands.logmessage(opts) or
                        (_('Automated merge with %s') % other.url()))
             n = repo.commit(mod + add + rem, message,
-                            opts['user'], opts['date'],
+                            opts['user'], opts['date'], lock=lock,
                             force_editor=opts.get('force_editor'))
             ui.status(_('new changeset %d:%s merges remote changes '
                         'with local\n') % (repo.changelog.rev(n),
@@ -61,7 +61,7 @@ def fetch(ui, repo, source='default', **opts):
             raise util.Abort(_("fetch -r doesn't work for remote repositories yet"))
         elif opts['rev']:
             revs = [other.lookup(rev) for rev in opts['rev']]
-        modheads = repo.pull(other, heads=revs)
+        modheads = repo.pull(other, heads=revs, lock=lock)
         return postincoming(other, modheads)
         
     parent, p2 = repo.dirstate.parents()
@@ -76,7 +76,11 @@ def fetch(ui, repo, source='default', **opts):
     if len(repo.heads()) > 1:
         raise util.Abort(_('multiple heads in this repository '
                            '(use "hg heads" and "hg merge" to merge them)'))
-    return pull()
+    lock = repo.lock()
+    try:
+        return pull()
+    finally:
+        lock.release()
 
 cmdtable = {
     'fetch':
