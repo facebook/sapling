@@ -169,6 +169,6 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     write('.hg_archival.txt', 0644,
           'repo: %s\nnode: %s\n' % (hex(repo.changelog.node(0)), hex(node)))
     for filename, filenode in mf:
-        write(filename, mff[filename] and 0755 or 0644,
+        write(filename, mff.execf(filename) and 0755 or 0644,
               repo.file(filename).read(filenode))
     archiver.done()

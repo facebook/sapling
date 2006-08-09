@@ -118,7 +118,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     for f in added + modified + unknown:
         mw[f] = ""
-        mfw[f] = util.is_exec(repo.wjoin(f), mfw.get(f, False))
+        mfw.set(f, util.is_exec(repo.wjoin(f), mfw.execf(f)))
 
     for f in deleted + removed:
         if f in mw:
@@ -155,7 +155,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
                     # merge executable bits
                     # "if we changed or they changed, change in merge"
-                    a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
+                    a, b, c = mfa.execf(f), mfw.execf(f), mf2.execf(f)
                     mode = ((a^b) | (a^c)) ^ a
                     merge[f] = (m1.get(f, nullid), m2[f], mode)
                     s = 1
@@ -171,12 +171,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 # we need to reset the dirstate if the file was added
                 get[f] = m2[f]
 
-            if not s and mfw[f] != mf2[f]:
+            if not s and mfw.execf(f) != mf2.execf(f):
                 if overwrite:
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
-                    util.set_exec(repo.wjoin(f), mf2[f])
+                    util.set_exec(repo.wjoin(f), mf2.execf(f))
                 else:
-                    a, b, c = mfa.get(f, 0), mfw[f], mf2[f]
+                    a, b, c = mfa.execf(f), mfw.execf(f), mf2.execf(f)
                     mode = ((a^b) | (a^c)) ^ a
                     if mode != b:
                         repo.ui.debug(_(" updating permissions for %s\n")
@@ -259,7 +259,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         repo.ui.note(_("getting %s\n") % f)
         t = repo.file(f).read(get[f])
         repo.wwrite(f, t)
-        util.set_exec(repo.wjoin(f), mf2[f])
+        util.set_exec(repo.wjoin(f), mf2.execf(f))
         if not partial:
             if branchmerge:
                 repo.dirstate.update([f], 'n', st_mtime=-1)

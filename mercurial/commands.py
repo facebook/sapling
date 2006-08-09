@@ -2151,7 +2151,8 @@ def manifest(ui, repo, rev=None):
     files.sort()
 
     for f in files:
-        ui.write("%40s %3s %s\n" % (hex(m[f]), mf[f] and "755" or "644", f))
+        ui.write("%40s %3s %s\n" % (hex(m[f]),
+                                    mf.execf(f) and "755" or "644", f))
 
 def merge(ui, repo, node=None, force=None, branch=None):
     """Merge working directory with another revision

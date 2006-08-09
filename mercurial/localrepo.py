@@ -490,9 +490,8 @@ class localrepository(repo.repository):
         for f in files:
             try:
                 t = self.wread(f)
-                tm = util.is_exec(self.wjoin(f), mfm.get(f, False))
+                mfm.set(f, util.is_exec(self.wjoin(f), mfm.execf(f)))
                 r = self.file(f)
-                mfm[f] = tm
 
                 (entry, fp1, fp2) = self.checkfilemerge(f, t, r, m1, m2)
                 if entry:
@@ -571,7 +570,7 @@ class localrepository(repo.repository):
         for f in commit:
             self.ui.note(f + "\n")
             try:
-                mf1[f] = util.is_exec(self.wjoin(f), mf1.get(f, False))
+                mf1.set(f, util.is_exec(self.wjoin(f), mf1.execf(f)))
                 t = self.wread(f)
             except IOError:
                 self.ui.warn(_("trouble committing %s!\n") % f)
@@ -826,7 +825,7 @@ class localrepository(repo.repository):
             else:
                 t = self.file(f).read(m[f])
                 self.wwrite(f, t)
-                util.set_exec(self.wjoin(f), mf[f])
+                util.set_exec(self.wjoin(f), mf.execf(f))
                 self.dirstate.update([f], "n")
 
     def copy(self, source, dest, wlock=None):
