@@ -24,29 +24,30 @@ def fetch(ui, repo, source='default', **opts):
         if modheads == 0:
             return 0
         if modheads == 1:
-            return hg.update(repo, repo.changelog.tip())
+            return hg.update(repo, repo.changelog.tip(), wlock=wlock)
         newheads = repo.heads(parent)
         newchildren = [n for n in repo.heads(parent) if n != parent]
         newparent = parent
         if newchildren:
             newparent = newchildren[0]
-            hg.update(repo, newparent)
+            hg.update(repo, newparent, wlock=wlock)
         newheads = [n for n in repo.heads() if n != newparent]
         err = False
         if newheads:
             ui.status(_('merging with new head %d:%s\n') %
                       (repo.changelog.rev(newheads[0]), short(newheads[0])))
-            err = hg.update(repo, newheads[0], allow=True, remind=False)
+            err = hg.update(repo, newheads[0], allow=True, remind=False,
+                            wlock=wlock)
         if not err and len(newheads) > 1:
             ui.status(_('not merging with %d other new heads '
                         '(use "hg heads" and "hg merge" to merge them)') %
                       (len(newheads) - 1))
         if not err:
-            mod, add, rem = repo.status()[:3]
+            mod, add, rem = repo.status(wlock=wlock)[:3]
             message = (commands.logmessage(opts) or
                        (_('Automated merge with %s') % other.url()))
             n = repo.commit(mod + add + rem, message,
-                            opts['user'], opts['date'], lock=lock,
+                            opts['user'], opts['date'], lock=lock, wlock=wlock,
                             force_editor=opts.get('force_editor'))
             ui.status(_('new changeset %d:%s merges remote changes '
                         'with local\n') % (repo.changelog.rev(n),
@@ -55,7 +56,7 @@ def fetch(ui, repo, source='default', **opts):
         commands.setremoteconfig(ui, opts)
 
         other = hg.repository(ui, ui.expandpath(source))
-        ui.status(_('pulling from %s\n') % source)
+        ui.status(_('pulling from %s\n') % ui.expandpath(source))
         revs = None
         if opts['rev'] and not other.local():
             raise util.Abort(_("fetch -r doesn't work for remote repositories yet"))
@@ -70,17 +71,19 @@ def fetch(ui, repo, source='default', **opts):
                            '(use "hg update" to check out tip)'))
     if p2 != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
-    mod, add, rem = repo.status()[:3]
-    if mod or add or rem:
-        raise util.Abort(_('outstanding uncommitted changes'))
-    if len(repo.heads()) > 1:
-        raise util.Abort(_('multiple heads in this repository '
-                           '(use "hg heads" and "hg merge" to merge them)'))
+    wlock = repo.wlock()
     lock = repo.lock()
     try:
+        mod, add, rem = repo.status(wlock=wlock)[:3]
+        if mod or add or rem:
+            raise util.Abort(_('outstanding uncommitted changes'))
+        if len(repo.heads()) > 1:
+            raise util.Abort(_('multiple heads in this repository '
+                               '(use "hg heads" and "hg merge" to merge)'))
         return pull()
     finally:
         lock.release()
+        wlock.release()
 
 cmdtable = {
     'fetch':

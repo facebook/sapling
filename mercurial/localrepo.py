@@ -1177,22 +1177,29 @@ class localrepository(repo.repository):
         else:
             return subset
 
-    def pull(self, remote, heads=None, force=False):
-        l = self.lock()
+    def pull(self, remote, heads=None, force=False, lock=None):
+        mylock = False
+        if not lock:
+            lock = self.lock()
+            mylock = True
 
-        fetch = self.findincoming(remote, force=force)
-        if fetch == [nullid]:
-            self.ui.status(_("requesting all changes\n"))
+        try:
+            fetch = self.findincoming(remote, force=force)
+            if fetch == [nullid]:
+                self.ui.status(_("requesting all changes\n"))
 
-        if not fetch:
-            self.ui.status(_("no changes found\n"))
-            return 0
+            if not fetch:
+                self.ui.status(_("no changes found\n"))
+                return 0
 
-        if heads is None:
-            cg = remote.changegroup(fetch, 'pull')
-        else:
-            cg = remote.changegroupsubset(fetch, heads, 'pull')
-        return self.addchangegroup(cg, 'pull', remote.url())
+            if heads is None:
+                cg = remote.changegroup(fetch, 'pull')
+            else:
+                cg = remote.changegroupsubset(fetch, heads, 'pull')
+            return self.addchangegroup(cg, 'pull', remote.url())
+        finally:
+            if mylock:
+                lock.release()
 
     def push(self, remote, force=False, revs=None):
         # there are two ways to push to remote repo:
