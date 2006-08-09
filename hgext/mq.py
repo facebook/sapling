@@ -56,10 +56,7 @@ class statusentry:
 class queue:
     def __init__(self, ui, path, patchdir=None):
         self.basepath = path
-        if patchdir:
-            self.path = patchdir
-        else:
-            self.path = os.path.join(path, "patches")
+        self.path = patchdir or os.path.join(path, "patches")
         self.opener = util.opener(self.path)
         self.ui = ui
         self.applied = []
@@ -69,13 +66,16 @@ class queue:
         self.series_path = "series"
         self.status_path = "status"
 
-        if os.path.exists(os.path.join(self.path, self.series_path)):
+        if os.path.exists(self.join(self.series_path)):
             self.full_series = self.opener(self.series_path).read().splitlines()
         self.parse_series()
 
-        if os.path.exists(os.path.join(self.path, self.status_path)):
+        if os.path.exists(self.join(self.status_path)):
             self.applied = [statusentry(l)
                             for l in self.opener(self.status_path).read().splitlines()]
+
+    def join(self, *p):
+        return os.path.join(self.path, *p)
 
     def find_series(self, patch):
         pre = re.compile("(\s*)([^#]+)")
@@ -124,7 +124,7 @@ class queue:
                 else:
                     break
 
-        pf = os.path.join(self.path, patch)
+        pf = self.join(patch)
         message = []
         comments = []
         user = None
@@ -390,7 +390,7 @@ class queue:
             if r:
                 r.remove([patch], True)
             else:
-                os.unlink(os.path.join(self.path, patch))
+                os.unlink(self.join(patch))
         i = self.find_series(patch)
         del self.full_series[i]
         self.parse_series()
@@ -409,7 +409,7 @@ class queue:
         if c or a or d or r:
             raise util.Abort(_("local changes found, refresh first"))
     def new(self, repo, patch, msg=None, force=None):
-        if os.path.exists(os.path.join(self.path, patch)):
+        if os.path.exists(self.join(patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
         commitfiles = []
         (c, a, r, d, u) = repo.changes(None, None)
@@ -632,7 +632,7 @@ class queue:
         if res and res == patch:
             return res
 
-        if not os.path.isfile(os.path.join(self.path, patch)):
+        if not os.path.isfile(self.join(patch)):
             try:
                 sno = int(patch)
             except(ValueError, OverflowError):
@@ -966,7 +966,7 @@ class queue:
             return True
 
     def qrepo(self, create=False):
-        if create or os.path.isdir(os.path.join(self.path, ".hg")):
+        if create or os.path.isdir(self.join(".hg")):
             return hg.repository(self.ui, path=self.path, create=create)
 
     def restore(self, repo, rev, delete=None, qupdate=None):
@@ -1126,7 +1126,7 @@ class queue:
             if existing:
                 if not patch:
                     patch = filename
-                if not os.path.isfile(os.path.join(self.path, patch)):
+                if not os.path.isfile(self.join(patch)):
                     raise util.Abort(_("patch %s does not exist") % patch)
             else:
                 try:
@@ -1135,7 +1135,7 @@ class queue:
                     raise util.Abort(_("unable to read %s") % patch)
                 if not patch:
                     patch = os.path.split(filename)[1]
-                if not force and os.path.exists(os.path.join(self.path, patch)):
+                if not force and os.path.exists(self.join(patch)):
                     raise util.Abort(_('patch "%s" already exists') % patch)
                 patchf = self.opener(patch, "w")
                 patchf.write(text)
@@ -1350,7 +1350,7 @@ def fold(ui, repo, *files, **opts):
     for patch in patches:
         if not message:
             messages.append(q.readheaders(patch)[0])
-        pf = os.path.join(q.path, patch)
+        pf = q.join(patch)
         (patchsuccess, files, fuzz) = q.patch(repo, pf)
         if not patchsuccess:
             raise util.Abort(_('Error folding patch %s') % patch)
@@ -1461,7 +1461,7 @@ def rename(ui, repo, patch, name=None, **opts):
     if name in q.series:
         raise util.Abort(_('A patch named %s already exists in the series file') % name)
 
-    absdest = os.path.join(q.path, name)
+    absdest = q.join(name)
     if os.path.exists(absdest):
         raise util.Abort(_('%s already exists') % absdest)
     
@@ -1485,7 +1485,7 @@ def rename(ui, repo, patch, name=None, **opts):
         q.applied[info[0]] = statusentry(info[1], name)
     q.applied_dirty = 1
 
-    util.rename(os.path.join(q.path, patch), absdest)
+    util.rename(q.join(patch), absdest)
     r = q.qrepo()
     if r:
         wlock = r.wlock()
@@ -1530,7 +1530,7 @@ def save(ui, repo, **opts):
         util.copyfiles(path, newpath)
     if opts['empty']:
         try:
-            os.unlink(os.path.join(q.path, q.status_path))
+            os.unlink(q.join(q.status_path))
         except:
             pass
     return 0
