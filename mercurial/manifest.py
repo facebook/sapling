@@ -10,26 +10,39 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "array bisect struct")
 
-class manifestflags(dict):
+class manifestdict(dict):
     def __init__(self, mapping={}):
         dict.__init__(self, mapping)
     def __getitem__(self, f):
-        raise "oops"
+        return self.node(f)
+    def get(self, f, default=None):
+        try:
+            return dict.__getitem__(self, f)[:20]
+        except KeyError:
+            return default
+    def __setitem__(self, f, node):
+        fl = self.flags(f)
+        dict.__setitem__(self, f, node + fl)
+    def node(self, f):
+        return dict.__getitem__(self, f)[:20]
     def flags(self, f):
-        return dict.__getitem__(self, f)
+        return dict.get(self, f, "")[20:]
     def execf(self, f):
         "test for executable in manifest flags"
-        return "x" in self.get(f, "")
+        return "x" in self.flags(f)
     def linkf(self, f):
         "test for symlink in manifest flags"
-        return "l" in self.get(f, "")
+        return "l" in self.flags(f)
+    def rawset(self, f, node, flags):
+        dict.__setitem__(self, f, node + flags)
     def set(self, f, execf=False, linkf=False):
+        n = dict.get(self, f, nullid)[:20]
         fl = ""
         if execf: fl = "x"
         if linkf: fl = "l"
-        self[f] = fl
+        dict.__setitem__(self, f, n + fl)
     def copy(self):
-        return manifestflags(dict.copy(self))
+        return manifestdict(dict.copy(self))
 
 class manifest(revlog):
     def __init__(self, opener, defversion=REVLOGV0):
@@ -39,26 +52,21 @@ class manifest(revlog):
                         defversion)
 
     def read(self, node):
-        if node == nullid: return {} # don't upset local cache
+        if node == nullid: return manifestdict() # don't upset local cache
         if self.mapcache and self.mapcache[0] == node:
             return self.mapcache[1]
         text = self.revision(node)
-        map = {}
-        flag = manifestflags()
         self.listcache = array.array('c', text)
         lines = text.splitlines(1)
+        mapping = manifestdict()
         for l in lines:
             (f, n) = l.split('\0')
-            map[f] = bin(n[:40])
-            flag[f] = n[40:-1]
-        self.mapcache = (node, map, flag)
-        return map
+            mapping.rawset(f, bin(n[:40]), n[40:-1])
+        self.mapcache = (node, mapping)
+        return mapping
 
     def readflags(self, node):
-        if node == nullid: return manifestflags() # don't upset local cache
-        if not self.mapcache or self.mapcache[0] != node:
-            self.read(node)
-        return self.mapcache[2]
+        return self.read(node)
 
     def diff(self, a, b):
         return mdiff.textdiff(str(a), str(b))
@@ -107,7 +115,7 @@ class manifest(revlog):
         '''look up entry for a single file efficiently.
         return (node, flag) pair if found, (None, None) if not.'''
         if self.mapcache and node == self.mapcache[0]:
-            return self.mapcache[1].get(f), self.mapcache[2].get(f)
+            return self.mapcache[1].get(f), self.mapcache[1].flags(f)
         text = self.revision(node)
         start, end = self._search(text, f)
         if start == end:
@@ -201,6 +209,6 @@ class manifest(revlog):
 
         n = self.addrevision(buffer(self.listcache), transaction, link, p1,  \
                              p2, cachedelta)
-        self.mapcache = (n, map, flags)
+        self.mapcache = (n, map)
 
         return n
