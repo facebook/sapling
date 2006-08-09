@@ -33,7 +33,7 @@ echo " This is the 3rd log message" >> logfile
 echo bbbb > file
 hg qrefresh -l logfile
 echo =======================
-echo "Should display 'Third commit message\n This is the 3rd log message'"
+printf "Should display 'Third commit message\\\n This is the 3rd log message'\n"
 hg log -l1 -v | sed -n '/description/,$p'
 echo
 
@@ -46,6 +46,6 @@ echo bbbb > file2
 echo " This is the 5th log message" >> logfile) |\
 hg qrefresh -l-
 echo =======================
-echo "Should display 'Fifth commit message\n This is the 5th log message'"
+printf "Should display 'Fifth commit message\\\n This is the 5th log message'\n"
 hg log -l1 -v | sed -n '/description/,$p'
 echo

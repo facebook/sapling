@@ -48,7 +48,7 @@ echo % qrefresh
 
 echo a >> a
 hg qrefresh
-sed -e "s/\(^diff -r \)\([a-f0-9]* \)/\1 x/" \
+sed -e "s/^\(diff -r \)\([a-f0-9]* \)/\1 x/" \
     -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/test.patch
 

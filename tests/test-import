@@ -72,7 +72,7 @@ rm -rf b
 
 echo % plain diff in email, no subject, no message body, should fail
 hg clone -r0 a b
-grep -v '^\(Subject\|email\)' msg.patch | hg --cwd b import -
+egrep -v '^(Subject|email)' msg.patch | hg --cwd b import -
 rm -rf b
 
 echo % hg export in email, should use patch header
@@ -89,9 +89,10 @@ hg --cwd a ci -u someoneelse -d '1 0' -m'subdir change'
 echo % hg import in a subdirectory
 hg clone -r0 a b
 hg --cwd a export tip | sed -e 's/d1\/d2\///' > tip.patch
-pushd b/d1/d2 2>&1 > /dev/null
+dir=`pwd`
+cd b/d1/d2 2>&1 > /dev/null
 hg import  ../../../tip.patch
-popd  2>&1 > /dev/null
+cd $dir
 echo "% message should be 'subdir change'"
 hg --cwd b tip | grep 'subdir change'
 echo "% committer should be 'someoneelse'"
