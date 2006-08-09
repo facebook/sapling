@@ -35,8 +35,6 @@ demandload(globals(), "os sys re struct traceback errno bz2")
 from mercurial.i18n import gettext as _
 from mercurial import ui, hg, revlog, commands, util
 
-versionstr = "0.45"
-
 commands.norepo += " qclone qversion"
 
 class statusentry:
@@ -1793,11 +1791,6 @@ def select(ui, repo, *args, **opts):
         else:
             ui.write(_('no active guards\n'))
 
-def version(ui, q=None):
-    """print the version number of the mq extension"""
-    ui.write("mq version %s\n" % versionstr)
-    return 0
-
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
         def tags(self):
@@ -1929,6 +1922,5 @@ cmdtable = {
          'hg strip [-f] [-b] [-n] REV'),
     "qtop": (top, [], 'hg qtop'),
     "qunapplied": (unapplied, [], 'hg qunapplied [PATCH]'),
-    "qversion": (version, [], 'hg qversion')
 }
 

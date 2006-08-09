@@ -47,7 +47,6 @@ list of commands (use "hg help -v mq" to show aliases and global options):
  qseries      print the entire series file
  qtop         print the name of the current patch
  qunapplied   print the patches not yet applied
- qversion     print the version number of the mq extension
  strip        strip a revision and all later revs on the same branch
 adding a
 adding b/z
