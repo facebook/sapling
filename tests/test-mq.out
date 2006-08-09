@@ -30,6 +30,7 @@ list of commands (use "hg help -v mq" to show aliases and global options):
  qdelete      remove a patch from the series file
  qdiff        diff of the current patch
  qfold        fold the named patches into the current patch
+ qguard       set or print guards for a patch
  qheader      Print the header of the topmost or specified patch
  qimport      import a patch
  qinit        init a new queue repository
@@ -42,10 +43,10 @@ list of commands (use "hg help -v mq" to show aliases and global options):
  qrename      rename a patch
  qrestore     restore the queue state saved by a rev
  qsave        save current queue state
+ qselect      set or print guarded patches to push
  qseries      print the entire series file
  qtop         print the name of the current patch
  qunapplied   print the patches not yet applied
- qversion     print the version number of the mq extension
  strip        strip a revision and all later revs on the same branch
 adding a
 adding b/z

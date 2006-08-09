@@ -22,7 +22,7 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 merge: warning: conflicts during merge
 resolving manifests
- force False allow True moddirstate True linear False
+ overwrite None branchmerge True partial False linear False
  ancestor 055d847dd401 local 2eded9ab0a5c remote 84cf5750dd20
  test.txt versions differ, resolve
 merging test.txt

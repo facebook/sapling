@@ -1,0 +1,54 @@
+adding x
+Patch queue now empty
+% should fail
+abort: no patches applied
+applying a.patch
+Now at: a.patch
+% should guard a.patch
+% should print +a
+a.patch: +a
+Patch queue now empty
+a.patch: +a
+% should push b.patch
+applying b.patch
+Now at: b.patch
+Patch queue now empty
+3 of 3 unapplied patches active
+% should push a.patch
+applying a.patch
+Now at: a.patch
+% should print -a
+c.patch: -a
+% should skip c.patch
+applying b.patch
+skipping c.patch - guarded by '- a'
+Now at: b.patch
+% should push c.patch
+applying c.patch
+Now at: c.patch
+Patch queue now empty
+guards deactivated
+2 of 3 unapplied patches active
+% should push all
+applying b.patch
+applying c.patch
+Now at: c.patch
+Patch queue now empty
+2 of 3 unapplied patches active
+% should push b.patch
+applying b.patch
+Now at: b.patch
+Patch queue now empty
+2 of 3 unapplied patches active
+applying b.patch
+Now at: b.patch
+Patch queue now empty
+3 of 3 unapplied patches active
+% should push a.patch
+applying a.patch
+Now at: a.patch
+Patch queue now empty
+2 of 3 unapplied patches active
+% should push b.patch
+applying b.patch
+Now at: b.patch

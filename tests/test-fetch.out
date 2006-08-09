@@ -1,0 +1,27 @@
+adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding b
+1:97d72e5f12c7
+% should pull one change
+pulling from ../a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1:97d72e5f12c7
+adding c
+pulling from ../a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+merging with new head 2:97d72e5f12c7
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+new changeset 3:cd3a41621cf0 merges remote changes with local
+a
+b
+c
