@@ -59,4 +59,26 @@ hg qpush -a
 
 hg qpop -a
 hg qselect -n
+echo % should push all
 hg qpush -a
+
+hg qpop -a
+hg qguard a.patch +1 +2
+hg qselect 1
+echo % should push b.patch
+hg qpush
+hg qpop -a
+
+hg qselect 2
+hg qpush
+hg qpop -a
+
+hg qselect 1 2
+echo % should push a.patch
+hg qpush
+hg qpop -a
+
+hg qguard a.patch +1 +2 -3
+hg qselect 1 2 3
+echo % should push b.patch
+hg qpush

@@ -176,11 +176,11 @@ class queue:
         if exactneg:
             return False, exactneg[0]
         pos = [g for g in patchguards if g[0] == '+']
-        exactpos = [g for g in pos if g[1:] in guards]
+        nonpos = [g for g in pos if g[1:] not in guards]
         if pos:
-            if exactpos:
-                return True, exactpos[0]
-            return False, ''
+            if not nonpos:
+                return True, ''
+            return False, nonpos
         return True, ''
 
     def explain_pushable(self, idx, all_patches=False):
@@ -201,9 +201,9 @@ class queue:
                         write(_('allowing %s - guarded by %r\n') %
                               (self.series[idx], why))
             if not pushable:
-                if why and why[0] in '-+':
+                if why:
                     write(_('skipping %s - guarded by %r\n') %
-                          (self.series[idx], why))
+                          (self.series[idx], ' '.join(why)))
                 else:
                     write(_('skipping %s - no matching guards\n') %
                           self.series[idx])
@@ -1740,7 +1740,8 @@ def select(ui, repo, *args, **opts):
 
     this sets "stable" guard.  mq will skip foo.patch (because it has
     nagative match) but push bar.patch (because it has posative
-    match).
+    match).  patch is pushed only if all posative guards match and no
+    nagative guards match.
 
     with no arguments, default is to print current active guards.
     with arguments, set active guards as given.
@@ -1760,9 +1761,8 @@ def select(ui, repo, *args, **opts):
         if not args:
             ui.status(_('guards deactivated\n'))
         if q.series:
-            pushable = [p for p in q.unapplied(repo) if q.pushable(p[0])[0]]
             ui.status(_('%d of %d unapplied patches active\n') %
-                      (len(pushable), len(q.series)))
+                      (len(q.unapplied(repo)), len(q.series)))
     elif opts['series']:
         guards = {}
         noguards = 0
