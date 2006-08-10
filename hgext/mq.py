@@ -1832,6 +1832,18 @@ def select(ui, repo, *args, **opts):
 
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
+        def commit(self, *args, **opts):
+            if len(args) >= 6:
+                force = args[5]
+            else:
+                force = opts.get('force')
+            if self.mq.applied and not force:
+                parent = revlog.hex(self.dirstate.parents()[0])
+                if parent in [s.rev for s in self.mq.applied]:
+                    raise util.Abort(_('cannot commit over an applied mq patch'))
+
+            return super(mqrepo, self).commit(*args, **opts)
+
         def tags(self):
             if self.tagscache:
                 return self.tagscache
