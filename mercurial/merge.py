@@ -84,11 +84,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     m2n = repo.changelog.read(p2)[0]
     man = repo.manifest.ancestor(m1n, m2n)
     m1 = repo.manifest.read(m1n)
-    mf1 = repo.manifest.readflags(m1n)
     m2 = repo.manifest.read(m2n).copy()
-    mf2 = repo.manifest.readflags(m2n)
     ma = repo.manifest.read(man)
-    mfa = repo.manifest.readflags(man)
 
     if not forcemerge and not overwrite:
         for f in unknown:
@@ -113,12 +110,11 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     # construct a working dir manifest
     mw = m1.copy()
-    mfw = mf1.copy()
     umap = dict.fromkeys(unknown)
 
     for f in added + modified + unknown:
         mw[f] = ""
-        mfw.set(f, util.is_exec(repo.wjoin(f), mfw.execf(f)))
+        mw.set(f, util.is_exec(repo.wjoin(f), mw.execf(f)))
 
     for f in deleted + removed:
         if f in mw:
@@ -155,7 +151,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
                     # merge executable bits
                     # "if we changed or they changed, change in merge"
-                    a, b, c = mfa.execf(f), mfw.execf(f), mf2.execf(f)
+                    a, b, c = ma.execf(f), mw.execf(f), m2.execf(f)
                     mode = ((a^b) | (a^c)) ^ a
                     merge[f] = (mode, m1.get(f, nullid), m2[f])
                     s = 1
@@ -171,12 +167,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 # we need to reset the dirstate if the file was added
                 get[f] = (m2.execf(f), m2[f])
 
-            if not s and mfw.execf(f) != mf2.execf(f):
+            if not s and mw.execf(f) != m2.execf(f):
                 if overwrite:
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
-                    util.set_exec(repo.wjoin(f), mf2.execf(f))
+                    util.set_exec(repo.wjoin(f), m2.execf(f))
                 else:
-                    a, b, c = mfa.execf(f), mfw.execf(f), mf2.execf(f)
+                    a, b, c = ma.execf(f), mw.execf(f), m2.execf(f)
                     mode = ((a^b) | (a^c)) ^ a
                     if mode != b:
                         repo.ui.debug(_(" updating permissions for %s\n")
