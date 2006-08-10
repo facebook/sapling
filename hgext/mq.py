@@ -725,6 +725,8 @@ class queue:
     # 2) a unique substring of the patch name was given
     # 3) patchname[-+]num to indicate an offset in the series file
     def lookup(self, patch, strict=False):
+        patch = patch and str(patch)
+
         def partial_name(s):
             if s in self.series:
                 return s
@@ -1750,19 +1752,36 @@ def select(ui, repo, *args, **opts):
     when no guards active, patches with posative guards are skipped,
     patches with nagative guards are pushed.
 
+    qselect can change guards of applied patches. it does not pop
+    guarded patches by default.  use --pop to pop back to last applied
+    patch that is not guarded.  use --reapply (implies --pop) to push
+    back to current patch afterwards, but skip guarded patches.
+
     use -s/--series to print list of all guards in series file (no
     other arguments needed).  use -v for more information.'''
 
     q = repo.mq
     guards = q.active()
     if args or opts['none']:
+        old_unapplied = q.unapplied(repo)
+        old_guarded = [i for i in xrange(len(q.applied)) if
+                       not q.pushable(i)[0]]
         q.set_active(args)
         q.save_dirty()
         if not args:
             ui.status(_('guards deactivated\n'))
-        if q.series:
-            ui.status(_('%d of %d unapplied patches active\n') %
-                      (len(q.unapplied(repo)), len(q.series)))
+        if not opts['pop'] and not opts['reapply']:
+            unapplied = q.unapplied(repo)
+            guarded = [i for i in xrange(len(q.applied))
+                       if not q.pushable(i)[0]]
+            if len(unapplied) != len(old_unapplied):
+                ui.status(_('number of unguarded, unapplied patches has '
+                            'changed from %d to %d\n') %
+                          (len(old_unapplied), len(unapplied)))
+            if len(guarded) != len(old_guarded):
+                ui.status(_('number of guarded, applied patches has changed '
+                            'from %d to %d\n') %
+                          (len(old_guarded), len(guarded)))
     elif opts['series']:
         guards = {}
         noguards = 0
@@ -1790,6 +1809,26 @@ def select(ui, repo, *args, **opts):
                 ui.write(g, '\n')
         else:
             ui.write(_('no active guards\n'))
+    reapply = opts['reapply'] and q.applied and q.appliedname(-1)
+    popped = False
+    if opts['pop'] or opts['reapply']:
+        for i in xrange(len(q.applied)):
+            pushable, reason = q.pushable(i)
+            if not pushable:
+                ui.status(_('popping guarded patches\n'))
+                popped = True
+                if i == 0:
+                    q.pop(repo, all=True)
+                else:
+                    q.pop(repo, i-1)
+                break
+    if popped:
+        try:
+            if reapply:
+                ui.status(_('reapplying unguarded patches\n'))
+                q.push(repo, reapply)
+        finally:
+            q.save_dirty()
 
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
@@ -1907,8 +1946,11 @@ cmdtable = {
          'hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]'),
     "qselect": (select,
                 [('n', 'none', None, _('disable all guards')),
-                 ('s', 'series', None, _('list all guards in series file'))],
-                'hg qselect [GUARDS]'),
+                 ('s', 'series', None, _('list all guards in series file')),
+                 ('', 'pop', None,
+                  _('pop to before first guarded applied patch')),
+                 ('', 'reapply', None, _('pop, then reapply patches'))],
+                'hg qselect [OPTION...] [GUARD...]'),
     "qseries":
         (series,
          [('m', 'missing', None, 'print patches not in series'),

@@ -13,7 +13,7 @@ a.patch: +a
 applying b.patch
 Now at: b.patch
 Patch queue now empty
-3 of 3 unapplied patches active
+number of unguarded, unapplied patches has changed from 2 to 3
 % should push a.patch
 applying a.patch
 Now at: a.patch
@@ -28,27 +28,34 @@ applying c.patch
 Now at: c.patch
 Patch queue now empty
 guards deactivated
-2 of 3 unapplied patches active
+number of unguarded, unapplied patches has changed from 3 to 2
 % should push all
 applying b.patch
 applying c.patch
 Now at: c.patch
 Patch queue now empty
-2 of 3 unapplied patches active
 % should push b.patch
 applying b.patch
 Now at: b.patch
 Patch queue now empty
-2 of 3 unapplied patches active
 applying b.patch
 Now at: b.patch
 Patch queue now empty
-3 of 3 unapplied patches active
+number of unguarded, unapplied patches has changed from 2 to 3
 % should push a.patch
 applying a.patch
 Now at: a.patch
 Patch queue now empty
-2 of 3 unapplied patches active
+number of unguarded, unapplied patches has changed from 3 to 2
 % should push b.patch
 applying b.patch
 Now at: b.patch
+applying c.patch
+Now at: c.patch
+guards deactivated
+popping guarded patches
+Patch queue now empty
+reapplying unguarded patches
+applying b.patch
+applying c.patch
+Now at: c.patch
