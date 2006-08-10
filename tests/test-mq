@@ -10,6 +10,10 @@ hg help mq
 hg init a
 cd a
 echo a > a
+hg ci -Ama
+
+hg clone . ../k
+
 mkdir b
 echo z > b/z
 hg ci -Ama
@@ -106,8 +110,15 @@ hg qapplied
 echo % commit should fail
 hg commit
 
+echo % push should fail
+hg push ../../k
+
 echo % qunapplied
 hg qunapplied
+
+echo % push should succeed
+hg qpop -a
+hg push ../../k
 
 echo % strip
 cd ../../b

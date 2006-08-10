@@ -49,6 +49,7 @@ list of commands (use "hg help -v mq" to show aliases and global options):
  qunapplied   print the patches not yet applied
  strip        strip a revision and all later revs on the same branch
 adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding b/z
 % qinit
 % -R qinit
@@ -104,6 +105,9 @@ Only one patch applied
 test.patch
 % commit should fail
 abort: cannot commit over an applied mq patch
+% push should fail
+pushing to ../../k
+abort: source has mq patches applied
 % qunapplied
 test2.patch
 % strip

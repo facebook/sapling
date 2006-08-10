@@ -1832,18 +1832,28 @@ def select(ui, repo, *args, **opts):
 
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
+        def abort_if_wdir_patched(self, errmsg, force=False):
+            if self.mq.applied and not force:
+                parent = revlog.hex(self.dirstate.parents()[0])
+                if parent in [s.rev for s in self.mq.applied]:
+                    raise util.Abort(errmsg)
+            
         def commit(self, *args, **opts):
             if len(args) >= 6:
                 force = args[5]
             else:
                 force = opts.get('force')
-            if self.mq.applied and not force:
-                parent = revlog.hex(self.dirstate.parents()[0])
-                if parent in [s.rev for s in self.mq.applied]:
-                    raise util.Abort(_('cannot commit over an applied mq patch'))
+            self.abort_if_wdir_patched(
+                _('cannot commit over an applied mq patch'),
+                force)
 
             return super(mqrepo, self).commit(*args, **opts)
 
+        def push(self, remote, force=False, revs=None):
+            if self.mq.applied and not force:
+                raise util.Abort(_('source has mq patches applied'))
+            return super(mqrepo, self).push(remote, force, revs)
+            
         def tags(self):
             if self.tagscache:
                 return self.tagscache
