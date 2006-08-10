@@ -103,6 +103,9 @@ hg qnext
 hg qprev
 hg qapplied
 
+echo % commit should fail
+hg commit
+
 echo % qunapplied
 hg qunapplied
 

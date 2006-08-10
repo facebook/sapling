@@ -102,6 +102,8 @@ Now at: test.patch
 test2.patch
 Only one patch applied
 test.patch
+% commit should fail
+abort: cannot commit over an applied mq patch
 % qunapplied
 test2.patch
 % strip
