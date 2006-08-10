@@ -48,9 +48,14 @@ def islocal(repo):
             return False
     return repo.local()
 
+repo_setup_hooks = []
+
 def repository(ui, path=None, create=False):
     """return a repository object for the specified path"""
-    return _lookup(path).instance(ui, path, create)
+    repo = _lookup(path).instance(ui, path, create)
+    for hook in repo_setup_hooks:
+        hook(ui, repo)
+    return repo
 
 def defaultdest(source):
     '''return default destination of clone if none is given'''

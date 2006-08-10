@@ -3545,6 +3545,7 @@ def dispatch(args):
                         mod = sys.modules[name]
                         if hasattr(mod, 'reposetup'):
                             mod.reposetup(u, repo)
+                            hg.repo_setup_hooks.append(mod.reposetup)
                 except hg.RepoError:
                     if cmd not in optionalrepo.split():
                         raise
