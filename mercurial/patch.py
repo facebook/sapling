@@ -94,7 +94,6 @@ def dogitpatch(patchname, gitpatches):
             (src, dst) = [os.path.join(os.getcwd(), n)
                           for n in (p.oldpath, p.path)]
 
-            print "copying %s to %s" % (src, dst)
             targetdir = os.path.dirname(dst)
             if not os.path.isdir(targetdir):
                 os.makedirs(targetdir)
