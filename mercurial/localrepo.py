@@ -509,7 +509,7 @@ class localrepository(repo.repository):
                     # deleted from p2?
                     pass
 
-        mnode = self.manifest.add(m1, m1, tr, linkrev, c1[0], c2[0])
+        mnode = self.manifest.add(m1, tr, linkrev, c1[0], c2[0])
         user = user or self.ui.username()
         n = self.changelog.add(mnode, changed, text, tr, p1, p2, user, date)
         tr.close()
@@ -597,7 +597,7 @@ class localrepository(repo.repository):
         for f in remove:
             if f in m1:
                 del m1[f]
-        mn = self.manifest.add(m1, m1, tr, linkrev, c1[0], c2[0],
+        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0],
                                (new, remove))
 
         # add changeset

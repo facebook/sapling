@@ -53,9 +53,6 @@ class manifest(revlog):
         self.mapcache = (node, mapping)
         return mapping
 
-    def readflags(self, node):
-        return self.read(node)
-
     def diff(self, a, b):
         return mdiff.textdiff(str(a), str(b))
 
@@ -112,7 +109,7 @@ class manifest(revlog):
         f, n = l.split('\0')
         return bin(n[:40]), n[40:-1] == 'x'
 
-    def add(self, map, flags, transaction, link, p1=None, p2=None,
+    def add(self, map, transaction, link, p1=None, p2=None,
             changed=None):
         # apply the changes collected during the bisect loop to our addlist
         # return a delta suitable for addrevision
@@ -140,7 +137,7 @@ class manifest(revlog):
 
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
-            text = ["%s\000%s%s\n" % (f, hex(map[f]), flags.flags(f)) for f in files]
+            text = ["%s\000%s%s\n" % (f, hex(map[f]), map.flags(f)) for f in files]
             self.listcache = array.array('c', "".join(text))
             cachedelta = None
         else:
@@ -166,7 +163,7 @@ class manifest(revlog):
                 # bs will either be the index of the item or the insert point
                 start, end = self._search(addbuf, f, start)
                 if w[1] == 0:
-                    l = "%s\000%s%s\n" % (f, hex(map[f]), flags.flags(f))
+                    l = "%s\000%s%s\n" % (f, hex(map[f]), map.flags(f))
                 else:
                     l = ""
                 if start == end and w[1] == 1:
