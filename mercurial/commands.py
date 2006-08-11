@@ -1825,7 +1825,6 @@ def import_(ui, repo, patch1, *patches, **opts):
     wlock = repo.wlock()
     lock = repo.lock()
 
-    wlock = repo.wlock()
     for p in patches:
         pf = os.path.join(d, p)
 
