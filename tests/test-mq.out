@@ -110,6 +110,14 @@ pushing to ../../k
 abort: source has mq patches applied
 % qunapplied
 test2.patch
+% push should succeed
+Patch queue now empty
+pushing to ../../k
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
 % strip
 adding x
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
