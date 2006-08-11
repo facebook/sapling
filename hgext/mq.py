@@ -1875,8 +1875,9 @@ def reposetup(ui, repo):
 
             return tagscache
 
-    repo.__class__ = mqrepo
-    repo.mq = queue(ui, repo.join(""))
+    if repo.local():
+        repo.__class__ = mqrepo
+        repo.mq = queue(ui, repo.join(""))
 
 cmdtable = {
     "qapplied": (applied, [], 'hg qapplied [PATCH]'),
