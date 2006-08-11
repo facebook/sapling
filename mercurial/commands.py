@@ -10,7 +10,7 @@ from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
-demandload(globals(), "fnmatch mdiff random signal tempfile time")
+demandload(globals(), "fnmatch mdiff patch random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
 demandload(globals(), "archival cStringIO changegroup email.Parser")
 demandload(globals(), "hgweb.server sshserver")
@@ -1826,21 +1826,21 @@ def import_(ui, repo, patch1, *patches, **opts):
     lock = repo.lock()
 
     wlock = repo.wlock()
-    for patch in patches:
-        pf = os.path.join(d, patch)
+    for p in patches:
+        pf = os.path.join(d, p)
 
         message = None
         user = None
         date = None
         hgpatch = False
 
-        p = email.Parser.Parser()
+        parser = email.Parser.Parser()
         if pf == '-':
-            msg = p.parse(sys.stdin)
+            msg = parser.parse(sys.stdin)
             ui.status(_("applying patch from stdin\n"))
         else:
-            msg = p.parse(file(pf))
-            ui.status(_("applying %s\n") % patch)
+            msg = parser.parse(file(pf))
+            ui.status(_("applying %s\n") % p)
 
         fd, tmpname = tempfile.mkstemp(prefix='hg-patch-')
         tmpfp = os.fdopen(fd, 'w')
@@ -1908,7 +1908,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             if not diffs_seen:
                 raise util.Abort(_('no diffs found'))
 
-            files = util.patch(strip, tmpname, ui, cwd=repo.root)
+            files = patch.patch(strip, tmpname, ui, cwd=repo.root)
             removes = []
             if len(files) > 0:
                 cfiles = files.keys()
