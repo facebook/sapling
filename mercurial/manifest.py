@@ -11,38 +11,26 @@ from demandload import *
 demandload(globals(), "array bisect struct")
 
 class manifestdict(dict):
-    def __init__(self, mapping={}):
+    def __init__(self, mapping={}, flags={}):
         dict.__init__(self, mapping)
-    def __getitem__(self, f):
-        return self.node(f)
-    def get(self, f, default=None):
-        try:
-            return dict.__getitem__(self, f)[:20]
-        except KeyError:
-            return default
-    def __setitem__(self, f, node):
-        fl = self.flags(f)
-        dict.__setitem__(self, f, node + fl)
-    def node(self, f):
-        return dict.__getitem__(self, f)[:20]
+        self._flags = flags
     def flags(self, f):
-        return dict.get(self, f, "")[20:]
+        return self._flags.get(f, "")
     def execf(self, f):
         "test for executable in manifest flags"
         return "x" in self.flags(f)
     def linkf(self, f):
         "test for symlink in manifest flags"
         return "l" in self.flags(f)
-    def rawset(self, f, node, flags):
-        dict.__setitem__(self, f, node + flags)
+    def rawset(self, f, entry):
+        self[f] = bin(entry[:40])
+        fl = entry[40:-1]
+        if fl: self._flags[f] = fl
     def set(self, f, execf=False, linkf=False):
-        n = dict.get(self, f, nullid)[:20]
-        fl = ""
-        if execf: fl = "x"
-        if linkf: fl = "l"
-        dict.__setitem__(self, f, n + fl)
+        if execf: self._flags[f] = "x"
+        if linkf: self._flags[f] = "x"
     def copy(self):
-        return manifestdict(dict.copy(self))
+        return manifestdict(dict.copy(self), dict.copy(self._flags))
 
 class manifest(revlog):
     def __init__(self, opener, defversion=REVLOGV0):
@@ -61,7 +49,7 @@ class manifest(revlog):
         mapping = manifestdict()
         for l in lines:
             (f, n) = l.split('\0')
-            mapping.rawset(f, bin(n[:40]), n[40:-1])
+            mapping.rawset(f, n)
         self.mapcache = (node, mapping)
         return mapping
 
