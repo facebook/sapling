@@ -1333,9 +1333,9 @@ def debugrebuildstate(ui, repo, rev=None):
         rev = repo.lookup(rev)
     change = repo.changelog.read(rev)
     n = change[0]
-    files = repo.manifest.readflags(n)
+    files = repo.manifest.read(n)
     wlock = repo.wlock()
-    repo.dirstate.rebuild(rev, files.iteritems())
+    repo.dirstate.rebuild(rev, files)
 
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
@@ -2146,13 +2146,12 @@ def manifest(ui, repo, rev=None):
     else:
         n = repo.manifest.tip()
     m = repo.manifest.read(n)
-    mf = repo.manifest.readflags(n)
     files = m.keys()
     files.sort()
 
     for f in files:
         ui.write("%40s %3s %s\n" % (hex(m[f]),
-                                    mf.execf(f) and "755" or "644", f))
+                                    m.execf(f) and "755" or "644", f))
 
 def merge(ui, repo, node=None, force=None, branch=None):
     """Merge working directory with another revision

@@ -886,7 +886,6 @@ class queue:
             top = self.check_toppatch(repo)
             qp = self.qparents(repo, rev)
             changes = repo.changelog.read(qp)
-            mf1 = repo.manifest.readflags(changes[0])
             mmap = repo.manifest.read(changes[0])
             (c, a, r, d, u) = repo.changes(qp, top)
             if d:
@@ -895,7 +894,7 @@ class queue:
                 getfile(f, mmap[f])
             for f in r:
                 getfile(f, mmap[f])
-                util.set_exec(repo.wjoin(f), mf1[f])
+                util.set_exec(repo.wjoin(f), mmap.execf[f])
             repo.dirstate.update(c + r, 'n')
             for f in a:
                 try: os.unlink(repo.wjoin(f))

@@ -164,11 +164,10 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     mn = change[0]
     archiver = archivers[kind](dest, prefix, mtime or change[2][0])
     mf = repo.manifest.read(mn).items()
-    mff = repo.manifest.readflags(mn)
     mf.sort()
     write('.hg_archival.txt', 0644,
           'repo: %s\nnode: %s\n' % (hex(repo.changelog.node(0)), hex(node)))
     for filename, filenode in mf:
-        write(filename, mff.execf(filename) and 0755 or 0644,
+        write(filename, mf.execf(filename) and 0755 or 0644,
               repo.file(filename).read(filenode))
     archiver.done()
