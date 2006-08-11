@@ -3449,18 +3449,8 @@ def findext(name):
                 return sys.modules[v]
         raise KeyError(name)
 
-def dispatch(args):
-    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
-        num = getattr(signal, name, None)
-        if num: signal.signal(num, catchterm)
-
-    try:
-        u = ui.ui(traceback='--traceback' in sys.argv[1:])
-    except util.Abort, inst:
-        sys.stderr.write(_("abort: %s\n") % inst)
-        return -1
-
-    for ext_name, load_from_name in u.extensions():
+def load_extensions(ui, extensions):
+    for ext_name, load_from_name in extensions:
         try:
             if load_from_name:
                 # the module will be loaded in sys.modules
@@ -3483,8 +3473,9 @@ def dispatch(args):
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
-            u.warn(_("*** failed to import extension %s: %s\n") % (ext_name, inst))
-            if u.print_exc():
+            ui.warn(_("*** failed to import extension %s: %s\n") %
+                    (ext_name, inst))
+            if ui.print_exc():
                 return 1
 
     for name in external.itervalues():
@@ -3495,8 +3486,21 @@ def dispatch(args):
         cmdtable = getattr(mod, 'cmdtable', {})
         for t in cmdtable:
             if t in table:
-                u.warn(_("module %s overrides %s\n") % (name, t))
+                ui.warn(_("module %s overrides %s\n") % (name, t))
         table.update(cmdtable)
+    
+def dispatch(args):
+    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
+        num = getattr(signal, name, None)
+        if num: signal.signal(num, catchterm)
+
+    try:
+        u = ui.ui(traceback='--traceback' in sys.argv[1:])
+    except util.Abort, inst:
+        sys.stderr.write(_("abort: %s\n") % inst)
+        return -1
+
+    load_extensions(u, u.extensions())
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)
