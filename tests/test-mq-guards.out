@@ -34,19 +34,37 @@ applying b.patch
 applying c.patch
 Now at: c.patch
 Patch queue now empty
+number of unguarded, unapplied patches has changed from 1 to 2
+% should push a.patch, not b.patch
+applying a.patch
+Now at: a.patch
+applying c.patch
+Now at: c.patch
+Patch queue now empty
 % should push b.patch
 applying b.patch
 Now at: b.patch
 Patch queue now empty
+number of unguarded, unapplied patches has changed from 2 to 3
+% should push a.patch, b.patch
+applying a.patch
+Now at: a.patch
 applying b.patch
 Now at: b.patch
 Patch queue now empty
-number of unguarded, unapplied patches has changed from 2 to 3
-% should push a.patch
-applying a.patch
-Now at: a.patch
-Patch queue now empty
 number of unguarded, unapplied patches has changed from 3 to 2
+% list patches and guards
+a.patch: +1 +2 -3
+b.patch: +2
+c.patch: unguarded
+% list series
+0 G a.patch
+1 U b.patch
+2 U c.patch
+% list guards
+1
+2
+3
 % should push b.patch
 applying b.patch
 Now at: b.patch
@@ -56,6 +74,11 @@ guards deactivated
 popping guarded patches
 Patch queue now empty
 reapplying unguarded patches
-applying b.patch
 applying c.patch
 Now at: c.patch
+% guards in series file: +1 +2 -3
++1
++2
+-3
+% should show c.patch
+c.patch

@@ -63,25 +63,39 @@ echo % should push all
 hg qpush -a
 
 hg qpop -a
-hg qguard a.patch +1 +2
+hg qguard a.patch +1
+hg qguard b.patch +2
 hg qselect 1
-echo % should push b.patch
+echo % should push a.patch, not b.patch
+hg qpush
 hg qpush
 hg qpop -a
 
 hg qselect 2
+echo % should push b.patch
 hg qpush
 hg qpop -a
 
 hg qselect 1 2
-echo % should push a.patch
+echo % should push a.patch, b.patch
+hg qpush
 hg qpush
 hg qpop -a
 
 hg qguard a.patch +1 +2 -3
 hg qselect 1 2 3
+echo % list patches and guards
+hg qguard -l
+echo % list series
+hg qseries -v
+echo % list guards
+hg qselect
 echo % should push b.patch
 hg qpush
 
 hg qpush -a
 hg qselect -n --reapply
+echo % guards in series file: +1 +2 -3
+hg qselect -s
+echo % should show c.patch
+hg qapplied

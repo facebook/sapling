@@ -176,11 +176,11 @@ class queue:
         if exactneg:
             return False, exactneg[0]
         pos = [g for g in patchguards if g[0] == '+']
-        nonpos = [g for g in pos if g[1:] not in guards]
+        exactpos = [g for g in pos if g[1:] in guards]
         if pos:
-            if not nonpos:
-                return True, ''
-            return False, nonpos
+            if exactpos:
+                return True, exactpos[0]
+            return False, pos
         return True, ''
 
     def explain_pushable(self, idx, all_patches=False):
@@ -1742,7 +1742,7 @@ def select(ui, repo, *args, **opts):
 
     this sets "stable" guard.  mq will skip foo.patch (because it has
     nagative match) but push bar.patch (because it has posative
-    match).  patch is pushed only if all posative guards match and no
+    match).  patch is pushed if any posative guards match and no
     nagative guards match.
 
     with no arguments, default is to print current active guards.
