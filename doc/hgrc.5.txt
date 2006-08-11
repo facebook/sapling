@@ -306,7 +306,7 @@ http_proxy::
 smtp::
   Configuration for extensions that need to send email messages.
   host;;
-    Optional.  Host name of mail server.  Default: "mail".
+    Host name of mail server, e.g. "mail.example.com".
   port;;
     Optional.  Port to connect to on mail server.  Default: 25.
   tls;;
