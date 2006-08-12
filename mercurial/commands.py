@@ -1649,6 +1649,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             return self.line == other.line
 
     matches = {}
+    copies = {}
     def grepbody(fn, rev, body):
         matches[rev].setdefault(fn, [])
         m = matches[rev][fn]
@@ -1709,10 +1710,12 @@ def grep(ui, repo, pattern, *pats, **opts):
     changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
     count = 0
     incrementing = False
+    follow = opts.get('follow')
     for st, rev, fns in changeiter:
         if st == 'window':
             incrementing = rev
             matches.clear()
+            copies.clear()
         elif st == 'add':
             change = repo.changelog.read(repo.lookup(str(rev)))
             mf = repo.manifest.read(change[0])
@@ -1721,22 +1724,34 @@ def grep(ui, repo, pattern, *pats, **opts):
                 if fn in skip:
                     continue
                 fstate.setdefault(fn, {})
+                copies.setdefault(rev, {})
                 try:
                     grepbody(fn, rev, getfile(fn).read(mf[fn]))
+                    if follow:
+                        copied = getfile(fn).renamed(mf[fn])
+                        if copied:
+                            copies[rev][fn] = copied[0]
                 except KeyError:
                     pass
         elif st == 'iter':
             states = matches[rev].items()
             states.sort()
             for fn, m in states:
+                copy = copies[rev].get(fn)
                 if fn in skip:
+                    if copy:
+                        skip[copy] = True
                     continue
                 if incrementing or not opts['all'] or fstate[fn]:
                     pos, neg = display(fn, rev, m, fstate[fn])
                     count += pos + neg
                     if pos and not opts['all']:
                         skip[fn] = True
+                        if copy:
+                            skip[copy] = True
                 fstate[fn] = m
+                if copy:
+                    fstate[copy] = m
                 prev[fn] = rev
 
     if not incrementing:
@@ -1745,7 +1760,8 @@ def grep(ui, repo, pattern, *pats, **opts):
         for fn, state in fstate:
             if fn in skip:
                 continue
-            display(fn, rev, {}, state)
+            if fn not in copies[prev[fn]]:
+                display(fn, rev, {}, state)
     return (count == 0 and 1) or 0
 
 def heads(ui, repo, **opts):
@@ -3107,6 +3123,8 @@ table = {
         (grep,
          [('0', 'print0', None, _('end fields with NUL')),
           ('', 'all', None, _('print all revisions that match')),
+          ('f', 'follow', None,
+           _('follow changeset history, or file history across copies and renames')),
           ('i', 'ignore-case', None, _('ignore case when matching')),
           ('l', 'files-with-matches', None,
            _('print only filenames and revs that match')),

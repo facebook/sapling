@@ -11,3 +11,15 @@ port:2:3:+:spam:import/export
 port:1:2:+:eggs:export
 port:0:1:+:eggs:import
 port:4:import/export
+% follow
+port:0:import
+port2:6:4:+:eggs:deport
+port:4:4:-:spam:import/export
+port:3:4:+:eggs:import/export
+port:2:1:-:spam:import
+port:2:2:-:spam:export
+port:2:1:+:spam:export
+port:2:2:+:spam:vaportight
+port:2:3:+:spam:import/export
+port:1:2:+:eggs:export
+port:0:1:+:eggs:import
