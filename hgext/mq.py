@@ -895,7 +895,7 @@ class queue:
                 getfile(f, mmap[f])
             for f in r:
                 getfile(f, mmap[f])
-                util.set_exec(repo.wjoin(f), mmap.execf[f])
+                util.set_exec(repo.wjoin(f), mmap.execf(f))
             repo.dirstate.update(c + r, 'n')
             for f in a:
                 try: os.unlink(repo.wjoin(f))
