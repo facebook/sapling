@@ -502,7 +502,6 @@ class localrepository(repo.repository):
             except IOError:
                 try:
                     del m1[f]
-                    del m1[f]
                     if update_dirstate:
                         self.dirstate.forget([f])
                 except:

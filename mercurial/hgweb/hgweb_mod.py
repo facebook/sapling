@@ -398,7 +398,7 @@ class hgweb(object):
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
                      rename=self.renamelink(fl, n),
-                     permissions=self.repo.manifest.read(mfn).execf[f])
+                     permissions=self.repo.manifest.read(mfn).execf(f))
 
     def fileannotate(self, f, node):
         bcache = {}
@@ -452,7 +452,7 @@ class hgweb(object):
                      rename=self.renamelink(fl, n),
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
-                     permissions=self.repo.manifest.read(mfn).execf[f])
+                     permissions=self.repo.manifest.read(mfn).execf(f))
 
     def manifest(self, mnode, path):
         man = self.repo.manifest
@@ -495,7 +495,7 @@ class hgweb(object):
                        "filenode": hex(fnode),
                        "parity": self.stripes(parity),
                        "basename": f,
-                       "permissions": mf.execf[full]}
+                       "permissions": mf.execf(full)}
                 parity += 1
 
         def dirlist(**map):
