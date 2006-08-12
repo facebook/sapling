@@ -95,27 +95,6 @@ def find_in_path(name, path, default=None):
             return p_name
     return default
 
-def patch(strip, patchname, ui, cwd=None):
-    """apply the patch <patchname> to the working directory.
-    a list of patched files is returned"""
-    patcher = find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-    args = []
-    if cwd:
-        args.append('-d %s' % shellquote(cwd))
-    fp = os.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
-                                       shellquote(patchname)))
-    files = {}
-    for line in fp:
-        line = line.rstrip()
-        ui.status("%s\n" % line)
-        if line.startswith('patching file '):
-            pf = parse_patch_output(line)
-            files.setdefault(pf, 1)
-    code = fp.close()
-    if code:
-        raise Abort(_("patch command failed: %s") % explain_exit(code)[0])
-    return files.keys()
-
 def binary(s):
     """return true if a string is binary data using diff's heuristic"""
     if s and '\0' in s[:4096]:

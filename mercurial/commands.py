@@ -10,7 +10,7 @@ from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
-demandload(globals(), "fnmatch mdiff random signal tempfile time")
+demandload(globals(), "fnmatch mdiff patch random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
 demandload(globals(), "archival cStringIO changegroup email.Parser")
 demandload(globals(), "hgweb.server sshserver")
@@ -1825,21 +1825,21 @@ def import_(ui, repo, patch1, *patches, **opts):
     wlock = repo.wlock()
     lock = repo.lock()
 
-    for patch in patches:
-        pf = os.path.join(d, patch)
+    for p in patches:
+        pf = os.path.join(d, p)
 
         message = None
         user = None
         date = None
         hgpatch = False
 
-        p = email.Parser.Parser()
+        parser = email.Parser.Parser()
         if pf == '-':
-            msg = p.parse(sys.stdin)
+            msg = parser.parse(sys.stdin)
             ui.status(_("applying patch from stdin\n"))
         else:
-            msg = p.parse(file(pf))
-            ui.status(_("applying %s\n") % patch)
+            msg = parser.parse(file(pf))
+            ui.status(_("applying %s\n") % p)
 
         fd, tmpname = tempfile.mkstemp(prefix='hg-patch-')
         tmpfp = os.fdopen(fd, 'w')
@@ -1907,13 +1907,45 @@ def import_(ui, repo, patch1, *patches, **opts):
             if not diffs_seen:
                 raise util.Abort(_('no diffs found'))
 
-            files = util.patch(strip, tmpname, ui, cwd=repo.root)
+            files = patch.patch(strip, tmpname, ui, cwd=repo.root)
+            removes = []
             if len(files) > 0:
-                cfiles = files
+                cfiles = files.keys()
+                copies = []
+                copts = {'after': False, 'force': False}
                 cwd = repo.getcwd()
                 if cwd:
-                    cfiles = [util.pathto(cwd, f) for f in files]
+                    cfiles = [util.pathto(cwd, f) for f in files.keys()]
+                for f in files:
+                    ctype, gp = files[f]
+                    if ctype == 'RENAME':
+                        copies.append((gp.oldpath, gp.path, gp.copymod))
+                        removes.append(gp.oldpath)
+                    elif ctype == 'COPY':
+                        copies.append((gp.oldpath, gp.path, gp.copymod))
+                    elif ctype == 'DELETE':
+                        removes.append(gp.path)
+                for src, dst, after in copies:
+                    absdst = os.path.join(repo.root, dst)
+                    if not after and os.path.exists(absdst):
+                        raise util.Abort(_('patch creates existing file %s') % dst)
+                    if cwd:
+                        src, dst = [util.pathto(cwd, f) for f in (src, dst)]
+                    copts['after'] = after
+                    errs, copied = docopy(ui, repo, (src, dst), copts, wlock=wlock)
+                    if errs:
+                        raise util.Abort(errs)
+                if removes:
+                    repo.remove(removes, True, wlock=wlock)
+                for f in files:
+                    ctype, gp = files[f]
+                    if gp and gp.mode:
+                        x = gp.mode & 0100 != 0
+                        dst = os.path.join(repo.root, gp.path)
+                        util.set_exec(dst, x)
                 addremove_lock(ui, repo, cfiles, {}, wlock=wlock)
+            files = files.keys()
+            files.extend([r for r in removes if r not in files])
             repo.commit(files, message, user, date, wlock=wlock, lock=lock)
         finally:
             os.unlink(tmpname)
