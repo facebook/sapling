@@ -242,7 +242,8 @@ def patch(strip, patchname, ui, cwd=None):
                 files.setdefault(pf, (None, None))
         code = fp.close()
         if code:
-            raise util.Abort(_("patch command failed: %s") % explain_exit(code)[0])
+            raise util.Abort(_("patch command failed: %s") %
+                             util.explain_exit(code)[0])
 
     for gp in gitpatches:
         files[gp.path] = (gp.op, gp)
