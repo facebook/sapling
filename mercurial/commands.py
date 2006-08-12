@@ -10,7 +10,7 @@ from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
-demandload(globals(), "fnmatch mdiff random signal tempfile time")
+demandload(globals(), "fnmatch mdiff difflib random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
 demandload(globals(), "archival cStringIO changegroup email.Parser")
 demandload(globals(), "hgweb.server sshserver")
@@ -1644,42 +1644,55 @@ def grep(ui, repo, pattern, *pats, **opts):
             self.linenum = linenum
             self.colstart = colstart
             self.colend = colend
+
         def __eq__(self, other):
             return self.line == other.line
-        def __hash__(self):
-            return hash(self.line)
 
     matches = {}
     def grepbody(fn, rev, body):
-        matches[rev].setdefault(fn, {})
+        matches[rev].setdefault(fn, [])
         m = matches[rev][fn]
         for lnum, cstart, cend, line in matchlines(body):
             s = linestate(line, lnum, cstart, cend)
-            m[s] = s
+            m.append(s)
 
-    # FIXME: prev isn't used, why ?
+    def difflinestates(a, b):
+        sm = difflib.SequenceMatcher(None, a, b)
+        for tag, alo, ahi, blo, bhi in sm.get_opcodes():
+            if tag == 'insert':
+                for i in range(blo, bhi):
+                    yield ('+', b[i])
+            elif tag == 'delete':
+                for i in range(alo, ahi):
+                    yield ('-', a[i])
+            elif tag == 'replace':
+                for i in range(alo, ahi):
+                    yield ('-', a[i])
+                for i in range(blo, bhi):
+                    yield ('+', b[i])
+
     prev = {}
     ucache = {}
     def display(fn, rev, states, prevstates):
-        diff = list(sets.Set(states).symmetric_difference(sets.Set(prevstates)))
-        diff.sort(lambda x, y: cmp(x.linenum, y.linenum))
         counts = {'-': 0, '+': 0}
         filerevmatches = {}
-        for l in diff:
+        if incrementing or not opts['all']:
+            a, b = prevstates, states
+        else:
+            a, b = states, prevstates
+        for change, l in difflinestates(a, b):
             if incrementing or not opts['all']:
-                change = ((l in prevstates) and '-') or '+'
                 r = rev
             else:
-                change = ((l in states) and '-') or '+'
                 r = prev[fn]
-            cols = [fn, str(rev)]
+            cols = [fn, str(r)]
             if opts['line_number']:
                 cols.append(str(l.linenum))
             if opts['all']:
                 cols.append(change)
             if opts['user']:
-                cols.append(trimuser(ui, getchange(rev)[1], rev,
-                                                  ucache))
+                cols.append(trimuser(ui, getchange(r)[1], rev,
+                                     ucache))
             if opts['files_with_matches']:
                 c = (fn, rev)
                 if c in filerevmatches:
