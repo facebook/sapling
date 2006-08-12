@@ -1,7 +1,6 @@
-
 # queue.py - patch queues for mercurial
 #
-# Copyright 2005 Chris Mason <mason@suse.com>
+# Copyright 2005, 2006 Chris Mason <mason@suse.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -31,9 +30,9 @@ refresh contents of top applied patch     qrefresh
 '''
 
 from mercurial.demandload import *
-demandload(globals(), "os sys re struct traceback errno bz2")
 from mercurial.i18n import gettext as _
-from mercurial import ui, hg, revlog, commands, util
+demandload(globals(), "os sys re struct traceback errno bz2")
+demandload(globals(), "mercurial:commands,hg,revlog,ui,util")
 
 commands.norepo += " qclone qversion"
 
@@ -561,7 +560,7 @@ class queue:
         r = self.qrepo()
         if r: r.add([patch])
         if commitfiles:
-            self.refresh(repo, msg=None, short=True)
+            self.refresh(repo, short=True)
 
     def strip(self, repo, rev, update=True, backup="all", wlock=None):
         def limitheads(chlog, stop):
@@ -888,7 +887,6 @@ class queue:
             top = self.check_toppatch(repo)
             qp = self.qparents(repo, rev)
             changes = repo.changelog.read(qp)
-            mf1 = repo.manifest.readflags(changes[0])
             mmap = repo.manifest.read(changes[0])
             (c, a, r, d, u) = repo.changes(qp, top)
             if d:
@@ -897,7 +895,7 @@ class queue:
                 getfile(f, mmap[f])
             for f in r:
                 getfile(f, mmap[f])
-                util.set_exec(repo.wjoin(f), mf1[f])
+                util.set_exec(repo.wjoin(f), mmap.execf[f])
             repo.dirstate.update(c + r, 'n')
             for f in a:
                 try: os.unlink(repo.wjoin(f))
@@ -922,7 +920,7 @@ class queue:
         qp = self.qparents(repo, top)
         commands.dodiff(sys.stdout, self.ui, repo, qp, None, files)
 
-    def refresh(self, repo, msg=None, short=False):
+    def refresh(self, repo, msg='', short=False):
         if len(self.applied) == 0:
             self.ui.write("No patches applied\n")
             return
@@ -1988,4 +1986,3 @@ cmdtable = {
     "qtop": (top, [], 'hg qtop'),
     "qunapplied": (unapplied, [], 'hg qunapplied [PATCH]'),
 }
-

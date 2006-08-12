@@ -1,7 +1,7 @@
 # hgweb/hgweb_mod.py - Web interface for a repository.
 #
 # Copyright 21 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -398,7 +398,7 @@ class hgweb(object):
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
                      rename=self.renamelink(fl, n),
-                     permissions=self.repo.manifest.readflags(mfn)[f])
+                     permissions=self.repo.manifest.read(mfn).execf(f))
 
     def fileannotate(self, f, node):
         bcache = {}
@@ -452,7 +452,7 @@ class hgweb(object):
                      rename=self.renamelink(fl, n),
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
-                     permissions=self.repo.manifest.readflags(mfn)[f])
+                     permissions=self.repo.manifest.read(mfn).execf(f))
 
     def manifest(self, mnode, path):
         man = self.repo.manifest
@@ -462,7 +462,6 @@ class hgweb(object):
         rev = man.rev(mn)
         changerev = man.linkrev(mn)
         node = self.repo.changelog.node(changerev)
-        mff = man.readflags(mn)
 
         files = {}
 
@@ -496,7 +495,7 @@ class hgweb(object):
                        "filenode": hex(fnode),
                        "parity": self.stripes(parity),
                        "basename": f,
-                       "permissions": mff[full]}
+                       "permissions": mf.execf(full)}
                 parity += 1
 
         def dirlist(**map):

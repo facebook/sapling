@@ -1,7 +1,7 @@
 """
 dirstate.py - working directory tracking for mercurial
 
-Copyright 2005 Matt Mackall <mpm@selenic.com>
+Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
@@ -238,8 +238,8 @@ class dirstate(object):
         self.clear()
         umask = os.umask(0)
         os.umask(umask)
-        for f, mode in files:
-            if mode:
+        for f in files:
+            if files.execf(f):
                 self.map[f] = ('n', ~umask, -1, 0)
             else:
                 self.map[f] = ('n', ~umask & 0666, -1, 0)

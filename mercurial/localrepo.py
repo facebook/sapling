@@ -1,6 +1,6 @@
 # localrepo.py - read/write repository class for mercurial
 #
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -470,8 +470,7 @@ class localrepository(repo.repository):
         p2 = p2 or self.dirstate.parents()[1] or nullid
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
-        m1 = self.manifest.read(c1[0])
-        mf1 = self.manifest.readflags(c1[0])
+        m1 = self.manifest.read(c1[0]).copy()
         m2 = self.manifest.read(c2[0])
         changed = []
 
@@ -484,36 +483,32 @@ class localrepository(repo.repository):
             wlock = self.wlock()
         l = self.lock()
         tr = self.transaction()
-        mm = m1.copy()
-        mfm = mf1.copy()
         linkrev = self.changelog.count()
         for f in files:
             try:
                 t = self.wread(f)
-                tm = util.is_exec(self.wjoin(f), mfm.get(f, False))
+                m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
                 r = self.file(f)
-                mfm[f] = tm
 
                 (entry, fp1, fp2) = self.checkfilemerge(f, t, r, m1, m2)
                 if entry:
-                    mm[f] = entry
+                    m1[f] = entry
                     continue
 
-                mm[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
+                m1[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
                 changed.append(f)
                 if update_dirstate:
                     self.dirstate.update([f], "n")
             except IOError:
                 try:
-                    del mm[f]
-                    del mfm[f]
+                    del m1[f]
                     if update_dirstate:
                         self.dirstate.forget([f])
                 except:
                     # deleted from p2?
                     pass
 
-        mnode = self.manifest.add(mm, mfm, tr, linkrev, c1[0], c2[0])
+        mnode = self.manifest.add(m1, tr, linkrev, c1[0], c2[0])
         user = user or self.ui.username()
         n = self.changelog.add(mnode, changed, text, tr, p1, p2, user, date)
         tr.close()
@@ -544,8 +539,7 @@ class localrepository(repo.repository):
         p1, p2 = self.dirstate.parents()
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
-        m1 = self.manifest.read(c1[0])
-        mf1 = self.manifest.readflags(c1[0])
+        m1 = self.manifest.read(c1[0]).copy()
         m2 = self.manifest.read(c2[0])
 
         if not commit and not remove and not force and p2 == nullid:
@@ -571,7 +565,7 @@ class localrepository(repo.repository):
         for f in commit:
             self.ui.note(f + "\n")
             try:
-                mf1[f] = util.is_exec(self.wjoin(f), mf1.get(f, False))
+                m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
                 t = self.wread(f)
             except IOError:
                 self.ui.warn(_("trouble committing %s!\n") % f)
@@ -598,12 +592,11 @@ class localrepository(repo.repository):
             changed.append(f)
 
         # update manifest
-        m1 = m1.copy()
         m1.update(new)
         for f in remove:
             if f in m1:
                 del m1[f]
-        mn = self.manifest.add(m1, mf1, tr, linkrev, c1[0], c2[0],
+        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0],
                                (new, remove))
 
         # add changeset
@@ -816,7 +809,6 @@ class localrepository(repo.repository):
     def undelete(self, list, wlock=None):
         p = self.dirstate.parents()[0]
         mn = self.changelog.read(p)[0]
-        mf = self.manifest.readflags(mn)
         m = self.manifest.read(mn)
         if not wlock:
             wlock = self.wlock()
@@ -826,7 +818,7 @@ class localrepository(repo.repository):
             else:
                 t = self.file(f).read(m[f])
                 self.wwrite(f, t)
-                util.set_exec(self.wjoin(f), mf[f])
+                util.set_exec(self.wjoin(f), m.execf(f))
                 self.dirstate.update([f], "n")
 
     def copy(self, source, dest, wlock=None):
