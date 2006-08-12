@@ -1822,6 +1822,9 @@ def import_(ui, repo, patch1, *patches, **opts):
                         'retrieving revision [0-9]+(\.[0-9]+)*$|' +
                         '(---|\*\*\*)[ \t])', re.MULTILINE)
 
+    wlock = repo.wlock()
+    lock = repo.lock()
+
     for patch in patches:
         pf = os.path.join(d, patch)
 
@@ -1910,8 +1913,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                 cwd = repo.getcwd()
                 if cwd:
                     cfiles = [util.pathto(cwd, f) for f in files]
-                addremove_lock(ui, repo, cfiles, {})
-            repo.commit(files, message, user, date)
+                addremove_lock(ui, repo, cfiles, {}, wlock=wlock)
+            repo.commit(files, message, user, date, wlock=wlock, lock=lock)
         finally:
             os.unlink(tmpname)
 
