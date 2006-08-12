@@ -10,6 +10,28 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "array bisect struct")
 
+class manifestdict(dict):
+    def __init__(self, mapping={}, flags={}):
+        dict.__init__(self, mapping)
+        self._flags = flags
+    def flags(self, f):
+        return self._flags.get(f, "")
+    def execf(self, f):
+        "test for executable in manifest flags"
+        return "x" in self.flags(f)
+    def linkf(self, f):
+        "test for symlink in manifest flags"
+        return "l" in self.flags(f)
+    def rawset(self, f, entry):
+        self[f] = bin(entry[:40])
+        fl = entry[40:-1]
+        if fl: self._flags[f] = fl
+    def set(self, f, execf=False, linkf=False):
+        if execf: self._flags[f] = "x"
+        if linkf: self._flags[f] = "x"
+    def copy(self):
+        return manifestdict(dict.copy(self), dict.copy(self._flags))
+
 class manifest(revlog):
     def __init__(self, opener, defversion=REVLOGV0):
         self.mapcache = None
@@ -18,26 +40,18 @@ class manifest(revlog):
                         defversion)
 
     def read(self, node):
-        if node == nullid: return {} # don't upset local cache
+        if node == nullid: return manifestdict() # don't upset local cache
         if self.mapcache and self.mapcache[0] == node:
             return self.mapcache[1]
         text = self.revision(node)
-        map = {}
-        flag = {}
         self.listcache = array.array('c', text)
         lines = text.splitlines(1)
+        mapping = manifestdict()
         for l in lines:
             (f, n) = l.split('\0')
-            map[f] = bin(n[:40])
-            flag[f] = (n[40:-1] == "x")
-        self.mapcache = (node, map, flag)
-        return map
-
-    def readflags(self, node):
-        if node == nullid: return {} # don't upset local cache
-        if not self.mapcache or self.mapcache[0] != node:
-            self.read(node)
-        return self.mapcache[2]
+            mapping.rawset(f, n)
+        self.mapcache = (node, mapping)
+        return mapping
 
     def diff(self, a, b):
         return mdiff.textdiff(str(a), str(b))
@@ -86,7 +100,7 @@ class manifest(revlog):
         '''look up entry for a single file efficiently.
         return (node, flag) pair if found, (None, None) if not.'''
         if self.mapcache and node == self.mapcache[0]:
-            return self.mapcache[1].get(f), self.mapcache[2].get(f)
+            return self.mapcache[1].get(f), self.mapcache[1].flags(f)
         text = self.revision(node)
         start, end = self._search(text, f)
         if start == end:
@@ -95,7 +109,7 @@ class manifest(revlog):
         f, n = l.split('\0')
         return bin(n[:40]), n[40:-1] == 'x'
 
-    def add(self, map, flags, transaction, link, p1=None, p2=None,
+    def add(self, map, transaction, link, p1=None, p2=None,
             changed=None):
         # apply the changes collected during the bisect loop to our addlist
         # return a delta suitable for addrevision
@@ -123,9 +137,7 @@ class manifest(revlog):
 
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
-            text = ["%s\000%s%s\n" %
-                            (f, hex(map[f]), flags[f] and "x" or '')
-                            for f in files]
+            text = ["%s\000%s%s\n" % (f, hex(map[f]), map.flags(f)) for f in files]
             self.listcache = array.array('c', "".join(text))
             cachedelta = None
         else:
@@ -151,8 +163,7 @@ class manifest(revlog):
                 # bs will either be the index of the item or the insert point
                 start, end = self._search(addbuf, f, start)
                 if w[1] == 0:
-                    l = "%s\000%s%s\n" % (f, hex(map[f]),
-                                          flags[f] and "x" or '')
+                    l = "%s\000%s%s\n" % (f, hex(map[f]), map.flags(f))
                 else:
                     l = ""
                 if start == end and w[1] == 1:
@@ -183,6 +194,6 @@ class manifest(revlog):
 
         n = self.addrevision(buffer(self.listcache), transaction, link, p1,  \
                              p2, cachedelta)
-        self.mapcache = (n, map, flags)
+        self.mapcache = (n, map)
 
         return n
