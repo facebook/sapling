@@ -30,9 +30,9 @@ refresh contents of top applied patch     qrefresh
 '''
 
 from mercurial.demandload import *
-demandload(globals(), "os sys re struct traceback errno bz2")
 from mercurial.i18n import gettext as _
-from mercurial import ui, hg, revlog, commands, util
+demandload(globals(), "os sys re struct traceback errno bz2")
+demandload(globals(), "mercurial:commands,hg,revlog,ui,util")
 
 commands.norepo += " qclone qversion"
 
