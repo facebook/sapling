@@ -75,7 +75,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         raise util.Abort(_("update spans branches, use 'hg merge' "
                            "or 'hg update -C' to lose changes"))
 
-    modified, added, removed, deleted, unknown = repo.changes()
+    modified, added, removed, deleted, unknown = repo.status()[:5]
     if branchmerge and not forcemerge:
         if modified or added or removed:
             raise util.Abort(_("outstanding uncommitted changes"))

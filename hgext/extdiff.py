@@ -80,8 +80,8 @@ def dodiff(ui, repo, diffcmd, pats, opts):
 
     node1, node2 = commands.revpair(ui, repo, opts['rev'])
     files, matchfn, anypats = commands.matchpats(repo, pats, opts)
-    modified, added, removed, deleted, unknown = repo.changes(
-        node1, node2, files, match=matchfn)
+    modified, added, removed, deleted, unknown = repo.status(
+        node1, node2, files, match=matchfn)[:5]
     if not (modified or added or removed):
         return 0
 

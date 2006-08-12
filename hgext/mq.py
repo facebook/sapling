@@ -533,19 +533,20 @@ class queue:
                 raise util.Abort(_("queue top not at same revision as working directory"))
             return top
         return None
-    def check_localchanges(self, repo):
-        (c, a, r, d, u) = repo.changes(None, None)
-        if c or a or d or r:
-            raise util.Abort(_("local changes found, refresh first"))
+    def check_localchanges(self, repo, force=False, refresh=True):
+        m, a, r, d = repo.status()[:4]
+        if m or a or r or d:
+            if not force:
+                if refresh:
+                    raise util.Abort(_("local changes found, refresh first"))
+                else:
+                    raise util.Abort(_("local changes found"))
+        return m, a, r, d
     def new(self, repo, patch, msg=None, force=None):
         if os.path.exists(self.join(patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
-        commitfiles = []
-        (c, a, r, d, u) = repo.changes(None, None)
-        if c or a or d or r:
-            if not force:
-                raise util.Abort(_("local changes found, refresh first"))
-            commitfiles = c + a + r
+        m, a, r, d = self.check_localchanges(repo, force)
+        commitfiles = m + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
         insert = self.full_series_end()
@@ -659,9 +660,7 @@ class queue:
         revnum = chlog.rev(rev)
 
         if update:
-            (c, a, r, d, u) = repo.changes(None, None)
-            if c or a or d or r:
-                raise util.Abort(_("local changes found"))
+            self.check_localchanges(repo, refresh=False)
             urev = self.qparents(repo, rev)
             hg.clean(repo, urev, wlock=wlock)
             repo.dirstate.write()
@@ -899,15 +898,15 @@ class queue:
             qp = self.qparents(repo, rev)
             changes = repo.changelog.read(qp)
             mmap = repo.manifest.read(changes[0])
-            (c, a, r, d, u) = repo.changes(qp, top)
+            m, a, r, d, u = repo.status(qp, top)[:5]
             if d:
                 raise util.Abort("deletions found between repo revs")
-            for f in c:
+            for f in m:
                 getfile(f, mmap[f])
             for f in r:
                 getfile(f, mmap[f])
                 util.set_exec(repo.wjoin(f), mmap.execf(f))
-            repo.dirstate.update(c + r, 'n')
+            repo.dirstate.update(m + r, 'n')
             for f in a:
                 try: os.unlink(repo.wjoin(f))
                 except: raise
@@ -970,30 +969,30 @@ class queue:
             # patch already
             #
             # this should really read:
-            #(cc, dd, aa, aa2, uu) = repo.changes(tip, patchparent)
+            #   mm, dd, aa, aa2, uu = repo.status(tip, patchparent)[:5]
             # but we do it backwards to take advantage of manifest/chlog
-            # caching against the next repo.changes call
+            # caching against the next repo.status call
             #
-            (cc, aa, dd, aa2, uu) = repo.changes(patchparent, tip)
+            mm, aa, dd, aa2, uu = repo.status(patchparent, tip)[:5]
             if short:
-                filelist = cc + aa + dd
+                filelist = mm + aa + dd
             else:
                 filelist = None
-            (c, a, r, d, u) = repo.changes(None, None, filelist)
+            m, a, r, d, u = repo.status(files=filelist)[:5]
 
             # we might end up with files that were added between tip and
             # the dirstate parent, but then changed in the local dirstate.
             # in this case, we want them to only show up in the added section
-            for x in c:
+            for x in m:
                 if x not in aa:
-                    cc.append(x)
+                    mm.append(x)
             # we might end up with files added by the local dirstate that
             # were deleted by the patch.  In this case, they should only
             # show up in the changed section.
             for x in a:
                 if x in dd:
                     del dd[dd.index(x)]
-                    cc.append(x)
+                    mm.append(x)
                 else:
                     aa.append(x)
             # make sure any files deleted in the local dirstate
@@ -1004,23 +1003,23 @@ class queue:
                     del aa[aa.index(x)]
                     forget.append(x)
                     continue
-                elif x in cc:
-                    del cc[cc.index(x)]
+                elif x in mm:
+                    del mm[mm.index(x)]
                 dd.append(x)
 
-            c = list(util.unique(cc))
+            m = list(util.unique(mm))
             r = list(util.unique(dd))
             a = list(util.unique(aa))
-            filelist = list(util.unique(c + r + a ))
+            filelist = list(util.unique(m + r + a))
             self.printdiff(repo, patchparent, files=filelist,
-                           changes=(c, a, r, [], u), fp=patchf)
+                           changes=(m, a, r, [], u), fp=patchf)
             patchf.close()
 
             changes = repo.changelog.read(tip)
             repo.dirstate.setparents(*cparents)
             repo.dirstate.update(a, 'a')
             repo.dirstate.update(r, 'r')
-            repo.dirstate.update(c, 'n')
+            repo.dirstate.update(m, 'n')
             repo.dirstate.forget(forget)
 
             if not msg:

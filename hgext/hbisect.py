@@ -23,10 +23,10 @@ def lookup_rev(ui, repo, rev=None):
     return parents.pop()
 
 def check_clean(ui, repo):
-        modified, added, removed, deleted, unknown = repo.changes()
-        if modified or added or removed:
-            ui.warn("Repository is not clean, please commit or revert\n")
-            sys.exit(1)
+    modified, added, removed, deleted, unknown = repo.status()[:5]
+    if modified or added or removed:
+        ui.warn("Repository is not clean, please commit or revert\n")
+        sys.exit(1)
 
 class bisect(object):
     """dichotomic search in the DAG of changesets"""

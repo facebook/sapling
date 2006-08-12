@@ -21,7 +21,7 @@ class AmbiguousCommand(Exception):
     """Exception raised if command shortcut matches more than one command."""
 
 def bail_if_changed(repo):
-    modified, added, removed, deleted, unknown = repo.changes()
+    modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:
         raise util.Abort(_("outstanding uncommitted changes"))
 
@@ -443,7 +443,7 @@ class changeset_printer(object):
         self.ui.status(_("date:        %s\n") % date)
 
         if self.ui.debugflag:
-            files = self.repo.changes(log.parents(changenode)[0], changenode)
+            files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
             for key, value in zip([_("files:"), _("files+:"), _("files-:")],
                                   files):
                 if value:
@@ -969,8 +969,7 @@ def commit(ui, repo, *pats, **opts):
         addremove_lock(ui, repo, pats, opts)
     fns, match, anypats = matchpats(repo, pats, opts)
     if pats:
-        modified, added, removed, deleted, unknown = (
-            repo.changes(files=fns, match=match))
+        modified, added, removed = repo.status(files=fns, match=match)[:3]
         files = modified + added + removed
     else:
         files = []
@@ -1636,7 +1635,7 @@ def identify(ui, repo):
         return
 
     hexfunc = ui.verbose and hex or short
-    modified, added, removed, deleted, unknown = repo.changes()
+    modified, added, removed, deleted = repo.status()[:4]
     output = ["%s%s" %
               ('+'.join([hexfunc(parent) for parent in parents]),
               (modified or added or removed or deleted) and "+" or "")]
@@ -2247,7 +2246,7 @@ def remove(ui, repo, *pats, **opts):
         raise util.Abort(_('no files specified'))
     files, matchfn, anypats = matchpats(repo, pats, opts)
     exact = dict.fromkeys(files)
-    mardu = map(dict.fromkeys, repo.changes(files=files, match=matchfn))
+    mardu = map(dict.fromkeys, repo.status(files=files, match=matchfn))[:5]
     modified, added, removed, deleted, unknown = mardu
     remove, forget = [], []
     for src, abs, rel, exact in walk(repo, pats, opts):
@@ -2370,7 +2369,7 @@ def revert(ui, repo, *pats, **opts):
         names[abs] = (rel, exact)
         target_only[abs] = True
 
-    changes = repo.changes(match=names.has_key, wlock=wlock)
+    changes = repo.status(match=names.has_key, wlock=wlock)[:5]
     modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
 
     revert = ([], _('reverting %s\n'))

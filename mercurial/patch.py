@@ -267,13 +267,13 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     if not node1:
         node1 = repo.dirstate.parents()[0]
     # reading the data for node1 early allows it to play nicely
-    # with repo.changes and the revlog cache.
+    # with repo.status and the revlog cache.
     change = repo.changelog.read(node1)
     mmap = repo.manifest.read(change[0])
     date1 = util.datestr(change[2])
 
     if not changes:
-        changes = repo.changes(node1, node2, files, match=match)
+        changes = repo.status(node1, node2, files, match=match)[:5]
     modified, added, removed, deleted, unknown = changes
     if files:
         def filterfiles(filters):

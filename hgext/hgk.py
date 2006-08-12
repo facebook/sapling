@@ -14,7 +14,7 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         return time.asctime(time.gmtime(c[2][0]))
 
     if not changes:
-        changes = repo.changes(node1, node2, files, match=match)
+        changes = repo.status(node1, node2, files, match=match)[:5]
     modified, added, removed, deleted, unknown = changes
     if files:
         modified, added, removed = map(lambda x: filterfiles(files, x),
@@ -67,12 +67,12 @@ def difftree(ui, repo, node1=None, node2=None, **opts):
         if node2:
             change = repo.changelog.read(node2)
             mmap2 = repo.manifest.read(change[0])
-            modified, added, removed, deleted, unknown = repo.changes(node1, node2)
+            modified, added, removed, deleted, unknown = repo.status(node1, node2)[:5]
             def read(f): return repo.file(f).read(mmap2[f])
             date2 = date(change)
         else:
             date2 = time.asctime()
-            modified, added, removed, deleted, unknown = repo.changes(node1)
+            modified, added, removed, deleted, unknown = repo.status(node1)[:5]
             if not node1:
                 node1 = repo.dirstate.parents()[0]
             def read(f): return file(os.path.join(repo.root, f)).read()
