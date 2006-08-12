@@ -561,7 +561,7 @@ class queue:
         r = self.qrepo()
         if r: r.add([patch])
         if commitfiles:
-            self.refresh(repo, msg=None, short=True)
+            self.refresh(repo, short=True)
 
     def strip(self, repo, rev, update=True, backup="all", wlock=None):
         def limitheads(chlog, stop):
@@ -921,7 +921,7 @@ class queue:
         qp = self.qparents(repo, top)
         commands.dodiff(sys.stdout, self.ui, repo, qp, None, files)
 
-    def refresh(self, repo, msg=None, short=False):
+    def refresh(self, repo, msg='', short=False):
         if len(self.applied) == 0:
             self.ui.write("No patches applied\n")
             return
