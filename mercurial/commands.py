@@ -10,10 +10,10 @@ from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
-demandload(globals(), "fnmatch mdiff difflib patch random signal tempfile time")
+demandload(globals(), "fnmatch difflib patch random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
 demandload(globals(), "archival cStringIO changegroup")
-demandload(globals(), "hgweb.server sshserver")
+demandload(globals(), "cmdutil hgweb.server sshserver")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
@@ -24,15 +24,6 @@ def bail_if_changed(repo):
     modified, added, removed, deleted, unknown = repo.changes()
     if modified or added or removed or deleted:
         raise util.Abort(_("outstanding uncommitted changes"))
-
-def filterfiles(filters, files):
-    l = [x for x in files if x in filters]
-
-    for t in filters:
-        if t and t[-1] != "/":
-            t += "/"
-        l += [x for x in files if x.startswith(t)]
-    return l
 
 def relpath(repo, args):
     cwd = repo.getcwd()
@@ -344,63 +335,6 @@ def revrange(ui, repo, revs):
             seen[rev] = 1
             yield str(rev)
 
-def make_filename(repo, pat, node,
-                  total=None, seqno=None, revwidth=None, pathname=None):
-    node_expander = {
-        'H': lambda: hex(node),
-        'R': lambda: str(repo.changelog.rev(node)),
-        'h': lambda: short(node),
-        }
-    expander = {
-        '%': lambda: '%',
-        'b': lambda: os.path.basename(repo.root),
-        }
-
-    try:
-        if node:
-            expander.update(node_expander)
-        if node and revwidth is not None:
-            expander['r'] = (lambda:
-                    str(repo.changelog.rev(node)).zfill(revwidth))
-        if total is not None:
-            expander['N'] = lambda: str(total)
-        if seqno is not None:
-            expander['n'] = lambda: str(seqno)
-        if total is not None and seqno is not None:
-            expander['n'] = lambda:str(seqno).zfill(len(str(total)))
-        if pathname is not None:
-            expander['s'] = lambda: os.path.basename(pathname)
-            expander['d'] = lambda: os.path.dirname(pathname) or '.'
-            expander['p'] = lambda: pathname
-
-        newname = []
-        patlen = len(pat)
-        i = 0
-        while i < patlen:
-            c = pat[i]
-            if c == '%':
-                i += 1
-                c = pat[i]
-                c = expander[c]()
-            newname.append(c)
-            i += 1
-        return ''.join(newname)
-    except KeyError, inst:
-        raise util.Abort(_("invalid format spec '%%%s' in output file name"),
-                    inst.args[0])
-
-def make_file(repo, pat, node=None,
-              total=None, seqno=None, revwidth=None, mode='wb', pathname=None):
-    if not pat or pat == '-':
-        return 'w' in mode and sys.stdout or sys.stdin
-    if hasattr(pat, 'write') and 'w' in mode:
-        return pat
-    if hasattr(pat, 'read') and 'r' in mode:
-        return pat
-    return open(make_filename(repo, pat, node, total, seqno, revwidth,
-                              pathname),
-                mode)
-
 def write_bundle(cg, filename=None, compress=True):
     """Write a bundle file and return its filename.
 
@@ -452,74 +386,6 @@ def write_bundle(cg, filename=None, compress=True):
             fh.close()
         if cleanup is not None:
             os.unlink(cleanup)
-
-def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
-           changes=None, text=False, opts={}):
-    if not node1:
-        node1 = repo.dirstate.parents()[0]
-    # reading the data for node1 early allows it to play nicely
-    # with repo.changes and the revlog cache.
-    change = repo.changelog.read(node1)
-    mmap = repo.manifest.read(change[0])
-    date1 = util.datestr(change[2])
-
-    if not changes:
-        changes = repo.changes(node1, node2, files, match=match)
-    modified, added, removed, deleted, unknown = changes
-    if files:
-        modified, added, removed = map(lambda x: filterfiles(files, x),
-                                       (modified, added, removed))
-
-    if not modified and not added and not removed:
-        return
-
-    if node2:
-        change = repo.changelog.read(node2)
-        mmap2 = repo.manifest.read(change[0])
-        _date2 = util.datestr(change[2])
-        def date2(f):
-            return _date2
-        def read(f):
-            return repo.file(f).read(mmap2[f])
-    else:
-        tz = util.makedate()[1]
-        _date2 = util.datestr()
-        def date2(f):
-            try:
-                return util.datestr((os.lstat(repo.wjoin(f)).st_mtime, tz))
-            except OSError, err:
-                if err.errno != errno.ENOENT: raise
-                return _date2
-        def read(f):
-            return repo.wread(f)
-
-    if ui.quiet:
-        r = None
-    else:
-        hexfunc = ui.verbose and hex or short
-        r = [hexfunc(node) for node in [node1, node2] if node]
-
-    diffopts = ui.diffopts()
-    showfunc = opts.get('show_function') or diffopts['showfunc']
-    ignorews = opts.get('ignore_all_space') or diffopts['ignorews']
-    ignorewsamount = opts.get('ignore_space_change') or \
-                     diffopts['ignorewsamount']
-    ignoreblanklines = opts.get('ignore_blank_lines') or \
-                     diffopts['ignoreblanklines']
-
-    all = modified + added + removed
-    all.sort()
-    for f in all:
-        to = None
-        tn = None
-        if f in mmap:
-            to = repo.file(f).read(mmap[f])
-        if f not in removed:
-            tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, text=text,
-                               showfunc=showfunc, ignorews=ignorews,
-                               ignorewsamount=ignorewsamount,
-                               ignoreblanklines=ignoreblanklines))
 
 def trimuser(ui, name, rev, revcache):
     """trim the name of the user who committed a change"""
@@ -922,7 +788,7 @@ def archive(ui, repo, dest, **opts):
             raise util.Abort(_('uncommitted merge - please provide a '
                                'specific revision'))
 
-    dest = make_filename(repo, dest, node)
+    dest = cmdutil.make_filename(repo, dest, node)
     if os.path.realpath(dest) == repo.root:
         raise util.Abort(_('repository root cannot be destination'))
     dummy, matchfn, dummy = matchpats(repo, [], opts)
@@ -933,7 +799,7 @@ def archive(ui, repo, dest, **opts):
             raise util.Abort(_('cannot archive plain files to stdout'))
         dest = sys.stdout
         if not prefix: prefix = os.path.basename(repo.root) + '-%h'
-    prefix = make_filename(repo, prefix, node)
+    prefix = cmdutil.make_filename(repo, prefix, node)
     archival.archive(repo, dest, node, kind, not opts['no_decode'],
                      matchfn, prefix)
 
@@ -1038,7 +904,7 @@ def cat(ui, repo, file1, *pats, **opts):
     """
     ctx = repo.changectx(opts['rev'] or "-1")
     for src, abs, rel, exact in walk(repo, (file1,) + pats, opts, ctx.node()):
-        fp = make_file(repo, opts['output'], ctx.node(), pathname=abs)
+        fp = cmdutil.make_file(repo, opts['output'], ctx.node(), pathname=abs)
         fp.write(ctx.filectx(abs).data())
 
 def clone(ui, source, dest=None, **opts):
@@ -1507,35 +1373,8 @@ def diff(ui, repo, *pats, **opts):
 
     fns, matchfn, anypats = matchpats(repo, pats, opts)
 
-    dodiff(sys.stdout, ui, repo, node1, node2, fns, match=matchfn,
-           text=opts['text'], opts=opts)
-
-def doexport(ui, repo, changeset, seqno, total, revwidth, opts):
-    node = repo.lookup(changeset)
-    parents = [p for p in repo.changelog.parents(node) if p != nullid]
-    if opts['switch_parent']:
-        parents.reverse()
-    prev = (parents and parents[0]) or nullid
-    change = repo.changelog.read(node)
-
-    fp = make_file(repo, opts['output'], node, total=total, seqno=seqno,
-                   revwidth=revwidth)
-    if fp != sys.stdout:
-        ui.note("%s\n" % fp.name)
-
-    fp.write("# HG changeset patch\n")
-    fp.write("# User %s\n" % change[1])
-    fp.write("# Date %d %d\n" % change[2])
-    fp.write("# Node ID %s\n" % hex(node))
-    fp.write("# Parent  %s\n" % hex(prev))
-    if len(parents) > 1:
-        fp.write("# Parent  %s\n" % hex(parents[1]))
-    fp.write(change[4].rstrip())
-    fp.write("\n\n")
-
-    dodiff(fp, ui, repo, prev, node, text=opts['text'])
-    if fp != sys.stdout:
-        fp.close()
+    patch.diff(repo, node1, node2, fns, match=matchfn,
+               opts=ui.diffopts(opts))
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
@@ -1566,15 +1405,13 @@ def export(ui, repo, *changesets, **opts):
     """
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
-    seqno = 0
     revs = list(revrange(ui, repo, changesets))
-    total = len(revs)
-    revwidth = max(map(len, revs))
-    msg = len(revs) > 1 and _("Exporting patches:\n") or _("Exporting patch:\n")
-    ui.note(msg)
-    for cset in revs:
-        seqno += 1
-        doexport(ui, repo, cset, seqno, total, revwidth, opts)
+    if len(revs) > 1:
+        ui.note(_('exporting patches:\n'))
+    else:
+        ui.note(_('exporting patch:\n'))
+    patch.export(repo, map(repo.lookup, revs), template=opts['output'],
+                 switch_parent=opts['switch_parent'], opts=ui.diffopts(opts))
 
 def forget(ui, repo, *pats, **opts):
     """don't add the specified files on the next commit (DEPRECATED)
@@ -1963,7 +1800,7 @@ def incoming(ui, repo, source="default", **opts):
             displayer.show(changenode=n)
             if opts['patch']:
                 prev = (parents and parents[0]) or nullid
-                dodiff(ui, ui, other, prev, n)
+                patch.diff(repo, other, prev, n)
                 ui.write("\n")
     finally:
         if hasattr(other, 'close'):
@@ -2114,7 +1951,7 @@ def log(ui, repo, *pats, **opts):
             displayer.show(rev, brinfo=br)
             if opts['patch']:
                 prev = (parents and parents[0]) or nullid
-                dodiff(du, du, repo, prev, changenode, match=matchfn)
+                patch.diff(repo, prev, changenode, match=matchfn, fp=du)
                 du.write("\n\n")
         elif st == 'iter':
             if count == limit: break
@@ -2195,7 +2032,7 @@ def outgoing(ui, repo, dest=None, **opts):
         displayer.show(changenode=n)
         if opts['patch']:
             prev = (parents and parents[0]) or nullid
-            dodiff(ui, ui, repo, prev, n)
+            patch.diff(repo, prev, n)
             ui.write("\n")
 
 def parents(ui, repo, file_=None, rev=None, branches=None, **opts):
@@ -2843,7 +2680,7 @@ def tip(ui, repo, **opts):
         br = repo.branchlookup([n])
     show_changeset(ui, repo, opts).show(changenode=n, brinfo=br)
     if opts['patch']:
-        dodiff(ui, ui, repo, repo.changelog.parents(n)[0], n)
+        patch.diff(repo, repo.changelog.parents(n)[0], n)
 
 def unbundle(ui, repo, fname, **opts):
     """apply a changegroup file

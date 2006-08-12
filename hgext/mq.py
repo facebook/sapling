@@ -32,7 +32,7 @@ refresh contents of top applied patch     qrefresh
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 demandload(globals(), "os sys re struct traceback errno bz2")
-demandload(globals(), "mercurial:commands,hg,revlog,ui,util")
+demandload(globals(), "mercurial:commands,hg,patch,revlog,ui,util")
 
 commands.norepo += " qclone qversion"
 
@@ -65,6 +65,7 @@ class queue:
         self.guards_path = "guards"
         self.active_guards = None
         self.guards_dirty = False
+        self._diffopts = None
 
         if os.path.exists(self.join(self.series_path)):
             self.full_series = self.opener(self.series_path).read().splitlines()
@@ -73,6 +74,11 @@ class queue:
         if os.path.exists(self.join(self.status_path)):
             lines = self.opener(self.status_path).read().splitlines()
             self.applied = [statusentry(l) for l in lines]
+
+    def diffopts(self):
+        if self._diffopts is None:
+            self._diffopts = self.ui.diffopts()
+        return self._diffopts
 
     def join(self, *p):
         return os.path.join(self.path, *p)
@@ -291,6 +297,11 @@ class queue:
             message.insert(0, subject)
         return (message, comments, user, date, diffstart > 1)
 
+    def printdiff(self, repo, node1, node2=None, files=None,
+                  fp=None, changes=None, opts=None):
+        patch.diff(repo, node1, node2, files,
+                   fp=fp, changes=changes, opts=self.diffopts())
+
     def mergeone(self, repo, mergeq, head, patch, rev, wlock):
         # first try just applying the patch
         (err, n) = self.apply(repo, [ patch ], update_status=False,
@@ -324,7 +335,7 @@ class queue:
         if comments:
             comments = "\n".join(comments) + '\n\n'
             patchf.write(comments)
-        commands.dodiff(patchf, self.ui, repo, head, n)
+        self.printdiff(repo, head, n, fp=patchf)
         patchf.close()
         return (0, n)
 
@@ -918,7 +929,7 @@ class queue:
             self.ui.write("No patches applied\n")
             return
         qp = self.qparents(repo, top)
-        commands.dodiff(sys.stdout, self.ui, repo, qp, None, files)
+        self.printdiff(repo, qp, files=files)
 
     def refresh(self, repo, msg='', short=False):
         if len(self.applied) == 0:
@@ -1001,8 +1012,8 @@ class queue:
             r = list(util.unique(dd))
             a = list(util.unique(aa))
             filelist = list(util.unique(c + r + a ))
-            commands.dodiff(patchf, self.ui, repo, patchparent, None,
-                            filelist, changes=(c, a, r, [], u))
+            self.printdiff(repo, patchparent, files=filelist,
+                           changes=(c, a, r, [], u), fp=patchf)
             patchf.close()
 
             changes = repo.changelog.read(tip)
@@ -1025,7 +1036,7 @@ class queue:
             self.applied[-1] = statusentry(revlog.hex(n), patch)
             self.applied_dirty = 1
         else:
-            commands.dodiff(patchf, self.ui, repo, patchparent, None)
+            self.printdiff(repo, patchparent, fp=patchf)
             patchf.close()
             self.pop(repo, force=True, wlock=wlock)
             self.push(repo, force=True, wlock=wlock)

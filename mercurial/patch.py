@@ -7,8 +7,9 @@
 
 from demandload import demandload
 from i18n import gettext as _
-demandload(globals(), "util")
-demandload(globals(), "cStringIO email.Parser os re shutil tempfile")
+from node import *
+demandload(globals(), "cmdutil mdiff util")
+demandload(globals(), "cStringIO email.Parser os re shutil sys tempfile")
 
 def extract(ui, fileobj):
     '''extract patch from data read from fileobj.
@@ -249,3 +250,117 @@ def patch(strip, patchname, ui, cwd=None):
         files[gp.path] = (gp.op, gp)
 
     return files
+
+def diff(repo, node1=None, node2=None, files=None, match=util.always,
+         fp=None, changes=None, opts=None):
+    '''print diff of changes to files between two nodes, or node and
+    working directory.
+
+    if node1 is None, use first dirstate parent instead.
+    if node2 is None, compare node1 with working directory.'''
+
+    if opts is None:
+        opts = mdiff.defaultopts
+    if fp is None:
+        fp = repo.ui
+
+    if not node1:
+        node1 = repo.dirstate.parents()[0]
+    # reading the data for node1 early allows it to play nicely
+    # with repo.changes and the revlog cache.
+    change = repo.changelog.read(node1)
+    mmap = repo.manifest.read(change[0])
+    date1 = util.datestr(change[2])
+
+    if not changes:
+        changes = repo.changes(node1, node2, files, match=match)
+    modified, added, removed, deleted, unknown = changes
+    if files:
+        def filterfiles(filters):
+            l = [x for x in files if x in filters]
+
+            for t in filters:
+                if t and t[-1] != "/":
+                    t += "/"
+                l += [x for x in files if x.startswith(t)]
+            return l
+
+        modified, added, removed = map(lambda x: filterfiles(x),
+                                       (modified, added, removed))
+
+    if not modified and not added and not removed:
+        return
+
+    if node2:
+        change = repo.changelog.read(node2)
+        mmap2 = repo.manifest.read(change[0])
+        _date2 = util.datestr(change[2])
+        def date2(f):
+            return _date2
+        def read(f):
+            return repo.file(f).read(mmap2[f])
+    else:
+        tz = util.makedate()[1]
+        _date2 = util.datestr()
+        def date2(f):
+            try:
+                return util.datestr((os.lstat(repo.wjoin(f)).st_mtime, tz))
+            except OSError, err:
+                if err.errno != errno.ENOENT: raise
+                return _date2
+        def read(f):
+            return repo.wread(f)
+
+    if repo.ui.quiet:
+        r = None
+    else:
+        hexfunc = repo.ui.verbose and hex or short
+        r = [hexfunc(node) for node in [node1, node2] if node]
+
+    all = modified + added + removed
+    all.sort()
+    for f in all:
+        to = None
+        tn = None
+        if f in mmap:
+            to = repo.file(f).read(mmap[f])
+        if f not in removed:
+            tn = read(f)
+        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts))
+
+def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
+           opts=None):
+    '''export changesets as hg patches.'''
+
+    total = len(revs)
+    revwidth = max(map(len, revs))
+
+    def single(node, seqno, fp):
+        parents = [p for p in repo.changelog.parents(node) if p != nullid]
+        if switch_parent:
+            parents.reverse()
+        prev = (parents and parents[0]) or nullid
+        change = repo.changelog.read(node)
+
+        if not fp:
+            fp = cmdutil.make_file(repo, template, node, total=total,
+                                   seqno=seqno, revwidth=revwidth)
+        if fp not in (sys.stdout, repo.ui):
+            repo.ui.note("%s\n" % fp.name)
+
+        fp.write("# HG changeset patch\n")
+        fp.write("# User %s\n" % change[1])
+        fp.write("# Date %d %d\n" % change[2])
+        fp.write("# Node ID %s\n" % hex(node))
+        fp.write("# Parent  %s\n" % hex(prev))
+        if len(parents) > 1:
+            fp.write("# Parent  %s\n" % hex(parents[1]))
+        fp.write(change[4].rstrip())
+        fp.write("\n\n")
+
+        diff(repo, prev, node, fp=fp, opts=opts)
+        if fp not in (sys.stdout, repo.ui):
+            fp.close()
+
+    for seqno, cset in enumerate(revs):
+        single(cset, seqno, fp)

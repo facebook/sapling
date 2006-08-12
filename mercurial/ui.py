@@ -8,7 +8,7 @@
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno getpass os re smtplib socket sys tempfile")
-demandload(globals(), "ConfigParser templater traceback util")
+demandload(globals(), "ConfigParser mdiff templater traceback util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
@@ -169,16 +169,17 @@ class ui(object):
             result[key.lower()] = value
         return result
 
-    def diffopts(self):
-        if self.diffcache:
-            return self.diffcache
-        result = {'showfunc': True, 'ignorews': False,
-                  'ignorewsamount': False, 'ignoreblanklines': False}
-        for key, value in self.configitems("diff"):
-            if value:
-                result[key.lower()] = (value.lower() == 'true')
-        self.diffcache = result
-        return result
+    def diffopts(self, opts={}):
+        return mdiff.diffopts(
+            text=opts.get('text'),
+            showfunc=(opts.get('show_function') or
+                      self.configbool('diff', 'showfunc', None)),
+            ignorews=(opts.get('ignore_all_space') or
+                      self.configbool('diff', 'ignorews', None)),
+            ignorewsamount=(opts.get('ignore_space_change') or
+                            self.configbool('diff', 'ignorewsamount', None)),
+            ignoreblanklines=(opts.get('ignore_blank_lines') or
+                              self.configbool('diff', 'ignoreblanklines', None)))
 
     def username(self):
         """Return default username to be used in commits.
