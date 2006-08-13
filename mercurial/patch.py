@@ -277,16 +277,15 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     modified, added, removed, deleted, unknown = changes
     if files:
         def filterfiles(filters):
-            l = [x for x in files if x in filters]
+            l = [x for x in filters if x in files]
 
-            for t in filters:
-                if t and t[-1] != "/":
+            for t in files:
+                if not t.endswith("/"):
                     t += "/"
-                l += [x for x in files if x.startswith(t)]
+                l += [x for x in filters if x.startswith(t)]
             return l
 
-        modified, added, removed = map(lambda x: filterfiles(x),
-                                       (modified, added, removed))
+        modified, added, removed = map(filterfiles, (modified, added, removed))
 
     if not modified and not added and not removed:
         return
