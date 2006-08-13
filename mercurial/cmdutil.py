@@ -90,3 +90,20 @@ def walk(repo, pats, opts, node=None, head='', badmatch=None):
     files, matchfn, results = makewalk(repo, pats, opts, node, head, badmatch)
     for r in results:
         yield r
+
+def addremove(repo, pats, opts={}, wlock=None, dry_run=None):
+    if dry_run is None:
+        dry_run = opts.get('dry_run')
+    add, remove = [], []
+    for src, abs, rel, exact in walk(repo, pats, opts):
+        if src == 'f' and repo.dirstate.state(abs) == '?':
+            add.append(abs)
+            if repo.ui.verbose or not exact:
+                repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
+        if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
+            remove.append(abs)
+            if repo.ui.verbose or not exact:
+                repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
+    if not dry_run:
+        repo.add(add, wlock=wlock)
+        repo.remove(remove, wlock=wlock)

@@ -655,22 +655,7 @@ def addremove(ui, repo, *pats, **opts):
     """
     ui.warn(_('(the addremove command is deprecated; use add and remove '
               '--after instead)\n'))
-    return addremove_lock(ui, repo, pats, opts)
-
-def addremove_lock(ui, repo, pats, opts, wlock=None):
-    add, remove = [], []
-    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
-        if src == 'f' and repo.dirstate.state(abs) == '?':
-            add.append(abs)
-            if ui.verbose or not exact:
-                ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
-            remove.append(abs)
-            if ui.verbose or not exact:
-                ui.status(_('removing %s\n') % ((pats and rel) or abs))
-    if not opts.get('dry_run'):
-        repo.add(add, wlock=wlock)
-        repo.remove(remove, wlock=wlock)
+    return cmdutil.addremove(repo, pats, opts)
 
 def annotate(ui, repo, *pats, **opts):
     """show changeset information per file line
@@ -945,7 +930,7 @@ def commit(ui, repo, *pats, **opts):
     message = logmessage(opts)
 
     if opts['addremove']:
-        addremove_lock(ui, repo, pats, opts)
+        cmdutil.addremove(repo, pats, opts)
     fns, match, anypats = cmdutil.matchpats(repo, pats, opts)
     if pats:
         modified, added, removed = repo.status(files=fns, match=match)[:3]
@@ -1722,7 +1707,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                         x = gp.mode & 0100 != 0
                         dst = os.path.join(repo.root, gp.path)
                         util.set_exec(dst, x)
-                addremove_lock(ui, repo, cfiles, {}, wlock=wlock)
+                cmdutil.addremove(repo, cfiles, wlock=wlock)
             files = files.keys()
             files.extend([r for r in removes if r not in files])
             repo.commit(files, message, user, date, wlock=wlock, lock=lock)

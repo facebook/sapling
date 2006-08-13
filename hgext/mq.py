@@ -32,7 +32,7 @@ refresh contents of top applied patch     qrefresh
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 demandload(globals(), "os sys re struct traceback errno bz2")
-demandload(globals(), "mercurial:commands,hg,patch,revlog,ui,util")
+demandload(globals(), "mercurial:cmdutil,commands,hg,patch,revlog,ui,util")
 
 commands.norepo += " qclone qversion"
 
@@ -480,8 +480,7 @@ class queue:
                 cfiles = files
                 if cwd:
                     cfiles = [util.pathto(cwd, f) for f in files]
-                commands.addremove_lock(self.ui, repo, cfiles,
-                                        opts={}, wlock=wlock)
+                cmdutil.addremove(repo, cfiles, wlock=wlock)
             n = repo.commit(files, message, user, date, force=1, lock=lock,
                             wlock=wlock)
 
