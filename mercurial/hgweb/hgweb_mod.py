@@ -129,7 +129,7 @@ class hgweb(object):
         date1 = util.datestr(change1[2])
         date2 = util.datestr(change2[2])
 
-        modified, added, removed, deleted, unknown = r.changes(node1, node2)
+        modified, added, removed, deleted, unknown = r.status(node1, node2)[:5]
         if files:
             modified, added, removed = map(lambda x: filterfiles(files, x),
                                            (modified, added, removed))
