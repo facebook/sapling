@@ -50,29 +50,6 @@ def logmessage(opts):
                              (logfile, inst.strerror))
     return message
 
-def matchpats(repo, pats=[], opts={}, head=''):
-    cwd = repo.getcwd()
-    if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
-        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
-        cwd = ''
-    return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
-                           opts.get('exclude'), head)
-
-def makewalk(repo, pats, opts, node=None, head='', badmatch=None):
-    files, matchfn, anypats = matchpats(repo, pats, opts, head)
-    exact = dict(zip(files, files))
-    def walk():
-        for src, fn in repo.walk(node=node, files=files, match=matchfn,
-                                 badmatch=badmatch):
-            yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
-    return files, matchfn, walk()
-
-def walk(repo, pats, opts, node=None, head='', badmatch=None):
-    files, matchfn, results = makewalk(repo, pats, opts, node, head, badmatch)
-    for r in results:
-        yield r
-
 def walkchangerevs(ui, repo, pats, opts):
     '''Iterate over files and the revs they changed in.
 
@@ -115,7 +92,7 @@ def walkchangerevs(ui, repo, pats, opts):
                     windowsize *= 2
 
 
-    files, matchfn, anypats = matchpats(repo, pats, opts)
+    files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     follow = opts.get('follow') or opts.get('follow_first')
 
     if repo.changelog.count() == 0:
@@ -653,7 +630,7 @@ def add(ui, repo, *pats, **opts):
     """
 
     names = []
-    for src, abs, rel, exact in walk(repo, pats, opts):
+    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
         if exact:
             if ui.verbose:
                 ui.status(_('adding %s\n') % rel)
@@ -682,7 +659,7 @@ def addremove(ui, repo, *pats, **opts):
 
 def addremove_lock(ui, repo, pats, opts, wlock=None):
     add, remove = [], []
-    for src, abs, rel, exact in walk(repo, pats, opts):
+    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
         if src == 'f' and repo.dirstate.state(abs) == '?':
             add.append(abs)
             if ui.verbose or not exact:
@@ -736,7 +713,8 @@ def annotate(ui, repo, *pats, **opts):
 
     ctx = repo.changectx(opts['rev'] or repo.dirstate.parents()[0])
 
-    for src, abs, rel, exact in walk(repo, pats, opts, node=ctx.node()):
+    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
+                                             node=ctx.node()):
         fctx = ctx.filectx(abs)
         if not opts['text'] and util.binary(fctx.data()):
             ui.write(_("%s: binary file\n") % ((pats and rel) or abs))
@@ -791,7 +769,7 @@ def archive(ui, repo, dest, **opts):
     dest = cmdutil.make_filename(repo, dest, node)
     if os.path.realpath(dest) == repo.root:
         raise util.Abort(_('repository root cannot be destination'))
-    dummy, matchfn, dummy = matchpats(repo, [], opts)
+    dummy, matchfn, dummy = cmdutil.matchpats(repo, [], opts)
     kind = opts.get('type') or 'files'
     prefix = opts['prefix']
     if dest == '-':
@@ -903,7 +881,8 @@ def cat(ui, repo, file1, *pats, **opts):
     %p   root-relative path name of file being printed
     """
     ctx = repo.changectx(opts['rev'] or "-1")
-    for src, abs, rel, exact in walk(repo, (file1,) + pats, opts, ctx.node()):
+    for src, abs, rel, exact in cmdutil.walk(repo, (file1,) + pats, opts,
+                                             ctx.node()):
         fp = cmdutil.make_file(repo, opts['output'], ctx.node(), pathname=abs)
         fp.write(ctx.filectx(abs).data())
 
@@ -967,7 +946,7 @@ def commit(ui, repo, *pats, **opts):
 
     if opts['addremove']:
         addremove_lock(ui, repo, pats, opts)
-    fns, match, anypats = matchpats(repo, pats, opts)
+    fns, match, anypats = cmdutil.matchpats(repo, pats, opts)
     if pats:
         modified, added, removed = repo.status(files=fns, match=match)[:3]
         files = modified + added + removed
@@ -1124,7 +1103,7 @@ def docopy(ui, repo, pats, opts, wlock):
     copylist = []
     for pat in pats:
         srcs = []
-        for tag, abssrc, relsrc, exact in walk(repo, [pat], opts):
+        for tag, abssrc, relsrc, exact in cmdutil.walk(repo, [pat], opts):
             origsrc = okaytocopy(abssrc, relsrc, exact)
             if origsrc:
                 srcs.append((origsrc, abssrc, relsrc, exact))
@@ -1341,7 +1320,7 @@ def debugrename(ui, repo, file, rev=None):
 
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
-    items = list(walk(repo, pats, opts))
+    items = list(cmdutil.walk(repo, pats, opts))
     if not items:
         return
     fmt = '%%s  %%-%ds  %%-%ds  %%s' % (
@@ -1370,7 +1349,7 @@ def diff(ui, repo, *pats, **opts):
     """
     node1, node2 = revpair(ui, repo, opts['rev'])
 
-    fns, matchfn, anypats = matchpats(repo, pats, opts)
+    fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
 
     patch.diff(repo, node1, node2, fns, match=matchfn,
                opts=ui.diffopts(opts))
@@ -1423,7 +1402,7 @@ def forget(ui, repo, *pats, **opts):
     """
     ui.warn(_("(the forget command is deprecated; use revert instead)\n"))
     forget = []
-    for src, abs, rel, exact in walk(repo, pats, opts):
+    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
         if repo.dirstate.state(abs) == 'a':
             forget.append(abs)
             if ui.verbose or not exact:
@@ -1847,8 +1826,8 @@ def locate(ui, repo, *pats, **opts):
     else:
         node = None
 
-    for src, abs, rel, exact in walk(repo, pats, opts, node=node,
-                                     head='(?:.*/|)'):
+    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts, node=node,
+                                             head='(?:.*/|)'):
         if not node and repo.dirstate.state(abs) == '?':
             continue
         if opts['fullpath']:
@@ -2244,12 +2223,12 @@ def remove(ui, repo, *pats, **opts):
     names = []
     if not opts['after'] and not pats:
         raise util.Abort(_('no files specified'))
-    files, matchfn, anypats = matchpats(repo, pats, opts)
+    files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     exact = dict.fromkeys(files)
     mardu = map(dict.fromkeys, repo.status(files=files, match=matchfn))[:5]
     modified, added, removed, deleted, unknown = mardu
     remove, forget = [], []
-    for src, abs, rel, exact in walk(repo, pats, opts):
+    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
         reason = None
         if abs not in deleted and opts['after']:
             reason = _('is still present')
@@ -2356,15 +2335,16 @@ def revert(ui, repo, *pats, **opts):
 
     # walk dirstate.
 
-    for src, abs, rel, exact in walk(repo, pats, opts, badmatch=mf.has_key):
+    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
+                                             badmatch=mf.has_key):
         names[abs] = (rel, exact)
         if src == 'b':
             target_only[abs] = True
 
     # walk target manifest.
 
-    for src, abs, rel, exact in walk(repo, pats, opts, node=node,
-                                     badmatch=names.has_key):
+    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts, node=node,
+                                             badmatch=names.has_key):
         if abs in names: continue
         names[abs] = (rel, exact)
         target_only[abs] = True
@@ -2576,7 +2556,7 @@ def status(ui, repo, *pats, **opts):
 
     all = opts['all']
     
-    files, matchfn, anypats = matchpats(repo, pats, opts)
+    files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
     modified, added, removed, deleted, unknown, ignored, clean = [
         [util.pathto(cwd, x) for x in n]

@@ -8,6 +8,7 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
+demandload(globals(), 'util')
 demandload(globals(), 'os sys')
 
 def make_filename(repo, pat, node,
@@ -66,3 +67,26 @@ def make_file(repo, pat, node=None,
     return open(make_filename(repo, pat, node, total, seqno, revwidth,
                               pathname),
                 mode)
+
+def matchpats(repo, pats=[], opts={}, head=''):
+    cwd = repo.getcwd()
+    if not pats and cwd:
+        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
+        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
+        cwd = ''
+    return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
+                           opts.get('exclude'), head)
+
+def makewalk(repo, pats, opts, node=None, head='', badmatch=None):
+    files, matchfn, anypats = matchpats(repo, pats, opts, head)
+    exact = dict(zip(files, files))
+    def walk():
+        for src, fn in repo.walk(node=node, files=files, match=matchfn,
+                                 badmatch=badmatch):
+            yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
+    return files, matchfn, walk()
+
+def walk(repo, pats, opts, node=None, head='', badmatch=None):
+    files, matchfn, results = makewalk(repo, pats, opts, node, head, badmatch)
+    for r in results:
+        yield r
