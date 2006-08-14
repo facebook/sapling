@@ -149,3 +149,29 @@ user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     base
 
+% log -P 2
+changeset:   6:2404bbcab562
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1.1
+
+changeset:   5:302e9dd6890d
+parent:      3:e62f78d544b4
+parent:      4:ddb82e70d1a1
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     m12
+
+changeset:   4:ddb82e70d1a1
+parent:      0:67e992f2c4f3
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b2
+
+changeset:   3:e62f78d544b4
+parent:      1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1
+

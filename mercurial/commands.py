@@ -183,49 +183,59 @@ def walkchangerevs(ui, repo, pats, opts):
                 fncache[rev] = matches
                 wanted[rev] = 1
 
-    def iterate():
-        class followfilter:
-            def __init__(self, onlyfirst=False):
-                self.startrev = -1
-                self.roots = []
-                self.onlyfirst = onlyfirst
+    class followfilter:
+        def __init__(self, onlyfirst=False):
+            self.startrev = -1
+            self.roots = []
+            self.onlyfirst = onlyfirst
 
-            def match(self, rev):
-                def realparents(rev):
-                    if self.onlyfirst:
-                        return repo.changelog.parentrevs(rev)[0:1]
-                    else:
-                        return filter(lambda x: x != -1, repo.changelog.parentrevs(rev))
+        def match(self, rev):
+            def realparents(rev):
+                if self.onlyfirst:
+                    return repo.changelog.parentrevs(rev)[0:1]
+                else:
+                    return filter(lambda x: x != -1, repo.changelog.parentrevs(rev))
 
-                if self.startrev == -1:
-                    self.startrev = rev
+            if self.startrev == -1:
+                self.startrev = rev
+                return True
+
+            if rev > self.startrev:
+                # forward: all descendants
+                if not self.roots:
+                    self.roots.append(self.startrev)
+                for parent in realparents(rev):
+                    if parent in self.roots:
+                        self.roots.append(rev)
+                        return True
+            else:
+                # backwards: all parents
+                if not self.roots:
+                    self.roots.extend(realparents(self.startrev))
+                if rev in self.roots:
+                    self.roots.remove(rev)
+                    self.roots.extend(realparents(rev))
                     return True
 
-                if rev > self.startrev:
-                    # forward: all descendants
-                    if not self.roots:
-                        self.roots.append(self.startrev)
-                    for parent in realparents(rev):
-                        if parent in self.roots:
-                            self.roots.append(rev)
-                            return True
-                else:
-                    # backwards: all parents
-                    if not self.roots:
-                        self.roots.extend(realparents(self.startrev))
-                    if rev in self.roots:
-                        self.roots.remove(rev)
-                        self.roots.extend(realparents(rev))
-                        return True
+            return False
 
-                return False
+    # it might be worthwhile to do this in the iterator if the rev range
+    # is descending and the prune args are all within that range
+    for rev in opts.get('prune'):
+        rev = repo.changelog.rev(repo.lookup(rev))
+        ff = followfilter()
+        stop = min(revs[0], revs[-1])
+        for x in range(rev, stop-1, -1):
+            if ff.match(x) and wanted.has_key(x):
+                del wanted[x]
 
+    def iterate():
         if follow and not files:
             ff = followfilter(onlyfirst=opts.get('follow_first'))
             def want(rev):
-                if rev not in wanted:
-                    return False
-                return ff.match(rev)
+                if ff.match(rev) and rev in wanted:
+                    return True
+                return False
         else:
             def want(rev):
                 return rev in wanted
@@ -2966,6 +2976,7 @@ table = {
           ('', 'style', '', _('display using template map file')),
           ('m', 'only-merges', None, _('show only merges')),
           ('p', 'patch', None, _('show patch')),
+          ('P', 'prune', [], _('do not display revision or any of its ancestors')),
           ('', 'template', '', _('display with template')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
