@@ -71,8 +71,10 @@ def make_file(repo, pat, node=None,
 def matchpats(repo, pats=[], opts={}, head=''):
     cwd = repo.getcwd()
     if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i) for i in opts['include']]
-        opts['exclude'] = [os.path.join(cwd, x) for x in opts['exclude']]
+        opts['include'] = [os.path.join(cwd, i)
+                           for i in opts.get('include', [])]
+        opts['exclude'] = [os.path.join(cwd, x)
+                           for x in opts.get('exclude', [])]
         cwd = ''
     return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
                            opts.get('exclude'), head)
