@@ -92,8 +92,9 @@ def dodiff(ui, repo, diffcmd, pats, opts):
             dir2 = snapshot_node(modified + added, node2)
         else:
             dir2 = snapshot_wdir(modified + added)
-        util.system('%s %s "%s" "%s"' %
-                    (diffcmd, ' '.join(opts['option']), dir1, dir2),
+        util.system('%s %s %s %s' %
+                    (util.shellquote(diffcmd), ' '.join(opts['option']),
+                     util.shellquote(dir1), util.shellquote(dir2)),
                     cwd=tmproot)
         return 1
     finally:
