@@ -35,7 +35,7 @@ from mercurial.i18n import gettext as _
 from mercurial.node import *
 demandload(globals(), 'mercurial:commands,cmdutil,util os shutil tempfile')
 
-def dodiff(ui, repo, diffcmd, pats, opts):
+def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     def snapshot_node(files, node):
         '''snapshot files as of some revision'''
         changes = repo.changelog.read(node)
@@ -92,10 +92,12 @@ def dodiff(ui, repo, diffcmd, pats, opts):
             dir2 = snapshot_node(modified + added, node2)
         else:
             dir2 = snapshot_wdir(modified + added)
-        util.system('%s %s %s %s' %
-                    (util.shellquote(diffcmd), ' '.join(opts['option']),
-                     util.shellquote(dir1), util.shellquote(dir2)),
-                    cwd=tmproot)
+        cmdline = ('%s %s %s %s' %
+                   (util.shellquote(diffcmd),
+                    ' '.join(map(util.shellquote, diffopts)),
+                    util.shellquote(dir1), util.shellquote(dir2)))
+        ui.debug('running %r in %s\n' % (cmdline, tmproot))
+        util.system(cmdline, cwd=tmproot)
         return 1
     finally:
         ui.note(_('cleaning up temp directory\n'))
@@ -105,7 +107,9 @@ def extdiff(ui, repo, *pats, **opts):
     '''use external program to diff repository (or selected files)
 
     Show differences between revisions for the specified files, using
-    an external program.  The default program used is "diff -Npru".
+    an external program.  The default program used is diff, with
+    default options "-Npru".
+
     To select a different program, use the -p option.  The program
     will be passed the names of two directories to compare.  To pass
     additional options to the program, use the -o option.  These will
@@ -116,7 +120,8 @@ def extdiff(ui, repo, *pats, **opts):
     specified then that revision is compared to the working
     directory, and, when no revisions are specified, the
     working directory files are compared to its parent.'''
-    return dodiff(ui, repo, opts['program'] or 'diff -Npru', pats, opts)
+    return dodiff(ui, repo, opts['program'] or 'diff',
+                  opts['option'] or ['-Npru'], pats, opts)
 
 cmdtable = {
     "extdiff":
@@ -134,20 +139,24 @@ def uisetup(ui):
         if not cmd.startswith('cmd.'): continue
         cmd = cmd[4:]
         if not path: path = cmd
+        diffopts = ui.config('extdiff', 'opts.' + cmd, '')
+        diffopts = diffopts and [diffopts] or []
         def save(cmd, path):
             '''use closure to save diff command to use'''
             def mydiff(ui, repo, *pats, **opts):
-                return dodiff(ui, repo, path, pats, opts)
-            mydiff.__doc__ = '''use %s to diff repository (or selected files)
+                return dodiff(ui, repo, path, diffopts, pats, opts)
+            mydiff.__doc__ = '''use %(path)r to diff repository (or selected files)
 
             Show differences between revisions for the specified
-            files, using the %s program.
+            files, using the %(path)r program.
 
             When two revision arguments are given, then changes are
             shown between those revisions. If only one revision is
             specified then that revision is compared to the working
             directory, and, when no revisions are specified, the
-            working directory files are compared to its parent.''' % (cmd, cmd)
+            working directory files are compared to its parent.''' % {
+                'path': path,
+                }
             return mydiff
         cmdtable[cmd] = (save(cmd, path),
                          cmdtable['extdiff'][1][1:],

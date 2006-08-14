@@ -1,0 +1,31 @@
+adding a
+making snapshot of 0 files from rev 000000000000
+making snapshot of 1 files from working dir
+diff -Nr a.000000000000/a a/a
+0a1
+> a
+making snapshot of 0 files from rev 000000000000
+making snapshot of 1 files from working dir
+diffing a.000000000000 a
+hg falabala [OPT]... [FILE]...
+
+use 'echo' to diff repository (or selected files)
+
+            Show differences between revisions for the specified
+            files, using the 'echo' program.
+
+            When two revision arguments are given, then changes are
+            shown between those revisions. If only one revision is
+            specified then that revision is compared to the working
+            directory, and, when no revisions are specified, the
+            working directory files are compared to its parent.
+
+options:
+
+ -o --option   pass option to comparison program
+ -r --rev      revision
+ -I --include  include names matching the given patterns
+ -X --exclude  exclude names matching the given patterns
+making snapshot of 1 files from rev e27a2475d60a
+making snapshot of 1 files from rev 5e49ec8d3f05
+diffing a.e27a2475d60a a.5e49ec8d3f05
