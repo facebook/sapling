@@ -77,7 +77,7 @@ def matchpats(repo, pats=[], opts={}, head=''):
     return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
                            opts.get('exclude'), head)
 
-def makewalk(repo, pats, opts, node=None, head='', badmatch=None):
+def makewalk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
     files, matchfn, anypats = matchpats(repo, pats, opts, head)
     exact = dict(zip(files, files))
     def walk():
@@ -86,12 +86,12 @@ def makewalk(repo, pats, opts, node=None, head='', badmatch=None):
             yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
     return files, matchfn, walk()
 
-def walk(repo, pats, opts, node=None, head='', badmatch=None):
+def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
     files, matchfn, results = makewalk(repo, pats, opts, node, head, badmatch)
     for r in results:
         yield r
 
-def addremove(repo, pats, opts={}, wlock=None, dry_run=None):
+def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None):
     if dry_run is None:
         dry_run = opts.get('dry_run')
     add, remove = [], []
