@@ -134,7 +134,7 @@ class hgweb(object):
             modified, added, removed = map(lambda x: filterfiles(files, x),
                                            (modified, added, removed))
 
-        diffopts = ui.diffopts()
+        diffopts = self.repo.ui.diffopts()
         for f in modified:
             to = r.file(f).read(mmap1[f])
             tn = r.file(f).read(mmap2[f])
