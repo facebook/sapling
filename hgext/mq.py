@@ -506,14 +506,14 @@ class queue:
         tr.close()
         return (err, n)
 
-    def delete(self, repo, patch, force=False):
+    def delete(self, repo, patch, keep=False):
         patch = self.lookup(patch, strict=True)
         info = self.isapplied(patch)
         if info:
             raise util.Abort(_("cannot delete applied patch %s") % patch)
         if patch not in self.series:
             raise util.Abort(_("patch %s not in series file") % patch)
-        if force:
+        if not keep:
             r = self.qrepo()
             if r:
                 r.remove([patch], True)
@@ -1304,9 +1304,9 @@ def delete(ui, repo, patch, **opts):
     """remove a patch from the series file
 
     The patch must not be applied.
-    With -f, deletes the patch file as well as the series entry."""
+    With -k, the patch file is preserved in the patch directory."""
     q = repo.mq
-    q.delete(repo, patch, force=opts.get('force'))
+    q.delete(repo, patch, keep=opts.get('keep'))
     q.save_dirty()
     return 0
 
@@ -1464,7 +1464,7 @@ def fold(ui, repo, *files, **opts):
     applied to the current patch in the order given. If all the
     patches apply successfully, the current patch will be refreshed
     with the new cumulative patch, and the folded patches will
-    be deleted. With -f/--force, the folded patch files will
+    be deleted. With -k/--keep, the folded patch files will not
     be removed afterwards.
 
     The header for each folded patch will be concatenated with
@@ -1514,7 +1514,7 @@ def fold(ui, repo, *files, **opts):
     q.refresh(repo, msg=message)
 
     for patch in patches:
-        q.delete(repo, patch, force=opts['force'])
+        q.delete(repo, patch, keep=opts['keep'])
 
     q.save_dirty()
 
@@ -1903,14 +1903,14 @@ cmdtable = {
          commands.table["^commit|ci"][1],
          'hg qcommit [OPTION]... [FILE]...'),
     "^qdiff": (diff, [], 'hg qdiff [FILE]...'),
-    "qdelete":
+    "qdelete|qremove|qrm":
         (delete,
-         [('f', 'force', None, _('delete patch file'))],
-          'hg qdelete [-f] PATCH'),
+         [('k', 'keep', None, _('keep patch file'))],
+          'hg qdelete [-k] PATCH'),
     'qfold':
         (fold,
          [('e', 'edit', None, _('edit patch header')),
-          ('f', 'force', None, _('delete folded patch files')),
+          ('k', 'keep', None, _('keep folded patch files')),
           ('m', 'message', '', _('set patch header to <text>')),
           ('l', 'logfile', '', _('set patch header to contents of <file>'))],
          'hg qfold [-e] [-m <text>] [-l <file] PATCH...'),
