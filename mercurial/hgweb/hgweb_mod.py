@@ -1,7 +1,7 @@
 # hgweb/hgweb_mod.py - Web interface for a repository.
 #
 # Copyright 21 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -129,37 +129,27 @@ class hgweb(object):
         date1 = util.datestr(change1[2])
         date2 = util.datestr(change2[2])
 
-        modified, added, removed, deleted, unknown = r.changes(node1, node2)
+        modified, added, removed, deleted, unknown = r.status(node1, node2)[:5]
         if files:
             modified, added, removed = map(lambda x: filterfiles(files, x),
                                            (modified, added, removed))
 
-        diffopts = self.repo.ui.diffopts()
-        showfunc = diffopts['showfunc']
-        ignorews = diffopts['ignorews']
-        ignorewsamount = diffopts['ignorewsamount']
-        ignoreblanklines = diffopts['ignoreblanklines']
+        diffopts = ui.diffopts()
         for f in modified:
             to = r.file(f).read(mmap1[f])
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
-                            showfunc=showfunc, ignorews=ignorews,
-                            ignorewsamount=ignorewsamount,
-                            ignoreblanklines=ignoreblanklines), f, tn)
+                                          opts=diffopts), f, tn)
         for f in added:
             to = None
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
-                            showfunc=showfunc, ignorews=ignorews,
-                            ignorewsamount=ignorewsamount,
-                            ignoreblanklines=ignoreblanklines), f, tn)
+                                          opts=diffopts), f, tn)
         for f in removed:
             to = r.file(f).read(mmap1[f])
             tn = None
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
-                            showfunc=showfunc, ignorews=ignorews,
-                            ignorewsamount=ignorewsamount,
-                            ignoreblanklines=ignoreblanklines), f, tn)
+                                          opts=diffopts), f, tn)
 
     def changelog(self, pos, shortlog=False):
         def changenav(**map):
@@ -398,7 +388,7 @@ class hgweb(object):
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
                      rename=self.renamelink(fl, n),
-                     permissions=self.repo.manifest.read(mfn).execf[f])
+                     permissions=self.repo.manifest.read(mfn).execf(f))
 
     def fileannotate(self, f, node):
         bcache = {}
@@ -452,7 +442,7 @@ class hgweb(object):
                      rename=self.renamelink(fl, n),
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
-                     permissions=self.repo.manifest.read(mfn).execf[f])
+                     permissions=self.repo.manifest.read(mfn).execf(f))
 
     def manifest(self, mnode, path):
         man = self.repo.manifest
@@ -495,7 +485,7 @@ class hgweb(object):
                        "filenode": hex(fnode),
                        "parity": self.stripes(parity),
                        "basename": f,
-                       "permissions": mf.execf[full]}
+                       "permissions": mf.execf(full)}
                 parity += 1
 
         def dirlist(**map):

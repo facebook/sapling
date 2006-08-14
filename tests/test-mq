@@ -10,6 +10,10 @@ hg help mq
 hg init a
 cd a
 echo a > a
+hg ci -Ama
+
+hg clone . ../k
+
 mkdir b
 echo z > b/z
 hg ci -Ama
@@ -48,7 +52,7 @@ echo % qrefresh
 
 echo a >> a
 hg qrefresh
-sed -e "s/\(^diff -r \)\([a-f0-9]* \)/\1 x/" \
+sed -e "s/^\(diff -r \)\([a-f0-9]* \)/\1 x/" \
     -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/test.patch
 
@@ -103,8 +107,18 @@ hg qnext
 hg qprev
 hg qapplied
 
+echo % commit should fail
+hg commit
+
+echo % push should fail
+hg push ../../k
+
 echo % qunapplied
 hg qunapplied
+
+echo % push should succeed
+hg qpop -a
+hg push ../../k
 
 echo % strip
 cd ../../b

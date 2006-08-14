@@ -1,6 +1,6 @@
 # manifest.py - manifest revision class for mercurial
 #
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -11,7 +11,9 @@ from demandload import *
 demandload(globals(), "array bisect struct")
 
 class manifestdict(dict):
-    def __init__(self, mapping={}, flags={}):
+    def __init__(self, mapping=None, flags=None):
+        if mapping is None: mapping = {}
+        if flags is None: flags = {}
         dict.__init__(self, mapping)
         self._flags = flags
     def flags(self, f):
@@ -27,8 +29,9 @@ class manifestdict(dict):
         fl = entry[40:-1]
         if fl: self._flags[f] = fl
     def set(self, f, execf=False, linkf=False):
-        if execf: self._flags[f] = "x"
-        if linkf: self._flags[f] = "x"
+        if linkf: self._flags[f] = "l"
+        elif execf: self._flags[f] = "x"
+        else: self._flags[f] = ""
     def copy(self):
         return manifestdict(dict.copy(self), dict.copy(self._flags))
 

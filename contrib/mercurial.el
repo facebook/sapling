@@ -722,7 +722,7 @@ code by typing `M-x find-library mercurial RET'."
       (if (not hg-root-dir)
 	  (error "error: %s: directory is not part of a Mercurial repository."
 		 default-directory)
-	(cd (hg-root))))))
+	(cd hg-root-dir)))))
 
 (defun hg-add (path)
   "Add PATH to the Mercurial repository on the next commit.

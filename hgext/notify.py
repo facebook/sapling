@@ -67,7 +67,7 @@
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'email.Parser mercurial:commands,templater,util')
+demandload(globals(), 'email.Parser mercurial:commands,patch,templater,util')
 demandload(globals(), 'fnmatch socket time')
 
 # template for single changeset can include email headers.
@@ -238,7 +238,7 @@ class notifier(object):
             return
         fp = templater.stringio()
         prev = self.repo.changelog.parents(node)[0]
-        commands.dodiff(fp, self.ui, self.repo, prev, ref)
+        patch.diff(self.repo, fp, prev, ref)
         difflines = fp.getvalue().splitlines(1)
         if maxdiff > 0 and len(difflines) > maxdiff:
             self.sio.write(_('\ndiffs (truncated from %d to %d lines):\n\n') %

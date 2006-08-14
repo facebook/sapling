@@ -1,6 +1,6 @@
 # localrepo.py - read/write repository class for mercurial
 #
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -198,7 +198,7 @@ class localrepository(repo.repository):
             self.hook('tag', node=node, tag=name, local=local)
             return
 
-        for x in self.changes():
+        for x in self.status()[:5]:
             if '.hgtags' in x:
                 raise util.Abort(_('working copy of .hgtags is changed '
                                    '(please commit .hgtags manually)'))
@@ -502,7 +502,6 @@ class localrepository(repo.repository):
             except IOError:
                 try:
                     del m1[f]
-                    del m1[f]
                     if update_dirstate:
                         self.dirstate.forget([f])
                 except:
@@ -533,7 +532,7 @@ class localrepository(repo.repository):
                 else:
                     self.ui.warn(_("%s not tracked!\n") % f)
         else:
-            modified, added, removed, deleted, unknown = self.changes(match=match)
+            modified, added, removed, deleted, unknown = self.status(match=match)[:5]
             commit = modified + added
             remove = removed
 
@@ -751,16 +750,6 @@ class localrepository(repo.repository):
         for l in modified, added, removed, deleted, unknown, ignored, clean:
             l.sort()
         return (modified, added, removed, deleted, unknown, ignored, clean)
-
-    def changes(self, node1=None, node2=None, files=[], match=util.always,
-                wlock=None, list_ignored=False, list_clean=False):
-        '''DEPRECATED - use status instead'''
-        marduit = self.status(node1, node2, files, match, wlock,
-                              list_ignored, list_clean)
-        if list_ignored:
-            return marduit[:-1]
-        else:
-            return marduit[:-2]
 
     def add(self, list, wlock=None):
         if not wlock:

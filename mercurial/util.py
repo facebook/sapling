@@ -2,6 +2,8 @@
 util.py - Mercurial utility functions and platform specfic implementations
 
  Copyright 2005 K. Thananchayan <thananck@yahoo.com>
+ Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
+ Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
@@ -92,27 +94,6 @@ def find_in_path(name, path, default=None):
         if os.path.exists(p_name):
             return p_name
     return default
-
-def patch(strip, patchname, ui, cwd=None):
-    """apply the patch <patchname> to the working directory.
-    a list of patched files is returned"""
-    patcher = find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-    args = []
-    if cwd:
-        args.append('-d %s' % shellquote(cwd))
-    fp = os.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
-                                       shellquote(patchname)))
-    files = {}
-    for line in fp:
-        line = line.rstrip()
-        ui.status("%s\n" % line)
-        if line.startswith('patching file '):
-            pf = parse_patch_output(line)
-            files.setdefault(pf, 1)
-    code = fp.close()
-    if code:
-        raise Abort(_("patch command failed: %s") % explain_exit(code)[0])
-    return files.keys()
 
 def binary(s):
     """return true if a string is binary data using diff's heuristic"""
@@ -1014,3 +995,4 @@ def drop_scheme(scheme, path):
         if path.startswith('//'):
             path = path[2:]
     return path
+    
