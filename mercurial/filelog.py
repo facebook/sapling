@@ -65,6 +65,27 @@ class filelog(revlog):
             return (m["copy"], bin(m["copyrev"]))
         return False
 
+    def cmp(self, node, text):
+        """compare text with a given file revision"""
+
+        # for renames, we have to go the slow way
+        if self.renamed(node):
+            t2 = self.read(node)
+            return t2 == text
+
+        p1, p2 = self.parents(node)
+        h = hash(text, p1, p2)
+
+        return h != node
+
+    def makenode(self, node, text):
+        """calculate a file nodeid for text, descended or possibly
+        unchanged from node"""
+
+        if self.cmp(node, text):
+            return hash(text, node, nullid)
+        return node
+
     def annotate(self, node):
 
         def decorate(text, rev):

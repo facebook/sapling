@@ -668,8 +668,7 @@ class localrepository(repo.repository):
 
         def fcmp(fn, mf):
             t1 = self.wread(fn)
-            t2 = self.file(fn).read(mf.get(fn, nullid))
-            return cmp(t1, t2)
+            return self.file(fn).cmp(mf.get(fn, nullid), t1)
 
         def mfmatches(node):
             change = self.changelog.read(node)
