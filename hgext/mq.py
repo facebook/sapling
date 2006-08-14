@@ -506,21 +506,28 @@ class queue:
         tr.close()
         return (err, n)
 
-    def delete(self, repo, patch, keep=False):
-        patch = self.lookup(patch, strict=True)
-        info = self.isapplied(patch)
-        if info:
-            raise util.Abort(_("cannot delete applied patch %s") % patch)
-        if patch not in self.series:
-            raise util.Abort(_("patch %s not in series file") % patch)
+    def delete(self, repo, patches, keep=False):
+        realpatches = []
+        for patch in patches:
+            patch = self.lookup(patch, strict=True)
+            info = self.isapplied(patch)
+            if info:
+                raise util.Abort(_("cannot delete applied patch %s") % patch)
+            if patch not in self.series:
+                raise util.Abort(_("patch %s not in series file") % patch)
+            realpatches.append(patch)
+
         if not keep:
             r = self.qrepo()
             if r:
-                r.remove([patch], True)
+                r.remove(realpatches, True)
             else:
                 os.unlink(self.join(patch))
-        i = self.find_series(patch)
-        del self.full_series[i]
+
+        indices = [self.find_series(p) for p in realpatches]
+        indices.sort()
+        for i in indices[-1::-1]:
+            del self.full_series[i]
         self.parse_series()
         self.series_dirty = 1
 
@@ -1300,13 +1307,13 @@ class queue:
         if qrepo:
             qrepo.add(added)
 
-def delete(ui, repo, patch, **opts):
-    """remove a patch from the series file
+def delete(ui, repo, patch, *patches, **opts):
+    """remove patches from queue
 
-    The patch must not be applied.
-    With -k, the patch file is preserved in the patch directory."""
+    The patches must not be applied.
+    With -k, the patch files are preserved in the patch directory."""
     q = repo.mq
-    q.delete(repo, patch, keep=opts.get('keep'))
+    q.delete(repo, (patch,) + patches, keep=opts.get('keep'))
     q.save_dirty()
     return 0
 
