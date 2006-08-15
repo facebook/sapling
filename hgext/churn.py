@@ -19,23 +19,19 @@ def __gather(ui, repo, node1, node2):
     def dirtywork(f, mmap1, mmap2):
         lines = 0
 
-        to = None
-        if mmap1:
-            to = repo.file(f).read(mmap1[f])
-        tn = None
-        if mmap2:
-            tn = repo.file(f).read(mmap2[f])
+        to = mmap1 and repo.file(f).read(mmap1[f]) or None
+        tn = mmap2 and repo.file(f).read(mmap2[f]) or None
 
         diff = mdiff.unidiff(to, "", tn, "", f).split("\n")
 
         for line in diff:
-            if len(line) <= 0:
+            if not len(line):
                 continue # skip EOF
-            if line[0] == " ":
+            if line.startswith(" "):
                 continue # context line
-            if line[0:4] == "--- " or line[0:4] == "+++ ":
+            if line.startswith("--- ") or line.startswith("+++ "):
                 continue # begining of diff
-            if line[0:3] == "@@ ":
+            if line.startswith("@@ "):
                 continue # info line
 
             # changed lines
@@ -135,7 +131,7 @@ def churn(ui, repo, aliases):
 
     # make a list of tuples (name, lines) and sort it in descending order
     ordered = stats.items()
-    ordered.sort(cmp=lambda x,y:cmp(y[1], x[1]))
+    ordered.sort(cmp=lambda x, y: cmp(y[1], x[1]))
 
     maximum = ordered[0][1]
 
