@@ -110,6 +110,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     merge = {}
     get = {}
     remove = []
+    forget = []
 
     # construct a working dir manifest
     mw = m1.copy()
@@ -133,8 +134,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         # the file, then we need to remove it from the dirstate, to
         # prevent the dirstate from listing the file when it is no
         # longer in the manifest.
-        if not partial and linear_path and f not in m2:
-            repo.dirstate.forget((f,))
+        if linear_path and f not in m2:
+            forget.append(f)
 
     # Compare manifests
     for f, n in mw.iteritems():
@@ -224,6 +225,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     del mw, m1, m2, ma
 
+    ### apply phase
+
     if overwrite:
         for f in merge:
             get[f] = merge[f][:2]
@@ -300,6 +303,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     if not partial:
         repo.dirstate.setparents(p1, p2)
+        repo.dirstate.forget(forget)
 
     if show_stats:
         stats = ((len(get), _("updated")),
