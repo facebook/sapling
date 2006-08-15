@@ -1,0 +1,37 @@
+#!/bin/sh
+
+set -e
+
+HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
+echo "[extensions]" >> $HGTMP/.hgrc
+echo "hbisect=" >> $HGTMP/.hgrc
+
+echo % init
+hg init
+
+echo % committing changes
+count=0
+echo > a
+while test $count -lt 32 ; do
+    echo 'a' >> a
+    test $count -eq 0 && hg add
+    hg ci -m "msg $count" -d "$count 0"
+    echo % committed changeset $count
+    count=$(( $count + 1 ))
+done
+
+echo % log
+hg log
+
+echo % hg up -C
+hg up -C
+
+echo % bisect test
+hg bisect init
+hg bisect bad
+hg bisect good 1
+hg bisect good
+hg bisect good
+hg bisect good
+hg bisect bad
+hg bisect good
