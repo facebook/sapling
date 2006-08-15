@@ -90,9 +90,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not force:
         for f in unknown:
             if f in m2:
-                t1 = repo.wread(f)
-                t2 = repo.file(f).read(m2[f])
-                if cmp(t1, t2) != 0:
+                if repo.file(f).cmp(m2[f], repo.wread(f)):
                     raise util.Abort(_("'%s' already exists in the working"
                                        " dir and differs from remote") % f)
 
@@ -137,11 +135,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
             # is the wfile new since m1, and match m2?
             if f not in m1:
-                t1 = repo.wread(f)
-                t2 = repo.file(f).read(m2[f])
-                if cmp(t1, t2) == 0:
+                if not repo.file(f).cmp(m2[f], repo.wread(f)):
                     n = m2[f]
-                del t1, t2
 
             # are files different?
             if n != m2[f]:
