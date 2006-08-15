@@ -71,7 +71,7 @@ class filelog(revlog):
         # for renames, we have to go the slow way
         if self.renamed(node):
             t2 = self.read(node)
-            return t2 == text
+            return t2 != text
 
         return revlog.cmp(self, node, text)
 
