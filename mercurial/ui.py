@@ -7,7 +7,7 @@
 
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "errno getpass os re smtplib socket sys tempfile")
+demandload(globals(), "errno getpass os re socket sys tempfile")
 demandload(globals(), "ConfigParser mdiff templater traceback util")
 
 class ui(object):
@@ -280,62 +280,6 @@ class ui(object):
             os.unlink(name)
 
         return t
-
-    def sendmail(self):
-        '''send mail message. object returned has one method, sendmail.
-        call as sendmail(sender, list-of-recipients, msg).'''
-
-        def smtp():
-            '''send mail using smtp.'''
-
-            local_hostname = self.config('smtp', 'local_hostname')
-            s = smtplib.SMTP(local_hostname=local_hostname)
-            mailhost = self.config('smtp', 'host')
-            if not mailhost:
-                raise util.Abort(_('no [smtp]host in hgrc - cannot send mail'))
-            mailport = int(self.config('smtp', 'port', 25))
-            self.note(_('sending mail: smtp host %s, port %s\n') %
-                      (mailhost, mailport))
-            s.connect(host=mailhost, port=mailport)
-            if self.configbool('smtp', 'tls'):
-                self.note(_('(using tls)\n'))
-                s.ehlo()
-                s.starttls()
-                s.ehlo()
-            username = self.config('smtp', 'username')
-            password = self.config('smtp', 'password')
-            if username and password:
-                self.note(_('(authenticating to mail server as %s)\n') %
-                          (username))
-                s.login(username, password)
-            return s
-
-        class sendmail(object):
-            '''send mail using sendmail.'''
-
-            def __init__(self, ui, program):
-                self.ui = ui
-                self.program = program
-
-            def sendmail(self, sender, recipients, msg):
-                cmdline = '%s -f %s %s' % (
-                    self.program, templater.email(sender),
-                    ' '.join(map(templater.email, recipients)))
-                self.ui.note(_('sending mail: %s\n') % cmdline)
-                fp = os.popen(cmdline, 'w')
-                fp.write(msg)
-                ret = fp.close()
-                if ret:
-                    raise util.Abort('%s %s' % (
-                        os.path.basename(self.program.split(None, 1)[0]),
-                        util.explain_exit(ret)[0]))
-
-        method = self.config('email', 'method', 'smtp')
-        if method == 'smtp':
-            mail = smtp()
-        else:
-            mail = sendmail(self, method)
-        return mail
 
     def print_exc(self):
         '''print exception traceback if traceback printing enabled.
