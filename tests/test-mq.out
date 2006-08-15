@@ -27,7 +27,7 @@ list of commands (use "hg help -v mq" to show aliases and global options):
  qapplied     print the patches already applied
  qclone       clone main and patch repository at same time
  qcommit      commit changes in the queue repository
- qdelete      remove a patch from the series file
+ qdelete      remove patches from queue
  qdiff        diff of the current patch
  qfold        fold the named patches into the current patch
  qguard       set or print guards for a patch
