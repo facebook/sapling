@@ -116,8 +116,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     umap = dict.fromkeys(unknown)
 
     for f in added + modified + unknown:
-        mw[f] = None
-        if f in m1: mw[f] = "" # distinguish between changed and new
+        mw[f] = ""
+        # is the wfile new and matches m2?
+        if (f not in m1 and f in m2 and
+            not repo.file(f).cmp(m2[f], repo.wread(f))):
+            mw[f] = m2[f]
+
         mw.set(f, util.is_exec(repo.wjoin(f), mw.execf(f)))
 
     for f in deleted + removed:
@@ -138,11 +142,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             continue
         if f in m2:
             s = 0
-
-            # is the wfile new and matches m2?
-            if mw[f] == None:
-                if not repo.file(f).cmp(m2[f], repo.wread(f)):
-                    n = m2[f]
 
             # are files different?
             if n != m2[f]:
