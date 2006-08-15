@@ -5,19 +5,24 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 #
-# allow to use external programs to compare revisions, or revision
-# with working dir. program is called with two arguments: paths to
-# directories containing snapshots of files to compare.
+# The `extdiff' Mercurial extension allows you to use external programs
+# to compare revisions, or revision with working dir.  The external diff
+# programs are called with a configurable set of options and two
+# non-option arguments: paths to directories containing snapshots of
+# files to compare.
 #
-# to enable:
+# To enable this extension:
 #
 #   [extensions]
 #   hgext.extdiff =
 #
-# also allows to configure new diff commands, so you do not need to
-# type "hg extdiff -p kdiff3" always.
+# The `extdiff' extension also allows to configure new diff commands, so
+# you do not need to type "hg extdiff -p kdiff3" always.
 #
 #   [extdiff]
+#   # add new command that runs GNU diff(1) in 'context diff' mode
+#   cmd.cdiff = gdiff
+#   opts.cdiff = -Nprc5
 #   # add new command called vdiff, runs kdiff3
 #   cmd.vdiff = kdiff3
 #   # add new command called meld, runs meld (no need to name twice)
@@ -26,9 +31,16 @@
 #   #(see http://www.vim.org/scripts/script.php?script_id=102)
 #   cmd.vimdiff = LC_ALL=C gvim -f '+bdel 1 2' '+ execute "DirDiff ".argv(0)." ".argv(1)'
 #
-# you can use -I/-X and list of file or directory names like normal
-# "hg diff" command. extdiff makes snapshots of only needed files, so
-# compare program will be fast.
+# Each custom diff commands can have two parts: a `cmd' and an `opts'
+# part.  The cmd.xxx option defines the name of an executable program
+# that will be run, and opts.xxx defines a set of command-line options
+# which will be inserted to the command between the program name and
+# the files/directories to diff (i.e. the cdiff example above).
+#
+# You can use -I/-X and list of file or directory names like normal
+# "hg diff" command.  The `extdiff' extension makes snapshots of only
+# needed files, so running the external diff program will actually be
+# pretty fast (at least faster than having to compare the entire tree).
 
 from mercurial.demandload import demandload
 from mercurial.i18n import gettext as _
