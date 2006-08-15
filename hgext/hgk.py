@@ -5,8 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import time, sys, signal, os
-from mercurial import hg, mdiff, fancyopts, commands, ui, util
+from mercurial.demandload import *
+demandload(globals(), 'time sys signal os')
+demandload(globals(), 'mercurial:hg,mdiff,fancyopts,commands,ui,util')
 
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False):
