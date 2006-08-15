@@ -103,7 +103,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     # we care about merging
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(_(" overwrite %s branchmerge %s partial %s linear %s\n") %
-                  (overwrite, branchmerge, partial and True or False, linear_path))
+                  (overwrite, branchmerge, bool(partial), linear_path))
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
                   (short(man), short(m1n), short(m2n)))
 
