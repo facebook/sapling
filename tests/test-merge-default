@@ -1,0 +1,40 @@
+#!/bin/sh
+
+hg init
+echo a > a
+hg commit -A -ma
+
+echo a >> a
+hg commit -mb
+
+echo a >> a
+hg commit -mc
+
+hg up 1
+echo a >> a
+hg commit -md
+
+hg up 1
+echo a >> a
+hg commit -me
+
+hg up 1
+echo % should fail because not at a head
+hg merge
+
+hg up
+echo % should fail because \> 2 heads
+hg merge
+
+echo % should succeed
+hg merge 2
+hg commit -mm1
+
+echo % should succeed - 2 heads
+hg merge
+hg commit -mm2
+
+echo % should fail because 1 head
+hg merge
+
+true

@@ -1969,9 +1969,29 @@ def merge(ui, repo, node=None, force=None, branch=None):
     requested revision. Files that changed between either parent are
     marked as changed for the next commit and a commit must be
     performed before any further updates are allowed.
+
+    If no revision is specified, the working directory's parent is a
+    head revision, and the repository contains exactly one other head,
+    the other head is merged with by default.  Otherwise, an explicit
+    revision to merge with must be provided.
     """
 
-    node = _lookup(repo, node, branch)
+    if node:
+        node = _lookup(repo, node, branch)
+    else:
+        heads = repo.heads()
+        if len(heads) > 2:
+            raise util.Abort(_('repo has %d heads - '
+                               'please merge with an explicit rev') %
+                             len(heads))
+        if len(heads) == 1:
+            raise util.Abort(_('there is nothing to merge - '
+                               'use "hg update" instead'))
+        parent = repo.dirstate.parents()[0]
+        if parent not in heads:
+            raise util.Abort(_('working dir not at a head rev - '
+                               'use "hg update" or merge with an explicit rev'))
+        node = parent == heads[0] and heads[-1] or heads[0]
     return hg.merge(repo, node, force=force)
 
 def outgoing(ui, repo, dest=None, **opts):
