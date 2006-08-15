@@ -1,0 +1,19 @@
+% init
+% commit
+adding base
+% qnew mqbase
+% qrefresh
+% qdiff
+diff -r 67e992f2c4f3 base
+--- a/base
++++ b/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% qdiff dirname
+diff -r 67e992f2c4f3 base
+--- a/base
++++ b/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
