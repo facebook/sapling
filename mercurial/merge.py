@@ -10,6 +10,11 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "util os tempfile")
 
+def fmerge(f, local, other, ancestor):
+    """merge executable flags"""
+    a, b, c = ancestor.execf(f), local.execf(f), other.execf(f)
+    return ((a^b) | (a^c)) ^ a
+
 def merge3(repo, fn, my, other, p1, p2):
     """perform a 3-way merge in the working directory"""
 
@@ -144,11 +149,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 # are both different from the ancestor?
                 if n != a and m2[f] != a:
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
-                    # merge executable bits
-                    # "if we changed or they changed, change in merge"
-                    a, b, c = ma.execf(f), mw.execf(f), m2.execf(f)
-                    mode = ((a^b) | (a^c)) ^ a
-                    merge[f] = (mode, m1.get(f, nullid), m2[f])
+                    merge[f] = (fmerge(f, mw, m2, ma), m1.get(f, nullid), m2[f])
                     s = 1
                 # are we clobbering?
                 # is remote's version newer?
@@ -167,9 +168,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
                     util.set_exec(repo.wjoin(f), m2.execf(f))
                 else:
-                    a, b, c = ma.execf(f), mw.execf(f), m2.execf(f)
-                    mode = ((a^b) | (a^c)) ^ a
-                    if mode != b:
+                    if fmerge(f, mw, m2, ma) != mw.execf(f):
                         repo.ui.debug(_(" updating permissions for %s\n")
                                       % f)
                         util.set_exec(repo.wjoin(f), mode)
