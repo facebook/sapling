@@ -87,7 +87,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     m2 = repo.manifest.read(m2n).copy()
     ma = repo.manifest.read(man)
 
-    if not forcemerge and not overwrite:
+    if not force:
         for f in unknown:
             if f in m2:
                 t1 = repo.wread(f)
