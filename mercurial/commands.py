@@ -221,7 +221,7 @@ def walkchangerevs(ui, repo, pats, opts):
 
     # it might be worthwhile to do this in the iterator if the rev range
     # is descending and the prune args are all within that range
-    for rev in opts.get('prune'):
+    for rev in opts.get('prune', ()):
         rev = repo.changelog.rev(repo.lookup(rev))
         ff = followfilter()
         stop = min(revs[0], revs[-1])
