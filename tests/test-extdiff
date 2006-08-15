@@ -23,4 +23,4 @@ hg ci -d '0 0' -mtest1
 echo b >> a
 hg ci -d '1 0' -mtest2
 
-hg falabala -r 0:1
+hg falabala -r 0:1 || echo "diff-like tools yield a non-zero exit code"
