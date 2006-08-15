@@ -215,13 +215,14 @@ def dogitpatch(patchname, gitpatches):
     tmpfp.close()
     return patchname
 
-def patch(strip, patchname, ui, cwd=None):
+def patch(patchname, ui, strip=1, cwd=None):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
 
     (dopatch, gitpatches) = readgitpatch(patchname)
 
     files = {}
+    fuzz = False
     if dopatch:
         if dopatch == 'filter':
             patchname = dogitpatch(patchname, gitpatches)
@@ -237,10 +238,25 @@ def patch(strip, patchname, ui, cwd=None):
 
         for line in fp:
             line = line.rstrip()
-            ui.status("%s\n" % line)
+            ui.note(line + '\n')
             if line.startswith('patching file '):
                 pf = util.parse_patch_output(line)
+                printed_file = False
                 files.setdefault(pf, (None, None))
+            elif line.find('with fuzz') >= 0:
+                fuzz = True
+                if not printed_file:
+                    ui.warn(pf + '\n')
+                    printed_file = True
+                ui.warn(line + '\n')
+            elif line.find('saving rejects to file') >= 0:
+                ui.warn(line + '\n')
+            elif line.find('FAILED') >= 0:
+                if not printed_file:
+                    ui.warn(pf + '\n')
+                    printed_file = True
+                ui.warn(line + '\n')
+            
         code = fp.close()
         if code:
             raise util.Abort(_("patch command failed: %s") %
@@ -249,7 +265,7 @@ def patch(strip, patchname, ui, cwd=None):
     for gp in gitpatches:
         files[gp.path] = (gp.op, gp)
 
-    return files
+    return (files, fuzz)
 
 def diff(repo, node1=None, node2=None, files=None, match=util.always,
          fp=None, changes=None, opts=None):

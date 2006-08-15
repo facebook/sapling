@@ -400,39 +400,15 @@ class queue:
         '''Apply patchfile  to the working directory.
         patchfile: file name of patch'''
         try:
-            pp = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-            f = os.popen("%s -d %s -p1 --no-backup-if-mismatch < %s" %
-                         (pp, util.shellquote(repo.root), util.shellquote(patchfile)))
-        except:
-            self.ui.warn("patch failed, unable to continue (try -v)\n")
-            return (None, [], False)
-        files = []
-        fuzz = False
-        for l in f:
-            l = l.rstrip('\r\n');
-            if self.ui.verbose:
-                self.ui.warn(l + "\n")
-            if l[:14] == 'patching file ':
-                pf = os.path.normpath(util.parse_patch_output(l))
-                if pf not in files:
-                    files.append(pf)
-                printed_file = False
-                file_str = l
-            elif l.find('with fuzz') >= 0:
-                if not printed_file:
-                    self.ui.warn(file_str + '\n')
-                    printed_file = True
-                self.ui.warn(l + '\n')
-                fuzz = True
-            elif l.find('saving rejects to file') >= 0:
-                self.ui.warn(l + '\n')
-            elif l.find('FAILED') >= 0:
-                if not printed_file:
-                    self.ui.warn(file_str + '\n')
-                    printed_file = True
-                self.ui.warn(l + '\n')
+            (files, fuzz) = patch.patch(patchfile, self.ui, strip=1,
+                                        cwd=repo.root)
+        except Exception, inst:
+            self.ui.note(str(inst) + '\n')
+            if not self.ui.verbose:
+                self.ui.warn("patch failed, unable to continue (try -v)\n")
+            return (False, [], False)
 
-        return (not f.close(), files, fuzz)
+        return (True, files.keys(), fuzz)
 
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, wlock=None):

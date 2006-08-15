@@ -1681,7 +1681,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 message = None
             ui.debug(_('message:\n%s\n') % message)
 
-            files = patch.patch(strip, tmpname, ui, cwd=repo.root)
+            files, fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root)
             removes = []
             if len(files) > 0:
                 cfiles = files.keys()

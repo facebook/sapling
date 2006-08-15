@@ -1,6 +1,5 @@
 % new file
 applying patch from stdin
-patching file new
 % chmod +x
 applying patch from stdin
 % copy
@@ -14,15 +13,12 @@ new
 rename
 % delete
 applying patch from stdin
-patching file copyx
 new
 rename
 % regular diff
 applying patch from stdin
-patching file rename
 % copy and modify
 applying patch from stdin
-patching file copy2
 a
 a
 b
@@ -30,7 +26,6 @@ a
 a
 % rename and modify
 applying patch from stdin
-patching file rename2
 copy2: No such file or directory
 a
 a
