@@ -251,6 +251,18 @@ def patch(strip, patchname, ui, cwd=None):
 
     return files
 
+def diffopts(ui, opts={}):
+    return mdiff.diffopts(
+        text=opts.get('text'),
+        showfunc=(opts.get('show_function') or
+                  ui.configbool('diff', 'showfunc', None)),
+        ignorews=(opts.get('ignore_all_space') or
+                  ui.configbool('diff', 'ignorews', None)),
+        ignorewsamount=(opts.get('ignore_space_change') or
+                        ui.configbool('diff', 'ignorewsamount', None)),
+        ignoreblanklines=(opts.get('ignore_blank_lines') or
+                          ui.configbool('diff', 'ignoreblanklines', None)))
+
 def diff(repo, node1=None, node2=None, files=None, match=util.always,
          fp=None, changes=None, opts=None):
     '''print diff of changes to files between two nodes, or node and

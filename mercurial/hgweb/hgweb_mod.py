@@ -11,7 +11,7 @@ import os.path
 import mimetypes
 from mercurial.demandload import demandload
 demandload(globals(), "re zlib ConfigParser mimetools cStringIO sys tempfile")
-demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone")
+demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone,patch")
 demandload(globals(), "mercurial:templater")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
 from mercurial.node import *
@@ -134,7 +134,7 @@ class hgweb(object):
             modified, added, removed = map(lambda x: filterfiles(files, x),
                                            (modified, added, removed))
 
-        diffopts = ui.diffopts()
+        diffopts = patch.diffopts(ui)
         for f in modified:
             to = r.file(f).read(mmap1[f])
             tn = r.file(f).read(mmap2[f])

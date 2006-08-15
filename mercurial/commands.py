@@ -1337,7 +1337,7 @@ def diff(ui, repo, *pats, **opts):
     fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
 
     patch.diff(repo, node1, node2, fns, match=matchfn,
-               opts=ui.diffopts(opts))
+               opts=patch.diffopts(ui, opts))
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
@@ -1374,7 +1374,8 @@ def export(ui, repo, *changesets, **opts):
     else:
         ui.note(_('exporting patch:\n'))
     patch.export(repo, map(repo.lookup, revs), template=opts['output'],
-                 switch_parent=opts['switch_parent'], opts=ui.diffopts(opts))
+                 switch_parent=opts['switch_parent'],
+                 opts=patch.diffopts(ui, opts))
 
 def forget(ui, repo, *pats, **opts):
     """don't add the specified files on the next commit (DEPRECATED)

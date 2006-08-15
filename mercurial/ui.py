@@ -169,18 +169,6 @@ class ui(object):
             result[key.lower()] = value
         return result
 
-    def diffopts(self, opts={}):
-        return mdiff.diffopts(
-            text=opts.get('text'),
-            showfunc=(opts.get('show_function') or
-                      self.configbool('diff', 'showfunc', None)),
-            ignorews=(opts.get('ignore_all_space') or
-                      self.configbool('diff', 'ignorews', None)),
-            ignorewsamount=(opts.get('ignore_space_change') or
-                            self.configbool('diff', 'ignorewsamount', None)),
-            ignoreblanklines=(opts.get('ignore_blank_lines') or
-                              self.configbool('diff', 'ignoreblanklines', None)))
-
     def username(self):
         """Return default username to be used in commits.
 
