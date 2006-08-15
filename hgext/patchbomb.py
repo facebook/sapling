@@ -23,22 +23,45 @@
 # the changeset summary, so you can be sure you are sending the right
 # changes.
 #
-# It is best to run this script with the "-n" (test only) flag before
-# firing it up "for real", in which case it will use your pager to
-# display each of the messages that it would send.
+# To enable this extension:
 #
-# The "-m" (mbox) option will create an mbox file instead of sending
-# the messages directly. This can be reviewed e.g. with "mutt -R -f mbox",
-# and finally sent with "formail -s sendmail -bm -t < mbox".
+#   [extensions]
+#   hgext.patchbomb =
 #
 # To configure other defaults, add a section like this to your hgrc
 # file:
 #
-# [email]
-# from = My Name <my@email>
-# to = recipient1, recipient2, ...
-# cc = cc1, cc2, ...
-# bcc = bcc1, bcc2, ...
+#   [email]
+#   from = My Name <my@email>
+#   to = recipient1, recipient2, ...
+#   cc = cc1, cc2, ...
+#   bcc = bcc1, bcc2, ...
+#
+# Then you can use the "hg email" command to mail a series of changesets
+# as a patchbomb.
+#
+# To avoid sending patches prematurely, it is a good idea to first run
+# the "email" command with the "-n" option (test only).  You will be
+# prompted for an email recipient address, a subject an an introductory
+# message describing the patches of your patchbomb.  Then when all is
+# done, your pager will be fired up once for each patchbomb message, so
+# you can verify everything is alright.
+#
+# The "-m" (mbox) option is also very useful.  Instead of previewing
+# each patchbomb message in a pager or sending the messages directly,
+# it will create a UNIX mailbox file with the patch emails.  This
+# mailbox file can be previewed with any mail user agent which supports
+# UNIX mbox files, i.e. with mutt:
+#
+#   % mutt -R -f mbox
+#
+# When you are previewing the patchbomb messages, you can use `formail'
+# (a utility that is commonly installed as part of the procmail package),
+# to send each message out:
+#
+#  % formail -s sendmail -bm -t < mbox
+#
+# That should be all.  Now your patchbomb is on its way out.
 
 from mercurial.demandload import *
 demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
