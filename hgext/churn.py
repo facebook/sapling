@@ -25,7 +25,7 @@ def __gather(ui, repo, node1, node2):
         diff = mdiff.unidiff(to, "", tn, "", f).split("\n")
 
         for line in diff:
-            if not len(line):
+            if not line:
                 continue # skip EOF
             if line.startswith(" "):
                 continue # context line
