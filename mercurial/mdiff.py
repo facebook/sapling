@@ -23,6 +23,7 @@ class diffopts(object):
     '''context is the number of context lines
     text treats all files as text
     showfunc enables diff -p output
+    git enables the git extended patch format
     ignorews ignores all whitespace changes in the diff
     ignorewsamount ignores changes in the amount of whitespace
     ignoreblanklines ignores changes whose lines are all blank'''
@@ -31,6 +32,7 @@ class diffopts(object):
         'context': 3,
         'text': False,
         'showfunc': True,
+        'git': False,
         'ignorews': False,
         'ignorewsamount': False,
         'ignoreblanklines': False,

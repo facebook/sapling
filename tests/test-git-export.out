@@ -1,0 +1,42 @@
+adding start
+adding new
+% new file
+diff --git a/new b/new
+new file mode 100644
+--- /dev/null
++++ b/new
+@@ -0,0 +1,1 @@
++new
+% copy
+diff --git a/new b/copy
+copy from new
+copy to copy
+% rename
+diff --git a/copy b/rename
+rename from copy
+rename to rename
+% delete
+diff --git a/rename b/rename
+deleted file mode 100644
+--- a/rename
++++ /dev/null
+@@ -1,1 +0,0 @@
+-new
+adding src
+% chmod 644
+diff --git a/src b/src
+old mode 100644
+new mode 100755
+% rename+mod+chmod
+diff --git a/src b/dst
+old mode 100755
+new mode 100644
+rename from src
+rename to dst
+--- a/dst
++++ b/dst
+@@ -3,3 +3,4 @@ 3
+ 3
+ 4
+ 5
++a

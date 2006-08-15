@@ -174,6 +174,8 @@ class ui(object):
             text=opts.get('text'),
             showfunc=(opts.get('show_function') or
                       self.configbool('diff', 'showfunc', None)),
+            git=(opts.get('git') or
+                 self.configbool('diff', 'git', None)),
             ignorews=(opts.get('ignore_all_space') or
                       self.configbool('diff', 'ignorews', None)),
             ignorewsamount=(opts.get('ignore_space_change') or

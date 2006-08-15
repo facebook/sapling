@@ -298,6 +298,9 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             return _date2
         def read(f):
             return repo.file(f).read(mmap2[f])
+        def renamed(f):
+            src = repo.file(f).renamed(mmap2[f])
+            return src and src[0] or None
     else:
         tz = util.makedate()[1]
         _date2 = util.datestr()
@@ -309,6 +312,8 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                 return _date2
         def read(f):
             return repo.wread(f)
+        def renamed(f):
+            return repo.dirstate.copies.get(f)
 
     if repo.ui.quiet:
         r = None
@@ -316,16 +321,65 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         hexfunc = repo.ui.verbose and hex or short
         r = [hexfunc(node) for node in [node1, node2] if node]
 
+    if opts.git:
+        copied = {}
+        for f in added:
+            src = renamed(f)
+            if src:
+                copied[f] = src
+        srcs = [x[1] for x in copied.items()]
+
     all = modified + added + removed
     all.sort()
     for f in all:
         to = None
         tn = None
+        dodiff = True
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         if f not in removed:
             tn = read(f)
-        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts))
+        if opts.git:
+            def gitmode(x):
+                return x and '100755' or '100644'
+            def addmodehdr(header, omode, nmode):
+                if omode != nmode:
+                    header.append('old mode %s\n' % omode)
+                    header.append('new mode %s\n' % nmode)
+
+            a, b = f, f
+            header = []
+            if f in added:
+                if node2:
+                    mode = gitmode(mmap2.execf(f))
+                else:
+                    mode = gitmode(util.is_exec(repo.wjoin(f), None))
+                if f in copied:
+                    a = copied[f]
+                    omode = gitmode(mmap.execf(a))
+                    addmodehdr(header, omode, mode)
+                    op = a in removed and 'rename' or 'copy'
+                    header.append('%s from %s\n' % (op, a))
+                    header.append('%s to %s\n' % (op, f))
+                    to = repo.file(a).read(mmap[a])
+                else:
+                    header.append('new file mode %s\n' % mode)
+            elif f in removed:
+                if f in srcs:
+                    dodiff = False
+                else:
+                    mode = gitmode(mmap.execf(f))
+                    header.append('deleted file mode %s\n' % mode)
+            else:
+                omode = gitmode(mmap.execf(f))
+                nmode = gitmode(util.is_exec(repo.wjoin(f), mmap.execf(f)))
+                addmodehdr(header, omode, nmode)
+            r = None
+            if dodiff:
+                header.insert(0, 'diff --git a/%s b/%s\n' % (a, b))
+                fp.write(''.join(header))
+        if dodiff:
+            fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts))
 
 def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
            opts=None):

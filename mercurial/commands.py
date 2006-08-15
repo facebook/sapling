@@ -2877,6 +2877,7 @@ table = {
           ('a', 'text', None, _('treat all files as text')),
           ('p', 'show-function', None,
            _('show which function each change is in')),
+          ('g', 'git', None, _('use git extended diff format')),
           ('w', 'ignore-all-space', None,
            _('ignore white space when comparing lines')),
           ('b', 'ignore-space-change', None,
