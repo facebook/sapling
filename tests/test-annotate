@@ -1,0 +1,23 @@
+#!/bin/sh
+
+echo % init
+hg init
+
+echo % commit
+echo 'a' > a
+hg ci -A -m test -u nobody -d '1 0'
+
+echo % annotate -c
+hg annotate -c a
+
+echo % annotate -d
+hg annotate -d a
+
+echo % annotate -n
+hg annotate -n a
+
+echo % annotate -u
+hg annotate -u a
+
+echo % annotate -cdnu
+hg annotate -cdnu a

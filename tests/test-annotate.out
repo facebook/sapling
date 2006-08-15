@@ -1,0 +1,13 @@
+% init
+% commit
+adding a
+% annotate -c
+8435f90966e4: a
+% annotate -d
+Thu Jan 01 00:00:01 1970 +0000: a
+% annotate -n
+0: a
+% annotate -u
+nobody: a
+% annotate -cdnu
+nobody 0 8435f90966e4 Thu Jan 01 00:00:01 1970 +0000: a
