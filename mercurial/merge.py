@@ -282,7 +282,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 # of that file some time in the past. Thus our
                 # merge will appear as a normal local file
                 # modification.
-                f_len = len(repo.file(f).read(other))
+                fl = repo.file(f)
+                f_len = fl.size(fl.rev(other))
                 repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
 
     remove.sort()
