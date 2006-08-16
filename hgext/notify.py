@@ -67,8 +67,8 @@
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'email.Parser mercurial:commands,patch,templater,util')
-demandload(globals(), 'fnmatch socket time')
+demandload(globals(), 'mercurial:commands,patch,templater,util,mail')
+demandload(globals(), 'email.Parser fnmatch socket time')
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -229,8 +229,8 @@ class notifier(object):
         else:
             self.ui.status(_('notify: sending %d subscribers %d changes\n') %
                              (len(self.subs), count))
-            mail = self.ui.sendmail()
-            mail.sendmail(templater.email(msg['From']), self.subs, msgtext)
+            mail.sendmail(self.ui, templater.email(msg['From']),
+                          self.subs, msgtext)
 
     def diff(self, node, ref):
         maxdiff = int(self.ui.config('notify', 'maxdiff', 300))

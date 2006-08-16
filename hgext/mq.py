@@ -77,7 +77,7 @@ class queue:
 
     def diffopts(self):
         if self._diffopts is None:
-            self._diffopts = self.ui.diffopts()
+            self._diffopts = patch.diffopts(self.ui)
         return self._diffopts
 
     def join(self, *p):

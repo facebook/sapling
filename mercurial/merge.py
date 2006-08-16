@@ -10,6 +10,11 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "util os tempfile")
 
+def fmerge(f, local, other, ancestor):
+    """merge executable flags"""
+    a, b, c = ancestor.execf(f), local.execf(f), other.execf(f)
+    return ((a^b) | (a^c)) ^ a
+
 def merge3(repo, fn, my, other, p1, p2):
     """perform a 3-way merge in the working directory"""
 
@@ -90,9 +95,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not force:
         for f in unknown:
             if f in m2:
-                t1 = repo.wread(f)
-                t2 = repo.file(f).read(m2[f])
-                if cmp(t1, t2) != 0:
+                if repo.file(f).cmp(m2[f], repo.wread(f)):
                     raise util.Abort(_("'%s' already exists in the working"
                                        " dir and differs from remote") % f)
 
@@ -100,13 +103,14 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     # we care about merging
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(_(" overwrite %s branchmerge %s partial %s linear %s\n") %
-                  (overwrite, branchmerge, partial and True or False, linear_path))
+                  (overwrite, branchmerge, bool(partial), linear_path))
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
                   (short(man), short(m1n), short(m2n)))
 
     merge = {}
     get = {}
     remove = []
+    forget = []
 
     # construct a working dir manifest
     mw = m1.copy()
@@ -114,6 +118,11 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     for f in added + modified + unknown:
         mw[f] = ""
+        # is the wfile new and matches m2?
+        if (f not in m1 and f in m2 and
+            not repo.file(f).cmp(m2[f], repo.wread(f))):
+            mw[f] = m2[f]
+
         mw.set(f, util.is_exec(repo.wjoin(f), mw.execf(f)))
 
     for f in deleted + removed:
@@ -125,8 +134,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         # the file, then we need to remove it from the dirstate, to
         # prevent the dirstate from listing the file when it is no
         # longer in the manifest.
-        if not partial and linear_path and f not in m2:
-            repo.dirstate.forget((f,))
+        if linear_path and f not in m2:
+            forget.append(f)
 
     # Compare manifests
     for f, n in mw.iteritems():
@@ -135,25 +144,13 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if f in m2:
             s = 0
 
-            # is the wfile new since m1, and match m2?
-            if f not in m1:
-                t1 = repo.wread(f)
-                t2 = repo.file(f).read(m2[f])
-                if cmp(t1, t2) == 0:
-                    n = m2[f]
-                del t1, t2
-
             # are files different?
             if n != m2[f]:
                 a = ma.get(f, nullid)
                 # are both different from the ancestor?
                 if n != a and m2[f] != a:
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
-                    # merge executable bits
-                    # "if we changed or they changed, change in merge"
-                    a, b, c = ma.execf(f), mw.execf(f), m2.execf(f)
-                    mode = ((a^b) | (a^c)) ^ a
-                    merge[f] = (mode, m1.get(f, nullid), m2[f])
+                    merge[f] = (fmerge(f, mw, m2, ma), m1.get(f, nullid), m2[f])
                     s = 1
                 # are we clobbering?
                 # is remote's version newer?
@@ -172,9 +169,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
                     util.set_exec(repo.wjoin(f), m2.execf(f))
                 else:
-                    a, b, c = ma.execf(f), mw.execf(f), m2.execf(f)
-                    mode = ((a^b) | (a^c)) ^ a
-                    if mode != b:
+                    if fmerge(f, mw, m2, ma) != mw.execf(f):
                         repo.ui.debug(_(" updating permissions for %s\n")
                                       % f)
                         util.set_exec(repo.wjoin(f), mode)
@@ -230,6 +225,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     del mw, m1, m2, ma
 
+    ### apply phase
+
     if overwrite:
         for f in merge:
             get[f] = merge[f][:2]
@@ -257,11 +254,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         t = repo.file(f).read(node)
         repo.wwrite(f, t)
         util.set_exec(repo.wjoin(f), flag)
-        if not partial:
-            if branchmerge:
-                repo.dirstate.update([f], 'n', st_mtime=-1)
-            else:
-                repo.dirstate.update([f], 'n')
 
     # merge the tricky bits
     unresolved = []
@@ -274,19 +266,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if ret:
             unresolved.append(f)
         util.set_exec(repo.wjoin(f), flag)
-        if not partial:
-            if branchmerge:
-                # We've done a branch merge, mark this file as merged
-                # so that we properly record the merger later
-                repo.dirstate.update([f], 'm')
-            else:
-                # We've update-merged a locally modified file, so
-                # we set the dirstate to emulate a normal checkout
-                # of that file some time in the past. Thus our
-                # merge will appear as a normal local file
-                # modification.
-                f_len = len(repo.file(f).read(other))
-                repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
 
     remove.sort()
     for f in remove:
@@ -298,14 +277,40 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             if inst.errno != errno.ENOENT:
                 repo.ui.warn(_("update failed to remove %s: %s!\n") %
                              (f, inst.strerror))
+
+    # update dirstate
     if not partial:
+        repo.dirstate.setparents(p1, p2)
+        repo.dirstate.forget(forget)
         if branchmerge:
             repo.dirstate.update(remove, 'r')
         else:
             repo.dirstate.forget(remove)
 
-    if not partial:
-        repo.dirstate.setparents(p1, p2)
+        files = get.keys()
+        files.sort()
+        for f in files:
+            if branchmerge:
+                repo.dirstate.update([f], 'n', st_mtime=-1)
+            else:
+                repo.dirstate.update([f], 'n')
+
+        files = merge.keys()
+        files.sort()
+        for f in files:
+            if branchmerge:
+                # We've done a branch merge, mark this file as merged
+                # so that we properly record the merger later
+                repo.dirstate.update([f], 'm')
+            else:
+                # We've update-merged a locally modified file, so
+                # we set the dirstate to emulate a normal checkout
+                # of that file some time in the past. Thus our
+                # merge will appear as a normal local file
+                # modification.
+                fl = repo.file(f)
+                f_len = fl.size(fl.rev(other))
+                repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
 
     if show_stats:
         stats = ((len(get), _("updated")),
