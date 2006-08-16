@@ -60,9 +60,9 @@ def connect(ui):
 
     method = ui.config('email', 'method', 'smtp')
     if method == 'smtp':
-        return smtp(ui)
+        return _smtp(ui)
 
-    return sendmail(ui, method)
+    return _sendmail(ui, method)
 
 def sendmail(ui, sender, recipients, msg):
     return connect(ui).sendmail(sender, recipients, msg)
