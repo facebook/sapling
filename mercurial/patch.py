@@ -215,14 +215,13 @@ def dogitpatch(patchname, gitpatches):
     tmpfp.close()
     return patchname
 
-def patch(patchname, ui, strip=1, cwd=None):
+def patch(strip, patchname, ui, cwd=None):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
 
     (dopatch, gitpatches) = readgitpatch(patchname)
 
     files = {}
-    fuzz = False
     if dopatch:
         if dopatch == 'filter':
             patchname = dogitpatch(patchname, gitpatches)
@@ -238,25 +237,10 @@ def patch(patchname, ui, strip=1, cwd=None):
 
         for line in fp:
             line = line.rstrip()
-            ui.note(line + '\n')
+            ui.status("%s\n" % line)
             if line.startswith('patching file '):
                 pf = util.parse_patch_output(line)
-                printed_file = False
                 files.setdefault(pf, (None, None))
-            elif line.find('with fuzz') >= 0:
-                fuzz = True
-                if not printed_file:
-                    ui.warn(pf + '\n')
-                    printed_file = True
-                ui.warn(line + '\n')
-            elif line.find('saving rejects to file') >= 0:
-                ui.warn(line + '\n')
-            elif line.find('FAILED') >= 0:
-                if not printed_file:
-                    ui.warn(pf + '\n')
-                    printed_file = True
-                ui.warn(line + '\n')
-            
         code = fp.close()
         if code:
             raise util.Abort(_("patch command failed: %s") %
@@ -265,7 +249,19 @@ def patch(patchname, ui, strip=1, cwd=None):
     for gp in gitpatches:
         files[gp.path] = (gp.op, gp)
 
-    return (files, fuzz)
+    return files
+
+def diffopts(ui, opts={}):
+    return mdiff.diffopts(
+        text=opts.get('text'),
+        showfunc=(opts.get('show_function') or
+                  ui.configbool('diff', 'showfunc', None)),
+        ignorews=(opts.get('ignore_all_space') or
+                  ui.configbool('diff', 'ignorews', None)),
+        ignorewsamount=(opts.get('ignore_space_change') or
+                        ui.configbool('diff', 'ignorewsamount', None)),
+        ignoreblanklines=(opts.get('ignore_blank_lines') or
+                          ui.configbool('diff', 'ignoreblanklines', None)))
 
 def diff(repo, node1=None, node2=None, files=None, match=util.always,
          fp=None, changes=None, opts=None):
@@ -314,9 +310,6 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             return _date2
         def read(f):
             return repo.file(f).read(mmap2[f])
-        def renamed(f):
-            src = repo.file(f).renamed(mmap2[f])
-            return src and src[0] or None
     else:
         tz = util.makedate()[1]
         _date2 = util.datestr()
@@ -328,8 +321,6 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                 return _date2
         def read(f):
             return repo.wread(f)
-        def renamed(f):
-            return repo.dirstate.copies.get(f)
 
     if repo.ui.quiet:
         r = None
@@ -337,65 +328,16 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         hexfunc = repo.ui.verbose and hex or short
         r = [hexfunc(node) for node in [node1, node2] if node]
 
-    if opts.git:
-        copied = {}
-        for f in added:
-            src = renamed(f)
-            if src:
-                copied[f] = src
-        srcs = [x[1] for x in copied.items()]
-
     all = modified + added + removed
     all.sort()
     for f in all:
         to = None
         tn = None
-        dodiff = True
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         if f not in removed:
             tn = read(f)
-        if opts.git:
-            def gitmode(x):
-                return x and '100755' or '100644'
-            def addmodehdr(header, omode, nmode):
-                if omode != nmode:
-                    header.append('old mode %s\n' % omode)
-                    header.append('new mode %s\n' % nmode)
-
-            a, b = f, f
-            header = []
-            if f in added:
-                if node2:
-                    mode = gitmode(mmap2.execf(f))
-                else:
-                    mode = gitmode(util.is_exec(repo.wjoin(f), None))
-                if f in copied:
-                    a = copied[f]
-                    omode = gitmode(mmap.execf(a))
-                    addmodehdr(header, omode, mode)
-                    op = a in removed and 'rename' or 'copy'
-                    header.append('%s from %s\n' % (op, a))
-                    header.append('%s to %s\n' % (op, f))
-                    to = repo.file(a).read(mmap[a])
-                else:
-                    header.append('new file mode %s\n' % mode)
-            elif f in removed:
-                if f in srcs:
-                    dodiff = False
-                else:
-                    mode = gitmode(mmap.execf(f))
-                    header.append('deleted file mode %s\n' % mode)
-            else:
-                omode = gitmode(mmap.execf(f))
-                nmode = gitmode(util.is_exec(repo.wjoin(f), mmap.execf(f)))
-                addmodehdr(header, omode, nmode)
-            r = None
-            if dodiff:
-                header.insert(0, 'diff --git a/%s b/%s\n' % (a, b))
-                fp.write(''.join(header))
-        if dodiff:
-            fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts))
+        fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts))
 
 def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
            opts=None):

@@ -241,7 +241,7 @@ def patchbomb(ui, repo, *revs, **opts):
     ui.write('\n')
 
     if not opts['test'] and not opts['mbox']:
-        mail = ui.sendmail()
+        mailer = mail.connect(ui)
     parent = None
 
     # Calculate UTC offset
@@ -290,7 +290,7 @@ def patchbomb(ui, repo, *revs, **opts):
             ui.status('Sending ', m['Subject'], ' ...\n')
             # Exim does not remove the Bcc field
             del m['Bcc']
-            mail.sendmail(sender, to + bcc + cc, m.as_string(0))
+            mailer.sendmail(sender, to + bcc + cc, m.as_string(0))
 
 cmdtable = {
     'email':

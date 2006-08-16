@@ -183,59 +183,49 @@ def walkchangerevs(ui, repo, pats, opts):
                 fncache[rev] = matches
                 wanted[rev] = 1
 
-    class followfilter:
-        def __init__(self, onlyfirst=False):
-            self.startrev = -1
-            self.roots = []
-            self.onlyfirst = onlyfirst
+    def iterate():
+        class followfilter:
+            def __init__(self, onlyfirst=False):
+                self.startrev = -1
+                self.roots = []
+                self.onlyfirst = onlyfirst
 
-        def match(self, rev):
-            def realparents(rev):
-                if self.onlyfirst:
-                    return repo.changelog.parentrevs(rev)[0:1]
-                else:
-                    return filter(lambda x: x != -1, repo.changelog.parentrevs(rev))
+            def match(self, rev):
+                def realparents(rev):
+                    if self.onlyfirst:
+                        return repo.changelog.parentrevs(rev)[0:1]
+                    else:
+                        return filter(lambda x: x != -1, repo.changelog.parentrevs(rev))
 
-            if self.startrev == -1:
-                self.startrev = rev
-                return True
-
-            if rev > self.startrev:
-                # forward: all descendants
-                if not self.roots:
-                    self.roots.append(self.startrev)
-                for parent in realparents(rev):
-                    if parent in self.roots:
-                        self.roots.append(rev)
-                        return True
-            else:
-                # backwards: all parents
-                if not self.roots:
-                    self.roots.extend(realparents(self.startrev))
-                if rev in self.roots:
-                    self.roots.remove(rev)
-                    self.roots.extend(realparents(rev))
+                if self.startrev == -1:
+                    self.startrev = rev
                     return True
 
-            return False
+                if rev > self.startrev:
+                    # forward: all descendants
+                    if not self.roots:
+                        self.roots.append(self.startrev)
+                    for parent in realparents(rev):
+                        if parent in self.roots:
+                            self.roots.append(rev)
+                            return True
+                else:
+                    # backwards: all parents
+                    if not self.roots:
+                        self.roots.extend(realparents(self.startrev))
+                    if rev in self.roots:
+                        self.roots.remove(rev)
+                        self.roots.extend(realparents(rev))
+                        return True
 
-    # it might be worthwhile to do this in the iterator if the rev range
-    # is descending and the prune args are all within that range
-    for rev in opts.get('prune', ()):
-        rev = repo.changelog.rev(repo.lookup(rev))
-        ff = followfilter()
-        stop = min(revs[0], revs[-1])
-        for x in range(rev, stop-1, -1):
-            if ff.match(x) and wanted.has_key(x):
-                del wanted[x]
+                return False
 
-    def iterate():
         if follow and not files:
             ff = followfilter(onlyfirst=opts.get('follow_first'))
             def want(rev):
-                if ff.match(rev) and rev in wanted:
-                    return True
-                return False
+                if rev not in wanted:
+                    return False
+                return ff.match(rev)
         else:
             def want(rev):
                 return rev in wanted
@@ -1347,7 +1337,7 @@ def diff(ui, repo, *pats, **opts):
     fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
 
     patch.diff(repo, node1, node2, fns, match=matchfn,
-               opts=ui.diffopts(opts))
+               opts=patch.diffopts(ui, opts))
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
@@ -1384,7 +1374,8 @@ def export(ui, repo, *changesets, **opts):
     else:
         ui.note(_('exporting patch:\n'))
     patch.export(repo, map(repo.lookup, revs), template=opts['output'],
-                 switch_parent=opts['switch_parent'], opts=ui.diffopts(opts))
+                 switch_parent=opts['switch_parent'],
+                 opts=patch.diffopts(ui, opts))
 
 def forget(ui, repo, *pats, **opts):
     """don't add the specified files on the next commit (DEPRECATED)
@@ -1681,7 +1672,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 message = None
             ui.debug(_('message:\n%s\n') % message)
 
-            files, fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root)
+            files = patch.patch(strip, tmpname, ui, cwd=repo.root)
             removes = []
             if len(files) > 0:
                 cfiles = files.keys()
@@ -1969,29 +1960,9 @@ def merge(ui, repo, node=None, force=None, branch=None):
     requested revision. Files that changed between either parent are
     marked as changed for the next commit and a commit must be
     performed before any further updates are allowed.
-
-    If no revision is specified, the working directory's parent is a
-    head revision, and the repository contains exactly one other head,
-    the other head is merged with by default.  Otherwise, an explicit
-    revision to merge with must be provided.
     """
 
-    if node:
-        node = _lookup(repo, node, branch)
-    else:
-        heads = repo.heads()
-        if len(heads) > 2:
-            raise util.Abort(_('repo has %d heads - '
-                               'please merge with an explicit rev') %
-                             len(heads))
-        if len(heads) == 1:
-            raise util.Abort(_('there is nothing to merge - '
-                               'use "hg update" instead'))
-        parent = repo.dirstate.parents()[0]
-        if parent not in heads:
-            raise util.Abort(_('working dir not at a head rev - '
-                               'use "hg update" or merge with an explicit rev'))
-        node = parent == heads[0] and heads[-1] or heads[0]
+    node = _lookup(repo, node, branch)
     return hg.merge(repo, node, force=force)
 
 def outgoing(ui, repo, dest=None, **opts):
@@ -2897,7 +2868,6 @@ table = {
           ('a', 'text', None, _('treat all files as text')),
           ('p', 'show-function', None,
            _('show which function each change is in')),
-          ('g', 'git', None, _('use git extended diff format')),
           ('w', 'ignore-all-space', None,
            _('ignore white space when comparing lines')),
           ('b', 'ignore-space-change', None,
@@ -2997,7 +2967,6 @@ table = {
           ('', 'style', '', _('display using template map file')),
           ('m', 'only-merges', None, _('show only merges')),
           ('p', 'patch', None, _('show patch')),
-          ('P', 'prune', [], _('do not display revision or any of its ancestors')),
           ('', 'template', '', _('display with template')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
