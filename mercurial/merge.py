@@ -254,11 +254,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         t = repo.file(f).read(node)
         repo.wwrite(f, t)
         util.set_exec(repo.wjoin(f), flag)
-        if not partial:
-            if branchmerge:
-                repo.dirstate.update([f], 'n', st_mtime=-1)
-            else:
-                repo.dirstate.update([f], 'n')
 
     # merge the tricky bits
     unresolved = []
@@ -271,7 +266,38 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if ret:
             unresolved.append(f)
         util.set_exec(repo.wjoin(f), flag)
-        if not partial:
+
+    remove.sort()
+    for f in remove:
+        repo.ui.note(_("removing %s\n") % f)
+        util.audit_path(f)
+        try:
+            util.unlink(repo.wjoin(f))
+        except OSError, inst:
+            if inst.errno != errno.ENOENT:
+                repo.ui.warn(_("update failed to remove %s: %s!\n") %
+                             (f, inst.strerror))
+
+    # update dirstate
+    if not partial:
+        repo.dirstate.setparents(p1, p2)
+        repo.dirstate.forget(forget)
+        if branchmerge:
+            repo.dirstate.update(remove, 'r')
+        else:
+            repo.dirstate.forget(remove)
+
+        files = get.keys()
+        files.sort()
+        for f in files:
+            if branchmerge:
+                repo.dirstate.update([f], 'n', st_mtime=-1)
+            else:
+                repo.dirstate.update([f], 'n')
+
+        files = merge.keys()
+        files.sort()
+        for f in files:
             if branchmerge:
                 # We've done a branch merge, mark this file as merged
                 # so that we properly record the merger later
@@ -285,26 +311,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 fl = repo.file(f)
                 f_len = fl.size(fl.rev(other))
                 repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
-
-    remove.sort()
-    for f in remove:
-        repo.ui.note(_("removing %s\n") % f)
-        util.audit_path(f)
-        try:
-            util.unlink(repo.wjoin(f))
-        except OSError, inst:
-            if inst.errno != errno.ENOENT:
-                repo.ui.warn(_("update failed to remove %s: %s!\n") %
-                             (f, inst.strerror))
-    if not partial:
-        if branchmerge:
-            repo.dirstate.update(remove, 'r')
-        else:
-            repo.dirstate.forget(remove)
-
-    if not partial:
-        repo.dirstate.setparents(p1, p2)
-        repo.dirstate.forget(forget)
 
     if show_stats:
         stats = ((len(get), _("updated")),
