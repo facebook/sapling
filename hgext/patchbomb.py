@@ -65,7 +65,7 @@
 
 from mercurial.demandload import *
 demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
-                         mercurial:commands,hg,ui
+                         mercurial:commands,hg,mail,ui
                          os errno popen2 socket sys tempfile time''')
 from mercurial.i18n import gettext as _
 from mercurial.node import *
