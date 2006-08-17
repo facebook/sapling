@@ -1228,7 +1228,7 @@ class queue:
         if not self.ui.verbose:
             p = pname
         else:
-            p = str(self.series.index(pname)) + " " + p
+            p = str(self.series.index(pname)) + " " + pname
         return p
 
     def top(self, repo):
