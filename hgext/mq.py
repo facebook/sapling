@@ -1423,11 +1423,13 @@ def new(ui, repo, patch, **opts):
     changes unless -f is specified, in which case the patch will
     be initialised with them.
 
-    -m or -l set the patch header as well as the commit message.
-    If neither is specified, the patch header is empty and the
+    -e, -m or -l set the patch header as well as the commit message.
+    If none is specified, the patch header is empty and the
     commit message is 'New patch: PATCH'"""
     q = repo.mq
     message = commands.logmessage(opts)
+    if opts['edit']:
+        message = ui.edit(message, ui.username())
     q.new(repo, patch, msg=message, force=opts['force'])
     q.save_dirty()
     return 0
@@ -1926,10 +1928,11 @@ cmdtable = {
          'hg qinit [-c]'),
     "qnew":
         (new,
-         [('m', 'message', '', _('use <text> as commit message')),
+         [('e', 'edit', None, _('edit commit message')),
+          ('m', 'message', '', _('use <text> as commit message')),
           ('l', 'logfile', '', _('read the commit message from <file>')),
           ('f', 'force', None, _('import uncommitted changes into patch'))],
-         'hg qnew [-m TEXT] [-l FILE] [-f] PATCH'),
+         'hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH'),
     "qnext": (next, [], 'hg qnext'),
     "qprev": (prev, [], 'hg qprev'),
     "^qpop":
