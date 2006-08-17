@@ -912,7 +912,7 @@ class queue:
         qp = self.qparents(repo, top)
         self.printdiff(repo, qp, files=pats, opts=opts)
 
-    def refresh(self, repo, msg='', short=False):
+    def refresh(self, repo, pats=None, **opts):
         if len(self.applied) == 0:
             self.ui.write("No patches applied\n")
             return
@@ -925,7 +925,7 @@ class queue:
         message, comments, user, date, patchfound = self.readheaders(patch)
 
         patchf = self.opener(patch, "w")
-        msg = msg.rstrip()
+        msg = opts.get('msg', '').rstrip()
         if msg:
             if comments:
                 # Remove existing message.
@@ -939,6 +939,7 @@ class queue:
             comments = "\n".join(comments) + '\n\n'
             patchf.write(comments)
 
+        fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
         tip = repo.changelog.tip()
         if top == tip:
             # if the top of our patch queue is also the tip, there is an
@@ -956,7 +957,7 @@ class queue:
             # caching against the next repo.status call
             #
             mm, aa, dd, aa2, uu = repo.status(patchparent, tip)[:5]
-            if short:
+            if opts.get('short'):
                 filelist = mm + aa + dd
             else:
                 filelist = None
@@ -992,7 +993,7 @@ class queue:
             m = list(util.unique(mm))
             r = list(util.unique(dd))
             a = list(util.unique(aa))
-            filelist = list(util.unique(m + r + a))
+            filelist = filter(matchfn, util.unique(m + r + a))
             self.printdiff(repo, patchparent, files=filelist,
                            changes=(m, a, r, [], u), fp=patchf)
             patchf.close()
@@ -1004,7 +1005,15 @@ class queue:
             for dst, src in copies:
                 repo.dirstate.copy(src, dst)
             repo.dirstate.update(r, 'r')
+            # if the patch excludes a modified file, mark that file with mtime=0
+            # so status can see it.
+            mm = []
+            for i in range(len(m)-1, -1, -1):
+                if not matchfn(m[i]):
+                    mm.append(m[i])
+                    del m[i]
             repo.dirstate.update(m, 'n')
+            repo.dirstate.update(mm, 'n', st_mtime=0)
             repo.dirstate.forget(forget)
 
             if not msg:
@@ -1423,7 +1432,7 @@ def new(ui, repo, patch, **opts):
     q.save_dirty()
     return 0
 
-def refresh(ui, repo, **opts):
+def refresh(ui, repo, *pats, **opts):
     """update the current patch"""
     q = repo.mq
     message = commands.logmessage(opts)
@@ -1433,7 +1442,7 @@ def refresh(ui, repo, **opts):
         patch = q.applied[-1].name
         (message, comment, user, date, hasdiff) = q.readheaders(patch)
         message = ui.edit('\n'.join(message), user or ui.username())
-    q.refresh(repo, msg=message, short=opts['short'])
+    q.refresh(repo, pats, msg=message, **opts)
     q.save_dirty()
     return 0
 
@@ -1942,8 +1951,10 @@ cmdtable = {
          [('e', 'edit', None, _('edit commit message')),
           ('m', 'message', '', _('change commit message with <text>')),
           ('l', 'logfile', '', _('change commit message with <file> content')),
-          ('s', 'short', None, 'short refresh')],
-         'hg qrefresh [-e] [-m TEXT] [-l FILE] [-s]'),
+          ('s', 'short', None, 'short refresh'),
+          ('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         'hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] FILES...'),
     'qrename|qmv':
         (rename, [], 'hg qrename PATCH1 [PATCH2]'),
     "qrestore":
