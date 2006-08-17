@@ -9,7 +9,7 @@ from demandload import demandload
 from i18n import gettext as _
 from node import *
 demandload(globals(), "cmdutil mdiff util")
-demandload(globals(), "cStringIO email.Parser os re shutil sys tempfile")
+demandload(globals(), "cStringIO email.Parser errno os re shutil sys tempfile")
 
 def extract(ui, fileobj):
     '''extract patch from data read from fileobj.
