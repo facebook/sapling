@@ -11,6 +11,28 @@ from node import *
 demandload(globals(), "cmdutil mdiff util")
 demandload(globals(), "cStringIO email.Parser os re shutil sys tempfile")
 
+# helper functions
+
+def copyfile(src, dst, basedir=None):
+    if not basedir:
+        basedir = os.getcwd()
+
+    abssrc, absdst = [os.path.join(basedir, n) for n in (src, dst)]
+    if os.path.exists(absdst):
+        raise util.Abort(_("cannot create %s: destination already exists") %
+                         dst)
+
+    targetdir = os.path.dirname(absdst)
+    if not os.path.isdir(targetdir):
+        os.makedirs(targetdir)
+    try:
+        shutil.copyfile(abssrc, absdst)
+        shutil.copymode(abssrc, absdst)
+    except shutil.Error, inst:
+        raise util.Abort(str(inst))
+
+# public functions
+
 def extract(ui, fileobj):
     '''extract patch from data read from fileobj.
 
@@ -174,21 +196,7 @@ def dogitpatch(patchname, gitpatches):
             if not p.copymod:
                 continue
 
-            if os.path.exists(p.path):
-                raise util.Abort(_("cannot create %s: destination already exists") %
-                            p.path)
-
-            (src, dst) = [os.path.join(os.getcwd(), n)
-                          for n in (p.oldpath, p.path)]
-
-            targetdir = os.path.dirname(dst)
-            if not os.path.isdir(targetdir):
-                os.makedirs(targetdir)
-            try:
-                shutil.copyfile(src, dst)
-                shutil.copymode(src, dst)
-            except shutil.Error, inst:
-                raise util.Abort(str(inst))
+            copyfile(p.oldpath, p.path)
 
             # rewrite patch hunk
             while pfline < p.lineno:
@@ -280,6 +288,45 @@ def diffopts(ui, opts={}):
                         ui.configbool('diff', 'ignorewsamount', None)),
         ignoreblanklines=(opts.get('ignore_blank_lines') or
                           ui.configbool('diff', 'ignoreblanklines', None)))
+
+def updatedir(ui, repo, patches, wlock=None):
+    '''Update dirstate after patch application according to metadata'''
+    if not patches:
+        return
+    copies = []
+    removes = []
+    cfiles = patches.keys()
+    copts = {'after': False, 'force': False}
+    cwd = repo.getcwd()
+    if cwd:
+        cfiles = [util.pathto(cwd, f) for f in patches.keys()]
+    for f in patches:
+        ctype, gp = patches[f]
+        if ctype == 'RENAME':
+            copies.append((gp.oldpath, gp.path, gp.copymod))
+            removes.append(gp.oldpath)
+        elif ctype == 'COPY':
+            copies.append((gp.oldpath, gp.path, gp.copymod))
+        elif ctype == 'DELETE':
+            removes.append(gp.path)
+    for src, dst, after in copies:
+        if not after:
+            copyfile(src, dst, repo.root)
+        repo.copy(src, dst, wlock=wlock)
+    if removes:
+        repo.remove(removes, True, wlock=wlock)
+    for f in patches:
+        ctype, gp = patches[f]
+        if gp and gp.mode:
+            x = gp.mode & 0100 != 0
+            dst = os.path.join(repo.root, gp.path)
+            util.set_exec(dst, x)
+    cmdutil.addremove(repo, cfiles, wlock=wlock)
+    files = patches.keys()
+    files.extend([r for r in removes if r not in files])
+    files.sort()
+
+    return files
 
 def diff(repo, node1=None, node2=None, files=None, match=util.always,
          fp=None, changes=None, opts=None):
