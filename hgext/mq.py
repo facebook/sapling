@@ -1470,20 +1470,21 @@ def fold(ui, repo, *files, **opts):
     patches = []
     messages = []
     for f in files:
-        patch = q.lookup(f)
-        if patch in patches or patch == parent:
-            ui.warn(_('Skipping already folded patch %s') % patch)
-        if q.isapplied(patch):
-            raise util.Abort(_('qfold cannot fold already applied patch %s') % patch)
-        patches.append(patch)
+        p = q.lookup(f)
+        if p in patches or p == parent:
+            ui.warn(_('Skipping already folded patch %s') % p)
+        if q.isapplied(p):
+            raise util.Abort(_('qfold cannot fold already applied patch %s') % p)
+        patches.append(p)
 
-    for patch in patches:
+    for p in patches:
         if not message:
-            messages.append(q.readheaders(patch)[0])
-        pf = q.join(patch)
+            messages.append(q.readheaders(p)[0])
+        pf = q.join(p)
         (patchsuccess, files, fuzz) = q.patch(repo, pf)
         if not patchsuccess:
-            raise util.Abort(_('Error folding patch %s') % patch)
+            raise util.Abort(_('Error folding patch %s') % p)
+        patch.updatedir(ui, repo, files)
 
     if not message:
         message, comments, user = q.readheaders(parent)[0:3]
@@ -1496,10 +1497,7 @@ def fold(ui, repo, *files, **opts):
         message = ui.edit(message, user or ui.username())
 
     q.refresh(repo, msg=message)
-
-    for patch in patches:
-        q.delete(repo, patch, keep=opts['keep'])
-
+    q.delete(repo, patches, keep=opts['keep'])
     q.save_dirty()
 
 def guard(ui, repo, *args, **opts):
