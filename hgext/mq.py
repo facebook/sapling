@@ -301,8 +301,10 @@ class queue:
         return (message, comments, user, date, diffstart > 1)
 
     def printdiff(self, repo, node1, node2=None, files=None,
-                  fp=None, changes=None, opts=None):
-        patch.diff(repo, node1, node2, files,
+                  fp=None, changes=None, opts={}):
+        fns, matchfn, anypats = cmdutil.matchpats(repo, files, opts)
+
+        patch.diff(repo, node1, node2, fns, match=matchfn,
                    fp=fp, changes=changes, opts=self.diffopts())
 
     def mergeone(self, repo, mergeq, head, patch, rev, wlock):
@@ -902,13 +904,13 @@ class queue:
         else:
             self.ui.write("Patch queue now empty\n")
 
-    def diff(self, repo, files):
+    def diff(self, repo, pats, opts):
         top = self.check_toppatch(repo)
         if not top:
             self.ui.write("No patches applied\n")
             return
         qp = self.qparents(repo, top)
-        self.printdiff(repo, qp, files=files)
+        self.printdiff(repo, qp, files=pats, opts=opts)
 
     def refresh(self, repo, msg='', short=False):
         if len(self.applied) == 0:
@@ -1435,10 +1437,9 @@ def refresh(ui, repo, **opts):
     q.save_dirty()
     return 0
 
-def diff(ui, repo, *files, **opts):
+def diff(ui, repo, *pats, **opts):
     """diff of the current patch"""
-    # deep in the dirstate code, the walkhelper method wants a list, not a tuple
-    repo.mq.diff(repo, list(files))
+    repo.mq.diff(repo, pats, opts)
     return 0
 
 def fold(ui, repo, *files, **opts):
@@ -1884,7 +1885,10 @@ cmdtable = {
         (commit,
          commands.table["^commit|ci"][1],
          'hg qcommit [OPTION]... [FILE]...'),
-    "^qdiff": (diff, [], 'hg qdiff [FILE]...'),
+    "^qdiff": (diff,
+               [('I', 'include', [], _('include names matching the given patterns')),
+                ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+               'hg qdiff [-I] [-X] [FILE]...'),
     "qdelete|qremove|qrm":
         (delete,
          [('k', 'keep', None, _('keep patch file'))],
