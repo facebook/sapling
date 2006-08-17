@@ -1435,7 +1435,12 @@ def new(ui, repo, patch, **opts):
     return 0
 
 def refresh(ui, repo, *pats, **opts):
-    """update the current patch"""
+    """update the current patch
+
+    If any file patterns are provided, the refreshed patch will contain only
+    the modifications that match those patterns; the remaining modifications
+    will remain in the working directory.
+    """
     q = repo.mq
     message = commands.logmessage(opts)
     if opts['edit']:
@@ -1515,20 +1520,20 @@ def fold(ui, repo, *files, **opts):
 def guard(ui, repo, *args, **opts):
     '''set or print guards for a patch
 
-    guards control whether a patch can be pushed.  a patch with no
-    guards is aways pushed.  a patch with posative guard ("+foo") is
-    pushed only if qselect command enables guard "foo".  a patch with
-    nagative guard ("-foo") is never pushed if qselect command enables
-    guard "foo".
+    Guards control whether a patch can be pushed. A patch with no
+    guards is always pushed. A patch with a positive guard ("+foo") is
+    pushed only if the qselect command has activated it. A patch with
+    a negative guard ("-foo") is never pushed if the qselect command
+    has activated it.
 
-    with no arguments, default is to print current active guards.
-    with arguments, set active guards for patch.
+    With no arguments, print the currently active guards.
+    With arguments, set guards for the named patch.
 
-    to set nagative guard "-foo" on topmost patch ("--" is needed so
-    hg will not interpret "-foo" as argument):
+    To set a negative guard "-foo" on topmost patch ("--" is needed so
+    hg will not interpret "-foo" as an option):
       hg qguard -- -foo
 
-    to set guards on other patch:
+    To set guards on another patch:
       hg qguard other.patch +2.6.17 -stable    
     '''
     def status(idx):
@@ -1734,32 +1739,34 @@ def strip(ui, repo, rev, **opts):
 def select(ui, repo, *args, **opts):
     '''set or print guarded patches to push
 
-    use qguard command to set or print guards on patch.  then use
-    qselect to tell mq which guards to use.  example:
+    Use the qguard command to set or print guards on patch, then use
+    qselect to tell mq which guards to use. A patch will be pushed if it
+    has no guards or any positive guards match the currently selected guard,
+    but will not be pushed if any negative guards match the current guard.
+    For example:
 
-        qguard foo.patch -stable    (nagative guard)
-        qguard bar.patch +stable    (posative guard)
+        qguard foo.patch -stable    (negative guard)
+        qguard bar.patch +stable    (positive guard)
         qselect stable
 
-    this sets "stable" guard.  mq will skip foo.patch (because it has
-    nagative match) but push bar.patch (because it has posative
-    match).  patch is pushed if any posative guards match and no
-    nagative guards match.
+    This activates the "stable" guard. mq will skip foo.patch (because
+    it has a negative match) but push bar.patch (because it
+    has a positive match).
 
-    with no arguments, default is to print current active guards.
-    with arguments, set active guards as given.
+    With no arguments, prints the currently active guards.
+    With one argument, sets the active guard.
     
-    use -n/--none to deactivate guards (no other arguments needed).
-    when no guards active, patches with posative guards are skipped,
-    patches with nagative guards are pushed.
+    Use -n/--none to deactivate guards (no other arguments needed).
+    When no guards are active, patches with positive guards are skipped
+    and patches with negative guards are pushed.
 
-    qselect can change guards of applied patches. it does not pop
-    guarded patches by default.  use --pop to pop back to last applied
-    patch that is not guarded.  use --reapply (implies --pop) to push
-    back to current patch afterwards, but skip guarded patches.
+    qselect can change the guards on applied patches. It does not pop
+    guarded patches by default. Use --pop to pop back to the last applied
+    patch that is not guarded. Use --reapply (which implies --pop) to push
+    back to the current patch afterwards, but skip guarded patches.
 
-    use -s/--series to print list of all guards in series file (no
-    other arguments needed).  use -v for more information.'''
+    Use -s/--series to print a list of all guards in the series file (no
+    other arguments needed). Use -v for more information.'''
 
     q = repo.mq
     guards = q.active()
