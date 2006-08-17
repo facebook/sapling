@@ -153,7 +153,7 @@ def uisetup(ui):
         if not path: path = cmd
         diffopts = ui.config('extdiff', 'opts.' + cmd, '')
         diffopts = diffopts and [diffopts] or []
-        def save(cmd, path):
+        def save(cmd, path, diffopts):
             '''use closure to save diff command to use'''
             def mydiff(ui, repo, *pats, **opts):
                 return dodiff(ui, repo, path, diffopts, pats, opts)
@@ -170,6 +170,6 @@ def uisetup(ui):
                 'path': path,
                 }
             return mydiff
-        cmdtable[cmd] = (save(cmd, path),
+        cmdtable[cmd] = (save(cmd, path, diffopts),
                          cmdtable['extdiff'][1][1:],
                          _('hg %s [OPT]... [FILE]...') % cmd)
