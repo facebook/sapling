@@ -141,12 +141,14 @@ echo foo > new
 chmod +x new
 hg add new
 hg qrefresh
-sed -e "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/new
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/new
 
 hg qnew -m'copy file' copy
 hg cp new copy
 hg qrefresh
-sed -e "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/copy
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/copy
 
 hg qpop
 hg qpush
