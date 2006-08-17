@@ -252,6 +252,9 @@ class queue:
 
         for line in file(pf):
             line = line.rstrip()
+            if line.startswith('diff --git'):
+                diffstart = 2
+                break
             if diffstart:
                 if line.startswith('+++ '):
                     diffstart = 2
@@ -408,7 +411,7 @@ class queue:
                 self.ui.warn("patch failed, unable to continue (try -v)\n")
             return (False, [], False)
 
-        return (True, files.keys(), fuzz)
+        return (True, files, fuzz)
 
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, wlock=None):
@@ -421,42 +424,37 @@ class queue:
         lock = repo.lock()
         tr = repo.transaction()
         n = None
-        for patch in series:
-            pushable, reason = self.pushable(patch)
+        for patchname in series:
+            pushable, reason = self.pushable(patchname)
             if not pushable:
-                self.explain_pushable(patch, all_patches=True)
+                self.explain_pushable(patchname, all_patches=True)
                 continue
-            self.ui.warn("applying %s\n" % patch)
-            pf = os.path.join(patchdir, patch)
+            self.ui.warn("applying %s\n" % patchname)
+            pf = os.path.join(patchdir, patchname)
 
             try:
-                message, comments, user, date, patchfound = self.readheaders(patch)
+                message, comments, user, date, patchfound = self.readheaders(patchname)
             except:
-                self.ui.warn("Unable to read %s\n" % pf)
+                self.ui.warn("Unable to read %s\n" % patchname)
                 err = 1
                 break
 
             if not message:
-                message = "imported patch %s\n" % patch
+                message = "imported patch %s\n" % patchname
             else:
                 if list:
-                    message.append("\nimported patch %s" % patch)
+                    message.append("\nimported patch %s" % patchname)
                 message = '\n'.join(message)
 
             (patcherr, files, fuzz) = self.patch(repo, pf)
             patcherr = not patcherr
 
-            if merge and len(files) > 0:
+            if merge and files:
                 # Mark as merged and update dirstate parent info
-                repo.dirstate.update(repo.dirstate.filterfiles(files), 'm')
+                repo.dirstate.update(repo.dirstate.filterfiles(files.keys()), 'm')
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
-            if len(files) > 0:
-                cwd = repo.getcwd()
-                cfiles = files
-                if cwd:
-                    cfiles = [util.pathto(cwd, f) for f in files]
-                cmdutil.addremove(repo, cfiles, wlock=wlock)
+            files = patch.updatedir(self.ui, repo, files, wlock=wlock)
             n = repo.commit(files, message, user, date, force=1, lock=lock,
                             wlock=wlock)
 
@@ -464,11 +462,11 @@ class queue:
                 raise util.Abort(_("repo commit failed"))
 
             if update_status:
-                self.applied.append(statusentry(revlog.hex(n), patch))
+                self.applied.append(statusentry(revlog.hex(n), patchname))
 
             if patcherr:
                 if not patchfound:
-                    self.ui.warn("patch %s is empty\n" % patch)
+                    self.ui.warn("patch %s is empty\n" % patchname)
                     err = 0
                 else:
                     self.ui.warn("patch failed, rejects left in working dir\n")
@@ -999,7 +997,10 @@ class queue:
 
             changes = repo.changelog.read(tip)
             repo.dirstate.setparents(*cparents)
+            copies = [(f, repo.dirstate.copied(f)) for f in a]
             repo.dirstate.update(a, 'a')
+            for dst, src in copies:
+                repo.dirstate.copy(src, dst)
             repo.dirstate.update(r, 'r')
             repo.dirstate.update(m, 'n')
             repo.dirstate.forget(forget)

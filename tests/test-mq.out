@@ -127,3 +127,22 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
+new file
+
+diff --git a/new b/new
+new file mode 100755
+--- /dev/null
++++ b/new
+@@ -0,0 +1,1 @@
++foo
+copy file
+
+diff --git a/new b/copy
+copy from new
+copy to copy
+Now at: new
+applying copy
+Now at: copy
+diff --git a/new b/copy
+copy from new
+copy to copy
