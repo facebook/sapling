@@ -1526,7 +1526,6 @@ def grep(ui, repo, pattern, *pats, **opts):
         if st == 'window':
             incrementing = rev
             matches.clear()
-            copies.clear()
         elif st == 'add':
             change = repo.changelog.read(repo.lookup(str(rev)))
             mf = repo.manifest.read(change[0])
@@ -1535,20 +1534,19 @@ def grep(ui, repo, pattern, *pats, **opts):
                 if fn in skip:
                     continue
                 fstate.setdefault(fn, {})
-                copies.setdefault(rev, {})
                 try:
                     grepbody(fn, rev, getfile(fn).read(mf[fn]))
                     if follow:
                         copied = getfile(fn).renamed(mf[fn])
                         if copied:
-                            copies[rev][fn] = copied[0]
+                            copies.setdefault(rev, {})[fn] = copied[0]
                 except KeyError:
                     pass
         elif st == 'iter':
             states = matches[rev].items()
             states.sort()
             for fn, m in states:
-                copy = copies[rev].get(fn)
+                copy = copies.get(rev, {}).get(fn)
                 if fn in skip:
                     if copy:
                         skip[copy] = True
@@ -1571,7 +1569,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         for fn, state in fstate:
             if fn in skip:
                 continue
-            if fn not in copies[prev[fn]]:
+            if fn not in copies.get(prev[fn], {}):
                 display(fn, rev, {}, state)
     return (count == 0 and 1) or 0
 
