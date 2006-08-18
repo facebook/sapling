@@ -96,31 +96,59 @@ class filelog(revlog):
             return child
 
         # find all ancestors
-        needed = {node:1}
-        visit = [node]
+        needed = {(self, node):1}
+        files = [self]
+        visit = [(self, node)]
         while visit:
-            n = visit.pop(0)
-            for p in self.parents(n):
-                if p not in needed:
-                    needed[p] = 1
-                    visit.append(p)
+            f, n = visit.pop(0)
+            rn = f.renamed(n)
+            if rn:
+                f, n = rn
+                f = filelog(self.opener, f, self.defversion)
+                files.insert(0, f)
+                if (f, n) not in needed:
+                    needed[(f, n)] = 1
+                else:
+                    needed[(f, n)] += 1
+            for p in f.parents(n):
+                if p == nullid:
+                    continue
+                if (f, p) not in needed:
+                    needed[(f, p)] = 1
+                    visit.append((f, p))
                 else:
                     # count how many times we'll use this
-                    needed[p] += 1
+                    needed[(f, p)] += 1
 
-        # sort by revision which is a topological order
-        visit = [ (self.rev(n), n) for n in needed.keys() ]
-        visit.sort()
+        # sort by revision (per file) which is a topological order
+        visit = []
+        for f in files:
+            fn = [(f.rev(n[1]), f, n[1]) for n in needed.keys() if n[0] == f]
+            fn.sort()
+            visit.extend(fn)
         hist = {}
 
-        for r,n in visit:
-            curr = decorate(self.read(n), self.linkrev(n))
-            for p in self.parents(n):
+        for i in range(len(visit)):
+            r, f, n = visit[i]
+            curr = decorate(f.read(n), f.linkrev(n))
+            if r == -1:
+                continue
+            parents = f.parents(n)
+            # follow parents across renames
+            if r < 1 and i > 0:
+                j = i
+                while j > 0 and visit[j][1] == f:
+                    j -= 1
+                parents = (visit[j][2],)
+                f = visit[j][1]
+            else:
+                parents = f.parents(n)
+            for p in parents:
                 if p != nullid:
                     curr = pair(hist[p], curr)
                     # trim the history of unneeded revs
-                    needed[p] -= 1
-                    if not needed[p]:
+                    needed[(f, p)] -= 1
+                    if not needed[(f, p)]:
                         del hist[p]
             hist[n] = curr
 
