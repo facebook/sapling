@@ -3242,18 +3242,11 @@ def findext(name):
                 return sys.modules[v]
         raise KeyError(name)
 
-def dispatch(args):
-    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
-        num = getattr(signal, name, None)
-        if num: signal.signal(num, catchterm)
-
-    try:
-        u = ui.ui(traceback='--traceback' in sys.argv[1:])
-    except util.Abort, inst:
-        sys.stderr.write(_("abort: %s\n") % inst)
-        return -1
-
-    for ext_name, load_from_name in u.extensions():
+def load_extensions(ui):
+    added = []
+    for ext_name, load_from_name in ui.extensions():
+        if ext_name in external:
+            continue
         try:
             if load_from_name:
                 # the module will be loaded in sys.modules
@@ -3273,23 +3266,36 @@ def dispatch(args):
                 except ImportError:
                     mod = importh(ext_name)
             external[ext_name] = mod.__name__
+            added.append((mod, ext_name))
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
-            u.warn(_("*** failed to import extension %s: %s\n") % (ext_name, inst))
-            if u.print_exc():
+            ui.warn(_("*** failed to import extension %s: %s\n") %
+                    (ext_name, inst))
+            if ui.print_exc():
                 return 1
 
-    for name in external.itervalues():
-        mod = sys.modules[name]
+    for mod, name in added:
         uisetup = getattr(mod, 'uisetup', None)
         if uisetup:
-            uisetup(u)
+            uisetup(ui)
         cmdtable = getattr(mod, 'cmdtable', {})
         for t in cmdtable:
             if t in table:
-                u.warn(_("module %s overrides %s\n") % (name, t))
+                ui.warn(_("module %s overrides %s\n") % (name, t))
         table.update(cmdtable)
+    
+def dispatch(args):
+    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
+        num = getattr(signal, name, None)
+        if num: signal.signal(num, catchterm)
+
+    try:
+        u = ui.ui(traceback='--traceback' in sys.argv[1:],
+                  readhooks=[load_extensions])
+    except util.Abort, inst:
+        sys.stderr.write(_("abort: %s\n") % inst)
+        return -1
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)

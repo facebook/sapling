@@ -12,11 +12,13 @@ demandload(globals(), "ConfigParser mdiff templater traceback util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
-                 interactive=True, traceback=False, parentui=None):
+                 interactive=True, traceback=False, parentui=None,
+                 readhooks=[]):
         self.overlay = {}
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
+            self.readhooks = list(readhooks)
             self.cdata = ConfigParser.SafeConfigParser()
             self.readconfig(util.rcpath())
 
@@ -34,6 +36,7 @@ class ui(object):
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
+            self.readhooks = list(parentui.readhooks or readhooks)
             parent_cdata = self.parentui.cdata
             self.cdata = ConfigParser.SafeConfigParser(parent_cdata.defaults())
             # make interpolation work
@@ -78,6 +81,8 @@ class ui(object):
         for name, path in self.configitems("paths"):
             if path and "://" not in path and not os.path.isabs(path):
                 self.cdata.set("paths", name, os.path.join(root, path))
+        for hook in self.readhooks:
+            hook(self)
 
     def setconfig(self, section, name, val):
         self.overlay[(section, name)] = val
