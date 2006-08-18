@@ -3449,8 +3449,11 @@ def findext(name):
                 return sys.modules[v]
         raise KeyError(name)
 
-def load_extensions(ui, extensions):
-    for ext_name, load_from_name in extensions:
+def load_extensions(ui):
+    added = []
+    for ext_name, load_from_name in ui.extensions():
+        if ext_name in external:
+            continue
         try:
             if load_from_name:
                 # the module will be loaded in sys.modules
@@ -3470,6 +3473,7 @@ def load_extensions(ui, extensions):
                 except ImportError:
                     mod = importh(ext_name)
             external[ext_name] = mod.__name__
+            added.append((mod, ext_name))
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
@@ -3478,11 +3482,10 @@ def load_extensions(ui, extensions):
             if ui.print_exc():
                 return 1
 
-    for name in external.itervalues():
-        mod = sys.modules[name]
+    for mod, name in added:
         uisetup = getattr(mod, 'uisetup', None)
         if uisetup:
-            uisetup(u)
+            uisetup(ui)
         cmdtable = getattr(mod, 'cmdtable', {})
         for t in cmdtable:
             if t in table:
@@ -3495,12 +3498,11 @@ def dispatch(args):
         if num: signal.signal(num, catchterm)
 
     try:
-        u = ui.ui(traceback='--traceback' in sys.argv[1:])
+        u = ui.ui(traceback='--traceback' in sys.argv[1:],
+                  readhooks=[load_extensions])
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
-
-    load_extensions(u, u.extensions())
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)
