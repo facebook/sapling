@@ -1,6 +1,8 @@
 #!/bin/sh
 # http://www.selenic.com/mercurial/bts/issue322
 
+echo % file replaced with directory
+
 hg init a
 cd a       
 echo a > a 
@@ -9,12 +11,35 @@ rm a
 mkdir a    
 echo a > a/a
 
-echo % should fail - will corrupt dirstate
+echo % should fail - would corrupt dirstate
 hg add a/a
+
+echo % should fail - if add succeeded, would corrupt manifest
 hg commit -mb
 
-echo % should fail - manifest is corrupt
+echo % should fail if commit succeeded - manifest is corrupt
 hg verify
-cd ..      
 
+cd ..      
+echo % should succeed, but manifest is corrupt
 hg --debug --traceback clone a b
+
+echo % directory replaced with file
+
+hg init c
+cd c
+mkdir a
+echo a > a/a
+hg commit -Ama
+
+rm -rf a
+echo a > a
+
+echo % should fail - would corrupt dirstate
+hg add a
+
+echo % should fail - if add succeeded, would corrupt manifest
+hg commit -mb a
+
+echo % should fail if commit succeeded - manifest is corrupt
+hg verify
