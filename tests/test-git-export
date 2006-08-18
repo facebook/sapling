@@ -8,22 +8,26 @@ hg ci -Amstart -d '0 0'
 echo new > new
 hg ci -Amnew -d '0 0'
 echo '% new file'
-hg diff --git -r 0 | sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --git -r 0 | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 hg cp new copy
 hg ci -mcopy -d '0 0'
 echo '% copy'
-hg diff --git -r 1:tip | sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --git -r 1:tip | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 hg mv copy rename
 hg ci -mrename -d '0 0'
 echo '% rename'
-hg diff --git -r 2:tip | sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --git -r 2:tip | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 hg rm rename
 hg ci -mdelete -d '0 0'
 echo '% delete'
-hg diff --git -r 3:tip | sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --git -r 3:tip | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 cat > src <<EOF
 1
@@ -36,11 +40,13 @@ hg ci -Amsrc -d '0 0'
 chmod +x src
 hg ci -munexec -d '0 0'
 echo '% chmod 644'
-hg diff --git -r 5:tip | sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --git -r 5:tip | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 hg mv src dst
 chmod -x dst
 echo a >> dst
 hg ci -mrenamemod -d '0 0'
 echo '% rename+mod+chmod'
-hg diff --git -r 6:tip | sed "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --git -r 6:tip | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"

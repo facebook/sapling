@@ -11,6 +11,28 @@ from node import *
 demandload(globals(), "cmdutil mdiff util")
 demandload(globals(), "cStringIO email.Parser os re shutil sys tempfile")
 
+# helper functions
+
+def copyfile(src, dst, basedir=None):
+    if not basedir:
+        basedir = os.getcwd()
+
+    abssrc, absdst = [os.path.join(basedir, n) for n in (src, dst)]
+    if os.path.exists(absdst):
+        raise util.Abort(_("cannot create %s: destination already exists") %
+                         dst)
+
+    targetdir = os.path.dirname(absdst)
+    if not os.path.isdir(targetdir):
+        os.makedirs(targetdir)
+    try:
+        shutil.copyfile(abssrc, absdst)
+        shutil.copymode(abssrc, absdst)
+    except shutil.Error, inst:
+        raise util.Abort(str(inst))
+
+# public functions
+
 def extract(ui, fileobj):
     '''extract patch from data read from fileobj.
 
@@ -174,21 +196,7 @@ def dogitpatch(patchname, gitpatches):
             if not p.copymod:
                 continue
 
-            if os.path.exists(p.path):
-                raise util.Abort(_("cannot create %s: destination already exists") %
-                            p.path)
-
-            (src, dst) = [os.path.join(os.getcwd(), n)
-                          for n in (p.oldpath, p.path)]
-
-            targetdir = os.path.dirname(dst)
-            if not os.path.isdir(targetdir):
-                os.makedirs(targetdir)
-            try:
-                shutil.copyfile(src, dst)
-                shutil.copymode(src, dst)
-            except shutil.Error, inst:
-                raise util.Abort(str(inst))
+            copyfile(p.oldpath, p.path)
 
             # rewrite patch hunk
             while pfline < p.lineno:
@@ -281,6 +289,45 @@ def diffopts(ui, opts={}):
         ignoreblanklines=(opts.get('ignore_blank_lines') or
                           ui.configbool('diff', 'ignoreblanklines', None)))
 
+def updatedir(ui, repo, patches, wlock=None):
+    '''Update dirstate after patch application according to metadata'''
+    if not patches:
+        return
+    copies = []
+    removes = []
+    cfiles = patches.keys()
+    copts = {'after': False, 'force': False}
+    cwd = repo.getcwd()
+    if cwd:
+        cfiles = [util.pathto(cwd, f) for f in patches.keys()]
+    for f in patches:
+        ctype, gp = patches[f]
+        if ctype == 'RENAME':
+            copies.append((gp.oldpath, gp.path, gp.copymod))
+            removes.append(gp.oldpath)
+        elif ctype == 'COPY':
+            copies.append((gp.oldpath, gp.path, gp.copymod))
+        elif ctype == 'DELETE':
+            removes.append(gp.path)
+    for src, dst, after in copies:
+        if not after:
+            copyfile(src, dst, repo.root)
+        repo.copy(src, dst, wlock=wlock)
+    if removes:
+        repo.remove(removes, True, wlock=wlock)
+    for f in patches:
+        ctype, gp = patches[f]
+        if gp and gp.mode:
+            x = gp.mode & 0100 != 0
+            dst = os.path.join(repo.root, gp.path)
+            util.set_exec(dst, x)
+    cmdutil.addremove(repo, cfiles, wlock=wlock)
+    files = patches.keys()
+    files.extend([r for r in removes if r not in files])
+    files.sort()
+
+    return files
+
 def diff(repo, node1=None, node2=None, files=None, match=util.always,
          fp=None, changes=None, opts=None):
     '''print diff of changes to files between two nodes, or node and
@@ -296,10 +343,27 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
     if not node1:
         node1 = repo.dirstate.parents()[0]
+
+    clcache = {}
+    def getchangelog(n):
+        if n not in clcache:
+            clcache[n] = repo.changelog.read(n)
+        return clcache[n]
+    mcache = {}
+    def getmanifest(n):
+        if n not in mcache:
+            mcache[n] = repo.manifest.read(n)
+        return mcache[n]
+    fcache = {}
+    def getfile(f):
+        if f not in fcache:
+            fcache[f] = repo.file(f)
+        return fcache[f]
+
     # reading the data for node1 early allows it to play nicely
     # with repo.status and the revlog cache.
-    change = repo.changelog.read(node1)
-    mmap = repo.manifest.read(change[0])
+    change = getchangelog(node1)
+    mmap = getmanifest(change[0])
     date1 = util.datestr(change[2])
 
     if not changes:
@@ -320,17 +384,32 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     if not modified and not added and not removed:
         return
 
+    def renamedbetween(f, n1, n2):
+        r1, r2 = map(repo.changelog.rev, (n1, n2))
+        src = None
+        while r2 > r1:
+            cl = getchangelog(n2)[0]
+            m = getmanifest(cl)
+            try:
+                src = getfile(f).renamed(m[f])
+            except KeyError:
+                return None
+            if src:
+                f = src[0]
+            n2 = repo.changelog.parents(n2)[0]
+            r2 = repo.changelog.rev(n2)
+        return src
+
     if node2:
-        change = repo.changelog.read(node2)
-        mmap2 = repo.manifest.read(change[0])
+        change = getchangelog(node2)
+        mmap2 = getmanifest(change[0])
         _date2 = util.datestr(change[2])
         def date2(f):
             return _date2
         def read(f):
-            return repo.file(f).read(mmap2[f])
+            return getfile(f).read(mmap2[f])
         def renamed(f):
-            src = repo.file(f).renamed(mmap2[f])
-            return src and src[0] or None
+            return renamedbetween(f, node1, node2)
     else:
         tz = util.makedate()[1]
         _date2 = util.datestr()
@@ -343,7 +422,18 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         def read(f):
             return repo.wread(f)
         def renamed(f):
-            return repo.dirstate.copies.get(f)
+            src = repo.dirstate.copies.get(f)
+            parent = repo.dirstate.parents()[0]
+            if src:
+                f = src[0]
+            of = renamedbetween(f, node1, parent)
+            if of:
+                return of
+            elif src:
+                cl = getchangelog(parent)[0]
+                return (src, getmanifest(cl)[src])
+            else:
+                return None
 
     if repo.ui.quiet:
         r = None
@@ -357,7 +447,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             src = renamed(f)
             if src:
                 copied[f] = src
-        srcs = [x[1] for x in copied.items()]
+        srcs = [x[1][0] for x in copied.items()]
 
     all = modified + added + removed
     all.sort()
@@ -366,7 +456,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         tn = None
         dodiff = True
         if f in mmap:
-            to = repo.file(f).read(mmap[f])
+            to = getfile(f).read(mmap[f])
         if f not in removed:
             tn = read(f)
         if opts.git:
@@ -385,13 +475,13 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                 else:
                     mode = gitmode(util.is_exec(repo.wjoin(f), None))
                 if f in copied:
-                    a = copied[f]
+                    a, arev = copied[f]
                     omode = gitmode(mmap.execf(a))
                     addmodehdr(header, omode, mode)
                     op = a in removed and 'rename' or 'copy'
                     header.append('%s from %s\n' % (op, a))
                     header.append('%s to %s\n' % (op, f))
-                    to = repo.file(a).read(mmap[a])
+                    to = getfile(a).read(arev)
                 else:
                     header.append('new file mode %s\n' % mode)
             elif f in removed:
