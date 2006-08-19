@@ -8,7 +8,7 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), 'util')
+demandload(globals(), 'mdiff util')
 demandload(globals(), 'os sys')
 
 def make_filename(repo, pat, node,
@@ -93,19 +93,53 @@ def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
     for r in results:
         yield r
 
-def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None):
+def findrenames(repo, added=None, removed=None, threshold=0.5):
+    if added is None or removed is None:
+        added, removed = repo.status()[1:3]
+    changes = repo.changelog.read(repo.dirstate.parents()[0])
+    mf = repo.manifest.read(changes[0])
+    for a in added:
+        aa = repo.wread(a)
+        bestscore, bestname = None, None
+        for r in removed:
+            rr = repo.file(r).read(mf[r])
+            delta = mdiff.textdiff(aa, rr)
+            if len(delta) < len(aa):
+                myscore = 1.0 - (float(len(delta)) / len(aa))
+                if bestscore is None or myscore > bestscore:
+                    bestscore, bestname = myscore, r
+        if bestname and bestscore >= threshold:
+            yield bestname, a, bestscore
+
+def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
+              similarity=None):
     if dry_run is None:
         dry_run = opts.get('dry_run')
+    if similarity is None:
+        similarity = float(opts.get('similarity') or 0)
     add, remove = [], []
+    mapping = {}
     for src, abs, rel, exact in walk(repo, pats, opts):
         if src == 'f' and repo.dirstate.state(abs) == '?':
             add.append(abs)
+            mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
         if repo.dirstate.state(abs) != 'r' and not os.path.exists(rel):
             remove.append(abs)
+            mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
     if not dry_run:
         repo.add(add, wlock=wlock)
         repo.remove(remove, wlock=wlock)
+    if similarity > 0:
+        for old, new, score in findrenames(repo, add, remove, similarity):
+            oldrel, oldexact = mapping[old]
+            newrel, newexact = mapping[new]
+            if repo.ui.verbose or not oldexact or not newexact:
+                repo.ui.status(_('recording removal of %s as rename to %s '
+                                 '(%d%% similar)\n') %
+                               (oldrel, newrel, score * 100))
+            if not dry_run:
+                repo.copy(old, new, wlock=wlock)
