@@ -14,15 +14,7 @@ echo a > a/a
 echo % should fail - would corrupt dirstate
 hg add a/a
 
-echo % should fail - if add succeeded, would corrupt manifest
-hg commit -mb
-
-echo % should fail if commit succeeded - manifest is corrupt
-hg verify
-
 cd ..      
-echo % should succeed, but manifest is corrupt
-hg --debug --traceback clone a b
 
 echo % directory replaced with file
 
@@ -38,8 +30,20 @@ echo a > a
 echo % should fail - would corrupt dirstate
 hg add a
 
-echo % should fail - if add succeeded, would corrupt manifest
-hg commit -mb a
+cd ..
 
-echo % should fail if commit succeeded - manifest is corrupt
-hg verify
+echo % directory replaced with file
+
+hg init d
+cd d
+mkdir b
+mkdir b/c
+echo a > b/c/d
+hg commit -Ama
+rm -rf b
+echo a > b
+
+echo % should fail - would corrupt dirstate
+hg add b
+
+exit 0
