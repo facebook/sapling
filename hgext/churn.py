@@ -74,7 +74,7 @@ def gather_stats(ui, repo, amap):
     
     cl    = repo.changelog
 
-    for rev in range(1,cl.count()):
+    for rev in range(0,cl.count()):
         node2    = cl.node(rev)
         node1    = cl.parents(node2)[0]
 
