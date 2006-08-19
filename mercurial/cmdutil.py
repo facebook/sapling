@@ -1,4 +1,4 @@
-# commands.py - command processing for mercurial
+# cmdutil.py - help for command processing in mercurial
 #
 # Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
