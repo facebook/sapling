@@ -12,6 +12,7 @@
 # <alias email> <actual email>
 
 from mercurial.demandload import *
+from mercurial.i18n import gettext as _
 demandload(globals(), 'time sys signal os')
 demandload(globals(), 'mercurial:hg,mdiff,fancyopts,commands,ui,util,templater')
 
@@ -69,12 +70,15 @@ def __gather(ui, repo, node1, node2):
 
     return (who, lines)
 
-def gather_stats(ui, repo, amap):
+def gather_stats(ui, repo, amap, revs=None):
     stats = {}
     
     cl    = repo.changelog
 
-    for rev in range(1,cl.count()):
+    if not revs:
+        revs = range(1, cl.count())
+
+    for rev in revs:
         node2    = cl.node(rev)
         node1    = cl.parents(node2)[0]
 
@@ -93,7 +97,7 @@ def gather_stats(ui, repo, amap):
 
     return stats
 
-def churn(ui, repo, aliases):
+def churn(ui, repo, **opts):
     "Graphs the number of lines changed"
     
     def pad(s, l):
@@ -117,6 +121,7 @@ def churn(ui, repo, aliases):
         return aliases
     
     amap = {}
+    aliases = opts.get('aliases')
     if aliases:
         try:
             f = open(aliases,"r")
@@ -126,8 +131,10 @@ def churn(ui, repo, aliases):
 
         amap = get_aliases(f)
         f.close()
-    
-    stats = gather_stats(ui, repo, amap)
+
+    revs = [int(r) for r in commands.revrange(ui, repo, opts['rev'])]
+    revs.sort()
+    stats = gather_stats(ui, repo, amap, revs)
 
     # make a list of tuples (name, lines) and sort it in descending order
     ordered = stats.items()
@@ -147,10 +154,7 @@ def churn(ui, repo, aliases):
 cmdtable = {
     "churn":
     (churn,
-     [('', 'aliases', '', 'file with email aliases')],
-    'hg churn [-a file]'),
+     [('r', 'rev', [], _('limit statistics to the specified revisions')),
+      ('', 'aliases', '', _('file with email aliases'))],
+    'hg churn [-r revision range] [-a file]'),
 }
-
-def reposetup(ui, repo):
-    pass
-
