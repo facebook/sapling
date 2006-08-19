@@ -995,4 +995,3 @@ def drop_scheme(scheme, path):
         if path.startswith('//'):
             path = path[2:]
     return path
-    
