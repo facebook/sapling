@@ -76,7 +76,7 @@ def gather_stats(ui, repo, amap, revs=None):
     cl    = repo.changelog
 
     if not revs:
-        revs = range(1, cl.count())
+        revs = range(0, cl.count())
 
     for rev in revs:
         node2    = cl.node(rev)
