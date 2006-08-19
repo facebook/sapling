@@ -1526,7 +1526,6 @@ def grep(ui, repo, pattern, *pats, **opts):
         if st == 'window':
             incrementing = rev
             matches.clear()
-            copies.clear()
         elif st == 'add':
             change = repo.changelog.read(repo.lookup(str(rev)))
             mf = repo.manifest.read(change[0])
@@ -1535,20 +1534,19 @@ def grep(ui, repo, pattern, *pats, **opts):
                 if fn in skip:
                     continue
                 fstate.setdefault(fn, {})
-                copies.setdefault(rev, {})
                 try:
                     grepbody(fn, rev, getfile(fn).read(mf[fn]))
                     if follow:
                         copied = getfile(fn).renamed(mf[fn])
                         if copied:
-                            copies[rev][fn] = copied[0]
+                            copies.setdefault(rev, {})[fn] = copied[0]
                 except KeyError:
                     pass
         elif st == 'iter':
             states = matches[rev].items()
             states.sort()
             for fn, m in states:
-                copy = copies[rev].get(fn)
+                copy = copies.get(rev, {}).get(fn)
                 if fn in skip:
                     if copy:
                         skip[copy] = True
@@ -1571,7 +1569,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         for fn, state in fstate:
             if fn in skip:
                 continue
-            if fn not in copies[prev[fn]]:
+            if fn not in copies.get(prev[fn], {}):
                 display(fn, rev, {}, state)
     return (count == 0 and 1) or 0
 
@@ -1683,44 +1681,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             ui.debug(_('message:\n%s\n') % message)
 
             files, fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root)
-            removes = []
-            if len(files) > 0:
-                cfiles = files.keys()
-                copies = []
-                copts = {'after': False, 'force': False}
-                cwd = repo.getcwd()
-                if cwd:
-                    cfiles = [util.pathto(cwd, f) for f in files.keys()]
-                for f in files:
-                    ctype, gp = files[f]
-                    if ctype == 'RENAME':
-                        copies.append((gp.oldpath, gp.path, gp.copymod))
-                        removes.append(gp.oldpath)
-                    elif ctype == 'COPY':
-                        copies.append((gp.oldpath, gp.path, gp.copymod))
-                    elif ctype == 'DELETE':
-                        removes.append(gp.path)
-                for src, dst, after in copies:
-                    absdst = os.path.join(repo.root, dst)
-                    if not after and os.path.exists(absdst):
-                        raise util.Abort(_('patch creates existing file %s') % dst)
-                    if cwd:
-                        src, dst = [util.pathto(cwd, f) for f in (src, dst)]
-                    copts['after'] = after
-                    errs, copied = docopy(ui, repo, (src, dst), copts, wlock=wlock)
-                    if errs:
-                        raise util.Abort(errs)
-                if removes:
-                    repo.remove(removes, True, wlock=wlock)
-                for f in files:
-                    ctype, gp = files[f]
-                    if gp and gp.mode:
-                        x = gp.mode & 0100 != 0
-                        dst = os.path.join(repo.root, gp.path)
-                        util.set_exec(dst, x)
-                cmdutil.addremove(repo, cfiles, wlock=wlock)
-            files = files.keys()
-            files.extend([r for r in removes if r not in files])
+            files = patch.updatedir(ui, repo, files, wlock=wlock)
             repo.commit(files, message, user, date, wlock=wlock, lock=lock)
         finally:
             os.unlink(tmpname)
@@ -3281,18 +3242,11 @@ def findext(name):
                 return sys.modules[v]
         raise KeyError(name)
 
-def dispatch(args):
-    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
-        num = getattr(signal, name, None)
-        if num: signal.signal(num, catchterm)
-
-    try:
-        u = ui.ui(traceback='--traceback' in sys.argv[1:])
-    except util.Abort, inst:
-        sys.stderr.write(_("abort: %s\n") % inst)
-        return -1
-
-    for ext_name, load_from_name in u.extensions():
+def load_extensions(ui):
+    added = []
+    for ext_name, load_from_name in ui.extensions():
+        if ext_name in external:
+            continue
         try:
             if load_from_name:
                 # the module will be loaded in sys.modules
@@ -3312,23 +3266,36 @@ def dispatch(args):
                 except ImportError:
                     mod = importh(ext_name)
             external[ext_name] = mod.__name__
+            added.append((mod, ext_name))
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
-            u.warn(_("*** failed to import extension %s: %s\n") % (ext_name, inst))
-            if u.print_exc():
+            ui.warn(_("*** failed to import extension %s: %s\n") %
+                    (ext_name, inst))
+            if ui.print_exc():
                 return 1
 
-    for name in external.itervalues():
-        mod = sys.modules[name]
+    for mod, name in added:
         uisetup = getattr(mod, 'uisetup', None)
         if uisetup:
-            uisetup(u)
+            uisetup(ui)
         cmdtable = getattr(mod, 'cmdtable', {})
         for t in cmdtable:
             if t in table:
-                u.warn(_("module %s overrides %s\n") % (name, t))
+                ui.warn(_("module %s overrides %s\n") % (name, t))
         table.update(cmdtable)
+    
+def dispatch(args):
+    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
+        num = getattr(signal, name, None)
+        if num: signal.signal(num, catchterm)
+
+    try:
+        u = ui.ui(traceback='--traceback' in sys.argv[1:],
+                  readhooks=[load_extensions])
+    except util.Abort, inst:
+        sys.stderr.write(_("abort: %s\n") % inst)
+        return -1
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)

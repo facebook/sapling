@@ -8,7 +8,11 @@ hg init a
 cd a
 echo a > a
 hg add
-hg extdiff -o -Nr
+diff -N /dev/null /dev/null 2> /dev/null
+if [ $? -ne 0 ]; then
+	opt="-p gdiff"
+fi
+hg extdiff -o -Nr $opt
 
 echo "[extdiff]" >> $HGTMP/.hgrc
 echo "cmd.falabala=echo" >> $HGTMP/.hgrc
