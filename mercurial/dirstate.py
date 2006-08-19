@@ -1,7 +1,7 @@
 """
 dirstate.py - working directory tracking for mercurial
 
-Copyright 2005 Matt Mackall <mpm@selenic.com>
+Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
@@ -10,7 +10,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "struct os time bisect stat util re errno")
+demandload(globals(), "struct os time bisect stat strutil util re errno")
 
 class dirstate(object):
     format = ">cllll"
@@ -22,6 +22,7 @@ class dirstate(object):
         self.ui = ui
         self.map = None
         self.pl = None
+        self.dirs = None
         self.copies = {}
         self.ignorefunc = None
         self.blockignore = False
@@ -197,6 +198,38 @@ class dirstate(object):
     def copied(self, file):
         return self.copies.get(file, None)
 
+    def initdirs(self):
+        if self.dirs is None:
+            self.dirs = {}
+            for f in self.map:
+                self.updatedirs(f, 1)
+        
+    def updatedirs(self, path, delta):
+        if self.dirs is not None:
+            for c in strutil.findall(path, '/'):
+                pc = path[:c]
+                self.dirs.setdefault(pc, 0)
+                self.dirs[pc] += delta
+
+    def checkshadows(self, files):
+        def prefixes(f):
+            for c in strutil.rfindall(f, '/'):
+                yield f[:c]
+        self.lazyread()
+        self.initdirs()
+        seendirs = {}
+        for f in files:
+            if self.dirs.get(f):
+                raise util.Abort(_('directory named %r already in dirstate') %
+                                 f)
+            for d in prefixes(f):
+                if d in seendirs:
+                    break
+                if d in self.map:
+                    raise util.Abort(_('file named %r already in dirstate') %
+                                     d)
+                seendirs[d] = True
+
     def update(self, files, state, **kw):
         ''' current states:
         n  normal
@@ -207,10 +240,16 @@ class dirstate(object):
         if not files: return
         self.lazyread()
         self.markdirty()
+        if state == "a":
+            self.initdirs()
+            self.checkshadows(files)
         for f in files:
             if state == "r":
                 self.map[f] = ('r', 0, 0, 0)
+                self.updatedirs(f, -1)
             else:
+                if state == "a":
+                    self.updatedirs(f, 1)
                 s = os.lstat(self.wjoin(f))
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
@@ -222,9 +261,11 @@ class dirstate(object):
         if not files: return
         self.lazyread()
         self.markdirty()
+        self.initdirs()
         for f in files:
             try:
                 del self.map[f]
+                self.updatedirs(f, -1)
             except KeyError:
                 self.ui.warn(_("not in dirstate: %s!\n") % f)
                 pass
@@ -232,14 +273,15 @@ class dirstate(object):
     def clear(self):
         self.map = {}
         self.copies = {}
+        self.dirs = None
         self.markdirty()
 
     def rebuild(self, parent, files):
         self.clear()
         umask = os.umask(0)
         os.umask(umask)
-        for f, mode in files:
-            if mode:
+        for f in files:
+            if files.execf(f):
                 self.map[f] = ('n', ~umask, -1, 0)
             else:
                 self.map[f] = ('n', ~umask & 0666, -1, 0)
@@ -344,6 +386,10 @@ class dirstate(object):
     # directly by this function, but might be modified by your statmatch call.
     #
     def walkhelper(self, files, statmatch, dc, badmatch=None):
+        # self.root may end with a path separator when self.root == '/'
+        common_prefix_len = len(self.root)
+        if not self.root.endswith('/'):
+            common_prefix_len += 1
         # recursion free walker, faster than os.walk.
         def findfiles(s):
             work = [s]
@@ -352,7 +398,7 @@ class dirstate(object):
                 names = os.listdir(top)
                 names.sort()
                 # nd is the top of the repository dir tree
-                nd = util.normpath(top[len(self.root) + 1:])
+                nd = util.normpath(top[common_prefix_len:])
                 if nd == '.':
                     nd = ''
                 else:
@@ -434,15 +480,16 @@ class dirstate(object):
             if not seen(k) and (statmatch(k, None)):
                 yield 'm', k, None
 
-    def changes(self, files=None, match=util.always, show_ignored=None):
+    def status(self, files=None, match=util.always, list_ignored=False,
+               list_clean=False):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
-        removed, deleted = [], []
+        removed, deleted, clean = [], [], []
 
-        for src, fn, st in self.statwalk(files, match, ignored=show_ignored):
+        for src, fn, st in self.statwalk(files, match, ignored=list_ignored):
             try:
                 type_, mode, size, time = self[fn]
             except KeyError:
-                if show_ignored and self.ignore(fn):
+                if list_ignored and self.ignore(fn):
                     ignored.append(fn)
                 else:
                     unknown.append(fn)
@@ -473,6 +520,8 @@ class dirstate(object):
                     modified.append(fn)
                 elif time != st.st_mtime:
                     lookup.append(fn)
+                elif list_clean:
+                    clean.append(fn)
             elif type_ == 'm':
                 modified.append(fn)
             elif type_ == 'a':
@@ -480,4 +529,5 @@ class dirstate(object):
             elif type_ == 'r':
                 removed.append(fn)
 
-        return (lookup, modified, added, removed, deleted, unknown, ignored)
+        return (lookup, modified, added, removed, deleted, unknown, ignored,
+                clean)

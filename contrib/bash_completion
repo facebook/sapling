@@ -288,7 +288,7 @@ _hg_cmd_qpush()
 
 _hg_cmd_qdelete()
 {
-    _hg_ext_mq_patchlist qseries
+    _hg_ext_mq_patchlist qunapplied
 }
 
 _hg_cmd_qsave()
@@ -311,6 +311,11 @@ _hg_cmd_qcommit()
     local files=$(cd "$root/.hg/patches" 2>/dev/null &&
                   "$hg" status -nmar 2>/dev/null)
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
+}
+
+_hg_cmd_export()
+{
+    _hg_ext_mq_patchlist qapplied
 }
 
 

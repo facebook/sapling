@@ -1,6 +1,6 @@
 # context.py - changeset and file context objects for mercurial
 #
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -11,9 +11,8 @@ class changectx(object):
     def __init__(self, repo, changeid):
         """changeid is a revision number, node, or tag"""
         self._repo = repo
-        self._id = changeid
 
-        self._node = self._repo.lookup(self._id)
+        self._node = self._repo.lookup(changeid)
         self._rev = self._repo.changelog.rev(self._node)
 
     def changeset(self):
@@ -74,39 +73,40 @@ class filectx(object):
            fileid can be a file revision or node."""
         self._repo = repo
         self._path = path
-        self._id = changeid
-        self._fileid = fileid
 
-        if self._id:
+        assert changeid or fileid
+
+        if not fileid:
             # if given a changeset id, go ahead and look up the file
-            self._changeset = self._repo.changelog.read(self._id)
-            node, flag = self._repo.manifest.find(self._changeset[0], path)
+            self._changeid = changeid
+            self._changectx = self.changectx()
             self._filelog = self._repo.file(self._path)
-            self._filenode = node
-        elif self._fileid:
+            self._filenode = self._changectx.filenode(self._path)
+        else:
             # else be lazy
             self._filelog = self._repo.file(self._path)
-            self._filenode = self._filelog.lookup(self._fileid)
+            self._filenode = self._filelog.lookup(fileid)
+            self._changeid = self._filelog.linkrev(self._filenode)
         self._filerev = self._filelog.rev(self._filenode)
 
-    def changeset(self):
+    def changectx(self):
         try:
-            return self._changeset
+            return self._changectx
         except AttributeError:
-            self._changeset = self._repo.changelog.read(self.node())
-            return self._changeset
+            self._changectx = changectx(self._repo, self._changeid)
+            return self._changectx
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
     def filelog(self): return self._filelog
 
-    def rev(self): return self.changeset().rev()
-    def node(self): return self.changeset().node()
-    def user(self): return self.changeset().user()
-    def date(self): return self.changeset().date()
-    def files(self): return self.changeset().files()
-    def description(self): return self.changeset().description()
-    def manifest(self): return self.changeset().manifest()
+    def rev(self): return self.changectx().rev()
+    def node(self): return self.changectx().node()
+    def user(self): return self.changectx().user()
+    def date(self): return self.changectx().date()
+    def files(self): return self.changectx().files()
+    def description(self): return self.changectx().description()
+    def manifest(self): return self.changectx().manifest()
 
     def data(self): return self._filelog.read(self._filenode)
     def metadata(self): return self._filelog.readmeta(self._filenode)

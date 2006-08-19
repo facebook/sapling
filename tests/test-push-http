@@ -36,13 +36,19 @@ kill `cat hg.pid`
 
 echo % expect success
 echo 'allow_push = *' >> .hg/hgrc
+echo '[hooks]' >> .hg/hgrc
+echo 'changegroup = echo changegroup: u=$HG_URL >> $HGTMP/urls' >> .hg/hgrc
 hg serve -p 20059 -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS
 hg --cwd ../test2 push http://localhost:20059/
 kill `cat hg.pid`
 hg rollback
 
+sed 's/\(remote:http.*\):.*/\1/' $HGTMP/urls
+
 echo % expect authorization error: all users denied
+echo '[web]' > .hg/hgrc
+echo 'push_ssl = false' >> .hg/hgrc
 echo 'deny_push = *' >> .hg/hgrc
 hg serve -p 20059 -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS

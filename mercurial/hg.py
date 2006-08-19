@@ -1,6 +1,7 @@
 # hg.py - repository classes for mercurial
 #
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
+# Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -10,69 +11,56 @@ from repo import *
 from demandload import *
 from i18n import gettext as _
 demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
-demandload(globals(), "errno lock os shutil util")
+demandload(globals(), "errno lock os shutil util merge@_merge verify@_verify")
 
-def bundle(ui, path):
-    if path.startswith('bundle://'):
-        path = path[9:]
-    else:
-        path = path[7:]
-    s = path.split("+", 1)
-    if len(s) == 1:
-        repopath, bundlename = "", s[0]
-    else:
-        repopath, bundlename = s
-    return bundlerepo.bundlerepository(ui, repopath, bundlename)
-
-def hg(ui, path):
-    ui.warn(_("hg:// syntax is deprecated, please use http:// instead\n"))
-    return httprepo.httprepository(ui, path.replace("hg://", "http://"))
-
-def local_(ui, path, create=0):
-    if path.startswith('file:'):
-        path = path[5:]
-    return localrepo.localrepository(ui, path, create)
-
-def ssh_(ui, path, create=0):
-    return sshrepo.sshrepository(ui, path, create)
-
-def old_http(ui, path):
-    ui.warn(_("old-http:// syntax is deprecated, "
-              "please use static-http:// instead\n"))
-    return statichttprepo.statichttprepository(
-        ui, path.replace("old-http://", "http://"))
-
-def static_http(ui, path):
-    return statichttprepo.statichttprepository(
-        ui, path.replace("static-http://", "http://"))
+def _local(path):
+    return (os.path.isfile(path and util.drop_scheme('file', path)) and
+            bundlerepo or localrepo)
 
 schemes = {
-    'bundle': bundle,
-    'file': local_,
-    'hg': hg,
-    'http': lambda ui, path: httprepo.httprepository(ui, path),
-    'https': lambda ui, path: httprepo.httpsrepository(ui, path),
-    'old-http': old_http,
-    'ssh': ssh_,
-    'static-http': static_http,
+    'bundle': bundlerepo,
+    'file': _local,
+    'hg': httprepo,
+    'http': httprepo,
+    'https': httprepo,
+    'old-http': statichttprepo,
+    'ssh': sshrepo,
+    'static-http': statichttprepo,
     }
 
-def repository(ui, path=None, create=0):
-    scheme = None
+def _lookup(path):
+    scheme = 'file'
     if path:
         c = path.find(':')
         if c > 0:
-            scheme = schemes.get(path[:c])
-    else:
-        path = ''
-    ctor = scheme or schemes['file']
-    if create:
+            scheme = path[:c]
+    thing = schemes.get(scheme) or schemes['file']
+    try:
+        return thing(path)
+    except TypeError:
+        return thing
+
+def islocal(repo):
+    '''return true if repo or path is local'''
+    if isinstance(repo, str):
         try:
-            return ctor(ui, path, create)
-        except TypeError:
-            raise util.Abort(_('cannot create new repository over "%s" protocol') %
-                             scheme)
-    return ctor(ui, path)
+            return _lookup(repo).islocal(repo)
+        except AttributeError:
+            return False
+    return repo.local()
+
+repo_setup_hooks = []
+
+def repository(ui, path=None, create=False):
+    """return a repository object for the specified path"""
+    repo = _lookup(path).instance(ui, path, create)
+    for hook in repo_setup_hooks:
+        hook(ui, repo)
+    return repo
+
+def defaultdest(source):
+    '''return default destination of clone if none is given'''
+    return os.path.basename(os.path.normpath(source))
 
 def clone(ui, source, dest=None, pull=False, rev=None, update=True,
           stream=False):
@@ -90,7 +78,9 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     If an exception is raised, the partly cloned/updated destination
     repository will be deleted.
 
-    Keyword arguments:
+    Arguments:
+
+    source: repository object or URL
 
     dest: URL of destination repository to create (defaults to base
     name of source repository)
@@ -105,8 +95,24 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     update: update working directory after clone completes, if
     destination is local repository
     """
+    if isinstance(source, str):
+        src_repo = repository(ui, source)
+    else:
+        src_repo = source
+        source = src_repo.url()
+
     if dest is None:
-        dest = os.path.basename(os.path.normpath(source))
+        dest = defaultdest(source)
+
+    def localpath(path):
+        if path.startswith('file://'):
+            return path[7:]
+        if path.startswith('file:'):
+            return path[5:]
+        return path
+
+    dest = localpath(dest)
+    source = localpath(source)
 
     if os.path.exists(dest):
         raise util.Abort(_("destination '%s' already exists"), dest)
@@ -121,8 +127,6 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
-    src_repo = repository(ui, source)
-
     dest_repo = None
     try:
         dest_repo = repository(ui, dest)
@@ -133,7 +137,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     dest_path = None
     dir_cleanup = None
     if dest_repo.local():
-        dest_path = os.path.realpath(dest)
+        dest_path = os.path.realpath(dest_repo.root)
         dir_cleanup = DirCleanup(dest_path)
 
     abspath = source
@@ -202,8 +206,31 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dest_lock.release()
 
         if update:
-            dest_repo.update(dest_repo.changelog.tip())
+            _merge.update(dest_repo, dest_repo.changelog.tip())
     if dir_cleanup:
         dir_cleanup.close()
 
     return src_repo, dest_repo
+
+def update(repo, node):
+    """update the working directory to node, merging linear changes"""
+    return _merge.update(repo, node)
+
+def clean(repo, node, wlock=None, show_stats=True):
+    """forcibly switch the working directory to node, clobbering changes"""
+    return _merge.update(repo, node, force=True, wlock=wlock,
+                         show_stats=show_stats)
+
+def merge(repo, node, force=None, remind=True, wlock=None):
+    """branch merge with node, resolving changes"""
+    return _merge.update(repo, node, branchmerge=True, force=force,
+                         remind=remind, wlock=wlock)
+
+def revert(repo, node, choose, wlock):
+    """revert changes to revision in node without updating dirstate"""
+    return _merge.update(repo, node, force=True, partial=choose,
+                         show_stats=False, wlock=wlock)
+
+def verify(repo):
+    """verify the consistency of a repository"""
+    return _verify.verify(repo)

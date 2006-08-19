@@ -1,7 +1,7 @@
 # hgweb/server.py - The standalone hg web server.
 #
 # Copyright 21 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -198,6 +198,7 @@ def create_server(ui, repo):
             self.webdirmaker = hgwebdir
             self.repoviewmaker = hgweb
             self.reqmaker = wsgiapplication(self.make_handler)
+            self.daemon_threads = True
 
         def make_handler(self):
             if self.webdir_conf:

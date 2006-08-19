@@ -15,7 +15,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- force None allow None moddirstate True linear True
+ overwrite False branchmerge False partial False linear True
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
  a versions differ, resolve
 remote created b
@@ -31,7 +31,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
 resolving manifests
- force None allow None moddirstate True linear True
+ overwrite False branchmerge False partial False linear True
  ancestor a0c8bcbbb45c local 1165e8bd193e remote a0c8bcbbb45c
 remote deleted b
 removing b
@@ -41,7 +41,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
-abort: there is nothing to merge, just use 'hg update' or look at 'hg heads'
+abort: there is nothing to merge - use "hg update" instead
 failed
 changeset:   0:33aaa84a386b
 user:        test
@@ -49,7 +49,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- force None allow None moddirstate True linear True
+ overwrite False branchmerge False partial False linear True
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
  a versions differ, resolve
 remote created b
@@ -95,21 +95,12 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
-resolving manifests
- force None allow None moddirstate True linear False
- ancestor a0c8bcbbb45c local 1165e8bd193e remote 4096f2872392
- a versions differ, resolve
- b versions differ, resolve
-this update spans a branch affecting the following files:
- a (resolve)
- b (resolve)
-aborting update spanning branches!
-(use 'hg merge' to merge across branches or 'hg update -C' to lose changes)
+abort: update spans branches, use 'hg merge' or 'hg update -C' to lose changes
 failed
 abort: outstanding uncommitted changes
 failed
 resolving manifests
- force False allow True moddirstate True linear False
+ overwrite False branchmerge True partial False linear False
  ancestor a0c8bcbbb45c local 1165e8bd193e remote 4096f2872392
  a versions differ, resolve
  b versions differ, resolve

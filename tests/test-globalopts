@@ -45,7 +45,7 @@ hg --cwd c head -v
 hg --cwd b tip --verbose
 
 echo %% --config
-hg --cwd c --config paths.quuxfoo=bar paths | grep -q quuxfoo && echo quuxfoo
+hg --cwd c --config paths.quuxfoo=bar paths | grep quuxfoo > /dev/null && echo quuxfoo
 hg --cwd c --config '' tip -q
 hg --cwd c --config a.b tip -q
 hg --cwd c --config a tip -q

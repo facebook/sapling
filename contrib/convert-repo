@@ -28,7 +28,8 @@ class convert_git:
         self.path = path
 
     def getheads(self):
-        return [file(self.path + "/HEAD").read()[:-1]]
+        fh = os.popen("GIT_DIR=%s git-rev-parse --verify HEAD" % self.path)
+        return [fh.read()[:-1]]
 
     def catfile(self, rev, type):
         if rev == "0" * 40: raise IOError()

@@ -1,6 +1,7 @@
 # httprepo.py - HTTP repository proxy classes for mercurial
 #
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
+# Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -115,6 +116,7 @@ else:
 
 class httprepository(remoterepository):
     def __init__(self, ui, path):
+        self.path = path
         self.caps = None
         scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
         if query or frag:
@@ -124,8 +126,8 @@ class httprepository(remoterepository):
         host, port, user, passwd = netlocsplit(netloc)
 
         # urllib cannot handle URLs with embedded user or passwd
-        self.url = urlparse.urlunsplit((scheme, netlocunsplit(host, port),
-                                        urlpath, '', ''))
+        self._url = urlparse.urlunsplit((scheme, netlocunsplit(host, port),
+                                         urlpath, '', ''))
         self.ui = ui
 
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
@@ -189,6 +191,9 @@ class httprepository(remoterepository):
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
         urllib2.install_opener(opener)
 
+    def url(self):
+        return self.path
+
     # look up capabilities only when needed
 
     def get_caps(self):
@@ -213,7 +218,7 @@ class httprepository(remoterepository):
         q = {"cmd": cmd}
         q.update(args)
         qs = urllib.urlencode(q)
-        cu = "%s?%s" % (self.url, qs)
+        cu = "%s?%s" % (self._url, qs)
         try:
             resp = urllib2.urlopen(urllib2.Request(cu, data, headers))
         except urllib2.HTTPError, inst:
@@ -234,13 +239,13 @@ class httprepository(remoterepository):
                not proto.startswith('text/plain') and \
                not proto.startswith('application/hg-changegroup'):
             raise hg.RepoError(_("'%s' does not appear to be an hg repository") %
-                               self.url)
+                               self._url)
 
         if proto.startswith('application/mercurial'):
             version = proto[22:]
             if float(version) > 0.1:
                 raise hg.RepoError(_("'%s' uses newer protocol %s") %
-                                   (self.url, version))
+                                   (self._url, version))
 
         return resp
 
@@ -335,3 +340,13 @@ class httpsrepository(httprepository):
             raise util.Abort(_('Python support for SSL and HTTPS '
                                'is not installed'))
         httprepository.__init__(self, ui, path)
+
+def instance(ui, path, create):
+    if create:
+        raise util.Abort(_('cannot create new http repository'))
+    if path.startswith('hg:'):
+        ui.warn(_("hg:// syntax is deprecated, please use http:// instead\n"))
+        path = 'http:' + path[3:]
+    if path.startswith('https:'):
+        return httpsrepository(ui, path)
+    return httprepository(ui, path)

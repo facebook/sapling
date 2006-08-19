@@ -17,9 +17,9 @@ cd ../b
 
 # changegroup hooks can see env vars
 echo '[hooks]' > .hg/hgrc
-echo 'prechangegroup = echo prechangegroup hook' >> .hg/hgrc
-echo 'changegroup = echo changegroup hook: n=$HG_NODE' >> .hg/hgrc
-echo 'incoming = echo incoming hook: n=$HG_NODE' >> .hg/hgrc
+echo 'prechangegroup = echo prechangegroup hook: u=`echo $HG_URL | sed s,file:.*,file:,`' >> .hg/hgrc
+echo 'changegroup = echo changegroup hook: n=$HG_NODE u=`echo $HG_URL | sed s,file:.*,file:,`' >> .hg/hgrc
+echo 'incoming = echo incoming hook: n=$HG_NODE u=`echo $HG_URL | sed s,file:.*,file:,`' >> .hg/hgrc
 
 # pretxncommit and commit hooks can see both parents of merge
 cd ../a

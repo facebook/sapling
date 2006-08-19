@@ -1,0 +1,30 @@
+#!/bin/sh
+
+HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
+echo "[extensions]" >> $HGTMP/.hgrc
+echo "extdiff=" >> $HGTMP/.hgrc
+
+hg init a
+cd a
+echo a > a
+hg add
+diff -N /dev/null /dev/null 2> /dev/null
+if [ $? -ne 0 ]; then
+	opt="-p gdiff"
+fi
+hg extdiff -o -Nr $opt
+
+echo "[extdiff]" >> $HGTMP/.hgrc
+echo "cmd.falabala=echo" >> $HGTMP/.hgrc
+echo "opts.falabala=diffing" >> $HGTMP/.hgrc
+
+hg falabala
+
+hg help falabala
+
+hg ci -d '0 0' -mtest1
+
+echo b >> a
+hg ci -d '1 0' -mtest2
+
+hg falabala -r 0:1 || echo "diff-like tools yield a non-zero exit code"

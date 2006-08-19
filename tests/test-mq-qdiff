@@ -1,0 +1,28 @@
+#!/bin/sh
+
+HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
+echo "[extensions]" >> $HGTMP/.hgrc
+echo "mq=" >> $HGTMP/.hgrc
+
+echo % init
+hg init a
+cd a
+
+echo % commit
+echo 'base' > base
+hg ci -Ambase -d '1 0'
+
+echo % qnew mqbase
+hg qnew -mmqbase mqbase
+
+echo % qrefresh
+echo 'patched' > base
+hg qrefresh
+
+echo % qdiff
+hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+               -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qdiff dirname
+hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+                 -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"

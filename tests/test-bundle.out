@@ -11,28 +11,34 @@ adding manifests
 adding file changes
 added 0 changesets with 0 changes to 4 files
 (run 'hg update' to get a working copy)
-adding changesets
-adding manifests
-adding file changes
-added 9 changesets with 7 changes to 4 files (+1 heads)
-(run 'hg heads' to see heads, 'hg merge' to merge)
-changeset:   8:836ac62537ab
+changeset:   -1:000000000000
 tag:         tip
-parent:      3:ac69c658229d
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     0.3m
-
-changeset:   7:80fe151401c2
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     1.3m
+user:        
+date:        Thu Jan 01 00:00:00 1970 +0000
 
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-4 files, 9 changesets, 7 total revisions
+0 files, 0 changesets, 0 total revisions
+pulling from ../full.hg
+searching for changes
+no changes found
+pulling from ../full.hg
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 9 changesets with 7 changes to 4 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+rolling back last transaction
+pulling from ../full.hg
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 9 changesets with 7 changes to 4 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
 changeset:   8:836ac62537ab
 tag:         tip
 parent:      3:ac69c658229d
@@ -81,6 +87,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     0.0
 
+changegroup: u=bundle:../full.hg
 pulling from bundle://../full.hg
 requesting all changes
 adding changesets

@@ -1,6 +1,7 @@
 # sshserver.py - ssh protocol server support for mercurial
 #
 # Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -117,9 +118,13 @@ class sshserver(object):
             return
 
         self.respond("")
-        r = self.repo.addchangegroup(self.fin, 'serve')
+        r = self.repo.addchangegroup(self.fin, 'serve', self.client_url())
         self.respond(str(r))
 
+    def client_url(self):
+        client = os.environ.get('SSH_CLIENT', '').split(' ', 1)[0]
+        return 'remote:ssh:' + client
+        
     def do_unbundle(self):
         their_heads = self.getarg()[1].split()
 
@@ -159,7 +164,7 @@ class sshserver(object):
                 # push can proceed
 
                 fp.seek(0)
-                r = self.repo.addchangegroup(fp, 'serve')
+                r = self.repo.addchangegroup(fp, 'serve', self.client_url())
                 self.respond(str(r))
             finally:
                 if not was_locked:

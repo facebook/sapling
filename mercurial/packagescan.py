@@ -2,7 +2,7 @@
 # Used for the py2exe distutil.
 # This module must be the first mercurial module imported in setup.py
 #
-# Copyright 2005 Volker Kleinfeld <Volker.Kleinfeld@gmx.de>
+# Copyright 2005, 2006 Volker Kleinfeld <Volker.Kleinfeld@gmx.de>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.

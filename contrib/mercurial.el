@@ -380,7 +380,9 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
   (save-excursion
     (while hg-prev-buffer
       (set-buffer hg-prev-buffer))
-    (let ((path (or default (buffer-file-name) default-directory)))
+    (let ((path (or default
+                    (buffer-file-name)
+                    (expand-file-name default-directory))))
       (if (or (not path) current-prefix-arg)
           (expand-file-name
            (eval (list* 'read-file-name
@@ -716,7 +718,11 @@ code by typing `M-x find-library mercurial RET'."
       (goto-char pos)
       (end-of-line 1)
       (delete-region pos (point)))
-    (cd (hg-root))))
+    (let ((hg-root-dir (hg-root)))
+      (if (not hg-root-dir)
+	  (error "error: %s: directory is not part of a Mercurial repository."
+		 default-directory)
+	(cd hg-root-dir)))))
 
 (defun hg-add (path)
   "Add PATH to the Mercurial repository on the next commit.
@@ -972,7 +978,8 @@ With a prefix argument, prompt for the path to forget."
       (cd (hg-root path)))
     (when update
       (with-current-buffer buf
-	(set (make-local-variable 'backup-inhibited) nil)
+        (when (local-variable-p 'backup-inhibited)
+          (kill-local-variable 'backup-inhibited))
 	(hg-mode-line)))))
 
 (defun hg-incoming (&optional repo)

@@ -2,6 +2,8 @@
 util.py - Mercurial utility functions and platform specfic implementations
 
  Copyright 2005 K. Thananchayan <thananck@yahoo.com>
+ Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
+ Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
@@ -12,7 +14,7 @@ platform-specific details from the core.
 
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "cStringIO errno popen2 re shutil sys tempfile")
+demandload(globals(), "cStringIO errno getpass popen2 re shutil sys tempfile")
 demandload(globals(), "os threading time")
 
 # used by parsedate
@@ -92,23 +94,6 @@ def find_in_path(name, path, default=None):
         if os.path.exists(p_name):
             return p_name
     return default
-
-def patch(strip, patchname, ui):
-    """apply the patch <patchname> to the working directory.
-    a list of patched files is returned"""
-    patcher = find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
-    fp = os.popen('%s -p%d < "%s"' % (patcher, strip, patchname))
-    files = {}
-    for line in fp:
-        line = line.rstrip()
-        ui.status("%s\n" % line)
-        if line.startswith('patching file '):
-            pf = parse_patch_output(line)
-            files.setdefault(pf, 1)
-    code = fp.close()
-    if code:
-        raise Abort(_("patch command failed: %s") % explain_exit(code)[0])
-    return files.keys()
 
 def binary(s):
     """return true if a string is binary data using diff's heuristic"""
@@ -510,6 +495,20 @@ def is_win_9x():
     except AttributeError:
         return os.name == 'nt' and 'command' in os.environ.get('comspec', '')
 
+getuser_fallback = None
+
+def getuser():
+    '''return name of current user'''
+    try:
+        return getpass.getuser()
+    except ImportError:
+        # import of pwd will fail on windows - try fallback
+        if getuser_fallback:
+            return getuser_fallback()
+    # raised if win32api not available
+    raise Abort(_('user name not available - set USERNAME '
+                  'environment variable'))
+
 # Platform specific variants
 if os.name == 'nt':
     demandload(globals(), "msvcrt")
@@ -592,6 +591,9 @@ if os.name == 'nt':
 
     def samestat(s1, s2):
         return False
+
+    def shellquote(s):
+        return '"%s"' % s.replace('"', '\\"')
 
     def explain_exit(code):
         return _("exited with status %d") % code, code
@@ -681,6 +683,9 @@ else:
                 return _readlock_file(pathname)
             else:
                 raise
+
+    def shellquote(s):
+        return "'%s'" % s.replace("'", "'\\''")
 
     def testpid(pid):
         '''return False if pid dead, True if running or not sure'''
@@ -982,3 +987,11 @@ def bytecount(nbytes):
         if nbytes >= divisor * multiplier:
             return format % (nbytes / float(divisor))
     return units[-1][2] % nbytes
+
+def drop_scheme(scheme, path):
+    sc = scheme + ':'
+    if path.startswith(sc):
+        path = path[len(sc):]
+        if path.startswith('//'):
+            path = path[2:]
+    return path

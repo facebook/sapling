@@ -5,34 +5,49 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 #
-# allow to use external programs to compare revisions, or revision
-# with working dir. program is called with two arguments: paths to
-# directories containing snapshots of files to compare.
+# The `extdiff' Mercurial extension allows you to use external programs
+# to compare revisions, or revision with working dir.  The external diff
+# programs are called with a configurable set of options and two
+# non-option arguments: paths to directories containing snapshots of
+# files to compare.
 #
-# to enable:
+# To enable this extension:
 #
 #   [extensions]
 #   hgext.extdiff =
 #
-# also allows to configure new diff commands, so you do not need to
-# type "hg extdiff -p kdiff3" always.
+# The `extdiff' extension also allows to configure new diff commands, so
+# you do not need to type "hg extdiff -p kdiff3" always.
 #
 #   [extdiff]
+#   # add new command that runs GNU diff(1) in 'context diff' mode
+#   cmd.cdiff = gdiff
+#   opts.cdiff = -Nprc5
 #   # add new command called vdiff, runs kdiff3
 #   cmd.vdiff = kdiff3
 #   # add new command called meld, runs meld (no need to name twice)
 #   cmd.meld =
+#   # add new command called vimdiff, runs gvimdiff with DirDiff plugin
+#   #(see http://www.vim.org/scripts/script.php?script_id=102)
+#   cmd.vimdiff = LC_ALL=C gvim -f '+bdel 1 2' '+ execute "DirDiff ".argv(0)." ".argv(1)'
 #
-# you can use -I/-X and list of file or directory names like normal
-# "hg diff" command. extdiff makes snapshots of only needed files, so
-# compare program will be fast.
+# Each custom diff commands can have two parts: a `cmd' and an `opts'
+# part.  The cmd.xxx option defines the name of an executable program
+# that will be run, and opts.xxx defines a set of command-line options
+# which will be inserted to the command between the program name and
+# the files/directories to diff (i.e. the cdiff example above).
+#
+# You can use -I/-X and list of file or directory names like normal
+# "hg diff" command.  The `extdiff' extension makes snapshots of only
+# needed files, so running the external diff program will actually be
+# pretty fast (at least faster than having to compare the entire tree).
 
 from mercurial.demandload import demandload
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:commands,util os shutil tempfile')
+demandload(globals(), 'mercurial:commands,cmdutil,util os shutil tempfile')
 
-def dodiff(ui, repo, diffcmd, pats, opts):
+def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     def snapshot_node(files, node):
         '''snapshot files as of some revision'''
         changes = repo.changelog.read(node)
@@ -76,9 +91,9 @@ def dodiff(ui, repo, diffcmd, pats, opts):
         return dirname
 
     node1, node2 = commands.revpair(ui, repo, opts['rev'])
-    files, matchfn, anypats = commands.matchpats(repo, pats, opts)
-    modified, added, removed, deleted, unknown = repo.changes(
-        node1, node2, files, match=matchfn)
+    files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
+    modified, added, removed, deleted, unknown = repo.status(
+        node1, node2, files, match=matchfn)[:5]
     if not (modified or added or removed):
         return 0
 
@@ -89,9 +104,12 @@ def dodiff(ui, repo, diffcmd, pats, opts):
             dir2 = snapshot_node(modified + added, node2)
         else:
             dir2 = snapshot_wdir(modified + added)
-        util.system('%s %s "%s" "%s"' %
-                    (diffcmd, ' '.join(opts['option']), dir1, dir2),
-                    cwd=tmproot)
+        cmdline = ('%s %s %s %s' %
+                   (util.shellquote(diffcmd),
+                    ' '.join(map(util.shellquote, diffopts)),
+                    util.shellquote(dir1), util.shellquote(dir2)))
+        ui.debug('running %r in %s\n' % (cmdline, tmproot))
+        util.system(cmdline, cwd=tmproot)
         return 1
     finally:
         ui.note(_('cleaning up temp directory\n'))
@@ -101,7 +119,9 @@ def extdiff(ui, repo, *pats, **opts):
     '''use external program to diff repository (or selected files)
 
     Show differences between revisions for the specified files, using
-    an external program.  The default program used is "diff -Npru".
+    an external program.  The default program used is diff, with
+    default options "-Npru".
+
     To select a different program, use the -p option.  The program
     will be passed the names of two directories to compare.  To pass
     additional options to the program, use the -o option.  These will
@@ -112,7 +132,8 @@ def extdiff(ui, repo, *pats, **opts):
     specified then that revision is compared to the working
     directory, and, when no revisions are specified, the
     working directory files are compared to its parent.'''
-    return dodiff(ui, repo, opts['program'] or 'diff -Npru', pats, opts)
+    return dodiff(ui, repo, opts['program'] or 'diff',
+                  opts['option'] or ['-Npru'], pats, opts)
 
 cmdtable = {
     "extdiff":
@@ -130,20 +151,24 @@ def uisetup(ui):
         if not cmd.startswith('cmd.'): continue
         cmd = cmd[4:]
         if not path: path = cmd
+        diffopts = ui.config('extdiff', 'opts.' + cmd, '')
+        diffopts = diffopts and [diffopts] or []
         def save(cmd, path):
             '''use closure to save diff command to use'''
             def mydiff(ui, repo, *pats, **opts):
-                return dodiff(ui, repo, path, pats, opts)
-            mydiff.__doc__ = '''use %s to diff repository (or selected files)
+                return dodiff(ui, repo, path, diffopts, pats, opts)
+            mydiff.__doc__ = '''use %(path)r to diff repository (or selected files)
 
             Show differences between revisions for the specified
-            files, using the %s program.
+            files, using the %(path)r program.
 
             When two revision arguments are given, then changes are
             shown between those revisions. If only one revision is
             specified then that revision is compared to the working
             directory, and, when no revisions are specified, the
-            working directory files are compared to its parent.''' % (cmd, cmd)
+            working directory files are compared to its parent.''' % {
+                'path': path,
+                }
             return mydiff
         cmdtable[cmd] = (save(cmd, path),
                          cmdtable['extdiff'][1][1:],
