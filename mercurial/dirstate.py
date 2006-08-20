@@ -518,7 +518,7 @@ class dirstate(object):
                 if size >= 0 and (size != st.st_size
                                   or (mode ^ st.st_mode) & 0100):
                     modified.append(fn)
-                elif time != st.st_mtime:
+                elif time != int(st.st_mtime):
                     lookup.append(fn)
                 elif list_clean:
                     clean.append(fn)
