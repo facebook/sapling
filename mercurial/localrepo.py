@@ -710,8 +710,10 @@ class localrepository(repo.repository):
                     for f in lookup:
                         if fcmp(f, mf2):
                             modified.append(f)
-                        elif wlock is not None:
-                            self.dirstate.update([f], "n")
+                        else:
+                            clean.append(f)
+                            if wlock is not None:
+                                self.dirstate.update([f], "n")
             else:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
