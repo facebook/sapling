@@ -18,8 +18,8 @@ def _smtp(ui):
     if not mailhost:
         raise util.Abort(_('no [smtp]host in hgrc - cannot send mail'))
     mailport = int(ui.config('smtp', 'port', 25))
-    self.note(_('sending mail: smtp host %s, port %s\n') %
-              (mailhost, mailport))
+    ui.note(_('sending mail: smtp host %s, port %s\n') %
+            (mailhost, mailport))
     s.connect(host=mailhost, port=mailport)
     if ui.configbool('smtp', 'tls'):
         ui.note(_('(using tls)\n'))
