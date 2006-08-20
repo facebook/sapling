@@ -1738,7 +1738,7 @@ def incoming(ui, repo, source="default", **opts):
             displayer.show(changenode=n)
             if opts['patch']:
                 prev = (parents and parents[0]) or nullid
-                patch.diff(repo, other, prev, n)
+                patch.diff(other, prev, n, fp=repo.ui)
                 ui.write("\n")
     finally:
         if hasattr(other, 'close'):
