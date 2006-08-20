@@ -109,9 +109,9 @@ def demandload(scope, modules):
             mod = mod[:col]
         else:
             fromlist = []
-        as = None
+        as_ = None
         if '@' in mod:
-            mod, as = mod.split("@")
+            mod, as_ = mod.split("@")
         importer = _importer(scope, mod, fromlist)
         if fromlist:
             for name in fromlist:
@@ -130,6 +130,6 @@ def demandload(scope, modules):
                     continue
             else:
                 basemod = mod
-            if not as:
-                as = basemod
-            scope[as] = _replacer(importer, as)
+            if not as_:
+                as_ = basemod
+            scope[as_] = _replacer(importer, as_)
