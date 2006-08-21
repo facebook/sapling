@@ -403,17 +403,15 @@ class changeset_printer(object):
         changes = log.read(changenode)
         date = util.datestr(changes[2])
 
-        parents = [(log.rev(p), self.ui.verbose and hex(p) or short(p))
-                   for p in log.parents(changenode)
+        hexfunc = self.ui.debugflag and hex or short
+
+        parents = [(log.rev(p), hexfunc(p)) for p in log.parents(changenode)
                    if self.ui.debugflag or p != nullid]
         if (not self.ui.debugflag and len(parents) == 1 and
             parents[0][0] == rev-1):
             parents = []
 
-        if self.ui.verbose:
-            self.ui.write(_("changeset:   %d:%s\n") % (rev, hex(changenode)))
-        else:
-            self.ui.write(_("changeset:   %d:%s\n") % (rev, short(changenode)))
+        self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
 
         for tag in self.repo.nodetags(changenode):
             self.ui.status(_("tag:         %s\n") % tag)
@@ -1610,7 +1608,7 @@ def identify(ui, repo):
         ui.write(_("unknown\n"))
         return
 
-    hexfunc = ui.verbose and hex or short
+    hexfunc = ui.debugflag and hex or short
     modified, added, removed, deleted = repo.status()[:4]
     output = ["%s%s" %
               ('+'.join([hexfunc(parent) for parent in parents]),
@@ -2618,9 +2616,10 @@ def tags(ui, repo):
 
     l = repo.tagslist()
     l.reverse()
+    hexfunc = ui.debugflag and hex or short
     for t, n in l:
         try:
-            r = "%5d:%s" % (repo.changelog.rev(n), hex(n))
+            r = "%5d:%s" % (repo.changelog.rev(n), hexfunc(n))
         except KeyError:
             r = "    ?:?"
         if ui.quiet:
