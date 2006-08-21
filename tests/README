@@ -31,3 +31,62 @@ writing tests:
   use hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
                     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
   to strip dates
+
+You also need to be careful that the tests are portable from one platform
+to another.  You're probably working on Linux, where the GNU toolchain has
+more (or different) functionality than on MacOS, *BSD, Solaris, AIX, etc.
+While testing on all platforms is the only sure-fire way to make sure that
+you've written portable code, here's a list of problems that have been
+found and fixed in the tests.  Another, more comprehensive list may be
+found in the GNU Autoconf manual, online here:
+
+    http://www.gnu.org/software/autoconf/manual/html_node/Portable-Shell.html
+
+sh:
+
+The Bourne shell is a very basic shell.  /bin/sh on Linux is typically
+bash, which even in Bourne-shell mode has many features that Bourne shells
+on other Unix systems don't have (and even on Linux /bin/sh isn't
+guaranteed to be bash).  You'll need to be careful about constructs that
+seem ubiquitous, but are actually not available in the least common
+denominator.  While using another shell (ksh, bash explicitly, posix shell,
+etc.) explicitly may seem like another option, these may not exist in a
+portable location, and so are generally probably not a good idea.  You may
+find that rewriting the test in python will be easier.
+
+- don't use pushd/popd; save the output of "pwd" and use "cd" in place of
+  the pushd, and cd back to the saved pwd instead of popd.
+
+- don't use math expressions like let, (( ... )), or $(( ... )); use "expr"
+  instead.
+
+grep:
+
+- don't use the -q option; redirect stdout to /dev/null instead.
+
+- don't use extended regular expressions with grep; use egrep instead, and
+  don't escape any regex operators.
+
+sed:
+
+- make sure that the beginning-of-line matcher ("^") is at the very
+  beginning of the expression -- it may not be supported inside parens.
+
+echo:
+
+- echo may interpret "\n" and print a newline; use printf instead if you
+  want a literal "\n" (backslash + n).
+
+false:
+
+- false is guaranteed only to return a non-zero value; you cannot depend on
+  it being 1.  On Solaris in particular, /bin/false returns 255.  Rewrite
+  your test to not depend on a particular return value, or create a
+  temporary "false" executable, and call that instead.
+
+diff:
+
+- don't use the -N option.  There's no particularly good workaround short
+  of writing a reasonably complicated replacement script, but substituting
+  gdiff for diff if you can't rewrite the test not to need -N will probably
+  do.
