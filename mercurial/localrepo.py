@@ -1105,7 +1105,7 @@ class localrepository(repo.repository):
             else:
                 raise util.Abort(_("repository is unrelated"))
 
-        self.ui.note(_("found new changesets starting at ") +
+        self.ui.debug(_("found new changesets starting at ") +
                      " ".join([short(f) for f in fetch]) + "\n")
 
         self.ui.debug(_("%d total queries\n") % reqcnt)
