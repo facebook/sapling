@@ -3049,7 +3049,7 @@ table = {
          _('hg rename [OPTION]... SOURCE... DEST')),
     "^revert":
         (revert,
-         [('', 'all', None, _('revert all changes when no arguments given')),
+         [('a', 'all', None, _('revert all changes when no arguments given')),
           ('r', 'rev', '', _('revision to revert to')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
           ('I', 'include', [], _('include names matching given patterns')),
