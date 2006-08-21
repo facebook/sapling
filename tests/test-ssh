@@ -38,7 +38,7 @@ cd ..
 
 echo "# clone remote via stream"
 hg clone -e ./dummyssh --uncompressed ssh://user@dummy/remote local-stream 2>&1 | \
-  sed -e 's/[0-9][0-9.]*/XXX/g'
+  sed -e 's/[0-9][0-9.]*/XXX/g' -e 's/[KM]\(B\/sec\)/X\1/'
 cd local-stream
 hg verify
 cd ..

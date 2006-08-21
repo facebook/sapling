@@ -15,7 +15,7 @@ sleep 2
 
 echo %% url for proxy, stream
 http_proxy=http://localhost:20060/ hg --config http_proxy.always=True clone --uncompressed http://localhost:20059/ b | \
-  sed -e 's/[0-9][0-9.]*/XXX/g'
+  sed -e 's/[0-9][0-9.]*/XXX/g' -e 's/[KM]\(B\/sec\)/X\1/'
 cd b
 hg verify
 cd ..
