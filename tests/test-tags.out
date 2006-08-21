@@ -16,21 +16,21 @@ M a
 (branch merge, don't forget to commit)
 8216907a933d+8a3ca90d111d+ tip
 M .hgtags
-tip                                6:c6af9d771a81
+tip                                6:e2174d339386
 first                              0:0acdaf898367
-.hgtags (rev 7:39bba1bbbc4c), line 2: cannot parse entry
-.hgtags (rev 7:39bba1bbbc4c), line 4: node 'foo' is not well formed
+.hgtags (rev 7:c071f74ab5eb), line 2: cannot parse entry
+.hgtags (rev 7:c071f74ab5eb), line 4: node 'foo' is not well formed
 localtags, line 1: tag 'invalid' refers to unknown node
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-.hgtags (rev 7:39bba1bbbc4c), line 2: cannot parse entry
-.hgtags (rev 7:39bba1bbbc4c), line 4: node 'foo' is not well formed
+.hgtags (rev 7:c071f74ab5eb), line 2: cannot parse entry
+.hgtags (rev 7:c071f74ab5eb), line 4: node 'foo' is not well formed
 .hgtags (rev 8:4ca6f1b1a68c), line 2: node 'x' is not well formed
 localtags, line 1: tag 'invalid' refers to unknown node
 tip                                8:4ca6f1b1a68c
 first                              0:0acdaf898367
 changeset:   8:4ca6f1b1a68c
-.hgtags (rev 7:39bba1bbbc4c), line 2: cannot parse entry
-.hgtags (rev 7:39bba1bbbc4c), line 4: node 'foo' is not well formed
+.hgtags (rev 7:c071f74ab5eb), line 2: cannot parse entry
+.hgtags (rev 7:c071f74ab5eb), line 4: node 'foo' is not well formed
 .hgtags (rev 8:4ca6f1b1a68c), line 2: node 'x' is not well formed
 localtags, line 1: tag 'invalid' refers to unknown node
 tag:         tip

@@ -2594,17 +2594,20 @@ def tag(ui, repo, name, rev_=None, **opts):
     if opts['rev']:
         rev_ = opts['rev']
     if rev_:
-        r = hex(repo.lookup(rev_))
+        r = repo.lookup(rev_)
     else:
         p1, p2 = repo.dirstate.parents()
         if p1 == nullid:
             raise util.Abort(_('no revision to tag'))
         if p2 != nullid:
             raise util.Abort(_('outstanding uncommitted merges'))
-        r = hex(p1)
+        r = p1
 
-    repo.tag(name, r, opts['local'], opts['message'], opts['user'],
-             opts['date'])
+    message = opts['message']
+    if not message:
+        message = _('Added tag %s for changeset %s') % (name, short(r))
+
+    repo.tag(name, r, message, opts['local'], opts['user'], opts['date'])
 
 def tags(ui, repo):
     """list repository tags
