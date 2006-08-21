@@ -70,6 +70,9 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     p1, p2 = pl[0], node
     pa = repo.changelog.ancestor(p1, p2)
 
+    # are we going backwards?
+    backwards = (pa == p2)
+
     # is there a linear path from p1 to p2?
     linear_path = (pa == p1 or pa == p2)
     if branchmerge and linear_path:
@@ -154,8 +157,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     s = 1
                 # are we clobbering?
                 # is remote's version newer?
-                # or are we going back in time?
-                elif overwrite or m2[f] != a or (p2 == pa and mw[f] == m1[f]):
+                # or are we going back in time and clean?
+                elif overwrite or m2[f] != a or (backwards and mw[f] == m1[f]):
                     repo.ui.debug(_(" remote %s is newer, get\n") % f)
                     get[f] = (m2.execf(f), m2[f])
                     s = 1
@@ -192,7 +195,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 repo.ui.debug(_("remote deleted %s, clobbering\n") % f)
                 remove.append(f)
             elif n == m1.get(f, nullid): # same as parent
-                if p2 == pa: # going backwards?
+                if backwards:
                     repo.ui.debug(_("remote deleted %s\n") % f)
                     remove.append(f)
                 else:
@@ -217,7 +220,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             repo.ui.debug(_("remote created %s\n") % f)
             get[f] = (m2.execf(f), n)
         else:
-            if overwrite or p2 == pa: # going backwards?
+            if overwrite or backwards:
                 repo.ui.debug(_("local deleted %s, recreating\n") % f)
                 get[f] = (m2.execf(f), n)
             else:
