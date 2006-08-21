@@ -9,7 +9,7 @@ hg commit -m 1 -d "1000000 0"
 hg remove
 rm foo
 hg remove foo
-hg revert
+hg revert --all
 rm foo
 hg remove --after
 hg commit -m 2 -d "1000000 0"

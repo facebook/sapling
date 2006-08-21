@@ -820,6 +820,7 @@ def backout(ui, repo, rev, **opts):
         parent = p1
     hg.clean(repo, node, show_stats=False)
     revert_opts = opts.copy()
+    revert_opts['all'] = True
     revert_opts['rev'] = hex(parent)
     revert(ui, repo, **revert_opts)
     commit_opts = opts.copy()
@@ -2288,8 +2289,12 @@ def revert(ui, repo, *pats, **opts):
 
     If names are given, all files matching the names are reverted.
 
-    If no arguments are given, all files in the repository are reverted.
+    If no arguments are given, no files are reverted.
     """
+
+    if not pats and not opts['all']:
+        raise util.Abort(_('no files or directories specified'))
+
     parent, p2 = repo.dirstate.parents()
     if opts['rev']:
         node = repo.lookup(opts['rev'])
@@ -3044,7 +3049,8 @@ table = {
          _('hg rename [OPTION]... SOURCE... DEST')),
     "^revert":
         (revert,
-         [('r', 'rev', '', _('revision to revert to')),
+         [('', 'all', None, _('revert all changes when no arguments given')),
+          ('r', 'rev', '', _('revision to revert to')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
           ('I', 'include', [], _('include names matching given patterns')),
           ('X', 'exclude', [], _('exclude names matching given patterns')),

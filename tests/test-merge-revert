@@ -15,7 +15,7 @@ hg update -C 0
 hg id
 echo "changed file1" >> file1
 hg id
-hg revert
+hg revert --all
 hg diff
 hg status
 hg id
@@ -29,11 +29,11 @@ HGMERGE=merge hg update
 hg diff
 hg status
 hg id
-hg revert
+hg revert --all
 hg diff
 hg status
 hg id
-hg revert -r tip
+hg revert -r tip --all
 hg diff
 hg status
 hg id
