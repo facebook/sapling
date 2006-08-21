@@ -145,7 +145,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if partial and not partial(f):
             continue
         if f in m2:
-            s = 0
+            queued = 0
 
             # are files different?
             if n != m2[f]:
@@ -154,20 +154,21 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 if n != a and m2[f] != a:
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
                     merge[f] = (fmerge(f, mw, m2, ma), m1.get(f, nullid), m2[f])
-                    s = 1
+                    queued = 1
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time and clean?
                 elif overwrite or m2[f] != a or (backwards and mw[f] == m1[f]):
                     repo.ui.debug(_(" remote %s is newer, get\n") % f)
                     get[f] = (m2.execf(f), m2[f])
-                    s = 1
+                    queued = 1
             elif f in umap or f in added:
                 # this unknown file is the same as the checkout
                 # we need to reset the dirstate if the file was added
                 get[f] = (m2.execf(f), m2[f])
 
-            if not s and mw.execf(f) != m2.execf(f):
+            # do we still need to look at mode bits?
+            if not queued and mw.execf(f) != m2.execf(f):
                 if overwrite:
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
                     util.set_exec(repo.wjoin(f), m2.execf(f))
