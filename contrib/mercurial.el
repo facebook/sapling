@@ -554,6 +554,23 @@ current frame."
 	      (cdr state)
 	    'normal)))))
 
+(defun hg-status (&rest paths)
+  "Return status of PATHS as an alist.
+Each entry is a pair (FILE-NAME . STATUS)."
+  (let ((s (apply 'hg-run "status" "-marduc" paths))
+	 result)
+      (dolist (entry (split-string (hg-chomp (cdr s)) "\n") (nreverse result))
+	(let ((state (cdr (assoc (substring entry 0 2)
+				 '(("M " . modified)
+				   ("A " . added)
+				   ("R " . removed)
+				   ("! " . deleted)
+				   ("C " . normal)
+				   ("I " . ignored)
+				   ("? " . nil)))))
+	      (name (substring entry 2)))
+	  (setq result (cons (cons name state) result)))))))
+
 (defmacro hg-view-output (args &rest body)
   "Execute BODY in a clean buffer, then quickly display that buffer.
 If the buffer contains one line, its contents are displayed in the
