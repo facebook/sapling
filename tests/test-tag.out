@@ -4,11 +4,11 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     test
 
-changeset:   1:c5c60883086f
+changeset:   1:3ecf002a1c57
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     Added tag bleah for changeset 0acdaf8983679e0aac16e811534eb49d7ee1f2b4
+summary:     Added tag bleah for changeset 0acdaf898367
 
 changeset:   0:0acdaf898367
 tag:         bleah
@@ -24,9 +24,9 @@ failed
 use of 'hg tag NAME [REV]' is deprecated, please use 'hg tag [-r REV] NAME' instead
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4 bleah
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4 bleah0
-c5c60883086f5526bd3e36814b94a73a4e75e172 bleah1
+3ecf002a1c572a2f3bb4e665417e60fca65bbd42 bleah1
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4 foobar
-c5c60883086f5526bd3e36814b94a73a4e75e172 bleah1
+3ecf002a1c572a2f3bb4e665417e60fca65bbd42 bleah1
 abort: '\n' cannot be used in a tag name
 abort: ':' cannot be used in a tag name

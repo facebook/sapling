@@ -1,7 +1,7 @@
 """
 dirstate.py - working directory tracking for mercurial
 
-Copyright 2005 Matt Mackall <mpm@selenic.com>
+Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
@@ -10,7 +10,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "struct os time bisect stat util re errno")
+demandload(globals(), "struct os time bisect stat strutil util re errno")
 
 class dirstate(object):
     format = ">cllll"
@@ -22,6 +22,7 @@ class dirstate(object):
         self.ui = ui
         self.map = None
         self.pl = None
+        self.dirs = None
         self.copies = {}
         self.ignorefunc = None
         self.blockignore = False
@@ -197,6 +198,38 @@ class dirstate(object):
     def copied(self, file):
         return self.copies.get(file, None)
 
+    def initdirs(self):
+        if self.dirs is None:
+            self.dirs = {}
+            for f in self.map:
+                self.updatedirs(f, 1)
+        
+    def updatedirs(self, path, delta):
+        if self.dirs is not None:
+            for c in strutil.findall(path, '/'):
+                pc = path[:c]
+                self.dirs.setdefault(pc, 0)
+                self.dirs[pc] += delta
+
+    def checkshadows(self, files):
+        def prefixes(f):
+            for c in strutil.rfindall(f, '/'):
+                yield f[:c]
+        self.lazyread()
+        self.initdirs()
+        seendirs = {}
+        for f in files:
+            if self.dirs.get(f):
+                raise util.Abort(_('directory named %r already in dirstate') %
+                                 f)
+            for d in prefixes(f):
+                if d in seendirs:
+                    break
+                if d in self.map:
+                    raise util.Abort(_('file named %r already in dirstate') %
+                                     d)
+                seendirs[d] = True
+
     def update(self, files, state, **kw):
         ''' current states:
         n  normal
@@ -207,10 +240,16 @@ class dirstate(object):
         if not files: return
         self.lazyread()
         self.markdirty()
+        if state == "a":
+            self.initdirs()
+            self.checkshadows(files)
         for f in files:
             if state == "r":
                 self.map[f] = ('r', 0, 0, 0)
+                self.updatedirs(f, -1)
             else:
+                if state == "a":
+                    self.updatedirs(f, 1)
                 s = os.lstat(self.wjoin(f))
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
@@ -222,9 +261,11 @@ class dirstate(object):
         if not files: return
         self.lazyread()
         self.markdirty()
+        self.initdirs()
         for f in files:
             try:
                 del self.map[f]
+                self.updatedirs(f, -1)
             except KeyError:
                 self.ui.warn(_("not in dirstate: %s!\n") % f)
                 pass
@@ -232,14 +273,15 @@ class dirstate(object):
     def clear(self):
         self.map = {}
         self.copies = {}
+        self.dirs = None
         self.markdirty()
 
     def rebuild(self, parent, files):
         self.clear()
         umask = os.umask(0)
         os.umask(umask)
-        for f, mode in files:
-            if mode:
+        for f in files:
+            if files.execf(f):
                 self.map[f] = ('n', ~umask, -1, 0)
             else:
                 self.map[f] = ('n', ~umask & 0666, -1, 0)
@@ -476,7 +518,7 @@ class dirstate(object):
                 if size >= 0 and (size != st.st_size
                                   or (mode ^ st.st_mode) & 0100):
                     modified.append(fn)
-                elif time != st.st_mtime:
+                elif time != int(st.st_mtime):
                     lookup.append(fn)
                 elif list_clean:
                     clean.append(fn)

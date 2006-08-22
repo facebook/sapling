@@ -1,4 +1,4 @@
-# Copyright (C) 2005 by Intevation GmbH
+# Copyright (C) 2005, 2006 by Intevation GmbH
 # Author(s):
 # Thomas Arendsen Hein <thomas@intevation.de>
 #

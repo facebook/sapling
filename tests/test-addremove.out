@@ -1,10 +1,15 @@
-(the addremove command is deprecated; use add and remove --after instead)
 adding dir/bar
 adding foo
 dir/bar
 foo
-(the addremove command is deprecated; use add and remove --after instead)
 adding dir/bar_2
 adding foo_2
 dir/bar_2
 foo_2
+adding a
+adding c
+adding b
+adding d
+removing a
+removing c
+recording removal of a as rename to b (100% similar)

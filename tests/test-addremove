@@ -10,3 +10,17 @@ cd dir/
 touch ../foo_2 bar_2
 hg -v addremove
 hg -v commit -m "add 2" -d "1000000 0"
+
+cd ..
+hg init sim
+cd sim
+echo a > a
+echo a >> a
+echo a >> a
+echo c > c
+hg commit -Ama
+mv a b
+rm c
+echo d > d
+hg addremove -s 0.5
+hg commit -mb

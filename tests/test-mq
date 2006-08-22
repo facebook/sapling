@@ -1,8 +1,7 @@
 #!/bin/sh
 
-HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
-echo "[extensions]" >> $HGTMP/.hgrc
-echo "mq=" >> $HGTMP/.hgrc
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
 
 echo % help
 hg help mq
@@ -10,6 +9,10 @@ hg help mq
 hg init a
 cd a
 echo a > a
+hg ci -Ama
+
+hg clone . ../k
+
 mkdir b
 echo z > b/z
 hg ci -Ama
@@ -48,7 +51,7 @@ echo % qrefresh
 
 echo a >> a
 hg qrefresh
-sed -e "s/\(^diff -r \)\([a-f0-9]* \)/\1 x/" \
+sed -e "s/^\(diff -r \)\([a-f0-9]* \)/\1 x/" \
     -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/test.patch
 
@@ -103,8 +106,18 @@ hg qnext
 hg qprev
 hg qapplied
 
+echo % commit should fail
+hg commit
+
+echo % push should fail
+hg push ../../k
+
 echo % qunapplied
 hg qunapplied
+
+echo % push should succeed
+hg qpop -a
+hg push ../../k
 
 echo % strip
 cd ../../b
@@ -112,3 +125,30 @@ echo x>x
 hg ci -Ama
 hg strip tip 2>&1 | sed 's/\(saving bundle to \).*/\1/'
 hg unbundle .hg/strip-backup/*
+
+cat >>$HGRCPATH <<EOF
+[diff]
+git = True
+EOF
+cd ..
+hg init git
+cd git
+hg qinit
+
+hg qnew -m'new file' new
+echo foo > new
+chmod +x new
+hg add new
+hg qrefresh
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/new
+
+hg qnew -m'copy file' copy
+hg cp new copy
+hg qrefresh
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/copy
+
+hg qpop
+hg qpush
+hg qdiff

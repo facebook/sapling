@@ -18,6 +18,13 @@ head -n 3 port > port1
 mv port1 port
 hg commit -m 4 -u spam -d '4 0'
 hg grep port port
-echo 'FIXME: history is wrong here'
 hg grep --all -nu port port
 hg grep import port
+
+hg cp port port2
+hg commit -m 4 -u spam -d '5 0'
+echo '% follow'
+hg grep -f 'import$' port2
+echo deport >> port2
+hg commit -m 5 -u eggs -d '6 0'
+hg grep -f --all -nu port port2

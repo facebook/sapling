@@ -1,0 +1,26 @@
+adding a
+0: a
+hg: unknown command 'an'
+Mercurial Distributed SCM
+
+basic commands (use "hg help" for the full list or option "-v" for details):
+
+ add        add the specified files on the next commit
+ annotate   show changeset information per file line
+ clone      make a copy of an existing repository
+ commit     commit the specified files or all outstanding changes
+ diff       diff repository (or selected files)
+ export     dump the header and diffs for one or more changesets
+ init       create a new repository in the given directory
+ log        show revision history of entire repository or files
+ parents    show the parents of the working dir or revision
+ pull       pull changes from the specified source
+ push       push changes to the specified destination
+ remove     remove the specified files on the next commit
+ revert     revert files or dirs to their states as of some revision
+ serve      export the repository via HTTP
+ status     show changed files in the working directory
+ update     update or merge working directory
+0: a
+% should succeed - up is an alias, not an abbreviation
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved

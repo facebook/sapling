@@ -1,8 +1,7 @@
 #!/bin/sh
 
-HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
-echo "[extensions]" >> $HGTMP/.hgrc
-echo "mq=" >> $HGTMP/.hgrc
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
 
 hg init a
 cd a

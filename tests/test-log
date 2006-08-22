@@ -63,3 +63,6 @@ hg ci -Amb1.1 -d'1 0'
 
 echo % log --follow-first
 hg log --follow-first
+
+echo % log -P 2
+hg log -P 2

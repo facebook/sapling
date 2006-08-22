@@ -36,43 +36,43 @@ added 3 changesets with 2 changes to 2 files
 (run 'hg update' to get a working copy)
 pretag hook: t=a n=4c52fb2e402287dd5dc052090682536c8406c321 l=0
 precommit hook: p1=4c52fb2e402287dd5dc052090682536c8406c321 p2=
-pretxncommit hook: n=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 p1=4c52fb2e402287dd5dc052090682536c8406c321 p2=
-4:4f92e785b90a
-commit hook: n=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 p1=4c52fb2e402287dd5dc052090682536c8406c321 p2=
+pretxncommit hook: n=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p1=4c52fb2e402287dd5dc052090682536c8406c321 p2=
+4:8ea2ef7ad3e8
+commit hook: n=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p1=4c52fb2e402287dd5dc052090682536c8406c321 p2=
 commit hook b
 tag hook: t=a n=4c52fb2e402287dd5dc052090682536c8406c321 l=0
-pretag hook: t=la n=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 l=1
-tag hook: t=la n=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 l=1
-pretag hook: t=fa n=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 l=0
+pretag hook: t=la n=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 l=1
+tag hook: t=la n=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 l=1
+pretag hook: t=fa n=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 l=0
 pretag.forbid hook
 abort: pretag.forbid hook exited with status 1
-pretag hook: t=fla n=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 l=1
+pretag hook: t=fla n=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 l=1
 pretag.forbid hook
 abort: pretag.forbid hook exited with status 1
-4:4f92e785b90a
-precommit hook: p1=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 p2=
-pretxncommit hook: n=7792358308a2026661cea44f9d47c072813004cb p1=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 p2=
-5:7792358308a2
-pretxncommit.forbid hook: tip=5:7792358308a2
+4:8ea2ef7ad3e8
+precommit hook: p1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p2=
+pretxncommit hook: n=fad284daf8c032148abaffcd745dafeceefceb61 p1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p2=
+5:fad284daf8c0
+pretxncommit.forbid hook: tip=5:fad284daf8c0
 abort: pretxncommit.forbid hook exited with status 1
 transaction abort!
 rollback completed
-4:4f92e785b90a
-precommit hook: p1=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 p2=
+4:8ea2ef7ad3e8
+precommit hook: p1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p2=
 precommit.forbid hook
 abort: precommit.forbid hook exited with status 1
-4:4f92e785b90a
+4:8ea2ef7ad3e8
 preupdate hook: p1=b702efe9688826e3a91283852b328b84dbf37bc2 p2=
 0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-preupdate hook: p1=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 p2=
-update hook: p1=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 p2= err=0
+preupdate hook: p1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p2=
+update hook: p1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p2= err=0
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 3:4c52fb2e4022
 prechangegroup.forbid hook
 pulling from ../a
 searching for changes
 abort: prechangegroup.forbid hook exited with status 1
-pretxnchangegroup.forbid hook: tip=4:4f92e785b90a
+pretxnchangegroup.forbid hook: tip=4:8ea2ef7ad3e8
 pulling from ../a
 searching for changes
 adding changesets
@@ -84,7 +84,7 @@ transaction abort!
 rollback completed
 3:4c52fb2e4022
 preoutgoing hook: s=pull
-outgoing hook: n=4f92e785b90ae8995dfe156e39dd4fbc3b346a24 s=pull
+outgoing hook: n=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 s=pull
 pulling from ../a
 searching for changes
 adding changesets

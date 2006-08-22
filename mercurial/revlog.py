@@ -4,7 +4,7 @@ revlog.py - storage back-end for mercurial
 This provides efficient delta storage with O(1) retrieve and append
 and O(changes) merge between branches
 
-Copyright 2005 Matt Mackall <mpm@selenic.com>
+Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
@@ -765,6 +765,19 @@ class revlog(object):
             return id
 
         raise RevlogError(_("No match found"))
+
+    def cmp(self, node, text):
+        """compare text with a given file revision"""
+        p1, p2 = self.parents(node)
+        return hash(text, p1, p2) != node
+
+    def makenode(self, node, text):
+        """calculate a file nodeid for text, descended or possibly
+        unchanged from node"""
+
+        if self.cmp(node, text):
+            return hash(text, node, nullid)
+        return node
 
     def diff(self, a, b):
         """return a delta between two revisions"""

@@ -1,6 +1,7 @@
 # hg.py - repository classes for mercurial
 #
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
+# Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -48,9 +49,14 @@ def islocal(repo):
             return False
     return repo.local()
 
+repo_setup_hooks = []
+
 def repository(ui, path=None, create=False):
     """return a repository object for the specified path"""
-    return _lookup(path).instance(ui, path, create)
+    repo = _lookup(path).instance(ui, path, create)
+    for hook in repo_setup_hooks:
+        hook(ui, repo)
+    return repo
 
 def defaultdest(source):
     '''return default destination of clone if none is given'''

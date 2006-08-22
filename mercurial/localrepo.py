@@ -1,6 +1,6 @@
 # localrepo.py - read/write repository class for mercurial
 #
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -169,7 +169,7 @@ class localrepository(repo.repository):
 
     tag_disallowed = ':\r\n'
 
-    def tag(self, name, node, local=False, message=None, user=None, date=None):
+    def tag(self, name, node, message, local, user, date):
         '''tag a revision with a symbolic name.
 
         if local is True, the tag is stored in a per-repository file.
@@ -191,27 +191,24 @@ class localrepository(repo.repository):
             if c in name:
                 raise util.Abort(_('%r cannot be used in a tag name') % c)
 
-        self.hook('pretag', throw=True, node=node, tag=name, local=local)
+        self.hook('pretag', throw=True, node=hex(node), tag=name, local=local)
 
         if local:
-            self.opener('localtags', 'a').write('%s %s\n' % (node, name))
-            self.hook('tag', node=node, tag=name, local=local)
+            self.opener('localtags', 'a').write('%s %s\n' % (hex(node), name))
+            self.hook('tag', node=hex(node), tag=name, local=local)
             return
 
-        for x in self.changes():
+        for x in self.status()[:5]:
             if '.hgtags' in x:
                 raise util.Abort(_('working copy of .hgtags is changed '
                                    '(please commit .hgtags manually)'))
 
-        self.wfile('.hgtags', 'ab').write('%s %s\n' % (node, name))
+        self.wfile('.hgtags', 'ab').write('%s %s\n' % (hex(node), name))
         if self.dirstate.state('.hgtags') == '?':
             self.add(['.hgtags'])
 
-        if not message:
-            message = _('Added tag %s for changeset %s') % (name, node)
-
         self.commit(['.hgtags'], message, user, date)
-        self.hook('tag', node=node, tag=name, local=local)
+        self.hook('tag', node=hex(node), tag=name, local=local)
 
     def tags(self):
         '''return a mapping of tag to node'''
@@ -470,8 +467,7 @@ class localrepository(repo.repository):
         p2 = p2 or self.dirstate.parents()[1] or nullid
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
-        m1 = self.manifest.read(c1[0])
-        mf1 = self.manifest.readflags(c1[0])
+        m1 = self.manifest.read(c1[0]).copy()
         m2 = self.manifest.read(c2[0])
         changed = []
 
@@ -484,36 +480,32 @@ class localrepository(repo.repository):
             wlock = self.wlock()
         l = self.lock()
         tr = self.transaction()
-        mm = m1.copy()
-        mfm = mf1.copy()
         linkrev = self.changelog.count()
         for f in files:
             try:
                 t = self.wread(f)
-                tm = util.is_exec(self.wjoin(f), mfm.get(f, False))
+                m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
                 r = self.file(f)
-                mfm[f] = tm
 
                 (entry, fp1, fp2) = self.checkfilemerge(f, t, r, m1, m2)
                 if entry:
-                    mm[f] = entry
+                    m1[f] = entry
                     continue
 
-                mm[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
+                m1[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
                 changed.append(f)
                 if update_dirstate:
                     self.dirstate.update([f], "n")
             except IOError:
                 try:
-                    del mm[f]
-                    del mfm[f]
+                    del m1[f]
                     if update_dirstate:
                         self.dirstate.forget([f])
                 except:
                     # deleted from p2?
                     pass
 
-        mnode = self.manifest.add(mm, mfm, tr, linkrev, c1[0], c2[0])
+        mnode = self.manifest.add(m1, tr, linkrev, c1[0], c2[0])
         user = user or self.ui.username()
         n = self.changelog.add(mnode, changed, text, tr, p1, p2, user, date)
         tr.close()
@@ -537,15 +529,14 @@ class localrepository(repo.repository):
                 else:
                     self.ui.warn(_("%s not tracked!\n") % f)
         else:
-            modified, added, removed, deleted, unknown = self.changes(match=match)
+            modified, added, removed, deleted, unknown = self.status(match=match)[:5]
             commit = modified + added
             remove = removed
 
         p1, p2 = self.dirstate.parents()
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
-        m1 = self.manifest.read(c1[0])
-        mf1 = self.manifest.readflags(c1[0])
+        m1 = self.manifest.read(c1[0]).copy()
         m2 = self.manifest.read(c2[0])
 
         if not commit and not remove and not force and p2 == nullid:
@@ -571,7 +562,7 @@ class localrepository(repo.repository):
         for f in commit:
             self.ui.note(f + "\n")
             try:
-                mf1[f] = util.is_exec(self.wjoin(f), mf1.get(f, False))
+                m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
                 t = self.wread(f)
             except IOError:
                 self.ui.warn(_("trouble committing %s!\n") % f)
@@ -598,12 +589,11 @@ class localrepository(repo.repository):
             changed.append(f)
 
         # update manifest
-        m1 = m1.copy()
         m1.update(new)
         for f in remove:
             if f in m1:
                 del m1[f]
-        mn = self.manifest.add(m1, mf1, tr, linkrev, c1[0], c2[0],
+        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0],
                                (new, remove))
 
         # add changeset
@@ -675,8 +665,7 @@ class localrepository(repo.repository):
 
         def fcmp(fn, mf):
             t1 = self.wread(fn)
-            t2 = self.file(fn).read(mf.get(fn, nullid))
-            return cmp(t1, t2)
+            return self.file(fn).cmp(mf.get(fn, nullid), t1)
 
         def mfmatches(node):
             change = self.changelog.read(node)
@@ -718,8 +707,10 @@ class localrepository(repo.repository):
                     for f in lookup:
                         if fcmp(f, mf2):
                             modified.append(f)
-                        elif wlock is not None:
-                            self.dirstate.update([f], "n")
+                        else:
+                            clean.append(f)
+                            if wlock is not None:
+                                self.dirstate.update([f], "n")
             else:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
@@ -757,16 +748,6 @@ class localrepository(repo.repository):
         for l in modified, added, removed, deleted, unknown, ignored, clean:
             l.sort()
         return (modified, added, removed, deleted, unknown, ignored, clean)
-
-    def changes(self, node1=None, node2=None, files=[], match=util.always,
-                wlock=None, list_ignored=False, list_clean=False):
-        '''DEPRECATED - use status instead'''
-        marduit = self.status(node1, node2, files, match, wlock,
-                              list_ignored, list_clean)
-        if list_ignored:
-            return marduit[:-1]
-        else:
-            return marduit[:-2]
 
     def add(self, list, wlock=None):
         if not wlock:
@@ -816,7 +797,6 @@ class localrepository(repo.repository):
     def undelete(self, list, wlock=None):
         p = self.dirstate.parents()[0]
         mn = self.changelog.read(p)[0]
-        mf = self.manifest.readflags(mn)
         m = self.manifest.read(mn)
         if not wlock:
             wlock = self.wlock()
@@ -826,7 +806,7 @@ class localrepository(repo.repository):
             else:
                 t = self.file(f).read(m[f])
                 self.wwrite(f, t)
-                util.set_exec(self.wjoin(f), mf[f])
+                util.set_exec(self.wjoin(f), m.execf(f))
                 self.dirstate.update([f], "n")
 
     def copy(self, source, dest, wlock=None):
@@ -1122,7 +1102,7 @@ class localrepository(repo.repository):
             else:
                 raise util.Abort(_("repository is unrelated"))
 
-        self.ui.note(_("found new changesets starting at ") +
+        self.ui.debug(_("found new changesets starting at ") +
                      " ".join([short(f) for f in fetch]) + "\n")
 
         self.ui.debug(_("%d total queries\n") % reqcnt)

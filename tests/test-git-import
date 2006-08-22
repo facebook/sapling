@@ -1,0 +1,122 @@
+#!/bin/sh
+
+hg init a
+cd a
+
+echo % new file
+hg import -mnew - <<EOF
+diff --git a/new b/new
+new file mode 100644
+index 0000000..7898192
+--- /dev/null
++++ b/new
+@@ -0,0 +1 @@
++a
+EOF
+
+echo % chmod +x
+hg import -msetx - <<EOF
+diff --git a/new b/new
+old mode 100644
+new mode 100755
+EOF
+
+test -x new || echo failed
+
+echo % copy
+hg import -mcopy - <<EOF
+diff --git a/new b/copy
+old mode 100755
+new mode 100644
+similarity index 100%
+copy from new
+copy to copy
+diff --git a/new b/copyx
+similarity index 100%
+copy from new
+copy to copyx
+EOF
+
+test -f copy -a ! -x copy || echo failed
+test -x copyx || echo failed
+cat copy
+hg cat copy
+
+echo % rename
+hg import -mrename - <<EOF
+diff --git a/copy b/rename
+similarity index 100%
+rename from copy
+rename to rename
+EOF
+
+hg locate
+
+echo % delete
+hg import -mdelete - <<EOF
+diff --git a/copyx b/copyx
+deleted file mode 100755
+index 7898192..0000000
+--- a/copyx
++++ /dev/null
+@@ -1 +0,0 @@
+-a
+EOF
+
+hg locate
+test -f copyx && echo failed || true
+
+echo % regular diff
+hg import -mregular - <<EOF
+diff --git a/rename b/rename
+index 7898192..72e1fe3 100644
+--- a/rename
++++ b/rename
+@@ -1 +1,5 @@
+ a
++a
++a
++a
++a
+EOF
+
+echo % copy and modify
+hg import -mcopymod - <<EOF
+diff --git a/rename b/copy2
+similarity index 80%
+copy from rename
+copy to copy2
+index 72e1fe3..b53c148 100644
+--- a/rename
++++ b/copy2
+@@ -1,5 +1,5 @@
+ a
+ a
+-a
++b
+ a
+ a
+EOF
+
+hg cat copy2
+
+echo % rename and modify
+hg import -mrenamemod - <<EOF
+diff --git a/copy2 b/rename2
+similarity index 80%
+rename from copy2
+rename to rename2
+index b53c148..8f81e29 100644
+--- a/copy2
++++ b/rename2
+@@ -1,5 +1,5 @@
+ a
+ a
+ b
+-a
++c
+ a
+EOF
+
+hg locate copy2
+hg cat rename2

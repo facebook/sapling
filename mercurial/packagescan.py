@@ -2,7 +2,7 @@
 # Used for the py2exe distutil.
 # This module must be the first mercurial module imported in setup.py
 #
-# Copyright 2005 Volker Kleinfeld <Volker.Kleinfeld@gmx.de>
+# Copyright 2005, 2006 Volker Kleinfeld <Volker.Kleinfeld@gmx.de>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -39,9 +39,9 @@ def demandload(scope, modules):
         except:
             module = m
             fromlist = []
-        as = None
+        as_ = None
         if '@' in module:
-            module, as = module.split("@")
+            module, as_ = module.split('@')
         mod = __import__(module, scope, scope, fromlist)
         if fromlist == []:
             # mod is only the top package, but we need all packages
@@ -50,9 +50,9 @@ def demandload(scope, modules):
             mn = comp[0]
             while True:
                 # mn and mod.__name__ might not be the same
-                if not as:
-                    as = mn
-                scope[as] = mod
+                if not as_:
+                    as_ = mn
+                scope[as_] = mod
                 requiredmodules[mod.__name__] = 1
                 if len(comp) == i: break
                 mod = getattr(mod,comp[i])
