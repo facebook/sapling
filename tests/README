@@ -31,3 +31,6 @@ writing tests:
   use hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
                     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
   to strip dates
+
+- You can append your own hgrc settings to the file that the environment
+  variable HGRCPATH points to. This file is cleared before running a test.
