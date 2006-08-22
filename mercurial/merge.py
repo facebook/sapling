@@ -121,11 +121,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     for f in added + modified + unknown:
         mw[f] = ""
-        # is the wfile new and matches m2?
-        if (f not in m1 and f in m2 and
-            not repo.file(f).cmp(m2[f], repo.wread(f))):
-            mw[f] = m2[f]
-
         mw.set(f, util.is_exec(repo.wjoin(f), mw.execf(f)))
 
     for f in deleted + removed:
