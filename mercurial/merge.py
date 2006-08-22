@@ -120,8 +120,10 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     umap = dict.fromkeys(unknown)
 
     for f in added + modified + unknown:
-        mw[f] = ""
+        mw[f] = nullid + "+"
         mw.set(f, util.is_exec(repo.wjoin(f), mw.execf(f)))
+        if f in m1:
+            mw[f] = m1[f] + "+"
 
     for f in deleted + removed:
         if f in mw:
@@ -152,12 +154,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 # are both different from the ancestor?
                 if not overwrite and n != a and m2[f] != a:
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
-                    merge[f] = (fmerge(f, mw, m2, ma), m1.get(f, nullid), m2[f])
+                    merge[f] = (fmerge(f, mw, m2, ma), n[:20], m2[f])
                     queued = 1
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time and clean?
-                elif overwrite or m2[f] != a or (backwards and mw[f] == m1[f]):
+                elif overwrite or m2[f] != a or (backwards and not n[20:]):
                     repo.ui.debug(_(" remote %s is newer, get\n") % f)
                     get[f] = (m2.execf(f), m2[f])
                     queued = 1
@@ -194,7 +196,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             if overwrite and f not in umap:
                 repo.ui.debug(_("remote deleted %s, clobbering\n") % f)
                 remove.append(f)
-            elif n == m1.get(f, nullid): # same as parent
+            elif not n[20:]: # same as parent
                 if backwards:
                     repo.ui.debug(_("remote deleted %s\n") % f)
                     remove.append(f)
