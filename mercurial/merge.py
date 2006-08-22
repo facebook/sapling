@@ -110,8 +110,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
                   (short(man), short(m1n), short(m2n)))
 
-    merge = {}
-    get = {}
+    action = {}
     remove = []
     forget = []
 
@@ -150,19 +149,19 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 # are both different from the ancestor?
                 if not overwrite and n != a and m2[f] != a:
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
-                    merge[f] = (fmerge(f, m1, m2, ma), n[:20], m2[f])
+                    action[f] = (fmerge(f, m1, m2, ma), n[:20], m2[f])
                     queued = 1
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time and clean?
                 elif overwrite or m2[f] != a or (backwards and not n[20:]):
                     repo.ui.debug(_(" remote %s is newer, get\n") % f)
-                    get[f] = (m2.execf(f), m2[f])
+                    action[f] = (m2.execf(f), m2[f], None)
                     queued = 1
             elif f in umap or f in added:
                 # this unknown file is the same as the checkout
                 # we need to reset the dirstate if the file was added
-                get[f] = (m2.execf(f), m2[f])
+                action[f] = (m2.execf(f), m2[f], None)
 
             # do we still need to look at mode bits?
             if not queued and m1.execf(f) != m2.execf(f):
@@ -211,14 +210,14 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     (_("remote changed %s which local deleted\n") % f) +
                      _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
             if r == _("k"):
-                get[f] = (m2.execf(f), n)
+                action[f] = (m2.execf(f), n, None)
         elif f not in ma:
             repo.ui.debug(_("remote created %s\n") % f)
-            get[f] = (m2.execf(f), n)
+            action[f] = (m2.execf(f), n, None)
         else:
             if overwrite or backwards:
                 repo.ui.debug(_("local deleted %s, recreating\n") % f)
-                get[f] = (m2.execf(f), n)
+                action[f] = (m2.execf(f), n, None)
             else:
                 repo.ui.debug(_("local deleted %s\n") % f)
 
@@ -237,28 +236,26 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     repo.hook('preupdate', throw=True, parent1=xp1, parent2=xxp2)
 
-    # get the files we don't need to change
-    files = get.keys()
+    # update files
+    unresolved = []
+    updated = 0
+    merged = 0
+    files = action.keys()
     files.sort()
     for f in files:
-        flag, node = get[f]
+        flag, my, other = action[f]
         if f[0] == "/":
             continue
-        repo.ui.note(_("getting %s\n") % f)
-        t = repo.file(f).read(node)
-        repo.wwrite(f, t)
-        util.set_exec(repo.wjoin(f), flag)
-
-    # merge the tricky bits
-    unresolved = []
-    files = merge.keys()
-    files.sort()
-    for f in files:
-        repo.ui.status(_("merging %s\n") % f)
-        flag, my, other = merge[f]
-        ret = merge3(repo, f, my, other, xp1, xp2)
-        if ret:
-            unresolved.append(f)
+        if other:
+            repo.ui.status(_("merging %s\n") % f)
+            if merge3(repo, f, my, other, xp1, xp2):
+                unresolved.append(f)
+            merged += 1
+        else:
+            repo.ui.note(_("getting %s\n") % f)
+            t = repo.file(f).read(my)
+            repo.wwrite(f, t)
+            updated += 1
         util.set_exec(repo.wjoin(f), flag)
 
     remove.sort()
@@ -281,34 +278,33 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         else:
             repo.dirstate.forget(remove)
 
-        files = get.keys()
+        files = action.keys()
         files.sort()
         for f in files:
-            if branchmerge:
-                repo.dirstate.update([f], 'n', st_mtime=-1)
+            flag, my, other = action[f]
+            if not other:
+                if branchmerge:
+                    repo.dirstate.update([f], 'n', st_mtime=-1)
+                else:
+                    repo.dirstate.update([f], 'n')
             else:
-                repo.dirstate.update([f], 'n')
-
-        files = merge.keys()
-        files.sort()
-        for f in files:
-            if branchmerge:
-                # We've done a branch merge, mark this file as merged
-                # so that we properly record the merger later
-                repo.dirstate.update([f], 'm')
-            else:
-                # We've update-merged a locally modified file, so
-                # we set the dirstate to emulate a normal checkout
-                # of that file some time in the past. Thus our
-                # merge will appear as a normal local file
-                # modification.
-                fl = repo.file(f)
-                f_len = fl.size(fl.rev(other))
-                repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
+                if branchmerge:
+                    # We've done a branch merge, mark this file as merged
+                    # so that we properly record the merger later
+                    repo.dirstate.update([f], 'm')
+                else:
+                    # We've update-merged a locally modified file, so
+                    # we set the dirstate to emulate a normal checkout
+                    # of that file some time in the past. Thus our
+                    # merge will appear as a normal local file
+                    # modification.
+                    fl = repo.file(f)
+                    f_len = fl.size(fl.rev(other))
+                    repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
 
     if show_stats:
-        stats = ((len(get), _("updated")),
-                 (len(merge) - len(unresolved), _("merged")),
+        stats = ((updated, _("updated")),
+                 (merged - len(unresolved), _("merged")),
                  (len(remove), _("removed")),
                  (len(unresolved), _("unresolved")))
         note = ", ".join([_("%d files %s") % s for s in stats])

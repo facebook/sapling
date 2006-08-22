@@ -19,10 +19,10 @@ resolving manifests
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
  a versions differ, resolve
 remote created b
-getting b
 merging a
 resolving a
 file a: my b789fdd96dc2 other d730145abbf9 ancestor b789fdd96dc2
+getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 changeset:   1:802f095af299
 tag:         tip
@@ -53,10 +53,10 @@ resolving manifests
  ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
  a versions differ, resolve
 remote created b
-getting b
 merging a
 resolving a
 file a: my b789fdd96dc2 other d730145abbf9 ancestor b789fdd96dc2
+getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 changeset:   1:802f095af299
 tag:         tip
