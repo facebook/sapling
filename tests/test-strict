@@ -7,9 +7,8 @@ hg ci -d '0 0' -Ama
 
 hg an a
 
-HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
-echo "[ui]" >> $HGTMP/.hgrc
-echo "strict=True" >> $HGTMP/.hgrc
+echo "[ui]" >> $HGRCPATH
+echo "strict=True" >> $HGRCPATH
 
 hg an a
 hg annotate a
