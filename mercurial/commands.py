@@ -505,7 +505,7 @@ def help_(ui, name=None, with_version=False):
         if with_version:
             show_version(ui)
             ui.write('\n')
-        aliases, i = findcmd(name)
+        aliases, i = findcmd(ui, name)
         # synopsis
         ui.write("%s\n\n" % i[2])
 
@@ -818,6 +818,7 @@ def backout(ui, repo, rev, **opts):
         parent = p1
     hg.clean(repo, node, show_stats=False)
     revert_opts = opts.copy()
+    revert_opts['all'] = True
     revert_opts['rev'] = hex(parent)
     revert(ui, repo, **revert_opts)
     commit_opts = opts.copy()
@@ -1151,7 +1152,7 @@ def debugcomplete(ui, cmd='', **opts):
         options = []
         otables = [globalopts]
         if cmd:
-            aliases, entry = findcmd(cmd)
+            aliases, entry = findcmd(ui, cmd)
             otables.append(entry[1])
         for t in otables:
             for o in t:
@@ -1161,7 +1162,7 @@ def debugcomplete(ui, cmd='', **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    clist = findpossible(cmd).keys()
+    clist = findpossible(ui, cmd).keys()
     clist.sort()
     ui.write("%s\n" % "\n".join(clist))
 
@@ -2286,8 +2287,12 @@ def revert(ui, repo, *pats, **opts):
 
     If names are given, all files matching the names are reverted.
 
-    If no arguments are given, all files in the repository are reverted.
+    If no arguments are given, no files are reverted.
     """
+
+    if not pats and not opts['all']:
+        raise util.Abort(_('no files or directories specified'))
+
     parent, p2 = repo.dirstate.parents()
     if opts['rev']:
         node = repo.lookup(opts['rev'])
@@ -3046,7 +3051,8 @@ table = {
          _('hg rename [OPTION]... SOURCE... DEST')),
     "^revert":
         (revert,
-         [('r', 'rev', '', _('revision to revert to')),
+         [('a', 'all', None, _('revert all changes when no arguments given')),
+          ('r', 'rev', '', _('revision to revert to')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
           ('I', 'include', [], _('include names matching given patterns')),
           ('X', 'exclude', [], _('exclude names matching given patterns')),
@@ -3145,7 +3151,7 @@ norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot")
 optionalrepo = ("paths serve debugconfig")
 
-def findpossible(cmd):
+def findpossible(ui, cmd):
     """
     Return cmd -> (aliases, command table entry)
     for each matching command.
@@ -3158,7 +3164,7 @@ def findpossible(cmd):
         found = None
         if cmd in aliases:
             found = cmd
-        else:
+        elif not ui.config("ui", "strict"):
             for a in aliases:
                 if a.startswith(cmd):
                     found = a
@@ -3174,9 +3180,9 @@ def findpossible(cmd):
 
     return choice
 
-def findcmd(cmd):
+def findcmd(ui, cmd):
     """Return (aliases, command table entry) for command string."""
-    choice = findpossible(cmd)
+    choice = findpossible(ui, cmd)
 
     if choice.has_key(cmd):
         return choice[cmd]
@@ -3211,7 +3217,7 @@ def parse(ui, args):
 
     if args:
         cmd, args = args[0], args[1:]
-        aliases, i = findcmd(cmd)
+        aliases, i = findcmd(ui, cmd)
         cmd = aliases[0]
         defaults = ui.config("defaults", cmd)
         if defaults:

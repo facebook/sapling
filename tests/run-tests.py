@@ -211,6 +211,10 @@ def run_one(test):
         sys.stdout.write('.')
         sys.stdout.flush()
 
+    # create a fresh hgrc
+    hgrc = file(HGRCPATH, 'w+')
+    hgrc.close()
+
     err = os.path.join(TESTDIR, test+".err")
     ref = os.path.join(TESTDIR, test+".out")
 
@@ -319,11 +323,11 @@ os.environ['TZ'] = 'GMT'
 os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
 os.environ["HGMERGE"]  = sys.executable + ' -c "import sys; sys.exit(0)"'
 os.environ["HGUSER"]   = "test"
-os.environ["HGRCPATH"] = ""
 
 TESTDIR = os.environ["TESTDIR"] = os.getcwd()
 HGTMP   = os.environ["HGTMP"]   = tempfile.mkdtemp("", "hgtests.")
 DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
+HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
 
 vlog("# Using TESTDIR", TESTDIR)
 vlog("# Using HGTMP", HGTMP)

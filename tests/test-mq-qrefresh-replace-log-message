@@ -1,9 +1,8 @@
 #!/bin/sh
 
 # Environement setup for MQ
-HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
-echo "[extensions]" >> $HGTMP/.hgrc
-echo "mq=" >> $HGTMP/.hgrc
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
 
 #Repo init
 hg init

@@ -31,7 +31,7 @@ echo %% should show a b c e
 ls
 echo %% should verbosely save backup to e.orig
 echo z > e
-hg revert -v
+hg revert --all -v
 echo %% should say no changes needed
 hg revert a
 echo %% should say file not managed
@@ -46,9 +46,9 @@ echo z > z
 hg add z
 hg st
 echo %% should add a, forget z
-hg revert -r0
+hg revert --all -r0
 echo %% should forget a
-hg revert -rtip
+hg revert --all -rtip
 rm -f a *.orig
 echo %% should silently add a
 hg revert -r0 a
@@ -56,7 +56,7 @@ hg st a
 
 hg update -C
 chmod +x c
-hg revert
+hg revert --all
 echo %% should print non-executable
 test -x c || echo non-executable
 
@@ -64,7 +64,7 @@ chmod +x c
 hg commit -d '1000001 0' -m exe
 
 chmod -x c
-hg revert
+hg revert --all
 echo %% should print executable
 test -x c && echo executable
 
@@ -78,6 +78,11 @@ hg commit -d '2 0' -m a
 hg update 0
 mkdir b
 echo b > b/b
+
+echo % should fail - no arguments
 hg revert -rtip
+
+echo % should succeed
+hg revert --all -rtip
 
 true
