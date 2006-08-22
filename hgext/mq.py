@@ -1238,11 +1238,13 @@ class queue:
             self.ui.write(p + '\n')
         else:
             self.ui.write("No patches applied\n")
+            return 1
 
     def next(self, repo):
         end = self.series_end()
         if end == len(self.series):
             self.ui.write("All patches applied\n")
+            return 1
         else:
             p = self.series[end]
             if self.ui.verbose:
@@ -1255,8 +1257,10 @@ class queue:
             self.ui.write(p + '\n')
         elif len(self.applied) == 1:
             self.ui.write("Only one patch applied\n")
+            return 1
         else:
             self.ui.write("No patches applied\n")
+            return 1
 
     def qimport(self, repo, files, patch=None, existing=None, force=None):
         if len(files) > 1 and patch:
@@ -1403,18 +1407,15 @@ def series(ui, repo, **opts):
 
 def top(ui, repo, **opts):
     """print the name of the current patch"""
-    repo.mq.top(repo)
-    return 0
+    return repo.mq.top(repo)
 
 def next(ui, repo, **opts):
     """print the name of the next patch"""
-    repo.mq.next(repo)
-    return 0
+    return repo.mq.next(repo)
 
 def prev(ui, repo, **opts):
     """print the name of the previous patch"""
-    repo.mq.prev(repo)
-    return 0
+    return repo.mq.prev(repo)
 
 def new(ui, repo, patch, **opts):
     """create a new patch
