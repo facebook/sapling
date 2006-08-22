@@ -46,18 +46,20 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
+        opts = mdiff.diffopts()
+        opts.text = text
         fp.write("diff --git a/%s b/%s\n" % (f, f))
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, text=text))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, opts=opts))
     for f in added:
         to = None
         tn = read(f)
         fp.write("diff --git /dev/null b/%s\n" % (f))
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, text=text))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, opts=opts))
     for f in removed:
         to = repo.file(f).read(mmap[f])
         tn = None
         fp.write("diff --git a/%s /dev/null\n" % (f))
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, text=text))
+        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, opts=opts))
 
 def difftree(ui, repo, node1=None, node2=None, **opts):
     """diff trees from two commits"""
