@@ -32,6 +32,9 @@ writing tests:
                     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
   to strip dates
 
+- You can append your own hgrc settings to the file that the environment
+  variable HGRCPATH points to. This file is cleared before running a test.
+
 You also need to be careful that the tests are portable from one platform
 to another.  You're probably working on Linux, where the GNU toolchain has
 more (or different) functionality than on MacOS, *BSD, Solaris, AIX, etc.

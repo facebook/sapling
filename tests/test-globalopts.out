@@ -47,7 +47,7 @@ summary:     a
 0:8580ff50825a
 1:b6c483daf290
 %% -v/--verbose
-changeset:   1:b6c483daf2907ce5825c0bb50f5716226281cc1a
+changeset:   1:b6c483daf290
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
@@ -56,7 +56,7 @@ description:
 b
 
 
-changeset:   0:8580ff50825a50c8f716709acdf8de0deddcd6ab
+changeset:   0:8580ff50825a
 user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 files:       a
@@ -64,7 +64,7 @@ description:
 a
 
 
-changeset:   0:b6c483daf2907ce5825c0bb50f5716226281cc1a
+changeset:   0:b6c483daf290
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000

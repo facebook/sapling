@@ -169,7 +169,7 @@ class localrepository(repo.repository):
 
     tag_disallowed = ':\r\n'
 
-    def tag(self, name, node, local=False, message=None, user=None, date=None):
+    def tag(self, name, node, message, local, user, date):
         '''tag a revision with a symbolic name.
 
         if local is True, the tag is stored in a per-repository file.
@@ -191,11 +191,11 @@ class localrepository(repo.repository):
             if c in name:
                 raise util.Abort(_('%r cannot be used in a tag name') % c)
 
-        self.hook('pretag', throw=True, node=node, tag=name, local=local)
+        self.hook('pretag', throw=True, node=hex(node), tag=name, local=local)
 
         if local:
-            self.opener('localtags', 'a').write('%s %s\n' % (node, name))
-            self.hook('tag', node=node, tag=name, local=local)
+            self.opener('localtags', 'a').write('%s %s\n' % (hex(node), name))
+            self.hook('tag', node=hex(node), tag=name, local=local)
             return
 
         for x in self.status()[:5]:
@@ -203,15 +203,12 @@ class localrepository(repo.repository):
                 raise util.Abort(_('working copy of .hgtags is changed '
                                    '(please commit .hgtags manually)'))
 
-        self.wfile('.hgtags', 'ab').write('%s %s\n' % (node, name))
+        self.wfile('.hgtags', 'ab').write('%s %s\n' % (hex(node), name))
         if self.dirstate.state('.hgtags') == '?':
             self.add(['.hgtags'])
 
-        if not message:
-            message = _('Added tag %s for changeset %s') % (name, node)
-
         self.commit(['.hgtags'], message, user, date)
-        self.hook('tag', node=node, tag=name, local=local)
+        self.hook('tag', node=hex(node), tag=name, local=local)
 
     def tags(self):
         '''return a mapping of tag to node'''
@@ -1105,7 +1102,7 @@ class localrepository(repo.repository):
             else:
                 raise util.Abort(_("repository is unrelated"))
 
-        self.ui.note(_("found new changesets starting at ") +
+        self.ui.debug(_("found new changesets starting at ") +
                      " ".join([short(f) for f in fetch]) + "\n")
 
         self.ui.debug(_("%d total queries\n") % reqcnt)

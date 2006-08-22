@@ -64,7 +64,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
-changeset:   1:802f095af299cde27a85b2f056aef3829870956c
+changeset:   1:802f095af299
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -73,7 +73,7 @@ description:
 2
 
 
-changeset:   0:33aaa84a386bd609094aeb21a97c09436c482ef1
+changeset:   0:33aaa84a386b
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 files:       a
