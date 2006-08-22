@@ -548,13 +548,11 @@ current frame."
 			    '(("M " . modified)
 			      ("A " . added)
 			      ("R " . removed)
+			      ("! " . deleted)
 			      ("? " . nil)))))
 	  (if state
 	      (cdr state)
 	    'normal)))))
-
-(defun hg-tip ()
-  (split-string (hg-chomp (hg-run0 "-q" "tip")) ":"))
 
 (defmacro hg-view-output (args &rest body)
   "Execute BODY in a clean buffer, then quickly display that buffer.
@@ -637,10 +635,13 @@ An update occurs if optional argument FORCE is non-nil,
 hg-update-modeline is non-nil, or we have not yet checked the state of
 the file."
   (when (and (hg-root) (or force hg-update-modeline (not hg-mode)))
-    (let ((status (hg-file-status buffer-file-name)))
+    (let ((status (hg-file-status buffer-file-name))
+	  (parents
+	   (split-string (hg-chomp
+			  (hg-run0 "parents" "--template" "{rev}\n")) "\n")))
       (setq hg-status status
 	    hg-mode (and status (concat " Hg:"
-					(car (hg-tip))
+					(mapconcat 'identity parents "+")
 					(cdr (assq status
 						   '((normal . "")
 						     (removed . "r")
