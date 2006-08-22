@@ -916,7 +916,7 @@ class queue:
     def refresh(self, repo, pats=None, **opts):
         if len(self.applied) == 0:
             self.ui.write("No patches applied\n")
-            return
+            return 1
         wlock = repo.wlock()
         self.check_toppatch(repo)
         (top, patch) = (self.applied[-1].rev, self.applied[-1].name)
@@ -1450,9 +1450,9 @@ def refresh(ui, repo, *pats, **opts):
         patch = q.applied[-1].name
         (message, comment, user, date, hasdiff) = q.readheaders(patch)
         message = ui.edit('\n'.join(message), user or ui.username())
-    q.refresh(repo, pats, msg=message, **opts)
+    ret = q.refresh(repo, pats, msg=message, **opts)
     q.save_dirty()
-    return 0
+    return ret
 
 def diff(ui, repo, *pats, **opts):
     """diff of the current patch"""
