@@ -1211,6 +1211,21 @@ prompts for a path to check."
 	root)
     hg-root))
 
+(defun hg-cwd (&optional path)
+  "Return the current directory of PATH within the repository."
+  (do ((stack nil (cons (file-name-nondirectory
+			 (directory-file-name dir))
+			stack))
+       (prev nil dir)
+       (dir (file-name-directory (or path buffer-file-name
+				     (expand-file-name default-directory)))
+	    (file-name-directory (directory-file-name dir))))
+      ((equal prev dir))
+    (when (file-directory-p (concat dir ".hg"))
+      (let ((cwd (mapconcat 'identity stack "/")))
+	(unless (equal cwd "")
+	  (return (file-name-as-directory cwd)))))))
+
 (defun hg-status (path)
   "Print revision control status of a file or directory.
 With prefix argument, prompt for the path to give status for.
