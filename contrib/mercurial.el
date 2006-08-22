@@ -595,18 +595,21 @@ current frame."
   "Return status of PATHS in repo ROOT as an alist.
 Each entry is a pair (FILE-NAME . STATUS)."
   (let ((s (apply 'hg-run "--cwd" root "status" "-marduc" paths))
-	 result)
-      (dolist (entry (split-string (hg-chomp (cdr s)) "\n") (nreverse result))
-	(let ((state (cdr (assoc (substring entry 0 2)
-				 '(("M " . modified)
-				   ("A " . added)
-				   ("R " . removed)
-				   ("! " . deleted)
-				   ("C " . normal)
-				   ("I " . ignored)
-				   ("? " . nil)))))
-	      (name (substring entry 2)))
-	  (setq result (cons (cons name state) result))))))
+	result)
+    (dolist (entry (split-string (hg-chomp (cdr s)) "\n") (nreverse result))
+      (let (state name)
+	(if (equal (substring entry 1 2) " ")
+	    (setq state (cdr (assoc (substring entry 0 2)
+				    '(("M " . modified)
+				      ("A " . added)
+				      ("R " . removed)
+				      ("! " . deleted)
+				      ("C " . normal)
+				      ("I " . ignored)
+				      ("? " . nil))))
+		  name (substring entry 2))
+	  (setq name (substring entry 0 (search ": " entry :from-end t))))
+	(setq result (cons (cons name state) result))))))
 
 (defmacro hg-view-output (args &rest body)
   "Execute BODY in a clean buffer, then quickly display that buffer.
@@ -641,7 +644,7 @@ being viewed."
 
 (put 'hg-view-output 'lisp-indent-function 1)
 
-;;; Context save and restore across revert.
+;;; Context save and restore across revert and other operations.
 
 (defun hg-position-context (pos)
   "Return information to help find the given position again."
