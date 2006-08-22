@@ -181,7 +181,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         elif f in ma:
             if n != ma[f]:
                 r = _("d")
-                if not overwrite and (linear_path or branchmerge):
+                if not overwrite:
                     r = repo.ui.prompt(
                         (_(" local changed %s which remote deleted\n") % f) +
                          _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
@@ -211,7 +211,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             continue
         if f in ma and n != ma[f]:
             r = _("k")
-            if not overwrite and (linear_path or branchmerge):
+            if not overwrite:
                 r = repo.ui.prompt(
                     (_("remote changed %s which local deleted\n") % f) +
                      _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
