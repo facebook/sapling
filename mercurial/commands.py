@@ -2272,8 +2272,8 @@ def revert(ui, repo, *pats, **opts):
     Modified files are saved with a .orig suffix before reverting.
     To disable these backups, use --no-backup.
 
-    Using the -r option, revert the given files or directories to
-    their contents as of a specific revision.  This can be helpful to"roll
+    Using the -r option, revert the given files or directories to their
+    contents as of a specific revision. This can be helpful to "roll
     back" some or all of a change that should not have been committed.
 
     Revert modifies the working directory.  It does not commit any
