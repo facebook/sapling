@@ -507,7 +507,7 @@ def help_(ui, name=None, with_version=False):
         if with_version:
             show_version(ui)
             ui.write('\n')
-        aliases, i = findcmd(name)
+        aliases, i = findcmd(ui, name)
         # synopsis
         ui.write("%s\n\n" % i[2])
 
@@ -1154,7 +1154,7 @@ def debugcomplete(ui, cmd='', **opts):
         options = []
         otables = [globalopts]
         if cmd:
-            aliases, entry = findcmd(cmd)
+            aliases, entry = findcmd(ui, cmd)
             otables.append(entry[1])
         for t in otables:
             for o in t:
@@ -1164,7 +1164,7 @@ def debugcomplete(ui, cmd='', **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    clist = findpossible(cmd).keys()
+    clist = findpossible(ui, cmd).keys()
     clist.sort()
     ui.write("%s\n" % "\n".join(clist))
 
@@ -3149,7 +3149,7 @@ norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot")
 optionalrepo = ("paths serve debugconfig")
 
-def findpossible(cmd):
+def findpossible(ui, cmd):
     """
     Return cmd -> (aliases, command table entry)
     for each matching command.
@@ -3162,7 +3162,7 @@ def findpossible(cmd):
         found = None
         if cmd in aliases:
             found = cmd
-        else:
+        elif not ui.config("ui", "strict"):
             for a in aliases:
                 if a.startswith(cmd):
                     found = a
@@ -3178,9 +3178,9 @@ def findpossible(cmd):
 
     return choice
 
-def findcmd(cmd):
+def findcmd(ui, cmd):
     """Return (aliases, command table entry) for command string."""
-    choice = findpossible(cmd)
+    choice = findpossible(ui, cmd)
 
     if choice.has_key(cmd):
         return choice[cmd]
@@ -3215,7 +3215,7 @@ def parse(ui, args):
 
     if args:
         cmd, args = args[0], args[1:]
-        aliases, i = findcmd(cmd)
+        aliases, i = findcmd(ui, cmd)
         cmd = aliases[0]
         defaults = ui.config("defaults", cmd)
         if defaults:
