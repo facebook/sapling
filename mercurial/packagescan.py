@@ -25,6 +25,7 @@ def demandload(scope, modules):
     """ fake demandload function that collects the required modules
         foo            import foo
         foo bar        import foo, bar
+        foo@bar        import foo as bar
         foo.bar        import foo.bar
         foo:bar        from foo import bar
         foo:bar,quux   from foo import bar, quux
@@ -38,6 +39,8 @@ def demandload(scope, modules):
         except:
             module = m
             fromlist = []
+        if '@' in module:
+            module, as_ = module.split('@')
         mod = __import__(module, scope, scope, fromlist)
         if fromlist == []:
             # mod is only the top package, but we need all packages
