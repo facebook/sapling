@@ -155,7 +155,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             if n != m2[f]:
                 a = ma.get(f, nullid)
                 # are both different from the ancestor?
-                if n != a and m2[f] != a:
+                if not overwrite and n != a and m2[f] != a:
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
                     merge[f] = (fmerge(f, mw, m2, ma), m1.get(f, nullid), m2[f])
                     queued = 1
@@ -232,11 +232,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     del mw, m1, m2, ma
 
     ### apply phase
-
-    if overwrite:
-        for f in merge:
-            get[f] = merge[f][:2]
-        merge = {}
 
     if linear_path or overwrite:
         # we don't need to do any magic, just jump to the new rev
