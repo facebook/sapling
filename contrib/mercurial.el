@@ -1,6 +1,6 @@
 ;;; mercurial.el --- Emacs support for the Mercurial distributed SCM
 
-;; Copyright (C) 2005 Bryan O'Sullivan
+;; Copyright (C) 2005, 2006 Bryan O'Sullivan
 
 ;; Author: Bryan O'Sullivan <bos@serpentine.com>
 
@@ -724,6 +724,13 @@ code by typing `M-x find-library mercurial RET'."
 		 default-directory)
 	(cd hg-root-dir)))))
 
+(defun hg-fix-paths ()
+  "Fix paths reported by some Mercurial commands."
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward " \\.\\.." nil t)
+      (replace-match " " nil nil))))
+
 (defun hg-add (path)
   "Add PATH to the Mercurial repository on the next commit.
 With a prefix argument, prompt for the path to add."
@@ -732,8 +739,7 @@ With a prefix argument, prompt for the path to add."
 	(update (equal buffer-file-name path)))
     (hg-view-output (hg-output-buffer-name)
       (apply 'call-process (hg-binary) nil t nil (list "add" path))
-      ;; "hg add" shows pathes relative NOT TO ROOT BUT TO REPOSITORY
-      (replace-regexp " \\.\\.." " " nil 0 (buffer-size))
+      (hg-fix-paths)
       (goto-char 0)
       (cd (hg-root path)))
     (when update
@@ -973,7 +979,7 @@ With a prefix argument, prompt for the path to forget."
     (hg-view-output (hg-output-buffer-name)
       (apply 'call-process (hg-binary) nil t nil (list "forget" path))
       ;; "hg forget" shows pathes relative NOT TO ROOT BUT TO REPOSITORY
-      (replace-regexp " \\.\\.." " " nil 0 (buffer-size))
+      (hg-fix-paths)
       (goto-char 0)
       (cd (hg-root path)))
     (when update
