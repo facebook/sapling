@@ -31,10 +31,19 @@
   :type 'sexp
   :group 'mercurial)
 
+(defcustom mq-edit-mode-hook nil
+  "Hook run after a buffer is populated to edit a patch description."
+  :type 'sexp
+  :group 'mercurial)
+
 
 ;;; Internal variables.
 
 (defvar mq-patch-history nil)
+
+(defvar mq-prev-buffer nil)
+(make-variable-buffer-local 'mq-prev-buffer)
+(put 'mq-prev-buffer 'permanent-local t)
 
 
 ;;; Global keymap.
@@ -51,6 +60,13 @@
 (define-key mq-global-map "n" 'mq-next)
 (define-key mq-global-map "p" 'mq-previous)
 (define-key mq-global-map "t" 'mq-top)
+
+
+;;; Refresh edit mode keymap.
+
+(defvar mq-edit-mode-map (make-sparse-keymap))
+(define-key mq-edit-mode-map "\C-c\C-c" 'mq-edit-finish)
+(define-key mq-edit-mode-map "\C-c\C-k" 'mq-edit-kill)
 
 
 ;;; Helper functions.
@@ -157,45 +173,103 @@ If PATCH is nil, pop at most one patch."
   (interactive)
   (mq-pop "-a"))
 
+(defun mq-refresh-internal (root &rest args)
+  (hg-sync-buffers root)
+  (let ((patch (mq-patch-info "qtop")))
+    (message "Refreshing %s..." patch)
+    (let ((ret (apply 'hg-run "qrefresh" args)))
+      (if (equal (car ret) 0)
+	  (message "Refreshing %s... done." patch)
+	(error "Refreshing %s... %s" patch (hg-chomp (cdr ret)))))))
+
 (defun mq-refresh ()
   "Refresh the topmost applied patch."
   (interactive)
   (let ((root (hg-root)))
     (unless root
-      (error "Cannot refresh outside a repository!"))
-    (hg-sync-buffers root)
-    (message "Refreshing patch...")
-    (let ((ret (hg-run "qrefresh")))
-      (if (equal (car ret) 0)
-	  (message "Refreshing patch... done.")
-	(error "Refreshing patch... %s" (hg-chomp (cdr ret)))))))
+      (error "Cannot refresh outside of a repository!"))
+  (mq-refresh-internal root)))
 
-(defun mq-patch-info (msg cmd)
-  (let ((ret (hg-run cmd)))
+(defun mq-patch-info (cmd &optional msg)
+  (let* ((ret (hg-run cmd))
+	 (info (hg-chomp (cdr ret))))
     (if (equal (car ret) 0)
-	(message "%s %s" msg (hg-chomp (cdr ret)))
-      (error "%s" (cdr ret)))))
+	(if msg
+	    (message "%s patch: %s" msg info)
+	  info)
+      (error "%s" info))))
 
 (defun mq-top ()
   "Print the name of the topmost applied patch."
   (interactive)
-  (mq-patch-info "Top patch is " "qtop"))
+  (mq-patch-info "qtop" "Top"))
 
 (defun mq-next ()
   "Print the name of the next patch to be pushed."
   (interactive)
-  (mq-patch-info "Next patch is " "qnext"))
+  (mq-patch-info "qnext" "Next"))
 
 (defun mq-previous ()
   "Print the name of the first patch below the topmost applied patch.
 This would become the active patch if popped to."
   (interactive)
-  (mq-patch-info "Previous patch is " "qprev"))
+  (mq-patch-info "qprev" "Previous"))
 
+(defun mq-edit-finish ()
+  (interactive)
+  (unless (equal (mq-patch-info "qtop") mq-top)
+    (error "Topmost patch has changed!"))
+  (hg-sync-buffers hg-root)
+  (mq-refresh-internal hg-root "-m" (buffer-substring (point-min) (point-max)))
+  (let ((buf mq-prev-buffer))
+    (kill-buffer nil)
+    (switch-to-buffer buf)))
+  
+(defun mq-edit-kill ()
+  "Kill the edit currently being prepared."
+  (interactive)
+  (when (or (not (buffer-modified-p)) (y-or-n-p "Really kill this edit? "))
+    (let ((buf mq-prev-buffer))
+      (kill-buffer nil)
+      (switch-to-buffer buf))))
+
+(defun mq-edit-mode ()
+  "Mode for editing the description of a patch.
+
+Key bindings
+------------
+\\[mq-edit-finish]	use this description
+\\[mq-edit-kill]	abandon this description"
+  (interactive)
+  (use-local-map mq-edit-mode-map)
+  (set-syntax-table text-mode-syntax-table)
+  (setq local-abbrev-table text-mode-abbrev-table
+	major-mode 'mq-edit-mode
+	mode-name "MQ-Edit")
+  (set-buffer-modified-p nil)
+  (setq buffer-undo-list nil)
+  (run-hooks 'text-mode-hook 'mq-edit-mode-hook))
+  
 (defun mq-refresh-edit ()
   "Refresh the topmost applied patch, editing the patch description."
   (interactive)
-  (error "Not yet implemented"))
+  (while mq-prev-buffer
+    (set-buffer mq-prev-buffer))
+  (let ((root (hg-root))
+	(prev-buffer (current-buffer))
+	(patch (mq-patch-info "qtop")))
+    (hg-sync-buffers root)
+    (let ((buf-name (format "*MQ: Edit description of %s*" patch)))
+      (switch-to-buffer (get-buffer-create buf-name))
+      (when (= (point-min) (point-max))
+	(set (make-local-variable 'hg-root) root)
+	(set (make-local-variable 'mq-top) patch)
+	(setq mq-prev-buffer prev-buffer)
+	(insert (hg-run0 "qheader"))
+	(goto-char (point-min)))
+      (mq-edit-mode)
+      (cd root)))
+  (message "Type `C-c C-c' to finish editing and refresh the patch."))
 
 
 (provide 'mq)
