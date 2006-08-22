@@ -91,7 +91,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     m1n = repo.changelog.read(p1)[0]
     m2n = repo.changelog.read(p2)[0]
     man = repo.manifest.ancestor(m1n, m2n)
-    m1 = repo.manifest.read(m1n)
+    m1 = repo.manifest.read(m1n).copy()
     m2 = repo.manifest.read(m2n).copy()
     ma = repo.manifest.read(man)
 
@@ -115,19 +115,16 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     remove = []
     forget = []
 
-    # construct a working dir manifest
-    mw = m1.copy()
+    # update m1 from working dir
     umap = dict.fromkeys(unknown)
 
     for f in added + modified + unknown:
-        mw[f] = nullid + "+"
-        mw.set(f, util.is_exec(repo.wjoin(f), mw.execf(f)))
-        if f in m1:
-            mw[f] = m1[f] + "+"
+        m1[f] = m1.get(f, nullid) + "+"
+        m1.set(f, util.is_exec(repo.wjoin(f), m1.execf(f)))
 
     for f in deleted + removed:
-        if f in mw:
-            del mw[f]
+        if f in m1:
+            del m1[f]
 
         # If we're jumping between revisions (as opposed to merging),
         # and if neither the working directory nor the target rev has
@@ -138,13 +135,13 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             forget.append(f)
 
     if partial:
-        for f in mw.keys():
-            if not partial(f): del mw[f]
+        for f in m1.keys():
+            if not partial(f): del m1[f]
         for f in m2.keys():
             if not partial(f): del m2[f]
 
     # Compare manifests
-    for f, n in mw.iteritems():
+    for f, n in m1.iteritems():
         if f in m2:
             queued = 0
 
@@ -154,7 +151,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 # are both different from the ancestor?
                 if not overwrite and n != a and m2[f] != a:
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
-                    merge[f] = (fmerge(f, mw, m2, ma), n[:20], m2[f])
+                    merge[f] = (fmerge(f, m1, m2, ma), n[:20], m2[f])
                     queued = 1
                 # are we clobbering?
                 # is remote's version newer?
@@ -169,12 +166,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 get[f] = (m2.execf(f), m2[f])
 
             # do we still need to look at mode bits?
-            if not queued and mw.execf(f) != m2.execf(f):
+            if not queued and m1.execf(f) != m2.execf(f):
                 if overwrite:
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
                     util.set_exec(repo.wjoin(f), m2.execf(f))
                 else:
-                    if fmerge(f, mw, m2, ma) != mw.execf(f):
+                    if fmerge(f, m1, m2, ma) != m1.execf(f):
                         repo.ui.debug(_(" updating permissions for %s\n")
                                       % f)
                         util.set_exec(repo.wjoin(f), mode)
@@ -226,7 +223,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             else:
                 repo.ui.debug(_("local deleted %s\n") % f)
 
-    del mw, m1, m2, ma
+    del m1, m2, ma
 
     ### apply phase
 
