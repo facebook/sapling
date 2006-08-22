@@ -123,8 +123,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         m1.set(f, util.is_exec(repo.wjoin(f), m1.execf(f)))
 
     for f in deleted + removed:
-        if f in m1:
-            del m1[f]
+        del m1[f]
 
         # If we're jumping between revisions (as opposed to merging),
         # and if neither the working directory nor the target rev has
