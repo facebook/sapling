@@ -1573,7 +1573,7 @@ def header(ui, repo, patch=None):
     else:
         if not q.applied:
             ui.write('No patches applied\n')
-            return
+            return 1
         patch = q.lookup('qtip')
     message = repo.mq.readheaders(patch)[0]
 
