@@ -79,7 +79,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         raise util.Abort(_("there is nothing to merge, just use "
                            "'hg update' or look at 'hg heads'"))
 
-    if not overwrite and not linear_path and not branchmerge:
+    if not linear_path and not (overwrite or branchmerge):
         raise util.Abort(_("update spans branches, use 'hg merge' "
                            "or 'hg update -C' to lose changes"))
 
@@ -140,10 +140,14 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if linear_path and f not in m2:
             forget.append(f)
 
+    if partial:
+        for f in mw.keys():
+            if not partial(f): del mw[f]
+        for f in m2.keys():
+            if not partial(f): del m2[f]
+
     # Compare manifests
     for f, n in mw.iteritems():
-        if partial and not partial(f):
-            continue
         if f in m2:
             queued = 0
 
@@ -205,8 +209,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 repo.ui.debug(_("working dir created %s, keeping\n") % f)
 
     for f, n in m2.iteritems():
-        if partial and not partial(f):
-            continue
         if f[0] == "/":
             continue
         if f in ma and n != ma[f]:
