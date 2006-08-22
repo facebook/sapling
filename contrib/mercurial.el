@@ -289,7 +289,7 @@ XEmacs and GNU Emacs."
 
 (defsubst hg-chomp (str)
   "Strip trailing newlines from a string."
-  (hg-replace-in-string str "[\r\n]+\'" ""))
+  (hg-replace-in-string str "[\r\n]+\\'" ""))
 
 (defun hg-run-command (command &rest args)
   "Run the shell command COMMAND, returning (EXIT-CODE . COMMAND-OUTPUT).
