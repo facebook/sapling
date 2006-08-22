@@ -740,7 +740,7 @@ With a prefix argument, prompt for the path to add."
     (hg-view-output (hg-output-buffer-name)
       (apply 'call-process (hg-binary) nil t nil (list "add" path))
       (hg-fix-paths)
-      (goto-char 0)
+      (goto-char (point-min))
       (cd (hg-root path)))
     (when update
       (unless vc-make-backup-files
@@ -980,7 +980,7 @@ With a prefix argument, prompt for the path to forget."
       (apply 'call-process (hg-binary) nil t nil (list "forget" path))
       ;; "hg forget" shows pathes relative NOT TO ROOT BUT TO REPOSITORY
       (hg-fix-paths)
-      (goto-char 0)
+      (goto-char (point-min))
       (cd (hg-root path)))
     (when update
       (with-current-buffer buf
