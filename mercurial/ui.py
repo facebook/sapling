@@ -12,13 +12,12 @@ demandload(globals(), "ConfigParser mdiff templater traceback util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
-                 interactive=True, traceback=False, parentui=None,
-                 readhooks=[]):
+                 interactive=True, traceback=False, parentui=None):
         self.overlay = {}
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
-            self.readhooks = list(readhooks)
+            self.readhooks = []
             self.trusted_users = {}
             self.trusted_groups = {}
             self.cdata = ConfigParser.SafeConfigParser()
@@ -38,7 +37,7 @@ class ui(object):
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
-            self.readhooks = list(parentui.readhooks or readhooks)
+            self.readhooks = parentui.readhooks[:]
             self.trusted_users = parentui.trusted_users.copy()
             self.trusted_groups = parentui.trusted_groups.copy()
             parent_cdata = self.parentui.cdata
@@ -109,6 +108,9 @@ class ui(object):
                 self.trusted_groups[group] = 1
         for hook in self.readhooks:
             hook(self)
+
+    def addreadhook(self, hook):
+        self.readhooks.append(hook)
 
     def setconfig(self, section, name, val):
         self.overlay[(section, name)] = val

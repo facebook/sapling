@@ -3305,11 +3305,13 @@ def dispatch(args):
         if num: signal.signal(num, catchterm)
 
     try:
-        u = ui.ui(traceback='--traceback' in sys.argv[1:],
-                  readhooks=[load_extensions])
+        u = ui.ui(traceback='--traceback' in sys.argv[1:])
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
+
+    load_extensions(u)
+    u.addreadhook(load_extensions)
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)
