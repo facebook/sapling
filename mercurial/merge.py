@@ -233,8 +233,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     repo.hook('preupdate', throw=True, parent1=xp1, parent2=xxp2)
 
     # update files
-    unresolved = []
-    updated, merged, removed = 0, 0, 0
+    updated, merged, removed, unresolved = 0, 0, 0, 0
     files = action.keys()
     files.sort()
     for f in files:
@@ -254,7 +253,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         elif other:
             repo.ui.status(_("merging %s\n") % f)
             if merge3(repo, f, my, other, xp1, xp2):
-                unresolved.append(f)
+                unresolved += 1
             util.set_exec(repo.wjoin(f), flag)
             merged += 1
         else:
@@ -299,9 +298,9 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     if show_stats:
         stats = ((updated, _("updated")),
-                 (merged - len(unresolved), _("merged")),
+                 (merged - unresolved, _("merged")),
                  (removed, _("removed")),
-                 (len(unresolved), _("unresolved")))
+                 (unresolved, _("unresolved")))
         note = ", ".join([_("%d files %s") % s for s in stats])
         repo.ui.status("%s\n" % note)
     if not partial:
@@ -319,6 +318,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             repo.ui.status(_("There are unresolved merges with"
                              " locally modified files.\n"))
 
-    repo.hook('update', parent1=xp1, parent2=xxp2, error=len(unresolved))
-    return len(unresolved)
+    repo.hook('update', parent1=xp1, parent2=xxp2, error=unresolved)
+    return unresolved
 
