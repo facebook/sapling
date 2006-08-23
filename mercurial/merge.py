@@ -113,9 +113,10 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     # update m1 from working dir
     umap = dict.fromkeys(unknown)
 
-    for f in added + modified + unknown:
-        m1[f] = m1.get(f, nullid) + "+"
-        m1.set(f, util.is_exec(repo.wjoin(f), m1.execf(f)))
+    for i,l in (("a", added), ("m", modified), ("u", unknown)):
+        for f in l:
+            m1[f] = m1.get(f, nullid) + i
+            m1.set(f, util.is_exec(repo.wjoin(f), m1.execf(f)))
 
     for f in deleted + removed:
         del m1[f]
@@ -154,7 +155,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     repo.ui.debug(_(" remote %s is newer, get\n") % f)
                     action[f] = (m2.execf(f), m2[f], None)
                     queued = 1
-            elif f in umap or f in added:
+            elif n[20:] in ("u","a"):
                 # this unknown file is the same as the checkout
                 # we need to reset the dirstate if the file was added
                 action[f] = (m2.execf(f), m2[f], None)
@@ -184,7 +185,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 action[f] = (None, None, None)
         else:
             # file is created on branch or in working directory
-            if overwrite and f not in umap:
+            if overwrite and n[20:] != "u":
                 repo.ui.debug(_("remote deleted %s, clobbering\n") % f)
                 action[f] = (None, None, None)
             elif not n[20:]: # same as parent
