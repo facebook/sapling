@@ -111,7 +111,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                   (short(man), short(m1n), short(m2n)))
 
     action = {}
-    remove = []
     forget = []
 
     # update m1 from working dir
@@ -182,19 +181,19 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                         (_(" local changed %s which remote deleted\n") % f) +
                          _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
                 if r == _("d"):
-                    remove.append(f)
+                    action[f] = (None, None, None)
             else:
                 repo.ui.debug(_("other deleted %s\n") % f)
-                remove.append(f) # other deleted it
+                action[f] = (None, None, None)
         else:
             # file is created on branch or in working directory
             if overwrite and f not in umap:
                 repo.ui.debug(_("remote deleted %s, clobbering\n") % f)
-                remove.append(f)
+                action[f] = (None, None, None)
             elif not n[20:]: # same as parent
                 if backwards:
                     repo.ui.debug(_("remote deleted %s\n") % f)
-                    remove.append(f)
+                    action[f] = (None, None, None)
                 else:
                     repo.ui.debug(_("local modified %s, keeping\n") % f)
             else:
@@ -238,51 +237,50 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     # update files
     unresolved = []
-    updated = 0
-    merged = 0
+    updated, merged, removed = 0, 0, 0
     files = action.keys()
     files.sort()
     for f in files:
         flag, my, other = action[f]
         if f[0] == "/":
             continue
-        if other:
+        if not my:
+            repo.ui.note(_("removing %s\n") % f)
+            util.audit_path(f)
+            try:
+                util.unlink(repo.wjoin(f))
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    repo.ui.warn(_("update failed to remove %s: %s!\n") %
+                                 (f, inst.strerror))
+            removed +=1
+        elif other:
             repo.ui.status(_("merging %s\n") % f)
             if merge3(repo, f, my, other, xp1, xp2):
                 unresolved.append(f)
+            util.set_exec(repo.wjoin(f), flag)
             merged += 1
         else:
             repo.ui.note(_("getting %s\n") % f)
             t = repo.file(f).read(my)
             repo.wwrite(f, t)
+            util.set_exec(repo.wjoin(f), flag)
             updated += 1
-        util.set_exec(repo.wjoin(f), flag)
-
-    remove.sort()
-    for f in remove:
-        repo.ui.note(_("removing %s\n") % f)
-        util.audit_path(f)
-        try:
-            util.unlink(repo.wjoin(f))
-        except OSError, inst:
-            if inst.errno != errno.ENOENT:
-                repo.ui.warn(_("update failed to remove %s: %s!\n") %
-                             (f, inst.strerror))
 
     # update dirstate
     if not partial:
         repo.dirstate.setparents(p1, p2)
         repo.dirstate.forget(forget)
-        if branchmerge:
-            repo.dirstate.update(remove, 'r')
-        else:
-            repo.dirstate.forget(remove)
-
         files = action.keys()
         files.sort()
         for f in files:
             flag, my, other = action[f]
-            if not other:
+            if not my:
+                if branchmerge:
+                    repo.dirstate.update([f], 'r')
+                else:
+                    repo.dirstate.forget([f])
+            elif not other:
                 if branchmerge:
                     repo.dirstate.update([f], 'n', st_mtime=-1)
                 else:
@@ -305,7 +303,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if show_stats:
         stats = ((updated, _("updated")),
                  (merged - len(unresolved), _("merged")),
-                 (len(remove), _("removed")),
+                 (removed, _("removed")),
                  (len(unresolved), _("unresolved")))
         note = ", ".join([_("%d files %s") % s for s in stats])
         repo.ui.status("%s\n" % note)
