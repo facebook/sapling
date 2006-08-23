@@ -16,7 +16,7 @@ summary:     1
 
 resolving manifests
  overwrite False branchmerge False partial False linear True
- ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
+ ancestor 33aaa84a386b local 802f095af299 remote 33aaa84a386b
  a versions differ, resolve
 remote created b
 merging a
@@ -32,7 +32,7 @@ summary:     2
 
 resolving manifests
  overwrite False branchmerge False partial False linear True
- ancestor a0c8bcbbb45c local 1165e8bd193e remote a0c8bcbbb45c
+ ancestor 802f095af299 local 33aaa84a386b remote 33aaa84a386b
 remote deleted b
 removing b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -50,7 +50,7 @@ summary:     1
 
 resolving manifests
  overwrite False branchmerge False partial False linear True
- ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
+ ancestor 33aaa84a386b local 802f095af299 remote 33aaa84a386b
  a versions differ, resolve
 remote created b
 merging a
@@ -101,7 +101,7 @@ abort: outstanding uncommitted changes
 failed
 resolving manifests
  overwrite False branchmerge True partial False linear False
- ancestor a0c8bcbbb45c local 1165e8bd193e remote 4096f2872392
+ ancestor 802f095af299 local 030602aee63d remote 33aaa84a386b
  a versions differ, resolve
  b versions differ, resolve
 merging a

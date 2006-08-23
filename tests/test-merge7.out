@@ -23,7 +23,7 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 merge: warning: conflicts during merge
 resolving manifests
  overwrite None branchmerge True partial False linear False
- ancestor 055d847dd401 local 2eded9ab0a5c remote 84cf5750dd20
+ ancestor 451c744aabcc local a070d41e8360 remote faaea63e63a9
  test.txt versions differ, resolve
 merging test.txt
 resolving test.txt

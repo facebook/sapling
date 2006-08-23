@@ -88,12 +88,9 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if modified or added or removed:
             raise util.Abort(_("outstanding uncommitted changes"))
 
-    m1n = repo.changelog.read(p1)[0]
-    m2n = repo.changelog.read(p2)[0]
-    man = repo.manifest.ancestor(m1n, m2n)
-    m1 = repo.manifest.read(m1n).copy()
-    m2 = repo.manifest.read(m2n).copy()
-    ma = repo.manifest.read(man)
+    m1 = repo.changectx(p1).manifest().copy()
+    m2 = repo.changectx(p2).manifest().copy()
+    ma = repo.changectx(pa).manifest()
 
     if not force:
         for f in unknown:
@@ -108,7 +105,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     repo.ui.debug(_(" overwrite %s branchmerge %s partial %s linear %s\n") %
                   (overwrite, branchmerge, bool(partial), linear_path))
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
-                  (short(man), short(m1n), short(m2n)))
+                  (short(p1), short(p2), short(pa)))
 
     action = {}
     forget = []
