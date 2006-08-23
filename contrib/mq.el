@@ -216,6 +216,7 @@ This would become the active patch if popped to."
   (mq-patch-info "qprev" "Previous"))
 
 (defun mq-edit-finish ()
+  "Finish editing the description of this patch, and refresh the patch."
   (interactive)
   (unless (equal (mq-patch-info "qtop") mq-top)
     (error "Topmost patch has changed!"))
