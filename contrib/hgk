@@ -100,7 +100,7 @@ to allow selection of commits to be displayed.)}
 	    set ids [string range $cmit 0 [expr {$j - 1}]]
 	    set ok 1
 	    foreach id $ids {
-		if {![regexp {^[0-9a-f]{40}$} $id]} {
+		if {![regexp {^[0-9a-f]{12}$} $id]} {
 		    set ok 0
 		    break
 		}
@@ -261,7 +261,7 @@ proc readotherrefs {base dname excl} {
 	catch {
 	    set fd [open $f r]
 	    set line [read $fd 40]
-	    if {[regexp {^[0-9a-f]{40}} $line id]} {
+	    if {[regexp {^[0-9a-f]{12}} $line id]} {
 		set name "$dname[file tail $f]"
 		set otherrefids($name) $id
 		lappend idotherrefs($id) $name
@@ -1743,7 +1743,7 @@ proc readfindproc {} {
 	}
 	return
     }
-    if {![regexp {^[0-9a-f]{40}} $line id]} {
+    if {![regexp {^[0-9a-f]{12}} $line id]} {
 	error_popup "Can't parse git-diff-tree output: $line"
 	stopfindproc
 	return
@@ -1856,7 +1856,7 @@ proc readfilediffs {df} {
 	}
 	return
     }
-    if {[regexp {^([0-9a-f]{40}) \(from ([0-9a-f]{40})\)} $line match id p]} {
+    if {[regexp {^([0-9a-f]{12}) \(from ([0-9a-f]{12})\)} $line match id p]} {
 	# start of a new string of diffs
 	donefilediff
 	set fdiffids [list $id $p]
@@ -2014,7 +2014,7 @@ proc appendwithlinks {text} {
     set start [$ctext index "end - 1c"]
     $ctext insert end $text
     $ctext insert end "\n"
-    set links [regexp -indices -all -inline {[0-9a-f]{40}} $text]
+    set links [regexp -indices -all -inline {[0-9a-f]{12}} $text]
     foreach l $links {
 	set s [lindex $l 0]
 	set e [lindex $l 1]

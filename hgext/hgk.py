@@ -87,12 +87,17 @@ def difftree(ui, repo, node1=None, node2=None, **opts):
 
         for f in modified:
             # TODO get file permissions
-            print ":100664 100664 %s %s M\t%s\t%s" % (hg.hex(mmap[f]),
-                                                      hg.hex(mmap2[f]), f, f)
+            print ":100664 100664 %s %s M\t%s\t%s" % (hg.short(mmap[f]),
+                                                      hg.short(mmap2[f]),
+                                                      f, f)
         for f in added:
-            print ":000000 100664 %s %s N\t%s\t%s" % (empty, hg.hex(mmap2[f]), f, f)
+            print ":000000 100664 %s %s N\t%s\t%s" % (empty,
+                                                      hg.short(mmap2[f]),
+                                                      f, f)
         for f in removed:
-            print ":100664 000000 %s %s D\t%s\t%s" % (hg.hex(mmap[f]), empty, f, f)
+            print ":100664 000000 %s %s D\t%s\t%s" % (hg.short(mmap[f]),
+                                                      empty,
+                                                      f, f)
     ##
 
     while True:
@@ -124,11 +129,11 @@ def difftree(ui, repo, node1=None, node2=None, **opts):
 def catcommit(repo, n, prefix, changes=None):
     nlprefix = '\n' + prefix;
     (p1, p2) = repo.changelog.parents(n)
-    (h, h1, h2) = map(hg.hex, (n, p1, p2))
+    (h, h1, h2) = map(hg.short, (n, p1, p2))
     (i1, i2) = map(repo.changelog.rev, (p1, p2))
     if not changes:
         changes = repo.changelog.read(n)
-    print "tree %s" % (hg.hex(changes[0]))
+    print "tree %s" % (hg.short(changes[0]))
     if i1 != -1: print "parent %s" % (h1)
     if i2 != -1: print "parent %s" % (h2)
     date_ar = changes[2]
@@ -154,7 +159,7 @@ def base(ui, repo, node1, node2):
     node1 = repo.lookup(node1)
     node2 = repo.lookup(node2)
     n = repo.changelog.ancestor(node1, node2)
-    print hg.hex(n)
+    print hg.short(n)
 
 def catfile(ui, repo, type=None, r=None, **opts):
     """cat a specific revision"""
@@ -276,17 +281,17 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
             if parents:
                 pp = repo.changelog.parents(n)
                 if pp[0] != hg.nullid:
-                    parentstr += " " + hg.hex(pp[0])
+                    parentstr += " " + hg.short(pp[0])
                 if pp[1] != hg.nullid:
-                    parentstr += " " + hg.hex(pp[1])
+                    parentstr += " " + hg.short(pp[1])
             if not full:
-                print hg.hex(n) + parentstr
+                print hg.short(n) + parentstr
             elif full is "commit":
-                print hg.hex(n) + parentstr
+                print hg.short(n) + parentstr
                 catcommit(repo, n, '    ', changes)
             else:
                 (p1, p2) = repo.changelog.parents(n)
-                (h, h1, h2) = map(hg.hex, (n, p1, p2))
+                (h, h1, h2) = map(hg.short, (n, p1, p2))
                 (i1, i2) = map(repo.changelog.rev, (p1, p2))
 
                 date = changes[2][0]
