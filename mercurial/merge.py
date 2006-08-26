@@ -8,7 +8,7 @@
 from node import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "util os tempfile")
+demandload(globals(), "errno util os tempfile")
 
 def fmerge(f, local, other, ancestor):
     """merge executable flags"""
@@ -168,7 +168,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
                     util.set_exec(repo.wjoin(f), m2.execf(f))
                 else:
-                    if fmerge(f, m1, m2, ma) != m1.execf(f):
+                    mode = fmerge(f, m1, m2, ma)
+                    if mode != m1.execf(f):
                         repo.ui.debug(_(" updating permissions for %s\n")
                                       % f)
                         util.set_exec(repo.wjoin(f), mode)
