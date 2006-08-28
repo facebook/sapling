@@ -58,3 +58,6 @@ adding a
 abort: no files or directories specified
 % should succeed
 reverting a
+%% issue332
+adding b/b
+reverting b/b

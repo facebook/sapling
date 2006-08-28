@@ -641,7 +641,11 @@ class localrepository(repo.repository):
         if node:
             fdict = dict.fromkeys(files)
             for fn in self.manifest.read(self.changelog.read(node)[0]):
-                fdict.pop(fn, None)
+                for ffn in fdict:
+                    # match if the file is the exact name or a directory
+                    if ffn == fn or fn.startswith("%s/" % ffn):
+                        del fdict[ffn]
+                        break
                 if match(fn):
                     yield 'm', fn
             for fn in fdict:
