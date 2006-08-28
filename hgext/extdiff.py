@@ -105,8 +105,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         else:
             dir2 = snapshot_wdir(modified + added)
         cmdline = ('%s %s %s %s' %
-                   (util.shellquote(diffcmd),
-                    ' '.join(map(util.shellquote, diffopts)),
+                   (util.shellquote(diffcmd), ' '.join(diffopts),
                     util.shellquote(dir1), util.shellquote(dir2)))
         ui.debug('running %r in %s\n' % (cmdline, tmproot))
         util.system(cmdline, cwd=tmproot)
