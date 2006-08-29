@@ -21,10 +21,10 @@ fileannotate = fileannotate-gitweb.tmpl
 filelog = filelog-gitweb.tmpl
 fileline = '<div style="font-family:monospace; white-space: pre;" class="parity#parity#"><span class="linenr">   #linenumber#</span> #line|escape#</div>'
 annotateline = '<tr style="font-family:monospace; white-space: pre;" class="parity#parity#"><td class="linenr" style="text-align: right;"><a href="?cs=#node|short#;style=gitweb">#author|obfuscate#@#rev#</a></td><td>#line|escape#</td></tr>'
-difflineplus = '<div class="pre" style="color:#008800;">#line|escape#</div>'
-difflineminus = '<div class="pre" style="color:#cc0000;">#line|escape#</div>'
-difflineat = '<div class="pre" style="color:#990099;">#line|escape#</div>'
-diffline = '<div class="pre">#line|escape#</div>'
+difflineplus = '<div style="color:#008800;">#line|escape#</div>'
+difflineminus = '<div style="color:#cc0000;">#line|escape#</div>'
+difflineat = '<div style="color:#990099;">#line|escape#</div>'
+diffline = '<div>#line|escape#</div>'
 changelogparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cmd=changeset;node=#node#;style=gitweb">#node|short#</a></td></tr>'
 changesetparent = '<tr><td>parent</td><td style="font-family:monospace"><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb">#node|short#</a></td></tr>'
 filerevparent = '<tr><td class="metatag">parent:</td><td><a href="?cmd=file;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>'
@@ -37,7 +37,7 @@ filerevchild = '<tr><td class="metatag">child:</td><td><a href="?cmd=file;file=#
 fileannotatechild = '<tr><td class="metatag">child:</td><td><a href="?cmd=annotate;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>'
 tags = tags-gitweb.tmpl
 tagentry = '<tr class="parity#parity#"><td class="age"><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#tag|escape#</b></a></td><td class="link"><a href="?cmd=changeset;node=#node|short#;style=gitweb">changeset</a> | <a href="?cmd=changelog;rev=#node|short#;style=gitweb">changelog</a> |  <a href="?mf=#tagmanifest|short#;path=/;style=gitweb">manifest</a></td></tr>'
-diffblock = '#lines#'
+diffblock = '<pre>#lines#</pre>'
 changelogtag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'
 changesettag = '<tr><td>tag</td><td>#tag|escape#</td></tr>'
 filediffparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cmd=changeset;node=#node#;style=gitweb">#node|short#</a></td></tr>'

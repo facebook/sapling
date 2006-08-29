@@ -47,3 +47,4 @@ a.rss_logo {
 	text-align:center; text-decoration:none;
 }
 a.rss_logo:hover { background-color:#ee5500; }
+pre { margin: 0; }
