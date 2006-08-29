@@ -55,7 +55,7 @@ executable
 adding a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % should fail - no arguments
-abort: no files or directories specified
+abort: no files or directories specified; use --all to revert the whole repo
 % should succeed
 reverting a
 %% issue332

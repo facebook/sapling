@@ -2291,7 +2291,8 @@ def revert(ui, repo, *pats, **opts):
     """
 
     if not pats and not opts['all']:
-        raise util.Abort(_('no files or directories specified'))
+        raise util.Abort(_('no files or directories specified; '
+                           'use --all to revert the whole repo'))
 
     parent, p2 = repo.dirstate.parents()
     if opts['rev']:
