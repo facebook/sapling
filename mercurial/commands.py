@@ -2887,6 +2887,7 @@ table = {
         (export,
          [('o', 'output', '', _('print output to file with formatted name')),
           ('a', 'text', None, _('treat all files as text')),
+          ('g', 'git', None, _('use git extended diff format')),
           ('', 'switch-parent', None, _('diff against the second parent'))],
          _('hg export [-a] [-o OUTFILESPEC] REV...')),
     "debugforget|forget":
