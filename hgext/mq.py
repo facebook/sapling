@@ -919,13 +919,13 @@ class queue:
             return 1
         wlock = repo.wlock()
         self.check_toppatch(repo)
-        (top, patch) = (self.applied[-1].rev, self.applied[-1].name)
+        (top, patchfn) = (self.applied[-1].rev, self.applied[-1].name)
         top = revlog.bin(top)
         cparents = repo.changelog.parents(top)
         patchparent = self.qparents(repo, top)
-        message, comments, user, date, patchfound = self.readheaders(patch)
+        message, comments, user, date, patchfound = self.readheaders(patchfn)
 
-        patchf = self.opener(patch, "w")
+        patchf = self.opener(patchfn, "w")
         msg = opts.get('msg', '').rstrip()
         if msg:
             if comments:
@@ -995,8 +995,9 @@ class queue:
             r = list(util.unique(dd))
             a = list(util.unique(aa))
             filelist = filter(matchfn, util.unique(m + r + a))
-            self.printdiff(repo, patchparent, files=filelist,
-                           changes=(m, a, r, [], u), fp=patchf)
+            patch.diff(repo, patchparent, files=filelist, match=matchfn,
+                       fp=patchf, changes=(m, a, r, [], u),
+                       opts=self.diffopts())
             patchf.close()
 
             changes = repo.changelog.read(tip)
@@ -1019,7 +1020,7 @@ class queue:
 
             if not msg:
                 if not message:
-                    message = "patch queue: %s\n" % patch
+                    message = "patch queue: %s\n" % patchfn
                 else:
                     message = "\n".join(message)
             else:
@@ -1027,7 +1028,7 @@ class queue:
 
             self.strip(repo, top, update=False, backup='strip', wlock=wlock)
             n = repo.commit(filelist, message, changes[1], force=1, wlock=wlock)
-            self.applied[-1] = statusentry(revlog.hex(n), patch)
+            self.applied[-1] = statusentry(revlog.hex(n), patchfn)
             self.applied_dirty = 1
         else:
             self.printdiff(repo, patchparent, fp=patchf)
