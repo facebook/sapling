@@ -127,6 +127,30 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
+% cd b; hg qrefresh
+adding a
+foo
+
+diff -r cb9a9f314b8b a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@ a
+ a
++a
+diff -r cb9a9f314b8b b/f
+--- /dev/null
++++ b/b/f
+@@ -0,0 +1,1 @@
++f
+% hg qrefresh .
+foo
+
+diff -r cb9a9f314b8b b/f
+--- /dev/null
++++ b/b/f
+@@ -0,0 +1,1 @@
++f
+M a
 new file
 
 diff --git a/new b/new
