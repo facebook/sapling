@@ -241,9 +241,6 @@ def patch(patchname, ui, strip=1, cwd=None):
         fp = os.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
                                            util.shellquote(patchname)))
 
-        if dopatch == 'filter':
-            False and os.unlink(patchname)
-
         for line in fp:
             line = line.rstrip()
             ui.note(line + '\n')
@@ -265,6 +262,9 @@ def patch(patchname, ui, strip=1, cwd=None):
                     printed_file = True
                 ui.warn(line + '\n')
             
+        if dopatch == 'filter':
+            os.unlink(patchname)
+
         code = fp.close()
         if code:
             raise util.Abort(_("patch command failed: %s") %
