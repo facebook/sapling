@@ -205,7 +205,8 @@ def patchbomb(ui, repo, *revs, **opts):
 
     commands.export(ui, repo, *revs, **{'output': exportee(patches),
                                         'switch_parent': False,
-                                        'text': None})
+                                        'text': None,
+                                        'git': opts.get('git')})
 
     jumbo = []
     msgs = []
@@ -322,6 +323,7 @@ cmdtable = {
       ('', 'bcc', [], 'email addresses of blind copy recipients'),
       ('c', 'cc', [], 'email addresses of copy recipients'),
       ('d', 'diffstat', None, 'add diffstat output to messages'),
+      ('g', 'git', None, _('use git extended diff format')),
       ('f', 'from', '', 'email address of sender'),
       ('', 'plain', None, 'omit hg patch header'),
       ('n', 'test', None, 'print messages that would be sent'),
