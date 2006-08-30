@@ -140,7 +140,9 @@ def patchbomb(ui, repo, *revs, **opts):
             if line.startswith('#'):
                 if line.startswith('# Node ID'): node = line.split()[-1]
                 continue
-            if line.startswith('diff -r'): break
+            if (line.startswith('diff -r')
+                or line.startswith('diff --git')):
+                break
             desc.append(line)
         if not node: raise ValueError
 
