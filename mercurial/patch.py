@@ -182,7 +182,7 @@ def readgitpatch(patchname):
 
     return (dopatch, gitpatches)
 
-def dogitpatch(patchname, gitpatches):
+def dogitpatch(patchname, gitpatches, cwd=None):
     """Preprocess git patch so that vanilla patch can handle it"""
     pf = file(patchname)
     pfline = 1
@@ -196,7 +196,7 @@ def dogitpatch(patchname, gitpatches):
             if not p.copymod:
                 continue
 
-            copyfile(p.oldpath, p.path)
+            copyfile(p.oldpath, p.path, basedir=cwd)
 
             # rewrite patch hunk
             while pfline < p.lineno:
@@ -233,7 +233,7 @@ def patch(patchname, ui, strip=1, cwd=None):
     fuzz = False
     if dopatch:
         if dopatch == 'filter':
-            patchname = dogitpatch(patchname, gitpatches)
+            patchname = dogitpatch(patchname, gitpatches, cwd=cwd)
         patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
         args = []
         if cwd:
