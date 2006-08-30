@@ -694,8 +694,8 @@ class queue:
         stripall(rev, revnum)
 
         change = chlog.read(rev)
-        repo.manifest.strip(repo.manifest.rev(change[0]), revnum)
         chlog.strip(revnum, revnum)
+        repo.manifest.strip(repo.manifest.rev(change[0]), revnum)
         if saveheads:
             self.ui.status("adding branch\n")
             commands.unbundle(self.ui, repo, chgrpfile, update=False)
