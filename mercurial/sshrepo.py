@@ -34,9 +34,10 @@ class sshrepository(remoterepository):
         if create:
             try:
                 self.validate_repo(ui, sshcmd, args, remotecmd)
-                return # the repo is good, nothing more to do
             except hg.RepoError:
                 pass
+            else:
+                raise hg.RepoError(_("repository %s already exists") % path)
 
             cmd = '%s %s "%s init %s"'
             cmd = cmd % (sshcmd, args, remotecmd, self.path)
