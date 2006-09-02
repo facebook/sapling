@@ -52,6 +52,9 @@ class sshrepository(remoterepository):
         return self._url
 
     def validate_repo(self, ui, sshcmd, args, remotecmd):
+        # cleanup up previous run
+        self.cleanup()
+
         cmd = '%s %s "%s -R %s serve --stdio"'
         cmd = cmd % (sshcmd, args, remotecmd, self.path)
 
@@ -90,7 +93,7 @@ class sshrepository(remoterepository):
             if not l: break
             self.ui.status(_("remote: "), l)
 
-    def __del__(self):
+    def cleanup(self):
         try:
             self.pipeo.close()
             self.pipei.close()
@@ -100,6 +103,8 @@ class sshrepository(remoterepository):
             self.pipee.close()
         except:
             pass
+
+    __del__ = cleanup
 
     def do_cmd(self, cmd, **args):
         self.ui.debug(_("sending %s command\n") % cmd)

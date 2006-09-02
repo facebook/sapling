@@ -1,6 +1,7 @@
 # creating 'local'
 adding foo
 # init+push to remote2
+remote: abort: repository remote2 not found!
 changeset:   0:c4e059d443be
 tag:         tip
 user:        test
@@ -14,6 +15,7 @@ remote: adding manifests
 remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
 # clone to remote1
+remote: abort: repository remote1 not found!
 searching for changes
 remote: abort: repository remote1 not found!
 remote: adding changesets
