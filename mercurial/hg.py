@@ -127,12 +127,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
-    dest_repo = None
-    try:
-        dest_repo = repository(ui, dest)
-        raise util.Abort(_("destination '%s' already exists." % dest))
-    except RepoError:
-        dest_repo = repository(ui, dest, create=True)
+    dest_repo = repository(ui, dest, create=True)
 
     dest_path = None
     dir_cleanup = None
