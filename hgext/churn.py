@@ -70,7 +70,7 @@ def __gather(ui, repo, node1, node2):
 
     return (who, lines)
 
-def gather_stats(ui, repo, amap, revs=None):
+def gather_stats(ui, repo, amap, revs=None, progress=False):
     stats = {}
     
     cl    = repo.changelog
@@ -78,13 +78,16 @@ def gather_stats(ui, repo, amap, revs=None):
     if not revs:
         revs = range(0, cl.count())
 
+    nr_revs = len(revs)
+    cur_rev = 0
+
     for rev in revs:
         node2    = cl.node(rev)
         node1    = cl.parents(node2)[0]
 
-	if cl.parents(node2)[1] != node.nullid:
+        if cl.parents(node2)[1] != node.nullid:
             ui.note(_('Revision %d is a merge, ignoring...\n') % (rev,))
-	    continue
+            continue
 
         who, lines = __gather(ui, repo, node1, node2)
 
@@ -98,6 +101,16 @@ def gather_stats(ui, repo, amap, revs=None):
         stats[who] += lines
 
         ui.note("rev %d: %d lines by %s\n" % (rev, lines, who))
+
+        cur_rev += 1
+        if progress:
+            if int(100.0*(cur_rev - 1)/nr_revs) < int(100.0*cur_rev/nr_revs):
+                ui.write("%d%%.." % (int(100.0*cur_rev/nr_revs),))
+                sys.stdout.flush()
+
+    if progress:
+        ui.write("done\n")
+        sys.stdout.flush()
 
     return stats
 
@@ -138,7 +151,7 @@ def churn(ui, repo, **opts):
 
     revs = [int(r) for r in commands.revrange(ui, repo, opts['rev'])]
     revs.sort()
-    stats = gather_stats(ui, repo, amap, revs)
+    stats = gather_stats(ui, repo, amap, revs, opts.get('progress'))
 
     # make a list of tuples (name, lines) and sort it in descending order
     ordered = stats.items()
@@ -159,6 +172,7 @@ cmdtable = {
     "churn":
     (churn,
      [('r', 'rev', [], _('limit statistics to the specified revisions')),
-      ('', 'aliases', '', _('file with email aliases'))],
-    'hg churn [-r revision range] [-a file]'),
+      ('', 'aliases', '', _('file with email aliases')),
+      ('', 'progress', None, _('show progress'))],
+    'hg churn [-r revision range] [-a file] [--progress]'),
 }
