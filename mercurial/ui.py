@@ -54,7 +54,7 @@ class ui(object):
     def updateopts(self, verbose=False, debug=False, quiet=False,
                    interactive=True, traceback=False, config=[]):
         self.quiet = (self.quiet or quiet) and not verbose and not debug
-        self.verbose = (self.verbose or verbose) or debug
+        self.verbose = ((self.verbose or verbose) or debug) and not self.quiet
         self.debugflag = (self.debugflag or debug)
         self.interactive = (self.interactive and interactive)
         self.traceback = self.traceback or traceback
