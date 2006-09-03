@@ -67,8 +67,8 @@
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'email.Parser mercurial:commands,templater,util')
-demandload(globals(), 'fnmatch socket time')
+demandload(globals(), 'mercurial:commands,patch,templater,util,mail')
+demandload(globals(), 'email.Parser fnmatch socket time')
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -229,8 +229,8 @@ class notifier(object):
         else:
             self.ui.status(_('notify: sending %d subscribers %d changes\n') %
                              (len(self.subs), count))
-            mail = self.ui.sendmail()
-            mail.sendmail(templater.email(msg['From']), self.subs, msgtext)
+            mail.sendmail(self.ui, templater.email(msg['From']),
+                          self.subs, msgtext)
 
     def diff(self, node, ref):
         maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
@@ -238,7 +238,7 @@ class notifier(object):
             return
         fp = templater.stringio()
         prev = self.repo.changelog.parents(node)[0]
-        commands.dodiff(fp, self.ui, self.repo, prev, ref)
+        patch.diff(self.repo, fp, prev, ref)
         difflines = fp.getvalue().splitlines(1)
         if maxdiff > 0 and len(difflines) > maxdiff:
             self.sio.write(_('\ndiffs (truncated from %d to %d lines):\n\n') %
@@ -255,7 +255,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     changegroup. else send one email per changeset.'''
     n = notifier(ui, repo, hooktype)
     if not n.subs:
-        ui.debug(_('notify: no subscribers to this repo\n'))
+        ui.debug(_('notify: no subscribers to repo %s\n' % n.root))
         return
     if n.skipsource(source):
         ui.debug(_('notify: changes have source "%s" - skipping\n') %

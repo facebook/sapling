@@ -1,4 +1,3 @@
-(the addremove command is deprecated; use add and remove --after instead)
 adding foo
 checking changesets
 checking manifests

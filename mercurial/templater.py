@@ -459,7 +459,7 @@ class changeset_templater(object):
                 yield x
 
         if self.ui.debugflag:
-            files = self.repo.changes(log.parents(changenode)[0], changenode)
+            files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
             def showfiles(**args):
                 for x in showlist('file', files[0], **args): yield x
             def showadds(**args):

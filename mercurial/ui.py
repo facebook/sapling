@@ -1,22 +1,24 @@
 # ui.py - user interface bits for mercurial
 #
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "errno getpass os re smtplib socket sys tempfile")
-demandload(globals(), "ConfigParser templater traceback util")
+demandload(globals(), "errno getpass os re socket sys tempfile")
+demandload(globals(), "ConfigParser mdiff templater traceback util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
-                 interactive=True, traceback=False, parentui=None):
+                 interactive=True, traceback=False, parentui=None,
+                 readhooks=[]):
         self.overlay = {}
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
+            self.readhooks = list(readhooks)
             self.cdata = ConfigParser.SafeConfigParser()
             self.readconfig(util.rcpath())
 
@@ -34,6 +36,7 @@ class ui(object):
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
+            self.readhooks = list(parentui.readhooks or readhooks)
             parent_cdata = self.parentui.cdata
             self.cdata = ConfigParser.SafeConfigParser(parent_cdata.defaults())
             # make interpolation work
@@ -78,6 +81,8 @@ class ui(object):
         for name, path in self.configitems("paths"):
             if path and "://" not in path and not os.path.isabs(path):
                 self.cdata.set("paths", name, os.path.join(root, path))
+        for hook in self.readhooks:
+            hook(self)
 
     def setconfig(self, section, name, val):
         self.overlay[(section, name)] = val
@@ -169,17 +174,6 @@ class ui(object):
             result[key.lower()] = value
         return result
 
-    def diffopts(self):
-        if self.diffcache:
-            return self.diffcache
-        result = {'showfunc': True, 'ignorews': False,
-                  'ignorewsamount': False, 'ignoreblanklines': False}
-        for key, value in self.configitems("diff"):
-            if value:
-                result[key.lower()] = (value.lower() == 'true')
-        self.diffcache = result
-        return result
-
     def username(self):
         """Return default username to be used in commits.
 
@@ -216,12 +210,6 @@ class ui(object):
         if not path and default is not None:
             path = self.config("paths", default)
         return path or loc
-
-    def setconfig_remoteopts(self, **opts):
-        if opts.get('ssh'):
-            self.setconfig("ui", "ssh", opts['ssh'])
-        if opts.get('remotecmd'):
-            self.setconfig("ui", "remotecmd", opts['remotecmd'])
 
     def write(self, *args):
         if self.header:
@@ -297,62 +285,6 @@ class ui(object):
             os.unlink(name)
 
         return t
-
-    def sendmail(self):
-        '''send mail message. object returned has one method, sendmail.
-        call as sendmail(sender, list-of-recipients, msg).'''
-
-        def smtp():
-            '''send mail using smtp.'''
-
-            local_hostname = self.config('smtp', 'local_hostname')
-            s = smtplib.SMTP(local_hostname=local_hostname)
-            mailhost = self.config('smtp', 'host')
-            if not mailhost:
-                raise util.Abort(_('no [smtp]host in hgrc - cannot send mail'))
-            mailport = int(self.config('smtp', 'port', 25))
-            self.note(_('sending mail: smtp host %s, port %s\n') %
-                      (mailhost, mailport))
-            s.connect(host=mailhost, port=mailport)
-            if self.configbool('smtp', 'tls'):
-                self.note(_('(using tls)\n'))
-                s.ehlo()
-                s.starttls()
-                s.ehlo()
-            username = self.config('smtp', 'username')
-            password = self.config('smtp', 'password')
-            if username and password:
-                self.note(_('(authenticating to mail server as %s)\n') %
-                          (username))
-                s.login(username, password)
-            return s
-
-        class sendmail(object):
-            '''send mail using sendmail.'''
-
-            def __init__(self, ui, program):
-                self.ui = ui
-                self.program = program
-
-            def sendmail(self, sender, recipients, msg):
-                cmdline = '%s -f %s %s' % (
-                    self.program, templater.email(sender),
-                    ' '.join(map(templater.email, recipients)))
-                self.ui.note(_('sending mail: %s\n') % cmdline)
-                fp = os.popen(cmdline, 'w')
-                fp.write(msg)
-                ret = fp.close()
-                if ret:
-                    raise util.Abort('%s %s' % (
-                        os.path.basename(self.program.split(None, 1)[0]),
-                        util.explain_exit(ret)[0]))
-
-        method = self.config('email', 'method', 'smtp')
-        if method == 'smtp':
-            mail = smtp()
-        else:
-            mail = sendmail(self, method)
-        return mail
 
     def print_exc(self):
         '''print exception traceback if traceback printing enabled.

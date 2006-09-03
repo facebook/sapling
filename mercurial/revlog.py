@@ -4,7 +4,7 @@ revlog.py - storage back-end for mercurial
 This provides efficient delta storage with O(1) retrieve and append
 and O(changes) merge between branches
 
-Copyright 2005 Matt Mackall <mpm@selenic.com>
+Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
@@ -744,8 +744,6 @@ class revlog(object):
 
     def lookup(self, id):
         """locate a node based on revision number or subset of hex nodeid"""
-        if id in self.nodemap:
-            return id
         if type(id) == type(0):
             return self.node(id)
         try:
@@ -760,10 +758,26 @@ class revlog(object):
                 if hex(n).startswith(id):
                     c.append(n)
             if len(c) > 1: raise RevlogError(_("Ambiguous identifier"))
-            if len(c) < 1: raise RevlogError(_("No match found"))
-            return c[0]
+            if len(c) == 1: return c[0]
 
-        return None
+        # might need fixing if we change hash lengths
+        if len(id) == 20 and id in self.nodemap:
+            return id
+
+        raise RevlogError(_("No match found"))
+
+    def cmp(self, node, text):
+        """compare text with a given file revision"""
+        p1, p2 = self.parents(node)
+        return hash(text, p1, p2) != node
+
+    def makenode(self, node, text):
+        """calculate a file nodeid for text, descended or possibly
+        unchanged from node"""
+
+        if self.cmp(node, text):
+            return hash(text, node, nullid)
+        return node
 
     def diff(self, a, b):
         """return a delta between two revisions"""

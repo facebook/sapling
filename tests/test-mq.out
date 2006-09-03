@@ -1,0 +1,148 @@
+% help
+mq extension - patch management and development
+
+This extension lets you work with a stack of patches in a Mercurial
+repository.  It manages two stacks of patches - all known patches, and
+applied patches (subset of known patches).
+
+Known patches are represented as patch files in the .hg/patches
+directory.  Applied patches are both patch files and changesets.
+
+Common tasks (use "hg help command" for more details):
+
+prepare repository to work with patches   qinit
+create new patch                          qnew
+import existing patch                     qimport
+
+print patch series                        qseries
+print applied patches                     qapplied
+print name of top applied patch           qtop
+
+add known patch to applied stack          qpush
+remove patch from applied stack           qpop
+refresh contents of top applied patch     qrefresh
+
+list of commands (use "hg help -v mq" to show aliases and global options):
+
+ qapplied     print the patches already applied
+ qclone       clone main and patch repository at same time
+ qcommit      commit changes in the queue repository
+ qdelete      remove patches from queue
+ qdiff        diff of the current patch
+ qfold        fold the named patches into the current patch
+ qguard       set or print guards for a patch
+ qheader      Print the header of the topmost or specified patch
+ qimport      import a patch
+ qinit        init a new queue repository
+ qnew         create a new patch
+ qnext        print the name of the next patch
+ qpop         pop the current patch off the stack
+ qprev        print the name of the previous patch
+ qpush        push the next patch onto the stack
+ qrefresh     update the current patch
+ qrename      rename a patch
+ qrestore     restore the queue state saved by a rev
+ qsave        save current queue state
+ qselect      set or print guarded patches to push
+ qseries      print the entire series file
+ qtop         print the name of the current patch
+ qunapplied   print the patches not yet applied
+ strip        strip a revision and all later revs on the same branch
+adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding b/z
+% qinit
+% -R qinit
+% qinit -c
+A .hgignore
+A series
+% qnew implies add
+A .hgignore
+A series
+A test.patch
+% qnew -m
+foo bar
+% qrefresh
+foo bar
+
+diff -r  xa
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@ a
+ a
++a
+% qpop
+Patch queue now empty
+% qpush
+applying test.patch
+Now at: test.patch
+% pop/push outside repo
+Patch queue now empty
+applying test.patch
+Now at: test.patch
+% qrefresh in subdir
+% pop/push -a in subdir
+Patch queue now empty
+applying test.patch
+applying test2.patch
+Now at: test2.patch
+% qseries
+test.patch
+test2.patch
+% qapplied
+test.patch
+test2.patch
+% qtop
+test2.patch
+% qprev
+test.patch
+% qnext
+All patches applied
+% pop, qnext, qprev, qapplied
+Now at: test.patch
+test2.patch
+Only one patch applied
+test.patch
+% commit should fail
+abort: cannot commit over an applied mq patch
+% push should fail
+pushing to ../../k
+abort: source has mq patches applied
+% qunapplied
+test2.patch
+% push should succeed
+Patch queue now empty
+pushing to ../../k
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+% strip
+adding x
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+saving bundle to 
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+new file
+
+diff --git a/new b/new
+new file mode 100755
+--- /dev/null
++++ b/new
+@@ -0,0 +1,1 @@
++foo
+copy file
+
+diff --git a/new b/copy
+copy from new
+copy to copy
+Now at: new
+applying copy
+Now at: copy
+diff --git a/new b/copy
+copy from new
+copy to copy

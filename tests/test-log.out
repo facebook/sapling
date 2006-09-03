@@ -1,0 +1,177 @@
+adding a
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     a
+
+% -f, directory
+abort: can only follow copies/renames for explicit file names
+% -f, but no args
+changeset:   4:8c1c8408f737
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+summary:     e
+
+changeset:   3:c4ba038c90ce
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     d
+
+changeset:   2:21fba396af4c
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     c
+
+changeset:   1:c0296dabce9b
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     b
+
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     a
+
+% one rename
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+files:       a
+description:
+a
+
+
+% many renames
+changeset:   4:8c1c8408f737
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+files:       dir/b e
+description:
+e
+
+
+changeset:   2:21fba396af4c
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+files:       b dir/b
+description:
+c
+
+
+changeset:   1:c0296dabce9b
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+files:       b
+description:
+b
+
+
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+files:       a
+description:
+a
+
+
+adding base
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding b1
+% log -f
+changeset:   3:e62f78d544b4
+tag:         tip
+parent:      1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1
+
+changeset:   1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     r1
+
+changeset:   0:67e992f2c4f3
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     base
+
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding b2
+% log -f -r 1:tip
+changeset:   1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     r1
+
+changeset:   2:60c670bf5b30
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     r2
+
+changeset:   3:e62f78d544b4
+parent:      1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1
+
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% log --follow-first
+changeset:   6:2404bbcab562
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1.1
+
+changeset:   5:302e9dd6890d
+parent:      3:e62f78d544b4
+parent:      4:ddb82e70d1a1
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     m12
+
+changeset:   3:e62f78d544b4
+parent:      1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1
+
+changeset:   1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     r1
+
+changeset:   0:67e992f2c4f3
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     base
+
+% log -P 2
+changeset:   6:2404bbcab562
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1.1
+
+changeset:   5:302e9dd6890d
+parent:      3:e62f78d544b4
+parent:      4:ddb82e70d1a1
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     m12
+
+changeset:   4:ddb82e70d1a1
+parent:      0:67e992f2c4f3
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b2
+
+changeset:   3:e62f78d544b4
+parent:      1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1
+

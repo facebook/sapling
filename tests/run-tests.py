@@ -201,6 +201,11 @@ def run(cmd):
     return ret, splitnewlines(output)
 
 def run_one(test):
+    '''tristate output:
+    None -> skipped
+    True -> passed
+    False -> failed'''
+
     vlog("# Test", test)
     if not verbose:
         sys.stdout.write('.')
@@ -217,15 +222,28 @@ def run_one(test):
     os.mkdir(tmpd)
     os.chdir(tmpd)
 
-    if test.endswith(".py"):
-        cmd = '%s "%s"' % (sys.executable, os.path.join(TESTDIR, test))
-    else:
-        cmd = '"%s"' % (os.path.join(TESTDIR, test))
+    lctest = test.lower()
 
-    # To reliably get the error code from batch files on WinXP,
-    # the "cmd /c call" prefix is needed. Grrr
-    if os.name == 'nt' and test.endswith(".bat"):
+    if lctest.endswith('.py'):
+        cmd = '%s "%s"' % (sys.executable, os.path.join(TESTDIR, test))
+    elif lctest.endswith('.bat'):
+        # do not run batch scripts on non-windows
+        if os.name != 'nt':
+            print '\nSkipping %s: batch script' % test
+            return None
+        # To reliably get the error code from batch files on WinXP,
+        # the "cmd /c call" prefix is needed. Grrr
         cmd = 'cmd /c call "%s"' % (os.path.join(TESTDIR, test))
+    else:
+        # do not run shell scripts on windows
+        if os.name == 'nt':
+            print '\nSkipping %s: shell script' % test
+            return None
+        # do not try to run non-executable programs
+        if not os.access(os.path.join(TESTDIR, test), os.X_OK):
+            print '\nSkipping %s: not executable' % test
+            return None
+        cmd = '"%s"' % (os.path.join(TESTDIR, test))
 
     if options.timeout > 0:
         signal.alarm(options.timeout)
@@ -244,7 +262,7 @@ def run_one(test):
         ref_out = splitnewlines(f.read())
         f.close()
     else:
-        ref_out = ['']
+        ref_out = []
     if out != ref_out:
         diffret = 1
         print "\nERROR: %s output changed" % (test)
@@ -330,16 +348,23 @@ try:
 
         tests = 0
         failed = 0
+        skipped = 0
 
         if len(args) == 0:
             args = os.listdir(".")
         for test in args:
-            if test.startswith("test-") and not '~' in test and not '.' in test:
-                if not run_one(test):
+            if (test.startswith("test-") and '~' not in test and
+                ('.' not in test or test.endswith('.py') or 
+                 test.endswith('.bat'))):
+                ret = run_one(test)
+                if ret is None:
+                    skipped += 1
+                elif not ret:
                     failed += 1
                 tests += 1
 
-        print "\n# Ran %d tests, %d failed." % (tests, failed)
+        print "\n# Ran %d tests, %d skipped, %d failed." % (tests, skipped,
+                                                            failed)
         if coverage:
             output_coverage()
     except KeyboardInterrupt:

@@ -1,7 +1,7 @@
 # hgweb/hgweb_mod.py - Web interface for a repository.
 #
 # Copyright 21 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>
-# Copyright 2005 Matt Mackall <mpm@selenic.com>
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -11,7 +11,7 @@ import os.path
 import mimetypes
 from mercurial.demandload import demandload
 demandload(globals(), "re zlib ConfigParser mimetools cStringIO sys tempfile")
-demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone")
+demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone,patch")
 demandload(globals(), "mercurial:templater")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
 from mercurial.node import *
@@ -48,6 +48,7 @@ class hgweb(object):
             self.repo = hg.repository(self.repo.ui, self.repo.root)
             self.maxchanges = int(self.repo.ui.config("web", "maxchanges", 10))
             self.stripecount = int(self.repo.ui.config("web", "stripes", 1))
+            self.maxshortchanges = int(self.repo.ui.config("web", "maxshortchanges", 60))
             self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
             self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
 
@@ -128,39 +129,29 @@ class hgweb(object):
         date1 = util.datestr(change1[2])
         date2 = util.datestr(change2[2])
 
-        modified, added, removed, deleted, unknown = r.changes(node1, node2)
+        modified, added, removed, deleted, unknown = r.status(node1, node2)[:5]
         if files:
             modified, added, removed = map(lambda x: filterfiles(files, x),
                                            (modified, added, removed))
 
-        diffopts = self.repo.ui.diffopts()
-        showfunc = diffopts['showfunc']
-        ignorews = diffopts['ignorews']
-        ignorewsamount = diffopts['ignorewsamount']
-        ignoreblanklines = diffopts['ignoreblanklines']
+        diffopts = patch.diffopts(self.repo.ui)
         for f in modified:
             to = r.file(f).read(mmap1[f])
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
-                            showfunc=showfunc, ignorews=ignorews,
-                            ignorewsamount=ignorewsamount,
-                            ignoreblanklines=ignoreblanklines), f, tn)
+                                          opts=diffopts), f, tn)
         for f in added:
             to = None
             tn = r.file(f).read(mmap2[f])
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
-                            showfunc=showfunc, ignorews=ignorews,
-                            ignorewsamount=ignorewsamount,
-                            ignoreblanklines=ignoreblanklines), f, tn)
+                                          opts=diffopts), f, tn)
         for f in removed:
             to = r.file(f).read(mmap1[f])
             tn = None
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
-                            showfunc=showfunc, ignorews=ignorews,
-                            ignorewsamount=ignorewsamount,
-                            ignoreblanklines=ignoreblanklines), f, tn)
+                                          opts=diffopts), f, tn)
 
-    def changelog(self, pos):
+    def changelog(self, pos, shortlog=False):
         def changenav(**map):
             def seq(factor, maxchanges=None):
                 if maxchanges:
@@ -175,8 +166,9 @@ class hgweb(object):
 
             l = []
             last = 0
-            for f in seq(1, self.maxchanges):
-                if f < self.maxchanges or f <= last:
+            maxchanges = shortlog and self.maxshortchanges or self.maxchanges
+            for f in seq(1, maxchanges):
+                if f < maxchanges or f <= last:
                     continue
                 if f > count:
                     break
@@ -221,14 +213,15 @@ class hgweb(object):
             for e in l:
                 yield e
 
+        maxchanges = shortlog and self.maxshortchanges or self.maxchanges
         cl = self.repo.changelog
         mf = cl.read(cl.tip())[0]
         count = cl.count()
-        start = max(0, pos - self.maxchanges + 1)
-        end = min(count, start + self.maxchanges)
+        start = max(0, pos - maxchanges + 1)
+        end = min(count, start + maxchanges)
         pos = end - 1
 
-        yield self.t('changelog',
+        yield self.t(shortlog and 'shortlog' or 'changelog',
                      changenav=changenav,
                      manifest=hex(mf),
                      rev=pos, changesets=count, entries=changelist,
@@ -395,7 +388,7 @@ class hgweb(object):
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
                      rename=self.renamelink(fl, n),
-                     permissions=self.repo.manifest.readflags(mfn)[f])
+                     permissions=self.repo.manifest.read(mfn).execf(f))
 
     def fileannotate(self, f, node):
         bcache = {}
@@ -449,7 +442,7 @@ class hgweb(object):
                      rename=self.renamelink(fl, n),
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
-                     permissions=self.repo.manifest.readflags(mfn)[f])
+                     permissions=self.repo.manifest.read(mfn).execf(f))
 
     def manifest(self, mnode, path):
         man = self.repo.manifest
@@ -459,7 +452,6 @@ class hgweb(object):
         rev = man.rev(mn)
         changerev = man.linkrev(mn)
         node = self.repo.changelog.node(changerev)
-        mff = man.readflags(mn)
 
         files = {}
 
@@ -493,7 +485,7 @@ class hgweb(object):
                        "filenode": hex(fnode),
                        "parity": self.stripes(parity),
                        "basename": f,
-                       "permissions": mff[full]}
+                       "permissions": mf.execf(full)}
                 parity += 1
 
         def dirlist(**map):
@@ -611,7 +603,8 @@ class hgweb(object):
                  lastchange = (0, 0), # FIXME
                  manifest = hex(mf),
                  tags = tagentries,
-                 shortlog = changelist)
+                 shortlog = changelist,
+                 archives=self.archivelist("tip"))
 
     def filediff(self, file, changeset):
         cl = self.repo.changelog
@@ -691,6 +684,7 @@ class hgweb(object):
         def expand_form(form):
             shortcuts = {
                 'cl': [('cmd', ['changelog']), ('rev', None)],
+                'sl': [('cmd', ['shortlog']), ('rev', None)],
                 'cs': [('cmd', ['changeset']), ('node', None)],
                 'f': [('cmd', ['file']), ('filenode', None)],
                 'fl': [('cmd', ['filelog']), ('filenode', None)],
@@ -772,6 +766,18 @@ class hgweb(object):
                 return
 
         req.write(self.changelog(hi))
+
+    def do_shortlog(self, req):
+        hi = self.repo.changelog.count() - 1
+        if req.form.has_key('rev'):
+            hi = req.form['rev'][0]
+            try:
+                hi = self.repo.changelog.rev(self.repo.lookup(hi))
+            except hg.RepoError:
+                req.write(self.search(hi)) # XXX redirect to 404 page?
+                return
+
+        req.write(self.changelog(hi, shortlog = True))
 
     def do_changeset(self, req):
         req.write(self.changeset(req.form['node'][0]))

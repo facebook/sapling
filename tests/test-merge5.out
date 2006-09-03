@@ -1,6 +1,3 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 removing b
-this update spans a branch affecting the following files:
- b
-aborting update spanning branches!
-(use 'hg merge' to merge across branches or 'hg update -C' to lose changes)
+abort: update spans branches, use 'hg merge' or 'hg update -C' to lose changes

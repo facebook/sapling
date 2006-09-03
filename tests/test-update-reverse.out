@@ -40,7 +40,7 @@ a
 side1
 side2
 resolving manifests
- force 1 allow None moddirstate True linear False
+ overwrite True branchmerge False partial False linear False
  ancestor 8515d4bfda76 local 1c0f48f8ece6 remote 0594b9004bae
 remote deleted side2, clobbering
 remote deleted side1, clobbering

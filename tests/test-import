@@ -1,7 +1,10 @@
 #!/bin/sh
 
 hg init a
+mkdir a/d1
+mkdir a/d1/d2
 echo line 1 > a/a
+echo line 1 > a/d1/d2/a
 hg --cwd a ci -d '0 0' -Ama
 
 echo line 2 >> a/a
@@ -69,7 +72,7 @@ rm -rf b
 
 echo % plain diff in email, no subject, no message body, should fail
 hg clone -r0 a b
-grep -v '^\(Subject\|email\)' msg.patch | hg --cwd b import -
+egrep -v '^(Subject|email)' msg.patch | hg --cwd b import -
 rm -rf b
 
 echo % hg export in email, should use patch header
@@ -79,3 +82,20 @@ python mkmsg.py | hg --cwd b import -
 hg --cwd b tip | grep second
 rm -rf b
 
+# bug non regression test
+# importing a patch in a subdirectory failed at the commit stage
+echo line 2 >> a/d1/d2/a
+hg --cwd a ci -u someoneelse -d '1 0' -m'subdir change'
+echo % hg import in a subdirectory
+hg clone -r0 a b
+hg --cwd a export tip | sed -e 's/d1\/d2\///' > tip.patch
+dir=`pwd`
+cd b/d1/d2 2>&1 > /dev/null
+hg import  ../../../tip.patch
+cd $dir
+echo "% message should be 'subdir change'"
+hg --cwd b tip | grep 'subdir change'
+echo "% committer should be 'someoneelse'"
+hg --cwd b tip | grep someoneelse
+echo "% should be empty"
+hg --cwd b status

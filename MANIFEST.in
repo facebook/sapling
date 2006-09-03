@@ -10,6 +10,7 @@ include templates/*.tmpl
 include templates/static/*
 include doc/README doc/Makefile doc/gendoc.py doc/*.txt doc/*.html doc/*.[0-9]
 recursive-include contrib *
+recursive-include hgext *
 include README
 include CONTRIBUTORS
 include COPYING
