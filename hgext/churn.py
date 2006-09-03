@@ -82,6 +82,8 @@ def gather_stats(ui, repo, amap, revs=None, progress=False):
     cur_rev = 0
 
     for rev in revs:
+        cur_rev += 1 # next revision
+
         node2    = cl.node(rev)
         node1    = cl.parents(node2)[0]
 
@@ -102,7 +104,6 @@ def gather_stats(ui, repo, amap, revs=None, progress=False):
 
         ui.note("rev %d: %d lines by %s\n" % (rev, lines, who))
 
-        cur_rev += 1
         if progress:
             if int(100.0*(cur_rev - 1)/nr_revs) < int(100.0*cur_rev/nr_revs):
                 ui.write("%d%%.." % (int(100.0*cur_rev/nr_revs),))
