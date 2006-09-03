@@ -14,7 +14,7 @@
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 demandload(globals(), 'time sys signal os')
-demandload(globals(), 'mercurial:hg,mdiff,fancyopts,commands,ui,util,templater')
+demandload(globals(), 'mercurial:hg,mdiff,fancyopts,commands,ui,util,templater,node')
 
 def __gather(ui, repo, node1, node2):
     def dirtywork(f, mmap1, mmap2):
@@ -81,6 +81,10 @@ def gather_stats(ui, repo, amap, revs=None):
     for rev in revs:
         node2    = cl.node(rev)
         node1    = cl.parents(node2)[0]
+
+	if cl.parents(node2)[1] != node.nullid:
+            ui.note(_('Revision %d is a merge, ignoring...\n') % (rev,))
+	    continue
 
         who, lines = __gather(ui, repo, node1, node2)
 
