@@ -227,14 +227,14 @@ def patch(patchname, ui, strip=1, cwd=None):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
 
-    (dopatch, gitpatches) = readgitpatch(patchname)
+    # helper function
+    def __patch(patchname):
+        """patch and updates the files and fuzz variables"""
+        files = {}
+        fuzz = False
 
-    files = {}
-    fuzz = False
-    if dopatch:
-        if dopatch == 'filter':
-            patchname = dogitpatch(patchname, gitpatches, cwd=cwd)
-        patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
+        patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''),
+                                    'patch')
         args = []
         if cwd:
             args.append('-d %s' % util.shellquote(cwd))
@@ -261,14 +261,24 @@ def patch(patchname, ui, strip=1, cwd=None):
                     ui.warn(pf + '\n')
                     printed_file = True
                 ui.warn(line + '\n')
-            
-        if dopatch == 'filter':
-            os.unlink(patchname)
-
         code = fp.close()
         if code:
             raise util.Abort(_("patch command failed: %s") %
                              util.explain_exit(code)[0])
+        return files, fuzz
+
+    (dopatch, gitpatches) = readgitpatch(patchname)
+
+    if dopatch:
+        if dopatch == 'filter':
+            patchname = dogitpatch(patchname, gitpatches, cwd=cwd)
+        try:
+            files, fuzz = __patch(patchname)
+        finally:
+            if dopatch == 'filter':
+                os.unlink(patchname)
+    else:
+        files, fuzz = {}, False
 
     for gp in gitpatches:
         files[gp.path] = (gp.op, gp)
