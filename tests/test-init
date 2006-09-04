@@ -27,12 +27,21 @@ hg init local
 echo this > local/foo
 hg ci --cwd local -A -m "init" -d "1000000 0"
 
+echo "#test failure"
+hg init local
+
 echo "# init+push to remote2"
 hg init -e ./dummyssh ssh://user@dummy/remote2
 hg incoming -R remote2 local
 hg push -R local -e ./dummyssh ssh://user@dummy/remote2
 
 echo "# clone to remote1"
+hg clone -e ./dummyssh local ssh://user@dummy/remote1
+
+echo "# init to existing repo"
+hg init -e ./dummyssh ssh://user@dummy/remote1
+
+echo "# clone to existing repo"
 hg clone -e ./dummyssh local ssh://user@dummy/remote1
 
 echo "# output of dummyssh"

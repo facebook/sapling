@@ -31,8 +31,16 @@ class localrepository(repo.repository):
             path = p
         self.path = os.path.join(path, ".hg")
 
-        if not create and not os.path.isdir(self.path):
-            raise repo.RepoError(_("repository %s not found") % path)
+        if not os.path.isdir(self.path):
+            if create:
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                os.mkdir(self.path)
+                os.mkdir(self.join("data"))
+            else:
+                raise repo.RepoError(_("repository %s not found") % path)
+        elif create:
+            raise repo.RepoError(_("repository %s already exists") % path)
 
         self.root = os.path.abspath(path)
         self.origroot = path
@@ -74,12 +82,6 @@ class localrepository(repo.repository):
         self.encodepats = None
         self.decodepats = None
         self.transhandle = None
-
-        if create:
-            if not os.path.exists(path):
-                os.mkdir(path)
-            os.mkdir(self.path)
-            os.mkdir(self.join("data"))
 
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
 
