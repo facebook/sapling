@@ -156,7 +156,7 @@ def churn(ui, repo, **opts):
 
     # make a list of tuples (name, lines) and sort it in descending order
     ordered = stats.items()
-    ordered.sort(cmp=lambda x, y: cmp(y[1], x[1]))
+    ordered.sort(lambda x, y: cmp(y[1], x[1]))
 
     maximum = ordered[0][1]
 
