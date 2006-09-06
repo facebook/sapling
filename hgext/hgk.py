@@ -9,6 +9,15 @@ from mercurial.demandload import *
 demandload(globals(), 'time sys signal os')
 demandload(globals(), 'mercurial:hg,mdiff,fancyopts,commands,ui,util')
 
+def filterfiles(files, filters):
+    l = [x for x in filters if x in files]
+
+    for t in files:
+        if not t.endswith("/"):
+            t += "/"
+        l += [x for x in filters if x.startswith(t)]
+    return l
+
 def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
            changes=None, text=False):
     def date(c):
@@ -41,13 +50,13 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
     mmap = repo.manifest.read(change[0])
     date1 = date(change)
 
+    opts = mdiff.diffopts()
+    opts.text = text
     for f in modified:
         to = None
         if f in mmap:
             to = repo.file(f).read(mmap[f])
         tn = read(f)
-        opts = mdiff.diffopts()
-        opts.text = text
         fp.write("diff --git a/%s b/%s\n" % (f, f))
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, opts=opts))
     for f in added:
@@ -64,27 +73,19 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
     def __difftree(repo, node1, node2, files=[]):
-        def date(c):
-            return time.asctime(time.gmtime(c[2][0]))
-
         if node2:
             change = repo.changelog.read(node2)
             mmap2 = repo.manifest.read(change[0])
             status = repo.status(node1, node2, files=files)[:5]
             modified, added, removed, deleted, unknown = status
-            def read(f): return repo.file(f).read(mmap2[f])
-            date2 = date(change)
         else:
-            date2 = time.asctime()
             status = repo.status(node1, files=files)[:5]
             modified, added, removed, deleted, unknown = status
             if not node1:
                 node1 = repo.dirstate.parents()[0]
-            def read(f): return file(os.path.join(repo.root, f)).read()
 
         change = repo.changelog.read(node1)
         mmap = repo.manifest.read(change[0])
-        date1 = date(change)
         empty = "0" * 40;
 
         for f in modified:
@@ -288,7 +289,7 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
                     parentstr += " " + hg.short(pp[1])
             if not full:
                 print hg.short(n) + parentstr
-            elif full is "commit":
+            elif full == "commit":
                 print hg.short(n) + parentstr
                 catcommit(repo, n, '    ', changes)
             else:
