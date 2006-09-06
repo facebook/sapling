@@ -61,21 +61,23 @@ def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
         fp.write("diff --git a/%s /dev/null\n" % (f))
         fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, opts=opts))
 
-def difftree(ui, repo, node1=None, node2=None, **opts):
+def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
-    def __difftree(repo, node1, node2):
+    def __difftree(repo, node1, node2, files=[]):
         def date(c):
             return time.asctime(time.gmtime(c[2][0]))
 
         if node2:
             change = repo.changelog.read(node2)
             mmap2 = repo.manifest.read(change[0])
-            modified, added, removed, deleted, unknown = repo.status(node1, node2)[:5]
+            status = repo.status(node1, node2, files=files)[:5]
+            modified, added, removed, deleted, unknown = status
             def read(f): return repo.file(f).read(mmap2[f])
             date2 = date(change)
         else:
             date2 = time.asctime()
-            modified, added, removed, deleted, unknown = repo.status(node1)[:5]
+            status = repo.status(node1, files=files)[:5]
+            modified, added, removed, deleted, unknown = status
             if not node1:
                 node1 = repo.dirstate.parents()[0]
             def read(f): return file(os.path.join(repo.root, f)).read()
@@ -120,9 +122,9 @@ def difftree(ui, repo, node1=None, node2=None, **opts):
         if opts['patch']:
             if opts['pretty']:
                 catcommit(repo, node2, "")
-            dodiff(sys.stdout, ui, repo, node1, node2)
+            dodiff(sys.stdout, ui, repo, node1, node2, files=files)
         else:
-            __difftree(repo, node1, node2)
+            __difftree(repo, node1, node2, files=files)
         if not opts['stdin']:
             break
 
@@ -332,7 +334,7 @@ cmdtable = {
                             ('s', 'stdin', None, 'stdin'),
                             ('C', 'copy', None, 'detect copies'),
                             ('S', 'search', "", 'search')],
-                            "hg git-diff-tree [options] node1 node2"),
+                            "hg git-diff-tree [options] node1 node2 [files...]"),
     "debug-cat-file": (catfile, [('s', 'stdin', None, 'stdin')],
                  "hg debug-cat-file [options] type file"),
     "debug-merge-base": (base, [], "hg debug-merge-base node node"),
