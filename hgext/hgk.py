@@ -25,7 +25,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
 
         change = repo.changelog.read(node1)
         mmap = repo.manifest.read(change[0])
-        empty = hg.nullid
+        empty = hg.short(hg.nullid)
 
         for f in modified:
             # TODO get file permissions
@@ -33,12 +33,12 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
                                                       hg.short(mmap2[f]),
                                                       f, f)
         for f in added:
-            print ":000000 100664 %s %s N\t%s\t%s" % (hg.short(nullid),
+            print ":000000 100664 %s %s N\t%s\t%s" % (empty,
                                                       hg.short(mmap2[f]),
                                                       f, f)
         for f in removed:
             print ":100664 000000 %s %s D\t%s\t%s" % (hg.short(mmap[f]),
-                                                      hg.short(nullid),
+                                                      empty,
                                                       f, f)
     ##
 
