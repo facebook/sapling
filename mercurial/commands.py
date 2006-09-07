@@ -8,7 +8,7 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), "os re sys signal shutil imp urllib pdb")
+demandload(globals(), "os re sys signal shutil imp urllib pdb shlex")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "fnmatch difflib patch random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
@@ -3223,7 +3223,7 @@ def parse(ui, args):
         cmd = aliases[0]
         defaults = ui.config("defaults", cmd)
         if defaults:
-            args = defaults.split() + args
+            args = shlex.split(defaults) + args
         c = list(i[1])
     else:
         cmd = None
