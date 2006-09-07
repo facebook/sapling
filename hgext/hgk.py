@@ -7,68 +7,7 @@
 
 from mercurial.demandload import *
 demandload(globals(), 'time sys signal os')
-demandload(globals(), 'mercurial:hg,mdiff,fancyopts,commands,ui,util')
-
-def filterfiles(files, filters):
-    l = [x for x in filters if x in files]
-
-    for t in files:
-        if not t.endswith("/"):
-            t += "/"
-        l += [x for x in filters if x.startswith(t)]
-    return l
-
-def dodiff(fp, ui, repo, node1, node2, files=None, match=util.always,
-           changes=None, text=False):
-    def date(c):
-        return time.asctime(time.gmtime(c[2][0]))
-
-    if not changes:
-        changes = repo.status(node1, node2, files, match=match)[:5]
-    modified, added, removed, deleted, unknown = changes
-    if files:
-        modified, added, removed = map(lambda x: filterfiles(files, x),
-                                       (modified, added, removed))
-
-    if not modified and not added and not removed:
-        return
-
-    if node2:
-        change = repo.changelog.read(node2)
-        mmap2 = repo.manifest.read(change[0])
-        date2 = date(change)
-        def read(f):
-            return repo.file(f).read(mmap2[f])
-    else:
-        date2 = time.asctime()
-        if not node1:
-            node1 = repo.dirstate.parents()[0]
-        def read(f):
-            return repo.wfile(f).read()
-
-    change = repo.changelog.read(node1)
-    mmap = repo.manifest.read(change[0])
-    date1 = date(change)
-
-    opts = mdiff.diffopts()
-    opts.text = text
-    for f in modified:
-        to = None
-        if f in mmap:
-            to = repo.file(f).read(mmap[f])
-        tn = read(f)
-        fp.write("diff --git a/%s b/%s\n" % (f, f))
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, opts=opts))
-    for f in added:
-        to = None
-        tn = read(f)
-        fp.write("diff --git /dev/null b/%s\n" % (f))
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, opts=opts))
-    for f in removed:
-        to = repo.file(f).read(mmap[f])
-        tn = None
-        fp.write("diff --git a/%s /dev/null\n" % (f))
-        fp.write(mdiff.unidiff(to, date1, tn, date2, f, None, opts=opts))
+demandload(globals(), 'mercurial:hg,fancyopts,commands,ui,util,patch')
 
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
@@ -123,7 +62,9 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         if opts['patch']:
             if opts['pretty']:
                 catcommit(repo, node2, "")
-            dodiff(sys.stdout, ui, repo, node1, node2, files=files)
+            patch.diff(repo, node1, node2,
+                       files=files,
+                       opts=patch.diffopts(ui, {'git': True}))
         else:
             __difftree(repo, node1, node2, files=files)
         if not opts['stdin']:
