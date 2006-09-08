@@ -1940,7 +1940,7 @@ def merge(ui, repo, node=None, force=None, branch=None):
     revision to merge with must be provided.
     """
 
-    if node:
+    if node or branch:
         node = _lookup(repo, node, branch)
     else:
         heads = repo.heads()
