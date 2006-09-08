@@ -53,8 +53,8 @@ def make_filename(repo, pat, node,
             i += 1
         return ''.join(newname)
     except KeyError, inst:
-        raise util.Abort(_("invalid format spec '%%%s' in output file name"),
-                    inst.args[0])
+        raise util.Abort(_("invalid format spec '%%%s' in output file name") %
+                         inst.args[0])
 
 def make_file(repo, pat, node=None,
               total=None, seqno=None, revwidth=None, mode='wb', pathname=None):

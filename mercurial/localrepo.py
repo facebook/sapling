@@ -133,7 +133,7 @@ class localrepository(repo.repository):
             except Exception, exc:
                 if isinstance(exc, util.Abort):
                     self.ui.warn(_('error: %s hook failed: %s\n') %
-                                 (hname, exc.args[0] % exc.args[1:]))
+                                 (hname, exc.args[0]))
                 else:
                     self.ui.warn(_('error: %s hook raised an exception: '
                                    '%s\n') % (hname, exc))

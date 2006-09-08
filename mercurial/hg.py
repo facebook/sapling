@@ -115,7 +115,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     source = localpath(source)
 
     if os.path.exists(dest):
-        raise util.Abort(_("destination '%s' already exists"), dest)
+        raise util.Abort(_("destination '%s' already exists") % dest)
 
     class DirCleanup(object):
         def __init__(self, dir_):
