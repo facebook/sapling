@@ -502,7 +502,10 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     header.append('deleted file mode %s\n' % mode)
             else:
                 omode = gitmode(mmap.execf(f))
-                nmode = gitmode(util.is_exec(repo.wjoin(f), mmap.execf(f)))
+                if node2:
+                    nmode = gitmode(mmap2.execf(f))
+                else:
+                    nmode = gitmode(util.is_exec(repo.wjoin(f), mmap.execf(f)))
                 addmodehdr(header, omode, nmode)
             r = None
             if dodiff:

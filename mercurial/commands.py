@@ -8,7 +8,7 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), "os re sys signal shutil imp urllib pdb")
+demandload(globals(), "os re sys signal shutil imp urllib pdb shlex")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "fnmatch difflib patch random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
@@ -274,7 +274,7 @@ def revfix(repo, val, defval):
         try:
             num = repo.changelog.rev(repo.lookup(val))
         except KeyError:
-            raise util.Abort(_('invalid revision identifier %s'), val)
+            raise util.Abort(_('invalid revision identifier %s') % val)
     return num
 
 def revpair(ui, repo, revs):
@@ -341,7 +341,7 @@ def write_bundle(cg, filename=None, compress=True):
     try:
         if filename:
             if os.path.exists(filename):
-                raise util.Abort(_("file '%s' already exists"), filename)
+                raise util.Abort(_("file '%s' already exists") % filename)
             fh = open(filename, "wb")
         else:
             fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
@@ -1269,7 +1269,7 @@ def debugdata(ui, file_, rev):
     try:
         ui.write(r.revision(r.lookup(rev)))
     except KeyError:
-        raise util.Abort(_('invalid revision identifier %s'), rev)
+        raise util.Abort(_('invalid revision identifier %s') % rev)
 
 def debugindex(ui, file_):
     """dump the contents of an index file"""
@@ -1940,7 +1940,7 @@ def merge(ui, repo, node=None, force=None, branch=None):
     revision to merge with must be provided.
     """
 
-    if node:
+    if node or branch:
         node = _lookup(repo, node, branch)
     else:
         heads = repo.heads()
@@ -2484,7 +2484,7 @@ def serve(ui, repo, **opts):
     try:
         httpd = hgweb.server.create_server(ui, repo)
     except socket.error, inst:
-        raise util.Abort(_('cannot start server: ') + inst.args[1])
+        raise util.Abort(_('cannot start server: %s') % inst.args[1])
 
     if ui.verbose:
         addr, port = httpd.socket.getsockname()
@@ -2734,7 +2734,7 @@ def _lookup(repo, node, branch=None):
             repo.ui.warn(_("Using head %s for branch %s\n")
                          % (short(node), branch))
         else:
-            raise util.Abort(_("branch %s not found\n") % (branch))
+            raise util.Abort(_("branch %s not found") % branch)
     else:
         node = node and repo.lookup(node) or repo.changelog.tip()
     return node
@@ -3223,7 +3223,7 @@ def parse(ui, args):
         cmd = aliases[0]
         defaults = ui.config("defaults", cmd)
         if defaults:
-            args = defaults.split() + args
+            args = shlex.split(defaults) + args
         c = list(i[1])
     else:
         cmd = None
@@ -3449,7 +3449,7 @@ def dispatch(args):
         u.warn(_("abort: could not lock %s: %s\n") %
                (inst.desc or inst.filename, inst.strerror))
     except revlog.RevlogError, inst:
-        u.warn(_("abort: "), inst, "!\n")
+        u.warn(_("abort: %s!\n") % inst)
     except util.SignalInterrupt:
         u.warn(_("killed!\n"))
     except KeyboardInterrupt:
@@ -3482,7 +3482,7 @@ def dispatch(args):
         else:
             u.warn(_("abort: %s\n") % inst.strerror)
     except util.Abort, inst:
-        u.warn(_('abort: '), inst.args[0] % inst.args[1:], '\n')
+        u.warn(_("abort: %s\n") % inst)
     except TypeError, inst:
         # was this an argument error?
         tb = traceback.extract_tb(sys.exc_info()[2])
