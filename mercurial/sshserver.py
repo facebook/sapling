@@ -48,6 +48,11 @@ class sshserver(object):
             else: self.respond("")
         return cmd != ''
 
+    def do_lookup(self):
+        arg, key = self.getarg()
+        assert arg == 'key'
+        self.respond(hex(self.repo.lookup(key)) + "\n")
+
     def do_heads(self):
         h = self.repo.heads()
         self.respond(" ".join(map(hex, h)) + "\n")
@@ -61,7 +66,7 @@ class sshserver(object):
         capabilities: space separated list of tokens
         '''
 
-        caps = ['unbundle']
+        caps = ['unbundle', 'lookup', 'changegroupsubset']
         if self.ui.configbool('server', 'uncompressed'):
             caps.append('stream=%d' % self.repo.revlogversion)
         self.respond("capabilities: %s\n" % (' '.join(caps),))
@@ -102,6 +107,22 @@ class sshserver(object):
         nodes = map(bin, roots.split(" "))
 
         cg = self.repo.changegroup(nodes, 'serve')
+        while True:
+            d = cg.read(4096)
+            if not d:
+                break
+            self.fout.write(d)
+
+        self.fout.flush()
+
+    def do_changegroupsubset(self):
+        bases = []
+        heads = []
+        argmap = dict([self.getarg(), self.getarg()])
+        bases = [bin(n) for n in argmap['bases'].split(' ')]
+        heads = [bin(n) for n in argmap['heads'].split(' ')]
+
+        cg = self.repo.changegroupsubset(bases, heads, 'serve')
         while True:
             d = cg.read(4096)
             if not d:

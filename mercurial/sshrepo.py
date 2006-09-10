@@ -131,6 +131,13 @@ class sshrepository(remoterepository):
     def unlock(self):
         self.call("unlock")
 
+    def lookup(self, key):
+        d = self.call("lookup", key=key)
+        try:
+            return bin(d[:-1])
+        except:
+            raise hg.RepoError("unexpected response '%s'" % (d[:400] + "..."))
+
     def heads(self):
         d = self.call("heads")
         try:
@@ -159,6 +166,11 @@ class sshrepository(remoterepository):
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
         return self.do_cmd("changegroup", roots=n)
+
+    def changegroupsubset(self, bases, heads, kind):
+        bases = " ".join(map(hex, bases))
+        heads = " ".join(map(hex, heads))
+        return self.do_cmd("changegroupsubset", bases=bases, heads=heads)
 
     def unbundle(self, cg, heads, source):
         d = self.call("unbundle", heads=' '.join(map(hex, heads)))
