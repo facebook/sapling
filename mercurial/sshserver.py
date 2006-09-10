@@ -51,7 +51,13 @@ class sshserver(object):
     def do_lookup(self):
         arg, key = self.getarg()
         assert arg == 'key'
-        self.respond(hex(self.repo.lookup(key)) + "\n")
+        try:
+            r = hex(self.repo.lookup(key))
+            success = 1
+        except Exception,inst:
+            r = str(inst)
+            success = 0
+        self.respond("%s %s\n" % (success, r))
 
     def do_heads(self):
         h = self.repo.heads()

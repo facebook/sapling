@@ -133,9 +133,14 @@ class sshrepository(remoterepository):
 
     def lookup(self, key):
         d = self.call("lookup", key=key)
+        success, data = d[:-1].split(" ", 1)
         try:
-            return bin(d[:-1])
+            if int(success):
+                return bin(data)
+            else:
+                raise data
         except:
+            raise
             raise hg.RepoError("unexpected response '%s'" % (d[:400] + "..."))
 
     def heads(self):
