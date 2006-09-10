@@ -176,9 +176,10 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     else:
         revs = None
         if rev:
-            if not src_repo.local():
-                raise util.Abort(_("clone by revision not supported yet "
-                                   "for remote repositories"))
+            if 'lookup' not in src_repo.capabilities:
+                raise util.Abort(_("src repository does not support revision "
+                                   "lookup and so doesn't support clone by "
+                                   "revision"))
             revs = [src_repo.lookup(r) for r in rev]
 
         if dest_repo.local():

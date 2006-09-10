@@ -2105,10 +2105,12 @@ def pull(ui, repo, source="default", **opts):
     other = hg.repository(ui, source)
     ui.status(_('pulling from %s\n') % (source))
     revs = None
-    if opts['rev'] and not other.local():
-        raise util.Abort(_("pull -r doesn't work for remote repositories yet"))
-    elif opts['rev']:
-        revs = [other.lookup(rev) for rev in opts['rev']]
+    if opts['rev']:
+        if 'lookup' in other.capabilities:
+            revs = [other.lookup(rev) for rev in opts['rev']]
+        else:
+            error = _("Other repository doesn't support revision lookup, so a rev cannot be specified.")
+            raise util.Abort(error)
     modheads = repo.pull(other, heads=revs, force=opts['force'])
     return postincoming(ui, repo, modheads, opts['update'])
 

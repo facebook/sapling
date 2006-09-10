@@ -15,7 +15,7 @@ demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
 demandload(globals(), "os revlog time util")
 
 class localrepository(repo.repository):
-    capabilities = ()
+    capabilities = ('lookup', 'changegroupsubset')
 
     def __del__(self):
         self.transhandle = None
@@ -1241,6 +1241,8 @@ class localrepository(repo.repository):
             if heads is None:
                 cg = remote.changegroup(fetch, 'pull')
             else:
+                if 'changegroupsubset' not in remote.capabilities:
+                    raise util.Abort(_("Partial pull cannot be done because other repository doesn't support changegroupsubset."))
                 cg = remote.changegroupsubset(fetch, heads, 'pull')
             return self.addchangegroup(cg, 'pull', remote.url())
         finally:
