@@ -883,6 +883,11 @@ class hgweb(object):
     def do_filelog(self, req):
         req.write(self.filelog(self.filectx(req)))
 
+    def do_lookup(self, req):
+        resp = hex(self.repo.lookup(req.form['key'][0])) + "\n"
+        req.httphdr("application/mercurial-0.1", length=len(resp))
+        req.write(resp)
+
     def do_heads(self, req):
         resp = " ".join(map(hex, self.repo.heads())) + "\n"
         req.httphdr("application/mercurial-0.1", length=len(resp))
@@ -929,6 +934,28 @@ class hgweb(object):
 
         req.write(z.flush())
 
+    def do_changegroupsubset(self, req):
+        req.httphdr("application/mercurial-0.1")
+        bases = []
+        heads = []
+        if not self.allowpull:
+            return
+
+        if req.form.has_key('bases'):
+            bases = [bin(x) for x in req.form['bases'][0].split(' ')]
+        if req.form.has_key('heads'):
+            heads = [bin(x) for x in req.form['heads'][0].split(' ')]
+
+        z = zlib.compressobj()
+        f = self.repo.changegroupsubset(bases, heads, 'serve')
+        while 1:
+            chunk = f.read(4096)
+            if not chunk:
+                break
+            req.write(z.compress(chunk))
+
+        req.write(z.flush())
+
     def do_archive(self, req):
         changeset = self.repo.lookup(req.form['node'][0])
         type_ = req.form['type'][0]
@@ -949,7 +976,7 @@ class hgweb(object):
                   or self.t("error", error="%r not found" % fname))
 
     def do_capabilities(self, req):
-        caps = ['unbundle']
+        caps = ['unbundle', 'lookup', 'changegroupsubset']
         if self.repo.ui.configbool('server', 'uncompressed'):
             caps.append('stream=%d' % self.repo.revlogversion)
         resp = ' '.join(caps)

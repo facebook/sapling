@@ -261,6 +261,14 @@ class httprepository(remoterepository):
             # if using keepalive, allow connection to be reused
             fp.close()
 
+    def lookup(self, key):
+        try:
+            d = self.do_cmd("lookup", key = key).read()
+            return bin(d[:-1])
+        except:
+            self.ui.warn('Not able to look up revision named "%s"\n' % (key,))
+            raise
+
     def heads(self):
         d = self.do_read("heads")
         try:
@@ -292,6 +300,22 @@ class httprepository(remoterepository):
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
         f = self.do_cmd("changegroup", roots=n)
+
+        def zgenerator(f):
+            zd = zlib.decompressobj()
+            try:
+                for chnk in f:
+                    yield zd.decompress(chnk)
+            except httplib.HTTPException, inst:
+                raise IOError(None, _('connection ended unexpectedly'))
+            yield zd.flush()
+
+        return util.chunkbuffer(zgenerator(util.filechunkiter(f)))
+
+    def changegroupsubset(self, bases, heads, source):
+        baselst = " ".join([hex(n) for n in bases])
+        headlst = " ".join([hex(n) for n in heads])
+        f = self.do_cmd("changegroupsubset", bases=baselst, heads=headlst)
 
         def zgenerator(f):
             zd = zlib.decompressobj()
