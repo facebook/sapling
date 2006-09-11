@@ -3473,13 +3473,13 @@ def dispatch(args):
                 u.warn(_("broken pipe\n"))
         elif getattr(inst, "strerror", None):
             if getattr(inst, "filename", None):
-                u.warn(_("abort: %s - %s\n") % (inst.strerror, inst.filename))
+                u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
             else:
                 u.warn(_("abort: %s\n") % inst.strerror)
         else:
             raise
     except OSError, inst:
-        if hasattr(inst, "filename"):
+        if getattr(inst, "filename", None):
             u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
         else:
             u.warn(_("abort: %s\n") % inst.strerror)

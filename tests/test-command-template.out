@@ -59,9 +59,9 @@
   line 1
 
 # error if style not readable
-abort: Permission denied - ./q
+abort: Permission denied: ./q
 # error if no style
-abort: No such file or directory - notexist
+abort: No such file or directory: notexist
 # error if style missing key
 abort: ./t: no key named 'changeset'
 # error if include fails
