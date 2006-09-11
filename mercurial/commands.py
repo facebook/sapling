@@ -2458,7 +2458,8 @@ def serve(ui, repo, **opts):
 
     if opts["stdio"]:
         if repo is None:
-            raise hg.RepoError(_('no repo found'))
+            raise hg.RepoError(_("There is no Mercurial repository here"
+                                 " (.hg not found)"))
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
@@ -2469,7 +2470,8 @@ def serve(ui, repo, **opts):
             ui.setconfig("web", o, opts[o])
 
     if repo is None and not ui.config("web", "webdir_conf"):
-        raise hg.RepoError(_('no repo found'))
+        raise hg.RepoError(_("There is no Mercurial repository here"
+                             " (.hg not found)"))
 
     if opts['daemon'] and not opts['daemon_pipefds']:
         rfd, wfd = os.pipe()

@@ -27,7 +27,8 @@ class localrepository(repo.repository):
                 oldp = p
                 p = os.path.dirname(p)
                 if p == oldp:
-                    raise repo.RepoError(_("no repo found"))
+                    raise repo.RepoError(_("There is no Mercurial repository"
+                                           " here (.hg not found)"))
             path = p
         self.path = os.path.join(path, ".hg")
 
