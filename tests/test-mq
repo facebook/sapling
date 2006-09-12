@@ -115,6 +115,19 @@ hg push ../../k
 echo % qunapplied
 hg qunapplied
 
+echo % qpush/qpop with index
+hg qnew test1b.patch
+echo 1b > 1b
+hg add 1b
+hg qrefresh
+hg qpush 2
+hg qpop 0
+hg qpush test.patch+1
+hg qpush test.patch+2
+hg qpop test2.patch-1
+hg qpop test2.patch-2
+hg qpush test1b.patch+1
+
 echo % push should succeed
 hg qpop -a
 hg push ../../k
