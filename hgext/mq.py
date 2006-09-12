@@ -757,25 +757,25 @@ class queue:
                 # return any partial match made above
                 if res:
                     return res
-                minus = patch.rsplit('-', 1)
-                if len(minus) > 1:
-                    res = partial_name(minus[0])
+                minus = patch.rfind('-')
+                if minus >= 0:
+                    res = partial_name(patch[:minus])
                     if res:
                         i = self.series.index(res)
                         try:
-                            off = int(minus[1] or 1)
+                            off = int(patch[minus+1:] or 1)
                         except(ValueError, OverflowError):
                             pass
                         else:
                             if i - off >= 0:
                                 return self.series[i - off]
-                plus = patch.rsplit('+', 1)
-                if len(plus) > 1:
-                    res = partial_name(plus[0])
+                plus = patch.rfind('+')
+                if plus >= 0:
+                    res = partial_name(patch[:plus])
                     if res:
                         i = self.series.index(res)
                         try:
-                            off = int(plus[1] or 1)
+                            off = int(patch[plus+1:] or 1)
                         except(ValueError, OverflowError):
                             pass
                         else:
