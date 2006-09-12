@@ -995,6 +995,8 @@ class queue:
             r = list(util.unique(dd))
             a = list(util.unique(aa))
             filelist = filter(matchfn, util.unique(m + r + a))
+            if opts.get('git'):
+                self.diffopts().git = True
             patch.diff(repo, patchparent, files=filelist, match=matchfn,
                        fp=patchf, changes=(m, a, r, [], u),
                        opts=self.diffopts())
@@ -1966,6 +1968,7 @@ cmdtable = {
          [('e', 'edit', None, _('edit commit message')),
           ('m', 'message', '', _('change commit message with <text>')),
           ('l', 'logfile', '', _('change commit message with <file> content')),
+          ('g', 'git', None, _('use git extended diff format')),
           ('s', 'short', None, 'short refresh'),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
