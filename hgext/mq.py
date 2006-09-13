@@ -1997,7 +1997,7 @@ cmdtable = {
         (series,
          [('m', 'missing', None, 'print patches not in series'),
           ('s', 'summary', None, _('print first line of patch header'))],
-         'hg qseries [-m]'),
+         'hg qseries [-ms]'),
     "^strip":
         (strip,
          [('f', 'force', None, 'force multi-head removal'),
