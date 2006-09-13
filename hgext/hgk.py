@@ -90,6 +90,7 @@ def catcommit(repo, n, prefix, changes=None):
 
     print "author %s %s %s" % (changes[1], date, date_ar[1])
     print "committer %s %s %s" % (committer, date, date_ar[1])
+    print "revision %d" % repo.changelog.rev(n)
     print ""
     if prefix != "":
         print "%s%s" % (prefix, changes[4].replace('\n', nlprefix).strip())

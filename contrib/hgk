@@ -176,6 +176,7 @@ proc parsecommit {id contents listed olds} {
     set audate {}
     set comname {}
     set comdate {}
+    set rev {}
     if {![info exists nchildren($id)]} {
 	set children($id) {}
 	set nchildren($id) 0
@@ -209,6 +210,8 @@ proc parsecommit {id contents listed olds} {
 		    set x [expr {[llength $line] - 2}]
 		    set comdate [lindex $line $x]
 		    set comname [join [lrange $line 1 [expr {$x - 1}]]]
+		} elseif {$tag == "revision"} {
+		    set rev [lindex $line 1]
 		}
 	    }
 	} else {
@@ -233,7 +236,7 @@ proc parsecommit {id contents listed olds} {
 	set comdate [clock format $comdate -format "%Y-%m-%d %H:%M:%S"]
     }
     set commitinfo($id) [list $headline $auname $audate \
-			     $comname $comdate $comment]
+			     $comname $comdate $comment $rev]
 }
 
 proc readrefs {} {
@@ -2002,8 +2005,9 @@ proc commit_descriptor {p} {
     set l "..."
     if {[info exists commitinfo($p)]} {
 	set l [lindex $commitinfo($p) 0]
+	set r [lindex $commitinfo($p) 6]
     }
-    return "$p ($l)"
+    return "$r:$p ($l)"
 }
 
 # append some text to the ctext widget, and make any SHA1 ID
@@ -2107,6 +2111,7 @@ proc selectline {l isnew} {
     $ctext mark set fmark.0 0.0
     $ctext mark gravity fmark.0 left
     set info $commitinfo($id)
+    $ctext insert end "Revision: [lindex $info 6]\n"
     $ctext insert end "Author: [lindex $info 1]  [lindex $info 2]\n"
     $ctext insert end "Committer: [lindex $info 3]  [lindex $info 4]\n"
     if {[info exists idtags($id)]} {
