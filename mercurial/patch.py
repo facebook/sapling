@@ -9,7 +9,8 @@ from demandload import demandload
 from i18n import gettext as _
 from node import *
 demandload(globals(), "cmdutil mdiff util")
-demandload(globals(), "cStringIO email.Parser errno os re shutil sys tempfile")
+demandload(globals(), '''cStringIO email.Parser errno os re shutil sys tempfile
+                         popen2''')
 
 # helper functions
 
@@ -550,3 +551,24 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
     for seqno, cset in enumerate(revs):
         single(cset, seqno, fp)
+
+def diffstat(patchlines):
+    fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
+    try:
+        p = popen2.Popen3('diffstat -p1 -w79 2>/dev/null > ' + name)
+        try:
+            for line in patchlines: print >> p.tochild, line
+            p.tochild.close()
+            if p.wait(): return
+            fp = os.fdopen(fd, 'r')
+            stat = []
+            for line in fp: stat.append(line.lstrip())
+            last = stat.pop()
+            stat.insert(0, last)
+            stat = ''.join(stat)
+            if stat.startswith('0 files'): raise ValueError
+            return stat
+        except: raise
+    finally:
+        try: os.unlink(name)
+        except: pass
