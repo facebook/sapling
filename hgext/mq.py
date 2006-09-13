@@ -1651,13 +1651,6 @@ def rename(ui, repo, patch, name=None, **opts):
         name = patch
         patch = None
 
-    if name in q.series:
-        raise util.Abort(_('A patch named %s already exists in the series file') % name)
-
-    absdest = q.join(name)
-    if os.path.exists(absdest):
-        raise util.Abort(_('%s already exists') % absdest)
-    
     if patch:
         patch = q.lookup(patch)
     else:
@@ -1665,6 +1658,15 @@ def rename(ui, repo, patch, name=None, **opts):
             ui.write(_('No patches applied\n'))
             return
         patch = q.lookup('qtip')
+    absdest = q.join(name)
+    if os.path.isdir(absdest):
+        name = os.path.join(name, os.path.basename(patch))
+        absdest = q.join(name)
+    if os.path.exists(absdest):
+        raise util.Abort(_('%s already exists') % absdest)
+    
+    if name in q.series:
+        raise util.Abort(_('A patch named %s already exists in the series file') % name)
 
     if ui.verbose:
         ui.write('Renaming %s to %s\n' % (patch, name))
