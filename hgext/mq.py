@@ -1740,7 +1740,8 @@ def strip(ui, repo, rev, **opts):
         backup = 'strip'
     elif opts['nobackup']:
         backup = 'none'
-    repo.mq.strip(repo, rev, backup=backup)
+    update = repo.dirstate.parents()[0] != revlog.nullid
+    repo.mq.strip(repo, rev, backup=backup, update=update)
     return 0
 
 def select(ui, repo, *args, **opts):
