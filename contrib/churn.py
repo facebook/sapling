@@ -14,7 +14,7 @@
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 demandload(globals(), 'time sys signal os')
-demandload(globals(), 'mercurial:hg,mdiff,fancyopts,commands,ui,util,templater,node')
+demandload(globals(), 'mercurial:hg,mdiff,fancyopts,cmdutil,ui,util,templater,node')
 
 def __gather(ui, repo, node1, node2):
     def dirtywork(f, mmap1, mmap2):
@@ -150,7 +150,7 @@ def churn(ui, repo, **opts):
         amap = get_aliases(f)
         f.close()
 
-    revs = [int(r) for r in commands.revrange(ui, repo, opts['rev'])]
+    revs = [int(r) for r in cmdutil.revrange(ui, repo, opts['rev'])]
     revs.sort()
     stats = gather_stats(ui, repo, amap, revs, opts.get('progress'))
 
