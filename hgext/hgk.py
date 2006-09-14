@@ -7,7 +7,7 @@
 
 from mercurial.demandload import *
 demandload(globals(), 'time sys signal os')
-demandload(globals(), 'mercurial:hg,fancyopts,commands,ui,util,patch')
+demandload(globals(), 'mercurial:hg,fancyopts,commands,ui,util,patch,revlog')
 
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
@@ -217,7 +217,6 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
 
     # walk the repository looking for commits that are in our
     # reachability graph
-    #for i in range(repo.changelog.count()-1, -1, -1):
     for i, changes in chlogwalk():
         n = repo.changelog.node(i)
         mask = is_reachable(want_sha1, reachable, n)
@@ -252,6 +251,19 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
                 break
             count += 1
 
+def revparse(ui, repo, *revs, **opts):
+    """Parse given revisions"""
+    def revstr(rev):
+        if rev == 'HEAD':
+            rev = 'tip'
+        return revlog.hex(repo.lookup(rev))
+
+    for r in revs:
+        revrange = r.split(':', 1)
+        ui.write('%s\n' % revstr(revrange[0]))
+        if len(revrange) == 2:
+            ui.write('^%s\n' % revstr(revrange[1]))
+
 # git rev-list tries to order things by date, and has the ability to stop
 # at a given commit without walking the whole repo.  TODO add the stop
 # parameter
@@ -264,13 +276,16 @@ def revlist(ui, repo, *revs, **opts):
     copy = [x for x in revs]
     revtree(copy, repo, full, opts['max_count'], opts['parents'])
 
-def view(ui, repo, *etc):
+def view(ui, repo, *etc, **opts):
     "start interactive history viewer"
     os.chdir(repo.root)
-    os.system(ui.config("hgk", "path", "hgk") + " " + " ".join(etc))
+    optstr = ' '.join(['--%s %s' % (k, v) for k, v in opts.iteritems()])
+    os.system(ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc)))
 
 cmdtable = {
-    "view": (view, [], 'hg view'),
+    "view": (view,
+             [('l', 'limit', '', 'limit number of changes displayed')],
+             'hg view [-l LIMIT] [REVRANGE]'),
     "debug-diff-tree": (difftree, [('p', 'patch', None, 'generate patch'),
                             ('r', 'recursive', None, 'recursive'),
                             ('P', 'pretty', None, 'pretty'),
@@ -281,6 +296,9 @@ cmdtable = {
     "debug-cat-file": (catfile, [('s', 'stdin', None, 'stdin')],
                  "hg debug-cat-file [options] type file"),
     "debug-merge-base": (base, [], "hg debug-merge-base node node"),
+    'debug-rev-parse': (revparse,
+                        [('', 'default', '', 'ignored')],
+                        "hg debug-rev-parse rev"),
     "debug-rev-list": (revlist, [('H', 'header', None, 'header'),
                            ('t', 'topo-order', None, 'topo-order'),
                            ('p', 'parents', None, 'parents'),

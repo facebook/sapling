@@ -30,15 +30,29 @@ proc getcommits {rargs} {
     set startmsecs [clock clicks -milliseconds]
     set nextupdate [expr $startmsecs + 100]
     set ncmupdate 1
+    set limit 0
+    set revargs {}
+    for {set i 0} {$i < [llength $rargs]} {incr i} {
+	set opt [lindex $rargs $i]
+	if {$opt == "--limit"} {
+	    incr i
+	    set limit [lindex $rargs $i]
+	} else {
+	    lappend revargs $opt
+	}
+    }
     if [catch {
-	set parse_args [concat --default HEAD $rargs]
+	set parse_args [concat --default HEAD $revargs]
 	set parsed_args [split [eval exec hg debug-rev-parse $parse_args] "\n"]
-    }] {
+    } err] {
 	# if git-rev-parse failed for some reason...
 	if {$rargs == {}} {
-	    set rargs HEAD
+	    set revargs HEAD
 	}
-	set parsed_args $rargs
+	set parsed_args $revargs
+    }
+    if {$limit > 0} {
+	set parsed_args [concat -n $limit $parsed_args]
     }
     if [catch {
 	set commfd [open "|hg debug-rev-list --header --topo-order --parents $parsed_args" r]
