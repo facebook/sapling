@@ -40,7 +40,7 @@ commands.norepo += " qclone qversion"
 class statusentry:
     def __init__(self, rev, name=None):
         if not name:
-            fields = rev.split(':')
+            fields = rev.split(':', 1)
             if len(fields) == 2:
                 self.rev, self.name = fields
             else:
