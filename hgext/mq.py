@@ -40,7 +40,7 @@ commands.norepo += " qclone qversion"
 class statusentry:
     def __init__(self, rev, name=None):
         if not name:
-            fields = rev.split(':')
+            fields = rev.split(':', 1)
             if len(fields) == 2:
                 self.rev, self.name = fields
             else:
@@ -483,24 +483,35 @@ class queue:
         tr.close()
         return (err, n)
 
-    def delete(self, repo, patches, keep=False):
+    def delete(self, repo, patches, opts):
         realpatches = []
+        appliedbase = 0
+        forget = opts.get('forget')
         for patch in patches:
             patch = self.lookup(patch, strict=True)
             info = self.isapplied(patch)
-            if info:
+            if info and not forget:
                 raise util.Abort(_("cannot delete applied patch %s") % patch)
             if patch not in self.series:
                 raise util.Abort(_("patch %s not in series file") % patch)
+            if forget:
+                if not info:
+                    raise util.Abort(_("cannot forget unapplied patch %s") % patch)
+                if info[0] != appliedbase:
+                    raise util.Abort(_("patch %s not at base") % patch)
+                appliedbase += 1
             realpatches.append(patch)
 
-        if not keep:
+        if not opts.get('keep'):
             r = self.qrepo()
             if r:
                 r.remove(realpatches, True)
             else:
                 os.unlink(self.join(patch))
 
+        if forget:
+            del self.applied[:appliedbase]
+            self.applied_dirty = 1
         indices = [self.find_series(p) for p in realpatches]
         indices.sort()
         for i in indices[-1::-1]:
@@ -995,6 +1006,8 @@ class queue:
             r = list(util.unique(dd))
             a = list(util.unique(aa))
             filelist = filter(matchfn, util.unique(m + r + a))
+            if opts.get('git'):
+                self.diffopts().git = True
             patch.diff(repo, patchparent, files=filelist, match=matchfn,
                        fp=patchf, changes=(m, a, r, [], u),
                        opts=self.diffopts())
@@ -1304,10 +1317,15 @@ class queue:
 def delete(ui, repo, patch, *patches, **opts):
     """remove patches from queue
 
-    The patches must not be applied.
-    With -k, the patch files are preserved in the patch directory."""
+    With --forget, mq will stop managing the named patches. The
+    patches must be applied and at the base of the stack. This option
+    is useful when the patches have been applied upstream.
+
+    Otherwise, the patches must not be applied.
+
+    With --keep, the patch files are preserved in the patch directory."""
     q = repo.mq
-    q.delete(repo, (patch,) + patches, keep=opts.get('keep'))
+    q.delete(repo, (patch,) + patches, opts)
     q.save_dirty()
     return 0
 
@@ -1651,13 +1669,6 @@ def rename(ui, repo, patch, name=None, **opts):
         name = patch
         patch = None
 
-    if name in q.series:
-        raise util.Abort(_('A patch named %s already exists in the series file') % name)
-
-    absdest = q.join(name)
-    if os.path.exists(absdest):
-        raise util.Abort(_('%s already exists') % absdest)
-    
     if patch:
         patch = q.lookup(patch)
     else:
@@ -1665,6 +1676,15 @@ def rename(ui, repo, patch, name=None, **opts):
             ui.write(_('No patches applied\n'))
             return
         patch = q.lookup('qtip')
+    absdest = q.join(name)
+    if os.path.isdir(absdest):
+        name = os.path.join(name, os.path.basename(patch))
+        absdest = q.join(name)
+    if os.path.exists(absdest):
+        raise util.Abort(_('%s already exists') % absdest)
+    
+    if name in q.series:
+        raise util.Abort(_('A patch named %s already exists in the series file') % name)
 
     if ui.verbose:
         ui.write('Renaming %s to %s\n' % (patch, name))
@@ -1736,7 +1756,8 @@ def strip(ui, repo, rev, **opts):
         backup = 'strip'
     elif opts['nobackup']:
         backup = 'none'
-    repo.mq.strip(repo, rev, backup=backup)
+    update = repo.dirstate.parents()[0] != revlog.nullid
+    repo.mq.strip(repo, rev, backup=backup, update=update)
     return 0
 
 def select(ui, repo, *args, **opts):
@@ -1912,8 +1933,9 @@ cmdtable = {
                'hg qdiff [-I] [-X] [FILE]...'),
     "qdelete|qremove|qrm":
         (delete,
-         [('k', 'keep', None, _('keep patch file'))],
-          'hg qdelete [-k] PATCH'),
+         [('f', 'forget', None, _('stop managing an applied patch')),
+          ('k', 'keep', None, _('keep patch file'))],
+          'hg qdelete [-f] [-k] PATCH'),
     'qfold':
         (fold,
          [('e', 'edit', None, _('edit patch header')),
@@ -1964,6 +1986,7 @@ cmdtable = {
          [('e', 'edit', None, _('edit commit message')),
           ('m', 'message', '', _('change commit message with <text>')),
           ('l', 'logfile', '', _('change commit message with <file> content')),
+          ('g', 'git', None, _('use git extended diff format')),
           ('s', 'short', None, 'short refresh'),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
@@ -1995,7 +2018,7 @@ cmdtable = {
         (series,
          [('m', 'missing', None, 'print patches not in series'),
           ('s', 'summary', None, _('print first line of patch header'))],
-         'hg qseries [-m]'),
+         'hg qseries [-ms]'),
     "^strip":
         (strip,
          [('f', 'force', None, 'force multi-head removal'),

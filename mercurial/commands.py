@@ -108,7 +108,7 @@ def walkchangerevs(ui, repo, pats, opts):
         defrange = '%s:0' % start
     else:
         defrange = 'tip:0'
-    revs = map(int, revrange(ui, repo, opts['rev'] or [defrange]))
+    revs = map(int, cmdutil.revrange(ui, repo, opts['rev'] or [defrange]))
     wanted = {}
     slowpath = anypats
     fncache = {}
@@ -251,76 +251,6 @@ def walkchangerevs(ui, repo, pats, opts):
             for rev in nrevs:
                 yield 'iter', rev, None
     return iterate(), getchange, matchfn
-
-revrangesep = ':'
-
-def revfix(repo, val, defval):
-    '''turn user-level id of changeset into rev number.
-    user-level id can be tag, changeset, rev number, or negative rev
-    number relative to number of revs (-1 is tip, etc).'''
-    if not val:
-        return defval
-    try:
-        num = int(val)
-        if str(num) != val:
-            raise ValueError
-        if num < 0:
-            num += repo.changelog.count()
-        if num < 0:
-            num = 0
-        elif num >= repo.changelog.count():
-            raise ValueError
-    except ValueError:
-        try:
-            num = repo.changelog.rev(repo.lookup(val))
-        except KeyError:
-            raise util.Abort(_('invalid revision identifier %s') % val)
-    return num
-
-def revpair(ui, repo, revs):
-    '''return pair of nodes, given list of revisions. second item can
-    be None, meaning use working dir.'''
-    if not revs:
-        return repo.dirstate.parents()[0], None
-    end = None
-    if len(revs) == 1:
-        start = revs[0]
-        if revrangesep in start:
-            start, end = start.split(revrangesep, 1)
-            start = revfix(repo, start, 0)
-            end = revfix(repo, end, repo.changelog.count() - 1)
-        else:
-            start = revfix(repo, start, None)
-    elif len(revs) == 2:
-        if revrangesep in revs[0] or revrangesep in revs[1]:
-            raise util.Abort(_('too many revisions specified'))
-        start = revfix(repo, revs[0], None)
-        end = revfix(repo, revs[1], None)
-    else:
-        raise util.Abort(_('too many revisions specified'))
-    if end is not None: end = repo.lookup(str(end))
-    return repo.lookup(str(start)), end
-
-def revrange(ui, repo, revs):
-    """Yield revision as strings from a list of revision specifications."""
-    seen = {}
-    for spec in revs:
-        if revrangesep in spec:
-            start, end = spec.split(revrangesep, 1)
-            start = revfix(repo, start, 0)
-            end = revfix(repo, end, repo.changelog.count() - 1)
-            step = start > end and -1 or 1
-            for rev in xrange(start, end+step, step):
-                if rev in seen:
-                    continue
-                seen[rev] = 1
-                yield str(rev)
-        else:
-            rev = revfix(repo, spec, None)
-            if rev in seen:
-                continue
-            seen[rev] = 1
-            yield str(rev)
 
 def write_bundle(cg, filename=None, compress=True):
     """Write a bundle file and return its filename.
@@ -1344,7 +1274,7 @@ def diff(ui, repo, *pats, **opts):
     it detects as binary. With -a, diff will generate a diff anyway,
     probably with undesirable results.
     """
-    node1, node2 = revpair(ui, repo, opts['rev'])
+    node1, node2 = cmdutil.revpair(ui, repo, opts['rev'])
 
     fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
 
@@ -1380,7 +1310,7 @@ def export(ui, repo, *changesets, **opts):
     """
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
-    revs = list(revrange(ui, repo, changesets))
+    revs = list(cmdutil.revrange(ui, repo, changesets))
     if len(revs) > 1:
         ui.note(_('exporting patches:\n'))
     else:
