@@ -80,7 +80,7 @@ cd ../remote
 echo "# check remote tip"
 hg tip
 hg verify
-hg cat foo
+hg cat -r tip foo
 
 echo z > z
 hg ci -A -m z -d '1000001 0' z
