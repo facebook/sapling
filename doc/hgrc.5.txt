@@ -50,8 +50,6 @@ installed.
     particular repository.  This file is not version-controlled, and
     will not get transferred during a "clone" operation.  Options in
     this file override options in all other configuration files.
-    On Unix, this file is only read if it belongs to a trusted user
-    or to a trusted group.
 
 SYNTAX
 ------
@@ -350,16 +348,6 @@ server::
     clone.  Over most WAN connections (anything slower than about
     6Mbps), uncompressed streaming is slower, because of the extra
     data transfer overhead.  Default is False.
-
-trusted::
-  Mercurial will only read the .hg/hgrc file from a repository if
-  it belongs to a trusted user or to a trusted group. This section
-  specifies what users and groups are trusted. To trust everybody,
-  list a user or a group with name "*".
-  users;;
-    Comma-separated list of trusted users.
-  groups;;
-    Comma-separated list of trusted groups.
 
 ui::
   User interface controls.
