@@ -23,13 +23,19 @@
 #   # add new command that runs GNU diff(1) in 'context diff' mode
 #   cmd.cdiff = gdiff
 #   opts.cdiff = -Nprc5
+
 #   # add new command called vdiff, runs kdiff3
 #   cmd.vdiff = kdiff3
+
 #   # add new command called meld, runs meld (no need to name twice)
 #   cmd.meld =
+
 #   # add new command called vimdiff, runs gvimdiff with DirDiff plugin
 #   #(see http://www.vim.org/scripts/script.php?script_id=102)
-#   cmd.vimdiff = LC_ALL=C gvim -f '+bdel 1 2' '+ execute "DirDiff ".argv(0)." ".argv(1)'
+#   # Non english user, be sure to put "let g:DirDiffDynamicDiffText = 1" in
+#   # your .vimrc
+#   cmd.vimdiff = gvim
+#   opts.vimdiff = -f '+next' '+execute "DirDiff" argv(0) argv(1)'
 #
 # Each custom diff commands can have two parts: a `cmd' and an `opts'
 # part.  The cmd.xxx option defines the name of an executable program
