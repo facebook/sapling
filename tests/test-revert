@@ -85,4 +85,8 @@ hg revert -rtip
 echo % should succeed
 hg revert --all -rtip
 
+echo %% issue332
+hg ci -A -m b -d '1000001 0'
+echo foobar > b/b
+hg revert b
 true

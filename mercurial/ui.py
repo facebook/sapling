@@ -12,13 +12,12 @@ demandload(globals(), "ConfigParser mdiff templater traceback util")
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
-                 interactive=True, traceback=False, parentui=None,
-                 readhooks=[]):
+                 interactive=True, traceback=False, parentui=None):
         self.overlay = {}
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
-            self.readhooks = list(readhooks)
+            self.readhooks = []
             self.cdata = ConfigParser.SafeConfigParser()
             self.readconfig(util.rcpath())
 
@@ -36,7 +35,7 @@ class ui(object):
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
-            self.readhooks = list(parentui.readhooks or readhooks)
+            self.readhooks = parentui.readhooks[:]
             parent_cdata = self.parentui.cdata
             self.cdata = ConfigParser.SafeConfigParser(parent_cdata.defaults())
             # make interpolation work
@@ -51,7 +50,7 @@ class ui(object):
     def updateopts(self, verbose=False, debug=False, quiet=False,
                    interactive=True, traceback=False, config=[]):
         self.quiet = (self.quiet or quiet) and not verbose and not debug
-        self.verbose = (self.verbose or verbose) or debug
+        self.verbose = ((self.verbose or verbose) or debug) and not self.quiet
         self.debugflag = (self.debugflag or debug)
         self.interactive = (self.interactive and interactive)
         self.traceback = self.traceback or traceback
@@ -84,6 +83,9 @@ class ui(object):
         for hook in self.readhooks:
             hook(self)
 
+    def addreadhook(self, hook):
+        self.readhooks.append(hook)
+
     def setconfig(self, section, name, val):
         self.overlay[(section, name)] = val
 
@@ -94,7 +96,9 @@ class ui(object):
             try:
                 return self.cdata.get(section, name)
             except ConfigParser.InterpolationError, inst:
-                raise util.Abort(_("Error in configuration:\n%s") % inst)
+                raise util.Abort(_("Error in configuration section [%s] "
+                                   "parameter '%s':\n%s")
+                                 % (section, name, inst))
         if self.parentui is None:
             return default
         else:
@@ -116,7 +120,9 @@ class ui(object):
             try:
                 return self.cdata.getboolean(section, name)
             except ConfigParser.InterpolationError, inst:
-                raise util.Abort(_("Error in configuration:\n%s") % inst)
+                raise util.Abort(_("Error in configuration section [%s] "
+                                   "parameter '%s':\n%s")
+                                 % (section, name, inst))
         if self.parentui is None:
             return default
         else:
@@ -134,7 +140,8 @@ class ui(object):
             try:
                 items.update(dict(self.cdata.items(section)))
             except ConfigParser.InterpolationError, inst:
-                raise util.Abort(_("Error in configuration:\n%s") % inst)
+                raise util.Abort(_("Error in configuration section [%s]:\n%s")
+                                 % (section, inst))
         x = items.items()
         x.sort()
         return x
@@ -146,10 +153,14 @@ class ui(object):
             yield section, name, value
             seen[section, name] = 1
         for section in self.cdata.sections():
-            for name, value in self.cdata.items(section):
-                if (section, name) in seen: continue
-                yield section, name, value.replace('\n', '\\n')
-                seen[section, name] = 1
+            try:
+                for name, value in self.cdata.items(section):
+                    if (section, name) in seen: continue
+                    yield section, name, value.replace('\n', '\\n')
+                    seen[section, name] = 1
+            except ConfigParser.InterpolationError, inst:
+                raise util.Abort(_("Error in configuration section [%s]:\n%s")
+                                 % (section, inst))
         if self.parentui is not None:
             for parent in self.parentui.walkconfig(seen):
                 yield parent

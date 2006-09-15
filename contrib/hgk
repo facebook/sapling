@@ -30,15 +30,29 @@ proc getcommits {rargs} {
     set startmsecs [clock clicks -milliseconds]
     set nextupdate [expr $startmsecs + 100]
     set ncmupdate 1
+    set limit 0
+    set revargs {}
+    for {set i 0} {$i < [llength $rargs]} {incr i} {
+	set opt [lindex $rargs $i]
+	if {$opt == "--limit"} {
+	    incr i
+	    set limit [lindex $rargs $i]
+	} else {
+	    lappend revargs $opt
+	}
+    }
     if [catch {
-	set parse_args [concat --default HEAD $rargs]
+	set parse_args [concat --default HEAD $revargs]
 	set parsed_args [split [eval exec hg debug-rev-parse $parse_args] "\n"]
-    }] {
+    } err] {
 	# if git-rev-parse failed for some reason...
 	if {$rargs == {}} {
-	    set rargs HEAD
+	    set revargs HEAD
 	}
-	set parsed_args $rargs
+	set parsed_args $revargs
+    }
+    if {$limit > 0} {
+	set parsed_args [concat -n $limit $parsed_args]
     }
     if [catch {
 	set commfd [open "|hg debug-rev-list --header --topo-order --parents $parsed_args" r]
@@ -100,7 +114,7 @@ to allow selection of commits to be displayed.)}
 	    set ids [string range $cmit 0 [expr {$j - 1}]]
 	    set ok 1
 	    foreach id $ids {
-		if {![regexp {^[0-9a-f]{40}$} $id]} {
+		if {![regexp {^[0-9a-f]{12}$} $id]} {
 		    set ok 0
 		    break
 		}
@@ -176,6 +190,7 @@ proc parsecommit {id contents listed olds} {
     set audate {}
     set comname {}
     set comdate {}
+    set rev {}
     if {![info exists nchildren($id)]} {
 	set children($id) {}
 	set nchildren($id) 0
@@ -209,6 +224,8 @@ proc parsecommit {id contents listed olds} {
 		    set x [expr {[llength $line] - 2}]
 		    set comdate [lindex $line $x]
 		    set comname [join [lrange $line 1 [expr {$x - 1}]]]
+		} elseif {$tag == "revision"} {
+		    set rev [lindex $line 1]
 		}
 	    }
 	} else {
@@ -233,7 +250,7 @@ proc parsecommit {id contents listed olds} {
 	set comdate [clock format $comdate -format "%Y-%m-%d %H:%M:%S"]
     }
     set commitinfo($id) [list $headline $auname $audate \
-			     $comname $comdate $comment]
+			     $comname $comdate $comment $rev]
 }
 
 proc readrefs {} {
@@ -261,7 +278,7 @@ proc readotherrefs {base dname excl} {
 	catch {
 	    set fd [open $f r]
 	    set line [read $fd 40]
-	    if {[regexp {^[0-9a-f]{40}} $line id]} {
+	    if {[regexp {^[0-9a-f]{12}} $line id]} {
 		set name "$dname[file tail $f]"
 		set otherrefids($name) $id
 		lappend idotherrefs($id) $name
@@ -1743,7 +1760,7 @@ proc readfindproc {} {
 	}
 	return
     }
-    if {![regexp {^[0-9a-f]{40}} $line id]} {
+    if {![regexp {^[0-9a-f]{12}} $line id]} {
 	error_popup "Can't parse git-diff-tree output: $line"
 	stopfindproc
 	return
@@ -1856,7 +1873,7 @@ proc readfilediffs {df} {
 	}
 	return
     }
-    if {[regexp {^([0-9a-f]{40}) \(from ([0-9a-f]{40})\)} $line match id p]} {
+    if {[regexp {^([0-9a-f]{12}) \(from ([0-9a-f]{12})\)} $line match id p]} {
 	# start of a new string of diffs
 	donefilediff
 	set fdiffids [list $id $p]
@@ -2002,8 +2019,9 @@ proc commit_descriptor {p} {
     set l "..."
     if {[info exists commitinfo($p)]} {
 	set l [lindex $commitinfo($p) 0]
+	set r [lindex $commitinfo($p) 6]
     }
-    return "$p ($l)"
+    return "$r:$p ($l)"
 }
 
 # append some text to the ctext widget, and make any SHA1 ID
@@ -2014,7 +2032,7 @@ proc appendwithlinks {text} {
     set start [$ctext index "end - 1c"]
     $ctext insert end $text
     $ctext insert end "\n"
-    set links [regexp -indices -all -inline {[0-9a-f]{40}} $text]
+    set links [regexp -indices -all -inline {[0-9a-f]{12}} $text]
     foreach l $links {
 	set s [lindex $l 0]
 	set e [lindex $l 1]
@@ -2107,6 +2125,7 @@ proc selectline {l isnew} {
     $ctext mark set fmark.0 0.0
     $ctext mark gravity fmark.0 left
     set info $commitinfo($id)
+    $ctext insert end "Revision: [lindex $info 6]\n"
     $ctext insert end "Author: [lindex $info 1]  [lindex $info 2]\n"
     $ctext insert end "Committer: [lindex $info 3]  [lindex $info 4]\n"
     if {[info exists idtags($id)]} {

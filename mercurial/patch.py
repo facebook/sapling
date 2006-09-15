@@ -9,7 +9,8 @@ from demandload import demandload
 from i18n import gettext as _
 from node import *
 demandload(globals(), "cmdutil mdiff util")
-demandload(globals(), "cStringIO email.Parser errno os re shutil sys tempfile")
+demandload(globals(), '''cStringIO email.Parser errno os re shutil sys tempfile
+                         popen2''')
 
 # helper functions
 
@@ -182,7 +183,7 @@ def readgitpatch(patchname):
 
     return (dopatch, gitpatches)
 
-def dogitpatch(patchname, gitpatches):
+def dogitpatch(patchname, gitpatches, cwd=None):
     """Preprocess git patch so that vanilla patch can handle it"""
     pf = file(patchname)
     pfline = 1
@@ -196,7 +197,7 @@ def dogitpatch(patchname, gitpatches):
             if not p.copymod:
                 continue
 
-            copyfile(p.oldpath, p.path)
+            copyfile(p.oldpath, p.path, basedir=cwd)
 
             # rewrite patch hunk
             while pfline < p.lineno:
@@ -227,22 +228,19 @@ def patch(patchname, ui, strip=1, cwd=None):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
 
-    (dopatch, gitpatches) = readgitpatch(patchname)
+    # helper function
+    def __patch(patchname):
+        """patch and updates the files and fuzz variables"""
+        files = {}
+        fuzz = False
 
-    files = {}
-    fuzz = False
-    if dopatch:
-        if dopatch == 'filter':
-            patchname = dogitpatch(patchname, gitpatches)
-        patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''), 'patch')
+        patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''),
+                                    'patch')
         args = []
         if cwd:
             args.append('-d %s' % util.shellquote(cwd))
         fp = os.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
                                            util.shellquote(patchname)))
-
-        if dopatch == 'filter':
-            False and os.unlink(patchname)
 
         for line in fp:
             line = line.rstrip()
@@ -264,11 +262,24 @@ def patch(patchname, ui, strip=1, cwd=None):
                     ui.warn(pf + '\n')
                     printed_file = True
                 ui.warn(line + '\n')
-            
         code = fp.close()
         if code:
             raise util.Abort(_("patch command failed: %s") %
                              util.explain_exit(code)[0])
+        return files, fuzz
+
+    (dopatch, gitpatches) = readgitpatch(patchname)
+
+    if dopatch:
+        if dopatch == 'filter':
+            patchname = dogitpatch(patchname, gitpatches, cwd=cwd)
+        try:
+            files, fuzz = __patch(patchname)
+        finally:
+            if dopatch == 'filter':
+                os.unlink(patchname)
+    else:
+        files, fuzz = {}, False
 
     for gp in gitpatches:
         files[gp.path] = (gp.op, gp)
@@ -492,7 +503,10 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     header.append('deleted file mode %s\n' % mode)
             else:
                 omode = gitmode(mmap.execf(f))
-                nmode = gitmode(util.is_exec(repo.wjoin(f), mmap.execf(f)))
+                if node2:
+                    nmode = gitmode(mmap2.execf(f))
+                else:
+                    nmode = gitmode(util.is_exec(repo.wjoin(f), mmap.execf(f)))
                 addmodehdr(header, omode, nmode)
             r = None
             if dodiff:
@@ -537,3 +551,24 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
     for seqno, cset in enumerate(revs):
         single(cset, seqno, fp)
+
+def diffstat(patchlines):
+    fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
+    try:
+        p = popen2.Popen3('diffstat -p1 -w79 2>/dev/null > ' + name)
+        try:
+            for line in patchlines: print >> p.tochild, line
+            p.tochild.close()
+            if p.wait(): return
+            fp = os.fdopen(fd, 'r')
+            stat = []
+            for line in fp: stat.append(line.lstrip())
+            last = stat.pop()
+            stat.insert(0, last)
+            stat = ''.join(stat)
+            if stat.startswith('0 files'): raise ValueError
+            return stat
+        except: raise
+    finally:
+        try: os.unlink(name)
+        except: pass

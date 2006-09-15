@@ -8,7 +8,7 @@
 from node import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "util os tempfile")
+demandload(globals(), "errno util os tempfile")
 
 def fmerge(f, local, other, ancestor):
     """merge executable flags"""
@@ -88,12 +88,9 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if modified or added or removed:
             raise util.Abort(_("outstanding uncommitted changes"))
 
-    m1n = repo.changelog.read(p1)[0]
-    m2n = repo.changelog.read(p2)[0]
-    man = repo.manifest.ancestor(m1n, m2n)
-    m1 = repo.manifest.read(m1n).copy()
-    m2 = repo.manifest.read(m2n).copy()
-    ma = repo.manifest.read(man)
+    m1 = repo.changectx(p1).manifest().copy()
+    m2 = repo.changectx(p2).manifest().copy()
+    ma = repo.changectx(pa).manifest()
 
     if not force:
         for f in unknown:
@@ -108,7 +105,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     repo.ui.debug(_(" overwrite %s branchmerge %s partial %s linear %s\n") %
                   (overwrite, branchmerge, bool(partial), linear_path))
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
-                  (short(man), short(m1n), short(m2n)))
+                  (short(p1), short(p2), short(pa)))
 
     action = {}
     forget = []
@@ -116,9 +113,10 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     # update m1 from working dir
     umap = dict.fromkeys(unknown)
 
-    for f in added + modified + unknown:
-        m1[f] = m1.get(f, nullid) + "+"
-        m1.set(f, util.is_exec(repo.wjoin(f), m1.execf(f)))
+    for i,l in (("a", added), ("m", modified), ("u", unknown)):
+        for f in l:
+            m1[f] = m1.get(f, nullid) + i
+            m1.set(f, util.is_exec(repo.wjoin(f), m1.execf(f)))
 
     for f in deleted + removed:
         del m1[f]
@@ -157,7 +155,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     repo.ui.debug(_(" remote %s is newer, get\n") % f)
                     action[f] = (m2.execf(f), m2[f], None)
                     queued = 1
-            elif f in umap or f in added:
+            elif n[20:] in ("u","a"):
                 # this unknown file is the same as the checkout
                 # we need to reset the dirstate if the file was added
                 action[f] = (m2.execf(f), m2[f], None)
@@ -168,7 +166,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
                     util.set_exec(repo.wjoin(f), m2.execf(f))
                 else:
-                    if fmerge(f, m1, m2, ma) != m1.execf(f):
+                    mode = fmerge(f, m1, m2, ma)
+                    if mode != m1.execf(f):
                         repo.ui.debug(_(" updating permissions for %s\n")
                                       % f)
                         util.set_exec(repo.wjoin(f), mode)
@@ -187,7 +186,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 action[f] = (None, None, None)
         else:
             # file is created on branch or in working directory
-            if overwrite and f not in umap:
+            if overwrite and n[20:] != "u":
                 repo.ui.debug(_("remote deleted %s, clobbering\n") % f)
                 action[f] = (None, None, None)
             elif not n[20:]: # same as parent
@@ -236,8 +235,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     repo.hook('preupdate', throw=True, parent1=xp1, parent2=xxp2)
 
     # update files
-    unresolved = []
-    updated, merged, removed = 0, 0, 0
+    updated, merged, removed, unresolved = 0, 0, 0, 0
     files = action.keys()
     files.sort()
     for f in files:
@@ -257,7 +255,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         elif other:
             repo.ui.status(_("merging %s\n") % f)
             if merge3(repo, f, my, other, xp1, xp2):
-                unresolved.append(f)
+                unresolved += 1
             util.set_exec(repo.wjoin(f), flag)
             merged += 1
         else:
@@ -302,9 +300,9 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     if show_stats:
         stats = ((updated, _("updated")),
-                 (merged - len(unresolved), _("merged")),
+                 (merged - unresolved, _("merged")),
                  (removed, _("removed")),
-                 (len(unresolved), _("unresolved")))
+                 (unresolved, _("unresolved")))
         note = ", ".join([_("%d files %s") % s for s in stats])
         repo.ui.status("%s\n" % note)
     if not partial:
@@ -322,6 +320,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             repo.ui.status(_("There are unresolved merges with"
                              " locally modified files.\n"))
 
-    repo.hook('update', parent1=xp1, parent2=xxp2, error=len(unresolved))
-    return len(unresolved)
+    repo.hook('update', parent1=xp1, parent2=xxp2, error=unresolved)
+    return unresolved
 

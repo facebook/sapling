@@ -207,7 +207,8 @@ def create_server(ui, repo):
                 hgwebobj = self.repoviewmaker(repo.__class__(repo.ui,
                                                              repo.origroot))
             else:
-                raise hg.RepoError(_('no repo found'))
+                raise hg.RepoError(_("There is no Mercurial repository here"
+                                     " (.hg not found)"))
             return hgwebobj
 
     class IPv6HTTPServer(MercurialHTTPServer):

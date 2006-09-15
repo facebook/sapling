@@ -40,3 +40,7 @@ rename to dst
  4
  5
 +a
+% nonexistent in tip+chmod
+diff --git a/src b/src
+old mode 100644
+new mode 100755
