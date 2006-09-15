@@ -16,6 +16,14 @@ class changelog(revlog):
                         defversion)
 
     def extract(self, text):
+        """
+        format used:
+        nodeid\n  : manifest node in ascii
+        user\n    : user, no \n or \r allowed
+        time tz\n : date (time is int or float, timezone is int)
+        files\n\n : files modified by the cset, no \n or \r allowed
+        (.*)      : comment (free text, ideally utf-8)
+        """
         if not text:
             return (nullid, "", (0, 0), [], "")
         last = text.index("\n\n")

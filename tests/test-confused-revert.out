@@ -17,7 +17,7 @@ foo-b
 A b
 R a
 %%% revert should fail
-abort: working dir has two parents; you must specify the revision to revert to
+abort: uncommitted merge - please provide a specific revision
 %%% revert should be ok now
 undeleting a
 forgetting b

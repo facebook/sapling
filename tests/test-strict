@@ -1,0 +1,18 @@
+#!/bin/sh
+
+hg init
+
+echo a > a
+hg ci -d '0 0' -Ama
+
+hg an a
+
+echo "[ui]" >> $HGRCPATH
+echo "strict=True" >> $HGRCPATH
+
+hg an a
+hg annotate a
+
+echo % should succeed - up is an alias, not an abbreviation
+
+hg up

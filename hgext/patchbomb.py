@@ -65,7 +65,7 @@
 
 from mercurial.demandload import *
 demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
-                         mercurial:commands,hg,mail,ui
+                         mercurial:commands,hg,mail,ui,patch
                          os errno popen2 socket sys tempfile time''')
 from mercurial.i18n import gettext as _
 from mercurial.node import *
@@ -75,27 +75,6 @@ try:
     # present on windows
     import readline
 except ImportError: pass
-
-def diffstat(patch):
-    fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
-    try:
-        p = popen2.Popen3('diffstat -p1 -w79 2>/dev/null > ' + name)
-        try:
-            for line in patch: print >> p.tochild, line
-            p.tochild.close()
-            if p.wait(): return
-            fp = os.fdopen(fd, 'r')
-            stat = []
-            for line in fp: stat.append(line.lstrip())
-            last = stat.pop()
-            stat.insert(0, last)
-            stat = ''.join(stat)
-            if stat.startswith('0 files'): raise ValueError
-            return stat
-        except: raise
-    finally:
-        try: os.unlink(name)
-        except: pass
 
 def patchbomb(ui, repo, *revs, **opts):
     '''send changesets as a series of patch emails
@@ -123,8 +102,8 @@ def patchbomb(ui, repo, *revs, **opts):
         if not prompt(s, default = 'y', rest = '? ').lower().startswith('y'):
             raise ValueError
 
-    def cdiffstat(summary, patch):
-        s = diffstat(patch)
+    def cdiffstat(summary, patchlines):
+        s = patch.diffstat(patchlines)
         if s:
             if summary:
                 ui.write(summary, '\n')
@@ -140,7 +119,9 @@ def patchbomb(ui, repo, *revs, **opts):
             if line.startswith('#'):
                 if line.startswith('# Node ID'): node = line.split()[-1]
                 continue
-            if line.startswith('diff -r'): break
+            if (line.startswith('diff -r')
+                or line.startswith('diff --git')):
+                break
             desc.append(line)
         if not node: raise ValueError
 
@@ -205,7 +186,8 @@ def patchbomb(ui, repo, *revs, **opts):
 
     commands.export(ui, repo, *revs, **{'output': exportee(patches),
                                         'switch_parent': False,
-                                        'text': None})
+                                        'text': None,
+                                        'git': opts.get('git')})
 
     jumbo = []
     msgs = []
@@ -322,6 +304,7 @@ cmdtable = {
       ('', 'bcc', [], 'email addresses of blind copy recipients'),
       ('c', 'cc', [], 'email addresses of copy recipients'),
       ('d', 'diffstat', None, 'add diffstat output to messages'),
+      ('g', 'git', None, _('use git extended diff format')),
       ('f', 'from', '', 'email address of sender'),
       ('', 'plain', None, 'omit hg patch header'),
       ('n', 'test', None, 'print messages that would be sent'),

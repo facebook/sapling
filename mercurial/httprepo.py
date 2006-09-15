@@ -325,7 +325,7 @@ class httprepository(remoterepository):
                     rfp.close()
             except socket.error, err:
                 if err[0] in (errno.ECONNRESET, errno.EPIPE):
-                    raise util.Abort(_('push failed: %s'), err[1])
+                    raise util.Abort(_('push failed: %s') % err[1])
                 raise util.Abort(err[1])
         finally:
             fp.close()

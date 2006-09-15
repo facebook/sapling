@@ -139,6 +139,11 @@ class lazyparser(object):
         if self.all: return
         if data is None:
             self.dataf.seek(blockstart)
+            if blockstart + blocksize > self.datasize:
+                # the revlog may have grown since we've started running,
+                # but we don't have space in self.index for more entries.
+                # limit blocksize so that we don't get too much data.
+                blocksize = max(self.datasize - blockstart, 0)
             data = self.dataf.read(blocksize)
         lend = len(data) / self.s
         i = blockstart / self.s

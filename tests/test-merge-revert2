@@ -16,7 +16,7 @@ hg update -C 0
 hg id
 echo "changed file1" >> file1
 hg id
-hg revert --no-backup
+hg revert --no-backup --all
 hg diff
 hg status
 hg id
@@ -31,11 +31,11 @@ hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" -e "s/\(<<<<<<<\) .*/\1/" \
               -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" -e "s/\(>>>>>>>\) .*/\1/"
 hg status
 hg id
-hg revert --no-backup
+hg revert --no-backup --all
 hg diff
 hg status
 hg id
-hg revert -r tip --no-backup
+hg revert -r tip --no-backup --all
 hg diff
 hg status
 hg id

@@ -193,6 +193,10 @@ FILES
     global /etc/mercurial/hgrc configuration.  See hgrc(5) for details of
     the contents and format of these files.
 
+Some commands (e.g. revert) produce backup files ending in .orig, if
+the .orig file already exists and is not tracked by Mercurial, it
+will be overwritten.
+
 BUGS
 ----
 Probably lots, please post them to the mailing list (See Resources below)

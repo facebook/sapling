@@ -45,7 +45,7 @@
 from mercurial.demandload import demandload
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:commands,cmdutil,util os shutil tempfile')
+demandload(globals(), 'mercurial:cmdutil,util os shutil tempfile')
 
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     def snapshot_node(files, node):
@@ -90,7 +90,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
                 fp.write(chunk)
         return dirname
 
-    node1, node2 = commands.revpair(ui, repo, opts['rev'])
+    node1, node2 = cmdutil.revpair(ui, repo, opts['rev'])
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     modified, added, removed, deleted, unknown = repo.status(
         node1, node2, files, match=matchfn)[:5]
@@ -105,8 +105,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         else:
             dir2 = snapshot_wdir(modified + added)
         cmdline = ('%s %s %s %s' %
-                   (util.shellquote(diffcmd),
-                    ' '.join(map(util.shellquote, diffopts)),
+                   (util.shellquote(diffcmd), ' '.join(diffopts),
                     util.shellquote(dir1), util.shellquote(dir2)))
         ui.debug('running %r in %s\n' % (cmdline, tmproot))
         util.system(cmdline, cwd=tmproot)

@@ -8,7 +8,7 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), "os re sys signal shutil imp urllib pdb")
+demandload(globals(), "os re sys signal shutil imp urllib pdb shlex")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "fnmatch difflib patch random signal tempfile time")
 demandload(globals(), "traceback errno socket version struct atexit sets bz2")
@@ -49,6 +49,21 @@ def logmessage(opts):
             raise util.Abort(_("can't read commit message '%s': %s") %
                              (logfile, inst.strerror))
     return message
+
+def defaultrev(repo, rev=None, default='tip'):
+    """returns rev if it is specified, otherwise the working dir
+    parent if there is only one, or tip if there is no working
+    dir"""
+    if rev:
+        return rev
+
+    p1, p2 = repo.dirstate.parents()
+    if p2 != nullid:
+        raise util.Abort(_('uncommitted merge - please provide a '
+                           'specific revision'))
+    if p1 != nullid:
+        return hex(p1)
+    return default
 
 def walkchangerevs(ui, repo, pats, opts):
     '''Iterate over files and the revs they changed in.
@@ -99,16 +114,10 @@ def walkchangerevs(ui, repo, pats, opts):
         return [], False, matchfn
 
     if follow:
-        p = repo.dirstate.parents()[0]
-        if p == nullid:
-            ui.warn(_('No working directory revision; defaulting to tip\n'))
-            start = 'tip'
-        else:
-            start = repo.changelog.rev(p)
-        defrange = '%s:0' % start
+        defrange = '%s:0' % defaultrev(repo)
     else:
         defrange = 'tip:0'
-    revs = map(int, revrange(ui, repo, opts['rev'] or [defrange]))
+    revs = map(int, cmdutil.revrange(ui, repo, opts['rev'] or [defrange]))
     wanted = {}
     slowpath = anypats
     fncache = {}
@@ -252,76 +261,6 @@ def walkchangerevs(ui, repo, pats, opts):
                 yield 'iter', rev, None
     return iterate(), getchange, matchfn
 
-revrangesep = ':'
-
-def revfix(repo, val, defval):
-    '''turn user-level id of changeset into rev number.
-    user-level id can be tag, changeset, rev number, or negative rev
-    number relative to number of revs (-1 is tip, etc).'''
-    if not val:
-        return defval
-    try:
-        num = int(val)
-        if str(num) != val:
-            raise ValueError
-        if num < 0:
-            num += repo.changelog.count()
-        if num < 0:
-            num = 0
-        elif num >= repo.changelog.count():
-            raise ValueError
-    except ValueError:
-        try:
-            num = repo.changelog.rev(repo.lookup(val))
-        except KeyError:
-            raise util.Abort(_('invalid revision identifier %s'), val)
-    return num
-
-def revpair(ui, repo, revs):
-    '''return pair of nodes, given list of revisions. second item can
-    be None, meaning use working dir.'''
-    if not revs:
-        return repo.dirstate.parents()[0], None
-    end = None
-    if len(revs) == 1:
-        start = revs[0]
-        if revrangesep in start:
-            start, end = start.split(revrangesep, 1)
-            start = revfix(repo, start, 0)
-            end = revfix(repo, end, repo.changelog.count() - 1)
-        else:
-            start = revfix(repo, start, None)
-    elif len(revs) == 2:
-        if revrangesep in revs[0] or revrangesep in revs[1]:
-            raise util.Abort(_('too many revisions specified'))
-        start = revfix(repo, revs[0], None)
-        end = revfix(repo, revs[1], None)
-    else:
-        raise util.Abort(_('too many revisions specified'))
-    if end is not None: end = repo.lookup(str(end))
-    return repo.lookup(str(start)), end
-
-def revrange(ui, repo, revs):
-    """Yield revision as strings from a list of revision specifications."""
-    seen = {}
-    for spec in revs:
-        if revrangesep in spec:
-            start, end = spec.split(revrangesep, 1)
-            start = revfix(repo, start, 0)
-            end = revfix(repo, end, repo.changelog.count() - 1)
-            step = start > end and -1 or 1
-            for rev in xrange(start, end+step, step):
-                if rev in seen:
-                    continue
-                seen[rev] = 1
-                yield str(rev)
-        else:
-            rev = revfix(repo, spec, None)
-            if rev in seen:
-                continue
-            seen[rev] = 1
-            yield str(rev)
-
 def write_bundle(cg, filename=None, compress=True):
     """Write a bundle file and return its filename.
 
@@ -341,7 +280,7 @@ def write_bundle(cg, filename=None, compress=True):
     try:
         if filename:
             if os.path.exists(filename):
-                raise util.Abort(_("file '%s' already exists"), filename)
+                raise util.Abort(_("file '%s' already exists") % filename)
             fh = open(filename, "wb")
         else:
             fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
@@ -505,7 +444,7 @@ def help_(ui, name=None, with_version=False):
         if with_version:
             show_version(ui)
             ui.write('\n')
-        aliases, i = findcmd(name)
+        aliases, i = findcmd(ui, name)
         # synopsis
         ui.write("%s\n\n" % i[2])
 
@@ -707,7 +646,7 @@ def annotate(ui, repo, *pats, **opts):
     if not opts['user'] and not opts['changeset'] and not opts['date']:
         opts['number'] = 1
 
-    ctx = repo.changectx(opts['rev'] or repo.dirstate.parents()[0])
+    ctx = repo.changectx(defaultrev(repo, opts['rev']))
 
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
                                              node=ctx.node()):
@@ -754,14 +693,7 @@ def archive(ui, repo, dest, **opts):
     The default is the basename of the archive, with suffixes removed.
     '''
 
-    if opts['rev']:
-        node = repo.lookup(opts['rev'])
-    else:
-        node, p2 = repo.dirstate.parents()
-        if p2 != nullid:
-            raise util.Abort(_('uncommitted merge - please provide a '
-                               'specific revision'))
-
+    node = repo.lookup(defaultrev(repo, opts['rev']))
     dest = cmdutil.make_filename(repo, dest, node)
     if os.path.realpath(dest) == repo.root:
         raise util.Abort(_('repository root cannot be destination'))
@@ -818,6 +750,7 @@ def backout(ui, repo, rev, **opts):
         parent = p1
     hg.clean(repo, node, show_stats=False)
     revert_opts = opts.copy()
+    revert_opts['all'] = True
     revert_opts['rev'] = hex(parent)
     revert(ui, repo, **revert_opts)
     commit_opts = opts.copy()
@@ -866,7 +799,8 @@ def cat(ui, repo, file1, *pats, **opts):
     """output the latest or given revisions of files
 
     Print the specified files as they were at the given revision.
-    If no revision is given then the tip is used.
+    If no revision is given then working dir parent is used, or tip
+    if no revision is checked out.
 
     Output may be to a file, in which case the name of the file is
     given using a format string.  The formatting rules are the same as
@@ -876,7 +810,7 @@ def cat(ui, repo, file1, *pats, **opts):
     %d   dirname of file being printed, or '.' if in repo root
     %p   root-relative path name of file being printed
     """
-    ctx = repo.changectx(opts['rev'] or "-1")
+    ctx = repo.changectx(defaultrev(repo, opts['rev']))
     for src, abs, rel, exact in cmdutil.walk(repo, (file1,) + pats, opts,
                                              ctx.node()):
         fp = cmdutil.make_file(repo, opts['output'], ctx.node(), pathname=abs)
@@ -1151,7 +1085,7 @@ def debugcomplete(ui, cmd='', **opts):
         options = []
         otables = [globalopts]
         if cmd:
-            aliases, entry = findcmd(cmd)
+            aliases, entry = findcmd(ui, cmd)
             otables.append(entry[1])
         for t in otables:
             for o in t:
@@ -1161,7 +1095,7 @@ def debugcomplete(ui, cmd='', **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    clist = findpossible(cmd).keys()
+    clist = findpossible(ui, cmd).keys()
     clist.sort()
     ui.write("%s\n" % "\n".join(clist))
 
@@ -1268,7 +1202,7 @@ def debugdata(ui, file_, rev):
     try:
         ui.write(r.revision(r.lookup(rev)))
     except KeyError:
-        raise util.Abort(_('invalid revision identifier %s'), rev)
+        raise util.Abort(_('invalid revision identifier %s') % rev)
 
 def debugindex(ui, file_):
     """dump the contents of an index file"""
@@ -1343,7 +1277,7 @@ def diff(ui, repo, *pats, **opts):
     it detects as binary. With -a, diff will generate a diff anyway,
     probably with undesirable results.
     """
-    node1, node2 = revpair(ui, repo, opts['rev'])
+    node1, node2 = cmdutil.revpair(ui, repo, opts['rev'])
 
     fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
 
@@ -1379,7 +1313,7 @@ def export(ui, repo, *changesets, **opts):
     """
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
-    revs = list(revrange(ui, repo, changesets))
+    revs = list(cmdutil.revrange(ui, repo, changesets))
     if len(revs) > 1:
         ui.note(_('exporting patches:\n'))
     else:
@@ -1939,7 +1873,7 @@ def merge(ui, repo, node=None, force=None, branch=None):
     revision to merge with must be provided.
     """
 
-    if node:
+    if node or branch:
         node = _lookup(repo, node, branch)
     else:
         heads = repo.heads()
@@ -2271,8 +2205,8 @@ def revert(ui, repo, *pats, **opts):
     Modified files are saved with a .orig suffix before reverting.
     To disable these backups, use --no-backup.
 
-    Using the -r option, revert the given files or directories to
-    their contents as of a specific revision.  This can be helpful to"roll
+    Using the -r option, revert the given files or directories to their
+    contents as of a specific revision. This can be helpful to "roll
     back" some or all of a change that should not have been committed.
 
     Revert modifies the working directory.  It does not commit any
@@ -2286,16 +2220,15 @@ def revert(ui, repo, *pats, **opts):
 
     If names are given, all files matching the names are reverted.
 
-    If no arguments are given, all files in the repository are reverted.
+    If no arguments are given, no files are reverted.
     """
+
+    if not pats and not opts['all']:
+        raise util.Abort(_('no files or directories specified; '
+                           'use --all to revert the whole repo'))
+
     parent, p2 = repo.dirstate.parents()
-    if opts['rev']:
-        node = repo.lookup(opts['rev'])
-    elif p2 != nullid:
-        raise util.Abort(_('working dir has two parents; '
-                           'you must specify the revision to revert to'))
-    else:
-        node = parent
+    node = repo.lookup(defaultrev(repo, opts['rev']))
     mf = repo.manifest.read(repo.changelog.read(node)[0])
     if node == parent:
         pmf = mf
@@ -2452,7 +2385,8 @@ def serve(ui, repo, **opts):
 
     if opts["stdio"]:
         if repo is None:
-            raise hg.RepoError(_('no repo found'))
+            raise hg.RepoError(_("There is no Mercurial repository here"
+                                 " (.hg not found)"))
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
@@ -2463,7 +2397,8 @@ def serve(ui, repo, **opts):
             ui.setconfig("web", o, opts[o])
 
     if repo is None and not ui.config("web", "webdir_conf"):
-        raise hg.RepoError(_('no repo found'))
+        raise hg.RepoError(_("There is no Mercurial repository here"
+                             " (.hg not found)"))
 
     if opts['daemon'] and not opts['daemon_pipefds']:
         rfd, wfd = os.pipe()
@@ -2478,7 +2413,7 @@ def serve(ui, repo, **opts):
     try:
         httpd = hgweb.server.create_server(ui, repo)
     except socket.error, inst:
-        raise util.Abort(_('cannot start server: ') + inst.args[1])
+        raise util.Abort(_('cannot start server: %s') % inst.args[1])
 
     if ui.verbose:
         addr, port = httpd.socket.getsockname()
@@ -2593,15 +2528,10 @@ def tag(ui, repo, name, rev_=None, **opts):
             raise util.Abort(_("use only one form to specify the revision"))
     if opts['rev']:
         rev_ = opts['rev']
-    if rev_:
-        r = repo.lookup(rev_)
-    else:
-        p1, p2 = repo.dirstate.parents()
-        if p1 == nullid:
-            raise util.Abort(_('no revision to tag'))
-        if p2 != nullid:
-            raise util.Abort(_('outstanding uncommitted merges'))
-        r = p1
+    r = defaultrev(repo, rev_, nullid)
+    if r == nullid:
+        raise util.Abort(_('no revision to tag'))
+    r = repo.lookup(r)
 
     message = opts['message']
     if not message:
@@ -2728,7 +2658,7 @@ def _lookup(repo, node, branch=None):
             repo.ui.warn(_("Using head %s for branch %s\n")
                          % (short(node), branch))
         else:
-            raise util.Abort(_("branch %s not found\n") % (branch))
+            raise util.Abort(_("branch %s not found") % branch)
     else:
         node = node and repo.lookup(node) or repo.changelog.tip()
     return node
@@ -2881,6 +2811,7 @@ table = {
         (export,
          [('o', 'output', '', _('print output to file with formatted name')),
           ('a', 'text', None, _('treat all files as text')),
+          ('g', 'git', None, _('use git extended diff format')),
           ('', 'switch-parent', None, _('diff against the second parent'))],
          _('hg export [-a] [-o OUTFILESPEC] REV...')),
     "debugforget|forget":
@@ -3046,7 +2977,8 @@ table = {
          _('hg rename [OPTION]... SOURCE... DEST')),
     "^revert":
         (revert,
-         [('r', 'rev', '', _('revision to revert to')),
+         [('a', 'all', None, _('revert all changes when no arguments given')),
+          ('r', 'rev', '', _('revision to revert to')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
           ('I', 'include', [], _('include names matching given patterns')),
           ('X', 'exclude', [], _('exclude names matching given patterns')),
@@ -3145,7 +3077,7 @@ norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot")
 optionalrepo = ("paths serve debugconfig")
 
-def findpossible(cmd):
+def findpossible(ui, cmd):
     """
     Return cmd -> (aliases, command table entry)
     for each matching command.
@@ -3158,7 +3090,7 @@ def findpossible(cmd):
         found = None
         if cmd in aliases:
             found = cmd
-        else:
+        elif not ui.config("ui", "strict"):
             for a in aliases:
                 if a.startswith(cmd):
                     found = a
@@ -3174,9 +3106,9 @@ def findpossible(cmd):
 
     return choice
 
-def findcmd(cmd):
+def findcmd(ui, cmd):
     """Return (aliases, command table entry) for command string."""
-    choice = findpossible(cmd)
+    choice = findpossible(ui, cmd)
 
     if choice.has_key(cmd):
         return choice[cmd]
@@ -3211,11 +3143,11 @@ def parse(ui, args):
 
     if args:
         cmd, args = args[0], args[1:]
-        aliases, i = findcmd(cmd)
+        aliases, i = findcmd(ui, cmd)
         cmd = aliases[0]
         defaults = ui.config("defaults", cmd)
         if defaults:
-            args = defaults.split() + args
+            args = shlex.split(defaults) + args
         c = list(i[1])
     else:
         cmd = None
@@ -3299,11 +3231,13 @@ def dispatch(args):
         if num: signal.signal(num, catchterm)
 
     try:
-        u = ui.ui(traceback='--traceback' in sys.argv[1:],
-                  readhooks=[load_extensions])
+        u = ui.ui(traceback='--traceback' in sys.argv[1:])
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
+
+    load_extensions(u)
+    u.addreadhook(load_extensions)
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)
@@ -3439,7 +3373,7 @@ def dispatch(args):
         u.warn(_("abort: could not lock %s: %s\n") %
                (inst.desc or inst.filename, inst.strerror))
     except revlog.RevlogError, inst:
-        u.warn(_("abort: "), inst, "!\n")
+        u.warn(_("abort: %s!\n") % inst)
     except util.SignalInterrupt:
         u.warn(_("killed!\n"))
     except KeyboardInterrupt:
@@ -3461,18 +3395,18 @@ def dispatch(args):
                 u.warn(_("broken pipe\n"))
         elif getattr(inst, "strerror", None):
             if getattr(inst, "filename", None):
-                u.warn(_("abort: %s - %s\n") % (inst.strerror, inst.filename))
+                u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
             else:
                 u.warn(_("abort: %s\n") % inst.strerror)
         else:
             raise
     except OSError, inst:
-        if hasattr(inst, "filename"):
+        if getattr(inst, "filename", None):
             u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
         else:
             u.warn(_("abort: %s\n") % inst.strerror)
     except util.Abort, inst:
-        u.warn(_('abort: '), inst.args[0] % inst.args[1:], '\n')
+        u.warn(_("abort: %s\n") % inst)
     except TypeError, inst:
         # was this an argument error?
         tb = traceback.extract_tb(sys.exc_info()[2])

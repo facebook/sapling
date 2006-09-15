@@ -1,0 +1,23 @@
+adding base
+abort: cannot delete applied patch c
+Now at: b
+a
+b
+a
+b
+series
+status
+Now at: a
+a
+b
+series
+status
+1 New patch: a
+0 base
+abort: patch e not at base
+f
+4 New patch: f
+3 New patch: e
+2 New patch: d
+1 New patch: a
+0 base

@@ -238,8 +238,11 @@ class notifier(object):
             return
         fp = templater.stringio()
         prev = self.repo.changelog.parents(node)[0]
-        patch.diff(self.repo, fp, prev, ref)
+        patch.diff(self.repo, prev, ref, fp=fp)
         difflines = fp.getvalue().splitlines(1)
+        if self.ui.configbool('notify', 'diffstat', True):
+            s = patch.diffstat(difflines)
+            self.sio.write('\ndiffstat:\n\n' + s)
         if maxdiff > 0 and len(difflines) > maxdiff:
             self.sio.write(_('\ndiffs (truncated from %d to %d lines):\n\n') %
                            (len(difflines), maxdiff))
