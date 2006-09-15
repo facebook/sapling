@@ -8,9 +8,18 @@
 class changectx(object):
     """A changecontext object makes access to data related to a particular
     changeset convenient."""
-    def __init__(self, repo, changeid):
+    def __init__(self, repo, changeid=None):
         """changeid is a revision number, node, or tag"""
         self._repo = repo
+
+        if not changeid:
+            p1, p2 = self._repo.dirstate.parents()
+            self._rev = self._repo.changelog.rev(p1)
+            if self._rev == -1:
+                changeid = 'tip'
+            else:
+                self._node = p1
+                return
 
         self._node = self._repo.lookup(changeid)
         self._rev = self._repo.changelog.rev(self._node)

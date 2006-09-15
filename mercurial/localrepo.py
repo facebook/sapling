@@ -318,7 +318,7 @@ class localrepository(repo.repository):
             f = f[1:]
         return filelog.filelog(self.opener, f, self.revlogversion)
 
-    def changectx(self, changeid):
+    def changectx(self, changeid=None):
         return context.changectx(self, changeid)
 
     def filectx(self, path, changeid=None, fileid=None):
