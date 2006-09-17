@@ -52,12 +52,66 @@ def merge3(repo, fn, my, other, p1, p2):
     os.unlink(c)
     return r
 
-def manifestmerge(ui, m1, m2, ma, overwrite, backwards):
+def checkunknown(repo, m2, status):
+    """
+    check for collisions between unknown files and files in m2
+    """
+    modified, added, removed, deleted, unknown = status[:5]
+    for f in unknown:
+        if f in m2:
+            if repo.file(f).cmp(m2[f], repo.wread(f)):
+                raise util.Abort(_("'%s' already exists in the working"
+                                   " dir and differs from remote") % f)
+
+def workingmanifest(repo, man, status):
+    """
+    Update manifest to correspond to the working directory
+    """
+
+    modified, added, removed, deleted, unknown = status[:5]
+    for i,l in (("a", added), ("m", modified), ("u", unknown)):
+        for f in l:
+            man[f] = man.get(f, nullid) + i
+            man.set(f, util.is_exec(repo.wjoin(f), man.execf(f)))
+
+    for f in deleted + removed:
+        del man[f]
+
+    return man
+
+def forgetremoved(m2, status):
+    """
+    Forget removed files
+
+    If we're jumping between revisions (as opposed to merging), and if
+    neither the working directory nor the target rev has the file,
+    then we need to remove it from the dirstate, to prevent the
+    dirstate from listing the file when it is no longer in the
+    manifest.
+    """
+
+    modified, added, removed, deleted, unknown = status[:5]
+    action = []
+
+    for f in deleted + removed:
+        if f not in m2:
+            action.append((f, "f"))
+
+    return action
+
+def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
     """
     Merge manifest m1 with m2 using ancestor ma and generate merge action list
     """
 
     action = []
+
+    # Filter manifests
+    if partial:
+        for f in m1.keys():
+            if not partial(f): del m1[f]
+        for f in m2.keys():
+            if not partial(f): del m2[f]
 
     # Compare manifests
     for f, n in m1.iteritems():
@@ -176,7 +230,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         raise util.Abort(_("update spans branches, use 'hg merge' "
                            "or 'hg update -C' to lose changes"))
 
-    modified, added, removed, deleted, unknown = repo.status()[:5]
+    status = repo.status()
+    modified, added, removed, deleted, unknown = status[:5]
     if branchmerge and not forcemerge:
         if modified or added or removed:
             raise util.Abort(_("outstanding uncommitted changes"))
@@ -184,13 +239,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     m1 = repo.changectx(p1).manifest().copy()
     m2 = repo.changectx(p2).manifest().copy()
     ma = repo.changectx(pa).manifest()
-
-    if not force:
-        for f in unknown:
-            if f in m2:
-                if repo.file(f).cmp(m2[f], repo.wread(f)):
-                    raise util.Abort(_("'%s' already exists in the working"
-                                       " dir and differs from remote") % f)
 
     # resolve the manifest to determine which files
     # we care about merging
@@ -201,31 +249,13 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                   (short(p1), short(p2), short(pa)))
 
     action = []
+    m1 = workingmanifest(repo, m1, status)
 
-    # update m1 from working dir
-    for i,l in (("a", added), ("m", modified), ("u", unknown)):
-        for f in l:
-            m1[f] = m1.get(f, nullid) + i
-            m1.set(f, util.is_exec(repo.wjoin(f), m1.execf(f)))
-
-    for f in deleted + removed:
-        del m1[f]
-
-        # If we're jumping between revisions (as opposed to merging),
-        # and if neither the working directory nor the target rev has
-        # the file, then we need to remove it from the dirstate, to
-        # prevent the dirstate from listing the file when it is no
-        # longer in the manifest.
-        if linear_path and f not in m2:
-            action.append((f, "f"))
-
-    if partial:
-        for f in m1.keys():
-            if not partial(f): del m1[f]
-        for f in m2.keys():
-            if not partial(f): del m2[f]
-
-    action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards)
+    if not force:
+        checkunknown(repo, m2, status)
+    if linear_path:
+        action += forgetremoved(m2, status)
+    action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards, partial)
     del m1, m2, ma
 
     ### apply phase
