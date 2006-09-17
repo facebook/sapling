@@ -203,8 +203,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     action = []
 
     # update m1 from working dir
-    umap = dict.fromkeys(unknown)
-
     for i,l in (("a", added), ("m", modified), ("u", unknown)):
         for f in l:
             m1[f] = m1.get(f, nullid) + i
