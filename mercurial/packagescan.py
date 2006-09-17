@@ -26,6 +26,7 @@ def demandload(scope, modules):
         foo            import foo
         foo bar        import foo, bar
         foo.bar        import foo.bar
+        foo@bar        import foo as bar
         foo:bar        from foo import bar
         foo:bar,quux   from foo import bar, quux
         foo.bar:quux   from foo.bar import quux"""
@@ -38,6 +39,9 @@ def demandload(scope, modules):
         except:
             module = m
             fromlist = []
+        as_ = None
+        if '@' in module:
+            module, as_ = module.split('@')
         mod = __import__(module, scope, scope, fromlist)
         if fromlist == []:
             # mod is only the top package, but we need all packages
@@ -46,7 +50,9 @@ def demandload(scope, modules):
             mn = comp[0]
             while True:
                 # mn and mod.__name__ might not be the same
-                scope[mn] = mod
+                if not as_:
+                    as_ = mn
+                scope[as_] = mod
                 requiredmodules[mod.__name__] = 1
                 if len(comp) == i: break
                 mod = getattr(mod,comp[i])

@@ -8,7 +8,7 @@ error = error-gitweb.tmpl
 naventry = '<a href="?cmd=changelog;rev=#rev#;style=gitweb">#label|escape#</a> '
 navshortentry = '<a href="?cmd=shortlog;rev=#rev#;style=gitweb">#label|escape#</a> '
 filedifflink = '<a href="?cmd=filediff;node=#node#;file=#file|urlescape#;style=gitweb">#file|escape#</a> '
-filenodelink = '<tr class="light"><td><a class="list" href="">#file|escape#</a></td><td></td><td class="link"><a href="?cmd=file;filenode=#filenode#;file=#file|urlescape#;style=gitweb">file</a> | <!-- FIXME: <a href="?fd=#filenode|short#;file=#file|urlescape#;style=gitweb">diff</a> | --> <a href="?cmd=filelog;filenode=#filenode|short#;file=#file|urlescape#;style=gitweb">revisions</a></td></tr>'
+filenodelink = '<tr class="light"><td><a class="list" href="">#file|escape#</a></td><td></td><td class="link"><a href="?cmd=file;filenode=#filenode#;file=#file|urlescape#;style=gitweb">file</a> | <a href="?fa=#filenode|short#;file=#file|urlescape#;style=gitweb">annotate</a> | <!-- FIXME: <a href="?fd=#filenode|short#;file=#file|urlescape#;style=gitweb">diff</a> | --> <a href="?cmd=filelog;filenode=#filenode|short#;file=#file|urlescape#;style=gitweb">revisions</a></td></tr>'
 fileellipses = '...'
 changelogentry = changelogentry-gitweb.tmpl
 searchentry = changelogentry-gitweb.tmpl
@@ -19,12 +19,12 @@ manifestfileentry = '<tr class="parity#parity#"><td style="font-family:monospace
 filerevision = filerevision-gitweb.tmpl
 fileannotate = fileannotate-gitweb.tmpl
 filelog = filelog-gitweb.tmpl
-fileline = '<div style="font-family:monospace; white-space: pre;" class="parity#parity#"><span class="linenr">   #linenumber#</span> #line|escape#</div>'
-annotateline = '<tr style="font-family:monospace; white-space: pre;" class="parity#parity#"><td class="linenr" style="text-align: right;"><a href="?cs=#node|short#;style=gitweb">#author|obfuscate#@#rev#</a></td><td>#line|escape#</td></tr>'
-difflineplus = '<div class="pre" style="color:#008800;">#line|escape#</div>'
-difflineminus = '<div class="pre" style="color:#cc0000;">#line|escape#</div>'
-difflineat = '<div class="pre" style="color:#990099;">#line|escape#</div>'
-diffline = '<div class="pre">#line|escape#</div>'
+fileline = '<div style="font-family:monospace" class="parity#parity#"><pre><span class="linenr">   #linenumber#</span> #line|escape#</pre></div>'
+annotateline = '<tr style="font-family:monospace" class="parity#parity#"><td class="linenr" style="text-align: right;"><a href="?cs=#node|short#;style=gitweb">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>'
+difflineplus = '<div style="color:#008800;">#line|escape#</div>'
+difflineminus = '<div style="color:#cc0000;">#line|escape#</div>'
+difflineat = '<div style="color:#990099;">#line|escape#</div>'
+diffline = '<div>#line|escape#</div>'
 changelogparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cmd=changeset;node=#node#;style=gitweb">#node|short#</a></td></tr>'
 changesetparent = '<tr><td>parent</td><td style="font-family:monospace"><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb">#node|short#</a></td></tr>'
 filerevparent = '<tr><td class="metatag">parent:</td><td><a href="?cmd=file;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>'
@@ -37,7 +37,7 @@ filerevchild = '<tr><td class="metatag">child:</td><td><a href="?cmd=file;file=#
 fileannotatechild = '<tr><td class="metatag">child:</td><td><a href="?cmd=annotate;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>'
 tags = tags-gitweb.tmpl
 tagentry = '<tr class="parity#parity#"><td class="age"><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#tag|escape#</b></a></td><td class="link"><a href="?cmd=changeset;node=#node|short#;style=gitweb">changeset</a> | <a href="?cmd=changelog;rev=#node|short#;style=gitweb">changelog</a> |  <a href="?mf=#tagmanifest|short#;path=/;style=gitweb">manifest</a></td></tr>'
-diffblock = '#lines#'
+diffblock = '<pre>#lines#</pre>'
 changelogtag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'
 changesettag = '<tr><td>tag</td><td>#tag|escape#</td></tr>'
 filediffparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="?cmd=changeset;node=#node#;style=gitweb">#node|short#</a></td></tr>'
@@ -46,5 +46,5 @@ filediffchild = '<tr><th class="child">child #rev#:</th><td class="child"><a hre
 filelogchild = '<tr><td align="right">child #rev#:&nbsp;</td><td><a href="?cmd=file;file=#file|urlescape#;filenode=#node#;style=gitweb">#node|short#</a></td></tr>'
 shortlog = shortlog-gitweb.tmpl
 shortlogentry = '<tr class="parity#parity#"><td class="age"><i>#date|age# ago</i></td><td><i>#author#</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#desc|strip|firstline|escape#</b></a></td><td class="link"><a href="?cmd=changeset;node=#node|short#;style=gitweb">changeset</a> |  <a href="?cmd=manifest;manifest=#manifest|short#;path=/;style=gitweb">manifest</a></td></tr>'
-filelogentry = '<tr class="parity#parity#"><td class="age"><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#desc|strip|firstline|escape#</b></a></td><td class="link"><!-- FIXME: <a href="?fd=#node|short#;file=#file|urlescape#;style=gitweb">diff</a> | --> <a href="?fa=#filenode|short#;file=#file|urlescape#;style=gitweb">annotate</a> #rename%filelogrename#</td></tr>'
+filelogentry = '<tr class="parity#parity#"><td class="age"><i>#date|age# ago</i></td><td><a class="list" href="?cmd=changeset;node=#node|short#;style=gitweb"><b>#desc|strip|firstline|escape#</b></a></td><td class="link"><a href="?f=#node|short#;file=#file|urlescape#;style=gitweb">file</a> | <!-- FIXME: <a href="?fd=#node|short#;file=#file|urlescape#;style=gitweb">diff</a> | --> <a href="?fa=#filenode|short#;file=#file|urlescape#;style=gitweb">annotate</a> #rename%filelogrename#</td></tr>'
 archiveentry = ' | <a href="?ca=#node|short#;type=#type|urlescape#">#type|escape#</a> '

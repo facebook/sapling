@@ -1,8 +1,7 @@
 #!/bin/sh
 
-HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
-echo "[extensions]" >> $HGTMP/.hgrc
-echo "mq=" >> $HGTMP/.hgrc
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
 
 echo % help
 hg help mq
@@ -116,6 +115,19 @@ hg push ../../k
 echo % qunapplied
 hg qunapplied
 
+echo % qpush/qpop with index
+hg qnew test1b.patch
+echo 1b > 1b
+hg add 1b
+hg qrefresh
+hg qpush 2
+hg qpop 0
+hg qpush test.patch+1
+hg qpush test.patch+2
+hg qpop test2.patch-1
+hg qpop test2.patch-2
+hg qpush test1b.patch+1
+
 echo % push should succeed
 hg qpop -a
 hg push ../../k
@@ -127,7 +139,28 @@ hg ci -Ama
 hg strip tip 2>&1 | sed 's/\(saving bundle to \).*/\1/'
 hg unbundle .hg/strip-backup/*
 
-cat >>$HGTMP/.hgrc <<EOF
+echo '% cd b; hg qrefresh'
+hg init refresh
+cd refresh
+echo a > a
+hg ci -Ama -d'0 0'
+hg qnew -mfoo foo
+echo a >> a
+hg qrefresh
+mkdir b
+cd b
+echo f > f
+hg add f
+hg qrefresh
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" ../.hg/patches/foo
+echo % hg qrefresh .
+hg qrefresh .
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" ../.hg/patches/foo
+hg status
+
+cat >>$HGRCPATH <<EOF
 [diff]
 git = True
 EOF

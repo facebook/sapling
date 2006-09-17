@@ -38,7 +38,7 @@ cd ..
 
 echo "# clone remote via stream"
 hg clone -e ./dummyssh --uncompressed ssh://user@dummy/remote local-stream 2>&1 | \
-  sed -e 's/[0-9][0-9.]*/XXX/g'
+  sed -e 's/[0-9][0-9.]*/XXX/g' -e 's/[KM]\(B\/sec\)/X\1/'
 cd local-stream
 hg verify
 cd ..
@@ -80,7 +80,7 @@ cd ../remote
 echo "# check remote tip"
 hg tip
 hg verify
-hg cat foo
+hg cat -r tip foo
 
 echo z > z
 hg ci -A -m z -d '1000001 0' z

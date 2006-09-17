@@ -60,8 +60,8 @@ class checker(object):
             return None, False
 
         thisuser = self.getuser()
-        pats = [pat for pat, user in self.ui.configitems(key)
-                if user == thisuser]
+        pats = [pat for pat, users in self.ui.configitems(key)
+                if thisuser in users.replace(',', ' ').split()]
         self.ui.debug(_('acl: %s enabled, %d entries for user %s\n') %
                       (key, len(pats), thisuser))
         if pats:

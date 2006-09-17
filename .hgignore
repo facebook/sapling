@@ -21,6 +21,7 @@ doc/*.[0-9].{x,ht}ml
 MANIFEST
 patches
 mercurial/__version__.py
+.DS_Store
 
 syntax: regexp
 ^\.pc/

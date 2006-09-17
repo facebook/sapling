@@ -27,12 +27,21 @@ class localrepository(repo.repository):
                 oldp = p
                 p = os.path.dirname(p)
                 if p == oldp:
-                    raise repo.RepoError(_("no repo found"))
+                    raise repo.RepoError(_("There is no Mercurial repository"
+                                           " here (.hg not found)"))
             path = p
         self.path = os.path.join(path, ".hg")
 
-        if not create and not os.path.isdir(self.path):
-            raise repo.RepoError(_("repository %s not found") % path)
+        if not os.path.isdir(self.path):
+            if create:
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                os.mkdir(self.path)
+                os.mkdir(self.join("data"))
+            else:
+                raise repo.RepoError(_("repository %s not found") % path)
+        elif create:
+            raise repo.RepoError(_("repository %s already exists") % path)
 
         self.root = os.path.abspath(path)
         self.origroot = path
@@ -74,12 +83,6 @@ class localrepository(repo.repository):
         self.encodepats = None
         self.decodepats = None
         self.transhandle = None
-
-        if create:
-            if not os.path.exists(path):
-                os.mkdir(path)
-            os.mkdir(self.path)
-            os.mkdir(self.join("data"))
 
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
 
@@ -131,7 +134,7 @@ class localrepository(repo.repository):
             except Exception, exc:
                 if isinstance(exc, util.Abort):
                     self.ui.warn(_('error: %s hook failed: %s\n') %
-                                 (hname, exc.args[0] % exc.args[1:]))
+                                 (hname, exc.args[0]))
                 else:
                     self.ui.warn(_('error: %s hook raised an exception: '
                                    '%s\n') % (hname, exc))
@@ -641,7 +644,11 @@ class localrepository(repo.repository):
         if node:
             fdict = dict.fromkeys(files)
             for fn in self.manifest.read(self.changelog.read(node)[0]):
-                fdict.pop(fn, None)
+                for ffn in fdict:
+                    # match if the file is the exact name or a directory
+                    if ffn == fn or fn.startswith("%s/" % ffn):
+                        del fdict[ffn]
+                        break
                 if match(fn):
                     yield 'm', fn
             for fn in fdict:

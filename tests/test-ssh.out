@@ -2,7 +2,7 @@
 # clone remote via stream
 streaming all changes
 XXX files to transfer, XXX bytes of data
-transferred XXX bytes in XXX seconds (XXX KB/sec)
+transferred XXX bytes in XXX seconds (XXX XB/sec)
 XXX files updated, XXX files merged, XXX files removed, XXX files unresolved
 checking changesets
 checking manifests

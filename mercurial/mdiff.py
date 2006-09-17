@@ -50,6 +50,9 @@ class diffopts(object):
 defaultopts = diffopts()
 
 def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
+    def datetag(date):
+        return opts.git and '\n' or '\t%s\n' % date
+
     if not a and not b: return ""
     epoch = util.datestr((0, 0))
 
@@ -58,19 +61,19 @@ def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
     elif not a:
         b = splitnewlines(b)
         if a is None:
-            l1 = "--- %s\t%s\n" % ("/dev/null", epoch)
+            l1 = '--- /dev/null%s' % datetag(epoch)
         else:
-            l1 = "--- %s\t%s\n" % ("a/" + fn, ad)
-        l2 = "+++ %s\t%s\n" % ("b/" + fn, bd)
+            l1 = "--- %s%s" % ("a/" + fn, datetag(ad))
+        l2 = "+++ %s%s" % ("b/" + fn, datetag(bd))
         l3 = "@@ -0,0 +1,%d @@\n" % len(b)
         l = [l1, l2, l3] + ["+" + e for e in b]
     elif not b:
         a = splitnewlines(a)
-        l1 = "--- %s\t%s\n" % ("a/" + fn, ad)
+        l1 = "--- %s%s" % ("a/" + fn, datetag(ad))
         if b is None:
-            l2 = "+++ %s\t%s\n" % ("/dev/null", epoch)
+            l2 = '+++ /dev/null%s' % datetag(epoch)
         else:
-            l2 = "+++ %s\t%s\n" % ("b/" + fn, bd)
+            l2 = "+++ %s%s" % ("b/" + fn, datetag(bd))
         l3 = "@@ -1,%d +0,0 @@\n" % len(a)
         l = [l1, l2, l3] + ["-" + e for e in a]
     else:
@@ -79,8 +82,8 @@ def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
         l = list(bunidiff(a, b, al, bl, "a/" + fn, "b/" + fn, opts=opts))
         if not l: return ""
         # difflib uses a space, rather than a tab
-        l[0] = "%s\t%s\n" % (l[0][:-2], ad)
-        l[1] = "%s\t%s\n" % (l[1][:-2], bd)
+        l[0] = "%s%s" % (l[0][:-2], datetag(ad))
+        l[1] = "%s%s" % (l[1][:-2], datetag(bd))
 
     for ln in xrange(len(l)):
         if l[ln][-1] != '\n':

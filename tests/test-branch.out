@@ -1,0 +1,55 @@
+adding a
+adding b
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   0:b544c4ac4389
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0
+
+Using head f4ac749470f2 for branch foo
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   1:f4ac749470f2
+tag:         foo
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1
+
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding c
+Using head f4ac749470f2 for branch foo
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+changeset:   2:1505d56ee00e
+tag:         tip
+parent:      0:b544c4ac4389
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.0
+
+changeset:   1:f4ac749470f2
+tag:         foo
+branch:      foo
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1
+
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding d
+Using head f4ac749470f2 for branch foo
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+changeset:   3:53b72df12ae5
+tag:         tip
+parent:      0:b544c4ac4389
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.0
+
+changeset:   1:f4ac749470f2
+tag:         foo
+branch:      foo
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1
+

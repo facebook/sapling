@@ -2,9 +2,8 @@
 
 set -e
 
-HGRCPATH=$HGTMP/.hgrc; export HGRCPATH
-echo "[extensions]" >> $HGTMP/.hgrc
-echo "hbisect=" >> $HGTMP/.hgrc
+echo "[extensions]" >> $HGRCPATH
+echo "hbisect=" >> $HGRCPATH
 
 echo % init
 hg init

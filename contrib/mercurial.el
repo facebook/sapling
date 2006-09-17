@@ -1,6 +1,6 @@
 ;;; mercurial.el --- Emacs support for the Mercurial distributed SCM
 
-;; Copyright (C) 2005 Bryan O'Sullivan
+;; Copyright (C) 2005, 2006 Bryan O'Sullivan
 
 ;; Author: Bryan O'Sullivan <bos@serpentine.com>
 
@@ -289,7 +289,7 @@ XEmacs and GNU Emacs."
 
 (defsubst hg-chomp (str)
   "Strip trailing newlines from a string."
-  (hg-replace-in-string str "[\r\n]+\'" ""))
+  (hg-replace-in-string str "[\r\n]+\\'" ""))
 
 (defun hg-run-command (command &rest args)
   "Run the shell command COMMAND, returning (EXIT-CODE . COMMAND-OUTPUT).
@@ -502,6 +502,43 @@ directory names from the file system.  We do not penalise URLs."
 			     (or default "tip")))
 	rev))))
 
+(defun hg-parents-for-mode-line (root)
+  "Format the parents of the working directory for the mode line."
+  (let ((parents (split-string (hg-chomp
+				(hg-run0 "--cwd" root "parents" "--template"
+					 "{rev}\n")) "\n")))
+    (mapconcat 'identity parents "+")))
+
+(defun hg-buffers-visiting-repo (&optional path)
+  "Return a list of buffers visiting the repository containing PATH."
+  (let ((root-name (hg-root (or path (buffer-file-name))))
+	bufs)
+    (save-excursion
+      (dolist (buf (buffer-list) bufs)
+	(set-buffer buf)
+	(let ((name (buffer-file-name)))
+	  (when (and hg-status name (equal (hg-root name) root-name))
+	    (setq bufs (cons buf bufs))))))))
+
+(defun hg-update-mode-lines (path)
+  "Update the mode lines of all buffers visiting the same repository as PATH."
+  (let* ((root (hg-root path))
+	 (parents (hg-parents-for-mode-line root)))
+    (save-excursion
+      (dolist (info (hg-path-status
+		     root
+		     (mapcar
+		      (function
+		       (lambda (buf)
+			 (substring (buffer-file-name buf) (length root))))
+		      (hg-buffers-visiting-repo root))))
+	(let* ((name (car info))
+	       (status (cdr info))
+	       (buf (find-buffer-visiting (concat root name))))
+	  (when buf
+	    (set-buffer buf)
+	    (hg-mode-line-internal status parents)))))))
+  
 (defmacro hg-do-across-repo (path &rest body)
   (let ((root-name (gensym "root-"))
 	(buf-name (gensym "buf-")))
@@ -548,13 +585,31 @@ current frame."
 			    '(("M " . modified)
 			      ("A " . added)
 			      ("R " . removed)
+			      ("! " . deleted)
 			      ("? " . nil)))))
 	  (if state
 	      (cdr state)
 	    'normal)))))
 
-(defun hg-tip ()
-  (split-string (hg-chomp (hg-run0 "-q" "tip")) ":"))
+(defun hg-path-status (root paths)
+  "Return status of PATHS in repo ROOT as an alist.
+Each entry is a pair (FILE-NAME . STATUS)."
+  (let ((s (apply 'hg-run "--cwd" root "status" "-marduc" paths))
+	result)
+    (dolist (entry (split-string (hg-chomp (cdr s)) "\n") (nreverse result))
+      (let (state name)
+	(if (equal (substring entry 1 2) " ")
+	    (setq state (cdr (assoc (substring entry 0 2)
+				    '(("M " . modified)
+				      ("A " . added)
+				      ("R " . removed)
+				      ("! " . deleted)
+				      ("C " . normal)
+				      ("I " . ignored)
+				      ("? " . nil))))
+		  name (substring entry 2))
+	  (setq name (substring entry 0 (search ": " entry :from-end t))))
+	(setq result (cons (cons name state) result))))))
 
 (defmacro hg-view-output (args &rest body)
   "Execute BODY in a clean buffer, then quickly display that buffer.
@@ -589,7 +644,7 @@ being viewed."
 
 (put 'hg-view-output 'lisp-indent-function 1)
 
-;;; Context save and restore across revert.
+;;; Context save and restore across revert and other operations.
 
 (defun hg-position-context (pos)
   "Return information to help find the given position again."
@@ -631,22 +686,28 @@ Always returns a valid, hopefully sane, position."
 
 ;;; Hooks.
 
+(defun hg-mode-line-internal (status parents)
+  (setq hg-status status
+	hg-mode (and status (concat " Hg:"
+				    parents
+				    (cdr (assq status
+					       '((normal . "")
+						 (removed . "r")
+						 (added . "a")
+						 (deleted . "!")
+						 (modified . "m"))))))))
+  
 (defun hg-mode-line (&optional force)
   "Update the modeline with the current status of a file.
 An update occurs if optional argument FORCE is non-nil,
 hg-update-modeline is non-nil, or we have not yet checked the state of
 the file."
-  (when (and (hg-root) (or force hg-update-modeline (not hg-mode)))
-    (let ((status (hg-file-status buffer-file-name)))
-      (setq hg-status status
-	    hg-mode (and status (concat " Hg:"
-					(car (hg-tip))
-					(cdr (assq status
-						   '((normal . "")
-						     (removed . "r")
-						     (added . "a")
-						     (modified . "m")))))))
-      status)))
+  (let ((root (hg-root)))
+    (when (and root (or force hg-update-modeline (not hg-mode)))
+      (let ((status (hg-file-status buffer-file-name))
+	    (parents (hg-parents-for-mode-line root)))
+	(hg-mode-line-internal status parents)
+	status))))
 
 (defun hg-mode (&optional toggle)
   "Minor mode for Mercurial distributed SCM integration.
@@ -724,6 +785,13 @@ code by typing `M-x find-library mercurial RET'."
 		 default-directory)
 	(cd hg-root-dir)))))
 
+(defun hg-fix-paths ()
+  "Fix paths reported by some Mercurial commands."
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward " \\.\\.." nil t)
+      (replace-match " " nil nil))))
+
 (defun hg-add (path)
   "Add PATH to the Mercurial repository on the next commit.
 With a prefix argument, prompt for the path to add."
@@ -732,9 +800,8 @@ With a prefix argument, prompt for the path to add."
 	(update (equal buffer-file-name path)))
     (hg-view-output (hg-output-buffer-name)
       (apply 'call-process (hg-binary) nil t nil (list "add" path))
-      ;; "hg add" shows pathes relative NOT TO ROOT BUT TO REPOSITORY
-      (replace-regexp " \\.\\.." " " nil 0 (buffer-size))
-      (goto-char 0)
+      (hg-fix-paths)
+      (goto-char (point-min))
       (cd (hg-root path)))
     (when update
       (unless vc-make-backup-files
@@ -820,8 +887,7 @@ hg-commit-allow-empty-file-list is nil, an error is raised."
       (let ((buf hg-prev-buffer))
 	(kill-buffer nil)
 	(switch-to-buffer buf))
-      (hg-do-across-repo root
-	(hg-mode-line)))))
+      (hg-update-mode-lines root))))
 
 (defun hg-commit-mode ()
   "Mode for describing a commit of changes to a Mercurial repository.
@@ -973,8 +1039,8 @@ With a prefix argument, prompt for the path to forget."
     (hg-view-output (hg-output-buffer-name)
       (apply 'call-process (hg-binary) nil t nil (list "forget" path))
       ;; "hg forget" shows pathes relative NOT TO ROOT BUT TO REPOSITORY
-      (replace-regexp " \\.\\.." " " nil 0 (buffer-size))
-      (goto-char 0)
+      (hg-fix-paths)
+      (goto-char (point-min))
       (cd (hg-root path)))
     (when update
       (with-current-buffer buf
@@ -1147,6 +1213,21 @@ prompts for a path to check."
 		     (hg-abbrev-file-name path))))
 	root)
     hg-root))
+
+(defun hg-cwd (&optional path)
+  "Return the current directory of PATH within the repository."
+  (do ((stack nil (cons (file-name-nondirectory
+			 (directory-file-name dir))
+			stack))
+       (prev nil dir)
+       (dir (file-name-directory (or path buffer-file-name
+				     (expand-file-name default-directory)))
+	    (file-name-directory (directory-file-name dir))))
+      ((equal prev dir))
+    (when (file-directory-p (concat dir ".hg"))
+      (let ((cwd (mapconcat 'identity stack "/")))
+	(unless (equal cwd "")
+	  (return (file-name-as-directory cwd)))))))
 
 (defun hg-status (path)
   "Print revision control status of a file or directory.
