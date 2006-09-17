@@ -108,7 +108,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                   (short(p1), short(p2), short(pa)))
 
     action = []
-    forget = []
 
     # update m1 from working dir
     umap = dict.fromkeys(unknown)
@@ -127,7 +126,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         # prevent the dirstate from listing the file when it is no
         # longer in the manifest.
         if linear_path and f not in m2:
-            forget.append(f)
+            action.append((f, "f"))
 
     if partial:
         for f in m1.keys():
@@ -268,7 +267,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     # update dirstate
     if not partial:
         repo.dirstate.setparents(p1, p2)
-        repo.dirstate.forget(forget)
         for a in action:
             f, m = a[:2]
             if m == "r": # remove
@@ -276,6 +274,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     repo.dirstate.update([f], 'r')
                 else:
                     repo.dirstate.forget([f])
+            elif m == "f": # forget
+                repo.dirstate.forget([f])
             elif m == "g": # get
                 if branchmerge:
                     repo.dirstate.update([f], 'n', st_mtime=-1)
