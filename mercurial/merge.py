@@ -199,6 +199,74 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
 
     return action
 
+def applyupdates(repo, action, xp1, xp2):
+    updated, merged, removed, unresolved = 0, 0, 0, 0
+    action.sort()
+    for a in action:
+        f, m = a[:2]
+        if f[0] == "/":
+            continue
+        if m == "r": # remove
+            repo.ui.note(_("removing %s\n") % f)
+            util.audit_path(f)
+            try:
+                util.unlink(repo.wjoin(f))
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    repo.ui.warn(_("update failed to remove %s: %s!\n") %
+                                 (f, inst.strerror))
+            removed +=1
+        elif m == "m": # merge
+            flag, my, other = a[2:]
+            repo.ui.status(_("merging %s\n") % f)
+            if merge3(repo, f, my, other, xp1, xp2):
+                unresolved += 1
+            util.set_exec(repo.wjoin(f), flag)
+            merged += 1
+        elif m == "g": # get
+            flag, node = a[2:]
+            repo.ui.note(_("getting %s\n") % f)
+            t = repo.file(f).read(node)
+            repo.wwrite(f, t)
+            util.set_exec(repo.wjoin(f), flag)
+            updated += 1
+        elif m == "e": # exec
+            flag = a[2:]
+            util.set_exec(repo.wjoin(f), flag)
+
+    return updated, merged, removed, unresolved
+
+def recordupdates(repo, action, branchmerge):
+    for a in action:
+        f, m = a[:2]
+        if m == "r": # remove
+            if branchmerge:
+                repo.dirstate.update([f], 'r')
+            else:
+                repo.dirstate.forget([f])
+        elif m == "f": # forget
+            repo.dirstate.forget([f])
+        elif m == "g": # get
+            if branchmerge:
+                repo.dirstate.update([f], 'n', st_mtime=-1)
+            else:
+                repo.dirstate.update([f], 'n')
+        elif m == "m": # merge
+            flag, my, other = a[2:]
+            if branchmerge:
+                # We've done a branch merge, mark this file as merged
+                # so that we properly record the merger later
+                repo.dirstate.update([f], 'm')
+            else:
+                # We've update-merged a locally modified file, so
+                # we set the dirstate to emulate a normal checkout
+                # of that file some time in the past. Thus our
+                # merge will appear as a normal local file
+                # modification.
+                fl = repo.file(f)
+                f_len = fl.size(fl.rev(other))
+                repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
+
 def update(repo, node, branchmerge=False, force=False, partial=None,
            wlock=None, show_stats=True, remind=True):
 
@@ -268,73 +336,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
-    # update files
-    updated, merged, removed, unresolved = 0, 0, 0, 0
-    action.sort()
-    for a in action:
-        f, m = a[:2]
-        if f[0] == "/":
-            continue
-        if m == "r": # remove
-            repo.ui.note(_("removing %s\n") % f)
-            util.audit_path(f)
-            try:
-                util.unlink(repo.wjoin(f))
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    repo.ui.warn(_("update failed to remove %s: %s!\n") %
-                                 (f, inst.strerror))
-            removed +=1
-        elif m == "m": # merge
-            flag, my, other = a[2:]
-            repo.ui.status(_("merging %s\n") % f)
-            if merge3(repo, f, my, other, xp1, xp2):
-                unresolved += 1
-            util.set_exec(repo.wjoin(f), flag)
-            merged += 1
-        elif m == "g": # get
-            flag, node = a[2:]
-            repo.ui.note(_("getting %s\n") % f)
-            t = repo.file(f).read(node)
-            repo.wwrite(f, t)
-            util.set_exec(repo.wjoin(f), flag)
-            updated += 1
-        elif m == "e": # exec
-            flag = a[2:]
-            util.set_exec(repo.wjoin(f), flag)
+    updated, merged, removed, unresolved = applyupdates(repo, action, xp1, xp2)
 
     # update dirstate
     if not partial:
         repo.dirstate.setparents(p1, p2)
-        for a in action:
-            f, m = a[:2]
-            if m == "r": # remove
-                if branchmerge:
-                    repo.dirstate.update([f], 'r')
-                else:
-                    repo.dirstate.forget([f])
-            elif m == "f": # forget
-                repo.dirstate.forget([f])
-            elif m == "g": # get
-                if branchmerge:
-                    repo.dirstate.update([f], 'n', st_mtime=-1)
-                else:
-                    repo.dirstate.update([f], 'n')
-            elif m == "m": # merge
-                flag, my, other = a[2:]
-                if branchmerge:
-                    # We've done a branch merge, mark this file as merged
-                    # so that we properly record the merger later
-                    repo.dirstate.update([f], 'm')
-                else:
-                    # We've update-merged a locally modified file, so
-                    # we set the dirstate to emulate a normal checkout
-                    # of that file some time in the past. Thus our
-                    # merge will appear as a normal local file
-                    # modification.
-                    fl = repo.file(f)
-                    f_len = fl.size(fl.rev(other))
-                    repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
+        recordupdates(repo, action, branchmerge)
 
     if show_stats:
         stats = ((updated, _("updated")),
