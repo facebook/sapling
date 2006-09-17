@@ -221,12 +221,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     backwards = (pa == p2)
 
     # is there a linear path from p1 to p2?
-    linear_path = (pa == p1 or pa == p2)
-    if branchmerge and linear_path:
+    linear = (pa == p1 or pa == p2)
+    if branchmerge and linear:
         raise util.Abort(_("there is nothing to merge, just use "
                            "'hg update' or look at 'hg heads'"))
 
-    if not linear_path and not (overwrite or branchmerge):
+    if not linear and not (overwrite or branchmerge):
         raise util.Abort(_("update spans branches, use 'hg merge' "
                            "or 'hg update -C' to lose changes"))
 
@@ -244,7 +244,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     # we care about merging
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(_(" overwrite %s branchmerge %s partial %s linear %s\n") %
-                  (overwrite, branchmerge, bool(partial), linear_path))
+                  (overwrite, branchmerge, bool(partial), linear))
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
                   (short(p1), short(p2), short(pa)))
 
@@ -253,14 +253,14 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     if not force:
         checkunknown(repo, m2, status)
-    if linear_path:
+    if linear:
         action += forgetremoved(m2, status)
     action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards, partial)
     del m1, m2, ma
 
     ### apply phase
 
-    if linear_path or overwrite:
+    if linear or overwrite:
         # we don't need to do any magic, just jump to the new rev
         p1, p2 = p2, nullid
 
