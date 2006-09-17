@@ -163,12 +163,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             if not queued and m1.execf(f) != m2.execf(f):
                 if overwrite:
                     repo.ui.debug(_(" updating permissions for %s\n") % f)
-                    util.set_exec(repo.wjoin(f), m2.execf(f))
+                    action.append((f, "e", m2.execf(f)))
                 else:
                     if fmerge(f, m1, m2, ma) != m1.execf(f):
                         repo.ui.debug(_(" updating permissions for %s\n")
                                       % f)
-                        util.set_exec(repo.wjoin(f), mode)
+                        action.append((f, "e", m2.execf(f)))
             del m2[f]
         elif f in ma:
             if n != ma[f]:
@@ -263,6 +263,9 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             repo.wwrite(f, t)
             util.set_exec(repo.wjoin(f), flag)
             updated += 1
+        elif m == "e": # exec
+            flag = a[2:]
+            util.set_exec(repo.wjoin(f), flag)
 
     # update dirstate
     if not partial:
