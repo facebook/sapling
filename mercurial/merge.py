@@ -264,12 +264,10 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         # we don't need to do any magic, just jump to the new rev
         p1, p2 = p2, nullid
 
-    xp1 = hex(p1)
-    xp2 = hex(p2)
-    if p2 == nullid: xxp2 = ''
-    else: xxp2 = xp2
+    xp1, xp2 = hex(p1), hex(p2)
+    if p2 == nullid: xp2 = ''
 
-    repo.hook('preupdate', throw=True, parent1=xp1, parent2=xxp2)
+    repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
     # update files
     updated, merged, removed, unresolved = 0, 0, 0, 0
@@ -361,6 +359,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             repo.ui.status(_("There are unresolved merges with"
                              " locally modified files.\n"))
 
-    repo.hook('update', parent1=xp1, parent2=xxp2, error=unresolved)
+    repo.hook('update', parent1=xp1, parent2=xp2, error=unresolved)
     return unresolved
 
