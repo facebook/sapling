@@ -133,10 +133,6 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
                     ui.debug(_(" remote %s is newer, get\n") % f)
                     action.append((f, "g", m2.execf(f), m2[f]))
                     queued = 1
-            elif n[20:] in ("u","a"):
-                # this unknown file is the same as the checkout
-                # we need to reset the dirstate if the file was added
-                action.append((f, "g", m2.execf(f), m2[f]))
 
             # do we still need to look at mode bits?
             if not queued and m1.execf(f) != m2.execf(f):
