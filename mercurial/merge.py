@@ -52,6 +52,99 @@ def merge3(repo, fn, my, other, p1, p2):
     os.unlink(c)
     return r
 
+def manifestmerge(ui, m1, m2, ma, overwrite, backwards):
+    """
+    Merge manifest m1 with m2 using ancestor ma and generate merge action list
+    """
+
+    action = []
+
+    # Compare manifests
+    for f, n in m1.iteritems():
+        if f in m2:
+            queued = 0
+
+            # are files different?
+            if n != m2[f]:
+                a = ma.get(f, nullid)
+                # are both different from the ancestor?
+                if not overwrite and n != a and m2[f] != a:
+                    ui.debug(_(" %s versions differ, resolve\n") % f)
+                    action.append((f, "m", fmerge(f, m1, m2, ma), n[:20], m2[f]))
+                    queued = 1
+                # are we clobbering?
+                # is remote's version newer?
+                # or are we going back in time and clean?
+                elif overwrite or m2[f] != a or (backwards and not n[20:]):
+                    ui.debug(_(" remote %s is newer, get\n") % f)
+                    action.append((f, "g", m2.execf(f), m2[f]))
+                    queued = 1
+            elif n[20:] in ("u","a"):
+                # this unknown file is the same as the checkout
+                # we need to reset the dirstate if the file was added
+                action.append((f, "g", m2.execf(f), m2[f]))
+
+            # do we still need to look at mode bits?
+            if not queued and m1.execf(f) != m2.execf(f):
+                if overwrite:
+                    ui.debug(_(" updating permissions for %s\n") % f)
+                    action.append((f, "e", m2.execf(f)))
+                else:
+                    mode = fmerge(f, m1, m2, ma)
+                    if mode != m1.execf(f):
+                        ui.debug(_(" updating permissions for %s\n")
+                                      % f)
+                        action.append((f, "e", m2.execf(f)))
+            del m2[f]
+        elif f in ma:
+            if n != ma[f]:
+                r = _("d")
+                if not overwrite:
+                    r = ui.prompt(
+                        (_(" local changed %s which remote deleted\n") % f) +
+                         _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
+                if r == _("d"):
+                    action.append((f, "r"))
+            else:
+                ui.debug(_("other deleted %s\n") % f)
+                action.append((f, "r"))
+        else:
+            # file is created on branch or in working directory
+            if overwrite and n[20:] != "u":
+                ui.debug(_("remote deleted %s, clobbering\n") % f)
+                action.append((f, "r"))
+            elif not n[20:]: # same as parent
+                if backwards:
+                    ui.debug(_("remote deleted %s\n") % f)
+                    action.append((f, "r"))
+                else:
+                    ui.debug(_("local modified %s, keeping\n") % f)
+            else:
+                ui.debug(_("working dir created %s, keeping\n") % f)
+
+    for f, n in m2.iteritems():
+        if f[0] == "/":
+            continue
+        if f in ma and n != ma[f]:
+            r = _("k")
+            if not overwrite:
+                r = ui.prompt(
+                    (_("remote changed %s which local deleted\n") % f) +
+                     _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
+            if r == _("k"):
+                action.append((f, "g", m2.execf(f), n))
+        elif f not in ma:
+            ui.debug(_("remote created %s\n") % f)
+            action.append((f, "g", m2.execf(f), n))
+        else:
+            if overwrite or backwards:
+                ui.debug(_("local deleted %s, recreating\n") % f)
+                action.append((f, "g", m2.execf(f), n))
+            else:
+                ui.debug(_("local deleted %s\n") % f)
+
+    return action
+
 def update(repo, node, branchmerge=False, force=False, partial=None,
            wlock=None, show_stats=True, remind=True):
 
@@ -134,90 +227,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         for f in m2.keys():
             if not partial(f): del m2[f]
 
-    # Compare manifests
-    for f, n in m1.iteritems():
-        if f in m2:
-            queued = 0
-
-            # are files different?
-            if n != m2[f]:
-                a = ma.get(f, nullid)
-                # are both different from the ancestor?
-                if not overwrite and n != a and m2[f] != a:
-                    repo.ui.debug(_(" %s versions differ, resolve\n") % f)
-                    action.append((f, "m", fmerge(f, m1, m2, ma), n[:20], m2[f]))
-                    queued = 1
-                # are we clobbering?
-                # is remote's version newer?
-                # or are we going back in time and clean?
-                elif overwrite or m2[f] != a or (backwards and not n[20:]):
-                    repo.ui.debug(_(" remote %s is newer, get\n") % f)
-                    action.append((f, "g", m2.execf(f), m2[f]))
-                    queued = 1
-            elif n[20:] in ("u","a"):
-                # this unknown file is the same as the checkout
-                # we need to reset the dirstate if the file was added
-                action.append((f, "g", m2.execf(f), m2[f]))
-
-            # do we still need to look at mode bits?
-            if not queued and m1.execf(f) != m2.execf(f):
-                if overwrite:
-                    repo.ui.debug(_(" updating permissions for %s\n") % f)
-                    action.append((f, "e", m2.execf(f)))
-                else:
-                    mode = fmerge(f, m1, m2, ma)
-                    if mode != m1.execf(f):
-                        repo.ui.debug(_(" updating permissions for %s\n")
-                                      % f)
-                        action.append((f, "e", m2.execf(f)))
-            del m2[f]
-        elif f in ma:
-            if n != ma[f]:
-                r = _("d")
-                if not overwrite:
-                    r = repo.ui.prompt(
-                        (_(" local changed %s which remote deleted\n") % f) +
-                         _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
-                if r == _("d"):
-                    action.append((f, "r"))
-            else:
-                repo.ui.debug(_("other deleted %s\n") % f)
-                action.append((f, "r"))
-        else:
-            # file is created on branch or in working directory
-            if overwrite and n[20:] != "u":
-                repo.ui.debug(_("remote deleted %s, clobbering\n") % f)
-                action.append((f, "r"))
-            elif not n[20:]: # same as parent
-                if backwards:
-                    repo.ui.debug(_("remote deleted %s\n") % f)
-                    action.append((f, "r"))
-                else:
-                    repo.ui.debug(_("local modified %s, keeping\n") % f)
-            else:
-                repo.ui.debug(_("working dir created %s, keeping\n") % f)
-
-    for f, n in m2.iteritems():
-        if f[0] == "/":
-            continue
-        if f in ma and n != ma[f]:
-            r = _("k")
-            if not overwrite:
-                r = repo.ui.prompt(
-                    (_("remote changed %s which local deleted\n") % f) +
-                     _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
-            if r == _("k"):
-                action.append((f, "g", m2.execf(f), n))
-        elif f not in ma:
-            repo.ui.debug(_("remote created %s\n") % f)
-            action.append((f, "g", m2.execf(f), n))
-        else:
-            if overwrite or backwards:
-                repo.ui.debug(_("local deleted %s, recreating\n") % f)
-                action.append((f, "g", m2.execf(f), n))
-            else:
-                repo.ui.debug(_("local deleted %s\n") % f)
-
+    action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards)
     del m1, m2, ma
 
     ### apply phase
