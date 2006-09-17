@@ -107,7 +107,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
                   (short(p1), short(p2), short(pa)))
 
-    action = {}
+    action = []
     forget = []
 
     # update m1 from working dir
@@ -146,19 +146,19 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                 # are both different from the ancestor?
                 if not overwrite and n != a and m2[f] != a:
                     repo.ui.debug(_(" %s versions differ, resolve\n") % f)
-                    action[f] = (fmerge(f, m1, m2, ma), n[:20], m2[f])
+                    action.append((f, fmerge(f, m1, m2, ma), n[:20], m2[f]))
                     queued = 1
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time and clean?
                 elif overwrite or m2[f] != a or (backwards and not n[20:]):
                     repo.ui.debug(_(" remote %s is newer, get\n") % f)
-                    action[f] = (m2.execf(f), m2[f], None)
+                    action.append((f, m2.execf(f), m2[f], None))
                     queued = 1
             elif n[20:] in ("u","a"):
                 # this unknown file is the same as the checkout
                 # we need to reset the dirstate if the file was added
-                action[f] = (m2.execf(f), m2[f], None)
+                action.append((f, m2.execf(f), m2[f], None))
 
             # do we still need to look at mode bits?
             if not queued and m1.execf(f) != m2.execf(f):
@@ -179,19 +179,19 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                         (_(" local changed %s which remote deleted\n") % f) +
                          _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
                 if r == _("d"):
-                    action[f] = (None, None, None)
+                    action.append((f, None, None, None))
             else:
                 repo.ui.debug(_("other deleted %s\n") % f)
-                action[f] = (None, None, None)
+                action.append((f, None, None, None))
         else:
             # file is created on branch or in working directory
             if overwrite and n[20:] != "u":
                 repo.ui.debug(_("remote deleted %s, clobbering\n") % f)
-                action[f] = (None, None, None)
+                action.append((f, None, None, None))
             elif not n[20:]: # same as parent
                 if backwards:
                     repo.ui.debug(_("remote deleted %s\n") % f)
-                    action[f] = (None, None, None)
+                    action.append((f, None, None, None))
                 else:
                     repo.ui.debug(_("local modified %s, keeping\n") % f)
             else:
@@ -207,14 +207,14 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                     (_("remote changed %s which local deleted\n") % f) +
                      _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
             if r == _("k"):
-                action[f] = (m2.execf(f), n, None)
+                action.append((f, m2.execf(f), n, None))
         elif f not in ma:
             repo.ui.debug(_("remote created %s\n") % f)
-            action[f] = (m2.execf(f), n, None)
+            action.append((f, m2.execf(f), n, None))
         else:
             if overwrite or backwards:
                 repo.ui.debug(_("local deleted %s, recreating\n") % f)
-                action[f] = (m2.execf(f), n, None)
+                action.append((f, m2.execf(f), n, None))
             else:
                 repo.ui.debug(_("local deleted %s\n") % f)
 
@@ -235,10 +235,9 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     # update files
     updated, merged, removed, unresolved = 0, 0, 0, 0
-    files = action.keys()
-    files.sort()
-    for f in files:
-        flag, my, other = action[f]
+    action.sort()
+    for a in action:
+        f, flag, my, other = a
         if f[0] == "/":
             continue
         if not my:
@@ -268,10 +267,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not partial:
         repo.dirstate.setparents(p1, p2)
         repo.dirstate.forget(forget)
-        files = action.keys()
-        files.sort()
-        for f in files:
-            flag, my, other = action[f]
+        for a in action:
+            f, flag, my, other = a
             if not my:
                 if branchmerge:
                     repo.dirstate.update([f], 'r')
