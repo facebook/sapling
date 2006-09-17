@@ -15,7 +15,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- overwrite False branchmerge False partial False linear True
+ overwrite False branchmerge False partial False
  ancestor 33aaa84a386b local 802f095af299 remote 33aaa84a386b
  a versions differ, resolve
 remote created b
@@ -31,7 +31,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
 resolving manifests
- overwrite False branchmerge False partial False linear True
+ overwrite False branchmerge False partial False
  ancestor 802f095af299 local 33aaa84a386b remote 33aaa84a386b
 remote deleted b
 removing b
@@ -49,7 +49,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- overwrite False branchmerge False partial False linear True
+ overwrite False branchmerge False partial False
  ancestor 33aaa84a386b local 802f095af299 remote 33aaa84a386b
  a versions differ, resolve
 remote created b
@@ -100,7 +100,7 @@ failed
 abort: outstanding uncommitted changes
 failed
 resolving manifests
- overwrite False branchmerge True partial False linear False
+ overwrite False branchmerge True partial False
  ancestor 802f095af299 local 030602aee63d remote 33aaa84a386b
  a versions differ, resolve
  b versions differ, resolve
