@@ -10,11 +10,6 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno util os tempfile")
 
-def fmerge(f, local, other, ancestor):
-    """merge executable flags"""
-    a, b, c = ancestor.execf(f), local.execf(f), other.execf(f)
-    return ((a^b) | (a^c)) ^ a
-
 def merge3(repo, fn, my, other, p1, p2):
     """perform a 3-way merge in the working directory"""
 
@@ -104,6 +99,11 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
     Merge manifest m1 with m2 using ancestor ma and generate merge action list
     """
 
+    def fmerge(f):
+        """merge executable flags"""
+        a, b, c = ma.execf(f), m1.execf(f), m2.execf(f)
+        return ((a^b) | (a^c)) ^ a
+
     action = []
 
     # Filter manifests
@@ -122,7 +122,7 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
                 # are both different from the ancestor?
                 if not overwrite and n != a and m2[f] != a:
                     ui.debug(_(" %s versions differ, resolve\n") % f)
-                    action.append((f, "m", fmerge(f, m1, m2, ma), n[:20], m2[f]))
+                    action.append((f, "m", fmerge(f), n[:20], m2[f]))
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time and clean?
@@ -130,22 +130,15 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
                     ui.debug(_(" remote %s is newer, get\n") % f)
                     action.append((f, "g", m2.execf(f), m2[f]))
                 # local is newer, not overwrite, check mode bits
-                elif m1.execf(f) != m2.execf(f):
-                    mode = fmerge(f, m1, m2, ma)
-                    if mode != m1.execf(f):
-                        ui.debug(_(" updating permissions for %s\n") % f)
-                        action.append((f, "e", m2.execf(f)))
+                elif fmerge(f) != m1.execf(f):
+                    ui.debug(_(" updating permissions for %s\n") % f)
+                    action.append((f, "e", m2.execf(f)))
 
             # contents same, check mode bits
             elif m1.execf(f) != m2.execf(f):
-                if overwrite:
+                if overwrite or fmerge(f) != m1.execf(f)
                     ui.debug(_(" updating permissions for %s\n") % f)
                     action.append((f, "e", m2.execf(f)))
-                else:
-                    mode = fmerge(f, m1, m2, ma)
-                    if mode != m1.execf(f):
-                        ui.debug(_(" updating permissions for %s\n") % f)
-                        action.append((f, "e", m2.execf(f)))
             del m2[f]
         elif f in ma:
             if n != ma[f] and not overwrite:
