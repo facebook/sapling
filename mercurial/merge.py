@@ -174,8 +174,6 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
                 ui.debug(_("working dir created %s, keeping\n") % f)
 
     for f, n in m2.iteritems():
-        if f[0] == "/":
-            continue
         if f in ma and n != ma[f]:
             r = _("k")
             if not overwrite:
