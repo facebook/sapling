@@ -15,7 +15,7 @@ platform-specific details from the core.
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "cStringIO errno getpass popen2 re shutil sys tempfile")
-demandload(globals(), "os threading time pwd grp")
+demandload(globals(), "os threading time")
 
 # used by parsedate
 defaultdateformats = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
@@ -508,38 +508,6 @@ def getuser():
     # raised if win32api not available
     raise Abort(_('user name not available - set USERNAME '
                   'environment variable'))
-
-def username(uid=None):
-    """Return the name of the user with the given uid.
-
-    If uid is None, return the name of the current user."""
-    try:
-        # force an ImportError if there's no module pwd
-        getpwuid = pwd.getpwuid
-        if uid is None:
-            uid = os.getuid()
-        try:
-            return getpwuid(uid)[0]
-        except KeyError:
-            return str(uid)
-    except ImportError:
-        return None
-
-def groupname(gid=None):
-    """Return the name of the group with the given gid.
-
-    If gid is None, return the name of the current group."""
-    try:
-        # force an ImportError if there's no module grp
-        getgrgid = grp.getgrgid
-        if gid is None:
-            gid = os.getgid()
-        try:
-            return getgrgid(gid)[0]
-        except KeyError:
-            return str(gid)
-    except ImportError:
-        return None
 
 # Platform specific variants
 if os.name == 'nt':

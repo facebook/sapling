@@ -15,10 +15,10 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- overwrite False branchmerge False partial False linear True
- ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
- a versions differ, resolve
-remote created b
+ overwrite False branchmerge False partial False
+ ancestor 33aaa84a386b local 802f095af299 remote 33aaa84a386b
+ a: versions differ -> m
+ b: remote created -> g
 merging a
 resolving a
 file a: my b789fdd96dc2 other d730145abbf9 ancestor b789fdd96dc2
@@ -31,9 +31,9 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
 resolving manifests
- overwrite False branchmerge False partial False linear True
- ancestor a0c8bcbbb45c local 1165e8bd193e remote a0c8bcbbb45c
-remote deleted b
+ overwrite False branchmerge False partial False
+ ancestor 802f095af299 local 33aaa84a386b remote 33aaa84a386b
+ b: remote deleted -> r
 removing b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 changeset:   0:33aaa84a386b
@@ -49,10 +49,10 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- overwrite False branchmerge False partial False linear True
- ancestor a0c8bcbbb45c local a0c8bcbbb45c remote 1165e8bd193e
- a versions differ, resolve
-remote created b
+ overwrite False branchmerge False partial False
+ ancestor 33aaa84a386b local 802f095af299 remote 33aaa84a386b
+ a: versions differ -> m
+ b: remote created -> g
 merging a
 resolving a
 file a: my b789fdd96dc2 other d730145abbf9 ancestor b789fdd96dc2
@@ -100,10 +100,10 @@ failed
 abort: outstanding uncommitted changes
 failed
 resolving manifests
- overwrite False branchmerge True partial False linear False
- ancestor a0c8bcbbb45c local 1165e8bd193e remote 4096f2872392
- a versions differ, resolve
- b versions differ, resolve
+ overwrite False branchmerge True partial False
+ ancestor 802f095af299 local 030602aee63d remote 33aaa84a386b
+ a: versions differ -> m
+ b: versions differ -> m
 merging a
 resolving a
 file a: my d730145abbf9 other 13e0d5f949fa ancestor b789fdd96dc2
