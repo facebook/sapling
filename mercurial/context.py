@@ -67,6 +67,13 @@ class changectx(object):
         for f in m:
             yield self.filectx(f, fileid=mf[f])
 
+    def ancestor(self, c2):
+        """
+        return the ancestor context of self and c2
+        """
+        n = self._repo.changelog.ancestor(self._node, c2._node)
+        return changectx(self._repo, n)
+
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
