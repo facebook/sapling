@@ -133,10 +133,9 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
                 elif fmerge(f) != m1.execf(f):
                     ui.debug(_(" updating permissions for %s\n") % f)
                     action.append((f, "e", m2.execf(f)))
-
             # contents same, check mode bits
             elif m1.execf(f) != m2.execf(f):
-                if overwrite or fmerge(f) != m1.execf(f)
+                if overwrite or fmerge(f) != m1.execf(f):
                     ui.debug(_(" updating permissions for %s\n") % f)
                     action.append((f, "e", m2.execf(f)))
             del m2[f]
@@ -151,17 +150,11 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
                 action.append((f, "r"))
         else:
             # file is created on branch or in working directory
-            if overwrite and n[20:] != "u":
+            if (overwrite and n[20:] != "u") or (backwards and not n[20:]):
                 ui.debug(_("remote deleted %s, clobbering\n") % f)
                 action.append((f, "r"))
-            elif not n[20:]: # same as parent
-                if backwards:
-                    ui.debug(_("remote deleted %s\n") % f)
-                    action.append((f, "r"))
-                else:
-                    ui.debug(_("local modified %s, keeping\n") % f)
             else:
-                ui.debug(_("working dir created %s, keeping\n") % f)
+                ui.debug(_("local created %s, keeping\n") % f)
 
     for f, n in m2.iteritems():
         if f in ma:

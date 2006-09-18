@@ -33,7 +33,7 @@ summary:     2
 resolving manifests
  overwrite False branchmerge False partial False
  ancestor 802f095af299 local 33aaa84a386b remote 33aaa84a386b
-remote deleted b
+remote deleted b, clobbering
 removing b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 changeset:   0:33aaa84a386b
