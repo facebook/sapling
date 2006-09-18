@@ -137,8 +137,12 @@ def extdiff(ui, repo, *pats, **opts):
     specified then that revision is compared to the working
     directory, and, when no revisions are specified, the
     working directory files are compared to its parent.'''
-    return dodiff(ui, repo, opts['program'] or 'diff',
-                  opts['option'] or ['-Npru'], pats, opts)
+    program = opts['program'] or 'diff'
+    if opts['program']:
+        option = opts['option']
+    else:
+        option = opts['option'] or ['-Npru']
+    return dodiff(ui, repo, program, option, pats, opts)
 
 cmdtable = {
     "extdiff":
