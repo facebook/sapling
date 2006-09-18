@@ -42,9 +42,9 @@ side2
 resolving manifests
  overwrite True branchmerge False partial False
  ancestor ded32b0db104 local 221226fb2bd8 remote 537353581d3d
-remote deleted side2, clobbering
-remote deleted side1, clobbering
-remote created main
+ side2: remote deleted -> r
+ side1: remote deleted -> r
+ main: remote created -> g
 getting main
 removing side1
 removing side2

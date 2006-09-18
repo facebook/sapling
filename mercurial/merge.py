@@ -106,6 +106,10 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
 
     action = []
 
+    def act(msg, f, m, *args):
+        ui.debug(" %s: %s -> %s\n" % (f, msg, m))
+        action.append((f, m) + args)
+
     # Filter manifests
     if partial:
         for f in m1.keys():
@@ -121,56 +125,44 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
                 a = ma.get(f, nullid)
                 # are both different from the ancestor?
                 if not overwrite and n != a and m2[f] != a:
-                    ui.debug(_(" %s versions differ, resolve\n") % f)
-                    action.append((f, "m", fmerge(f), n[:20], m2[f]))
+                    act("versions differ", f, "m", fmerge(f), n[:20], m2[f])
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time and clean?
                 elif overwrite or m2[f] != a or (backwards and not n[20:]):
-                    ui.debug(_(" remote %s is newer, get\n") % f)
-                    action.append((f, "g", m2.execf(f), m2[f]))
+                    act("remote is newer", f, "g", m2.execf(f), m2[f])
                 # local is newer, not overwrite, check mode bits
                 elif fmerge(f) != m1.execf(f):
-                    ui.debug(_(" updating permissions for %s\n") % f)
-                    action.append((f, "e", m2.execf(f)))
+                    act("update permissions", f, "e", m2.execf(f))
             # contents same, check mode bits
             elif m1.execf(f) != m2.execf(f):
                 if overwrite or fmerge(f) != m1.execf(f):
-                    ui.debug(_(" updating permissions for %s\n") % f)
-                    action.append((f, "e", m2.execf(f)))
+                    act("update permissions", f, "e", m2.execf(f))
             del m2[f]
         elif f in ma:
             if n != ma[f] and not overwrite:
                 if ui.prompt(
                     (_(" local changed %s which remote deleted\n") % f) +
                     _("(k)eep or (d)elete?"), _("[kd]"), _("k")) == _("d"):
-                    action.append((f, "r"))
+                    act("prompt delete", f, "r")
             else:
-                ui.debug(_("other deleted %s\n") % f)
-                action.append((f, "r"))
+                act("other deleted", f, "r")
         else:
             # file is created on branch or in working directory
             if (overwrite and n[20:] != "u") or (backwards and not n[20:]):
-                ui.debug(_("remote deleted %s, clobbering\n") % f)
-                action.append((f, "r"))
-            else:
-                ui.debug(_("local created %s, keeping\n") % f)
+                act("remote deleted", f, "r")
 
     for f, n in m2.iteritems():
         if f in ma:
             if overwrite or backwards:
-                ui.debug(_("local deleted %s, recreating\n") % f)
-                action.append((f, "g", m2.execf(f), n))
+                act("recreating", f, "g", m2.execf(f), n)
             elif n != ma[f]:
                 if ui.prompt(
                     (_("remote changed %s which local deleted\n") % f) +
                     _("(k)eep or (d)elete?"), _("[kd]"), _("k")) == _("k"):
-                    action.append((f, "g", m2.execf(f), n))
-            else:
-                ui.debug(_("local deleted %s\n") % f)
+                    act("prompt recreating", f, "g", m2.execf(f), n)
         else:
-            ui.debug(_("remote created %s\n") % f)
-            action.append((f, "g", m2.execf(f), n))
+            act("remote created", f, "g", m2.execf(f), n)
 
     return action
 
