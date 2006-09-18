@@ -111,13 +111,13 @@ class filectx(object):
     def manifest(self): return self.changectx().manifest()
 
     def data(self): return self._filelog.read(self._filenode)
-    def metadata(self): return self._filelog.readmeta(self._filenode)
     def renamed(self): return self._filelog.renamed(self._filenode)
     def path(self): return self._path
 
     def parents(self):
         p = [ (self._path, n) for n in self._filelog.parents(self._filenode) ]
         r = self.renamed()
+
         if r:
             p[0] = r
         return [ filectx(self._repo, p, fileid=n) for p,n in p if n != nullid ]
