@@ -30,9 +30,9 @@ class _error_logger(object):
         self.handler = handler
     def flush(self):
         pass
-    def write(str):
+    def write(self, str):
         self.writelines(str.split('\n'))
-    def writelines(seq):
+    def writelines(self, seq):
         for msg in seq:
             self.handler.log_error("HG error:  %s", msg)
 
