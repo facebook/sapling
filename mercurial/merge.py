@@ -148,12 +148,10 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
                         action.append((f, "e", m2.execf(f)))
             del m2[f]
         elif f in ma:
-            if n != ma[f]:
-                r = _("d")
-                if not overwrite:
-                    r = ui.prompt(
-                        (_(" local changed %s which remote deleted\n") % f) +
-                         _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
+            if n != ma[f] and not overwrite:
+                r = ui.prompt(
+                    (_(" local changed %s which remote deleted\n") % f) +
+                    _("(k)eep or (d)elete?"), _("[kd]"), _("k"))
                 if r == _("d"):
                     action.append((f, "r"))
             else:
