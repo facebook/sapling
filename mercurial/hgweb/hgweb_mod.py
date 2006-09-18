@@ -825,7 +825,6 @@ class hgweb(object):
         req.write(resp)
 
     def do_between(self, req):
-        nodes = []
         if req.form.has_key('pairs'):
             pairs = [map(bin, p.split("-"))
                      for p in req.form['pairs'][0].split(" ")]

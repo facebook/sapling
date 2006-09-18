@@ -131,7 +131,7 @@ class httprepository(remoterepository):
         self.ui = ui
 
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
-        proxyauthinfo = None
+        # XXX proxyauthinfo = None
         handler = httphandler()
 
         if proxyurl:
@@ -288,14 +288,13 @@ class httprepository(remoterepository):
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
         f = self.do_cmd("changegroup", roots=n)
-        bytes = 0
 
         def zgenerator(f):
             zd = zlib.decompressobj()
             try:
                 for chnk in f:
                     yield zd.decompress(chnk)
-            except httplib.HTTPException, inst:
+            except httplib.HTTPException:
                 raise IOError(None, _('connection ended unexpectedly'))
             yield zd.flush()
 

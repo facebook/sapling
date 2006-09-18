@@ -116,7 +116,6 @@ class lazyparser(object):
         which takes much less time.
         """
         if self.allmap: return
-        start = 0
         end = self.datasize
         self.allmap = 1
         cur = 0
