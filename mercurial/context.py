@@ -5,6 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+from node import *
+
 class changectx(object):
     """A changecontext object makes access to data related to a particular
     changeset convenient."""
@@ -33,7 +35,7 @@ class changectx(object):
     def node(self): return self._node
     def user(self): return self.changeset()[1]
     def date(self): return self.changeset()[2]
-    def changedfiles(self): return self.changeset()[3]
+    def files(self): return self.changeset()[3]
     def description(self): return self.changeset()[4]
 
     def parents(self):
@@ -111,11 +113,14 @@ class filectx(object):
     def data(self): return self._filelog.read(self._filenode)
     def metadata(self): return self._filelog.readmeta(self._filenode)
     def renamed(self): return self._filelog.renamed(self._filenode)
+    def path(self): return self._path
 
     def parents(self):
-        # need to fix for renames
-        p = self._filelog.parents(self._filenode)
-        return [ filectx(self._repo, self._path, fileid=x) for x in p ]
+        p = [ (self._path, n) for n in self._filelog.parents(self._filenode) ]
+        r = self.renamed()
+        if r:
+            p[0] = r
+        return [ filectx(self._repo, p, fileid=n) for p,n in p if n != nullid ]
 
     def children(self):
         # hard for renames
