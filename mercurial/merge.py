@@ -116,8 +116,6 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
     # Compare manifests
     for f, n in m1.iteritems():
         if f in m2:
-            queued = 0
-
             # are files different?
             if n != m2[f]:
                 a = ma.get(f, nullid)
@@ -125,25 +123,28 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
                 if not overwrite and n != a and m2[f] != a:
                     ui.debug(_(" %s versions differ, resolve\n") % f)
                     action.append((f, "m", fmerge(f, m1, m2, ma), n[:20], m2[f]))
-                    queued = 1
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time and clean?
                 elif overwrite or m2[f] != a or (backwards and not n[20:]):
                     ui.debug(_(" remote %s is newer, get\n") % f)
                     action.append((f, "g", m2.execf(f), m2[f]))
-                    queued = 1
+                # local is newer, not overwrite, check mode bits
+                elif m1.execf(f) != m2.execf(f):
+                    mode = fmerge(f, m1, m2, ma)
+                    if mode != m1.execf(f):
+                        ui.debug(_(" updating permissions for %s\n") % f)
+                        action.append((f, "e", m2.execf(f)))
 
-            # do we still need to look at mode bits?
-            if not queued and m1.execf(f) != m2.execf(f):
+            # contents same, check mode bits
+            elif m1.execf(f) != m2.execf(f):
                 if overwrite:
                     ui.debug(_(" updating permissions for %s\n") % f)
                     action.append((f, "e", m2.execf(f)))
                 else:
                     mode = fmerge(f, m1, m2, ma)
                     if mode != m1.execf(f):
-                        ui.debug(_(" updating permissions for %s\n")
-                                      % f)
+                        ui.debug(_(" updating permissions for %s\n") % f)
                         action.append((f, "e", m2.execf(f)))
             del m2[f]
         elif f in ma:
