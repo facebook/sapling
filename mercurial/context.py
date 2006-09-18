@@ -70,7 +70,7 @@ class changectx(object):
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
-    def __init__(self, repo, path, changeid=None, fileid=None):
+    def __init__(self, repo, path, changeid=None, fileid=None, filelog=None):
         """changeid can be a changeset revision, node, or tag.
            fileid can be a file revision or node."""
         self._repo = repo
@@ -78,15 +78,18 @@ class filectx(object):
 
         assert changeid or fileid
 
+        if filelog:
+            self._filelog = filelog
+        else:
+            self._filelog = self._repo.file(self._path)
+
         if not fileid:
             # if given a changeset id, go ahead and look up the file
             self._changeid = changeid
             self._changectx = self.changectx()
-            self._filelog = self._repo.file(self._path)
             self._filenode = self._changectx.filenode(self._path)
         else:
-            # else be lazy
-            self._filelog = self._repo.file(self._path)
+            # else delay changectx creation
             self._filenode = self._filelog.lookup(fileid)
             self._changeid = self._filelog.linkrev(self._filenode)
         self._filerev = self._filelog.rev(self._filenode)
@@ -115,17 +118,23 @@ class filectx(object):
     def path(self): return self._path
 
     def parents(self):
-        p = [ (self._path, n) for n in self._filelog.parents(self._filenode) ]
-        r = self.renamed()
+        p = self._path
+        fl = self._filelog
+        pl = [ (p, n, fl) for n in self._filelog.parents(self._filenode) ]
 
+        r = self.renamed()
         if r:
-            p[0] = r
-        return [ filectx(self._repo, p, fileid=n) for p,n in p if n != nullid ]
+            pl[0] = (r[0], r[1], None)
+
+        return [ filectx(self._repo, p, fileid=n, filelog=l)
+                 for p,n,l in pl if n != nullid ]
 
     def children(self):
         # hard for renames
         c = self._filelog.children(self._filenode)
-        return [ filectx(self._repo, self._path, fileid=x) for x in c ]
+        return [ filectx(self._repo, self._path, fileid=x,
+                         filelog=self._filelog) for x in c ]
 
     def annotate(self):
         return self._filelog.annotate(self._filenode)
+
