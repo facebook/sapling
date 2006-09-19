@@ -1276,12 +1276,80 @@ class queue:
             self.ui.write("No patches applied\n")
             return 1
 
-    def qimport(self, repo, files, patchname=None, existing=None, force=None):
-        if len(files) > 1 and patchname:
+    def qimport(self, repo, files, patchname=None, rev=None, existing=None,
+                force=None):
+        def checkseries(patchname):
+            if patchname in self.series:
+                raise util.Abort(_('patch %s is already in the series file')
+                                 % patchname)
+        def checkfile(patchname):
+            if not force and os.path.exists(self.join(patchname)):
+                raise util.Abort(_('patch "%s" already exists')
+                                 % patchname)
+
+        if rev:
+            if files:
+                raise util.Abort(_('option "-r" not valid when importing '
+                                   'files'))
+            rev = [int(r) for r in cmdutil.revrange(self.ui, repo, rev)]
+            rev.sort(lambda x, y: cmp(y, x))
+        if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
-                               'files'))
+                               'patches'))
         i = 0
         added = []
+        if rev:
+            # If mq patches are applied, we can only import revisions
+            # that form a linear path to qbase.
+            # Otherwise, they should form a linear path to a head.
+            heads = repo.changelog.heads(repo.changelog.node(rev[-1]))
+            if len(heads) > 1:
+                raise util.Abort(_('revision %d is the root of more than one '
+                                   'branch') % rev[-1])
+            if self.applied:
+                base = revlog.hex(repo.changelog.node(rev[0]))
+                if base in [n.rev for n in self.applied]:
+                    raise util.Abort(_('revision %d is already managed')
+                                     % rev[0])
+                if heads != [revlog.bin(self.applied[-1].rev)]:
+                    raise util.Abort(_('revision %d is not the parent of '
+                                       'the queue') % rev[0])
+                base = repo.changelog.rev(revlog.bin(self.applied[0].rev))
+                lastparent = repo.changelog.parentrevs(base)[0]
+            else:
+                if heads != [repo.changelog.node(rev[0])]:
+                    raise util.Abort(_('revision %d has unmanaged children')
+                                     % rev[0])
+                lastparent = None
+
+            for r in rev:
+                p1, p2 = repo.changelog.parentrevs(r)
+                n = repo.changelog.node(r)
+                if p2 != -1:
+                    raise util.Abort(_('cannot import merge revision %d') % r)
+                if lastparent and lastparent != r:
+                    raise util.Abort(_('revision %d is not the parent of %d')
+                                     % (r, lastparent))
+                lastparent = p1
+
+                if not patchname:
+                    patchname = '%d.diff' % r
+                checkseries(patchname)
+                checkfile(patchname)
+                self.full_series.insert(0, patchname)
+
+                patchf = self.opener(patchname, "w")
+                patch.export(repo, [n], fp=patchf, opts=self.diffopts())
+                patchf.close()
+
+                se = statusentry(revlog.hex(n), patchname)
+                self.applied.insert(0, se)
+
+                added.append(patchname)
+                patchname = None
+            self.parse_series()
+            self.applied_dirty = 1
+
         for filename in files:
             if existing:
                 if not patchname:
@@ -1295,14 +1363,10 @@ class queue:
                     raise util.Abort(_("unable to read %s") % patchname)
                 if not patchname:
                     patchname = os.path.basename(filename)
-                if not force and os.path.exists(self.join(patchname)):
-                    raise util.Abort(_('patch "%s" already exists')
-                                     % patchname)
+                checkfile(patchname)
                 patchf = self.opener(patchname, "w")
                 patchf.write(text)
-            if patchname in self.series:
-                raise util.Abort(_('patch %s is already in the series file')
-                                 % patchname)
+            checkseries(patchname)
             index = self.full_series_end() + i
             self.full_series[index:index] = [patchname]
             self.parse_series()
@@ -1343,10 +1407,22 @@ def unapplied(ui, repo, patch=None, **opts):
         ui.write("%s\n" % p)
 
 def qimport(ui, repo, *filename, **opts):
-    """import a patch"""
+    """import a patch
+
+    The patch will have the same name as its source file unless you
+    give it a new one with --name.
+
+    You can register an existing patch inside the patch directory
+    with the --existing flag.
+
+    With --force, an existing patch of the same name will be overwritten.
+
+    An existing changeset may be placed under mq control with --rev
+    (e.g. qimport --rev tip -n patch will place tip under mq control).
+    """
     q = repo.mq
     q.qimport(repo, filename, patchname=opts['name'],
-              existing=opts['existing'], force=opts['force'])
+              existing=opts['existing'], force=opts['force'], rev=opts['rev'])
     q.save_dirty()
     return 0
 
@@ -1953,8 +2029,9 @@ cmdtable = {
         (qimport,
          [('e', 'existing', None, 'import file in patch dir'),
           ('n', 'name', '', 'patch file name'),
-          ('f', 'force', None, 'overwrite existing files')],
-         'hg qimport [-e] [-n NAME] [-f] FILE...'),
+          ('f', 'force', None, 'overwrite existing files'),
+          ('r', 'rev', [], 'place existing revisions under mq control')],
+         'hg qimport [-e] [-n NAME] [-f] [-r REV]... FILE...'),
     "^qinit":
         (init,
          [('c', 'create-repo', None, 'create queue repository')],
