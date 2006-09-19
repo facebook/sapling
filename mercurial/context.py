@@ -6,6 +6,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import *
+from demandload import demandload
+demandload(globals(), "heapq")
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular
@@ -145,3 +147,108 @@ class filectx(object):
     def annotate(self):
         return self._filelog.annotate(self._filenode)
 
+    def ancestor(self, fc2):
+        """
+        find the common ancestor file context, if any, of self, and fc2
+        """
+
+        a, b = (self._path, self._filenode), (fc2._path, fc2._filenode)
+
+        if a == b:
+            return self
+
+        if a[0] == b[0]:
+            n = self._filelog.ancestor(a[1], b[1])
+            if n != nullid:
+                return filectx(self._repo, self._path,
+                               fileid=n, filelog=self._filelog)
+
+        # build a graph of all ancestors, crossing renames
+        ag = {}
+        fv = [a, b]
+        flcache = {self._path:self._filelog, fc2._path:fc2._filelog}
+
+        while fv:
+            f,n = fv.pop()
+            try:
+                fl = flcache[f]
+            except KeyError:
+                flcache[f] = self._repo.file(f)
+                fl = flcache[f]
+            v = [n]
+            while v:
+                n = v.pop()
+                c = (f, n)
+                if c in ag:
+                    continue
+
+                pl = [ n for n in fl.parents(n) if n != nullid ]
+                v += pl
+                pl = [ (f, n) for n in pl ]
+                re = fl.renamed(n)
+                if re:
+                    pl.append(re)
+                    if re not in ag:
+                        fv.append(re)
+                ag[c] = pl
+
+        dist = {}
+        def depth(node):
+            try:
+                return dist[node]
+            except KeyError:
+                pl = ag[node]
+                if not pl:
+                    dist[node] = 0
+                else:
+                    dist[node] = max([depth(p) for p in pl]) + 1
+                return dist[node]
+
+        # traverse ancestors in order of decreasing distance from root
+        def ancestors(vertex):
+            h = [(-depth(vertex), vertex)]
+            seen = {}
+            while h:
+                d, v = heapq.heappop(h)
+                if v not in seen:
+                    seen[v] = 1
+                    yield (-d, v)
+                    for p in ag[v]:
+                        heapq.heappush(h, (-depth(p), p))
+
+        def generations(vertex):
+            sg, s = None, {}
+            for g,v in ancestors(vertex):
+                if g != sg:
+                    if sg:
+                        yield sg, s
+                    sg, s = g, {v:1}
+                else:
+                    s[v] = 1
+            yield sg, s
+
+        x = generations(a)
+        y = generations(b)
+        gx = x.next()
+        gy = y.next()
+
+        # increment each ancestor list until it is closer to root than
+        # the other, or they match
+        try:
+            while 1:
+                if gx[0] == gy[0]:
+                    # find the intersection
+                    i = [ n for n in gx[1] if n in gy[1] ]
+                    if i:
+                        fp,fn = i[0]
+                        fl = flcache[fp]
+                        return filectx(self._repo, fp, fileid=fn, filelog=fl)
+                    else:
+                        gy = y.next()
+                        gx = x.next()
+                elif gx[0] < gy[0]:
+                    gy = y.next()
+                else:
+                    gx = x.next()
+        except StopIteration:
+            return None
