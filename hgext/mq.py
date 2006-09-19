@@ -1276,39 +1276,40 @@ class queue:
             self.ui.write("No patches applied\n")
             return 1
 
-    def qimport(self, repo, files, patch=None, existing=None, force=None):
-        if len(files) > 1 and patch:
+    def qimport(self, repo, files, patchname=None, existing=None, force=None):
+        if len(files) > 1 and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
                                'files'))
         i = 0
         added = []
         for filename in files:
             if existing:
-                if not patch:
-                    patch = filename
-                if not os.path.isfile(self.join(patch)):
-                    raise util.Abort(_("patch %s does not exist") % patch)
+                if not patchname:
+                    patchname = filename
+                if not os.path.isfile(self.join(patchname)):
+                    raise util.Abort(_("patch %s does not exist") % patchname)
             else:
                 try:
                     text = file(filename).read()
                 except IOError:
-                    raise util.Abort(_("unable to read %s") % patch)
-                if not patch:
-                    patch = os.path.split(filename)[1]
-                if not force and os.path.exists(self.join(patch)):
-                    raise util.Abort(_('patch "%s" already exists') % patch)
-                patchf = self.opener(patch, "w")
+                    raise util.Abort(_("unable to read %s") % patchname)
+                if not patchname:
+                    patchname = os.path.basename(filename)
+                if not force and os.path.exists(self.join(patchname)):
+                    raise util.Abort(_('patch "%s" already exists')
+                                     % patchname)
+                patchf = self.opener(patchname, "w")
                 patchf.write(text)
-            if patch in self.series:
+            if patchname in self.series:
                 raise util.Abort(_('patch %s is already in the series file')
-                                 % patch)
+                                 % patchname)
             index = self.full_series_end() + i
-            self.full_series[index:index] = [patch]
+            self.full_series[index:index] = [patchname]
             self.parse_series()
-            self.ui.warn("adding %s to series file\n" % patch)
+            self.ui.warn("adding %s to series file\n" % patchname)
             i += 1
-            added.append(patch)
-            patch = None
+            added.append(patchname)
+            patchname = None
         self.series_dirty = 1
         qrepo = self.qrepo()
         if qrepo:
@@ -1344,7 +1345,7 @@ def unapplied(ui, repo, patch=None, **opts):
 def qimport(ui, repo, *filename, **opts):
     """import a patch"""
     q = repo.mq
-    q.qimport(repo, filename, patch=opts['name'],
+    q.qimport(repo, filename, patchname=opts['name'],
               existing=opts['existing'], force=opts['force'])
     q.save_dirty()
     return 0
