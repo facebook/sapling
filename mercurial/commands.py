@@ -50,21 +50,6 @@ def logmessage(opts):
                              (logfile, inst.strerror))
     return message
 
-def defaultrev(repo, rev=None, default='tip'):
-    """returns rev if it is specified, otherwise the working dir
-    parent if there is only one, or tip if there is no working
-    dir"""
-    if rev:
-        return rev
-
-    p1, p2 = repo.dirstate.parents()
-    if p2 != nullid:
-        raise util.Abort(_('uncommitted merge - please provide a '
-                           'specific revision'))
-    if p1 != nullid:
-        return hex(p1)
-    return default
-
 def walkchangerevs(ui, repo, pats, opts):
     '''Iterate over files and the revs they changed in.
 
@@ -114,7 +99,7 @@ def walkchangerevs(ui, repo, pats, opts):
         return [], False, matchfn
 
     if follow:
-        defrange = '%s:0' % defaultrev(repo)
+        defrange = '%s:0' % repo.changectx().rev()
     else:
         defrange = 'tip:0'
     revs = map(int, cmdutil.revrange(ui, repo, opts['rev'] or [defrange]))
@@ -646,7 +631,7 @@ def annotate(ui, repo, *pats, **opts):
     if not opts['user'] and not opts['changeset'] and not opts['date']:
         opts['number'] = 1
 
-    ctx = repo.changectx(defaultrev(repo, opts['rev']))
+    ctx = repo.changectx(opts['rev'])
 
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
                                              node=ctx.node()):
@@ -693,7 +678,7 @@ def archive(ui, repo, dest, **opts):
     The default is the basename of the archive, with suffixes removed.
     '''
 
-    node = repo.lookup(defaultrev(repo, opts['rev']))
+    node = repo.changectx(opts['rev']).node()
     dest = cmdutil.make_filename(repo, dest, node)
     if os.path.realpath(dest) == repo.root:
         raise util.Abort(_('repository root cannot be destination'))
@@ -810,7 +795,7 @@ def cat(ui, repo, file1, *pats, **opts):
     %d   dirname of file being printed, or '.' if in repo root
     %p   root-relative path name of file being printed
     """
-    ctx = repo.changectx(defaultrev(repo, opts['rev']))
+    ctx = repo.changectx(opts['rev'])
     for src, abs, rel, exact in cmdutil.walk(repo, (file1,) + pats, opts,
                                              ctx.node()):
         fp = cmdutil.make_file(repo, opts['output'], ctx.node(), pathname=abs)
@@ -2228,7 +2213,10 @@ def revert(ui, repo, *pats, **opts):
                            'use --all to revert the whole repo'))
 
     parent, p2 = repo.dirstate.parents()
-    node = repo.lookup(defaultrev(repo, opts['rev']))
+    if not opts['rev'] and p2 != nullid:
+        raise util.Abort(_('uncommitted merge - please provide a '
+                           'specific revision'))
+    node = repo.changectx(opts['rev']).node()
     mf = repo.manifest.read(repo.changelog.read(node)[0])
     if node == parent:
         pmf = mf
@@ -2528,10 +2516,10 @@ def tag(ui, repo, name, rev_=None, **opts):
             raise util.Abort(_("use only one form to specify the revision"))
     if opts['rev']:
         rev_ = opts['rev']
-    r = defaultrev(repo, rev_, nullid)
-    if r == nullid:
-        raise util.Abort(_('no revision to tag'))
-    r = repo.lookup(r)
+    if not rev_ and repo.dirstate.parents()[1] != nullid:
+        raise util.Abort(_('uncommitted merge - please provide a '
+                           'specific revision'))
+    r = repo.changectx(rev_).node()
 
     message = opts['message']
     if not message:

@@ -615,7 +615,8 @@ else:
         try:
             rcs.extend([os.path.join(rcdir, f) for f in os.listdir(rcdir)
                         if f.endswith(".rc")])
-        except OSError, inst: pass
+        except OSError:
+            pass
         return rcs
 
     def os_rcpath():
