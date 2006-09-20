@@ -13,7 +13,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "binascii changegroup errno heapq mdiff os")
+demandload(globals(), "binascii changegroup errno ancestor mdiff os")
 demandload(globals(), "sha struct util zlib")
 
 # revlog version strings
@@ -1016,78 +1016,10 @@ class revlog(object):
     def ancestor(self, a, b):
         """calculate the least common ancestor of nodes a and b"""
 
-        # start with some short cuts for the linear cases
-        if a == b:
-            return a
-        ra = self.rev(a)
-        rb = self.rev(b)
-        if ra < rb:
-            last = b
-            first = a
-        else:
-            last = a
-            first = b
+        def parents(node):
+            return [p for p in self.parents(node) if p != nullid]
 
-        # reachable won't include stop in the list, so we have to use a parent
-        reachable = self.reachable(last, stop=self.parents(first)[0])
-        if first in reachable:
-            return first
-
-        # calculate the distance of every node from root
-        dist = {nullid: 0}
-        for i in xrange(self.count()):
-            n = self.node(i)
-            p1, p2 = self.parents(n)
-            dist[n] = max(dist[p1], dist[p2]) + 1
-
-        # traverse ancestors in order of decreasing distance from root
-        def ancestors(node):
-            # we store negative distances because heap returns smallest member
-            h = [(-dist[node], node)]
-            seen = {}
-            while h:
-                d, n = heapq.heappop(h)
-                if n not in seen:
-                    seen[n] = 1
-                    yield (-d, n)
-                    for p in self.parents(n):
-                        heapq.heappush(h, (-dist[p], p))
-
-        def generations(node):
-            sg, s = None, {}
-            for g,n in ancestors(node):
-                if g != sg:
-                    if sg:
-                        yield sg, s
-                    sg, s = g, {n:1}
-                else:
-                    s[n] = 1
-            yield sg, s
-
-        x = generations(a)
-        y = generations(b)
-        gx = x.next()
-        gy = y.next()
-
-        # increment each ancestor list until it is closer to root than
-        # the other, or they match
-        while 1:
-            #print "ancestor gen %s %s" % (gx[0], gy[0])
-            if gx[0] == gy[0]:
-                # find the intersection
-                i = [ n for n in gx[1] if n in gy[1] ]
-                if i:
-                    return i[0]
-                else:
-                    #print "next"
-                    gy = y.next()
-                    gx = x.next()
-            elif gx[0] < gy[0]:
-                #print "next y"
-                gy = y.next()
-            else:
-                #print "next x"
-                gx = x.next()
+        return ancestor.ancestor(a, b, parents) or nullid
 
     def group(self, nodelist, lookup, infocollect=None):
         """calculate a delta group
