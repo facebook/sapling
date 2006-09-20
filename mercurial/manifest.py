@@ -56,9 +56,6 @@ class manifest(revlog):
         self.mapcache = (node, mapping)
         return mapping
 
-    def diff(self, a, b):
-        return mdiff.textdiff(str(a), str(b))
-
     def _search(self, m, s, lo=0, hi=None):
         '''return a tuple (start, end) that says where to find s within m.
 
