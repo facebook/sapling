@@ -1,0 +1,161 @@
+% init
+% commit
+adding 1/base
+adding 2/base
+% qnew mqbase
+% qrefresh
+% qdiff
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% qdiff dirname
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% patch file contents
+mqbase
+
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% qrefresh 1
+% qdiff
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% qdiff dirname
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% patch file contents
+mqbase
+
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% qrefresh . in subdir
+% qdiff
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% qdiff dirname
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% patch file contents
+mqbase
+
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% qrefresh in hg-root again
+% qdiff
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% qdiff dirname
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+% patch file contents
+mqbase
+
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@ base
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@ base
+-base
++patched

@@ -1,0 +1,84 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+
+echo % init
+hg init a
+cd a
+
+echo % commit
+mkdir 1 2
+echo 'base' > 1/base
+echo 'base' > 2/base
+hg ci -Ambase -d '1 0'
+
+echo % qnew mqbase
+hg qnew -mmqbase mqbase
+
+echo % qrefresh
+echo 'patched' > 1/base
+echo 'patched' > 2/base
+hg qrefresh
+
+echo % qdiff
+hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+               -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qdiff dirname
+hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+                 -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % patch file contents
+cat .hg/patches/mqbase | \
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qrefresh 1
+echo 'patched again' > base
+hg qrefresh 1
+
+echo % qdiff
+hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+               -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qdiff dirname
+hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+                 -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % patch file contents
+cat .hg/patches/mqbase | \
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qrefresh . in subdir
+( cd 1 ; hg qrefresh . )
+
+echo % qdiff
+hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+               -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qdiff dirname
+hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+                 -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % patch file contents
+cat .hg/patches/mqbase | \
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qrefresh in hg-root again
+hg qrefresh
+
+echo % qdiff
+hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+               -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qdiff dirname
+hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+                 -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % patch file contents
+cat .hg/patches/mqbase | \
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
