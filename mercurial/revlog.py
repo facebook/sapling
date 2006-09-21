@@ -1016,10 +1016,14 @@ class revlog(object):
     def ancestor(self, a, b):
         """calculate the least common ancestor of nodes a and b"""
 
-        def parents(node):
-            return [p for p in self.parents(node) if p != nullid]
+        def parents(rev):
+            return [p for p in self.parentrevs(rev) if p != -1]
 
-        return ancestor.ancestor(a, b, parents) or nullid
+        c = ancestor.ancestor(self.rev(a), self.rev(b), parents)
+        if c is None:
+            return nullid
+
+        return self.node(c)
 
     def group(self, nodelist, lookup, infocollect=None):
         """calculate a delta group
