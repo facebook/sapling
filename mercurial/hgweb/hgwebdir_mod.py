@@ -21,6 +21,7 @@ class hgwebdir(object):
             return [(name.strip(os.sep), path) for name, path in items]
 
         self.motd = ""
+        self.style = ""
         self.repos_sorted = ('name', False)
         if isinstance(config, (list, tuple)):
             self.repos = cleannames(config)
@@ -32,8 +33,11 @@ class hgwebdir(object):
             cp = ConfigParser.SafeConfigParser()
             cp.read(config)
             self.repos = []
-            if cp.has_section('web') and cp.has_option('web', 'motd'):
-                self.motd = cp.get('web', 'motd')
+            if cp.has_section('web'):
+                if cp.has_option('web', 'motd'):
+                    self.motd = cp.get('web', 'motd')
+                if cp.has_option('web', 'style'):
+		    self.style = cp.get('web', 'style')
             if cp.has_section('paths'):
                 self.repos.extend(cleannames(cp.items('paths')))
             if cp.has_section('collections'):
@@ -66,6 +70,15 @@ class hgwebdir(object):
             yield tmpl("footer", motd=self.motd, **map)
 
         m = os.path.join(templater.templatepath(), "map")
+        style = self.style
+        if req.form.has_key('style'):
+            style = req.form['style'][0]
+        if style != "":
+            b = os.path.basename("map-" + style)
+            p = os.path.join(templater.templatepath(), b)
+            if os.path.isfile(p):
+                m = p
+
         tmpl = templater.templater(m, templater.common_filters,
                                    defaults={"header": header,
                                              "footer": footer})
