@@ -169,7 +169,7 @@ class manifest(revlog):
                 if start == end and w[1] == 1:
                     # item we want to delete was not found, error out
                     raise AssertionError(
-                            _("failed to remove %s from manifest\n") % f)
+                            _("failed to remove %s from manifest") % f)
                 if dstart != None and dstart <= start and dend >= start:
                     if dend < end:
                         dend = end
