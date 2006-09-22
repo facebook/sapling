@@ -604,29 +604,14 @@ def annotate(ui, repo, *pats, **opts):
     detects as binary. With -a, annotate will generate an annotation
     anyway, probably with undesirable results.
     """
-    def getnode(rev):
-        return short(repo.changelog.node(rev))
-
-    ucache = {}
-    def getname(rev):
-        try:
-            return ucache[rev]
-        except:
-            u = trimuser(ui, repo.changectx(rev).user(), rev, ucache)
-            ucache[rev] = u
-            return u
-
-    dcache = {}
-    def getdate(rev):
-        datestr = dcache.get(rev)
-        if datestr is None:
-            datestr = dcache[rev] = util.datestr(repo.changectx(rev).date())
-        return datestr
+    getdate = util.cachefunc(lambda x: util.datestr(x.date()))
 
     if not pats:
         raise util.Abort(_('at least one file name or pattern required'))
 
-    opmap = [['user', getname], ['number', str], ['changeset', getnode],
+    opmap = [['user', lambda x: ui.shortuser(x.user())],
+             ['number', lambda x: str(x.rev())],
+             ['changeset', lambda x: short(x.node())],
              ['date', getdate]]
     if not opts['user'] and not opts['changeset'] and not opts['date']:
         opts['number'] = 1

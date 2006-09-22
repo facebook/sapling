@@ -7,7 +7,7 @@
 
 from node import *
 from demandload import demandload
-demandload(globals(), "ancestor")
+demandload(globals(), "ancestor util")
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular
@@ -155,7 +155,12 @@ class filectx(object):
                          filelog=self._filelog) for x in c ]
 
     def annotate(self):
-        return self._filelog.annotate(self._filenode)
+        getctx = util.cachefunc(lambda x: filectx(self._repo, self._path,
+                                                  changeid=x,
+                                                  filelog=self._filelog))
+        hist = self._filelog.annotate(self._filenode)
+
+        return [(getctx(rev), line) for rev, line in hist]
 
     def ancestor(self, fc2):
         """
