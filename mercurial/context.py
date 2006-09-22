@@ -16,7 +16,7 @@ class changectx(object):
         """changeid is a revision number, node, or tag"""
         self._repo = repo
 
-        if not changeid:
+        if not changeid and changeid != 0:
             p1, p2 = self._repo.dirstate.parents()
             self._rev = self._repo.changelog.rev(p1)
             if self._rev == -1:
@@ -94,14 +94,14 @@ class filectx(object):
         self._repo = repo
         self._path = path
 
-        assert changeid or fileid
+        assert changeid is not None or fileid is not None
 
         if filelog:
             self._filelog = filelog
         else:
             self._filelog = self._repo.file(self._path)
 
-        if not fileid:
+        if fileid is None:
             # if given a changeset id, go ahead and look up the file
             self._changeid = changeid
             self._changectx = self.changectx()
