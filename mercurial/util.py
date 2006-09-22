@@ -24,6 +24,22 @@ defaultdateformats = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
 class SignalInterrupt(Exception):
     """Exception raised on SIGTERM and SIGHUP."""
 
+def cachefunc(func):
+    '''cache the result of function calls'''
+    cache = {}
+    if func.func_code.co_argcount == 1:
+        def f(arg):
+            if arg not in cache:
+                cache[arg] = func(arg)
+            return cache[arg]
+    else:
+        def f(*args):
+            if args not in cache:
+                cache[args] = func(*args)
+            return cache[args]
+
+    return f
+
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
     (pout, pin) = popen2.popen2(cmd, -1, 'b')
