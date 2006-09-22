@@ -124,7 +124,11 @@ class filectx(object):
     def filenode(self): return self._filenode
     def filelog(self): return self._filelog
 
-    def rev(self): return self._changectx.rev()
+    def rev(self):
+        if hasattr(self, "_changectx"):
+            return self._changectx.rev()
+        return self._filelog.linkrev(self._filenode)
+
     def node(self): return self._changectx.node()
     def user(self): return self._changectx.user()
     def date(self): return self._changectx.date()
