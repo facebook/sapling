@@ -28,6 +28,9 @@ class changectx(object):
         self._node = self._repo.lookup(changeid)
         self._rev = self._repo.changelog.rev(self._node)
 
+    def __repr__(self):
+        return "<changectx %s>" % short(self.node())
+
     def changeset(self):
         try:
             return self._changeset
@@ -119,6 +122,9 @@ class filectx(object):
             return self._filerev
         else:
             raise AttributeError, name
+
+    def __repr__(self):
+        return "<filectx %s:%s>" % (self.path(), short(self.node()))
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
