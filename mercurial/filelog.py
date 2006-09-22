@@ -37,7 +37,7 @@ class filelog(revlog):
         s = t.index('\1\n', 2)
         return t[s+2:]
 
-    def readmeta(self, node):
+    def _readmeta(self, node):
         t = self.revision(node)
         if not t.startswith('\1\n'):
             return {}
@@ -60,7 +60,7 @@ class filelog(revlog):
     def renamed(self, node):
         if self.parents(node)[0] != nullid:
             return False
-        m = self.readmeta(node)
+        m = self._readmeta(node)
         if m and m.has_key("copy"):
             return (m["copy"], bin(m["copyrev"]))
         return False

@@ -5,6 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+from node import *
+from demandload import demandload
+demandload(globals(), "ancestor")
+
 class changectx(object):
     """A changecontext object makes access to data related to a particular
     changeset convenient."""
@@ -42,7 +46,7 @@ class changectx(object):
     def node(self): return self._node
     def user(self): return self.changeset()[1]
     def date(self): return self.changeset()[2]
-    def changedfiles(self): return self.changeset()[3]
+    def files(self): return self.changeset()[3]
     def description(self): return self.changeset()[4]
 
     def parents(self):
@@ -74,10 +78,17 @@ class changectx(object):
         for f in m:
             yield self.filectx(f, fileid=mf[f])
 
+    def ancestor(self, c2):
+        """
+        return the ancestor context of self and c2
+        """
+        n = self._repo.changelog.ancestor(self._node, c2._node)
+        return changectx(self._repo, n)
+
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
-    def __init__(self, repo, path, changeid=None, fileid=None):
+    def __init__(self, repo, path, changeid=None, fileid=None, filelog=None):
         """changeid can be a changeset revision, node, or tag.
            fileid can be a file revision or node."""
         self._repo = repo
@@ -85,15 +96,18 @@ class filectx(object):
 
         assert changeid or fileid
 
+        if filelog:
+            self._filelog = filelog
+        else:
+            self._filelog = self._repo.file(self._path)
+
         if not fileid:
             # if given a changeset id, go ahead and look up the file
             self._changeid = changeid
             self._changectx = self.changectx()
-            self._filelog = self._repo.file(self._path)
             self._filenode = self._changectx.filenode(self._path)
         else:
-            # else be lazy
-            self._filelog = self._repo.file(self._path)
+            # else delay changectx creation
             self._filenode = self._filelog.lookup(fileid)
             self._changeid = self._filelog.linkrev(self._filenode)
         self._filerev = self._filelog.rev(self._filenode)
@@ -118,18 +132,55 @@ class filectx(object):
     def manifest(self): return self.changectx().manifest()
 
     def data(self): return self._filelog.read(self._filenode)
-    def metadata(self): return self._filelog.readmeta(self._filenode)
     def renamed(self): return self._filelog.renamed(self._filenode)
+    def path(self): return self._path
 
     def parents(self):
-        # need to fix for renames
-        p = self._filelog.parents(self._filenode)
-        return [ filectx(self._repo, self._path, fileid=x) for x in p ]
+        p = self._path
+        fl = self._filelog
+        pl = [ (p, n, fl) for n in self._filelog.parents(self._filenode) ]
+
+        r = self.renamed()
+        if r:
+            pl[0] = (r[0], r[1], None)
+
+        return [ filectx(self._repo, p, fileid=n, filelog=l)
+                 for p,n,l in pl if n != nullid ]
 
     def children(self):
         # hard for renames
         c = self._filelog.children(self._filenode)
-        return [ filectx(self._repo, self._path, fileid=x) for x in c ]
+        return [ filectx(self._repo, self._path, fileid=x,
+                         filelog=self._filelog) for x in c ]
 
     def annotate(self):
         return self._filelog.annotate(self._filenode)
+
+    def ancestor(self, fc2):
+        """
+        find the common ancestor file context, if any, of self, and fc2
+        """
+
+        acache = {}
+        flcache = {self._path:self._filelog, fc2._path:fc2._filelog}
+        def parents(vertex):
+            if vertex in acache:
+                return acache[vertex]
+            f, n = vertex
+            if f not in flcache:
+                flcache[f] = self._repo.file(f)
+            fl = flcache[f]
+            pl = [ (f,p) for p in fl.parents(n) if p != nullid ]
+            re = fl.renamed(n)
+            if re:
+                pl.append(re)
+            acache[vertex]=pl
+            return pl
+
+        a, b = (self._path, self._filenode), (fc2._path, fc2._filenode)
+        v = ancestor.ancestor(a, b, parents)
+        if v:
+            f,n = v
+            return filectx(self._repo, f, fileid=n, filelog=flcache[f])
+
+        return None
