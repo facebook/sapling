@@ -102,34 +102,35 @@ class filectx(object):
             self._filelog = self._repo.file(self._path)
 
         if fileid is None:
-            # if given a changeset id, go ahead and look up the file
             self._changeid = changeid
-            self._changectx = self.changectx()
-            self._filenode = self._changectx.filenode(self._path)
         else:
-            # else delay changectx creation
             self._filenode = self._filelog.lookup(fileid)
             self._changeid = self._filelog.linkrev(self._filenode)
-        self._filerev = self._filelog.rev(self._filenode)
 
-    def changectx(self):
-        try:
-            return self._changectx
-        except AttributeError:
+    def __getattr__(self, name):
+        if name == '_changectx':
             self._changectx = changectx(self._repo, self._changeid)
             return self._changectx
+        elif name == '_filenode':
+            self._filenode = self._changectx.filenode(self._path)
+            return self._filenode
+        elif name == '_filerev':
+            self._filerev = self._filelog.rev(self._filenode)
+            return self._filerev
+        else:
+            raise AttributeError, name
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
     def filelog(self): return self._filelog
 
-    def rev(self): return self.changectx().rev()
-    def node(self): return self.changectx().node()
-    def user(self): return self.changectx().user()
-    def date(self): return self.changectx().date()
-    def files(self): return self.changectx().files()
-    def description(self): return self.changectx().description()
-    def manifest(self): return self.changectx().manifest()
+    def rev(self): return self._changectx.rev()
+    def node(self): return self._changectx.node()
+    def user(self): return self._changectx.user()
+    def date(self): return self._changectx.date()
+    def files(self): return self._changectx.files()
+    def description(self): return self._changectx.description()
+    def manifest(self): return self._changectx.manifest()
 
     def data(self): return self._filelog.read(self._filenode)
     def renamed(self): return self._filelog.renamed(self._filenode)
