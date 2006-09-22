@@ -131,6 +131,7 @@ class filectx(object):
     def files(self): return self._changectx.files()
     def description(self): return self._changectx.description()
     def manifest(self): return self._changectx.manifest()
+    def changectx(self): return self._changectx
 
     def data(self): return self._filelog.read(self._filenode)
     def renamed(self): return self._filelog.renamed(self._filenode)
