@@ -763,15 +763,22 @@ class revlog(object):
             return self.node(rev)
         except (ValueError, OverflowError):
             pass
-        # hex(node)[:...]
-        node = None
-        for n in self.nodemap:
-            if hex(n).startswith(id):
-                if node is not None:
-                    raise RevlogError(_("Ambiguous identifier"))
-                node = n
-        if node is not None:
-            return node
+        try:
+            # hex(node)[:...]
+            if len(id) % 2 == 0:
+                bin_id = bin(id)
+            else:
+                bin_id = bin(id[:-1])
+            node = None
+            for n in self.nodemap:
+                if n.startswith(bin_id) and hex(n).startswith(id):
+                    if node is not None:
+                        raise RevlogError(_("Ambiguous identifier"))
+                    node = n
+            if node is not None:
+                return node
+        except TypeError:
+            pass
 
         # might need fixing if we change hash lengths
         if len(id) == 20 and id in self.nodemap:
