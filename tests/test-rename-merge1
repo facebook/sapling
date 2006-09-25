@@ -1,0 +1,23 @@
+#!/bin/sh
+
+mkdir t
+cd t
+hg init
+echo foo > a
+echo foo > a2
+hg add a a2
+hg ci -m "start" -d "0 0"
+hg mv a b
+hg mv a2 b2
+hg ci -m "rename" -d "0 0"
+echo "checkout"
+hg co 0
+echo blahblah > a
+echo blahblah > a2
+hg mv a2 c2
+hg ci -m "modify" -d "0 0"
+echo "merge"
+hg merge -y --debug
+cat a
+cat b
+hg ci -m "merge" -d "0 0"

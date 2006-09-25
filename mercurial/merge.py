@@ -94,6 +94,77 @@ def forgetremoved(m2, status):
 
     return action
 
+def nonoverlap(d1, d2):
+    """
+    Return list of elements in d1 not in d2
+    """
+
+    l = []
+    for d in d1:
+        if d not in d2:
+            l.append(d)
+
+    l.sort()
+    return l
+
+def findold(fctx, limit):
+    """
+    find files that path was copied from, back to linkrev limit
+    """
+
+    old = {}
+    orig = fctx.path()
+    visit = [fctx]
+    while visit:
+        fc = visit.pop()
+        if fc.rev() < limit:
+            continue
+        if fc.path() != orig and fc.path() not in old:
+            old[fc.path()] = 1
+        visit += fc.parents()
+
+    old = old.keys()
+    old.sort()
+    return old
+
+def findcopies(repo, m1, m2, limit):
+    """
+    Find moves and copies between m1 and m2 back to limit linkrev
+    """
+
+    copy = {}
+    match = {}
+    u1 = nonoverlap(m1, m2)
+    u2 = nonoverlap(m2, m1)
+    ctx = util.cachefunc(lambda f,n: repo.filectx(f, fileid=n[:20]))
+
+    def checkpair(c, f2, man):
+        ''' check if an apparent pair actually matches '''
+        c2 = ctx(f2, man[f2])
+        ca = c.ancestor(c2)
+        if ca:
+            copy[c.path()] = f2
+            copy[f2] = c.path()
+
+    for f in u1:
+        c = ctx(f, m1[f])
+        for of in findold(c, limit):
+            if of in m2:
+                checkpair(c, of, m2)
+            else:
+                match.setdefault(of, []).append(f)
+
+    for f in u2:
+        c = ctx(f, m2[f])
+        for of in findold(c, limit):
+            if of in m1:
+                checkpair(c, of, m1)
+            elif of in match:
+                for mf in match[of]:
+                    checkpair(c, mf, m1)
+
+    return copy
+
 def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
     """
     Merge manifest m1 with m2 using ancestor ma and generate merge action list
@@ -289,6 +360,11 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         checkunknown(repo, m2, status)
     if not branchmerge:
         action += forgetremoved(m2, status)
+
+    copy = {}
+    if not (backwards or overwrite):
+        copy = findcopies(repo, m1, m2, repo.changelog.rev(pa))
+
     action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards, partial)
     del m1, m2, ma
 

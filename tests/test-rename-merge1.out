@@ -1,0 +1,14 @@
+checkout
+2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+merge
+resolving manifests
+ overwrite None branchmerge True partial False
+ ancestor f26ec4fc3fa3 local 8e765a822af2 remote af1939970a1c
+ b: remote created -> g
+ b2: remote created -> g
+getting b
+getting b2
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+blahblah
+foo
