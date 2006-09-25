@@ -23,7 +23,7 @@ class dirstate(object):
         self.map = None
         self.pl = None
         self.dirs = None
-        self.copies = {}
+        self.copymap = {}
         self.ignorefunc = None
         self.blockignore = False
 
@@ -160,7 +160,7 @@ class dirstate(object):
 
         # deref fields so they will be local in loop
         map = self.map
-        copies = self.copies
+        copymap = self.copymap
         format = self.format
         unpack = struct.unpack
 
@@ -176,7 +176,7 @@ class dirstate(object):
             f = st[pos:newpos]
             if '\0' in f:
                 f, c = f.split('\0')
-                copies[f] = c
+                copymap[f] = c
             map[f] = e[:4]
             pos = newpos
 
@@ -193,10 +193,13 @@ class dirstate(object):
     def copy(self, source, dest):
         self.lazyread()
         self.markdirty()
-        self.copies[dest] = source
+        self.copymap[dest] = source
 
     def copied(self, file):
-        return self.copies.get(file, None)
+        return self.copymap.get(file, None)
+
+    def copies(self):
+        return self.copymap
 
     def initdirs(self):
         if self.dirs is None:
@@ -254,8 +257,8 @@ class dirstate(object):
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
                 self.map[f] = (state, s.st_mode, st_size, st_mtime)
-            if self.copies.has_key(f):
-                del self.copies[f]
+            if self.copymap.has_key(f):
+                del self.copymap[f]
 
     def forget(self, files):
         if not files: return
@@ -272,7 +275,7 @@ class dirstate(object):
 
     def clear(self):
         self.map = {}
-        self.copies = {}
+        self.copymap = {}
         self.dirs = None
         self.markdirty()
 
