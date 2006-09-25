@@ -12,8 +12,7 @@ hg clone . ../r2
 cd ../r2
 hg up
 echo abc > a
-hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-              -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --nodates
 
 cd ../r1
 echo b > b
@@ -34,8 +33,7 @@ hg parents
 hg --debug up
 hg parents
 hg -v history
-hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-              -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --nodates
 
 # create a second head
 cd ../r1
@@ -53,8 +51,7 @@ hg --debug up || echo failed
 hg --debug merge || echo failed
 hg --debug merge -f
 hg parents
-hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-              -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --nodates
 
 # test a local add
 cd ..

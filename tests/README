@@ -26,11 +26,9 @@ writing tests:
 
   use commit -m "test" -u test -d "1000000 0"
 
-- diff will show the current time
+- diff and export may show the current time
 
-  use hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-                    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
-  to strip dates
+  use -D/--nodates to strip the dates
 
 - You can append your own hgrc settings to the file that the environment
   variable HGRCPATH points to. This file is cleared before running a test.

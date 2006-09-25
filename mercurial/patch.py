@@ -291,6 +291,8 @@ def diffopts(ui, opts={}):
         text=opts.get('text'),
         git=(opts.get('git') or
                   ui.configbool('diff', 'git', None)),
+        nodates=(opts.get('nodates') or
+                  ui.configbool('diff', 'nodates', None)),
         showfunc=(opts.get('show_function') or
                   ui.configbool('diff', 'showfunc', None)),
         ignorews=(opts.get('ignore_all_space') or

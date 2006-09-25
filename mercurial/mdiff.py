@@ -24,6 +24,7 @@ class diffopts(object):
     text treats all files as text
     showfunc enables diff -p output
     git enables the git extended patch format
+    nodates removes dates from diff headers
     ignorews ignores all whitespace changes in the diff
     ignorewsamount ignores changes in the amount of whitespace
     ignoreblanklines ignores changes whose lines are all blank'''
@@ -33,6 +34,7 @@ class diffopts(object):
         'text': False,
         'showfunc': True,
         'git': False,
+        'nodates': False,
         'ignorews': False,
         'ignorewsamount': False,
         'ignoreblanklines': False,
@@ -51,7 +53,7 @@ defaultopts = diffopts()
 
 def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
     def datetag(date):
-        return opts.git and '\n' or '\t%s\n' % date
+        return (opts.git or opts.nodates) and '\n' or '\t%s\n' % date
 
     if not a and not b: return ""
     epoch = util.datestr((0, 0))

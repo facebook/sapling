@@ -14,14 +14,11 @@ echo 1 > alpha/one
 echo 2 > beta/two
 
 echo EVERYTHING
-hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-              -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --nodates
 
 echo BETA ONLY
-hg diff beta | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-                -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --nodates beta
 
 echo INSIDE BETA
 cd beta
-hg diff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-                -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --nodates .

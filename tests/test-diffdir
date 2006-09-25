@@ -7,12 +7,9 @@ hg ci -m "a" -d "1000000 0"
 
 echo 123 > b
 hg add b
-hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-              -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --nodates
 
-hg diff -r tip | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-                     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --nodates -r tip
 
 echo foo > a
-hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
-              -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+hg diff --nodates

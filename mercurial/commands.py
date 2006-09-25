@@ -2852,6 +2852,7 @@ table = {
           ('p', 'show-function', None,
            _('show which function each change is in')),
           ('g', 'git', None, _('use git extended diff format')),
+          ('D', 'nodates', None, _("don't include dates in diff headers")),
           ('w', 'ignore-all-space', None,
            _('ignore white space when comparing lines')),
           ('b', 'ignore-space-change', None,
@@ -2865,6 +2866,7 @@ table = {
          [('o', 'output', '', _('print output to file with formatted name')),
           ('a', 'text', None, _('treat all files as text')),
           ('g', 'git', None, _('use git extended diff format')),
+          ('D', 'nodates', None, _("don't include dates in diff headers")),
           ('', 'switch-parent', None, _('diff against the second parent'))],
          _('hg export [-a] [-o OUTFILESPEC] REV...')),
     "debugforget|forget":
