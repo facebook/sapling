@@ -124,7 +124,7 @@ class filectx(object):
             raise AttributeError, name
 
     def __repr__(self):
-        return "<filectx %s:%s>" % (self.path(), short(self.node()))
+        return "<filectx %s@%s>" % (self.path(), short(self.node()))
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
