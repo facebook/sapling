@@ -433,7 +433,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         def read(f):
             return repo.wread(f)
         def renamed(f):
-            src = repo.dirstate.copies.get(f)
+            src = repo.dirstate.copied(f)
             parent = repo.dirstate.parents()[0]
             if src:
                 f = src[0]

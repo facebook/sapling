@@ -1162,8 +1162,8 @@ def debugstate(ui, repo):
                  % (dc[file_][0], dc[file_][1] & 0777, dc[file_][2],
                     time.strftime("%x %X",
                                   time.localtime(dc[file_][3])), file_))
-    for f in repo.dirstate.copies:
-        ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copies[f], f))
+    for f in repo.dirstate.copies():
+        ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
 
 def debugdata(ui, file_, rev):
     """dump the contents of an data file revision"""
@@ -2472,8 +2472,10 @@ def status(ui, repo, *pats, **opts):
         for f in changes:
             ui.write(format % f)
             if ((all or opts.get('copies')) and not opts.get('no_status')
-                and opt == 'added' and repo.dirstate.copies.has_key(f)):
-                ui.write('  %s%s' % (repo.dirstate.copies[f], end))
+                and opt == 'added'):
+                copied = repo.dirstate.copied(f)
+                if copied:
+                    ui.write('  %s%s' % (copied, end))
 
 def tag(ui, repo, name, rev_=None, **opts):
     """add a tag for the current tip or a given revision
