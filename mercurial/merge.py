@@ -63,10 +63,11 @@ def workingmanifest(repo, man, status):
     Update manifest to correspond to the working directory
     """
 
+    copied = repo.dirstate.copies()
     modified, added, removed, deleted, unknown = status[:5]
     for i,l in (("a", added), ("m", modified), ("u", unknown)):
         for f in l:
-            man[f] = man.get(f, nullid) + i
+            man[f] = man.get(copied.get(f, f), nullid) + i
             man.set(f, util.is_exec(repo.wjoin(f), man.execf(f)))
 
     for f in deleted + removed:
@@ -132,6 +133,7 @@ def findcopies(repo, m1, m2, limit):
     Find moves and copies between m1 and m2 back to limit linkrev
     """
 
+    dcopies = repo.dirstate.copies()
     copy = {}
     match = {}
     u1 = nonoverlap(m1, m2)
@@ -147,7 +149,7 @@ def findcopies(repo, m1, m2, limit):
             copy[f2] = c.path()
 
     for f in u1:
-        c = ctx(f, m1[f])
+        c = ctx(dcopies.get(f, f), m1[f])
         for of in findold(c, limit):
             if of in m2:
                 checkpair(c, of, m2)
@@ -354,16 +356,17 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                   (short(p1), short(p2), short(pa)))
 
     action = []
+
+    copy = {}
+    if not (backwards or overwrite):
+        copy = findcopies(repo, m1, m2, repo.changelog.rev(pa))
+
     m1 = workingmanifest(repo, m1, status)
 
     if not force:
         checkunknown(repo, m2, status)
     if not branchmerge:
         action += forgetremoved(m2, status)
-
-    copy = {}
-    if not (backwards or overwrite):
-        copy = findcopies(repo, m1, m2, repo.changelog.rev(pa))
 
     action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards, partial)
     del m1, m2, ma
