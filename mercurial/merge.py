@@ -133,6 +133,10 @@ def findcopies(repo, m1, m2, limit):
     Find moves and copies between m1 and m2 back to limit linkrev
     """
 
+    # avoid silly behavior for update from empty dir
+    if not m1:
+        return {}
+
     dcopies = repo.dirstate.copies()
     copy = {}
     match = {}
