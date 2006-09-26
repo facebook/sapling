@@ -747,25 +747,42 @@ class revlog(object):
         return c
 
     def lookup(self, id):
-        """locate a node based on revision number or subset of hex nodeid"""
+        """locate a node based on:
+            - revision number or str(revision number)
+            - nodeid or subset of hex nodeid
+        """
         if type(id) == type(0):
+            # rev
             return self.node(id)
         try:
+            # str(rev)
             rev = int(id)
             if str(rev) != id: raise ValueError
             if rev < 0: rev = self.count() + rev
             if rev < 0 or rev >= self.count(): raise ValueError
             return self.node(rev)
         except (ValueError, OverflowError):
-            c = []
+            pass
+        try:
+            # hex(node)[:...]
+            if len(id) % 2 == 0:
+                bin_id = bin(id)
+            else:
+                bin_id = bin(id[:-1])
+            node = None
             for n in self.nodemap:
-                if hex(n).startswith(id):
-                    c.append(n)
-            if len(c) > 1: raise RevlogError(_("Ambiguous identifier"))
-            if len(c) == 1: return c[0]
+                if n.startswith(bin_id) and hex(n).startswith(id):
+                    if node is not None:
+                        raise RevlogError(_("Ambiguous identifier"))
+                    node = n
+            if node is not None:
+                return node
+        except TypeError:
+            pass
 
         # might need fixing if we change hash lengths
         if len(id) == 20 and id in self.nodemap:
+            # node
             return id
 
         raise RevlogError(_("No match found"))
