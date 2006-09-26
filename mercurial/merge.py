@@ -360,10 +360,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                   (short(p1), short(p2), short(pa)))
 
     action = []
-
     copy = {}
-    if not (backwards or overwrite):
-        copy = findcopies(repo, m1, m2, repo.changelog.rev(pa))
 
     m1 = workingmanifest(repo, m1, status)
 
@@ -371,6 +368,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         checkunknown(repo, m2, status)
     if not branchmerge:
         action += forgetremoved(m2, status)
+    if not (backwards or overwrite):
+        copy = findcopies(repo, m1, m2, repo.changelog.rev(pa))
 
     action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards, partial)
     del m1, m2, ma
