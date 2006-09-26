@@ -171,7 +171,12 @@ def findcopies(repo, m1, m2, limit):
 
     return copy
 
-def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
+def filtermanifest(man, partial):
+    if partial:
+        for k in man.keys():
+            if not partial(k): del man[k]
+
+def manifestmerge(ui, m1, m2, ma, overwrite, backwards):
     """
     Merge manifest m1 with m2 using ancestor ma and generate merge action list
     """
@@ -186,13 +191,6 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
     def act(msg, f, m, *args):
         ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
-
-    # Filter manifests
-    if partial:
-        for f in m1.keys():
-            if not partial(f): del m1[f]
-        for f in m2.keys():
-            if not partial(f): del m2[f]
 
     # Compare manifests
     for f, n in m1.iteritems():
@@ -363,6 +361,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     copy = {}
 
     m1 = workingmanifest(repo, m1, status)
+    filtermanifest(m1, partial)
+    filtermanifest(m2, partial)
 
     if not force:
         checkunknown(repo, m2, status)
@@ -371,7 +371,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not (backwards or overwrite):
         copy = findcopies(repo, m1, m2, repo.changelog.rev(pa))
 
-    action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards, partial)
+    action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards)
     del m1, m2, ma
 
     ### apply phase
