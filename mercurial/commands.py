@@ -574,7 +574,7 @@ def add(ui, repo, *pats, **opts):
         repo.add(names)
 
 def addremove(ui, repo, *pats, **opts):
-    """add all new files, delete all missing files (DEPRECATED)
+    """add all new files, delete all missing files
 
     Add all new files and remove all missing files from the repository.
 
@@ -2667,7 +2667,7 @@ table = {
           ('n', 'dry-run', None,
            _('do not perform actions, just print output')),
           ('s', 'similarity', '',
-           _('guess renamed files by similarity (0<=s<=1)'))],
+           _('guess renamed files by similarity (0<=s<=100)'))],
          _('hg addremove [OPTION]... [FILE]...')),
     "^annotate":
         (annotate,
