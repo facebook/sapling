@@ -391,32 +391,16 @@ class hgweb(object):
                      permissions=self.repo.manifest.read(mfn).execf(f))
 
     def fileannotate(self, f, node):
-        bcache = {}
-        ncache = {}
-        fl = self.repo.file(f)
-        n = fl.lookup(node)
-        node = hex(n)
-        changerev = fl.linkrev(n)
-
-        cl = self.repo.changelog
-        cn = cl.node(changerev)
-        cs = cl.read(cn)
-        mfn = cs[0]
+        fctx = self.repo.filectx(f, fileid=node)
+        n = fctx.filenode()
+        fl = fctx.filelog()
 
         def annotate(**map):
             parity = 0
             last = None
-            for r, l in fl.annotate(n):
-                try:
-                    cnode = ncache[r]
-                except KeyError:
-                    cnode = ncache[r] = self.repo.changelog.node(r)
-
-                try:
-                    name = bcache[r]
-                except KeyError:
-                    cl = self.repo.changelog.read(cnode)
-                    bcache[r] = name = self.repo.ui.shortuser(cl[1])
+            for f, l in fctx.annotate():
+                cnode = f.node()
+                name = self.repo.ui.shortuser(f.user())
 
                 if last != cnode:
                     parity = 1 - parity
@@ -424,9 +408,9 @@ class hgweb(object):
 
                 yield {"parity": parity,
                        "node": hex(cnode),
-                       "rev": r,
+                       "rev": f.rev(),
                        "author": name,
-                       "file": f,
+                       "file": f.path(),
                        "line": l}
 
         yield self.t("fileannotate",
@@ -434,15 +418,15 @@ class hgweb(object):
                      filenode=node,
                      annotate=annotate,
                      path=_up(f),
-                     rev=changerev,
-                     node=hex(cn),
-                     manifest=hex(mfn),
-                     author=cs[1],
-                     date=cs[2],
+                     rev=fctx.rev(),
+                     node=hex(n),
+                     manifest=hex(fctx.changectx().changeset()[0]),
+                     author=fctx.user(),
+                     date=fctx.date(),
                      rename=self.renamelink(fl, n),
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
-                     permissions=self.repo.manifest.read(mfn).execf(f))
+                     permissions=fctx.manifest().execf(f))
 
     def manifest(self, mnode, path):
         man = self.repo.manifest
