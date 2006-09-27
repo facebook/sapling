@@ -292,9 +292,12 @@ class hgweb(object):
 
         files = []
         mf = self.repo.manifest.read(changes[0])
+        parity = 0
         for f in changes[3]:
             files.append(self.t("filenodelink",
-                                filenode=hex(mf.get(f, nullid)), file=f))
+                                filenode=hex(mf.get(f, nullid)), file=f,
+                                parity=parity))
+            parity = 1 - parity
 
         def diff(**map):
             yield self.diff(p1, n, None)

@@ -8,7 +8,7 @@ error = error-gitweb.tmpl
 naventry = '<a href="?cmd=changelog;rev=#rev#;style=gitweb">#label|escape#</a> '
 navshortentry = '<a href="?cmd=shortlog;rev=#rev#;style=gitweb">#label|escape#</a> '
 filedifflink = '<a href="?cmd=filediff;node=#node#;file=#file|urlescape#;style=gitweb">#file|escape#</a> '
-filenodelink = '<tr class="light"><td><a class="list" href="">#file|escape#</a></td><td></td><td class="link"><a href="?cmd=file;filenode=#filenode#;file=#file|urlescape#;style=gitweb">file</a> | <a href="?fa=#filenode|short#;file=#file|urlescape#;style=gitweb">annotate</a> | <!-- FIXME: <a href="?fd=#filenode|short#;file=#file|urlescape#;style=gitweb">diff</a> | --> <a href="?cmd=filelog;filenode=#filenode|short#;file=#file|urlescape#;style=gitweb">revisions</a></td></tr>'
+filenodelink = '<tr class="parity#parity#"><td><a class="list" href="">#file|escape#</a></td><td></td><td class="link"><a href="?cmd=file;filenode=#filenode#;file=#file|urlescape#;style=gitweb">file</a> | <a href="?fa=#filenode|short#;file=#file|urlescape#;style=gitweb">annotate</a> | <!-- FIXME: <a href="?fd=#filenode|short#;file=#file|urlescape#;style=gitweb">diff</a> | --> <a href="?cmd=filelog;filenode=#filenode|short#;file=#file|urlescape#;style=gitweb">revisions</a></td></tr>'
 fileellipses = '...'
 changelogentry = changelogentry-gitweb.tmpl
 searchentry = changelogentry-gitweb.tmpl
