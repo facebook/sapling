@@ -22,7 +22,7 @@ filediff = filediff.tmpl
 filelog = filelog.tmpl
 fileline = '<div class="parity#parity#"><span class="lineno">#linenumber#</span>#line|escape#</div>'
 filelogentry = filelogentry.tmpl
-annotateline = '<tr class="parity#parity#"><td class="annotate"><a href="?cs=#node|short#">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>'
+annotateline = '<tr class="parity#parity#"><td class="annotate"><a href="?fa=#node|short#;file=#file|urlescape#">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>'
 difflineplus = '<span class="plusline">#line|escape#</span>'
 difflineminus = '<span class="minusline">#line|escape#</span>'
 difflineat = '<span class="atline">#line|escape#</span>'

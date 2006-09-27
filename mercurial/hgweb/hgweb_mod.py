@@ -398,16 +398,16 @@ class hgweb(object):
         def annotate(**map):
             parity = 0
             last = None
-            for f, l in fctx.annotate():
-                cnode = f.node()
+            for f, l in fctx.annotate(follow=True):
+                fnode = f.filenode()
                 name = self.repo.ui.shortuser(f.user())
 
-                if last != cnode:
+                if last != fnode:
                     parity = 1 - parity
-                    last = cnode
+                    last = fnode
 
                 yield {"parity": parity,
-                       "node": hex(cnode),
+                       "node": hex(fnode),
                        "rev": f.rev(),
                        "author": name,
                        "file": f.path(),
