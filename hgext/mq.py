@@ -114,6 +114,9 @@ class queue:
                 comment = l[h:]
             patch = patch.strip()
             if patch:
+                if patch in self.series:
+                    raise util.Abort(_('%s appears more than once in %s') %
+                                     (patch, self.join(self.series_path)))
                 self.series.append(patch)
                 self.series_guards.append(self.guard_re.findall(comment))
 
