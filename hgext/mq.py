@@ -1071,25 +1071,38 @@ class queue:
             self.explain_pushable(i)
         return unapplied
 
-    def qseries(self, repo, missing=None, summary=False):
-        start = self.series_end(all_patches=True)
+    def qseries(self, repo, missing=None, start=0, length=0, status=None,
+                summary=False):
+        def displayname(patchname):
+            if summary:
+                msg = self.readheaders(patchname)[0]
+                msg = msg and ': ' + msg[0] or ': '
+            else:
+                msg = ''
+            return '%s%s' % (patchname, msg)
+
+        def pname(i):
+            if status == 'A':
+                return self.applied[i].name
+            else:
+                return self.series[i]
+
+        unapplied = self.series_end(all_patches=True)
+        if not length:
+            length = len(self.series) - start
         if not missing:
-            for i in range(len(self.series)):
-                patch = self.series[i]
+            for i in range(start, start+length):
+                pfx = ''
+                patch = pname(i)
                 if self.ui.verbose:
-                    if i < start:
+                    if i < unapplied:
                         status = 'A'
                     elif self.pushable(i)[0]:
                         status = 'U'
                     else:
                         status = 'G'
-                    self.ui.write('%d %s ' % (i, status))
-                if summary:
-                    msg = self.readheaders(patch)[0]
-                    msg = msg and ': ' + msg[0] or ': '
-                else:
-                    msg = ''
-                self.ui.write('%s%s\n' % (patch, msg))
+                    pfx = '%d %s ' % (i, status)
+                self.ui.write('%s%s\n' % (pfx, displayname(patch)))
         else:
             msng_list = []
             for root, dirs, files in os.walk(self.path):
@@ -1102,9 +1115,8 @@ class queue:
                         msng_list.append(fl)
             msng_list.sort()
             for x in msng_list:
-                if self.ui.verbose:
-                    self.ui.write("D ")
-                self.ui.write("%s\n" % x)
+                pfx = self.ui.verbose and ('D ') or ''
+                self.ui.write("%s%s\n" % (pfx, displayname(x)))
 
     def issaveline(self, l):
         if l.name == '.hg.patches.save.line':
@@ -1227,17 +1239,6 @@ class queue:
             return next(end + 1)
         return next(end)
 
-    def qapplied(self, repo, patch=None):
-        if patch and patch not in self.series:
-            raise util.Abort(_("patch %s is not in series file") % patch)
-        if not patch:
-            end = len(self.applied)
-        else:
-            end = self.series.index(patch) + 1
-        for x in xrange(end):
-            p = self.appliedname(x)
-            self.ui.write("%s\n" % p)
-
     def appliedname(self, index):
         pname = self.applied[index].name
         if not self.ui.verbose:
@@ -1245,36 +1246,6 @@ class queue:
         else:
             p = str(self.series.index(pname)) + " " + pname
         return p
-
-    def top(self, repo):
-        if len(self.applied):
-            p = self.appliedname(-1)
-            self.ui.write(p + '\n')
-        else:
-            self.ui.write("No patches applied\n")
-            return 1
-
-    def next(self, repo):
-        end = self.series_end()
-        if end == len(self.series):
-            self.ui.write("All patches applied\n")
-            return 1
-        else:
-            p = self.series[end]
-            if self.ui.verbose:
-                self.ui.write("%d " % self.series.index(p))
-            self.ui.write(p + '\n')
-
-    def prev(self, repo):
-        if len(self.applied) > 1:
-            p = self.appliedname(-2)
-            self.ui.write(p + '\n')
-        elif len(self.applied) == 1:
-            self.ui.write("Only one patch applied\n")
-            return 1
-        else:
-            self.ui.write("No patches applied\n")
-            return 1
 
     def qimport(self, repo, files, patchname=None, rev=None, existing=None,
                 force=None):
@@ -1396,15 +1367,25 @@ def delete(ui, repo, patch, *patches, **opts):
 
 def applied(ui, repo, patch=None, **opts):
     """print the patches already applied"""
-    repo.mq.qapplied(repo, patch)
-    return 0
+    q = repo.mq
+    if patch:
+        if patch not in q.series:
+            raise util.Abort(_("patch %s is not in series file") % patch)
+        end = q.series.index(patch) + 1
+    else:
+        end = len(q.applied)
+    return q.qseries(repo, length=end, status='A', summary=opts.get('summary'))
 
 def unapplied(ui, repo, patch=None, **opts):
     """print the patches not yet applied"""
-    for i, p in repo.mq.unapplied(repo, patch):
-        if ui.verbose:
-            ui.write("%d " % i)
-        ui.write("%s\n" % p)
+    q = repo.mq
+    if patch:
+        if patch not in q.series:
+            raise util.Abort(_("patch %s is not in series file") % patch)
+        start = q.series.index(patch) + 1
+    else:
+        start = q.series_end()
+    q.qseries(repo, start=start, summary=opts.get('summary'))
 
 def qimport(ui, repo, *filename, **opts):
     """import a patch
@@ -1503,15 +1484,36 @@ def series(ui, repo, **opts):
 
 def top(ui, repo, **opts):
     """print the name of the current patch"""
-    return repo.mq.top(repo)
+    q = repo.mq
+    t = len(q.applied)
+    if t:
+        return q.qseries(repo, start=t-1, length=1, status='A',
+                         summary=opts.get('summary'))
+    else:
+        ui.write("No patches applied\n")
+        return 1
 
 def next(ui, repo, **opts):
     """print the name of the next patch"""
-    return repo.mq.next(repo)
+    q = repo.mq
+    end = q.series_end()
+    if end == len(q.series):
+        ui.write("All patches applied\n")
+        return 1
+    return q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
 
 def prev(ui, repo, **opts):
     """print the name of the previous patch"""
-    return repo.mq.prev(repo)
+    q = repo.mq
+    l = len(q.applied)
+    if l == 1:
+        ui.write("Only one patch applied\n")
+        return 1
+    if not l:
+        ui.write("No patches applied\n")
+        return 1
+    return q.qseries(repo, start=l-2, length=1, status='A',
+                     summary=opts.get('summary'))
 
 def new(ui, repo, patch, **opts):
     """create a new patch
@@ -1988,8 +1990,10 @@ def reposetup(ui, repo):
         repo.__class__ = mqrepo
         repo.mq = queue(ui, repo.join(""))
 
+seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
+
 cmdtable = {
-    "qapplied": (applied, [], 'hg qapplied [PATCH]'),
+    "qapplied": (applied, [] + seriesopts, 'hg qapplied [-s] [PATCH]'),
     "qclone": (clone,
                [('', 'pull', None, _('use pull protocol to copy metadata')),
                 ('U', 'noupdate', None, _('do not update the new working directories')),
@@ -2043,8 +2047,8 @@ cmdtable = {
           ('l', 'logfile', '', _('read the commit message from <file>')),
           ('f', 'force', None, _('import uncommitted changes into patch'))],
          'hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH'),
-    "qnext": (next, [], 'hg qnext'),
-    "qprev": (prev, [], 'hg qprev'),
+    "qnext": (next, [] + seriesopts, 'hg qnext [-s]'),
+    "qprev": (prev, [] + seriesopts, 'hg qprev [-s]'),
     "^qpop":
         (pop,
          [('a', 'all', None, 'pop all patches'),
@@ -2094,8 +2098,7 @@ cmdtable = {
                 'hg qselect [OPTION...] [GUARD...]'),
     "qseries":
         (series,
-         [('m', 'missing', None, 'print patches not in series'),
-          ('s', 'summary', None, _('print first line of patch header'))],
+         [('m', 'missing', None, 'print patches not in series')] + seriesopts,
          'hg qseries [-ms]'),
     "^strip":
         (strip,
@@ -2103,6 +2106,6 @@ cmdtable = {
           ('b', 'backup', None, 'bundle unrelated changesets'),
           ('n', 'nobackup', None, 'no backups')],
          'hg strip [-f] [-b] [-n] REV'),
-    "qtop": (top, [], 'hg qtop'),
-    "qunapplied": (unapplied, [], 'hg qunapplied [PATCH]'),
+    "qtop": (top, [] + seriesopts, 'hg qtop [-s]'),
+    "qunapplied": (unapplied, [] + seriesopts, 'hg qunapplied [-s] [PATCH]'),
 }
