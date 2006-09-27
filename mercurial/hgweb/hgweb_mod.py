@@ -419,7 +419,7 @@ class hgweb(object):
                      annotate=annotate,
                      path=_up(f),
                      rev=fctx.rev(),
-                     node=hex(n),
+                     node=hex(fctx.node()),
                      manifest=hex(fctx.changectx().changeset()[0]),
                      author=fctx.user(),
                      date=fctx.date(),
