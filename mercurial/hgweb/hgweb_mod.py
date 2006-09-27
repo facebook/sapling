@@ -407,7 +407,8 @@ class hgweb(object):
                     last = fnode
 
                 yield {"parity": parity,
-                       "node": hex(fnode),
+                       "node": hex(f.node()),
+                       "filenode": hex(fnode),
                        "rev": f.rev(),
                        "author": name,
                        "file": f.path(),
