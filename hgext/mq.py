@@ -1151,7 +1151,8 @@ class queue:
                 file_ = se.name
                 if se.rev:
                     applied.append(se)
-                series.append(file_)
+                else:
+                    series.append(file_)
         if datastart == None:
             self.ui.warn("No saved patch data found\n")
             return 1
