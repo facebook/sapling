@@ -279,8 +279,10 @@ def revlist(ui, repo, *revs, **opts):
 def view(ui, repo, *etc, **opts):
     "start interactive history viewer"
     os.chdir(repo.root)
-    optstr = ' '.join(['--%s %s' % (k, v) for k, v in opts.iteritems()])
-    os.system(ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc)))
+    optstr = ' '.join(['--%s %s' % (k, v) for k, v in opts.iteritems() if v])
+    cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
+    ui.debug("running %s\n" % cmd)
+    os.system(cmd)
 
 cmdtable = {
     "view": (view,
