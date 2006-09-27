@@ -11,3 +11,40 @@ Thu Jan 01 00:00:01 1970 +0000: a
 nobody: a
 % annotate -cdnu
 nobody 0 8435f90966e4 Thu Jan 01 00:00:01 1970 +0000: a
+% annotate b
+2: a
+2: a
+2: a
+3: b
+3: b
+3: b
+% annotate -nf b
+0 a: a
+1 a: a
+1 a: a
+3 b: b
+3 b: b
+3 b: b
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+merging b
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% annotate after merge
+0 a: a
+1 a: a
+1 a: a
+3 b: b
+4 b: c
+3 b: b
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+merging b
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% annotate after rename merge
+0 a: a
+6 b: z
+1 a: a
+3 b: b
+4 b: c
+3 b: b
+7 b: d

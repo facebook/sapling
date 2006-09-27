@@ -5,6 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+from demandload import *
+from node import *
+demandload(globals(), 'bdiff')
+
 from node import *
 from demandload import demandload
 demandload(globals(), "ancestor util")
@@ -165,13 +169,74 @@ class filectx(object):
         return [ filectx(self._repo, self._path, fileid=x,
                          filelog=self._filelog) for x in c ]
 
-    def annotate(self):
-        getctx = util.cachefunc(lambda x: filectx(self._repo, self._path,
-                                                  changeid=x,
-                                                  filelog=self._filelog))
-        hist = self._filelog.annotate(self._filenode)
+    def annotate(self, follow=False):
+        '''returns a list of tuples of (ctx, line) for each line
+        in the file, where ctx is the filectx of the node where
+        that line was last changed'''
 
-        return [(getctx(rev), line) for rev, line in hist]
+        def decorate(text, rev):
+            return ([rev] * len(text.splitlines()), text)
+
+        def pair(parent, child):
+            for a1, a2, b1, b2 in bdiff.blocks(parent[1], child[1]):
+                child[0][b1:b2] = parent[0][a1:a2]
+            return child
+
+        getlog = util.cachefunc(lambda x: self._repo.file(x))
+        def getctx(path, fileid):
+            log = path == self._path and self._filelog or getlog(path)
+            return filectx(self._repo, path, fileid=fileid, filelog=log)
+        getctx = util.cachefunc(getctx)
+
+        def parents(f):
+            # we want to reuse filectx objects as much as possible
+            p = f._path
+            pl = [ (p, f._filelog.rev(n)) for n in f._filelog.parents(f._filenode) ]
+
+            if follow:
+                r = f.renamed()
+                if r:
+                    pl[0] = (r[0], getlog(r[0]).rev(r[1]))
+
+            return [ getctx(p, n) for p, n in pl if n != -1 ]
+                
+        # find all ancestors
+        needed = {self: 1}
+        visit = [self]
+        files = [self._path]
+        while visit:
+            f = visit.pop(0)
+            for p in parents(f):
+                if p not in needed:
+                    needed[p] = 1
+                    visit.append(p)
+                    if p._path not in files:
+                        files.append(p._path)
+                else:
+                    # count how many times we'll use this
+                    needed[p] += 1
+
+        # sort by revision (per file) which is a topological order
+        visit = []
+        files.reverse()
+        for f in files:
+            fn = [(n._filerev, n) for n in needed.keys() if n._path == f]
+            fn.sort()
+            visit.extend(fn)
+        hist = {}
+
+        for r, f in visit:
+            curr = decorate(f.data(), f)
+            for p in parents(f):
+                if p != nullid:
+                    curr = pair(hist[p], curr)
+                    # trim the history of unneeded revs
+                    needed[p] -= 1
+                    if not needed[p]:
+                        del hist[p]
+            hist[f] = curr
+
+        return zip(hist[f][0], hist[f][1].splitlines(1))
 
     def ancestor(self, fc2):
         """

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export HGMERGE=true
+
 echo % init
 hg init
 
@@ -21,3 +23,53 @@ hg annotate -u a
 
 echo % annotate -cdnu
 hg annotate -cdnu a
+
+cat <<EOF >>a
+a
+a
+EOF
+hg ci -ma1 -d '1 0'
+hg cp a b
+hg ci -mb -d '1 0'
+cat <<EOF >> b
+b
+b
+b
+EOF
+hg ci -mb2 -d '2 0'
+
+echo % annotate b
+hg annotate b
+echo % annotate -nf b
+hg annotate -nf b
+
+hg up -C 2
+cat <<EOF >> b
+b
+c
+b
+EOF
+hg ci -mb2.1 -d '2 0'
+hg merge
+hg ci -mmergeb -d '3 0'
+echo % annotate after merge
+hg annotate -nf b
+
+hg up -C 1
+hg cp a b
+cat <<EOF > b
+a
+z
+a
+EOF
+hg ci -mc -d '3 0'
+hg merge
+cat <<EOF >> b
+b
+c
+b
+EOF
+echo d >> b
+hg ci -mmerge2 -d '4 0'
+echo % annotate after rename merge
+hg annotate -nf b

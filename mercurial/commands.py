@@ -612,8 +612,9 @@ def annotate(ui, repo, *pats, **opts):
     opmap = [['user', lambda x: ui.shortuser(x.user())],
              ['number', lambda x: str(x.rev())],
              ['changeset', lambda x: short(x.node())],
-             ['date', getdate]]
-    if not opts['user'] and not opts['changeset'] and not opts['date']:
+             ['date', getdate], ['follow', lambda x: x.path()]]
+    if (not opts['user'] and not opts['changeset'] and not opts['date']
+        and not opts['follow']):
         opts['number'] = 1
 
     ctx = repo.changectx(opts['rev'])
@@ -625,7 +626,7 @@ def annotate(ui, repo, *pats, **opts):
             ui.write(_("%s: binary file\n") % ((pats and rel) or abs))
             continue
 
-        lines = fctx.annotate()
+        lines = fctx.annotate(follow=opts.get('follow'))
         pieces = []
 
         for o, f in opmap:
@@ -2671,6 +2672,7 @@ table = {
     "^annotate":
         (annotate,
          [('r', 'rev', '', _('annotate the specified revision')),
+          ('f', 'follow', None, _('follow file copies and renames')),
           ('a', 'text', None, _('treat all files as text')),
           ('u', 'user', None, _('list the author')),
           ('d', 'date', None, _('list the date')),
