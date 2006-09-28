@@ -803,11 +803,9 @@ class queue:
             wlock = repo.wlock()
         patch = self.lookup(patch)
         if patch and self.isapplied(patch):
-            self.ui.warn(_("patch %s is already applied\n") % patch)
-            sys.exit(1)
+            raise util.Abort(_("patch %s is already applied") % patch)
         if self.series_end() == len(self.series):
-            self.ui.warn(_("patch series fully applied\n"))
-            sys.exit(1)
+            raise util.Abort(_("patch series fully applied"))
         if not force:
             self.check_localchanges(repo)
 
@@ -857,8 +855,7 @@ class queue:
             if not info:
                 raise util.Abort(_("patch %s is not applied") % patch)
         if len(self.applied) == 0:
-            self.ui.warn(_("no patches applied\n"))
-            sys.exit(1)
+            raise util.Abort(_("no patches applied"))
 
         if not update:
             parents = repo.dirstate.parents()
@@ -1378,6 +1375,9 @@ def applied(ui, repo, patch=None, **opts):
         end = q.series.index(patch) + 1
     else:
         end = len(q.applied)
+    if not end:
+        return
+
     return q.qseries(repo, length=end, status='A', summary=opts.get('summary'))
 
 def unapplied(ui, repo, patch=None, **opts):
