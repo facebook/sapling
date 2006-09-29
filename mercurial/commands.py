@@ -2973,7 +2973,7 @@ table = {
     "^pull":
         (pull,
          [('u', 'update', None,
-           _('update the working directory to tip after pull')),
+           _('update to new tip if changesets were pulled')),
           ('f', 'force', None,
            _('run even when remote repository is unrelated')),
           ('r', 'rev', [], _('a specific revision up to which you would like to pull')),
@@ -3070,7 +3070,7 @@ table = {
     "unbundle":
         (unbundle,
          [('u', 'update', None,
-           _('update the working directory to tip after unbundle'))],
+           _('update to new tip if changesets were unbundled'))],
          _('hg unbundle [-u] FILE')),
     "debugundo|undo": (undo, [], _('hg undo')),
     "^update|up|checkout|co":
