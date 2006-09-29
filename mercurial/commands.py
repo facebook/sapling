@@ -399,9 +399,9 @@ def show_changeset(ui, repo, opts):
 
     if tmpl or mapfile:
         if mapfile:
-            if not os.path.isfile(mapfile):
-                mapname = templater.templatepath('map-cmdline.' + mapfile)
-                if not mapname: mapname = templater.templatepath(mapfile)
+            if not os.path.split(mapfile)[0]:
+                mapname = (templater.templatepath('map-cmdline.' + mapfile)
+                           or templater.templatepath(mapfile))
                 if mapname: mapfile = mapname
         try:
             t = templater.changeset_templater(ui, repo, mapfile)

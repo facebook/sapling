@@ -65,6 +65,10 @@ echo '[ui]' > .hg/hgrc
 echo 'style = t' >> .hg/hgrc
 hg log
 
+echo '# issue338'
+hg log --style=changelog > changelog
+cat changelog
+
 echo "# keys work"
 for key in author branches date desc file_adds file_dels files \
         manifest node parents rev tags; do
