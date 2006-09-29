@@ -2672,6 +2672,9 @@ globalopts = [
     ('h', 'help', None, _('display help and exit')),
 ]
 
+dryrunopts = [('n', 'dry-run', None,
+               _('do not perform actions, just print output'))]
+
 walkopts = [
     ('I', 'include', [], _('include names matching the given patterns')),
     ('X', 'exclude', [], _('exclude names matching the given patterns')),
@@ -2680,17 +2683,14 @@ walkopts = [
 table = {
     "^add":
         (add,
-         walkopts + \
-         [('n', 'dry-run', None,
-           _('do not perform actions, just print output'))],
+         walkopts + dryrunopts,
          _('hg add [OPTION]... [FILE]...')),
     "addremove":
         (addremove,
-         walkopts + \
-         [('n', 'dry-run', None,
-           _('do not perform actions, just print output'))],
+         walkopts + dryrunopts +
          [('s', 'similarity', '',
-           _('guess renamed files by similarity (0<=s<=100)'))],
+           _('guess renamed files by similarity (0<=s<=100)')),
+         ] + walkopts + dryrunopts,
          _('hg addremove [OPTION]... [FILE]...')),
     "^annotate":
         (annotate,
@@ -2760,8 +2760,7 @@ table = {
          [('A', 'after', None, _('record a copy that has already occurred')),
           ('f', 'force', None,
            _('forcibly copy over an existing managed file')),
-          ('n', 'dry-run', None, _('do not perform actions, just print output'))],
-         ] + walkopts,
+         ] + walkopts + dryrunopts,
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
     "debugcomplete":
@@ -2954,16 +2953,14 @@ table = {
          [('A', 'after', None, _('record a rename that has already occurred')),
           ('f', 'force', None,
            _('forcibly copy over an existing managed file')),
-          ('n', 'dry-run', None, _('do not perform actions, just print output'))],
-         ] + walkopts,
+         ] + walkopts + dryrunopts,
          _('hg rename [OPTION]... SOURCE... DEST')),
     "^revert":
         (revert,
          [('a', 'all', None, _('revert all changes when no arguments given')),
           ('r', 'rev', '', _('revision to revert to')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
-          ('n', 'dry-run', None, _('do not perform actions, just print output'))],
-         ] + walkopts,
+         ] + walkopts + dryrunopts,
          _('hg revert [-r REV] [NAME]...')),
     "rollback": (rollback, [], _('hg rollback')),
     "root": (root, [], _('hg root')),
