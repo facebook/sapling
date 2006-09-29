@@ -14,7 +14,7 @@ demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
 demandload(globals(), "errno lock os shutil util merge@_merge verify@_verify")
 
 def _local(path):
-    return (os.path.isfile(path and util.drop_scheme('file', path)) and
+    return (os.path.isfile(util.drop_scheme('file', path)) and
             bundlerepo or localrepo)
 
 schemes = {
@@ -51,7 +51,7 @@ def islocal(repo):
 
 repo_setup_hooks = []
 
-def repository(ui, path=None, create=False):
+def repository(ui, path='', create=False):
     """return a repository object for the specified path"""
     repo = _lookup(path).instance(ui, path, create)
     for hook in repo_setup_hooks:
