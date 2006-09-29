@@ -320,12 +320,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     ### check phase
 
-    pl = repo.dirstate.parents()
-    if not overwrite and pl[1] != nullid:
+    pl = repo.parents()
+    if not overwrite and len(pl) > 1:
         raise util.Abort(_("outstanding uncommitted merges"))
 
-    p1, p2 = pl[0], node
-    pa = repo.changelog.ancestor(p1, p2)
+    p1, p2 = pl[0], repo.changectx(node)
+    pa = p1.ancestor(p2)
 
     # are we going backwards?
     backwards = (pa == p2)
@@ -345,17 +345,16 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if modified or added or removed:
             raise util.Abort(_("outstanding uncommitted changes"))
 
-    m1 = repo.changectx(p1).manifest().copy()
-    m2 = repo.changectx(p2).manifest().copy()
-    ma = repo.changectx(pa).manifest()
+    m1 = p1.manifest().copy()
+    m2 = p2.manifest().copy()
+    ma = pa.manifest()
 
     # resolve the manifest to determine which files
     # we care about merging
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(_(" overwrite %s branchmerge %s partial %s\n") %
                   (overwrite, branchmerge, bool(partial)))
-    repo.ui.debug(_(" ancestor %s local %s remote %s\n") %
-                  (short(p1), short(p2), short(pa)))
+    repo.ui.debug(_(" ancestor %s local %s remote %s\n") % (p1, p2, pa))
 
     action = []
     copy = {}
@@ -369,7 +368,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not branchmerge:
         action += forgetremoved(m2, status)
     if not (backwards or overwrite):
-        copy = findcopies(repo, m1, m2, repo.changelog.rev(pa))
+        copy = findcopies(repo, m1, m2, pa.rev())
 
     action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards)
     del m1, m2, ma
@@ -378,10 +377,10 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     if not branchmerge:
         # we don't need to do any magic, just jump to the new rev
-        p1, p2 = p2, nullid
+        p1, p2 = p2, repo.changectx(nullid)
 
-    xp1, xp2 = hex(p1), hex(p2)
-    if p2 == nullid: xp2 = ''
+    xp1, xp2 = str(p1), str(p2)
+    if p2.node() == nullid: xp2 = ''
 
     repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
@@ -389,7 +388,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     # update dirstate
     if not partial:
-        repo.dirstate.setparents(p1, p2)
+        repo.dirstate.setparents(p1.node(), p2.node())
         recordupdates(repo, action, branchmerge)
 
     if show_stats:
@@ -406,8 +405,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
                                 " you can redo the full merge using:\n"
                                 "  hg update -C %s\n"
                                 "  hg merge %s\n"
-                                % (repo.changelog.rev(p1),
-                                    repo.changelog.rev(p2))))
+                                % (p1.rev(), p2.rev())))
             elif remind:
                 repo.ui.status(_("(branch merge, don't forget to commit)\n"))
         elif unresolved:

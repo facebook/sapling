@@ -62,10 +62,10 @@ precommit hook: p1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p2=
 precommit.forbid hook
 abort: precommit.forbid hook exited with status 1
 4:8ea2ef7ad3e8
-preupdate hook: p1=b702efe9688826e3a91283852b328b84dbf37bc2 p2=
+preupdate hook: p1=b702efe96888 p2=
 0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-preupdate hook: p1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p2=
-update hook: p1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 p2= err=0
+preupdate hook: p1=8ea2ef7ad3e8 p2=
+update hook: p1=8ea2ef7ad3e8 p2= err=0
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 3:4c52fb2e4022
 prechangegroup.forbid hook
