@@ -2653,6 +2653,25 @@ def verify(ui, repo):
 
 # Command options and aliases are listed here, alphabetically
 
+globalopts = [
+    ('R', 'repository', '',
+     _('repository root directory or symbolic path name')),
+    ('', 'cwd', '', _('change working directory')),
+    ('y', 'noninteractive', None,
+     _('do not prompt, assume \'yes\' for any required answers')),
+    ('q', 'quiet', None, _('suppress output')),
+    ('v', 'verbose', None, _('enable additional output')),
+    ('', 'config', [], _('set/override config option')),
+    ('', 'debug', None, _('enable debugging output')),
+    ('', 'debugger', None, _('start debugger')),
+    ('', 'lsprof', None, _('print improved command execution profile')),
+    ('', 'traceback', None, _('print traceback on exception')),
+    ('', 'time', None, _('time how long the command takes')),
+    ('', 'profile', None, _('print command execution profile')),
+    ('', 'version', None, _('output version information and exit')),
+    ('h', 'help', None, _('display help and exit')),
+]
+
 table = {
     "^add":
         (add,
@@ -3030,25 +3049,6 @@ table = {
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),
 }
-
-globalopts = [
-    ('R', 'repository', '',
-     _('repository root directory or symbolic path name')),
-    ('', 'cwd', '', _('change working directory')),
-    ('y', 'noninteractive', None,
-     _('do not prompt, assume \'yes\' for any required answers')),
-    ('q', 'quiet', None, _('suppress output')),
-    ('v', 'verbose', None, _('enable additional output')),
-    ('', 'config', [], _('set/override config option')),
-    ('', 'debug', None, _('enable debugging output')),
-    ('', 'debugger', None, _('start debugger')),
-    ('', 'lsprof', None, _('print improved command execution profile')),
-    ('', 'traceback', None, _('print traceback on exception')),
-    ('', 'time', None, _('time how long the command takes')),
-    ('', 'profile', None, _('print command execution profile')),
-    ('', 'version', None, _('output version information and exit')),
-    ('h', 'help', None, _('display help and exit')),
-]
 
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot")
