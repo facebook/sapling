@@ -9,6 +9,7 @@ from revlog import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "array bisect struct")
+demandload(globals(), "mdiff")
 
 class manifestdict(dict):
     def __init__(self, mapping=None, flags=None):
@@ -42,16 +43,25 @@ class manifest(revlog):
         revlog.__init__(self, opener, "00manifest.i", "00manifest.d",
                         defversion)
 
+    def parselines(self, lines):
+        for l in lines.splitlines(1):
+            yield l.split('\0')
+
+    def readdelta(self, node):
+        delta = mdiff.patchtext(self.delta(node))
+        deltamap = manifestdict()
+        for f, n in self.parselines(delta):
+            deltamap.rawset(f, n)
+        return deltamap
+            
     def read(self, node):
         if node == nullid: return manifestdict() # don't upset local cache
         if self.mapcache and self.mapcache[0] == node:
             return self.mapcache[1]
         text = self.revision(node)
         self.listcache = array.array('c', text)
-        lines = text.splitlines(1)
         mapping = manifestdict()
-        for l in lines:
-            (f, n) = l.split('\0')
+        for f, n in self.parselines(text):
             mapping.rawset(f, n)
         self.mapcache = (node, mapping)
         return mapping

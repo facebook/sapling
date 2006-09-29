@@ -102,20 +102,14 @@ def verify(repo):
                     (short(n), short(p)))
 
         try:
-            delta = mdiff.patchtext(repo.manifest.delta(n))
+            for f, fn in repo.manifest.readdelta(n).iteritems():
+                filenodes.setdefault(f, {})[fn] = 1
         except KeyboardInterrupt:
             repo.ui.warn(_("interrupted"))
             raise
         except Exception, inst:
-            err(_("unpacking manifest %s: %s") % (short(n), inst))
+            err(_("reading delta for manifest %s: %s") % (short(n), inst))
             continue
-
-        try:
-            ff = [ l.split('\0') for l in delta.splitlines() ]
-            for f, fn in ff:
-                filenodes.setdefault(f, {})[bin(fn[:40])] = 1
-        except (ValueError, TypeError), inst:
-            err(_("broken delta in manifest %s: %s") % (short(n), inst))
 
     repo.ui.status(_("crosschecking files in changesets and manifests\n"))
 
