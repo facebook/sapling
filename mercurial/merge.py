@@ -380,7 +380,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         p1, p2 = p2, repo.changectx(nullid)
 
     xp1, xp2 = str(p1), str(p2)
-    if p2.node() == nullid: xp2 = ''
+    if not p2: xp2 = ''
 
     repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
