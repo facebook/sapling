@@ -372,16 +372,31 @@ class changeset_printer(object):
         self.ui.status("\n")
 
 def show_changeset(ui, repo, opts):
-    '''show one changeset.  uses template or regular display.  caller
-    can pass in 'style' and 'template' options in opts.'''
+    """show one changeset using template or regular display.
 
+    Display format will be the first non-empty hit of:
+    1. option 'template'
+    2. option 'style'
+    3. [ui] setting 'logtemplate'
+    4. [ui] setting 'style'
+    If all of these values are either the unset or the empty string,
+    regular display via changeset_printer() is done.
+    """
+    # options
     tmpl = opts.get('template')
+    mapfile = None
     if tmpl:
         tmpl = templater.parsestring(tmpl, quoted=False)
     else:
-        tmpl = ui.config('ui', 'logtemplate')
-        if tmpl: tmpl = templater.parsestring(tmpl)
-    mapfile = opts.get('style') or ui.config('ui', 'style')
+        mapfile = opts.get('style')
+        # ui settings
+        if not mapfile:
+            tmpl = ui.config('ui', 'logtemplate')
+            if tmpl:
+                tmpl = templater.parsestring(tmpl)
+            else:
+                mapfile = ui.config('ui', 'style')
+
     if tmpl or mapfile:
         if mapfile:
             if not os.path.isfile(mapfile):
