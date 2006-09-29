@@ -776,6 +776,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     contents including permissions, rename data, and revision history.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
+    setremoteconfig(ui, opts)
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other, force=opts['force'])
     cg = repo.changegroup(o, 'bundle')
@@ -2690,6 +2691,11 @@ globalopts = [
 dryrunopts = [('n', 'dry-run', None,
                _('do not perform actions, just print output'))]
 
+remoteopts = [
+    ('e', 'ssh', '', _('specify ssh command to use')),
+    ('', 'remotecmd', '', _('specify hg command to run on the remote side')),
+]
+
 walkopts = [
     ('I', 'include', [], _('include names matching the given patterns')),
     ('X', 'exclude', [], _('exclude names matching the given patterns')),
@@ -2740,7 +2746,8 @@ table = {
     "bundle":
         (bundle,
          [('f', 'force', None,
-           _('run even when remote repository is unrelated'))],
+           _('run even when remote repository is unrelated')),
+         ] + remoteopts,
          _('hg bundle FILE DEST')),
     "cat":
         (cat,
@@ -2756,9 +2763,7 @@ table = {
           ('', 'pull', None, _('use pull protocol to copy metadata')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
-          ('e', 'ssh', '', _('specify ssh command to use')),
-          ('', 'remotecmd', '',
-           _('specify hg command to run on the remote side'))],
+         ] + remoteopts,
          _('hg clone [OPTION]... SOURCE [DEST]')),
     "^commit|ci":
         (commit,
@@ -2863,17 +2868,11 @@ table = {
           ('p', 'patch', None, _('show patch')),
           ('r', 'rev', [], _('a specific revision up to which you would like to pull')),
           ('', 'template', '', _('display with template')),
-          ('e', 'ssh', '', _('specify ssh command to use')),
-          ('', 'remotecmd', '',
-           _('specify hg command to run on the remote side'))],
+         ] + remoteopts,
          _('hg incoming [-p] [-n] [-M] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
     "^init":
-        (init,
-         [('e', 'ssh', '', _('specify ssh command to use')),
-          ('', 'remotecmd', '',
-           _('specify hg command to run on the remote side'))],
-         _('hg init [-e FILE] [--remotecmd FILE] [DEST]')),
+        (init, remoteopts, _('hg init [-e FILE] [--remotecmd FILE] [DEST]')),
     "locate":
         (locate,
          [('r', 'rev', '', _('search the repository as it stood at rev')),
@@ -2916,9 +2915,7 @@ table = {
           ('r', 'rev', [], _('a specific revision you would like to push')),
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'template', '', _('display with template')),
-          ('e', 'ssh', '', _('specify ssh command to use')),
-          ('', 'remotecmd', '',
-           _('specify hg command to run on the remote side'))],
+         ] + remoteopts,
          _('hg outgoing [-M] [-p] [-n] [-r REV]... [DEST]')),
     "^parents":
         (parents,
@@ -2932,20 +2929,16 @@ table = {
         (pull,
          [('u', 'update', None,
            _('update the working directory to tip after pull')),
-          ('e', 'ssh', '', _('specify ssh command to use')),
           ('f', 'force', None,
            _('run even when remote repository is unrelated')),
           ('r', 'rev', [], _('a specific revision up to which you would like to pull')),
-          ('', 'remotecmd', '',
-           _('specify hg command to run on the remote side'))],
+         ] + remoteopts,
          _('hg pull [-u] [-r REV]... [-e FILE] [--remotecmd FILE] [SOURCE]')),
     "^push":
         (push,
          [('f', 'force', None, _('force push')),
-          ('e', 'ssh', '', _('specify ssh command to use')),
           ('r', 'rev', [], _('a specific revision you would like to push')),
-          ('', 'remotecmd', '',
-           _('specify hg command to run on the remote side'))],
+         ] + remoteopts,
          _('hg push [-f] [-r REV]... [-e FILE] [--remotecmd FILE] [DEST]')),
     "debugrawcommit|rawcommit":
         (rawcommit,
