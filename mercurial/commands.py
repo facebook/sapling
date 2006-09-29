@@ -761,6 +761,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     contents including permissions, rename data, and revision history.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
+    setremoteconfig(ui, opts)
     other = hg.repository(ui, dest)
     o = repo.findoutgoing(other, force=opts['force'])
     cg = repo.changegroup(o, 'bundle')
@@ -2730,7 +2731,8 @@ table = {
     "bundle":
         (bundle,
          [('f', 'force', None,
-           _('run even when remote repository is unrelated'))],
+           _('run even when remote repository is unrelated')),
+         ] + remoteopts,
          _('hg bundle FILE DEST')),
     "cat":
         (cat,
