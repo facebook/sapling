@@ -330,7 +330,9 @@ class localrepository(repo.repository):
         else:
             n = self.changelog.lookup(changeid)
             pl = self.changelog.parents(n)
-        return [self.changectx(n) for n in pl if n != nullid]
+        if pl[1] == nullid:
+            return [self.changectx(pl[0])]
+        return [self.changectx(pl[0]), self.changectx(pl[1])]
 
     def filectx(self, path, changeid=None, fileid=None):
         """changeid can be a changeset revision, node, or tag.
