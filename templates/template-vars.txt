@@ -25,6 +25,7 @@ header        the global page header
 footer        the global page footer
 
 files         a list of file links
+file_copies   a list of pairs of name, source filenames
 dirs          a set of directory links
 diff          a diff of one or more files
 annotate      an annotated file

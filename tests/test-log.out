@@ -76,6 +76,12 @@ description:
 a
 
 
+% log copies
+4 e (dir/b)
+3 b (a)
+2 dir/b (b)
+1 b (a)
+0 
 adding base
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding b1

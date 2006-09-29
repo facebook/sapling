@@ -330,7 +330,8 @@ class changeset_templater(object):
     def __init__(self, ui, repo, mapfile, dest=None):
         self.t = templater(mapfile, common_filters,
                            cache={'parent': '{rev}:{node|short} ',
-                                  'manifest': '{rev}:{node|short}'})
+                                  'manifest': '{rev}:{node|short}',
+                                  'filecopy': '{name} ({source})'})
         self.ui = ui
         self.dest = dest
         self.repo = repo
@@ -355,7 +356,7 @@ class changeset_templater(object):
         self.write(thing, header=True)
 
     def show(self, rev=0, changenode=None, brinfo=None, changes=None,
-             **props):
+             copies=None, **props):
         '''show a single changeset or file revision'''
         log = self.repo.changelog
         if changenode is None:
@@ -472,6 +473,13 @@ class changeset_templater(object):
             showadds = ''
             showdels = ''
 
+        copies = [{'name': x[0], 'source': x[1]}
+                  for x in copies]
+        def showcopies(**args):
+            for x in showlist('file_copy', copies, plural='file_copies',
+                              **args):
+                yield x
+
         defprops = {
             'author': changes[1],
             'branches': showbranches,
@@ -480,6 +488,7 @@ class changeset_templater(object):
             'file_adds': showadds,
             'file_dels': showdels,
             'files': showfiles,
+            'file_copies': showcopies,
             'manifest': showmanifest,
             'node': hex(changenode),
             'parents': showparents,

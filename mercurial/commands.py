@@ -312,7 +312,7 @@ class changeset_printer(object):
         self.ui = ui
         self.repo = repo
 
-    def show(self, rev=0, changenode=None, brinfo=None):
+    def show(self, rev=0, changenode=None, brinfo=None, copies=None):
         '''show a single changeset or file revision'''
         log = self.repo.changelog
         if changenode is None:
@@ -359,6 +359,9 @@ class changeset_printer(object):
                     self.ui.note("%-12s %s\n" % (key, " ".join(value)))
         else:
             self.ui.note(_("files:       %s\n") % " ".join(changes[3]))
+        if copies:
+            copies = ['%s (%s)' % c for c in copies]
+            self.ui.note(_("copies:      %s\n") % ' '.join(copies))
 
         description = changes[4].strip()
         if description:
@@ -1774,6 +1777,40 @@ def log(ui, repo, *pats, **opts):
         limit = sys.maxint
     count = 0
 
+    if opts['copies'] and opts['rev']:
+        endrev = max([int(i)
+                      for i in cmdutil.revrange(ui, repo, opts['rev'])]) + 1
+    else:
+        endrev = repo.changelog.count()
+    rcache = {}
+    ncache = {}
+    dcache = []
+    def getrenamed(fn, rev, man):
+        '''looks up all renames for a file (up to endrev) the first
+        time the file is given. It indexes on the changerev and only
+        parses the manifest if linkrev != changerev.
+        Returns rename info for fn at changerev rev.'''
+        if fn not in rcache:
+            rcache[fn] = {}
+            ncache[fn] = {}
+            fl = repo.file(fn)
+            for i in xrange(fl.count()):
+                node = fl.node(i)
+                lr = fl.linkrev(node)
+                renamed = fl.renamed(node)
+                rcache[fn][lr] = renamed
+                if renamed:
+                    ncache[fn][node] = renamed
+                if lr >= endrev:
+                    break
+        if rev in rcache[fn]:
+            return rcache[fn][rev]
+        if not dcache or dcache[0] != man:
+            dcache[:] = [man, repo.manifest.readdelta(man)]
+        if fn in dcache[1]:
+            return ncache[fn].get(dcache[1][fn])
+        return None
+
     displayer = show_changeset(ui, repo, opts)
     for st, rev, fns in changeiter:
         if st == 'window':
@@ -1805,7 +1842,14 @@ def log(ui, repo, *pats, **opts):
             if opts['branches']:
                 br = repo.branchlookup([repo.changelog.node(rev)])
 
-            displayer.show(rev, brinfo=br)
+            copies = []
+            if opts.get('copies') and rev:
+                mf = getchange(rev)[0]
+                for fn in getchange(rev)[3]:
+                    rename = getrenamed(fn, rev, mf)
+                    if rename:
+                        copies.append((fn, rename[0]))
+            displayer.show(rev, brinfo=br, copies=copies)
             if opts['patch']:
                 prev = (parents and parents[0]) or nullid
                 patch.diff(repo, prev, changenode, match=matchfn, fp=du)
@@ -2889,6 +2933,7 @@ table = {
            _('follow changeset history, or file history across copies and renames')),
           ('', 'follow-first', None,
            _('only follow the first parent of merge changesets')),
+          ('C', 'copies', None, _('show copied files')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),

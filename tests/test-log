@@ -29,6 +29,9 @@ hg log -vf a
 echo % many renames
 hg log -vf e
 
+echo % log copies
+hg log -vC --template '{rev} {file_copies%filecopy}\n'
+
 # log --follow tests
 hg init ../follow
 cd ../follow
