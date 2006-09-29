@@ -31,6 +31,9 @@ class changectx(object):
     def __repr__(self):
         return "<changectx %s>" % short(self.node())
 
+    def __eq__(self, other):
+        return self._rev == other._rev
+
     def changeset(self):
         try:
             return self._changeset
@@ -125,6 +128,9 @@ class filectx(object):
 
     def __repr__(self):
         return "<filectx %s@%s>" % (self.path(), short(self.node()))
+
+    def __eq__(self, other):
+        return self._path == other._path and self._changeid == other._changeid
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
