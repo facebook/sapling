@@ -202,7 +202,6 @@ class hgweb(object):
                              "child": self.siblings(cl.children(n), cl.rev,
                                                     cl.rev(n) + 1),
                              "changelogtag": self.showtag("changelogtag",n),
-                             "manifest": hex(changes[0]),
                              "desc": changes[4],
                              "date": changes[2],
                              "files": self.listfilediffs(changes[3], n),
@@ -223,7 +222,7 @@ class hgweb(object):
 
         yield self.t(shortlog and 'shortlog' or 'changelog',
                      changenav=changenav,
-                     manifest=hex(mf),
+                     node=hex(cl.tip()),
                      rev=pos, changesets=count, entries=changelist,
                      archives=self.archivelist("tip"))
 
@@ -265,7 +264,6 @@ class hgweb(object):
                              parent=self.siblings(cl.parents(n), cl.rev),
                              child=self.siblings(cl.children(n), cl.rev),
                              changelogtag=self.showtag("changelogtag",n),
-                             manifest=hex(changes[0]),
                              desc=changes[4],
                              date=changes[2],
                              files=self.listfilediffs(changes[3], n),
@@ -280,7 +278,7 @@ class hgweb(object):
 
         yield self.t('search',
                      query=query,
-                     manifest=hex(mf),
+                     node=hex(cl.tip()),
                      entries=changelist)
 
     def changeset(self, nodeid):
@@ -309,7 +307,6 @@ class hgweb(object):
                      parent=self.siblings(cl.parents(n), cl.rev),
                      child=self.siblings(cl.children(n), cl.rev),
                      changesettag=self.showtag("changesettag",n),
-                     manifest=hex(changes[0]),
                      author=changes[1],
                      desc=changes[4],
                      date=changes[2],
@@ -385,7 +382,6 @@ class hgweb(object):
                      mimetype=mt,
                      rev=changerev,
                      node=hex(cn),
-                     manifest=hex(mfn),
                      author=cs[1],
                      date=cs[2],
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
@@ -424,7 +420,6 @@ class hgweb(object):
                      path=_up(f),
                      rev=fctx.rev(),
                      node=hex(fctx.node()),
-                     manifest=hex(fctx.changectx().changeset()[0]),
                      author=fctx.user(),
                      date=fctx.date(),
                      rename=self.renamelink(fl, n),
@@ -432,14 +427,9 @@ class hgweb(object):
                      child=self.siblings(fl.children(n), fl.rev, file=f),
                      permissions=fctx.manifest().execf(f))
 
-    def manifest(self, mnode, path):
-        man = self.repo.manifest
-        mn = man.lookup(mnode)
-        mnode = hex(mn)
-        mf = man.read(mn)
-        rev = man.rev(mn)
-        changerev = man.linkrev(mn)
-        node = self.repo.changelog.node(changerev)
+    def manifest(self, ctx, path):
+        mf = ctx.manifest()
+        node = ctx.node()
 
         files = {}
 
@@ -469,7 +459,6 @@ class hgweb(object):
                     continue
 
                 yield {"file": full,
-                       "manifest": mnode,
                        "filenode": hex(fnode),
                        "parity": self.stripes(parity),
                        "basename": f,
@@ -487,13 +476,11 @@ class hgweb(object):
 
                 yield {"parity": self.stripes(parity),
                        "path": os.path.join(path, f),
-                       "manifest": mnode,
                        "basename": f[:-1]}
                 parity += 1
 
         yield self.t("manifest",
-                     manifest=mnode,
-                     rev=rev,
+                     rev=ctx.rev(),
                      node=hex(node),
                      path=path,
                      up=_up(path),
@@ -503,7 +490,6 @@ class hgweb(object):
 
     def tags(self):
         cl = self.repo.changelog
-        mf = cl.read(cl.tip())[0]
 
         i = self.repo.tagslist()
         i.reverse()
@@ -514,19 +500,17 @@ class hgweb(object):
                 if notip and k == "tip": continue
                 yield {"parity": self.stripes(parity),
                        "tag": k,
-                       "tagmanifest": hex(cl.read(n)[0]),
                        "date": cl.read(n)[2],
                        "node": hex(n)}
                 parity += 1
 
         yield self.t("tags",
-                     manifest=hex(mf),
+                     node=hex(self.repo.changelog.tip()),
                      entries=lambda **x: entries(False, **x),
                      entriesnotip=lambda **x: entries(True, **x))
 
     def summary(self):
         cl = self.repo.changelog
-        mf = cl.read(cl.tip())[0]
 
         i = self.repo.tagslist()
         i.reverse()
@@ -550,8 +534,7 @@ class hgweb(object):
                              parity = self.stripes(parity),
                              tag = k,
                              node = hex(n),
-                             date = t,
-                             tagmanifest = hex(m))
+                             date = t)
                 parity += 1
 
         def changelist(**map):
@@ -568,7 +551,6 @@ class hgweb(object):
                     'shortlogentry',
                     parity = parity,
                     author = changes[1],
-                    manifest = hex(changes[0]),
                     desc = changes[4],
                     date = t,
                     rev = i,
@@ -577,8 +559,6 @@ class hgweb(object):
 
             yield l
 
-        cl = self.repo.changelog
-        mf = cl.read(cl.tip())[0]
         count = cl.count()
         start = max(0, count - self.maxchanges)
         end = min(count, start + self.maxchanges)
@@ -589,9 +569,9 @@ class hgweb(object):
                           self.repo.ui.config("web", "contact") or # deprecated
                           self.repo.ui.config("web", "author", "unknown")), # also
                  lastchange = (0, 0), # FIXME
-                 manifest = hex(mf),
                  tags = tagentries,
                  shortlog = changelist,
+                 node = hex(self.repo.changelog.tip()),
                  archives=self.archivelist("tip"))
 
     def filediff(self, file, changeset):
@@ -693,6 +673,15 @@ class hgweb(object):
                         form[name] = value
                     del form[k]
 
+            if form.has_key('manifest'):
+                changeid = req.form['manifest'][0]
+                try:
+                    req.changectx = self.repo.changectx(changeid)
+                except hg.RepoError:
+                    man = self.repo.manifest
+                    mn = man.lookup(changeid)
+                    req.changectx = self.repo.changectx(man.linkrev(mn))
+
         self.refresh()
 
         expand_form(req.form)
@@ -771,7 +760,7 @@ class hgweb(object):
         req.write(self.changeset(req.form['node'][0]))
 
     def do_manifest(self, req):
-        req.write(self.manifest(req.form['manifest'][0],
+        req.write(self.manifest(req.changectx,
                                 self.cleanpath(req.form['path'][0])))
 
     def do_tags(self, req):

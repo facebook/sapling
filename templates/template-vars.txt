@@ -3,14 +3,11 @@ rev           a changeset.manifest revision
 node          a changeset node
 changesets    total number of changesets
 file          a filename
-filenode      a file node
 filerev       a file revision
 filerevs      total number of file revisions
 up            the directory of the relevant file
 path          a path in the manifest, starting with "/"
 basename      a short pathname
-manifest      a manifest node
-manifestrev   a manifest revision
 date          a date string
 age           age in hours, days, etc
 line          a line of text (escaped)

@@ -14,7 +14,7 @@ changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
-manifestdirentry = '<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td><a href="?cmd=manifest;manifest=#manifest#;path=#path|urlescape#">#basename|escape#/</a>'
+manifestdirentry = '<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td><a href="?mf=#node|short#;path=#path|urlescape#">#basename|escape#/</a>'
 manifestfileentry = '<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td><a href="?f=#filenode|short#;file=#file|urlescape#">#basename|escape#</a>'
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
