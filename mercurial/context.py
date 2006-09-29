@@ -37,6 +37,9 @@ class changectx(object):
     def __eq__(self, other):
         return self._rev == other._rev
 
+    def __nonzero__(self):
+        return self._rev != -1
+
     def changeset(self):
         try:
             return self._changeset
@@ -128,6 +131,9 @@ class filectx(object):
             return self._filerev
         else:
             raise AttributeError, name
+
+    def __nonzero__(self):
+        return self._filerev != nullid
 
     def __str__(self):
         return "%s@%s" % (self.path(), short(self.node()))
