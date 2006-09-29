@@ -8,21 +8,21 @@ shortlogentry = shortlogentry.tmpl
 naventry = '<a href="?cl=#rev#">#label|escape#</a> '
 navshortentry = '<a href="?sl=#rev#">#label|escape#</a> '
 filedifflink = '<a href="?fd=#node|short#;file=#file|urlescape#">#file|escape#</a> '
-filenodelink = '<a href="?f=#filenode|short#;file=#file|urlescape#">#file|escape#</a> '
+filenodelink = '<a href="?f=#node|short#;file=#file|urlescape#">#file|escape#</a> '
 fileellipses = '...'
 changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
 manifestdirentry = '<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td><a href="?mf=#node|short#;path=#path|urlescape#">#basename|escape#/</a>'
-manifestfileentry = '<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td><a href="?f=#filenode|short#;file=#file|urlescape#">#basename|escape#</a>'
+manifestfileentry = '<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td><a href="?f=#node|short#;file=#file|urlescape#">#basename|escape#</a>'
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
 fileline = '<div class="parity#parity#"><span class="lineno">#linenumber#</span>#line|escape#</div>'
 filelogentry = filelogentry.tmpl
-annotateline = '<tr class="parity#parity#"><td class="annotate"><a href="?fa=#filenode|short#;file=#file|urlescape#">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>'
+annotateline = '<tr class="parity#parity#"><td class="annotate"><a href="?fa=#node|short#;file=#file|urlescape#">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>'
 difflineplus = '<span class="plusline">#line|escape#</span>'
 difflineminus = '<span class="minusline">#line|escape#</span>'
 difflineat = '<span class="atline">#line|escape#</span>'

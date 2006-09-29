@@ -293,7 +293,7 @@ class hgweb(object):
         parity = 0
         for f in changes[3]:
             files.append(self.t("filenodelink",
-                                filenode=hex(mf.get(f, nullid)), file=f,
+                                node=hex(n), file=f,
                                 parity=parity))
             parity = 1 - parity
 
@@ -313,10 +313,10 @@ class hgweb(object):
                      files=files,
                      archives=self.archivelist(nodeid))
 
-    def filelog(self, f, filenode):
+    def filelog(self, fctx):
+        f = fctx.path()
         cl = self.repo.changelog
-        fl = self.repo.file(f)
-        filenode = hex(fl.lookup(filenode))
+        fl = fctx.filelog()
         count = fl.count()
 
         def entries(**map):
@@ -326,39 +326,32 @@ class hgweb(object):
             for i in range(count):
                 n = fl.node(i)
                 lr = fl.linkrev(n)
-                cn = cl.node(lr)
-                cs = cl.read(cl.node(lr))
+                ctx = self.repo.changectx(lr)
 
                 l.insert(0, {"parity": parity,
-                             "filenode": hex(n),
                              "filerev": i,
                              "file": f,
-                             "node": hex(cn),
-                             "author": cs[1],
-                             "date": cs[2],
+                             "node": hex(ctx.node()),
+                             "author": ctx.user(),
+                             "date": ctx.date(),
                              "rename": self.renamelink(fl, n),
                              "parent": self.siblings(fl.parents(n),
                                                      fl.rev, file=f),
                              "child": self.siblings(fl.children(n),
                                                     fl.rev, file=f),
-                             "desc": cs[4]})
+                             "desc": ctx.description()})
                 parity = 1 - parity
 
             for e in l:
                 yield e
 
-        yield self.t("filelog", file=f, filenode=filenode, entries=entries)
+        yield self.t("filelog", file=f, node=hex(fctx.node()), entries=entries)
 
-    def filerevision(self, f, node):
-        fl = self.repo.file(f)
-        n = fl.lookup(node)
-        node = hex(n)
-        text = fl.read(n)
-        changerev = fl.linkrev(n)
-        cl = self.repo.changelog
-        cn = cl.node(changerev)
-        cs = cl.read(cn)
-        mfn = cs[0]
+    def filerevision(self, fctx):
+        f = fctx.path()
+        text = fctx.data()
+        fl = fctx.filelog()
+        n = fctx.filenode()
 
         mt = mimetypes.guess_type(f)[0]
         rawtext = text
@@ -375,22 +368,21 @@ class hgweb(object):
 
         yield self.t("filerevision",
                      file=f,
-                     filenode=node,
                      path=_up(f),
                      text=lines(),
                      raw=rawtext,
                      mimetype=mt,
-                     rev=changerev,
-                     node=hex(cn),
-                     author=cs[1],
-                     date=cs[2],
+                     rev=fctx.rev(),
+                     node=hex(fctx.node()),
+                     author=fctx.user(),
+                     date=fctx.date(),
                      parent=self.siblings(fl.parents(n), fl.rev, file=f),
                      child=self.siblings(fl.children(n), fl.rev, file=f),
                      rename=self.renamelink(fl, n),
-                     permissions=self.repo.manifest.read(mfn).execf(f))
+                     permissions=fctx.manifest().execf(f))
 
-    def fileannotate(self, f, node):
-        fctx = self.repo.filectx(f, fileid=node)
+    def fileannotate(self, fctx):
+        f = fctx.path()
         n = fctx.filenode()
         fl = fctx.filelog()
 
@@ -407,7 +399,6 @@ class hgweb(object):
 
                 yield {"parity": parity,
                        "node": hex(f.node()),
-                       "filenode": hex(fnode),
                        "rev": f.rev(),
                        "author": name,
                        "file": f.path(),
@@ -415,7 +406,6 @@ class hgweb(object):
 
         yield self.t("fileannotate",
                      file=f,
-                     filenode=node,
                      annotate=annotate,
                      path=_up(f),
                      rev=fctx.rev(),
@@ -682,6 +672,16 @@ class hgweb(object):
                     mn = man.lookup(changeid)
                     req.changectx = self.repo.changectx(man.linkrev(mn))
 
+            if form.has_key('filenode'):
+                changeid = req.form['filenode'][0]
+                path = self.cleanpath(req.form['file'][0])
+                try:
+                    req.changectx = self.repo.changectx(changeid)
+                    req.filectx = req.changectx.filectx(path)
+                except hg.RepoError:
+                    req.filectx = self.repo.filectx(path, fileid=changeid)
+                    req.changectx = req.filectx.changectx()
+
         self.refresh()
 
         expand_form(req.form)
@@ -774,16 +774,13 @@ class hgweb(object):
                                 req.form['node'][0]))
 
     def do_file(self, req):
-        req.write(self.filerevision(self.cleanpath(req.form['file'][0]),
-                                    req.form['filenode'][0]))
+        req.write(self.filerevision(req.filectx))
 
     def do_annotate(self, req):
-        req.write(self.fileannotate(self.cleanpath(req.form['file'][0]),
-                                    req.form['filenode'][0]))
+        req.write(self.fileannotate(req.filectx))
 
     def do_filelog(self, req):
-        req.write(self.filelog(self.cleanpath(req.form['file'][0]),
-                               req.form['filenode'][0]))
+        req.write(self.filelog(req.filectx))
 
     def do_heads(self, req):
         resp = " ".join(map(hex, self.repo.heads())) + "\n"
