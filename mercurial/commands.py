@@ -2672,20 +2672,24 @@ globalopts = [
     ('h', 'help', None, _('display help and exit')),
 ]
 
+walkopts = [
+    ('I', 'include', [], _('include names matching the given patterns')),
+    ('X', 'exclude', [], _('exclude names matching the given patterns')),
+]
+
 table = {
     "^add":
         (add,
-         [('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('n', 'dry-run', None, _('do not perform actions, just print output'))],
+         walkopts + \
+         [('n', 'dry-run', None,
+           _('do not perform actions, just print output'))],
          _('hg add [OPTION]... [FILE]...')),
     "addremove":
         (addremove,
-         [('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ('n', 'dry-run', None,
-           _('do not perform actions, just print output')),
-          ('s', 'similarity', '',
+         walkopts + \
+         [('n', 'dry-run', None,
+           _('do not perform actions, just print output'))],
+         [('s', 'similarity', '',
            _('guess renamed files by similarity (0<=s<=100)'))],
          _('hg addremove [OPTION]... [FILE]...')),
     "^annotate":
@@ -2697,8 +2701,7 @@ table = {
           ('d', 'date', None, _('list the date')),
           ('n', 'number', None, _('list the revision number (default)')),
           ('c', 'changeset', None, _('list the changeset')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg annotate [-r REV] [-a] [-u] [-d] [-n] [-c] FILE...')),
     "archive":
         (archive,
@@ -2706,8 +2709,7 @@ table = {
           ('p', 'prefix', '', _('directory prefix for files in archive')),
           ('r', 'rev', '', _('revision to distribute')),
           ('t', 'type', '', _('type of distribution to create')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg archive [OPTION]... DEST')),
     "backout":
         (backout,
@@ -2718,8 +2720,7 @@ table = {
           ('d', 'date', '', _('record datecode as commit date')),
           ('', 'parent', '', _('parent to choose when backing out merge')),
           ('u', 'user', '', _('record user as committer')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg backout [OPTION]... REV')),
     "bundle":
         (bundle,
@@ -2730,8 +2731,7 @@ table = {
         (cat,
          [('o', 'output', '', _('print output to file with formatted name')),
           ('r', 'rev', '', _('print the given revision')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg cat [OPTION]... FILE...')),
     "^clone":
         (clone,
@@ -2753,17 +2753,15 @@ table = {
           ('l', 'logfile', '', _('read the commit message from <file>')),
           ('d', 'date', '', _('record datecode as commit date')),
           ('u', 'user', '', _('record user as commiter')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg commit [OPTION]... [FILE]...')),
     "copy|cp":
         (copy,
          [('A', 'after', None, _('record a copy that has already occurred')),
           ('f', 'force', None,
            _('forcibly copy over an existing managed file')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
           ('n', 'dry-run', None, _('do not perform actions, just print output'))],
+         ] + walkopts,
          _('hg copy [OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
     "debugcomplete":
@@ -2783,10 +2781,7 @@ table = {
     "debugindexdot": (debugindexdot, [], _('debugindexdot FILE')),
     "debugrename": (debugrename, [], _('debugrename FILE [REV]')),
     "debugwalk":
-        (debugwalk,
-         [('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         _('debugwalk [OPTION]... [FILE]...')),
+        (debugwalk, walkopts, _('debugwalk [OPTION]... [FILE]...')),
     "^diff":
         (diff,
          [('r', 'rev', [], _('revision')),
@@ -2800,8 +2795,7 @@ table = {
            _('ignore changes in the amount of white space')),
           ('B', 'ignore-blank-lines', None,
            _('ignore changes whose lines are all blank')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...')),
     "^export":
         (export,
@@ -2811,10 +2805,7 @@ table = {
           ('', 'switch-parent', None, _('diff against the second parent'))],
          _('hg export [-a] [-o OUTFILESPEC] REV...')),
     "debugforget|forget":
-        (forget,
-         [('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         _('hg forget [OPTION]... FILE...')),
+        (forget, walkopts, _('hg forget [OPTION]... FILE...')),
     "grep":
         (grep,
          [('0', 'print0', None, _('end fields with NUL')),
@@ -2827,8 +2818,7 @@ table = {
           ('n', 'line-number', None, _('print matching line numbers')),
           ('r', 'rev', [], _('search in given revision range')),
           ('u', 'user', None, _('print user who committed change')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg grep [OPTION]... PATTERN [FILE]...')),
     "heads":
         (heads,
@@ -2877,8 +2867,7 @@ table = {
            _('end filenames with NUL, for use with xargs')),
           ('f', 'fullpath', None,
            _('print complete paths from the filesystem root')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg locate [OPTION]... [PATTERN]...')),
     "^log|history":
         (log,
@@ -2896,8 +2885,7 @@ table = {
           ('p', 'patch', None, _('show patch')),
           ('P', 'prune', [], _('do not display revision or any of its ancestors')),
           ('', 'template', '', _('display with template')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg log [OPTION]... [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "merge":
@@ -2959,26 +2947,23 @@ table = {
         (remove,
          [('A', 'after', None, _('record remove that has already occurred')),
           ('f', 'force', None, _('remove file even if modified')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg remove [OPTION]... FILE...')),
     "rename|mv":
         (rename,
          [('A', 'after', None, _('record a rename that has already occurred')),
           ('f', 'force', None,
            _('forcibly copy over an existing managed file')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
           ('n', 'dry-run', None, _('do not perform actions, just print output'))],
+         ] + walkopts,
          _('hg rename [OPTION]... SOURCE... DEST')),
     "^revert":
         (revert,
          [('a', 'all', None, _('revert all changes when no arguments given')),
           ('r', 'rev', '', _('revision to revert to')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
-          ('I', 'include', [], _('include names matching given patterns')),
-          ('X', 'exclude', [], _('exclude names matching given patterns')),
           ('n', 'dry-run', None, _('do not perform actions, just print output'))],
+         ] + walkopts,
          _('hg revert [-r REV] [NAME]...')),
     "rollback": (rollback, [], _('hg rollback')),
     "root": (root, [], _('hg root')),
@@ -3014,8 +2999,7 @@ table = {
           ('C', 'copies', None, _('show source of copied files')),
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + walkopts,
          _('hg status [OPTION]... [FILE]...')),
     "tag":
         (tag,
