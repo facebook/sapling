@@ -751,7 +751,7 @@ class revlog(object):
             - revision number or str(revision number)
             - nodeid or subset of hex nodeid
         """
-        if type(id) == type(0):
+        if isinstance(id, (long, int)):
             # rev
             return self.node(id)
         try:
