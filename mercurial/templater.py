@@ -356,7 +356,7 @@ class changeset_templater(object):
         self.write(thing, header=True)
 
     def show(self, rev=0, changenode=None, brinfo=None, changes=None,
-             copies=None, **props):
+             copies=[], **props):
         '''show a single changeset or file revision'''
         log = self.repo.changelog
         if changenode is None:
