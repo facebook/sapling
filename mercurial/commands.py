@@ -2752,7 +2752,6 @@ table = {
          _('hg add [OPTION]... [FILE]...')),
     "addremove":
         (addremove,
-         walkopts + dryrunopts +
          [('s', 'similarity', '',
            _('guess renamed files by similarity (0<=s<=100)')),
          ] + walkopts + dryrunopts,
