@@ -148,6 +148,12 @@ class filectx(object):
     def __eq__(self, other):
         return self._path == other._path and self._changeid == other._changeid
 
+    def filectx(self, fileid):
+        '''opens an arbitrary revision of the file without
+        opening a new filelog'''
+        return filectx(self._repo, self._path, fileid=fileid,
+                       filelog=self._filelog)
+
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
     def filelog(self): return self._filelog
