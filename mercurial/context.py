@@ -32,8 +32,17 @@ class changectx(object):
         self._node = self._repo.lookup(changeid)
         self._rev = self._repo.changelog.rev(self._node)
 
+    def __str__(self):
+        return short(self.node())
+
     def __repr__(self):
         return "<changectx %s>" % short(self.node())
+
+    def __eq__(self, other):
+        return self._rev == other._rev
+
+    def __nonzero__(self):
+        return self._rev != -1
 
     def changeset(self):
         try:
@@ -127,8 +136,17 @@ class filectx(object):
         else:
             raise AttributeError, name
 
+    def __nonzero__(self):
+        return self._filerev != nullid
+
+    def __str__(self):
+        return "%s@%s" % (self.path(), short(self.node()))
+
     def __repr__(self):
         return "<filectx %s@%s>" % (self.path(), short(self.node()))
+
+    def __eq__(self, other):
+        return self._path == other._path and self._changeid == other._changeid
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
