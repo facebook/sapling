@@ -8,7 +8,7 @@
 from node import *
 from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "ancestor bdiff repo util")
+demandload(globals(), "ancestor bdiff repo revlog util")
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular
@@ -104,10 +104,10 @@ class changectx(object):
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
-    def __init__(self, repo, path, changeid=None, fileid=None, filelog=None):
+    def __init__(self, repo_, path, changeid=None, fileid=None, filelog=None):
         """changeid can be a changeset revision, node, or tag.
            fileid can be a file revision or node."""
-        self._repo = repo
+        self._repo = repo_
         self._path = path
 
         assert changeid is not None or fileid is not None
@@ -120,7 +120,10 @@ class filectx(object):
         if fileid is None:
             self._changeid = changeid
         else:
-            self._filenode = self._filelog.lookup(fileid)
+            try:
+                self._filenode = self._filelog.lookup(fileid)
+            except revlog.RevlogError, inst:
+                raise repo.LookupError(str(inst))
             self._changeid = self._filelog.linkrev(self._filenode)
 
     def __getattr__(self, name):
