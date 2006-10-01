@@ -16,7 +16,7 @@ for filename in sys.argv[1:]:
     except IOError, msg:
         sys.stderr.write('%s: Can\'t open: %s\n' % (filename, msg))
         sys.exit(1)
-    
+
     m = md5.new()
     try:
         while 1:

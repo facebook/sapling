@@ -53,7 +53,7 @@ class manifest(revlog):
         for f, n in self.parselines(delta):
             deltamap.rawset(f, n)
         return deltamap
-            
+
     def read(self, node):
         if node == nullid: return manifestdict() # don't upset local cache
         if self.mapcache and self.mapcache[0] == node:

@@ -223,7 +223,7 @@ class filectx(object):
                     pl[0] = (r[0], getlog(r[0]).rev(r[1]))
 
             return [ getctx(p, n) for p, n in pl if n != -1 ]
-                
+
         # find all ancestors
         needed = {self: 1}
         visit = [self]

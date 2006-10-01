@@ -58,7 +58,7 @@ def __gather(ui, repo, node1, node2):
 
     for f in added:
         lines += dirtywork(f, None, mmap2)
-        
+
     for f in removed:
         lines += dirtywork(f, mmap1, None)
 
@@ -72,7 +72,7 @@ def __gather(ui, repo, node1, node2):
 
 def gather_stats(ui, repo, amap, revs=None, progress=False):
     stats = {}
-    
+
     cl    = repo.changelog
 
     if not revs:
@@ -117,7 +117,7 @@ def gather_stats(ui, repo, amap, revs=None, progress=False):
 
 def churn(ui, repo, **opts):
     "Graphs the number of lines changed"
-    
+
     def pad(s, l):
         if len(s) < l:
             return s + " " * (l-len(s))
@@ -125,7 +125,7 @@ def churn(ui, repo, **opts):
 
     def graph(n, maximum, width, char):
         n = int(n * width / float(maximum))
-        
+
         return char * (n)
 
     def get_aliases(f):
@@ -137,7 +137,7 @@ def churn(ui, repo, **opts):
             aliases[alias] = actual
 
         return aliases
-    
+
     amap = {}
     aliases = opts.get('aliases')
     if aliases:

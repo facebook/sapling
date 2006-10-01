@@ -128,7 +128,7 @@ def readgitpatch(patchname):
             self.op = 'MODIFY'
             self.copymod = False
             self.lineno = 0
-    
+
     # Filter patch for git information
     gitre = re.compile('diff --git a/(.*) b/(.*)')
     pf = file(patchname)

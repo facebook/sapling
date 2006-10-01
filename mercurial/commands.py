@@ -2502,7 +2502,7 @@ def status(ui, repo, *pats, **opts):
     """
 
     all = opts['all']
-    
+
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
     modified, added, removed, deleted, unknown, ignored, clean = [
@@ -3236,7 +3236,7 @@ def load_extensions(ui):
             if t in table:
                 ui.warn(_("module %s overrides %s\n") % (name, t))
         table.update(cmdtable)
-    
+
 def dispatch(args):
     for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
         num = getattr(signal, name, None)

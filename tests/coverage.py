@@ -87,19 +87,19 @@ class StatementFindingAstVisitor(compiler.visitor.ASTVisitor):
         self.excluded = excluded
         self.suite_spots = suite_spots
         self.excluding_suite = 0
-        
+
     def doRecursive(self, node):
         self.recordNodeLine(node)
         for n in node.getChildNodes():
             self.dispatch(n)
 
     visitStmt = visitModule = doRecursive
-    
+
     def doCode(self, node):
         if hasattr(node, 'decorators') and node.decorators:
             self.dispatch(node.decorators)
         self.doSuite(node, node.code)
-    
+
     visitFunction = visitClass = doCode
 
     def getFirstLine(self, node):
@@ -119,17 +119,17 @@ class StatementFindingAstVisitor(compiler.visitor.ASTVisitor):
         for n in node.getChildNodes():
             lineno = max(lineno, self.getLastLine(n))
         return lineno
-    
+
     def doStatement(self, node):
         self.recordLine(self.getFirstLine(node))
 
     visitAssert = visitAssign = visitAssTuple = visitDiscard = visitPrint = \
         visitPrintnl = visitRaise = visitSubscript = visitDecorators = \
         doStatement
-    
+
     def recordNodeLine(self, node):
         return self.recordLine(node.lineno)
-    
+
     def recordLine(self, lineno):
         # Returns a bool, whether the line is included or excluded.
         if lineno:
@@ -153,9 +153,9 @@ class StatementFindingAstVisitor(compiler.visitor.ASTVisitor):
                 self.statements[lineno] = 1
                 return 1
         return 0
-    
+
     default = recordNodeLine
-    
+
     def recordAndDispatch(self, node):
         self.recordNodeLine(node)
         self.dispatch(node)
@@ -166,7 +166,7 @@ class StatementFindingAstVisitor(compiler.visitor.ASTVisitor):
             self.excluding_suite = 1
         self.recordAndDispatch(body)
         self.excluding_suite = exsuite
-        
+
     def doPlainWordSuite(self, prevsuite, suite):
         # Finding the exclude lines for else's is tricky, because they aren't
         # present in the compiler parse tree.  Look at the previous suite,
@@ -180,11 +180,11 @@ class StatementFindingAstVisitor(compiler.visitor.ASTVisitor):
                 break
         else:
             self.doSuite(None, suite)
-        
+
     def doElse(self, prevsuite, node):
         if node.else_:
             self.doPlainWordSuite(prevsuite, node.else_)
-    
+
     def visitFor(self, node):
         self.doSuite(node, node.body)
         self.doElse(node.body, node)
@@ -216,11 +216,11 @@ class StatementFindingAstVisitor(compiler.visitor.ASTVisitor):
             else:
                 self.doSuite(a, h)
         self.doElse(node.handlers[-1][2], node)
-    
+
     def visitTryFinally(self, node):
         self.doSuite(node, node.body)
         self.doPlainWordSuite(node.body, node.final)
-        
+
     def visitGlobal(self, node):
         # "global" statements don't execute like others (they don't call the
         # trace function), so don't record their line numbers.
@@ -240,7 +240,7 @@ class coverage:
     # A dictionary with an entry for (Python source file name, line number
     # in that file) if that line has been executed.
     c = {}
-    
+
     # A map from canonical Python source file name to a dictionary in
     # which there's an entry for each line number that has been
     # executed.
@@ -266,12 +266,12 @@ class coverage:
         self.xstack = []
         self.relative_dir = os.path.normcase(os.path.abspath(os.curdir)+os.path.sep)
 
-    # t(f, x, y).  This method is passed to sys.settrace as a trace function.  
-    # See [van Rossum 2001-07-20b, 9.2] for an explanation of sys.settrace and 
+    # t(f, x, y).  This method is passed to sys.settrace as a trace function.
+    # See [van Rossum 2001-07-20b, 9.2] for an explanation of sys.settrace and
     # the arguments and return value of the trace function.
     # See [van Rossum 2001-07-20a, 3.2] for a description of frame and code
     # objects.
-    
+
     def t(self, f, w, a):                                   #pragma: no cover
         #print w, f.f_code.co_filename, f.f_lineno
         if w == 'line':
@@ -279,7 +279,7 @@ class coverage:
             for c in self.cstack:
                 c[(f.f_code.co_filename, f.f_lineno)] = 1
         return self.t
-    
+
     def help(self, error=None):
         if error:
             print error
@@ -330,7 +330,7 @@ class coverage:
             self.help("You must specify at least one of -e, -x, -r, or -a.")
         if not args_needed and args:
             self.help("Unexpected arguments %s." % args)
-        
+
         self.get_ready()
         self.exclude('#pragma[: ]+[nN][oO] [cC][oO][vV][eE][rR]')
 
@@ -359,14 +359,14 @@ class coverage:
 
     def use_cache(self, usecache):
         self.usecache = usecache
-        
+
     def get_ready(self):
         if self.usecache and not self.cache:
             self.cache = os.path.abspath(os.environ.get(self.cache_env,
                                                         self.cache_default))
             self.restore()
         self.analysis_cache = {}
-        
+
     def start(self):
         self.get_ready()
         if self.nesting == 0:                               #pragma: no cover
@@ -374,7 +374,7 @@ class coverage:
             if hasattr(threading, 'settrace'):
                 threading.settrace(self.t)
         self.nesting += 1
-        
+
     def stop(self):
         self.nesting -= 1
         if self.nesting == 0:                               #pragma: no cover
@@ -398,7 +398,7 @@ class coverage:
     def begin_recursive(self):
         self.cstack.append(self.c)
         self.xstack.append(self.exclude_re)
-        
+
     def end_recursive(self):
         self.c = self.cstack.pop()
         self.exclude_re = self.xstack.pop()
@@ -452,7 +452,7 @@ class coverage:
             self.canonical_filename_cache[filename] = cf
         return self.canonical_filename_cache[filename]
 
-    # canonicalize_filenames().  Copy results from "c" to "cexecuted", 
+    # canonicalize_filenames().  Copy results from "c" to "cexecuted",
     # canonicalizing filenames on the way.  Clear the "c" map.
 
     def canonicalize_filenames(self):
@@ -550,7 +550,7 @@ class coverage:
         import parser
         tree = parser.suite(text+'\n\n').totuple(1)
         self.get_suite_spots(tree, suite_spots)
-            
+
         # Use the compiler module to parse the text and find the executable
         # statements.  We add newlines to be impervious to final partial lines.
         statements = {}
@@ -713,7 +713,7 @@ class coverage:
             except:
                 if not ignore_errors:
                     raise
-                
+
     def annotate_file(self, filename, statements, excluded, missing, directory=None):
         source = open(filename, 'r')
         if directory:
@@ -741,7 +741,7 @@ class coverage:
             if self.blank_re.match(line):
                 dest.write('  ')
             elif self.else_re.match(line):
-                # Special logic for lines containing only 'else:'.  
+                # Special logic for lines containing only 'else:'.
                 # See [GDR 2001-12-04b, 3.2].
                 if i >= len(statements) and j >= len(missing):
                     dest.write('! ')
@@ -850,7 +850,7 @@ if __name__ == '__main__':
 # Thanks, Allen.
 #
 # 2005-12-02 NMB Call threading.settrace so that all threads are measured.
-# Thanks Martin Fuzzey. Add a file argument to report so that reports can be 
+# Thanks Martin Fuzzey. Add a file argument to report so that reports can be
 # captured to a different destination.
 #
 # 2005-12-03 NMB coverage.py can now measure itself.

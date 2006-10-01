@@ -37,7 +37,7 @@ class hgwebdir(object):
                 if cp.has_option('web', 'motd'):
                     self.motd = cp.get('web', 'motd')
                 if cp.has_option('web', 'style'):
-		    self.style = cp.get('web', 'style')
+                    self.style = cp.get('web', 'style')
             if cp.has_section('paths'):
                 self.repos.extend(cleannames(cp.items('paths')))
             if cp.has_section('collections'):

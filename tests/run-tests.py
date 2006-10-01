@@ -104,7 +104,7 @@ def use_correct_python():
         # windows fallback
         shutil.copyfile(sys.executable, my_python)
         shutil.copymode(sys.executable, my_python)
-            
+
 def install_hg():
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
@@ -358,7 +358,7 @@ try:
             args = os.listdir(".")
         for test in args:
             if (test.startswith("test-") and '~' not in test and
-                ('.' not in test or test.endswith('.py') or 
+                ('.' not in test or test.endswith('.py') or
                  test.endswith('.bat'))):
                 ret = run_one(test)
                 if ret is None:
