@@ -7,7 +7,7 @@
 
 from revlog import *
 from demandload import *
-demandload(globals(), "bdiff os")
+demandload(globals(), "os")
 
 class filelog(revlog):
     def __init__(self, opener, path, defversion=REVLOG_DEFAULT_VERSION):
@@ -84,72 +84,3 @@ class filelog(revlog):
             return t2 != text
 
         return revlog.cmp(self, node, text)
-
-    def annotate(self, node):
-
-        def decorate(text, rev):
-            return ([rev] * len(text.splitlines()), text)
-
-        def pair(parent, child):
-            for a1, a2, b1, b2 in bdiff.blocks(parent[1], child[1]):
-                child[0][b1:b2] = parent[0][a1:a2]
-            return child
-
-        # find all ancestors
-        needed = {(self, node):1}
-        files = [self]
-        visit = [(self, node)]
-        while visit:
-            f, n = visit.pop(0)
-            rn = f.renamed(n)
-            if rn:
-                f, n = rn
-                f = filelog(self.opener, f, self.defversion)
-                files.insert(0, f)
-                if (f, n) not in needed:
-                    needed[(f, n)] = 1
-                else:
-                    needed[(f, n)] += 1
-            for p in f.parents(n):
-                if p == nullid:
-                    continue
-                if (f, p) not in needed:
-                    needed[(f, p)] = 1
-                    visit.append((f, p))
-                else:
-                    # count how many times we'll use this
-                    needed[(f, p)] += 1
-
-        # sort by revision (per file) which is a topological order
-        visit = []
-        for f in files:
-            fn = [(f.rev(n[1]), f, n[1]) for n in needed.keys() if n[0] == f]
-            fn.sort()
-            visit.extend(fn)
-        hist = {}
-
-        for i in range(len(visit)):
-            r, f, n = visit[i]
-            curr = decorate(f.read(n), f.linkrev(n))
-            if r == -1:
-                continue
-            parents = f.parents(n)
-            # follow parents across renames
-            if r < 1 and i > 0:
-                j = i
-                while j > 0 and visit[j][1] == f:
-                    j -= 1
-                parents = (visit[j][2],)
-                f = visit[j][1]
-            else:
-                parents = f.parents(n)
-            for p in parents:
-                if p != nullid:
-                    curr = pair(hist[p], curr)
-                    # trim the history of unneeded revs
-                    needed[(f, p)] -= 1
-                    if not needed[(f, p)]:
-                        del hist[p]
-            hist[n] = curr
-
-        return zip(hist[n][0], hist[n][1].splitlines(1))
