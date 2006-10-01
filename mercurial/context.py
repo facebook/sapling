@@ -5,13 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import *
 from node import *
-demandload(globals(), 'bdiff')
-
-from node import *
+from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "ancestor util")
+demandload(globals(), "ancestor bdiff repo util")
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular
@@ -83,6 +80,9 @@ class changectx(object):
         """get a file context from this changeset"""
         if fileid is None:
             fileid = self.filenode(path)
+            if not fileid:
+                raise repo.LookupError(_("'%s' does not exist in changeset %s") %
+                                       (path, hex(self.node())))
         return filectx(self._repo, path, fileid=fileid)
 
     def filectxs(self):
