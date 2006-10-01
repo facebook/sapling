@@ -149,7 +149,8 @@ class hgweb(object):
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
                                           opts=diffopts), f, tn)
 
-    def changelog(self, pos, shortlog=False):
+    def changelog(self, ctx, shortlog=False):
+        pos = ctx.rev()
         def changenav(**map):
             def seq(factor, maxchanges=None):
                 if maxchanges:
@@ -274,8 +275,7 @@ class hgweb(object):
                      node=hex(cl.tip()),
                      entries=changelist)
 
-    def changeset(self, nodeid):
-        ctx = self.repo.changectx(nodeid)
+    def changeset(self, ctx):
         n = ctx.node()
         parents = ctx.parents()
         p1 = parents[0].node()
@@ -302,7 +302,7 @@ class hgweb(object):
                      desc=ctx.description(),
                      date=ctx.date(),
                      files=files,
-                     archives=self.archivelist(nodeid))
+                     archives=self.archivelist(hex(n)))
 
     def filelog(self, fctx):
         f = fctx.path()
@@ -552,21 +552,21 @@ class hgweb(object):
                  node = hex(self.repo.changelog.tip()),
                  archives=self.archivelist("tip"))
 
-    def filediff(self, file, changeset):
-        ctx = self.repo.changectx(changeset)
-        n = ctx.node()
-        parents = ctx.parents()
+    def filediff(self, fctx):
+        n = fctx.node()
+        path = fctx.path()
+        parents = fctx.changectx().parents()
         p1 = parents[0].node()
 
         def diff(**map):
-            yield self.diff(p1, n, [file])
+            yield self.diff(p1, n, [path])
 
         yield self.t("filediff",
-                     file=file,
+                     file=path,
                      node=hex(n),
-                     rev=ctx.rev(),
+                     rev=fctx.rev(),
                      parent=self.siblings(parents),
-                     child=self.siblings(ctx.children()),
+                     child=self.siblings(fctx.children()),
                      diff=diff)
 
     archive_specs = {
@@ -649,7 +649,7 @@ class hgweb(object):
                     del form[k]
 
             if form.has_key('manifest'):
-                changeid = req.form['manifest'][0]
+                changeid = form['manifest'][0]
                 try:
                     req.changectx = self.repo.changectx(changeid)
                 except hg.RepoError:
@@ -658,8 +658,8 @@ class hgweb(object):
                     req.changectx = self.repo.changectx(man.linkrev(mn))
 
             if form.has_key('filenode'):
-                changeid = req.form['filenode'][0]
-                path = self.cleanpath(req.form['file'][0])
+                changeid = form['filenode'][0]
+                path = self.cleanpath(form['file'][0])
                 try:
                     req.changectx = self.repo.changectx(changeid)
                     req.filectx = req.changectx.filectx(path)
@@ -718,31 +718,34 @@ class hgweb(object):
             return 0
 
     def do_changelog(self, req):
-        hi = self.repo.changelog.count() - 1
         if req.form.has_key('rev'):
             hi = req.form['rev'][0]
-            try:
-                hi = self.repo.changelog.rev(self.repo.lookup(hi))
-            except hg.RepoError:
-                req.write(self.search(hi)) # XXX redirect to 404 page?
-                return
+        else:
+            hi = self.repo.changelog.count() - 1
+        try:
+            ctx = self.repo.changectx(hi)
+        except hg.RepoError:
+            req.write(self.search(hi)) # XXX redirect to 404 page?
+            return
 
-        req.write(self.changelog(hi))
+        req.write(self.changelog(ctx))
 
     def do_shortlog(self, req):
-        hi = self.repo.changelog.count() - 1
         if req.form.has_key('rev'):
             hi = req.form['rev'][0]
-            try:
-                hi = self.repo.changelog.rev(self.repo.lookup(hi))
-            except hg.RepoError:
-                req.write(self.search(hi)) # XXX redirect to 404 page?
-                return
+        else:
+            hi = self.repo.changelog.count() - 1
+        try:
+            hi = self.repo.changectx(hi)
+        except hg.RepoError:
+            req.write(self.search(hi)) # XXX redirect to 404 page?
+            return
 
-        req.write(self.changelog(hi, shortlog = True))
+        req.write(self.changelog(ctx, shortlog = True))
 
     def do_changeset(self, req):
-        req.write(self.changeset(req.form['node'][0]))
+        ctx = self.repo.changectx(req.form['node'][0])
+        req.write(self.changeset(ctx))
 
     def do_manifest(self, req):
         req.write(self.manifest(req.changectx,
@@ -755,8 +758,9 @@ class hgweb(object):
         req.write(self.summary())
 
     def do_filediff(self, req):
-        req.write(self.filediff(self.cleanpath(req.form['file'][0]),
-                                req.form['node'][0]))
+        ctx = self.repo.changectx(req.form['node'][0])
+        fctx = ctx.filectx(self.cleanpath(req.form['file'][0]))
+        req.write(self.filediff(fctx))
 
     def do_file(self, req):
         req.write(self.filerevision(req.filectx))
