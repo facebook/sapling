@@ -83,7 +83,7 @@ class changectx(object):
         """get a file context from this changeset"""
         if fileid is None:
             fileid = self.filenode(path)
-        return filectx(self._repo, path, fileid=fileid)
+        return filectx(self._repo, path, fileid=fileid, changectx=self)
 
     def filectxs(self):
         """generate a file context for each file in this changeset's
@@ -104,7 +104,8 @@ class changectx(object):
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
-    def __init__(self, repo, path, changeid=None, fileid=None, filelog=None):
+    def __init__(self, repo, path, changeid=None, fileid=None,
+                 filelog=None, changectx=None):
         """changeid can be a changeset revision, node, or tag.
            fileid can be a file revision or node."""
         self._repo = repo
@@ -114,6 +115,9 @@ class filectx(object):
 
         if filelog:
             self._filelog = filelog
+        if changectx:
+            self._changectx = changectx
+            self._changeid = changectx.node()
 
         if fileid is None:
             self._changeid = changeid
