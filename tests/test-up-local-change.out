@@ -21,7 +21,7 @@ resolving manifests
  b: remote created -> g
 merging a
 resolving a
-file a: my b789fdd96dc2 other d730145abbf9 ancestor b789fdd96dc2
+my a@33aaa84a386b other a@802f095af299 ancestor a@33aaa84a386b
 getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 changeset:   1:802f095af299
@@ -55,7 +55,7 @@ resolving manifests
  b: remote created -> g
 merging a
 resolving a
-file a: my b789fdd96dc2 other d730145abbf9 ancestor b789fdd96dc2
+my a@33aaa84a386b other a@802f095af299 ancestor a@33aaa84a386b
 getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 changeset:   1:802f095af299
@@ -106,10 +106,10 @@ resolving manifests
  b: versions differ -> m
 merging a
 resolving a
-file a: my d730145abbf9 other 13e0d5f949fa ancestor b789fdd96dc2
+my a@802f095af299 other a@030602aee63d ancestor a@33aaa84a386b
 merging b
 resolving b
-file b: my 1e88685f5dde other 61de8c7723ca ancestor 000000000000
+my b@802f095af299 other b@030602aee63d ancestor b@000000000000
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 changeset:   1:802f095af299

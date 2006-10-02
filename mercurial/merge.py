@@ -10,42 +10,58 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno util os tempfile")
 
-def merge3(repo, fn, my, other, p1, p2):
-    """perform a 3-way merge in the working directory"""
+def filemerge(repo, fw, fo, fd, my, other, p1, p2, move):
+    """perform a 3-way merge in the working directory
 
-    def temp(prefix, node):
-        pre = "%s~%s." % (os.path.basename(fn), prefix)
+    fw = filename in the working directory and first parent
+    fo = filename in other parent
+    fd = destination filename
+    my = fileid in first parent
+    other = fileid in second parent
+    p1, p2 = hex changeset ids for merge command
+    move = whether to move or copy the file to the destination
+
+    TODO:
+      if fw is copied in the working directory, we get confused
+      implement move and fd
+    """
+
+    def temp(prefix, ctx):
+        pre = "%s~%s." % (os.path.basename(ctx.path()), prefix)
         (fd, name) = tempfile.mkstemp(prefix=pre)
         f = os.fdopen(fd, "wb")
-        repo.wwrite(fn, fl.read(node), f)
+        repo.wwrite(ctx.path(), ctx.data(), f)
         f.close()
         return name
 
-    fl = repo.file(fn)
-    base = fl.ancestor(my, other)
-    a = repo.wjoin(fn)
-    b = temp("base", base)
-    c = temp("other", other)
+    fcm = repo.filectx(fw, fileid=my)
+    fco = repo.filectx(fo, fileid=other)
+    fca = fcm.ancestor(fco)
+    if not fca:
+        fca = repo.filectx(fw, fileid=-1)
+    a = repo.wjoin(fw)
+    b = temp("base", fca)
+    c = temp("other", fco)
 
-    repo.ui.note(_("resolving %s\n") % fn)
-    repo.ui.debug(_("file %s: my %s other %s ancestor %s\n") %
-                          (fn, short(my), short(other), short(base)))
+    repo.ui.note(_("resolving %s\n") % fw)
+    repo.ui.debug(_("my %s other %s ancestor %s\n") % (fcm, fco, fca))
 
     cmd = (os.environ.get("HGMERGE") or repo.ui.config("ui", "merge")
            or "hgmerge")
     r = util.system('%s "%s" "%s" "%s"' % (cmd, a, b, c), cwd=repo.root,
-                    environ={'HG_FILE': fn,
+                    environ={'HG_FILE': fw,
                              'HG_MY_NODE': p1,
-                             'HG_OTHER_NODE': p2,
-                             'HG_FILE_MY_NODE': hex(my),
-                             'HG_FILE_OTHER_NODE': hex(other),
-                             'HG_FILE_BASE_NODE': hex(base)})
+                             'HG_OTHER_NODE': p2})
     if r:
-        repo.ui.warn(_("merging %s failed!\n") % fn)
+        repo.ui.warn(_("merging %s failed!\n") % fw)
 
     os.unlink(b)
     os.unlink(c)
     return r
+
+def merge3(repo, fn, my, other, p1, p2):
+    """perform a 3-way merge in the working directory"""
+    return filemerge(repo, fn, fn, fn, my, other, p1, p2, False)
 
 def checkunknown(repo, m2, status):
     """

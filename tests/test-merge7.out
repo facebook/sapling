@@ -27,7 +27,7 @@ resolving manifests
  test.txt: versions differ -> m
 merging test.txt
 resolving test.txt
-file test.txt: my fc3148072371 other d40249267ae3 ancestor 8fe46a3eb557
+my test.txt@451c744aabcc other test.txt@a070d41e8360 ancestor test.txt@faaea63e63a9
 merging test.txt failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
 There are unresolved merges, you can redo the full merge using:
