@@ -5,13 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import *
 from node import *
-demandload(globals(), 'bdiff')
-
-from node import *
+from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "ancestor util")
+demandload(globals(), "ancestor bdiff repo revlog util")
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular
@@ -83,6 +80,9 @@ class changectx(object):
         """get a file context from this changeset"""
         if fileid is None:
             fileid = self.filenode(path)
+            if not fileid:
+                raise repo.LookupError(_("'%s' does not exist in changeset %s") %
+                                       (path, hex(self.node())))
         return filectx(self._repo, path, fileid=fileid)
 
     def filectxs(self):
@@ -104,10 +104,10 @@ class changectx(object):
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
-    def __init__(self, repo, path, changeid=None, fileid=None, filelog=None):
+    def __init__(self, repo_, path, changeid=None, fileid=None, filelog=None):
         """changeid can be a changeset revision, node, or tag.
            fileid can be a file revision or node."""
-        self._repo = repo
+        self._repo = repo_
         self._path = path
 
         assert changeid is not None or fileid is not None
@@ -120,7 +120,10 @@ class filectx(object):
         if fileid is None:
             self._changeid = changeid
         else:
-            self._filenode = self._filelog.lookup(fileid)
+            try:
+                self._filenode = self._filelog.lookup(fileid)
+            except revlog.RevlogError, inst:
+                raise repo.LookupError(str(inst))
             self._changeid = self._filelog.linkrev(self._filenode)
 
     def __getattr__(self, name):
@@ -223,7 +226,7 @@ class filectx(object):
                     pl[0] = (r[0], getlog(r[0]).rev(r[1]))
 
             return [ getctx(p, n) for p, n in pl if n != -1 ]
-                
+
         # find all ancestors
         needed = {self: 1}
         visit = [self]

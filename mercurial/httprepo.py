@@ -165,7 +165,7 @@ class httprepository(remoterepository):
                                                proxyuser, proxypasswd or ''),
                     proxypath, proxyquery, proxyfrag))
                 handler = urllib2.ProxyHandler({scheme: proxyurl})
-                ui.debug(_('proxying through http://%s:%s\n') % 
+                ui.debug(_('proxying through http://%s:%s\n') %
                           (proxyhost, proxyport))
 
         # urllib2 takes proxy values from the environment and those

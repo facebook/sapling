@@ -130,7 +130,7 @@ class queue:
         for c in bad_chars:
             if c in guard:
                 return _('invalid character in guard %r: %r') % (guard, c)
-        
+
     def set_active(self, guards):
         for guard in guards:
             bad = self.check_guard(guard)
@@ -172,7 +172,7 @@ class queue:
         self.full_series[idx] = drop + ''.join([' #' + g for g in guards])
         self.parse_series()
         self.series_dirty = True
-        
+
     def pushable(self, idx):
         if isinstance(idx, str):
             idx = self.series.index(idx)
@@ -724,7 +724,7 @@ class queue:
                 return (i, a.rev, a.name)
         return None
 
-    # if the exact patch name does not exist, we try a few 
+    # if the exact patch name does not exist, we try a few
     # variations.  If strict is passed, we try only #1
     #
     # 1) a number to indicate an offset in the series file
@@ -1638,7 +1638,7 @@ def guard(ui, repo, *args, **opts):
       hg qguard -- -foo
 
     To set guards on another patch:
-      hg qguard other.patch +2.6.17 -stable    
+      hg qguard other.patch +2.6.17 -stable
     '''
     def status(idx):
         guards = q.series_guards[idx] or ['unguarded']
@@ -1765,7 +1765,7 @@ def rename(ui, repo, patch, name=None, **opts):
         absdest = q.join(name)
     if os.path.exists(absdest):
         raise util.Abort(_('%s already exists') % absdest)
-    
+
     if name in q.series:
         raise util.Abort(_('A patch named %s already exists in the series file') % name)
 
@@ -1862,7 +1862,7 @@ def select(ui, repo, *args, **opts):
 
     With no arguments, prints the currently active guards.
     With one argument, sets the active guard.
-    
+
     Use -n/--none to deactivate guards (no other arguments needed).
     When no guards are active, patches with positive guards are skipped
     and patches with negative guards are pushed.
@@ -1952,7 +1952,7 @@ def reposetup(ui, repo):
                 parent = revlog.hex(self.dirstate.parents()[0])
                 if parent in [s.rev for s in self.mq.applied]:
                     raise util.Abort(errmsg)
-            
+
         def commit(self, *args, **opts):
             if len(args) >= 6:
                 force = args[5]
@@ -1968,7 +1968,7 @@ def reposetup(ui, repo):
             if self.mq.applied and not force:
                 raise util.Abort(_('source has mq patches applied'))
             return super(mqrepo, self).push(remote, force, revs)
-            
+
         def tags(self):
             if self.tagscache:
                 return self.tagscache

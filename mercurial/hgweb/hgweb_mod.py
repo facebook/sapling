@@ -648,25 +648,6 @@ class hgweb(object):
                         form[name] = value
                     del form[k]
 
-            if form.has_key('manifest'):
-                changeid = form['manifest'][0]
-                try:
-                    req.changectx = self.repo.changectx(changeid)
-                except hg.RepoError:
-                    man = self.repo.manifest
-                    mn = man.lookup(changeid)
-                    req.changectx = self.repo.changectx(man.linkrev(mn))
-
-            if form.has_key('filenode'):
-                changeid = form['filenode'][0]
-                path = self.cleanpath(form['file'][0])
-                try:
-                    req.changectx = self.repo.changectx(changeid)
-                    req.filectx = req.changectx.filectx(path)
-                except hg.RepoError:
-                    req.filectx = self.repo.filectx(path, fileid=changeid)
-                    req.changectx = req.filectx.changectx()
-
         self.refresh()
 
         expand_form(req.form)
@@ -710,6 +691,34 @@ class hgweb(object):
         else:
             req.write(self.t("error"))
 
+    def changectx(self, req):
+        if req.form.has_key('node'):
+            changeid = req.form['node'][0]
+        else:
+            changeid = req.form['manifest'][0]
+        try:
+            ctx = self.repo.changectx(changeid)
+        except hg.RepoError:
+            man = self.repo.manifest
+            mn = man.lookup(changeid)
+            ctx = self.repo.changectx(man.linkrev(mn))
+
+        return ctx
+
+    def filectx(self, req):
+        path = self.cleanpath(req.form['file'][0])
+        if req.form.has_key('node'):
+            changeid = req.form['node'][0]
+        else:
+            changeid = req.form['filenode'][0]
+        try:
+            ctx = self.repo.changectx(changeid)
+            fctx = ctx.filectx(path)
+        except hg.RepoError:
+            fctx = self.repo.filectx(path, fileid=changeid)
+
+        return fctx
+
     def stripes(self, parity):
         "make horizontal stripes for easier reading"
         if self.stripecount:
@@ -717,38 +726,31 @@ class hgweb(object):
         else:
             return 0
 
-    def do_changelog(self, req):
-        if req.form.has_key('rev'):
-            hi = req.form['rev'][0]
+    def do_changelog(self, req, shortlog = False):
+        if req.form.has_key('node'):
+            ctx = self.changectx(req)
         else:
-            hi = self.repo.changelog.count() - 1
-        try:
-            ctx = self.repo.changectx(hi)
-        except hg.RepoError:
-            req.write(self.search(hi)) # XXX redirect to 404 page?
-            return
+            if req.form.has_key('rev'):
+                hi = req.form['rev'][0]
+            else:
+                hi = self.repo.changelog.count() - 1
+            try:
+                ctx = self.repo.changectx(hi)
+            except hg.RepoError:
+                req.write(self.search(hi)) # XXX redirect to 404 page?
+                return
 
-        req.write(self.changelog(ctx))
+        req.write(self.changelog(ctx, shortlog = shortlog))
 
     def do_shortlog(self, req):
-        if req.form.has_key('rev'):
-            hi = req.form['rev'][0]
-        else:
-            hi = self.repo.changelog.count() - 1
-        try:
-            hi = self.repo.changectx(hi)
-        except hg.RepoError:
-            req.write(self.search(hi)) # XXX redirect to 404 page?
-            return
-
-        req.write(self.changelog(ctx, shortlog = True))
+        self.do_changelog(req, shortlog = True)
 
     def do_changeset(self, req):
         ctx = self.repo.changectx(req.form['node'][0])
         req.write(self.changeset(ctx))
 
     def do_manifest(self, req):
-        req.write(self.manifest(req.changectx,
+        req.write(self.manifest(self.changectx(req),
                                 self.cleanpath(req.form['path'][0])))
 
     def do_tags(self, req):
@@ -758,18 +760,16 @@ class hgweb(object):
         req.write(self.summary())
 
     def do_filediff(self, req):
-        ctx = self.repo.changectx(req.form['node'][0])
-        fctx = ctx.filectx(self.cleanpath(req.form['file'][0]))
-        req.write(self.filediff(fctx))
+        req.write(self.filediff(self.filectx(req)))
 
     def do_file(self, req):
-        req.write(self.filerevision(req.filectx))
+        req.write(self.filerevision(self.filectx(req)))
 
     def do_annotate(self, req):
-        req.write(self.fileannotate(req.filectx))
+        req.write(self.fileannotate(self.filectx(req)))
 
     def do_filelog(self, req):
-        req.write(self.filelog(req.filectx))
+        req.write(self.filelog(self.filectx(req)))
 
     def do_heads(self, req):
         resp = " ".join(map(hex, self.repo.heads())) + "\n"

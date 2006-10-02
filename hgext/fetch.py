@@ -63,7 +63,7 @@ def fetch(ui, repo, source='default', **opts):
             revs = [other.lookup(rev) for rev in opts['rev']]
         modheads = repo.pull(other, heads=revs, lock=lock)
         return postincoming(other, modheads)
-        
+
     parent, p2 = repo.dirstate.parents()
     if parent != repo.changelog.tip():
         raise util.Abort(_('working dir not at tip '

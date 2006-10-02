@@ -206,7 +206,7 @@ class dirstate(object):
             self.dirs = {}
             for f in self.map:
                 self.updatedirs(f, 1)
-        
+
     def updatedirs(self, path, delta):
         if self.dirs is not None:
             for c in strutil.findall(path, '/'):
