@@ -59,10 +59,6 @@ def filemerge(repo, fw, fo, fd, my, other, p1, p2, move):
     os.unlink(c)
     return r
 
-def merge3(repo, fn, my, other, p1, p2):
-    """perform a 3-way merge in the working directory"""
-    return filemerge(repo, fn, fn, fn, my, other, p1, p2, False)
-
 def checkunknown(repo, m2, status):
     """
     check for collisions between unknown files and files in m2
@@ -277,7 +273,7 @@ def applyupdates(repo, action, xp1, xp2):
         elif m == "m": # merge
             flag, my, other = a[2:]
             repo.ui.status(_("merging %s\n") % f)
-            if merge3(repo, f, my, other, xp1, xp2):
+            if filemerge(repo, f, f, f, my, other, xp1, xp2, False):
                 unresolved += 1
             util.set_exec(repo.wjoin(f), flag)
             merged += 1
