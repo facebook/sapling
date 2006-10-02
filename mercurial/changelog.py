@@ -10,6 +10,23 @@ from i18n import gettext as _
 from demandload import demandload
 demandload(globals(), "os time util")
 
+def _string_escape(text):
+    """
+    >>> d = {'nl': chr(10), 'bs': chr(92), 'cr': chr(13), 'nul': chr(0)}
+    >>> s = "ab%(nl)scd%(bs)s%(bs)sn%(nul)sab%(cr)scd%(bs)s%(nl)s" % d
+    >>> s
+    'ab\\ncd\\\\\\\\n\\x00ab\\rcd\\\\\\n'
+    >>> res = _string_escape(s)
+    >>> s == _string_unescape(res)
+    True
+    """
+    # subset of the string_escape codec
+    text = text.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r')
+    return text.replace('\0', '\\0')
+
+def _string_unescape(text):
+    return text.decode('string_escape')
+
 class changelog(revlog):
     def __init__(self, opener, defversion=REVLOGV0):
         revlog.__init__(self, opener, "00changelog.i", "00changelog.d",
