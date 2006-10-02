@@ -210,7 +210,6 @@ class hgweb(object):
 
         maxchanges = shortlog and self.maxshortchanges or self.maxchanges
         cl = self.repo.changelog
-        mf = cl.read(cl.tip())[0]
         count = cl.count()
         start = max(0, pos - maxchanges + 1)
         end = min(count, start + maxchanges)
@@ -306,7 +305,6 @@ class hgweb(object):
 
     def filelog(self, fctx):
         f = fctx.path()
-        cl = self.repo.changelog
         fl = fctx.filelog()
         count = fl.count()
 
@@ -505,7 +503,6 @@ class hgweb(object):
                     break;
 
                 c = cl.read(n)
-                m = c[0]
                 t = c[2]
 
                 yield self.t("tagentry",

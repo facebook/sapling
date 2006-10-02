@@ -309,7 +309,6 @@ def updatedir(ui, repo, patches, wlock=None):
     copies = []
     removes = []
     cfiles = patches.keys()
-    copts = {'after': False, 'force': False}
     cwd = repo.getcwd()
     if cwd:
         cfiles = [util.pathto(cwd, f) for f in patches.keys()]
