@@ -44,26 +44,25 @@ class changectx(object):
     def __nonzero__(self):
         return self._rev != -1
 
-    def changeset(self):
-        try:
-            return self._changeset
-        except AttributeError:
+    def __getattr__(self, name):
+        if name == '_changeset':
             self._changeset = self._repo.changelog.read(self.node())
             return self._changeset
+        elif name == '_manifest':
+            self._manifest = self._repo.manifest.read(self._changeset[0])
+            return self._manifest
+        else:
+            raise AttributeError, name
 
-    def manifest(self):
-        try:
-            return self._manifest
-        except AttributeError:
-            self._manifest = self._repo.manifest.read(self.changeset()[0])
-            return self._manifest
+    def changeset(self): return self._changeset
+    def manifest(self): return self._manifest
 
     def rev(self): return self._rev
     def node(self): return self._node
-    def user(self): return self.changeset()[1]
-    def date(self): return self.changeset()[2]
-    def files(self): return self.changeset()[3]
-    def description(self): return self.changeset()[4]
+    def user(self): return self._changeset[1]
+    def date(self): return self._changeset[2]
+    def files(self): return self._changeset[3]
+    def description(self): return self._changeset[4]
 
     def parents(self):
         """return contexts for each parent changeset"""
@@ -76,7 +75,9 @@ class changectx(object):
         return [ changectx(self._repo, x) for x in c ]
 
     def filenode(self, path):
-        node, flag = self._repo.manifest.find(self.changeset()[0], path)
+        if hasattr(self, "_manifest"):
+            return self._manifest[path]
+        node, flag = self._repo.manifest.find(self._changeset[0], path)
         return node
 
     def filectx(self, path, fileid=None):
