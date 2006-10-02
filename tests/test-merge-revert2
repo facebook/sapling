@@ -27,8 +27,7 @@ hg id
 hg update -C 0
 echo "changed file1 different" >> file1
 HGMERGE=merge hg update
-#hg diff --nodates | sed -e "s/\(<<<<<<<\) .*/\1/" -e "s/\(>>>>>>>\) .*/\1/"
-hg diff --nodates | sed -e "s/\(<<<<<<<\|>>>>>>>\) .*/\1/"
+hg diff --nodates | sed -e "s/\(<<<<<<<\) .*/\1/" -e "s/\(>>>>>>>\) .*/\1/"
 hg status
 hg id
 hg revert --no-backup --all
