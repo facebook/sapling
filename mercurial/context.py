@@ -36,7 +36,7 @@ class changectx(object):
         return short(self.node())
 
     def __repr__(self):
-        return "<changectx %s>" % short(self.node())
+        return "<changectx %s>" % str(self)
 
     def __eq__(self, other):
         return self._rev == other._rev
@@ -154,7 +154,7 @@ class filectx(object):
         return "%s@%s" % (self.path(), short(self.node()))
 
     def __repr__(self):
-        return "<filectx %s@%s>" % (self.path(), short(self.node()))
+        return "<filectx %s>" % str(self)
 
     def __eq__(self, other):
         return self._path == other._path and self._changeid == other._changeid
