@@ -114,21 +114,27 @@ class filectx(object):
 
         if filelog:
             self._filelog = filelog
-        else:
-            self._filelog = self._repo.file(self._path)
 
         if fileid is None:
             self._changeid = changeid
         else:
-            self._filenode = self._filelog.lookup(fileid)
-            self._changeid = self._filelog.linkrev(self._filenode)
+            self._fileid = fileid
 
     def __getattr__(self, name):
         if name == '_changectx':
             self._changectx = changectx(self._repo, self._changeid)
             return self._changectx
+        elif name == '_filelog':
+            self._filelog = self._repo.file(self._path)
+            return self._filelog
+        elif name == '_changeid':
+            self._changeid = self._filelog.linkrev(self._filenode)
+            return self._changeid
         elif name == '_filenode':
-            self._filenode = self._changectx.filenode(self._path)
+            if hasattr(self, "_fileid"):
+                self._filenode = self._filelog.lookup(self._fileid)
+            else:
+                self._filenode = self._changectx.filenode(self._path)
             return self._filenode
         elif name == '_filerev':
             self._filerev = self._filelog.rev(self._filenode)
