@@ -15,7 +15,7 @@ platform-specific details from the core.
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "cStringIO errno getpass popen2 re shutil sys tempfile")
-demandload(globals(), "os threading time")
+demandload(globals(), "os threading time calendar")
 
 # used by parsedate
 defaultdateformats = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
@@ -903,14 +903,16 @@ def strdate(string, format='%a %b %d %H:%M:%S %Y'):
                (string[-5] == '+' or string[-5] == '-') and
                string[-6].isspace())
 
+    # NOTE: unixtime = localunixtime + offset
     if hastimezone(string):
         date, tz = string[:-6], string[-5:]
         tz = int(tz)
         offset = - 3600 * (tz / 100) - 60 * (tz % 100)
     else:
         date, offset = string, 0
-    when = int(time.mktime(time.strptime(date, format))) + offset
-    return when, offset
+    localunixtime = int(calendar.timegm(time.strptime(date, format)))
+    unixtime = localunixtime + offset
+    return unixtime, offset
 
 def parsedate(string, formats=None):
     """parse a localized time string and return a (unixtime, offset) tuple.

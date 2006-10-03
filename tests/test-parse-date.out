@@ -12,6 +12,10 @@ rollback completed
 abort: impossible time zone offset: 1400000
 transaction abort!
 rollback completed
+Sun Jan 15 13:30:00 2006 +0500
+Sun Jan 15 13:30:00 2006 +0000
+Sat Jul 15 13:30:00 2006 +0500
+Sat Jul 15 13:30:00 2006 +0000
 Sun Jun 11 00:26:40 2006 -0400
 Sat Apr 15 13:30:00 2006 +0200
 Sat Apr 15 13:30:00 2006 +0000
