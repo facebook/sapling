@@ -59,35 +59,17 @@ def filemerge(repo, fw, fo, fd, my, other, p1, p2, move):
     os.unlink(c)
     return r
 
-def checkunknown(repo, m2, status):
+def checkunknown(repo, m2, wctx):
     """
     check for collisions between unknown files and files in m2
     """
-    modified, added, removed, deleted, unknown = status[:5]
-    for f in unknown:
+    for f in wctx.unknown():
         if f in m2:
             if repo.file(f).cmp(m2[f], repo.wread(f)):
                 raise util.Abort(_("'%s' already exists in the working"
                                    " dir and differs from remote") % f)
 
-def workingmanifest(repo, man, status):
-    """
-    Update manifest to correspond to the working directory
-    """
-
-    copied = repo.dirstate.copies()
-    modified, added, removed, deleted, unknown = status[:5]
-    for i,l in (("a", added), ("m", modified), ("u", unknown)):
-        for f in l:
-            man[f] = man.get(copied.get(f, f), nullid) + i
-            man.set(f, util.is_exec(repo.wjoin(f), man.execf(f)))
-
-    for f in deleted + removed:
-        del man[f]
-
-    return man
-
-def forgetremoved(m2, status):
+def forgetremoved(m2, wctx):
     """
     Forget removed files
 
@@ -98,10 +80,9 @@ def forgetremoved(m2, status):
     manifest.
     """
 
-    modified, added, removed, deleted, unknown = status[:5]
     action = []
 
-    for f in deleted + removed:
+    for f in wctx.deleted() + wctx.removed():
         if f not in m2:
             action.append((f, "f"))
 
@@ -332,7 +313,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     ### check phase
 
-    pl = repo.parents()
+    wc = repo.workingctx()
+    pl = wc.parents()
     if not overwrite and len(pl) > 1:
         raise util.Abort(_("outstanding uncommitted merges"))
 
@@ -351,13 +333,11 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         raise util.Abort(_("update spans branches, use 'hg merge' "
                            "or 'hg update -C' to lose changes"))
 
-    status = repo.status()
-    modified, added, removed, deleted, unknown = status[:5]
     if branchmerge and not forcemerge:
-        if modified or added or removed:
+        if wc.modified() or wc.added() or wc.removed():
             raise util.Abort(_("outstanding uncommitted changes"))
 
-    m1 = p1.manifest().copy()
+    m1 = wc.manifest().copy()
     m2 = p2.manifest().copy()
     ma = pa.manifest()
 
@@ -371,14 +351,13 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     action = []
     copy = {}
 
-    m1 = workingmanifest(repo, m1, status)
     filtermanifest(m1, partial)
     filtermanifest(m2, partial)
 
     if not force:
-        checkunknown(repo, m2, status)
+        checkunknown(repo, m2, wc)
     if not branchmerge:
-        action += forgetremoved(m2, status)
+        action += forgetremoved(m2, wc)
     if not (backwards or overwrite):
         copy = findcopies(repo, m1, m2, pa.rev())
 

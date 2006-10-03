@@ -342,7 +342,7 @@ class workingctx(changectx):
     def _buildmanifest(self):
         """generate a manifest corresponding to the working directory"""
 
-        man = self._parents[0].manifest().coy()
+        man = self._parents[0].manifest().copy()
         copied = self._repo.dirstate.copies()
         modified, added, removed, deleted, unknown = self._status[:5]
         for i,l in (("a", added), ("m", modified), ("u", unknown)):

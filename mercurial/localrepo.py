@@ -321,6 +321,9 @@ class localrepository(repo.repository):
     def changectx(self, changeid=None):
         return context.changectx(self, changeid)
 
+    def workingctx(self):
+        return context.workingctx(self)
+
     def parents(self, changeid=None):
         '''
         get list of changectxs for parents of changeid or working directory
