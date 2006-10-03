@@ -1618,7 +1618,7 @@ def fold(ui, repo, *files, **opts):
         message = ui.edit(message, user or ui.username())
 
     q.refresh(repo, msg=message)
-    q.delete(repo, patches, keep=opts['keep'])
+    q.delete(repo, patches, opts)
     q.save_dirty()
 
 def guard(ui, repo, *args, **opts):
