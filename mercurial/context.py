@@ -33,7 +33,7 @@ class changectx(object):
         return short(self.node())
 
     def __repr__(self):
-        return "<changectx %s>" % short(self.node())
+        return "<changectx %s>" % str(self)
 
     def __eq__(self, other):
         return self._rev == other._rev
@@ -41,26 +41,25 @@ class changectx(object):
     def __nonzero__(self):
         return self._rev != -1
 
-    def changeset(self):
-        try:
-            return self._changeset
-        except AttributeError:
+    def __getattr__(self, name):
+        if name == '_changeset':
             self._changeset = self._repo.changelog.read(self.node())
             return self._changeset
+        elif name == '_manifest':
+            self._manifest = self._repo.manifest.read(self._changeset[0])
+            return self._manifest
+        else:
+            raise AttributeError, name
 
-    def manifest(self):
-        try:
-            return self._manifest
-        except AttributeError:
-            self._manifest = self._repo.manifest.read(self.changeset()[0])
-            return self._manifest
+    def changeset(self): return self._changeset
+    def manifest(self): return self._manifest
 
     def rev(self): return self._rev
     def node(self): return self._node
-    def user(self): return self.changeset()[1]
-    def date(self): return self.changeset()[2]
-    def files(self): return self.changeset()[3]
-    def description(self): return self.changeset()[4]
+    def user(self): return self._changeset[1]
+    def date(self): return self._changeset[2]
+    def files(self): return self._changeset[3]
+    def description(self): return self._changeset[4]
 
     def parents(self):
         """return contexts for each parent changeset"""
@@ -73,17 +72,16 @@ class changectx(object):
         return [ changectx(self._repo, x) for x in c ]
 
     def filenode(self, path):
-        node, flag = self._repo.manifest.find(self.changeset()[0], path)
+        if hasattr(self, "_manifest"):
+            return self._manifest[path]
+        node, flag = self._repo.manifest.find(self._changeset[0], path)
         return node
 
     def filectx(self, path, fileid=None):
         """get a file context from this changeset"""
         if fileid is None:
             fileid = self.filenode(path)
-            if not fileid:
-                raise repo.LookupError(_("'%s' does not exist in changeset %s") %
-                                       (path, hex(self.node())))
-        return filectx(self._repo, path, fileid=fileid)
+        return filectx(self._repo, path, fileid=fileid, changectx=self)
 
     def filectxs(self):
         """generate a file context for each file in this changeset's
@@ -104,34 +102,44 @@ class changectx(object):
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
-    def __init__(self, repo_, path, changeid=None, fileid=None, filelog=None):
+    def __init__(self, repo, path, changeid=None, fileid=None,
+                 filelog=None, changectx=None):
         """changeid can be a changeset revision, node, or tag.
            fileid can be a file revision or node."""
-        self._repo = repo_
+        self._repo = repo
         self._path = path
 
         assert changeid is not None or fileid is not None
 
         if filelog:
             self._filelog = filelog
-        else:
-            self._filelog = self._repo.file(self._path)
+        if changectx:
+            self._changectx = changectx
+            self._changeid = changectx.node()
 
         if fileid is None:
             self._changeid = changeid
         else:
-            try:
-                self._filenode = self._filelog.lookup(fileid)
-            except revlog.RevlogError, inst:
-                raise repo.LookupError(str(inst))
-            self._changeid = self._filelog.linkrev(self._filenode)
+            self._fileid = fileid
 
     def __getattr__(self, name):
         if name == '_changectx':
             self._changectx = changectx(self._repo, self._changeid)
             return self._changectx
+        elif name == '_filelog':
+            self._filelog = self._repo.file(self._path)
+            return self._filelog
+        elif name == '_changeid':
+            self._changeid = self._filelog.linkrev(self._filenode)
+            return self._changeid
         elif name == '_filenode':
-            self._filenode = self._changectx.filenode(self._path)
+            try:
+                if hasattr(self, "_fileid"):
+                    self._filenode = self._filelog.lookup(self._fileid)
+                else:
+                    self._filenode = self._changectx.filenode(self._path)
+            except revlog.RevlogError, inst:
+                raise repo.LookupError(str(inst))
             return self._filenode
         elif name == '_filerev':
             self._filerev = self._filelog.rev(self._filenode)
@@ -146,7 +154,7 @@ class filectx(object):
         return "%s@%s" % (self.path(), short(self.node()))
 
     def __repr__(self):
-        return "<filectx %s@%s>" % (self.path(), short(self.node()))
+        return "<filectx %s>" % str(self)
 
     def __eq__(self, other):
         return self._path == other._path and self._changeid == other._changeid
@@ -218,7 +226,10 @@ class filectx(object):
         def parents(f):
             # we want to reuse filectx objects as much as possible
             p = f._path
-            pl = [ (p, r) for r in f._filelog.parentrevs(f._filerev) ]
+            if f._filerev is None: # working dir
+                pl = [ (n.path(), n.filerev()) for n in f.parents() ]
+            else:
+                pl = [ (p, n) for n in f._filelog.parentrevs(f._filerev) ]
 
             if follow:
                 r = f.renamed()
@@ -271,6 +282,13 @@ class filectx(object):
         """
 
         acache = {}
+
+        # prime the ancestor cache for the working directory
+        for c in (self, fc2):
+            if c._filerev == None:
+                pl = [ (n.path(), n.filenode()) for n in c.parents() ]
+                acache[(c._path, None)] = pl
+
         flcache = {self._path:self._filelog, fc2._path:fc2._filelog}
         def parents(vertex):
             if vertex in acache:
@@ -293,3 +311,149 @@ class filectx(object):
             return filectx(self._repo, f, fileid=n, filelog=flcache[f])
 
         return None
+
+class workingctx(changectx):
+    """A workingctx object makes access to data related to
+    the current working directory convenient."""
+    def __init__(self, repo):
+        self._repo = repo
+        self._rev = None
+        self._node = None
+
+    def __str__(self):
+        return "."
+
+    def __nonzero__(self):
+        return True
+
+    def __getattr__(self, name):
+        if name == '_parents':
+            self._parents = self._repo.parents()
+            return self._parents
+        if name == '_status':
+            self._status = self._repo.status()
+            return self._status
+        if name == '_manifest':
+            self._buildmanifest()
+            return self._manifest
+        else:
+            raise AttributeError, name
+
+    def _buildmanifest(self):
+        """generate a manifest corresponding to the working directory"""
+
+        man = self._parents[0].manifest().copy()
+        copied = self._repo.dirstate.copies()
+        modified, added, removed, deleted, unknown = self._status[:5]
+        for i,l in (("a", added), ("m", modified), ("u", unknown)):
+            for f in l:
+                man[f] = man.get(copied.get(f, f), nullid) + i
+                man.set(f, util.is_exec(self._repo.wjoin(f), man.execf(f)))
+
+        for f in deleted + removed:
+            del man[f]
+
+        self._manifest = man
+
+    def manifest(self): return self._manifest
+
+    def user(self): return self._repo.ui.username()
+    def date(self): return util.makedate()
+    def description(self): return ""
+    def files(self):
+        f = self.modified() + self.added() + self.removed()
+        f.sort()
+        return f
+
+    def modified(self): return self._status[0]
+    def added(self): return self._status[1]
+    def removed(self): return self._status[2]
+    def deleted(self): return self._status[3]
+    def unknown(self): return self._status[4]
+    def clean(self): return self._status[5]
+
+    def parents(self):
+        """return contexts for each parent changeset"""
+        return self._parents
+
+    def children(self):
+        return []
+
+    def filectx(self, path):
+        """get a file context from the working directory"""
+        return workingfilectx(self._repo, path, workingctx=self)
+
+    def ancestor(self, c2):
+        """return the ancestor context of self and c2"""
+        return self._parents[0].ancestor(c2) # punt on two parents for now
+
+class workingfilectx(filectx):
+    """A workingfilectx object makes access to data related to a particular
+       file in the working directory convenient."""
+    def __init__(self, repo, path, filelog=None, workingctx=None):
+        """changeid can be a changeset revision, node, or tag.
+           fileid can be a file revision or node."""
+        self._repo = repo
+        self._path = path
+        self._changeid = None
+        self._filerev = self._filenode = None
+
+        if filelog:
+            self._filelog = filelog
+        if workingctx:
+            self._changectx = workingctx
+
+    def __getattr__(self, name):
+        if name == '_changectx':
+            self._changectx = workingctx(repo)
+            return self._changectx
+        elif name == '_repopath':
+            self._repopath = self._repo.dirstate.copied(p) or self._path
+        elif name == '_filelog':
+            self._filelog = self._repo.file(self._repopath)
+            return self._filelog
+        else:
+            raise AttributeError, name
+
+    def __nonzero__(self):
+        return True
+
+    def __str__(self):
+        return "%s@." % self.path()
+
+    def filectx(self, fileid):
+        '''opens an arbitrary revision of the file without
+        opening a new filelog'''
+        return filectx(self._repo, self._repopath, fileid=fileid,
+                       filelog=self._filelog)
+
+    def rev(self):
+        if hasattr(self, "_changectx"):
+            return self._changectx.rev()
+        return self._filelog.linkrev(self._filenode)
+
+    def data(self): return self._repo.wread(self._path)
+    def renamed(self):
+        rp = self._repopath
+        if rp == self._path:
+            return None
+        return rp, self._workingctx._parents._manifest.get(rp, nullid)
+
+    def parents(self):
+        '''return parent filectxs, following copies if necessary'''
+        p = self._path
+        rp = self._repopath
+        pcl = self._workingctx._parents
+        fl = self._filelog
+        pl = [ (rp, pcl[0]._manifest.get(rp, nullid), fl) ]
+        if len(pcl) > 1:
+            if rp != p:
+                fl = None
+            pl.append((p, pcl[1]._manifest.get(p, nullid), fl))
+
+        return [ filectx(self._repo, p, fileid=n, filelog=l)
+                 for p,n,l in pl if n != nullid ]
+
+    def children(self):
+        return []
+

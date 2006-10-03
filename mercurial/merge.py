@@ -10,72 +10,66 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno util os tempfile")
 
-def merge3(repo, fn, my, other, p1, p2):
-    """perform a 3-way merge in the working directory"""
+def filemerge(repo, fw, fo, fd, my, other, p1, p2, move):
+    """perform a 3-way merge in the working directory
 
-    def temp(prefix, node):
-        pre = "%s~%s." % (os.path.basename(fn), prefix)
+    fw = filename in the working directory and first parent
+    fo = filename in other parent
+    fd = destination filename
+    my = fileid in first parent
+    other = fileid in second parent
+    p1, p2 = hex changeset ids for merge command
+    move = whether to move or copy the file to the destination
+
+    TODO:
+      if fw is copied in the working directory, we get confused
+      implement move and fd
+    """
+
+    def temp(prefix, ctx):
+        pre = "%s~%s." % (os.path.basename(ctx.path()), prefix)
         (fd, name) = tempfile.mkstemp(prefix=pre)
         f = os.fdopen(fd, "wb")
-        repo.wwrite(fn, fl.read(node), f)
+        repo.wwrite(ctx.path(), ctx.data(), f)
         f.close()
         return name
 
-    fl = repo.file(fn)
-    base = fl.ancestor(my, other)
-    a = repo.wjoin(fn)
-    b = temp("base", base)
-    c = temp("other", other)
+    fcm = repo.filectx(fw, fileid=my)
+    fco = repo.filectx(fo, fileid=other)
+    fca = fcm.ancestor(fco)
+    if not fca:
+        fca = repo.filectx(fw, fileid=-1)
+    a = repo.wjoin(fw)
+    b = temp("base", fca)
+    c = temp("other", fco)
 
-    repo.ui.note(_("resolving %s\n") % fn)
-    repo.ui.debug(_("file %s: my %s other %s ancestor %s\n") %
-                          (fn, short(my), short(other), short(base)))
+    repo.ui.note(_("resolving %s\n") % fw)
+    repo.ui.debug(_("my %s other %s ancestor %s\n") % (fcm, fco, fca))
 
     cmd = (os.environ.get("HGMERGE") or repo.ui.config("ui", "merge")
            or "hgmerge")
     r = util.system('%s "%s" "%s" "%s"' % (cmd, a, b, c), cwd=repo.root,
-                    environ={'HG_FILE': fn,
+                    environ={'HG_FILE': fw,
                              'HG_MY_NODE': p1,
-                             'HG_OTHER_NODE': p2,
-                             'HG_FILE_MY_NODE': hex(my),
-                             'HG_FILE_OTHER_NODE': hex(other),
-                             'HG_FILE_BASE_NODE': hex(base)})
+                             'HG_OTHER_NODE': p2})
     if r:
-        repo.ui.warn(_("merging %s failed!\n") % fn)
+        repo.ui.warn(_("merging %s failed!\n") % fw)
 
     os.unlink(b)
     os.unlink(c)
     return r
 
-def checkunknown(repo, m2, status):
+def checkunknown(repo, m2, wctx):
     """
     check for collisions between unknown files and files in m2
     """
-    modified, added, removed, deleted, unknown = status[:5]
-    for f in unknown:
+    for f in wctx.unknown():
         if f in m2:
             if repo.file(f).cmp(m2[f], repo.wread(f)):
                 raise util.Abort(_("'%s' already exists in the working"
                                    " dir and differs from remote") % f)
 
-def workingmanifest(repo, man, status):
-    """
-    Update manifest to correspond to the working directory
-    """
-
-    copied = repo.dirstate.copies()
-    modified, added, removed, deleted, unknown = status[:5]
-    for i,l in (("a", added), ("m", modified), ("u", unknown)):
-        for f in l:
-            man[f] = man.get(copied.get(f, f), nullid) + i
-            man.set(f, util.is_exec(repo.wjoin(f), man.execf(f)))
-
-    for f in deleted + removed:
-        del man[f]
-
-    return man
-
-def forgetremoved(m2, status):
+def forgetremoved(m2, wctx):
     """
     Forget removed files
 
@@ -86,10 +80,9 @@ def forgetremoved(m2, status):
     manifest.
     """
 
-    modified, added, removed, deleted, unknown = status[:5]
     action = []
 
-    for f in deleted + removed:
+    for f in wctx.deleted() + wctx.removed():
         if f not in m2:
             action.append((f, "f"))
 
@@ -261,7 +254,7 @@ def applyupdates(repo, action, xp1, xp2):
         elif m == "m": # merge
             flag, my, other = a[2:]
             repo.ui.status(_("merging %s\n") % f)
-            if merge3(repo, f, my, other, xp1, xp2):
+            if filemerge(repo, f, f, f, my, other, xp1, xp2, False):
                 unresolved += 1
             util.set_exec(repo.wjoin(f), flag)
             merged += 1
@@ -320,7 +313,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     ### check phase
 
-    pl = repo.parents()
+    wc = repo.workingctx()
+    pl = wc.parents()
     if not overwrite and len(pl) > 1:
         raise util.Abort(_("outstanding uncommitted merges"))
 
@@ -339,13 +333,11 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         raise util.Abort(_("update spans branches, use 'hg merge' "
                            "or 'hg update -C' to lose changes"))
 
-    status = repo.status()
-    modified, added, removed, deleted, unknown = status[:5]
     if branchmerge and not forcemerge:
-        if modified or added or removed:
+        if wc.modified() or wc.added() or wc.removed():
             raise util.Abort(_("outstanding uncommitted changes"))
 
-    m1 = p1.manifest().copy()
+    m1 = wc.manifest().copy()
     m2 = p2.manifest().copy()
     ma = pa.manifest()
 
@@ -359,14 +351,13 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     action = []
     copy = {}
 
-    m1 = workingmanifest(repo, m1, status)
     filtermanifest(m1, partial)
     filtermanifest(m2, partial)
 
     if not force:
-        checkunknown(repo, m2, status)
+        checkunknown(repo, m2, wc)
     if not branchmerge:
-        action += forgetremoved(m2, status)
+        action += forgetremoved(m2, wc)
     if not (backwards or overwrite):
         copy = findcopies(repo, m1, m2, pa.rev())
 
