@@ -909,9 +909,15 @@ def strdate(string, format='%a %b %d %H:%M:%S %Y'):
         tz = int(tz)
         offset = - 3600 * (tz / 100) - 60 * (tz % 100)
     else:
-        date, offset = string, 0
-    localunixtime = int(calendar.timegm(time.strptime(date, format)))
-    unixtime = localunixtime + offset
+        date, offset = string, None
+    timetuple = time.strptime(date, format)
+    localunixtime = int(calendar.timegm(timetuple))
+    if offset is None:
+        # local timezone
+        unixtime = int(time.mktime(timetuple))
+        offset = unixtime - localunixtime
+    else:
+        unixtime = localunixtime + offset
     return unixtime, offset
 
 def parsedate(string, formats=None):
