@@ -937,7 +937,9 @@ def parsedate(string, formats=None):
             else:
                 break
         else:
-            raise ValueError(_('invalid date: %r') % string)
+            raise ValueError(_('invalid date: %r '
+                               'see hg(1) manual page for details')
+                             % string)
     # validate explicit (probably user-specified) date and
     # time zone offset. values must fit in signed 32 bits for
     # current 32-bit linux runtimes. timezones go from UTC-12
