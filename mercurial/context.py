@@ -73,8 +73,14 @@ class changectx(object):
 
     def filenode(self, path):
         if hasattr(self, "_manifest"):
-            return self._manifest[path]
+            try:
+                return self._manifest[path]
+            except KeyError:
+                raise repo.LookupError(_("'%s' not found in manifest") % path)
         node, flag = self._repo.manifest.find(self._changeset[0], path)
+        if not node:
+            raise repo.LookupError(_("'%s' not found in manifest") % path)
+
         return node
 
     def filectx(self, path, fileid=None):
