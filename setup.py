@@ -9,7 +9,7 @@ import sys
 if not hasattr(sys, 'version_info') or sys.version_info < (2, 3):
     raise SystemExit, "Mercurial requires python 2.3 or later."
 
-import glob
+import os
 from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
 
@@ -90,13 +90,9 @@ setup(name='mercurial',
       packages=['mercurial', 'mercurial.hgweb', 'hgext'],
       ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
                    Extension('mercurial.bdiff', ['mercurial/bdiff.c'])],
-      data_files=[
-          ('mercurial/templates',
-           ['templates/map'] +
-           glob.glob('templates/map-*') +
-           glob.glob('templates/*.tmpl')),
-          ('mercurial/templates/static', glob.glob('templates/static/*')),
-      ],
+      data_files=[(os.path.join('mercurial', root),
+                   [os.path.join(root, file_) for file_ in files])
+                  for root, dirs, files in os.walk('templates')],
       cmdclass=cmdclass,
       scripts=['hg', 'hgmerge'],
       options=dict(bdist_mpkg=dict(zipdist=True,

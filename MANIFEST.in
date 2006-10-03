@@ -5,10 +5,8 @@ include hgeditor rewrite-log
 include tests/README tests/*.py tests/test-*[a-z0-9] tests/*.out
 prune tests/*.err
 include *.txt
-include templates/map templates/map-*[a-z0-9]
-include templates/*.tmpl
-include templates/static/*
 include doc/README doc/Makefile doc/gendoc.py doc/*.txt doc/*.html doc/*.[0-9]
+recursive-include templates *
 recursive-include contrib *
 recursive-include hgext *
 include README
