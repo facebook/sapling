@@ -218,7 +218,7 @@ class filectx(object):
         def parents(f):
             # we want to reuse filectx objects as much as possible
             p = f._path
-            pl = [ (p, f._filelog.rev(n)) for n in f._filelog.parents(f._filenode) ]
+            pl = [ (p, r) for r in f._filelog.parentrevs(f._filerev) ]
 
             if follow:
                 r = f.renamed()
