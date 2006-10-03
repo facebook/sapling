@@ -1,8 +1,8 @@
 default = 'changelog'
-header = header-rss.tmpl
-changelog = changelog-rss.tmpl
-changelogentry = changelogentry-rss.tmpl
-filelog = filelog-rss.tmpl
-filelogentry = filelogentry-rss.tmpl
-tags = tags-rss.tmpl
-tagentry = tagentry-rss.tmpl
+header = rss/header.tmpl
+changelog = rss/changelog.tmpl
+changelogentry = rss/changelogentry.tmpl
+filelog = rss/filelog.tmpl
+filelogentry = rss/filelogentry.tmpl
+tags = rss/tags.tmpl
+tagentry = rss/tagentry.tmpl
