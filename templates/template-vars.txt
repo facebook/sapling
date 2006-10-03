@@ -12,7 +12,7 @@ date          a date string
 age           age in hours, days, etc
 line          a line of text (escaped)
 desc          a description (escaped, with breaks)
-shortdesc         a short description (escaped)
+shortdesc     a short description (escaped)
 author        a name or email addressv(obfuscated)
 parent        a list of the parent
 child         a list of the children
