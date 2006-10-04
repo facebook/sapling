@@ -65,7 +65,7 @@
 
 from mercurial.demandload import *
 demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
-                         mercurial:commands,hg,mail,ui,patch
+                         mercurial:cmdutil,commands,hg,mail,ui,patch
                          os errno popen2 socket sys tempfile time''')
 from mercurial.i18n import gettext as _
 from mercurial.node import *
@@ -146,10 +146,10 @@ def patchbomb(ui, repo, *revs, **opts):
             if patchname:
                 patchname = patchname[0]
             elif total > 1:
-                patchname = commands.make_filename(repo, '%b-%n.patch',
+                patchname = cmdutil.make_filename(repo, '%b-%n.patch',
                                                    binnode, idx, total)
             else:
-                patchname = commands.make_filename(repo, '%b.patch', binnode)
+                patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
             p['Content-Disposition'] = 'inline; filename=' + patchname
             msg.attach(p)
         else:
