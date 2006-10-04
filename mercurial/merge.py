@@ -379,8 +379,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     # update dirstate
     if not partial:
-        repo.dirstate.setparents(p1.node(), p2.node())
         recordupdates(repo, action, branchmerge)
+        repo.dirstate.setparents(p1.node(), p2.node())
 
     if show_stats:
         stats = ((updated, _("updated")),
