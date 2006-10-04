@@ -164,12 +164,7 @@ def findcopies(repo, m1, m2, limit):
 
     return copy
 
-def filtermanifest(man, partial):
-    if partial:
-        for k in man.keys():
-            if not partial(k): del man[k]
-
-def manifestmerge(ui, m1, m2, ma, overwrite, backwards):
+def manifestmerge(ui, m1, m2, ma, overwrite, backwards, partial):
     """
     Merge manifest m1 with m2 using ancestor ma and generate merge action list
     """
@@ -187,6 +182,8 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards):
 
     # Compare manifests
     for f, n in m1.iteritems():
+        if partial and not partial(f):
+            continue
         if f in m2:
             # are files different?
             if n != m2[f]:
@@ -206,7 +203,6 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards):
             elif m1.execf(f) != m2.execf(f):
                 if overwrite or fmerge(f) != m1.execf(f):
                     act("update permissions", f, "e", m2.execf(f))
-            del m2[f]
         elif f in ma:
             if n != ma[f] and not overwrite:
                 if ui.prompt(
@@ -221,6 +217,10 @@ def manifestmerge(ui, m1, m2, ma, overwrite, backwards):
                 act("remote deleted", f, "r")
 
     for f, n in m2.iteritems():
+        if partial and not partial(f):
+            continue
+        if f in m1:
+            continue
         if f in ma:
             if overwrite or backwards:
                 act("recreating", f, "g", m2.execf(f), n)
@@ -337,8 +337,8 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if wc.modified() or wc.added() or wc.removed():
             raise util.Abort(_("outstanding uncommitted changes"))
 
-    m1 = wc.manifest().copy()
-    m2 = p2.manifest().copy()
+    m1 = wc.manifest()
+    m2 = p2.manifest()
     ma = pa.manifest()
 
     # resolve the manifest to determine which files
@@ -351,9 +351,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     action = []
     copy = {}
 
-    filtermanifest(m1, partial)
-    filtermanifest(m2, partial)
-
     if not force:
         checkunknown(repo, m2, wc)
     if not branchmerge:
@@ -361,8 +358,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not (backwards or overwrite):
         copy = findcopies(repo, m1, m2, pa.rev())
 
-    action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards)
-    del m1, m2, ma
+    action += manifestmerge(repo.ui, m1, m2, ma, overwrite, backwards, partial)
 
     ### apply phase
 
