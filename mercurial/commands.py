@@ -2532,8 +2532,7 @@ def status(ui, repo, *pats, **opts):
 
         for f in changes:
             ui.write(format % f)
-            if ((all or opts.get('copies')) and not opts.get('no_status')
-                and opt == 'added'):
+            if ((all or opts.get('copies')) and not opts.get('no_status')):
                 copied = repo.dirstate.copied(f)
                 if copied:
                     ui.write('  %s%s' % (copied, end))
