@@ -38,7 +38,7 @@ def staticfile(directory, fname, req):
         ct = mimetypes.guess_type(path)[0] or "text/plain"
         req.header([('Content-type', ct),
                     ('Content-length', os.path.getsize(path))])
-        return file(path).read()
+        return file(path, 'rb').read()
     except (TypeError, OSError):
         # illegal fname or unreadable file
         return ""
