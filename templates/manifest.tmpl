@@ -4,10 +4,10 @@
 <body>
 
 <div class="buttons">
-<a href="#url#log/#rev#">changelog</a>
-<a href="#url#shortlog/#rev#">shortlog</a>
-<a href="#url#tags">tags</a>
-<a href="#url#rev/#node|short#">changeset</a>
+<a href="#url#log/#rev#{getentries}">changelog</a>
+<a href="#url#shortlog/#rev#{getentries}">shortlog</a>
+<a href="#url#tags{getentries}">tags</a>
+<a href="#url#rev/#node|short#{getentries}">changeset</a>
 #archives%archiveentry#
 </div>
 
@@ -16,7 +16,7 @@
 <table cellpadding="0" cellspacing="0">
 <tr class="parity1">
   <td><tt>drwxr-xr-x</tt>&nbsp;
-  <td><a href="#url#file/#node|short##up|urlescape#">[up]</a>
+  <td><a href="#url#file/#node|short##up|urlescape#{getentries}">[up]</a>
 #dentries%manifestdirentry#
 #fentries%manifestfileentry#
 </table>

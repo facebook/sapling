@@ -4,13 +4,13 @@
 <body>
 
 <div class="buttons">
-<a href="#url#log/#rev#">changelog</a>
-<a href="#url#shortlog/#rev#">shortlog</a>
-<a href="#url#tags">tags</a>
-<a href="#url#rev/#node|short#">changeset</a>
-<a href="#url#file/#node|short##path|urlescape#">manifest</a>
-<a href="#url#file/#node|short#/#file|urlescape#">file</a>
-<a href="#url#log/#node|short#/#file|urlescape#">revisions</a>
+<a href="#url#log/#rev#{getentries}">changelog</a>
+<a href="#url#shortlog/#rev#{getentries}">shortlog</a>
+<a href="#url#tags{getentries}">tags</a>
+<a href="#url#rev/#node|short#{getentries}">changeset</a>
+<a href="#url#file/#node|short##path|urlescape#{getentries}">manifest</a>
+<a href="#url#file/#node|short#/#file|urlescape#{getentries}">file</a>
+<a href="#url#log/#node|short#/#file|urlescape#{getentries}">revisions</a>
 <a href="#url#raw-annotate/#node|short#/#file|urlescape#">raw</a>
 </div>
 
@@ -19,7 +19,7 @@
 <table>
 <tr>
  <td class="metatag">changeset #rev#:</td>
- <td><a href="#url#rev/#node|short#">#node|short#</a></td></tr>
+ <td><a href="#url#rev/#node|short#{getentries}">#node|short#</a></td></tr>
 #rename%filerename#
 #parent%fileannotateparent#
 #child%fileannotatechild#
