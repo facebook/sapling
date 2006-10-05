@@ -1134,7 +1134,7 @@ def debugcheckstate(ui, repo):
         error = _(".hg/dirstate inconsistent with current parent's manifest")
         raise util.Abort(error)
 
-def debugconfig(ui, repo, *values):
+def showconfig(ui, repo, *values):
     """show combined config settings from all hgrc files
 
     With no args, print names and values of all config items.
@@ -2834,7 +2834,6 @@ table = {
          [('r', 'rev', '', _('revision to rebuild to'))],
          _('debugrebuildstate [-r REV] [REV]')),
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
-    "debugconfig": (debugconfig, [], _('debugconfig [NAME]...')),
     "debugsetparents": (debugsetparents, [], _('debugsetparents REV1 [REV2]')),
     "debugstate": (debugstate, [], _('debugstate')),
     "debugdata": (debugdata, [], _('debugdata FILE REV')),
@@ -3017,6 +3016,7 @@ table = {
          _('hg revert [-r REV] [NAME]...')),
     "rollback": (rollback, [], _('hg rollback')),
     "root": (root, [], _('hg root')),
+    "showconfig|debugconfig": (showconfig, [], _('showconfig [NAME]...')),
     "^serve":
         (serve,
          [('A', 'accesslog', '', _('name of access log file to write to')),
@@ -3086,7 +3086,7 @@ table = {
 
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot")
-optionalrepo = ("paths serve debugconfig")
+optionalrepo = ("paths serve showconfig")
 
 def findpossible(ui, cmd):
     """

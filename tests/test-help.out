@@ -38,92 +38,94 @@ Mercurial Distributed SCM
 
 list of commands (use "hg help -v" to show aliases and global options):
 
- add         add the specified files on the next commit
- addremove   add all new files, delete all missing files
- annotate    show changeset information per file line
- archive     create unversioned archive of a repository revision
- backout     reverse effect of earlier changeset
- bundle      create a changegroup file
- cat         output the latest or given revisions of files
- clone       make a copy of an existing repository
- commit      commit the specified files or all outstanding changes
- copy        mark files as copied for the next commit
- diff        diff repository (or selected files)
- export      dump the header and diffs for one or more changesets
- grep        search for a pattern in specified files and revisions
- heads       show current repository heads
- help        show help for a command, extension, or list of commands
- identify    print information about the working copy
- import      import an ordered set of patches
- incoming    show new changesets found in source
- init        create a new repository in the given directory
- locate      locate files matching specific patterns
- log         show revision history of entire repository or files
- manifest    output the latest or given revision of the project manifest
- merge       Merge working directory with another revision
- outgoing    show changesets not found in destination
- parents     show the parents of the working dir or revision
- paths       show definition of symbolic path names
- pull        pull changes from the specified source
- push        push changes to the specified destination
- recover     roll back an interrupted transaction
- remove      remove the specified files on the next commit
- rename      rename files; equivalent of copy + remove
- revert      revert files or dirs to their states as of some revision
- rollback    roll back the last transaction in this repository
- root        print the root (top) of the current working dir
- serve       export the repository via HTTP
- status      show changed files in the working directory
- tag         add a tag for the current tip or a given revision
- tags        list repository tags
- tip         show the tip revision
- unbundle    apply a changegroup file
- update      update or merge working directory
- verify      verify the integrity of the repository
- version     output version and copyright information
- add         add the specified files on the next commit
- addremove   add all new files, delete all missing files
- annotate    show changeset information per file line
- archive     create unversioned archive of a repository revision
- backout     reverse effect of earlier changeset
- bundle      create a changegroup file
- cat         output the latest or given revisions of files
- clone       make a copy of an existing repository
- commit      commit the specified files or all outstanding changes
- copy        mark files as copied for the next commit
- diff        diff repository (or selected files)
- export      dump the header and diffs for one or more changesets
- grep        search for a pattern in specified files and revisions
- heads       show current repository heads
- help        show help for a command, extension, or list of commands
- identify    print information about the working copy
- import      import an ordered set of patches
- incoming    show new changesets found in source
- init        create a new repository in the given directory
- locate      locate files matching specific patterns
- log         show revision history of entire repository or files
- manifest    output the latest or given revision of the project manifest
- merge       Merge working directory with another revision
- outgoing    show changesets not found in destination
- parents     show the parents of the working dir or revision
- paths       show definition of symbolic path names
- pull        pull changes from the specified source
- push        push changes to the specified destination
- recover     roll back an interrupted transaction
- remove      remove the specified files on the next commit
- rename      rename files; equivalent of copy + remove
- revert      revert files or dirs to their states as of some revision
- rollback    roll back the last transaction in this repository
- root        print the root (top) of the current working dir
- serve       export the repository via HTTP
- status      show changed files in the working directory
- tag         add a tag for the current tip or a given revision
- tags        list repository tags
- tip         show the tip revision
- unbundle    apply a changegroup file
- update      update or merge working directory
- verify      verify the integrity of the repository
- version     output version and copyright information
+ add          add the specified files on the next commit
+ addremove    add all new files, delete all missing files
+ annotate     show changeset information per file line
+ archive      create unversioned archive of a repository revision
+ backout      reverse effect of earlier changeset
+ bundle       create a changegroup file
+ cat          output the latest or given revisions of files
+ clone        make a copy of an existing repository
+ commit       commit the specified files or all outstanding changes
+ copy         mark files as copied for the next commit
+ diff         diff repository (or selected files)
+ export       dump the header and diffs for one or more changesets
+ grep         search for a pattern in specified files and revisions
+ heads        show current repository heads
+ help         show help for a command, extension, or list of commands
+ identify     print information about the working copy
+ import       import an ordered set of patches
+ incoming     show new changesets found in source
+ init         create a new repository in the given directory
+ locate       locate files matching specific patterns
+ log          show revision history of entire repository or files
+ manifest     output the latest or given revision of the project manifest
+ merge        Merge working directory with another revision
+ outgoing     show changesets not found in destination
+ parents      show the parents of the working dir or revision
+ paths        show definition of symbolic path names
+ pull         pull changes from the specified source
+ push         push changes to the specified destination
+ recover      roll back an interrupted transaction
+ remove       remove the specified files on the next commit
+ rename       rename files; equivalent of copy + remove
+ revert       revert files or dirs to their states as of some revision
+ rollback     roll back the last transaction in this repository
+ root         print the root (top) of the current working dir
+ serve        export the repository via HTTP
+ showconfig   show combined config settings from all hgrc files
+ status       show changed files in the working directory
+ tag          add a tag for the current tip or a given revision
+ tags         list repository tags
+ tip          show the tip revision
+ unbundle     apply a changegroup file
+ update       update or merge working directory
+ verify       verify the integrity of the repository
+ version      output version and copyright information
+ add          add the specified files on the next commit
+ addremove    add all new files, delete all missing files
+ annotate     show changeset information per file line
+ archive      create unversioned archive of a repository revision
+ backout      reverse effect of earlier changeset
+ bundle       create a changegroup file
+ cat          output the latest or given revisions of files
+ clone        make a copy of an existing repository
+ commit       commit the specified files or all outstanding changes
+ copy         mark files as copied for the next commit
+ diff         diff repository (or selected files)
+ export       dump the header and diffs for one or more changesets
+ grep         search for a pattern in specified files and revisions
+ heads        show current repository heads
+ help         show help for a command, extension, or list of commands
+ identify     print information about the working copy
+ import       import an ordered set of patches
+ incoming     show new changesets found in source
+ init         create a new repository in the given directory
+ locate       locate files matching specific patterns
+ log          show revision history of entire repository or files
+ manifest     output the latest or given revision of the project manifest
+ merge        Merge working directory with another revision
+ outgoing     show changesets not found in destination
+ parents      show the parents of the working dir or revision
+ paths        show definition of symbolic path names
+ pull         pull changes from the specified source
+ push         push changes to the specified destination
+ recover      roll back an interrupted transaction
+ remove       remove the specified files on the next commit
+ rename       rename files; equivalent of copy + remove
+ revert       revert files or dirs to their states as of some revision
+ rollback     roll back the last transaction in this repository
+ root         print the root (top) of the current working dir
+ serve        export the repository via HTTP
+ showconfig   show combined config settings from all hgrc files
+ status       show changed files in the working directory
+ tag          add a tag for the current tip or a given revision
+ tags         list repository tags
+ tip          show the tip revision
+ unbundle     apply a changegroup file
+ update       update or merge working directory
+ verify       verify the integrity of the repository
+ version      output version and copyright information
 hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
