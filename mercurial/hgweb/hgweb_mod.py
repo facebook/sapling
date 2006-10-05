@@ -11,6 +11,7 @@ import os.path
 import mimetypes
 from mercurial.demandload import demandload
 demandload(globals(), "re zlib ConfigParser mimetools cStringIO sys tempfile")
+demandload(globals(), 'urllib')
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone,patch")
 demandload(globals(), "mercurial:templater")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
@@ -717,6 +718,23 @@ class hgweb(object):
                         req.form['node'] = [fn[:-len(ext)]]
                         req.form['type'] = [type_]
 
+        def queryprefix(**map):
+            return req.url[-1] == '?' and ';' or '?'
+
+        def getentries(**map):
+            fields = {}
+            if req.form.has_key('style'):
+                style = req.form['style'][0]
+                if style != self.repo.ui.config('web', 'style', ''):
+                    fields['style'] = style
+
+            if fields:
+                fields = ['%s=%s' % (k, urllib.quote(v))
+                          for k, v in fields.iteritems()]
+                yield '%s%s' % (queryprefix(), ';'.join(fields))
+            else:
+                yield ''
+
         self.refresh()
 
         expand_form(req.form)
@@ -751,6 +769,8 @@ class hgweb(object):
                                                "header": header,
                                                "footer": footer,
                                                "rawfileheader": rawfileheader,
+                                               "queryprefix": queryprefix,
+                                               "getentries": getentries
                                                })
 
         if not req.form.has_key('cmd'):
