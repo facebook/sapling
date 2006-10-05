@@ -85,9 +85,10 @@ class hgwebdir(object):
 
         def archivelist(ui, nodeid, url):
             allowed = ui.configlist("web", "allow_archive")
-            for i in ['zip', 'gz', 'bz2']:
-                if i in allowed or ui.configbool("web", "allow" + i):
-                    yield {"type" : i, "node": nodeid, "url": url}
+            for i in [('zip', '.zip'), ('gz', '.tar.gz'), ('bz2', '.tar.bz2')]:
+                if i[0] in allowed or ui.configbool("web", "allow" + i[0]):
+                    yield {"type" : i[0], "extension": i[1],
+                           "node": nodeid, "url": url}
 
         def entries(sortcolumn="", descending=False, **map):
             rows = []
@@ -101,7 +102,7 @@ class hgwebdir(object):
                 get = u.config
 
                 url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
-                       .replace("//", "/"))
+                       .replace("//", "/")) + '/'
 
                 # update time with local timezone
                 try:
@@ -142,9 +143,22 @@ class hgwebdir(object):
                     yield row
 
         virtual = req.env.get("PATH_INFO", "").strip('/')
-        if virtual:
-            real = dict(self.repos).get(virtual)
+        if virtual.startswith('static/'):
+            static = os.path.join(templater.templatepath(), 'static')
+            fname = virtual[7:]
+            req.write(staticfile(static, fname, req) or
+                      tmpl('error', error='%r not found' % fname))
+        elif virtual:
+            while virtual:
+                real = dict(self.repos).get(virtual)
+                if real:
+                    break
+                up = virtual.rfind('/')
+                if up < 0:
+                    break
+                virtual = virtual[:up]
             if real:
+                req.env['REPO_NAME'] = virtual
                 try:
                     hgweb(real).run_wsgi(req)
                 except IOError, inst:

@@ -71,7 +71,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         env['REQUEST_METHOD'] = self.command
         env['SERVER_NAME'] = self.server.server_name
         env['SERVER_PORT'] = str(self.server.server_port)
-        env['REQUEST_URI'] = "/"
+        env['REQUEST_URI'] = self.path
         env['PATH_INFO'] = path_info
         if query:
             env['QUERY_STRING'] = query

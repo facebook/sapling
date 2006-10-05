@@ -54,9 +54,9 @@ class hgweb(object):
 
     def archivelist(self, nodeid):
         allowed = self.repo.ui.configlist("web", "allow_archive")
-        for i in self.archives:
+        for i, spec in self.archive_specs.iteritems():
             if i in allowed or self.repo.ui.configbool("web", "allow" + i):
-                yield {"type" : i, "node" : nodeid, "url": ""}
+                yield {"type" : i, "extension" : spec[2], "node" : nodeid}
 
     def listfiles(self, files, mf):
         for f in files[:self.maxfiles]:
@@ -645,9 +645,80 @@ class hgweb(object):
                         form[name] = value
                     del form[k]
 
+        def rewrite_request(req):
+            '''translate new web interface to traditional format'''
+
+            def spliturl(req):
+                def firstitem(query):
+                    return query.split('&', 1)[0].split(';', 1)[0]
+
+                base = ''
+                if req.env.has_key('REPO_NAME'):
+                    base = '/' + req.env['REPO_NAME']
+                elif req.env.get('SCRIPT_NAME'):
+                    base = req.env['SCRIPT_NAME']
+
+                pi = req.env.get('PATH_INFO')
+                if pi:
+                    if pi.startswith(base):
+                        if len(pi) > len(base):
+                            base += '/'
+                            query = pi[len(base):]
+                        else:
+                            if req.env.has_key('REPO_NAME'):
+                                # We are using hgwebdir
+                                base += '/'
+                            else:
+                                base += '?'
+                            query = firstitem(req.env['QUERY_STRING'])
+                    else:
+                        base += '/'
+                        query = pi[1:]
+                else:
+                    base += '?'
+                    query = firstitem(req.env['QUERY_STRING'])
+
+                return (base, query)
+
+            req.url, query = spliturl(req)
+
+            if req.form.has_key('cmd'):
+                # old style
+                return
+
+            args = query.split('/', 2)
+            if not args or not args[0]:
+                return
+
+            cmd = args.pop(0)
+            style = cmd.rfind('-')
+            if style != -1:
+                req.form['style'] = [cmd[:style]]
+                cmd = cmd[style+1:]
+            # avoid accepting e.g. style parameter as command
+            if hasattr(self, 'do_' + cmd):
+                req.form['cmd'] = [cmd]
+
+            if args and args[0]:
+                node = args.pop(0)
+                req.form['node'] = [node]
+            if args:
+                req.form['file'] = args
+
+            if cmd == 'static':
+                req.form['file'] = req.form['node']
+            elif cmd == 'archive':
+                fn = req.form['node'][0]
+                for type_, spec in self.archive_specs.iteritems():
+                    ext = spec[2]
+                    if fn.endswith(ext):
+                        req.form['node'] = [fn[:-len(ext)]]
+                        req.form['type'] = [type_]
+
         self.refresh()
 
         expand_form(req.form)
+        rewrite_request(req)
 
         m = os.path.join(self.templatepath, "map")
         style = self.repo.ui.config("web", "style", "")
@@ -659,18 +730,21 @@ class hgweb(object):
             if os.path.isfile(p):
                 m = p
 
-        port = req.env["SERVER_PORT"]
-        port = port != "80" and (":" + port) or ""
-        uri = req.env["REQUEST_URI"]
-        if "?" in uri:
-            uri = uri.split("?")[0]
-        url = "http://%s%s%s" % (req.env["SERVER_NAME"], port, uri)
+        if not req.url:
+            port = req.env["SERVER_PORT"]
+            port = port != "80" and (":" + port) or ""
+            uri = req.env["REQUEST_URI"]
+            if "?" in uri:
+                uri = uri.split("?")[0]
+            req.url = "http://%s%s%s" % (req.env["SERVER_NAME"], port, uri)
+
         if not self.reponame:
             self.reponame = (self.repo.ui.config("web", "name")
-                             or uri.strip('/') or self.repo.root)
+                             or req.env.get('REPO_NAME')
+                             or req.url.strip('/') or self.repo.root)
 
         self.t = templater.templater(m, templater.common_filters,
-                                     defaults={"url": url,
+                                     defaults={"url": req.url,
                                                "repo": self.reponame,
                                                "header": header,
                                                "footer": footer,
@@ -723,6 +797,30 @@ class hgweb(object):
         else:
             return 0
 
+    def do_log(self, req):
+        if req.form.has_key('file') and req.form['file'][0]:
+            self.do_filelog(req)
+        else:
+            self.do_changelog(req)
+
+    def do_rev(self, req):
+        self.do_changeset(req)
+
+    def do_file(self, req):
+        path = req.form.get('file', [''])[0]
+        if path:
+            try:
+                req.write(self.filerevision(self.filectx(req)))
+                return
+            except hg.RepoError:
+                pass
+            path = self.cleanpath(path)
+
+        req.write(self.manifest(self.changectx(req), '/' + path))
+
+    def do_diff(self, req):
+        self.do_filediff(req)
+
     def do_changelog(self, req, shortlog = False):
         if req.form.has_key('node'):
             ctx = self.changectx(req)
@@ -758,9 +856,6 @@ class hgweb(object):
 
     def do_filediff(self, req):
         req.write(self.filediff(self.filectx(req)))
-
-    def do_file(self, req):
-        req.write(self.filerevision(self.filectx(req)))
 
     def do_annotate(self, req):
         req.write(self.fileannotate(self.filectx(req)))
