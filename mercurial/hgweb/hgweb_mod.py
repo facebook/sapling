@@ -653,11 +653,11 @@ class hgweb(object):
                 def firstitem(query):
                     return query.split('&', 1)[0].split(';', 1)[0]
 
-                base = ''
+                root = req.env.get('SCRIPT_NAME', '')
                 if req.env.has_key('REPO_NAME'):
                     base = '/' + req.env['REPO_NAME']
-                elif req.env.get('SCRIPT_NAME'):
-                    base = req.env['SCRIPT_NAME']
+                else:
+                    base = root
 
                 pi = req.env.get('PATH_INFO')
                 if pi:
@@ -681,7 +681,7 @@ class hgweb(object):
                     base += '?'
                     query = firstitem(req.env['QUERY_STRING'])
 
-                return (base, query)
+                return (root + base, query)
 
             req.url, query = spliturl(req)
 
