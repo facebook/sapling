@@ -664,12 +664,10 @@ class hgweb(object):
                 return
 
             cmd = args.pop(0)
-            if cmd == 'raw':
-                req.form['style'] = ['raw']
-                cmd = 'rev'
-            elif cmd == 'rawdiff':
-                req.form['style'] = ['raw']
-                cmd = 'diff'
+            style = cmd.rfind('-')
+            if style != -1:
+                req.form['style'] = [cmd[:style]]
+                cmd = cmd[style+1:]
             req.form['cmd'] = [cmd]
 
             if args and args[0]:
