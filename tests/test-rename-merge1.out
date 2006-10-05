@@ -4,11 +4,18 @@ merge
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor f26ec4fc3fa3 local 8e765a822af2 remote af1939970a1c
- b: remote created -> g
+ a: remote moved -> c
  b2: remote created -> g
-getting b
+resolving a
+my a@f26ec4fc3fa3 other b@8e765a822af2 ancestor a@af1939970a1c
+copying a to b
+removing a
 getting b2
-2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+M b
+  a
+M b2
+R a
+C c2
 blahblah
-foo
