@@ -648,16 +648,43 @@ class hgweb(object):
         def rewrite_request(req):
             '''translate new web interface to traditional format'''
 
+            def spliturl(req):
+                def firstitem(query):
+                    return query.split('&', 1)[0].split(';', 1)[0]
+
+                base = ''
+                if req.env.has_key('REPO_NAME'):
+                    base = '/' + req.env['REPO_NAME']
+                elif req.env.get('SCRIPT_NAME'):
+                    base = req.env['SCRIPT_NAME']
+
+                pi = req.env.get('PATH_INFO')
+                if pi:
+                    if pi.startswith(base):
+                        if len(pi) > len(base):
+                            base += '/'
+                            query = pi[len(base):]
+                        else:
+                            if req.env.has_key('REPO_NAME'):
+                                # We are using hgwebdir
+                                base += '/'
+                            else:
+                                base += '?'
+                            query = firstitem(req.env['QUERY_STRING'])
+                    else:
+                        base += '/'
+                        query = pi[1:]
+                else:
+                    base += '?'
+                    query = firstitem(req.env['QUERY_STRING'])
+
+                return (base, query)
+
+            req.url, query = spliturl(req)
+
             if req.form.has_key('cmd'):
                 # old style
                 return
-            if req.env.has_key('SCRIPT_URL'):
-                # run through web server
-                base = req.env['SCRIPT_URL']
-                # strip repo and leading '/' or '?'
-                query = req.env['REQUEST_URI'][len(base)+1:]
-            else:
-                query = req.env['PATH_INFO'][1:]
 
             args = query.split('/', 2)
             if not args or not args[0]:
@@ -668,7 +695,9 @@ class hgweb(object):
             if style != -1:
                 req.form['style'] = [cmd[:style]]
                 cmd = cmd[style+1:]
-            req.form['cmd'] = [cmd]
+            # avoid accepting e.g. style parameter as command
+            if hasattr(self, 'do_' + cmd):
+                req.form['cmd'] = [cmd]
 
             if args and args[0]:
                 node = args.pop(0)
@@ -701,18 +730,21 @@ class hgweb(object):
             if os.path.isfile(p):
                 m = p
 
-        port = req.env["SERVER_PORT"]
-        port = port != "80" and (":" + port) or ""
-        uri = req.env["REQUEST_URI"]
-        if "?" in uri:
-            uri = uri.split("?")[0]
-        url = "http://%s%s%s" % (req.env["SERVER_NAME"], port, uri)
+        if not req.url:
+            port = req.env["SERVER_PORT"]
+            port = port != "80" and (":" + port) or ""
+            uri = req.env["REQUEST_URI"]
+            if "?" in uri:
+                uri = uri.split("?")[0]
+            req.url = "http://%s%s%s" % (req.env["SERVER_NAME"], port, uri)
+
         if not self.reponame:
             self.reponame = (self.repo.ui.config("web", "name")
-                             or uri.strip('/') or self.repo.root)
+                             or req.env.get('REPO_NAME')
+                             or req.url.strip('/') or self.repo.root)
 
         self.t = templater.templater(m, templater.common_filters,
-                                     defaults={"url": url,
+                                     defaults={"url": req.url,
                                                "repo": self.reponame,
                                                "header": header,
                                                "footer": footer,

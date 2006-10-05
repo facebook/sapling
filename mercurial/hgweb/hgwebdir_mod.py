@@ -143,7 +143,12 @@ class hgwebdir(object):
                     yield row
 
         virtual = req.env.get("PATH_INFO", "").strip('/')
-        if virtual:
+        if virtual.startswith('static/'):
+            static = os.path.join(templater.templatepath(), 'static')
+            fname = virtual[7:]
+            req.write(staticfile(static, fname, req) or
+                      tmpl('error', error='%r not found' % fname))
+        elif virtual:
             while virtual:
                 real = dict(self.repos).get(virtual)
                 if real:
