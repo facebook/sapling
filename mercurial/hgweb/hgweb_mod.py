@@ -660,6 +660,8 @@ class hgweb(object):
 
                 pi = req.env.get('PATH_INFO')
                 if pi:
+                    while pi.startswith('//'):
+                        pi = pi[1:]
                     if pi.startswith(base):
                         if len(pi) > len(base):
                             base += '/'
