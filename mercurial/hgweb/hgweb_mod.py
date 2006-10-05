@@ -653,13 +653,16 @@ class hgweb(object):
                 def firstitem(query):
                     return query.split('&', 1)[0].split(';', 1)[0]
 
-                root = req.env.get('SCRIPT_NAME', '')
+                root = req.env.get('REQUEST_URI', '').split('?', 1)[0]
+                pi = req.env.get('PATH_INFO', '')
+                if pi:
+                    root = root[:-len(pi)]
+                
                 if req.env.has_key('REPO_NAME'):
                     base = '/' + req.env['REPO_NAME']
                 else:
                     base = root
 
-                pi = req.env.get('PATH_INFO')
                 if pi:
                     while pi.startswith('//'):
                         pi = pi[1:]
