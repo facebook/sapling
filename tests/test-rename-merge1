@@ -3,6 +3,8 @@
 mkdir t
 cd t
 hg init
+echo "[merge]" >> .hg/hgrc
+echo "followcopies = 1" >> .hg/hgrc
 echo foo > a
 echo foo > a2
 hg add a a2
@@ -18,6 +20,6 @@ hg mv a2 c2
 hg ci -m "modify" -d "0 0"
 echo "merge"
 hg merge -y --debug
-cat a
+hg status -AC
 cat b
 hg ci -m "merge" -d "0 0"

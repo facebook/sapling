@@ -151,7 +151,7 @@ def findcopies(repo, m1, m2, limit):
         ''' check if an apparent pair actually matches '''
         c2 = ctx(f2, man[f2])
         ca = c.ancestor(c2)
-        if ca:
+        if ca and ca.path() == c.path() or ca.path() == c2.path():
             copy[c.path()] = f2
             copy[f2] = c.path()
 
@@ -284,8 +284,8 @@ def applyupdates(repo, action, xp1, xp2):
                                  (f, inst.strerror))
             removed +=1
         elif m == "c": # copy
-            f2, fd, my, other, flag, remove = a[2:]
-            if filemerge(repo, f, f2, fd, my, other, xp1, xp2, remove):
+            f2, fd, my, other, flag, move = a[2:]
+            if filemerge(repo, f, f2, fd, my, other, xp1, xp2, move):
                 unresolved += 1
             util.set_exec(repo.wjoin(fd), flag)
             merged += 1
@@ -339,6 +339,25 @@ def recordupdates(repo, action, branchmerge):
                 fl = repo.file(f)
                 f_len = fl.size(fl.rev(other))
                 repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
+        elif m == "c": # copy
+            f2, fd, my, other, flag, move = a[2:]
+            if branchmerge:
+                # We've done a branch merge, mark this file as merged
+                # so that we properly record the merger later
+                repo.dirstate.update([fd], 'm')
+            else:
+                # We've update-merged a locally modified file, so
+                # we set the dirstate to emulate a normal checkout
+                # of that file some time in the past. Thus our
+                # merge will appear as a normal local file
+                # modification.
+                fl = repo.file(f)
+                f_len = fl.size(fl.rev(other))
+                repo.dirstate.update([fd], 'n', st_size=f_len, st_mtime=-1)
+            if move:
+                repo.dirstate.update([f], 'r')
+            if f != fd:
+                repo.dirstate.copy(f, fd)
 
 def update(repo, node, branchmerge=False, force=False, partial=None,
            wlock=None, show_stats=True, remind=True):
