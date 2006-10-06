@@ -1,4 +1,7 @@
 # creating 'remote'
+# repo not found error
+abort: no suitable response from remote hg!
+remote: abort: repository nonexistent not found!
 # clone remote via stream
 streaming all changes
 XXX files to transfer, XXX bytes of data
@@ -77,6 +80,7 @@ remote: adding changesets
 remote: adding manifests
 remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
+Got arguments 1:user@dummy 2:hg -R nonexistent serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio 3: 4: 5:

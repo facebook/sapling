@@ -70,7 +70,7 @@ class sshrepository(remoterepository):
             lines.append(l)
             max_noise -= 1
         else:
-            raise hg.RepoError(_("no response from remote hg"))
+            raise hg.RepoError(_("no suitable response from remote hg"))
 
         self.capabilities = ()
         lines.reverse()
