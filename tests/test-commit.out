@@ -1,13 +1,13 @@
 abort: impossible time zone offset: 4444444
 transaction abort!
 rollback completed
-abort: invalid date: '1\t15.1'
+abort: invalid date: '1\t15.1' see hg(1) manual page for details
 transaction abort!
 rollback completed
-abort: invalid date: 'foo bar'
+abort: invalid date: 'foo bar' see hg(1) manual page for details
 transaction abort!
 rollback completed
-abort: invalid date: ' 1 4444'
+abort: invalid date: ' 1 4444' see hg(1) manual page for details
 transaction abort!
 rollback completed
 abort: date exceeds 32 bits: 111111111111

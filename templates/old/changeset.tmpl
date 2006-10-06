@@ -4,11 +4,11 @@
 <body>
 
 <div class="buttons">
-<a href="#url#log/#rev#{getentries}">changelog</a>
-<a href="#url#shortlog/#rev#{getentries}">shortlog</a>
-<a href="#url#tags{getentries}">tags</a>
-<a href="#url#file/#node|short#{getentries}">manifest</a>
-<a href="#url#raw-rev/#node|short#">raw</a>
+<a href="?cl=#rev#">changelog</a>
+<a href="?sl=#rev#">shortlog</a>
+<a href="?cmd=tags">tags</a>
+<a href="?mf=#node|short#;path=/">manifest</a>
+<a href="?cs=#node|short#;style=raw">raw</a>
 #archives%archiveentry#
 </div>
 
@@ -17,7 +17,7 @@
 <table id="changesetEntry">
 <tr>
  <th class="changeset">changeset #rev#:</th>
- <td class="changeset"><a href="#url#rev/#node|short#{getentries}">#node|short#</a></td>
+ <td class="changeset"><a href="?cs=#node|short#">#node|short#</a></td>
 </tr>
 #parent%changesetparent#
 #child%changesetchild#

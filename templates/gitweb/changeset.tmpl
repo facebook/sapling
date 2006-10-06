@@ -1,27 +1,27 @@
 #header#
 <title>#repo|escape#: Changeset</title>
 <link rel="alternate" type="application/rss+xml"
-   href="?cmd=changelog;style=rss" title="RSS feed for #repo|escape#">
+   href="{url}rss-log" title="RSS feed for #repo|escape#">
 </head>
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="?cmd=summary;style=gitweb">#repo|escape#</a> / changeset
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="#url#summary{getentries}">#repo|escape#</a> / changeset
 </div>
 
 <div class="page_nav">
-<a href="?cmd=summary;style=gitweb">summary</a> | <a href="?cmd=shortlog;rev=#rev#;style=gitweb">shortlog</a> | <a href="?cmd=changelog;rev=#rev#;style=gitweb">changelog</a> | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?mf=#node|short#;path=/;style=gitweb">manifest</a> | changeset | <a href="?cmd=changeset;node=#node#;style=raw">raw</a> #archives%archiveentry#<br/>
+<a href="{url}summary{getentries}">summary</a> | <a href="{url}shortlog/#rev#{getentries}">shortlog</a> | <a href="{url}log/#rev#{getentries}">changelog</a> | <a href="{url}tags{getentries}">tags</a> | <a href="{url}file/#node|short#{getentries}">manifest</a> | changeset | <a href="{url}raw-rev/#node|short#">raw</a> #archives%archiveentry#<br/>
 </div>
 
 <div>
-<a class="title" href="?cmd=changeset;node=#node#;style=raw">#desc|strip|escape|firstline#</a>
+<a class="title" href="{url}raw-rev/#node|short#">#desc|strip|escape|firstline#</a>
 </div>
 <div class="title_text">
 <table cellspacing="0">
 <tr><td>author</td><td>#author|obfuscate#</td></tr>
 <tr><td></td><td>#date|date# (#date|age# ago)</td></tr>
 <tr><td>changeset</td><td style="font-family:monospace">#node|short#</td></tr>
-<tr><td>manifest</td><td style="font-family:monospace"><a class="list" href="?mf=#node|short#;path=/;style=gitweb">#node|short#</a></td></tr>
+<tr><td>manifest</td><td style="font-family:monospace"><a class="list" href="{url}file/#node|short#{getentries}">#node|short#</a></td></tr>
 #parent%changesetparent#
 #child%changesetchild#
 #changesettag#

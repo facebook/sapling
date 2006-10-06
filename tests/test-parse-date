@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# This runs with TZ="GMT"
 hg init
 echo "test-parse-date" > a
 hg add a
@@ -13,4 +14,21 @@ echo "fail" >> a
 hg ci -d "should fail" -m "fail"
 hg ci -d "100000000000000000 1400" -m "fail"
 hg ci -d "100000 1400000" -m "fail"
+
+# Check with local timezone other than GMT and with DST
+TZ="PST+8PDT"
+export TZ
+# PST=UTC-8 / PDT=UTC-7
+hg debugrebuildstate
+echo "a" > a
+hg ci -d "2006-07-15 13:30" -m "summer@UTC-7"
+hg debugrebuildstate
+echo "b" > a
+hg ci -d "2006-07-15 13:30 +0500" -m "summer@UTC+5"
+hg debugrebuildstate
+echo "c" > a
+hg ci -d "2006-01-15 13:30" -m "winter@UTC-8"
+hg debugrebuildstate
+echo "d" > a
+hg ci -d "2006-01-15 13:30 +0500" -m "winter@UTC+5"
 hg log --template '{date|date}\n'

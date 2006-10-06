@@ -1,23 +1,24 @@
 #header#
 <title>#repo|escape#: changelog</title>
 <link rel="alternate" type="application/rss+xml"
-   href="#url#rss-log" title="RSS feed for #repo|escape#">
+   href="?cmd=changelog;style=rss" title="RSS feed for #repo|escape#">
 </head>
 <body>
 
 <div class="buttons">
-<a href="#url#shortlog/#rev#{getentries}">shortlog</a>
-<a href="#url#tags{getentries}">tags</a>
-<a href="#url#file/#node|short#{getentries}">manifest</a>
+<a href="?sl=#rev#">shortlog</a>
+<a href="?cmd=tags">tags</a>
+<a href="?mf=#node|short#;path=/">manifest</a>
 #archives%archiveentry#
-<a type="application/rss+xml" href="#url#rss-log">rss</a>
+<a type="application/rss+xml" href="?style=rss">rss</a>
 </div>
 
 <h2>changelog for #repo|escape#</h2>
 
-<form action="#url#log">
+<form action="#">
 <p>
 <label for="search1">search:</label>
+<input type="hidden" name="cmd" value="changelog">
 <input name="rev" id="search1" type="text" size="30">
 navigate: <small class="navigate">#changenav%naventry#</small>
 </p>
@@ -25,9 +26,10 @@ navigate: <small class="navigate">#changenav%naventry#</small>
 
 #entries%changelogentry#
 
-<form action="#url#log">
+<form action="#">
 <p>
 <label for="search2">search:</label>
+<input type="hidden" name="cmd" value="changelog">
 <input name="rev" id="search2" type="text" size="30">
 navigate: <small class="navigate">#changenav%naventry#</small>
 </p>

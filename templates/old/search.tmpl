@@ -4,10 +4,10 @@
 <body>
 
 <div class="buttons">
-<a href="#url#log{getentries}">changelog</a>
-<a href="#url#shortlog{getentries}">shortlog</a>
-<a href="#url#tags{getentries}">tags</a>
-<a href="#url#file/#node|short#{getentries}">manifest</a>
+<a href="?cl=tip">changelog</a>
+<a href="?sl=tip">shortlog</a>
+<a href="?tags=">tags</a>
+<a href="?mf=#node|short#;path=/">manifest</a>
 </div>
 
 <h2>searching for #query|escape#</h2>
@@ -15,6 +15,7 @@
 <form>
 <p>
 search:
+<input type="hidden" name="cmd" value="changelog">
 <input name="rev" type="text" width="30" value="#query|escape#">
 </p>
 </form>
@@ -24,6 +25,7 @@ search:
 <form>
 <p>
 search:
+<input type="hidden" name="cmd" value="changelog">
 <input name="rev" type="text" width="30" value="#query|escape#">
 </p>
 </form>

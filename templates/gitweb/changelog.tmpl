@@ -1,26 +1,24 @@
 #header#
 <title>#repo|escape#: Changelog</title>
 <link rel="alternate" type="application/rss+xml"
-   href="?cmd=changelog;style=rss" title="RSS feed for #repo|escape#">
+   href="{url}rss-log" title="RSS feed for #repo|escape#">
 </head>
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="?cmd=summary;style=gitweb">#repo|escape#</a> / changelog
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{getentries}">#repo|escape#</a> / changelog
 </div>
 
-<form action="#">
+<form action="{url}log">
 <div class="search">
-<input type="hidden" name="repo" value="#repo|escape#"  />
 <input type="hidden" name="style" value="gitweb"  />
-<input type="hidden" name="cmd" value="changelog"  />
 <input type="text" name="rev"  />
 </div>
 </form>
 </div>
 
 <div class="page_nav">
-<a href="?cmd=summary;style=gitweb">summary</a> | <a href="?cmd=shortlog;rev=#rev#;style=gitweb">shortlog</a> | changelog | <a href="?cmd=tags;style=gitweb">tags</a> | <a href="?mf=#node|short#;path=/;style=gitweb">manifest</a>#archives%archiveentry#<br/>
+<a href="{url}summary{getentries}">summary</a> | <a href="{url}shortlog/#rev#{getentries}">shortlog</a> | changelog | <a href="{url}tags{getentries}">tags</a> | <a href="{url}file/#node|short#{getentries}">manifest</a>#archives%archiveentry#<br/>
 <br/>
 #changenav%naventry#<br/>
 </div>

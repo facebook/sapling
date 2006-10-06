@@ -1,18 +1,18 @@
 #header#
 <title>#repo|escape#: #file|escape# history</title>
 <link rel="alternate" type="application/rss+xml"
-   href="?fl=0;file=#file|urlescape#;style=rss" title="RSS feed for #repo|escape#:#file#">
+   href="#url#rss-log/tip/#file|urlescape#" title="RSS feed for #repo|escape#:#file#">
 </head>
 </head>
 <body>
 
 <div class="buttons">
-<a href="?cl=tip">changelog</a>
-<a href="?sl=tip">shortlog</a>
-<a href="?tags=">tags</a>
-<a href="?f=#node|short#;file=#file|urlescape#">file</a>
-<a href="?fa=#node|short#;file=#file|urlescape#">annotate</a>
-<a type="application/rss+xml" href="?fl=0;file=#file|urlescape#;style=rss">rss</a>
+<a href="#url#log{getentries}">changelog</a>
+<a href="#url#shortlog{getentries}">shortlog</a>
+<a href="#url#tags{getentries}">tags</a>
+<a href="#url#file/#node|short#/#file|urlescape#{getentries}">file</a>
+<a href="#url#annotate/#node|short#/#file|urlescape#{getentries}">annotate</a>
+<a type="application/rss+xml" href="#url#rss-log/tip/#file|urlescape#">rss</a>
 </div>
 
 <h2>#file|escape# revision history</h2>

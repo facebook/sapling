@@ -4,14 +4,14 @@
 <body>
 
 <div class="buttons">
-<a href="?cl=#rev#">changelog</a>
-<a href="?sl=#rev#">shortlog</a>
-<a href="?tags=">tags</a>
-<a href="?cs=#node|short#">changeset</a>
-<a href="?f=#node|short#;file=#file|urlescape#">file</a>
-<a href="?fl=#node|short#;file=#file|urlescape#">revisions</a>
-<a href="?fa=#node|short#;file=#file|urlescape#">annotate</a>
-<a href="?fd=#node|short#;file=#file|urlescape#;style=raw">raw</a>
+<a href="#url#log/#rev#{getentries}">changelog</a>
+<a href="#url#shortlog/#rev#{getentries}">shortlog</a>
+<a href="#url#tags{getentries}">tags</a>
+<a href="#url#rev/#node|short#{getentries}">changeset</a>
+<a href="#url#file/#node|short#/#file|urlescape#{getentries}">file</a>
+<a href="#url#log/#node|short#/#file|urlescape#{getentries}">revisions</a>
+<a href="#url#annotate/#node|short#/#file|urlescape#{getentries}">annotate</a>
+<a href="#url#raw-diff/#node|short#/#file|urlescape#">raw</a>
 </div>
 
 <h2>#file|escape#</h2>
@@ -19,7 +19,7 @@
 <table id="filediffEntry">
 <tr>
  <th class="revision">revision #rev#:</th>
- <td class="revision"><a href="?cs=#node|short#">#node|short#</a></td>
+ <td class="revision"><a href="#url#rev/#node|short#{getentries}">#node|short#</a></td>
 </tr>
 #parent%filediffparent#
 #child%filediffchild#
