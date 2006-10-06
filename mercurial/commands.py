@@ -3283,6 +3283,8 @@ def dispatch(args):
 
             path = u.expandpath(options["repository"]) or ""
             repo = path and hg.repository(u, path=path) or None
+            if repo and not repo.local():
+                raise util.Abort(_("repository '%s' is not local") % path)
 
             if options['help']:
                 return help_(u, cmd, options['version'])
