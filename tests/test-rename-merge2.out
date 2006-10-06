@@ -302,7 +302,7 @@ M b
 --------------
 
 --------------
-test L:nc a b R:up a b W:       - 16 merge a, merge b no ancestor
+test L:nc a b R:up a b W:       - 16 get a, merge b no ancestor
 --------------
 resolving manifests
  overwrite None branchmerge True partial False
@@ -325,7 +325,7 @@ M b
 --------------
 
 --------------
-test L:up a b R:nc a b W:       - 17 merge a, merge b no ancestor
+test L:up a b R:nc a b W:       - 17 keep a, merge b no ancestor
 --------------
 resolving manifests
  overwrite None branchmerge True partial False
@@ -369,7 +369,7 @@ M b
 --------------
 
 --------------
-test L:up a b R:nm a b W:       - 19 merge b no ancestor, remove a
+test L:up a b R:nm a b W:       - 19 merge b no ancestor, prompt remove a
 --------------
 resolving manifests
  overwrite None branchmerge True partial False
