@@ -248,11 +248,11 @@ def manifestmerge(ui, m1, m2, ma, copy, overwrite, backwards, partial):
             continue
         if f in copy:
             f2 = copy[f]
-            if f2 in ma or f2 in m1: # already seen
+            if f2 not in m2: # already seen
                 continue
             # rename case 1, A/A,B/A
             act("remote copied",
-                f, "c", f2, f, m1[f2], m2[f], fmerge(f2, f, f2), False)
+                f2, "c", f, f, m1[f2], m2[f], fmerge(f2, f, f2), False)
         elif f in ma:
             if overwrite or backwards:
                 act("recreating", f, "g", m2.execf(f), n)
@@ -285,6 +285,7 @@ def applyupdates(repo, action, xp1, xp2):
             removed +=1
         elif m == "c": # copy
             f2, fd, my, other, flag, move = a[2:]
+            repo.ui.status(_("merging %s and %s to %s\n") % (f, f2, fd))
             if filemerge(repo, f, f2, fd, my, other, xp1, xp2, move):
                 unresolved += 1
             util.set_exec(repo.wjoin(fd), flag)
