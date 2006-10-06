@@ -42,3 +42,20 @@ def staticfile(directory, fname, req):
     except (TypeError, OSError):
         # illegal fname or unreadable file
         return ""
+
+def style_map(templatepath, style):
+    """Return path to mapfile for a given style.
+
+    Searches mapfile in the following locations:
+    1. templatepath/style/map
+    2. templatepath/map-style
+    3. templatepath/map
+    """
+    locations = style and [os.path.join(style, "map"), "map-"+style] or []
+    locations.append("map")
+    for location in locations:
+        mapfile = os.path.join(templatepath, location)
+        if os.path.isfile(mapfile):
+            return mapfile
+    raise RuntimeError("No hgweb templates found in %r" % templatepath)
+

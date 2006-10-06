@@ -11,7 +11,7 @@ from mercurial.demandload import demandload
 demandload(globals(), "ConfigParser mimetools cStringIO")
 demandload(globals(), "mercurial:ui,hg,util,templater")
 demandload(globals(), "mercurial.hgweb.hgweb_mod:hgweb")
-demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
+demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile,style_map")
 from mercurial.i18n import gettext as _
 
 # This is a stopgap
@@ -69,17 +69,11 @@ class hgwebdir(object):
         def footer(**map):
             yield tmpl("footer", motd=self.motd, **map)
 
-        m = os.path.join(templater.templatepath(), "map")
         style = self.style
         if req.form.has_key('style'):
             style = req.form['style'][0]
-        if style != "":
-            b = os.path.basename("map-" + style)
-            p = os.path.join(templater.templatepath(), b)
-            if os.path.isfile(p):
-                m = p
-
-        tmpl = templater.templater(m, templater.common_filters,
+        mapfile = style_map(templater.templatepath(), style)
+        tmpl = templater.templater(mapfile, templater.common_filters,
                                    defaults={"header": header,
                                              "footer": footer})
 

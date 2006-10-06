@@ -14,7 +14,7 @@ demandload(globals(), "re zlib ConfigParser mimetools cStringIO sys tempfile")
 demandload(globals(), 'urllib')
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone,patch")
 demandload(globals(), "mercurial:templater")
-demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile")
+demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile,style_map")
 from mercurial.node import *
 from mercurial.i18n import gettext as _
 
@@ -743,15 +743,10 @@ class hgweb(object):
         expand_form(req.form)
         rewrite_request(req)
 
-        m = os.path.join(self.templatepath, "map")
         style = self.repo.ui.config("web", "style", "")
         if req.form.has_key('style'):
             style = req.form['style'][0]
-        if style:
-            b = os.path.basename("map-" + style)
-            p = os.path.join(self.templatepath, b)
-            if os.path.isfile(p):
-                m = p
+        mapfile = style_map(self.templatepath, style)
 
         if not req.url:
             port = req.env["SERVER_PORT"]
@@ -766,7 +761,7 @@ class hgweb(object):
                              or req.env.get('REPO_NAME')
                              or req.url.strip('/') or self.repo.root)
 
-        self.t = templater.templater(m, templater.common_filters,
+        self.t = templater.templater(mapfile, templater.common_filters,
                                      defaults={"url": req.url,
                                                "repo": self.reponame,
                                                "header": header,
