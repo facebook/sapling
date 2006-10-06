@@ -1,6 +1,6 @@
-header = raw/header.tmpl
+header = header.tmpl
 footer = ''
-changeset = raw/changeset.tmpl
+changeset = changeset.tmpl
 difflineplus = '#line#'
 difflineminus = '#line#'
 difflineat = '#line#'
@@ -11,6 +11,6 @@ filenodelink = ''
 filerevision = '#rawfileheader##raw#'
 fileline = '#line#'
 diffblock = '#lines#'
-filediff = raw/filediff.tmpl
-fileannotate = raw/fileannotate.tmpl
+filediff = filediff.tmpl
+fileannotate = fileannotate.tmpl
 annotateline = '#author#@#rev#: #line#'

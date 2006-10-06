@@ -1,27 +1,27 @@
 default = 'changelog'
-header = old/header.tmpl
+header = header.tmpl
 footer = footer.tmpl
-search = old/search.tmpl
-changelog = old/changelog.tmpl
-shortlog = old/shortlog.tmpl
-shortlogentry = old/shortlogentry.tmpl
+search = search.tmpl
+changelog = changelog.tmpl
+shortlog = shortlog.tmpl
+shortlogentry = shortlogentry.tmpl
 naventry = '<a href="?cl=#rev#">#label|escape#</a> '
 navshortentry = '<a href="?sl=#rev#">#label|escape#</a> '
 filedifflink = '<a href="?fd=#node|short#;file=#file|urlescape#">#file|escape#</a> '
 filenodelink = '<a href="?f=#node|short#;file=#file|urlescape#">#file|escape#</a> '
 fileellipses = '...'
-changelogentry = old/changelogentry.tmpl
-searchentry = old/changelogentry.tmpl
-changeset = old/changeset.tmpl
-manifest = old/manifest.tmpl
+changelogentry = changelogentry.tmpl
+searchentry = changelogentry.tmpl
+changeset = changeset.tmpl
+manifest = manifest.tmpl
 manifestdirentry = '<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td><a href="?mf=#node|short#;path=#path|urlescape#">#basename|escape#/</a>'
 manifestfileentry = '<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td><a href="?f=#node|short#;file=#file|urlescape#">#basename|escape#</a>'
-filerevision = old/filerevision.tmpl
-fileannotate = old/fileannotate.tmpl
-filediff = old/filediff.tmpl
-filelog = old/filelog.tmpl
+filerevision = filerevision.tmpl
+fileannotate = fileannotate.tmpl
+filediff = filediff.tmpl
+filelog = filelog.tmpl
 fileline = '<div class="parity#parity#"><span class="lineno">#linenumber#</span>#line|escape#</div>'
-filelogentry = old/filelogentry.tmpl
+filelogentry = filelogentry.tmpl
 annotateline = '<tr class="parity#parity#"><td class="annotate"><a href="?fa=#node|short#;file=#file|urlescape#">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>'
 difflineplus = '<span class="plusline">#line|escape#</span>'
 difflineminus = '<span class="minusline">#line|escape#</span>'
