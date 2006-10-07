@@ -5,7 +5,7 @@ cd t
 
 cat <<'EOF' > merge
 #!/bin/sh
-echo merge > $1
+echo merge $1 $2 $3 > $1
 EOF
 chmod +x merge
 
