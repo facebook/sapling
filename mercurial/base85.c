@@ -33,18 +33,25 @@ b85encode(PyObject *self, PyObject *args)
 	char *dst;
 	int len, olen, i;
 	unsigned int acc, val, ch;
+        int pad = 0;
 
-	if (!PyArg_ParseTuple(args, "s#", &text, &len))
+	if (!PyArg_ParseTuple(args, "s#|i", &text, &len, &pad))
 		return NULL;
 
-	olen = (len + 3) / 4 * 5;
-	if (!(out = PyString_FromStringAndSize(NULL, olen)))
+        if (pad)
+                olen = ((len + 3) / 4 * 5) - 3;
+        else {
+                olen = len % 4;
+                if (olen)
+                        olen++;
+                olen += len / 4 * 5;
+        }
+	if (!(out = PyString_FromStringAndSize(NULL, olen + 3)))
 		return NULL;
 
 	dst = PyString_AS_STRING(out);
 
-	while (len)
-	{
+	while (len) {
 		acc = 0;
 		for (i = 24; i >= 0; i -= 8) {
 			ch = *text++;
@@ -60,6 +67,9 @@ b85encode(PyObject *self, PyObject *args)
 		dst += 5;
 	}
 
+        if (!pad)
+                _PyString_Resize(&out, olen);
+
 	return out;
 }
 
@@ -69,47 +79,57 @@ b85decode(PyObject *self, PyObject *args)
 	PyObject *out;
 	const char *text;
 	char *dst;
-	int len, i, j, olen, c;
+	int len, i, j, olen, c, cap;
 	unsigned int acc;
 
 	if (!PyArg_ParseTuple(args, "s#", &text, &len))
 		return NULL;
 
-	olen = (len + 4) / 5 * 4;
+	olen = len / 5 * 4;
+	i = len % 5;
+	if (i)
+		olen += i - 1;
 	if (!(out = PyString_FromStringAndSize(NULL, olen)))
 		return NULL;
 
 	dst = PyString_AS_STRING(out);
 
-	for (i = 1; len; i++)
+	i = 0;
+	while (i < len)
 	{
 		acc = 0;
-		for (j = 0; j < 4 && --len; j++)
+		cap = len - i - 1;
+		if (cap > 4)
+			cap = 4;
+		for (j = 0; j < cap; i++, j++)
 		{
 			c = b85dec[(int)*text++] - 1;
 			if (c < 0)
 				return PyErr_Format(PyExc_ValueError, "Bad base85 character at position %d", i);
 			acc = acc * 85 + c;
 		}
-		if (len--)
+		if (i++ < len)
 		{
 			c = b85dec[(int)*text++] - 1;
 			if (c < 0)
 				return PyErr_Format(PyExc_ValueError, "Bad base85 character at position %d", i);
+			/* overflow detection: 0xffffffff == "|NsC0",
+			 * "|NsC" == 0x03030303 */
+			if (acc > 0x03030303 || (acc *= 85) > 0xffffffff - c)
+				return PyErr_Format(PyExc_ValueError, "Bad base85 sequence at position %d", i);
+			acc += c;
 		}
-		else
-			c = 0;
-		/* overflow detection: 0xffffffff == "|NsC0",
-		 * "|NsC" == 0x03030303 */
-		if (acc > 0x03030303 || (acc *= 85) > 0xffffffff - c)
-			return PyErr_Format(PyExc_ValueError, "Bad base85 sequence at position %d", i);
-		
-		acc += c;
 
-		for (j = 0; j < 4; j++)
+		cap = olen < 4 ? olen : 4;
+		olen -= cap;
+		for (j = 0; j < 4 - cap; j++)
+			acc *= 85;
+		if (cap && cap < 4)
+			acc += 0xffffff >> (cap - 1) * 8;
+		for (j = 0; j < cap; j++)
 		{
 			acc = (acc << 8) | (acc >> 24);
-			*dst++ = (char)acc;
+			*dst++ = acc;
 		}
 	}
 
@@ -119,8 +139,11 @@ b85decode(PyObject *self, PyObject *args)
 static char base85_doc[] = "Base85 Data Encoding";
 
 static PyMethodDef methods[] = {
-	{"b85encode", b85encode, METH_VARARGS, "encode text in base85\n"},
-	{"b85decode", b85decode, METH_VARARGS, "decode base85 text\n"},
+	{"b85encode", b85encode, METH_VARARGS,
+         "Encode text in base85.\n\n"
+         "If the second parameter is true, pad the result to a multiple of "
+         "five characters.\n"},
+	{"b85decode", b85decode, METH_VARARGS, "Decode base85 text.\n"},
 	{NULL, NULL}
 };
 
