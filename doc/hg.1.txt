@@ -133,7 +133,7 @@ DATE FORMATS
     Some commands (backout, commit, tag) allow the user to specify a date.
     Possible formats for dates are:
 
-YYYY-mm-dd \HH:MM[:SS] [(+|-)NNNN]::
+YYYY-mm-dd HH:MM[:SS] [(+|-)NNNN]::
     This is a subset of ISO 8601, allowing just the recommended notations
     for date and time. The last part represents the timezone; if omitted,
     local time is assumed. Examples:
