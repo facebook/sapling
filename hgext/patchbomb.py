@@ -158,7 +158,8 @@ def patchbomb(ui, repo, *revs, **opts):
         if total == 1:
             subj = '[PATCH] ' + desc[0].strip()
         else:
-            subj = '[PATCH %d of %d] %s' % (idx, total, desc[0].strip())
+            tlen = len(str(total))
+            subj = '[PATCH %0*d of %d] %s' % (tlen, idx, total, desc[0].strip())
         if subj.endswith('.'): subj = subj[:-1]
         msg['Subject'] = subj
         msg['X-Mercurial-Node'] = node
@@ -217,10 +218,14 @@ def patchbomb(ui, repo, *revs, **opts):
     if len(patches) > 1:
         ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
 
-        subj = '[PATCH 0 of %d] %s' % (
+        tlen = len(str(len(patches)))
+
+        subj = '[PATCH %0*d of %d] %s' % (
+            tlen, 0,
             len(patches),
             opts['subject'] or
-            prompt('Subject:', rest = ' [PATCH 0 of %d] ' % len(patches)))
+            prompt('Subject:', rest = ' [PATCH %0*d of %d] ' % (tlen, 0,
+                len(patches))))
 
         ui.write(_('Finish with ^D or a dot on a line by itself.\n\n'))
 
