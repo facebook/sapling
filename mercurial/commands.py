@@ -3137,7 +3137,7 @@ def findpossible(ui, cmd):
                     found = a
                     break
         if found is not None:
-            if aliases[0].startswith("debug"):
+            if aliases[0].startswith("debug") or found.startswith("debug"):
                 debugchoice[found] = (aliases, table[e])
             else:
                 choice[found] = (aliases, table[e])
