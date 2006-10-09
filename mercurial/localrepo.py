@@ -462,11 +462,33 @@ class localrepository(repo.repository):
                             desc=_('working directory of %s') % self.origroot)
 
     def checkfilemerge(self, filename, text, filelog, manifest1, manifest2):
-        "determine whether a new filenode is needed"
+        """
+        Determine whether a new filenode is needed and what parent
+        and rename information is needed for a file commit.
+
+        Returns (old entry, file parent 1, file parent 2, metadata)
+
+        If old entry is not None, a commit is not needed.
+        """
         fp1 = manifest1.get(filename, nullid)
         fp2 = manifest2.get(filename, nullid)
 
-        if fp2 != nullid:
+        meta = {}
+        cp = self.dirstate.copied(filename)
+        if cp:
+            meta["copy"] = cp
+            if not manifest2: # not a branch merge
+                meta["copyrev"] = hex(manifest1.get(cp, nullid))
+                fp2 = nullid
+            elif fp2 != nullid: # copied on remote side
+                meta["copyrev"] = hex(manifest1.get(cp, nullid))
+            else: # copied on local side, reversed
+                meta["copyrev"] = hex(manifest2.get(cp))
+                fp2 = nullid
+            self.ui.debug(_(" %s: copy %s:%s\n") %
+                          (filename, cp, meta["copyrev"]))
+            fp1 = nullid
+        elif fp2 != nullid:
             # is one parent an ancestor of the other?
             fpa = filelog.ancestor(fp1, fp2)
             if fpa == fp1:
@@ -475,10 +497,11 @@ class localrepository(repo.repository):
                 fp2 = nullid
 
             # is the file unmodified from the parent? report existing entry
+            # fixme: use filelog.cmp()
             if fp2 == nullid and text == filelog.read(fp1):
-                return (fp1, None, None)
+                return (fp1, None, None, {})
 
-        return (None, fp1, fp2)
+        return (None, fp1, fp2, meta)
 
     def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None):
         orig_parent = self.dirstate.parents()[0] or nullid
@@ -506,12 +529,12 @@ class localrepository(repo.repository):
                 m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
                 r = self.file(f)
 
-                (entry, fp1, fp2) = self.checkfilemerge(f, t, r, m1, m2)
+                entry, fp1, fp2, meta = self.checkfilemerge(f, t, r, m1, m2)
                 if entry:
                     m1[f] = entry
                     continue
 
-                m1[f] = r.add(t, {}, tr, linkrev, fp1, fp2)
+                m1[f] = r.add(t, meta, tr, linkrev, fp1, fp2)
                 changed.append(f)
                 if update_dirstate:
                     self.dirstate.update([f], "n")
@@ -589,18 +612,10 @@ class localrepository(repo.repository):
 
             r = self.file(f)
 
-            meta = {}
-            cp = self.dirstate.copied(f)
-            if cp:
-                meta["copy"] = cp
-                meta["copyrev"] = hex(m1.get(cp, m2.get(cp, nullid)))
-                self.ui.debug(_(" %s: copy %s:%s\n") % (f, cp, meta["copyrev"]))
-                fp1, fp2 = nullid, nullid
-            else:
-                entry, fp1, fp2 = self.checkfilemerge(f, t, r, m1, m2)
-                if entry:
-                    new[f] = entry
-                    continue
+            entry, fp1, fp2, meta = self.checkfilemerge(f, t, r, m1, m2)
+            if entry:
+                new[f] = entry
+                continue
 
             new[f] = r.add(t, meta, tr, linkrev, fp1, fp2)
             # remember what we've added so that we can later calculate

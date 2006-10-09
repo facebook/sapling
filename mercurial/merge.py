@@ -359,6 +359,8 @@ def recordupdates(repo, action, branchmerge):
                 repo.dirstate.update([f], 'r')
             if f != fd:
                 repo.dirstate.copy(f, fd)
+            else:
+                repo.dirstate.copy(f2, fd)
 
 def update(repo, node, branchmerge=False, force=False, partial=None,
            wlock=None, show_stats=True, remind=True):
