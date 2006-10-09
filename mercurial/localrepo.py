@@ -497,8 +497,7 @@ class localrepository(repo.repository):
                 fp2 = nullid
 
             # is the file unmodified from the parent? report existing entry
-            # fixme: use filelog.cmp()
-            if fp2 == nullid and text == filelog.read(fp1):
+            if fp2 == nullid and not filelog.cmp(fp1, text):
                 return (fp1, None, None, {})
 
         return (None, fp1, fp2, meta)
