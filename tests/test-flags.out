@@ -1,3 +1,4 @@
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pulling from ../test1
 requesting all changes
 adding changesets
@@ -47,5 +48,56 @@ merging a
 resolving a
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+pulling from ../test2
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+changeset:   2:b833d578451e
+tag:         tip
+parent:      0:4536b1c2ca69
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     chmod +x a
+
+changeset:   1:d54568174d8e
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     b updated
+
+changeset:   2:b833d578451e
+tag:         tip
+parent:      0:4536b1c2ca69
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     chmod +x a
+
+changeset:   1:d54568174d8e
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     b updated
+
+changeset:   0:4536b1c2ca69
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     added a b
+
+resolving manifests
+getting a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
 -rwxr-x---
 -rwxr-x---
+-rwxr-x---
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       0      0       0 b80de5d13875 000000000000 000000000000
+     1         0       0      0       2 37c42bd6cc03 b80de5d13875 000000000000
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       0      0       0 b80de5d13875 000000000000 000000000000
+     1         0       0      0       1 37c42bd6cc03 b80de5d13875 000000000000
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       0      0       0 b80de5d13875 000000000000 000000000000
+     1         0       5      1       1 7fe919cc0336 b80de5d13875 000000000000
+     2         5       0      2       2 37c42bd6cc03 b80de5d13875 000000000000

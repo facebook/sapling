@@ -10,6 +10,7 @@ hg add a b
 hg ci -m "added a b" -d "1000000 0"
 
 cd ..
+hg clone test1 test3
 mkdir test2
 cd test2
 
@@ -29,6 +30,19 @@ hg history
 
 hg -v merge
 
-ls -l ../test[12]/a > foo
+cd ../test3
+echo 123 >>b
+hg ci -m "b updated" -d "1000000 0"
+
+hg pull ../test2
+hg heads
+hg history
+
+hg -v merge
+
+ls -l ../test[123]/a > foo
 cut -b 1-10 < foo
 
+hg debugindex .hg/data/a.i
+hg debugindex ../test2/.hg/data/a.i
+hg debugindex ../test1/.hg/data/a.i
