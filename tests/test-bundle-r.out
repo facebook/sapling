@@ -148,6 +148,7 @@ rolling back last transaction
 % should fail
 abort: --base is incompatible with specifiying a destination
 abort: repository default-push not found!
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 2
 2:d62976ca1e50
 adding changesets
@@ -163,6 +164,11 @@ added 6 changesets with 4 changes to 4 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 % 8
 8:836ac62537ab
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+4 files, 9 changesets, 7 total revisions
 rolling back last transaction
 % 2
 2:d62976ca1e50
@@ -173,15 +179,36 @@ added 2 changesets with 2 changes to 2 files
 (run 'hg update' to get a working copy)
 % 4
 4:836ac62537ab
-adding changesets
-adding manifests
-adding file changes
-added 4 changesets with 2 changes to 3 files (+1 heads)
-(run 'hg heads' to see heads, 'hg merge' to merge)
-% 8
-8:80fe151401c2
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-4 files, 9 changesets, 7 total revisions
+2 files, 5 changesets, 5 total revisions
+rolling back last transaction
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 3 changes to 3 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+% 6
+6:80fe151401c2
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+3 files, 7 changesets, 6 total revisions
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding changesets
+adding manifests
+adding file changes
+added 7 changesets with 4 changes to 4 files
+(run 'hg update' to get a working copy)
+% 9
+9:607fe5912aad
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+4 files, 10 changesets, 7 total revisions

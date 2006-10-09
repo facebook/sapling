@@ -72,7 +72,8 @@ hg -R test bundle --base 2 -r tip test-bundle-branch1.hg
 hg -R test bundle --base 2 -r 7 test-bundle-branch2.hg
 hg -R test bundle --base 2 test-bundle-all.hg
 hg -R test bundle --base 3 -r tip test-bundle-should-fail.hg
-cd test-2
+hg clone test-2 test-9
+cd test-9
 echo % 2
 hg tip -q
 hg unbundle ../test-bundle-should-fail.hg
@@ -81,13 +82,28 @@ hg tip -q
 hg unbundle ../test-bundle-all.hg
 echo % 8
 hg tip -q
+hg verify
 hg rollback
 echo % 2
 hg tip -q
 hg unbundle ../test-bundle-branch1.hg
 echo % 4
 hg tip -q
+hg verify
+hg rollback
 hg unbundle ../test-bundle-branch2.hg
-echo % 8
+echo % 6
+hg tip -q
+hg verify
+
+cd ../test
+hg merge 7
+hg ci -m merge -d "1000000 0"
+cd ..
+hg -R test bundle --base 2 test-bundle-head.hg
+hg clone test-2 test-10
+cd test-10
+hg unbundle ../test-bundle-head.hg
+echo % 9
 hg tip -q
 hg verify
