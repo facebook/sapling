@@ -461,20 +461,18 @@ class localrepository(repo.repository):
                             self.wreload,
                             desc=_('working directory of %s') % self.origroot)
 
-    def checkfilemerge(self, filename, text, filelog, manifest1, manifest2):
+    def filecommit(self, fn, manifest1, manifest2, linkrev, transaction, changelist):
         """
-        Determine whether a new filenode is needed and what parent
-        and rename information is needed for a file commit.
-
-        Returns (old entry, file parent 1, file parent 2, metadata)
-
-        If old entry is not None, a commit is not needed.
+        commit an individual file as part of a larger transaction
         """
-        fp1 = manifest1.get(filename, nullid)
-        fp2 = manifest2.get(filename, nullid)
+
+        t = self.wread(fn)
+        fl = self.file(fn)
+        fp1 = manifest1.get(fn, nullid)
+        fp2 = manifest2.get(fn, nullid)
 
         meta = {}
-        cp = self.dirstate.copied(filename)
+        cp = self.dirstate.copied(fn)
         if cp:
             meta["copy"] = cp
             if not manifest2: # not a branch merge
@@ -486,21 +484,22 @@ class localrepository(repo.repository):
                 meta["copyrev"] = hex(manifest2.get(cp))
                 fp2 = nullid
             self.ui.debug(_(" %s: copy %s:%s\n") %
-                          (filename, cp, meta["copyrev"]))
+                          (fn, cp, meta["copyrev"]))
             fp1 = nullid
         elif fp2 != nullid:
             # is one parent an ancestor of the other?
-            fpa = filelog.ancestor(fp1, fp2)
+            fpa = fl.ancestor(fp1, fp2)
             if fpa == fp1:
                 fp1, fp2 = fp2, nullid
             elif fpa == fp2:
                 fp2 = nullid
 
             # is the file unmodified from the parent? report existing entry
-            if fp2 == nullid and not filelog.cmp(fp1, text):
-                return (fp1, None, None, {})
+            if fp2 == nullid and not fl.cmp(fp1, t):
+                return fp1
 
-        return (None, fp1, fp2, meta)
+        changelist.append(fn)
+        return fl.add(t, meta, transaction, linkrev, fp1, fp2)
 
     def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None):
         orig_parent = self.dirstate.parents()[0] or nullid
@@ -524,19 +523,8 @@ class localrepository(repo.repository):
         linkrev = self.changelog.count()
         for f in files:
             try:
-                t = self.wread(f)
+                m1[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
                 m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
-                r = self.file(f)
-
-                entry, fp1, fp2, meta = self.checkfilemerge(f, t, r, m1, m2)
-                if entry:
-                    m1[f] = entry
-                    continue
-
-                m1[f] = r.add(t, meta, tr, linkrev, fp1, fp2)
-                changed.append(f)
-                if update_dirstate:
-                    self.dirstate.update([f], "n")
             except IOError:
                 try:
                     del m1[f]
@@ -603,31 +591,18 @@ class localrepository(repo.repository):
         for f in commit:
             self.ui.note(f + "\n")
             try:
+                new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
                 m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
-                t = self.wread(f)
             except IOError:
                 self.ui.warn(_("trouble committing %s!\n") % f)
                 raise
-
-            r = self.file(f)
-
-            entry, fp1, fp2, meta = self.checkfilemerge(f, t, r, m1, m2)
-            if entry:
-                new[f] = entry
-                continue
-
-            new[f] = r.add(t, meta, tr, linkrev, fp1, fp2)
-            # remember what we've added so that we can later calculate
-            # the files to pull from a set of changesets
-            changed.append(f)
 
         # update manifest
         m1.update(new)
         for f in remove:
             if f in m1:
                 del m1[f]
-        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0],
-                               (new, remove))
+        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0], (new, remove))
 
         # add changeset
         new = new.keys()
