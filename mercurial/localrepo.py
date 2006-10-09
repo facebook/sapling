@@ -706,7 +706,7 @@ class localrepository(repo.repository):
 
         def mfmatches(node):
             change = self.changelog.read(node)
-            mf = dict(self.manifest.read(change[0]))
+            mf = self.manifest.read(change[0]).copy()
             for fn in mf.keys():
                 if not match(fn):
                     del mf[fn]
@@ -751,9 +751,11 @@ class localrepository(repo.repository):
             else:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
+                # XXX: create it in dirstate.py ?
                 mf2 = mfmatches(self.dirstate.parents()[0])
                 for f in lookup + modified + added:
                     mf2[f] = ""
+                    mf2.set(f, execf=util.is_exec(self.wjoin(f), mf2.execf(f)))
                 for f in removed:
                     if f in mf2:
                         del mf2[f]
@@ -771,7 +773,8 @@ class localrepository(repo.repository):
             mf2keys.sort()
             for fn in mf2keys:
                 if mf1.has_key(fn):
-                    if mf1[fn] != mf2[fn] and (mf2[fn] != "" or fcmp(fn, mf1)):
+                    if mf1.flags(fn) != mf2.flags(fn) or \
+                       (mf1[fn] != mf2[fn] and (mf2[fn] != "" or fcmp(fn, mf1))):
                         modified.append(fn)
                     elif list_clean:
                         clean.append(fn)
