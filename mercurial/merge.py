@@ -174,10 +174,15 @@ def findcopies(repo, m1, m2, limit):
 
     return copy
 
-def manifestmerge(ui, m1, m2, ma, copy, overwrite, backwards, partial):
+def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     """
     Merge manifest m1 with m2 using ancestor ma and generate merge action list
     """
+
+    m1 = p1.manifest()
+    m2 = p2.manifest()
+    ma = pa.manifest()
+    backwards = (pa == p2)
 
     def fmerge(f, f2=None, fa=None):
         """merge executable flags"""
@@ -190,8 +195,12 @@ def manifestmerge(ui, m1, m2, ma, copy, overwrite, backwards, partial):
     action = []
 
     def act(msg, f, m, *args):
-        ui.debug(" %s: %s -> %s\n" % (f, msg, m))
+        repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
+
+    copy = {}
+    if not (backwards or overwrite):
+        copy = findcopies(repo, m1, m2, pa.rev())
 
     # Compare manifests
     for f, n in m1.iteritems():
@@ -230,7 +239,7 @@ def manifestmerge(ui, m1, m2, ma, copy, overwrite, backwards, partial):
                         f, "c", f2, f, m1[f], m2[f2], fmerge(f, f2, f2), False)
         elif f in ma:
             if n != ma[f] and not overwrite:
-                if ui.prompt(
+                if repo.ui.prompt(
                     (_(" local changed %s which remote deleted\n") % f) +
                     _("(k)eep or (d)elete?"), _("[kd]"), _("k")) == _("d"):
                     act("prompt delete", f, "r")
@@ -257,7 +266,7 @@ def manifestmerge(ui, m1, m2, ma, copy, overwrite, backwards, partial):
             if overwrite or backwards:
                 act("recreating", f, "g", m2.execf(f), n)
             elif n != ma[f]:
-                if ui.prompt(
+                if repo.ui.prompt(
                     (_("remote changed %s which local deleted\n") % f) +
                     _("(k)eep or (d)elete?"), _("[kd]"), _("k")) == _("k"):
                     act("prompt recreating", f, "g", m2.execf(f), n)
@@ -381,9 +390,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     p1, p2 = pl[0], repo.changectx(node)
     pa = p1.ancestor(p2)
 
-    # are we going backwards?
-    backwards = (pa == p2)
-
     # is there a linear path from p1 to p2?
     if pa == p1 or pa == p2:
         if branchmerge:
@@ -399,7 +405,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
 
     m1 = wc.manifest()
     m2 = p2.manifest()
-    ma = pa.manifest()
 
     # resolve the manifest to determine which files
     # we care about merging
@@ -409,17 +414,13 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") % (p1, p2, pa))
 
     action = []
-    copy = {}
 
     if not force:
         checkunknown(repo, m2, wc)
     if not branchmerge:
         action += forgetremoved(m2, wc)
-    if not (backwards or overwrite):
-        copy = findcopies(repo, m1, m2, pa.rev())
 
-    action += manifestmerge(repo.ui, m1, m2, ma, copy,
-                            overwrite, backwards, partial)
+    action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
 
     ### apply phase
 
