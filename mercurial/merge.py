@@ -425,20 +425,21 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     ### apply phase
 
     if not branchmerge:
-        # we don't need to do any magic, just jump to the new rev
-        p1, p2 = p2, repo.changectx(nullid)
+        # just jump to the new rev
+        fp1, fp2, xp1, xp2 = p2.node(), nullid, str(p2), ''
+    else:
+        fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
-    xp1, xp2 = str(p1), str(p2)
-    if not p2: xp2 = ''
-
-    repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
+    if not partial:
+        repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
     updated, merged, removed, unresolved = applyupdates(repo, action, xp1, xp2)
 
     # update dirstate
     if not partial:
         recordupdates(repo, action, branchmerge)
-        repo.dirstate.setparents(p1.node(), p2.node())
+        repo.dirstate.setparents(fp1, fp2)
+        repo.hook('update', parent1=xp1, parent2=xp2, error=unresolved)
 
     if show_stats:
         stats = ((updated, _("updated")),
@@ -461,6 +462,5 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
             repo.ui.status(_("There are unresolved merges with"
                              " locally modified files.\n"))
 
-    repo.hook('update', parent1=xp1, parent2=xp2, error=unresolved)
     return unresolved
 
