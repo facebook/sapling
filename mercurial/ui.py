@@ -87,12 +87,13 @@ class ui(object):
     def setconfig(self, section, name, val):
         self.overlay[(section, name)] = val
 
-    def config(self, section, name, default=None):
+    def _config(self, section, name, default, funcname):
         if self.overlay.has_key((section, name)):
             return self.overlay[(section, name)]
         if self.cdata.has_option(section, name):
             try:
-                return self.cdata.get(section, name)
+                func = getattr(self.cdata, funcname)
+                return func(section, name)
             except ConfigParser.InterpolationError, inst:
                 raise util.Abort(_("Error in configuration section [%s] "
                                    "parameter '%s':\n%s")
@@ -100,7 +101,13 @@ class ui(object):
         if self.parentui is None:
             return default
         else:
-            return self.parentui.config(section, name, default)
+            return self.parentui._config(section, name, default, funcname)
+
+    def config(self, section, name, default=None):
+        return self._config(section, name, default, 'get')
+
+    def configbool(self, section, name, default=False):
+        return self._config(section, name, default, 'getboolean')
 
     def configlist(self, section, name, default=None):
         """Return a list of comma/space separated strings"""
@@ -110,21 +117,6 @@ class ui(object):
         if isinstance(result, basestring):
             result = result.replace(",", " ").split()
         return result
-
-    def configbool(self, section, name, default=False):
-        if self.overlay.has_key((section, name)):
-            return self.overlay[(section, name)]
-        if self.cdata.has_option(section, name):
-            try:
-                return self.cdata.getboolean(section, name)
-            except ConfigParser.InterpolationError, inst:
-                raise util.Abort(_("Error in configuration section [%s] "
-                                   "parameter '%s':\n%s")
-                                 % (section, name, inst))
-        if self.parentui is None:
-            return default
-        else:
-            return self.parentui.configbool(section, name, default)
 
     def has_config(self, section):
         '''tell whether section exists in config.'''
