@@ -360,7 +360,8 @@ class workingctx(changectx):
                 man.set(f, util.is_exec(self._repo.wjoin(f), man.execf(f)))
 
         for f in deleted + removed:
-            del man[f]
+            if f in man:
+                del man[f]
 
         self._manifest = man
 
