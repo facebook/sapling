@@ -210,7 +210,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 a = ma.get(f, nullid)
                 # are both different from the ancestor?
                 if not overwrite and n != a and m2[f] != a:
-                    act("versions differ", "m", f, fmerge(f))
+                    act("versions differ", "m", f, f, f, fmerge(f), False)
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time and clean?
@@ -226,14 +226,13 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         elif f in copy:
             f2 = copy[f]
             if f in ma: # case 3,20 A/B/A
-                act("remote moved", "c",
-                    f, f2, f2, fmerge(f, f2, f), True)
+                act("remote moved", "m", f, f2, f2, fmerge(f, f2, f), True)
             else:
                 if f2 in m1: # case 2 A,B/B/B
-                    act("local copied", "c",
+                    act("local copied", "m",
                         f, f2, f, fmerge(f, f2, f2), False)
                 else: # case 4,21 A/B/B
-                    act("local moved", "c",
+                    act("local moved", "m",
                         f, f2, f, fmerge(f, f2, f2), False)
         elif f in ma:
             if n != ma[f] and not overwrite:
@@ -258,7 +257,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             if f2 not in m2: # already seen
                 continue
             # rename case 1, A/A,B/A
-            act("remote copied", "c", f2, f, f, fmerge(f2, f, f2), False)
+            act("remote copied", "m", f2, f, f, fmerge(f2, f, f2), False)
         elif f in ma:
             if overwrite or backwards:
                 act("recreating", "g", f, m2.execf(f))
@@ -289,19 +288,15 @@ def applyupdates(repo, action, wctx, mctx):
                     repo.ui.warn(_("update failed to remove %s: %s!\n") %
                                  (f, inst.strerror))
             removed +=1
-        elif m == "c": # copy
+        elif m == "m": # merge
             f2, fd, flag, move = a[2:]
-            repo.ui.status(_("merging %s and %s to %s\n") % (f, f2, fd))
+            if f != f2:
+                repo.ui.status(_("merging %s and %s to %s\n") % (f, f2, fd))
+            else:
+                repo.ui.status(_("merging %s\n") % f)
             if filemerge(repo, f, f2, fd, wctx, mctx, move):
                 unresolved += 1
             util.set_exec(repo.wjoin(fd), flag)
-            merged += 1
-        elif m == "m": # merge
-            flag = a[2]
-            repo.ui.status(_("merging %s\n") % f)
-            if filemerge(repo, f, f, f, wctx, mctx, False):
-                unresolved += 1
-            util.set_exec(repo.wjoin(f), flag)
             merged += 1
         elif m == "g": # get
             flag = a[2]
@@ -332,21 +327,6 @@ def recordupdates(repo, action, branchmerge, mctx):
             else:
                 repo.dirstate.update([f], 'n')
         elif m == "m": # merge
-            flag = a[2]
-            if branchmerge:
-                # We've done a branch merge, mark this file as merged
-                # so that we properly record the merger later
-                repo.dirstate.update([f], 'm')
-            else:
-                # We've update-merged a locally modified file, so
-                # we set the dirstate to emulate a normal checkout
-                # of that file some time in the past. Thus our
-                # merge will appear as a normal local file
-                # modification.
-                fl = repo.file(f)
-                f_len = mctx.filectx(f).size()
-                repo.dirstate.update([f], 'n', st_size=f_len, st_mtime=-1)
-        elif m == "c": # copy
             f2, fd, flag, move = a[2:]
             if branchmerge:
                 # We've done a branch merge, mark this file as merged
@@ -358,15 +338,15 @@ def recordupdates(repo, action, branchmerge, mctx):
                 # of that file some time in the past. Thus our
                 # merge will appear as a normal local file
                 # modification.
-                fl = repo.file(f)
                 f_len = mctx.filectx(f).size()
                 repo.dirstate.update([fd], 'n', st_size=f_len, st_mtime=-1)
-            if move:
-                repo.dirstate.update([f], 'r')
-            if f != fd:
-                repo.dirstate.copy(f, fd)
-            else:
-                repo.dirstate.copy(f2, fd)
+            if f != f2: # copy/rename
+                if move:
+                    repo.dirstate.update([f], 'r')
+                if f != fd:
+                    repo.dirstate.copy(f, fd)
+                else:
+                    repo.dirstate.copy(f2, fd)
 
 def update(repo, node, branchmerge=False, force=False, partial=None,
            wlock=None, show_stats=True, remind=True):

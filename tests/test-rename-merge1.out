@@ -4,7 +4,7 @@ merge
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor f26ec4fc3fa3 local 8e765a822af2 remote af1939970a1c
- a: remote moved -> c
+ a: remote moved -> m
  b2: remote created -> g
 merging a and b to b
 resolving a

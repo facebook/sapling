@@ -5,7 +5,7 @@ resolving manifests
  overwrite None branchmerge True partial False
  ancestor e300d1c794ec local 735846fee2d7 remote 924404dff337
  rev: versions differ -> m
- a: remote copied -> c
+ a: remote copied -> m
 merging a and b to b
 resolving a
 my a@. other b@735846fee2d7 ancestor a@924404dff337
@@ -28,7 +28,7 @@ resolving manifests
  overwrite None branchmerge True partial False
  ancestor ac809aeed39a local f4db7e329e71 remote 924404dff337
  a: remote is newer -> g
- b: local copied -> c
+ b: local copied -> m
  rev: versions differ -> m
 getting a
 merging b and a to b
@@ -51,7 +51,7 @@ test L:up a   R:nm a b W:       - 3  get local a change to b, remove a
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor e300d1c794ec local e03727d2d66b remote 924404dff337
- a: remote moved -> c
+ a: remote moved -> m
  rev: versions differ -> m
 merging a and b to b
 resolving a
@@ -74,7 +74,7 @@ test L:nm a b R:up a   W:       - 4  get remote change to b
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor ecf3cb2a4219 local f4db7e329e71 remote 924404dff337
- b: local moved -> c
+ b: local moved -> m
  rev: versions differ -> m
 merging b and a to b
 resolving b
@@ -96,7 +96,7 @@ resolving manifests
  overwrite None branchmerge True partial False
  ancestor 94b33a1b7f2d local 735846fee2d7 remote 924404dff337
  rev: versions differ -> m
- a: remote copied -> c
+ a: remote copied -> m
 merging a and b to b
 resolving a
 my a@. other b@735846fee2d7 ancestor a@924404dff337
@@ -118,7 +118,7 @@ test L:nc a b R:       W:       - 6  nothing
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor ac809aeed39a local 97c705ade336 remote 924404dff337
- b: local copied -> c
+ b: local copied -> m
  rev: versions differ -> m
 merging b and a to b
 resolving b
@@ -140,7 +140,7 @@ test L:       R:nm a b W:       - 7  get b
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor 94b33a1b7f2d local e03727d2d66b remote 924404dff337
- a: remote moved -> c
+ a: remote moved -> m
  rev: versions differ -> m
 merging a and b to b
 resolving a
@@ -163,7 +163,7 @@ test L:nm a b R:       W:       - 8  nothing
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor ecf3cb2a4219 local 97c705ade336 remote 924404dff337
- b: local moved -> c
+ b: local moved -> m
  rev: versions differ -> m
 merging b and a to b
 resolving b
@@ -399,7 +399,7 @@ test L:up a   R:um a b W:       - 20 merge a and b to b, remove a
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor e300d1c794ec local 79cc6877a3b7 remote 924404dff337
- a: remote moved -> c
+ a: remote moved -> m
  rev: versions differ -> m
 merging a and b to b
 resolving a
@@ -422,7 +422,7 @@ test L:um a b R:up a   W:       - 21 merge a and b to b
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor ec03c2ca8642 local f4db7e329e71 remote 924404dff337
- b: local moved -> c
+ b: local moved -> m
  rev: versions differ -> m
 merging b and a to b
 resolving b
@@ -443,7 +443,7 @@ test L:nm a b R:up a c W:       - 23 get c, keep b
 resolving manifests
  overwrite None branchmerge True partial False
  ancestor ecf3cb2a4219 local 2b958612230f remote 924404dff337
- b: local moved -> c
+ b: local moved -> m
  rev: versions differ -> m
  c: remote created -> g
 merging b and a to b
