@@ -330,7 +330,7 @@ class workingctx(changectx):
         self._node = None
 
     def __str__(self):
-        return "."
+        return str(self._parents[0]) + "+"
 
     def __nonzero__(self):
         return True
@@ -430,7 +430,7 @@ class workingfilectx(filectx):
         return True
 
     def __str__(self):
-        return "%s@." % self.path()
+        return "%s@%s" % (self.path(), self._changectx)
 
     def filectx(self, fileid):
         '''opens an arbitrary revision of the file without
