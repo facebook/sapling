@@ -291,15 +291,14 @@ def applyupdates(repo, action, wctx, mctx):
             if filemerge(repo, f, f2, wctx, mctx):
                 unresolved += 1
             else:
+                merged += 1
                 if f != fd:
                     repo.ui.debug(_("copying %s to %s\n") % (f, fd))
                     repo.wwrite(fd, repo.wread(f))
                     if move:
                         repo.ui.debug(_("removing %s\n") % f)
                         os.unlink(repo.wjoin(f))
-
             util.set_exec(repo.wjoin(fd), flag)
-            merged += 1
         elif m == "g": # get
             flag = a[2]
             repo.ui.note(_("getting %s\n") % f)
@@ -352,8 +351,7 @@ def recordupdates(repo, action, branchmerge, mctx):
                 else:
                     repo.dirstate.copy(f2, fd)
 
-def update(repo, node, branchmerge=False, force=False, partial=None,
-           wlock=None, show_stats=True, remind=True):
+def update(repo, node, branchmerge, force, partial, wlock):
     """
     Perform a merge between the working directory and the given node
 
@@ -361,8 +359,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     force = whether to force branch merging or file overwriting
     partial = a function to filter file lists (dirstate not updated)
     wlock = working dir lock, if already held
-    show_stats = whether to report merge statistics
-    remind = whether to remind about merge
     """
 
     if not wlock:
@@ -404,32 +400,12 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not partial:
         repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
-    updated, merged, removed, unresolved = applyupdates(repo, action, wc, p2)
+    stats = applyupdates(repo, action, wc, p2)
 
-    if show_stats:
-        stats = ((updated, _("updated")),
-                 (merged - unresolved, _("merged")),
-                 (removed, _("removed")),
-                 (unresolved, _("unresolved")))
-        note = ", ".join([_("%d files %s") % s for s in stats])
-        repo.ui.status("%s\n" % note)
     if not partial:
         recordupdates(repo, action, branchmerge, p2)
         repo.dirstate.setparents(fp1, fp2)
-        repo.hook('update', parent1=xp1, parent2=xp2, error=unresolved)
+        repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
 
-        if branchmerge:
-            if unresolved:
-                repo.ui.status(_("There are unresolved merges,"
-                                " you can redo the full merge using:\n"
-                                "  hg update -C %s\n"
-                                "  hg merge %s\n"
-                                % (p1.rev(), p2.rev())))
-            elif remind:
-                repo.ui.status(_("(branch merge, don't forget to commit)\n"))
-        elif unresolved:
-            repo.ui.status(_("There are unresolved merges with"
-                             " locally modified files.\n"))
-
-    return unresolved
+    return stats
 
