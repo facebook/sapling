@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from mercurial import ui, util
+from mercurial import ui, util, commands
 
 testui = ui.ui()
-testui.updateopts(config=[
+parsed = commands.parseconfig([
     'values.string=string value',
     'values.bool1=true',
     'values.bool2=false',
@@ -17,6 +17,7 @@ testui.updateopts(config=[
     'interpolation.value4=%(bad)1',
     'interpolation.value5=%bad2',
 ])
+testui.updateopts(config=parsed)
 
 print repr(testui.configitems('values'))
 print repr(testui.configitems('lists'))

@@ -3275,6 +3275,20 @@ def load_extensions(ui):
                 ui.warn(_("module %s overrides %s\n") % (name, t))
         table.update(cmdtable)
 
+def parseconfig(config):
+    """parse the --config options from the command line"""
+    parsed = []
+    for cfg in config:
+        try:
+            name, value = cfg.split('=', 1)
+            section, name = name.split('.', 1)
+            if not section or not name:
+                raise IndexError
+            parsed.append((section, name, value))
+        except (IndexError, ValueError):
+            raise util.Abort(_('malformed --config option: %s') % cfg)
+    return parsed
+
 def dispatch(args):
     for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
         num = getattr(signal, name, None)
@@ -3306,7 +3320,7 @@ def dispatch(args):
 
         u.updateopts(options["verbose"], options["debug"], options["quiet"],
                      not options["noninteractive"], options["traceback"],
-                     options["config"])
+                     parseconfig(options["config"]))
 
         # enter the debugger before command execution
         if options['debugger']:

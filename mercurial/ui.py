@@ -60,15 +60,8 @@ class ui(object):
         self.debugflag = (self.debugflag or debug)
         self.interactive = (self.interactive and interactive)
         self.traceback = self.traceback or traceback
-        for cfg in config:
-            try:
-                name, value = cfg.split('=', 1)
-                section, name = name.split('.', 1)
-                if not section or not name:
-                    raise IndexError
-                self.setconfig(section, name, value)
-            except (IndexError, ValueError):
-                raise util.Abort(_('malformed --config option: %s') % cfg)
+        for section, name, value in config:
+            self.setconfig(section, name, value)
 
     def readconfig(self, fn, root=None):
         if isinstance(fn, basestring):
