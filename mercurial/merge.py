@@ -13,13 +13,9 @@ demandload(globals(), "errno util os tempfile")
 def filemerge(repo, fw, fo, wctx, mctx):
     """perform a 3-way merge in the working directory
 
-    fw = filename in the working directory and first parent
+    fw = filename in the working directory
     fo = filename in other parent
     wctx, mctx = working and merge changecontexts
-
-    TODO:
-      if fw is copied in the working directory, we get confused
-      implement move and fd
     """
 
     def temp(prefix, ctx):
@@ -64,9 +60,7 @@ def filemerge(repo, fw, fo, wctx, mctx):
     return r
 
 def checkunknown(wctx, mctx):
-    """
-    check for collisions between unknown files and files in m2
-    """
+    "check for collisions between unknown files and files in mctx"
     man = mctx.manifest()
     for f in wctx.unknown():
         if f in man:
@@ -94,9 +88,7 @@ def forgetremoved(wctx, mctx):
     return action
 
 def nonoverlap(d1, d2):
-    """
-    Return list of elements in d1 not in d2
-    """
+    "Return list of elements in d1 not in d2"
 
     l = []
     for d in d1:
@@ -107,9 +99,7 @@ def nonoverlap(d1, d2):
     return l
 
 def findold(fctx, limit):
-    """
-    find files that path was copied from, back to linkrev limit
-    """
+    "find files that path was copied from, back to linkrev limit"
 
     old = {}
     orig = fctx.path()
@@ -174,7 +164,10 @@ def findcopies(repo, m1, m2, limit):
 
 def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     """
-    Merge manifest m1 with m2 using ancestor ma and generate merge action list
+    Merge p1 and p2 with ancestor ma and generate merge action list
+
+    overwrite = whether we clobber working files
+    partial = function to filter file lists
     """
 
     repo.ui.note(_("resolving manifests\n"))
@@ -275,6 +268,8 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     return action
 
 def applyupdates(repo, action, wctx, mctx):
+    "apply the merge action list to the working directory"
+
     updated, merged, removed, unresolved = 0, 0, 0, 0
     action.sort()
     for a in action:
@@ -319,6 +314,8 @@ def applyupdates(repo, action, wctx, mctx):
     return updated, merged, removed, unresolved
 
 def recordupdates(repo, action, branchmerge, mctx):
+    "record merge actions to the dirstate"
+
     for a in action:
         f, m = a[:2]
         if m == "r": # remove
@@ -357,6 +354,16 @@ def recordupdates(repo, action, branchmerge, mctx):
 
 def update(repo, node, branchmerge=False, force=False, partial=None,
            wlock=None, show_stats=True, remind=True):
+    """
+    Perform a merge between the working directory and the given node
+
+    branchmerge = whether to merge between branches
+    force = whether to force branch merging or file overwriting
+    partial = a function to filter file lists (dirstate not updated)
+    wlock = working dir lock, if already held
+    show_stats = whether to report merge statistics
+    remind = whether to remind about merge
+    """
 
     if not wlock:
         wlock = repo.wlock()
