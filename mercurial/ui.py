@@ -32,15 +32,13 @@ class ui(object):
             # this is the parent of all ui children
             self.parentui = None
             self.readhooks = []
+            self.quiet = quiet
+            self.verbose = verbose
+            self.debugflag = debug
+            self.interactive = interactive
+            self.traceback = traceback
             self.cdata = ConfigParser.SafeConfigParser()
             self.readconfig(util.rcpath())
-
-            self.quiet = self.configbool("ui", "quiet")
-            self.verbose = self.configbool("ui", "verbose")
-            self.debugflag = self.configbool("ui", "debug")
-            self.interactive = self.configbool("ui", "interactive", True)
-            self.traceback = traceback
-
             self.updateopts(verbose, debug, quiet, interactive)
         else:
             # parentui may point to an ui object which is already a child
@@ -55,28 +53,32 @@ class ui(object):
 
     def updateopts(self, verbose=False, debug=False, quiet=False,
                    interactive=True, traceback=False, config=[]):
-        self.quiet = self.quiet or quiet
-        self.verbose = self.verbose or verbose
-        self.debugflag = self.debugflag or debug
-
-        self.verbosity_constraints(quiet, verbose, debug)
-
-        self.interactive = (self.interactive and interactive)
-        self.traceback = self.traceback or traceback
         for section, name, value in config:
             self.setconfig(section, name, value)
 
-    def verbosity_constraints(self, quiet, verbose, debug):
+        if quiet or verbose or debug:
+            self.setconfig('ui', 'quiet', str(bool(quiet)))
+            self.setconfig('ui', 'verbose', str(bool(verbose)))
+            self.setconfig('ui', 'debug', str(bool(debug)))
+
+        self.verbosity_constraints()
+
+        if not interactive:
+            self.setconfig('ui', 'interactive', 'False')
+            self.interactive = False
+
+        self.traceback = self.traceback or traceback
+
+    def verbosity_constraints(self):
+        self.quiet = self.configbool('ui', 'quiet')
+        self.verbose = self.configbool('ui', 'verbose')
+        self.debugflag = self.configbool('ui', 'debug')
+
         if self.debugflag:
             self.verbose = True
             self.quiet = False
         elif self.verbose and self.quiet:
-            if quiet and not verbose:
-                self.verbose = False
-            elif not quiet and verbose:
-                self.quiet = False
-            else:
-                self.quiet = self.verbose = False
+            self.quiet = self.verbose = False
 
     def readconfig(self, fn, root=None):
         if isinstance(fn, basestring):
@@ -113,6 +115,14 @@ class ui(object):
                 for n, path in pathsitems:
                     if path and "://" not in path and not os.path.isabs(path):
                         cdata.set("paths", n, os.path.join(root, path))
+
+        # update quiet/verbose/debug and interactive status
+        if section is None or section == 'ui':
+            if name is None or name in ('quiet', 'verbose', 'debug'):
+                self.verbosity_constraints()
+
+            if name is None or name == 'interactive':
+                self.interactive = self.configbool("ui", "interactive", True)
 
     def setconfig(self, section, name, value):
         if not self.overlay:
