@@ -30,8 +30,6 @@ class ui(object):
             self.traceback = traceback
 
             self.updateopts(verbose, debug, quiet, interactive)
-            self.diffcache = None
-            self.revlogopts = self.configrevlog()
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui

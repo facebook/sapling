@@ -54,7 +54,7 @@ class localrepository(repo.repository):
         except IOError:
             pass
 
-        v = self.ui.revlogopts
+        v = self.ui.configrevlog()
         self.revlogversion = int(v.get('format', revlog.REVLOG_DEFAULT_FORMAT))
         self.revlogv1 = self.revlogversion != revlog.REVLOGV0
         fl = v.get('flags', None)
