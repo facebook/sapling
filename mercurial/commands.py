@@ -2463,7 +2463,7 @@ def serve(ui, repo, **opts):
                " accesslog errorlog webdir_conf")
     for o in optlist.split():
         if opts[o]:
-            ui.setconfig("web", o, opts[o])
+            ui.setconfig("web", o, str(opts[o]))
 
     if repo is None and not ui.config("web", "webdir_conf"):
         raise hg.RepoError(_("There is no Mercurial repository here"

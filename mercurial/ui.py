@@ -10,10 +10,22 @@ from demandload import *
 demandload(globals(), "errno getpass os re socket sys tempfile")
 demandload(globals(), "ConfigParser mdiff templater traceback util")
 
+def dupconfig(orig):
+    new = ConfigParser.SafeConfigParser(orig.defaults())
+    updateconfig(orig, new)
+    return new
+
+def updateconfig(source, dest):
+    for section in source.sections():
+        if not dest.has_section(section):
+            dest.add_section(section)
+        for name, value in source.items(section, raw=True):
+            dest.set(section, name, value)
+
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True, traceback=False, parentui=None):
-        self.overlay = {}
+        self.overlay = None
         self.header = []
         self.prev_header = []
         if parentui is None:
@@ -34,13 +46,9 @@ class ui(object):
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
             self.readhooks = self.parentui.readhooks[:]
-            parent_cdata = self.parentui.cdata
-            self.cdata = ConfigParser.SafeConfigParser(parent_cdata.defaults())
-            # make interpolation work
-            for section in parent_cdata.sections():
-                self.cdata.add_section(section)
-                for name, value in parent_cdata.items(section, raw=True):
-                    self.cdata.set(section, name, value)
+            self.cdata = dupconfig(self.parentui.cdata)
+            if self.parentui.overlay:
+                self.overlay = dupconfig(self.parentui.overlay)
 
     def __getattr__(self, key):
         return getattr(self.parentui, key)
@@ -78,18 +86,24 @@ class ui(object):
         for name, path in self.configitems("paths"):
             if path and "://" not in path and not os.path.isabs(path):
                 self.cdata.set("paths", name, os.path.join(root, path))
+        # override data from config files with data set with ui.setconfig
+        if self.overlay:
+            updateconfig(self.overlay, self.cdata)
         for hook in self.readhooks:
             hook(self)
 
     def addreadhook(self, hook):
         self.readhooks.append(hook)
 
-    def setconfig(self, section, name, val):
-        self.overlay[(section, name)] = val
+    def setconfig(self, section, name, value):
+        if not self.overlay:
+            self.overlay = ConfigParser.SafeConfigParser()
+        for cdata in (self.overlay, self.cdata):
+            if not cdata.has_section(section):
+                cdata.add_section(section)
+            cdata.set(section, name, value)
 
     def _config(self, section, name, default, funcname):
-        if self.overlay.has_key((section, name)):
-            return self.overlay[(section, name)]
         if self.cdata.has_option(section, name):
             try:
                 func = getattr(self.cdata, funcname)
@@ -132,17 +146,11 @@ class ui(object):
         return x
 
     def walkconfig(self):
-        seen = {}
-        for (section, name), value in self.overlay.iteritems():
-            yield section, name, value
-            seen[section, name] = 1
         sections = self.cdata.sections()
         sections.sort()
         for section in sections:
             for name, value in self.configitems(section):
-                if (section, name) in seen: continue
                 yield section, name, value.replace('\n', '\\n')
-                seen[section, name] = 1
 
     def extensions(self):
         result = self.configitems("extensions")
