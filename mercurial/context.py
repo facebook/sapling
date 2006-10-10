@@ -8,7 +8,7 @@
 from node import *
 from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "ancestor bdiff repo revlog util")
+demandload(globals(), "ancestor bdiff repo revlog util os")
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular
@@ -191,6 +191,9 @@ class filectx(object):
     def data(self): return self._filelog.read(self._filenode)
     def renamed(self): return self._filelog.renamed(self._filenode)
     def path(self): return self._path
+    def size(self): return self._filelog.size(self._filerev)
+
+    def cmp(self, text): return self._filelog.cmp(self._filenode, text)
 
     def parents(self):
         p = self._path
@@ -327,7 +330,7 @@ class workingctx(changectx):
         self._node = None
 
     def __str__(self):
-        return "."
+        return str(self._parents[0]) + "+"
 
     def __nonzero__(self):
         return True
@@ -414,7 +417,9 @@ class workingfilectx(filectx):
             self._changectx = workingctx(repo)
             return self._changectx
         elif name == '_repopath':
-            self._repopath = self._repo.dirstate.copied(p) or self._path
+            self._repopath = (self._repo.dirstate.copied(self._path)
+                              or self._path)
+            return self._repopath
         elif name == '_filelog':
             self._filelog = self._repo.file(self._repopath)
             return self._filelog
@@ -425,7 +430,7 @@ class workingfilectx(filectx):
         return True
 
     def __str__(self):
-        return "%s@." % self.path()
+        return "%s@%s" % (self.path(), self._changectx)
 
     def filectx(self, fileid):
         '''opens an arbitrary revision of the file without
@@ -449,7 +454,7 @@ class workingfilectx(filectx):
         '''return parent filectxs, following copies if necessary'''
         p = self._path
         rp = self._repopath
-        pcl = self._workingctx._parents
+        pcl = self._changectx._parents
         fl = self._filelog
         pl = [ (rp, pcl[0]._manifest.get(rp, nullid), fl) ]
         if len(pcl) > 1:
@@ -463,3 +468,6 @@ class workingfilectx(filectx):
     def children(self):
         return []
 
+    def size(self): return os.stat(self._repo.wjoin(self._path)).st_size
+
+    def cmp(self, text): return self._repo.wread(self._path) == text

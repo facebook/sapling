@@ -15,13 +15,12 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- overwrite False branchmerge False partial False
- ancestor 33aaa84a386b local 802f095af299 remote 33aaa84a386b
+ overwrite False partial False
+ ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
  a: versions differ -> m
  b: remote created -> g
 merging a
-resolving a
-my a@33aaa84a386b other a@802f095af299 ancestor a@33aaa84a386b
+my a@33aaa84a386b+ other a@802f095af299 ancestor a@33aaa84a386b
 getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 changeset:   1:802f095af299
@@ -31,8 +30,8 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
 resolving manifests
- overwrite False branchmerge False partial False
- ancestor 802f095af299 local 33aaa84a386b remote 33aaa84a386b
+ overwrite False partial False
+ ancestor 33aaa84a386b local 802f095af299+ remote 33aaa84a386b
  b: remote deleted -> r
 removing b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -49,13 +48,12 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
 resolving manifests
- overwrite False branchmerge False partial False
- ancestor 33aaa84a386b local 802f095af299 remote 33aaa84a386b
+ overwrite False partial False
+ ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
  a: versions differ -> m
  b: remote created -> g
 merging a
-resolving a
-my a@33aaa84a386b other a@802f095af299 ancestor a@33aaa84a386b
+my a@33aaa84a386b+ other a@802f095af299 ancestor a@33aaa84a386b
 getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 changeset:   1:802f095af299
@@ -100,16 +98,14 @@ failed
 abort: outstanding uncommitted changes
 failed
 resolving manifests
- overwrite False branchmerge True partial False
- ancestor 802f095af299 local 030602aee63d remote 33aaa84a386b
+ overwrite False partial False
+ ancestor 33aaa84a386b local 802f095af299+ remote 030602aee63d
  a: versions differ -> m
  b: versions differ -> m
 merging a
-resolving a
-my a@802f095af299 other a@030602aee63d ancestor a@33aaa84a386b
+my a@802f095af299+ other a@030602aee63d ancestor a@33aaa84a386b
 merging b
-resolving b
-my b@802f095af299 other b@030602aee63d ancestor b@000000000000
+my b@802f095af299+ other b@030602aee63d ancestor b@000000000000
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 changeset:   1:802f095af299
@@ -137,5 +133,4 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-merging a
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved

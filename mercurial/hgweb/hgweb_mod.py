@@ -59,12 +59,6 @@ class hgweb(object):
             if i in allowed or self.repo.ui.configbool("web", "allow" + i):
                 yield {"type" : i, "extension" : spec[2], "node" : nodeid}
 
-    def listfiles(self, files, mf):
-        for f in files[:self.maxfiles]:
-            yield self.t("filenodelink", node=hex(mf[f]), file=f)
-        if len(files) > self.maxfiles:
-            yield self.t("fileellipses")
-
     def listfilediffs(self, files, changeset):
         for f in files[:self.maxfiles]:
             yield self.t("filedifflink", node=hex(changeset), file=f)
@@ -436,9 +430,9 @@ class hgweb(object):
                     continue
 
                 yield {"file": full,
-                       "filenode": hex(fnode),
                        "parity": self.stripes(parity),
                        "basename": f,
+                       "size": ctx.filectx(full).size(),
                        "permissions": mf.execf(full)}
                 parity += 1
 

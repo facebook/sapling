@@ -2,13 +2,12 @@ checkout
 2 files updated, 0 files merged, 2 files removed, 0 files unresolved
 merge
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor f26ec4fc3fa3 local 8e765a822af2 remote af1939970a1c
- a: remote moved -> c
+ overwrite None partial False
+ ancestor af1939970a1c local f26ec4fc3fa3+ remote 8e765a822af2
+ a: remote moved -> m
  b2: remote created -> g
-merging a and b to b
-resolving a
-my a@f26ec4fc3fa3 other b@8e765a822af2 ancestor a@af1939970a1c
+merging a and b
+my a@f26ec4fc3fa3+ other b@8e765a822af2 ancestor a@af1939970a1c
 copying a to b
 removing a
 getting b2
