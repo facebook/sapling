@@ -98,10 +98,7 @@ class ui(object):
                 raise util.Abort(_("Error in configuration section [%s] "
                                    "parameter '%s':\n%s")
                                  % (section, name, inst))
-        if self.parentui is None:
-            return default
-        else:
-            return self.parentui._config(section, name, default, funcname)
+        return default
 
     def config(self, section, name, default=None):
         return self._config(section, name, default, 'get')
@@ -124,8 +121,6 @@ class ui(object):
 
     def configitems(self, section):
         items = {}
-        if self.parentui is not None:
-            items = dict(self.parentui.configitems(section))
         if self.cdata.has_section(section):
             try:
                 items.update(dict(self.cdata.items(section)))
@@ -136,9 +131,8 @@ class ui(object):
         x.sort()
         return x
 
-    def walkconfig(self, seen=None):
-        if seen is None:
-            seen = {}
+    def walkconfig(self):
+        seen = {}
         for (section, name), value in self.overlay.iteritems():
             yield section, name, value
             seen[section, name] = 1
@@ -149,9 +143,6 @@ class ui(object):
                 if (section, name) in seen: continue
                 yield section, name, value.replace('\n', '\\n')
                 seen[section, name] = 1
-        if self.parentui is not None:
-            for parent in self.parentui.walkconfig(seen):
-                yield parent
 
     def extensions(self):
         result = self.configitems("extensions")
