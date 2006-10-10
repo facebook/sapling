@@ -14,8 +14,8 @@ changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
-manifestdirentry = '<tr class="parity#parity#"><td style="font-family:monospace">drwxr-xr-x</td><td><a href="#url#file/#node|short##path|urlescape#{getentries}">#basename|escape#/</a></td><td class="link"><a href="#url#file/#node|short##path|urlescape#{getentries}">manifest</a></td></tr>'
-manifestfileentry = '<tr class="parity#parity#"><td style="font-family:monospace">#permissions|permissions#</td><td class="list"><a class="list" href="#url#file/#node|short#/#file|urlescape#{getentries}">#basename|escape#</a></td><td class="link"><a href="#url#file/#node|short#/#file|urlescape#{getentries}">file</a> | <a href="#url#log/#node|short#/#file|urlescape#{getentries}">revisions</a> | <a href="#url#annotate/#node|short#/#file|urlescape#{getentries}">annotate</a></td></tr>'
+manifestdirentry = '<tr class="parity#parity#"><td style="font-family:monospace">drwxr-xr-x</td><td style="font-family:monospace"></td><td><a href="#url#file/#node|short##path|urlescape#{getentries}">#basename|escape#/</a></td><td class="link"><a href="#url#file/#node|short##path|urlescape#{getentries}">manifest</a></td></tr>'
+manifestfileentry = '<tr class="parity#parity#"><td style="font-family:monospace">#permissions|permissions#</td><td style="font-family:monospace" align=right>#size#</td><td class="list"><a class="list" href="#url#file/#node|short#/#file|urlescape#{getentries}">#basename|escape#</a></td><td class="link"><a href="#url#file/#node|short#/#file|urlescape#{getentries}">file</a> | <a href="#url#log/#node|short#/#file|urlescape#{getentries}">revisions</a> | <a href="#url#annotate/#node|short#/#file|urlescape#{getentries}">annotate</a></td></tr>'
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filelog = filelog.tmpl

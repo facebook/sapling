@@ -430,9 +430,9 @@ class hgweb(object):
                     continue
 
                 yield {"file": full,
-                       "filenode": hex(fnode),
                        "parity": self.stripes(parity),
                        "basename": f,
+                       "size": ctx.filectx(full).size(),
                        "permissions": mf.execf(full)}
                 parity += 1
 
