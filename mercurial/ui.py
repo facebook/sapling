@@ -14,6 +14,8 @@ class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True, traceback=False, parentui=None):
         self.overlay = {}
+        self.header = []
+        self.prev_header = []
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
@@ -29,8 +31,6 @@ class ui(object):
 
             self.updateopts(verbose, debug, quiet, interactive)
             self.diffcache = None
-            self.header = []
-            self.prev_header = []
             self.revlogopts = self.configrevlog()
         else:
             # parentui may point to an ui object which is already a child
