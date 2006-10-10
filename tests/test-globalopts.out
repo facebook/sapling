@@ -105,6 +105,7 @@ a
 
 
 %% --traceback
+Traceback (most recent call last):
 %% --time
 Time: real x.x secs (user x.x+x.x sys x.x+x.x)
 %% --version

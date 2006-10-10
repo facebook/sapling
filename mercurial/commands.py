@@ -3318,10 +3318,6 @@ def dispatch(args):
                     (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
             atexit.register(print_time)
 
-        u.updateopts(options["verbose"], options["debug"], options["quiet"],
-                     not options["noninteractive"], options["traceback"],
-                     parseconfig(options["config"]))
-
         # enter the debugger before command execution
         if options['debugger']:
             pdb.set_trace()
@@ -3333,6 +3329,10 @@ def dispatch(args):
                 except OSError, inst:
                     raise util.Abort('%s: %s' %
                                      (options['cwd'], inst.strerror))
+
+            u.updateopts(options["verbose"], options["debug"], options["quiet"],
+                         not options["noninteractive"], options["traceback"],
+                         parseconfig(options["config"]))
 
             path = u.expandpath(options["repository"]) or ""
             repo = path and hg.repository(u, path=path) or None
