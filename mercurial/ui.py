@@ -35,7 +35,7 @@ class ui(object):
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
-            self.readhooks = parentui.readhooks[:]
+            self.readhooks = self.parentui.readhooks[:]
             parent_cdata = self.parentui.cdata
             self.cdata = ConfigParser.SafeConfigParser(parent_cdata.defaults())
             # make interpolation work
