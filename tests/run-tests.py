@@ -34,6 +34,8 @@ parser.add_option("-C", "--annotate", action="store_true",
     help="output files annotated with coverage")
 parser.add_option("-r", "--retest", action="store_true",
     help="retest failed tests")
+parser.add_option("-f", "--first", action="store_true",
+    help="exit on the first test failure")
 
 parser.set_defaults(timeout=180)
 (options, args) = parser.parse_args()
@@ -371,6 +373,8 @@ try:
                     skipped += 1
                 elif not ret:
                     failed += 1
+                    if options.first:
+                        break
                 tests += 1
 
         print "\n# Ran %d tests, %d skipped, %d failed." % (tests, skipped,
