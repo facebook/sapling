@@ -1,7 +1,5 @@
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 %% no merges expected
-merging for b
-merging b
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -19,8 +17,6 @@ This is file b1
 %% merge fails
 abort: outstanding uncommitted changes
 %% merge expected!
-merging for b
-merging b
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved

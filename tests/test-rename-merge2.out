@@ -6,12 +6,10 @@ resolving manifests
  ancestor e300d1c794ec local 735846fee2d7 remote 924404dff337
  rev: versions differ -> m
  a: remote copied -> m
-merging a and b to b
-resolving a
+merging a and b
 my a@. other b@735846fee2d7 ancestor a@924404dff337
 copying a to b
 merging rev
-resolving rev
 my rev@. other rev@735846fee2d7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -31,11 +29,9 @@ resolving manifests
  b: local copied -> m
  rev: versions differ -> m
 getting a
-merging b and a to b
-resolving b
+merging b and a
 my b@. other a@f4db7e329e71 ancestor a@924404dff337
 merging rev
-resolving rev
 my rev@. other rev@f4db7e329e71 ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -53,13 +49,11 @@ resolving manifests
  ancestor e300d1c794ec local e03727d2d66b remote 924404dff337
  a: remote moved -> m
  rev: versions differ -> m
-merging a and b to b
-resolving a
+merging a and b
 my a@. other b@e03727d2d66b ancestor a@924404dff337
 copying a to b
 removing a
 merging rev
-resolving rev
 my rev@. other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -76,11 +70,9 @@ resolving manifests
  ancestor ecf3cb2a4219 local f4db7e329e71 remote 924404dff337
  b: local moved -> m
  rev: versions differ -> m
-merging b and a to b
-resolving b
+merging b and a
 my b@. other a@f4db7e329e71 ancestor a@924404dff337
 merging rev
-resolving rev
 my rev@. other rev@f4db7e329e71 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -97,19 +89,15 @@ resolving manifests
  ancestor 94b33a1b7f2d local 735846fee2d7 remote 924404dff337
  rev: versions differ -> m
  a: remote copied -> m
-merging a and b to b
-resolving a
-my a@. other b@735846fee2d7 ancestor a@924404dff337
 copying a to b
 merging rev
-resolving rev
 my rev@. other rev@735846fee2d7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
-M a
 M b
   a
+C a
 --------------
 
 --------------
@@ -120,11 +108,7 @@ resolving manifests
  ancestor ac809aeed39a local 97c705ade336 remote 924404dff337
  b: local copied -> m
  rev: versions differ -> m
-merging b and a to b
-resolving b
-my b@. other a@97c705ade336 ancestor a@924404dff337
 merging rev
-resolving rev
 my rev@. other rev@97c705ade336 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -142,13 +126,9 @@ resolving manifests
  ancestor 94b33a1b7f2d local e03727d2d66b remote 924404dff337
  a: remote moved -> m
  rev: versions differ -> m
-merging a and b to b
-resolving a
-my a@. other b@e03727d2d66b ancestor a@924404dff337
 copying a to b
 removing a
 merging rev
-resolving rev
 my rev@. other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -165,11 +145,7 @@ resolving manifests
  ancestor ecf3cb2a4219 local 97c705ade336 remote 924404dff337
  b: local moved -> m
  rev: versions differ -> m
-merging b and a to b
-resolving b
-my b@. other a@97c705ade336 ancestor a@924404dff337
 merging rev
-resolving rev
 my rev@. other rev@97c705ade336 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -187,10 +163,8 @@ resolving manifests
  b: versions differ -> m
  rev: versions differ -> m
 merging b
-resolving b
 my b@. other b@79cc6877a3b7 ancestor a@924404dff337
 merging rev
-resolving rev
 my rev@. other rev@79cc6877a3b7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -208,7 +182,6 @@ resolving manifests
  c: remote created -> g
 getting c
 merging rev
-resolving rev
 my rev@. other rev@e6abcc1a30c2 ancestor rev@924404dff337
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -226,10 +199,8 @@ resolving manifests
  b: versions differ -> m
  rev: versions differ -> m
 merging b
-resolving b
 my b@. other b@af30c7647fc7 ancestor b@000000000000
 merging rev
-resolving rev
 my rev@. other rev@af30c7647fc7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -249,10 +220,8 @@ resolving manifests
  rev: versions differ -> m
 removing a
 merging b
-resolving b
 my b@. other b@e03727d2d66b ancestor b@000000000000
 merging rev
-resolving rev
 my rev@. other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 1 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -271,10 +240,8 @@ resolving manifests
  rev: versions differ -> m
 getting a
 merging b
-resolving b
 my b@. other b@8dbce441892a ancestor b@000000000000
 merging rev
-resolving rev
 my rev@. other rev@8dbce441892a ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -294,10 +261,8 @@ resolving manifests
  rev: versions differ -> m
 removing a
 merging b
-resolving b
 my b@. other b@e03727d2d66b ancestor b@000000000000
 merging rev
-resolving rev
 my rev@. other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 1 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -316,10 +281,8 @@ resolving manifests
  rev: versions differ -> m
 getting a
 merging b
-resolving b
 my b@. other b@8dbce441892a ancestor b@000000000000
 merging rev
-resolving rev
 my rev@. other rev@8dbce441892a ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -337,10 +300,8 @@ resolving manifests
  b: versions differ -> m
  rev: versions differ -> m
 merging b
-resolving b
 my b@. other b@735846fee2d7 ancestor b@000000000000
 merging rev
-resolving rev
 my rev@. other rev@735846fee2d7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -360,10 +321,8 @@ resolving manifests
  a: prompt recreating -> g
 getting a
 merging b
-resolving b
 my b@. other b@8dbce441892a ancestor b@000000000000
 merging rev
-resolving rev
 my rev@. other rev@8dbce441892a ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -381,10 +340,8 @@ resolving manifests
  b: versions differ -> m
  rev: versions differ -> m
 merging b
-resolving b
 my b@. other b@e03727d2d66b ancestor b@000000000000
 merging rev
-resolving rev
 my rev@. other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -401,13 +358,11 @@ resolving manifests
  ancestor e300d1c794ec local 79cc6877a3b7 remote 924404dff337
  a: remote moved -> m
  rev: versions differ -> m
-merging a and b to b
-resolving a
+merging a and b
 my a@. other b@79cc6877a3b7 ancestor a@924404dff337
 copying a to b
 removing a
 merging rev
-resolving rev
 my rev@. other rev@79cc6877a3b7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -424,11 +379,9 @@ resolving manifests
  ancestor ec03c2ca8642 local f4db7e329e71 remote 924404dff337
  b: local moved -> m
  rev: versions differ -> m
-merging b and a to b
-resolving b
+merging b and a
 my b@. other a@f4db7e329e71 ancestor a@924404dff337
 merging rev
-resolving rev
 my rev@. other rev@f4db7e329e71 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -446,12 +399,10 @@ resolving manifests
  b: local moved -> m
  rev: versions differ -> m
  c: remote created -> g
-merging b and a to b
-resolving b
+merging b and a
 my b@. other a@2b958612230f ancestor a@924404dff337
 getting c
 merging rev
-resolving rev
 my rev@. other rev@2b958612230f ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)

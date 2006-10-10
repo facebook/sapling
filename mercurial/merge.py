@@ -32,6 +32,10 @@ def filemerge(repo, fw, fo, wctx, mctx):
 
     fcm = wctx.filectx(fw)
     fco = mctx.filectx(fo)
+
+    if not fco.cmp(fcm.data()): # files identical?
+        return 0
+
     fca = fcm.ancestor(fco)
     if not fca:
         fca = repo.filectx(fw, fileid=-1)
@@ -39,7 +43,11 @@ def filemerge(repo, fw, fo, wctx, mctx):
     b = temp("base", fca)
     c = temp("other", fco)
 
-    repo.ui.note(_("resolving %s\n") % fw)
+    if fw != fo:
+        repo.ui.status(_("merging %s and %s\n") % (fw, fo))
+    else:
+        repo.ui.status(_("merging %s\n") % fw)
+
     repo.ui.debug(_("my %s other %s ancestor %s\n") % (fcm, fco, fca))
 
     cmd = (os.environ.get("HGMERGE") or repo.ui.config("ui", "merge")
@@ -281,10 +289,6 @@ def applyupdates(repo, action, wctx, mctx):
             removed +=1
         elif m == "m": # merge
             f2, fd, flag, move = a[2:]
-            if f != f2:
-                repo.ui.status(_("merging %s and %s to %s\n") % (f, f2, fd))
-            else:
-                repo.ui.status(_("merging %s\n") % f)
             if filemerge(repo, f, f2, wctx, mctx):
                 unresolved += 1
             else:

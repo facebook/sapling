@@ -26,7 +26,6 @@ resolving manifests
  ancestor 451c744aabcc local a070d41e8360 remote faaea63e63a9
  test.txt: versions differ -> m
 merging test.txt
-resolving test.txt
 my test.txt@. other test.txt@a070d41e8360 ancestor test.txt@faaea63e63a9
 merging test.txt failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved

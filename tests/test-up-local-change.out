@@ -20,7 +20,6 @@ resolving manifests
  a: versions differ -> m
  b: remote created -> g
 merging a
-resolving a
 my a@. other a@802f095af299 ancestor a@33aaa84a386b
 getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -54,7 +53,6 @@ resolving manifests
  a: versions differ -> m
  b: remote created -> g
 merging a
-resolving a
 my a@. other a@802f095af299 ancestor a@33aaa84a386b
 getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -105,10 +103,8 @@ resolving manifests
  a: versions differ -> m
  b: versions differ -> m
 merging a
-resolving a
 my a@. other a@030602aee63d ancestor a@33aaa84a386b
 merging b
-resolving b
 my b@. other b@030602aee63d ancestor b@000000000000
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -137,5 +133,4 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-merging a
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
