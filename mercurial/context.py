@@ -414,7 +414,9 @@ class workingfilectx(filectx):
             self._changectx = workingctx(repo)
             return self._changectx
         elif name == '_repopath':
-            self._repopath = self._repo.dirstate.copied(p) or self._path
+            self._repopath = (self._repo.dirstate.copied(self._path)
+                              or self._path)
+            return self._repopath
         elif name == '_filelog':
             self._filelog = self._repo.file(self._repopath)
             return self._filelog
@@ -449,7 +451,7 @@ class workingfilectx(filectx):
         '''return parent filectxs, following copies if necessary'''
         p = self._path
         rp = self._repopath
-        pcl = self._workingctx._parents
+        pcl = self._changectx._parents
         fl = self._filelog
         pl = [ (rp, pcl[0]._manifest.get(rp, nullid), fl) ]
         if len(pcl) > 1:
