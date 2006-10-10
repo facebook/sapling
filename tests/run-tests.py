@@ -32,6 +32,9 @@ parser.add_option("-s", "--cover_stdlib", action="store_true",
     help="print a test coverage report inc. standard libraries")
 parser.add_option("-C", "--annotate", action="store_true",
     help="output files annotated with coverage")
+parser.add_option("-r", "--retest", action="store_true",
+    help="retest failed tests")
+
 parser.set_defaults(timeout=180)
 (options, args) = parser.parse_args()
 verbose = options.verbose
@@ -360,6 +363,9 @@ try:
             if (test.startswith("test-") and '~' not in test and
                 ('.' not in test or test.endswith('.py') or
                  test.endswith('.bat'))):
+                if options.retest and not os.path.exists(test + ".err"):
+                    skipped += 1
+                    continue
                 ret = run_one(test)
                 if ret is None:
                     skipped += 1
