@@ -64,11 +64,9 @@ class ui(object):
             try:
                 name, value = cfg.split('=', 1)
                 section, name = name.split('.', 1)
-                if not self.cdata.has_section(section):
-                    self.cdata.add_section(section)
                 if not section or not name:
                     raise IndexError
-                self.cdata.set(section, name, value)
+                self.setconfig(section, name, value)
             except (IndexError, ValueError):
                 raise util.Abort(_('malformed --config option: %s') % cfg)
 
