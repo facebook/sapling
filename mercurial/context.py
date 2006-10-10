@@ -8,7 +8,7 @@
 from node import *
 from i18n import gettext as _
 from demandload import demandload
-demandload(globals(), "ancestor bdiff repo revlog util")
+demandload(globals(), "ancestor bdiff repo revlog util os")
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular
@@ -191,6 +191,7 @@ class filectx(object):
     def data(self): return self._filelog.read(self._filenode)
     def renamed(self): return self._filelog.renamed(self._filenode)
     def path(self): return self._path
+    def size(self): return self._filelog.size(self._filerev)
 
     def parents(self):
         p = self._path
@@ -465,3 +466,4 @@ class workingfilectx(filectx):
     def children(self):
         return []
 
+    def size(self): return os.stat(self._repo.wjoin(self._path)).st_size
