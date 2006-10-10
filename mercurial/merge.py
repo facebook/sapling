@@ -192,7 +192,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     action = []
 
-    def act(msg, f, m, *args):
+    def act(msg, m, f, *args):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
 
@@ -210,43 +210,43 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 a = ma.get(f, nullid)
                 # are both different from the ancestor?
                 if not overwrite and n != a and m2[f] != a:
-                    act("versions differ", f, "m", fmerge(f))
+                    act("versions differ", "m", f, fmerge(f))
                 # are we clobbering?
                 # is remote's version newer?
                 # or are we going back in time and clean?
                 elif overwrite or m2[f] != a or (backwards and not n[20:]):
-                    act("remote is newer", f, "g", m2.execf(f))
+                    act("remote is newer", "g", f, m2.execf(f))
                 # local is newer, not overwrite, check mode bits
                 elif fmerge(f) != m1.execf(f):
-                    act("update permissions", f, "e", m2.execf(f))
+                    act("update permissions", "e", f, m2.execf(f))
             # contents same, check mode bits
             elif m1.execf(f) != m2.execf(f):
                 if overwrite or fmerge(f) != m1.execf(f):
-                    act("update permissions", f, "e", m2.execf(f))
+                    act("update permissions", "e", f, m2.execf(f))
         elif f in copy:
             f2 = copy[f]
             if f in ma: # case 3,20 A/B/A
-                act("remote moved",
-                    f, "c", f2, f2, fmerge(f, f2, f), True)
+                act("remote moved", "c",
+                    f, f2, f2, fmerge(f, f2, f), True)
             else:
                 if f2 in m1: # case 2 A,B/B/B
-                    act("local copied",
-                        f, "c", f2, f, fmerge(f, f2, f2), False)
+                    act("local copied", "c",
+                        f, f2, f, fmerge(f, f2, f2), False)
                 else: # case 4,21 A/B/B
-                    act("local moved",
-                        f, "c", f2, f, fmerge(f, f2, f2), False)
+                    act("local moved", "c",
+                        f, f2, f, fmerge(f, f2, f2), False)
         elif f in ma:
             if n != ma[f] and not overwrite:
                 if repo.ui.prompt(
                     (_(" local changed %s which remote deleted\n") % f) +
                     _("(k)eep or (d)elete?"), _("[kd]"), _("k")) == _("d"):
-                    act("prompt delete", f, "r")
+                    act("prompt delete", "r", f)
             else:
-                act("other deleted", f, "r")
+                act("other deleted", "r", f)
         else:
             # file is created on branch or in working directory
             if (overwrite and n[20:] != "u") or (backwards and not n[20:]):
-                act("remote deleted", f, "r")
+                act("remote deleted", "r", f)
 
     for f, n in m2.iteritems():
         if partial and not partial(f):
@@ -258,17 +258,17 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             if f2 not in m2: # already seen
                 continue
             # rename case 1, A/A,B/A
-            act("remote copied", f2, "c", f, f, fmerge(f2, f, f2), False)
+            act("remote copied", "c", f2, f, f, fmerge(f2, f, f2), False)
         elif f in ma:
             if overwrite or backwards:
-                act("recreating", f, "g", m2.execf(f))
+                act("recreating", "g", f, m2.execf(f))
             elif n != ma[f]:
                 if repo.ui.prompt(
                     (_("remote changed %s which local deleted\n") % f) +
                     _("(k)eep or (d)elete?"), _("[kd]"), _("k")) == _("k"):
-                    act("prompt recreating", f, "g", m2.execf(f))
+                    act("prompt recreating", "g", f, m2.execf(f))
         else:
-            act("remote created", f, "g", m2.execf(f))
+            act("remote created", "g", f, m2.execf(f))
 
     return action
 
