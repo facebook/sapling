@@ -55,13 +55,28 @@ class ui(object):
 
     def updateopts(self, verbose=False, debug=False, quiet=False,
                    interactive=True, traceback=False, config=[]):
-        self.quiet = (self.quiet or quiet) and not verbose and not debug
-        self.verbose = ((self.verbose or verbose) or debug) and not self.quiet
-        self.debugflag = (self.debugflag or debug)
+        self.quiet = self.quiet or quiet
+        self.verbose = self.verbose or verbose
+        self.debugflag = self.debugflag or debug
+
+        self.verbosity_constraints(quiet, verbose, debug)
+
         self.interactive = (self.interactive and interactive)
         self.traceback = self.traceback or traceback
         for section, name, value in config:
             self.setconfig(section, name, value)
+
+    def verbosity_constraints(self, quiet, verbose, debug):
+        if self.debugflag:
+            self.verbose = True
+            self.quiet = False
+        elif self.verbose and self.quiet:
+            if quiet and not verbose:
+                self.verbose = False
+            elif not quiet and verbose:
+                self.quiet = False
+            else:
+                self.quiet = self.verbose = False
 
     def readconfig(self, fn, root=None):
         if isinstance(fn, basestring):
