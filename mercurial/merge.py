@@ -177,10 +177,16 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     Merge manifest m1 with m2 using ancestor ma and generate merge action list
     """
 
+    repo.ui.note(_("resolving manifests\n"))
+    repo.ui.debug(_(" overwrite %s partial %s\n") % (overwrite, bool(partial)))
+    repo.ui.debug(_(" ancestor %s local %s remote %s\n") % (pa, p1, p2))
+
     m1 = p1.manifest()
     m2 = p2.manifest()
     ma = pa.manifest()
     backwards = (pa == p2)
+    action = []
+    copy = {}
 
     def fmerge(f, f2=None, fa=None):
         """merge executable flags"""
@@ -190,13 +196,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         a, b, c = ma.execf(fa), m1.execf(f), m2.execf(f2)
         return ((a^b) | (a^c)) ^ a
 
-    action = []
-
     def act(msg, m, f, *args):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
 
-    copy = {}
     if not (backwards or overwrite):
         copy = findcopies(repo, m1, m2, pa.rev())
 
@@ -355,69 +358,46 @@ def recordupdates(repo, action, branchmerge, mctx):
 def update(repo, node, branchmerge=False, force=False, partial=None,
            wlock=None, show_stats=True, remind=True):
 
-    overwrite = force and not branchmerge
-    forcemerge = force and branchmerge
-
     if not wlock:
         wlock = repo.wlock()
 
-    ### check phase
-
+    overwrite = force and not branchmerge
+    forcemerge = force and branchmerge
     wc = repo.workingctx()
     pl = wc.parents()
-    if not overwrite and len(pl) > 1:
-        raise util.Abort(_("outstanding uncommitted merges"))
-
     p1, p2 = pl[0], repo.changectx(node)
     pa = p1.ancestor(p2)
+    fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
-    # is there a linear path from p1 to p2?
-    if pa == p1 or pa == p2:
+    ### check phase
+    if not overwrite and len(pl) > 1:
+        raise util.Abort(_("outstanding uncommitted merges"))
+    if pa == p1 or pa == p2: # is there a linear path from p1 to p2?
         if branchmerge:
             raise util.Abort(_("there is nothing to merge, just use "
                                "'hg update' or look at 'hg heads'"))
     elif not (overwrite or branchmerge):
         raise util.Abort(_("update spans branches, use 'hg merge' "
                            "or 'hg update -C' to lose changes"))
-
     if branchmerge and not forcemerge:
         if wc.modified() or wc.added() or wc.removed():
             raise util.Abort(_("outstanding uncommitted changes"))
 
-    # resolve the manifest to determine which files
-    # we care about merging
-    repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(_(" overwrite %s branchmerge %s partial %s\n") %
-                  (overwrite, branchmerge, bool(partial)))
-    repo.ui.debug(_(" ancestor %s local %s remote %s\n") % (p1, p2, pa))
-
+    ### calculate phase
     action = []
-
     if not force:
         checkunknown(wc, p2)
     if not branchmerge:
         action += forgetremoved(wc, p2)
-
     action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
 
     ### apply phase
-
-    if not branchmerge:
-        # just jump to the new rev
-        fp1, fp2, xp1, xp2 = p2.node(), nullid, str(p2), ''
-    else:
-        fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
-
+    if not branchmerge: # just jump to the new rev
+        fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
     if not partial:
         repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
     updated, merged, removed, unresolved = applyupdates(repo, action, wc, p2)
-
-    # update dirstate
-    if not partial:
-        recordupdates(repo, action, branchmerge, p2)
-        repo.dirstate.setparents(fp1, fp2)
-        repo.hook('update', parent1=xp1, parent2=xp2, error=unresolved)
 
     if show_stats:
         stats = ((updated, _("updated")),
@@ -427,6 +407,10 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         note = ", ".join([_("%d files %s") % s for s in stats])
         repo.ui.status("%s\n" % note)
     if not partial:
+        recordupdates(repo, action, branchmerge, p2)
+        repo.dirstate.setparents(fp1, fp2)
+        repo.hook('update', parent1=xp1, parent2=xp2, error=unresolved)
+
         if branchmerge:
             if unresolved:
                 repo.ui.status(_("There are unresolved merges,"
