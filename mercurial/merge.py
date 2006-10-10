@@ -10,14 +10,12 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno util os tempfile")
 
-def filemerge(repo, fw, fo, fd, wctx, mctx, move):
+def filemerge(repo, fw, fo, wctx, mctx):
     """perform a 3-way merge in the working directory
 
     fw = filename in the working directory and first parent
     fo = filename in other parent
-    fd = destination filename
     wctx, mctx = working and merge changecontexts
-    move = whether to move or copy the file to the destination
 
     TODO:
       if fw is copied in the working directory, we get confused
@@ -52,13 +50,6 @@ def filemerge(repo, fw, fo, fd, wctx, mctx, move):
                              'HG_OTHER_NODE': str(mctx)})
     if r:
         repo.ui.warn(_("merging %s failed!\n") % fw)
-    else:
-        if fd != fw:
-            repo.ui.debug(_("copying %s to %s\n") % (fw, fd))
-            repo.wwrite(fd, repo.wread(fw))
-            if move:
-                repo.ui.debug(_("removing %s\n") % fw)
-                os.unlink(a)
 
     os.unlink(b)
     os.unlink(c)
@@ -294,8 +285,16 @@ def applyupdates(repo, action, wctx, mctx):
                 repo.ui.status(_("merging %s and %s to %s\n") % (f, f2, fd))
             else:
                 repo.ui.status(_("merging %s\n") % f)
-            if filemerge(repo, f, f2, fd, wctx, mctx, move):
+            if filemerge(repo, f, f2, wctx, mctx):
                 unresolved += 1
+            else:
+                if f != fd:
+                    repo.ui.debug(_("copying %s to %s\n") % (f, fd))
+                    repo.wwrite(fd, repo.wread(f))
+                    if move:
+                        repo.ui.debug(_("removing %s\n") % f)
+                        os.unlink(repo.wjoin(f))
+
             util.set_exec(repo.wjoin(fd), flag)
             merged += 1
         elif m == "g": # get
