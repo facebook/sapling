@@ -193,6 +193,8 @@ class filectx(object):
     def path(self): return self._path
     def size(self): return self._filelog.size(self._filerev)
 
+    def cmp(self, text): return self._filelog.cmp(self._filenode, text)
+
     def parents(self):
         p = self._path
         fl = self._filelog
@@ -467,3 +469,5 @@ class workingfilectx(filectx):
         return []
 
     def size(self): return os.stat(self._repo.wjoin(self._path)).st_size
+
+    def cmp(self, text): return self._repo.wread(self._path) == text
