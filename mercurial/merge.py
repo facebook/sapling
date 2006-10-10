@@ -10,7 +10,7 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno util os tempfile")
 
-def filemerge(repo, fw, fo, fd, my, other, p1, p2, move):
+def filemerge(repo, fw, fo, fd, my, other, wctx, mctx, move):
     """perform a 3-way merge in the working directory
 
     fw = filename in the working directory and first parent
@@ -18,7 +18,7 @@ def filemerge(repo, fw, fo, fd, my, other, p1, p2, move):
     fd = destination filename
     my = fileid in first parent
     other = fileid in second parent
-    p1, p2 = hex changeset ids for merge command
+    wctx, mctx = working and merge changecontexts
     move = whether to move or copy the file to the destination
 
     TODO:
@@ -50,8 +50,8 @@ def filemerge(repo, fw, fo, fd, my, other, p1, p2, move):
            or "hgmerge")
     r = util.system('%s "%s" "%s" "%s"' % (cmd, a, b, c), cwd=repo.root,
                     environ={'HG_FILE': fw,
-                             'HG_MY_NODE': p1,
-                             'HG_OTHER_NODE': p2})
+                             'HG_MY_NODE': str(wctx.parents()[0]),
+                             'HG_OTHER_NODE': str(mctx)})
     if r:
         repo.ui.warn(_("merging %s failed!\n") % fw)
     else:
@@ -275,7 +275,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     return action
 
-def applyupdates(repo, action, xp1, xp2):
+def applyupdates(repo, action, wctx, mctx):
     updated, merged, removed, unresolved = 0, 0, 0, 0
     action.sort()
     for a in action:
@@ -295,14 +295,14 @@ def applyupdates(repo, action, xp1, xp2):
         elif m == "c": # copy
             f2, fd, my, other, flag, move = a[2:]
             repo.ui.status(_("merging %s and %s to %s\n") % (f, f2, fd))
-            if filemerge(repo, f, f2, fd, my, other, xp1, xp2, move):
+            if filemerge(repo, f, f2, fd, my, other, wctx, mctx, move):
                 unresolved += 1
             util.set_exec(repo.wjoin(fd), flag)
             merged += 1
         elif m == "m": # merge
             flag, my, other = a[2:]
             repo.ui.status(_("merging %s\n") % f)
-            if filemerge(repo, f, f, f, my, other, xp1, xp2, False):
+            if filemerge(repo, f, f, f, my, other, wctx, mctx, False):
                 unresolved += 1
             util.set_exec(repo.wjoin(f), flag)
             merged += 1
@@ -433,7 +433,7 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     if not partial:
         repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
-    updated, merged, removed, unresolved = applyupdates(repo, action, xp1, xp2)
+    updated, merged, removed, unresolved = applyupdates(repo, action, wc, p2)
 
     # update dirstate
     if not partial:
