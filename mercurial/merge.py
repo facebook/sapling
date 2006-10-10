@@ -215,7 +215,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 # is remote's version newer?
                 # or are we going back in time and clean?
                 elif overwrite or m2[f] != a or (backwards and not n[20:]):
-                    act("remote is newer", f, "g", m2.execf(f), m2[f])
+                    act("remote is newer", f, "g", m2.execf(f))
                 # local is newer, not overwrite, check mode bits
                 elif fmerge(f) != m1.execf(f):
                     act("update permissions", f, "e", m2.execf(f))
@@ -261,14 +261,14 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             act("remote copied", f2, "c", f, f, fmerge(f2, f, f2), False)
         elif f in ma:
             if overwrite or backwards:
-                act("recreating", f, "g", m2.execf(f), n)
+                act("recreating", f, "g", m2.execf(f))
             elif n != ma[f]:
                 if repo.ui.prompt(
                     (_("remote changed %s which local deleted\n") % f) +
                     _("(k)eep or (d)elete?"), _("[kd]"), _("k")) == _("k"):
-                    act("prompt recreating", f, "g", m2.execf(f), n)
+                    act("prompt recreating", f, "g", m2.execf(f))
         else:
-            act("remote created", f, "g", m2.execf(f), n)
+            act("remote created", f, "g", m2.execf(f))
 
     return action
 
@@ -304,7 +304,7 @@ def applyupdates(repo, action, wctx, mctx):
             util.set_exec(repo.wjoin(f), flag)
             merged += 1
         elif m == "g": # get
-            flag, node = a[2:]
+            flag = a[2]
             repo.ui.note(_("getting %s\n") % f)
             t = mctx.filectx(f).data()
             repo.wwrite(f, t)
