@@ -8,7 +8,7 @@ resolving manifests
  b2: remote created -> g
 merging a and b to b
 resolving a
-my a@f26ec4fc3fa3 other b@8e765a822af2 ancestor a@af1939970a1c
+my a@. other b@8e765a822af2 ancestor a@af1939970a1c
 copying a to b
 removing a
 getting b2

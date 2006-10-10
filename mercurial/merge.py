@@ -10,7 +10,7 @@ from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno util os tempfile")
 
-def filemerge(repo, fw, fo, fd, my, other, wctx, mctx, move):
+def filemerge(repo, fw, fo, fd, wctx, mctx, move):
     """perform a 3-way merge in the working directory
 
     fw = filename in the working directory and first parent
@@ -34,8 +34,8 @@ def filemerge(repo, fw, fo, fd, my, other, wctx, mctx, move):
         f.close()
         return name
 
-    fcm = repo.filectx(fw, fileid=my)
-    fco = repo.filectx(fo, fileid=other)
+    fcm = wctx.filectx(fw)
+    fco = mctx.filectx(fo)
     fca = fcm.ancestor(fco)
     if not fca:
         fca = repo.filectx(fw, fileid=-1)
@@ -295,14 +295,14 @@ def applyupdates(repo, action, wctx, mctx):
         elif m == "c": # copy
             f2, fd, my, other, flag, move = a[2:]
             repo.ui.status(_("merging %s and %s to %s\n") % (f, f2, fd))
-            if filemerge(repo, f, f2, fd, my, other, wctx, mctx, move):
+            if filemerge(repo, f, f2, fd, wctx, mctx, move):
                 unresolved += 1
             util.set_exec(repo.wjoin(fd), flag)
             merged += 1
         elif m == "m": # merge
             flag, my, other = a[2:]
             repo.ui.status(_("merging %s\n") % f)
-            if filemerge(repo, f, f, f, my, other, wctx, mctx, False):
+            if filemerge(repo, f, f, f, wctx, mctx, False):
                 unresolved += 1
             util.set_exec(repo.wjoin(f), flag)
             merged += 1
