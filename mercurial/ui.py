@@ -142,15 +142,13 @@ class ui(object):
         for (section, name), value in self.overlay.iteritems():
             yield section, name, value
             seen[section, name] = 1
-        for section in self.cdata.sections():
-            try:
-                for name, value in self.cdata.items(section):
-                    if (section, name) in seen: continue
-                    yield section, name, value.replace('\n', '\\n')
-                    seen[section, name] = 1
-            except ConfigParser.InterpolationError, inst:
-                raise util.Abort(_("Error in configuration section [%s]:\n%s")
-                                 % (section, inst))
+        sections = self.cdata.sections()
+        sections.sort()
+        for section in sections:
+            for name, value in self.configitems(section):
+                if (section, name) in seen: continue
+                yield section, name, value.replace('\n', '\\n')
+                seen[section, name] = 1
         if self.parentui is not None:
             for parent in self.parentui.walkconfig(seen):
                 yield parent
