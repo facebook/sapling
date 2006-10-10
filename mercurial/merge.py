@@ -63,17 +63,18 @@ def filemerge(repo, fw, fo, wctx, mctx):
     os.unlink(c)
     return r
 
-def checkunknown(repo, m2, wctx):
+def checkunknown(wctx, mctx):
     """
     check for collisions between unknown files and files in m2
     """
+    man = mctx.manifest()
     for f in wctx.unknown():
-        if f in m2:
-            if repo.file(f).cmp(m2[f], repo.wread(f)):
+        if f in man:
+            if mctx.filectx(f).cmp(wctx.filectx(f).data()):
                 raise util.Abort(_("'%s' already exists in the working"
                                    " dir and differs from remote") % f)
 
-def forgetremoved(m2, wctx):
+def forgetremoved(wctx, mctx):
     """
     Forget removed files
 
@@ -85,9 +86,9 @@ def forgetremoved(m2, wctx):
     """
 
     action = []
-
+    man = mctx.manifest()
     for f in wctx.deleted() + wctx.removed():
-        if f not in m2:
+        if f not in man:
             action.append((f, "f"))
 
     return action
@@ -383,9 +384,6 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
         if wc.modified() or wc.added() or wc.removed():
             raise util.Abort(_("outstanding uncommitted changes"))
 
-    m1 = wc.manifest()
-    m2 = p2.manifest()
-
     # resolve the manifest to determine which files
     # we care about merging
     repo.ui.note(_("resolving manifests\n"))
@@ -396,9 +394,9 @@ def update(repo, node, branchmerge=False, force=False, partial=None,
     action = []
 
     if not force:
-        checkunknown(repo, m2, wc)
+        checkunknown(wc, p2)
     if not branchmerge:
-        action += forgetremoved(m2, wc)
+        action += forgetremoved(wc, p2)
 
     action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
 
