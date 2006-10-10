@@ -71,20 +71,33 @@ class ui(object):
                 self.cdata.read(f)
             except ConfigParser.ParsingError, inst:
                 raise util.Abort(_("Failed to parse %s\n%s") % (f, inst))
-        # translate paths relative to root (or home) into absolute paths
-        if root is None:
-            root = os.path.expanduser('~')
-        for name, path in self.configitems("paths"):
-            if path and "://" not in path and not os.path.isabs(path):
-                self.cdata.set("paths", name, os.path.join(root, path))
         # override data from config files with data set with ui.setconfig
         if self.overlay:
             updateconfig(self.overlay, self.cdata)
+        if root is None:
+            root = os.path.expanduser('~')
+        self.fixconfig(root=root)
         for hook in self.readhooks:
             hook(self)
 
     def addreadhook(self, hook):
         self.readhooks.append(hook)
+
+    def fixconfig(self, section=None, name=None, value=None, root=None):
+        # translate paths relative to root (or home) into absolute paths
+        if section is None or section == 'paths':
+            if root is None:
+                root = os.getcwd()
+            items = section and [(name, value)] or []
+            for cdata in self.cdata, self.overlay:
+                if not cdata: continue
+                if not items and cdata.has_section('paths'):
+                    pathsitems = cdata.items('paths')
+                else:
+                    pathsitems = items
+                for n, path in pathsitems:
+                    if path and "://" not in path and not os.path.isabs(path):
+                        cdata.set("paths", n, os.path.join(root, path))
 
     def setconfig(self, section, name, value):
         if not self.overlay:
@@ -93,6 +106,7 @@ class ui(object):
             if not cdata.has_section(section):
                 cdata.add_section(section)
             cdata.set(section, name, value)
+        self.fixconfig(section, name, value)
 
     def _config(self, section, name, default, funcname):
         if self.cdata.has_option(section, name):
