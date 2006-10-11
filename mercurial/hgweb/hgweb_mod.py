@@ -772,8 +772,11 @@ class hgweb(object):
     def changectx(self, req):
         if req.form.has_key('node'):
             changeid = req.form['node'][0]
-        else:
+        elif req.form.has_key('manifest'):
             changeid = req.form['manifest'][0]
+        else:
+            changeid = self.repo.changelog.count() - 1
+
         try:
             ctx = self.repo.changectx(changeid)
         except hg.RepoError:
@@ -848,8 +851,7 @@ class hgweb(object):
         self.do_changelog(req, shortlog = True)
 
     def do_changeset(self, req):
-        ctx = self.repo.changectx(req.form['node'][0])
-        req.write(self.changeset(ctx))
+        req.write(self.changeset(self.changectx(req)))
 
     def do_manifest(self, req):
         req.write(self.manifest(self.changectx(req),

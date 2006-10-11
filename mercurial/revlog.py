@@ -973,7 +973,7 @@ class revlog(object):
             end = self.end(t)
             if not d:
                 prev = self.revision(self.tip())
-                d = self.diff(prev, str(text))
+                d = self.diff(prev, text)
             data = compress(d)
             l = len(data[1]) + len(data[0])
             dist = end - start + l

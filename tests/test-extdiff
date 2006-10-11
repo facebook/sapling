@@ -26,4 +26,13 @@ hg ci -d '0 0' -mtest1
 echo b >> a
 hg ci -d '1 0' -mtest2
 
-hg falabala -r 0:1 || echo "diff-like tools yield a non-zero exit code"
+hg falabala -r 0:1
+
+# test diff during merge
+hg update 0
+echo b >> b
+hg add b
+hg ci -m "new branch" -d '1 0'
+hg update -C 1
+hg merge tip
+hg falabala || echo "diff-like tools yield a non-zero exit code"

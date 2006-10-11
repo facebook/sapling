@@ -48,6 +48,10 @@ class changectx(object):
         elif name == '_manifest':
             self._manifest = self._repo.manifest.read(self._changeset[0])
             return self._manifest
+        elif name == '_manifestdelta':
+            md = self._repo.manifest.readdelta(self._changeset[0])
+            self._manifestdelta = md
+            return self._manifestdelta
         else:
             raise AttributeError, name
 
@@ -72,11 +76,14 @@ class changectx(object):
         return [ changectx(self._repo, x) for x in c ]
 
     def filenode(self, path):
-        if hasattr(self, "_manifest"):
+        if '_manifest' in self.__dict__:
             try:
                 return self._manifest[path]
             except KeyError:
                 raise repo.LookupError(_("'%s' not found in manifest") % path)
+        if '_manifestdelta' in self.__dict__ or path in self.files():
+            if path in self._manifestdelta:
+                return self._manifestdelta[path]
         node, flag = self._repo.manifest.find(self._changeset[0], path)
         if not node:
             raise repo.LookupError(_("'%s' not found in manifest") % path)
@@ -140,7 +147,7 @@ class filectx(object):
             return self._changeid
         elif name == '_filenode':
             try:
-                if hasattr(self, "_fileid"):
+                if '_fileid' in self.__dict__:
                     self._filenode = self._filelog.lookup(self._fileid)
                 else:
                     self._filenode = self._changectx.filenode(self._path)
@@ -176,7 +183,7 @@ class filectx(object):
     def filelog(self): return self._filelog
 
     def rev(self):
-        if hasattr(self, "_changectx"):
+        if '_changectx' in self.__dict__:
             return self._changectx.rev()
         return self._filelog.linkrev(self._filenode)
 
@@ -439,7 +446,7 @@ class workingfilectx(filectx):
                        filelog=self._filelog)
 
     def rev(self):
-        if hasattr(self, "_changectx"):
+        if '_changectx' in self.__dict__:
             return self._changectx.rev()
         return self._filelog.linkrev(self._filenode)
 

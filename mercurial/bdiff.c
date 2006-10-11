@@ -300,18 +300,19 @@ nomem:
 
 static PyObject *bdiff(PyObject *self, PyObject *args)
 {
-	PyObject *sa, *sb, *result = NULL;
+	char *sa, *sb;
+	PyObject *result = NULL;
 	struct line *al, *bl;
 	struct hunklist l = {NULL, NULL};
 	struct hunk *h;
 	char encode[12], *rb;
-	int an, bn, len = 0, la = 0, lb = 0;
+	int an, bn, len = 0, la, lb;
 
-	if (!PyArg_ParseTuple(args, "SS:bdiff", &sa, &sb))
+	if (!PyArg_ParseTuple(args, "t#t#:bdiff", &sa, &la, &sb, &lb))
 		return NULL;
 
-	an = splitlines(PyString_AsString(sa), PyString_Size(sa), &al);
-	bn = splitlines(PyString_AsString(sb), PyString_Size(sb), &bl);
+	an = splitlines(sa, la, &al);
+	bn = splitlines(sb, lb, &bl);
 	if (!al || !bl)
 		goto nomem;
 
@@ -320,6 +321,7 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 		goto nomem;
 
 	/* calculate length of output */
+	la = lb = 0;
 	for (h = l.base; h != l.head; h++) {
 		if (h->a1 != la || h->b1 != lb)
 			len += 12 + bl[h->b1].l - bl[lb].l;
