@@ -767,7 +767,7 @@ class hgweb(object):
         if method:
             method(req)
         else:
-            req.write(self.t("error"))
+            req.write(self.t("error", error='No such method: ' + cmd))
 
     def changectx(self, req):
         if req.form.has_key('node'):
