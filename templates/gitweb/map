@@ -8,7 +8,7 @@ error = error.tmpl
 naventry = '<a href="#url#log/#rev#{getentries}">#label|escape#</a> '
 navshortentry = '<a href="#url#shortlog/#rev#{getentries}">#label|escape#</a> '
 filedifflink = '<a href="#url#diff/#node|short#/#file|urlescape#{getentries}">#file|escape#</a> '
-filenodelink = '<tr class="parity#parity#"><td><a class="list" href="">#file|escape#</a></td><td></td><td class="link"><a href="#url#file/#node|short#/#file|urlescape#{getentries}">file</a> | <a href="#url#annotate/#node|short#/#file|urlescape#{getentries}">annotate</a> | <a href="#url#diff/#node|short#/#file|urlescape#{getentries}">diff</a> | <a href="#url#log/#node|short#/#file|urlescape#{getentries}">revisions</a></td></tr>'
+filenodelink = '<tr class="parity#parity#"><td><a class="list" href="{url}diff/{node|short}/{file|urlescape}{getentries}">#file|escape#</a></td><td></td><td class="link"><a href="#url#file/#node|short#/#file|urlescape#{getentries}">file</a> | <a href="#url#annotate/#node|short#/#file|urlescape#{getentries}">annotate</a> | <a href="#url#diff/#node|short#/#file|urlescape#{getentries}">diff</a> | <a href="#url#log/#node|short#/#file|urlescape#{getentries}">revisions</a></td></tr>'
 fileellipses = '...'
 changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl
