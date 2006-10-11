@@ -2,17 +2,15 @@
 test L:up a   R:nc a b W:       - 1  get local a to b
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor e300d1c794ec local 735846fee2d7 remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local e300d1c794ec+ remote 735846fee2d7
  rev: versions differ -> m
- a: remote copied -> c
-merging a and b to b
-resolving a
-my a@e300d1c794ec other b@735846fee2d7 ancestor a@924404dff337
+ a: remote copied -> m
+merging a and b
+my a@e300d1c794ec+ other b@735846fee2d7 ancestor a@924404dff337
 copying a to b
 merging rev
-resolving rev
-my rev@e300d1c794ec other rev@735846fee2d7 ancestor rev@924404dff337
+my rev@e300d1c794ec+ other rev@735846fee2d7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -25,18 +23,16 @@ M b
 test L:nc a b R:up a   W:       - 2  get rem change to a and b
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ac809aeed39a local f4db7e329e71 remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local ac809aeed39a+ remote f4db7e329e71
  a: remote is newer -> g
- b: local copied -> c
+ b: local copied -> m
  rev: versions differ -> m
 getting a
-merging b and a to b
-resolving b
-my b@ac809aeed39a other a@f4db7e329e71 ancestor a@924404dff337
+merging b and a
+my b@ac809aeed39a+ other a@f4db7e329e71 ancestor a@924404dff337
 merging rev
-resolving rev
-my rev@ac809aeed39a other rev@f4db7e329e71 ancestor rev@924404dff337
+my rev@ac809aeed39a+ other rev@f4db7e329e71 ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -49,18 +45,16 @@ M b
 test L:up a   R:nm a b W:       - 3  get local a change to b, remove a
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor e300d1c794ec local e03727d2d66b remote 924404dff337
- a: remote moved -> c
+ overwrite None partial False
+ ancestor 924404dff337 local e300d1c794ec+ remote e03727d2d66b
+ a: remote moved -> m
  rev: versions differ -> m
-merging a and b to b
-resolving a
-my a@e300d1c794ec other b@e03727d2d66b ancestor a@924404dff337
+merging a and b
+my a@e300d1c794ec+ other b@e03727d2d66b ancestor a@924404dff337
 copying a to b
 removing a
 merging rev
-resolving rev
-my rev@e300d1c794ec other rev@e03727d2d66b ancestor rev@924404dff337
+my rev@e300d1c794ec+ other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -72,16 +66,14 @@ M b
 test L:nm a b R:up a   W:       - 4  get remote change to b
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ecf3cb2a4219 local f4db7e329e71 remote 924404dff337
- b: local moved -> c
+ overwrite None partial False
+ ancestor 924404dff337 local ecf3cb2a4219+ remote f4db7e329e71
+ b: local moved -> m
  rev: versions differ -> m
-merging b and a to b
-resolving b
-my b@ecf3cb2a4219 other a@f4db7e329e71 ancestor a@924404dff337
+merging b and a
+my b@ecf3cb2a4219+ other a@f4db7e329e71 ancestor a@924404dff337
 merging rev
-resolving rev
-my rev@ecf3cb2a4219 other rev@f4db7e329e71 ancestor rev@924404dff337
+my rev@ecf3cb2a4219+ other rev@f4db7e329e71 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -93,39 +85,31 @@ M b
 test L:       R:nc a b W:       - 5  get b
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor 94b33a1b7f2d local 735846fee2d7 remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local 94b33a1b7f2d+ remote 735846fee2d7
  rev: versions differ -> m
- a: remote copied -> c
-merging a and b to b
-resolving a
-my a@924404dff337 other b@735846fee2d7 ancestor a@924404dff337
+ a: remote copied -> m
 copying a to b
 merging rev
-resolving rev
-my rev@94b33a1b7f2d other rev@735846fee2d7 ancestor rev@924404dff337
+my rev@94b33a1b7f2d+ other rev@735846fee2d7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
-M a
 M b
   a
+C a
 --------------
 
 --------------
 test L:nc a b R:       W:       - 6  nothing
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ac809aeed39a local 97c705ade336 remote 924404dff337
- b: local copied -> c
+ overwrite None partial False
+ ancestor 924404dff337 local ac809aeed39a+ remote 97c705ade336
+ b: local copied -> m
  rev: versions differ -> m
-merging b and a to b
-resolving b
-my b@ac809aeed39a other a@924404dff337 ancestor a@924404dff337
 merging rev
-resolving rev
-my rev@ac809aeed39a other rev@97c705ade336 ancestor rev@924404dff337
+my rev@ac809aeed39a+ other rev@97c705ade336 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -138,18 +122,14 @@ C a
 test L:       R:nm a b W:       - 7  get b
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor 94b33a1b7f2d local e03727d2d66b remote 924404dff337
- a: remote moved -> c
+ overwrite None partial False
+ ancestor 924404dff337 local 94b33a1b7f2d+ remote e03727d2d66b
+ a: remote moved -> m
  rev: versions differ -> m
-merging a and b to b
-resolving a
-my a@924404dff337 other b@e03727d2d66b ancestor a@924404dff337
 copying a to b
 removing a
 merging rev
-resolving rev
-my rev@94b33a1b7f2d other rev@e03727d2d66b ancestor rev@924404dff337
+my rev@94b33a1b7f2d+ other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -161,16 +141,12 @@ M b
 test L:nm a b R:       W:       - 8  nothing
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ecf3cb2a4219 local 97c705ade336 remote 924404dff337
- b: local moved -> c
+ overwrite None partial False
+ ancestor 924404dff337 local ecf3cb2a4219+ remote 97c705ade336
+ b: local moved -> m
  rev: versions differ -> m
-merging b and a to b
-resolving b
-my b@ecf3cb2a4219 other a@924404dff337 ancestor a@924404dff337
 merging rev
-resolving rev
-my rev@ecf3cb2a4219 other rev@97c705ade336 ancestor rev@924404dff337
+my rev@ecf3cb2a4219+ other rev@97c705ade336 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -182,16 +158,14 @@ M b
 test L:um a b R:um a b W:       - 9  do merge with ancestor in a
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ec03c2ca8642 local 79cc6877a3b7 remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local ec03c2ca8642+ remote 79cc6877a3b7
  b: versions differ -> m
  rev: versions differ -> m
 merging b
-resolving b
-my b@ec03c2ca8642 other b@79cc6877a3b7 ancestor a@924404dff337
+my b@ec03c2ca8642+ other b@79cc6877a3b7 ancestor a@924404dff337
 merging rev
-resolving rev
-my rev@ec03c2ca8642 other rev@79cc6877a3b7 ancestor rev@924404dff337
+my rev@ec03c2ca8642+ other rev@79cc6877a3b7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -202,14 +176,13 @@ M b
 test L:nm a b R:nm a c W:       - 11 get c, keep b
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ecf3cb2a4219 local e6abcc1a30c2 remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local ecf3cb2a4219+ remote e6abcc1a30c2
  rev: versions differ -> m
  c: remote created -> g
 getting c
 merging rev
-resolving rev
-my rev@ecf3cb2a4219 other rev@e6abcc1a30c2 ancestor rev@924404dff337
+my rev@ecf3cb2a4219+ other rev@e6abcc1a30c2 ancestor rev@924404dff337
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -221,16 +194,14 @@ C b
 test L:nc a b R:up b   W:       - 12 merge b no ancestor
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ac809aeed39a local af30c7647fc7 remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local ac809aeed39a+ remote af30c7647fc7
  b: versions differ -> m
  rev: versions differ -> m
 merging b
-resolving b
-my b@ac809aeed39a other b@af30c7647fc7 ancestor b@000000000000
+my b@ac809aeed39a+ other b@af30c7647fc7 ancestor b@000000000000
 merging rev
-resolving rev
-my rev@ac809aeed39a other rev@af30c7647fc7 ancestor rev@924404dff337
+my rev@ac809aeed39a+ other rev@af30c7647fc7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -242,18 +213,16 @@ C a
 test L:up b   R:nm a b W:       - 13 merge b no ancestor
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor 59318016310c local e03727d2d66b remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local 59318016310c+ remote e03727d2d66b
  a: other deleted -> r
  b: versions differ -> m
  rev: versions differ -> m
 removing a
 merging b
-resolving b
-my b@59318016310c other b@e03727d2d66b ancestor b@000000000000
+my b@59318016310c+ other b@e03727d2d66b ancestor b@000000000000
 merging rev
-resolving rev
-my rev@59318016310c other rev@e03727d2d66b ancestor rev@924404dff337
+my rev@59318016310c+ other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 1 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -264,18 +233,16 @@ M b
 test L:nc a b R:up a b W:       - 14 merge b no ancestor
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ac809aeed39a local 8dbce441892a remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local ac809aeed39a+ remote 8dbce441892a
  a: remote is newer -> g
  b: versions differ -> m
  rev: versions differ -> m
 getting a
 merging b
-resolving b
-my b@ac809aeed39a other b@8dbce441892a ancestor b@000000000000
+my b@ac809aeed39a+ other b@8dbce441892a ancestor b@000000000000
 merging rev
-resolving rev
-my rev@ac809aeed39a other rev@8dbce441892a ancestor rev@924404dff337
+my rev@ac809aeed39a+ other rev@8dbce441892a ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -287,18 +254,16 @@ M b
 test L:up b   R:nm a b W:       - 15 merge b no ancestor, remove a
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor 59318016310c local e03727d2d66b remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local 59318016310c+ remote e03727d2d66b
  a: other deleted -> r
  b: versions differ -> m
  rev: versions differ -> m
 removing a
 merging b
-resolving b
-my b@59318016310c other b@e03727d2d66b ancestor b@000000000000
+my b@59318016310c+ other b@e03727d2d66b ancestor b@000000000000
 merging rev
-resolving rev
-my rev@59318016310c other rev@e03727d2d66b ancestor rev@924404dff337
+my rev@59318016310c+ other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 1 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -309,18 +274,16 @@ M b
 test L:nc a b R:up a b W:       - 16 get a, merge b no ancestor
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ac809aeed39a local 8dbce441892a remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local ac809aeed39a+ remote 8dbce441892a
  a: remote is newer -> g
  b: versions differ -> m
  rev: versions differ -> m
 getting a
 merging b
-resolving b
-my b@ac809aeed39a other b@8dbce441892a ancestor b@000000000000
+my b@ac809aeed39a+ other b@8dbce441892a ancestor b@000000000000
 merging rev
-resolving rev
-my rev@ac809aeed39a other rev@8dbce441892a ancestor rev@924404dff337
+my rev@ac809aeed39a+ other rev@8dbce441892a ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -332,16 +295,14 @@ M b
 test L:up a b R:nc a b W:       - 17 keep a, merge b no ancestor
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor 0b76e65c8289 local 735846fee2d7 remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local 0b76e65c8289+ remote 735846fee2d7
  b: versions differ -> m
  rev: versions differ -> m
 merging b
-resolving b
-my b@0b76e65c8289 other b@735846fee2d7 ancestor b@000000000000
+my b@0b76e65c8289+ other b@735846fee2d7 ancestor b@000000000000
 merging rev
-resolving rev
-my rev@0b76e65c8289 other rev@735846fee2d7 ancestor rev@924404dff337
+my rev@0b76e65c8289+ other rev@735846fee2d7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -353,18 +314,16 @@ C a
 test L:nm a b R:up a b W:       - 18 merge b no ancestor
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ecf3cb2a4219 local 8dbce441892a remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local ecf3cb2a4219+ remote 8dbce441892a
  b: versions differ -> m
  rev: versions differ -> m
  a: prompt recreating -> g
 getting a
 merging b
-resolving b
-my b@ecf3cb2a4219 other b@8dbce441892a ancestor b@000000000000
+my b@ecf3cb2a4219+ other b@8dbce441892a ancestor b@000000000000
 merging rev
-resolving rev
-my rev@ecf3cb2a4219 other rev@8dbce441892a ancestor rev@924404dff337
+my rev@ecf3cb2a4219+ other rev@8dbce441892a ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -376,16 +335,14 @@ M b
 test L:up a b R:nm a b W:       - 19 merge b no ancestor, prompt remove a
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor 0b76e65c8289 local e03727d2d66b remote 924404dff337
+ overwrite None partial False
+ ancestor 924404dff337 local 0b76e65c8289+ remote e03727d2d66b
  b: versions differ -> m
  rev: versions differ -> m
 merging b
-resolving b
-my b@0b76e65c8289 other b@e03727d2d66b ancestor b@000000000000
+my b@0b76e65c8289+ other b@e03727d2d66b ancestor b@000000000000
 merging rev
-resolving rev
-my rev@0b76e65c8289 other rev@e03727d2d66b ancestor rev@924404dff337
+my rev@0b76e65c8289+ other rev@e03727d2d66b ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -397,18 +354,16 @@ C a
 test L:up a   R:um a b W:       - 20 merge a and b to b, remove a
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor e300d1c794ec local 79cc6877a3b7 remote 924404dff337
- a: remote moved -> c
+ overwrite None partial False
+ ancestor 924404dff337 local e300d1c794ec+ remote 79cc6877a3b7
+ a: remote moved -> m
  rev: versions differ -> m
-merging a and b to b
-resolving a
-my a@e300d1c794ec other b@79cc6877a3b7 ancestor a@924404dff337
+merging a and b
+my a@e300d1c794ec+ other b@79cc6877a3b7 ancestor a@924404dff337
 copying a to b
 removing a
 merging rev
-resolving rev
-my rev@e300d1c794ec other rev@79cc6877a3b7 ancestor rev@924404dff337
+my rev@e300d1c794ec+ other rev@79cc6877a3b7 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -420,16 +375,14 @@ M b
 test L:um a b R:up a   W:       - 21 merge a and b to b
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ec03c2ca8642 local f4db7e329e71 remote 924404dff337
- b: local moved -> c
+ overwrite None partial False
+ ancestor 924404dff337 local ec03c2ca8642+ remote f4db7e329e71
+ b: local moved -> m
  rev: versions differ -> m
-merging b and a to b
-resolving b
-my b@ec03c2ca8642 other a@f4db7e329e71 ancestor a@924404dff337
+merging b and a
+my b@ec03c2ca8642+ other a@f4db7e329e71 ancestor a@924404dff337
 merging rev
-resolving rev
-my rev@ec03c2ca8642 other rev@f4db7e329e71 ancestor rev@924404dff337
+my rev@ec03c2ca8642+ other rev@f4db7e329e71 ancestor rev@924404dff337
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
@@ -441,18 +394,16 @@ M b
 test L:nm a b R:up a c W:       - 23 get c, keep b
 --------------
 resolving manifests
- overwrite None branchmerge True partial False
- ancestor ecf3cb2a4219 local 2b958612230f remote 924404dff337
- b: local moved -> c
+ overwrite None partial False
+ ancestor 924404dff337 local ecf3cb2a4219+ remote 2b958612230f
+ b: local moved -> m
  rev: versions differ -> m
  c: remote created -> g
-merging b and a to b
-resolving b
-my b@ecf3cb2a4219 other a@2b958612230f ancestor a@924404dff337
+merging b and a
+my b@ecf3cb2a4219+ other a@2b958612230f ancestor a@924404dff337
 getting c
 merging rev
-resolving rev
-my rev@ecf3cb2a4219 other rev@2b958612230f ancestor rev@924404dff337
+my rev@ecf3cb2a4219+ other rev@2b958612230f ancestor rev@924404dff337
 1 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------

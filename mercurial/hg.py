@@ -201,30 +201,55 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dest_lock.release()
 
         if update:
-            _merge.update(dest_repo, dest_repo.changelog.tip())
+            _update(dest_repo, dest_repo.changelog.tip())
     if dir_cleanup:
         dir_cleanup.close()
 
     return src_repo, dest_repo
 
+def _showstats(repo, stats):
+    stats = ((stats[0], _("updated")),
+             (stats[1], _("merged")),
+             (stats[2], _("removed")),
+             (stats[3], _("unresolved")))
+    note = ", ".join([_("%d files %s") % s for s in stats])
+    repo.ui.status("%s\n" % note)
+
+def _update(repo, node): return update(repo, node)
+
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
-    return _merge.update(repo, node)
+    stats = _merge.update(repo, node, False, False, None, None)
+    _showstats(repo, stats)
+    if stats[3]:
+        repo.ui.status(_("There are unresolved merges with"
+                         " locally modified files.\n"))
+    return stats[3]
 
 def clean(repo, node, wlock=None, show_stats=True):
     """forcibly switch the working directory to node, clobbering changes"""
-    return _merge.update(repo, node, force=True, wlock=wlock,
-                         show_stats=show_stats)
+    stats = _merge.update(repo, node, False, True, None, wlock)
+    if show_stats: _showstats(repo, stats)
+    return stats[3]
 
 def merge(repo, node, force=None, remind=True, wlock=None):
     """branch merge with node, resolving changes"""
-    return _merge.update(repo, node, branchmerge=True, force=force,
-                         remind=remind, wlock=wlock)
+    stats = _merge.update(repo, node, True, force, False, wlock)
+    _showstats(repo, stats)
+    if stats[3]:
+        pl = repo.parents()
+        repo.ui.status(_("There are unresolved merges,"
+                         " you can redo the full merge using:\n"
+                         "  hg update -C %s\n"
+                         "  hg merge %s\n"
+                         % (pl[0].rev(), pl[1].rev())))
+    elif remind:
+        repo.ui.status(_("(branch merge, don't forget to commit)\n"))
+    return stats[3]
 
 def revert(repo, node, choose, wlock):
     """revert changes to revision in node without updating dirstate"""
-    return _merge.update(repo, node, force=True, partial=choose,
-                         show_stats=False, wlock=wlock)
+    return _merge.update(repo, node, False, True, choose, wlock)[3]
 
 def verify(repo):
     """verify the consistency of a repository"""

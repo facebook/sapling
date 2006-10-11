@@ -467,6 +467,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         to = None
         tn = None
         dodiff = True
+        header = []
         if f in mmap:
             to = getfile(f).read(mmap[f])
         if f not in removed:
@@ -480,7 +481,6 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     header.append('new mode %s\n' % nmode)
 
             a, b = f, f
-            header = []
             if f in added:
                 if node2:
                     mode = gitmode(mmap2.execf(f))
@@ -510,11 +510,12 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     nmode = gitmode(util.is_exec(repo.wjoin(f), mmap.execf(f)))
                 addmodehdr(header, omode, nmode)
             r = None
-            if dodiff:
-                header.insert(0, 'diff --git a/%s b/%s\n' % (a, b))
-                fp.write(''.join(header))
+            header.insert(0, 'diff --git a/%s b/%s\n' % (a, b))
         if dodiff:
-            fp.write(mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts))
+            text = mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts)
+            if text or len(header) > 1:
+                fp.write(''.join(header))
+            fp.write(text)
 
 def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
            opts=None):

@@ -59,12 +59,6 @@ class hgweb(object):
             if i in allowed or self.repo.ui.configbool("web", "allow" + i):
                 yield {"type" : i, "extension" : spec[2], "node" : nodeid}
 
-    def listfiles(self, files, mf):
-        for f in files[:self.maxfiles]:
-            yield self.t("filenodelink", node=hex(mf[f]), file=f)
-        if len(files) > self.maxfiles:
-            yield self.t("fileellipses")
-
     def listfilediffs(self, files, changeset):
         for f in files[:self.maxfiles]:
             yield self.t("filedifflink", node=hex(changeset), file=f)
@@ -436,9 +430,9 @@ class hgweb(object):
                     continue
 
                 yield {"file": full,
-                       "filenode": hex(fnode),
                        "parity": self.stripes(parity),
                        "basename": f,
+                       "size": ctx.filectx(full).size(),
                        "permissions": mf.execf(full)}
                 parity += 1
 
@@ -653,38 +647,31 @@ class hgweb(object):
                 def firstitem(query):
                     return query.split('&', 1)[0].split(';', 1)[0]
 
-                root = req.env.get('REQUEST_URI', '').split('?', 1)[0]
-                pi = req.env.get('PATH_INFO', '')
-                if pi:
-                    root = root[:-len(pi)]
-                
-                if req.env.has_key('REPO_NAME'):
-                    base = '/' + req.env['REPO_NAME']
-                else:
-                    base = root
+                def normurl(url):
+                    inner = '/'.join([x for x in url.split('/') if x])
+                    tl = len(url) > 1 and url.endswith('/') and '/' or ''
 
+                    return '%s%s%s' % (url.startswith('/') and '/' or '',
+                                       inner, tl)
+
+                root = normurl(req.env.get('REQUEST_URI', '').split('?', 1)[0])
+                pi = normurl(req.env.get('PATH_INFO', ''))
                 if pi:
-                    while pi.startswith('//'):
-                        pi = pi[1:]
-                    if pi.startswith(base):
-                        if len(pi) > len(base):
-                            base += '/'
-                            query = pi[len(base):]
-                        else:
-                            if req.env.has_key('REPO_NAME'):
-                                # We are using hgwebdir
-                                base += '/'
-                            else:
-                                base += '?'
-                            query = firstitem(req.env['QUERY_STRING'])
+                    # strip leading /
+                    pi = pi[1:]
+                    if pi:
+                        root = root[:-len(pi)]
+                    if req.env.has_key('REPO_NAME'):
+                        rn = req.env['REPO_NAME'] + '/'
+                        root += rn
+                        query = pi[len(rn):]
                     else:
-                        base += '/'
-                        query = pi[1:]
+                        query = pi
                 else:
-                    base += '?'
+                    root += '?'
                     query = firstitem(req.env['QUERY_STRING'])
 
-                return (root + base, query)
+                return (root, query)
 
             req.url, query = spliturl(req)
 

@@ -69,13 +69,18 @@ class hgwebdir(object):
         def footer(**map):
             yield tmpl("footer", motd=self.motd, **map)
 
+        url = req.env['REQUEST_URI'].split('?')[0]
+        if not url.endswith('/'):
+            url += '/'
+
         style = self.style
         if req.form.has_key('style'):
             style = req.form['style'][0]
         mapfile = style_map(templater.templatepath(), style)
         tmpl = templater.templater(mapfile, templater.common_filters,
                                    defaults={"header": header,
-                                             "footer": footer})
+                                             "footer": footer,
+                                             "url": url})
 
         def archivelist(ui, nodeid, url):
             allowed = ui.configlist("web", "allow_archive")
