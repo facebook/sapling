@@ -72,7 +72,7 @@ class changectx(object):
         return [ changectx(self._repo, x) for x in c ]
 
     def filenode(self, path):
-        if hasattr(self, "_manifest"):
+        if '_manifest' in self.__dict__:
             try:
                 return self._manifest[path]
             except KeyError:
@@ -140,7 +140,7 @@ class filectx(object):
             return self._changeid
         elif name == '_filenode':
             try:
-                if hasattr(self, "_fileid"):
+                if '_fileid' in self.__dict__:
                     self._filenode = self._filelog.lookup(self._fileid)
                 else:
                     self._filenode = self._changectx.filenode(self._path)
@@ -176,7 +176,7 @@ class filectx(object):
     def filelog(self): return self._filelog
 
     def rev(self):
-        if hasattr(self, "_changectx"):
+        if '_changectx' in self.__dict__:
             return self._changectx.rev()
         return self._filelog.linkrev(self._filenode)
 
@@ -439,7 +439,7 @@ class workingfilectx(filectx):
                        filelog=self._filelog)
 
     def rev(self):
-        if hasattr(self, "_changectx"):
+        if '_changectx' in self.__dict__:
             return self._changectx.rev()
         return self._filelog.linkrev(self._filenode)
 
