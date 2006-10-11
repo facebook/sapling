@@ -48,6 +48,10 @@ class changectx(object):
         elif name == '_manifest':
             self._manifest = self._repo.manifest.read(self._changeset[0])
             return self._manifest
+        elif name == '_manifestdelta':
+            md = self._repo.manifest.readdelta(self._changeset[0])
+            self._manifestdelta = md
+            return self._manifestdelta
         else:
             raise AttributeError, name
 
@@ -77,6 +81,9 @@ class changectx(object):
                 return self._manifest[path]
             except KeyError:
                 raise repo.LookupError(_("'%s' not found in manifest") % path)
+        if '_manifestdelta' in self.__dict__ or path in self.files():
+            if path in self._manifestdelta:
+                return self._manifestdelta[path]
         node, flag = self._repo.manifest.find(self._changeset[0], path)
         if not node:
             raise repo.LookupError(_("'%s' not found in manifest") % path)
