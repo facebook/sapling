@@ -51,3 +51,4 @@ filelogentry = '<tr class="parity#parity#"><td class="age"><i>#date|age# ago</i>
 archiveentry = ' | <a href="{url}archive/{node|short}{extension}">#type|escape#</a> '
 indexentry = '<tr class="parity#parity#"><td><a class="list" href="#url#"><b>#name|escape#</b></a></td><td>#description#</td><td>#contact|obfuscate#</td><td class="age">#lastchange|age# ago</td><td class="indexlinks"><a class="rss_logo" href="#url#rss-log">RSS</a> #archives%archiveentry#</td></tr>' 
 index = index.tmpl
+hiddenformentry = '<input type="hidden" name="#name#" value="#value|escape#" />'

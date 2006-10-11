@@ -708,6 +708,16 @@ class hgweb(object):
                         req.form['node'] = [fn[:-len(ext)]]
                         req.form['type'] = [type_]
 
+        def sessionvars(**map):
+            fields = []
+            if req.form.has_key('style'):
+                style = req.form['style'][0]
+                if style != self.repo.ui.config('web', 'style', ''):
+                    fields.append(('style', style))
+
+            for name, value in fields:
+                yield dict(name=name, value=value)
+
         def queryprefix(**map):
             return req.url[-1] == '?' and ';' or '?'
 
@@ -754,6 +764,7 @@ class hgweb(object):
                                                "header": header,
                                                "footer": footer,
                                                "rawfileheader": rawfileheader,
+                                               "sessionvars": sessionvars,
                                                "queryprefix": queryprefix,
                                                "getentries": getentries
                                                })

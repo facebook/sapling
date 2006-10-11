@@ -51,3 +51,4 @@ index = index.tmpl
 archiveentry = '<a href="#url#archive/#node|short##extension|urlescape#">#type|escape#</a> '
 notfound = notfound.tmpl
 error = error.tmpl
+hiddenformentry = '<input type="hidden" name="#name#" value="#value|escape#" />'

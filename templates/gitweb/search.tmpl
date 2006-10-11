@@ -10,14 +10,15 @@
 <h2>searching for #query|escape#</h2>
 
 <form action="{url}log">
+{sessionvars%hiddenformentry}
 search:
-<input type="hidden" name="style" value="gitweb">
 <input name="rev" type="text" width="30" value="#query|escape#">
 </form>
 
 #entries#
 
 <form action="{url}log">
+{sessionvars%hiddenformentry}
 search:
 <input type="hidden" name="style" value="gitweb">
 <input name="rev" type="text" width="30">
