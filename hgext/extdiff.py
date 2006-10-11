@@ -65,6 +65,9 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
             ui.write_err(_('making snapshot of %d files from rev %s\n') %
                          (len(files), short(node)))
         for fn in files:
+            if not fn in mf:
+                # skipping new file after a merge ?
+                continue
             wfn = util.pconvert(fn)
             ui.note('  %s\n' % wfn)
             dest = os.path.join(base, wfn)
