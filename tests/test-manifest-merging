@@ -26,7 +26,7 @@ cd ..
 
 echo % pull into work and merge
 cd foo-work
-hg pull
+hg pull -q
 hg merge
 
 echo % revert to changeset 1 to simulate a failed merge
