@@ -13,7 +13,7 @@ from mercurial.demandload import demandload
 demandload(globals(), "re zlib ConfigParser mimetools cStringIO sys tempfile")
 demandload(globals(), 'urllib')
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone,patch")
-demandload(globals(), "mercurial:templater")
+demandload(globals(), "mercurial:revlog,templater")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile,style_map")
 from mercurial.node import *
 from mercurial.i18n import gettext as _
@@ -765,7 +765,10 @@ class hgweb(object):
 
         method = getattr(self, 'do_' + cmd, None)
         if method:
-            method(req)
+            try:
+                method(req)
+            except (hg.RepoError, revlog.RevlogError), inst:
+                req.write(self.t("error", error=str(inst)))
         else:
             req.write(self.t("error", error='No such method: ' + cmd))
 
