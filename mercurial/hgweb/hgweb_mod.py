@@ -538,10 +538,10 @@ class hgweb(object):
                  owner = (self.repo.ui.config("ui", "username") or # preferred
                           self.repo.ui.config("web", "contact") or # deprecated
                           self.repo.ui.config("web", "author", "unknown")), # also
-                 lastchange = (0, 0), # FIXME
+                 lastchange = cl.read(cl.tip())[2],
                  tags = tagentries,
                  shortlog = changelist,
-                 node = hex(self.repo.changelog.tip()),
+                 node = hex(cl.tip()),
                  archives=self.archivelist("tip"))
 
     def filediff(self, fctx):
