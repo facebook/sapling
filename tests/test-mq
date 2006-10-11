@@ -160,6 +160,17 @@ sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" ../.hg/patches/foo
 hg status
 
+echo % qpush failure
+cd ..
+hg qrefresh
+hg qnew -mbar bar
+echo foo > foo
+hg add foo
+hg qrefresh
+hg qpop -a
+echo bar > foo
+hg qpush -a
+
 cat >>$HGRCPATH <<EOF
 [diff]
 git = True

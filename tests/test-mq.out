@@ -164,6 +164,14 @@ diff -r cb9a9f314b8b b/f
 @@ -0,0 +1,1 @@
 +f
 M a
+% qpush failure
+Patch queue now empty
+applying foo
+applying bar
+1 out of 1 hunk ignored -- saving rejects to file foo.rej
+patch failed, unable to continue (try -v)
+patch failed, rejects left in working dir
+Errors during apply, please fix and refresh bar
 new file
 
 diff --git a/new b/new
