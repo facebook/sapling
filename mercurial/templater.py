@@ -135,7 +135,11 @@ class templater(object):
                 fl = m.group(4)
 
                 if format:
-                    q = v.__iter__
+                    try:
+                        q = v.__iter__
+                    except AttributeError:
+                        raise SyntaxError(_("Error expanding '%s%s'")
+                                          % (key, format))
                     for i in q():
                         lm.update(i)
                         yield self(format[1:], **lm)
