@@ -6,15 +6,15 @@
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{getentries}">#repo|escape#</a> / tags
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / tags
 </div>
 
 <div class="page_nav">
-<a href="{url}summary{getentries}">summary</a> |
-<a href="{url}shortlog{getentries}">shortlog</a> |
-<a href="{url}log{getentries}">changelog</a> |
+<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url}log{sessionvars%urlparameter}">changelog</a> |
 tags |
-<a href="{url}file/#node|short#{getentries}">manifest</a>
+<a href="{url}file/#node|short#{sessionvars%urlparameter}">manifest</a>
 <br/>
 </div>
 

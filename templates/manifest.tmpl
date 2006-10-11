@@ -4,10 +4,10 @@
 <body>
 
 <div class="buttons">
-<a href="#url#log/#rev#{getentries}">changelog</a>
-<a href="#url#shortlog/#rev#{getentries}">shortlog</a>
-<a href="#url#tags{getentries}">tags</a>
-<a href="#url#rev/#node|short#{getentries}">changeset</a>
+<a href="#url#log/#rev#{sessionvars%urlparameter}">changelog</a>
+<a href="#url#shortlog/#rev#{sessionvars%urlparameter}">shortlog</a>
+<a href="#url#tags{sessionvars%urlparameter}">tags</a>
+<a href="#url#rev/#node|short#{sessionvars%urlparameter}">changeset</a>
 #archives%archiveentry#
 </div>
 
@@ -17,7 +17,7 @@
 <tr class="parity1">
   <td><tt>drwxr-xr-x</tt>&nbsp;
   <td>&nbsp;
-  <td><a href="#url#file/#node|short##up|urlescape#{getentries}">[up]</a>
+  <td><a href="#url#file/#node|short##up|urlescape#{sessionvars%urlparameter}">[up]</a>
 </tr>
 #dentries%manifestdirentry#
 #fentries%manifestfileentry#

@@ -6,11 +6,11 @@
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="#url#summary{getentries}">#repo|escape#</a> / changeset
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="#url#summary{sessionvars%urlparameter}">#repo|escape#</a> / changeset
 </div>
 
 <div class="page_nav">
-<a href="{url}summary{getentries}">summary</a> | <a href="{url}shortlog/#rev#{getentries}">shortlog</a> | <a href="{url}log/#rev#{getentries}">changelog</a> | <a href="{url}tags{getentries}">tags</a> | <a href="{url}file/#node|short#{getentries}">manifest</a> | changeset | <a href="{url}raw-rev/#node|short#">raw</a> #archives%archiveentry#<br/>
+<a href="{url}summary{sessionvars%urlparameter}">summary</a> | <a href="{url}shortlog/#rev#{sessionvars%urlparameter}">shortlog</a> | <a href="{url}log/#rev#{sessionvars%urlparameter}">changelog</a> | <a href="{url}tags{sessionvars%urlparameter}">tags</a> | <a href="{url}file/#node|short#{sessionvars%urlparameter}">manifest</a> | changeset | <a href="{url}raw-rev/#node|short#">raw</a> #archives%archiveentry#<br/>
 </div>
 
 <div>
@@ -21,7 +21,7 @@
 <tr><td>author</td><td>#author|obfuscate#</td></tr>
 <tr><td></td><td>#date|date# (#date|age# ago)</td></tr>
 <tr><td>changeset</td><td style="font-family:monospace">#node|short#</td></tr>
-<tr><td>manifest</td><td style="font-family:monospace"><a class="list" href="{url}file/#node|short#{getentries}">#node|short#</a></td></tr>
+<tr><td>manifest</td><td style="font-family:monospace"><a class="list" href="{url}file/#node|short#{sessionvars%urlparameter}">#node|short#</a></td></tr>
 #parent%changesetparent#
 #child%changesetchild#
 #changesettag#

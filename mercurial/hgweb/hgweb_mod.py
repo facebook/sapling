@@ -715,25 +715,10 @@ class hgweb(object):
                 if style != self.repo.ui.config('web', 'style', ''):
                     fields.append(('style', style))
 
+            separator = req.url[-1] == '?' and ';' or '?'
             for name, value in fields:
-                yield dict(name=name, value=value)
-
-        def queryprefix(**map):
-            return req.url[-1] == '?' and ';' or '?'
-
-        def getentries(**map):
-            fields = {}
-            if req.form.has_key('style'):
-                style = req.form['style'][0]
-                if style != self.repo.ui.config('web', 'style', ''):
-                    fields['style'] = style
-
-            if fields:
-                fields = ['%s=%s' % (k, urllib.quote(v))
-                          for k, v in fields.iteritems()]
-                yield '%s%s' % (queryprefix(), ';'.join(fields))
-            else:
-                yield ''
+                yield dict(name=name, value=value, separator=separator)
+                separator = ';'
 
         self.refresh()
 
@@ -764,9 +749,7 @@ class hgweb(object):
                                                "header": header,
                                                "footer": footer,
                                                "rawfileheader": rawfileheader,
-                                               "sessionvars": sessionvars,
-                                               "queryprefix": queryprefix,
-                                               "getentries": getentries
+                                               "sessionvars": sessionvars
                                                })
 
         if not req.form.has_key('cmd'):

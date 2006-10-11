@@ -6,14 +6,14 @@
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{getentries}">#repo|escape#</a> / summary
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / summary
 </div>
 <div class="page_nav">
 summary |
-<a href="{url}shortlog{getentries}">shortlog</a> |
-<a href="{url}log{getentries}">changelog</a> |
-<a href="{url}tags{getentries}">tags</a> |
-<a href="{url}file/#node|short#{getentries}">manifest</a>#archives%archiveentry#
+<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url}log{sessionvars%urlparameter}">changelog</a> |
+<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
+<a href="{url}file/#node|short#{sessionvars%urlparameter}">manifest</a>#archives%archiveentry#
 <br/>
 </div>
 
@@ -24,16 +24,16 @@ summary |
 <tr><td>last change</td><td>#lastchange|rfc822date#</td></tr>
 </table>
 
-<div><a  class="title" href="{url}log{getentries}">changes</a></div>
+<div><a  class="title" href="{url}log{sessionvars%urlparameter}">changes</a></div>
 <table cellspacing="0">
 #shortlog#
-<tr class="light"><td colspan="3"><a class="list" href="{url}log{getentries}">...</a></td></tr>
+<tr class="light"><td colspan="3"><a class="list" href="{url}log{sessionvars%urlparameter}">...</a></td></tr>
 </table>
 
-<div><a class="title" href="{url}tags{getentries}">tags</a></div>
+<div><a class="title" href="{url}tags{sessionvars%urlparameter}">tags</a></div>
 <table cellspacing="0">
 #tags#
-<tr class="light"><td colspan="3"><a class="list" href="{url}tags{getentries}">...</a></td></tr>
+<tr class="light"><td colspan="3"><a class="list" href="{url}tags{sessionvars%urlparameter}">...</a></td></tr>
 </table>
 
 #footer#

@@ -6,18 +6,18 @@
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{getentries}">#repo|escape#</a> / file revisions
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / file revisions
 </div>
 
 <div class="page_nav">
-<a href="{url}summary{getentries}">summary</a> |
-<a href="{url}shortlog{getentries}">shortlog</a> |
-<a href="{url}log{getentries}">changelog</a> |
-<a href="{url}tags{getentries}">tags</a> |
-<a href="{url}file/{node|short}/#file|urlescape#{getentries}">file</a> |
+<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url}log{sessionvars%urlparameter}">changelog</a> |
+<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
+<a href="{url}file/{node|short}/#file|urlescape#{sessionvars%urlparameter}">file</a> |
 revisions |
-<a href="{url}annotate/{node|short}/#file|urlescape#{getentries}">annotate</a> |
-<a href="{url}diff/{node|short}/{file|urlescape}{getentries}">diff</a> |
+<a href="{url}annotate/{node|short}/#file|urlescape#{sessionvars%urlparameter}">annotate</a> |
+<a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a> |
 <a href="{url}rss-log/#node|short#/#file|urlescape#">rss</a><br/>
 </div>
 

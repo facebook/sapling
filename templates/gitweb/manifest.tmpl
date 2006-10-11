@@ -6,16 +6,16 @@
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{getentries}">#repo|escape#</a> / manifest
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / manifest
 </div>
 
 <div class="page_nav">
-<a href="{url}summary{getentries}">summary</a> |
-<a href="{url}shortlog{getentries}">shortlog</a> |
-<a href="{url}log{getentries}">changelog</a> |
-<a href="{url}tags{getentries}">tags</a> |
+<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url}log{sessionvars%urlparameter}">changelog</a> |
+<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
 manifest |
-<a href="{url}rev/#node|short#{getentries}">changeset</a> #archives%archiveentry#<br/>
+<a href="{url}rev/#node|short#{sessionvars%urlparameter}">changeset</a> #archives%archiveentry#<br/>
 </div>
 
 <div class="title" >#path|escape#</div>
@@ -24,7 +24,7 @@ manifest |
 <tr class="light">
 <td style="font-family:monospace">drwxr-xr-x</td>
 <td style="font-family:monospace"></td>
-<td><a href="{url}file/#node|short##up|urlescape#{getentries}">[up]</a></td>
+<td><a href="{url}file/#node|short##up|urlescape#{sessionvars%urlparameter}">[up]</a></td>
 <td class="link">&nbsp;</td>
 </tr>
 #dentries%manifestdirentry#

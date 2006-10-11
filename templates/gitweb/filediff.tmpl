@@ -6,18 +6,18 @@
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{getentries}">{repo|escape}</a> / annotate
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / annotate
 </div>
 
 <div class="page_nav">
-<a href="{url}summary{getentries}">summary</a> |
-<a href="{url}shortlog{getentries}">shortlog</a> |
-<a href="{url}log{getentries}">changelog</a> |
-<a href="{url}tags{getentries}">tags</a> |
-<a href="{url}file/{node|short}{path|urlescape}{getentries}">manifest</a> |
-<a href="{url}rev/{node|short}{getentries}">changeset</a> |
-<a href="{url}file/{node|short}/{file|urlescape}{getentries}">file</a> |
-<a href="{url}log/{node|short}/{file|urlescape}{getentries}">revisions</a> |
+<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url}log{sessionvars%urlparameter}">changelog</a> |
+<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
+<a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">manifest</a> |
+<a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
+<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a> |
+<a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a> |
 <a href="{url}annotate/{node|short}/{file|urlescape}{getantries}">annotate</a> |
 diff |
 <a href="{url}raw-diff/{node|short}/{file|urlescape}">raw</a><br/>
@@ -28,13 +28,13 @@ diff |
 <table>
 <tr>
  <td class="metatag">changeset {rev}:</td>
- <td><a href="{url}rev/{node|short}{getentries}">{node|short}</a></td>
+ <td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
 </tr>
 {parent%filediffparent}
 {child%filediffchild}
 <tr>
  <td class="metatag">manifest:</td>
- <td><a href="{url}file/{node|short}{getentries}">{node|short}</a></td>
+ <td><a href="{url}file/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
 </tr>
 </table>
 
