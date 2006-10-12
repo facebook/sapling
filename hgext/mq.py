@@ -521,7 +521,8 @@ class queue:
             if r:
                 r.remove(realpatches, True)
             else:
-                os.unlink(self.join(patch))
+                for p in realpatches:
+                    os.unlink(self.join(p))
 
         if appliedbase:
             del self.applied[:appliedbase]

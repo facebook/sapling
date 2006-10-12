@@ -21,7 +21,7 @@ ls .hg/patches
 hg qpop
 hg qdel -k b
 ls .hg/patches
-hg qdel -f a
+hg qdel -r a
 hg qapplied
 hg log --template '{rev} {desc}\n'
 
@@ -29,7 +29,7 @@ hg qnew d
 hg qnew e
 hg qnew f
 
-hg qdel -f e
-hg qdel -f d e
+hg qdel -r e
+hg qdel -r d e
 hg qapplied
 hg log --template '{rev} {desc}\n'
