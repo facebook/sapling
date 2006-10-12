@@ -30,6 +30,6 @@ hg qnew e
 hg qnew f
 
 hg qdel -r e
-hg qdel -r d e
+hg qdel -r qbase:e
 hg qapplied
 hg log --template '{rev} {desc}\n'

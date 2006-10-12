@@ -14,7 +14,7 @@ series
 status
 1 New patch: a
 0 base
-abort: patch e not at base
+abort: cannot delete revision 3 above applied patches
 f
 4 New patch: f
 3 New patch: e
