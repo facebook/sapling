@@ -87,12 +87,12 @@ def forgetremoved(wctx, mctx):
 
     return action
 
-def nonoverlap(d1, d2):
-    "Return list of elements in d1 not in d2"
+def nonoverlap(d1, d2, d3):
+    "Return list of elements in d1 not in d2 or d3"
 
     l = []
     for d in d1:
-        if d not in d2:
+        if d not in d3 and d not in d2:
             l.append(d)
 
     l.sort()
@@ -116,12 +116,12 @@ def findold(fctx, limit):
     old.sort()
     return old
 
-def findcopies(repo, m1, m2, limit):
+def findcopies(repo, m1, m2, ma, limit):
     """
     Find moves and copies between m1 and m2 back to limit linkrev
     """
 
-    if not repo.ui.config("merge", "followcopies"):
+    if not repo.ui.configbool("merge", "followcopies", True):
         return {}
 
     # avoid silly behavior for update from empty dir
@@ -131,8 +131,8 @@ def findcopies(repo, m1, m2, limit):
     dcopies = repo.dirstate.copies()
     copy = {}
     match = {}
-    u1 = nonoverlap(m1, m2)
-    u2 = nonoverlap(m2, m1)
+    u1 = nonoverlap(m1, m2, ma)
+    u2 = nonoverlap(m2, m1, ma)
     ctx = util.cachefunc(lambda f,n: repo.filectx(f, fileid=n[:20]))
 
     def checkpair(c, f2, man):
@@ -194,7 +194,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         action.append((f, m) + args)
 
     if not (backwards or overwrite):
-        copy = findcopies(repo, m1, m2, pa.rev())
+        copy = findcopies(repo, m1, m2, ma, pa.rev())
 
     # Compare manifests
     for f, n in m1.iteritems():
