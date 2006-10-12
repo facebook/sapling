@@ -599,12 +599,12 @@ class revlog(object):
             if not heads:
                 return nonodes
             ancestors = {}
-            # Start at the top and keep marking parents until we're done.
-            nodestotag = heads[:]
             # Turn heads into a dictionary so we can remove 'fake' heads.
             # Also, later we will be using it to filter out the heads we can't
             # find from roots.
             heads = dict.fromkeys(heads, 0)
+            # Start at the top and keep marking parents until we're done.
+            nodestotag = heads.keys()
             # Remember where the top was so we can use it as a limit later.
             highestrev = max([self.rev(n) for n in nodestotag])
             while nodestotag:

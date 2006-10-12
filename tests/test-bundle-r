@@ -72,6 +72,10 @@ hg -R test bundle --base 2 -r tip test-bundle-branch1.hg
 hg -R test bundle --base 2 -r 7 test-bundle-branch2.hg
 hg -R test bundle --base 2 test-bundle-all.hg
 hg -R test bundle --base 3 -r tip test-bundle-should-fail.hg
+
+# issue76 msg2163
+hg -R test bundle --base 3 -r 3 -r 3 test-bundle-cset-3.hg
+
 hg clone test-2 test-9
 cd test-9
 echo % 2
