@@ -191,18 +191,22 @@ def readgitpatch(patchname):
 def dogitpatch(patchname, gitpatches, cwd=None):
     """Preprocess git patch so that vanilla patch can handle it"""
     def extractbin(fp):
-        line = fp.readline()
+        line = fp.readline().rstrip()
         while line and not line.startswith('literal '):
-            line = fp.readline()
+            line = fp.readline().rstrip()
         if not line:
             return
-        size = int(line[8:].rstrip())
+        size = int(line[8:])
         dec = []
-        line = fp.readline()
+        line = fp.readline().rstrip()
         while line:
-            line = line[1:-1]
-            dec.append(base85.b85decode(line))
-            line = fp.readline()
+            l = line[0]
+            if l <= 'Z' and l >= 'A':
+                l = ord(l) - ord('A') + 1
+            else:
+                l = ord(l) - ord('a') + 27
+            dec.append(base85.b85decode(line[1:])[:l])
+            line = fp.readline().rstrip()
         text = zlib.decompress(''.join(dec))
         if len(text) != size:
             raise util.Abort(_('binary patch is %d bytes, not %d') %
