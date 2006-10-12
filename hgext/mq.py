@@ -488,22 +488,33 @@ class queue:
 
     def delete(self, repo, patches, opts):
         realpatches = []
-        appliedbase = 0
-        forget = opts.get('forget')
         for patch in patches:
             patch = self.lookup(patch, strict=True)
             info = self.isapplied(patch)
-            if info and not forget:
+            if info:
                 raise util.Abort(_("cannot delete applied patch %s") % patch)
             if patch not in self.series:
                 raise util.Abort(_("patch %s not in series file") % patch)
-            if forget:
-                if not info:
-                    raise util.Abort(_("cannot forget unapplied patch %s") % patch)
-                if info[0] != appliedbase:
-                    raise util.Abort(_("patch %s not at base") % patch)
-                appliedbase += 1
             realpatches.append(patch)
+
+        appliedbase = 0
+        if opts.get('rev'):
+            if not self.applied:
+                raise util.Abort(_('no patches applied'))
+            revs = [int(r) for r in cmdutil.revrange(ui, repo, opts['rev'])]
+            if len(revs) > 1 and revs[0] > revs[1]:
+                revs.reverse()
+            for rev in revs:
+                if appliedbase >= len(self.applied):
+                    raise util.Abort(_("revision %d is not managed") % rev)
+
+                base = revlog.bin(self.applied[appliedbase].rev)
+                node = repo.changelog.node(rev)
+                if node != base:
+                    raise util.Abort(_("cannot delete revision %d above "
+                                       "applied patches") % rev)
+                realpatches.append(self.applied[appliedbase].name)
+                appliedbase += 1
 
         if not opts.get('keep'):
             r = self.qrepo()
@@ -512,7 +523,7 @@ class queue:
             else:
                 os.unlink(self.join(patch))
 
-        if forget:
+        if appliedbase:
             del self.applied[:appliedbase]
             self.applied_dirty = 1
         indices = [self.find_series(p) for p in realpatches]
@@ -1351,10 +1362,10 @@ class queue:
         if qrepo:
             qrepo.add(added)
 
-def delete(ui, repo, patch, *patches, **opts):
+def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
-    With --forget, mq will stop managing the named patches. The
+    With --rev, mq will stop managing the named revisions. The
     patches must be applied and at the base of the stack. This option
     is useful when the patches have been applied upstream.
 
@@ -1362,7 +1373,7 @@ def delete(ui, repo, patch, *patches, **opts):
 
     With --keep, the patch files are preserved in the patch directory."""
     q = repo.mq
-    q.delete(repo, (patch,) + patches, opts)
+    q.delete(repo, patches, opts)
     q.save_dirty()
     return 0
 
@@ -2018,9 +2029,9 @@ cmdtable = {
                'hg qdiff [-I] [-X] [FILE]...'),
     "qdelete|qremove|qrm":
         (delete,
-         [('f', 'forget', None, _('stop managing an applied patch')),
-          ('k', 'keep', None, _('keep patch file'))],
-          'hg qdelete [-f] [-k] PATCH'),
+         [('k', 'keep', None, _('keep patch file')),
+          ('r', 'rev', [], _('stop managing a revision'))],
+          'hg qdelete [-k] [-r REV]... PATCH...'),
     'qfold':
         (fold,
          [('e', 'edit', None, _('edit patch header')),
