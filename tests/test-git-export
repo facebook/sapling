@@ -47,3 +47,16 @@ hg diff --git -r 6:tip
 
 echo '% nonexistent in tip+chmod'
 hg diff --git -r 5:6
+
+echo '% binary diff'
+cp $TESTDIR/binfile.bin .
+hg add binfile.bin
+hg diff --git > b.diff
+cat b.diff
+
+echo '% import binary diff'
+hg revert binfile.bin
+rm binfile.bin
+hg import -mfoo b.diff
+cmp binfile.bin $TESTDIR/binfile.bin
+
