@@ -9,8 +9,8 @@ from demandload import demandload
 from i18n import gettext as _
 from node import *
 demandload(globals(), "base85 cmdutil mdiff util")
-demandload(globals(), "cStringIO email.Parser errno os re shutil sha sys")
-demandload(globals(), "tempfile zlib")
+demandload(globals(), "cStringIO email.Parser errno os popen2 re shutil sha")
+demandload(globals(), "sys tempfile zlib")
 
 # helper functions
 
