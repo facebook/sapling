@@ -10,24 +10,24 @@ hg manifest 1
 echo this is c1 > c
 hg rawcommit -p 1 -d "1000000 0" -m2 c
 hg manifest 2
-hg parents
+hg -v parents
 rm b
 hg rawcommit -p 2 -d "1000000 0" -m3 b
 hg manifest 3
-hg parents
+hg -v parents
 echo this is a22 > a
 hg rawcommit -p 3 -d "1000000 0" -m4 a
 hg manifest 4
-hg parents
+hg -v parents
 echo this is c22 > c
 hg rawcommit -p 1 -d "1000000 0" -m5 c
 hg manifest 5
-hg parents
+hg -v parents
 # merge, but no files changed
 hg rawcommit -p 4 -p 5 -d "1000000 0" -m6
 hg manifest 6
-hg parents
+hg -v parents
 # no changes what-so-ever
 hg rawcommit -p 6 -d "1000000 0" -m7
 hg manifest 7
-hg parents
+hg -v parents

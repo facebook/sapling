@@ -510,6 +510,7 @@ class localrepository(repo.repository):
         m1 = self.manifest.read(c1[0]).copy()
         m2 = self.manifest.read(c2[0])
         changed = []
+        removed = []
 
         if orig_parent == p1:
             update_dirstate = 1
@@ -530,13 +531,15 @@ class localrepository(repo.repository):
                     del m1[f]
                     if update_dirstate:
                         self.dirstate.forget([f])
+                    removed.append(f)
                 except:
                     # deleted from p2?
                     pass
 
         mnode = self.manifest.add(m1, tr, linkrev, c1[0], c2[0])
         user = user or self.ui.username()
-        n = self.changelog.add(mnode, changed, text, tr, p1, p2, user, date)
+        n = self.changelog.add(mnode, changed + removed, text,
+                               tr, p1, p2, user, date)
         tr.close()
         if update_dirstate:
             self.dirstate.setparents(n, nullid)
