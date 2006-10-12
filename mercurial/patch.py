@@ -8,9 +8,9 @@
 from demandload import demandload
 from i18n import gettext as _
 from node import *
-demandload(globals(), "cmdutil mdiff util")
-demandload(globals(), '''cStringIO email.Parser errno os re shutil sys tempfile
-                         popen2''')
+demandload(globals(), "base85 cmdutil mdiff util")
+demandload(globals(), "cStringIO email.Parser errno os re shutil sha sys")
+demandload(globals(), "tempfile zlib")
 
 # helper functions
 
@@ -128,6 +128,7 @@ def readgitpatch(patchname):
             self.op = 'MODIFY'
             self.copymod = False
             self.lineno = 0
+            self.binary = False
 
     # Filter patch for git information
     gitre = re.compile('diff --git a/(.*) b/(.*)')
@@ -175,6 +176,10 @@ def readgitpatch(patchname):
                 gp.mode = int(line.rstrip()[-3:], 8)
             elif line.startswith('new mode '):
                 gp.mode = int(line.rstrip()[-3:], 8)
+            elif line.startswith('GIT binary patch'):
+                if not dopatch:
+                    dopatch = 'binary'
+                gp.binary = True
     if gp:
         gitpatches.append(gp)
 
@@ -185,6 +190,25 @@ def readgitpatch(patchname):
 
 def dogitpatch(patchname, gitpatches, cwd=None):
     """Preprocess git patch so that vanilla patch can handle it"""
+    def extractbin(fp):
+        line = fp.readline()
+        while line and not line.startswith('literal '):
+            line = fp.readline()
+        if not line:
+            return
+        size = int(line[8:].rstrip())
+        dec = []
+        line = fp.readline()
+        while line:
+            line = line[1:-1]
+            dec.append(base85.b85decode(line))
+            line = fp.readline()
+        text = zlib.decompress(''.join(dec))
+        if len(text) != size:
+            raise util.Abort(_('binary patch is %d bytes, not %d') %
+                             (len(text), size))
+        return text
+
     pf = file(patchname)
     pfline = 1
 
@@ -194,23 +218,37 @@ def dogitpatch(patchname, gitpatches, cwd=None):
     try:
         for i in range(len(gitpatches)):
             p = gitpatches[i]
-            if not p.copymod:
+            if not p.copymod and not p.binary:
                 continue
-
-            copyfile(p.oldpath, p.path, basedir=cwd)
 
             # rewrite patch hunk
             while pfline < p.lineno:
                 tmpfp.write(pf.readline())
                 pfline += 1
-            tmpfp.write('diff --git a/%s b/%s\n' % (p.path, p.path))
-            line = pf.readline()
-            pfline += 1
-            while not line.startswith('--- a/'):
-                tmpfp.write(line)
+
+            if p.binary:
+                text = extractbin(pf)
+                if not text:
+                    raise util.Abort(_('binary patch extraction failed'))
+                if not cwd:
+                    cwd = os.getcwd()
+                absdst = os.path.join(cwd, p.path)
+                basedir = os.path.dirname(absdst)
+                if not os.path.isdir(basedir):
+                    os.makedirs(basedir)
+                out = file(absdst, 'wb')
+                out.write(text)
+                out.close()
+            elif p.copymod:
+                copyfile(p.oldpath, p.path, basedir=cwd)
+                tmpfp.write('diff --git a/%s b/%s\n' % (p.path, p.path))
                 line = pf.readline()
                 pfline += 1
-            tmpfp.write('--- a/%s\n' % p.path)
+                while not line.startswith('--- a/'):
+                    tmpfp.write(line)
+                    line = pf.readline()
+                    pfline += 1
+                tmpfp.write('--- a/%s\n' % p.path)
 
         line = pf.readline()
         while line:
@@ -270,16 +308,16 @@ def patch(patchname, ui, strip=1, cwd=None):
 
     (dopatch, gitpatches) = readgitpatch(patchname)
 
+    files, fuzz = {}, False
     if dopatch:
-        if dopatch == 'filter':
+        if dopatch in ('filter', 'binary'):
             patchname = dogitpatch(patchname, gitpatches, cwd=cwd)
         try:
-            files, fuzz = __patch(patchname)
+            if dopatch != 'binary':
+                files, fuzz = __patch(patchname)
         finally:
             if dopatch == 'filter':
                 os.unlink(patchname)
-    else:
-        files, fuzz = {}, False
 
     for gp in gitpatches:
         files[gp.path] = (gp.op, gp)
@@ -339,6 +377,40 @@ def updatedir(ui, repo, patches, wlock=None):
     files.sort()
 
     return files
+
+def b85diff(fp, to, tn):
+    '''print base85-encoded binary diff'''
+    def gitindex(text):
+        if not text:
+            return '0' * 40
+        l = len(text)
+        s = sha.new('blob %d\0' % l)
+        s.update(text)
+        return s.hexdigest()
+
+    def fmtline(line):
+        l = len(line)
+        if l <= 26:
+            l = chr(ord('A') + l - 1)
+        else:
+            l = chr(l - 26 + ord('a') - 1)
+        return '%c%s\n' % (l, base85.b85encode(line, True))
+
+    def chunk(text, csize=52):
+        l = len(text)
+        i = 0
+        while i < l:
+            yield text[i:i+csize]
+            i += csize
+
+    # TODO: deltas
+    l = len(tn)
+    fp.write('index %s..%s\nGIT binary patch\nliteral %s\n' %
+             (gitindex(to), gitindex(tn), len(tn)))
+
+    tn = ''.join([fmtline(l) for l in chunk(zlib.compress(tn))])
+    fp.write(tn)
+    fp.write('\n')
 
 def diff(repo, node1=None, node2=None, files=None, match=util.always,
          fp=None, changes=None, opts=None):
@@ -496,6 +568,8 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     to = getfile(a).read(arev)
                 else:
                     header.append('new file mode %s\n' % mode)
+                    if util.binary(tn):
+                        dodiff = 'binary'
             elif f in removed:
                 if f in srcs:
                     dodiff = False
@@ -509,9 +583,14 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                 else:
                     nmode = gitmode(util.is_exec(repo.wjoin(f), mmap.execf(f)))
                 addmodehdr(header, omode, nmode)
+                if util.binary(to) or util.binary(tn):
+                    dodiff = 'binary'
             r = None
             header.insert(0, 'diff --git a/%s b/%s\n' % (a, b))
-        if dodiff:
+        if dodiff == 'binary':
+            fp.write(''.join(header))
+            b85diff(fp, to, tn)
+        elif dodiff:
             text = mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts)
             if text or len(header) > 1:
                 fp.write(''.join(header))
