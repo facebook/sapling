@@ -1,7 +1,7 @@
 # creating 'remote'
 # repo not found error
-abort: no suitable response from remote hg!
 remote: abort: repository nonexistent not found!
+abort: no suitable response from remote hg!
 # clone remote via stream
 streaming all changes
 XXX files to transfer, XXX bytes of data
