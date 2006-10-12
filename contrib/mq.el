@@ -39,7 +39,14 @@
 
 ;;; Internal variables.
 
+(defvar mq-mode nil
+  "Is this file managed by MQ?")
+(make-variable-buffer-local 'mq-mode)
+(put 'mq-mode 'permanent-local t)
+
 (defvar mq-patch-history nil)
+
+(defvar mq-top-patch '(nil))
 
 (defvar mq-prev-buffer nil)
 (make-variable-buffer-local 'mq-prev-buffer)
@@ -60,6 +67,8 @@
 (define-key mq-global-map "n" 'mq-next)
 (define-key mq-global-map "p" 'mq-previous)
 (define-key mq-global-map "t" 'mq-top)
+
+(add-minor-mode 'mq-mode 'mq-mode)
 
 
 ;;; Refresh edit mode keymap.
@@ -94,7 +103,8 @@ May return nil, meaning \"use the default\"."
 	  (revert-buffer t t t)
 	  (hg-restore-context ctx)
 	  (message "Refreshing %s...done" (buffer-name))))))
-  (hg-update-mode-lines root))
+  (hg-update-mode-lines root)
+  (mq-update-mode-lines root))
 
 (defun mq-last-line ()
   (goto-char (point-max))
@@ -233,6 +243,42 @@ This would become the active patch if popped to."
     (let ((buf mq-prev-buffer))
       (kill-buffer nil)
       (switch-to-buffer buf))))
+
+(defun mq-get-top (root)
+  (let ((entry (assoc root mq-top-patch)))
+    (if entry
+        (cdr entry))))
+
+(defun mq-set-top (root patch)
+  (let ((entry (assoc root mq-top-patch)))
+    (if entry
+        (if patch
+            (setcdr entry patch)
+          (setq mq-top-patch (delq entry mq-top-patch)))
+      (setq mq-top-patch (cons (cons root patch) mq-top-patch)))))
+
+(defun mq-update-mode-lines (root)
+  (let ((cwd default-directory))
+    (cd root)
+    (condition-case nil
+        (mq-set-top root (mq-patch-info "qtop"))
+      (error (mq-set-top root nil)))
+    (cd cwd))
+  (let ((patch (mq-get-top root)))
+    (save-excursion
+      (dolist (buf (hg-buffers-visiting-repo root))
+        (set-buffer buf)
+        (if mq-mode
+            (setq mq-mode (or (and patch (concat " MQ:" patch)) " MQ")))))))
+	
+(defun mq-mode (&optional arg)
+  "Minor mode for Mercurial repositories with an MQ patch queue"
+  (interactive "i")
+  (cond ((hg-root)
+         (setq mq-mode (if (null arg) (not mq-mode)
+                         arg))
+         (mq-update-mode-lines (hg-root))))
+  (run-hooks 'mq-mode-hook))
 
 (defun mq-edit-mode ()
   "Mode for editing the description of a patch.
