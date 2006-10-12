@@ -90,6 +90,18 @@ class hgwebdir(object):
                            "node": nodeid, "url": url}
 
         def entries(sortcolumn="", descending=False, **map):
+            def sessionvars(**map):
+                fields = []
+                if req.form.has_key('style'):
+                    style = req.form['style'][0]
+                    if style != get('web', 'style', ''):
+                        fields.append(('style', style))
+
+                separator = url[-1] == '?' and ';' or '?'
+                for name, value in fields:
+                    yield dict(name=name, value=value, separator=separator)
+                    separator = ';'
+
             rows = []
             parity = 0
             for name, path in self.repos:
@@ -123,6 +135,7 @@ class hgwebdir(object):
                            description_sort=description.upper() or "unknown",
                            lastchange=d,
                            lastchange_sort=d[1]-d[0],
+                           sessionvars=sessionvars,
                            archives=archivelist(u, "tip", url))
                 if (not sortcolumn
                     or (sortcolumn, descending) == self.repos_sorted):
