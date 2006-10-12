@@ -308,7 +308,7 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	char encode[12], *rb;
 	int an, bn, len = 0, la, lb;
 
-	if (!PyArg_ParseTuple(args, "t#t#:bdiff", &sa, &la, &sb, &lb))
+	if (!PyArg_ParseTuple(args, "s#s#:bdiff", &sa, &la, &sb, &lb))
 		return NULL;
 
 	an = splitlines(sa, la, &al);
