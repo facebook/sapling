@@ -526,7 +526,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     if repo.ui.quiet:
         r = None
     else:
-        hexfunc = repo.ui.verbose and hex or short
+        hexfunc = repo.ui.debugflag and hex or short
         r = [hexfunc(node) for node in [node1, node2] if node]
 
     if opts.git:
