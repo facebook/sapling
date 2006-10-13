@@ -584,10 +584,7 @@ class hgweb(object):
     # find tag, changeset, file
 
     def cleanpath(self, path):
-        p = util.normpath(path)
-        if p[:2] == "..":
-            raise Exception("suspicious path")
-        return p
+        return util.canonpath(self.repo.root, '', path)
 
     def run(self):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
