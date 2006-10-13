@@ -82,6 +82,10 @@ a
 2 dir/b (b)
 1 b (a)
 0 
+% log copies, non-linear manifest
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding foo
+5 e (dir/b)
 adding base
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding b1

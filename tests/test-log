@@ -32,6 +32,13 @@ hg log -vf e
 echo % log copies
 hg log -vC --template '{rev} {file_copies%filecopy}\n'
 
+echo % log copies, non-linear manifest
+hg up -C 3
+hg mv dir/b e
+echo foo > foo
+hg ci -Ame2 -d '6 0'
+hg log -vC --template '{rev} {file_copies%filecopy}\n' -r 5
+
 # log --follow tests
 hg init ../follow
 cd ../follow
