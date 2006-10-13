@@ -8,7 +8,7 @@
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "errno getpass os re socket sys tempfile")
-demandload(globals(), "ConfigParser mdiff templater traceback util")
+demandload(globals(), "ConfigParser traceback util")
 
 def dupconfig(orig):
     new = ConfigParser.SafeConfigParser(orig.defaults())
