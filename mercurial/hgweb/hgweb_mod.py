@@ -71,8 +71,8 @@ class hgweb(object):
             return
         for s in siblings:
             d = {'node': hex(s.node()), 'rev': s.rev()}
-            if hasattr(s, 'file'):
-                d['file'] = s.file()
+            if hasattr(s, 'path'):
+                d['file'] = s.path()
             d.update(args)
             yield d
 
