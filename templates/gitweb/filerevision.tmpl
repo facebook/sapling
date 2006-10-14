@@ -25,6 +25,7 @@ file |
 
 <div class="title">#file|escape#</div>
 
+<div class="title_text">
 <table>
 <tr>
  <td class="metatag">changeset #rev#:</td>
@@ -44,6 +45,11 @@ file |
  <td class="metatag">permissions:</td>
  <td>#permissions|permissions#</td></tr>
 </table>
+</div>
+
+<div class="page_path">
+{desc|strip|escape|addbreaks}
+</div>
 
 <div class="page_body">
 #text%fileline#
