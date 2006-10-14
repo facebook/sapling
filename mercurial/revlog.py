@@ -955,6 +955,14 @@ class revlog(object):
         p1, p2 - the parent nodeids of the revision
         d - an optional precomputed delta
         """
+        if not self.inlinedata():
+            dfh = self.opener(self.datafile, "a")
+        else:
+            dfh = None
+        ifh = self.opener(self.indexfile, "a+")
+        return self._addrevision(text, transaction, link, p1, p2, d, ifh, dfh)
+
+    def _addrevision(self, text, transaction, link, p1, p2, d, ifh, dfh):
         if text is None: text = ""
         if p1 is None: p1 = self.tip()
         if p2 is None: p2 = nullid
@@ -1004,28 +1012,25 @@ class revlog(object):
         if not self.inlinedata():
             transaction.add(self.datafile, offset)
             transaction.add(self.indexfile, n * len(entry))
-            f = self.opener(self.datafile, "a")
             if data[0]:
-                f.write(data[0])
-            f.write(data[1])
-            f.close()
-            f = self.opener(self.indexfile, "a")
+                dfh.write(data[0])
+            dfh.write(data[1])
+            dfh.flush()
         else:
-            f = self.opener(self.indexfile, "a+")
-            f.seek(0, 2)
-            transaction.add(self.indexfile, f.tell(), self.count() - 1)
+            ifh.seek(0, 2)
+            transaction.add(self.indexfile, ifh.tell(), self.count() - 1)
 
         if len(self.index) == 1 and self.version != REVLOGV0:
             l = struct.pack(versionformat, self.version)
-            f.write(l)
+            ifh.write(l)
             entry = entry[4:]
 
-        f.write(entry)
+        ifh.write(entry)
 
         if self.inlinedata():
-            f.write(data[0])
-            f.write(data[1])
-            self.checkinlinesize(transaction, f)
+            ifh.write(data[0])
+            ifh.write(data[1])
+            self.checkinlinesize(transaction, ifh)
 
         self.cache = (node, n, text)
         return node
@@ -1146,7 +1151,13 @@ class revlog(object):
                 ifh.flush()
                 text = self.revision(chain)
                 text = self.patches(text, [delta])
-                chk = self.addrevision(text, transaction, link, p1, p2)
+                chk = self._addrevision(text, transaction, link, p1, p2, None,
+                                        ifh, dfh)
+                if not dfh and not self.inlinedata():
+                    # addrevision switched from inline to conventional
+                    # reopen the index
+                    dfh = self.opener(self.datafile, "a")
+                    ifh = self.opener(self.indexfile, "a")
                 if chk != node:
                     raise RevlogError(_("consistency error adding group"))
                 textlen = len(text)
@@ -1166,11 +1177,6 @@ class revlog(object):
                         dfh = self.opener(self.datafile, "a")
                         ifh = self.opener(self.indexfile, "a")
                 else:
-                    if not dfh:
-                        # addrevision switched from inline to conventional
-                        # reopen the index
-                        dfh = self.opener(self.datafile, "a")
-                        ifh = self.opener(self.indexfile, "a")
                     dfh.write(cdelta)
                     ifh.write(struct.pack(self.indexformat, *e))
 
