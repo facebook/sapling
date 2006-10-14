@@ -70,7 +70,11 @@ class hgweb(object):
         if len(siblings) == 1 and siblings[0].rev() == hiderev:
             return
         for s in siblings:
-            yield dict(node=hex(s.node()), rev=s.rev(), **args)
+            d = {'node': hex(s.node()), 'rev': s.rev()}
+            if hasattr(s, 'file'):
+                d['file'] = s.file()
+            d.update(args)
+            yield d
 
     def renamelink(self, fl, node):
         r = fl.renamed(node)
@@ -318,8 +322,8 @@ class hgweb(object):
                              "author": ctx.user(),
                              "date": ctx.date(),
                              "rename": self.renamelink(fl, n),
-                             "parent": self.siblings(fctx.parents(), file=f),
-                             "child": self.siblings(fctx.children(), file=f),
+                             "parent": self.siblings(fctx.parents()),
+                             "child": self.siblings(fctx.children()),
                              "desc": ctx.description()})
                 parity = 1 - parity
 
@@ -357,8 +361,8 @@ class hgweb(object):
                      node=hex(fctx.node()),
                      author=fctx.user(),
                      date=fctx.date(),
-                     parent=self.siblings(fctx.parents(), file=f),
-                     child=self.siblings(fctx.children(), file=f),
+                     parent=self.siblings(fctx.parents()),
+                     child=self.siblings(fctx.children()),
                      rename=self.renamelink(fl, n),
                      permissions=fctx.manifest().execf(f))
 
@@ -395,8 +399,8 @@ class hgweb(object):
                      date=fctx.date(),
                      desc=fctx.description(),
                      rename=self.renamelink(fl, n),
-                     parent=self.siblings(fctx.parents(), file=f),
-                     child=self.siblings(fctx.children(), file=f),
+                     parent=self.siblings(fctx.parents()),
+                     child=self.siblings(fctx.children()),
                      permissions=fctx.manifest().execf(f))
 
     def manifest(self, ctx, path):
