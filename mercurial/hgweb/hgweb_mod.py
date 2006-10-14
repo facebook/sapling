@@ -393,6 +393,7 @@ class hgweb(object):
                      node=hex(fctx.node()),
                      author=fctx.user(),
                      date=fctx.date(),
+                     desc=fctx.description(),
                      rename=self.renamelink(fl, n),
                      parent=self.siblings(fctx.parents(), file=f),
                      child=self.siblings(fctx.children(), file=f),
