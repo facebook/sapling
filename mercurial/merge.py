@@ -312,7 +312,7 @@ def applyupdates(repo, action, wctx, mctx):
 
     return updated, merged, removed, unresolved
 
-def recordupdates(repo, action, branchmerge, mctx):
+def recordupdates(repo, action, branchmerge):
     "record merge actions to the dirstate"
 
     for a in action:
@@ -335,21 +335,22 @@ def recordupdates(repo, action, branchmerge, mctx):
                 # We've done a branch merge, mark this file as merged
                 # so that we properly record the merger later
                 repo.dirstate.update([fd], 'm')
+                if f != f2: # copy/rename
+                    if move:
+                        repo.dirstate.update([f], 'r')
+                    if f != fd:
+                        repo.dirstate.copy(f, fd)
+                    else:
+                        repo.dirstate.copy(f2, fd)
             else:
                 # We've update-merged a locally modified file, so
                 # we set the dirstate to emulate a normal checkout
                 # of that file some time in the past. Thus our
                 # merge will appear as a normal local file
                 # modification.
-                f_len = mctx.filectx(f).size()
-                repo.dirstate.update([fd], 'n', st_size=f_len, st_mtime=-1)
-            if f != f2: # copy/rename
+                repo.dirstate.update([fd], 'n', st_size=-1, st_mtime=-1)
                 if move:
-                    repo.dirstate.update([f], 'r')
-                if f != fd:
-                    repo.dirstate.copy(f, fd)
-                else:
-                    repo.dirstate.copy(f2, fd)
+                    repo.dirstate.forget([f])
 
 def update(repo, node, branchmerge, force, partial, wlock):
     """
@@ -403,7 +404,7 @@ def update(repo, node, branchmerge, force, partial, wlock):
     stats = applyupdates(repo, action, wc, p2)
 
     if not partial:
-        recordupdates(repo, action, branchmerge, p2)
+        recordupdates(repo, action, branchmerge)
         repo.dirstate.setparents(fp1, fp2)
         repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
 
