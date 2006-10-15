@@ -30,7 +30,7 @@ def filemerge(repo, fw, fo, wctx, mctx):
     fco = mctx.filectx(fo)
 
     if not fco.cmp(fcm.data()): # files identical?
-        return 0
+        return None
 
     fca = fcm.ancestor(fco)
     if not fca:
@@ -288,10 +288,14 @@ def applyupdates(repo, action, wctx, mctx):
             removed +=1
         elif m == "m": # merge
             f2, fd, flag, move = a[2:]
-            if filemerge(repo, f, f2, wctx, mctx):
+            r = filemerge(repo, f, f2, wctx, mctx)
+            if r > 0:
                 unresolved += 1
             else:
-                merged += 1
+                if r is None:
+                    updated += 1
+                else:
+                    merged += 1
                 if f != fd:
                     repo.ui.debug(_("copying %s to %s\n") % (f, fd))
                     repo.wwrite(fd, repo.wread(f))

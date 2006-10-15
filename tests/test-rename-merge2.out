@@ -92,7 +92,7 @@ resolving manifests
 copying a to b
 merging rev
 my rev@94b33a1b7f2d+ other rev@735846fee2d7 ancestor rev@924404dff337
-0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
 M b
@@ -110,7 +110,7 @@ resolving manifests
  rev: versions differ -> m
 merging rev
 my rev@ac809aeed39a+ other rev@97c705ade336 ancestor rev@924404dff337
-0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
 M b
@@ -130,7 +130,7 @@ copying a to b
 removing a
 merging rev
 my rev@94b33a1b7f2d+ other rev@e03727d2d66b ancestor rev@924404dff337
-0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
 M b
@@ -147,7 +147,7 @@ resolving manifests
  rev: versions differ -> m
 merging rev
 my rev@ecf3cb2a4219+ other rev@97c705ade336 ancestor rev@924404dff337
-0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
 M b
