@@ -40,6 +40,7 @@
 #   changegroup = ...      # template when run as changegroup hook
 #   maxdiff = 300          # max lines of diffs to include (0=none, -1=all)
 #   maxsubject = 67        # truncate subject line longer than this
+#   diffstat = True        # add a diffstat before the diff content
 #   sources = serve        # notify if source of incoming changes in this list
 #                          # (serve == ssh or http, push, pull, bundle)
 #   [email]
