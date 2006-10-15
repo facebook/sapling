@@ -230,6 +230,9 @@ class httprepository(remoterepository):
             self.ui.debug(_('http error while sending %s command\n') % cmd)
             self.ui.print_exc()
             raise IOError(None, inst)
+        except IndexError:
+            # this only happens with Python 2.3, later versions raise URLError
+            raise util.Abort(_('http error, possibly caused by proxy setting'))
         try:
             proto = resp.getheader('content-type')
         except AttributeError:
