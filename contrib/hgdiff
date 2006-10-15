@@ -5,9 +5,9 @@ import difflib
 import re
 from optparse import OptionParser
 from mercurial.bdiff import bdiff, blocks
-from mercurial.mdiff import bunidiff
+from mercurial.mdiff import bunidiff, diffopts
 
-VERSION="0.2"
+VERSION="0.3"
 usage = "usage: %prog [options] file1 file2"
 parser = OptionParser(usage=usage)
 
@@ -57,9 +57,10 @@ def diff_files(file1, file2):
         if options.difflib:
             l = difflib.unified_diff(l1, l2, file1, file2)
         else:
-            l = bunidiff(t1, t2, l1, l2, file1, file2, context=options.context,
-                     showfunc=options.show_c_function,
-                     ignorews=options.ignore_all_space)
+            l = bunidiff(t1, t2, l1, l2, file1, file2,
+                         diffopts(context=options.context,
+                                  showfunc=options.show_c_function,
+                                  ignorews=options.ignore_all_space))
     for x in l:
         if x[-1] != '\n':
             x += "\n\ No newline at end of file\n"
