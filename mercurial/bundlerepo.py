@@ -233,10 +233,12 @@ class bundlerepository(localrepo.localrepository):
         self.bundlefile.close()
 
     def __del__(self):
-        if not self.bundlefile.closed:
-            self.bundlefile.close()
-        if self.tempfile is not None:
-            os.unlink(self.tempfile)
+        bundlefile = getattr(self, 'bundlefile', None)
+        if bundlefile and not bundlefile.closed:
+            bundlefile.close()
+        tempfile = getattr(self, 'tempfile', None)
+        if tempfile is not None:
+            os.unlink(tempfile)
 
 def instance(ui, path, create):
     if create:

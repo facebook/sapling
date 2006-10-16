@@ -208,3 +208,4 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     0.3m
 
+abort: No such file or directory: ../does-not-exist.hg
