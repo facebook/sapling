@@ -628,7 +628,7 @@ def annotate(ui, repo, *pats, **opts):
         raise util.Abort(_('at least one file name or pattern required'))
 
     opmap = [['user', lambda x: ui.shortuser(x.user())],
-             ['number', lambda x: str(x.rev())],
+             ['number', lambda x: str(x.linkrev())],
              ['changeset', lambda x: short(x.node())],
              ['date', getdate], ['follow', lambda x: x.path()]]
     if (not opts['user'] and not opts['changeset'] and not opts['date']
