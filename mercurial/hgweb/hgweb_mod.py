@@ -54,12 +54,15 @@ def revnavgen(pos, pagelen, limit, nodefunc):
             if pos - f >= 0:
                 l.insert(0, ("-%d" % f, hex(nodefunc(pos - f).node())))
 
-        yield {"label": "(0)", "node": hex(nodefunc(0).node())}
+        try:
+            yield {"label": "(0)", "node": hex(nodefunc('0').node())}
 
-        for label, node in l:
-            yield {"label": label, "node": node}
+            for label, node in l:
+                yield {"label": label, "node": node}
 
-        yield {"label": "tip", "node": hex(nodefunc('-1').node())}
+            yield {"label": "tip", "node": hex(nodefunc('-1').node())}
+        except hg.RepoError:
+            pass
 
     return nav
 
