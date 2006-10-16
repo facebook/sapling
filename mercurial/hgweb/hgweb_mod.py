@@ -553,8 +553,8 @@ class hgweb(object):
     def filediff(self, fctx):
         n = fctx.node()
         path = fctx.path()
-        parents = fctx.changectx().parents()
-        p1 = parents[0].node()
+        parents = fctx.parents()
+        p1 = parents and parents[0].node() or nullid
 
         def diff(**map):
             yield self.diff(p1, n, [path])
