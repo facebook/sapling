@@ -28,6 +28,41 @@ def _up(p):
         return "/"
     return up + "/"
 
+def revnavgen(pos, pagelen, limit):
+    def seq(factor, limit=None):
+        if limit:
+            yield limit
+            if limit >= 20 and limit <= 40:
+                yield 50
+        else:
+            yield 1 * factor
+            yield 3 * factor
+        for f in seq(factor * 10):
+            yield f
+
+    def nav(**map):
+        l = []
+        last = 0
+        for f in seq(1, pagelen):
+            if f < pagelen or f <= last:
+                continue
+            if f > limit:
+                break
+            last = f
+            if pos + f < limit:
+                l.append(("+%d" % f, pos + f))
+            if pos - f >= 0:
+                l.insert(0, ("-%d" % f, pos - f))
+
+        yield {"label": "(0)", "rev": 0}
+
+        for label, rev in l:
+            yield {"label": label, "rev": rev}
+
+        yield {"label": "tip", "rev": "tip"}
+
+    return nav
+
 class hgweb(object):
     def __init__(self, repo, name=None):
         if type(repo) == type(""):
@@ -149,41 +184,6 @@ class hgweb(object):
                                           opts=diffopts), f, tn)
 
     def changelog(self, ctx, shortlog=False):
-        pos = ctx.rev()
-        def changenav(**map):
-            def seq(factor, maxchanges=None):
-                if maxchanges:
-                    yield maxchanges
-                    if maxchanges >= 20 and maxchanges <= 40:
-                        yield 50
-                else:
-                    yield 1 * factor
-                    yield 3 * factor
-                for f in seq(factor * 10):
-                    yield f
-
-            l = []
-            last = 0
-            maxchanges = shortlog and self.maxshortchanges or self.maxchanges
-            for f in seq(1, maxchanges):
-                if f < maxchanges or f <= last:
-                    continue
-                if f > count:
-                    break
-                last = f
-                r = "%d" % f
-                if pos + f < count:
-                    l.append(("+" + r, pos + f))
-                if pos - f >= 0:
-                    l.insert(0, ("-" + r, pos - f))
-
-            yield {"rev": 0, "label": "(0)"}
-
-            for label, rev in l:
-                yield {"label": label, "rev": rev}
-
-            yield {"label": "tip", "rev": "tip"}
-
         def changelist(**map):
             parity = (start - end) & 1
             cl = self.repo.changelog
@@ -210,9 +210,12 @@ class hgweb(object):
         maxchanges = shortlog and self.maxshortchanges or self.maxchanges
         cl = self.repo.changelog
         count = cl.count()
+        pos = ctx.rev()
         start = max(0, pos - maxchanges + 1)
         end = min(count, start + maxchanges)
         pos = end - 1
+
+        changenav = revnavgen(pos, maxchanges, count)
 
         yield self.t(shortlog and 'shortlog' or 'changelog',
                      changenav=changenav,
@@ -306,12 +309,17 @@ class hgweb(object):
         f = fctx.path()
         fl = fctx.filelog()
         count = fl.count()
+        pagelen = self.maxshortchanges
 
         def entries(**map):
+            pos = fctx.filerev()
+            start = max(0, pos - pagelen + 1) 
+            end = min(count, start + pagelen)
+            pos = end - 1
             l = []
             parity = (count - 1) & 1
 
-            for i in range(count):
+            for i in range(start, end):
                 ctx = fctx.filectx(i)
                 n = fl.node(i)
 
@@ -330,7 +338,9 @@ class hgweb(object):
             for e in l:
                 yield e
 
-        yield self.t("filelog", file=f, node=hex(fctx.node()), entries=entries)
+        nav = revnavgen(fctx.filerev(), self.maxshortchanges, count)
+        yield self.t("filelog", file=f, node=hex(fctx.node()), nav=nav,
+                     entries=entries)
 
     def filerevision(self, fctx):
         f = fctx.path()
