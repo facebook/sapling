@@ -28,7 +28,7 @@ def _up(p):
         return "/"
     return up + "/"
 
-def revnavgen(pos, pagelen, limit):
+def revnavgen(pos, pagelen, limit, nodefunc):
     def seq(factor, limit=None):
         if limit:
             yield limit
@@ -50,16 +50,16 @@ def revnavgen(pos, pagelen, limit):
                 break
             last = f
             if pos + f < limit:
-                l.append(("+%d" % f, pos + f))
+                l.append(("+%d" % f, hex(nodefunc(pos + f).node())))
             if pos - f >= 0:
-                l.insert(0, ("-%d" % f, pos - f))
+                l.insert(0, ("-%d" % f, hex(nodefunc(pos - f).node())))
 
-        yield {"label": "(0)", "rev": 0}
+        yield {"label": "(0)", "node": hex(nodefunc(0).node())}
 
-        for label, rev in l:
-            yield {"label": label, "rev": rev}
+        for label, node in l:
+            yield {"label": label, "node": node}
 
-        yield {"label": "tip", "rev": "tip"}
+        yield {"label": "tip", "node": hex(nodefunc('-1').node())}
 
     return nav
 
@@ -215,7 +215,7 @@ class hgweb(object):
         end = min(count, start + maxchanges)
         pos = end - 1
 
-        changenav = revnavgen(pos, maxchanges, count)
+        changenav = revnavgen(pos, maxchanges, count, self.repo.changectx)
 
         yield self.t(shortlog and 'shortlog' or 'changelog',
                      changenav=changenav,
@@ -338,7 +338,8 @@ class hgweb(object):
             for e in l:
                 yield e
 
-        nav = revnavgen(pos, pagelen, count)
+        nodefunc = lambda x: fctx.filectx(fileid=x)
+        nav = revnavgen(pos, pagelen, count, nodefunc)
         yield self.t("filelog", file=f, node=hex(fctx.node()), nav=nav,
                      entries=entries)
 
