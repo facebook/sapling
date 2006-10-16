@@ -744,13 +744,9 @@ class hgweb(object):
             style = req.form['style'][0]
         mapfile = style_map(self.templatepath, style)
 
-        if not req.url:
-            port = req.env["SERVER_PORT"]
-            port = port != "80" and (":" + port) or ""
-            uri = req.env["REQUEST_URI"]
-            if "?" in uri:
-                uri = uri.split("?")[0]
-            req.url = "http://%s%s%s" % (req.env["SERVER_NAME"], port, uri)
+        port = req.env["SERVER_PORT"]
+        port = port != "80" and (":" + port) or ""
+        urlbase = 'http://%s%s' % (req.env['SERVER_NAME'], port)
 
         if not self.reponame:
             self.reponame = (self.repo.ui.config("web", "name")
@@ -759,6 +755,7 @@ class hgweb(object):
 
         self.t = templater.templater(mapfile, templater.common_filters,
                                      defaults={"url": req.url,
+                                               "urlbase": urlbase,
                                                "repo": self.reponame,
                                                "header": header,
                                                "footer": footer,
