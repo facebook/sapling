@@ -71,3 +71,6 @@ echo d >> b
 hg ci -mmerge2 -d '4 0'
 echo % annotate after rename merge
 hg annotate -nf b
+
+echo % linkrev vs rev
+hg annotate -r tip a

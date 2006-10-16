@@ -48,3 +48,7 @@ merging b
 4 b: c
 3 b: b
 7 b: d
+% linkrev vs rev
+0: a
+1: a
+1: a
