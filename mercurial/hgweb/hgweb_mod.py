@@ -385,7 +385,7 @@ class hgweb(object):
 
                 yield {"parity": parity,
                        "node": hex(f.node()),
-                       "rev": f.linkrev(),
+                       "rev": f.rev(),
                        "author": name,
                        "file": f.path(),
                        "line": l}

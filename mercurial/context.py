@@ -185,7 +185,7 @@ class filectx(object):
     def rev(self):
         if '_changectx' in self.__dict__:
             return self._changectx.rev()
-        return self.linkrev()
+        return self._filelog.linkrev(self._filenode)
 
     def node(self): return self._changectx.node()
     def user(self): return self._changectx.user()
@@ -195,7 +195,6 @@ class filectx(object):
     def manifest(self): return self._changectx.manifest()
     def changectx(self): return self._changectx
 
-    def linkrev(self): return self._filelog.linkrev(self._filenode)
     def data(self): return self._filelog.read(self._filenode)
     def renamed(self): return self._filelog.renamed(self._filenode)
     def path(self): return self._path
