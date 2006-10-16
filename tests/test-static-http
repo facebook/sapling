@@ -2,7 +2,7 @@
 
 http_proxy= hg clone static-http://localhost:20059/ copy
 echo $?
-ls copy 2>/dev/null || echo copy: No such file or directory
+test -e copy || echo copy: No such file or directory
 
 # This server doesn't do range requests so it's basically only good for
 # one pull
