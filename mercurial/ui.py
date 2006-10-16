@@ -11,7 +11,7 @@ demandload(globals(), "errno getpass os re socket sys tempfile")
 demandload(globals(), "ConfigParser traceback util")
 
 def dupconfig(orig):
-    new = ConfigParser.SafeConfigParser(orig.defaults())
+    new = util.configparser(orig.defaults())
     updateconfig(orig, new)
     return new
 
@@ -37,7 +37,7 @@ class ui(object):
             self.debugflag = debug
             self.interactive = interactive
             self.traceback = traceback
-            self.cdata = ConfigParser.SafeConfigParser()
+            self.cdata = util.configparser()
             self.readconfig(util.rcpath())
             self.updateopts(verbose, debug, quiet, interactive)
         else:
@@ -126,7 +126,7 @@ class ui(object):
 
     def setconfig(self, section, name, value):
         if not self.overlay:
-            self.overlay = ConfigParser.SafeConfigParser()
+            self.overlay = util.configparser()
         for cdata in (self.overlay, self.cdata):
             if not cdata.has_section(section):
                 cdata.add_section(section)
