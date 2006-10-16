@@ -310,12 +310,12 @@ class hgweb(object):
         fl = fctx.filelog()
         count = fl.count()
         pagelen = self.maxshortchanges
+        pos = fctx.filerev()
+        start = max(0, pos - pagelen + 1) 
+        end = min(count, start + pagelen)
+        pos = end - 1
 
         def entries(**map):
-            pos = fctx.filerev()
-            start = max(0, pos - pagelen + 1) 
-            end = min(count, start + pagelen)
-            pos = end - 1
             l = []
             parity = (count - 1) & 1
 
@@ -338,7 +338,7 @@ class hgweb(object):
             for e in l:
                 yield e
 
-        nav = revnavgen(fctx.filerev(), self.maxshortchanges, count)
+        nav = revnavgen(pos, pagelen, count)
         yield self.t("filelog", file=f, node=hex(fctx.node()), nav=nav,
                      entries=entries)
 
