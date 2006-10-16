@@ -254,10 +254,16 @@ class filectx(object):
 
             return [ getctx(p, n) for p, n in pl if n != -1 ]
 
+        # use linkrev to find the first changeset where self appeared
+        if self.rev() != self._filelog.linkrev(self._filenode):
+            base = self.filectx(self.filerev())
+        else:
+            base = self
+
         # find all ancestors
-        needed = {self: 1}
-        visit = [self]
-        files = [self._path]
+        needed = {base: 1}
+        visit = [base]
+        files = [base._path]
         while visit:
             f = visit.pop(0)
             for p in parents(f):
