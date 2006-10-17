@@ -59,7 +59,7 @@ class changelog(revlog):
         changelog v0 doesn't use extra
         """
         if not text:
-            return (nullid, "", (0, 0), [], "")
+            return (nullid, "", (0, 0), [], "", {})
         last = text.index("\n\n")
         desc = text[last + 2:]
         l = text[:last].split('\n')
