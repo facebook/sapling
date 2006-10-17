@@ -1577,6 +1577,11 @@ def identify(ui, repo):
               (modified or added or removed or deleted) and "+" or "")]
 
     if not ui.quiet:
+
+        branch = repo.workingctx().branch()
+        if branch:
+            output.append("(%s)" % branch)
+
         # multiple tags for a single parent separated by '/'
         parenttags = ['/'.join(tags)
                       for tags in map(repo.nodetags, parents) if tags]
