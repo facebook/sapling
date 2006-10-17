@@ -328,17 +328,18 @@ class localrepository(repo.repository):
             f.write("%s %s\n" % (hex(node), label))
 
     def lookup(self, key):
-        try:
+        if key == '.':
+            key = self.dirstate.parents()[0]
+            if key == nullid:
+                raise repo.RepoError(_("no revision checked out"))
+        if key in self.tags():
             return self.tags()[key]
-        except KeyError:
-            if key == '.':
-                key = self.dirstate.parents()[0]
-                if key == nullid:
-                    raise repo.RepoError(_("no revision checked out"))
-            try:
-                return self.changelog.lookup(key)
-            except:
-                raise repo.RepoError(_("unknown revision '%s'") % key)
+        if key in self.branchtags():
+            return self.branchtags()[key]
+        try:
+            return self.changelog.lookup(key)
+        except:
+            raise repo.RepoError(_("unknown revision '%s'") % key)
 
     def dev(self):
         return os.lstat(self.path).st_dev
