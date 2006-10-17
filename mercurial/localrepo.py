@@ -611,7 +611,14 @@ class localrepository(repo.repository):
         m1 = self.manifest.read(c1[0]).copy()
         m2 = self.manifest.read(c2[0])
 
-        if not commit and not remove and not force and p2 == nullid:
+        try:
+            branchname = self.opener("branch").read().rstrip()
+        except IOError:
+            branchname = ""
+        oldname = c1[5].get("branch", "")
+
+        if not commit and not remove and not force and p2 == nullid and \
+               branchname == oldname:
             self.ui.status(_("nothing changed\n"))
             return None
 
@@ -676,7 +683,11 @@ class localrepository(repo.repository):
         if not lines:
             return None
         text = '\n'.join(lines)
-        n = self.changelog.add(mn, changed + remove, text, tr, p1, p2, user, date)
+        extra = {}
+        if branchname:
+            extra["branch"] = branchname
+        n = self.changelog.add(mn, changed + remove, text, tr, p1, p2,
+                               user, date, extra)
         self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                   parent2=xp2)
         tr.close()
