@@ -221,6 +221,8 @@ def update(repo, node):
     """update the working directory to node, merging linear changes"""
     stats = _merge.update(repo, node, False, False, None, None)
     _showstats(repo, stats)
+    branch = repo.changectx(node).branch()
+    repo.opener("branch", "w").write(branch + "\n")
     if stats[3]:
         repo.ui.status(_("There are unresolved merges with"
                          " locally modified files.\n"))
@@ -229,6 +231,8 @@ def update(repo, node):
 def clean(repo, node, wlock=None, show_stats=True):
     """forcibly switch the working directory to node, clobbering changes"""
     stats = _merge.update(repo, node, False, True, None, wlock)
+    branch = repo.changectx(node).branch()
+    repo.opener("branch", "w").write(branch + "\n")
     if show_stats: _showstats(repo, stats)
     return stats[3]
 
