@@ -64,6 +64,7 @@ class changectx(object):
     def date(self): return self._changeset[2]
     def files(self): return self._changeset[3]
     def description(self): return self._changeset[4]
+    def branch(self): return self._changeset[5].get("branch", "")
 
     def parents(self):
         """return contexts for each parent changeset"""
@@ -192,6 +193,7 @@ class filectx(object):
     def date(self): return self._changectx.date()
     def files(self): return self._changectx.files()
     def description(self): return self._changectx.description()
+    def branch(self): return self._changectx.branch()
     def manifest(self): return self._changectx.manifest()
     def changectx(self): return self._changectx
 
@@ -388,6 +390,11 @@ class workingctx(changectx):
     def deleted(self): return self._status[3]
     def unknown(self): return self._status[4]
     def clean(self): return self._status[5]
+    def branch(self):
+        try:
+            return self._repo.opener("branch").read().strip()
+        except IOError:
+            return ""
 
     def parents(self):
         """return contexts for each parent changeset"""
