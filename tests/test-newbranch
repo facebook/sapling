@@ -1,0 +1,26 @@
+#!/bin/sh
+
+hg init t
+cd t
+
+echo foo > a
+hg add a
+hg ci -m "initial" -d "0 0"
+echo foo > .hg/branch
+hg ci -m "add branch name" -d "0 0"
+echo bar > .hg/branch
+hg ci -m "change branch name" -d "0 0"
+rm .hg/branch
+hg ci -m "clear branch name" -d "0 0"
+
+hg co foo
+cat .hg/branch
+echo bleah > a
+hg ci -m "modify a branch" -d "0 0"
+
+hg merge
+cat .hg/branch
+HG_MERGE=true hg ci -m "merge" -d "0 0"
+hg log
+
+
