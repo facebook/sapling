@@ -469,3 +469,49 @@ rollback completed
 no rollback information available
 0:6675d58eff77
 
+acl.config can set only [acl.allow]/[acl.deny]
+Pushing as user barney
+hgrc = """
+[hooks]
+pretxnchangegroup.acl = python:hgext.acl.hook
+[acl]
+sources = push
+[acl.allow]
+foo/** = fred
+[acl.deny]
+foo/bar/** = fred
+foo/Bar/** = fred
+[acl.allow]
+** = barney
+**/*.txt = wilma
+[acl]
+config = ../acl.config
+"""
+acl.config = """
+[acl.allow]
+foo/** = betty
+[hooks]
+changegroup.acl = false
+"""
+pushing to ../b
+searching for changes
+common changesets up to 6675d58eff77
+adding changesets
+add changeset ef1ea85a6374
+add changeset f9cafe1212c8
+add changeset 911600dab2ae
+adding manifests
+adding file changes
+adding foo/Bar/file.txt revisions
+adding foo/file.txt revisions
+adding quux/file.py revisions
+added 3 changesets with 3 changes to 3 files
+calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow enabled, 1 entries for user barney
+acl: acl.deny enabled, 0 entries for user barney
+acl: allowing changeset ef1ea85a6374
+acl: allowing changeset f9cafe1212c8
+acl: allowing changeset 911600dab2ae
+rolling back last transaction
+0:6675d58eff77
+

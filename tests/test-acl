@@ -102,3 +102,8 @@ echo '[acl.allow]' >> acl.config
 echo 'foo/** = betty' >> acl.config
 do_push betty
 
+echo 'acl.config can set only [acl.allow]/[acl.deny]'
+echo '[hooks]' >> acl.config
+echo 'changegroup.acl = false' >> acl.config
+do_push barney
+

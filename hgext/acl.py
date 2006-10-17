@@ -80,7 +80,7 @@ class checker(object):
         self.user = getpass.getuser()
         cfg = self.ui.config('acl', 'config')
         if cfg:
-            self.ui.readconfig(cfg)
+            self.ui.readsections(cfg, 'acl.allow', 'acl.deny')
         self.allow, self.allowable = self.buildmatch('acl.allow')
         self.deny, self.deniable = self.buildmatch('acl.deny')
 
