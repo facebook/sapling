@@ -79,6 +79,7 @@ class localrepository(repo.repository):
         self.revlogversion = v
 
         self.tagscache = None
+        self.branchcache = None
         self.nodetagscache = None
         self.encodepats = None
         self.decodepats = None
@@ -287,6 +288,44 @@ class localrepository(repo.repository):
             for t, n in self.tags().items():
                 self.nodetagscache.setdefault(n, []).append(t)
         return self.nodetagscache.get(node, [])
+
+    def branchtags(self):
+        if self.branchcache != None:
+            return self.branchcache
+
+        self.branchcache = {}
+
+        try:
+            f = self.opener("branches.cache")
+            last, lrev = f.readline().rstrip().split(" ", 1)
+            last, lrev = bin(last), int(lrev)
+            if self.changelog.node(lrev) == last: # sanity check
+                for l in f:
+                    node, label = l.rstrip().split(" ", 1)
+                    self.branchcache[label] = bin(node)
+            f.close()
+        except IOError:
+            last, lrev = nullid, -1
+            lrev = self.changelog.rev(last)
+
+        tip = self.changelog.count() - 1
+        if lrev != tip:
+            for r in range(lrev + 1, tip + 1):
+                n = self.changelog.node(r)
+                c = self.changelog.read(n)
+                b = c[5].get("branch")
+                if b:
+                    self.branchcache[b] = n
+            self._writebranchcache()
+
+        return self.branchcache
+
+    def _writebranchcache(self):
+        f = self.opener("branches.cache", "w")
+        t = self.changelog.tip()
+        f.write("%s %s\n" % (hex(t), self.changelog.count() - 1))
+        for label, node in self.branchcache.iteritems():
+            f.write("%s %s\n" % (hex(node), label))
 
     def lookup(self, key):
         try:
