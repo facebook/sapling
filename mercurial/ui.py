@@ -15,8 +15,10 @@ def dupconfig(orig):
     updateconfig(orig, new)
     return new
 
-def updateconfig(source, dest):
-    for section in source.sections():
+def updateconfig(source, dest, sections=None):
+    if not sections:
+        sections = source.sections()
+    for section in sections:
         if not dest.has_section(section):
             dest.add_section(section)
         for name, value in source.items(section, raw=True):
@@ -99,6 +101,23 @@ class ui(object):
 
     def addreadhook(self, hook):
         self.readhooks.append(hook)
+
+    def readsections(self, filename, *sections):
+        "read filename and add only the specified sections to the config data"
+        if not sections:
+            return
+
+        cdata = util.configparser()
+        try:
+            cdata.read(filename)
+        except ConfigParser.ParsingError, inst:
+            raise util.Abort(_("failed to parse %s\n%s") % (f, inst))
+
+        for section in sections:
+            if not cdata.has_section(section):
+                cdata.add_section(section)
+
+        updateconfig(cdata, self.cdata, sections)
 
     def fixconfig(self, section=None, name=None, value=None, root=None):
         # translate paths relative to root (or home) into absolute paths
