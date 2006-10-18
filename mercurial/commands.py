@@ -361,7 +361,7 @@ class changeset_printer(object):
                                   files):
                 if value:
                     self.ui.note("%-12s %s\n" % (key, " ".join(value)))
-        else:
+        elif changes[3]:
             self.ui.note(_("files:       %s\n") % " ".join(changes[3]))
         if copies:
             copies = ['%s (%s)' % c for c in copies]
