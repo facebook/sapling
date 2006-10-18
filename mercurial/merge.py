@@ -411,6 +411,9 @@ def update(repo, node, branchmerge, force, partial, wlock):
         recordupdates(repo, action, branchmerge)
         repo.dirstate.setparents(fp1, fp2)
         repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
+        if not branchmerge:
+            print "yow!"
+            repo.opener("branch", "w").write(p1.branch() + "\n")
 
     return stats
 
