@@ -41,3 +41,13 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     initial
 
+% test for invalid branch cache
+rolling back last transaction
+changeset:   4:98d14f698afe
+branch:      foo
+tag:         tip
+parent:      1:0079f24813e2
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     modify a branch
+

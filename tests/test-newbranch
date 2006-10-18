@@ -23,4 +23,6 @@ cat .hg/branch
 HG_MERGE=true hg ci -m "merge" -d "0 0"
 hg log
 
-
+echo % test for invalid branch cache
+hg rollback
+hg tip
