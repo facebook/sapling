@@ -1656,8 +1656,12 @@ def import_(ui, repo, patch1, *patches, **opts):
                 message = None
             ui.debug(_('message:\n%s\n') % message)
 
-            files, fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root)
-            files = patch.updatedir(ui, repo, files, wlock=wlock)
+            files = {}
+            try:
+                fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
+                                   files=files)
+            finally:
+                files = patch.updatedir(ui, repo, files, wlock=wlock)
             repo.commit(files, message, user, date, wlock=wlock, lock=lock)
         finally:
             os.unlink(tmpname)

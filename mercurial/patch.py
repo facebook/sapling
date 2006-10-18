@@ -266,14 +266,13 @@ def dogitpatch(patchname, gitpatches, cwd=None):
     tmpfp.close()
     return patchname
 
-def patch(patchname, ui, strip=1, cwd=None):
+def patch(patchname, ui, strip=1, cwd=None, files={}):
     """apply the patch <patchname> to the working directory.
     a list of patched files is returned"""
 
     # helper function
     def __patch(patchname):
         """patch and updates the files and fuzz variables"""
-        files = {}
         fuzz = False
 
         patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''),
@@ -308,25 +307,24 @@ def patch(patchname, ui, strip=1, cwd=None):
         if code:
             raise util.Abort(_("patch command failed: %s") %
                              util.explain_exit(code)[0])
-        return files, fuzz
+        return fuzz
 
     (dopatch, gitpatches) = readgitpatch(patchname)
+    for gp in gitpatches:
+        files[gp.path] = (gp.op, gp)
 
-    files, fuzz = {}, False
+    fuzz = False
     if dopatch:
         if dopatch in ('filter', 'binary'):
             patchname = dogitpatch(patchname, gitpatches, cwd=cwd)
         try:
             if dopatch != 'binary':
-                files, fuzz = __patch(patchname)
+                fuzz = __patch(patchname)
         finally:
             if dopatch == 'filter':
                 os.unlink(patchname)
 
-    for gp in gitpatches:
-        files[gp.path] = (gp.op, gp)
-
-    return (files, fuzz)
+    return fuzz
 
 def diffopts(ui, opts={}):
     return mdiff.diffopts(

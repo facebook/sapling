@@ -408,14 +408,15 @@ class queue:
     def patch(self, repo, patchfile):
         '''Apply patchfile  to the working directory.
         patchfile: file name of patch'''
+        files = {}
         try:
-            (files, fuzz) = patch.patch(patchfile, self.ui, strip=1,
-                                        cwd=repo.root)
+            fuzz = patch.patch(patchfile, self.ui, strip=1, cwd=repo.root,
+                               files=files)
         except Exception, inst:
             self.ui.note(str(inst) + '\n')
             if not self.ui.verbose:
                 self.ui.warn("patch failed, unable to continue (try -v)\n")
-            return (False, [], False)
+            return (False, files, False)
 
         return (True, files, fuzz)
 
