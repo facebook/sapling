@@ -754,6 +754,15 @@ class revlog(object):
         if isinstance(id, (long, int)):
             # rev
             return self.node(id)
+        if len(id) == 20:
+            # possibly a binary node
+            # odds of a binary node being all hex in ASCII are 1 in 10**25
+            try:
+                node = id
+                r = self.rev(node) # quick search the index
+                return node
+            except RevlogError:
+                pass # may be partial hex id
         try:
             # str(rev)
             rev = int(id)
@@ -764,26 +773,24 @@ class revlog(object):
         except (ValueError, OverflowError):
             pass
         try:
-            # hex(node)[:...]
-            if len(id) % 2 == 0:
-                bin_id = bin(id)
-            else:
-                bin_id = bin(id[:-1])
-            node = None
-            for n in self.nodemap:
-                if n.startswith(bin_id) and hex(n).startswith(id):
-                    if node is not None:
-                        raise RevlogError(_("Ambiguous identifier"))
-                    node = n
-            if node is not None:
+            if len(id) == 40:
+                # a full hex nodeid?
+                node = bin(id)
+                r = self.rev(node)
                 return node
+            elif len(id) < 40:
+                # hex(node)[:...]
+                bin_id = bin(id[:len(id) & ~1]) # grab an even number of digits
+                node = None
+                for n in self.nodemap:
+                    if n.startswith(bin_id) and hex(n).startswith(id):
+                        if node is not None:
+                            raise RevlogError(_("Ambiguous identifier"))
+                        node = n
+                if node is not None:
+                    return node
         except TypeError:
             pass
-
-        # might need fixing if we change hash lengths
-        if len(id) == 20 and id in self.nodemap:
-            # node
-            return id
 
         raise RevlogError(_("No match found"))
 
