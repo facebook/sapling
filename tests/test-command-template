@@ -17,6 +17,8 @@ hg add c
 hg commit -m 'no person' -d '1200000 0' -u 'other@place'
 echo c >> c
 hg commit -m 'no user, no domain' -d '1300000 0' -u 'person'
+echo foo > .hg/branch
+hg commit -m 'new branch' -d '1400000 0' -u 'person'
 
 # make sure user/global hgrc does not affect tests
 echo '[ui]' > .hg/hgrc
