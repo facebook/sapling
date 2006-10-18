@@ -2,7 +2,7 @@
 
 hg clone http://localhost:20059/ copy
 echo $?
-test -e copy || echo copy: No such file or directory
+test -d copy || echo copy: No such file or directory
 
 cat > dumb.py <<EOF
 import BaseHTTPServer, SimpleHTTPServer, signal
