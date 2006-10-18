@@ -326,7 +326,8 @@ class changeset_printer(object):
 
         changes = log.read(changenode)
         date = util.datestr(changes[2])
-        branch = changes[5].get("branch")
+        extra = changes[5]
+        branch = extra.get("branch")
 
         hexfunc = self.ui.debugflag and hex or short
 
@@ -365,6 +366,13 @@ class changeset_printer(object):
         if copies:
             copies = ['%s (%s)' % c for c in copies]
             self.ui.note(_("copies:      %s\n") % ' '.join(copies))
+
+        if extra and self.ui.debugflag:
+            extraitems = extra.items()
+            extraitems.sort()
+            for key, value in extraitems:
+                self.ui.debug(_("extra:       %s=%s\n")
+                              % (key, value.encode('string_escape')))
 
         description = changes[4].strip()
         if description:
