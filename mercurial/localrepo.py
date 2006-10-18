@@ -299,7 +299,8 @@ class localrepository(repo.repository):
             f = self.opener("branches.cache")
             last, lrev = f.readline().rstrip().split(" ", 1)
             last, lrev = bin(last), int(lrev)
-            if self.changelog.node(lrev) == last: # sanity check
+            if (lrev < self.changelog.count() and
+                self.changelog.node(lrev) == last): # sanity check
                 for l in f:
                     node, label = l.rstrip().split(" ", 1)
                     self.branchcache[label] = bin(node)
