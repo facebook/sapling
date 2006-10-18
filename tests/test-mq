@@ -165,11 +165,13 @@ cd ..
 hg qrefresh
 hg qnew -mbar bar
 echo foo > foo
-hg add foo
+echo bar > bar
+hg add foo bar
 hg qrefresh
 hg qpop -a
 echo bar > foo
 hg qpush -a
+hg st
 
 cat >>$HGRCPATH <<EOF
 [diff]
