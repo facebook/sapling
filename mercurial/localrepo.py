@@ -304,10 +304,11 @@ class localrepository(repo.repository):
                 for l in f:
                     node, label = l.rstrip().split(" ", 1)
                     self.branchcache[label] = bin(node)
+            else: # invalidate the cache
+                last, lrev = nullid, -1
             f.close()
         except IOError:
             last, lrev = nullid, -1
-            lrev = self.changelog.rev(last)
 
         tip = self.changelog.count() - 1
         if lrev != tip:
