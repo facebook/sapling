@@ -2550,6 +2550,9 @@ def status(ui, repo, *pats, **opts):
     files that match are shown.  Files that are clean or ignored, are
     not listed unless -c (clean), -i (ignored) or -A is given.
 
+    If one revision is given, it is used as the base revision.
+    If two revisions are given, the difference between them is shown.
+
     The codes used to show the status of files are:
     M = modified
     A = added
@@ -2562,12 +2565,14 @@ def status(ui, repo, *pats, **opts):
     """
 
     all = opts['all']
+    node1, node2 = cmdutil.revpair(ui, repo, opts.get('rev'))
 
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
     modified, added, removed, deleted, unknown, ignored, clean = [
         [util.pathto(cwd, x) for x in n]
-        for n in repo.status(files=files, match=matchfn,
+        for n in repo.status(node1=node1, node2=node2, files=files,
+                             match=matchfn,
                              list_ignored=all or opts['ignored'],
                              list_clean=all or opts['clean'])]
 
@@ -3113,6 +3118,7 @@ table = {
           ('C', 'copies', None, _('show source of copied files')),
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),
+          ('', 'rev', [], _('show difference from revision')),
          ] + walkopts,
          _('hg status [OPTION]... [FILE]...')),
     "tag":
