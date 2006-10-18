@@ -610,10 +610,7 @@ class localrepository(repo.repository):
         m1 = self.manifest.read(c1[0]).copy()
         m2 = self.manifest.read(c2[0])
 
-        try:
-            branchname = self.opener("branch").read().rstrip()
-        except IOError:
-            branchname = ""
+        branchname = self.workingctx().branch()
         oldname = c1[5].get("branch", "")
 
         if not commit and not remove and not force and p2 == nullid and \
