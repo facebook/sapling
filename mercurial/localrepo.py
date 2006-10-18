@@ -247,15 +247,12 @@ class localrepository(repo.repository):
             heads.reverse()
             fl = self.file(".hgtags")
             for node in heads:
-                change = self.changelog.read(node)
-                rev = self.changelog.rev(node)
-                fn, ff = self.manifest.find(change[0], '.hgtags')
-                if fn is None: continue
+                f = self.filectx('.hgtags', node)
+                if not f: continue
                 count = 0
-                for l in fl.read(fn).splitlines():
+                for l in f.data().splitlines():
                     count += 1
-                    parsetag(l, _(".hgtags (rev %d:%s), line %d") %
-                             (rev, short(node), count))
+                    parsetag(l, _("%s, line %d") % (str(f), count))
             try:
                 f = self.opener("localtags")
                 count = 0
