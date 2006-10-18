@@ -1,0 +1,109 @@
+#!/bin/sh
+
+do_push()
+{
+    user=$1
+    shift
+
+    echo "Pushing as user $user"
+    echo 'hgrc = """'
+    sed -e 1,2d b/.hg/hgrc
+    echo '"""'
+    if [ -e acl.config ]; then
+	echo 'acl.config = """'
+	cat acl.config
+	echo '"""'
+    fi
+    LOGNAME=$user hg --cwd a --debug push ../b
+    hg --cwd b rollback
+    hg --cwd b --quiet tip
+    echo
+}
+
+hg init a
+cd a
+mkdir foo foo/Bar quux
+echo 'in foo' > foo/file.txt
+echo 'in foo/Bar' > foo/Bar/file.txt
+echo 'in quux' > quux/file.py
+hg add
+hg ci -m 'add files' -d '1000000 0'
+echo >> foo/file.txt
+hg ci -m 'change foo/file' -d '1000001 0'
+echo >> foo/Bar/file.txt
+hg ci -m 'change foo/Bar/file' -d '1000002 0'
+echo >> quux/file.py
+hg ci -m 'change quux/file' -d '1000003 0'
+hg tip --quiet
+
+cd ..
+hg clone -r 0 a b
+
+echo '[extensions]' >> $HGRCPATH
+echo 'hgext.acl =' >> $HGRCPATH
+
+config=b/.hg/hgrc
+
+echo
+
+echo 'Extension disabled for lack of a hook'
+do_push fred
+
+echo '[hooks]' >> $config
+echo 'pretxnchangegroup.acl = python:hgext.acl.hook' >> $config
+
+echo 'Extension disabled for lack of acl.sources'
+do_push fred
+
+echo 'No [acl.allow]/[acl.deny]'
+echo '[acl]' >> $config
+echo 'sources = push' >> $config
+do_push fred
+
+echo 'Empty [acl.allow]'
+echo '[acl.allow]' >> $config
+do_push fred
+
+echo 'fred is allowed inside foo/'
+echo 'foo/** = fred' >> $config
+do_push fred
+
+echo 'Empty [acl.deny]'
+echo '[acl.deny]' >> $config
+do_push barney
+
+echo 'fred is allowed inside foo/, but not foo/bar/ (case matters)'
+echo 'foo/bar/** = fred' >> $config
+do_push fred
+
+echo 'fred is allowed inside foo/, but not foo/Bar/'
+echo 'foo/Bar/** = fred' >> $config
+do_push fred
+
+echo 'barney is not mentioned => not allowed anywhere'
+do_push barney
+
+echo 'barney is allowed everywhere'
+echo '[acl.allow]' >> $config
+echo '** = barney' >> $config
+do_push barney
+
+echo 'wilma can change files with a .txt extension'
+echo '**/*.txt = wilma' >> $config
+do_push wilma
+
+echo 'file specified by acl.config does not exist'
+echo '[acl]' >> $config
+echo 'config = ../acl.config' >> $config
+do_push barney
+
+echo 'betty is allowed inside foo/ by a acl.config file'
+echo '[acl.allow]' >> acl.config
+echo 'foo/** = betty' >> acl.config
+do_push betty
+
+echo 'acl.config can set only [acl.allow]/[acl.deny]'
+echo '[hooks]' >> acl.config
+echo 'changegroup.acl = false' >> acl.config
+do_push barney
+

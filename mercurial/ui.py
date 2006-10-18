@@ -11,12 +11,14 @@ demandload(globals(), "errno getpass os re socket sys tempfile")
 demandload(globals(), "ConfigParser traceback util")
 
 def dupconfig(orig):
-    new = ConfigParser.SafeConfigParser(orig.defaults())
+    new = util.configparser(orig.defaults())
     updateconfig(orig, new)
     return new
 
-def updateconfig(source, dest):
-    for section in source.sections():
+def updateconfig(source, dest, sections=None):
+    if not sections:
+        sections = source.sections()
+    for section in sections:
         if not dest.has_section(section):
             dest.add_section(section)
         for name, value in source.items(section, raw=True):
@@ -37,7 +39,7 @@ class ui(object):
             self.debugflag = debug
             self.interactive = interactive
             self.traceback = traceback
-            self.cdata = ConfigParser.SafeConfigParser()
+            self.cdata = util.configparser()
             self.readconfig(util.rcpath())
             self.updateopts(verbose, debug, quiet, interactive)
         else:
@@ -100,6 +102,23 @@ class ui(object):
     def addreadhook(self, hook):
         self.readhooks.append(hook)
 
+    def readsections(self, filename, *sections):
+        "read filename and add only the specified sections to the config data"
+        if not sections:
+            return
+
+        cdata = util.configparser()
+        try:
+            cdata.read(filename)
+        except ConfigParser.ParsingError, inst:
+            raise util.Abort(_("failed to parse %s\n%s") % (f, inst))
+
+        for section in sections:
+            if not cdata.has_section(section):
+                cdata.add_section(section)
+
+        updateconfig(cdata, self.cdata, sections)
+
     def fixconfig(self, section=None, name=None, value=None, root=None):
         # translate paths relative to root (or home) into absolute paths
         if section is None or section == 'paths':
@@ -126,7 +145,7 @@ class ui(object):
 
     def setconfig(self, section, name, value):
         if not self.overlay:
-            self.overlay = ConfigParser.SafeConfigParser()
+            self.overlay = util.configparser()
         for cdata in (self.overlay, self.cdata):
             if not cdata.has_section(section):
                 cdata.add_section(section)

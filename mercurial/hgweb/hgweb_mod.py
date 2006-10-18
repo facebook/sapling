@@ -28,7 +28,7 @@ def _up(p):
         return "/"
     return up + "/"
 
-def revnavgen(pos, pagelen, limit):
+def revnavgen(pos, pagelen, limit, nodefunc):
     def seq(factor, limit=None):
         if limit:
             yield limit
@@ -50,16 +50,19 @@ def revnavgen(pos, pagelen, limit):
                 break
             last = f
             if pos + f < limit:
-                l.append(("+%d" % f, pos + f))
+                l.append(("+%d" % f, hex(nodefunc(pos + f).node())))
             if pos - f >= 0:
-                l.insert(0, ("-%d" % f, pos - f))
+                l.insert(0, ("-%d" % f, hex(nodefunc(pos - f).node())))
 
-        yield {"label": "(0)", "rev": 0}
+        try:
+            yield {"label": "(0)", "node": hex(nodefunc('0').node())}
 
-        for label, rev in l:
-            yield {"label": label, "rev": rev}
+            for label, node in l:
+                yield {"label": label, "node": node}
 
-        yield {"label": "tip", "rev": "tip"}
+            yield {"label": "tip", "node": "tip"}
+        except hg.RepoError:
+            pass
 
     return nav
 
@@ -215,7 +218,7 @@ class hgweb(object):
         end = min(count, start + maxchanges)
         pos = end - 1
 
-        changenav = revnavgen(pos, maxchanges, count)
+        changenav = revnavgen(pos, maxchanges, count, self.repo.changectx)
 
         yield self.t(shortlog and 'shortlog' or 'changelog',
                      changenav=changenav,
@@ -338,7 +341,8 @@ class hgweb(object):
             for e in l:
                 yield e
 
-        nav = revnavgen(pos, pagelen, count)
+        nodefunc = lambda x: fctx.filectx(fileid=x)
+        nav = revnavgen(pos, pagelen, count, nodefunc)
         yield self.t("filelog", file=f, node=hex(fctx.node()), nav=nav,
                      entries=entries)
 
@@ -743,13 +747,9 @@ class hgweb(object):
             style = req.form['style'][0]
         mapfile = style_map(self.templatepath, style)
 
-        if not req.url:
-            port = req.env["SERVER_PORT"]
-            port = port != "80" and (":" + port) or ""
-            uri = req.env["REQUEST_URI"]
-            if "?" in uri:
-                uri = uri.split("?")[0]
-            req.url = "http://%s%s%s" % (req.env["SERVER_NAME"], port, uri)
+        port = req.env["SERVER_PORT"]
+        port = port != "80" and (":" + port) or ""
+        urlbase = 'http://%s%s' % (req.env['SERVER_NAME'], port)
 
         if not self.reponame:
             self.reponame = (self.repo.ui.config("web", "name")
@@ -758,6 +758,7 @@ class hgweb(object):
 
         self.t = templater.templater(mapfile, templater.common_filters,
                                      defaults={"url": req.url,
+                                               "urlbase": urlbase,
                                                "repo": self.reponame,
                                                "header": header,
                                                "footer": footer,

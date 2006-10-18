@@ -15,7 +15,7 @@ platform-specific details from the core.
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "cStringIO errno getpass popen2 re shutil sys tempfile")
-demandload(globals(), "os threading time calendar")
+demandload(globals(), "os threading time calendar ConfigParser")
 
 # used by parsedate
 defaultdateformats = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
@@ -23,6 +23,11 @@ defaultdateformats = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
 
 class SignalInterrupt(Exception):
     """Exception raised on SIGTERM and SIGHUP."""
+
+# like SafeConfigParser but with case-sensitive keys
+class configparser(ConfigParser.SafeConfigParser):
+    def optionxform(self, optionstr):
+        return optionstr
 
 def cachefunc(func):
     '''cache the result of function calls'''

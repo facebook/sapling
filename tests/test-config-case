@@ -1,0 +1,7 @@
+#!/bin/sh
+
+echo '[Section]' >> $HGRCPATH
+echo 'KeY = Case Sensitive' >> $HGRCPATH
+echo 'key = lower case' >> $HGRCPATH
+
+hg showconfig

@@ -57,4 +57,5 @@ cd partial
 hg -R bundle://../full.hg log
 hg incoming bundle://../full.hg
 hg -R bundle://../full.hg outgoing ../partial2
+hg -R bundle://../does-not-exist.hg outgoing ../partial2
 cd ..

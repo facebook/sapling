@@ -8,7 +8,7 @@
 
 import os
 from mercurial.demandload import demandload
-demandload(globals(), "ConfigParser mimetools cStringIO")
+demandload(globals(), "mimetools cStringIO")
 demandload(globals(), "mercurial:ui,hg,util,templater")
 demandload(globals(), "mercurial.hgweb.hgweb_mod:hgweb")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile,style_map")
@@ -30,7 +30,7 @@ class hgwebdir(object):
             self.repos = cleannames(config.items())
             self.repos.sort()
         else:
-            cp = ConfigParser.SafeConfigParser()
+            cp = util.configparser()
             cp.read(config)
             self.repos = []
             if cp.has_section('web'):
