@@ -431,14 +431,15 @@ class changeset_templater(object):
             if endname in self.t:
                 yield self.t(endname, **args)
 
-        if brinfo:
-            def showbranches(**args):
-                if changenode in brinfo:
-                    for x in showlist('branch', brinfo[changenode],
-                                      plural='branches', **args):
-                        yield x
-        else:
-            showbranches = ''
+        def showbranches(**args):
+            branch = changes[5].get("branch")
+            if branch:
+                yield showlist('branch', [branch], plural='branches', **args)
+            # add old style branches if requested
+            if brinfo and changenode in brinfo:
+                for x in showlist('branch', brinfo[changenode],
+                                  plural='branches', **args):
+                    yield x
 
         if self.ui.debugflag:
             def showmanifest(**args):
