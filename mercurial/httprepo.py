@@ -262,12 +262,11 @@ class httprepository(remoterepository):
             fp.close()
 
     def lookup(self, key):
-        try:
-            d = self.do_cmd("lookup", key = key).read()
-            return bin(d[:-1])
-        except:
-            self.ui.warn('Not able to look up revision named "%s"\n' % (key,))
-            raise
+        d = self.do_cmd("lookup", key = key).read()
+        success, data = d[:-1].split(' ', 1)
+        if int(success):
+            return bin(data)
+        raise hg.RepoError(data)
 
     def heads(self):
         d = self.do_read("heads")

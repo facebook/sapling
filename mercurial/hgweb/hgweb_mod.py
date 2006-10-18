@@ -884,7 +884,13 @@ class hgweb(object):
         req.write(self.filelog(self.filectx(req)))
 
     def do_lookup(self, req):
-        resp = hex(self.repo.lookup(req.form['key'][0])) + "\n"
+        try:
+            r = hex(self.repo.lookup(req.form['key'][0]))
+            success = 1
+        except Exception,inst:
+            r = str(inst)
+            success = 0
+        resp = "%s %s\n" % (success, r)
         req.httphdr("application/mercurial-0.1", length=len(resp))
         req.write(resp)
 
