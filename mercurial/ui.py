@@ -226,10 +226,8 @@ class ui(object):
 
         Searched in this order: $HGUSER, [ui] section of hgrcs, $EMAIL
         and stop searching if one of these is set.
-        Abort if found username is an empty string to force specifying
-        the commit user elsewhere, e.g. with line option or repo hgrc.
-        If not found, use ($LOGNAME or $USER or $LNAME or
-        $USERNAME) +"@full.hostname".
+        Abort if no username is found, to force specifying the commit user
+        with line option or repo hgrc.
         """
         user = os.environ.get("HGUSER")
         if user is None:
@@ -237,10 +235,7 @@ class ui(object):
         if user is None:
             user = os.environ.get("EMAIL")
         if user is None:
-            try:
-                user = '%s@%s' % (util.getuser(), socket.getfqdn())
-            except KeyError:
-                raise util.Abort(_("Please specify a username."))
+            raise util.Abort(_("No default username available, use -u"))
         return user
 
     def shortuser(self, user):

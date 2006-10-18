@@ -297,5 +297,3 @@ class posixfile_nt(object):
             win32file.SetEndOfFile(self.handle)
         except pywintypes.error, err:
             raise WinIOError(err)
-
-getuser_fallback = win32api.GetUserName
