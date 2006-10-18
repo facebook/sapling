@@ -310,6 +310,7 @@ common_filters = {
     "strip": lambda x: x.strip(),
     "urlescape": lambda x: urllib.quote(x),
     "user": lambda x: util.shortuser(x),
+    "stringescape": lambda x: x.encode('string_escape'),
     }
 
 def templatepath(name=None):
@@ -464,6 +465,14 @@ class changeset_templater(object):
             for x in showlist('tag', self.repo.nodetags(changenode), **args):
                 yield x
 
+        def showextras(**args):
+            extras = changes[5].items()
+            extras.sort()
+            for key, value in extras:
+                args = args.copy()
+                args.update(dict(key=key, value=value))
+                yield self.t('extra', **args)
+
         if self.ui.debugflag:
             files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
             def showfiles(**args):
@@ -499,6 +508,7 @@ class changeset_templater(object):
             'parents': showparents,
             'rev': rev,
             'tags': showtags,
+            'extras': showextras,
             }
         props = props.copy()
         props.update(defprops)
