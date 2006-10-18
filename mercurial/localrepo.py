@@ -322,11 +322,14 @@ class localrepository(repo.repository):
         return self.branchcache
 
     def _writebranchcache(self):
-        f = self.opener("branches.cache", "w")
-        t = self.changelog.tip()
-        f.write("%s %s\n" % (hex(t), self.changelog.count() - 1))
-        for label, node in self.branchcache.iteritems():
-            f.write("%s %s\n" % (hex(node), label))
+        try:
+            f = self.opener("branches.cache", "w")
+            t = self.changelog.tip()
+            f.write("%s %s\n" % (hex(t), self.changelog.count() - 1))
+            for label, node in self.branchcache.iteritems():
+                f.write("%s %s\n" % (hex(node), label))
+        except IOError:
+            pass
 
     def lookup(self, key):
         if key == '.':
