@@ -746,11 +746,7 @@ class revlog(object):
                     continue
         return c
 
-    def lookup(self, id):
-        """locate a node based on:
-            - revision number or str(revision number)
-            - nodeid or subset of hex nodeid
-        """
+    def _match(self, id):
         if isinstance(id, (long, int)):
             # rev
             return self.node(id)
@@ -772,13 +768,18 @@ class revlog(object):
             return self.node(rev)
         except (ValueError, OverflowError):
             pass
-        try:
-            if len(id) == 40:
+        if len(id) == 40:
+            try:
                 # a full hex nodeid?
                 node = bin(id)
                 r = self.rev(node)
                 return node
-            elif len(id) < 40:
+            except TypeError:
+                pass
+
+    def _partialmatch(self, id):
+        if len(id) < 40:
+            try:
                 # hex(node)[:...]
                 bin_id = bin(id[:len(id) & ~1]) # grab an even number of digits
                 node = None
@@ -789,8 +790,21 @@ class revlog(object):
                         node = n
                 if node is not None:
                     return node
-        except TypeError:
-            pass
+            except TypeError:
+                pass
+
+    def lookup(self, id):
+        """locate a node based on:
+            - revision number or str(revision number)
+            - nodeid or subset of hex nodeid
+        """
+
+        n = self._match(id)
+        if n is not None:
+            return n
+        n = self._partialmatch(id)
+        if n:
+            return n
 
         raise RevlogError(_("No match found"))
 

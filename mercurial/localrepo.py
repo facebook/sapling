@@ -336,14 +336,17 @@ class localrepository(repo.repository):
             key = self.dirstate.parents()[0]
             if key == nullid:
                 raise repo.RepoError(_("no revision checked out"))
+        n = self.changelog._match(key)
+        if n:
+            return n
         if key in self.tags():
             return self.tags()[key]
         if key in self.branchtags():
             return self.branchtags()[key]
-        try:
-            return self.changelog.lookup(key)
-        except:
-            raise repo.RepoError(_("unknown revision '%s'") % key)
+        n = self.changelog._partialmatch(key)
+        if n:
+            return n
+        raise repo.RepoError(_("unknown revision '%s'") % key)
 
     def dev(self):
         return os.lstat(self.path).st_dev
