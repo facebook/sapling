@@ -293,7 +293,7 @@ class localrepository(repo.repository):
         if self.branchcache != None:
             return self.branchcache
 
-        self.branchcache = {}
+        self.branchcache = {} # avoid recursion in changectx
 
         try:
             f = self.opener("branches.cache")
@@ -310,12 +310,11 @@ class localrepository(repo.repository):
 
         tip = self.changelog.count() - 1
         if lrev != tip:
-            for r in range(lrev + 1, tip + 1):
-                n = self.changelog.node(r)
-                c = self.changelog.read(n)
-                b = c[5].get("branch")
+            for r in xrange(lrev + 1, tip + 1):
+                c = self.changectx(r)
+                b = c.branch()
                 if b:
-                    self.branchcache[b] = n
+                    self.branchcache[b] = c.node()
             self._writebranchcache()
 
         return self.branchcache
