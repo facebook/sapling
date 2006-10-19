@@ -2103,11 +2103,11 @@ def pull(ui, repo, source="default", **opts):
       Use an extra slash at the start of a path to specify an absolute path:
         ssh://example.com//tmp/repository
     - Mercurial doesn't use its own compression via SSH; the right thing
-      to do is to configure it in your ~/.ssh/ssh_config, e.g.:
+      to do is to configure it in your ~/.ssh/config, e.g.:
         Host *.mylocalnetwork.example.com
-          Compression off
+          Compression no
         Host *
-          Compression on
+          Compression yes
       Alternatively specify "ssh -C" as your ssh command in your hgrc or
       with the --ssh command line option.
     """
