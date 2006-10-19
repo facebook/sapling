@@ -245,14 +245,16 @@ class localrepository(repo.repository):
             # taking precedence
             heads = self.heads()
             heads.reverse()
-            fl = self.file(".hgtags")
+            seen = {}
             for node in heads:
                 f = self.filectx('.hgtags', node)
-                if not f: continue
+                if not f or f.filerev() in seen: continue
+                seen[f.filerev()] = 1
                 count = 0
                 for l in f.data().splitlines():
                     count += 1
                     parsetag(l, _("%s, line %d") % (str(f), count))
+
             try:
                 f = self.opener("localtags")
                 count = 0
