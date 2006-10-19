@@ -219,7 +219,7 @@ def walkchangerevs(ui, repo, pats, opts):
         rev = repo.changelog.rev(repo.lookup(rev))
         ff = followfilter()
         stop = min(revs[0], revs[-1])
-        for x in range(rev, stop-1, -1):
+        for x in xrange(rev, stop-1, -1):
             if ff.match(x) and wanted.has_key(x):
                 del wanted[x]
 
@@ -1245,7 +1245,7 @@ def debugindex(ui, file_):
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "", 0)
     ui.write("   rev    offset  length   base linkrev" +
              " nodeid       p1           p2\n")
-    for i in range(r.count()):
+    for i in xrange(r.count()):
         node = r.node(i)
         pp = r.parents(node)
         ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
@@ -1256,7 +1256,7 @@ def debugindexdot(ui, file_):
     """dump an index DAG as a .dot file"""
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "", 0)
     ui.write("digraph G {\n")
-    for i in range(r.count()):
+    for i in xrange(r.count()):
         node = r.node(i)
         pp = r.parents(node)
         ui.write("\t%d -> %d\n" % (r.rev(pp[0]), i))
@@ -1443,15 +1443,15 @@ def grep(ui, repo, pattern, *pats, **opts):
         sm = difflib.SequenceMatcher(None, a, b)
         for tag, alo, ahi, blo, bhi in sm.get_opcodes():
             if tag == 'insert':
-                for i in range(blo, bhi):
+                for i in xrange(blo, bhi):
                     yield ('+', b[i])
             elif tag == 'delete':
-                for i in range(alo, ahi):
+                for i in xrange(alo, ahi):
                     yield ('-', a[i])
             elif tag == 'replace':
-                for i in range(alo, ahi):
+                for i in xrange(alo, ahi):
                     yield ('-', a[i])
-                for i in range(blo, bhi):
+                for i in xrange(blo, bhi):
                     yield ('+', b[i])
 
     prev = {}
