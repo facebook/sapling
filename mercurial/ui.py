@@ -111,7 +111,8 @@ class ui(object):
         try:
             cdata.read(filename)
         except ConfigParser.ParsingError, inst:
-            raise util.Abort(_("failed to parse %s\n%s") % (f, inst))
+            raise util.Abort(_("failed to parse %s\n%s") % (filename,
+                                                            inst))
 
         for section in sections:
             if not cdata.has_section(section):

@@ -737,7 +737,7 @@ class revlog(object):
         c = []
         p = self.rev(node)
         for r in range(p + 1, self.count()):
-            for pr in self.parentrevs(n):
+            for pr in self.parentrevs(r):
                 if pr == p:
                     c.append(self.node(r))
         return c
