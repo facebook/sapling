@@ -1132,7 +1132,7 @@ class localrepository(repo.repository):
                 reqcnt += 1
                 self.ui.debug(_("request %d: %s\n") %
                             (reqcnt, " ".join(map(short, r))))
-                for p in range(0, len(r), 10):
+                for p in xrange(0, len(r), 10):
                     for b in remote.branches(r[p:p+10]):
                         self.ui.debug(_("received %s:%s\n") %
                                       (short(b[0]), short(b[1])))
@@ -1750,7 +1750,7 @@ class localrepository(repo.repository):
             self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
                       source=srctype, url=url)
 
-            for i in range(cor + 1, cnr + 1):
+            for i in xrange(cor + 1, cnr + 1):
                 self.hook("incoming", node=hex(self.changelog.node(i)),
                           source=srctype, url=url)
 

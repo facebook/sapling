@@ -220,7 +220,7 @@ def dogitpatch(patchname, gitpatches, cwd=None):
     tmpfp = os.fdopen(fd, 'w')
 
     try:
-        for i in range(len(gitpatches)):
+        for i in xrange(len(gitpatches)):
             p = gitpatches[i]
             if not p.copymod and not p.binary:
                 continue

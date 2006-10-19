@@ -48,7 +48,7 @@ def verify(repo):
     repo.ui.status(_("checking changesets\n"))
     checksize(repo.changelog, "changelog")
 
-    for i in range(repo.changelog.count()):
+    for i in xrange(repo.changelog.count()):
         changesets += 1
         n = repo.changelog.node(i)
         l = repo.changelog.linkrev(n)
@@ -81,7 +81,7 @@ def verify(repo):
     checkversion(repo.manifest, "manifest")
     checksize(repo.manifest, "manifest")
 
-    for i in range(repo.manifest.count()):
+    for i in xrange(repo.manifest.count()):
         n = repo.manifest.node(i)
         l = repo.manifest.linkrev(n)
 
@@ -142,7 +142,7 @@ def verify(repo):
 
         nodes = {nullid: 1}
         seen = {}
-        for i in range(fl.count()):
+        for i in xrange(fl.count()):
             revisions += 1
             n = fl.node(i)
 

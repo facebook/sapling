@@ -593,7 +593,7 @@ class queue:
             if stop in chlog.nodemap:
                 stoprev = chlog.rev(stop)
 
-            for r in range(chlog.count() - 1, -1, -1):
+            for r in xrange(chlog.count() - 1, -1, -1):
                 n = chlog.node(r)
                 if n not in p:
                     h.append(n)
@@ -955,7 +955,7 @@ class queue:
             if comments:
                 # Remove existing message.
                 ci = 0
-                for mi in range(len(message)):
+                for mi in xrange(len(message)):
                     while message[mi] != comments[ci]:
                         ci += 1
                     del comments[ci]
@@ -1036,7 +1036,7 @@ class queue:
             # if the patch excludes a modified file, mark that file with mtime=0
             # so status can see it.
             mm = []
-            for i in range(len(m)-1, -1, -1):
+            for i in xrange(len(m)-1, -1, -1):
                 if not matchfn(m[i]):
                     mm.append(m[i])
                     del m[i]
@@ -1104,7 +1104,7 @@ class queue:
         if not length:
             length = len(self.series) - start
         if not missing:
-            for i in range(start, start+length):
+            for i in xrange(start, start+length):
                 pfx = ''
                 patch = pname(i)
                 if self.ui.verbose:
