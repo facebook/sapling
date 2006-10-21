@@ -202,4 +202,5 @@ class hgwebdir(object):
                         for column in sortable]
                 req.write(tmpl("index", entries=entries,
                                sortcolumn=sortcolumn, descending=descending,
+                               motd=self.motd,
                                **dict(sort)))
