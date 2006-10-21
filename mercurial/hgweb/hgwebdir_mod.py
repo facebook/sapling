@@ -67,7 +67,7 @@ class hgwebdir(object):
             yield header_file.read()
 
         def footer(**map):
-            yield tmpl("footer", motd=self.motd, **map)
+            yield tmpl("footer", **map)
 
         url = req.env['REQUEST_URI'].split('?')[0]
         if not url.endswith('/'):
