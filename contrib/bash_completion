@@ -251,8 +251,13 @@ complete -o bashdefault -o default -F _hg hg 2>/dev/null \
 # mq
 _hg_ext_mq_patchlist()
 {
-    local patches=$("$hg" $1 2>/dev/null)
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$patches' -- "$cur"))
+    local patches
+    patches=$("$hg" $1 2>/dev/null)
+    if [ $? -eq 0 ] && [ "$patches" ]; then
+	COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$patches' -- "$cur"))
+	return 0
+    fi
+    return 1
 }
 
 _hg_ext_mq_queues()
