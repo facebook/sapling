@@ -328,6 +328,41 @@ _hg_cmd_qcommit()
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
+_hg_cmd_qfold()
+{
+    _hg_ext_mq_patchlist qunapplied
+}
+
+_hg_cmd_qrename()
+{
+    _hg_ext_mq_patchlist qseries
+}
+
+_hg_cmd_qheader()
+{
+    _hg_ext_mq_patchlist qseries
+}
+
+_hg_cmd_qclone()
+{
+    local count=$(_hg_count_non_option)
+    if [ $count = 1 ]; then
+	_hg_paths
+    fi
+    _hg_repos
+}
+
+_hg_ext_mq_guards()
+{
+    "$hg" qselect --series 2>/dev/null | sed -e 's/^.//'
+}
+
+_hg_cmd_qselect()
+{
+    local guards=$(_hg_ext_mq_guards)
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$guards' -- "$cur"))
+}
+
 
 # hbisect
 _hg_cmd_bisect()
