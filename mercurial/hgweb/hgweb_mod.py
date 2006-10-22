@@ -1076,8 +1076,6 @@ class hgweb(object):
                  headers={'status': '401 Unauthorized'})
             return
 
-        req.httphdr("application/mercurial-0.1")
-
         their_heads = req.form['heads'][0].split(' ')
 
         def check_heads():
@@ -1088,6 +1086,8 @@ class hgweb(object):
         if not check_heads():
             bail(_('unsynced changes\n'))
             return
+
+        req.httphdr("application/mercurial-0.1")
 
         # do not lock repo until all changegroup data is
         # streamed. save to temporary file.
