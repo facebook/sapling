@@ -364,7 +364,7 @@ _hg_cmd_bisect()
 _hg_cmd_email()
 {
     case "$prev" in
-	-c|--cc|-t|--to|-f|--from)
+	-c|--cc|-t|--to|-f|--from|--bcc)
 	    # we need an e-mail address. let the user provide a function 
 	    # to get them
 	    if [ "$(type -t _hg_emails)" = function ]; then
