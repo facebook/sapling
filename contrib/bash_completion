@@ -8,9 +8,9 @@
 #
 # Mercurial allows you to define additional commands through extensions.
 # Bash should be able to automatically figure out the name of these new
-# commands and their options.  If you also want to tell it how to
-# complete non-option arguments, see below for how to define an
-# _hg_cmd_foo function.
+# commands and their options.  See below for how to define _hg_opt_foo
+# and _hg_cmd_foo functions to fine-tune the completion for option and
+# non-option arguments, respectively.
 #
 #
 # Notes about completion for specific commands:
@@ -34,7 +34,10 @@
 #
 # If it exists, the function _hg_cmd_foo will be called without
 # arguments to generate the completion candidates for the hg command
-# "foo".
+# "foo".  If the command receives some arguments that aren't options
+# even though they start with a "-", you can define a function called
+# _hg_opt_foo to generate the completion candidates.  If _hg_opt_foo
+# doesn't return 0, regular completion for options is attempted.
 #
 # In addition to the regular completion variables provided by bash,
 # the following variables are also set:
@@ -109,6 +112,7 @@ _hg()
     # global options that receive an argument
     local global_args='--cwd|-R|--repository'
     local hg="$1"
+    local canonical=0
 
     COMPREPLY=()
     cur="$2"
@@ -128,6 +132,10 @@ _hg()
     done
 
     if [[ "$cur" == -* ]]; then
+	if [ "$(type -t "_hg_opt_$cmd")" = function ] && "_hg_opt_$cmd"; then
+	    return
+	fi
+
 	opts=$("$hg" debugcomplete --options "$cmd" 2>/dev/null)
 
 	COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur"))
@@ -153,7 +161,6 @@ _hg()
 
     # try to generate completion candidates for whatever command the user typed
     local help
-    local canonical=0
     if _hg_command_specific; then
 	return
     fi
