@@ -193,7 +193,13 @@ _hg_command_specific()
 	help)
 	    _hg_commands
 	;;
-	export|manifest|update)
+	export)
+	    if _hg_ext_mq_patchlist qapplied && [ "${COMPREPLY[*]}" ]; then
+		return 0
+	    fi
+	    _hg_tags
+	;;
+	manifest|update)
 	    _hg_tags
 	;;
 	pull|push|outgoing|incoming)
@@ -316,11 +322,6 @@ _hg_cmd_qcommit()
     local files=$(cd "$root/.hg/patches" 2>/dev/null &&
                   "$hg" status -nmar 2>/dev/null)
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
-}
-
-_hg_cmd_export()
-{
-    _hg_ext_mq_patchlist qapplied
 }
 
 
