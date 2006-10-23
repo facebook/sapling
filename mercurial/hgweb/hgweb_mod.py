@@ -629,9 +629,10 @@ class hgweb(object):
             yield ''
 
         def footer(**map):
-            yield self.t("footer",
-                         motd=self.repo.ui.config("web", "motd", ""),
-                         **map)
+            yield self.t("footer", **map)
+
+        def motd(**map):
+            yield self.repo.ui.config("web", "motd", "")
 
         def expand_form(form):
             shortcuts = {
@@ -762,6 +763,7 @@ class hgweb(object):
                                                "repo": self.reponame,
                                                "header": header,
                                                "footer": footer,
+                                               "motd": motd,
                                                "rawfileheader": rawfileheader,
                                                "sessionvars": sessionvars
                                                })
