@@ -235,8 +235,13 @@ class ui(object):
             user = self.config("ui", "username")
         if user is None:
             user = os.environ.get("EMAIL")
-        if user is None:
-            raise util.Abort(_("No default username available, use -u"))
+        if not user:
+            self.status(_("Please choose a commit username to be recorded "
+                          "in the changelog via\ncommand line option "
+                          '(-u "First Last <email@example.com>"), in the\n'
+                          "configuration files (hgrc), or by setting the "
+                          "EMAIL environment variable.\n\n"))
+            raise util.Abort(_("No commit username specified!"))
         return user
 
     def shortuser(self, user):
