@@ -47,6 +47,7 @@ class localrepository(repo.repository):
         self.origroot = path
         self.ui = ui.ui(parentui=parentui)
         self.opener = util.opener(self.path)
+        self.sopener = util.opener(self.path)
         self.wopener = util.opener(self.root)
 
         try:
@@ -66,8 +67,8 @@ class localrepository(repo.repository):
             flags = revlog.REVLOG_DEFAULT_FLAGS
 
         v = self.revlogversion | flags
-        self.manifest = manifest.manifest(self.opener, v)
-        self.changelog = changelog.changelog(self.opener, v)
+        self.manifest = manifest.manifest(self.sopener, v)
+        self.changelog = changelog.changelog(self.sopener, v)
 
         # the changelog might not have the inline index flag
         # on.  If the format of the changelog is the same as found in
@@ -356,13 +357,16 @@ class localrepository(repo.repository):
     def join(self, f):
         return os.path.join(self.path, f)
 
+    def sjoin(self, f):
+        return os.path.join(self.path, f)
+
     def wjoin(self, f):
         return os.path.join(self.root, f)
 
     def file(self, f):
         if f[0] == '/':
             f = f[1:]
-        return filelog.filelog(self.opener, f, self.revlogversion)
+        return filelog.filelog(self.sopener, f, self.revlogversion)
 
     def changectx(self, changeid=None):
         return context.changectx(self, changeid)
@@ -442,17 +446,17 @@ class localrepository(repo.repository):
             ds = ""
         self.opener("journal.dirstate", "w").write(ds)
 
-        tr = transaction.transaction(self.ui.warn, self.opener,
-                                       self.join("journal"),
+        tr = transaction.transaction(self.ui.warn, self.sopener,
+                                       self.sjoin("journal"),
                                        aftertrans(self.path))
         self.transhandle = tr
         return tr
 
     def recover(self):
         l = self.lock()
-        if os.path.exists(self.join("journal")):
+        if os.path.exists(self.sjoin("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
-            transaction.rollback(self.opener, self.join("journal"))
+            transaction.rollback(self.sopener, self.sjoin("journal"))
             self.reload()
             return True
         else:
@@ -463,9 +467,9 @@ class localrepository(repo.repository):
         if not wlock:
             wlock = self.wlock()
         l = self.lock()
-        if os.path.exists(self.join("undo")):
+        if os.path.exists(self.sjoin("undo")):
             self.ui.status(_("rolling back last transaction\n"))
-            transaction.rollback(self.opener, self.join("undo"))
+            transaction.rollback(self.sopener, self.sjoin("undo"))
             util.rename(self.join("undo.dirstate"), self.join("dirstate"))
             self.reload()
             self.wreload()
@@ -484,26 +488,25 @@ class localrepository(repo.repository):
     def do_lock(self, lockname, wait, releasefn=None, acquirefn=None,
                 desc=None):
         try:
-            l = lock.lock(self.join(lockname), 0, releasefn, desc=desc)
+            l = lock.lock(lockname, 0, releasefn, desc=desc)
         except lock.LockHeld, inst:
             if not wait:
                 raise
             self.ui.warn(_("waiting for lock on %s held by %s\n") %
                          (desc, inst.args[0]))
             # default to 600 seconds timeout
-            l = lock.lock(self.join(lockname),
-                          int(self.ui.config("ui", "timeout") or 600),
+            l = lock.lock(lockname, int(self.ui.config("ui", "timeout", "600")),
                           releasefn, desc=desc)
         if acquirefn:
             acquirefn()
         return l
 
     def lock(self, wait=1):
-        return self.do_lock("lock", wait, acquirefn=self.reload,
+        return self.do_lock(self.sjoin("lock"), wait, acquirefn=self.reload,
                             desc=_('repository %s') % self.origroot)
 
     def wlock(self, wait=1):
-        return self.do_lock("wlock", wait, self.dirstate.write,
+        return self.do_lock(self.join("wlock"), wait, self.dirstate.write,
                             self.wreload,
                             desc=_('working directory of %s') % self.origroot)
 
@@ -1686,7 +1689,8 @@ class localrepository(repo.repository):
         # inconsistent view
         cl = None
         try:
-            cl = appendfile.appendchangelog(self.opener, self.changelog.version)
+            cl = appendfile.appendchangelog(self.sopener,
+                                            self.changelog.version)
 
             oldheads = len(cl.heads())
 
@@ -1729,7 +1733,8 @@ class localrepository(repo.repository):
                 cl.cleanup()
 
         # make changelog see real files again
-        self.changelog = changelog.changelog(self.opener, self.changelog.version)
+        self.changelog = changelog.changelog(self.sopener,
+                                             self.changelog.version)
         self.changelog.checkinlinesize(tr)
 
         newheads = len(self.changelog.heads())
@@ -1773,7 +1778,7 @@ class localrepository(repo.repository):
             name, size = fp.readline().split('\0', 1)
             size = int(size)
             self.ui.debug('adding %s (%s)\n' % (name, util.bytecount(size)))
-            ofp = self.opener(name, 'w')
+            ofp = self.sopener(name, 'w')
             for chunk in util.filechunkiter(fp, limit=size):
                 ofp.write(chunk)
             ofp.close()

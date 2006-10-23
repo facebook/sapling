@@ -36,6 +36,7 @@ class statichttprepository(localrepo.localrepository):
         self.ui = ui
         self.revlogversion = 0
         self.opener = opener(self.path)
+        self.sopener = opener(self.path)
         self.manifest = manifest.manifest(self.opener)
         self.changelog = changelog.changelog(self.opener)
         self.tagscache = None
