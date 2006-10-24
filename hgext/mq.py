@@ -2003,6 +2003,35 @@ def reposetup(ui, repo):
 
             return tagscache
 
+        def branchtags(self):
+            if self.branchcache != None:
+                return self.branchcache
+
+            q = self.mq
+            if not q.applied:
+                return super(mqrepo, self).branchtags()
+
+            self.branchcache = {} # avoid recursion in changectx
+            cl = self.changelog
+            partial, last, lrev = self._readbranchcache()
+
+            qbase = cl.rev(revlog.bin(q.applied[0].rev))
+            start = lrev + 1
+            if start < qbase:
+                # update the cache (excluding the patches) and save it
+                self._updatebranchcache(partial, lrev+1, qbase)
+                self._writebranchcache(partial, cl.node(qbase-1), qbase-1)
+                start = qbase
+            # if start = qbase, the cache is as updated as it should be.
+            # if start > qbase, the cache includes (part of) the patches.
+            # we might as well use it, but we won't save it.
+
+            # update the cache up to the tip
+            self._updatebranchcache(partial, start, cl.count())
+
+            self.branchcache = partial
+            return self.branchcache
+
     if repo.local():
         repo.__class__ = mqrepo
         repo.mq = queue(ui, repo.join(""))
