@@ -527,6 +527,23 @@ class hgweb(object):
                              date = t)
                 parity += 1
 
+        def heads(**map):
+            parity = 0
+            count = 0
+
+            for node in self.repo.heads():
+                count += 1
+                if count > 10:
+                    break;
+
+                ctx = self.repo.changectx(node)
+
+                yield {'parity': self.stripes(parity),
+                       'branch': ctx.branch(),
+                       'node': hex(node),
+                       'date': ctx.date()}
+                parity += 1
+
         def changelist(**map):
             parity = 0
             cl = self.repo.changelog
@@ -560,6 +577,7 @@ class hgweb(object):
                           self.repo.ui.config("web", "author", "unknown")), # also
                  lastchange = cl.read(cl.tip())[2],
                  tags = tagentries,
+                 heads = heads,
                  shortlog = changelist,
                  node = hex(cl.tip()),
                  archives=self.archivelist("tip"))
