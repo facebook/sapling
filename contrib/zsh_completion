@@ -434,8 +434,11 @@ case $service in
         _arguments '*:revision:->tags'
     ;;
 
-    (parents)
-        _arguments '*:revision:->tags'
+    (par*)
+        _arguments \
+        '(--rev 1)-r[show parents of the specified rev]:revision:->tags' \
+        '(-r 1)--rev[show parents of the specified rev]:revision:->tags' \
+	'::revision:->tags'
     ;;
 
     (identify|recover|root|undo|view|verify|version|ct|tags)
