@@ -2,26 +2,31 @@
 
 hg init t
 cd t
+hg branches
 
 echo foo > a
 hg add a
 hg ci -m "initial" -d "0 0"
-echo foo > .hg/branch
+hg branch foo
+hg branch
 hg ci -m "add branch name" -d "0 0"
-echo bar > .hg/branch
+hg branch bar
 hg ci -m "change branch name" -d "0 0"
-rm .hg/branch
+hg branch ""
 hg ci -m "clear branch name" -d "0 0"
 
 hg co foo
-cat .hg/branch
+hg branch
 echo bleah > a
 hg ci -m "modify a branch" -d "0 0"
 
 hg merge
-cat .hg/branch
+hg branch
 HG_MERGE=true hg ci -m "merge" -d "0 0"
 hg log
+
+hg branches
+hg branches -q
 
 echo % test for invalid branch cache
 hg rollback

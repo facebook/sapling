@@ -774,6 +774,35 @@ def backout(ui, repo, rev, **opts):
             ui.status(_('(use "backout --merge" '
                         'if you want to auto-merge)\n'))
 
+def branch(ui, repo, label=None):
+    """set or show the current branch name
+
+    With <name>, set the current branch name. Otherwise, show the
+    current branch name.
+    """
+
+    if label is not None:
+        repo.opener("branch", "w").write(label)
+    else:
+        b = repo.workingctx().branch()
+        if b:
+            ui.write("%s\n" % b)
+
+def branches(ui, repo):
+    """list repository named branches
+
+    List the repository's named branches.
+    """
+    b = repo.branchtags()
+    l = [(-repo.changelog.rev(n), n, t) for t,n in b.items()]
+    l.sort()
+    for r, n, t in l:
+        hexfunc = ui.debugflag and hex or short
+        if ui.quiet:
+            ui.write("%s\n" % t)
+        else:
+            ui.write("%-30s %s:%s\n" % (t, -r, hexfunc(n)))
+
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
 
@@ -2850,6 +2879,8 @@ table = {
           ('u', 'user', '', _('record user as committer')),
          ] + walkopts,
          _('hg backout [OPTION]... REV')),
+    "branch": (branch, [], _('hg branch [NAME]')),
+    "branches": (branches, [], _('hg branches')),
     "bundle":
         (bundle,
          [('f', 'force', None,

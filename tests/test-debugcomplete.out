@@ -4,6 +4,8 @@ addremove
 annotate
 archive
 backout
+branch
+branches
 bundle
 cat
 clone

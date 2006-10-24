@@ -43,6 +43,8 @@ list of commands (use "hg help -v" to show aliases and global options):
  annotate     show changeset information per file line
  archive      create unversioned archive of a repository revision
  backout      reverse effect of earlier changeset
+ branch       set or show the current branch name
+ branches     list repository named branches
  bundle       create a changegroup file
  cat          output the latest or given revisions of files
  clone        make a copy of an existing repository
@@ -87,6 +89,8 @@ list of commands (use "hg help -v" to show aliases and global options):
  annotate     show changeset information per file line
  archive      create unversioned archive of a repository revision
  backout      reverse effect of earlier changeset
+ branch       set or show the current branch name
+ branches     list repository named branches
  bundle       create a changegroup file
  cat          output the latest or given revisions of files
  clone        make a copy of an existing repository
