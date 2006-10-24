@@ -14,10 +14,15 @@
 
 local curcontext="$curcontext" state line
 typeset -A opt_args
-local subcmds repos tags newFiles addedFiles includeExclude commitMessage
+local subcmds repos newFiles addedFiles includeExclude commitMessage
+local _hg_state
 
-_mq_state () {
+_hg_state () {
   case "$state" in
+    (tags)
+      compadd $(hg tags 2> /dev/null |
+        sed -e 's/[0-9]*:[a-f0-9]*$//; s/ *$//')
+    ;;
     (qapplied)
       compadd $(hg qapplied)
     ;;
@@ -27,7 +32,6 @@ _mq_state () {
   esac
 }
 
-tags=($(hg tags 2> /dev/null | sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//'))
 subcmds=($(hg -v help | sed -e '1,/^list of commands:/d' \
       -e '/^global options:/,$d' -e '/^ [^ ]/!d; s/[,:].*//g;'))
 
@@ -128,8 +132,8 @@ case $service in
 
     (diff)
         _arguments $includeExclude \
-        '*-r[revision]:revision:($tags)' \
-        '*--rev[revision]:revision:($tags)' \
+        '*-r[revision]:revision:->tags' \
+        '*--rev[revision]:revision:->tags' \
         '(--text)-a[treat all files as text]' \
         '(-a)--text[treat all files as text]' \
         '*:file:_files'
@@ -155,8 +159,8 @@ case $service in
     (revert)
         addedFiles=(${(ps:\0:)"$(hg status -0amrn .)"})
         _arguments \
-        '(--rev)-r[revision to revert to]:revision:($tags)' \
-        '(-r)--rev[revision to revert to]:revision:($tags)' \
+        '(--rev)-r[revision to revert to]:revision:->tags' \
+        '(-r)--rev[revision to revert to]:revision:->tags' \
         '(--nonrecursive)-n[do not recurse into subdirectories]' \
         '(-n)--nonrecursive[do not recurse into subdirectories]' \
         '*:file:->modified'
@@ -184,15 +188,15 @@ case $service in
         _arguments $includeExclude \
         '(--output)-o[print output to file with formatted name]:filespec:' \
         '(-o)--output[print output to file with formatted name]:filespec:' \
-        '(--rev)-r[revision]:revision:($tags)' \
-        '(-r)--rev[revision]:revision:($tags)' \
+        '(--rev)-r[revision]:revision:->tags' \
+        '(-r)--rev[revision]:revision:->tags' \
         '*:file:_files'
     ;;
 
     (annotate)
         _arguments $includeExclude \
-        '(--rev)-r[annotate the specified revision]:revision:($tags)' \
-        '(-r)--rev[annotate the specified revision]:revision:($tags)' \
+        '(--rev)-r[annotate the specified revision]:revision:->tags' \
+        '(-r)--rev[annotate the specified revision]:revision:->tags' \
         '(--text)-a[treat all files as text]' \
         '(-a)--text[treat all files as text]' \
         '(--user)-u[list the author]' \
@@ -206,8 +210,8 @@ case $service in
 
     (grep)
         _arguments $includeExclude \
-        '*-r[search in given revision range]:revision:($tags)' \
-        '*--rev[search in given revision range]:revision:($tags)' \
+        '*-r[search in given revision range]:revision:->tags' \
+        '*--rev[search in given revision range]:revision:->tags' \
         '--all[print all revisions with matches]' \
         '(-print0)-0[end filenames with NUL, for use with xargs]' \
         '(-0)--print0[end filenames with NUL, for use with xargs]' \
@@ -224,8 +228,8 @@ case $service in
 
     (locate)
         _arguments $includeExclude \
-        '(--rev)-r[search repository as it stood at revision]:revision:($tags)' \
-        '(-r)--rev[search repository as it stood at revision]:revision:($tags)' \
+        '(--rev)-r[search repository as it stood at revision]:revision:->tags' \
+        '(-r)--rev[search repository as it stood at revision]:revision:->tags' \
         '(--print0)-0[end filenames with NUL, for use with xargs]' \
         '(-0)--print0[end filenames with NUL, for use with xargs]' \
         '(--fullpath)-f[print complete paths]' \
@@ -235,8 +239,8 @@ case $service in
 
     (log|history)
         _arguments $includeExclude \
-        '*-r[show the specified revision or range]:revision:($tags)' \
-        '*--rev[show the specified revision or range]:revision:($tags)' \
+        '*-r[show the specified revision or range]:revision:->tags' \
+        '*--rev[show the specified revision or range]:revision:->tags' \
         '(--no-merges -M --only-merges)-m[show only merge revisions]' \
         '(--no-merges -M -m)--only-merges[show only merge revisions]' \
         '(--only-merges -m --no-merges)-M[do not show merge revisions]' \
@@ -258,7 +262,7 @@ case $service in
         '(-C --clean -m)--merge[allow merging of branches]' \
         '(-m --merge --clean)-C[overwrite locally modified files]' \
         '(-m --merge -C)--clean[overwrite locally modified files]' \
-        '*:revision or tag:($tags)'
+        '*:revision or tag:->tags'
     ;;
 
     (tag)
@@ -271,7 +275,7 @@ case $service in
         '(-d)--date[record datecode as commit date]:date code:' \
         '(--user)-u[record user as commiter]:user:' \
         '(-u)--user[record user as commiter]:user:' \
-        '*:name, then revision:($tags)'
+        '*:name, then revision:->tags'
     ;;
 
     (clone)
@@ -293,8 +297,8 @@ case $service in
 
     (rawcommit)
         _arguments \
-        '(--parent)-p[parent revision]:revision:($tags)' \
-        '(-p)--parent[parent revision]:revision:($tags)' \
+        '(--parent)-p[parent revision]:revision:->tags' \
+        '(-p)--parent[parent revision]:revision:->tags' \
         '(--date)-d[record datecode as commit date]:date code:' \
         '(-d)--date[record datecode as commit date]:date code:' \
         '(--user)-u[record user as commiter]:user:' \
@@ -427,11 +431,11 @@ case $service in
     ;;
 
     (manifest)
-        _arguments '*:revision:($tags)'
+        _arguments '*:revision:->tags'
     ;;
 
     (parents)
-        _arguments '*:revision:($tags)'
+        _arguments '*:revision:->tags'
     ;;
 
     (identify|recover|root|undo|view|verify|version|ct|tags)
@@ -444,7 +448,6 @@ case $service in
             {-k,--keep}'[keep patch file]' \
             {-r,--rev}'[revision]:applied patch:->qapplied' \
             '*:unapplied patches:->qunapplied'
-        _mq_state
     ;;
 
     (qnew)
@@ -459,7 +462,6 @@ case $service in
             (1){-a,--all}'[pop all patches]' \
             {-f,--force}'[forget any local changes]' \
             ':applied patch:->qapplied'
-        _mq_state
     ;;
 
     (qpu*)
@@ -467,7 +469,6 @@ case $service in
             (1){-a,--all}'[apply all patches]' \
             {-f,--force}'[apply if the patch has rejects]' \
             ':unapplied patch:->qunapplied'
-        _mq_state
     ;;
     (qref*)
         _arguments $commitMessage $includeExclude \
@@ -479,3 +480,5 @@ case $service in
         _message "unknown hg command completion: $service"
     ;;
 esac
+
+_hg_state
