@@ -14,7 +14,7 @@
 
 local curcontext="$curcontext" state line
 typeset -A opt_args
-local subcmds repos newFiles addedFiles includeExclude commitMessage
+local repos newFiles addedFiles includeExclude commitMessage
 local ridx _hgroot
 
 # FIXME: why isn't opt_args available?
@@ -44,7 +44,8 @@ _hg_state () {
   esac
 }
 
-subcmds=($(hg -v help | sed -e '1,/^list of commands:/d' \
+(( $+_hg_commands )) ||
+_hg_commands=($(hg -v help | sed -e '1,/^list of commands:/d' \
       -e '/^global options:/,$d' -e '/^ [^ ]/!d; s/[,:].*//g;'))
 
 # A lot of commands have these arguments
@@ -88,7 +89,7 @@ if [[ $service == "hg" ]]; then
     '*::command:->subcmd' && return 0
 
     if (( CURRENT == 1 )); then
-        _wanted commands expl 'hg command' compadd -a subcmds
+        _wanted commands expl 'hg command' compadd -a _hg_commands
         return
     fi
     service="$words[1]"
@@ -429,7 +430,7 @@ case $service in
     ;;
 
     (help)
-        _wanted commands expl 'hg command' compadd -a subcmds
+        _wanted commands expl 'hg command' compadd -a _hg_commands
     ;;
 
     (heads)
