@@ -15,19 +15,31 @@
 local curcontext="$curcontext" state line
 typeset -A opt_args
 local subcmds repos newFiles addedFiles includeExclude commitMessage
-local _hg_state
+local ridx _hgroot
 
+# FIXME: why isn't opt_args available?
+[[ -d .hg ]] && _hgroot="$PWD"
+ridx=$words[(i)-R]
+(( $ridx < $#words )) && _hgroot="${words[$ridx+1]}"
+
+# hg dispatch (borrowed from _cvs)
+(( $+functions[_hg_cmd] )) ||
+_hg_cmd () {
+  _call_program hg hg -R "$_hgroot" "$@"
+}
+
+(( $+functions[_hg_state] )) ||
 _hg_state () {
   case "$state" in
     (tags)
-      compadd $(hg tags 2> /dev/null |
+      compadd $(_hg_cmd tags 2> /dev/null |
         sed -e 's/[0-9]*:[a-f0-9]*$//; s/ *$//')
     ;;
     (qapplied)
-      compadd $(hg qapplied)
+      compadd $(_hg_cmd qapplied)
     ;;
     (qunapplied)
-      compadd $(hg qunapplied)
+      compadd $(_hg_cmd qunapplied)
     ;;
   esac
 }
@@ -37,10 +49,10 @@ subcmds=($(hg -v help | sed -e '1,/^list of commands:/d' \
 
 # A lot of commands have these arguments
 includeExclude=(
-        '*-I-[include names matching the given patterns]:dir:_files -W $(hg root) -/'
-        '*--include-[include names matching the given patterns]:dir:_files -W $(hg root) -/'
-        '*-X-[exclude names matching the given patterns]:dir:_files -W $(hg root) -/'
-        '*--exclude-[exclude names matching the given patterns]:dir:_files -W $(hg root) -/')
+        '*-I-[include names matching the given patterns]:dir:_files -W $(_hg_cmd root) -/'
+        '*--include-[include names matching the given patterns]:dir:_files -W $(_hg_cmd root) -/'
+        '*-X-[exclude names matching the given patterns]:dir:_files -W $(_hg_cmd root) -/'
+        '*--exclude-[exclude names matching the given patterns]:dir:_files -W $(_hg_cmd root) -/')
 
 styleOpts=(
         '--style[display using template map file]:'
@@ -85,7 +97,7 @@ fi
 
 case $service in
     (add)
-        newFiles=(${(ps:\0:)"$(hg status -0un .)"})
+        newFiles=(${(ps:\0:)"$(_hg_cmd status -0un .)"})
         _arguments $includeExclude \
         '*:file:->unknown'
         _wanted files expl 'unknown files' compadd -a newFiles
@@ -97,7 +109,7 @@ case $service in
     ;;
 
     (forget)
-        addedFiles=(${(ps:\0:)"$(hg status -0an .)"})
+        addedFiles=(${(ps:\0:)"$(_hg_cmd status -0an .)"})
         _arguments $includeExclude  \
         '*:file:->added'
         _wanted files expl 'newly added files' compadd -a addedFiles
@@ -161,7 +173,7 @@ case $service in
     ;;
 
     (revert)
-        addedFiles=(${(ps:\0:)"$(hg status -0amrn .)"})
+        addedFiles=(${(ps:\0:)"$(_hg_cmd status -0amrn .)"})
         _arguments \
         '(--rev)-r[revision to revert to]:revision:->tags' \
         '(-r)--rev[revision to revert to]:revision:->tags' \
@@ -172,7 +184,7 @@ case $service in
     ;;
 
     (commit|ci)
-        addedFiles=(${(ps:\0:)"$(hg status -0amrn .)"})
+        addedFiles=(${(ps:\0:)"$(_hg_cmd status -0amrn .)"})
         _arguments $includeExclude \
         '(--addremove)-A[run addremove during commit]' \
         '(-A)--addremove[run addremove during commit]' \
@@ -284,7 +296,7 @@ case $service in
 
     (clone)
         if (( CURRENT == 2 )); then
-            repos=( $(hg paths | sed -e 's/^.*= //') )
+            repos=( $(_hg_cmd paths | sed -e 's/^.*= //') )
             _arguments \
             '(--no-update)-U[do not update the new working directory]' \
             '(-U)--no-update[do not update the new working directory]' \
@@ -345,13 +357,13 @@ case $service in
         '(-p)--strip[directory strip option for patch (default: 1)]:count:' \
         '(--force)-f[skip check for outstanding uncommitted changes]' \
         '(-f)--force[skip check for outstanding uncommitted changes]' \
-        '(--base)-b[base directory to read patches from]:file:_files -W $(hg root) -/' \
-        '(-b)--base[base directory to read patches from]:file:_files -W $(hg root) -/' \
+        '(--base)-b[base directory to read patches from]:file:_files -W $(_hg_cmd root) -/' \
+        '(-b)--base[base directory to read patches from]:file:_files -W $(_hg_cmd root) -/' \
         '*:patch file:_files'
     ;;
 
     (pull)
-        repos=( $(hg paths | sed -e 's/^.*= //') )
+        repos=( $(_hg_cmd paths | sed -e 's/^.*= //') )
         _arguments \
         '(--update)-u[update working directory to tip after pull]' \
         '(-u)--update[update working directory to tip after pull]' \
@@ -385,7 +397,7 @@ case $service in
     ;;
 
     (push)
-        repos=( $(hg paths | sed -e 's/^.*= //') )
+        repos=( $(_hg_cmd paths | sed -e 's/^.*= //') )
         _arguments \
         '(--force)-f[force push]' \
         '(-f)--force[force push]' \
@@ -472,7 +484,6 @@ case $service in
     ;;
 
     (qpo*)
-        applied=( $(hg qapplied) )
         _arguments \
             (1){-a,--all}'[pop all patches]' \
             {-f,--force}'[forget any local changes]' \
