@@ -195,7 +195,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     ui.write(_('This patch series consists of %d patches.\n\n') % len(patches))
 
-    for p, i in zip(patches, range(len(patches))):
+    for p, i in zip(patches, xrange(len(patches))):
         jumbo.extend(p)
         msgs.append(makepatch(p, i + 1, len(patches)))
 

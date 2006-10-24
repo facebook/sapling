@@ -14,7 +14,18 @@
 
 local curcontext="$curcontext" state line
 typeset -A opt_args
-local subcmds repos tags newFiles addedFiles includeExclude
+local subcmds repos tags newFiles addedFiles includeExclude commitMessage
+
+_mq_state () {
+  case "$state" in
+    (qapplied)
+      compadd $(hg qapplied)
+    ;;
+    (qunapplied)
+      compadd $(hg qunapplied)
+    ;;
+  esac
+}
 
 tags=($(hg tags 2> /dev/null | sed -e 's/[0-9]*:[a-f0-9]\{40\}$//; s/ *$//'))
 subcmds=($(hg -v help | sed -e '1,/^list of commands:/d' \
@@ -26,6 +37,14 @@ includeExclude=(
         '*--include-[include names matching the given patterns]:dir:_files -W $(hg root) -/'
         '*-X-[exclude names matching the given patterns]:dir:_files -W $(hg root) -/'
         '*--exclude-[exclude names matching the given patterns]:dir:_files -W $(hg root) -/')
+
+commitMessage=(
+        '(-m --message -l --logfile --edit)-e[edit commit message]'
+        '(-m --message -l --logfile -e)--edit[edit commit message]'
+        '(-e --edit -l --logfile --message)-m[use <text> as commit message]:message:'
+        '(-e --edit -l --logfile -m)--message[use <text> as commit message]:message:'
+        '(-e --edit -m --message --logfile)-l[read the commit message from <file>]:log file:_files'
+        '(-e --edit -m --message -l)--logfile[read the commit message from <file>]:log file:_files')
 
 if [[ $service == "hg" ]]; then
     _arguments -C -A "-*" \
@@ -417,6 +436,43 @@ case $service in
 
     (identify|recover|root|undo|view|verify|version|ct|tags)
         # no arguments for these commands
+    ;;
+
+    # MQ commands
+    (qdel*|qrm|qrem*)
+        _arguments \
+            {-k,--keep}'[keep patch file]' \
+            {-r,--rev}'[revision]:applied patch:->qapplied' \
+            '*:unapplied patches:->qunapplied'
+        _mq_state
+    ;;
+
+    (qnew)
+        _arguments $commitMessage \
+            {-f,--force}'[import uncommitted changes into patch]' \
+            ':patch name:'
+    ;;
+
+    (qpo*)
+        applied=( $(hg qapplied) )
+        _arguments \
+            (1){-a,--all}'[pop all patches]' \
+            {-f,--force}'[forget any local changes]' \
+            ':applied patch:->qapplied'
+        _mq_state
+    ;;
+
+    (qpu*)
+        _arguments \
+            (1){-a,--all}'[apply all patches]' \
+            {-f,--force}'[apply if the patch has rejects]' \
+            ':unapplied patch:->qunapplied'
+        _mq_state
+    ;;
+    (qref*)
+        _arguments $commitMessage $includeExclude \
+            {-g,--git}'[use git extended diff format]' \
+            {-s,--short}'[short refresh]'
     ;;
 
     (*)

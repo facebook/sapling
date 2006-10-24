@@ -4,3 +4,28 @@ user:        My Name <myname@example.com>
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     commit-1
 
+Please choose a commit username to be recorded in the changelog via
+command line option (-u "First Last <email@example.com>"), in the
+configuration files (hgrc), or by setting the EMAIL environment variable.
+
+abort: No commit username specified!
+transaction abort!
+rollback completed
+changeset:   1:2becd0bae6e6
+tag:         tip
+user:        foo@bar.com
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     commit-1
+
+changeset:   2:7a0176714f78
+tag:         tip
+user:        foobar <foo@bar.com>
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     commit-1
+
+changeset:   3:f9b58c5a6352
+tag:         tip
+user:        foo@bar.com
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     commit-1
+

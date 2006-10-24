@@ -8,9 +8,9 @@
 #
 # Mercurial allows you to define additional commands through extensions.
 # Bash should be able to automatically figure out the name of these new
-# commands and their options.  If you also want to tell it how to
-# complete non-option arguments, see below for how to define an
-# _hg_cmd_foo function.
+# commands and their options.  See below for how to define _hg_opt_foo
+# and _hg_cmd_foo functions to fine-tune the completion for option and
+# non-option arguments, respectively.
 #
 #
 # Notes about completion for specific commands:
@@ -34,7 +34,10 @@
 #
 # If it exists, the function _hg_cmd_foo will be called without
 # arguments to generate the completion candidates for the hg command
-# "foo".
+# "foo".  If the command receives some arguments that aren't options
+# even though they start with a "-", you can define a function called
+# _hg_opt_foo to generate the completion candidates.  If _hg_opt_foo
+# doesn't return 0, regular completion for options is attempted.
 #
 # In addition to the regular completion variables provided by bash,
 # the following variables are also set:
@@ -109,6 +112,7 @@ _hg()
     # global options that receive an argument
     local global_args='--cwd|-R|--repository'
     local hg="$1"
+    local canonical=0
 
     COMPREPLY=()
     cur="$2"
@@ -128,6 +132,10 @@ _hg()
     done
 
     if [[ "$cur" == -* ]]; then
+	if [ "$(type -t "_hg_opt_$cmd")" = function ] && "_hg_opt_$cmd"; then
+	    return
+	fi
+
 	opts=$("$hg" debugcomplete --options "$cmd" 2>/dev/null)
 
 	COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur"))
@@ -153,7 +161,6 @@ _hg()
 
     # try to generate completion candidates for whatever command the user typed
     local help
-    local canonical=0
     if _hg_command_specific; then
 	return
     fi
@@ -193,7 +200,13 @@ _hg_command_specific()
 	help)
 	    _hg_commands
 	;;
-	export|manifest|update)
+	export)
+	    if _hg_ext_mq_patchlist qapplied && [ "${COMPREPLY[*]}" ]; then
+		return 0
+	    fi
+	    _hg_tags
+	;;
+	manifest|update)
 	    _hg_tags
 	;;
 	pull|push|outgoing|incoming)
@@ -251,8 +264,13 @@ complete -o bashdefault -o default -F _hg hg 2>/dev/null \
 # mq
 _hg_ext_mq_patchlist()
 {
-    local patches=$("$hg" $1 2>/dev/null)
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$patches' -- "$cur"))
+    local patches
+    patches=$("$hg" $1 2>/dev/null)
+    if [ $? -eq 0 ] && [ "$patches" ]; then
+	COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$patches' -- "$cur"))
+	return 0
+    fi
+    return 1
 }
 
 _hg_ext_mq_queues()
@@ -288,7 +306,11 @@ _hg_cmd_qpush()
 
 _hg_cmd_qdelete()
 {
-    _hg_ext_mq_patchlist qunapplied
+    local qcmd=qunapplied
+    if [[ "$prev" = @(-r|--rev) ]]; then
+	qcmd=qapplied
+    fi
+    _hg_ext_mq_patchlist $qcmd
 }
 
 _hg_cmd_qsave()
@@ -313,9 +335,76 @@ _hg_cmd_qcommit()
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
-_hg_cmd_export()
+_hg_cmd_qfold()
 {
-    _hg_ext_mq_patchlist qapplied
+    _hg_ext_mq_patchlist qunapplied
+}
+
+_hg_cmd_qrename()
+{
+    _hg_ext_mq_patchlist qseries
+}
+
+_hg_cmd_qheader()
+{
+    _hg_ext_mq_patchlist qseries
+}
+
+_hg_cmd_qclone()
+{
+    local count=$(_hg_count_non_option)
+    if [ $count = 1 ]; then
+	_hg_paths
+    fi
+    _hg_repos
+}
+
+_hg_ext_mq_guards()
+{
+    "$hg" qselect --series 2>/dev/null | sed -e 's/^.//'
+}
+
+_hg_cmd_qselect()
+{
+    local guards=$(_hg_ext_mq_guards)
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$guards' -- "$cur"))
+}
+
+_hg_cmd_qguard()
+{
+    local prefix=''
+
+    if [[ "$cur" == +* ]]; then
+	prefix=+
+    elif [[ "$cur" == -* ]]; then
+	prefix=-
+    fi
+    local ncur=${cur#[-+]}
+
+    if ! [ "$prefix" ]; then
+	_hg_ext_mq_patchlist qseries
+	return
+    fi
+
+    local guards=$(_hg_ext_mq_guards)
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -P $prefix -W '$guards' -- "$ncur"))
+}
+
+_hg_opt_qguard()
+{
+    local i
+    for ((i=cmd_index+1; i<=COMP_CWORD; i++)); do
+	if [[ ${COMP_WORDS[i]} != -* ]]; then
+	    if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
+		_hg_cmd_qguard
+		return 0
+	    fi
+	elif [ "${COMP_WORDS[i]}" = -- ]; then
+	    _hg_cmd_qguard
+	    return 0
+	fi
+    done
+    return 1
 }
 
 
@@ -354,7 +443,7 @@ _hg_cmd_bisect()
 _hg_cmd_email()
 {
     case "$prev" in
-	-c|--cc|-t|--to|-f|--from)
+	-c|--cc|-t|--to|-f|--from|--bcc)
 	    # we need an e-mail address. let the user provide a function 
 	    # to get them
 	    if [ "$(type -t _hg_emails)" = function ]; then

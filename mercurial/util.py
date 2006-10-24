@@ -519,20 +519,6 @@ def is_win_9x():
     except AttributeError:
         return os.name == 'nt' and 'command' in os.environ.get('comspec', '')
 
-getuser_fallback = None
-
-def getuser():
-    '''return name of current user'''
-    try:
-        return getpass.getuser()
-    except ImportError:
-        # import of pwd will fail on windows - try fallback
-        if getuser_fallback:
-            return getuser_fallback()
-    # raised if win32api not available
-    raise Abort(_('user name not available - set USERNAME '
-                  'environment variable'))
-
 # Platform specific variants
 if os.name == 'nt':
     demandload(globals(), "msvcrt")

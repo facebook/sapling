@@ -118,6 +118,9 @@ show changed files in the working directory
     files that match are shown.  Files that are clean or ignored, are
     not listed unless -c (clean), -i (ignored) or -A is given.
 
+    If one revision is given, it is used as the base revision.
+    If two revisions are given, the difference between them is shown.
+
     The codes used to show the status of files are:
     M = modified
     A = added
@@ -143,6 +146,7 @@ options:
  -n --no-status  hide status prefix
  -C --copies     show source of copied files
  -0 --print0     end filenames with NUL, for use with xargs
+    --rev        show difference from revision
  -I --include    include names matching the given patterns
  -X --exclude    exclude names matching the given patterns
 hg status -A:

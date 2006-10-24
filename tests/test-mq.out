@@ -172,6 +172,8 @@ applying bar
 patch failed, unable to continue (try -v)
 patch failed, rejects left in working dir
 Errors during apply, please fix and refresh bar
+? foo
+? foo.rej
 new file
 
 diff --git a/new b/new

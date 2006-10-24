@@ -58,7 +58,6 @@ parent:      4:42556b925639
 parent:      5:f56d4c64ab98
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
-files:       
 description:
 6
 
@@ -70,7 +69,6 @@ changeset:   7:a5a6e1f312b9
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
-files:       
 description:
 7
 

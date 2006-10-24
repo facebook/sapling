@@ -17,6 +17,8 @@ hg add c
 hg commit -m 'no person' -d '1200000 0' -u 'other@place'
 echo c >> c
 hg commit -m 'no user, no domain' -d '1300000 0' -u 'person'
+echo foo > .hg/branch
+hg commit -m 'new branch' -d '1400000 0' -u 'person'
 
 # make sure user/global hgrc does not affect tests
 echo '[ui]' > .hg/hgrc
@@ -24,12 +26,15 @@ echo 'logtemplate =' >> .hg/hgrc
 echo 'style =' >> .hg/hgrc
 
 echo '# default style is like normal output'
+echo '#  normal'
 hg log > log.out
 hg log --style default > style.out
 diff log.out style.out
+echo '#  verbose'
 hg log -v > log.out
 hg log -v --style default > style.out
 diff log.out style.out
+echo '#  debug'
 hg log --debug > log.out
 hg log --debug --style default > style.out
 diff log.out style.out

@@ -111,7 +111,8 @@ class ui(object):
         try:
             cdata.read(filename)
         except ConfigParser.ParsingError, inst:
-            raise util.Abort(_("failed to parse %s\n%s") % (f, inst))
+            raise util.Abort(_("failed to parse %s\n%s") % (filename,
+                                                            inst))
 
         for section in sections:
             if not cdata.has_section(section):
@@ -226,21 +227,21 @@ class ui(object):
 
         Searched in this order: $HGUSER, [ui] section of hgrcs, $EMAIL
         and stop searching if one of these is set.
-        Abort if found username is an empty string to force specifying
-        the commit user elsewhere, e.g. with line option or repo hgrc.
-        If not found, use ($LOGNAME or $USER or $LNAME or
-        $USERNAME) +"@full.hostname".
+        Abort if no username is found, to force specifying the commit user
+        with line option or repo hgrc.
         """
         user = os.environ.get("HGUSER")
         if user is None:
             user = self.config("ui", "username")
         if user is None:
             user = os.environ.get("EMAIL")
-        if user is None:
-            try:
-                user = '%s@%s' % (util.getuser(), socket.getfqdn())
-            except KeyError:
-                raise util.Abort(_("Please specify a username."))
+        if not user:
+            self.status(_("Please choose a commit username to be recorded "
+                          "in the changelog via\ncommand line option "
+                          '(-u "First Last <email@example.com>"), in the\n'
+                          "configuration files (hgrc), or by setting the "
+                          "EMAIL environment variable.\n\n"))
+            raise util.Abort(_("No commit username specified!"))
         return user
 
     def shortuser(self, user):

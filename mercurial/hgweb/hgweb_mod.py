@@ -191,7 +191,7 @@ class hgweb(object):
             parity = (start - end) & 1
             cl = self.repo.changelog
             l = [] # build a list in forward order for efficiency
-            for i in range(start, end):
+            for i in xrange(start, end):
                 ctx = self.repo.changectx(i)
                 n = ctx.node()
 
@@ -234,9 +234,9 @@ class hgweb(object):
             qw = query.lower().split()
 
             def revgen():
-                for i in range(cl.count() - 1, 0, -100):
+                for i in xrange(cl.count() - 1, 0, -100):
                     l = []
-                    for j in range(max(0, i - 100), i):
+                    for j in xrange(max(0, i - 100), i):
                         ctx = self.repo.changectx(j)
                         l.append(ctx)
                     l.reverse()
@@ -322,7 +322,7 @@ class hgweb(object):
             l = []
             parity = (count - 1) & 1
 
-            for i in range(start, end):
+            for i in xrange(start, end):
                 ctx = fctx.filectx(i)
                 n = fl.node(i)
 
@@ -531,7 +531,7 @@ class hgweb(object):
             parity = 0
             cl = self.repo.changelog
             l = [] # build a list in forward order for efficiency
-            for i in range(start, end):
+            for i in xrange(start, end):
                 n = cl.node(i)
                 changes = cl.read(n)
                 hn = hex(n)
@@ -629,9 +629,10 @@ class hgweb(object):
             yield ''
 
         def footer(**map):
-            yield self.t("footer",
-                         motd=self.repo.ui.config("web", "motd", ""),
-                         **map)
+            yield self.t("footer", **map)
+
+        def motd(**map):
+            yield self.repo.ui.config("web", "motd", "")
 
         def expand_form(form):
             shortcuts = {
@@ -762,6 +763,7 @@ class hgweb(object):
                                                "repo": self.reponame,
                                                "header": header,
                                                "footer": footer,
+                                               "motd": motd,
                                                "rawfileheader": rawfileheader,
                                                "sessionvars": sessionvars
                                                })

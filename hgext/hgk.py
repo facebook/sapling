@@ -177,7 +177,7 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
         if len(ar) == 0:
             return 1
         mask = 0
-        for i in range(len(ar)):
+        for i in xrange(len(ar)):
             if sha in reachable[i]:
                 mask |= 1 << i
 
@@ -190,7 +190,7 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
 
     # figure out which commits they are asking for and which ones they
     # want us to stop on
-    for i in range(len(args)):
+    for i in xrange(len(args)):
         if args[i].startswith('^'):
             s = repo.lookup(args[i][1:])
             stop_sha1.append(s)
@@ -199,7 +199,7 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
             want_sha1.append(repo.lookup(args[i]))
 
     # calculate the graph for the supplied commits
-    for i in range(len(want_sha1)):
+    for i in xrange(len(want_sha1)):
         reachable.append({});
         n = want_sha1[i];
         visit = [n];

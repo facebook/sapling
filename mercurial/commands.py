@@ -219,7 +219,7 @@ def walkchangerevs(ui, repo, pats, opts):
         rev = repo.changelog.rev(repo.lookup(rev))
         ff = followfilter()
         stop = min(revs[0], revs[-1])
-        for x in range(rev, stop-1, -1):
+        for x in xrange(rev, stop-1, -1):
             if ff.match(x) and wanted.has_key(x):
                 del wanted[x]
 
@@ -326,7 +326,8 @@ class changeset_printer(object):
 
         changes = log.read(changenode)
         date = util.datestr(changes[2])
-        branch = changes[5].get("branch")
+        extra = changes[5]
+        branch = extra.get("branch")
 
         hexfunc = self.ui.debugflag and hex or short
 
@@ -360,11 +361,18 @@ class changeset_printer(object):
                                   files):
                 if value:
                     self.ui.note("%-12s %s\n" % (key, " ".join(value)))
-        else:
+        elif changes[3]:
             self.ui.note(_("files:       %s\n") % " ".join(changes[3]))
         if copies:
             copies = ['%s (%s)' % c for c in copies]
             self.ui.note(_("copies:      %s\n") % ' '.join(copies))
+
+        if extra and self.ui.debugflag:
+            extraitems = extra.items()
+            extraitems.sort()
+            for key, value in extraitems:
+                self.ui.debug(_("extra:       %s=%s\n")
+                              % (key, value.encode('string_escape')))
 
         description = changes[4].strip()
         if description:
@@ -1237,7 +1245,7 @@ def debugindex(ui, file_):
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "", 0)
     ui.write("   rev    offset  length   base linkrev" +
              " nodeid       p1           p2\n")
-    for i in range(r.count()):
+    for i in xrange(r.count()):
         node = r.node(i)
         pp = r.parents(node)
         ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
@@ -1248,7 +1256,7 @@ def debugindexdot(ui, file_):
     """dump an index DAG as a .dot file"""
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_, "", 0)
     ui.write("digraph G {\n")
-    for i in range(r.count()):
+    for i in xrange(r.count()):
         node = r.node(i)
         pp = r.parents(node)
         ui.write("\t%d -> %d\n" % (r.rev(pp[0]), i))
@@ -1435,15 +1443,15 @@ def grep(ui, repo, pattern, *pats, **opts):
         sm = difflib.SequenceMatcher(None, a, b)
         for tag, alo, ahi, blo, bhi in sm.get_opcodes():
             if tag == 'insert':
-                for i in range(blo, bhi):
+                for i in xrange(blo, bhi):
                     yield ('+', b[i])
             elif tag == 'delete':
-                for i in range(alo, ahi):
+                for i in xrange(alo, ahi):
                     yield ('-', a[i])
             elif tag == 'replace':
-                for i in range(alo, ahi):
+                for i in xrange(alo, ahi):
                     yield ('-', a[i])
-                for i in range(blo, bhi):
+                for i in xrange(blo, bhi):
                     yield ('+', b[i])
 
     prev = {}
@@ -1648,8 +1656,12 @@ def import_(ui, repo, patch1, *patches, **opts):
                 message = None
             ui.debug(_('message:\n%s\n') % message)
 
-            files, fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root)
-            files = patch.updatedir(ui, repo, files, wlock=wlock)
+            files = {}
+            try:
+                fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
+                                   files=files)
+            finally:
+                files = patch.updatedir(ui, repo, files, wlock=wlock)
             repo.commit(files, message, user, date, wlock=wlock, lock=lock)
         finally:
             os.unlink(tmpname)
@@ -2091,11 +2103,11 @@ def pull(ui, repo, source="default", **opts):
       Use an extra slash at the start of a path to specify an absolute path:
         ssh://example.com//tmp/repository
     - Mercurial doesn't use its own compression via SSH; the right thing
-      to do is to configure it in your ~/.ssh/ssh_config, e.g.:
+      to do is to configure it in your ~/.ssh/config, e.g.:
         Host *.mylocalnetwork.example.com
-          Compression off
+          Compression no
         Host *
-          Compression on
+          Compression yes
       Alternatively specify "ssh -C" as your ssh command in your hgrc or
       with the --ssh command line option.
     """
@@ -2538,6 +2550,9 @@ def status(ui, repo, *pats, **opts):
     files that match are shown.  Files that are clean or ignored, are
     not listed unless -c (clean), -i (ignored) or -A is given.
 
+    If one revision is given, it is used as the base revision.
+    If two revisions are given, the difference between them is shown.
+
     The codes used to show the status of files are:
     M = modified
     A = added
@@ -2550,12 +2565,14 @@ def status(ui, repo, *pats, **opts):
     """
 
     all = opts['all']
+    node1, node2 = cmdutil.revpair(ui, repo, opts.get('rev'))
 
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
     modified, added, removed, deleted, unknown, ignored, clean = [
         [util.pathto(cwd, x) for x in n]
-        for n in repo.status(files=files, match=matchfn,
+        for n in repo.status(node1=node1, node2=node2, files=files,
+                             match=matchfn,
                              list_ignored=all or opts['ignored'],
                              list_clean=all or opts['clean'])]
 
@@ -3101,6 +3118,7 @@ table = {
           ('C', 'copies', None, _('show source of copied files')),
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),
+          ('', 'rev', [], _('show difference from revision')),
          ] + walkopts,
          _('hg status [OPTION]... [FILE]...')),
     "tag":

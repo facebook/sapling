@@ -1,5 +1,5 @@
 #header#
-<title>#repo|escape#: Changeset</title>
+<title>{repo|escape}: changeset {rev}:{node|short}</title>
 <link rel="alternate" type="application/rss+xml"
    href="{url}rss-log" title="RSS feed for #repo|escape#">
 </head>
@@ -20,7 +20,7 @@
 <table cellspacing="0">
 <tr><td>author</td><td>#author|obfuscate#</td></tr>
 <tr><td></td><td>#date|date# (#date|age# ago)</td></tr>
-<tr><td>changeset</td><td style="font-family:monospace">#node|short#</td></tr>
+<tr><td>changeset {rev}</td><td style="font-family:monospace">{node|short}</td></tr>
 <tr><td>manifest</td><td style="font-family:monospace"><a class="list" href="{url}file/#node|short#{sessionvars%urlparameter}">#node|short#</a></td></tr>
 #parent%changesetparent#
 #child%changesetchild#
