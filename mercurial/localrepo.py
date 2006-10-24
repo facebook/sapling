@@ -295,6 +295,18 @@ class localrepository(repo.repository):
 
         self.branchcache = {} # avoid recursion in changectx
 
+        partial, last, lrev = self._readbranchcache()
+
+        tiprev = self.changelog.count() - 1
+        if lrev != tiprev:
+            self._updatebranchcache(partial, lrev+1, tiprev+1)
+            self._writebranchcache(partial, self.changelog.tip(), tiprev)
+
+        self.branchcache = partial
+        return self.branchcache
+
+    def _readbranchcache(self):
+        partial = {}
         try:
             f = self.opener("branches.cache")
             last, lrev = f.readline().rstrip().split(" ", 1)
@@ -303,33 +315,29 @@ class localrepository(repo.repository):
                 self.changelog.node(lrev) == last): # sanity check
                 for l in f:
                     node, label = l.rstrip().split(" ", 1)
-                    self.branchcache[label] = bin(node)
+                    partial[label] = bin(node)
             else: # invalidate the cache
                 last, lrev = nullid, -1
             f.close()
         except IOError:
             last, lrev = nullid, -1
+        return partial, last, lrev
 
-        tip = self.changelog.count() - 1
-        if lrev != tip:
-            for r in xrange(lrev + 1, tip + 1):
-                c = self.changectx(r)
-                b = c.branch()
-                if b:
-                    self.branchcache[b] = c.node()
-            self._writebranchcache()
-
-        return self.branchcache
-
-    def _writebranchcache(self):
+    def _writebranchcache(self, branches, tip, tiprev):
         try:
             f = self.opener("branches.cache", "w")
-            t = self.changelog.tip()
-            f.write("%s %s\n" % (hex(t), self.changelog.count() - 1))
-            for label, node in self.branchcache.iteritems():
+            f.write("%s %s\n" % (hex(tip), tiprev))
+            for label, node in branches.iteritems():
                 f.write("%s %s\n" % (hex(node), label))
         except IOError:
             pass
+
+    def _updatebranchcache(self, partial, start, end):
+        for r in xrange(start, end):
+            c = self.changectx(r)
+            b = c.branch()
+            if b:
+                partial[b] = c.node()
 
     def lookup(self, key):
         if key == '.':
