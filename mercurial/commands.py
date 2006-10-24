@@ -2998,7 +2998,7 @@ table = {
           ('', 'style', '', _('display using template map file')),
           ('r', 'rev', '', _('show only heads which are descendants of rev')),
           ('', 'template', '', _('display with template'))],
-         _('hg heads [-b] [-r <rev>]')),
+         _('hg heads [-r <rev>]')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id": (identify, [], _('hg identify')),
     "import|patch":
@@ -3059,7 +3059,7 @@ table = {
         (merge,
          [('b', 'branch', '', _('merge with head of a specific branch (DEPRECATED)')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
-         _('hg merge [-b TAG] [-f] [REV]')),
+         _('hg merge [-f] [REV]')),
     "outgoing|out": (outgoing,
          [('M', 'no-merges', None, _('do not show merges')),
           ('f', 'force', None,
@@ -3077,7 +3077,7 @@ table = {
           ('r', 'rev', '', _('show parents from the specified rev')),
           ('', 'style', '', _('display using template map file')),
           ('', 'template', '', _('display with template'))],
-         _('hg parents [-b] [-r REV] [FILE]')),
+         _('hg parents [-r REV] [FILE]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
         (pull,
@@ -3177,7 +3177,7 @@ table = {
           ('', 'style', '', _('display using template map file')),
           ('p', 'patch', None, _('show patch')),
           ('', 'template', '', _('display with template'))],
-         _('hg tip [-b] [-p]')),
+         _('hg tip [-p]')),
     "unbundle":
         (unbundle,
          [('u', 'update', None,
@@ -3191,7 +3191,7 @@ table = {
           ('m', 'merge', None, _('allow merging of branches (DEPRECATED)')),
           ('C', 'clean', None, _('overwrite locally modified files')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
-         _('hg update [-b TAG] [-m] [-C] [-f] [REV]')),
+         _('hg update [-m] [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),
 }
