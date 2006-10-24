@@ -1588,6 +1588,8 @@ def heads(ui, repo, **opts):
         heads = repo.heads()
     br = None
     if opts['branches']:
+        ui.warn(_("the --branches option is deprecated, "
+                  "please use 'hg branches' instead\n"))
         br = repo.branchlookup(heads)
     displayer = show_changeset(ui, repo, opts)
     for n in heads:
@@ -1927,6 +1929,8 @@ def log(ui, repo, *pats, **opts):
 
             br = None
             if opts['branches']:
+                ui.warn(_("the --branches option is deprecated, "
+                          "please use 'hg branches' instead\n"))
                 br = repo.branchlookup([repo.changelog.node(rev)])
 
             copies = []
@@ -2070,6 +2074,8 @@ def parents(ui, repo, file_=None, rev=None, branches=None, **opts):
 
     br = None
     if branches is not None:
+        ui.warn(_("the --branches option is deprecated, "
+                  "please use 'hg branches' instead\n"))
         br = repo.branchlookup(p)
     displayer = show_changeset(ui, repo, opts)
     for n in p:
@@ -2697,6 +2703,8 @@ def tip(ui, repo, **opts):
     n = repo.changelog.tip()
     br = None
     if opts['branches']:
+        ui.warn(_("the --branches option is deprecated, "
+                  "please use 'hg branches' instead\n"))
         br = repo.branchlookup([n])
     show_changeset(ui, repo, opts).show(changenode=n, brinfo=br)
     if opts['patch']:
@@ -2772,6 +2780,8 @@ def update(ui, repo, node=None, merge=False, clean=False, force=None,
 
 def _lookup(repo, node, branch=None):
     if branch:
+        repo.ui.warn(_("the --branch option is deprecated, "
+                       "please use 'hg branch' instead\n"))
         br = repo.branchlookup(branch=branch)
         found = []
         for x in br:
@@ -2984,7 +2994,7 @@ table = {
          _('hg grep [OPTION]... PATTERN [FILE]...')),
     "heads":
         (heads,
-         [('b', 'branches', None, _('show branches')),
+         [('b', 'branches', None, _('show branches (DEPRECATED)')),
           ('', 'style', '', _('display using template map file')),
           ('r', 'rev', '', _('show only heads which are descendants of rev')),
           ('', 'template', '', _('display with template'))],
@@ -2997,7 +3007,7 @@ table = {
            _('directory strip option for patch. This has the same\n'
              'meaning as the corresponding patch option')),
           ('m', 'message', '', _('use <text> as commit message')),
-          ('b', 'base', '', _('base path')),
+          ('b', 'base', '', _('base path (DEPRECATED)')),
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes'))],
          _('hg import [-p NUM] [-b BASE] [-m MESSAGE] [-f] PATCH...')),
@@ -3027,7 +3037,7 @@ table = {
          _('hg locate [OPTION]... [PATTERN]...')),
     "^log|history":
         (log,
-         [('b', 'branches', None, _('show branches')),
+         [('b', 'branches', None, _('show branches (DEPRECATED)')),
           ('f', 'follow', None,
            _('follow changeset history, or file history across copies and renames')),
           ('', 'follow-first', None,
@@ -3047,7 +3057,7 @@ table = {
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "merge":
         (merge,
-         [('b', 'branch', '', _('merge with head of a specific branch')),
+         [('b', 'branch', '', _('merge with head of a specific branch (DEPRECATED)')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
          _('hg merge [-b TAG] [-f] [REV]')),
     "outgoing|out": (outgoing,
@@ -3063,7 +3073,7 @@ table = {
          _('hg outgoing [-M] [-p] [-n] [-r REV]... [DEST]')),
     "^parents":
         (parents,
-         [('b', 'branches', None, _('show branches')),
+         [('b', 'branches', None, _('show branches (DEPRECATED)')),
           ('r', 'rev', '', _('show parents from the specified rev')),
           ('', 'style', '', _('display using template map file')),
           ('', 'template', '', _('display with template'))],
@@ -3163,7 +3173,7 @@ table = {
     "tags": (tags, [], _('hg tags')),
     "tip":
         (tip,
-         [('b', 'branches', None, _('show branches')),
+         [('b', 'branches', None, _('show branches (DEPRECATED)')),
           ('', 'style', '', _('display using template map file')),
           ('p', 'patch', None, _('show patch')),
           ('', 'template', '', _('display with template'))],
@@ -3176,7 +3186,8 @@ table = {
     "debugundo|undo": (undo, [], _('hg undo')),
     "^update|up|checkout|co":
         (update,
-         [('b', 'branch', '', _('checkout the head of a specific branch')),
+         [('b', 'branch', '',
+           _('checkout the head of a specific branch (DEPRECATED)')),
           ('m', 'merge', None, _('allow merging of branches (DEPRECATED)')),
           ('C', 'clean', None, _('overwrite locally modified files')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
