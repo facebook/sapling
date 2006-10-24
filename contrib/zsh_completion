@@ -445,8 +445,16 @@ case $service in
 	'::revision:->tags'
     ;;
 
-    (identify|recover|root|undo|view|verify|version|ct|tags)
+    (identify|recover|root|undo|verify|version|ct|tags)
         # no arguments for these commands
+    ;;
+
+    # HGK
+    (vi*)
+        _arguments \
+        '(--limit)-l[limit number of changes displayed]:' \
+        '(-l)--limit[limit number of changes displayed]:' \
+        '::revision range:->tags'
     ;;
 
     # MQ commands
