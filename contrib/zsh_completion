@@ -42,6 +42,10 @@ includeExclude=(
         '*-X-[exclude names matching the given patterns]:dir:_files -W $(hg root) -/'
         '*--exclude-[exclude names matching the given patterns]:dir:_files -W $(hg root) -/')
 
+styleOpts=(
+        '--style[display using template map file]:'
+        '--template[display with template]:')
+
 commitMessage=(
         '(-m --message -l --logfile --edit)-e[edit commit message]'
         '(-m --message -l --logfile -e)--edit[edit commit message]'
@@ -238,7 +242,7 @@ case $service in
     ;;
 
     (log|history)
-        _arguments $includeExclude \
+        _arguments $includeExclude $styleOpts \
         '*-r[show the specified revision or range]:revision:->tags' \
         '*--rev[show the specified revision or range]:revision:->tags' \
         '(--no-merges -M --only-merges)-m[show only merge revisions]' \
@@ -325,7 +329,7 @@ case $service in
     ;;
 
     (incoming)
-        _arguments \
+        _arguments $styleOpts \
         '(--patch)-p[show patch]' \
         '(-p)--patch[show patch]' \
         '(--no-merges)-M[do not show merge revisions]' \
@@ -359,7 +363,7 @@ case $service in
     ;;
 
     (outgoing)
-        _arguments \
+        _arguments $styleOpts \
         '(--patch)-p[show patch]' \
         '(-p)--patch[show patch]' \
         '(--no-merges)-M[do not show merge revisions]' \
@@ -417,7 +421,7 @@ case $service in
     ;;
 
     (heads)
-        _arguments \
+        _arguments $styleOpts \
         '(--branches)-b[find branch info]' \
         '(-b)--branches[find branch info]'
     ;;
@@ -435,7 +439,7 @@ case $service in
     ;;
 
     (par*)
-        _arguments \
+        _arguments $styleOpts \
         '(--rev 1)-r[show parents of the specified rev]:revision:->tags' \
         '(-r 1)--rev[show parents of the specified rev]:revision:->tags' \
 	'::revision:->tags'
