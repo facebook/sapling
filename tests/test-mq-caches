@@ -6,6 +6,8 @@ echo 'hgext.mq=' >> $HGRCPATH
 show_branch_cache()
 {
     branches=.hg/branches.cache
+    # force cache (re)generation
+    hg log -r does-not-exist 2> /dev/null
     hg log -r tip --template 'tip: #rev#\n'
     if [ -f $branches ]; then
 	sort $branches
