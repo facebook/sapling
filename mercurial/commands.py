@@ -2729,17 +2729,6 @@ def unbundle(ui, repo, fname, **opts):
                                    'bundle:' + fname)
     return postincoming(ui, repo, modheads, opts['update'])
 
-def undo(ui, repo):
-    """undo the last commit or pull (DEPRECATED)
-
-    (DEPRECATED)
-    This command is now deprecated and will be removed in a future
-    release. Please use the rollback command instead.  For usage
-    instructions, see the rollback command.
-    """
-    ui.warn(_('(the undo command is deprecated; use rollback instead)\n'))
-    repo.rollback()
-
 def update(ui, repo, node=None, merge=False, clean=False, force=None,
            branch=None):
     """update or merge working directory
@@ -3169,7 +3158,6 @@ table = {
          [('u', 'update', None,
            _('update to new tip if changesets were unbundled'))],
          _('hg unbundle [-u] FILE')),
-    "debugundo|undo": (undo, [], _('hg undo')),
     "^update|up|checkout|co":
         (update,
          [('b', 'branch', '',
