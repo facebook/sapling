@@ -29,10 +29,10 @@
 " completes.  This allows various actions to only be taken by functions after
 " system initialization.
 
-if exists("loaded_hgcommand")
+if exists("g:loaded_hgcommand")
    finish
 endif
-let loaded_hgcommand = 1
+let g:loaded_hgcommand = 1
 
 " store 'compatible' settings
 let s:save_cpo = &cpo
@@ -45,7 +45,7 @@ function! s:HGCleanupOnFailure(err)
   echohl WarningMsg
   echomsg s:script_name . ":" a:err "Plugin not loaded"
   echohl None
-  let loaded_hgcommand = "no"
+  let g:loaded_hgcommand = "no"
   unlet s:save_cpo s:script_name
 endfunction
 
@@ -566,11 +566,11 @@ function! s:HGInstallDocumentation(full_name)
   1
   " Delete from first line to a line starts with
   " === START_DOC
-  silent 1,/^=\{3,}\s\+START_DOC\C/ d
+  silent 1,/^=\{3,}\s\+START_DOC\C/ delete _
   " Delete from a line starts with
   " === END_DOC
   " to the end of the documents:
-  silent /^=\{3,}\s\+END_DOC\C/,$ d
+  silent /^=\{3,}\s\+END_DOC\C/,$ delete _
 
   " Add modeline for help doc: the modeline string is mangled intentionally
   " to avoid it be recognized by VIM:
@@ -1048,7 +1048,7 @@ com! HGDisableBufferSetup call HGDisableBufferSetup()
 com! HGEnableBufferSetup call HGEnableBufferSetup()
 
 " Allow reloading hgcommand.vim
-com! HGReload unlet! loaded_hgcommand | runtime plugin/hgcommand.vim
+com! HGReload unlet! g:loaded_hgcommand | runtime plugin/hgcommand.vim
 
 " Section: Plugin command mappings {{{1
 nnoremap <silent> <Plug>HGAdd :HGAdd<CR>
@@ -1200,7 +1200,7 @@ delfunction <SID>HGFlexiMkdir
 delfunction <SID>HGCleanupOnFailure
 unlet s:script_version s:script_name
 
-let loaded_hgcommand=2
+let g:loaded_hgcommand=2
 silent do HGCommand User HGPluginFinish
 
 let &cpo = s:save_cpo
