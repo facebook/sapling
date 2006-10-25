@@ -3014,7 +3014,7 @@ table = {
           ('b', 'base', '', _('base path (DEPRECATED)')),
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes'))],
-         _('hg import [-p NUM] [-b BASE] [-m MESSAGE] [-f] PATCH...')),
+         _('hg import [-p NUM] [-m MESSAGE] [-f] PATCH...')),
     "incoming|in": (incoming,
          [('M', 'no-merges', None, _('do not show merges')),
           ('f', 'force', None,
@@ -3195,7 +3195,7 @@ table = {
           ('m', 'merge', None, _('allow merging of branches (DEPRECATED)')),
           ('C', 'clean', None, _('overwrite locally modified files')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
-         _('hg update [-m] [-C] [-f] [REV]')),
+         _('hg update [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),
 }
