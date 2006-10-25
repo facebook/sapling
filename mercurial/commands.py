@@ -1391,24 +1391,6 @@ def export(ui, repo, *changesets, **opts):
                  switch_parent=opts['switch_parent'],
                  opts=patch.diffopts(ui, opts))
 
-def forget(ui, repo, *pats, **opts):
-    """don't add the specified files on the next commit (DEPRECATED)
-
-    (DEPRECATED)
-    Undo an 'hg add' scheduled for the next commit.
-
-    This command is now deprecated and will be removed in a future
-    release. Please use revert instead.
-    """
-    ui.warn(_("(the forget command is deprecated; use revert instead)\n"))
-    forget = []
-    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
-        if repo.dirstate.state(abs) == 'a':
-            forget.append(abs)
-            if ui.verbose or not exact:
-                ui.status(_('forgetting %s\n') % ((pats and rel) or abs))
-    repo.forget(forget)
-
 def grep(ui, repo, pattern, *pats, **opts):
     """search for a pattern in specified files and revisions
 
@@ -2982,8 +2964,6 @@ table = {
           ('', 'nodates', None, _("don't include dates in diff headers")),
           ('', 'switch-parent', None, _('diff against the second parent'))],
          _('hg export [-a] [-o OUTFILESPEC] REV...')),
-    "debugforget|forget":
-        (forget, walkopts, _('hg forget [OPTION]... FILE...')),
     "grep":
         (grep,
          [('0', 'print0', None, _('end fields with NUL')),
