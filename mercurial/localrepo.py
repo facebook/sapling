@@ -1336,6 +1336,13 @@ class localrepository(repo.repository):
             return remote.unbundle(cg, remote_heads, 'push')
         return ret[1]
 
+    def changegroupinfo(self, nodes):
+        self.ui.note(_("%d changesets found\n") % len(nodes))
+        if self.ui.debugflag:
+            self.ui.debug(_("List of changesets:\n"))
+            for node in nodes:
+                self.ui.debug("%s\n" % hex(node))
+
     def changegroupsubset(self, bases, heads, source):
         """This function generates a changegroup consisting of all the nodes
         that are descendents of any of the bases, and ancestors of any of
@@ -1356,6 +1363,7 @@ class localrepository(repo.repository):
         # msng is short for missing - compute the list of changesets in this
         # changegroup.
         msng_cl_lst, bases, heads = cl.nodesbetween(bases, heads)
+        self.changegroupinfo(msng_cl_lst)
         # Some bases may turn out to be superfluous, and some heads may be
         # too.  nodesbetween will return the minimal set of bases and heads
         # necessary to re-create the changegroup.
@@ -1619,6 +1627,7 @@ class localrepository(repo.repository):
         cl = self.changelog
         nodes = cl.nodesbetween(basenodes, None)[0]
         revset = dict.fromkeys([cl.rev(n) for n in nodes])
+        self.changegroupinfo(nodes)
 
         def identity(x):
             return x
