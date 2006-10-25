@@ -37,7 +37,6 @@ Setting up a Mercurial project:
  $ cd project
                        # copy files in, edit them
  $ hg add              # add all unknown files
- $ hg remove --after   # remove deleted files
  $ hg commit           # commit all changes, edit changelog entry
 
  Mercurial will look for a file named .hgignore in the root of your
@@ -46,36 +45,30 @@ Setting up a Mercurial project:
 
 Branching and merging:
 
- $ hg clone linux linux-work    # create a new branch
- $ cd linux-work
+ $ hg clone project project-work    # create a new branch
+ $ cd project-work
  $ <make changes>
  $ hg commit
- $ cd ../linux
- $ hg pull ../linux-work     # pull changesets from linux-work
- $ hg merge                  # merge the new tip from linux-work into
+ $ cd ../project
+ $ hg pull ../project-work   # pull changesets from project-work
+ $ hg merge                  # merge the new tip from project-work into
                              # our working directory
  $ hg commit                 # commit the result of the merge
 
 Importing patches:
 
- Fast:
+ Simple:
  $ patch < ../p/foo.patch
  $ hg commit -A
 
- Faster:
- $ patch < ../p/foo.patch
- $ hg commit `lsdiff -p1 ../p/foo.patch`
-
- Fastest:
+ Fast:
  $ cat ../p/patchlist | xargs hg import -p1 -b ../p
 
 Exporting a patch:
 
  (make changes)
  $ hg commit
- $ hg tip
- 28237:747a537bd090880c29eae861df4d81b245aa0190
- $ hg export 28237 > foo.patch    # export changeset 28237
+ $ hg export tip > foo.patch    # export latest change
 
 Network support:
 
