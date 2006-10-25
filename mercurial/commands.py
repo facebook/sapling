@@ -2998,7 +2998,7 @@ table = {
           ('', 'style', '', _('display using template map file')),
           ('r', 'rev', '', _('show only heads which are descendants of rev')),
           ('', 'template', '', _('display with template'))],
-         _('hg heads [-r <rev>]')),
+         _('hg heads [-r REV]')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id": (identify, [], _('hg identify')),
     "import|patch":
