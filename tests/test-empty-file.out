@@ -1,0 +1,19 @@
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+changeset:   2:62ec0e86d1e5
+tag:         tip
+parent:      0:567dde5e6e98
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     add empty3
+
+changeset:   1:41ab7b321727
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     add empty2
+
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+M empty2
+b80de5d138758541c5f05265ad144ab9fa86d1db 644 empty1
+b80de5d138758541c5f05265ad144ab9fa86d1db 644 empty2
+b80de5d138758541c5f05265ad144ab9fa86d1db 644 empty3
