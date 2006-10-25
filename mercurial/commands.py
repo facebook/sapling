@@ -839,6 +839,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
             visit = list(revs)
         else:
             visit = repo.changelog.heads()
+        seen = sets.Set(visit)
         while visit:
             n = visit.pop(0)
             parents = [p for p in repo.changelog.parents(n)
@@ -846,7 +847,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
             if len(parents) == 0:
                 o.insert(0, n)
             else:
-                visit.extend(parents)
+                for p in parents:
+                    if p not in seen:
+                        seen.add(p)
+                        visit.append(p)
     else:
         setremoteconfig(ui, opts)
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
