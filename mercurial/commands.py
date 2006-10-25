@@ -1857,6 +1857,10 @@ def log(ui, repo, *pats, **opts):
 
     changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
 
+    if opts['branches']:
+        ui.warn(_("the --branches option is deprecated, "
+                  "please use 'hg branches' instead\n"))
+
     if opts['limit']:
         try:
             limit = int(opts['limit'])
@@ -1933,8 +1937,6 @@ def log(ui, repo, *pats, **opts):
 
             br = None
             if opts['branches']:
-                ui.warn(_("the --branches option is deprecated, "
-                          "please use 'hg branches' instead\n"))
                 br = repo.branchlookup([repo.changelog.node(rev)])
 
             copies = []
