@@ -806,20 +806,19 @@ def branches(ui, repo):
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
 
-    Generate a compressed changegroup file collecting changesets.
-    not found in the other repository.
+    Generate a compressed changegroup file collecting changesets not
+    found in the other repository.
 
-    If no destination repository is specified the destination is
-    assumed to have all the node specified by --base.
+    If no destination repository is specified the destination is assumed
+    to have all the nodes specified by one or more --base parameters.
 
-    This file can then be transferred using conventional means and
-    applied to another repository with the unbundle command. This is
-    useful when native push and pull are not available or when
-    exporting an entire repository is undesirable. The standard file
-    extension is ".hg".
+    The bundle file can then be transferred using conventional means and
+    applied to another repository with the unbundle or pull command.
+    This is useful when direct push and pull are not available or when
+    exporting an entire repository is undesirable.
 
-    Unlike import/export, this exactly preserves all changeset
-    contents including permissions, rename data, and revision history.
+    Applying bundles preserves all changeset contents including
+    permissions, copy/rename information, and revision history.
     """
     revs = opts.get('rev') or None
     if revs:
