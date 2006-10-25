@@ -2746,11 +2746,7 @@ def update(ui, repo, node=None, merge=False, clean=False, force=None,
     merging or discarding local changes.
     """
     node = _lookup(repo, node, branch)
-    if merge:
-        ui.warn(_('(the -m/--merge option is deprecated; '
-                  'use the merge command instead)\n'))
-        return hg.merge(repo, node, force=force)
-    elif clean:
+    if clean:
         return hg.clean(repo, node)
     else:
         return hg.update(repo, node)
