@@ -1213,7 +1213,7 @@ def debugcheckstate(ui, repo):
         error = _(".hg/dirstate inconsistent with current parent's manifest")
         raise util.Abort(error)
 
-def showconfig(ui, repo, *values):
+def showconfig(ui, repo, *values, **opts):
     """show combined config settings from all hgrc files
 
     With no args, print names and values of all config items.
@@ -1224,10 +1224,11 @@ def showconfig(ui, repo, *values):
     With multiple args, print names and values of all config items
     with matching section names."""
 
+    untrusted = bool(opts.get('untrusted'))
     if values:
         if len([v for v in values if '.' in v]) > 1:
             raise util.Abort(_('only one config item permitted'))
-    for section, name, value in ui.walkconfig():
+    for section, name, value in ui.walkconfig(untrusted=untrusted):
         sectname = section + '.' + name
         if values:
             for v in values:
@@ -3097,7 +3098,10 @@ table = {
          _('hg revert [-r REV] [NAME]...')),
     "rollback": (rollback, [], _('hg rollback')),
     "root": (root, [], _('hg root')),
-    "showconfig|debugconfig": (showconfig, [], _('showconfig [NAME]...')),
+    "showconfig|debugconfig":
+        (showconfig,
+         [('u', 'untrusted', None, _('show untrusted configuration options'))],
+         _('showconfig [-u] [NAME]...')),
     "^serve":
         (serve,
          [('A', 'accesslog', '', _('name of access log file to write to')),
