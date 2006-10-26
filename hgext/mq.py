@@ -1337,13 +1337,20 @@ class queue:
 
         for filename in files:
             if existing:
+                if filename == '-':
+                    raise util.Abort(_('-e is incompatible with import from -'))
                 if not patchname:
                     patchname = filename
                 if not os.path.isfile(self.join(patchname)):
                     raise util.Abort(_("patch %s does not exist") % patchname)
             else:
                 try:
-                    text = file(filename).read()
+                    if filename == '-':
+                        if not patchname:
+                            raise util.Abort(_('need --name to import a patch from -'))
+                        text = sys.stdin.read()
+                    else:
+                        text = file(filename).read()
                 except IOError:
                     raise util.Abort(_("unable to read %s") % patchname)
                 if not patchname:
