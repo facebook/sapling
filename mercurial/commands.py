@@ -102,7 +102,7 @@ def walkchangerevs(ui, repo, pats, opts):
         defrange = '%s:0' % repo.changectx().rev()
     else:
         defrange = 'tip:0'
-    revs = map(int, cmdutil.revrange(ui, repo, opts['rev'] or [defrange]))
+    revs = cmdutil.revrange(ui, repo, opts['rev'] or [defrange])
     wanted = {}
     slowpath = anypats
     fncache = {}
@@ -1375,7 +1375,7 @@ def export(ui, repo, *changesets, **opts):
     """
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
-    revs = list(cmdutil.revrange(ui, repo, changesets))
+    revs = cmdutil.revrange(ui, repo, changesets)
     if len(revs) > 1:
         ui.note(_('exporting patches:\n'))
     else:
@@ -1841,8 +1841,7 @@ def log(ui, repo, *pats, **opts):
     count = 0
 
     if opts['copies'] and opts['rev']:
-        endrev = max([int(i)
-                      for i in cmdutil.revrange(ui, repo, opts['rev'])]) + 1
+        endrev = max(cmdutil.revrange(ui, repo, opts['rev'])) + 1
     else:
         endrev = repo.changelog.count()
     rcache = {}

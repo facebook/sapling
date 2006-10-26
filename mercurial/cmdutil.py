@@ -49,7 +49,7 @@ def revrange(ui, repo, revs):
             return defval
         return repo.changelog.rev(repo.lookup(val))
 
-    seen = {}
+    seen, l = {}, []
     for spec in revs:
         if revrangesep in spec:
             start, end = spec.split(revrangesep, 1)
@@ -60,13 +60,15 @@ def revrange(ui, repo, revs):
                 if rev in seen:
                     continue
                 seen[rev] = 1
-                yield rev
+                l.append(rev)
         else:
             rev = revfix(repo, spec, None)
             if rev in seen:
                 continue
             seen[rev] = 1
-            yield rev
+            l.append(rev)
+
+    return l
 
 def make_filename(repo, pat, node,
                   total=None, seqno=None, revwidth=None, pathname=None):

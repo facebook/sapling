@@ -502,7 +502,7 @@ class queue:
         if opts.get('rev'):
             if not self.applied:
                 raise util.Abort(_('no patches applied'))
-            revs = [int(r) for r in cmdutil.revrange(ui, repo, opts['rev'])]
+            revs = cmdutil.revrange(ui, repo, opts['rev'])
             if len(revs) > 1 and revs[0] > revs[1]:
                 revs.reverse()
             for rev in revs:
@@ -1276,7 +1276,7 @@ class queue:
             if files:
                 raise util.Abort(_('option "-r" not valid when importing '
                                    'files'))
-            rev = [int(r) for r in cmdutil.revrange(self.ui, repo, rev)]
+            rev = cmdutil.revrange(self.ui, repo, rev)
             rev.sort(lambda x, y: cmp(y, x))
         if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
