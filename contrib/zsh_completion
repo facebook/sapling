@@ -506,7 +506,11 @@ _hg_qseries() {
 _hg_qapplied() {
   typeset -a patches
   patches=($(_hg_cmd qapplied))
-  (( $#patches )) && _describe -t hg-applied-patches 'applied patches' patches
+  if (( $#patches ))
+  then
+    patches+=(qbase qtip)
+    _describe -t hg-applied-patches 'applied patches' patches
+  fi
 }
 
 _hg_qunapplied() {
