@@ -117,6 +117,11 @@ _hg_commands() {
   _describe -t commands 'mercurial command' _hg_cmd_list
 }
 
+_hg_revrange() {
+  compset -P 1 '*:'
+  _hg_tags "$@"
+}
+
 _hg_tags() {
   typeset -a tags
   local tag rev
@@ -283,7 +288,7 @@ _hg_cmd_copy() {
 
 _hg_cmd_diff() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_diff_opts \
-  '*'{-r,--rev}'+[revision]:revision:_hg_tags ' \
+  '*'{-r,--rev}'+[revision]:revision:_hg_revrange' \
   '(--show-function -p)'{-p,--show-function}'[show which function each change is in]' \
   '(--ignore-all-space -w)'{-w,--ignore-all-space}'[ignore white space when comparing lines]' \
   '(--ignore-space-change -b)'{-b,--ignore-space-change}'[ignore changes in the amount of white space]' \
@@ -306,7 +311,7 @@ _hg_cmd_grep() {
   '(--ignore-case -i)'{-i,--ignore-case}'[ignore case when matching]' \
   '(--files-with-matches -l)'{-l,--files-with-matches}'[print only filenames and revs that match]' \
   '(--line-number -n)'{-n,--line-number}'[print matching line numbers]' \
-  '*'{-r+,--rev}'[search in given revision range]:revision:_hg_tags' \
+  '*'{-r+,--rev}'[search in given revision range]:revision:_hg_revrange' \
   '(--user -u)'{-u,--user}'[print user who committed change]' \
   '*:search pattern:_files -W $(_hg_cmd root)'
 }
@@ -360,7 +365,7 @@ _hg_cmd_log() {
   '(--copies -C)'{-C,--copies}'[show copied files]' \
   '(--keyword -k)'{-k+,--keyword}'[search for a keyword]:' \
   '(--limit -l)'{-l+,--limit}'[limit number of changes displayed]:' \
-  '*'{-r,--rev}'[show the specified revision or range]:revision:_hg_tags' \
+  '*'{-r,--rev}'[show the specified revision or range]:revision:_hg_revrange' \
   '(--no-merges -M)'{-M,--no-merges}'[do not show merges]' \
   '(--only-merges -m)'{-m,--only-merges}'[show only merges]' \
   '(--patch -p)'{-p,--patch}'[show patch]' \
@@ -540,7 +545,7 @@ _hg_cmd_qapplied() {
 _hg_cmd_qdelete() {
   _arguments -s -w : $_hg_global_opts \
   '(--keep -k)'{-k,--keep}'[keep patch file]' \
-  '*'{-r+,--rev}'[stop managing a revision]:applied patch:_hg_qapplied' \
+  '*'{-r+,--rev}'[stop managing a revision]:applied patch:_hg_revrange' \
   '*:unapplied patch:_hg_qunapplied'
 }
 
@@ -573,7 +578,7 @@ _hg_cmd_qimport() {
   '(--existing -e)'{-e,--existing}'[import file in patch dir]' \
   '(--name -n 2)'{-n+,--name}'[patch file name]:name:' \
   '(--force -f)'{-f,--force}'[overwrite existing files]' \
-  '*'{-r+,--rev}'[place existing revisions under mq control]:revision:_hg_tags' \
+  '*'{-r+,--rev}'[place existing revisions under mq control]:revision:_hg_revrange' \
   '*:patch:_files'
 }
 
