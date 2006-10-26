@@ -298,13 +298,6 @@ def write_bundle(cg, filename=None, compress=True):
         if cleanup is not None:
             os.unlink(cleanup)
 
-def trimuser(ui, name, rev, revcache):
-    """trim the name of the user who committed a change"""
-    user = revcache.get(rev)
-    if user is None:
-        user = revcache[rev] = ui.shortuser(name)
-    return user
-
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 
@@ -1470,29 +1463,23 @@ def grep(ui, repo, pattern, *pats, **opts):
                     yield ('+', b[i])
 
     prev = {}
-    ucache = {}
     def display(fn, rev, states, prevstates):
         counts = {'-': 0, '+': 0}
         filerevmatches = {}
         if incrementing or not opts['all']:
-            a, b = prevstates, states
+            a, b, r = prevstates, states, rev
         else:
-            a, b = states, prevstates
+            a, b, r = states, prevstates, prev.get(fn, -1)
         for change, l in difflinestates(a, b):
-            if incrementing or not opts['all']:
-                r = rev
-            else:
-                r = prev[fn]
             cols = [fn, str(r)]
             if opts['line_number']:
                 cols.append(str(l.linenum))
             if opts['all']:
                 cols.append(change)
             if opts['user']:
-                cols.append(trimuser(ui, getchange(r)[1], rev,
-                                     ucache))
+                cols.append(ui.shortuser(getchange(r)[1]))
             if opts['files_with_matches']:
-                c = (fn, rev)
+                c = (fn, r)
                 if c in filerevmatches:
                     continue
                 filerevmatches[c] = 1
