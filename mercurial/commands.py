@@ -50,7 +50,7 @@ def logmessage(opts):
                              (logfile, inst.strerror))
     return message
 
-def walkchangerevs(ui, repo, pats, opts):
+def walkchangerevs(ui, repo, pats, change, opts):
     '''Iterate over files and the revs they changed in.
 
     Callers most commonly need to iterate backwards over the history
@@ -61,10 +61,8 @@ def walkchangerevs(ui, repo, pats, opts):
     window, we first walk forwards to gather data, then in the desired
     order (usually backwards) to display it.
 
-    This function returns an (iterator, getchange, matchfn) tuple.  The
-    getchange function returns the changelog entry for a numeric
-    revision.  The iterator yields 3-tuples.  They will be of one of
-    the following forms:
+    This function returns an (iterator, matchfn) tuple. The iterator
+    yields 3-tuples. They will be of one of the following forms:
 
     "window", incrementing, lastrev: stepping through a window,
     positive if walking forwards through revs, last rev in the
@@ -91,12 +89,11 @@ def walkchangerevs(ui, repo, pats, opts):
                 if windowsize < sizelimit:
                     windowsize *= 2
 
-
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     follow = opts.get('follow') or opts.get('follow_first')
 
     if repo.changelog.count() == 0:
-        return [], False, matchfn
+        return [], matchfn
 
     if follow:
         defrange = '%s:0' % repo.changectx().rev()
@@ -106,13 +103,6 @@ def walkchangerevs(ui, repo, pats, opts):
     wanted = {}
     slowpath = anypats
     fncache = {}
-
-    chcache = {}
-    def getchange(rev):
-        ch = chcache.get(rev)
-        if ch is None:
-            chcache[rev] = ch = repo.changelog.read(repo.lookup(str(rev)))
-        return ch
 
     if not slowpath and not files:
         # No files, no patterns.  Display all revs.
@@ -169,7 +159,7 @@ def walkchangerevs(ui, repo, pats, opts):
         def changerevgen():
             for i, window in increasing_windows(repo.changelog.count()-1, -1):
                 for j in xrange(i - window, i + 1):
-                    yield j, getchange(j)[3]
+                    yield j, change(j)[3]
 
         for rev, changefiles in changerevgen():
             matches = filter(matchfn, changefiles)
@@ -240,11 +230,11 @@ def walkchangerevs(ui, repo, pats, opts):
             srevs = list(nrevs)
             srevs.sort()
             for rev in srevs:
-                fns = fncache.get(rev) or filter(matchfn, getchange(rev)[3])
+                fns = fncache.get(rev) or filter(matchfn, change(rev)[3])
                 yield 'add', rev, fns
             for rev in nrevs:
                 yield 'iter', rev, None
-    return iterate(), getchange, matchfn
+    return iterate(), matchfn
 
 def write_bundle(cg, filename=None, compress=True):
     """Write a bundle file and return its filename.
@@ -1491,7 +1481,8 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     fstate = {}
     skip = {}
-    changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
+    getchange = util.cachefunc(lambda r:repo.changectx(r).changeset())
+    changeiter, matchfn = walkchangerevs(ui, repo, pats, getchange, opts)
     count = 0
     incrementing = False
     follow = opts.get('follow')
@@ -1824,7 +1815,8 @@ def log(ui, repo, *pats, **opts):
         def __getattr__(self, key):
             return getattr(self.ui, key)
 
-    changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
+    getchange = util.cachefunc(lambda r:repo.changectx(r).changeset())
+    changeiter, matchfn = walkchangerevs(ui, repo, pats, getchange, opts)
 
     if opts['branches']:
         ui.warn(_("the --branches option is deprecated, "
