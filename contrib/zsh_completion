@@ -519,6 +519,7 @@ _hg_qunapplied() {
 _hg_qguards() {
   typeset -a guards
   local guard
+  compset -P "+|-"
   _hg_cmd qselect -s | while read guard
   do
     guards+=(${guard#(+|-)})
