@@ -5,7 +5,7 @@
 # instance)
 #
 # Copyright (C) 2005 Steve Borho
-# Copyright (C) 2006 Brendan Cully
+# Copyright (C) 2006 Brendan Cully <brendan@kublai.com>
 #
 # This is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -14,7 +14,6 @@
 #
 
 local curcontext="$curcontext" state line
-local repos newFiles addedFiles commitMessage
 typeset -A _hg_cmd_globals
 
 _hg() {
@@ -115,7 +114,7 @@ _hg_get_commands() {
 
 _hg_commands() {
   (( $#_hg_cmd_list )) || _hg_get_commands
-  _describe -t hg-commands 'mercurial command' _hg_cmd_list
+  _describe -t commands 'mercurial command' _hg_cmd_list
 }
 
 _hg_tags() {
@@ -126,7 +125,7 @@ _hg_tags() {
   do
     tags+=($tag)
   done
-  (( $#tags )) && _describe -t hg-tags 'tags' tags
+  (( $#tags )) && _describe -t tags 'tags' tags
 }
 
 _hg_status() {
@@ -136,18 +135,18 @@ _hg_status() {
 _hg_unknown() {
   typeset -a status_files
   _hg_status u
-  (( $#status_files )) && _describe -t hg-unknown-files 'unknown files' status_files
+  (( $#status_files )) && _describe -t files 'unknown files' status_files
 }
 
 _hg_missing() {
   typeset -a status_files
   _hg_status d
-  (( $#status_files )) && _describe -t hg-missing-files 'missing files' status_files
+  (( $#status_files )) && _describe -t files 'missing files' status_files
 }
 
 _hg_addremove() {
-  _alternative "unknown files:unknown files:_hg_unknown" \
-  "missing files:missing files:_hg_missing"
+  _alternative 'files:unknown files:_hg_unknown' \
+    'files:missing files:_hg_missing'
 }
 
 _hg_paths() {
@@ -156,12 +155,12 @@ _hg_paths() {
   do
     paths+=($pnames[1])
   done
-  (( $#paths )) && _describe -t hg-paths 'repository aliases' paths
+  (( $#paths )) && _describe -t urls 'repository aliases' paths
 }
 
 _hg_remote() {
-  _alternative 'repository aliases:repository aliases:_hg_paths' \
-  'directory:directory:_files -/'
+  _alternative 'urls:repository alias:_hg_paths' \
+    'directories:directory:_files -/'
 }
 
 # Common options
