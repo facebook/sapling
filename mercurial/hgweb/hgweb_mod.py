@@ -77,24 +77,41 @@ class hgweb(object):
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
         self.stripecount = 1
-        self.templatepath = self.repo.ui.config("web", "templates",
-                                                templater.templatepath())
+        # a repo owner may set web.templates in .hg/hgrc to get any file
+        # readable by the user running the CGI script
+        self.templatepath = self.config("web", "templates",
+                                        templater.templatepath(),
+                                        untrusted=False)
+
+    # The CGI scripts are often run by a user different from the repo owner.
+    # Trust the settings from the .hg/hgrc files by default.
+    def config(self, section, name, default=None, untrusted=True):
+        return self.repo.ui.config(section, name, default,
+                                   untrusted=untrusted)
+
+    def configbool(self, section, name, default=False, untrusted=True):
+        return self.repo.ui.configbool(section, name, default,
+                                       untrusted=untrusted)
+
+    def configlist(self, section, name, default=None, untrusted=True):
+        return self.repo.ui.configlist(section, name, default,
+                                       untrusted=untrusted)
 
     def refresh(self):
         mtime = get_mtime(self.repo.root)
         if mtime != self.mtime:
             self.mtime = mtime
             self.repo = hg.repository(self.repo.ui, self.repo.root)
-            self.maxchanges = int(self.repo.ui.config("web", "maxchanges", 10))
-            self.stripecount = int(self.repo.ui.config("web", "stripes", 1))
-            self.maxshortchanges = int(self.repo.ui.config("web", "maxshortchanges", 60))
-            self.maxfiles = int(self.repo.ui.config("web", "maxfiles", 10))
-            self.allowpull = self.repo.ui.configbool("web", "allowpull", True)
+            self.maxchanges = int(self.config("web", "maxchanges", 10))
+            self.stripecount = int(self.config("web", "stripes", 1))
+            self.maxshortchanges = int(self.config("web", "maxshortchanges", 60))
+            self.maxfiles = int(self.config("web", "maxfiles", 10))
+            self.allowpull = self.configbool("web", "allowpull", True)
 
     def archivelist(self, nodeid):
-        allowed = self.repo.ui.configlist("web", "allow_archive")
+        allowed = self.configlist("web", "allow_archive")
         for i, spec in self.archive_specs.iteritems():
-            if i in allowed or self.repo.ui.configbool("web", "allow" + i):
+            if i in allowed or self.configbool("web", "allow" + i):
                 yield {"type" : i, "extension" : spec[2], "node" : nodeid}
 
     def listfilediffs(self, files, changeset):
@@ -169,7 +186,7 @@ class hgweb(object):
             modified, added, removed = map(lambda x: filterfiles(files, x),
                                            (modified, added, removed))
 
-        diffopts = patch.diffopts(self.repo.ui)
+        diffopts = patch.diffopts(self.repo.ui, untrusted=True)
         for f in modified:
             to = r.file(f).read(mmap1[f])
             tn = r.file(f).read(mmap2[f])
@@ -571,10 +588,10 @@ class hgweb(object):
         end = min(count, start + self.maxchanges)
 
         yield self.t("summary",
-                 desc = self.repo.ui.config("web", "description", "unknown"),
-                 owner = (self.repo.ui.config("ui", "username") or # preferred
-                          self.repo.ui.config("web", "contact") or # deprecated
-                          self.repo.ui.config("web", "author", "unknown")), # also
+                 desc = self.config("web", "description", "unknown"),
+                 owner = (self.config("ui", "username") or # preferred
+                          self.config("web", "contact") or # deprecated
+                          self.config("web", "author", "unknown")), # also
                  lastchange = cl.read(cl.tip())[2],
                  tags = tagentries,
                  heads = heads,
@@ -650,7 +667,7 @@ class hgweb(object):
             yield self.t("footer", **map)
 
         def motd(**map):
-            yield self.repo.ui.config("web", "motd", "")
+            yield self.config("web", "motd", "")
 
         def expand_form(form):
             shortcuts = {
@@ -748,7 +765,7 @@ class hgweb(object):
             fields = []
             if req.form.has_key('style'):
                 style = req.form['style'][0]
-                if style != self.repo.ui.config('web', 'style', ''):
+                if style != self.config('web', 'style', ''):
                     fields.append(('style', style))
 
             separator = req.url[-1] == '?' and ';' or '?'
@@ -761,7 +778,7 @@ class hgweb(object):
         expand_form(req.form)
         rewrite_request(req)
 
-        style = self.repo.ui.config("web", "style", "")
+        style = self.config("web", "style", "")
         if req.form.has_key('style'):
             style = req.form['style'][0]
         mapfile = style_map(self.templatepath, style)
@@ -771,7 +788,7 @@ class hgweb(object):
         urlbase = 'http://%s%s' % (req.env['SERVER_NAME'], port)
 
         if not self.reponame:
-            self.reponame = (self.repo.ui.config("web", "name")
+            self.reponame = (self.config("web", "name")
                              or req.env.get('REPO_NAME')
                              or req.url.strip('/') or self.repo.root)
 
@@ -985,9 +1002,9 @@ class hgweb(object):
     def do_archive(self, req):
         changeset = self.repo.lookup(req.form['node'][0])
         type_ = req.form['type'][0]
-        allowed = self.repo.ui.configlist("web", "allow_archive")
+        allowed = self.configlist("web", "allow_archive")
         if (type_ in self.archives and (type_ in allowed or
-            self.repo.ui.configbool("web", "allow" + type_, False))):
+            self.configbool("web", "allow" + type_, False))):
             self.archive(req, changeset, type_)
             return
 
@@ -995,15 +1012,17 @@ class hgweb(object):
 
     def do_static(self, req):
         fname = req.form['file'][0]
-        static = self.repo.ui.config("web", "static",
-                                     os.path.join(self.templatepath,
-                                                  "static"))
+        # a repo owner may set web.static in .hg/hgrc to get any file
+        # readable by the user running the CGI script
+        static = self.config("web", "static",
+                             os.path.join(self.templatepath, "static"),
+                             untrusted=False)
         req.write(staticfile(static, fname, req)
                   or self.t("error", error="%r not found" % fname))
 
     def do_capabilities(self, req):
         caps = ['unbundle', 'lookup', 'changegroupsubset']
-        if self.repo.ui.configbool('server', 'uncompressed'):
+        if self.configbool('server', 'uncompressed'):
             caps.append('stream=%d' % self.repo.revlogversion)
         resp = ' '.join(caps)
         req.httphdr("application/mercurial-0.1", length=len(resp))
@@ -1016,11 +1035,11 @@ class hgweb(object):
 
         user = req.env.get('REMOTE_USER')
 
-        deny = self.repo.ui.configlist('web', 'deny_' + op)
+        deny = self.configlist('web', 'deny_' + op)
         if deny and (not user or deny == ['*'] or user in deny):
             return False
 
-        allow = self.repo.ui.configlist('web', 'allow_' + op)
+        allow = self.configlist('web', 'allow_' + op)
         return (allow and (allow == ['*'] or user in allow)) or default
 
     def do_unbundle(self, req):
@@ -1036,7 +1055,7 @@ class hgweb(object):
 
         # require ssl by default, auth info cannot be sniffed and
         # replayed
-        ssl_req = self.repo.ui.configbool('web', 'push_ssl', True)
+        ssl_req = self.configbool('web', 'push_ssl', True)
         if ssl_req:
             if not req.env.get('HTTPS'):
                 bail(_('ssl required\n'))
