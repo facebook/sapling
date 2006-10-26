@@ -87,9 +87,10 @@ class hgwebdir(object):
                                              "url": url})
 
         def archivelist(ui, nodeid, url):
-            allowed = ui.configlist("web", "allow_archive")
+            allowed = ui.configlist("web", "allow_archive", untrusted=True)
             for i in [('zip', '.zip'), ('gz', '.tar.gz'), ('bz2', '.tar.bz2')]:
-                if i[0] in allowed or ui.configbool("web", "allow" + i[0]):
+                if i[0] in allowed or ui.configbool("web", "allow" + i[0],
+                                                    untrusted=True):
                     yield {"type" : i[0], "extension": i[1],
                            "node": nodeid, "url": url}
 
@@ -114,7 +115,8 @@ class hgwebdir(object):
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
                 except IOError:
                     pass
-                get = u.config
+                def get(section, name, default=None):
+                    return u.config(section, name, default, untrusted=True)
 
                 url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
                        .replace("//", "/")) + '/'
