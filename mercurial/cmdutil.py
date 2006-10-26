@@ -57,8 +57,8 @@ def revpair(ui, repo, revs):
         end = revfix(repo, revs[1], None)
     else:
         raise util.Abort(_('too many revisions specified'))
-    if end is not None: end = repo.lookup(str(end))
-    return repo.lookup(str(start)), end
+    if end is not None: end = repo.lookup(end)
+    return repo.lookup(start), end
 
 def revrange(ui, repo, revs):
     """Yield revision as strings from a list of revision specifications."""
