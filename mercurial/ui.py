@@ -26,7 +26,8 @@ def updateconfig(source, dest, sections=None):
 
 class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
-                 interactive=True, traceback=False, parentui=None):
+                 interactive=True, traceback=False, report_untrusted=True,
+                 parentui=None):
         self.overlay = None
         self.header = []
         self.prev_header = []
@@ -39,6 +40,7 @@ class ui(object):
             self.debugflag = debug
             self.interactive = interactive
             self.traceback = traceback
+            self.report_untrusted = report_untrusted
             self.trusted_users = {}
             self.trusted_groups = {}
             # if ucdata is not None, its keys must be a superset of cdata's
@@ -98,7 +100,7 @@ class ui(object):
             user = util.username(st.st_uid)
             group = util.groupname(st.st_gid)
             if user not in tusers and group not in tgroups:
-                if warn:
+                if warn and self.report_untrusted:
                     self.warn(_('Not trusting file %s from untrusted '
                                 'user %s, group %s\n') % (f, user, group))
                 return False

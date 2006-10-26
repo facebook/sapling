@@ -110,7 +110,7 @@ class hgwebdir(object):
             rows = []
             parity = 0
             for name, path in self.repos:
-                u = ui.ui()
+                u = ui.ui(report_untrusted=False)
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
                 except IOError:

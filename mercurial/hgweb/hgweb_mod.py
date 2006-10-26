@@ -69,7 +69,7 @@ def revnavgen(pos, pagelen, limit, nodefunc):
 class hgweb(object):
     def __init__(self, repo, name=None):
         if type(repo) == type(""):
-            self.repo = hg.repository(ui.ui(), repo)
+            self.repo = hg.repository(ui.ui(report_untrusted=False), repo)
         else:
             self.repo = repo
 
