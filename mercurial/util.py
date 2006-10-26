@@ -519,6 +519,36 @@ def is_win_9x():
     except AttributeError:
         return os.name == 'nt' and 'command' in os.environ.get('comspec', '')
 
+def username(uid=None):
+    """Return the name of the user with the given uid.
+
+    If uid is None, return the name of the current user."""
+    try:
+        import pwd
+        if uid is None:
+            uid = os.getuid()
+        try:
+            return pwd.getpwuid(uid)[0]
+        except KeyError:
+            return str(uid)
+    except ImportError:
+        return None
+
+def groupname(gid=None):
+    """Return the name of the group with the given gid.
+
+    If gid is None, return the name of the current group."""
+    try:
+        import grp
+        if gid is None:
+            gid = os.getgid()
+        try:
+            return grp.getgrgid(gid)[0]
+        except KeyError:
+            return str(gid)
+    except ImportError:
+        return None
+
 # Platform specific variants
 if os.name == 'nt':
     demandload(globals(), "msvcrt")

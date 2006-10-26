@@ -1,0 +1,67 @@
+# same user, same group
+    global = /some/path
+    local = /another/path
+
+# same user, different group
+    global = /some/path
+    local = /another/path
+
+# different user, same group
+Not reading file .hg/hgrc from untrusted user abc, group bar
+    global = /some/path
+
+# different user, same group, but we trust the group
+    global = /some/path
+    local = /another/path
+
+# different user, different group
+Not reading file .hg/hgrc from untrusted user abc, group def
+    global = /some/path
+
+# different user, different group, but we trust the user
+    global = /some/path
+    local = /another/path
+
+# different user, different group, but we trust the group
+    global = /some/path
+    local = /another/path
+
+# different user, different group, but we trust the user and the group
+    global = /some/path
+    local = /another/path
+
+# we trust all users
+# different user, different group
+    global = /some/path
+    local = /another/path
+
+# we trust all groups
+# different user, different group
+    global = /some/path
+    local = /another/path
+
+# we trust all users and groups
+# different user, different group
+    global = /some/path
+    local = /another/path
+
+# we don't get confused by users and groups with the same name
+# different user, different group
+Not reading file .hg/hgrc from untrusted user abc, group def
+    global = /some/path
+
+# list of user names
+# different user, different group, but we trust the user
+    global = /some/path
+    local = /another/path
+
+# list of group names
+# different user, different group, but we trust the group
+    global = /some/path
+    local = /another/path
+
+# Can't figure out the name of the user running this process
+# different user, different group
+    global = /some/path
+    local = /another/path
+

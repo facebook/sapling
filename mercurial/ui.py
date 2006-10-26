@@ -39,6 +39,8 @@ class ui(object):
             self.debugflag = debug
             self.interactive = interactive
             self.traceback = traceback
+            self.trusted_users = {}
+            self.trusted_groups = {}
             self.cdata = util.configparser()
             self.readconfig(util.rcpath())
             self.updateopts(verbose, debug, quiet, interactive)
@@ -46,6 +48,8 @@ class ui(object):
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
             self.readhooks = self.parentui.readhooks[:]
+            self.trusted_users = parentui.trusted_users.copy()
+            self.trusted_groups = parentui.trusted_groups.copy()
             self.cdata = dupconfig(self.parentui.cdata)
             if self.parentui.overlay:
                 self.overlay = dupconfig(self.parentui.overlay)
@@ -82,12 +86,32 @@ class ui(object):
         elif self.verbose and self.quiet:
             self.quiet = self.verbose = False
 
+    def _is_trusted(self, fp, f, warn=True):
+        tusers = self.trusted_users
+        tgroups = self.trusted_groups
+        if (tusers or tgroups) and '*' not in tusers and '*' not in tgroups:
+            st = util.fstat(fp)
+            user = util.username(st.st_uid)
+            group = util.groupname(st.st_gid)
+            if user not in tusers and group not in tgroups:
+                if warn:
+                    self.warn(_('Not reading file %s from untrusted '
+                                'user %s, group %s\n') % (f, user, group))
+                return False
+        return True
+
     def readconfig(self, fn, root=None):
         if isinstance(fn, basestring):
             fn = [fn]
         for f in fn:
             try:
-                self.cdata.read(f)
+                fp = open(f)
+            except IOError:
+                continue
+            if not self._is_trusted(fp, f):
+                continue
+            try:
+                self.cdata.readfp(fp, f)
             except ConfigParser.ParsingError, inst:
                 raise util.Abort(_("Failed to parse %s\n%s") % (f, inst))
         # override data from config files with data set with ui.setconfig
@@ -143,6 +167,16 @@ class ui(object):
 
             if name is None or name == 'interactive':
                 self.interactive = self.configbool("ui", "interactive", True)
+
+        # update trust information
+        if section is None or section == 'trusted':
+            user = util.username()
+            if user is not None:
+                self.trusted_users[user] = 1
+                for user in self.configlist('trusted', 'users'):
+                    self.trusted_users[user] = 1
+                for group in self.configlist('trusted', 'groups'):
+                    self.trusted_groups[group] = 1
 
     def setconfig(self, section, name, value):
         if not self.overlay:
