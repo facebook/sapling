@@ -61,7 +61,6 @@ debugcheckstate
 debugcomplete
 debugconfig
 debugdata
-debugforget
 debugindex
 debugindexdot
 debugrawcommit
@@ -69,7 +68,6 @@ debugrebuildstate
 debugrename
 debugsetparents
 debugstate
-debugundo
 debugwalk
 
 % Do not show the alias of a debug command if there are other candidates

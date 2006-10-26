@@ -563,6 +563,7 @@ def help_(ui, name=None, with_version=False):
     for title, options in option_lists:
         opt_output.append(("\n%s:\n" % title, None))
         for shortopt, longopt, default, desc in options:
+            if "DEPRECATED" in desc and not ui.verbose: continue
             opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
                                           longopt and " --%s" % longopt),
                                "%s%s" % (desc,
@@ -1390,24 +1391,6 @@ def export(ui, repo, *changesets, **opts):
                  switch_parent=opts['switch_parent'],
                  opts=patch.diffopts(ui, opts))
 
-def forget(ui, repo, *pats, **opts):
-    """don't add the specified files on the next commit (DEPRECATED)
-
-    (DEPRECATED)
-    Undo an 'hg add' scheduled for the next commit.
-
-    This command is now deprecated and will be removed in a future
-    release. Please use revert instead.
-    """
-    ui.warn(_("(the forget command is deprecated; use revert instead)\n"))
-    forget = []
-    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
-        if repo.dirstate.state(abs) == 'a':
-            forget.append(abs)
-            if ui.verbose or not exact:
-                ui.status(_('forgetting %s\n') % ((pats and rel) or abs))
-    repo.forget(forget)
-
 def grep(ui, repo, pattern, *pats, **opts):
     """search for a pattern in specified files and revisions
 
@@ -1856,6 +1839,10 @@ def log(ui, repo, *pats, **opts):
 
     changeiter, getchange, matchfn = walkchangerevs(ui, repo, pats, opts)
 
+    if opts['branches']:
+        ui.warn(_("the --branches option is deprecated, "
+                  "please use 'hg branches' instead\n"))
+
     if opts['limit']:
         try:
             limit = int(opts['limit'])
@@ -1932,8 +1919,6 @@ def log(ui, repo, *pats, **opts):
 
             br = None
             if opts['branches']:
-                ui.warn(_("the --branches option is deprecated, "
-                          "please use 'hg branches' instead\n"))
                 br = repo.branchlookup([repo.changelog.node(rev)])
 
             copies = []
@@ -2744,17 +2729,6 @@ def unbundle(ui, repo, fname, **opts):
                                    'bundle:' + fname)
     return postincoming(ui, repo, modheads, opts['update'])
 
-def undo(ui, repo):
-    """undo the last commit or pull (DEPRECATED)
-
-    (DEPRECATED)
-    This command is now deprecated and will be removed in a future
-    release. Please use the rollback command instead.  For usage
-    instructions, see the rollback command.
-    """
-    ui.warn(_('(the undo command is deprecated; use rollback instead)\n'))
-    repo.rollback()
-
 def update(ui, repo, node=None, merge=False, clean=False, force=None,
            branch=None):
     """update or merge working directory
@@ -2772,11 +2746,7 @@ def update(ui, repo, node=None, merge=False, clean=False, force=None,
     merging or discarding local changes.
     """
     node = _lookup(repo, node, branch)
-    if merge:
-        ui.warn(_('(the -m/--merge option is deprecated; '
-                  'use the merge command instead)\n'))
-        return hg.merge(repo, node, force=force)
-    elif clean:
+    if clean:
         return hg.clean(repo, node)
     else:
         return hg.update(repo, node)
@@ -2979,8 +2949,6 @@ table = {
           ('', 'nodates', None, _("don't include dates in diff headers")),
           ('', 'switch-parent', None, _('diff against the second parent'))],
          _('hg export [-a] [-o OUTFILESPEC] REV...')),
-    "debugforget|forget":
-        (forget, walkopts, _('hg forget [OPTION]... FILE...')),
     "grep":
         (grep,
          [('0', 'print0', None, _('end fields with NUL')),
@@ -3013,7 +2981,7 @@ table = {
           ('b', 'base', '', _('base path (DEPRECATED)')),
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes'))],
-         _('hg import [-p NUM] [-b BASE] [-m MESSAGE] [-f] PATCH...')),
+         _('hg import [-p NUM] [-m MESSAGE] [-f] PATCH...')),
     "incoming|in": (incoming,
          [('M', 'no-merges', None, _('do not show merges')),
           ('f', 'force', None,
@@ -3186,7 +3154,6 @@ table = {
          [('u', 'update', None,
            _('update to new tip if changesets were unbundled'))],
          _('hg unbundle [-u] FILE')),
-    "debugundo|undo": (undo, [], _('hg undo')),
     "^update|up|checkout|co":
         (update,
          [('b', 'branch', '',
@@ -3194,7 +3161,7 @@ table = {
           ('m', 'merge', None, _('allow merging of branches (DEPRECATED)')),
           ('C', 'clean', None, _('overwrite locally modified files')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
-         _('hg update [-m] [-C] [-f] [REV]')),
+         _('hg update [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (show_version, [], _('hg version')),
 }
