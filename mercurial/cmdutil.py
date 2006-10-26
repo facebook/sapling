@@ -138,19 +138,12 @@ def matchpats(repo, pats=[], opts={}, head=''):
     return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
                            opts.get('exclude'), head)
 
-def makewalk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
+def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
     files, matchfn, anypats = matchpats(repo, pats, opts, head)
     exact = dict(zip(files, files))
-    def walk():
-        for src, fn in repo.walk(node=node, files=files, match=matchfn,
-                                 badmatch=badmatch):
-            yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
-    return files, matchfn, walk()
-
-def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
-    files, matchfn, results = makewalk(repo, pats, opts, node, head, badmatch)
-    for r in results:
-        yield r
+    for src, fn in repo.walk(node=node, files=files, match=matchfn,
+                             badmatch=badmatch):
+        yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     if added is None or removed is None:
