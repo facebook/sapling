@@ -8,7 +8,7 @@ hg - Mercurial source code management system
 
 SYNOPSIS
 --------
-'hg' [-v -d -q -y] <command> [command options] [files]
+'hg' [global option]... <command> [command/global option]... [argument]...
 
 DESCRIPTION
 -----------
