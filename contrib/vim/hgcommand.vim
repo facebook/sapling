@@ -372,7 +372,7 @@ function! s:HGGetStatusVars(revisionVar, branchVar, repositoryVar)
       let revision="ADDED"
     else
       " The file is tracked, we can try to get is revision number
-      let hgCommand = <SID>HGGetOption("HGCommandHGExec", "hg") . " parents -b  "
+      let hgCommand = <SID>HGGetOption("HGCommandHGExec", "hg") . " parents "
       let statustext=system(hgCommand)
       if(v:shell_error)
           return ""
