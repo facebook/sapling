@@ -326,21 +326,18 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
 
     return fuzz
 
-def diffopts(ui, opts={}):
+def diffopts(ui, opts={}, untrusted=False):
+    def get(key, name=None):
+        return (opts.get(key) or
+                ui.configbool('diff', name or key, None, untrusted=untrusted))
     return mdiff.diffopts(
         text=opts.get('text'),
-        git=(opts.get('git') or
-                  ui.configbool('diff', 'git', None)),
-        nodates=(opts.get('nodates') or
-                  ui.configbool('diff', 'nodates', None)),
-        showfunc=(opts.get('show_function') or
-                  ui.configbool('diff', 'showfunc', None)),
-        ignorews=(opts.get('ignore_all_space') or
-                  ui.configbool('diff', 'ignorews', None)),
-        ignorewsamount=(opts.get('ignore_space_change') or
-                        ui.configbool('diff', 'ignorewsamount', None)),
-        ignoreblanklines=(opts.get('ignore_blank_lines') or
-                          ui.configbool('diff', 'ignoreblanklines', None)))
+        git=get('git'),
+        nodates=get('nodates'),
+        showfunc=get('show_function', 'showfunc'),
+        ignorews=get('ignore_all_space', 'ignorews'),
+        ignorewsamount=get('ignore_space_change', 'ignorewsamount'),
+        ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'))
 
 def updatedir(ui, repo, patches, wlock=None):
     '''Update dirstate after patch application according to metadata'''
