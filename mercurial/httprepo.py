@@ -339,7 +339,7 @@ class httprepository(remoterepository):
             try:
                 rfp = self.do_cmd(
                     'unbundle', data=fp,
-                    headers={'content-length': length,
+                    headers={'content-length': str(length),
                              'content-type': 'application/octet-stream'},
                     heads=' '.join(map(hex, heads)))
                 try:
