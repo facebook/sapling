@@ -373,6 +373,7 @@ class dirstate(object):
             files = [self.root]
             dc = self.map.copy()
         else:
+            files = util.unique(files)
             dc = self.filterfiles(files)
 
         def imatch(file_):
@@ -431,12 +432,12 @@ class dirstate(object):
 
         # step one, find all files that match our criteria
         files.sort()
-        for ff in util.unique(files):
+        for ff in files:
+            nf = util.normpath(ff)
             f = self.wjoin(ff)
             try:
                 st = os.lstat(f)
             except OSError, inst:
-                nf = util.normpath(ff)
                 found = False
                 for fn in dc:
                     if nf == fn or (fn.startswith(nf) and fn[len(nf)] == '/'):
@@ -457,14 +458,11 @@ class dirstate(object):
                 for e in sorted_:
                     yield e
             else:
-                ff = util.normpath(ff)
-                if seen(ff):
-                    continue
-                if match(ff):
+                if not seen(nf) and match(nf):
                     if self.supported_type(ff, st, verbose=True):
-                        yield 'f', ff, st
+                        yield 'f', nf, st
                     elif ff in dc:
-                        yield 'm', ff, st
+                        yield 'm', nf, st
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
