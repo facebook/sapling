@@ -350,45 +350,38 @@ class dirstate(object):
                 kind))
         return False
 
-    def statwalk(self, files=None, match=util.always, dc=None, ignored=False,
+    def walk(self, files=None, match=util.always, badmatch=None):
+        # filter out the stat
+        for src, f, st in self.statwalk(files, match, badmatch=badmatch):
+            yield src, f
+
+    def statwalk(self, files=None, match=util.always, ignored=False,
                  badmatch=None):
+        '''
+        walk recursively through the directory tree, finding all files
+        matched by the match function
+
+        results are yielded in a tuple (src, filename, st), where src
+        is one of:
+        'f' the file was found in the directory tree
+        'm' the file was only in the dirstate and not in the tree
+        and st is the stat result if the file was found in the directory.
+        '''
         self.lazyread()
 
         # walk all files by default
         if not files:
             files = [self.root]
-            if not dc:
-                dc = self.map.copy()
-        elif not dc:
+            dc = self.map.copy()
+        else:
             dc = self.filterfiles(files)
 
-        def statmatch(file_, stat):
+        def imatch(file_):
             file_ = util.pconvert(file_)
             if not ignored and file_ not in dc and self.ignore(file_):
                 return False
             return match(file_)
 
-        return self.walkhelper(files=files, statmatch=statmatch, dc=dc,
-                               badmatch=badmatch)
-
-    def walk(self, files=None, match=util.always, dc=None, badmatch=None):
-        # filter out the stat
-        for src, f, st in self.statwalk(files, match, dc, badmatch=badmatch):
-            yield src, f
-
-    # walk recursively through the directory tree, finding all files
-    # matched by the statmatch function
-    #
-    # results are yielded in a tuple (src, filename, st), where src
-    # is one of:
-    # 'f' the file was found in the directory tree
-    # 'm' the file was only in the dirstate and not in the tree
-    # and st is the stat result if the file was found in the directory.
-    #
-    # dc is an optional arg for the current dirstate.  dc is not modified
-    # directly by this function, but might be modified by your statmatch call.
-    #
-    def walkhelper(self, files, statmatch, dc, badmatch=None):
         # self.root may end with a path separator when self.root == '/'
         common_prefix_len = len(self.root)
         if not self.root.endswith('/'):
@@ -421,11 +414,11 @@ class dirstate(object):
                     st = os.lstat(p)
                     if stat.S_ISDIR(st.st_mode):
                         ds = os.path.join(nd, f +'/')
-                        if statmatch(ds, st):
+                        if imatch(ds):
                             work.append(p)
-                        if statmatch(np, st) and np in dc:
+                        if imatch(np) and np in dc:
                             yield 'm', np, st
-                    elif statmatch(np, st):
+                    elif imatch(np):
                         if self.supported_type(np, st):
                             yield 'f', np, st
                         elif np in dc:
@@ -454,7 +447,7 @@ class dirstate(object):
                         self.ui.warn('%s: %s\n' % (
                             util.pathto(self.getcwd(), ff),
                             inst.strerror))
-                    elif badmatch and badmatch(ff) and statmatch(ff, None):
+                    elif badmatch and badmatch(ff) and imatch(ff):
                         yield 'b', ff, None
                 continue
             if stat.S_ISDIR(st.st_mode):
@@ -468,7 +461,7 @@ class dirstate(object):
                 if seen(ff):
                     continue
                 self.blockignore = True
-                if statmatch(ff, st):
+                if imatch(ff):
                     if self.supported_type(ff, st, verbose=True):
                         yield 'f', ff, st
                     elif ff in dc:
@@ -480,7 +473,7 @@ class dirstate(object):
         ks = dc.keys()
         ks.sort()
         for k in ks:
-            if not seen(k) and (statmatch(k, None)):
+            if not seen(k) and imatch(k):
                 yield 'm', k, None
 
     def status(self, files=None, match=util.always, list_ignored=False,
