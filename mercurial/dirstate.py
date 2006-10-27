@@ -365,6 +365,8 @@ class dirstate(object):
         is one of:
         'f' the file was found in the directory tree
         'm' the file was only in the dirstate and not in the tree
+        'b' file was not found and matched badmatch
+
         and st is the stat result if the file was found in the directory.
         '''
         self.lazyread()
