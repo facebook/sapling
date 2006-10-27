@@ -134,7 +134,7 @@ _hg_tags() {
 }
 
 _hg_status() {
-  status_files=(${(ps:\0:)"$(_hg_cmd status -0n$1 .)"})
+  status_files=(${(ps:\0:)"$(_hg_cmd status -0n$1 . 2>/dev/null)"})
 }
 
 _hg_unknown() {
