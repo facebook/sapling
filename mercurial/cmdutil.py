@@ -140,7 +140,7 @@ def matchpats(repo, pats=[], opts={}, head=''):
 
 def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
     files, matchfn, anypats = matchpats(repo, pats, opts, head)
-    exact = dict(zip(files, files))
+    exact = dict.fromkeys(files)
     for src, fn in repo.walk(node=node, files=files, match=matchfn,
                              badmatch=badmatch):
         yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact

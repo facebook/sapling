@@ -106,7 +106,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
 
     if not slowpath and not files:
         # No files, no patterns.  Display all revs.
-        wanted = dict(zip(revs, revs))
+        wanted = dict.fromkeys(revs)
     copies = []
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
@@ -210,7 +210,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         ff = followfilter()
         stop = min(revs[0], revs[-1])
         for x in xrange(rev, stop-1, -1):
-            if ff.match(x) and wanted.has_key(x):
+            if ff.match(x) and x in wanted:
                 del wanted[x]
 
     def iterate():
