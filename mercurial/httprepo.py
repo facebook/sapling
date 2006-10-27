@@ -275,8 +275,7 @@ class httprepository(remoterepository):
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            self.ui.warn(_("unexpected response:\n") + d[:400] + "\n...\n")
-            raise
+            raise util.UnexpectedOutput(_("unexpected response:"), d)
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -285,8 +284,7 @@ class httprepository(remoterepository):
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            self.ui.warn(_("unexpected response:\n") + d[:400] + "\n...\n")
-            raise
+            raise util.UnexpectedOutput(_("unexpected response:"), d)
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
@@ -295,8 +293,7 @@ class httprepository(remoterepository):
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
-            self.ui.warn(_("unexpected response:\n") + d[:400] + "\n...\n")
-            raise
+            raise util.UnexpectedOutput(_("unexpected response:"), d)
 
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
