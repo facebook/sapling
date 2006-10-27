@@ -952,6 +952,9 @@ def shortuser(user):
     f = user.find(' ')
     if f >= 0:
         user = user[:f]
+    f = user.find('.')
+    if f >= 0:
+        user = user[:f]
     return user
 
 def walkrepos(path):
