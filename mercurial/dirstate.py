@@ -25,7 +25,6 @@ class dirstate(object):
         self.dirs = None
         self.copymap = {}
         self.ignorefunc = None
-        self.blockignore = False
 
     def wjoin(self, f):
         return os.path.join(self.root, f)
@@ -98,8 +97,6 @@ class dirstate(object):
         '''default match function used by dirstate and
         localrepository.  this honours the repository .hgignore file
         and any other files specified in the [ui] section of .hgrc.'''
-        if self.blockignore:
-            return False
         if not self.ignorefunc:
             ignore = self.hgignore()
             allpats = []
@@ -379,10 +376,11 @@ class dirstate(object):
             dc = self.filterfiles(files)
 
         def imatch(file_):
-            file_ = util.pconvert(file_)
-            if not ignored and file_ not in dc and self.ignore(file_):
+            if file_ not in dc and self.ignore(file_):
                 return False
             return match(file_)
+
+        if ignored: imatch = match
 
         # self.root may end with a path separator when self.root == '/'
         common_prefix_len = len(self.root)
@@ -415,7 +413,7 @@ class dirstate(object):
                     # don't trip over symlinks
                     st = os.lstat(p)
                     if stat.S_ISDIR(st.st_mode):
-                        ds = os.path.join(nd, f +'/')
+                        ds = util.pconvert(os.path.join(nd, f +'/'))
                         if imatch(ds):
                             work.append(p)
                         if imatch(np) and np in dc:
@@ -449,7 +447,7 @@ class dirstate(object):
                         self.ui.warn('%s: %s\n' % (
                             util.pathto(self.getcwd(), ff),
                             inst.strerror))
-                    elif badmatch and badmatch(ff) and imatch(ff):
+                    elif badmatch and badmatch(ff) and imatch(nf):
                         yield 'b', ff, None
                 continue
             if stat.S_ISDIR(st.st_mode):
@@ -462,13 +460,11 @@ class dirstate(object):
                 ff = util.normpath(ff)
                 if seen(ff):
                     continue
-                self.blockignore = True
-                if imatch(ff):
+                if match(ff):
                     if self.supported_type(ff, st, verbose=True):
                         yield 'f', ff, st
                     elif ff in dc:
                         yield 'm', ff, st
-                self.blockignore = False
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
