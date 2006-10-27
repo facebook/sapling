@@ -504,13 +504,13 @@ _hg_cmd_view() {
 # MQ
 _hg_qseries() {
   typeset -a patches
-  patches=($(_hg_cmd qseries))
+  patches=($(_hg_cmd qseries 2>/dev/null))
   (( $#patches )) && _describe -t hg-patches 'patches' patches
 }
 
 _hg_qapplied() {
   typeset -a patches
-  patches=($(_hg_cmd qapplied))
+  patches=($(_hg_cmd qapplied 2>/dev/null))
   if (( $#patches ))
   then
     patches+=(qbase qtip)
@@ -520,7 +520,7 @@ _hg_qapplied() {
 
 _hg_qunapplied() {
   typeset -a patches
-  patches=($(_hg_cmd qunapplied))
+  patches=($(_hg_cmd qunapplied 2>/dev/null))
   (( $#patches )) && _describe -t hg-unapplied-patches 'unapplied patches' patches
 }
 
@@ -528,7 +528,7 @@ _hg_qguards() {
   typeset -a guards
   local guard
   compset -P "+|-"
-  _hg_cmd qselect -s | while read guard
+  _hg_cmd qselect -s 2>/dev/null | while read guard
   do
     guards+=(${guard#(+|-)})
   done
