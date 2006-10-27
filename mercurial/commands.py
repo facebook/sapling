@@ -2115,10 +2115,17 @@ def pull(ui, repo, source="default", **opts):
 
     Valid URLs are of the form:
 
-      local/filesystem/path
+      local/filesystem/path (or file://local/filesystem/path)
       http://[user@]host[:port]/[path]
       https://[user@]host[:port]/[path]
       ssh://[user@]host[:port]/[path]
+      static-http://host[:port]/[path]
+
+    Paths in the local filesystem can either point to Mercurial
+    repositories or to bundle files (as created by 'hg bundle' or
+    'hg incoming --bundle'). The static-http:// protocol, albeit slow,
+    allows access to a Mercurial repository where you simply use a web
+    server to publish the .hg directory as static content.
 
     Some notes about using SSH with Mercurial:
     - SSH requires an accessible shell account on the destination machine
@@ -2166,14 +2173,16 @@ def push(ui, repo, dest=None, **opts):
 
     Valid URLs are of the form:
 
-      local/filesystem/path
+      local/filesystem/path (or file://local/filesystem/path)
       ssh://[user@]host[:port]/[path]
+      http://[user@]host[:port]/[path]
+      https://[user@]host[:port]/[path]
 
     Look at the help text for the pull command for important details
     about ssh:// URLs.
 
-    Pushing to http:// and https:// URLs is possible, too, if this
-    feature is enabled on the remote Mercurial server.
+    Pushing to http:// and https:// URLs is only possible, if this
+    feature is explicitly enabled on the remote Mercurial server.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     setremoteconfig(ui, opts)
