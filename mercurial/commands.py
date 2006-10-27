@@ -1491,8 +1491,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             incrementing = rev
             matches.clear()
         elif st == 'add':
-            change = repo.changelog.read(repo.lookup(str(rev)))
-            mf = repo.manifest.read(change[0])
+            mf = repo.changectx(rev).manifest()
             matches[rev] = {}
             for fn in fns:
                 if fn in skip:
