@@ -3522,6 +3522,15 @@ def dispatch(args):
             u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
         else:
             u.warn(_("abort: %s\n") % inst.strerror)
+    except util.UnexpectedOutput, inst:
+        u.warn(_("abort: %s") % inst[0])
+        if not isinstance(inst[1], basestring):
+            u.warn(" %r\n" % (inst[1],))
+        elif not inst[1]:
+            u.warn(_(" empty string\n"))
+        else:
+            u.warn("\n%r%s\n" %
+                    (inst[1][:400], len(inst[1]) > 400 and '...' or ''))
     except util.Abort, inst:
         u.warn(_("abort: %s\n") % inst)
     except TypeError, inst:

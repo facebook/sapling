@@ -1783,17 +1783,32 @@ class localrepository(repo.repository):
 
     def stream_in(self, remote):
         fp = remote.stream_out()
-        resp = int(fp.readline())
+        l = fp.readline()
+        try:
+            resp = int(l)
+        except ValueError:
+            raise util.UnexpectedOutput(
+                _('Unexpected response from remote server:'), l)
         if resp != 0:
             raise util.Abort(_('operation forbidden by server'))
         self.ui.status(_('streaming all changes\n'))
-        total_files, total_bytes = map(int, fp.readline().split(' ', 1))
+        l = fp.readline()
+        try:
+            total_files, total_bytes = map(int, l.split(' ', 1))
+        except ValueError, TypeError:
+            raise util.UnexpectedOutput(
+                _('Unexpected response from remote server:'), l)
         self.ui.status(_('%d files to transfer, %s of data\n') %
                        (total_files, util.bytecount(total_bytes)))
         start = time.time()
         for i in xrange(total_files):
-            name, size = fp.readline().split('\0', 1)
-            size = int(size)
+            l = fp.readline()
+            try:
+                name, size = l.split('\0', 1)
+                size = int(size)
+            except ValueError, TypeError:
+                raise util.UnexpectedOutput(
+                    _('Unexpected response from remote server:'), l)
             self.ui.debug('adding %s (%s)\n' % (name, util.bytecount(size)))
             ofp = self.sopener(name, 'w')
             for chunk in util.filechunkiter(fp, limit=size):
