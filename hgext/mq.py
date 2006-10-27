@@ -1015,9 +1015,9 @@ class queue:
                     del mm[mm.index(x)]
                 dd.append(x)
 
-            m = list(util.unique(mm))
-            r = list(util.unique(dd))
-            a = list(util.unique(aa))
+            m = util.unique(mm)
+            r = util.unique(dd)
+            a = util.unique(aa)
             filelist = filter(matchfn, util.unique(m + r + a))
             if opts.get('git'):
                 self.diffopts().git = True
