@@ -714,6 +714,18 @@ class localrepository(repo.repository):
         return n
 
     def walk(self, node=None, files=[], match=util.always, badmatch=None):
+        '''
+        walk recursively through the directory tree or a given
+        changeset, finding all files matched by the match
+        function
+
+        results are yielded in a tuple (src, filename), where src
+        is one of:
+        'f' the file was found in the directory tree
+        'm' the file was only in the dirstate and not in the tree
+        'b' file was not found and matched badmatch
+        '''
+
         if node:
             fdict = dict.fromkeys(files)
             for fn in self.manifest.read(self.changelog.read(node)[0]):

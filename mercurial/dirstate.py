@@ -25,7 +25,6 @@ class dirstate(object):
         self.dirs = None
         self.copymap = {}
         self.ignorefunc = None
-        self.blockignore = False
 
     def wjoin(self, f):
         return os.path.join(self.root, f)
@@ -98,8 +97,6 @@ class dirstate(object):
         '''default match function used by dirstate and
         localrepository.  this honours the repository .hgignore file
         and any other files specified in the [ui] section of .hgrc.'''
-        if self.blockignore:
-            return False
         if not self.ignorefunc:
             ignore = self.hgignore()
             allpats = []
@@ -350,45 +347,42 @@ class dirstate(object):
                 kind))
         return False
 
-    def statwalk(self, files=None, match=util.always, dc=None, ignored=False,
+    def walk(self, files=None, match=util.always, badmatch=None):
+        # filter out the stat
+        for src, f, st in self.statwalk(files, match, badmatch=badmatch):
+            yield src, f
+
+    def statwalk(self, files=None, match=util.always, ignored=False,
                  badmatch=None):
+        '''
+        walk recursively through the directory tree, finding all files
+        matched by the match function
+
+        results are yielded in a tuple (src, filename, st), where src
+        is one of:
+        'f' the file was found in the directory tree
+        'm' the file was only in the dirstate and not in the tree
+        'b' file was not found and matched badmatch
+
+        and st is the stat result if the file was found in the directory.
+        '''
         self.lazyread()
 
         # walk all files by default
         if not files:
             files = [self.root]
-            if not dc:
-                dc = self.map.copy()
-        elif not dc:
+            dc = self.map.copy()
+        else:
+            files = util.unique(files)
             dc = self.filterfiles(files)
 
-        def statmatch(file_, stat):
-            file_ = util.pconvert(file_)
-            if not ignored and file_ not in dc and self.ignore(file_):
+        def imatch(file_):
+            if file_ not in dc and self.ignore(file_):
                 return False
             return match(file_)
 
-        return self.walkhelper(files=files, statmatch=statmatch, dc=dc,
-                               badmatch=badmatch)
+        if ignored: imatch = match
 
-    def walk(self, files=None, match=util.always, dc=None, badmatch=None):
-        # filter out the stat
-        for src, f, st in self.statwalk(files, match, dc, badmatch=badmatch):
-            yield src, f
-
-    # walk recursively through the directory tree, finding all files
-    # matched by the statmatch function
-    #
-    # results are yielded in a tuple (src, filename, st), where src
-    # is one of:
-    # 'f' the file was found in the directory tree
-    # 'm' the file was only in the dirstate and not in the tree
-    # and st is the stat result if the file was found in the directory.
-    #
-    # dc is an optional arg for the current dirstate.  dc is not modified
-    # directly by this function, but might be modified by your statmatch call.
-    #
-    def walkhelper(self, files, statmatch, dc, badmatch=None):
         # self.root may end with a path separator when self.root == '/'
         common_prefix_len = len(self.root)
         if not self.root.endswith('/'):
@@ -420,12 +414,12 @@ class dirstate(object):
                     # don't trip over symlinks
                     st = os.lstat(p)
                     if stat.S_ISDIR(st.st_mode):
-                        ds = os.path.join(nd, f +'/')
-                        if statmatch(ds, st):
+                        ds = util.pconvert(os.path.join(nd, f +'/'))
+                        if imatch(ds):
                             work.append(p)
-                        if statmatch(np, st) and np in dc:
+                        if imatch(np) and np in dc:
                             yield 'm', np, st
-                    elif statmatch(np, st):
+                    elif imatch(np):
                         if self.supported_type(np, st):
                             yield 'f', np, st
                         elif np in dc:
@@ -438,12 +432,12 @@ class dirstate(object):
 
         # step one, find all files that match our criteria
         files.sort()
-        for ff in util.unique(files):
+        for ff in files:
+            nf = util.normpath(ff)
             f = self.wjoin(ff)
             try:
                 st = os.lstat(f)
             except OSError, inst:
-                nf = util.normpath(ff)
                 found = False
                 for fn in dc:
                     if nf == fn or (fn.startswith(nf) and fn[len(nf)] == '/'):
@@ -454,7 +448,7 @@ class dirstate(object):
                         self.ui.warn('%s: %s\n' % (
                             util.pathto(self.getcwd(), ff),
                             inst.strerror))
-                    elif badmatch and badmatch(ff) and statmatch(ff, None):
+                    elif badmatch and badmatch(ff) and imatch(nf):
                         yield 'b', ff, None
                 continue
             if stat.S_ISDIR(st.st_mode):
@@ -464,23 +458,18 @@ class dirstate(object):
                 for e in sorted_:
                     yield e
             else:
-                ff = util.normpath(ff)
-                if seen(ff):
-                    continue
-                self.blockignore = True
-                if statmatch(ff, st):
+                if not seen(nf) and match(nf):
                     if self.supported_type(ff, st, verbose=True):
-                        yield 'f', ff, st
+                        yield 'f', nf, st
                     elif ff in dc:
-                        yield 'm', ff, st
-                self.blockignore = False
+                        yield 'm', nf, st
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
         ks = dc.keys()
         ks.sort()
         for k in ks:
-            if not seen(k) and (statmatch(k, None)):
+            if not seen(k) and imatch(k):
                 yield 'm', k, None
 
     def status(self, files=None, match=util.always, list_ignored=False,

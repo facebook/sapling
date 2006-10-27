@@ -13,43 +13,25 @@ demandload(globals(), 'os sys')
 
 revrangesep = ':'
 
-def revfix(repo, val, defval):
-    '''turn user-level id of changeset into rev number.
-    user-level id can be tag, changeset, rev number, or negative rev
-    number relative to number of revs (-1 is tip, etc).'''
-    if not val:
-        return defval
-    try:
-        num = int(val)
-        if str(num) != val:
-            raise ValueError
-        if num < 0:
-            num += repo.changelog.count()
-        if num < 0:
-            num = 0
-        elif num >= repo.changelog.count():
-            raise ValueError
-    except ValueError:
-        try:
-            num = repo.changelog.rev(repo.lookup(val))
-        except KeyError:
-            raise util.Abort(_('invalid revision identifier %s') % val)
-    return num
-
 def revpair(ui, repo, revs):
     '''return pair of nodes, given list of revisions. second item can
     be None, meaning use working dir.'''
+
+    def revfix(repo, val, defval):
+        if not val and val != 0:
+            val = defval
+        return repo.lookup(val)
+
     if not revs:
         return repo.dirstate.parents()[0], None
     end = None
     if len(revs) == 1:
-        start = revs[0]
-        if revrangesep in start:
-            start, end = start.split(revrangesep, 1)
+        if revrangesep in revs[0]:
+            start, end = revs[0].split(revrangesep, 1)
             start = revfix(repo, start, 0)
             end = revfix(repo, end, repo.changelog.count() - 1)
         else:
-            start = revfix(repo, start, None)
+            start = revfix(repo, revs[0], None)
     elif len(revs) == 2:
         if revrangesep in revs[0] or revrangesep in revs[1]:
             raise util.Abort(_('too many revisions specified'))
@@ -57,12 +39,17 @@ def revpair(ui, repo, revs):
         end = revfix(repo, revs[1], None)
     else:
         raise util.Abort(_('too many revisions specified'))
-    if end is not None: end = repo.lookup(str(end))
-    return repo.lookup(str(start)), end
+    return start, end
 
 def revrange(ui, repo, revs):
     """Yield revision as strings from a list of revision specifications."""
-    seen = {}
+
+    def revfix(repo, val, defval):
+        if not val and val != 0:
+            return defval
+        return repo.changelog.rev(repo.lookup(val))
+
+    seen, l = {}, []
     for spec in revs:
         if revrangesep in spec:
             start, end = spec.split(revrangesep, 1)
@@ -73,13 +60,15 @@ def revrange(ui, repo, revs):
                 if rev in seen:
                     continue
                 seen[rev] = 1
-                yield str(rev)
+                l.append(rev)
         else:
             rev = revfix(repo, spec, None)
             if rev in seen:
                 continue
             seen[rev] = 1
-            yield str(rev)
+            l.append(rev)
+
+    return l
 
 def make_filename(repo, pat, node,
                   total=None, seqno=None, revwidth=None, pathname=None):
@@ -149,19 +138,12 @@ def matchpats(repo, pats=[], opts={}, head=''):
     return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
                            opts.get('exclude'), head)
 
-def makewalk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
-    files, matchfn, anypats = matchpats(repo, pats, opts, head)
-    exact = dict(zip(files, files))
-    def walk():
-        for src, fn in repo.walk(node=node, files=files, match=matchfn,
-                                 badmatch=badmatch):
-            yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
-    return files, matchfn, walk()
-
 def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
-    files, matchfn, results = makewalk(repo, pats, opts, node, head, badmatch)
-    for r in results:
-        yield r
+    files, matchfn, anypats = matchpats(repo, pats, opts, head)
+    exact = dict.fromkeys(files)
+    for src, fn in repo.walk(node=node, files=files, match=matchfn,
+                             badmatch=badmatch):
+        yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     if added is None or removed is None:

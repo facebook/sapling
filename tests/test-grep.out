@@ -9,7 +9,7 @@ port:2:1:+:spam:export
 port:2:2:+:spam:vaportight
 port:2:3:+:spam:import/export
 port:1:2:+:eggs:export
-port:0:1:+:eggs:import
+port:0:1:+:spam:import
 port:4:import/export
 % follow
 port:0:import
@@ -22,4 +22,4 @@ port:2:1:+:spam:export
 port:2:2:+:spam:vaportight
 port:2:3:+:spam:import/export
 port:1:2:+:eggs:export
-port:0:1:+:eggs:import
+port:0:1:+:spam:import
