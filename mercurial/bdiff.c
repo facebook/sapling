@@ -13,11 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __hpux
-#define inline
-#endif
-
-#ifdef __SUNPRO_C
+#if defined __hpux || defined __SUNPRO_C || defined _AIX
 # define inline
 #endif
 
