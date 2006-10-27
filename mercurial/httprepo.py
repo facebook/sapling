@@ -221,6 +221,12 @@ class httprepository(remoterepository):
         qs = '?%s' % urllib.urlencode(q)
         cu = "%s%s" % (self._url, qs)
         try:
+            if data:
+                if isinstance(data, file):
+                    # urllib2 needs string or buffer when using a proxy
+                    data.seek(0)
+                    data = data.read()
+                self.ui.debug(_("sending %d bytes\n") % len(data))
             resp = urllib2.urlopen(urllib2.Request(cu, data, headers))
         except urllib2.HTTPError, inst:
             if inst.code == 401:
