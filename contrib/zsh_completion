@@ -154,18 +154,34 @@ _hg_addremove() {
     'files:missing files:_hg_missing'
 }
 
+_hg_urls() {
+  if compset -P bundle://
+  then
+    _files
+  elif [[ -prefix *: ]]
+  then
+    _urls
+  else
+    local expl
+    compset -S '[^:]*'
+    _wanted url-schemas expl 'URL schema' compadd -S '' - \
+      http:// https:// ssh:// bundle://
+  fi
+}
+
 _hg_paths() {
   typeset -a paths pnames
   _hg_cmd paths 2> /dev/null | while read -A pnames
   do
     paths+=($pnames[1])
   done
-  (( $#paths )) && _describe -t urls 'repository aliases' paths
+  (( $#paths )) && _describe -t path-aliases 'repository alias' paths
 }
 
 _hg_remote() {
-  _alternative 'urls:repository alias:_hg_paths' \
-    'directories:directory:_files -/'
+  _alternative 'path-aliases:repository alias:_hg_paths' \
+    'directories:directory:_files -/' \
+    'urls:URL schema:_hg_urls'
 }
 
 # Common options
