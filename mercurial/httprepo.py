@@ -218,8 +218,8 @@ class httprepository(remoterepository):
         self.ui.debug(_("sending %s command\n") % cmd)
         q = {"cmd": cmd}
         q.update(args)
-        qs = urllib.urlencode(q)
-        cu = "%s?%s" % (self._url, qs)
+        qs = '?%s' % urllib.urlencode(q)
+        cu = "%s%s" % (self._url, qs)
         try:
             resp = urllib2.urlopen(urllib2.Request(cu, data, headers))
         except urllib2.HTTPError, inst:
@@ -233,6 +233,8 @@ class httprepository(remoterepository):
         except IndexError:
             # this only happens with Python 2.3, later versions raise URLError
             raise util.Abort(_('http error, possibly caused by proxy setting'))
+        # record the url we got redirected to
+        self._url = resp.geturl().rstrip(qs)
         try:
             proto = resp.getheader('content-type')
         except AttributeError:
