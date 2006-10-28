@@ -230,7 +230,13 @@ def walkchangerevs(ui, repo, pats, change, opts):
             srevs = list(nrevs)
             srevs.sort()
             for rev in srevs:
-                fns = fncache.get(rev) or filter(matchfn, change(rev)[3])
+                fns = fncache.get(rev)
+                if not fns:
+                    def fns_generator():
+                        for f in change(rev)[3]:
+                            if matchfn(f):
+                                yield f
+                    fns = fns_generator()
                 yield 'add', rev, fns
             for rev in nrevs:
                 yield 'iter', rev, None
