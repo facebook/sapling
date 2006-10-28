@@ -240,8 +240,12 @@ class httprepository(remoterepository):
             # this only happens with Python 2.3, later versions raise URLError
             raise util.Abort(_('http error, possibly caused by proxy setting'))
         # record the url we got redirected to
-        if resp.geturl().endswith(qs):
-            self._url = resp.geturl()[:-len(qs)]
+        resp_url = resp.geturl()
+        if resp_url.endswith(qs):
+            resp_url = resp_url[:-len(qs)]
+        if self._url != resp_url:
+            self.ui.status(_('real URL is %s\n') % resp_url)
+            self._url = resp_url
         try:
             proto = resp.getheader('content-type')
         except AttributeError:
