@@ -320,8 +320,8 @@ class changeset_printer(object):
 
         hexfunc = self.ui.debugflag and hex or short
 
-        parents = [(log.rev(p), hexfunc(p)) for p in log.parents(changenode)
-                   if self.ui.debugflag or p != nullid]
+        parents = [(p, hexfunc(log.node(p))) for p in log.parentrevs(rev)
+                   if self.ui.debugflag or p != -1]
         if (not self.ui.debugflag and len(parents) == 1 and
             parents[0][0] == rev-1):
             parents = []
@@ -1886,8 +1886,7 @@ def log(ui, repo, *pats, **opts):
         elif st == 'add':
             du.bump(rev)
             changenode = repo.changelog.node(rev)
-            parents = [p for p in repo.changelog.parents(changenode)
-                       if p != nullid]
+            parents = [p for p in repo.changelog.parentrevs(rev) if p != -1]
             if opts['no_merges'] and len(parents) == 2:
                 continue
             if opts['only_merges'] and len(parents) != 2:
@@ -1918,7 +1917,11 @@ def log(ui, repo, *pats, **opts):
                         copies.append((fn, rename[0]))
             displayer.show(rev, brinfo=br, copies=copies)
             if opts['patch']:
-                prev = (parents and parents[0]) or nullid
+                if parents:
+                    prev = parents[0]
+                else:
+                    prev = -1
+                prev = repo.changelog.node(prev)
                 patch.diff(repo, prev, changenode, match=matchfn, fp=du)
                 du.write("\n\n")
         elif st == 'iter':
