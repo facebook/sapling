@@ -1802,6 +1802,9 @@ def log(ui, repo, *pats, **opts):
             self.ui = ui
             self.hunk = {}
             self.header = {}
+            self.quiet = ui.quiet
+            self.verbose = ui.verbose
+            self.debugflag = ui.debugflag
         def bump(self, rev):
             self.rev = rev
             self.hunk[rev] = []
