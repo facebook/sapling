@@ -329,9 +329,9 @@ class changeset_printer(object):
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
 
         if branch:
-            self.ui.status(_("branch:      %s\n") % branch)
+            self.ui.write(_("branch:      %s\n") % branch)
         for tag in self.repo.nodetags(changenode):
-            self.ui.status(_("tag:         %s\n") % tag)
+            self.ui.write(_("tag:         %s\n") % tag)
         for parent in parents:
             self.ui.write(_("parent:      %d:%s\n") % parent)
 
@@ -339,40 +339,41 @@ class changeset_printer(object):
             br = brinfo[changenode]
             self.ui.write(_("branch:      %s\n") % " ".join(br))
 
-        self.ui.debug(_("manifest:    %d:%s\n") %
-                      (self.repo.manifest.rev(changes[0]), hex(changes[0])))
-        self.ui.status(_("user:        %s\n") % changes[1])
-        self.ui.status(_("date:        %s\n") % date)
+        if self.ui.debugflag:
+            self.ui.write(_("manifest:    %d:%s\n") %
+                          (self.repo.manifest.rev(changes[0]), hex(changes[0])))
+        self.ui.write(_("user:        %s\n") % changes[1])
+        self.ui.write(_("date:        %s\n") % date)
 
         if self.ui.debugflag:
             files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
             for key, value in zip([_("files:"), _("files+:"), _("files-:")],
                                   files):
                 if value:
-                    self.ui.note("%-12s %s\n" % (key, " ".join(value)))
-        elif changes[3]:
-            self.ui.note(_("files:       %s\n") % " ".join(changes[3]))
-        if copies:
+                    self.ui.write("%-12s %s\n" % (key, " ".join(value)))
+        elif changes[3] and self.ui.verbose:
+            self.ui.write(_("files:       %s\n") % " ".join(changes[3]))
+        if copies and self.ui.verbose:
             copies = ['%s (%s)' % c for c in copies]
-            self.ui.note(_("copies:      %s\n") % ' '.join(copies))
+            self.ui.write(_("copies:      %s\n") % ' '.join(copies))
 
         if extra and self.ui.debugflag:
             extraitems = extra.items()
             extraitems.sort()
             for key, value in extraitems:
-                self.ui.debug(_("extra:       %s=%s\n")
+                self.ui.write(_("extra:       %s=%s\n")
                               % (key, value.encode('string_escape')))
 
         description = changes[4].strip()
         if description:
             if self.ui.verbose:
-                self.ui.status(_("description:\n"))
-                self.ui.status(description)
-                self.ui.status("\n\n")
+                self.ui.write(_("description:\n"))
+                self.ui.write(description)
+                self.ui.write("\n\n")
             else:
-                self.ui.status(_("summary:     %s\n") %
-                               description.splitlines()[0])
-        self.ui.status("\n")
+                self.ui.write(_("summary:     %s\n") %
+                              description.splitlines()[0])
+        self.ui.write("\n")
 
 def show_changeset(ui, repo, opts):
     """show one changeset using template or regular display.
