@@ -320,11 +320,13 @@ class changeset_printer(object):
 
         hexfunc = self.ui.debugflag and hex or short
 
-        parents = [(p, hexfunc(log.node(p))) for p in log.parentrevs(rev)
-                   if self.ui.debugflag or p != -1]
-        if (not self.ui.debugflag and len(parents) == 1 and
-            parents[0][0] == rev-1):
-            parents = []
+        parents = log.parentrevs(rev)
+        if not self.ui.debugflag:
+            parents = [p for p in parents if p != -1]
+            if len(parents) == 1 and parents[0] == rev-1:
+                parents = []
+        parents = [(p, hexfunc(log.node(p))) for p in parents]
+
 
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
 
@@ -1915,7 +1917,7 @@ def log(ui, repo, *pats, **opts):
                     rename = getrenamed(fn, rev, mf)
                     if rename:
                         copies.append((fn, rename[0]))
-            displayer.show(rev, brinfo=br, copies=copies)
+            displayer.show(rev, changenode, brinfo=br, copies=copies)
             if opts['patch']:
                 if parents:
                     prev = parents[0]
