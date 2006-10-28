@@ -1816,9 +1816,9 @@ def log(ui, repo, *pats, **opts):
             if not self.quiet:
                 self.write(*args)
         def write(self, *args):
-            self.hunk[self.rev].append(args)
+            self.hunk[self.rev].extend(args)
         def write_header(self, *args):
-            self.header[self.rev].append(args)
+            self.header[self.rev].extend(args)
         def debug(self, *args):
             if self.debugflag:
                 self.write(*args)
@@ -1927,12 +1927,10 @@ def log(ui, repo, *pats, **opts):
         elif st == 'iter':
             if count == limit: break
             if du.header[rev]:
-                for args in du.header[rev]:
-                    ui.write_header(*args)
+                ui.write_header(*du.header[rev])
             if du.hunk[rev]:
                 count += 1
-                for args in du.hunk[rev]:
-                    ui.write(*args)
+                ui.write(*du.hunk[rev])
 
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest
