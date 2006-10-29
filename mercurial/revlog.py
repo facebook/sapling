@@ -500,6 +500,8 @@ class revlog(object):
 
     def size(self, rev):
         """return the length of the uncompressed text for a given revision"""
+        if rev == nullrev:
+            return 0
         l = -1
         if self.version != REVLOGV0:
             l = self.index[rev][2]
