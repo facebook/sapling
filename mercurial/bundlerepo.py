@@ -59,7 +59,7 @@ class bundlerevlog(revlog.revlog):
             if not prev:
                 prev = p1
             # start, size, base is not used, link, p1, p2, delta ref
-            if self.version == 0:
+            if self.version == revlog.REVLOGV0:
                 e = (start, size, None, link, p1, p2, node)
             else:
                 e = (self.offset_type(start, 0), size, -1, None, link,
