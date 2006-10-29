@@ -332,10 +332,10 @@ class localrepository(repo.repository):
                     node, label = l.rstrip().split(" ", 1)
                     partial[label] = bin(node)
             else: # invalidate the cache
-                last, lrev = nullid, -1
+                last, lrev = nullid, nullrev
             f.close()
         except IOError:
-            last, lrev = nullid, -1
+            last, lrev = nullid, nullrev
         return partial, last, lrev
 
     def _writebranchcache(self, branches, tip, tiprev):

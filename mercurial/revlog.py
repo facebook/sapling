@@ -102,7 +102,7 @@ class lazyparser(object):
         self.datasize = size
         self.l = size/self.s
         self.index = [None] * self.l
-        self.map = {nullid: -1}
+        self.map = {nullid: nullrev}
         self.allmap = 0
         self.all = 0
         self.mapfind_count = 0
@@ -387,14 +387,14 @@ class revlog(object):
                 e[0] = self.offset_type(0, type)
                 self.index[0] = e
         else:
-            self.nodemap = { nullid: -1}
+            self.nodemap = {nullid: nullrev}
             self.index = []
 
 
     def parseindex(self, fp, st):
         s = struct.calcsize(self.indexformat)
         self.index = []
-        self.nodemap =  {nullid: -1}
+        self.nodemap =  {nullid: nullrev}
         inline = self.inlinedata()
         n = 0
         leftover = None
@@ -474,7 +474,7 @@ class revlog(object):
         except KeyError:
             raise RevlogError(_('%s: no node %s') % (self.indexfile, hex(node)))
     def linkrev(self, node):
-        return (node == nullid) and -1 or self.index[self.rev(node)][-4]
+        return (node == nullid) and nullrev or self.index[self.rev(node)][-4]
     def parents(self, node):
         if node == nullid: return (nullid, nullid)
         r = self.rev(node)
@@ -483,15 +483,15 @@ class revlog(object):
             return d
         return (self.node(d[0]), self.node(d[1]))
     def parentrevs(self, rev):
-        if rev == -1:
-            return (-1, -1)
+        if rev == nullrev:
+            return (nullrev, nullrev)
         d = self.index[rev][-3:-1]
         if self.version == REVLOGV0:
             return (self.rev(d[0]), self.rev(d[1]))
         return d
     def start(self, rev):
         if rev < 0:
-            return -1
+            return nullrev
         if self.version != REVLOGV0:
             return self.ngoffset(self.index[rev][0])
         return self.index[rev][0]
@@ -581,8 +581,8 @@ class revlog(object):
             lowestrev = min([self.rev(n) for n in roots])
         else:
             roots = [nullid] # Everybody's a descendent of nullid
-            lowestrev = -1
-        if (lowestrev == -1) and (heads is None):
+            lowestrev = nullrev
+        if (lowestrev == nullrev) and (heads is None):
             # We want _all_ the nodes!
             return ([self.node(r) for r in xrange(0, self.count())],
                     [nullid], list(self.heads()))
@@ -634,7 +634,7 @@ class revlog(object):
             # roots that are not ancestors.
 
             # If one of the roots was nullid, everything is included anyway.
-            if lowestrev > -1:
+            if lowestrev > nullrev:
                 # But, since we weren't, let's recompute the lowest rev to not
                 # include roots that aren't ancestors.
 
@@ -649,7 +649,7 @@ class revlog(object):
             else:
                 # We are descending from nullid, and don't need to care about
                 # any other roots.
-                lowestrev = -1
+                lowestrev = nullrev
                 roots = [nullid]
         # Transform our roots list into a 'set' (i.e. a dictionary where the
         # values don't matter.
@@ -665,7 +665,7 @@ class revlog(object):
         for r in xrange(max(lowestrev, 0), highestrev + 1):
             n = self.node(r)
             isdescendent = False
-            if lowestrev == -1:  # Everybody is a descendent of nullid
+            if lowestrev == nullrev:  # Everybody is a descendent of nullid
                 isdescendent = True
             elif n in descendents:
                 # n is already a descendent
@@ -1056,7 +1056,7 @@ class revlog(object):
         """calculate the least common ancestor of nodes a and b"""
 
         def parents(rev):
-            return [p for p in self.parentrevs(rev) if p != -1]
+            return [p for p in self.parentrevs(rev) if p != nullrev]
 
         c = ancestor.ancestor(self.rev(a), self.rev(b), parents)
         if c is None:
@@ -1113,7 +1113,7 @@ class revlog(object):
         t = r - 1
         node = None
 
-        base = prev = -1
+        base = prev = nullrev
         start = end = textlen = 0
         if r:
             end = self.end(t)

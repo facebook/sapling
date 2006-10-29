@@ -78,8 +78,8 @@ def catcommit(repo, n, prefix, changes=None):
     if not changes:
         changes = repo.changelog.read(n)
     print "tree %s" % (hg.short(changes[0]))
-    if i1 != -1: print "parent %s" % (h1)
-    if i2 != -1: print "parent %s" % (h2)
+    if i1 != hg.nullrev: print "parent %s" % (h1)
+    if i2 != hg.nullrev: print "parent %s" % (h2)
     date_ar = changes[2]
     date = int(float(date_ar[0]))
     lines = changes[4].splitlines()
@@ -241,10 +241,10 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
                 date = changes[2][0]
                 print "%s %s:%s" % (date, h, mask),
                 mask = is_reachable(want_sha1, reachable, p1)
-                if i1 != -1 and mask > 0:
+                if i1 != hg.nullrev and mask > 0:
                     print "%s:%s " % (h1, mask),
                 mask = is_reachable(want_sha1, reachable, p2)
-                if i2 != -1 and mask > 0:
+                if i2 != hg.nullrev and mask > 0:
                     print "%s:%s " % (h2, mask),
                 print ""
             if maxnr and count >= maxnr:

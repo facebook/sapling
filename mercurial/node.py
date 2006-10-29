@@ -10,6 +10,7 @@ of the GNU General Public License, incorporated herein by reference.
 from demandload import demandload
 demandload(globals(), "binascii")
 
+nullrev = -1
 nullid = "\0" * 20
 
 def hex(node):

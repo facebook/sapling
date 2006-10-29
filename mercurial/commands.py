@@ -116,7 +116,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 last = filelog.count() - 1
             else:
                 last = filelog.rev(node)
-            for i, window in increasing_windows(last, -1):
+            for i, window in increasing_windows(last, nullrev):
                 revs = []
                 for j in xrange(i - window, i + 1):
                     n = filelog.node(j)
@@ -157,7 +157,8 @@ def walkchangerevs(ui, repo, pats, change, opts):
 
         # The slow path checks files modified in every changeset.
         def changerevgen():
-            for i, window in increasing_windows(repo.changelog.count()-1, -1):
+            for i, window in increasing_windows(repo.changelog.count()-1,
+                                                nullrev):
                 for j in xrange(i - window, i + 1):
                     yield j, change(j)[3]
 
@@ -169,7 +170,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
 
     class followfilter:
         def __init__(self, onlyfirst=False):
-            self.startrev = -1
+            self.startrev = nullrev
             self.roots = []
             self.onlyfirst = onlyfirst
 
@@ -178,9 +179,10 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 if self.onlyfirst:
                     return repo.changelog.parentrevs(rev)[0:1]
                 else:
-                    return filter(lambda x: x != -1, repo.changelog.parentrevs(rev))
+                    return filter(lambda x: x != nullrev,
+                                  repo.changelog.parentrevs(rev))
 
-            if self.startrev == -1:
+            if self.startrev == nullrev:
                 self.startrev = rev
                 return True
 
@@ -322,7 +324,7 @@ class changeset_printer(object):
 
         parents = log.parentrevs(rev)
         if not self.ui.debugflag:
-            parents = [p for p in parents if p != -1]
+            parents = [p for p in parents if p != nullrev]
             if len(parents) == 1 and parents[0] == rev-1:
                 parents = []
         parents = [(p, hexfunc(log.node(p))) for p in parents]
@@ -1872,7 +1874,7 @@ def log(ui, repo, *pats, **opts):
         if rev in rcache[fn]:
             return rcache[fn][rev]
         mr = repo.manifest.rev(man)
-        if repo.manifest.parentrevs(mr) != (mr - 1, -1):
+        if repo.manifest.parentrevs(mr) != (mr - 1, nullrev):
             return ncache[fn].get(repo.manifest.find(man, fn)[0])
         if not dcache or dcache[0] != man:
             dcache[:] = [man, repo.manifest.readdelta(man)]
@@ -1888,7 +1890,8 @@ def log(ui, repo, *pats, **opts):
         elif st == 'add':
             du.bump(rev)
             changenode = repo.changelog.node(rev)
-            parents = [p for p in repo.changelog.parentrevs(rev) if p != -1]
+            parents = [p for p in repo.changelog.parentrevs(rev)
+                       if p != nullrev]
             if opts['no_merges'] and len(parents) == 2:
                 continue
             if opts['only_merges'] and len(parents) != 2:
@@ -1922,7 +1925,7 @@ def log(ui, repo, *pats, **opts):
                 if parents:
                     prev = parents[0]
                 else:
-                    prev = -1
+                    prev = nullrev
                 prev = repo.changelog.node(prev)
                 patch.diff(repo, prev, changenode, match=matchfn, fp=du)
                 du.write("\n\n")

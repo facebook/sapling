@@ -34,7 +34,7 @@ def filemerge(repo, fw, fo, wctx, mctx):
 
     fca = fcm.ancestor(fco)
     if not fca:
-        fca = repo.filectx(fw, fileid=-1)
+        fca = repo.filectx(fw, fileid=nullrev)
     a = repo.wjoin(fw)
     b = temp("base", fca)
     c = temp("other", fco)

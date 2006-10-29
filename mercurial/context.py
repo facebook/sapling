@@ -39,7 +39,7 @@ class changectx(object):
         return self._rev == other._rev
 
     def __nonzero__(self):
-        return self._rev != -1
+        return self._rev != nullrev
 
     def __getattr__(self, name):
         if name == '_changeset':
@@ -257,7 +257,7 @@ class filectx(object):
                 if r:
                     pl[0] = (r[0], getlog(r[0]).rev(r[1]))
 
-            return [ getctx(p, n) for p, n in pl if n != -1 ]
+            return [getctx(p, n) for p, n in pl if n != nullrev]
 
         # use linkrev to find the first changeset where self appeared
         if self.rev() != self._filelog.linkrev(self._filenode):

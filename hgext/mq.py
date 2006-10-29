@@ -1310,7 +1310,7 @@ class queue:
             for r in rev:
                 p1, p2 = repo.changelog.parentrevs(r)
                 n = repo.changelog.node(r)
-                if p2 != -1:
+                if p2 != revlog.nullrev:
                     raise util.Abort(_('cannot import merge revision %d') % r)
                 if lastparent and lastparent != r:
                     raise util.Abort(_('revision %d is not the parent of %d')
