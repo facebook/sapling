@@ -914,8 +914,9 @@ def clone(ui, source, dest=None, **opts):
     See pull for valid source format details.
 
     It is possible to specify an ssh:// URL as the destination, but no
-    .hg/hgrc will be created on the remote side. Look at the help text
-    for the pull command for important details about ssh:// URLs.
+    .hg/hgrc and working directory will be created on the remote side.
+    Look at the help text for the pull command for important details
+    about ssh:// URLs.
     """
     setremoteconfig(ui, opts)
     hg.clone(ui, ui.expandpath(source), dest,
