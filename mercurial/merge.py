@@ -392,7 +392,7 @@ def update(repo, node, branchmerge, force, partial, wlock):
             else:
                 overwrite = True
     if branchmerge and not forcemerge:
-        if wc.modified() or wc.added() or wc.removed():
+        if wc.files():
             raise util.Abort(_("outstanding uncommitted changes"))
 
     ### calculate phase
