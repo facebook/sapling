@@ -203,7 +203,7 @@ class filectx(object):
     def data(self): return self._filelog.read(self._filenode)
     def renamed(self): return self._filelog.renamed(self._filenode)
     def path(self): return self._path
-    def size(self): return self._filelog.size(self._filerev)
+    def size(self): return self._filelog.len(self._filerev)
 
     def cmp(self, text): return self._filelog.cmp(self._filenode, text)
 

@@ -65,15 +65,15 @@ class filelog(revlog):
             return (m["copy"], bin(m["copyrev"]))
         return False
 
-    def size(self, rev):
-        """return the size of a given revision"""
+    def len(self, rev):
+        """return the len of a given revision"""
 
         # for revisions with renames, we have to go the slow way
         node = self.node(rev)
         if self.renamed(node):
             return len(self.read(node))
 
-        return revlog.size(self, rev)
+        return self.size(rev)
 
     def cmp(self, node, text):
         """compare text with a given file revision"""
