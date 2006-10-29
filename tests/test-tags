@@ -60,3 +60,19 @@ hg commit -m "head" -d "1000000 0"
 hg tags
 hg tip
 
+# tags from later heads override previous ones
+cd ..
+hg init t2
+cd t2
+echo foo > foo
+hg add foo
+hg ci -m 'add foo' -d '1000000 0'      # rev 0
+hg tag -d '1000000 0' bar              # rev 1
+echo >> foo
+hg ci -m 'change foo 1' -d '1000000 0' # rev 2
+hg up -C 1
+hg tag -r 1 -d '1000000 0' bar         # rev 3
+hg up -C 1
+echo >> foo
+hg ci -m 'change foo 2' -d '1000000 0' # rev 4
+hg tags

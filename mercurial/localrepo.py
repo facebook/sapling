@@ -244,13 +244,10 @@ class localrepository(repo.repository):
             # read the tags file from each head, ending with the tip,
             # and add each tag found to the map, with "newer" ones
             # taking precedence
-            heads = self.heads()
-            heads.reverse()
-            seen = {}
-            for node in heads:
-                f = self.filectx('.hgtags', node)
-                if not f or f.filerev() in seen: continue
-                seen[f.filerev()] = 1
+            f = None
+            for rev, node, fnode in self._hgtagsnodes():
+                f = (f and f.filectx(fnode) or
+                     self.filectx('.hgtags', fileid=fnode))
                 count = 0
                 for l in f.data().splitlines():
                     count += 1
@@ -268,6 +265,24 @@ class localrepository(repo.repository):
             self.tagscache['tip'] = self.changelog.tip()
 
         return self.tagscache
+
+    def _hgtagsnodes(self):
+        heads = self.heads()
+        heads.reverse()
+        last = {}
+        ret = []
+        for node in heads:
+            c = self.changectx(node)
+            rev = c.rev()
+            try:
+                fnode = c.filenode('.hgtags')
+            except repo.LookupError:
+                continue
+            ret.append((rev, node, fnode))
+            if fnode in last:
+                ret[last[fnode]] = None
+            last[fnode] = len(ret) - 1
+        return [item for item in ret if item]
 
     def tagslist(self):
         '''return a list of tags ordered by revision'''
