@@ -491,7 +491,7 @@ class revlog(object):
         return d
     def start(self, rev):
         if rev < 0:
-            return nullrev
+            return 0
         if self.version != REVLOGV0:
             return self.ngoffset(self.index[rev][0])
         return self.index[rev][0]
