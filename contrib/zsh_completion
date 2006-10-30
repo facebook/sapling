@@ -140,13 +140,19 @@ _hg_status() {
 _hg_unknown() {
   typeset -a status_files
   _hg_status u
-  (( $#status_files )) && _describe -t files 'unknown files' status_files
+  _wanted files expl 'unknown files' _multi_parts / status_files
 }
 
 _hg_missing() {
   typeset -a status_files
   _hg_status d
-  (( $#status_files )) && _describe -t files 'missing files' status_files
+  _wanted files expl 'missing files' _multi_parts / status_files
+}
+
+_hg_modified() {
+  typeset -a status_files
+  _hg_status m
+  _wanted files expl 'modified files' _multi_parts / status_files
 }
 
 _hg_addremove() {
@@ -303,13 +309,24 @@ _hg_cmd_copy() {
 }
 
 _hg_cmd_diff() {
+  typeset -A opt_args
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_diff_opts \
   '*'{-r,--rev}'+[revision]:revision:_hg_revrange' \
   '(--show-function -p)'{-p,--show-function}'[show which function each change is in]' \
   '(--ignore-all-space -w)'{-w,--ignore-all-space}'[ignore white space when comparing lines]' \
   '(--ignore-space-change -b)'{-b,--ignore-space-change}'[ignore changes in the amount of white space]' \
   '(--ignore-blank-lines -B)'{-B,--ignore-blank-lines}'[ignore changes whose lines are all blank]' \
-  '*:file:_files -W $(_hg_cmd root)'
+  '*:file:->diff_files'
+
+  if [[ $state == 'diff_files' ]]
+  then
+    if [[ -n $opt_args[-r] ]]
+    then
+      _files -W $(_hg_cmd root)
+    else
+      _hg_modified
+    fi
+  fi
 }
 
 _hg_cmd_export() {
@@ -448,7 +465,19 @@ _hg_cmd_revert() {
   '(--all -a :)'{-a,--all}'[revert all changes when no arguments given]' \
   '(--rev -r)'{-r+,--rev}'[revision to revert to]:revision:_hg_tags' \
   '--no-backup[do not save backup copies of files]' \
-  '*:file:_files -W $(_hg_cmd root)'
+  '*:file:->diff_files'
+
+  if [[ $state == 'diff_files' ]]
+  then
+    if [[ -n $opt_args[-r] ]]
+    then
+      _files -W $(_hg_cmd root)
+    else
+      typeset -a status_files
+      _hg_status mard
+      _wanted files expl 'modified, added, removed or deleted file' _multi_parts / status_files
+    fi
+  fi
 }
 
 _hg_cmd_serve() {
