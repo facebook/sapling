@@ -239,6 +239,11 @@ _hg_remote() {
     'urls:URL:_hg_urls'
 }
 
+_hg_clone_dest() {
+  _alternative 'directories:directory:_files -/' \
+    'urls:URL:_hg_urls'
+}
+
 # Common options
 _hg_global_opts=(
     '(--repository -R)'{-R+,--repository}'[repository root directory]:repository:_files -/'
@@ -337,7 +342,7 @@ _hg_cmd_clone() {
   '(--rev -r)'{-r+,--rev}'[a changeset you would like to have after cloning]:' \
   '--uncompressed[use uncompressed transfer (fast over LAN)]' \
   ':source repository:_hg_remote' \
-  ':destination:_files -/'  
+  ':destination:_hg_clone_dest'
 }
 
 _hg_cmd_commit() {
