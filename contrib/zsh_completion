@@ -80,7 +80,10 @@ _hg() {
   then
     curcontext="${curcontext%:*:*}:hg-${cmd}:"
     _hg_cmd_${cmd}
-    return
+  else
+    # complete unknown commands normally
+    _arguments -s -w : $_hg_global_opts \
+      '*:files:_files -W $(_hg_cmd root)'
   fi
 }
 
