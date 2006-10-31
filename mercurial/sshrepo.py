@@ -16,7 +16,7 @@ class sshrepository(remoterepository):
         self._url = path
         self.ui = ui
 
-        m = re.match(r'ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?', path)
+        m = re.match(r'^ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?$', path)
         if not m:
             self.repoerror(_("couldn't parse location %s") % path)
 
