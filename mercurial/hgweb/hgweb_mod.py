@@ -441,13 +441,13 @@ class hgweb(object):
 
         files = {}
 
-        p = path[1:]
-        if p and p[-1] != "/":
-            p += "/"
-        l = len(p)
+        if path and path[-1] != "/":
+            path += "/"
+        l = len(path)
+        abspath = "/" + path
 
         for f,n in mf.items():
-            if f[:l] != p:
+            if f[:l] != path:
                 continue
             remain = f[l:]
             if "/" in remain:
@@ -483,15 +483,15 @@ class hgweb(object):
                     continue
 
                 yield {"parity": self.stripes(parity),
-                       "path": os.path.join(path, f),
+                       "path": os.path.join(abspath, f),
                        "basename": f[:-1]}
                 parity += 1
 
         yield self.t("manifest",
                      rev=ctx.rev(),
                      node=hex(node),
-                     path=path,
-                     up=_up(path),
+                     path=abspath,
+                     up=_up(abspath),
                      fentries=filelist,
                      dentries=dirlist,
                      archives=self.archivelist(hex(node)))
@@ -639,6 +639,7 @@ class hgweb(object):
     # find tag, changeset, file
 
     def cleanpath(self, path):
+        path = path.lstrip('/')
         return util.canonpath(self.repo.root, '', path)
 
     def run(self):
@@ -865,16 +866,15 @@ class hgweb(object):
         self.do_changeset(req)
 
     def do_file(self, req):
-        path = req.form.get('file', [''])[0]
+        path = self.cleanpath(req.form.get('file', [''])[0])
         if path:
             try:
                 req.write(self.filerevision(self.filectx(req)))
                 return
             except hg.RepoError:
                 pass
-            path = self.cleanpath(path)
 
-        req.write(self.manifest(self.changectx(req), '/' + path))
+        req.write(self.manifest(self.changectx(req), path))
 
     def do_diff(self, req):
         self.do_filediff(req)
