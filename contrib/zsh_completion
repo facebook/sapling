@@ -163,10 +163,33 @@ _hg_addremove() {
     'files:missing files:_hg_missing'
 }
 
+_hg_ssh_urls() {
+  if [[ -prefix */ ]]
+  then
+    if zstyle -T ":completion:${curcontext}:files" remote-access
+    then
+      local host=${PREFIX%%/*}
+      typeset -a remdirs
+      compset -p $(( $#host + 1 ))
+      local rempath=${(M)PREFIX##*/}
+      compset -P '*/'
+      remdirs=(${${(M)${(f)"$(_call_program files ssh -a -x $host ls -1FL "${(q)rempath}" 2> /dev/null)"}##*/}%/})
+      _describe -t directories 'remote directory' remdirs -S/
+    else
+      _message 'remote directory'
+    fi
+  else
+    _hosts -S/
+  fi
+}
+
 _hg_urls() {
   if compset -P bundle://
   then
     _files
+  elif compset -P ssh://
+  then
+    _hg_ssh_urls
   elif [[ -prefix *: ]]
   then
     _urls
@@ -190,7 +213,7 @@ _hg_paths() {
 _hg_remote() {
   _alternative 'path-aliases:repository alias:_hg_paths' \
     'directories:directory:_files -/' \
-    'urls:URL schema:_hg_urls'
+    'urls:URL:_hg_urls'
 }
 
 # Common options
