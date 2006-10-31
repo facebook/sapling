@@ -76,15 +76,33 @@ _hg() {
     fi
   fi
 
+  curcontext="${curcontext%:*:*}:hg-${cmd}:"
+
+  zstyle -s ":completion:$curcontext:" cache-policy update_policy
+
+  if [[ -z "$update_policy" ]]
+  then
+    zstyle ":completion:$curcontext:" cache-policy _hg_cache_policy
+  fi
+
   if (( $+functions[_hg_cmd_${cmd}] ))
   then
-    curcontext="${curcontext%:*:*}:hg-${cmd}:"
     _hg_cmd_${cmd}
   else
     # complete unknown commands normally
     _arguments -s -w : $_hg_global_opts \
       '*:files:_files -W $(_hg_cmd root)'
   fi
+}
+
+_hg_cache_policy() {
+  typeset -a old
+
+  # cache for a minute
+  old=( "$1"(mm+10) )
+  (( $#old )) && return 0
+
+  return 1
 }
 
 _hg_get_commands() {
@@ -172,8 +190,13 @@ _hg_ssh_urls() {
       typeset -a remdirs
       compset -p $(( $#host + 1 ))
       local rempath=${(M)PREFIX##*/}
+      local cacheid="hg_${host}_${rempath//\//_}"
       compset -P '*/'
-      remdirs=(${${(M)${(f)"$(_call_program files ssh -a -x $host ls -1FL "${(q)rempath}" 2> /dev/null)"}##*/}%/})
+      if _cache_invalid "$cacheid" || ! _retrieve_cache "$cacheid"
+      then
+        remdirs=(${${(M)${(f)"$(_call_program files ssh -a -x $host ls -1FL "${(q)rempath}" 2> /dev/null)"}##*/}%/})
+        _store_cache "$cacheid" remdirs
+      fi
       _describe -t directories 'remote directory' remdirs -S/
     else
       _message 'remote directory'
