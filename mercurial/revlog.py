@@ -467,7 +467,7 @@ class revlog(object):
     def tip(self): return self.node(len(self.index) - 1)
     def count(self): return len(self.index)
     def node(self, rev):
-        return (rev < 0) and nullid or self.index[rev][-1]
+        return rev == nullrev and nullid or self.index[rev][-1]
     def rev(self, node):
         try:
             return self.nodemap[node]
@@ -490,8 +490,8 @@ class revlog(object):
             return (self.rev(d[0]), self.rev(d[1]))
         return d
     def start(self, rev):
-        if rev < 0:
-            return nullrev
+        if rev == nullrev:
+            return 0
         if self.version != REVLOGV0:
             return self.ngoffset(self.index[rev][0])
         return self.index[rev][0]
@@ -500,6 +500,8 @@ class revlog(object):
 
     def size(self, rev):
         """return the length of the uncompressed text for a given revision"""
+        if rev == nullrev:
+            return 0
         l = -1
         if self.version != REVLOGV0:
             l = self.index[rev][2]
@@ -530,11 +532,15 @@ class revlog(object):
         """
 
     def length(self, rev):
-        if rev < 0:
+        if rev == nullrev:
             return 0
         else:
             return self.index[rev][1]
-    def base(self, rev): return (rev < 0) and rev or self.index[rev][-5]
+    def base(self, rev):
+        if (rev == nullrev):
+            return nullrev
+        else:
+            return self.index[rev][-5]
 
     def reachable(self, rev, stop=None):
         reachable = {}
