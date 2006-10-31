@@ -14,6 +14,13 @@ index 0000000..7898192
 +a
 EOF
 
+echo % new empty file
+hg import -mempty - <<EOF
+diff --git a/empty b/empty
+new file mode 100644
+EOF
+hg locate empty
+
 echo % chmod +x
 hg import -msetx - <<EOF
 diff --git a/new b/new

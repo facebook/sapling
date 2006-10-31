@@ -1,5 +1,8 @@
 % new file
 applying patch from stdin
+% new empty file
+applying patch from stdin
+empty
 % chmod +x
 applying patch from stdin
 % copy
@@ -9,10 +12,12 @@ a
 % rename
 applying patch from stdin
 copyx
+empty
 new
 rename
 % delete
 applying patch from stdin
+empty
 new
 rename
 % regular diff
