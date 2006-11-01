@@ -1731,6 +1731,8 @@ def push(ui, repo, patch=None, **opts):
     mergeq = None
 
     if opts['all']:
+        if not q.series:
+            raise util.Abort(_('no patches in series'))
         patch = q.series[-1]
     if opts['merge']:
         if opts['name']:
