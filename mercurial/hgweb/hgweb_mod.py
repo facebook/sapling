@@ -1102,7 +1102,6 @@ class hgweb(object):
 
                 fp.seek(0)
                 header = fp.read(6)
-                print repr(header)
                 if not header.startswith("HG"):
                     # old client with uncompressed bundle
                     def generator(f):
