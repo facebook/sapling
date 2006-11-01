@@ -11,7 +11,7 @@ import os.path
 import mimetypes
 from mercurial.demandload import demandload
 demandload(globals(), "re zlib ConfigParser mimetools cStringIO sys tempfile")
-demandload(globals(), 'urllib')
+demandload(globals(), 'urllib bz2')
 demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone,patch")
 demandload(globals(), "mercurial:revlog,templater")
 demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile,style_map")
@@ -1021,7 +1021,7 @@ class hgweb(object):
                   or self.t("error", error="%r not found" % fname))
 
     def do_capabilities(self, req):
-        caps = ['unbundle', 'lookup', 'changegroupsubset']
+        caps = ['unbundle', 'lookup', 'changegroupsubset', 'standardbundle']
         if self.configbool('server', 'uncompressed'):
             caps.append('stream=%d' % self.repo.revlogversion)
         resp = ' '.join(caps)
@@ -1101,6 +1101,38 @@ class hgweb(object):
                     return
 
                 fp.seek(0)
+                header = fp.read(6)
+                print repr(header)
+                if not header.startswith("HG"):
+                    # old client with uncompressed bundle
+                    def generator(f):
+                        yield header
+                        for chunk in f:
+                            yield chunk
+                elif not header.startswith("HG10"):
+                    req.write("0\n")
+                    req.write(_("unknown bundle version\n"))
+                    return
+                elif header == "HG10GZ":
+                    def generator(f):
+                        zd = zlib.decompressobj()
+                        for chunk in f:
+                            yield zd.decompress(chunk)
+                elif header == "HG10BZ":
+                    def generator(f):
+                        zd = bz2.BZ2Decompressor()
+                        zd.decompress("BZ")
+                        for chunk in f:
+                            yield zd.decompress(chunk)
+                elif header == "HG10UN":
+                    def generator(f):
+                        for chunk in f:
+                            yield chunk
+                else:
+                    req.write("0\n")
+                    req.write(_("unknown bundle compression type\n"))
+                    return
+                gen = generator(util.filechunkiter(fp, 4096))
 
                 # send addchangegroup output to client
 
@@ -1110,7 +1142,8 @@ class hgweb(object):
                 try:
                     url = 'remote:%s:%s' % (proto,
                                             req.env.get('REMOTE_HOST', ''))
-                    ret = self.repo.addchangegroup(fp, 'serve', url)
+                    ret = self.repo.addchangegroup(util.chunkbuffer(gen),
+                                                   'serve', url)
                 finally:
                     val = sys.stdout.getvalue()
                     sys.stdout = old_stdout
