@@ -190,7 +190,8 @@ _hg_ssh_urls() {
       typeset -a remdirs
       compset -p $(( $#host + 1 ))
       local rempath=${(M)PREFIX##*/}
-      local cacheid="hg_${host}_${rempath//\//_}"
+      local cacheid="hg:${host}-${rempath//\//_}"
+      cacheid=${cacheid%[-_]}
       compset -P '*/'
       if _cache_invalid "$cacheid" || ! _retrieve_cache "$cacheid"
       then
@@ -202,7 +203,13 @@ _hg_ssh_urls() {
       _message 'remote directory'
     fi
   else
-    _hosts -S/
+    if compset -P '*@'
+    then
+      _hosts -S/
+    else
+      _alternative 'hosts:remote host name:_hosts -S/' \
+        'users:user:_users -S@'
+    fi
   fi
 }
 
