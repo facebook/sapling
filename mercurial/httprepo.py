@@ -337,11 +337,31 @@ class httprepository(remoterepository):
         # have to stream bundle to a temp file because we do not have
         # http 1.1 chunked transfer.
 
+        use_compress = 'standardbundle' in self.capabilities
+
+        # XXX duplication from commands.py
+        class nocompress(object):
+            def compress(self, x):
+                return x
+            def flush(self):
+                return ""
+
+        if use_compress:
+            header = "HG10GZ"
+            z = zlib.compressobj()
+        else:
+            self.ui.note(_("server has no compression support, "
+                           "sending uncompressed"))
+            header = ""
+            z = nocompress()
+
         fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
         fp = os.fdopen(fd, 'wb+')
         try:
+            fp.write(header)
             for chunk in util.filechunkiter(cg):
-                fp.write(chunk)
+                fp.write(z.compress(chunk))
+            fp.write(z.flush())
             length = fp.tell()
             try:
                 rfp = self.do_cmd(
