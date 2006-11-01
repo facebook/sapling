@@ -708,7 +708,7 @@ class hgweb(object):
                     return '%s%s%s' % (url.startswith('/') and '/' or '',
                                        inner, tl)
 
-                root = normurl(req.env.get('REQUEST_URI', '').split('?', 1)[0])
+                root = normurl(urllib.unquote(req.env.get('REQUEST_URI', '').split('?', 1)[0]))
                 pi = normurl(req.env.get('PATH_INFO', ''))
                 if pi:
                     # strip leading /
