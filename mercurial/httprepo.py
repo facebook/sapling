@@ -132,7 +132,7 @@ class httprepository(remoterepository):
 
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
         # XXX proxyauthinfo = None
-        handler = httphandler()
+        handlers = [httphandler()]
 
         if proxyurl:
             # proxy can be proper url or host[:port]
@@ -164,7 +164,7 @@ class httprepository(remoterepository):
                     proxyscheme, netlocunsplit(proxyhost, proxyport,
                                                proxyuser, proxypasswd or ''),
                     proxypath, proxyquery, proxyfrag))
-                handler = urllib2.ProxyHandler({scheme: proxyurl})
+                handlers.append(urllib2.ProxyHandler({scheme: proxyurl}))
                 ui.debug(_('proxying through http://%s:%s\n') %
                           (proxyhost, proxyport))
 
@@ -183,10 +183,9 @@ class httprepository(remoterepository):
                      (user, passwd and '*' * len(passwd) or 'not set'))
             passmgr.add_password(None, host, user, passwd or '')
 
-        opener = urllib2.build_opener(
-            handler,
-            urllib2.HTTPBasicAuthHandler(passmgr),
-            urllib2.HTTPDigestAuthHandler(passmgr))
+        handlers.extend((urllib2.HTTPBasicAuthHandler(passmgr),
+                         urllib2.HTTPDigestAuthHandler(passmgr)))
+        opener = urllib2.build_opener(*handlers)
 
         # 1.0 here is the _protocol_ version
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
@@ -222,11 +221,8 @@ class httprepository(remoterepository):
         cu = "%s%s" % (self._url, qs)
         try:
             if data:
-                if isinstance(data, file):
-                    # urllib2 needs string or buffer when using a proxy
-                    data.seek(0)
-                    data = data.read()
-                self.ui.debug(_("sending %d bytes\n") % len(data))
+                self.ui.debug(_("sending %s bytes\n") %
+                              headers.get('content-length', 'X'))
             resp = urllib2.urlopen(urllib2.Request(cu, data, headers))
         except urllib2.HTTPError, inst:
             if inst.code == 401:
