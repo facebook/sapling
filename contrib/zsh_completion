@@ -25,14 +25,14 @@ _hg() {
   do
     case "$words[$i]" in
       -R|--repository)
-        _hg_root="$words[$i+1]"
+        eval _hg_root="$words[$i+1]"
         _hg_cmd_globals+=("$words[$i]" "$_hg_root")
         (( i += 2 ))
         continue
       ;;
       -R*)
         _hg_cmd_globals+="$words[$i]"
-        _hg_root="${words[$i]#-R}"
+        eval _hg_root="${words[$i]#-R}"
        (( i++ ))
        continue
       ;;
