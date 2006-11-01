@@ -17,24 +17,30 @@ local curcontext="$curcontext" state line
 typeset -A _hg_cmd_globals
 
 _hg() {
-  local cmd
+  local cmd _hg_root
   integer i=2
   _hg_cmd_globals=()
 
   while (( i < $#words ))
   do
     case "$words[$i]" in
-      -R|--repository|--cwd|--config)
-        # pass along arguments to hg completer
-        _hg_cmd_globals+="$words[$i]"
-        _hg_cmd_globals+="$words[$i+1]"
+      -R|--repository)
+        _hg_root="$words[$i+1]"
+        _hg_cmd_globals+=("$words[$i]" "$_hg_root")
         (( i += 2 ))
         continue
       ;;
       -R*)
         _hg_cmd_globals+="$words[$i]"
+        _hg_root="${words[$i]#-R}"
        (( i++ ))
        continue
+      ;;
+      --cwd|--config)
+        # pass along arguments to hg completer
+        _hg_cmd_globals+=("$words[$i]" "$words[$i+1]")
+        (( i += 2 ))
+        continue
       ;;
       -*)
         # skip option
@@ -91,7 +97,7 @@ _hg() {
   else
     # complete unknown commands normally
     _arguments -s -w : $_hg_global_opts \
-      '*:files:_files -W $(_hg_cmd root)'
+      '*:files:_hg_files'
   fi
 }
 
@@ -152,6 +158,23 @@ _hg_tags() {
     tags+=($tag)
   done
   (( $#tags )) && _describe -t tags 'tags' tags
+}
+
+_hg_files() {
+  if [[ -n "$_hg_root" ]]
+  then
+    [[ -d "$_hg_root/.hg" ]] || return
+    case "$_hg_root" in
+      /*)
+        _files -W $_hg_root
+      ;;
+      *)
+        _files -W $PWD/$_hg_root
+      ;;
+    esac
+  else
+    _files
+  fi
 }
 
 _hg_status() {
@@ -316,7 +339,7 @@ _hg_cmd_annotate() {
   '(--date -d)'{-d,--date}'[list the date]' \
   '(--number -n)'{-n,--number}'[list the revision number (default)]' \
   '(--changeset -c)'{-c,--changeset}'[list the changeset]' \
-  '*:files:_files -W $(_hg_cmd root)'
+  '*:files:_hg_files'
 }
 
 _hg_cmd_archive() {
@@ -340,7 +363,7 @@ _hg_cmd_cat() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
   '(--output -o)'{-o+,--output}'[print output to file with formatted name]:filespec:' \
   '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_tags' \
-  '*:file:_files -W $(_hg_cmd root)'
+  '*:file:_hg_files'
 }
 
 _hg_cmd_clone() {
@@ -359,14 +382,14 @@ _hg_cmd_commit() {
   '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_file -g \*.txt' \
   '(--date -d)'{-d+,--date}'[record datecode as commit date]:date code:' \
   '(--user -u)'{-u+,--user}'[record user as commiter]:user:' \
-  '*:file:_files -W $(_hg_cmd root)'
+  '*:file:_hg_files'
 }
 
 _hg_cmd_copy() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_dryrun_opts \
   '(--after -A)'{-A,--after}'[record a copy that has already occurred]' \
   '(--force -f)'{-f,--force}'[forcibly copy over an existing managed file]' \
-  '*:file:_files -W $(_hg_cmd root)'
+  '*:file:_hg_files'
 }
 
 _hg_cmd_diff() {
@@ -383,7 +406,7 @@ _hg_cmd_diff() {
   then
     if [[ -n $opt_args[-r] ]]
     then
-      _files -W $(_hg_cmd root)
+      _hg_files
     else
       _hg_modified
     fi
@@ -407,7 +430,7 @@ _hg_cmd_grep() {
   '(--line-number -n)'{-n,--line-number}'[print matching line numbers]' \
   '*'{-r+,--rev}'[search in given revision range]:revision:_hg_revrange' \
   '(--user -u)'{-u,--user}'[print user who committed change]' \
-  '*:search pattern:_files -W $(_hg_cmd root)'
+  '*:search pattern:_hg_files'
 }
 
 _hg_cmd_heads() {
@@ -449,7 +472,7 @@ _hg_cmd_locate() {
   '(--rev -r)'{-r+,--rev}'[search repository as it stood at revision]:revision:_hg_tags' \
   '(--print0 -0)'{-0,--print0}'[end filenames with NUL, for use with xargs]' \
   '(--fullpath -f)'{-f,--fullpath}'[print complete paths]' \
-  '*:search pattern:_files -W $(_hg_cmd root)'
+  '*:search pattern:_hg_files'
 }
 
 _hg_cmd_log() {
@@ -464,7 +487,7 @@ _hg_cmd_log() {
   '(--only-merges -m)'{-m,--only-merges}'[show only merges]' \
   '(--patch -p)'{-p,--patch}'[show patch]' \
   '(--prune -P)'{-P+,--prune}'[do not display revision or any of its ancestors]:revision:_hg_tags' \
-  '*:files:_files -W $(_hg_cmd root)'
+  '*:files:_hg_files'
 }
 
 _hg_cmd_manifest() {
@@ -511,14 +534,14 @@ _hg_cmd_remove() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
   '(--after -A)'{-A,--after}'[record remove that has already occurred]' \
   '(--force -f)'{-f,--force}'[remove file even if modified]' \
-  '*:file:_files -W $(_hg_cmd root)'
+  '*:file:_hg_files'
 }
 
 _hg_cmd_rename() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_dryrun_opts \
   '(--after -A)'{-A,--after}'[record a rename that has already occurred]' \
   '(--force -f)'{-f,--force}'[forcibly copy over an existing managed file]' \
-  '*:file:_files -W $(_hg_cmd root)'
+  '*:file:_hg_files'
 }
 
 _hg_cmd_revert() {
@@ -532,7 +555,7 @@ _hg_cmd_revert() {
   then
     if [[ -n $opt_args[-r] ]]
     then
-      _files -W $(_hg_cmd root)
+      _hg_files
     else
       typeset -a status_files
       _hg_status mard
@@ -657,7 +680,7 @@ _hg_cmd_qdelete() {
 
 _hg_cmd_qdiff() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
-  '*:pattern:_files -W $(_hg_cmd root)'
+  '*:pattern:_hg_files'
 }
 
 _hg_cmd_qfold() {
@@ -724,7 +747,7 @@ _hg_cmd_qrefresh() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_commit_opts \
   '(--git -g)'{-g,--git}'[use git extended diff format]' \
   '(--short -s)'{-s,--short}'[short refresh]' \
-  '*:files:_files -W $(_hg_cmd root)'
+  '*:files:_hg_files'
 }
 
 _hg_cmd_qrename() {
