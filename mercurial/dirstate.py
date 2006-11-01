@@ -211,7 +211,7 @@ class dirstate(object):
                 self.dirs.setdefault(pc, 0)
                 self.dirs[pc] += delta
 
-    def checkshadows(self, files):
+    def checkinterfering(self, files):
         def prefixes(f):
             for c in strutil.rfindall(f, '/'):
                 yield f[:c]
@@ -219,6 +219,7 @@ class dirstate(object):
         self.initdirs()
         seendirs = {}
         for f in files:
+            # shadows
             if self.dirs.get(f):
                 raise util.Abort(_('directory named %r already in dirstate') %
                                  f)
@@ -229,6 +230,9 @@ class dirstate(object):
                     raise util.Abort(_('file named %r already in dirstate') %
                                      d)
                 seendirs[d] = True
+            # disallowed
+            if '\r' in f or '\n' in f:
+                raise util.Abort(_("'\\n' and '\\r' disallowed in filenames"))
 
     def update(self, files, state, **kw):
         ''' current states:
@@ -242,7 +246,7 @@ class dirstate(object):
         self.markdirty()
         if state == "a":
             self.initdirs()
-            self.checkshadows(files)
+            self.checkinterfering(files)
         for f in files:
             if state == "r":
                 self.map[f] = ('r', 0, 0, 0)

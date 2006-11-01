@@ -1,0 +1,21 @@
+#!/bin/bash
+# http://www.selenic.com/mercurial/bts/issue352
+
+hg init foo
+cd foo
+
+A=`echo -e -n 'he\rllo'`
+
+echo foo > "hell
+o"
+echo foo > "$A"
+hg add
+hg ci -A -m m
+rm "$A"
+ls
+hg add
+# BUG ? we don't walk on filenames with '\n' (regexp related) ?
+hg debugwalk
+hg ci -A -m m
+
+exit 0
