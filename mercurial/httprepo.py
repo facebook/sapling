@@ -337,8 +337,6 @@ class httprepository(remoterepository):
         # have to stream bundle to a temp file because we do not have
         # http 1.1 chunked transfer.
 
-        use_compress = 'standardbundle' in self.capabilities
-
         # XXX duplication from commands.py
         class nocompress(object):
             def compress(self, x):
@@ -346,7 +344,13 @@ class httprepository(remoterepository):
             def flush(self):
                 return ""
 
-        if use_compress:
+        unbundleversions = self.capable('unbundle')
+        try:
+            unbundleversions = unbundleversions.split(',')
+        except AttributeError:
+            unbundleversions = [""]
+
+        if "HG10GZ" in unbundleversions:
             header = "HG10GZ"
             z = zlib.compressobj()
         else:
