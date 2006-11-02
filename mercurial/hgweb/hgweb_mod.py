@@ -1021,9 +1021,13 @@ class hgweb(object):
                   or self.t("error", error="%r not found" % fname))
 
     def do_capabilities(self, req):
-        caps = ['unbundle', 'lookup', 'changegroupsubset', 'standardbundle']
+        caps = ['lookup', 'changegroupsubset']
         if self.configbool('server', 'uncompressed'):
             caps.append('stream=%d' % self.repo.revlogversion)
+        # XXX: make configurable and/or share code with do_unbundle:
+        unbundleversions = ['HG10GZ', 'HG10BZ', 'HG10UN']
+        if unbundleversions:
+            caps.append('unbundle=%s' % ','.join(unbundleversions))
         resp = ' '.join(caps)
         req.httphdr("application/mercurial-0.1", length=len(resp))
         req.write(resp)
