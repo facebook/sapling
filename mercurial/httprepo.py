@@ -350,14 +350,25 @@ class httprepository(remoterepository):
         except AttributeError:
             unbundleversions = [""]
 
-        if "HG10GZ" in unbundleversions:
-            header = "HG10GZ"
-            z = zlib.compressobj()
-        else:
-            self.ui.note(_("server has no compression support, "
-                           "sending uncompressed"))
-            header = ""
-            z = nocompress()
+        while unbundleversions:
+            header = unbundleversions[0]
+            if header == "HG10GZ":
+                self.ui.note(_("using zlib compression\n"))
+                z = zlib.compressobj()
+                break
+            elif header == "HG10UN":
+                self.ui.note(_("using no compression\n"))
+                z = nocompress()
+                break
+            elif header == "":
+                self.ui.note(_("old server without compression support,"
+                               " sending uncompressed\n"))
+                z = nocompress()
+                break
+            unbundleversions.pop(0)
+        if not unbundleversions:
+            raise util.Abort(_("The server doesn't accept any bundle format"
+                               " method we know."))
 
         fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
         fp = os.fdopen(fd, 'wb+')
