@@ -39,7 +39,7 @@ class tarit:
 
     def __init__(self, dest, prefix, mtime, kind=''):
         self.prefix = tidyprefix(dest, prefix, ['.tar', '.tar.bz2', '.tar.gz',
-                                                '.tgz', 'tbz2'])
+                                                '.tgz', '.tbz2'])
         self.mtime = mtime
         if isinstance(dest, str):
             self.z = tarfile.open(dest, mode='w:'+kind)
