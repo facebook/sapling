@@ -303,9 +303,8 @@ hooks::
   environment variables above are passed as keyword arguments, with no
   "HG_" prefix, and names in lower case.
 
-  A Python hook must return a "true" value to succeed.  Returning a
-  "false" value or raising an exception is treated as failure of the
-  hook.
+  If a Python hook returns a "true" value or raises an exception, this
+  is treated as failure of the hook.
 
 http_proxy::
   Used to access web-based Mercurial repositories through a HTTP
