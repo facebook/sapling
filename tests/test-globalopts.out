@@ -27,6 +27,7 @@ summary:     b
 %% abbrev of long option
 changeset:   1:b6c483daf290
 tag:         tip
+parent:      -1:000000000000
 user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     b
@@ -49,6 +50,7 @@ summary:     a
 %% -v/--verbose
 changeset:   1:b6c483daf290
 tag:         tip
+parent:      -1:000000000000
 user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 files:       b

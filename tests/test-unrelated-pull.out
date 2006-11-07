@@ -11,6 +11,7 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 changeset:   1:bdcee5d51fa6
 tag:         tip
+parent:      -1:000000000000
 user:        a
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     a
