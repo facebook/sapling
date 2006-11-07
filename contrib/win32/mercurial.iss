@@ -43,8 +43,6 @@ Source: doc\*.txt; DestDir: {app}\Docs
 Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
 Source: COPYING; DestDir: {app}; DestName: Copying.txt
-Source: comparison.txt; DestDir: {app}\Docs; DestName: Comparison.txt
-Source: notes.txt; DestDir: {app}\Docs; DestName: DesignNotes.txt
 
 [INI]
 Filename: {app}\Mercurial.url; Section: InternetShortcut; Key: URL; String: http://www.selenic.com/mercurial/
