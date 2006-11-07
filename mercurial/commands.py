@@ -324,11 +324,12 @@ class changeset_printer(object):
 
         parents = log.parentrevs(rev)
         if not self.ui.debugflag:
-            parents = [p for p in parents if p != nullrev]
-            if len(parents) == 1 and parents[0] == rev-1:
-                parents = []
+            if parents[1] == nullrev:
+                if parents[0] >= rev - 1:
+                    parents = []
+                else:
+                    parents = [parents[0]]
         parents = [(p, hexfunc(log.node(p))) for p in parents]
-
 
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
 
