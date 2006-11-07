@@ -43,7 +43,7 @@ class localrepository(repo.repository):
         elif create:
             raise repo.RepoError(_("repository %s already exists") % path)
 
-        self.root = os.path.abspath(path)
+        self.root = os.path.realpath(path)
         self.origroot = path
         self.ui = ui.ui(parentui=parentui)
         self.opener = util.opener(self.path)
