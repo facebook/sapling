@@ -574,82 +574,61 @@ class localrepository(repo.repository):
         return fl.add(t, meta, transaction, linkrev, fp1, fp2)
 
     def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None):
-        orig_parent = self.dirstate.parents()[0] or nullid
-        p1 = p1 or self.dirstate.parents()[0] or nullid
-        p2 = p2 or self.dirstate.parents()[1] or nullid
-        c1 = self.changelog.read(p1)
-        c2 = self.changelog.read(p2)
-        m1 = self.manifest.read(c1[0]).copy()
-        m2 = self.manifest.read(c2[0])
-        changed = []
-        removed = []
-
-        if orig_parent == p1:
-            update_dirstate = 1
-        else:
-            update_dirstate = 0
-
-        if not wlock:
-            wlock = self.wlock()
-        l = self.lock()
-        tr = self.transaction()
-        linkrev = self.changelog.count()
-        for f in files:
-            try:
-                m1[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
-                m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
-            except IOError:
-                try:
-                    del m1[f]
-                    if update_dirstate:
-                        self.dirstate.forget([f])
-                    removed.append(f)
-                except:
-                    # deleted from p2?
-                    pass
-
-        mnode = self.manifest.add(m1, tr, linkrev, c1[0], c2[0])
-        user = user or self.ui.username()
-        n = self.changelog.add(mnode, changed + removed, text,
-                               tr, p1, p2, user, date)
-        tr.close()
-        if update_dirstate:
-            self.dirstate.setparents(n, nullid)
+        if p1 is None:
+            p1, p2 = self.dirstate.parents()
+        return self.commit(files=files, text=text, user=user, date=date,
+                           p1=p1, p2=p2, wlock=wlock)
 
     def commit(self, files=None, text="", user=None, date=None,
                match=util.always, force=False, lock=None, wlock=None,
-               force_editor=False):
+               force_editor=False, p1=None, p2=None):
+
         commit = []
         remove = []
         changed = []
+        use_dirstate = (p1 is None) # not rawcommit
 
-        if files:
-            for f in files:
-                s = self.dirstate.state(f)
-                if s in 'nmai':
-                    commit.append(f)
-                elif s == 'r':
-                    remove.append(f)
-                else:
-                    self.ui.warn(_("%s not tracked!\n") % f)
+        if use_dirstate:
+            if files:
+                for f in files:
+                    s = self.dirstate.state(f)
+                    if s in 'nmai':
+                        commit.append(f)
+                    elif s == 'r':
+                        remove.append(f)
+                    else:
+                        self.ui.warn(_("%s not tracked!\n") % f)
+            else:
+                changes = self.status(match=match)[:5]
+                modified, added, removed, deleted, unknown = changes
+                commit = modified + added
+                remove = removed
         else:
-            modified, added, removed, deleted, unknown = self.status(match=match)[:5]
-            commit = modified + added
-            remove = removed
+            commit = files
 
-        p1, p2 = self.dirstate.parents()
+        if use_dirstate:
+            p1, p2 = self.dirstate.parents()
+            update_dirstate = True
+        else:
+            p1, p2 = p1, p2 or nullid
+            update_dirstate = (self.dirstate.parents()[0] == p1)
+
         c1 = self.changelog.read(p1)
         c2 = self.changelog.read(p2)
         m1 = self.manifest.read(c1[0]).copy()
         m2 = self.manifest.read(c2[0])
 
-        branchname = self.workingctx().branch()
-        oldname = c1[5].get("branch", "")
+        if use_dirstate:
+            branchname = self.workingctx().branch()
+        else:
+            branchname = ""
 
-        if not commit and not remove and not force and p2 == nullid and \
-               branchname == oldname:
-            self.ui.status(_("nothing changed\n"))
-            return None
+        if use_dirstate:
+            oldname = c1[5].get("branch", "")
+            if not commit and not remove and not force and p2 == nullid and \
+                   branchname == oldname:
+                self.ui.status(_("nothing changed\n"))
+                return None
 
         xp1 = hex(p1)
         if p2 == nullid: xp2 = ''
@@ -674,8 +653,11 @@ class localrepository(repo.repository):
                 m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
                 new.append(f)
             except IOError:
-                self.ui.warn(_("trouble committing %s!\n") % f)
-                raise
+                if use_dirstate:
+                    self.ui.warn(_("trouble committing %s!\n") % f)
+                    raise
+                else:
+                    remove.append(f)
 
         # update manifest
         remove.sort()
@@ -720,9 +702,11 @@ class localrepository(repo.repository):
                   parent2=xp2)
         tr.close()
 
-        self.dirstate.setparents(n)
-        self.dirstate.update(new, "n")
-        self.dirstate.forget(remove)
+        if use_dirstate or update_dirstate:
+            self.dirstate.setparents(n)
+            if use_dirstate:
+                self.dirstate.update(new, "n")
+                self.dirstate.forget(remove)
 
         self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
         return n
