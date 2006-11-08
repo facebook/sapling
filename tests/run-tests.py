@@ -361,6 +361,8 @@ try:
 
         if len(args) == 0:
             args = os.listdir(".")
+            args.sort()
+
         for test in args:
             if (test.startswith("test-") and '~' not in test and
                 ('.' not in test or test.endswith('.py') or
