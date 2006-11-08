@@ -38,6 +38,8 @@ parser.add_option("-f", "--first", action="store_true",
     help="exit on the first test failure")
 parser.add_option("-R", "--restart", action="store_true",
     help="restart at last error")
+parser.add_option("-i", "--interactive", action="store_true",
+    help="prompt to accept changed output")
 
 parser.set_defaults(timeout=180)
 (options, args) = parser.parse_args()
@@ -391,6 +393,13 @@ try:
             if ret is None:
                 skipped += 1
             elif not ret:
+                if options.interactive:
+                    print "Accept this change? [n] ",
+                    answer = sys.stdin.readline().strip()
+                    if answer.lower() in "y yes".split():
+                        os.rename(test + ".err", test + ".out")
+                        tested += 1
+                        continue
                 failed += 1
                 if options.first:
                     break
