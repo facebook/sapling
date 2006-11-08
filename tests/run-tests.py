@@ -36,6 +36,8 @@ parser.add_option("-r", "--retest", action="store_true",
     help="retest failed tests")
 parser.add_option("-f", "--first", action="store_true",
     help="exit on the first test failure")
+parser.add_option("-R", "--restart", action="store_true",
+    help="restart at last error")
 
 parser.set_defaults(timeout=180)
 (options, args) = parser.parse_args()
@@ -355,7 +357,7 @@ try:
                 print 'WARNING: cannot run tests with timeouts'
                 options.timeout = 0
 
-        tests = 0
+        tested = 0
         failed = 0
         skipped = 0
 
@@ -363,23 +365,38 @@ try:
             args = os.listdir(".")
             args.sort()
 
+
+        tests = []
         for test in args:
             if (test.startswith("test-") and '~' not in test and
                 ('.' not in test or test.endswith('.py') or
                  test.endswith('.bat'))):
-                if options.retest and not os.path.exists(test + ".err"):
-                    skipped += 1
-                    continue
-                ret = run_one(test)
-                if ret is None:
-                    skipped += 1
-                elif not ret:
-                    failed += 1
-                    if options.first:
-                        break
-                tests += 1
+                tests.append(test)
 
-        print "\n# Ran %d tests, %d skipped, %d failed." % (tests, skipped,
+        if options.restart:
+            orig = list(tests)
+            while tests:
+                if os.path.exists(tests[0] + ".err"):
+                    break
+                tests.pop(0)
+            if not tests:
+                print "running all tests"
+                tests = orig
+
+        for test in tests:
+            if options.retest and not os.path.exists(test + ".err"):
+                skipped += 1
+                continue
+            ret = run_one(test)
+            if ret is None:
+                skipped += 1
+            elif not ret:
+                failed += 1
+                if options.first:
+                    break
+            tested += 1
+
+        print "\n# Ran %d tests, %d skipped, %d failed." % (tested, skipped,
                                                             failed)
         if coverage:
             output_coverage()
