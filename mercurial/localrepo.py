@@ -581,12 +581,13 @@ class localrepository(repo.repository):
 
     def commit(self, files=None, text="", user=None, date=None,
                match=util.always, force=False, lock=None, wlock=None,
-               force_editor=False, p1=None, p2=None):
+               force_editor=False, p1=None, p2=None, extra={}):
 
         commit = []
         remove = []
         changed = []
         use_dirstate = (p1 is None) # not rawcommit
+        extra = extra.copy()
 
         if use_dirstate:
             if files:
@@ -693,7 +694,6 @@ class localrepository(repo.repository):
         if not lines:
             return None
         text = '\n'.join(lines)
-        extra = {}
         if branchname:
             extra["branch"] = branchname
         n = self.changelog.add(mn, changed + remove, text, tr, p1, p2,
