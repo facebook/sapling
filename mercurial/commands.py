@@ -8,7 +8,7 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), "os re sys signal shutil imp urllib pdb shlex")
+demandload(globals(), "os re sys signal imp urllib pdb shlex")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "difflib patch tempfile time")
 demandload(globals(), "traceback errno version atexit sets bz2")
@@ -1004,14 +1004,11 @@ def docopy(ui, repo, pats, opts, wlock):
                     repo.undelete([abstarget], wlock)
                 try:
                     if not opts.get('dry_run'):
-                        shutil.copyfile(relsrc, reltarget)
-                        shutil.copymode(relsrc, reltarget)
+                        util.copyfile(relsrc, reltarget)
                     restore = False
                 finally:
                     if restore:
                         repo.remove([abstarget], wlock)
-            except shutil.Error, inst:
-                raise util.Abort(str(inst))
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
                     ui.warn(_('%s: deleted in working copy\n') % relsrc)
@@ -2419,8 +2416,7 @@ def revert(ui, repo, *pats, **opts):
                 ui.note(_('saving current version of %s as %s\n') %
                         (rel, bakname))
                 if not opts.get('dry_run'):
-                    shutil.copyfile(rel, bakname)
-                    shutil.copymode(rel, bakname)
+                    util.copyfile(rel, bakname)
             if ui.verbose or not exact:
                 ui.status(xlist[1] % rel)
         for table, hitlist, misslist, backuphit, backupmiss in disptable:

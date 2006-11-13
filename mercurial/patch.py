@@ -26,11 +26,8 @@ def copyfile(src, dst, basedir=None):
     targetdir = os.path.dirname(absdst)
     if not os.path.isdir(targetdir):
         os.makedirs(targetdir)
-    try:
-        shutil.copyfile(abssrc, absdst)
-        shutil.copymode(abssrc, absdst)
-    except shutil.Error, inst:
-        raise util.Abort(str(inst))
+
+    util.copyfile(abssrc, absdst)
 
 # public functions
 
