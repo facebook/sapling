@@ -370,10 +370,6 @@ class ui(object):
         for a in args:
             sys.stdout.write(str(a))
 
-    def write_header(self, *args):
-        for a in args:
-            self.header.append(str(a))
-
     def write_err(self, *args):
         try:
             if not sys.stdout.closed: sys.stdout.flush()
