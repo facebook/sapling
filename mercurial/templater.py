@@ -44,6 +44,9 @@ class templater(object):
     filter uses function to transform value. syntax is
     {key|filter1|filter2|...}.'''
 
+    template_re = re.compile(r"(?:(?:#(?=[\w\|%]+#))|(?:{(?=[\w\|%]+})))"
+                             r"(\w+)(?:(?:%(\w+))|((?:\|\w+)*))[#}]")
+
     def __init__(self, mapfile, filters={}, defaults={}, cache={}):
         '''set up template engine.
         mapfile is name of file to read map definitions from.
@@ -84,55 +87,46 @@ class templater(object):
         '''perform expansion.
         t is name of map element to expand.
         map is added elements to use during expansion.'''
-        m = self.defaults.copy()
-        m.update(map)
         if not self.cache.has_key(t):
             try:
                 self.cache[t] = file(self.map[t]).read()
             except IOError, inst:
                 raise IOError(inst.args[0], _('template file %s: %s') %
                               (self.map[t], inst.args[1]))
-        return self.template(self.cache[t], **m)
+        tmpl = self.cache[t]
 
-    template_re = re.compile(r"(?:(?:#(?=[\w\|%]+#))|(?:{(?=[\w\|%]+})))"
-                             r"(\w+)((%\w+)*)((\|\w+)*)[#}]")
-
-    def template(self, tmpl, **map):
         while tmpl:
             m = self.template_re.search(tmpl)
-            if m:
-                start, end = m.span(0)
-                key = m.group(1)
-                format = m.group(2)
-                fl = m.group(4)
-
-                if start:
-                    yield tmpl[:start]
-
-                v = map.get(key, "")
-                if callable(v):
-                    v = v(**map)
-
-                if format:
-                    if not hasattr(v, '__iter__'):
-                        raise SyntaxError(_("Error expanding '%s%s'")
-                                          % (key, format))
-                    lm = map.copy()
-                    for i in v:
-                        lm.update(i)
-                        yield self(format[1:], **lm)
-
-                    v = ""
-
-                elif fl:
-                    for f in fl.split("|")[1:]:
-                        v = self.filters[f](v)
-
-                yield v
-                tmpl = tmpl[end:]
-            else:
+            if not m:
                 yield tmpl
                 break
+
+            start, end = m.span(0)
+            key, format, fl = m.groups()
+
+            if start:
+                yield tmpl[:start]
+            tmpl = tmpl[end:]
+
+            if key in map:
+                v = map[key]
+            else:
+                v = self.defaults.get(key, "")
+            if callable(v):
+                v = v(**map)
+            if format:
+                if not hasattr(v, '__iter__'):
+                    raise SyntaxError(_("Error expanding '%s%s'")
+                                      % (key, format))
+                lm = map.copy()
+                for i in v:
+                    lm.update(i)
+                    yield self(format, **lm)
+            else:
+                if fl:
+                    for f in fl.split("|")[1:]:
+                        v = self.filters[f](v)
+                yield v
 
 agescales = [("second", 1),
              ("minute", 60),
