@@ -9,7 +9,7 @@ from demandload import demandload
 from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal imp urllib pdb shlex")
-demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
+demandload(globals(), "fancyopts ui hg util lock revlog bundlerepo")
 demandload(globals(), "difflib patch tempfile time")
 demandload(globals(), "traceback errno version atexit bz2")
 demandload(globals(), "archival changegroup cmdutil hgweb.server sshserver")
@@ -294,130 +294,6 @@ def write_bundle(cg, filename=None, compress=True):
             fh.close()
         if cleanup is not None:
             os.unlink(cleanup)
-
-class changeset_printer(object):
-    '''show changeset information when templating not requested.'''
-
-    def __init__(self, ui, repo):
-        self.ui = ui
-        self.repo = repo
-
-    def show(self, rev=0, changenode=None, brinfo=None, copies=None):
-        '''show a single changeset or file revision'''
-        log = self.repo.changelog
-        if changenode is None:
-            changenode = log.node(rev)
-        elif not rev:
-            rev = log.rev(changenode)
-
-        if self.ui.quiet:
-            self.ui.write("%d:%s\n" % (rev, short(changenode)))
-            return
-
-        changes = log.read(changenode)
-        date = util.datestr(changes[2])
-        extra = changes[5]
-        branch = extra.get("branch")
-
-        hexfunc = self.ui.debugflag and hex or short
-
-        parents = log.parentrevs(rev)
-        if not self.ui.debugflag:
-            if parents[1] == nullrev:
-                if parents[0] >= rev - 1:
-                    parents = []
-                else:
-                    parents = [parents[0]]
-        parents = [(p, hexfunc(log.node(p))) for p in parents]
-
-        self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
-
-        if branch:
-            self.ui.write(_("branch:      %s\n") % branch)
-        for tag in self.repo.nodetags(changenode):
-            self.ui.write(_("tag:         %s\n") % tag)
-        for parent in parents:
-            self.ui.write(_("parent:      %d:%s\n") % parent)
-
-        if brinfo and changenode in brinfo:
-            br = brinfo[changenode]
-            self.ui.write(_("branch:      %s\n") % " ".join(br))
-
-        if self.ui.debugflag:
-            self.ui.write(_("manifest:    %d:%s\n") %
-                          (self.repo.manifest.rev(changes[0]), hex(changes[0])))
-        self.ui.write(_("user:        %s\n") % changes[1])
-        self.ui.write(_("date:        %s\n") % date)
-
-        if self.ui.debugflag:
-            files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
-            for key, value in zip([_("files:"), _("files+:"), _("files-:")],
-                                  files):
-                if value:
-                    self.ui.write("%-12s %s\n" % (key, " ".join(value)))
-        elif changes[3] and self.ui.verbose:
-            self.ui.write(_("files:       %s\n") % " ".join(changes[3]))
-        if copies and self.ui.verbose:
-            copies = ['%s (%s)' % c for c in copies]
-            self.ui.write(_("copies:      %s\n") % ' '.join(copies))
-
-        if extra and self.ui.debugflag:
-            extraitems = extra.items()
-            extraitems.sort()
-            for key, value in extraitems:
-                self.ui.write(_("extra:       %s=%s\n")
-                              % (key, value.encode('string_escape')))
-
-        description = changes[4].strip()
-        if description:
-            if self.ui.verbose:
-                self.ui.write(_("description:\n"))
-                self.ui.write(description)
-                self.ui.write("\n\n")
-            else:
-                self.ui.write(_("summary:     %s\n") %
-                              description.splitlines()[0])
-        self.ui.write("\n")
-
-def show_changeset(ui, repo, opts):
-    """show one changeset using template or regular display.
-
-    Display format will be the first non-empty hit of:
-    1. option 'template'
-    2. option 'style'
-    3. [ui] setting 'logtemplate'
-    4. [ui] setting 'style'
-    If all of these values are either the unset or the empty string,
-    regular display via changeset_printer() is done.
-    """
-    # options
-    tmpl = opts.get('template')
-    mapfile = None
-    if tmpl:
-        tmpl = templater.parsestring(tmpl, quoted=False)
-    else:
-        mapfile = opts.get('style')
-        # ui settings
-        if not mapfile:
-            tmpl = ui.config('ui', 'logtemplate')
-            if tmpl:
-                tmpl = templater.parsestring(tmpl)
-            else:
-                mapfile = ui.config('ui', 'style')
-
-    if tmpl or mapfile:
-        if mapfile:
-            if not os.path.split(mapfile)[0]:
-                mapname = (templater.templatepath('map-cmdline.' + mapfile)
-                           or templater.templatepath(mapfile))
-                if mapname: mapfile = mapname
-        try:
-            t = templater.changeset_templater(ui, repo, mapfile)
-        except SyntaxError, inst:
-            raise util.Abort(inst.args[0])
-        if tmpl: t.use_template(tmpl)
-        return t
-    return changeset_printer(ui, repo)
 
 def setremoteconfig(ui, opts):
     "copy remote options to ui tree"
@@ -1563,7 +1439,7 @@ def heads(ui, repo, **opts):
         ui.warn(_("the --branches option is deprecated, "
                   "please use 'hg branches' instead\n"))
         br = repo.branchlookup(heads)
-    displayer = show_changeset(ui, repo, opts)
+    displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in heads:
         displayer.show(changenode=n, brinfo=br)
 
@@ -1710,7 +1586,7 @@ def incoming(ui, repo, source="default", **opts):
         o = other.changelog.nodesbetween(incoming, revs)[0]
         if opts['newest_first']:
             o.reverse()
-        displayer = show_changeset(ui, other, opts)
+        displayer = cmdutil.show_changeset(ui, other, opts)
         for n in o:
             parents = [p for p in other.changelog.parents(n) if p != nullid]
             if opts['no_merges'] and len(parents) == 2:
@@ -1879,7 +1755,7 @@ def log(ui, repo, *pats, **opts):
             return ncache[fn].get(dcache[1][fn])
         return None
 
-    displayer = show_changeset(ui, repo, opts)
+    displayer = cmdutil.show_changeset(ui, repo, opts)
     for st, rev, fns in changeiter:
         if st == 'window':
             du = dui(ui)
@@ -2015,7 +1891,7 @@ def outgoing(ui, repo, dest=None, **opts):
     o = repo.changelog.nodesbetween(o, revs)[0]
     if opts['newest_first']:
         o.reverse()
-    displayer = show_changeset(ui, repo, opts)
+    displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in o:
         parents = [p for p in repo.changelog.parents(n) if p != nullid]
         if opts['no_merges'] and len(parents) == 2:
@@ -2056,7 +1932,7 @@ def parents(ui, repo, file_=None, rev=None, branches=None, **opts):
         ui.warn(_("the --branches option is deprecated, "
                   "please use 'hg branches' instead\n"))
         br = repo.branchlookup(p)
-    displayer = show_changeset(ui, repo, opts)
+    displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in p:
         if n != nullid:
             displayer.show(changenode=n, brinfo=br)
@@ -2683,7 +2559,7 @@ def tip(ui, repo, **opts):
         ui.warn(_("the --branches option is deprecated, "
                   "please use 'hg branches' instead\n"))
         br = repo.branchlookup([n])
-    show_changeset(ui, repo, opts).show(changenode=n, brinfo=br)
+    cmdutil.show_changeset(ui, repo, opts).show(changenode=n, brinfo=br)
     if opts['patch']:
         patch.diff(repo, repo.changelog.parents(n)[0], n)
 
@@ -2752,7 +2628,8 @@ def _lookup(repo, node, branch=None):
         if len(found) > 1:
             repo.ui.warn(_("Found multiple heads for %s\n") % branch)
             for x in found:
-                show_changeset(ui, repo, {}).show(changenode=x, brinfo=br)
+                cmdutil.show_changeset(ui, repo, {}).show(
+                    changenode=x, brinfo=br)
             raise util.Abort("")
         if len(found) == 1:
             node = found[0]

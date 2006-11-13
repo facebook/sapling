@@ -55,7 +55,7 @@
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:templater,util os re time')
+demandload(globals(), 'mercurial:cmdutil,templater,util os re time')
 
 MySQLdb = None
 
@@ -267,8 +267,8 @@ class bugzilla(object):
 
         mapfile = self.ui.config('bugzilla', 'style')
         tmpl = self.ui.config('bugzilla', 'template')
-        sio = templater.stringio()
-        t = templater.changeset_templater(self.ui, self.repo, mapfile, sio)
+        sio = cmdutil.stringio()
+        t = cmdutil.changeset_templater(self.ui, self.repo, mapfile, sio)
         if not mapfile and not tmpl:
             tmpl = _('changeset {node|short} in repo {root} refers '
                      'to bug {bug}.\ndetails:\n\t{desc|tabindent}')

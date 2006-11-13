@@ -8,8 +8,8 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), 'mdiff util')
 demandload(globals(), 'os sys')
+demandload(globals(), 'mdiff util templater cStringIO')
 
 revrangesep = ':'
 
@@ -195,3 +195,330 @@ def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
                                (oldrel, newrel, score * 100))
             if not dry_run:
                 repo.copy(old, new, wlock=wlock)
+
+class changeset_printer(object):
+    '''show changeset information when templating not requested.'''
+
+    def __init__(self, ui, repo):
+        self.ui = ui
+        self.repo = repo
+
+    def show(self, rev=0, changenode=None, brinfo=None, copies=None):
+        '''show a single changeset or file revision'''
+        log = self.repo.changelog
+        if changenode is None:
+            changenode = log.node(rev)
+        elif not rev:
+            rev = log.rev(changenode)
+
+        if self.ui.quiet:
+            self.ui.write("%d:%s\n" % (rev, short(changenode)))
+            return
+
+        changes = log.read(changenode)
+        date = util.datestr(changes[2])
+        extra = changes[5]
+        branch = extra.get("branch")
+
+        hexfunc = self.ui.debugflag and hex or short
+
+        parents = log.parentrevs(rev)
+        if not self.ui.debugflag:
+            if parents[1] == nullrev:
+                if parents[0] >= rev - 1:
+                    parents = []
+                else:
+                    parents = [parents[0]]
+        parents = [(p, hexfunc(log.node(p))) for p in parents]
+
+        self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
+
+        if branch:
+            self.ui.write(_("branch:      %s\n") % branch)
+        for tag in self.repo.nodetags(changenode):
+            self.ui.write(_("tag:         %s\n") % tag)
+        for parent in parents:
+            self.ui.write(_("parent:      %d:%s\n") % parent)
+
+        if brinfo and changenode in brinfo:
+            br = brinfo[changenode]
+            self.ui.write(_("branch:      %s\n") % " ".join(br))
+
+        if self.ui.debugflag:
+            self.ui.write(_("manifest:    %d:%s\n") %
+                          (self.repo.manifest.rev(changes[0]), hex(changes[0])))
+        self.ui.write(_("user:        %s\n") % changes[1])
+        self.ui.write(_("date:        %s\n") % date)
+
+        if self.ui.debugflag:
+            files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
+            for key, value in zip([_("files:"), _("files+:"), _("files-:")],
+                                  files):
+                if value:
+                    self.ui.write("%-12s %s\n" % (key, " ".join(value)))
+        elif changes[3] and self.ui.verbose:
+            self.ui.write(_("files:       %s\n") % " ".join(changes[3]))
+        if copies and self.ui.verbose:
+            copies = ['%s (%s)' % c for c in copies]
+            self.ui.write(_("copies:      %s\n") % ' '.join(copies))
+
+        if extra and self.ui.debugflag:
+            extraitems = extra.items()
+            extraitems.sort()
+            for key, value in extraitems:
+                self.ui.write(_("extra:       %s=%s\n")
+                              % (key, value.encode('string_escape')))
+
+        description = changes[4].strip()
+        if description:
+            if self.ui.verbose:
+                self.ui.write(_("description:\n"))
+                self.ui.write(description)
+                self.ui.write("\n\n")
+            else:
+                self.ui.write(_("summary:     %s\n") %
+                              description.splitlines()[0])
+        self.ui.write("\n")
+
+class changeset_templater(object):
+    '''format changeset information.'''
+
+    def __init__(self, ui, repo, mapfile, dest=None):
+        self.t = templater.templater(mapfile, templater.common_filters,
+                                     cache={'parent': '{rev}:{node|short} ',
+                                            'manifest': '{rev}:{node|short}',
+                                            'filecopy': '{name} ({source})'})
+        self.ui = ui
+        self.dest = dest
+        self.repo = repo
+
+    def use_template(self, t):
+        '''set template string to use'''
+        self.t.cache['changeset'] = t
+
+    def show(self, rev=0, changenode=None, brinfo=None, copies=[], **props):
+        '''show a single changeset or file revision'''
+        log = self.repo.changelog
+        if changenode is None:
+            changenode = log.node(rev)
+        elif not rev:
+            rev = log.rev(changenode)
+
+        changes = log.read(changenode)
+
+        def showlist(name, values, plural=None, **args):
+            '''expand set of values.
+            name is name of key in template map.
+            values is list of strings or dicts.
+            plural is plural of name, if not simply name + 's'.
+
+            expansion works like this, given name 'foo'.
+
+            if values is empty, expand 'no_foos'.
+
+            if 'foo' not in template map, return values as a string,
+            joined by space.
+
+            expand 'start_foos'.
+
+            for each value, expand 'foo'. if 'last_foo' in template
+            map, expand it instead of 'foo' for last key.
+
+            expand 'end_foos'.
+            '''
+            if plural: names = plural
+            else: names = name + 's'
+            if not values:
+                noname = 'no_' + names
+                if noname in self.t:
+                    yield self.t(noname, **args)
+                return
+            if name not in self.t:
+                if isinstance(values[0], str):
+                    yield ' '.join(values)
+                else:
+                    for v in values:
+                        yield dict(v, **args)
+                return
+            startname = 'start_' + names
+            if startname in self.t:
+                yield self.t(startname, **args)
+            vargs = args.copy()
+            def one(v, tag=name):
+                try:
+                    vargs.update(v)
+                except (AttributeError, ValueError):
+                    try:
+                        for a, b in v:
+                            vargs[a] = b
+                    except ValueError:
+                        vargs[name] = v
+                return self.t(tag, **vargs)
+            lastname = 'last_' + name
+            if lastname in self.t:
+                last = values.pop()
+            else:
+                last = None
+            for v in values:
+                yield one(v)
+            if last is not None:
+                yield one(last, tag=lastname)
+            endname = 'end_' + names
+            if endname in self.t:
+                yield self.t(endname, **args)
+
+        def showbranches(**args):
+            branch = changes[5].get("branch")
+            if branch:
+                yield showlist('branch', [branch], plural='branches', **args)
+            # add old style branches if requested
+            if brinfo and changenode in brinfo:
+                yield showlist('branch', brinfo[changenode],
+                               plural='branches', **args)
+
+        def showparents(**args):
+            parents = [[('rev', log.rev(p)), ('node', hex(p))]
+                       for p in log.parents(changenode)
+                       if self.ui.debugflag or p != nullid]
+            if (not self.ui.debugflag and len(parents) == 1 and
+                parents[0][0][1] == rev - 1):
+                return
+            return showlist('parent', parents, **args)
+
+        def showtags(**args):
+            return showlist('tag', self.repo.nodetags(changenode), **args)
+
+        def showextras(**args):
+            extras = changes[5].items()
+            extras.sort()
+            for key, value in extras:
+                args = args.copy()
+                args.update(dict(key=key, value=value))
+                yield self.t('extra', **args)
+
+        def showcopies(**args):
+            c = [{'name': x[0], 'source': x[1]} for x in copies]
+            return showlist('file_copy', c, plural='file_copies', **args)
+
+        if self.ui.debugflag:
+            files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
+            def showfiles(**args):
+                return showlist('file', files[0], **args)
+            def showadds(**args):
+                return showlist('file_add', files[1], **args)
+            def showdels(**args):
+                return showlist('file_del', files[2], **args)
+            def showmanifest(**args):
+                args = args.copy()
+                args.update(dict(rev=self.repo.manifest.rev(changes[0]),
+                                 node=hex(changes[0])))
+                return self.t('manifest', **args)
+        else:
+            def showfiles(**args):
+                yield showlist('file', changes[3], **args)
+            showadds = ''
+            showdels = ''
+            showmanifest = ''
+
+        defprops = {
+            'author': changes[1],
+            'branches': showbranches,
+            'date': changes[2],
+            'desc': changes[4],
+            'file_adds': showadds,
+            'file_dels': showdels,
+            'files': showfiles,
+            'file_copies': showcopies,
+            'manifest': showmanifest,
+            'node': hex(changenode),
+            'parents': showparents,
+            'rev': rev,
+            'tags': showtags,
+            'extras': showextras,
+            }
+        props = props.copy()
+        props.update(defprops)
+
+        try:
+            dest = self.dest or self.ui
+            if self.ui.debugflag and 'header_debug' in self.t:
+                key = 'header_debug'
+            elif self.ui.quiet and 'header_quiet' in self.t:
+                key = 'header_quiet'
+            elif self.ui.verbose and 'header_verbose' in self.t:
+                key = 'header_verbose'
+            elif 'header' in self.t:
+                key = 'header'
+            else:
+                key = ''
+            if key:
+                dest.write_header(templater.stringify(self.t(key, **props)))
+            if self.ui.debugflag and 'changeset_debug' in self.t:
+                key = 'changeset_debug'
+            elif self.ui.quiet and 'changeset_quiet' in self.t:
+                key = 'changeset_quiet'
+            elif self.ui.verbose and 'changeset_verbose' in self.t:
+                key = 'changeset_verbose'
+            else:
+                key = 'changeset'
+            dest.write(templater.stringify(self.t(key, **props)))
+        except KeyError, inst:
+            raise util.Abort(_("%s: no key named '%s'") % (self.t.mapfile,
+                                                           inst.args[0]))
+        except SyntaxError, inst:
+            raise util.Abort(_('%s: %s') % (self.t.mapfile, inst.args[0]))
+
+class stringio(object):
+    '''wrap cStringIO for use by changeset_templater.'''
+    def __init__(self):
+        self.fp = cStringIO.StringIO()
+
+    def write(self, *args):
+        for a in args:
+            self.fp.write(a)
+
+    write_header = write
+
+    def __getattr__(self, key):
+        return getattr(self.fp, key)
+
+def show_changeset(ui, repo, opts):
+    """show one changeset using template or regular display.
+
+    Display format will be the first non-empty hit of:
+    1. option 'template'
+    2. option 'style'
+    3. [ui] setting 'logtemplate'
+    4. [ui] setting 'style'
+    If all of these values are either the unset or the empty string,
+    regular display via changeset_printer() is done.
+    """
+    # options
+    tmpl = opts.get('template')
+    mapfile = None
+    if tmpl:
+        tmpl = templater.parsestring(tmpl, quoted=False)
+    else:
+        mapfile = opts.get('style')
+        # ui settings
+        if not mapfile:
+            tmpl = ui.config('ui', 'logtemplate')
+            if tmpl:
+                tmpl = templater.parsestring(tmpl)
+            else:
+                mapfile = ui.config('ui', 'style')
+
+    if tmpl or mapfile:
+        if mapfile:
+            if not os.path.split(mapfile)[0]:
+                mapname = (templater.templatepath('map-cmdline.' + mapfile)
+                           or templater.templatepath(mapfile))
+                if mapname: mapfile = mapname
+        try:
+            t = changeset_templater(ui, repo, mapfile)
+        except SyntaxError, inst:
+            raise util.Abort(inst.args[0])
+        if tmpl: t.use_template(tmpl)
+        return t
+    return changeset_printer(ui, repo)
+
