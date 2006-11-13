@@ -256,16 +256,17 @@ def shortdate(date):
 
 def indent(text, prefix):
     '''indent each non-empty line of text after first with prefix.'''
-    fp = cStringIO.StringIO()
     lines = text.splitlines()
     num_lines = len(lines)
-    for i in xrange(num_lines):
-        l = lines[i]
-        if i and l.strip(): fp.write(prefix)
-        fp.write(l)
-        if i < num_lines - 1 or text.endswith('\n'):
-            fp.write('\n')
-    return fp.getvalue()
+    def indenter():
+        for i in xrange(num_lines):
+            l = lines[i]
+            if i and l.strip():
+                yield prefix
+            yield l
+            if i < num_lines - 1 or text.endswith('\n'):
+                yield '\n'
+    return "".join(indenter())
 
 common_filters = {
     "addbreaks": nl2br,
