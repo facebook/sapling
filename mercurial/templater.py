@@ -157,6 +157,7 @@ def stringify(thing):
     '''turn nested template iterator into string.'''
     if hasattr(thing, '__iter__'):
         return "".join([stringify(t) for t in thing])
+    if thing is None: return ""
     return str(thing)
 
 para_re = None
@@ -382,18 +383,8 @@ class changeset_templater(object):
                 yield showlist('branch', [branch], plural='branches', **args)
             # add old style branches if requested
             if brinfo and changenode in brinfo:
-                for x in showlist('branch', brinfo[changenode],
-                                  plural='branches', **args):
-                    yield x
-
-        if self.ui.debugflag:
-            def showmanifest(**args):
-                args = args.copy()
-                args.update(dict(rev=self.repo.manifest.rev(changes[0]),
-                                 node=hex(changes[0])))
-                yield self.t('manifest', **args)
-        else:
-            showmanifest = ''
+                yield showlist('branch', brinfo[changenode],
+                               plural='branches', **args)
 
         def showparents(**args):
             parents = [[('rev', log.rev(p)), ('node', hex(p))]
@@ -402,12 +393,10 @@ class changeset_templater(object):
             if (not self.ui.debugflag and len(parents) == 1 and
                 parents[0][0][1] == rev - 1):
                 return
-            for x in showlist('parent', parents, **args):
-                yield x
+            return showlist('parent', parents, **args)
 
         def showtags(**args):
-            for x in showlist('tag', self.repo.nodetags(changenode), **args):
-                yield x
+            return showlist('tag', self.repo.nodetags(changenode), **args)
 
         def showextras(**args):
             extras = changes[5].items()
@@ -417,26 +406,29 @@ class changeset_templater(object):
                 args.update(dict(key=key, value=value))
                 yield self.t('extra', **args)
 
+        def showcopies(**args):
+            c = [{'name': x[0], 'source': x[1]} for x in copies]
+            return showlist('file_copy', c, plural='file_copies', **args)
+
         if self.ui.debugflag:
             files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
             def showfiles(**args):
-                for x in showlist('file', files[0], **args): yield x
+                return showlist('file', files[0], **args)
             def showadds(**args):
-                for x in showlist('file_add', files[1], **args): yield x
+                return showlist('file_add', files[1], **args)
             def showdels(**args):
-                for x in showlist('file_del', files[2], **args): yield x
+                return showlist('file_del', files[2], **args)
+            def showmanifest(**args):
+                args = args.copy()
+                args.update(dict(rev=self.repo.manifest.rev(changes[0]),
+                                 node=hex(changes[0])))
+                return self.t('manifest', **args)
         else:
             def showfiles(**args):
-                for x in showlist('file', changes[3], **args): yield x
+                yield showlist('file', changes[3], **args)
             showadds = ''
             showdels = ''
-
-        copies = [{'name': x[0], 'source': x[1]}
-                  for x in copies]
-        def showcopies(**args):
-            for x in showlist('file_copy', copies, plural='file_copies',
-                              **args):
-                yield x
+            showmanifest = ''
 
         defprops = {
             'author': changes[1],
