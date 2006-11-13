@@ -1592,10 +1592,6 @@ def incoming(ui, repo, source="default", **opts):
             if opts['no_merges'] and len(parents) == 2:
                 continue
             displayer.show(changenode=n)
-            if opts['patch']:
-                prev = (parents and parents[0]) or nullid
-                patch.diff(other, prev, n, fp=repo.ui)
-                ui.write("\n")
     finally:
         if hasattr(other, 'close'):
             other.close()
@@ -1672,35 +1668,6 @@ def log(ui, repo, *pats, **opts):
     commit. When the -v/--verbose switch is used, the list of changed
     files and full commit message is shown.
     """
-    class dui(object):
-        # Implement and delegate some ui protocol.  Save hunks of
-        # output for later display in the desired order.
-        def __init__(self, ui):
-            self.ui = ui
-            self.hunk = {}
-            self.header = {}
-            self.quiet = ui.quiet
-            self.verbose = ui.verbose
-            self.debugflag = ui.debugflag
-        def bump(self, rev):
-            self.rev = rev
-            self.hunk[rev] = []
-            self.header[rev] = []
-        def note(self, *args):
-            if self.verbose:
-                self.write(*args)
-        def status(self, *args):
-            if not self.quiet:
-                self.write(*args)
-        def write(self, *args):
-            self.hunk[self.rev].extend(args)
-        def write_header(self, *args):
-            self.header[self.rev].extend(args)
-        def debug(self, *args):
-            if self.debugflag:
-                self.write(*args)
-        def __getattr__(self, key):
-            return getattr(self.ui, key)
 
     getchange = util.cachefunc(lambda r:repo.changectx(r).changeset())
     changeiter, matchfn = walkchangerevs(ui, repo, pats, getchange, opts)
@@ -1755,13 +1722,9 @@ def log(ui, repo, *pats, **opts):
             return ncache[fn].get(dcache[1][fn])
         return None
 
-    displayer = cmdutil.show_changeset(ui, repo, opts)
+    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     for st, rev, fns in changeiter:
-        if st == 'window':
-            du = dui(ui)
-            displayer.ui = du
-        elif st == 'add':
-            du.bump(rev)
+        if st == 'add':
             changenode = repo.changelog.node(rev)
             parents = [p for p in repo.changelog.parentrevs(rev)
                        if p != nullrev]
@@ -1794,21 +1757,10 @@ def log(ui, repo, *pats, **opts):
                     if rename:
                         copies.append((fn, rename[0]))
             displayer.show(rev, changenode, brinfo=br, copies=copies)
-            if opts['patch']:
-                if parents:
-                    prev = parents[0]
-                else:
-                    prev = nullrev
-                prev = repo.changelog.node(prev)
-                patch.diff(repo, prev, changenode, match=matchfn, fp=du)
-                du.write("\n\n")
         elif st == 'iter':
             if count == limit: break
-            if du.header[rev]:
-                ui.write_header(*du.header[rev])
-            if du.hunk[rev]:
+            if displayer.flush(rev):
                 count += 1
-                ui.write(*du.hunk[rev])
 
 def manifest(ui, repo, rev=None):
     """output the latest or given revision of the project manifest
@@ -1897,10 +1849,6 @@ def outgoing(ui, repo, dest=None, **opts):
         if opts['no_merges'] and len(parents) == 2:
             continue
         displayer.show(changenode=n)
-        if opts['patch']:
-            prev = (parents and parents[0]) or nullid
-            patch.diff(repo, prev, n)
-            ui.write("\n")
 
 def parents(ui, repo, file_=None, rev=None, branches=None, **opts):
     """show the parents of the working dir or revision
@@ -2560,8 +2508,6 @@ def tip(ui, repo, **opts):
                   "please use 'hg branches' instead\n"))
         br = repo.branchlookup([n])
     cmdutil.show_changeset(ui, repo, opts).show(changenode=n, brinfo=br)
-    if opts['patch']:
-        patch.diff(repo, repo.changelog.parents(n)[0], n)
 
 def unbundle(ui, repo, fname, **opts):
     """apply a changegroup file
