@@ -78,7 +78,7 @@ class templater(object):
                 raise SyntaxError(_("%s:%s: parse error") % (mapfile, i))
 
     def __contains__(self, key):
-        return key in self.cache
+        return key in self.cache or key in self.map
 
     def __call__(self, t, **map):
         '''perform expansion.
@@ -86,20 +86,18 @@ class templater(object):
         map is added elements to use during expansion.'''
         m = self.defaults.copy()
         m.update(map)
-        try:
-            tmpl = self.cache[t]
-        except KeyError:
+        if not self.cache.has_key(t):
             try:
-                tmpl = self.cache[t] = file(self.map[t]).read()
+                self.cache[t] = file(self.map[t]).read()
             except IOError, inst:
                 raise IOError(inst.args[0], _('template file %s: %s') %
                               (self.map[t], inst.args[1]))
-        return self.template(tmpl, self.filters, **m)
+        return self.template(self.cache[t], **m)
 
     template_re = re.compile(r"(?:(?:#(?=[\w\|%]+#))|(?:{(?=[\w\|%]+})))"
                              r"(\w+)((%\w+)*)((\|\w+)*)[#}]")
 
-    def template(self, tmpl, filters={}, **map):
+    def template(self, tmpl, **map):
         while tmpl:
             m = self.template_re.search(tmpl)
             if m:
@@ -128,7 +126,7 @@ class templater(object):
 
                 elif fl:
                     for f in fl.split("|")[1:]:
-                        v = filters[f](v)
+                        v = self.filters[f](v)
 
                 yield v
                 tmpl = tmpl[end:]
