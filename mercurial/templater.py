@@ -325,16 +325,15 @@ class changeset_templater(object):
     def write_header(self, thing):
         self.write(thing, header=True)
 
-    def show(self, rev=0, changenode=None, brinfo=None, changes=None,
-             copies=[], **props):
+    def show(self, rev=0, changenode=None, brinfo=None, copies=[], **props):
         '''show a single changeset or file revision'''
         log = self.repo.changelog
         if changenode is None:
             changenode = log.node(rev)
         elif not rev:
             rev = log.rev(changenode)
-        if changes is None:
-            changes = log.read(changenode)
+
+        changes = log.read(changenode)
 
         def showlist(name, values, plural=None, **args):
             '''expand set of values.
