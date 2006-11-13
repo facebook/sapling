@@ -11,7 +11,7 @@ from i18n import gettext as _
 demandload(globals(), "os re sys signal imp urllib pdb shlex")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "difflib patch tempfile time")
-demandload(globals(), "traceback errno version atexit sets bz2")
+demandload(globals(), "traceback errno version atexit bz2")
 demandload(globals(), "archival changegroup cmdutil hgweb.server sshserver")
 
 class UnknownCommand(Exception):
@@ -827,24 +827,23 @@ def bundle(ui, repo, fname, dest=None, **opts):
         # create the right base
         # XXX: nodesbetween / changegroup* should be "fixed" instead
         o = []
-        has_set = sets.Set(base)
+        has = {nullid: None} 
         for n in base:
-            has_set.update(repo.changelog.reachable(n))
+            has.update(repo.changelog.reachable(n))
         if revs:
             visit = list(revs)
         else:
             visit = repo.changelog.heads()
-        seen = sets.Set(visit)
+        seen = {}
         while visit:
             n = visit.pop(0)
-            parents = [p for p in repo.changelog.parents(n)
-                       if p != nullid and p not in has_set]
+            parents = [p for p in repo.changelog.parents(n) if p not in has]
             if len(parents) == 0:
                 o.insert(0, n)
             else:
                 for p in parents:
                     if p not in seen:
-                        seen.add(p)
+                        seen[p] = 1
                         visit.append(p)
     else:
         setremoteconfig(ui, opts)
