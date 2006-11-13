@@ -155,14 +155,9 @@ def age(date):
 
 def stringify(thing):
     '''turn nested template iterator into string.'''
-    def flatten(thing):
-        if hasattr(thing, '__iter__'):
-            for t in thing:
-                for i in flatten(t):
-                    yield i
-        else:
-            yield str(thing)
-    return "".join(flatten(thing))
+    if hasattr(thing, '__iter__'):
+        return "".join([stringify(t) for t in thing])
+    return str(thing)
 
 para_re = None
 space_re = None
@@ -309,21 +304,6 @@ class changeset_templater(object):
     def use_template(self, t):
         '''set template string to use'''
         self.t.cache['changeset'] = t
-
-    def write(self, thing, header=False):
-        '''write expanded template.
-        uses in-order recursive traverse of iterators.'''
-        dest = self.dest or self.ui
-        for t in thing:
-            if hasattr(t, '__iter__'):
-                self.write(t, header=header)
-            elif header:
-                dest.write_header(t)
-            else:
-                dest.write(t)
-
-    def write_header(self, thing):
-        self.write(thing, header=True)
 
     def show(self, rev=0, changenode=None, brinfo=None, copies=[], **props):
         '''show a single changeset or file revision'''
@@ -478,6 +458,7 @@ class changeset_templater(object):
         props.update(defprops)
 
         try:
+            dest = self.dest or self.ui
             if self.ui.debugflag and 'header_debug' in self.t:
                 key = 'header_debug'
             elif self.ui.quiet and 'header_quiet' in self.t:
@@ -489,7 +470,7 @@ class changeset_templater(object):
             else:
                 key = ''
             if key:
-                self.write_header(self.t(key, **props))
+                dest.write_header(stringify(self.t(key, **props)))
             if self.ui.debugflag and 'changeset_debug' in self.t:
                 key = 'changeset_debug'
             elif self.ui.quiet and 'changeset_quiet' in self.t:
@@ -498,7 +479,7 @@ class changeset_templater(object):
                 key = 'changeset_verbose'
             else:
                 key = 'changeset'
-            self.write(self.t(key, **props))
+            dest.write(stringify(self.t(key, **props)))
         except KeyError, inst:
             raise util.Abort(_("%s: no key named '%s'") % (self.t.mapfile,
                                                            inst.args[0]))
