@@ -14,13 +14,9 @@ def parsestring(s, quoted=True):
     '''parse a string using simple c-like syntax.
     string must be in quotes if quoted is True.'''
     if quoted:
-        first = s[0]
-        if len(s) < 2: raise SyntaxError(_('string too short'))
-        if first not in "'\"": raise SyntaxError(_('invalid quote'))
-        if s[-1] != first: raise SyntaxError(_('unmatched quotes'))
-        s = s[1:-1].decode('string_escape')
-        if first in s: raise SyntaxError(_('string ends early'))
-        return s
+        if len(s) < 2 or s[0] != s[-1]:
+            raise SyntaxError(_('unmatched quotes'))
+        return s[1:-1].decode('string_escape')
 
     return s.decode('string_escape')
 
