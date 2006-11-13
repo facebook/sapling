@@ -542,10 +542,10 @@ class revlog(object):
         else:
             return self.index[rev][-5]
 
-    def reachable(self, rev, stop=None):
+    def reachable(self, node, stop=None):
         reachable = {}
-        visit = [rev]
-        reachable[rev] = 1
+        visit = [node]
+        reachable[node] = 1
         if stop:
             stopn = self.rev(stop)
         else:
