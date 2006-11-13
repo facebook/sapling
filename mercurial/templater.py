@@ -10,34 +10,19 @@ from i18n import gettext as _
 from node import *
 demandload(globals(), "cStringIO cgi re sys os time urllib util textwrap")
 
-esctable = {
-    '\\': '\\',
-    'r': '\r',
-    't': '\t',
-    'n': '\n',
-    'v': '\v',
-    }
-
 def parsestring(s, quoted=True):
     '''parse a string using simple c-like syntax.
     string must be in quotes if quoted is True.'''
-    fp = cStringIO.StringIO()
     if quoted:
         first = s[0]
         if len(s) < 2: raise SyntaxError(_('string too short'))
         if first not in "'\"": raise SyntaxError(_('invalid quote'))
         if s[-1] != first: raise SyntaxError(_('unmatched quotes'))
-        s = s[1:-1]
-    escape = False
-    for c in s:
-        if escape:
-            fp.write(esctable.get(c, c))
-            escape = False
-        elif c == '\\': escape = True
-        elif quoted and c == first: raise SyntaxError(_('string ends early'))
-        else: fp.write(c)
-    if escape: raise SyntaxError(_('unterminated escape'))
-    return fp.getvalue()
+        s = s[1:-1].decode('string_escape')
+        if first in s: raise SyntaxError(_('string ends early'))
+        return s
+
+    return s.decode('string_escape')
 
 class templater(object):
     '''template expansion engine.
