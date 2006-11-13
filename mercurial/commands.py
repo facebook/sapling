@@ -10,10 +10,9 @@ from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb shlex")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
-demandload(globals(), "fnmatch difflib patch random signal tempfile time")
-demandload(globals(), "traceback errno socket version struct atexit sets bz2")
-demandload(globals(), "archival cStringIO changegroup")
-demandload(globals(), "cmdutil hgweb.server sshserver")
+demandload(globals(), "difflib patch tempfile time")
+demandload(globals(), "traceback errno socket version atexit sets bz2")
+demandload(globals(), "archival changegroup cmdutil hgweb.server sshserver")
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
