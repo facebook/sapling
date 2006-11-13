@@ -68,7 +68,7 @@
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:commands,patch,templater,util,mail')
+demandload(globals(), 'mercurial:commands,patch,cmdutil,templater,util,mail')
 demandload(globals(), 'email.Parser fnmatch socket time')
 
 # template for single changeset can include email headers.
@@ -107,13 +107,13 @@ class notifier(object):
         self.stripcount = int(self.ui.config('notify', 'strip', 0))
         self.root = self.strip(self.repo.root)
         self.domain = self.ui.config('notify', 'domain')
-        self.sio = templater.stringio()
+        self.sio = cmdutil.stringio()
         self.subs = self.subscribers()
 
         mapfile = self.ui.config('notify', 'style')
         template = (self.ui.config('notify', hooktype) or
                     self.ui.config('notify', 'template'))
-        self.t = templater.changeset_templater(self.ui, self.repo, mapfile,
+        self.t = cmdutil.changeset_templater(self.ui, self.repo, mapfile,
                                                self.sio)
         if not mapfile and not template:
             template = deftemplates.get(hooktype) or single_template
@@ -237,7 +237,7 @@ class notifier(object):
         maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
         if maxdiff == 0:
             return
-        fp = templater.stringio()
+        fp = cmdutil.stringio()
         prev = self.repo.changelog.parents(node)[0]
         patch.diff(self.repo, prev, ref, fp=fp)
         difflines = fp.getvalue().splitlines(1)

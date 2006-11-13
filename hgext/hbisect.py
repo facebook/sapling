@@ -8,7 +8,7 @@
 
 from mercurial.i18n import gettext as _
 from mercurial.demandload import demandload
-demandload(globals(), "os sys sets mercurial:hg,util,commands")
+demandload(globals(), "os sys sets mercurial:hg,util,commands,cmdutil")
 
 versionstr = "0.0.3"
 
@@ -169,7 +169,7 @@ class bisect(object):
             if ancestors.pop() != self.badrev:
                 raise util.Abort(_("Could not find the first bad revision"))
             self.ui.write(_("The first bad revision is:\n"))
-            displayer = commands.show_changeset(self.ui, self.repo, {})
+            displayer = cmdutil.show_changeset(self.ui, self.repo, {})
             displayer.show(changenode=self.badrev)
             return None
         best_rev = None

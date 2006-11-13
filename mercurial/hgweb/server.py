@@ -200,6 +200,16 @@ def create_server(ui, repo):
             self.reqmaker = wsgiapplication(self.make_handler)
             self.daemon_threads = True
 
+            addr, port = self.socket.getsockname()
+            if addr == '0.0.0.0':
+                addr = socket.gethostname()
+            else:
+                try:
+                    addr = socket.gethostbyaddr(addr)[0]
+                except socket.error:
+                    pass
+            self.addr, self.port = addr, port
+
         def make_handler(self):
             if self.webdir_conf:
                 hgwebobj = self.webdirmaker(self.webdir_conf)
@@ -219,7 +229,10 @@ def create_server(ui, repo):
                 raise hg.RepoError(_('IPv6 not available on this system'))
             super(IPv6HTTPServer, self).__init__(*args, **kwargs)
 
-    if use_ipv6:
-        return IPv6HTTPServer((address, port), _hgwebhandler)
-    else:
-        return MercurialHTTPServer((address, port), _hgwebhandler)
+    try:
+        if use_ipv6:
+            return IPv6HTTPServer((address, port), _hgwebhandler)
+        else:
+            return MercurialHTTPServer((address, port), _hgwebhandler)
+    except socket.error, inst:
+        raise util.Abort(_('cannot start server: %s') % inst.args[1])

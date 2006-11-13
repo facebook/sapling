@@ -37,7 +37,6 @@ diff -r 000000000000 -r 8ba83d44753d foo
 @@ -0,0 +1,1 @@
 +a
 
-
 changeset:   1:a1fce69c50d9
 tag:         tip
 user:        test
@@ -49,7 +48,6 @@ diff -r 8ba83d44753d -r a1fce69c50d9 foo
 +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
 @@ -1,1 +0,0 @@
 -a
-
 
 not removing a: file has been marked for add (use -f to force removal)
 adding a
