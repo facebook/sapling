@@ -172,15 +172,14 @@ def age(date):
 
 def stringify(thing):
     '''turn nested template iterator into string.'''
-    cs = cStringIO.StringIO()
-    def walk(things):
-        for t in things:
-            if hasattr(t, '__iter__'):
-                walk(t)
-            else:
-                cs.write(t)
-    walk(thing)
-    return cs.getvalue()
+    def flatten(thing):
+        if hasattr(thing, '__iter__'):
+            for t in thing:
+                for i in flatten(t):
+                    yield i
+        else:
+            yield str(thing)
+    return "".join(flatten(thing))
 
 para_re = None
 space_re = None
