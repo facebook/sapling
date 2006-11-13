@@ -204,11 +204,8 @@ def fill(text, width):
             yield text[start:m.start(0)], m.group(1)
             start = m.end(1)
 
-    fp = cStringIO.StringIO()
-    for para, rest in findparas():
-        fp.write(space_re.sub(' ', textwrap.fill(para, width)))
-        fp.write(rest)
-    return fp.getvalue()
+    return "".join([space_re.sub(' ', textwrap.fill(para, width)) + rest
+                    for para, rest in findparas()])
 
 def firstline(text):
     '''return the first line of text'''
