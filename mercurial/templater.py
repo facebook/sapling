@@ -96,36 +96,31 @@ class templater(object):
                               (self.map[t], inst.args[1]))
         return self.template(tmpl, self.filters, **m)
 
-    template_re = re.compile(r"[#{]([a-zA-Z_][a-zA-Z0-9_]*)"
-                             r"((%[a-zA-Z_][a-zA-Z0-9_]*)*)"
-                             r"((\|[a-zA-Z_][a-zA-Z0-9_]*)*)[#}]")
+    template_re = re.compile(r"(?:(?:#(?=[\w\|%]+#))|(?:{(?=[\w\|%]+})))"
+                             r"(\w+)((%\w+)*)((\|\w+)*)[#}]")
 
     def template(self, tmpl, filters={}, **map):
-        lm = map.copy()
         while tmpl:
             m = self.template_re.search(tmpl)
             if m:
                 start, end = m.span(0)
-                s, e = tmpl[start], tmpl[end - 1]
                 key = m.group(1)
-                if ((s == '#' and e != '#') or (s == '{' and e != '}')):
-                    raise SyntaxError(_("'%s'/'%s' mismatch expanding '%s'") %
-                                      (s, e, key))
-                if start:
-                    yield tmpl[:start]
-                v = map.get(key, "")
-                v = callable(v) and v(**map) or v
-
                 format = m.group(2)
                 fl = m.group(4)
 
+                if start:
+                    yield tmpl[:start]
+
+                v = map.get(key, "")
+                if callable(v):
+                    v = v(**map)
+
                 if format:
-                    try:
-                        q = v.__iter__
-                    except AttributeError:
+                    if not hasattr(v, '__iter__'):
                         raise SyntaxError(_("Error expanding '%s%s'")
                                           % (key, format))
-                    for i in q():
+                    lm = map.copy()
+                    for i in v:
                         lm.update(i)
                         yield self(format[1:], **lm)
 
