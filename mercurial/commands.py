@@ -11,7 +11,7 @@ from i18n import gettext as _
 demandload(globals(), "os re sys signal shutil imp urllib pdb shlex")
 demandload(globals(), "fancyopts ui hg util lock revlog templater bundlerepo")
 demandload(globals(), "difflib patch tempfile time")
-demandload(globals(), "traceback errno socket version atexit sets bz2")
+demandload(globals(), "traceback errno version atexit sets bz2")
 demandload(globals(), "archival changegroup cmdutil hgweb.server sshserver")
 
 class UnknownCommand(Exception):
@@ -2531,24 +2531,14 @@ def serve(ui, repo, **opts):
         os.read(rfd, 1)
         os._exit(0)
 
-    try:
-        httpd = hgweb.server.create_server(ui, repo)
-    except socket.error, inst:
-        raise util.Abort(_('cannot start server: %s') % inst.args[1])
+    httpd = hgweb.server.create_server(ui, repo)
 
     if ui.verbose:
-        addr, port = httpd.socket.getsockname()
-        if addr == '0.0.0.0':
-            addr = socket.gethostname()
+        if httpd.port != 80:
+            ui.status(_('listening at http://%s:%d/\n') %
+                      (httpd.addr, httpd.port))
         else:
-            try:
-                addr = socket.gethostbyaddr(addr)[0]
-            except socket.error:
-                pass
-        if port != 80:
-            ui.status(_('listening at http://%s:%d/\n') % (addr, port))
-        else:
-            ui.status(_('listening at http://%s/\n') % addr)
+            ui.status(_('listening at http://%s/\n') % httpd.addr)
 
     if opts['pid_file']:
         fp = open(opts['pid_file'], 'w')
