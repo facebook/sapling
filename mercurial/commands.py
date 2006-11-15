@@ -652,10 +652,6 @@ def copy(ui, repo, *pats, **opts):
     operation is recorded, but no copying is performed.
 
     This command takes effect in the next commit.
-
-    NOTE: This command should be treated as experimental. While it
-    should properly record copied files, this information is not yet
-    fully used by merge, nor fully reported by log.
     """
     wlock = repo.wlock(0)
     errs, copied = docopy(ui, repo, pats, opts, wlock)
@@ -1872,10 +1868,6 @@ def rename(ui, repo, *pats, **opts):
     operation is recorded, but no copying is performed.
 
     This command takes effect in the next commit.
-
-    NOTE: This command should be treated as experimental. While it
-    should properly record rename files, this information is not yet
-    fully used by merge, nor fully reported by log.
     """
     wlock = repo.wlock(0)
     errs, copied = docopy(ui, repo, pats, opts, wlock)
