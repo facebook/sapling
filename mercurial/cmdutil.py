@@ -592,3 +592,196 @@ def show_changeset(ui, repo, opts, buffered=False):
         return t
     return changeset_printer(ui, repo, patch, br, buffered)
 
+def walkchangerevs(ui, repo, pats, change, opts):
+    '''Iterate over files and the revs they changed in.
+
+    Callers most commonly need to iterate backwards over the history
+    it is interested in.  Doing so has awful (quadratic-looking)
+    performance, so we use iterators in a "windowed" way.
+
+    We walk a window of revisions in the desired order.  Within the
+    window, we first walk forwards to gather data, then in the desired
+    order (usually backwards) to display it.
+
+    This function returns an (iterator, matchfn) tuple. The iterator
+    yields 3-tuples. They will be of one of the following forms:
+
+    "window", incrementing, lastrev: stepping through a window,
+    positive if walking forwards through revs, last rev in the
+    sequence iterated over - use to reset state for the current window
+
+    "add", rev, fns: out-of-order traversal of the given file names
+    fns, which changed during revision rev - use to gather data for
+    possible display
+
+    "iter", rev, None: in-order traversal of the revs earlier iterated
+    over with "add" - use to display data'''
+
+    def increasing_windows(start, end, windowsize=8, sizelimit=512):
+        if start < end:
+            while start < end:
+                yield start, min(windowsize, end-start)
+                start += windowsize
+                if windowsize < sizelimit:
+                    windowsize *= 2
+        else:
+            while start > end:
+                yield start, min(windowsize, start-end-1)
+                start -= windowsize
+                if windowsize < sizelimit:
+                    windowsize *= 2
+
+    files, matchfn, anypats = matchpats(repo, pats, opts)
+    follow = opts.get('follow') or opts.get('follow_first')
+
+    if repo.changelog.count() == 0:
+        return [], matchfn
+
+    if follow:
+        defrange = '%s:0' % repo.changectx().rev()
+    else:
+        defrange = 'tip:0'
+    revs = revrange(ui, repo, opts['rev'] or [defrange])
+    wanted = {}
+    slowpath = anypats
+    fncache = {}
+
+    if not slowpath and not files:
+        # No files, no patterns.  Display all revs.
+        wanted = dict.fromkeys(revs)
+    copies = []
+    if not slowpath:
+        # Only files, no patterns.  Check the history of each file.
+        def filerevgen(filelog, node):
+            cl_count = repo.changelog.count()
+            if node is None:
+                last = filelog.count() - 1
+            else:
+                last = filelog.rev(node)
+            for i, window in increasing_windows(last, nullrev):
+                revs = []
+                for j in xrange(i - window, i + 1):
+                    n = filelog.node(j)
+                    revs.append((filelog.linkrev(n),
+                                 follow and filelog.renamed(n)))
+                revs.reverse()
+                for rev in revs:
+                    # only yield rev for which we have the changelog, it can
+                    # happen while doing "hg log" during a pull or commit
+                    if rev[0] < cl_count:
+                        yield rev
+        def iterfiles():
+            for filename in files:
+                yield filename, None
+            for filename_node in copies:
+                yield filename_node
+        minrev, maxrev = min(revs), max(revs)
+        for file_, node in iterfiles():
+            filelog = repo.file(file_)
+            # A zero count may be a directory or deleted file, so
+            # try to find matching entries on the slow path.
+            if filelog.count() == 0:
+                slowpath = True
+                break
+            for rev, copied in filerevgen(filelog, node):
+                if rev <= maxrev:
+                    if rev < minrev:
+                        break
+                    fncache.setdefault(rev, [])
+                    fncache[rev].append(file_)
+                    wanted[rev] = 1
+                    if follow and copied:
+                        copies.append(copied)
+    if slowpath:
+        if follow:
+            raise util.Abort(_('can only follow copies/renames for explicit '
+                               'file names'))
+
+        # The slow path checks files modified in every changeset.
+        def changerevgen():
+            for i, window in increasing_windows(repo.changelog.count()-1,
+                                                nullrev):
+                for j in xrange(i - window, i + 1):
+                    yield j, change(j)[3]
+
+        for rev, changefiles in changerevgen():
+            matches = filter(matchfn, changefiles)
+            if matches:
+                fncache[rev] = matches
+                wanted[rev] = 1
+
+    class followfilter:
+        def __init__(self, onlyfirst=False):
+            self.startrev = nullrev
+            self.roots = []
+            self.onlyfirst = onlyfirst
+
+        def match(self, rev):
+            def realparents(rev):
+                if self.onlyfirst:
+                    return repo.changelog.parentrevs(rev)[0:1]
+                else:
+                    return filter(lambda x: x != nullrev,
+                                  repo.changelog.parentrevs(rev))
+
+            if self.startrev == nullrev:
+                self.startrev = rev
+                return True
+
+            if rev > self.startrev:
+                # forward: all descendants
+                if not self.roots:
+                    self.roots.append(self.startrev)
+                for parent in realparents(rev):
+                    if parent in self.roots:
+                        self.roots.append(rev)
+                        return True
+            else:
+                # backwards: all parents
+                if not self.roots:
+                    self.roots.extend(realparents(self.startrev))
+                if rev in self.roots:
+                    self.roots.remove(rev)
+                    self.roots.extend(realparents(rev))
+                    return True
+
+            return False
+
+    # it might be worthwhile to do this in the iterator if the rev range
+    # is descending and the prune args are all within that range
+    for rev in opts.get('prune', ()):
+        rev = repo.changelog.rev(repo.lookup(rev))
+        ff = followfilter()
+        stop = min(revs[0], revs[-1])
+        for x in xrange(rev, stop-1, -1):
+            if ff.match(x) and x in wanted:
+                del wanted[x]
+
+    def iterate():
+        if follow and not files:
+            ff = followfilter(onlyfirst=opts.get('follow_first'))
+            def want(rev):
+                if ff.match(rev) and rev in wanted:
+                    return True
+                return False
+        else:
+            def want(rev):
+                return rev in wanted
+
+        for i, window in increasing_windows(0, len(revs)):
+            yield 'window', revs[0] < revs[-1], revs[-1]
+            nrevs = [rev for rev in revs[i:i+window] if want(rev)]
+            srevs = list(nrevs)
+            srevs.sort()
+            for rev in srevs:
+                fns = fncache.get(rev)
+                if not fns:
+                    def fns_generator():
+                        for f in change(rev)[3]:
+                            if matchfn(f):
+                                yield f
+                    fns = fns_generator()
+                yield 'add', rev, fns
+            for rev in nrevs:
+                yield 'iter', rev, None
+    return iterate(), matchfn
