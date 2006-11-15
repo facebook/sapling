@@ -102,142 +102,6 @@ def setremoteconfig(ui, opts):
     if opts.get('remotecmd'):
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
-def help_(ui, name=None, with_version=False):
-    """show help for a command, extension, or list of commands
-
-    With no arguments, print a list of commands and short help.
-
-    Given a command name, print help for that command.
-
-    Given an extension name, print help for that extension, and the
-    commands it provides."""
-    option_lists = []
-
-    def helpcmd(name):
-        if with_version:
-            version_(ui)
-            ui.write('\n')
-        aliases, i = findcmd(ui, name)
-        # synopsis
-        ui.write("%s\n\n" % i[2])
-
-        # description
-        doc = i[0].__doc__
-        if not doc:
-            doc = _("(No help text available)")
-        if ui.quiet:
-            doc = doc.splitlines(0)[0]
-        ui.write("%s\n" % doc.rstrip())
-
-        if not ui.quiet:
-            # aliases
-            if len(aliases) > 1:
-                ui.write(_("\naliases: %s\n") % ', '.join(aliases[1:]))
-
-            # options
-            if i[1]:
-                option_lists.append(("options", i[1]))
-
-    def helplist(select=None):
-        h = {}
-        cmds = {}
-        for c, e in table.items():
-            f = c.split("|", 1)[0]
-            if select and not select(f):
-                continue
-            if name == "shortlist" and not f.startswith("^"):
-                continue
-            f = f.lstrip("^")
-            if not ui.debugflag and f.startswith("debug"):
-                continue
-            doc = e[0].__doc__
-            if not doc:
-                doc = _("(No help text available)")
-            h[f] = doc.splitlines(0)[0].rstrip()
-            cmds[f] = c.lstrip("^")
-
-        fns = h.keys()
-        fns.sort()
-        m = max(map(len, fns))
-        for f in fns:
-            if ui.verbose:
-                commands = cmds[f].replace("|",", ")
-                ui.write(" %s:\n      %s\n"%(commands, h[f]))
-            else:
-                ui.write(' %-*s   %s\n' % (m, f, h[f]))
-
-    def helpext(name):
-        try:
-            mod = findext(name)
-        except KeyError:
-            raise UnknownCommand(name)
-
-        doc = (mod.__doc__ or _('No help text available')).splitlines(0)
-        ui.write(_('%s extension - %s\n') % (name.split('.')[-1], doc[0]))
-        for d in doc[1:]:
-            ui.write(d, '\n')
-
-        ui.status('\n')
-        if ui.verbose:
-            ui.status(_('list of commands:\n\n'))
-        else:
-            ui.status(_('list of commands (use "hg help -v %s" '
-                        'to show aliases and global options):\n\n') % name)
-
-        modcmds = dict.fromkeys([c.split('|', 1)[0] for c in mod.cmdtable])
-        helplist(modcmds.has_key)
-
-    if name and name != 'shortlist':
-        try:
-            helpcmd(name)
-        except UnknownCommand:
-            helpext(name)
-
-    else:
-        # program name
-        if ui.verbose or with_version:
-            version_(ui)
-        else:
-            ui.status(_("Mercurial Distributed SCM\n"))
-        ui.status('\n')
-
-        # list of commands
-        if name == "shortlist":
-            ui.status(_('basic commands (use "hg help" '
-                        'for the full list or option "-v" for details):\n\n'))
-        elif ui.verbose:
-            ui.status(_('list of commands:\n\n'))
-        else:
-            ui.status(_('list of commands (use "hg help -v" '
-                        'to show aliases and global options):\n\n'))
-
-        helplist()
-
-    # global options
-    if ui.verbose:
-        option_lists.append(("global options", globalopts))
-
-    # list all option lists
-    opt_output = []
-    for title, options in option_lists:
-        opt_output.append(("\n%s:\n" % title, None))
-        for shortopt, longopt, default, desc in options:
-            if "DEPRECATED" in desc and not ui.verbose: continue
-            opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
-                                          longopt and " --%s" % longopt),
-                               "%s%s" % (desc,
-                                         default
-                                         and _(" (default: %s)") % default
-                                         or "")))
-
-    if opt_output:
-        opts_len = max([len(line[0]) for line in opt_output if line[1]])
-        for first, second in opt_output:
-            if second:
-                ui.write(" %-*s  %s\n" % (opts_len, first, second))
-            else:
-                ui.write("%s\n" % first)
-
 # Commands start here, listed alphabetically
 
 def add(ui, repo, *pats, **opts):
@@ -1218,6 +1082,142 @@ def heads(ui, repo, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in heads:
         displayer.show(changenode=n)
+
+def help_(ui, name=None, with_version=False):
+    """show help for a command, extension, or list of commands
+
+    With no arguments, print a list of commands and short help.
+
+    Given a command name, print help for that command.
+
+    Given an extension name, print help for that extension, and the
+    commands it provides."""
+    option_lists = []
+
+    def helpcmd(name):
+        if with_version:
+            version_(ui)
+            ui.write('\n')
+        aliases, i = findcmd(ui, name)
+        # synopsis
+        ui.write("%s\n\n" % i[2])
+
+        # description
+        doc = i[0].__doc__
+        if not doc:
+            doc = _("(No help text available)")
+        if ui.quiet:
+            doc = doc.splitlines(0)[0]
+        ui.write("%s\n" % doc.rstrip())
+
+        if not ui.quiet:
+            # aliases
+            if len(aliases) > 1:
+                ui.write(_("\naliases: %s\n") % ', '.join(aliases[1:]))
+
+            # options
+            if i[1]:
+                option_lists.append(("options", i[1]))
+
+    def helplist(select=None):
+        h = {}
+        cmds = {}
+        for c, e in table.items():
+            f = c.split("|", 1)[0]
+            if select and not select(f):
+                continue
+            if name == "shortlist" and not f.startswith("^"):
+                continue
+            f = f.lstrip("^")
+            if not ui.debugflag and f.startswith("debug"):
+                continue
+            doc = e[0].__doc__
+            if not doc:
+                doc = _("(No help text available)")
+            h[f] = doc.splitlines(0)[0].rstrip()
+            cmds[f] = c.lstrip("^")
+
+        fns = h.keys()
+        fns.sort()
+        m = max(map(len, fns))
+        for f in fns:
+            if ui.verbose:
+                commands = cmds[f].replace("|",", ")
+                ui.write(" %s:\n      %s\n"%(commands, h[f]))
+            else:
+                ui.write(' %-*s   %s\n' % (m, f, h[f]))
+
+    def helpext(name):
+        try:
+            mod = findext(name)
+        except KeyError:
+            raise UnknownCommand(name)
+
+        doc = (mod.__doc__ or _('No help text available')).splitlines(0)
+        ui.write(_('%s extension - %s\n') % (name.split('.')[-1], doc[0]))
+        for d in doc[1:]:
+            ui.write(d, '\n')
+
+        ui.status('\n')
+        if ui.verbose:
+            ui.status(_('list of commands:\n\n'))
+        else:
+            ui.status(_('list of commands (use "hg help -v %s" '
+                        'to show aliases and global options):\n\n') % name)
+
+        modcmds = dict.fromkeys([c.split('|', 1)[0] for c in mod.cmdtable])
+        helplist(modcmds.has_key)
+
+    if name and name != 'shortlist':
+        try:
+            helpcmd(name)
+        except UnknownCommand:
+            helpext(name)
+
+    else:
+        # program name
+        if ui.verbose or with_version:
+            version_(ui)
+        else:
+            ui.status(_("Mercurial Distributed SCM\n"))
+        ui.status('\n')
+
+        # list of commands
+        if name == "shortlist":
+            ui.status(_('basic commands (use "hg help" '
+                        'for the full list or option "-v" for details):\n\n'))
+        elif ui.verbose:
+            ui.status(_('list of commands:\n\n'))
+        else:
+            ui.status(_('list of commands (use "hg help -v" '
+                        'to show aliases and global options):\n\n'))
+
+        helplist()
+
+    # global options
+    if ui.verbose:
+        option_lists.append(("global options", globalopts))
+
+    # list all option lists
+    opt_output = []
+    for title, options in option_lists:
+        opt_output.append(("\n%s:\n" % title, None))
+        for shortopt, longopt, default, desc in options:
+            if "DEPRECATED" in desc and not ui.verbose: continue
+            opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
+                                          longopt and " --%s" % longopt),
+                               "%s%s" % (desc,
+                                         default
+                                         and _(" (default: %s)") % default
+                                         or "")))
+
+    if opt_output:
+        opts_len = max([len(line[0]) for line in opt_output if line[1]])
+        for first, second in opt_output:
+            if second:
+                ui.write(" %-*s  %s\n" % (opts_len, first, second))
+            else:
+                ui.write("%s\n" % first)
 
 def identify(ui, repo):
     """print information about the working copy
