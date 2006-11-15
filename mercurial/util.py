@@ -207,9 +207,12 @@ _globchars = {'[': 1, '{': 1, '*': 1, '?': 1}
 
 def pathto(n1, n2):
     '''return the relative path from one place to another.
-    this returns a path in the form used by the local filesystem, not hg.'''
+    n1 should use os.sep to separate directories
+    n2 should use "/" to separate directories
+    returns an os.sep-separated path.
+    '''
     if not n1: return localpath(n2)
-    a, b = n1.split('/'), n2.split('/')
+    a, b = n1.split(os.sep), n2.split('/')
     a.reverse()
     b.reverse()
     while a and b and a[-1] == b[-1]:
