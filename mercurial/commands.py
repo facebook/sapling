@@ -108,17 +108,6 @@ def setremoteconfig(ui, opts):
     if opts.get('remotecmd'):
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
-def show_version(ui):
-    """output version and copyright information"""
-    ui.write(_("Mercurial Distributed SCM (version %s)\n")
-             % version.get_version())
-    ui.status(_(
-        "\nCopyright (C) 2005, 2006 Matt Mackall <mpm@selenic.com>\n"
-        "This is free software; see the source for copying conditions. "
-        "There is NO\nwarranty; "
-        "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
-    ))
-
 def help_(ui, name=None, with_version=False):
     """show help for a command, extension, or list of commands
 
@@ -132,7 +121,7 @@ def help_(ui, name=None, with_version=False):
 
     def helpcmd(name):
         if with_version:
-            show_version(ui)
+            version_(ui)
             ui.write('\n')
         aliases, i = findcmd(ui, name)
         # synopsis
@@ -213,7 +202,7 @@ def help_(ui, name=None, with_version=False):
     else:
         # program name
         if ui.verbose or with_version:
-            show_version(ui)
+            version_(ui)
         else:
             ui.status(_("Mercurial Distributed SCM\n"))
         ui.status('\n')
@@ -2380,6 +2369,17 @@ def verify(ui, repo):
     """
     return hg.verify(repo)
 
+def version_(ui):
+    """output version and copyright information"""
+    ui.write(_("Mercurial Distributed SCM (version %s)\n")
+             % version.get_version())
+    ui.status(_(
+        "\nCopyright (C) 2005, 2006 Matt Mackall <mpm@selenic.com>\n"
+        "This is free software; see the source for copying conditions. "
+        "There is NO\nwarranty; "
+        "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
+    ))
+
 # Command options and aliases are listed here, alphabetically
 
 globalopts = [
@@ -2759,7 +2759,7 @@ table = {
           ('f', 'force', None, _('force a merge with outstanding changes'))],
          _('hg update [-C] [-f] [REV]')),
     "verify": (verify, [], _('hg verify')),
-    "version": (show_version, [], _('hg version')),
+    "version": (version_, [], _('hg version')),
 }
 
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
@@ -2981,7 +2981,7 @@ def dispatch(args):
             if options['help']:
                 return help_(u, cmd, options['version'])
             elif options['version']:
-                return show_version(u)
+                return version_(u)
             elif not cmd:
                 return help_(u, 'shortlist')
 
