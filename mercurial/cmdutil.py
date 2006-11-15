@@ -238,18 +238,19 @@ class uibuffer(object):
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 
-    def __init__(self, ui, repo, patch, buffered):
+    def __init__(self, ui, repo, patch, brinfo, buffered):
         self.ui = ui
         self.repo = repo
         self.buffered = buffered
         self.patch = patch
+        self.brinfo = brinfo
         if buffered:
             self.ui = uibuffer(ui)
 
     def flush(self, rev):
         return self.ui.flush(rev)
 
-    def show(self, rev=0, changenode=None, brinfo=None, copies=None):
+    def show(self, rev=0, changenode=None, copies=None):
         '''show a single changeset or file revision'''
         if self.buffered:
             self.ui.mark(rev)
@@ -288,9 +289,10 @@ class changeset_printer(object):
         for parent in parents:
             self.ui.write(_("parent:      %d:%s\n") % parent)
 
-        if brinfo and changenode in brinfo:
-            br = brinfo[changenode]
-            self.ui.write(_("branch:      %s\n") % " ".join(br))
+        if self.brinfo:
+            br = self.repo.branchlookup([changenode])
+            if br:
+                self.ui.write(_("branch:      %s\n") % " ".join(br[changenode]))
 
         if self.ui.debugflag:
             self.ui.write(_("manifest:    %d:%s\n") %
@@ -339,8 +341,8 @@ class changeset_printer(object):
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
 
-    def __init__(self, ui, repo, patch, mapfile, buffered):
-        changeset_printer.__init__(self, ui, repo, patch, buffered)
+    def __init__(self, ui, repo, patch, brinfo, mapfile, buffered):
+        changeset_printer.__init__(self, ui, repo, patch, brinfo, buffered)
         self.t = templater.templater(mapfile, templater.common_filters,
                                      cache={'parent': '{rev}:{node|short} ',
                                             'manifest': '{rev}:{node|short}',
@@ -350,7 +352,7 @@ class changeset_templater(changeset_printer):
         '''set template string to use'''
         self.t.cache['changeset'] = t
 
-    def show(self, rev=0, changenode=None, brinfo=None, copies=[], **props):
+    def show(self, rev=0, changenode=None, copies=[], **props):
         '''show a single changeset or file revision'''
         if self.buffered:
             self.ui.mark(rev)
@@ -428,9 +430,11 @@ class changeset_templater(changeset_printer):
             if branch:
                 return showlist('branch', [branch], plural='branches', **args)
             # add old style branches if requested
-            if brinfo and changenode in brinfo:
-                return showlist('branch', brinfo[changenode],
-                                plural='branches', **args)
+            if self.brinfo:
+                br = self.repo.branchlookup([changenode])
+                if changenode in br:
+                    return showlist('branch', br[changenode],
+                                    plural='branches', **args)
 
         def showparents(**args):
             parents = [[('rev', log.rev(p)), ('node', hex(p))]
@@ -555,6 +559,11 @@ def show_changeset(ui, repo, opts, buffered=False):
     """
     # options
     patch = opts.get('patch')
+    br = None
+    if opts.get('branches'):
+        ui.warn(_("the --branches option is deprecated, "
+                  "please use 'hg branches' instead\n"))
+        br = True
     tmpl = opts.get('template')
     mapfile = None
     if tmpl:
@@ -576,10 +585,10 @@ def show_changeset(ui, repo, opts, buffered=False):
                            or templater.templatepath(mapfile))
                 if mapname: mapfile = mapname
         try:
-            t = changeset_templater(ui, repo, patch, mapfile, buffered)
+            t = changeset_templater(ui, repo, patch, br, mapfile, buffered)
         except SyntaxError, inst:
             raise util.Abort(inst.args[0])
         if tmpl: t.use_template(tmpl)
         return t
-    return changeset_printer(ui, repo, patch, buffered)
+    return changeset_printer(ui, repo, patch, br, buffered)
 

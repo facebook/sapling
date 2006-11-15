@@ -703,7 +703,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         # create the right base
         # XXX: nodesbetween / changegroup* should be "fixed" instead
         o = []
-        has = {nullid: None} 
+        has = {nullid: None}
         for n in base:
             has.update(repo.changelog.reachable(n))
         if revs:
@@ -1434,14 +1434,9 @@ def heads(ui, repo, **opts):
         heads = repo.heads(repo.lookup(opts['rev']))
     else:
         heads = repo.heads()
-    br = None
-    if opts['branches']:
-        ui.warn(_("the --branches option is deprecated, "
-                  "please use 'hg branches' instead\n"))
-        br = repo.branchlookup(heads)
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in heads:
-        displayer.show(changenode=n, brinfo=br)
+        displayer.show(changenode=n)
 
 def identify(ui, repo):
     """print information about the working copy
@@ -1672,10 +1667,6 @@ def log(ui, repo, *pats, **opts):
     getchange = util.cachefunc(lambda r:repo.changectx(r).changeset())
     changeiter, matchfn = walkchangerevs(ui, repo, pats, getchange, opts)
 
-    if opts['branches']:
-        ui.warn(_("the --branches option is deprecated, "
-                  "please use 'hg branches' instead\n"))
-
     if opts['limit']:
         try:
             limit = int(opts['limit'])
@@ -1745,10 +1736,6 @@ def log(ui, repo, *pats, **opts):
                 if miss:
                     continue
 
-            br = None
-            if opts['branches']:
-                br = repo.branchlookup([repo.changelog.node(rev)])
-
             copies = []
             if opts.get('copies') and rev:
                 mf = getchange(rev)[0]
@@ -1756,7 +1743,7 @@ def log(ui, repo, *pats, **opts):
                     rename = getrenamed(fn, rev, mf)
                     if rename:
                         copies.append((fn, rename[0]))
-            displayer.show(rev, changenode, brinfo=br, copies=copies)
+            displayer.show(rev, changenode, copies=copies)
         elif st == 'iter':
             if count == limit: break
             if displayer.flush(rev):
@@ -1850,7 +1837,7 @@ def outgoing(ui, repo, dest=None, **opts):
             continue
         displayer.show(changenode=n)
 
-def parents(ui, repo, file_=None, rev=None, branches=None, **opts):
+def parents(ui, repo, file_=None, rev=None, **opts):
     """show the parents of the working dir or revision
 
     Print the working directory's parent revisions.
@@ -1875,15 +1862,10 @@ def parents(ui, repo, file_=None, rev=None, branches=None, **opts):
     else:
         p = repo.dirstate.parents()
 
-    br = None
-    if branches is not None:
-        ui.warn(_("the --branches option is deprecated, "
-                  "please use 'hg branches' instead\n"))
-        br = repo.branchlookup(p)
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in p:
         if n != nullid:
-            displayer.show(changenode=n, brinfo=br)
+            displayer.show(changenode=n)
 
 def paths(ui, repo, search=None):
     """show definition of symbolic path names
@@ -2501,13 +2483,7 @@ def tip(ui, repo, **opts):
 
     Show the tip revision.
     """
-    n = repo.changelog.tip()
-    br = None
-    if opts['branches']:
-        ui.warn(_("the --branches option is deprecated, "
-                  "please use 'hg branches' instead\n"))
-        br = repo.branchlookup([n])
-    cmdutil.show_changeset(ui, repo, opts).show(changenode=n, brinfo=br)
+    cmdutil.show_changeset(ui, repo, opts).show(repo.changelog.count()-1)
 
 def unbundle(ui, repo, fname, **opts):
     """apply a changegroup file
@@ -2574,8 +2550,7 @@ def _lookup(repo, node, branch=None):
         if len(found) > 1:
             repo.ui.warn(_("Found multiple heads for %s\n") % branch)
             for x in found:
-                cmdutil.show_changeset(ui, repo, {}).show(
-                    changenode=x, brinfo=br)
+                cmdutil.show_changeset(ui, repo, {}).show(changenode=x)
             raise util.Abort("")
         if len(found) == 1:
             node = found[0]
