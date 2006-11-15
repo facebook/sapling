@@ -93,3 +93,23 @@ def writebundle(cg, filename, compress):
             fh.close()
         if cleanup is not None:
             os.unlink(cleanup)
+
+def readbundle(fh):
+    header = fh.read(6)
+    if not header.startswith("HG"):
+        raise util.Abort(_("%s: not a Mercurial bundle file") % fname)
+    elif not header.startswith("HG10"):
+        raise util.Abort(_("%s: unknown bundle version") % fname)
+
+    if header == "HG10BZ":
+        def generator(f):
+            zd = bz2.BZ2Decompressor()
+            zd.decompress("BZ")
+            for chunk in util.filechunkiter(f, 4096):
+                yield zd.decompress(chunk)
+        return util.chunkbuffer(generator(fh))
+    elif header == "HG10UN":
+        return fh
+
+    raise util.Abort(_("%s: unknown bundle compression type")
+                     % fname)
