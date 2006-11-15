@@ -324,16 +324,18 @@ class localrepository(repo.repository):
         partial = {}
         try:
             f = self.opener("branches.cache")
-            last, lrev = f.readline().rstrip().split(" ", 1)
+            lines = f.read().split('\n')
+            f.close()
+            last, lrev = lines.pop(0).rstrip().split(" ", 1)
             last, lrev = bin(last), int(lrev)
             if (lrev < self.changelog.count() and
                 self.changelog.node(lrev) == last): # sanity check
-                for l in f:
+                for l in lines:
+                    if not l: continue
                     node, label = l.rstrip().split(" ", 1)
                     partial[label] = bin(node)
             else: # invalidate the cache
                 last, lrev = nullid, nullrev
-            f.close()
         except IOError:
             last, lrev = nullid, nullrev
         return partial, last, lrev
