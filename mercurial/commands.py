@@ -1614,22 +1614,12 @@ def outgoing(ui, repo, dest=None, **opts):
             continue
         displayer.show(changenode=n)
 
-def parents(ui, repo, file_=None, rev=None, **opts):
+def parents(ui, repo, file_=None, **opts):
     """show the parents of the working dir or revision
 
     Print the working directory's parent revisions.
     """
-    # legacy
-    if file_ and not rev:
-        try:
-            rev = repo.lookup(file_)
-            file_ = None
-        except hg.RepoError:
-            pass
-        else:
-            ui.warn(_("'hg parent REV' is deprecated, "
-                      "please use 'hg parents -r REV instead\n"))
-
+    rev = opts.get('rev')
     if rev:
         if file_:
             ctx = repo.filectx(file_, changeid=rev)
