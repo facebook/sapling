@@ -114,6 +114,15 @@ else:
     class httphandler(basehttphandler):
         pass
 
+def zgenerator(f):
+    zd = zlib.decompressobj()
+    try:
+        for chunk in util.filechunkiter(f):
+            yield zd.decompress(chunk)
+    except httplib.HTTPException, inst:
+        raise IOError(None, _('connection ended unexpectedly'))
+    yield zd.flush()
+
 class httprepository(remoterepository):
     def __init__(self, ui, path):
         self.path = path
@@ -305,33 +314,13 @@ class httprepository(remoterepository):
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
         f = self.do_cmd("changegroup", roots=n)
-
-        def zgenerator(f):
-            zd = zlib.decompressobj()
-            try:
-                for chnk in f:
-                    yield zd.decompress(chnk)
-            except httplib.HTTPException, inst:
-                raise IOError(None, _('connection ended unexpectedly'))
-            yield zd.flush()
-
-        return util.chunkbuffer(zgenerator(util.filechunkiter(f)))
+        return util.chunkbuffer(zgenerator(f))
 
     def changegroupsubset(self, bases, heads, source):
         baselst = " ".join([hex(n) for n in bases])
         headlst = " ".join([hex(n) for n in heads])
         f = self.do_cmd("changegroupsubset", bases=baselst, heads=headlst)
-
-        def zgenerator(f):
-            zd = zlib.decompressobj()
-            try:
-                for chnk in f:
-                    yield zd.decompress(chnk)
-            except httplib.HTTPException:
-                raise IOError(None, _('connection ended unexpectedly'))
-            yield zd.flush()
-
-        return util.chunkbuffer(zgenerator(util.filechunkiter(f)))
+        return util.chunkbuffer(zgenerator(f))
 
     def unbundle(self, cg, heads, source):
         # have to stream bundle to a temp file because we do not have
