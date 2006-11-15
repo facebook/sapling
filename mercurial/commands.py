@@ -960,25 +960,17 @@ def debugindexdot(ui, file_):
             ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
 
-def debugrename(ui, repo, file, rev=None):
+def debugrename(ui, repo, file1, *pats, **opts):
     """dump rename information"""
-    r = repo.file(relpath(repo, [file])[0])
-    if rev:
-        try:
-            # assume all revision numbers are for changesets
-            n = repo.lookup(rev)
-            change = repo.changelog.read(n)
-            m = repo.manifest.read(change[0])
-            n = m[relpath(repo, [file])[0]]
-        except (hg.RepoError, KeyError):
-            n = r.lookup(rev)
-    else:
-        n = r.tip()
-    m = r.renamed(n)
-    if m:
-        ui.write(_("renamed from %s:%s\n") % (m[0], hex(m[1])))
-    else:
-        ui.write(_("not renamed\n"))
+
+    ctx = repo.changectx(opts.get('rev', 'tip'))
+    for src, abs, rel, exact in cmdutil.walk(repo, (file1,) + pats, opts,
+                                             ctx.node()):
+        m = ctx.filectx(abs).renamed()
+        if m:
+            ui.write(_("%s renamed from %s:%s\n") % (rel, m[0], hex(m[1])))
+        else:
+            ui.write(_("%s not renamed\n") % rel)
 
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""

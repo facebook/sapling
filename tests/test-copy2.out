@@ -4,9 +4,9 @@ copy: foo -> bar
 # should match
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       5      0       0 2ed2a3912a0b 000000000000 000000000000
-renamed from foo:2ed2a3912a0b24502043eae84ee4b279c18b90dd
+bar renamed from foo:2ed2a3912a0b24502043eae84ee4b279c18b90dd
 # should not be renamed
-not renamed
+bar not renamed
 # should show copy
 copy: foo -> bar
 # should show no parents for tip
@@ -18,5 +18,5 @@ copy: foo -> bar
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       5      0       0 2ed2a3912a0b 000000000000 000000000000
      1         5       7      1       2 dd12c926cf16 2ed2a3912a0b 000000000000
-renamed from foo:dd12c926cf165e3eb4cf87b084955cb617221c17
+bar renamed from foo:dd12c926cf165e3eb4cf87b084955cb617221c17
 # should show no copies
