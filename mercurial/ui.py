@@ -29,8 +29,6 @@ class ui(object):
                  interactive=True, traceback=False, report_untrusted=True,
                  parentui=None):
         self.overlay = None
-        self.header = []
-        self.prev_header = []
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
@@ -362,11 +360,6 @@ class ui(object):
         return path or loc
 
     def write(self, *args):
-        if self.header:
-            if self.header != self.prev_header:
-                self.prev_header = self.header
-                self.write(*self.header)
-            self.header = []
         for a in args:
             sys.stdout.write(str(a))
 
