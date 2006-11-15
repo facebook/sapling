@@ -156,8 +156,7 @@ def age(date):
 def stringify(thing):
     '''turn nested template iterator into string.'''
     if hasattr(thing, '__iter__'):
-        return "".join([stringify(t) for t in thing])
-    if thing is None: return ""
+        return "".join([stringify(t) for t in thing if t is not None])
     return str(thing)
 
 para_re = None
