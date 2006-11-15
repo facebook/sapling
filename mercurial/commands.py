@@ -24,12 +24,6 @@ def bail_if_changed(repo):
     if modified or added or removed or deleted:
         raise util.Abort(_("outstanding uncommitted changes"))
 
-def relpath(repo, args):
-    cwd = repo.getcwd()
-    if cwd:
-        return [util.normpath(os.path.join(cwd, x)) for x in args]
-    return args
-
 def logmessage(opts):
     """ get the log message according to -m and -l option """
     message = opts['message']
