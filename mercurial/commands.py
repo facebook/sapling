@@ -10,7 +10,7 @@ from node import *
 from i18n import gettext as _
 demandload(globals(), "os re sys signal imp urllib pdb shlex")
 demandload(globals(), "fancyopts ui hg util lock revlog bundlerepo")
-demandload(globals(), "difflib patch tempfile time")
+demandload(globals(), "difflib patch time")
 demandload(globals(), "traceback errno version atexit bz2")
 demandload(globals(), "archival changegroup cmdutil hgweb.server sshserver")
 
@@ -42,58 +42,6 @@ def logmessage(opts):
             raise util.Abort(_("can't read commit message '%s': %s") %
                              (logfile, inst.strerror))
     return message
-
-def write_bundle(cg, filename=None, compress=True):
-    """Write a bundle file and return its filename.
-
-    Existing files will not be overwritten.
-    If no filename is specified, a temporary file is created.
-    bz2 compression can be turned off.
-    The bundle file will be deleted in case of errors.
-    """
-    class nocompress(object):
-        def compress(self, x):
-            return x
-        def flush(self):
-            return ""
-
-    fh = None
-    cleanup = None
-    try:
-        if filename:
-            if os.path.exists(filename):
-                raise util.Abort(_("file '%s' already exists") % filename)
-            fh = open(filename, "wb")
-        else:
-            fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
-            fh = os.fdopen(fd, "wb")
-        cleanup = filename
-
-        if compress:
-            fh.write("HG10")
-            z = bz2.BZ2Compressor(9)
-        else:
-            fh.write("HG10UN")
-            z = nocompress()
-        # parse the changegroup data, otherwise we will block
-        # in case of sshrepo because we don't know the end of the stream
-
-        # an empty chunkiter is the end of the changegroup
-        empty = False
-        while not empty:
-            empty = True
-            for chunk in changegroup.chunkiter(cg):
-                empty = False
-                fh.write(z.compress(changegroup.genchunk(chunk)))
-            fh.write(z.compress(changegroup.closechunk()))
-        fh.write(z.flush())
-        cleanup = None
-        return filename
-    finally:
-        if fh is not None:
-            fh.close()
-        if cleanup is not None:
-            os.unlink(cleanup)
 
 def setremoteconfig(ui, opts):
     "copy remote options to ui tree"
@@ -384,7 +332,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         cg = repo.changegroupsubset(o, revs, 'bundle')
     else:
         cg = repo.changegroup(o, 'bundle')
-    write_bundle(cg, fname)
+    changegroup.writebundle(cg, fname, False)
 
 def cat(ui, repo, file1, *pats, **opts):
     """output the latest or given revisions of files
@@ -1344,7 +1292,7 @@ def incoming(ui, repo, source="default", **opts):
         if fname or not other.local():
             # create a bundle (uncompressed if other repo is not local)
             cg = other.changegroup(incoming, "incoming")
-            fname = cleanup = write_bundle(cg, fname, compress=other.local())
+            fname = cleanup = changegroup.writebundle(cg, fname, other.local())
             # keep written bundle?
             if opts["bundle"]:
                 cleanup = None
@@ -1782,8 +1730,7 @@ def rawcommit(ui, repo, *pats, **opts):
     parents = [repo.lookup(p) for p in opts['parent']]
 
     try:
-        repo.rawcommit(files, message,
-                       opts['user'], opts['date'], *parents)
+        repo.rawcommit(files, message, opts['user'], opts['date'], *parents)
     except ValueError, inst:
         raise util.Abort(str(inst))
 
