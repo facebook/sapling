@@ -426,11 +426,11 @@ class changeset_templater(changeset_printer):
         def showbranches(**args):
             branch = changes[5].get("branch")
             if branch:
-                yield showlist('branch', [branch], plural='branches', **args)
+                return showlist('branch', [branch], plural='branches', **args)
             # add old style branches if requested
             if brinfo and changenode in brinfo:
-                yield showlist('branch', brinfo[changenode],
-                               plural='branches', **args)
+                return showlist('branch', brinfo[changenode],
+                                plural='branches', **args)
 
         def showparents(**args):
             parents = [[('rev', log.rev(p)), ('node', hex(p))]
@@ -471,7 +471,7 @@ class changeset_templater(changeset_printer):
                 return self.t('manifest', **args)
         else:
             def showfiles(**args):
-                yield showlist('file', changes[3], **args)
+                return showlist('file', changes[3], **args)
             showadds = ''
             showdels = ''
             showmanifest = ''
