@@ -2582,6 +2582,7 @@ table = {
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
+          ('', 'removed', None, _('include revs where files were removed')),
           ('M', 'no-merges', None, _('do not show merges')),
           ('', 'style', '', _('display using template map file')),
           ('m', 'only-merges', None, _('show only merges')),
