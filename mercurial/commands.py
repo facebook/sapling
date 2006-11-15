@@ -829,11 +829,17 @@ def commit(ui, repo, *pats, **opts):
 
 def docopy(ui, repo, pats, opts, wlock):
     # called with the repo lock held
+    #
+    # hgsep => pathname that uses "/" to separate directories
+    # ossep => pathname that uses os.sep to separate directories
     cwd = repo.getcwd()
     errors = 0
     copied = []
     targets = {}
 
+    # abs: hgsep
+    # rel: ossep
+    # return: hgsep
     def okaytocopy(abs, rel, exact):
         reasons = {'?': _('is not managed'),
                    'a': _('has been marked for add'),
@@ -850,13 +856,18 @@ def docopy(ui, repo, pats, opts, wlock):
         else:
             return abs
 
+    # origsrc: hgsep
+    # abssrc: hgsep
+    # relsrc: ossep
+    # target: ossep
     def copy(origsrc, abssrc, relsrc, target, exact):
         abstarget = util.canonpath(repo.root, cwd, target)
         reltarget = util.pathto(cwd, abstarget)
         prevsrc = targets.get(abstarget)
         if prevsrc is not None:
             ui.warn(_('%s: not overwriting - %s collides with %s\n') %
-                    (reltarget, abssrc, prevsrc))
+                    (reltarget, util.localpath(abssrc),
+                     util.localpath(prevsrc)))
             return
         if (not opts['after'] and os.path.exists(reltarget) or
             opts['after'] and repo.dirstate.state(abstarget) not in '?r'):
@@ -899,26 +910,37 @@ def docopy(ui, repo, pats, opts, wlock):
             repo.copy(origsrc, abstarget, wlock)
         copied.append((abssrc, relsrc, exact))
 
+    # pat: ossep
+    # dest ossep
+    # srcs: list of (hgsep, hgsep, ossep, bool)
+    # return: function that takes hgsep and returns ossep
     def targetpathfn(pat, dest, srcs):
         if os.path.isdir(pat):
             abspfx = util.canonpath(repo.root, cwd, pat)
+            abspfx = util.localpath(abspfx)
             if destdirexists:
                 striplen = len(os.path.split(abspfx)[0])
             else:
                 striplen = len(abspfx)
             if striplen:
                 striplen += len(os.sep)
-            res = lambda p: os.path.join(dest, p[striplen:])
+            res = lambda p: os.path.join(dest, util.localpath(p)[striplen:])
         elif destdirexists:
-            res = lambda p: os.path.join(dest, os.path.basename(p))
+            res = lambda p: os.path.join(dest,
+                                         os.path.basename(util.localpath(p)))
         else:
             res = lambda p: dest
         return res
 
+    # pat: ossep
+    # dest ossep
+    # srcs: list of (hgsep, hgsep, ossep, bool)
+    # return: function that takes hgsep and returns ossep
     def targetpathafterfn(pat, dest, srcs):
         if util.patkind(pat, None)[0]:
             # a mercurial pattern
-            res = lambda p: os.path.join(dest, os.path.basename(p))
+            res = lambda p: os.path.join(dest,
+                                         os.path.basename(util.localpath(p)))
         else:
             abspfx = util.canonpath(repo.root, cwd, pat)
             if len(abspfx) < len(srcs[0][0]):
@@ -927,11 +949,12 @@ def docopy(ui, repo, pats, opts, wlock):
                 def evalpath(striplen):
                     score = 0
                     for s in srcs:
-                        t = os.path.join(dest, s[0][striplen:])
+                        t = os.path.join(dest, util.localpath(s[0])[striplen:])
                         if os.path.exists(t):
                             score += 1
                     return score
 
+                abspfx = util.localpath(abspfx)
                 striplen = len(abspfx)
                 if striplen:
                     striplen += len(os.sep)
@@ -942,11 +965,13 @@ def docopy(ui, repo, pats, opts, wlock):
                         striplen1 += len(os.sep)
                     if evalpath(striplen1) > score:
                         striplen = striplen1
-                res = lambda p: os.path.join(dest, p[striplen:])
+                res = lambda p: os.path.join(dest,
+                                             util.localpath(p)[striplen:])
             else:
                 # a file
                 if destdirexists:
-                    res = lambda p: os.path.join(dest, os.path.basename(p))
+                    res = lambda p: os.path.join(dest,
+                                        os.path.basename(util.localpath(p)))
                 else:
                     res = lambda p: dest
         return res
