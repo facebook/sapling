@@ -2195,7 +2195,7 @@ def tip(ui, repo, **opts):
 
     Show the tip revision.
     """
-    cmdutil.show_changeset(ui, repo, opts).show(repo.changelog.count()-1)
+    cmdutil.show_changeset(ui, repo, opts).show(nullrev+repo.changelog.count())
 
 def unbundle(ui, repo, fname, **opts):
     """apply a changegroup file
