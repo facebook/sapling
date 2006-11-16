@@ -324,16 +324,18 @@ class localrepository(repo.repository):
         partial = {}
         try:
             f = self.opener("branches.cache")
-            last, lrev = f.readline().rstrip().split(" ", 1)
+            lines = f.read().split('\n')
+            f.close()
+            last, lrev = lines.pop(0).rstrip().split(" ", 1)
             last, lrev = bin(last), int(lrev)
             if (lrev < self.changelog.count() and
                 self.changelog.node(lrev) == last): # sanity check
-                for l in f:
+                for l in lines:
+                    if not l: continue
                     node, label = l.rstrip().split(" ", 1)
                     partial[label] = bin(node)
             else: # invalidate the cache
                 last, lrev = nullid, nullrev
-            f.close()
         except IOError:
             last, lrev = nullid, nullrev
         return partial, last, lrev
@@ -581,12 +583,13 @@ class localrepository(repo.repository):
 
     def commit(self, files=None, text="", user=None, date=None,
                match=util.always, force=False, lock=None, wlock=None,
-               force_editor=False, p1=None, p2=None):
+               force_editor=False, p1=None, p2=None, extra={}):
 
         commit = []
         remove = []
         changed = []
         use_dirstate = (p1 is None) # not rawcommit
+        extra = extra.copy()
 
         if use_dirstate:
             if files:
@@ -693,7 +696,6 @@ class localrepository(repo.repository):
         if not lines:
             return None
         text = '\n'.join(lines)
-        extra = {}
         if branchname:
             extra["branch"] = branchname
         n = self.changelog.add(mn, changed + remove, text, tr, p1, p2,

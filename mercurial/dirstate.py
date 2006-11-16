@@ -32,7 +32,11 @@ class dirstate(object):
     def getcwd(self):
         cwd = os.getcwd()
         if cwd == self.root: return ''
-        return cwd[len(self.root) + 1:]
+        # self.root ends with a path separator if self.root is '/' or 'C:\'
+        common_prefix_len = len(self.root)
+        if not self.root.endswith(os.sep):
+            common_prefix_len += 1
+        return cwd[common_prefix_len:]
 
     def hgignore(self):
         '''return the contents of .hgignore files as a list of patterns.

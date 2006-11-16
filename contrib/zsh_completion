@@ -377,7 +377,7 @@ _hg_cmd_clone() {
 
 _hg_cmd_commit() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
-  '(--addremove -A)'{-A,--addremove}'[mark new/missing files as added/removed before committing]'
+  '(--addremove -A)'{-A,--addremove}'[mark new/missing files as added/removed before committing]' \
   '(--message -m)'{-m+,--message}'[use <text> as commit message]:text:' \
   '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_file -g \*.txt' \
   '(--date -d)'{-d+,--date}'[record datecode as commit date]:date code:' \
