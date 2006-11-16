@@ -8,7 +8,7 @@ of the GNU General Public License, incorporated herein by reference.
 """
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "struct os bz2 util tempfile")
+demandload(globals(), "struct os bz2 zlib util tempfile")
 
 def getchunk(source):
     """get a chunk from a changegroup"""
@@ -47,7 +47,14 @@ class nocompress(object):
     def flush(self):
         return ""
 
-def writebundle(cg, filename, compress):
+bundletypes = {
+    "": nocompress,
+    "HG10UN": nocompress,
+    "HG10": lambda: bz2.BZ2Compressor(9),
+    "HG10GZ": zlib.compressobj,
+}
+
+def writebundle(cg, filename, type):
     """Write a bundle file and return its filename.
 
     Existing files will not be overwritten.
@@ -68,12 +75,9 @@ def writebundle(cg, filename, compress):
             fh = os.fdopen(fd, "wb")
         cleanup = filename
 
-        if compress:
-            fh.write("HG10")
-            z = bz2.BZ2Compressor(9)
-        else:
-            fh.write("HG10UN")
-            z = nocompress()
+        fh.write(type)
+        z = bundletypes[type]()
+
         # parse the changegroup data, otherwise we will block
         # in case of sshrepo because we don't know the end of the stream
 

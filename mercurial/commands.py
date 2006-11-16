@@ -332,7 +332,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         cg = repo.changegroupsubset(o, revs, 'bundle')
     else:
         cg = repo.changegroup(o, 'bundle')
-    changegroup.writebundle(cg, fname, False)
+    changegroup.writebundle(cg, fname, "HG10")
 
 def cat(ui, repo, file1, *pats, **opts):
     """output the latest or given revisions of files
@@ -1292,7 +1292,8 @@ def incoming(ui, repo, source="default", **opts):
         if fname or not other.local():
             # create a bundle (uncompressed if other repo is not local)
             cg = other.changegroup(incoming, "incoming")
-            fname = cleanup = changegroup.writebundle(cg, fname, other.local())
+            type = other.local() and "HG10" or "HG10UN"
+            fname = cleanup = changegroup.writebundle(cg, fname, type)
             # keep written bundle?
             if opts["bundle"]:
                 cleanup = None

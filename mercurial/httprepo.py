@@ -11,7 +11,7 @@ from remoterepo import *
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "hg os urllib urllib2 urlparse zlib util httplib")
-demandload(globals(), "errno keepalive tempfile socket")
+demandload(globals(), "errno keepalive tempfile socket changegroup")
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
@@ -326,47 +326,18 @@ class httprepository(remoterepository):
         # have to stream bundle to a temp file because we do not have
         # http 1.1 chunked transfer.
 
-        # XXX duplication from commands.py
-        class nocompress(object):
-            def compress(self, x):
-                return x
-            def flush(self):
-                return ""
+        type = ""
+        types = self.capable('unbundle')
+        if types:
+            for x in types.split(','):
+                if x in changegroup.bundletypes:
+                    type = x
+                    break
 
-        unbundleversions = self.capable('unbundle')
+        tempname = changegroup.writebundle(cg, None, type)
+        fp = file(tempname, "rb")
         try:
-            unbundleversions = unbundleversions.split(',')
-        except AttributeError:
-            unbundleversions = [""]
-
-        while unbundleversions:
-            header = unbundleversions[0]
-            if header == "HG10GZ":
-                self.ui.note(_("using zlib compression\n"))
-                z = zlib.compressobj()
-                break
-            elif header == "HG10UN":
-                self.ui.note(_("using no compression\n"))
-                z = nocompress()
-                break
-            elif header == "":
-                self.ui.note(_("old server without compression support,"
-                               " sending uncompressed\n"))
-                z = nocompress()
-                break
-            unbundleversions.pop(0)
-        if not unbundleversions:
-            raise util.Abort(_("The server doesn't accept any bundle format"
-                               " method we know."))
-
-        fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
-        fp = os.fdopen(fd, 'wb+')
-        try:
-            fp.write(header)
-            for chunk in util.filechunkiter(cg):
-                fp.write(z.compress(chunk))
-            fp.write(z.flush())
-            length = fp.tell()
+            length = os.stat(tempname).st_size
             try:
                 rfp = self.do_cmd(
                     'unbundle', data=fp,
