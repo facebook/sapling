@@ -418,8 +418,15 @@ def commit(ui, repo, *pats, **opts):
         cmdutil.addremove(repo, pats, opts)
     fns, match, anypats = cmdutil.matchpats(repo, pats, opts)
     if pats:
-        modified, added, removed = repo.status(files=fns, match=match)[:3]
+        status = repo.status(files=fns, match=match)
+        modified, added, removed, deleted, unknown = status[:5]
         files = modified + added + removed
+        for f in fns:
+            if f not in modified + added + removed:
+                if f in unknown:
+                    raise util.Abort(_("file %s not tracked!") % f)
+                else:
+                    raise util.Abort(_("file %s not found!") % f)
     else:
         files = []
     try:
