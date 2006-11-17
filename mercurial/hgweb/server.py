@@ -186,7 +186,8 @@ def create_server(ui, repo):
         if hasattr(os, "fork"):
             _mixin = SocketServer.ForkingMixIn
         else:
-            class _mixin: pass
+            class _mixin:
+                pass
 
     class MercurialHTTPServer(object, _mixin, BaseHTTPServer.HTTPServer):
         def __init__(self, *args, **kargs):

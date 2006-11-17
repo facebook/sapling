@@ -139,7 +139,7 @@ class hgweb(object):
 
     def showtag(self, t1, node=nullid, **args):
         for t in self.repo.nodetags(node):
-             yield self.t(t1, tag=t, **args)
+            yield self.t(t1, tag=t, **args)
 
     def diff(self, node1, node2, files):
         def filterfiles(filters, files):
@@ -331,7 +331,7 @@ class hgweb(object):
         count = fl.count()
         pagelen = self.maxshortchanges
         pos = fctx.filerev()
-        start = max(0, pos - pagelen + 1) 
+        start = max(0, pos - pagelen + 1)
         end = min(count, start + pagelen)
         pos = end - 1
 
@@ -446,7 +446,7 @@ class hgweb(object):
         l = len(path)
         abspath = "/" + path
 
-        for f,n in mf.items():
+        for f, n in mf.items():
             if f[:l] != path:
                 continue
             remain = f[l:]
@@ -504,8 +504,9 @@ class hgweb(object):
 
         def entries(notip=False, **map):
             parity = 0
-            for k,n in i:
-                if notip and k == "tip": continue
+            for k, n in i:
+                if notip and k == "tip":
+                    continue
                 yield {"parity": self.stripes(parity),
                        "tag": k,
                        "date": cl.read(n)[2],
@@ -526,7 +527,7 @@ class hgweb(object):
         def tagentries(**map):
             parity = 0
             count = 0
-            for k,n in i:
+            for k, n in i:
                 if k == "tip": # skip tip
                     continue;
 
@@ -805,7 +806,7 @@ class hgweb(object):
                                                })
 
         if not req.form.has_key('cmd'):
-            req.form['cmd'] = [self.t.cache['default'],]
+            req.form['cmd'] = [self.t.cache['default']]
 
         cmd = req.form['cmd'][0]
 

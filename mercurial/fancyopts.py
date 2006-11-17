@@ -20,7 +20,7 @@ def fancyopts(args, options, state):
     opts, args = getopt.getopt(args, short, long)
 
     for opt, arg in opts:
-        if dt[map[opt]] is type(fancyopts): state[map[opt]](state,map[opt],arg)
+        if dt[map[opt]] is type(fancyopts): state[map[opt]](state, map[opt], arg)
         elif dt[map[opt]] is type(1): state[map[opt]] = int(arg)
         elif dt[map[opt]] is type(''): state[map[opt]] = arg
         elif dt[map[opt]] is type([]): state[map[opt]].append(arg)

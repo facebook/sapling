@@ -51,7 +51,7 @@ def ancestor(a, b, pfunc):
 
     def generations(vertex):
         sg, s = None, {}
-        for g,v in ancestors(vertex):
+        for g, v in ancestors(vertex):
             if g != sg:
                 if sg:
                     yield sg, s

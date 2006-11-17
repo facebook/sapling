@@ -69,12 +69,12 @@ class changectx(object):
     def parents(self):
         """return contexts for each parent changeset"""
         p = self._repo.changelog.parents(self._node)
-        return [ changectx(self._repo, x) for x in p ]
+        return [changectx(self._repo, x) for x in p]
 
     def children(self):
         """return contexts for each child changeset"""
         c = self._repo.changelog.children(self._node)
-        return [ changectx(self._repo, x) for x in c ]
+        return [changectx(self._repo, x) for x in c]
 
     def filenode(self, path):
         if '_manifest' in self.__dict__:
@@ -210,20 +210,20 @@ class filectx(object):
     def parents(self):
         p = self._path
         fl = self._filelog
-        pl = [ (p, n, fl) for n in self._filelog.parents(self._filenode) ]
+        pl = [(p, n, fl) for n in self._filelog.parents(self._filenode)]
 
         r = self.renamed()
         if r:
             pl[0] = (r[0], r[1], None)
 
-        return [ filectx(self._repo, p, fileid=n, filelog=l)
-                 for p,n,l in pl if n != nullid ]
+        return [filectx(self._repo, p, fileid=n, filelog=l)
+                for p,n,l in pl if n != nullid]
 
     def children(self):
         # hard for renames
         c = self._filelog.children(self._filenode)
-        return [ filectx(self._repo, self._path, fileid=x,
-                         filelog=self._filelog) for x in c ]
+        return [filectx(self._repo, self._path, fileid=x,
+                        filelog=self._filelog) for x in c]
 
     def annotate(self, follow=False):
         '''returns a list of tuples of (ctx, line) for each line
@@ -248,9 +248,9 @@ class filectx(object):
             # we want to reuse filectx objects as much as possible
             p = f._path
             if f._filerev is None: # working dir
-                pl = [ (n.path(), n.filerev()) for n in f.parents() ]
+                pl = [(n.path(), n.filerev()) for n in f.parents()]
             else:
-                pl = [ (p, n) for n in f._filelog.parentrevs(f._filerev) ]
+                pl = [(p, n) for n in f._filelog.parentrevs(f._filerev)]
 
             if follow:
                 r = f.renamed()
@@ -313,7 +313,7 @@ class filectx(object):
         # prime the ancestor cache for the working directory
         for c in (self, fc2):
             if c._filerev == None:
-                pl = [ (n.path(), n.filenode()) for n in c.parents() ]
+                pl = [(n.path(), n.filenode()) for n in c.parents()]
                 acache[(c._path, None)] = pl
 
         flcache = {self._path:self._filelog, fc2._path:fc2._filelog}
@@ -324,17 +324,17 @@ class filectx(object):
             if f not in flcache:
                 flcache[f] = self._repo.file(f)
             fl = flcache[f]
-            pl = [ (f,p) for p in fl.parents(n) if p != nullid ]
+            pl = [(f, p) for p in fl.parents(n) if p != nullid]
             re = fl.renamed(n)
             if re:
                 pl.append(re)
-            acache[vertex]=pl
+            acache[vertex] = pl
             return pl
 
         a, b = (self._path, self._filenode), (fc2._path, fc2._filenode)
         v = ancestor.ancestor(a, b, parents)
         if v:
-            f,n = v
+            f, n = v
             return filectx(self._repo, f, fileid=n, filelog=flcache[f])
 
         return None
@@ -372,7 +372,7 @@ class workingctx(changectx):
         man = self._parents[0].manifest().copy()
         copied = self._repo.dirstate.copies()
         modified, added, removed, deleted, unknown = self._status[:5]
-        for i,l in (("a", added), ("m", modified), ("u", unknown)):
+        for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
                 man[f] = man.get(copied.get(f, f), nullid) + i
                 man.set(f, util.is_exec(self._repo.wjoin(f), man.execf(f)))
@@ -480,14 +480,14 @@ class workingfilectx(filectx):
         rp = self._repopath
         pcl = self._changectx._parents
         fl = self._filelog
-        pl = [ (rp, pcl[0]._manifest.get(rp, nullid), fl) ]
+        pl = [(rp, pcl[0]._manifest.get(rp, nullid), fl)]
         if len(pcl) > 1:
             if rp != p:
                 fl = None
             pl.append((p, pcl[1]._manifest.get(p, nullid), fl))
 
-        return [ filectx(self._repo, p, fileid=n, filelog=l)
-                 for p,n,l in pl if n != nullid ]
+        return [filectx(self._repo, p, fileid=n, filelog=l)
+                for p,n,l in pl if n != nullid]
 
     def children(self):
         return []

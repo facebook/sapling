@@ -93,7 +93,7 @@ def make_filename(repo, pat, node,
         if seqno is not None:
             expander['n'] = lambda: str(seqno)
         if total is not None and seqno is not None:
-            expander['n'] = lambda:str(seqno).zfill(len(str(total)))
+            expander['n'] = lambda: str(seqno).zfill(len(str(total)))
         if pathname is not None:
             expander['s'] = lambda: os.path.basename(pathname)
             expander['d'] = lambda: os.path.dirname(pathname) or '.'

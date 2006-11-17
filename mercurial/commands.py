@@ -266,7 +266,7 @@ def branches(ui, repo):
     List the repository's named branches.
     """
     b = repo.branchtags()
-    l = [(-repo.changelog.rev(n), n, t) for t,n in b.items()]
+    l = [(-repo.changelog.rev(n), n, t) for t, n in b.items()]
     l.sort()
     for r, n, t in l:
         hexfunc = ui.debugflag and hex or short
@@ -987,7 +987,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     fstate = {}
     skip = {}
-    get = util.cachefunc(lambda r:repo.changectx(r).changeset())
+    get = util.cachefunc(lambda r: repo.changectx(r).changeset())
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
     count = 0
     incrementing = False
@@ -1422,7 +1422,7 @@ def log(ui, repo, *pats, **opts):
     files and full commit message is shown.
     """
 
-    get = util.cachefunc(lambda r:repo.changectx(r).changeset())
+    get = util.cachefunc(lambda r: repo.changectx(r).changeset())
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
 
     if opts['limit']:

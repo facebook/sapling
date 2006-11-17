@@ -133,7 +133,7 @@ def findcopies(repo, m1, m2, ma, limit):
     match = {}
     u1 = nonoverlap(m1, m2, ma)
     u2 = nonoverlap(m2, m1, ma)
-    ctx = util.cachefunc(lambda f,n: repo.filectx(f, fileid=n[:20]))
+    ctx = util.cachefunc(lambda f, n: repo.filectx(f, fileid=n[:20]))
 
     def checkpair(c, f2, man):
         ''' check if an apparent pair actually matches '''
@@ -285,7 +285,7 @@ def applyupdates(repo, action, wctx, mctx):
                 if inst.errno != errno.ENOENT:
                     repo.ui.warn(_("update failed to remove %s: %s!\n") %
                                  (f, inst.strerror))
-            removed +=1
+            removed += 1
         elif m == "m": # merge
             f2, fd, flag, move = a[2:]
             r = filemerge(repo, f, f2, wctx, mctx)

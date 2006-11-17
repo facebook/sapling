@@ -610,8 +610,8 @@ if os.name == 'nt':
         return path
 
     def user_rcpath():
-         '''return os-specific hgrc search path to the user dir'''
-         return os.path.join(os.path.expanduser('~'), 'mercurial.ini')
+        '''return os-specific hgrc search path to the user dir'''
+        return os.path.join(os.path.expanduser('~'), 'mercurial.ini')
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""

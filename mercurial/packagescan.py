@@ -55,14 +55,14 @@ def demandload(scope, modules):
                 scope[as_] = mod
                 requiredmodules[mod.__name__] = 1
                 if len(comp) == i: break
-                mod = getattr(mod,comp[i])
+                mod = getattr(mod, comp[i])
                 mn = string.join(comp[:i+1],'.')
                 i += 1
         else:
             # mod is the last package in the component list
             requiredmodules[mod.__name__] = 1
             for f in fromlist:
-                scope[f] = getattr(mod,f)
+                scope[f] = getattr(mod, f)
                 if type(scope[f]) == types.ModuleType:
                     requiredmodules[scope[f].__name__] = 1
 
@@ -72,14 +72,14 @@ class SkipPackage(Exception):
 
 scan_in_progress = False
 
-def scan(libpath,packagename):
+def scan(libpath, packagename):
     """ helper for finding all required modules of package <packagename> """
     global scan_in_progress
     scan_in_progress = True
     # Use the package in the build directory
     libpath = os.path.abspath(libpath)
-    sys.path.insert(0,libpath)
-    packdir = os.path.join(libpath,packagename.replace('.', '/'))
+    sys.path.insert(0, libpath)
+    packdir = os.path.join(libpath, packagename.replace('.', '/'))
     # A normal import would not find the package in
     # the build directory. ihook is used to force the import.
     # After the package is imported the import scope for
@@ -97,10 +97,10 @@ def scan(libpath,packagename):
     for m in pymodulefiles:
         if m == '__init__.py': continue
         tmp = {}
-        mname,ext = os.path.splitext(m)
+        mname, ext = os.path.splitext(m)
         fullname = packagename+'.'+mname
         try:
-            __import__(fullname,tmp,tmp)
+            __import__(fullname, tmp, tmp)
         except SkipPackage, inst:
             print >> sys.stderr, 'skipping %s: %s' % (fullname, inst.reason)
             continue
@@ -108,9 +108,9 @@ def scan(libpath,packagename):
     # Import all extension modules and by that run the fake demandload
     for m in extmodulefiles:
         tmp = {}
-        mname,ext = os.path.splitext(m)
+        mname, ext = os.path.splitext(m)
         fullname = packagename+'.'+mname
-        __import__(fullname,tmp,tmp)
+        __import__(fullname, tmp, tmp)
         requiredmodules[fullname] = 1
 
 def getmodules():

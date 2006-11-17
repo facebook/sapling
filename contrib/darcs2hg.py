@@ -74,8 +74,8 @@ def darcs_changes(darcsRepo):
 	changes    = cmd("darcs changes --reverse --xml-output", darcsRepo)
 	doc        = xml_dom.parseString(changes)
 	for patch_node in doc.childNodes[0].childNodes:
-		name = filter(lambda n:n.nodeName == "name", patch_node.childNodes)
-		comm = filter(lambda n:n.nodeName == "comment", patch_node.childNodes)
+		name = filter(lambda n: n.nodeName == "name", patch_node.childNodes)
+		comm = filter(lambda n: n.nodeName == "comment", patch_node.childNodes)
 		if not name:continue
 		else: name = name[0].childNodes[0].data
 		if not comm: comm = ""
@@ -87,7 +87,7 @@ def darcs_changes(darcsRepo):
 
 def darcs_tip(darcs_repo):
 	changes = cmd("darcs changes",darcs_repo,silent=True)
-	changes = filter(lambda l:l.strip().startswith("* "), changes.split("\n"))
+	changes = filter(lambda l: l.strip().startswith("* "), changes.split("\n"))
 	return len(changes)
 
 def darcs_pull(hg_repo, darcs_repo, chash):

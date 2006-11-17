@@ -121,7 +121,7 @@ class RangeableFileObject:
         """
         return (self.realpos - self.firstbyte)
 
-    def seek(self,offset,whence=0):
+    def seek(self, offset, whence=0):
         """Seek within the byte range.
         Positioning is identical to that described under tell().
         """
@@ -170,7 +170,7 @@ class RangeableFileObject:
                 size = (self.lastbyte - self.realpos)
         return size
 
-    def _do_seek(self,offset):
+    def _do_seek(self, offset):
         """Seek based on whether wrapped object supports seek().
         offset is relative to the current position (self.realpos).
         """
@@ -179,9 +179,9 @@ class RangeableFileObject:
             self._poor_mans_seek(offset)
         else:
             self.fo.seek(self.realpos + offset)
-        self.realpos+= offset
+        self.realpos += offset
 
-    def _poor_mans_seek(self,offset):
+    def _poor_mans_seek(self, offset):
         """Seek by calling the wrapped file objects read() method.
         This is used for file like objects that do not have native
         seek support. The wrapped objects read() method is called
@@ -199,7 +199,7 @@ class RangeableFileObject:
             buf = self.fo.read(bufsize)
             if len(buf) != bufsize:
                 raise RangeError('Requested Range Not Satisfiable')
-            pos+= bufsize
+            pos += bufsize
 
 class FileRangeHandler(urllib2.FileHandler):
     """FileHandler subclass that adds Range support.
@@ -221,16 +221,17 @@ class FileRangeHandler(urllib2.FileHandler):
             if port or socket.gethostbyname(host) not in self.get_names():
                 raise urllib2.URLError('file not on local host')
         fo = open(localfile,'rb')
-        brange = req.headers.get('Range',None)
+        brange = req.headers.get('Range', None)
         brange = range_header_to_tuple(brange)
         assert brange != ()
         if brange:
-            (fb,lb) = brange
-            if lb == '': lb = size
+            (fb, lb) = brange
+            if lb == '':
+                lb = size
             if fb < 0 or fb > size or lb > size:
                 raise RangeError('Requested Range Not Satisfiable')
             size = (lb - fb)
-            fo = RangeableFileObject(fo, (fb,lb))
+            fo = RangeableFileObject(fo, (fb, lb))
         headers = mimetools.Message(StringIO(
             'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %
             (mtype or 'text/plain', size, modified)))
@@ -292,18 +293,19 @@ class FTPRangeHandler(urllib2.FTPHandler):
 
             # -- range support modifications start here
             rest = None
-            range_tup = range_header_to_tuple(req.headers.get('Range',None))
+            range_tup = range_header_to_tuple(req.headers.get('Range', None))
             assert range_tup != ()
             if range_tup:
-                (fb,lb) = range_tup
-                if fb > 0: rest = fb
+                (fb, lb) = range_tup
+                if fb > 0:
+                    rest = fb
             # -- range support modifications end here
 
             fp, retrlen = fw.retrfile(file, type, rest)
 
             # -- range support modifications start here
             if range_tup:
-                (fb,lb) = range_tup
+                (fb, lb) = range_tup
                 if lb == '':
                     if retrlen is None or retrlen == 0:
                         raise RangeError('Requested Range Not Satisfiable due to unobtainable file length.')
@@ -314,7 +316,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
                         raise RangeError('Requested Range Not Satisfiable')
                 else:
                     retrlen = lb - fb
-                    fp = RangeableFileObject(fp, (0,retrlen))
+                    fp = RangeableFileObject(fp, (0, retrlen))
             # -- range support modifications end here
 
             headers = ""
@@ -340,8 +342,12 @@ class ftpwrapper(urllib.ftpwrapper):
     # argument and pass it on to ftp.ntransfercmd
     def retrfile(self, file, type, rest=None):
         self.endtransfer()
-        if type in ('d', 'D'): cmd = 'TYPE A'; isdir = 1
-        else: cmd = 'TYPE ' + type; isdir = 0
+        if type in ('d', 'D'):
+            cmd = 'TYPE A'
+            isdir = 1
+        else:
+            cmd = 'TYPE ' + type
+            isdir = 0
         try:
             self.ftp.voidcmd(cmd)
         except ftplib.all_errors:
@@ -372,8 +378,10 @@ class ftpwrapper(urllib.ftpwrapper):
             # Set transfer mode to ASCII!
             self.ftp.voidcmd('TYPE A')
             # Try a directory listing
-            if file: cmd = 'LIST ' + file
-            else: cmd = 'LIST'
+            if file:
+                cmd = 'LIST ' + file
+            else:
+                cmd = 'LIST'
             conn = self.ftp.ntransfercmd(cmd)
         self.busy = 1
         # Pass back both a suitably decorated object and a retrieval length
@@ -401,15 +409,16 @@ def range_header_to_tuple(range_header):
 
     """
     global _rangere
-    if range_header is None: return None
+    if range_header is None:
+        return None
     if _rangere is None:
         import re
         _rangere = re.compile(r'^bytes=(\d{1,})-(\d*)')
     match = _rangere.match(range_header)
     if match:
-        tup = range_tuple_normalize(match.group(1,2))
+        tup = range_tuple_normalize(match.group(1, 2))
         if tup and tup[1]:
-            tup = (tup[0],tup[1]+1)
+            tup = (tup[0], tup[1]+1)
         return tup
     return ()
 
@@ -418,11 +427,12 @@ def range_tuple_to_header(range_tup):
     Return a string of the form "bytes=<firstbyte>-<lastbyte>" or None
     if no range is needed.
     """
-    if range_tup is None: return None
+    if range_tup is None:
+        return None
     range_tup = range_tuple_normalize(range_tup)
     if range_tup:
         if range_tup[1]:
-            range_tup = (range_tup[0],range_tup[1] - 1)
+            range_tup = (range_tup[0], range_tup[1] - 1)
         return 'bytes=%s-%s' % range_tup
 
 def range_tuple_normalize(range_tup):
@@ -432,19 +442,28 @@ def range_tuple_normalize(range_tup):
     an int. Finally, return None if the normalized tuple == (0,'')
     as that is equivelant to retrieving the entire file.
     """
-    if range_tup is None: return None
+    if range_tup is None:
+        return None
     # handle first byte
     fb = range_tup[0]
-    if fb in (None,''): fb = 0
-    else: fb = int(fb)
-    # handle last byte
-    try: lb = range_tup[1]
-    except IndexError: lb = ''
+    if fb in (None, ''):
+        fb = 0
     else:
-        if lb is None: lb = ''
-        elif lb != '': lb = int(lb)
+        fb = int(fb)
+    # handle last byte
+    try:
+        lb = range_tup[1]
+    except IndexError:
+        lb = ''
+    else:
+        if lb is None:
+            lb = ''
+        elif lb != '':
+            lb = int(lb)
     # check if range is over the entire file
-    if (fb,lb) == (0,''): return None
+    if (fb, lb) == (0, ''):
+        return None
     # check that the range is valid
-    if lb < fb: raise RangeError('Invalid byte range: %s-%s' % (fb,lb))
-    return (fb,lb)
+    if lb < fb:
+        raise RangeError('Invalid byte range: %s-%s' % (fb, lb))
+    return (fb, lb)

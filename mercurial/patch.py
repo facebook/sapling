@@ -143,7 +143,7 @@ def readgitpatch(patchname):
             if m:
                 if gp:
                     gitpatches.append(gp)
-                src, dst = m.group(1,2)
+                src, dst = m.group(1, 2)
                 gp = gitpatch(dst)
                 gp.lineno = lineno
         elif gp:
