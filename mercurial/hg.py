@@ -242,8 +242,8 @@ def merge(repo, node, force=None, remind=True, wlock=None):
         repo.ui.status(_("There are unresolved merges,"
                          " you can redo the full merge using:\n"
                          "  hg update -C %s\n"
-                         "  hg merge %s\n"
-                         % (pl[0].rev(), pl[1].rev())))
+                         "  hg merge %s\n")
+                         % (pl[0].rev(), pl[1].rev()))
     elif remind:
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
     return stats[3]

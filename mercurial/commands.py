@@ -213,8 +213,8 @@ def backout(ui, repo, rev, **opts):
                                '--parent'))
         p = repo.lookup(opts['parent'])
         if p not in (p1, p2):
-            raise util.Abort(_('%s is not a parent of %s' %
-                               (short(p), short(node))))
+            raise util.Abort(_('%s is not a parent of %s') %
+                               (short(p), short(node)))
         parent = p
     else:
         if opts['parent']:
@@ -1969,12 +1969,12 @@ def revert(ui, repo, *pats, **opts):
             elif misslist is not None:
                 handle(misslist, backupmiss)
             else:
-                if exact: ui.warn(_('file not managed: %s\n' % rel))
+                if exact: ui.warn(_('file not managed: %s\n') % rel)
             break
         else:
             # file has not changed in dirstate
             if node == parent:
-                if exact: ui.warn(_('no changes needed to %s\n' % rel))
+                if exact: ui.warn(_('no changes needed to %s\n') % rel)
                 continue
             if pmf is None:
                 # only need parent manifest in this unlikely case,
