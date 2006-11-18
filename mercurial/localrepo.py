@@ -646,15 +646,14 @@ class localrepository(repo.repository):
         tr = self.transaction()
 
         # check in files
-        new = []
+        new = {}
         linkrev = self.changelog.count()
         commit.sort()
         for f in commit:
             self.ui.note(f + "\n")
             try:
-                m1[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
+                new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
                 m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
-                new.append(f)
             except IOError:
                 if use_dirstate:
                     self.ui.warn(_("trouble committing %s!\n") % f)
@@ -663,6 +662,7 @@ class localrepository(repo.repository):
                     remove.append(f)
 
         # update manifest
+        m1.update(new)
         remove.sort()
 
         for f in remove:
@@ -671,6 +671,9 @@ class localrepository(repo.repository):
         mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0], (new, remove))
 
         # add changeset
+        new = new.keys()
+        new.sort()
+
         user = user or self.ui.username()
         if not text or force_editor:
             edittext = []
