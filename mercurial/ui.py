@@ -101,6 +101,11 @@ class ui(object):
             return True
         tusers = self.trusted_users
         tgroups = self.trusted_groups
+        if not tusers:
+            user = util.username()
+            if user is not None:
+                self.trusted_users[user] = 1
+                self.fixconfig(section='trusted')
         if (tusers or tgroups) and '*' not in tusers and '*' not in tgroups:
             user = util.username(st.st_uid)
             group = util.groupname(st.st_gid)
@@ -203,14 +208,11 @@ class ui(object):
                 self.interactive = self.configbool("ui", "interactive", True)
 
         # update trust information
-        if section is None or section == 'trusted':
-            user = util.username()
-            if user is not None:
+        if (section is None or section == 'trusted') and self.trusted_users:
+            for user in self.configlist('trusted', 'users'):
                 self.trusted_users[user] = 1
-                for user in self.configlist('trusted', 'users'):
-                    self.trusted_users[user] = 1
-                for group in self.configlist('trusted', 'groups'):
-                    self.trusted_groups[group] = 1
+            for group in self.configlist('trusted', 'groups'):
+                self.trusted_groups[group] = 1
 
     def setconfig(self, section, name, value):
         if not self.overlay:
