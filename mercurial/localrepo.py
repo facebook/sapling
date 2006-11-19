@@ -1298,11 +1298,6 @@ class localrepository(repo.repository):
         base = {}
         remote_heads = remote.heads()
         inc = self.findincoming(remote, base, remote_heads, force=force)
-        if not force and inc:
-            self.ui.warn(_("abort: unsynced remote changes!\n"))
-            self.ui.status(_("(did you forget to sync?"
-                             " use push -f to force)\n"))
-            return None, 1
 
         update, updated_heads = self.findoutgoing(remote, base, remote_heads)
         if revs is not None:
@@ -1322,6 +1317,12 @@ class localrepository(repo.repository):
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
                 return None, 1
+
+        if not force and inc:
+            self.ui.warn(_("abort: unsynced remote changes!\n"))
+            self.ui.status(_("(did you forget to sync?"
+                             " use push -f to force)\n"))
+            return None, 1
 
         if revs is None:
             cg = self.changegroup(update, 'push')
