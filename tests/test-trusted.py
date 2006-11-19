@@ -41,6 +41,10 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
         return group
     util.groupname = groupname
 
+    def isowner(fp, st=None):
+        return user == cuser
+    util.isowner = isowner
+
     # try to read everything
     #print '# File belongs to user %s, group %s' % (user, group)
     #print '# trusted users = %s; trusted groups = %s' % (tusers, tgroups)

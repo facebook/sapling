@@ -96,10 +96,12 @@ class ui(object):
     def _is_trusted(self, fp, f, warn=True):
         if not self.check_trusted:
             return True
+        st = util.fstat(fp)
+        if util.isowner(fp, st):
+            return True
         tusers = self.trusted_users
         tgroups = self.trusted_groups
         if (tusers or tgroups) and '*' not in tusers and '*' not in tgroups:
-            st = util.fstat(fp)
             user = util.username(st.st_uid)
             group = util.groupname(st.st_gid)
             if user not in tusers and group not in tgroups:

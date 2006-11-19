@@ -654,6 +654,11 @@ if os.name == 'nt':
     def explain_exit(code):
         return _("exited with status %d") % code, code
 
+    # if you change this stub into a real check, please try to implement the
+    # username and groupname functions above, too.
+    def isowner(fp, st=None):
+        return True
+
     try:
         # override functions with win32 versions if possible
         from util_win32 import *
@@ -764,6 +769,16 @@ else:
             val = os.WSTOPSIG(code)
             return _("stopped by signal %d") % val, val
         raise ValueError(_("invalid exit code"))
+
+    def isowner(fp, st=None):
+        """Return True if the file object f belongs to the current user.
+
+        The return value of a util.fstat(f) may be passed as the st argument.
+        """
+        if st is None:
+            st = fstat(f)
+        return st.st_uid == os.getuid()
+
 
 def opener(base, audit=True):
     """
