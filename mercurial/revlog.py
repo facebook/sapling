@@ -543,6 +543,8 @@ class revlog(object):
             return self.index[rev][-5]
 
     def reachable(self, node, stop=None):
+        """return a hash of all nodes ancestral to a given node, including
+         the node itself, stopping when stop is matched"""
         reachable = {}
         visit = [node]
         reachable[node] = 1
