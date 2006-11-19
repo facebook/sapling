@@ -214,7 +214,7 @@ def backout(ui, repo, rev, **opts):
         p = repo.lookup(opts['parent'])
         if p not in (p1, p2):
             raise util.Abort(_('%s is not a parent of %s') %
-                               (short(p), short(node)))
+                             (short(p), short(node)))
         parent = p
     else:
         if opts['parent']:

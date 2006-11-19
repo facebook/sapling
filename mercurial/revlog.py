@@ -355,15 +355,15 @@ class revlog(object):
         fmt = v & 0xFFFF
         if fmt == REVLOGV0:
             if flags:
-                raise RevlogError(_("index %s invalid flags %x for format v0") %
-                                   (self.indexfile, flags))
+                raise RevlogError(_("index %s invalid flags %x for format v0")
+                                  % (self.indexfile, flags))
         elif fmt == REVLOGNG:
             if flags & ~REVLOGNGINLINEDATA:
-                raise RevlogError(_("index %s invalid flags %x for revlogng") %
-                                   (self.indexfile, flags))
+                raise RevlogError(_("index %s invalid flags %x for revlogng")
+                                  % (self.indexfile, flags))
         else:
-            raise RevlogError(_("index %s invalid format %d") %
-                               (self.indexfile, fmt))
+            raise RevlogError(_("index %s invalid format %d")
+                              % (self.indexfile, fmt))
         self.version = v
         if v == REVLOGV0:
             self.indexformat = indexformatv0
@@ -915,7 +915,7 @@ class revlog(object):
         p1, p2 = self.parents(node)
         if node != hash(text, p1, p2):
             raise RevlogError(_("integrity check failed on %s:%d")
-                          % (self.datafile, rev))
+                              % (self.datafile, rev))
 
         self.cache = (node, rev, text)
         return text
@@ -931,8 +931,8 @@ class revlog(object):
             return
         trinfo = tr.find(self.indexfile)
         if trinfo == None:
-            raise RevlogError(_("%s not found in the transaction")  %
-                              self.indexfile)
+            raise RevlogError(_("%s not found in the transaction")
+                              % self.indexfile)
 
         trindex = trinfo[2]
         dataoff = self.start(trindex)
