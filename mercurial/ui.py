@@ -44,7 +44,10 @@ class ui(object):
             # if ucdata is not None, its keys must be a superset of cdata's
             self.cdata = util.configparser()
             self.ucdata = None
+            # we always trust global config files
+            self.check_trusted = False
             self.readconfig(util.rcpath())
+            self.check_trusted = True
             self.updateopts(verbose, debug, quiet, interactive)
         else:
             # parentui may point to an ui object which is already a child
@@ -91,6 +94,8 @@ class ui(object):
             self.quiet = self.verbose = False
 
     def _is_trusted(self, fp, f, warn=True):
+        if not self.check_trusted:
+            return True
         tusers = self.trusted_users
         tgroups = self.trusted_groups
         if (tusers or tgroups) and '*' not in tusers and '*' not in tgroups:
