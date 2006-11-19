@@ -1,8 +1,8 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to ../a
 searching for changes
-abort: unsynced remote changes!
-(did you forget to sync? use push -f to force)
+abort: push creates new remote branches!
+(did you forget to merge? use push -f to force)
 pulling from ../a
 searching for changes
 adding changesets
@@ -36,6 +36,10 @@ abort: push creates new remote branches!
 pushing to ../c
 searching for changes
 no changes found
+pushing to ../c
+searching for changes
+abort: push creates new remote branches!
+(did you forget to merge? use push -f to force)
 pushing to ../c
 searching for changes
 adding changesets

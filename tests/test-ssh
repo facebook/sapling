@@ -92,11 +92,8 @@ cd ../local
 echo r > r
 hg ci -A -m z -d '1000002 0' r
 
-echo "# push should fail"
-hg push
-
 echo "# push should succeed"
-hg push -f
+hg push
 
 cd ..
 cat dummylog

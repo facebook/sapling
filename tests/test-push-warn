@@ -50,6 +50,7 @@ hg ci -m c-d -d "1000000 0"
 hg push ../c
 hg push -r 2 ../c
 hg push -r 3 -r 4 ../c
+hg push -f -r 3 -r 4 ../c
 hg push -r 5 ../c
 
 exit 0

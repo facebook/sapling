@@ -1309,20 +1309,40 @@ class localrepository(repo.repository):
             self.ui.status(_("no changes found\n"))
             return None, 1
         elif not force:
-            # FIXME we don't properly detect creation of new heads
-            # in the push -r case, assume the user knows what he's doing
-            if not revs and len(remote_heads) < len(heads) \
-                   and remote_heads != [nullid]:
+            # check if we're creating new remote heads
+            # to be a remote head after push, node must be either
+            # - unknown locally
+            # - a local outgoing head descended from update
+            # - a remote head that's known locally and not
+            #   ancestral to an outgoing head
+
+            warn = 0
+
+            if remote_heads == [nullid]:
+                warn = 0
+            elif not revs and len(heads) > len(remote_heads):
+                warn = 1
+            else:
+                newheads = list(heads)
+                for r in remote_heads:
+                    if r in self.changelog.nodemap:
+                        desc = self.changelog.heads(r)
+                        l = [h for h in heads if h in desc]
+                        if not l:
+                            newheads.append(r)
+                    else:
+                        newheads.append(r)
+                if len(newheads) > len(remote_heads):
+                    warn = 1
+
+            if warn:
                 self.ui.warn(_("abort: push creates new remote branches!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
                 return None, 1
+            elif inc:
+                self.ui.warn(_("note: unsynced remote changes!\n"))
 
-        if not force and inc:
-            self.ui.warn(_("abort: unsynced remote changes!\n"))
-            self.ui.status(_("(did you forget to sync?"
-                             " use push -f to force)\n"))
-            return None, 1
 
         if revs is None:
             cg = self.changegroup(update, 'push')
