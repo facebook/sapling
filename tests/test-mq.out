@@ -89,6 +89,11 @@ Now at: test2.patch
 % qseries
 test.patch
 test2.patch
+Now at: test.patch
+0 A test.patch: foo bar
+1 U test2.patch: 
+applying test2.patch
+Now at: test2.patch
 % qapplied
 test.patch
 test2.patch

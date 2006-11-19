@@ -1106,7 +1106,6 @@ class queue:
         if not missing:
             for i in xrange(start, start+length):
                 pfx = ''
-                patch = pname(i)
                 if self.ui.verbose:
                     if i < unapplied:
                         status = 'A'
@@ -1115,6 +1114,7 @@ class queue:
                     else:
                         status = 'G'
                     pfx = '%d %s ' % (i, status)
+                patch = pname(i)
                 self.ui.write('%s%s\n' % (pfx, displayname(patch)))
         else:
             msng_list = []

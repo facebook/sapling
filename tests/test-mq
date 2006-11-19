@@ -87,6 +87,9 @@ hg --traceback qpush -a
 
 echo % qseries
 hg qseries
+hg qpop
+hg qseries -vs
+hg qpush
 
 echo % qapplied
 hg qapplied
