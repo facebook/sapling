@@ -1794,7 +1794,8 @@ def rename(ui, repo, patch, name=None, **opts):
     if ui.verbose:
         ui.write('Renaming %s to %s\n' % (patch, name))
     i = q.find_series(patch)
-    q.full_series[i] = name
+    guards = q.guard_re.findall(q.full_series[i])
+    q.full_series[i] = name + ''.join([' #' + g for g in guards])
     q.parse_series()
     q.series_dirty = 1
 

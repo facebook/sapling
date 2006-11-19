@@ -98,3 +98,12 @@ echo % guards in series file: +1 +2 -3
 hg qselect -s
 echo % should show c.patch
 hg qapplied
+
+hg qrename a.patch new.patch
+echo % should show :
+echo % new.patch: +1 +2 -3
+echo % b.patch: +2
+echo % c.patch: unguarded
+hg qguard -l
+
+

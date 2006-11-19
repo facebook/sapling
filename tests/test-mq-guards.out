@@ -82,3 +82,10 @@ Now at: c.patch
 -3
 % should show c.patch
 c.patch
+% should show :
+% new.patch: +1 +2 -3
+% b.patch: +2
+% c.patch: unguarded
+new.patch: +1 +2 -3
+b.patch: +2
+c.patch: unguarded
