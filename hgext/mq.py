@@ -2122,10 +2122,10 @@ cmdtable = {
     "^qrefresh":
         (refresh,
          [('e', 'edit', None, _('edit commit message')),
-          ('m', 'message', '', _('change commit message with <text>')),
-          ('l', 'logfile', '', _('change commit message with <file> content')),
+          ('m', 'message', '', _('change commit message to <text>')),
+          ('l', 'logfile', '', _('change commit message to <file> content')),
           ('g', 'git', None, _('use git extended diff format')),
-          ('s', 'short', None, 'short refresh'),
+          ('s', 'short', None, 'refresh only files already in the patch'),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          'hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] FILES...'),
