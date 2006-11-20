@@ -1825,8 +1825,12 @@ class localrepository(repo.repository):
         except ValueError:
             raise util.UnexpectedOutput(
                 _('Unexpected response from remote server:'), l)
-        if resp != 0:
+        if resp == 1:
             raise util.Abort(_('operation forbidden by server'))
+        elif resp == 2:
+            raise util.Abort(_('locking the remote repository failed'))
+        elif resp != 0:
+            raise util.Abort(_('the server sent an unknown error code'))
         self.ui.status(_('streaming all changes\n'))
         l = fp.readline()
         try:
