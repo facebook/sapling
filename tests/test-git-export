@@ -112,3 +112,18 @@ hg diff --git
 echo
 echo "% ...but there's another copy between the original rev and the wd"
 hg diff --git -r -2
+echo
+echo "% ...but the source of the copy was created after the original rev"
+hg diff --git -r -3
+hg ci -m 'mv created2 created3'
+
+echo > brand-new
+hg add brand-new
+hg ci -m 'add brand-new'
+hg mv brand-new brand-new2
+echo '% created in parent of wd; renamed in the wd'
+hg diff --git
+
+echo
+echo '% created between r1 and parent of wd; renamed in the wd'
+hg diff --git -r -2

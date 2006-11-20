@@ -467,6 +467,9 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     if not modified and not added and not removed:
         return
 
+    # returns False if there was no rename between n1 and n2
+    # returns None if the file was created between n1 and n2
+    # returns the (file, node) present in n1 that was renamed to f in n2
     def renamedbetween(f, n1, n2):
         r1, r2 = map(repo.changelog.rev, (n1, n2))
         orig = f
@@ -483,12 +486,12 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     f = src[0]
             n2 = repo.changelog.parents(n2)[0]
             r2 = repo.changelog.rev(n2)
-        if orig == f:
-            return None
         cl = getchangelog(n1)
         m = getmanifest(cl[0])
         if f not in m:
             return None
+        if f == orig:
+            return False
         return f, m[f]
 
     if node2:
@@ -518,7 +521,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             if src:
                 f = src
             of = renamedbetween(f, node1, parent)
-            if of:
+            if of or of is None:
                 return of
             elif src:
                 cl = getchangelog(parent)[0]
