@@ -198,3 +198,6 @@ Now at: copy
 diff --git a/new b/copy
 copy from new
 copy to copy
+diff --git a/new b/copy
+copy from new
+copy to copy

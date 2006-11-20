@@ -935,6 +935,8 @@ class queue:
             self.ui.write("No patches applied\n")
             return
         qp = self.qparents(repo, top)
+        if opts.get('git'):
+            self.diffopts().git = True
         self.printdiff(repo, qp, files=pats, opts=opts)
 
     def refresh(self, repo, pats=None, **opts):
@@ -2071,7 +2073,8 @@ cmdtable = {
          commands.table["^commit|ci"][1],
          'hg qcommit [OPTION]... [FILE]...'),
     "^qdiff": (diff,
-               [('I', 'include', [], _('include names matching the given patterns')),
+               [('g', 'git', None, _('use git extended diff format')),
+                ('I', 'include', [], _('include names matching the given patterns')),
                 ('X', 'exclude', [], _('exclude names matching the given patterns'))],
                'hg qdiff [-I] [-X] [FILE]...'),
     "qdelete|qremove|qrm":

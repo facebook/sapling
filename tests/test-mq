@@ -202,3 +202,8 @@ sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
 hg qpop
 hg qpush
 hg qdiff
+cat >>$HGRCPATH <<EOF
+[diff]
+git = False
+EOF
+hg qdiff --git
