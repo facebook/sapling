@@ -127,3 +127,19 @@ EOF
 
 hg locate copy2
 hg cat rename2
+
+echo % one file renamed multiple times
+hg import -mmultirenames - <<EOF
+diff --git a/rename2 b/rename3
+rename from rename2
+rename to rename3
+diff --git a/rename2 b/rename3-2
+rename from rename2
+rename to rename3-2
+EOF
+hg log -vCr. --template '{rev} {files} / {file_copies%filecopy}\n'
+
+hg locate rename2 rename3 rename3-2
+hg cat rename3
+echo
+hg cat rename3-2

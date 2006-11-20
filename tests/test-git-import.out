@@ -37,3 +37,20 @@ a
 b
 c
 a
+% one file renamed multiple times
+applying patch from stdin
+9 rename2 rename3 rename3-2 / rename3 (rename2)rename3-2 (rename2)
+rename2: No such file or directory
+rename3
+rename3-2
+a
+a
+b
+c
+a
+
+a
+a
+b
+c
+a

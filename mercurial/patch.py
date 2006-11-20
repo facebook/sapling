@@ -341,7 +341,7 @@ def updatedir(ui, repo, patches, wlock=None):
     if not patches:
         return
     copies = []
-    removes = []
+    removes = {}
     cfiles = patches.keys()
     cwd = repo.getcwd()
     if cwd:
@@ -350,16 +350,18 @@ def updatedir(ui, repo, patches, wlock=None):
         ctype, gp = patches[f]
         if ctype == 'RENAME':
             copies.append((gp.oldpath, gp.path, gp.copymod))
-            removes.append(gp.oldpath)
+            removes[gp.oldpath] = 1
         elif ctype == 'COPY':
             copies.append((gp.oldpath, gp.path, gp.copymod))
         elif ctype == 'DELETE':
-            removes.append(gp.path)
+            removes[gp.path] = 1
     for src, dst, after in copies:
         if not after:
             copyfile(src, dst, repo.root)
         repo.copy(src, dst, wlock=wlock)
+    removes = removes.keys()
     if removes:
+        removes.sort()
         repo.remove(removes, True, wlock=wlock)
     for f in patches:
         ctype, gp = patches[f]
