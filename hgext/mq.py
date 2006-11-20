@@ -966,6 +966,8 @@ class queue:
             comments = "\n".join(comments) + '\n\n'
             patchf.write(comments)
 
+        if opts.get('git'):
+            self.diffopts().git = True
         fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
         tip = repo.changelog.tip()
         if top == tip:
@@ -1021,8 +1023,6 @@ class queue:
             r = util.unique(dd)
             a = util.unique(aa)
             filelist = filter(matchfn, util.unique(m + r + a))
-            if opts.get('git'):
-                self.diffopts().git = True
             patch.diff(repo, patchparent, files=filelist, match=matchfn,
                        fp=patchf, changes=(m, a, r, [], u),
                        opts=self.diffopts())
