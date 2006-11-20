@@ -60,3 +60,16 @@ rm binfile.bin
 hg import -mfoo b.diff
 cmp binfile.bin $TESTDIR/binfile.bin
 
+echo
+echo '% diff across many revisions'
+hg mv dst dst2
+hg ci -m 'mv dst dst2' -d '0 0'
+
+echo >> start
+hg ci -m 'change start' -d '0 0'
+
+hg revert -r -2 start
+hg mv dst2 dst3
+hg ci -m 'mv dst2 dst3; revert start' -d '0 0'
+
+hg diff --git -r 9:11

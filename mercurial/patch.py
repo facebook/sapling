@@ -471,14 +471,15 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         r1, r2 = map(repo.changelog.rev, (n1, n2))
         src = None
         while r2 > r1:
-            cl = getchangelog(n2)[0]
-            m = getmanifest(cl)
-            try:
-                src = getfile(f).renamed(m[f])
-            except KeyError:
-                return None
-            if src:
-                f = src[0]
+            cl = getchangelog(n2)
+            if f in cl[3]:
+                m = getmanifest(cl[0])
+                try:
+                    src = getfile(f).renamed(m[f])
+                except KeyError:
+                    return None
+                if src:
+                    f = src[0]
             n2 = repo.changelog.parents(n2)[0]
             r2 = repo.changelog.rev(n2)
         return src
