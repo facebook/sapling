@@ -201,3 +201,46 @@ copy to copy
 diff --git a/new b/copy
 copy from new
 copy to copy
+1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+Patch queue now empty
+applying bar
+Now at: bar
+diff --git a/bar b/bar
+new file mode 100644
+--- /dev/null
++++ b/bar
+@@ -0,0 +1,1 @@
++bar
+diff --git a/foo b/baz
+rename from foo
+rename to baz
+2 baz (foo)
+
+1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+Patch queue now empty
+applying bar
+Now at: bar
+diff --git a/foo b/bleh
+rename from foo
+rename to bleh
+diff --git a/quux b/quux
+new file mode 100644
+--- /dev/null
++++ b/quux
+@@ -0,0 +1,1 @@
++bar
+3 bleh (foo)

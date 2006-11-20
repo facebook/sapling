@@ -207,3 +207,34 @@ cat >>$HGRCPATH <<EOF
 git = False
 EOF
 hg qdiff --git
+
+cd ..
+hg init slow
+cd slow
+hg qinit
+echo foo > foo
+hg add foo
+hg ci -m 'add foo'
+hg qnew bar
+echo bar > bar
+hg add bar
+hg mv foo baz
+hg qrefresh --git
+hg up -C 0
+echo >> foo
+hg ci -m 'change foo'
+hg up -C 1
+hg qrefresh --git 2>&1 | grep -v 'saving bundle'
+cat .hg/patches/bar
+hg log -vC --template '{rev} {file_copies%filecopy}\n' -r .
+
+echo
+hg up -C 1
+echo >> foo
+hg ci -m 'change foo again'
+hg up -C 2
+hg mv bar quux
+hg mv baz bleh
+hg qrefresh --git 2>&1 | grep -v 'saving bundle'
+cat .hg/patches/bar
+hg log -vC --template '{rev} {file_copies%filecopy}\n' -r .

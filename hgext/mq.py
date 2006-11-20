@@ -915,8 +915,11 @@ class queue:
                 util.set_exec(repo.wjoin(f), mmap.execf(f))
             repo.dirstate.update(m + r, 'n')
             for f in a:
-                try: os.unlink(repo.wjoin(f))
-                except: raise
+                try:
+                    os.unlink(repo.wjoin(f))
+                except OSError, e:
+                    if e.errno != errno.ENOENT:
+                        raise
                 try: os.removedirs(os.path.dirname(repo.wjoin(f)))
                 except: pass
             if a:
@@ -1061,6 +1064,19 @@ class queue:
         else:
             self.printdiff(repo, patchparent, fp=patchf)
             patchf.close()
+            added = repo.status()[1]
+            for a in added:
+                f = repo.wjoin(a)
+                try:
+                    os.unlink(f)
+                except OSError, e:
+                    if e.errno != errno.ENOENT:
+                        raise
+                try: os.removedirs(os.path.dirname(f))
+                except: pass
+            # forget the file copies in the dirstate
+            # push should readd the files later on
+            repo.dirstate.forget(added)
             self.pop(repo, force=True, wlock=wlock)
             self.push(repo, force=True, wlock=wlock)
 
