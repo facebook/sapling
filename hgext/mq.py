@@ -1262,7 +1262,7 @@ class queue:
         return p
 
     def qimport(self, repo, files, patchname=None, rev=None, existing=None,
-                force=None):
+                force=None, git=False):
         def checkseries(patchname):
             if patchname in self.series:
                 raise util.Abort(_('patch %s is already in the series file')
@@ -1306,6 +1306,9 @@ class queue:
                     raise util.Abort(_('revision %d has unmanaged children')
                                      % rev[0])
                 lastparent = None
+
+            if git:
+                self.diffopts().git = True
 
             for r in rev:
                 p1, p2 = repo.changelog.parentrevs(r)
@@ -1424,10 +1427,13 @@ def qimport(ui, repo, *filename, **opts):
 
     An existing changeset may be placed under mq control with --rev
     (e.g. qimport --rev tip -n patch will place tip under mq control).
+    With --git, patches imported with --rev will use the git diff
+    format.
     """
     q = repo.mq
     q.qimport(repo, filename, patchname=opts['name'],
-              existing=opts['existing'], force=opts['force'], rev=opts['rev'])
+              existing=opts['existing'], force=opts['force'], rev=opts['rev'],
+              git=opts['git'])
     q.save_dirty()
     return 0
 
@@ -2090,8 +2096,9 @@ cmdtable = {
          [('e', 'existing', None, 'import file in patch dir'),
           ('n', 'name', '', 'patch file name'),
           ('f', 'force', None, 'overwrite existing files'),
-          ('r', 'rev', [], 'place existing revisions under mq control')],
-         'hg qimport [-e] [-n NAME] [-f] [-r REV]... FILE...'),
+          ('r', 'rev', [], 'place existing revisions under mq control'),
+          ('g', 'git', None, _('use git extended diff format'))],
+         'hg qimport [-e] [-n NAME] [-f] [-g] [-r REV]... FILE...'),
     "^qinit":
         (init,
          [('c', 'create-repo', None, 'create queue repository')],
