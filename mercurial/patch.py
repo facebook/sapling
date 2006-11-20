@@ -547,6 +547,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
     all = modified + added + removed
     all.sort()
+    gone = {}
     for f in all:
         to = None
         tn = None
@@ -574,7 +575,11 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     a, arev = copied[f]
                     omode = gitmode(mmap.execf(a))
                     addmodehdr(header, omode, mode)
-                    op = a in removed and 'rename' or 'copy'
+                    if a in removed and a not in gone:
+                        op = 'rename'
+                        gone[a] = 1
+                    else:
+                        op = 'copy'
                     header.append('%s from %s\n' % (op, a))
                     header.append('%s to %s\n' % (op, f))
                     to = getfile(a).read(arev)

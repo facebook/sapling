@@ -133,3 +133,10 @@ new file mode 100644
 +++ b/brand-new2
 @@ -0,0 +1,1 @@
 +
+% one file is copied to many destinations and removed
+diff --git a/brand-new2 b/brand-new3
+rename from brand-new2
+rename to brand-new3
+diff --git a/brand-new2 b/brand-new3-2
+copy from brand-new2
+copy to brand-new3-2
