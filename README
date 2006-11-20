@@ -76,15 +76,17 @@ Network support:
  foo$ hg clone http://selenic.com/hg/
  foo$ cd hg
 
- # export your current repo via HTTP with browsable interface
- foo$ hg serve -n "My repo" -p 80
+ # make your current repo available via http://server:8000/
+ foo$ hg serve
 
- # pushing changes to a remote repo with SSH
- foo$ hg push ssh://user@example.com/~/hg/
+ # pushing and pulling changes to/from a remote repo with SSH
+ foo$ hg push ssh://user@example.com/my/repository
+ foo$ hg pull ssh://user@example.com//home/somebody/his/repository
 
- # merge changes from a remote machine
- bar$ hg pull http://foo/
+ # merge changes from a remote machine (e.g. running 'hg serve')
+ bar$ hg pull http://foo:8000/
  bar$ hg merge   # merge changes into your working directory
+ bar$ hg commit  # commit merge in to your local repository
 
  # Set up a CGI server on your webserver
  foo$ cp hgweb.cgi ~/public_html/hg/index.cgi
