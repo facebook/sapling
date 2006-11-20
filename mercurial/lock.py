@@ -71,7 +71,7 @@ class lock(object):
             except (OSError, IOError), why:
                 if why.errno == errno.EEXIST:
                     locker = self.testlock()
-                    if locker:
+                    if locker is not None:
                         raise LockHeld(errno.EAGAIN, self.f, self.desc,
                                        locker)
                 else:
@@ -79,11 +79,16 @@ class lock(object):
                                           why.filename, self.desc)
 
     def testlock(self):
-        '''return id of locker if lock is valid, else None.'''
-        # if old-style lock, we cannot tell what machine locker is on.
-        # with new-style lock, if locker is on this machine, we can
-        # see if locker is alive.  if locker is on this machine but
-        # not alive, we can safely break lock.
+        """return id of locker if lock is valid, else None.
+
+        If old-style lock, we cannot tell what machine locker is on.
+        with new-style lock, if locker is on this machine, we can
+        see if locker is alive.  If locker is on this machine but
+        not alive, we can safely break lock.
+
+        The lock file is only deleted when None is returned.
+
+        """
         locker = util.readlock(self.f)
         try:
             host, pid = locker.split(":", 1)
