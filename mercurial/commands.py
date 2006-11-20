@@ -1492,9 +1492,10 @@ def import_(ui, repo, patch1, *patches, **opts):
             raise util.Abort(_('no diffs found'))
 
         try:
-            if opts['message']:
+            cmdline_message = logmessage(opts)
+            if cmdline_message:
                 # pickup the cmdline msg
-                message = opts['message']
+                message = cmdline_message
             elif message:
                 # pickup the patch msg
                 message = message.strip()
@@ -2586,6 +2587,11 @@ walkopts = [
     ('X', 'exclude', [], _('exclude names matching the given patterns')),
 ]
 
+commitopts = [
+    ('m', 'message', '', _('use <text> as commit message')),
+    ('l', 'logfile', '', _('read commit message from <file>')),
+]
+
 table = {
     "^add": (add, walkopts + dryrunopts, _('hg add [OPTION]... [FILE]...')),
     "addremove":
@@ -2617,12 +2623,10 @@ table = {
         (backout,
          [('', 'merge', None,
            _('merge with old dirstate parent after backout')),
-          ('m', 'message', '', _('use <text> as commit message')),
-          ('l', 'logfile', '', _('read commit message from <file>')),
           ('d', 'date', '', _('record datecode as commit date')),
           ('', 'parent', '', _('parent to choose when backing out merge')),
           ('u', 'user', '', _('record user as committer')),
-         ] + walkopts,
+         ] + walkopts + commitopts,
          _('hg backout [OPTION]... REV')),
     "branch": (branch, [], _('hg branch [NAME]')),
     "branches": (branches, [], _('hg branches')),
@@ -2656,11 +2660,9 @@ table = {
         (commit,
          [('A', 'addremove', None,
            _('mark new/missing files as added/removed before committing')),
-          ('m', 'message', '', _('use <text> as commit message')),
-          ('l', 'logfile', '', _('read the commit message from <file>')),
           ('d', 'date', '', _('record datecode as commit date')),
           ('u', 'user', '', _('record user as commiter')),
-         ] + walkopts,
+         ] + walkopts + commitopts,
          _('hg commit [OPTION]... [FILE]...')),
     "copy|cp":
         (copy,
@@ -2743,10 +2745,9 @@ table = {
          [('p', 'strip', 1,
            _('directory strip option for patch. This has the same\n'
              'meaning as the corresponding patch option')),
-          ('m', 'message', '', _('use <text> as commit message')),
           ('b', 'base', '', _('base path (DEPRECATED)')),
           ('f', 'force', None,
-           _('skip check for outstanding uncommitted changes'))],
+           _('skip check for outstanding uncommitted changes'))] + commitopts,
          _('hg import [-p NUM] [-m MESSAGE] [-f] PATCH...')),
     "incoming|in": (incoming,
          [('M', 'no-merges', None, _('do not show merges')),
@@ -2838,9 +2839,8 @@ table = {
          [('p', 'parent', [], _('parent')),
           ('d', 'date', '', _('date code')),
           ('u', 'user', '', _('user')),
-          ('F', 'files', '', _('file list')),
-          ('m', 'message', '', _('commit message')),
-          ('l', 'logfile', '', _('commit message file'))],
+          ('F', 'files', '', _('file list'))
+          ] + commitopts,
          _('hg debugrawcommit [OPTION]... [FILE]...')),
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":

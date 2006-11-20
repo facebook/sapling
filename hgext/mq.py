@@ -2103,9 +2103,8 @@ cmdtable = {
     'qfold':
         (fold,
          [('e', 'edit', None, _('edit patch header')),
-          ('k', 'keep', None, _('keep folded patch files')),
-          ('m', 'message', '', _('set patch header to <text>')),
-          ('l', 'logfile', '', _('set patch header to contents of <file>'))],
+          ('k', 'keep', None, _('keep folded patch files'))
+          ] + commands.commitopts,
          'hg qfold [-e] [-m <text>] [-l <file] PATCH...'),
     'qguard': (guard, [('l', 'list', None, _('list all patches and guards')),
                        ('n', 'none', None, _('drop all guards'))],
@@ -2127,9 +2126,8 @@ cmdtable = {
     "qnew":
         (new,
          [('e', 'edit', None, _('edit commit message')),
-          ('m', 'message', '', _('use <text> as commit message')),
-          ('l', 'logfile', '', _('read the commit message from <file>')),
-          ('f', 'force', None, _('import uncommitted changes into patch'))],
+          ('f', 'force', None, _('import uncommitted changes into patch'))
+          ] + commands.commitopts,
          'hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH'),
     "qnext": (next, [] + seriesopts, 'hg qnext [-s]'),
     "qprev": (prev, [] + seriesopts, 'hg qprev [-s]'),
@@ -2150,12 +2148,11 @@ cmdtable = {
     "^qrefresh":
         (refresh,
          [('e', 'edit', None, _('edit commit message')),
-          ('m', 'message', '', _('change commit message to <text>')),
-          ('l', 'logfile', '', _('change commit message to <file> content')),
           ('g', 'git', None, _('use git extended diff format')),
           ('s', 'short', None, 'refresh only files already in the patch'),
           ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+          ('X', 'exclude', [], _('exclude names matching the given patterns'))
+          ] + commands.commitopts,
          'hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] FILES...'),
     'qrename|qmv':
         (rename, [], 'hg qrename PATCH1 [PATCH2]'),
@@ -2166,12 +2163,10 @@ cmdtable = {
          'hg qrestore [-d] [-u] REV'),
     "qsave":
         (save,
-         [('m', 'message', '', _('use <text> as commit message')),
-          ('l', 'logfile', '', _('read the commit message from <file>')),
-          ('c', 'copy', None, 'copy patch directory'),
+         [('c', 'copy', None, 'copy patch directory'),
           ('n', 'name', '', 'copy directory name'),
           ('e', 'empty', None, 'clear queue status file'),
-          ('f', 'force', None, 'force copy')],
+          ('f', 'force', None, 'force copy')] + commands.commitopts,
          'hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]'),
     "qselect": (select,
                 [('n', 'none', None, _('disable all guards')),
