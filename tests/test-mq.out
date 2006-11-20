@@ -222,6 +222,16 @@ diff --git a/foo b/baz
 rename from foo
 rename to baz
 2 baz (foo)
+diff --git a/bar b/bar
+new file mode 100644
+--- /dev/null
++++ b/bar
+@@ -0,0 +1,1 @@
++bar
+diff --git a/foo b/baz
+rename from foo
+rename to baz
+2 baz (foo)
 
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -244,3 +254,13 @@ new file mode 100644
 @@ -0,0 +1,1 @@
 +bar
 3 bleh (foo)
+diff --git a/foo b/barney
+rename from foo
+rename to barney
+diff --git a/fred b/fred
+new file mode 100644
+--- /dev/null
++++ b/fred
+@@ -0,0 +1,1 @@
++bar
+3 barney (foo)

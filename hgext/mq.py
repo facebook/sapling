@@ -989,6 +989,9 @@ class queue:
             # caching against the next repo.status call
             #
             mm, aa, dd, aa2, uu = repo.status(patchparent, tip)[:5]
+            changes = repo.changelog.read(tip)
+            man = repo.manifest.read(changes[0])
+            aaa = aa[:]
             if opts.get('short'):
                 filelist = mm + aa + dd
             else:
@@ -1031,12 +1034,30 @@ class queue:
                        opts=self.diffopts())
             patchf.close()
 
-            changes = repo.changelog.read(tip)
             repo.dirstate.setparents(*cparents)
-            copies = [(f, repo.dirstate.copied(f)) for f in a]
+            copies = {}
+            for dst in a:
+                src = repo.dirstate.copied(dst)
+                if src is None:
+                    continue
+                copies.setdefault(src, []).append(dst)
             repo.dirstate.update(a, 'a')
-            for dst, src in copies:
-                repo.dirstate.copy(src, dst)
+            # remember the copies between patchparent and tip
+            # this may be slow, so don't do it if we're not tracking copies
+            if self.diffopts().git:
+                for dst in aaa:
+                    f = repo.file(dst)
+                    src = f.renamed(man[dst])
+                    if src:
+                        copies[src[0]] = copies.get(dst, [])
+                        if dst in a:
+                            copies[src[0]].append(dst)
+                    # we can't copy a file created by the patch itself
+                    if dst in copies:
+                        del copies[dst]
+            for src, dsts in copies.iteritems():
+                for dst in dsts:
+                    repo.dirstate.copy(src, dst)
             repo.dirstate.update(r, 'r')
             # if the patch excludes a modified file, mark that file with mtime=0
             # so status can see it.
