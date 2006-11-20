@@ -516,7 +516,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             src = repo.dirstate.copied(f)
             parent = repo.dirstate.parents()[0]
             if src:
-                f = src[0]
+                f = src
             of = renamedbetween(f, node1, parent)
             if of:
                 return of

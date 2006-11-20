@@ -102,3 +102,14 @@ new file mode 100644
 +a
 +b
 +c
+
+% comparing with the working dir
+% there's a copy in the working dir...
+diff --git a/created2 b/created3
+rename from created2
+rename to created3
+
+% ...but there's another copy between the original rev and the wd
+diff --git a/created b/created3
+rename from created
+rename to created3

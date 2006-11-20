@@ -94,3 +94,21 @@ echo
 echo '% file created after r1 and renamed before r2'
 hg diff --git -r -5:-1
 
+echo
+echo '% comparing with the working dir'
+echo >> start
+hg ci -m 'change start again' -d '0 0'
+
+echo > created
+hg add created
+hg ci -m 'add created'
+
+hg mv created created2
+hg ci -m 'mv created created2'
+
+hg mv created2 created3
+echo "% there's a copy in the working dir..."
+hg diff --git
+echo
+echo "% ...but there's another copy between the original rev and the wd"
+hg diff --git -r -2
