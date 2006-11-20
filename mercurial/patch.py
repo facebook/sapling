@@ -469,6 +469,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
     def renamedbetween(f, n1, n2):
         r1, r2 = map(repo.changelog.rev, (n1, n2))
+        orig = f
         src = None
         while r2 > r1:
             cl = getchangelog(n2)
@@ -482,7 +483,13 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     f = src[0]
             n2 = repo.changelog.parents(n2)[0]
             r2 = repo.changelog.rev(n2)
-        return src
+        if orig == f:
+            return None
+        cl = getchangelog(n1)
+        m = getmanifest(cl[0])
+        if f not in m:
+            return None
+        return f, m[f]
 
     if node2:
         change = getchangelog(node2)

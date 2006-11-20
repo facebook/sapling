@@ -70,3 +70,35 @@ applying b.diff
 diff --git a/dst2 b/dst3
 rename from dst2
 rename to dst3
+
+% file created before r1 and renamed before r2
+diff --git a/foo b/bar
+rename from foo
+rename to bar
+--- a/bar
++++ b/bar
+@@ -1,2 +1,3 @@ a
+ a
+ b
++c
+
+% file created in r1 and renamed before r2
+diff --git a/foo b/bar
+rename from foo
+rename to bar
+--- a/bar
++++ b/bar
+@@ -1,1 +1,3 @@ a
+ a
++b
++c
+
+% file created after r1 and renamed before r2
+diff --git a/bar b/bar
+new file mode 100644
+--- /dev/null
++++ b/bar
+@@ -0,0 +1,3 @@
++a
++b
++c

@@ -73,3 +73,24 @@ hg mv dst2 dst3
 hg ci -m 'mv dst2 dst3; revert start' -d '0 0'
 
 hg diff --git -r 9:11
+
+echo a >> foo
+hg add foo
+hg ci -m 'add foo'
+echo b >> foo
+hg ci -m 'change foo'
+hg mv foo bar
+hg ci -m 'mv foo bar'
+echo c >> bar
+hg ci -m 'change bar'
+
+echo
+echo '% file created before r1 and renamed before r2'
+hg diff --git -r -3:-1
+echo
+echo '% file created in r1 and renamed before r2'
+hg diff --git -r -4:-1
+echo
+echo '% file created after r1 and renamed before r2'
+hg diff --git -r -5:-1
+
