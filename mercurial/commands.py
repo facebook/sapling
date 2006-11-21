@@ -8,7 +8,7 @@
 from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), "os re sys signal imp urllib pdb shlex")
+demandload(globals(), "bisect os re sys signal imp urllib pdb shlex stat")
 demandload(globals(), "fancyopts ui hg util lock revlog bundlerepo")
 demandload(globals(), "difflib patch time")
 demandload(globals(), "traceback errno version atexit")
@@ -423,12 +423,28 @@ def commit(ui, repo, *pats, **opts):
         status = repo.status(files=fns, match=match)
         modified, added, removed, deleted, unknown = status[:5]
         files = modified + added + removed
+        slist = None
         for f in fns:
-            if f not in modified + added + removed:
+            if f not in files:
+                rf = repo.wjoin(f)
                 if f in unknown:
-                    raise util.Abort(_("file %s not tracked!") % f)
-                else:
-                    raise util.Abort(_("file %s not found!") % f)
+                    raise util.Abort(_("file %s not tracked!") % rf)
+                try:
+                    mode = os.lstat(rf)[stat.ST_MODE]
+                except OSError:
+                    raise util.Abort(_("file %s not found!") % rf)
+                if stat.S_ISDIR(mode):
+                    name = f + '/'
+                    if slist is None:
+                        slist = list(files)
+                        slist.sort()
+                    i = bisect.bisect(slist, name)
+                    if i >= len(slist) or not slist[i].startswith(name):
+                        raise util.Abort(_("no match under directory %s!")
+                                         % rf)
+                elif not stat.S_ISREG(mode):
+                    raise util.Abort(_("can't commit %s: "
+                                       "unsupported file type!") % rf)
     else:
         files = []
     try:

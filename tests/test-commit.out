@@ -17,6 +17,19 @@ rollback completed
 % partial commit test
 trouble committing bar!
 abort: No such file or directory: .../test/bar
+adding dir/file
+dir/file
+adding dir.file
+abort: no match under directory .../test/dir!
+abort: no match under directory .../test/bleh!
+abort: no match under directory .../test/dir2!
+dir/file
+does-not-exist: No such file or directory
+abort: file .../test/does-not-exist not found!
+baz: unsupported file type (type is symbolic link)
+abort: can't commit .../test/baz: unsupported file type!
+abort: file .../test/quux not tracked!
+dir/file
 % partial subdir commit test
 adding bar/bar
 adding foo/foo
