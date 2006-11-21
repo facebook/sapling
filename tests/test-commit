@@ -1,5 +1,6 @@
 #!/bin/sh
 
+echo % commit date test
 hg init test
 cd test
 echo foo > foo
@@ -12,8 +13,29 @@ hg commit -d 'foo bar' -m commit-5
 hg commit -d ' 1 4444' -m commit-6
 hg commit -d '111111111111 0' -m commit-7
 
+echo % partial commit test
 echo bar > bar
 hg add bar
 rm bar
 hg commit -d "1000000 0" -m commit-8 2>&1 | sed -e "s:/.*\(/test/.*\):...\1:"
+cd ..
+
+echo % partial subdir commit test
+hg init test2
+cd test2
+mkdir foo
+echo foo > foo/foo
+mkdir bar
+echo bar > bar/bar
+hg add
+hg ci -d '1000000 0' -u test -m commit-subdir-1 foo
+hg ci -d '1000001 0' -u test -m commit-subdir-2 bar
+echo % subdir log 1
+hg log -v foo
+echo % subdir log 2
+hg log -v bar
+echo % full log
+hg log -v
+cd ..
+
 exit 0

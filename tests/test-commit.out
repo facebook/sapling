@@ -1,3 +1,4 @@
+% commit date test
 abort: impossible time zone offset: 4444444
 transaction abort!
 rollback completed
@@ -13,5 +14,46 @@ rollback completed
 abort: date exceeds 32 bits: 111111111111
 transaction abort!
 rollback completed
+% partial commit test
 trouble committing bar!
 abort: No such file or directory: .../test/bar
+% partial subdir commit test
+adding bar/bar
+adding foo/foo
+% subdir log 1
+changeset:   0:6ef3cb06bb80
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+files:       foo/foo
+description:
+commit-subdir-1
+
+
+% subdir log 2
+changeset:   1:f2e51572cf5a
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:41 1970 +0000
+files:       bar/bar
+description:
+commit-subdir-2
+
+
+% full log
+changeset:   1:f2e51572cf5a
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:41 1970 +0000
+files:       bar/bar
+description:
+commit-subdir-2
+
+
+changeset:   0:6ef3cb06bb80
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+files:       foo/foo
+description:
+commit-subdir-1
+
+
