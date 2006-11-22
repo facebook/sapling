@@ -54,7 +54,7 @@ bundletypes = {
     "HG10GZ": ("HG10GZ", zlib.compressobj),
 }
 
-def writebundle(cg, filename, type):
+def writebundle(cg, filename, bundletype):
     """Write a bundle file and return its filename.
 
     Existing files will not be overwritten.
@@ -75,7 +75,7 @@ def writebundle(cg, filename, type):
             fh = os.fdopen(fd, "wb")
         cleanup = filename
 
-        header, compressor = bundletypes[type]
+        header, compressor = bundletypes[bundletype]
         fh.write(header)
         z = compressor()
 

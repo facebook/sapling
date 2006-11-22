@@ -1324,8 +1324,8 @@ def incoming(ui, repo, source="default", **opts):
         if fname or not other.local():
             # create a bundle (uncompressed if other repo is not local)
             cg = other.changegroup(incoming, "incoming")
-            type = other.local() and "HG10BZ" or "HG10UN"
-            fname = cleanup = changegroup.writebundle(cg, fname, type)
+            bundletype = other.local() and "HG10BZ" or "HG10UN"
+            fname = cleanup = changegroup.writebundle(cg, fname, bundletype)
             # keep written bundle?
             if opts["bundle"]:
                 cleanup = None
