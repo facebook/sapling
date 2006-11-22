@@ -328,8 +328,14 @@ class httprepository(remoterepository):
 
         type = ""
         types = self.capable('unbundle')
+        # servers older than d1b16a746db6 will send 'unbundle' as a
+        # boolean capability
+        try:
+            types = types.split(',')
+        except AttributeError:
+            types = [""]
         if types:
-            for x in types.split(','):
+            for x in types:
                 if x in changegroup.bundletypes:
                     type = x
                     break
