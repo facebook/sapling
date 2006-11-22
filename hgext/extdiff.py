@@ -99,7 +99,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
                 fp.write(chunk)
         return dirname
 
-    node1, node2 = cmdutil.revpair(ui, repo, opts['rev'])
+    node1, node2 = cmdutil.revpair(repo, opts['rev'])
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     modified, added, removed, deleted, unknown = repo.status(
         node1, node2, files, match=matchfn)[:5]

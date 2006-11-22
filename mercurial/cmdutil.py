@@ -13,7 +13,7 @@ demandload(globals(), 'mdiff util templater cStringIO patch')
 
 revrangesep = ':'
 
-def revpair(ui, repo, revs):
+def revpair(repo, revs):
     '''return pair of nodes, given list of revisions. second item can
     be None, meaning use working dir.'''
 
@@ -41,7 +41,7 @@ def revpair(ui, repo, revs):
         raise util.Abort(_('too many revisions specified'))
     return start, end
 
-def revrange(ui, repo, revs):
+def revrange(repo, revs):
     """Yield revision as strings from a list of revision specifications."""
 
     def revfix(repo, val, defval):
@@ -641,7 +641,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         defrange = '%s:0' % repo.changectx().rev()
     else:
         defrange = 'tip:0'
-    revs = revrange(ui, repo, opts['rev'] or [defrange])
+    revs = revrange(repo, opts['rev'] or [defrange])
     wanted = {}
     slowpath = anypats or opts.get('removed')
     fncache = {}

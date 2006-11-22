@@ -33,7 +33,7 @@ from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial import commands
 demandload(globals(), "os sys re struct traceback errno bz2")
-demandload(globals(), "mercurial:cmdutil,hg,patch,revlog,ui,util")
+demandload(globals(), "mercurial:cmdutil,hg,patch,revlog,util")
 
 commands.norepo += " qclone qversion"
 
@@ -502,7 +502,7 @@ class queue:
         if opts.get('rev'):
             if not self.applied:
                 raise util.Abort(_('no patches applied'))
-            revs = cmdutil.revrange(ui, repo, opts['rev'])
+            revs = cmdutil.revrange(repo, opts['rev'])
             if len(revs) > 1 and revs[0] > revs[1]:
                 revs.reverse()
             for rev in revs:
@@ -1315,7 +1315,7 @@ class queue:
             if files:
                 raise util.Abort(_('option "-r" not valid when importing '
                                    'files'))
-            rev = cmdutil.revrange(self.ui, repo, rev)
+            rev = cmdutil.revrange(repo, rev)
             rev.sort(lambda x, y: cmp(y, x))
         if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '

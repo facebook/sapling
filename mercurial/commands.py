@@ -835,7 +835,7 @@ def diff(ui, repo, *pats, **opts):
     it detects as binary. With -a, diff will generate a diff anyway,
     probably with undesirable results.
     """
-    node1, node2 = cmdutil.revpair(ui, repo, opts['rev'])
+    node1, node2 = cmdutil.revpair(repo, opts['rev'])
 
     fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
 
@@ -871,7 +871,7 @@ def export(ui, repo, *changesets, **opts):
     """
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
-    revs = cmdutil.revrange(ui, repo, changesets)
+    revs = cmdutil.revrange(repo, changesets)
     if len(revs) > 1:
         ui.note(_('exporting patches:\n'))
     else:
@@ -1436,7 +1436,7 @@ def log(ui, repo, *pats, **opts):
     count = 0
 
     if opts['copies'] and opts['rev']:
-        endrev = max(cmdutil.revrange(ui, repo, opts['rev'])) + 1
+        endrev = max(cmdutil.revrange(repo, opts['rev'])) + 1
     else:
         endrev = repo.changelog.count()
     rcache = {}
@@ -2120,7 +2120,7 @@ def status(ui, repo, *pats, **opts):
     """
 
     all = opts['all']
-    node1, node2 = cmdutil.revpair(ui, repo, opts.get('rev'))
+    node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
 
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
