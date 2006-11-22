@@ -48,10 +48,10 @@ class nocompress(object):
         return ""
 
 bundletypes = {
-    "": nocompress,
-    "HG10UN": nocompress,
-    "HG10": lambda: bz2.BZ2Compressor(9),
-    "HG10GZ": zlib.compressobj,
+    "": ("", nocompress),
+    "HG10UN": ("HG10UN", nocompress),
+    "HG10BZ": ("HG10", lambda: bz2.BZ2Compressor(9)),
+    "HG10GZ": ("HG10GZ", zlib.compressobj),
 }
 
 def writebundle(cg, filename, type):
@@ -75,8 +75,9 @@ def writebundle(cg, filename, type):
             fh = os.fdopen(fd, "wb")
         cleanup = filename
 
-        fh.write(type)
-        z = bundletypes[type]()
+        header, compressor = bundletypes[type]
+        fh.write(header)
+        z = compressor()
 
         # parse the changegroup data, otherwise we will block
         # in case of sshrepo because we don't know the end of the stream
