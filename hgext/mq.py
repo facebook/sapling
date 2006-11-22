@@ -33,7 +33,7 @@ from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial import commands
 demandload(globals(), "os sys re struct traceback errno bz2")
-demandload(globals(), "mercurial:cmdutil,hg,patch,revlog,util")
+demandload(globals(), "mercurial:cmdutil,hg,patch,revlog,util,changegroup")
 
 commands.norepo += " qclone qversion"
 
@@ -612,22 +612,7 @@ class queue:
             name = os.path.join(backupdir, "%s" % revlog.short(rev))
             name = savename(name)
             self.ui.warn("saving bundle to %s\n" % name)
-            # TODO, exclusive open
-            f = open(name, "wb")
-            try:
-                f.write("HG10")
-                z = bz2.BZ2Compressor(9)
-                while 1:
-                    chunk = cg.read(4096)
-                    if not chunk:
-                        break
-                    f.write(z.compress(chunk))
-                f.write(z.flush())
-            except:
-                os.unlink(name)
-                raise
-            f.close()
-            return name
+            return changegroup.writebundle(cg, name, "HG10BZ")
 
         def stripall(rev, revnum):
             cl = repo.changelog
