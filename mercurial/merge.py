@@ -195,7 +195,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
 
-    if not (backwards or overwrite):
+    if pa and not (backwards or overwrite):
         copy = findcopies(repo, m1, m2, ma, pa.rev())
 
     # Compare manifests
