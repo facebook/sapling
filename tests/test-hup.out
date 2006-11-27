@@ -5,5 +5,4 @@ killed!
 transaction abort!
 rollback completed
 00changelog.i
-data
 journal.dirstate

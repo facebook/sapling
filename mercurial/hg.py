@@ -156,11 +156,10 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         # we lock here to avoid premature writing to the target
         dest_lock = lock.lock(os.path.join(dest_path, ".hg", "lock"))
 
-        # we need to remove the (empty) data dir in dest so copyfiles
-        # can do its work
-        os.rmdir(os.path.join(dest_path, ".hg", "data"))
-        files = "data 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
-        for f in files.split():
+        files = ("data",
+                 "00manifest.d", "00manifest.i",
+                 "00changelog.d", "00changelog.i")
+        for f in files:
             src = os.path.join(source, ".hg", f)
             dst = os.path.join(dest_path, ".hg", f)
             try:

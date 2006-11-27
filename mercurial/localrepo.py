@@ -37,7 +37,6 @@ class localrepository(repo.repository):
                 if not os.path.exists(path):
                     os.mkdir(path)
                 os.mkdir(self.path)
-                os.mkdir(self.join("data"))
             else:
                 raise repo.RepoError(_("repository %s not found") % path)
         elif create:
