@@ -1,0 +1,60 @@
+#!/bin/sh
+
+cat <<EOF >> $HGRCPATH
+[extensions]
+transplant=
+EOF
+
+hg init t
+cd t
+echo r1 > r1
+hg ci -Amr1 -d'0 0'
+echo r2 > r2
+hg ci -Amr2 -d'1 0'
+hg up 0
+
+echo b1 > b1
+hg ci -Amb1 -d '0 0'
+echo b2 > b2
+hg ci -Amb2 -d '1 0'
+echo b3 > b3
+hg ci -Amb3 -d '2 0'
+
+hg log --template '{rev} {parents} {desc}\n'
+
+cd ..
+hg clone t rebase
+cd rebase
+
+hg up -C 1
+echo '% rebase b onto r1'
+hg transplant -a -b tip
+hg log --template '{rev} {parents} {desc}\n'
+
+cd ..
+hg clone t prune
+cd prune
+
+hg up -C 1
+echo '% rebase b onto r1, skipping b2'
+hg transplant -a -b tip -p 3
+hg log --template '{rev} {parents} {desc}\n'
+
+cd ..
+echo '% remote transplant'
+hg clone -r 1 t remote
+cd remote
+hg transplant --log -s ../t 2 4
+hg log --template '{rev} {parents} {desc}\n'
+
+echo '% skip previous transplants'
+hg transplant -s ../t -a -b 4
+hg log --template '{rev} {parents} {desc}\n'
+
+echo '% skip local changes transplanted to the source'
+echo b4 > b4
+hg ci -Amb4 -d '3 0'
+cd ..
+hg clone t pullback
+cd pullback
+hg transplant -s ../remote -a -b tip
