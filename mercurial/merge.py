@@ -139,9 +139,9 @@ def findcopies(repo, m1, m2, ma, limit):
         ''' check if an apparent pair actually matches '''
         c2 = ctx(f2, man[f2])
         ca = c.ancestor(c2)
-        if c == ca or c2 == ca:
+        if not ca or c == ca or c2 == ca:
             return
-        if ca and ca.path() == c.path() or ca.path() == c2.path():
+        if ca.path() == c.path() or ca.path() == c2.path():
             copy[c.path()] = f2
             copy[f2] = c.path()
 

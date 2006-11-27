@@ -36,7 +36,10 @@ class changectx(object):
         return "<changectx %s>" % str(self)
 
     def __eq__(self, other):
-        return self._rev == other._rev
+        try:
+            return self._rev == other._rev
+        except AttributeError:
+            return False
 
     def __nonzero__(self):
         return self._rev != nullrev
@@ -176,7 +179,11 @@ class filectx(object):
         return "<filectx %s>" % str(self)
 
     def __eq__(self, other):
-        return self._path == other._path and self._changeid == other._changeid
+        try:
+            return (self._path == other._path
+                    and self._changeid == other._changeid)
+        except AttributeError:
+            return False
 
     def filectx(self, fileid):
         '''opens an arbitrary revision of the file without
