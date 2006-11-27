@@ -151,10 +151,7 @@ class filectx(object):
                 if '_fileid' in self.__dict__:
                     self._filenode = self._filelog.lookup(self._fileid)
                 else:
-                    try:
-                        self._filenode = self._changectx.filenode(self._path)
-                    except:
-                        self._filenode = self._filerev = None
+                    self._filenode = self._changectx.filenode(self._path)
             except revlog.RevlogError, inst:
                 raise repo.LookupError(str(inst))
             return self._filenode
@@ -165,7 +162,12 @@ class filectx(object):
             raise AttributeError, name
 
     def __nonzero__(self):
-        return self._filenode != None
+        try:
+            n = self._filenode
+            return True
+        except repo.LookupError:
+            # file is missing
+            return False
 
     def __str__(self):
         return "%s@%s" % (self.path(), short(self.node()))
