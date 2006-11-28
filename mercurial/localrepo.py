@@ -1841,6 +1841,7 @@ class localrepository(repo.repository):
                        (total_files, util.bytecount(total_bytes)))
         start = time.time()
         for i in xrange(total_files):
+            # XXX doesn't support '\n' or '\r' in filenames
             l = fp.readline()
             try:
                 name, size = l.split('\0', 1)
