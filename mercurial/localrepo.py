@@ -679,6 +679,7 @@ class localrepository(repo.repository):
             if text:
                 edittext.append(text)
             edittext.append("")
+            edittext.append("HG: user: %s" % user)
             if p2 != nullid:
                 edittext.append("HG: branch merge")
             edittext.extend(["HG: changed %s" % f for f in changed])
