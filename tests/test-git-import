@@ -162,3 +162,22 @@ rename to foo2
 EOF
 cat foo2
 hg manifest | grep binary
+
+echo % many binary files
+hg import -m multibinary - <<EOF
+diff --git a/mbinary1 b/mbinary1
+new file mode 100644
+index 0000000000000000000000000000000000000000..593f4708db84ac8fd0f5cc47c634f38c013fe9e4
+GIT binary patch
+literal 4
+Lc\${NkU|;|M00aO5
+
+diff --git a/mbinary2 b/mbinary2
+new file mode 100644
+index 0000000000000000000000000000000000000000..112363ac1917b417ffbd7f376ca786a1e5fa7490
+GIT binary patch
+literal 5
+Mc\${NkU|\`?^000jF3jhEB
+
+EOF
+hg manifest | grep mbinary

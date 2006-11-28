@@ -58,3 +58,7 @@ a
 applying patch from stdin
 foo
 045c85ba38952325e126c70962cc0f9d9077bc67 644 binary
+% many binary files
+applying patch from stdin
+045c85ba38952325e126c70962cc0f9d9077bc67 644 mbinary1
+a874b471193996e7cb034bb301cac7bdaf3e3f46 644 mbinary2
