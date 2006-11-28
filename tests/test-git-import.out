@@ -54,3 +54,7 @@ a
 b
 c
 a
+% binary files and regular patch hunks
+applying patch from stdin
+foo
+045c85ba38952325e126c70962cc0f9d9077bc67 644 binary

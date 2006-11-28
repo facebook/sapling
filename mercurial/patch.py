@@ -114,6 +114,10 @@ def extract(ui, fileobj):
         return None, message, user, date
     return tmpname, message, user, date
 
+GP_PATCH  = 1 << 0  # we have to run patch
+GP_FILTER = 1 << 1  # there's some copy/rename operation
+GP_BINARY = 1 << 2  # there's a binary patch
+
 def readgitpatch(patchname):
     """extract git-style metadata about patches from <patchname>"""
     class gitpatch:
@@ -133,7 +137,7 @@ def readgitpatch(patchname):
     gp = None
     gitpatches = []
     # Can have a git patch with only metadata, causing patch to complain
-    dopatch = False
+    dopatch = 0
 
     lineno = 0
     for line in pf:
@@ -150,11 +154,10 @@ def readgitpatch(patchname):
             if line.startswith('--- '):
                 if gp.op in ('COPY', 'RENAME'):
                     gp.copymod = True
-                    dopatch = 'filter'
+                    dopatch |= GP_FILTER
                 gitpatches.append(gp)
                 gp = None
-                if not dopatch:
-                    dopatch = True
+                dopatch |= GP_PATCH
                 continue
             if line.startswith('rename from '):
                 gp.op = 'RENAME'
@@ -174,14 +177,13 @@ def readgitpatch(patchname):
             elif line.startswith('new mode '):
                 gp.mode = int(line.rstrip()[-3:], 8)
             elif line.startswith('GIT binary patch'):
-                if not dopatch:
-                    dopatch = 'binary'
+                dopatch |= GP_BINARY
                 gp.binary = True
     if gp:
         gitpatches.append(gp)
 
     if not gitpatches:
-        dopatch = True
+        dopatch = GP_PATCH
 
     return (dopatch, gitpatches)
 
@@ -312,13 +314,14 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
 
     fuzz = False
     if dopatch:
-        if dopatch in ('filter', 'binary'):
+        filterpatch = dopatch & (GP_FILTER | GP_BINARY)
+        if filterpatch:
             patchname = dogitpatch(patchname, gitpatches, cwd=cwd)
         try:
-            if dopatch != 'binary':
+            if dopatch & GP_PATCH:
                 fuzz = __patch(patchname)
         finally:
-            if dopatch == 'filter':
+            if filterpatch:
                 os.unlink(patchname)
 
     return fuzz
