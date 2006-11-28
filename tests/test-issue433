@@ -1,0 +1,10 @@
+#!/bin/sh
+# http://www.selenic.com/mercurial/bts/issue433
+
+hg init a
+cd a       
+echo a > a 
+hg commit -Ama 
+
+hg parents -r 0 doesnotexist
+true
