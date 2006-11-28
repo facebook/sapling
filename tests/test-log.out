@@ -185,3 +185,5 @@ user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     b1
 
+% log -r ""
+abort: Ambiguous identifier!
