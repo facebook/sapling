@@ -25,4 +25,4 @@ hg commit -d '1000000 0' -u "foo@bar.com" -m commit-1
 hg tip
 echo 123 > asdf
 rm .hg/hgrc
-hg commit -d '1000000 0' -m commit-1 2>&1 | sed -e "s/[^ \t]*@[^ \t]*/user@host/"
+hg commit -d '1000000 0' -m commit-1 2>&1 | sed -e "s/'[^']*'/user@host/"
