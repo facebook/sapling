@@ -130,7 +130,6 @@ def findcopies(repo, m1, m2, ma, limit):
 
     dcopies = repo.dirstate.copies()
     copy = {}
-    match = {}
     u1 = nonoverlap(m1, m2, ma)
     u2 = nonoverlap(m2, m1, ma)
     ctx = util.cachefunc(lambda f, n: repo.filectx(f, fileid=n[:20]))
@@ -150,17 +149,12 @@ def findcopies(repo, m1, m2, ma, limit):
         for of in findold(c, limit):
             if of in m2:
                 checkpair(c, of, m2)
-            else:
-                match.setdefault(of, []).append(f)
 
     for f in u2:
         c = ctx(f, m2[f])
         for of in findold(c, limit):
             if of in m1:
                 checkpair(c, of, m1)
-            elif of in match:
-                for mf in match[of]:
-                    checkpair(c, mf, m1)
 
     return copy
 
