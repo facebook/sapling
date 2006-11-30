@@ -176,6 +176,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     backwards = (pa == p2)
     action = []
     copy = {}
+    copied = {}
 
     def fmerge(f, f2=None, fa=None):
         """merge executable flags"""
@@ -217,6 +218,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                     act("update permissions", "e", f, m2.execf(f))
         elif f in copy:
             f2 = copy[f]
+            copied[f2] = True
             if f in ma: # case 3,20 A/B/A
                 act("remote moved to " + f2, "m",
                     f, f2, f2, fmerge(f, f2, f), True)
@@ -245,10 +247,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             continue
         if f in m1:
             continue
+        if f in copied:
+            continue
         if f in copy:
             f2 = copy[f]
-            if f2 not in m2: # already seen
-                continue
             # rename case 1, A/A,B/A
             act("remote copied to " + f, "m",
                 f2, f, f, fmerge(f2, f, f2), False)
