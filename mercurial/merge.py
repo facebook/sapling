@@ -136,25 +136,24 @@ def findcopies(repo, m1, m2, ma, limit):
 
     def checkpair(c, f2, man):
         ''' check if an apparent pair actually matches '''
+        if f2 not in man:
+            return
         c2 = ctx(f2, man[f2])
         ca = c.ancestor(c2)
         if not ca or c == ca or c2 == ca:
             return
         if ca.path() == c.path() or ca.path() == c2.path():
             copy[c.path()] = f2
-            copy[f2] = c.path()
 
     for f in u1:
         c = ctx(dcopies.get(f, f), m1[f])
         for of in findold(c, limit):
-            if of in m2:
-                checkpair(c, of, m2)
+            checkpair(c, of, m2)
 
     for f in u2:
         c = ctx(f, m2[f])
         for of in findold(c, limit):
-            if of in m1:
-                checkpair(c, of, m1)
+            checkpair(c, of, m1)
 
     return copy
 
@@ -176,7 +175,6 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     backwards = (pa == p2)
     action = []
     copy = {}
-    copied = {}
 
     def fmerge(f, f2=None, fa=None):
         """merge executable flags"""
@@ -192,6 +190,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     if pa and not (backwards or overwrite):
         copy = findcopies(repo, m1, m2, ma, pa.rev())
+    copied = dict.fromkeys(copy.values())
 
     # Compare manifests
     for f, n in m1.iteritems():
@@ -216,19 +215,16 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             elif m1.execf(f) != m2.execf(f):
                 if overwrite or fmerge(f) != m1.execf(f):
                     act("update permissions", "e", f, m2.execf(f))
+        elif f in copied:
+            continue
         elif f in copy:
             f2 = copy[f]
-            copied[f2] = True
-            if f in ma: # case 3,20 A/B/A
-                act("remote moved to " + f2, "m",
-                    f, f2, f2, fmerge(f, f2, f), True)
-            else:
-                if f2 in m1: # case 2 A,B/B/B
-                    act("local copied to " + f2, "m",
-                        f, f2, f, fmerge(f, f2, f2), False)
-                else: # case 4,21 A/B/B
-                    act("local moved to " + f2, "m",
-                        f, f2, f, fmerge(f, f2, f2), False)
+            if f2 in m1: # case 2 A,B/B/B
+                act("local copied to " + f2, "m",
+                    f, f2, f, fmerge(f, f2, f2), False)
+            else: # case 4,21 A/B/B
+                act("local moved to " + f2, "m",
+                    f, f2, f, fmerge(f, f2, f2), False)
         elif f in ma:
             if n != ma[f] and not overwrite:
                 if repo.ui.prompt(
@@ -251,9 +247,12 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             continue
         if f in copy:
             f2 = copy[f]
-            # rename case 1, A/A,B/A
-            act("remote copied to " + f, "m",
-                f2, f, f, fmerge(f2, f, f2), False)
+            if f2 in m2: # rename case 1, A/A,B/A
+                act("remote copied to " + f, "m",
+                    f2, f, f, fmerge(f2, f, f2), False)
+            else: # case 3,20 A/B/A
+                act("remote moved to " + f, "m",
+                    f2, f, f, fmerge(f2, f, f2), True)
         elif f in ma:
             if overwrite or backwards:
                 act("recreating", "g", f, m2.execf(f))

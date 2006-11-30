@@ -47,8 +47,8 @@ test L:up a   R:nm a b W:       - 3  get local a change to b, remove a
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local e300d1c794ec+ remote e03727d2d66b
- a: remote moved to b -> m
  rev: versions differ -> m
+ a: remote moved to b -> m
 merging a and b
 my a@e300d1c794ec+ other b@e03727d2d66b ancestor a@924404dff337
 copying a to b
@@ -351,8 +351,8 @@ test L:up a   R:um a b W:       - 20 merge a and b to b, remove a
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local e300d1c794ec+ remote 79cc6877a3b7
- a: remote moved to b -> m
  rev: versions differ -> m
+ a: remote moved to b -> m
 merging a and b
 my a@e300d1c794ec+ other b@79cc6877a3b7 ancestor a@924404dff337
 copying a to b
