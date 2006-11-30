@@ -5,7 +5,7 @@ resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local e300d1c794ec+ remote 735846fee2d7
  rev: versions differ -> m
- a: remote copied -> m
+ a: remote copied to b -> m
 merging a and b
 my a@e300d1c794ec+ other b@735846fee2d7 ancestor a@924404dff337
 copying a to b
@@ -26,7 +26,7 @@ resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ac809aeed39a+ remote f4db7e329e71
  a: remote is newer -> g
- b: local copied -> m
+ b: local copied to a -> m
  rev: versions differ -> m
 getting a
 merging b and a
@@ -47,7 +47,7 @@ test L:up a   R:nm a b W:       - 3  get local a change to b, remove a
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local e300d1c794ec+ remote e03727d2d66b
- a: remote moved -> m
+ a: remote moved to b -> m
  rev: versions differ -> m
 merging a and b
 my a@e300d1c794ec+ other b@e03727d2d66b ancestor a@924404dff337
@@ -68,7 +68,7 @@ test L:nm a b R:up a   W:       - 4  get remote change to b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ecf3cb2a4219+ remote f4db7e329e71
- b: local moved -> m
+ b: local moved to a -> m
  rev: versions differ -> m
 merging b and a
 my b@ecf3cb2a4219+ other a@f4db7e329e71 ancestor a@924404dff337
@@ -351,7 +351,7 @@ test L:up a   R:um a b W:       - 20 merge a and b to b, remove a
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local e300d1c794ec+ remote 79cc6877a3b7
- a: remote moved -> m
+ a: remote moved to b -> m
  rev: versions differ -> m
 merging a and b
 my a@e300d1c794ec+ other b@79cc6877a3b7 ancestor a@924404dff337
@@ -372,7 +372,7 @@ test L:um a b R:up a   W:       - 21 merge a and b to b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ec03c2ca8642+ remote f4db7e329e71
- b: local moved -> m
+ b: local moved to a -> m
  rev: versions differ -> m
 merging b and a
 my b@ec03c2ca8642+ other a@f4db7e329e71 ancestor a@924404dff337
@@ -391,7 +391,7 @@ test L:nm a b R:up a c W:       - 23 get c, keep b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ecf3cb2a4219+ remote 2b958612230f
- b: local moved -> m
+ b: local moved to a -> m
  rev: versions differ -> m
  c: remote created -> g
 merging b and a

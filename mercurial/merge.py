@@ -224,13 +224,14 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         elif f in copy:
             f2 = copy[f]
             if f in ma: # case 3,20 A/B/A
-                act("remote moved", "m", f, f2, f2, fmerge(f, f2, f), True)
+                act("remote moved to " + f2, "m",
+                    f, f2, f2, fmerge(f, f2, f), True)
             else:
                 if f2 in m1: # case 2 A,B/B/B
-                    act("local copied", "m",
+                    act("local copied to " + f2, "m",
                         f, f2, f, fmerge(f, f2, f2), False)
                 else: # case 4,21 A/B/B
-                    act("local moved", "m",
+                    act("local moved to " + f2, "m",
                         f, f2, f, fmerge(f, f2, f2), False)
         elif f in ma:
             if n != ma[f] and not overwrite:
@@ -255,7 +256,8 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             if f2 not in m2: # already seen
                 continue
             # rename case 1, A/A,B/A
-            act("remote copied", "m", f2, f, f, fmerge(f2, f, f2), False)
+            act("remote copied to " + f, "m",
+                f2, f, f, fmerge(f2, f, f2), False)
         elif f in ma:
             if overwrite or backwards:
                 act("recreating", "g", f, m2.execf(f))

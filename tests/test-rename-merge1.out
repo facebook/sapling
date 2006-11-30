@@ -4,7 +4,7 @@ merge
 resolving manifests
  overwrite None partial False
  ancestor af1939970a1c local f26ec4fc3fa3+ remote 8e765a822af2
- a: remote moved -> m
+ a: remote moved to b -> m
  b2: remote created -> g
 merging a and b
 my a@f26ec4fc3fa3+ other b@8e765a822af2 ancestor a@af1939970a1c
