@@ -125,7 +125,7 @@ def findcopies(repo, m1, m2, ma, limit):
         return {}
 
     # avoid silly behavior for update from empty dir
-    if not m1:
+    if not m1 or not m2 or not ma:
         return {}
 
     dcopies = repo.dirstate.copies()
@@ -188,7 +188,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
 
-    if pa and not (backwards or overwrite):
+    if not (backwards or overwrite):
         copy = findcopies(repo, m1, m2, ma, pa.rev())
     copied = dict.fromkeys(copy.values())
 
