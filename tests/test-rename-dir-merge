@@ -1,0 +1,32 @@
+#!/bin/sh
+
+mkdir t
+cd t
+hg init
+
+mkdir a
+echo foo > a/a
+echo bar > a/b
+
+hg add a
+hg ci -m "0" -d "0 0"
+
+hg co -C 0
+hg mv a b
+hg ci -m "1 mv a/ b/" -d "0 0"
+
+hg co -C 0
+echo baz > a/c
+hg add a/c
+hg ci -m "2 add a/c" -d "0 0"
+
+hg merge --debug 1
+ls a/ b/
+hg st -C
+hg ci -m "3 merge 2+1" -d "0 0"
+
+hg co -C 1
+hg merge --debug 2
+ls a/ b/
+hg st -C
+hg ci -m "4 merge 1+2" -d "0 0"

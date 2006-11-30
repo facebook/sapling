@@ -122,10 +122,19 @@ def findcopies(repo, m1, m2, ma, limit):
                 return
             c2 = ctx(of, man[of])
             ca = c.ancestor(c2)
-            if not ca or c == ca or c2 == ca:
+            if not ca: # unrelated
                 return
             if ca.path() == c.path() or ca.path() == c2.path():
+                fullcopy[c.path()] = of
+                if c == ca or c2 == ca: # no merge needed, ignore copy
+                    return
                 copy[c.path()] = of
+
+    def dirs(files):
+        d = {}
+        for f in files:
+            d[os.path.dirname(f)] = True
+        return d
 
     if not repo.ui.configbool("merge", "followcopies", True):
         return {}
@@ -136,6 +145,7 @@ def findcopies(repo, m1, m2, ma, limit):
 
     dcopies = repo.dirstate.copies()
     copy = {}
+    fullcopy = {}
     u1 = nonoverlap(m1, m2, ma)
     u2 = nonoverlap(m2, m1, ma)
     ctx = util.cachefunc(lambda f, n: repo.filectx(f, fileid=n[:20]))
@@ -145,6 +155,38 @@ def findcopies(repo, m1, m2, ma, limit):
 
     for f in u2:
         checkcopies(ctx(f, m2[f]), m1)
+
+    if not fullcopy or not repo.ui.configbool("merge", "followdirs", True):
+        return copy
+
+    # generate a directory move map
+    d1, d2 = dirs(m1), dirs(m2)
+    invalid = {}
+    dirmove = {}
+
+    for dst, src in fullcopy.items():
+        dsrc, ddst = os.path.dirname(src), os.path.dirname(dst)
+        if dsrc in invalid:
+            continue
+        elif (dsrc in d1 and ddst in d1) or (dsrc in d2 and ddst in d2):
+            invalid[dsrc] = True
+        elif dsrc in dirmove and dirmove[dsrc] != ddst:
+            invalid[dsrc] = True
+            del dirmove[dsrc]
+        else:
+            dirmove[dsrc] = ddst
+
+    del d1, d2, invalid
+
+    if not dirmove:
+        return copy
+
+    # check unaccounted nonoverlapping files
+    for f in u1 + u2:
+        if f not in fullcopy:
+            d = os.path.dirname(f)
+            if d in dirmove:
+                copy[f] = dirmove[d] + "/" + os.path.basename(f)
 
     return copy
 
@@ -210,7 +252,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             continue
         elif f in copy:
             f2 = copy[f]
-            if f2 in m1: # case 2 A,B/B/B
+            if f2 not in m2: # directory rename
+                act("remote renamed directory to " + f2, "d",
+                    f, None, f2, m1.execf(f))
+            elif f2 in m1: # case 2 A,B/B/B
                 act("local copied to " + f2, "m",
                     f, f2, f, fmerge(f, f2, f2), False)
             else: # case 4,21 A/B/B
@@ -238,7 +283,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             continue
         if f in copy:
             f2 = copy[f]
-            if f2 in m2: # rename case 1, A/A,B/A
+            if f2 not in m1: # directory rename
+                act("local renamed directory to " + f2, "d",
+                    None, f, f2, m2.execf(f))
+            elif f2 in m2: # rename case 1, A/A,B/A
                 act("remote copied to " + f, "m",
                     f2, f, f, fmerge(f2, f, f2), False)
             else: # case 3,20 A/B/A
@@ -264,7 +312,7 @@ def applyupdates(repo, action, wctx, mctx):
     action.sort()
     for a in action:
         f, m = a[:2]
-        if f[0] == "/":
+        if f and f[0] == "/":
             continue
         if m == "r": # remove
             repo.ui.note(_("removing %s\n") % f)
@@ -299,6 +347,20 @@ def applyupdates(repo, action, wctx, mctx):
             t = mctx.filectx(f).data()
             repo.wwrite(f, t)
             util.set_exec(repo.wjoin(f), flag)
+            updated += 1
+        elif m == "d": # directory rename
+            f2, fd, flag = a[2:]
+            if f:
+                repo.ui.note(_("moving %s to %s\n") % (f, fd))
+                t = wctx.filectx(f).data()
+                repo.wwrite(fd, t)
+                util.set_exec(repo.wjoin(fd), flag)
+                util.unlink(repo.wjoin(f))
+            if f2:
+                repo.ui.note(_("getting %s to %s\n") % (f2, fd))
+                t = mctx.filectx(f2).data()
+                repo.wwrite(fd, t)
+                util.set_exec(repo.wjoin(fd), flag)
             updated += 1
         elif m == "e": # exec
             flag = a[2]
@@ -344,6 +406,19 @@ def recordupdates(repo, action, branchmerge):
                 # modification.
                 repo.dirstate.update([fd], 'n', st_size=-1, st_mtime=-1)
                 if move:
+                    repo.dirstate.forget([f])
+        elif m == "d": # directory rename
+            f2, fd, flag = a[2:]
+            if branchmerge:
+                repo.dirstate.update([fd], 'a')
+                if f:
+                    repo.dirstate.update([f], 'r')
+                    repo.dirstate.copy(f, fd)
+                if f2:
+                    repo.dirstate.copy(f2, fd)
+            else:
+                repo.dirstate.update([fd], 'n')
+                if f:
                     repo.dirstate.forget([f])
 
 def update(repo, node, branchmerge, force, partial, wlock):
