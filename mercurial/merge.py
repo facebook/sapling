@@ -87,39 +87,45 @@ def forgetremoved(wctx, mctx):
 
     return action
 
-def nonoverlap(d1, d2, d3):
-    "Return list of elements in d1 not in d2 or d3"
-
-    l = []
-    for d in d1:
-        if d not in d3 and d not in d2:
-            l.append(d)
-
-    l.sort()
-    return l
-
-def findold(fctx, limit):
-    "find files that path was copied from, back to linkrev limit"
-
-    old = {}
-    orig = fctx.path()
-    visit = [fctx]
-    while visit:
-        fc = visit.pop()
-        if fc.rev() < limit:
-            continue
-        if fc.path() != orig and fc.path() not in old:
-            old[fc.path()] = 1
-        visit += fc.parents()
-
-    old = old.keys()
-    old.sort()
-    return old
-
 def findcopies(repo, m1, m2, ma, limit):
     """
     Find moves and copies between m1 and m2 back to limit linkrev
     """
+
+    def findold(fctx):
+        "find files that path was copied from, back to linkrev limit"
+        old = {}
+        orig = fctx.path()
+        visit = [fctx]
+        while visit:
+            fc = visit.pop()
+            if fc.rev() < limit:
+                continue
+            if fc.path() != orig and fc.path() not in old:
+                old[fc.path()] = 1
+            visit += fc.parents()
+
+        old = old.keys()
+        old.sort()
+        return old
+
+    def nonoverlap(d1, d2, d3):
+        "Return list of elements in d1 not in d2 or d3"
+        l = [d for d in d1 if d not in d3 and d not in d2]
+        l.sort()
+        return l
+
+    def checkcopies(c, man):
+        '''check possible copies for filectx c'''
+        for of in findold(c):
+            if of not in man:
+                return
+            c2 = ctx(of, man[of])
+            ca = c.ancestor(c2)
+            if not ca or c == ca or c2 == ca:
+                return
+            if ca.path() == c.path() or ca.path() == c2.path():
+                copy[c.path()] = of
 
     if not repo.ui.configbool("merge", "followcopies", True):
         return {}
@@ -134,26 +140,11 @@ def findcopies(repo, m1, m2, ma, limit):
     u2 = nonoverlap(m2, m1, ma)
     ctx = util.cachefunc(lambda f, n: repo.filectx(f, fileid=n[:20]))
 
-    def checkpair(c, f2, man):
-        ''' check if an apparent pair actually matches '''
-        if f2 not in man:
-            return
-        c2 = ctx(f2, man[f2])
-        ca = c.ancestor(c2)
-        if not ca or c == ca or c2 == ca:
-            return
-        if ca.path() == c.path() or ca.path() == c2.path():
-            copy[c.path()] = f2
-
     for f in u1:
-        c = ctx(dcopies.get(f, f), m1[f])
-        for of in findold(c, limit):
-            checkpair(c, of, m2)
+        checkcopies(ctx(dcopies.get(f, f), m1[f]), m2)
 
     for f in u2:
-        c = ctx(f, m2[f])
-        for of in findold(c, limit):
-            checkpair(c, of, m1)
+        checkcopies(ctx(f, m2[f]), m1)
 
     return copy
 
