@@ -58,3 +58,29 @@ cd ..
 hg clone t pullback
 cd pullback
 hg transplant -s ../remote -a -b tip
+
+echo '% transplant --continue'
+hg init ../tc
+cd ../tc
+cat <<EOF > foo
+foo
+bar
+baz
+EOF
+hg ci -Amfoo -d '0 0'
+cat <<EOF > foo
+foo2
+bar2
+baz2
+EOF
+hg ci -mfoo2 -d '0 0'
+echo bar > bar
+hg ci -Ambar -d '0 0'
+echo bar2 >> bar
+hg ci -mbar2 -d '0 0'
+hg up 0
+echo foobar > foo
+hg ci -mfoobar -d '0 0'
+hg transplant 1:3
+echo merge > foo
+hg transplant --continue

@@ -75,3 +75,18 @@ adding b4
 searching for changes
 applying 4333daefcb15
 4333daefcb15 transplanted to 5f42c04e07cc
+% transplant --continue
+adding foo
+adding bar
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+applying c029d661401c
+foo
+Hunk #1 FAILED at 1.
+1 out of 1 hunk FAILED -- saving rejects to file foo.rej
+patch command failed: exited with status 1
+abort: Fix up the merge and run hg transplant --continue
+c029d661401c transplanted as 1b09cda4cf1b
+applying 67f0722fdc4f
+67f0722fdc4f transplanted to faa04033bb41
+applying 84c5126bd0d2
+84c5126bd0d2 transplanted to b35f4019ccc9

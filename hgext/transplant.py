@@ -231,8 +231,8 @@ class transplanter:
         '''recover last transaction and apply remaining changesets'''
         if os.path.exists(os.path.join(self.path, 'journal')):
             n, node = self.recover(repo)
-        self.ui.status(_('%s transplanted as %s\n') % (revlog.short(node),
-                                                       revlog.short(n)))
+            self.ui.status(_('%s transplanted as %s\n') % (revlog.short(node),
+                                                           revlog.short(n)))
         seriespath = os.path.join(self.path, 'series')
         if not os.path.exists(seriespath):
             return
@@ -510,7 +510,7 @@ def transplant(ui, repo, *revs, **opts):
 
     try:
         if opts.get('continue'):
-            n, node = tp.resume(repo, source, opts)
+            tp.resume(repo, source, opts)
             return
 
         tf=tp.transplantfilter(repo, source, p1)
