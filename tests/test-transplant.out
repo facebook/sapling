@@ -77,16 +77,22 @@ applying 4333daefcb15
 4333daefcb15 transplanted to 5f42c04e07cc
 % transplant --continue
 adding foo
+adding toremove
+adding added
+removing toremove
 adding bar
-1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-applying c029d661401c
+2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+applying a1e30dd1b8e7
 foo
 Hunk #1 FAILED at 1.
 1 out of 1 hunk FAILED -- saving rejects to file foo.rej
 patch command failed: exited with status 1
 abort: Fix up the merge and run hg transplant --continue
-c029d661401c transplanted as 1b09cda4cf1b
-applying 67f0722fdc4f
-67f0722fdc4f transplanted to faa04033bb41
-applying 84c5126bd0d2
-84c5126bd0d2 transplanted to b35f4019ccc9
+a1e30dd1b8e7 transplanted as e6d0b5145568
+applying 1739ac5f6139
+1739ac5f6139 transplanted to 48f780141a79
+applying 0282d5fbbe02
+0282d5fbbe02 transplanted to 821d17b1a3ed
+added
+bar
+foo

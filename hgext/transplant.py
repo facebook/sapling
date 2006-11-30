@@ -196,12 +196,14 @@ class transplanter:
         if patchfile:
             try:
                 files = {}
-                fuzz = patch.patch(patchfile, self.ui, cwd=repo.root,
-                                   files=files)
-                if not files:
-                    self.ui.warn(_('%s: empty changeset') % revlog.hex(node))
-                    return
-                files = patch.updatedir(self.ui, repo, files, wlock=wlock)
+                try:
+                    fuzz = patch.patch(patchfile, self.ui, cwd=repo.root,
+                                       files=files)
+                    if not files:
+                        self.ui.warn(_('%s: empty changeset') % revlog.hex(node))
+                        return
+                finally:
+                    files = patch.updatedir(self.ui, repo, files, wlock=wlock)
                 if filter:
                     os.unlink(patchfile)
             except Exception, inst:
