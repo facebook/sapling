@@ -365,7 +365,7 @@ def browserevs(ui, repo, nodes, opts):
                  'q: cancel transplant\n'
                  '?: show this help\n')
 
-    displayer = commands.show_changeset(ui, repo, opts)
+    displayer = cmdutil.show_changeset(ui, repo, opts)
     transplants = []
     merges = []
     for node in nodes:
