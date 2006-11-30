@@ -187,8 +187,6 @@ class transplanter:
 
         if log:
             message += '\n(transplanted from %s)' % revlog.hex(node)
-            cl = list(cl)
-            cl[4] = message
 
         self.ui.status(_('applying %s\n') % revlog.short(node))
         self.ui.note('%s %s\n%s\n' % (user, date, message))
@@ -211,7 +209,7 @@ class transplanter:
                     os.unlink(patchfile)
                 p1 = repo.dirstate.parents()[0]
                 p2 = node
-                self.log(cl, p1, p2, merge=merge)
+                self.log(user, date, message, p1, p2, merge=merge)
                 self.ui.write(str(inst) + '\n')
                 raise util.Abort(_('Fix up the merge and run hg transplant --continue'))
         else:
@@ -297,19 +295,19 @@ class transplanter:
                 series.write(revlog.hex(m) + '\n')
         series.close()
 
-    def log(self, changelog, p1, p2, merge=False):
+    def log(self, user, date, message, p1, p2, merge=False):
         '''journal changelog metadata for later recover'''
 
         if not os.path.isdir(self.path):
             os.mkdir(self.path)
         fp = self.opener('journal', 'w')
-        fp.write('# User %s\n' % changelog[1])
-        fp.write('# Date %d %d\n' % changelog[2])
+        fp.write('# User %s\n' % user)
+        fp.write('# Date %s\n' % date)
         fp.write('# Node ID %s\n' % revlog.hex(p2))
         fp.write('# Parent ' + revlog.hex(p1) + '\n')
         if merge:
             fp.write('# Parent ' + revlog.hex(p2) + '\n')
-        fp.write(changelog[4].rstrip() + '\n')
+        fp.write(message.rstrip() + '\n')
         fp.close()
 
     def readlog(self):
