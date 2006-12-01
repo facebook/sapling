@@ -1,0 +1,50 @@
+adding a/a
+adding a/b
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+copying a/a to b/a
+copying a/b to b/b
+removing a/a
+removing a/b
+2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+resolving manifests
+ overwrite None partial False
+ ancestor f9b20c0d4c51 local ce36d17b18fb+ remote 55119e611c80
+ a/c: remote renamed directory to b/c -> d
+ a/b: other deleted -> r
+ a/a: other deleted -> r
+ b/a: remote created -> g
+ b/b: remote created -> g
+removing a/a
+removing a/b
+moving a/c to b/c
+getting b/a
+getting b/b
+3 files updated, 0 files merged, 2 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+ls: a/: No such file or directory
+b/:
+a
+b
+c
+M b/a
+M b/b
+A b/c
+  a/c
+R a/a
+R a/b
+R a/c
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+resolving manifests
+ overwrite None partial False
+ ancestor f9b20c0d4c51 local 55119e611c80+ remote ce36d17b18fb
+ None: local renamed directory to b/c -> d
+getting a/c to b/c
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+ls: a/: No such file or directory
+b/:
+a
+b
+c
+A b/c
+  a/c
