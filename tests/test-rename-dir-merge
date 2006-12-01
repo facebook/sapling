@@ -21,12 +21,12 @@ hg add a/c
 hg ci -m "2 add a/c" -d "0 0"
 
 hg merge --debug 1
-ls a/ b/
+echo a/* b/*
 hg st -C
 hg ci -m "3 merge 2+1" -d "0 0"
 
 hg co -C 1
 hg merge --debug 2
-ls a/ b/
+echo a/* b/*
 hg st -C
 hg ci -m "4 merge 1+2" -d "0 0"
