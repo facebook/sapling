@@ -7,11 +7,7 @@ hg init a
 cd a
 echo a > a
 hg add
-diff -N /dev/null /dev/null 2> /dev/null
-if [ $? -ne 0 ]; then
-	opt="-p gdiff"
-fi
-hg extdiff -o -Nr $opt
+hg extdiff -o -r $opt
 
 echo "[extdiff]" >> $HGRCPATH
 echo "cmd.falabala=echo" >> $HGRCPATH

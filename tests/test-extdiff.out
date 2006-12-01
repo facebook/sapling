@@ -1,9 +1,7 @@
 adding a
 making snapshot of 0 files from rev 000000000000
 making snapshot of 1 files from working dir
-diff -Nr a.000000000000/a a/a
-0a1
-> a
+Only in a: a
 making snapshot of 0 files from rev 000000000000
 making snapshot of 1 files from working dir
 diffing a.000000000000 a
