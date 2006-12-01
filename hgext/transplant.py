@@ -140,7 +140,7 @@ class transplanter:
                 else:
                     fd, patchfile = tempfile.mkstemp(prefix='hg-transplant-')
                     fp = os.fdopen(fd, 'w')
-                    patch.export(source, [node], fp=fp, opts=diffopts)
+                    patch.diff(source, parents[0], node, fp=fp, opts=diffopts)
                     fp.close()
 
                 del revmap[rev]
@@ -171,9 +171,27 @@ class transplanter:
         '''arbitrarily rewrite changeset before applying it'''
 
         self.ui.status('filtering %s\n' % patchfile)
-        util.system('%s %s' % (filter, util.shellquote(patchfile)),
-                    environ={'HGUSER': changelog[1]},
-                    onerr=util.Abort, errprefix=_('filter failed'))
+        user, date, msg = (changelog[1], changelog[2], changelog[4])
+
+        fd, headerfile = tempfile.mkstemp(prefix='hg-transplant-')
+        fp = os.fdopen(fd, 'w')
+        fp.write("# HG changeset patch\n")
+        fp.write("# User %s\n" % user)
+        fp.write("# Date %d %d\n" % date)
+        fp.write(changelog[4].rstrip())
+        fp.write("\n\n")
+        fp.close()
+
+        try:
+            util.system('%s %s %s' % (filter, util.shellquote(headerfile),
+                                   util.shellquote(patchfile)),
+                        environ={'HGUSER': changelog[1]},
+                        onerr=util.Abort, errprefix=_('filter failed'))
+            user, date, msg = self.parselog(file(headerfile))[1:4]
+        finally:
+            os.unlink(headerfile)
+
+        return (user, date, msg)
 
     def applyone(self, repo, node, cl, patchfile, merge=False, log=False,
                  filter=None, lock=None, wlock=None):
@@ -182,8 +200,7 @@ class transplanter:
         date = "%d %d" % (time, timezone)
         extra = {'transplant_source': node}
         if filter:
-            self.filter(filter, cl, patchfile)
-            patchfile, message, user, date = patch.extract(self.ui, file(patchfile))
+            (user, date, message) = self.filter(filter, cl, patchfile)
 
         if log:
             message += '\n(transplanted from %s)' % revlog.hex(node)
@@ -204,8 +221,6 @@ class transplanter:
                         return
                 finally:
                     files = patch.updatedir(self.ui, repo, files, wlock=wlock)
-                if filter:
-                    os.unlink(patchfile)
             except Exception, inst:
                 if filter:
                     os.unlink(patchfile)
@@ -302,6 +317,27 @@ class transplanter:
                 series.write(revlog.hex(m) + '\n')
         series.close()
 
+    def parselog(self, fp):
+        parents = []
+        message = []
+        node = revlog.nullid
+        inmsg = False
+        for line in fp.read().splitlines():
+            if inmsg:
+                message.append(line)
+            elif line.startswith('# User '):
+                user = line[7:]
+            elif line.startswith('# Date '):
+                date = line[7:]
+            elif line.startswith('# Node ID '):
+                node = revlog.bin(line[10:])
+            elif line.startswith('# Parent '):
+                parents.append(revlog.bin(line[9:]))
+            elif not line.startswith('#'):
+                inmsg = True
+                message.append(line)
+        return (node, user, date, '\n'.join(message), parents)
+            
     def log(self, user, date, message, p1, p2, merge=False):
         '''journal changelog metadata for later recover'''
 
@@ -318,20 +354,7 @@ class transplanter:
         fp.close()
 
     def readlog(self):
-        parents = []
-        message = []
-        for line in self.opener('journal').read().splitlines():
-            if line.startswith('# User '):
-                user = line[7:]
-            elif line.startswith('# Date '):
-                date = line[7:]
-            elif line.startswith('# Node ID '):
-                node = revlog.bin(line[10:])
-            elif line.startswith('# Parent '):
-                parents.append(revlog.bin(line[9:]))
-            else:
-                message.append(line)
-        return (node, user, date, '\n'.join(message), parents)
+        return self.parselog(self.opener('journal'))
 
     def unlog(self):
         '''remove changelog journal'''
