@@ -68,7 +68,7 @@
 from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:commands,patch,cmdutil,templater,util,mail')
+demandload(globals(), 'mercurial:patch,cmdutil,templater,util,mail')
 demandload(globals(), 'email.Parser fnmatch socket time')
 
 # template for single changeset can include email headers.
@@ -107,14 +107,13 @@ class notifier(object):
         self.stripcount = int(self.ui.config('notify', 'strip', 0))
         self.root = self.strip(self.repo.root)
         self.domain = self.ui.config('notify', 'domain')
-        self.sio = cmdutil.stringio()
         self.subs = self.subscribers()
 
         mapfile = self.ui.config('notify', 'style')
         template = (self.ui.config('notify', hooktype) or
                     self.ui.config('notify', 'template'))
-        self.t = cmdutil.changeset_templater(self.ui, self.repo, mapfile,
-                                               self.sio)
+        self.t = cmdutil.changeset_templater(self.ui, self.repo,
+                                             False, None, mapfile, False)
         if not mapfile and not template:
             template = deftemplates.get(hooktype) or single_template
         if template:
@@ -177,12 +176,11 @@ class notifier(object):
         ok_sources = self.ui.config('notify', 'sources', 'serve').split()
         return source not in ok_sources
 
-    def send(self, node, count):
+    def send(self, node, count, data):
         '''send message.'''
 
         p = email.Parser.Parser()
-        self.sio.seek(0)
-        msg = p.parse(self.sio)
+        msg = p.parsestr(data)
 
         def fix_subject():
             '''try to make subject line exist and be useful.'''
@@ -237,20 +235,20 @@ class notifier(object):
         maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
         if maxdiff == 0:
             return
-        fp = cmdutil.stringio()
         prev = self.repo.changelog.parents(node)[0]
-        patch.diff(self.repo, prev, ref, fp=fp)
-        difflines = fp.getvalue().splitlines(1)
+        self.ui.pushbuffer()
+        patch.diff(self.repo, prev, ref)
+        difflines = self.ui.popbuffer().splitlines(1)
         if self.ui.configbool('notify', 'diffstat', True):
             s = patch.diffstat(difflines)
-            self.sio.write('\ndiffstat:\n\n' + s)
+            self.ui.write('\ndiffstat:\n\n' + s)
         if maxdiff > 0 and len(difflines) > maxdiff:
-            self.sio.write(_('\ndiffs (truncated from %d to %d lines):\n\n') %
-                           (len(difflines), maxdiff))
+            self.ui.write(_('\ndiffs (truncated from %d to %d lines):\n\n') %
+                          (len(difflines), maxdiff))
             difflines = difflines[:maxdiff]
         elif difflines:
-            self.sio.write(_('\ndiffs (%d lines):\n\n') % len(difflines))
-        self.sio.write(*difflines)
+            self.ui.write(_('\ndiffs (%d lines):\n\n') % len(difflines))
+        self.ui.write(*difflines)
 
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     '''send email notifications to interested subscribers.
@@ -266,6 +264,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
                   source)
         return
     node = bin(node)
+    ui.pushbuffer()
     if hooktype == 'changegroup':
         start = repo.changelog.rev(node)
         end = repo.changelog.count()
@@ -277,4 +276,5 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         count = 1
         n.node(node)
         n.diff(node, node)
-    n.send(node, count)
+    data = ui.popbuffer()
+    n.send(node, count, data)
