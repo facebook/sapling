@@ -81,7 +81,7 @@ v0shaoffset = 56
 # 32 bytes: nodeid
 indexformatng = ">Qiiiiii20s12x"
 ngshaoffset = 32
-versionformat = ">i"
+versionformat = ">I"
 
 class lazyparser(object):
     """
