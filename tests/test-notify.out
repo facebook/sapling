@@ -1,0 +1,35 @@
+% commit
+adding a
+% clone
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% commit
+% pull
+pulling from ../a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+Subject: b
+From: test@test.com
+X-Hg-Notification: changeset 0647d048b600
+Message-Id:
+To: foo@bar
+
+changeset 0647d048b600
+description:
+	b
+diffstat:
+
+1 file changed, 1 insertion(+)
+a |    1 +
+
+diffs (6 lines):
+
+diff -r cb9a9f314b8b -r 0647d048b600 a
+--- a/a	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:01 1970 +0000
+@@ -1,1 +1,2 @@ a
+ a
++a
+(run 'hg update' to get a working copy)
