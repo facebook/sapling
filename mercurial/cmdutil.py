@@ -9,7 +9,7 @@ from demandload import demandload
 from node import *
 from i18n import gettext as _
 demandload(globals(), 'os sys')
-demandload(globals(), 'mdiff util templater cStringIO patch')
+demandload(globals(), 'mdiff util templater patch')
 
 revrangesep = ':'
 
@@ -196,45 +196,6 @@ def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
             if not dry_run:
                 repo.copy(old, new, wlock=wlock)
 
-class uibuffer(object):
-    # Implement and delegate some ui protocol.  Save hunks of
-    # output for later display in the desired order.
-    def __init__(self, ui):
-        self.ui = ui
-        self.hunk = {}
-        self.header = {}
-        self.quiet = ui.quiet
-        self.verbose = ui.verbose
-        self.debugflag = ui.debugflag
-        self.lastheader = None
-    def note(self, *args):
-        if self.verbose:
-            self.write(*args)
-    def status(self, *args):
-        if not self.quiet:
-            self.write(*args)
-    def debug(self, *args):
-        if self.debugflag:
-            self.write(*args)
-    def write(self, *args):
-        self.hunk.setdefault(self.rev, []).extend(args)
-    def write_header(self, *args):
-        self.header.setdefault(self.rev, []).extend(args)
-    def mark(self, rev):
-        self.rev = rev
-    def flush(self, rev):
-        if rev in self.header:
-            h = "".join(self.header[rev])
-            if h != self.lastheader:
-                self.lastheader = h
-                self.ui.write(h)
-            del self.header[rev]
-        if rev in self.hunk:
-            self.ui.write("".join(self.hunk[rev]))
-            del self.hunk[rev]
-            return 1
-        return 0
-
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 
@@ -244,16 +205,33 @@ class changeset_printer(object):
         self.buffered = buffered
         self.patch = patch
         self.brinfo = brinfo
-        if buffered:
-            self.ui = uibuffer(ui)
+        self.header = {}
+        self.hunk = {}
+        self.lastheader = None
 
     def flush(self, rev):
-        return self.ui.flush(rev)
+        if rev in self.header:
+            h = self.header[rev]
+            if h != self.lastheader:
+                self.lastheader = h
+                self.ui.write(h)
+            del self.header[rev]
+        if rev in self.hunk:
+            self.ui.write(self.hunk[rev])
+            del self.hunk[rev]
+            return 1
+        return 0
 
-    def show(self, rev=0, changenode=None, copies=None):
-        '''show a single changeset or file revision'''
+    def show(self, rev=0, changenode=None, copies=None, **props):
         if self.buffered:
-            self.ui.mark(rev)
+            self.ui.pushbuffer()
+            self._show(rev, changenode, copies, props)
+            self.hunk[rev] = self.ui.popbuffer()
+        else:
+            self._show(rev, changenode, copies, props)
+
+    def _show(self, rev, changenode, copies, props):
+        '''show a single changeset or file revision'''
         log = self.repo.changelog
         if changenode is None:
             changenode = log.node(rev)
@@ -352,10 +330,8 @@ class changeset_templater(changeset_printer):
         '''set template string to use'''
         self.t.cache['changeset'] = t
 
-    def show(self, rev=0, changenode=None, copies=[], **props):
+    def _show(self, rev, changenode, copies, props):
         '''show a single changeset or file revision'''
-        if self.buffered:
-            self.ui.mark(rev)
         log = self.repo.changelog
         if changenode is None:
             changenode = log.node(rev)
@@ -513,7 +489,7 @@ class changeset_templater(changeset_printer):
             if key:
                 h = templater.stringify(self.t(key, **props))
                 if self.buffered:
-                    self.ui.write_header(h)
+                    self.header[rev] = h
                 else:
                     self.ui.write(h)
             if self.ui.debugflag and 'changeset_debug' in self.t:
@@ -531,20 +507,6 @@ class changeset_templater(changeset_printer):
                                                            inst.args[0]))
         except SyntaxError, inst:
             raise util.Abort(_('%s: %s') % (self.t.mapfile, inst.args[0]))
-
-class stringio(object):
-    '''wrap cStringIO for use by changeset_templater.'''
-    def __init__(self):
-        self.fp = cStringIO.StringIO()
-
-    def write(self, *args):
-        for a in args:
-            self.fp.write(a)
-
-    write_header = write
-
-    def __getattr__(self, key):
-        return getattr(self.fp, key)
 
 def show_changeset(ui, repo, opts, buffered=False):
     """show one changeset using template or regular display.
