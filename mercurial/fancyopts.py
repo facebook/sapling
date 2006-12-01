@@ -24,7 +24,7 @@ def fancyopts(args, options, state):
         elif dt[map[opt]] is type(1): state[map[opt]] = int(arg)
         elif dt[map[opt]] is type(''): state[map[opt]] = arg
         elif dt[map[opt]] is type([]): state[map[opt]].append(arg)
-        elif dt[map[opt]] is type(None): state[map[opt]] = 1
+        elif dt[map[opt]] is type(None): state[map[opt]] = True
 
     return args
 
