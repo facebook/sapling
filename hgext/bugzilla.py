@@ -267,20 +267,22 @@ class bugzilla(object):
 
         mapfile = self.ui.config('bugzilla', 'style')
         tmpl = self.ui.config('bugzilla', 'template')
-        sio = cmdutil.stringio()
-        t = cmdutil.changeset_templater(self.ui, self.repo, mapfile, sio)
+        t = cmdutil.changeset_templater(self.ui, self.repo,
+                                        False, None, mapfile, False)
         if not mapfile and not tmpl:
             tmpl = _('changeset {node|short} in repo {root} refers '
                      'to bug {bug}.\ndetails:\n\t{desc|tabindent}')
         if tmpl:
             tmpl = templater.parsestring(tmpl, quoted=False)
             t.use_template(tmpl)
+        self.ui.pushbuffer()
         t.show(changenode=node, changes=changes,
                bug=str(bugid),
                hgweb=self.ui.config('web', 'baseurl'),
                root=self.repo.root,
                webroot=webroot(self.repo.root))
-        self.add_comment(bugid, sio.getvalue(), templater.email(changes[1]))
+        data = self.ui.popbuffer()
+        self.add_comment(bugid, data, templater.email(changes[1]))
 
 def hook(ui, repo, hooktype, node=None, **kwargs):
     '''add comment to bugzilla for each changeset that refers to a
