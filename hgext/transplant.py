@@ -209,6 +209,9 @@ class transplanter:
             except Exception, inst:
                 if filter:
                     os.unlink(patchfile)
+                seriespath = os.path.join(self.path, 'series')
+                if os.path.exists(seriespath):
+                    os.unlink(seriespath)
                 p1 = repo.dirstate.parents()[0]
                 p2 = node
                 self.log(user, date, message, p1, p2, merge=merge)
