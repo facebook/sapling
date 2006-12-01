@@ -29,6 +29,7 @@ class ui(object):
                  interactive=True, traceback=False, report_untrusted=True,
                  parentui=None):
         self.overlay = None
+        self.buffers = []
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
@@ -367,9 +368,18 @@ class ui(object):
             path = self.config("paths", default)
         return path or loc
 
+    def pushbuffer(self):
+        self.buffers.append([])
+
+    def popbuffer(self):
+        return "".join(self.buffers.pop())
+
     def write(self, *args):
-        for a in args:
-            sys.stdout.write(str(a))
+        if self.buffers:
+            self.buffers[-1].extend([str(a) for a in args])
+        else:
+            for a in args:
+                sys.stdout.write(str(a))
 
     def write_err(self, *args):
         try:
