@@ -170,7 +170,7 @@ class transplanter:
     def filter(self, filter, changelog, patchfile):
         '''arbitrarily rewrite changeset before applying it'''
 
-        self.ui.status('filtering %s' % patchfile)
+        self.ui.status('filtering %s\n' % patchfile)
         util.system('%s %s' % (filter, util.shellquote(patchfile)),
                     environ={'HGUSER': changelog[1]},
                     onerr=util.Abort, errprefix=_('filter failed'))
