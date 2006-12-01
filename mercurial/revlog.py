@@ -355,14 +355,14 @@ class revlog(object):
         fmt = v & 0xFFFF
         if fmt == REVLOGV0:
             if flags:
-                raise RevlogError(_("index %s invalid flags %x for format v0")
+                raise RevlogError(_("index %s unknown flags %x for format v0")
                                   % (self.indexfile, flags))
         elif fmt == REVLOGNG:
             if flags & ~REVLOGNGINLINEDATA:
-                raise RevlogError(_("index %s invalid flags %x for revlogng")
+                raise RevlogError(_("index %s unknown flags %x for revlogng")
                                   % (self.indexfile, flags))
         else:
-            raise RevlogError(_("index %s invalid format %d")
+            raise RevlogError(_("index %s unknown format %d")
                               % (self.indexfile, fmt))
         self.version = v
         if v == REVLOGV0:
