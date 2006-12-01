@@ -31,13 +31,13 @@ hg debugindex .hg/00changelog.i
 echo
 
 echo 1
-hg manifest 1
+hg manifest --debug 1
 echo 2
-hg manifest 2
+hg manifest --debug 2
 echo 3
-hg manifest 3
+hg manifest --debug 3
 echo 4
-hg manifest 4
+hg manifest --debug 4
 
 echo
 

@@ -71,7 +71,7 @@ echo "quux: we shouldn't have a merge here"
 hg debugindex .hg/data/quux.i
 
 echo "manifest entries should match tips of all files"
-hg manifest
+hg manifest --debug
 
 echo "everything should be clean now"
 hg status

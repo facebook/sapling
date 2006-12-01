@@ -1513,25 +1513,22 @@ def manifest(ui, repo, rev=None):
     Print a list of version controlled files for the given revision.
 
     The manifest is the list of files being version controlled. If no revision
-    is given then the tip is used.
+    is given then the first parent of the working directory is used.
+
+    With -v flag, print file permissions. With --debug flag, print
+    file revision hashes.
     """
-    if rev:
-        try:
-            # assume all revision numbers are for changesets
-            n = repo.lookup(rev)
-            change = repo.changelog.read(n)
-            n = change[0]
-        except hg.RepoError:
-            n = repo.manifest.lookup(rev)
-    else:
-        n = repo.manifest.tip()
-    m = repo.manifest.read(n)
+
+    m = repo.changectx(rev).manifest()
     files = m.keys()
     files.sort()
 
     for f in files:
-        ui.write("%40s %3s %s\n" % (hex(m[f]),
-                                    m.execf(f) and "755" or "644", f))
+        if ui.debugflag:
+            ui.write("%40s " % hex(m[f]))
+        if ui.verbose:
+            ui.write("%3s " % (m.execf(f) and "755" or "644"))
+        ui.write("%s\n" % f)
 
 def merge(ui, repo, node=None, force=None, branch=None):
     """Merge working directory with another revision

@@ -16,5 +16,5 @@ cd copy
 hg verify
 hg co
 cat foo
-hg manifest
+hg manifest --debug
 hg pull

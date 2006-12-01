@@ -7,6 +7,6 @@ echo a > a
 hg add a
 hg commit -m test -d "1000000 0"
 hg history
-hg manifest
+hg manifest --debug
 hg cat a
 hg verify

@@ -21,4 +21,4 @@ hg pull ../branch
 hg verify
 hg co
 cat foo
-hg manifest
+hg manifest --debug

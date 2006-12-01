@@ -161,7 +161,7 @@ rename from foo
 rename to foo2
 EOF
 cat foo2
-hg manifest | grep binary
+hg manifest --debug | grep binary
 
 echo % many binary files
 hg import -m multibinary - <<EOF
@@ -180,4 +180,4 @@ literal 5
 Mc\${NkU|\`?^000jF3jhEB
 
 EOF
-hg manifest | grep mbinary
+hg manifest --debug | grep mbinary
