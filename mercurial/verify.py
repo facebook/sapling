@@ -179,6 +179,18 @@ def verify(repo):
                         (f, short(n), short(p1)))
             nodes[n] = 1
 
+            # check renames
+            try:
+                rp = fl.renamed(n)
+                if rp:
+                    fl2 = repo.file(rp[0])
+                    rev = fl2.rev(rp[1])
+            except KeyboardInterrupt:
+                repo.ui.warn(_("interrupted"))
+                raise
+            except Exception, inst:
+                err(_("checking rename on file %s %s: %s") % (f, short(n), inst))
+
         # cross-check
         for node in filenodes[f]:
             err(_("node %s in manifests not in %s") % (hex(node), f))
