@@ -238,6 +238,7 @@ class transplanter:
                                                            revlog.short(n)))
         seriespath = os.path.join(self.path, 'series')
         if not os.path.exists(seriespath):
+            self.transplants.write()
             return
         nodes, merges = self.readseries()
         revmap = {}
@@ -255,6 +256,7 @@ class transplanter:
         if not user or not date or not message or not parents[0]:
             raise util.Abort(_('transplant log file is corrupt'))
 
+        extra = {'transplant_source': node}
         wlock = repo.wlock()
         p1, p2 = repo.dirstate.parents()
         if p1 != parents[0]:
@@ -262,7 +264,7 @@ class transplanter:
                              revlog.hex(parents[0]))
         if merge:
             repo.dirstate.setparents(p1, parents[1])
-        n = repo.commit(None, message, user, date, wlock=wlock)
+        n = repo.commit(None, message, user, date, wlock=wlock, extra=extra)
         if not n:
             raise util.Abort(_('commit failed'))
         if not merge:

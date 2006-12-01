@@ -85,6 +85,9 @@ hg up 0
 echo foobar > foo
 hg ci -mfoobar -d '0 0'
 hg transplant 1:3
-echo merge > foo
+# transplant -c shouldn't use an old changeset
+hg up -C
+hg transplant 1
 hg transplant --continue
+hg transplant 1:3
 hg locate
