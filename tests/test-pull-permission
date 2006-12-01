@@ -7,13 +7,13 @@ echo foo > b
 hg add b
 hg ci -m "b" -d "1000000 0"
 
-chmod -w .hg
+chmod -w .hg/store
 
 cd ..
 
 hg clone a b
 
-chmod +w a/.hg # let test clean up
+chmod +w a/.hg/store # let test clean up
 
 cd b
 hg verify

@@ -28,7 +28,8 @@ echo "# creating 'remote'"
 hg init remote
 cd remote
 echo this > foo
-hg ci -A -m "init" -d "1000000 0" foo
+echo this > fooO
+hg ci -A -m "init" -d "1000000 0" foo fooO
 echo '[server]' > .hg/hgrc
 echo 'uncompressed = True' >> .hg/hgrc
 echo '[hooks]' >> .hg/hgrc

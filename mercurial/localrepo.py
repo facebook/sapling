@@ -16,7 +16,7 @@ demandload(globals(), "os revlog time util")
 
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
-    supported = ('revlogv1',)
+    supported = ('revlogv1', 'store')
 
     def __del__(self):
         self.transhandle = None
@@ -43,13 +43,14 @@ class localrepository(repo.repository):
                 if not os.path.exists(path):
                     os.mkdir(path)
                 os.mkdir(self.path)
-                #if self.spath != self.path:
-                #    os.mkdir(self.spath)
-                requirements = ("revlogv1",)
+                os.mkdir(os.path.join(self.path, "store"))
+                requirements = ("revlogv1", "store")
                 reqfile = self.opener("requires", "w")
                 for r in requirements:
                     reqfile.write("%s\n" % r)
                 reqfile.close()
+                # create an invalid changelog
+                self.opener("00changelog.i", "a").write('\0\0\0\2')
             else:
                 raise repo.RepoError(_("repository %s not found") % path)
         elif create:
@@ -68,8 +69,15 @@ class localrepository(repo.repository):
                 raise repo.RepoError(_("requirement '%s' not supported") % r)
 
         # setup store
-        self.spath = self.path
-        self.sopener = util.opener(self.spath)
+        if "store" in requirements:
+            self.encodefn = util.encodefilename
+            self.decodefn = util.decodefilename
+            self.spath = os.path.join(self.path, "store")
+        else:
+            self.encodefn = lambda x: x
+            self.decodefn = lambda x: x
+            self.spath = self.path
+        self.sopener = util.encodedopener(util.opener(self.spath), self.encodefn)
 
         self.ui = ui.ui(parentui=parentui)
         try:
@@ -420,6 +428,7 @@ class localrepository(repo.repository):
         return os.path.join(self.path, f)
 
     def sjoin(self, f):
+        f = self.encodefn(f)
         return os.path.join(self.spath, f)
 
     def wjoin(self, f):

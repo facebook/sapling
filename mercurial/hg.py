@@ -157,11 +157,15 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                     raise
 
         src_store = os.path.realpath(src_repo.spath)
-        dest_path = os.path.realpath(os.path.join(dest, ".hg"))
-        dest_store = dest_path
         if not os.path.exists(dest):
             os.mkdir(dest)
+        dest_path = os.path.realpath(os.path.join(dest, ".hg"))
         os.mkdir(dest_path)
+        if src_repo.spath != src_repo.path:
+            dest_store = os.path.join(dest_path, "store")
+            os.mkdir(dest_store)
+        else:
+            dest_store = dest_path
         # copy the requires file
         force_copy(src_repo.join("requires"),
                    os.path.join(dest_path, "requires"))

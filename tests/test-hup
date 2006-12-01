@@ -10,7 +10,7 @@ Q=$!
 sleep 3
 kill -HUP $P
 wait
-ls .hg
+ls -R .hg
 
 
 

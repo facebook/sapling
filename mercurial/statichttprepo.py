@@ -32,10 +32,10 @@ def opener(base):
 class statichttprepository(localrepo.localrepository):
     def __init__(self, ui, path):
         self._url = path
-        self.path = (path + "/.hg")
-        self.spath = self.path
         self.ui = ui
         self.revlogversion = 0
+
+        self.path = (path + "/.hg")
         self.opener = opener(self.path)
         # find requirements
         try:
@@ -48,8 +48,15 @@ class statichttprepository(localrepo.localrepository):
                 raise repo.RepoError(_("requirement '%s' not supported") % r)
 
         # setup store
-        self.spath = self.path
-        self.sopener = opener(self.spath)
+        if "store" in requirements:
+            self.encodefn = util.encodefilename
+            self.decodefn = util.decodefilename
+            self.spath = self.path + "/store"
+        else:
+            self.encodefn = lambda x: x
+            self.decodefn = lambda x: x
+            self.spath = self.path
+        self.sopener = util.encodedopener(opener(self.spath), self.encodefn)
 
         self.manifest = manifest.manifest(self.sopener)
         self.changelog = changelog.changelog(self.sopener)

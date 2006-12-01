@@ -897,6 +897,10 @@ def _buildencodefun():
 
 encodefilename, decodefilename = _buildencodefun()
 
+def encodedopener(openerfn, fn):
+    def o(path, *args, **kw):
+        return openerfn(fn(path), *args, **kw)
+    return o
 
 def opener(base, audit=True):
     """

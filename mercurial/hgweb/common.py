@@ -10,12 +10,14 @@ import os, mimetypes
 import os.path
 
 def get_mtime(repo_path):
-    hg_path = os.path.join(repo_path, ".hg")
-    cl_path = os.path.join(hg_path, "00changelog.i")
-    if os.path.exists(os.path.join(cl_path)):
+    store_path = os.path.join(repo_path, ".hg")
+    if not os.path.isdir(os.path.join(store_path, "data")):
+        store_path = os.path.join(store_path, "store")
+    cl_path = os.path.join(store_path, "00changelog.i")
+    if os.path.exists(cl_path):
         return os.stat(cl_path).st_mtime
     else:
-        return os.stat(hg_path).st_mtime
+        return os.stat(store_path).st_mtime
 
 def staticfile(directory, fname, req):
     """return a file inside directory with guessed content-type header

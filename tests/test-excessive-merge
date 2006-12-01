@@ -26,7 +26,7 @@ HGMERGE=true hg merge 2
 hg ci -m "merge a/b -> blah" -d "1000000 0"
 
 hg log
-hg debugindex .hg/00changelog.i
+hg debugindex .hg/store/00changelog.i
 
 echo
 
@@ -41,6 +41,6 @@ hg manifest --debug 4
 
 echo
 
-hg debugindex .hg/data/a.i
+hg debugindex .hg/store/data/a.i
 
 hg verify
