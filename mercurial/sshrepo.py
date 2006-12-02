@@ -18,7 +18,7 @@ class sshrepository(remoterepository):
 
         m = re.match(r'^ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?$', path)
         if not m:
-            self.repoerror(_("couldn't parse location %s") % path)
+            self.raise_(hg.RepoError(_("couldn't parse location %s") % path))
 
         self.user = m.group(2)
         self.host = m.group(3)
@@ -38,7 +38,7 @@ class sshrepository(remoterepository):
             ui.note('running %s\n' % cmd)
             res = os.system(cmd)
             if res != 0:
-                self.repoerror(_("could not create remote repo"))
+                self.raise_(hg.RepoError(_("could not create remote repo")))
 
         self.validate_repo(ui, sshcmd, args, remotecmd)
 
@@ -70,7 +70,7 @@ class sshrepository(remoterepository):
             lines.append(l)
             max_noise -= 1
         else:
-            self.repoerror(_("no suitable response from remote hg"))
+            self.raise_(hg.RepoError(_("no suitable response from remote hg")))
 
         self.capabilities = ()
         lines.reverse()
@@ -87,9 +87,9 @@ class sshrepository(remoterepository):
             if not l: break
             self.ui.status(_("remote: "), l)
 
-    def repoerror(self, msg):
+    def raise_(self, exception):
         self.cleanup()
-        raise hg.RepoError(msg)
+        raise exception
 
     def cleanup(self):
         try:
@@ -121,7 +121,7 @@ class sshrepository(remoterepository):
         try:
             l = int(l)
         except:
-            self.repoerror(_("unexpected response '%s'") % l)
+            self.raise_(hg.RepoError(_("unexpected response '%s'") % l))
         return r.read(l)
 
     def lock(self):
@@ -137,14 +137,14 @@ class sshrepository(remoterepository):
         if int(success):
             return bin(data)
         else:
-            self.repoerror(data)
+            self.raise_(hg.RepoError(data))
 
     def heads(self):
         d = self.call("heads")
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            self.repoerror(_("unexpected response '%s'") % (d[:400] + "..."))
+            self.raise_(hg.RepoError(_("unexpected response '%s'") % (d[:400] + "...")))
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -153,7 +153,7 @@ class sshrepository(remoterepository):
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            self.repoerror(_("unexpected response '%s'") % (d[:400] + "..."))
+            self.raise_(hg.RepoError(_("unexpected response '%s'") % (d[:400] + "...")))
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
@@ -162,7 +162,7 @@ class sshrepository(remoterepository):
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
-            self.repoerror(_("unexpected response '%s'") % (d[:400] + "..."))
+            self.raise_(hg.RepoError(_("unexpected response '%s'") % (d[:400] + "...")))
 
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
@@ -176,7 +176,7 @@ class sshrepository(remoterepository):
     def unbundle(self, cg, heads, source):
         d = self.call("unbundle", heads=' '.join(map(hex, heads)))
         if d:
-            self.repoerror(_("push refused: %s") % d)
+            self.raise_(hg.RepoError(_("push refused: %s") % d))
 
         while 1:
             d = cg.read(4096)
@@ -202,7 +202,7 @@ class sshrepository(remoterepository):
     def addchangegroup(self, cg, source, url):
         d = self.call("addchangegroup")
         if d:
-            self.repoerror(_("push refused: %s") % d)
+            self.raise_(hg.RepoError(_("push refused: %s") % d))
         while 1:
             d = cg.read(4096)
             if not d: break
