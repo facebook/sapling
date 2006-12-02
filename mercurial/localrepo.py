@@ -327,16 +327,20 @@ class localrepository(repo.repository):
             f.close()
             last, lrev = lines.pop(0).rstrip().split(" ", 1)
             last, lrev = bin(last), int(lrev)
-            if (lrev < self.changelog.count() and
-                self.changelog.node(lrev) == last): # sanity check
-                for l in lines:
-                    if not l: continue
-                    node, label = l.rstrip().split(" ", 1)
-                    partial[label] = bin(node)
-            else: # invalidate the cache
-                last, lrev = nullid, nullrev
-        except IOError:
-            last, lrev = nullid, nullrev
+            if not (lrev < self.changelog.count() and
+                    self.changelog.node(lrev) == last): # sanity check
+                # invalidate the cache
+                raise ValueError('Invalid branch cache: unknown tip')
+            for l in lines:
+                if not l: continue
+                node, label = l.rstrip().split(" ", 1)
+                partial[label] = bin(node)
+        except (KeyboardInterrupt, util.SignalInterrupt):
+            raise
+        except Exception, inst:
+            if self.ui.debugflag:
+                self.ui.warn(str(inst), '\n')
+            partial, last, lrev = {}, nullid, nullrev
         return partial, last, lrev
 
     def _writebranchcache(self, branches, tip, tiprev):

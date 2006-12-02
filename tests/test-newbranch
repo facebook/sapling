@@ -30,4 +30,11 @@ hg branches -q
 
 echo % test for invalid branch cache
 hg rollback
+cp .hg/branches.cache .hg/bc-invalid
 hg log -r foo
+cp .hg/bc-invalid .hg/branches.cache
+hg --debug log -r foo
+rm .hg/branches.cache
+echo corrupted > .hg/branches.cache
+hg log -qr foo
+cat .hg/branches.cache

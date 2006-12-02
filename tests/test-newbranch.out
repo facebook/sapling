@@ -56,3 +56,22 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     modify a branch
 
+Invalid branch cache: unknown tip
+changeset:   4:4909a3732169c0c20011c4f4b8fdff4e3d89b23f
+branch:      foo
+tag:         tip
+parent:      1:b699b1cec9c2966b3700de4fef0dc123cd754c31
+parent:      -1:0000000000000000000000000000000000000000
+manifest:    4:d01b250baaa05909152f7ae07d7a649deea0df9a
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+files:       a
+extra:       branch=foo
+description:
+modify a branch
+
+
+4:4909a3732169
+4909a3732169c0c20011c4f4b8fdff4e3d89b23f 4
+4909a3732169c0c20011c4f4b8fdff4e3d89b23f foo
+67ec16bde7f1575d523313b9bca000f6a6f12dca bar
