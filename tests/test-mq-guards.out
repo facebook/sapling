@@ -89,3 +89,15 @@ c.patch
 new.patch: +1 +2 -3
 b.patch: +2
 c.patch: unguarded
+Now at: c.patch
+% should show new.patch and b.patch as Guarded, c.patch as Applied
+% and d.patch as Unapplied
+0 G new.patch
+1 G b.patch
+2 A c.patch
+3 U d.patch
+% new.patch, b.patch: Guarded. c.patch: Applied. d.patch: Guarded.
+0 G new.patch
+1 G b.patch
+2 A c.patch
+3 G d.patch

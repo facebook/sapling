@@ -1124,21 +1124,21 @@ class queue:
             else:
                 return self.series[i]
 
-        unapplied = self.series_end(all_patches=True)
+        applied = dict.fromkeys([p.name for p in self.applied])
         if not length:
             length = len(self.series) - start
         if not missing:
             for i in xrange(start, start+length):
                 pfx = ''
-                if self.ui.verbose:
-                    if i < unapplied:
-                        status = 'A'
-                    elif self.pushable(i)[0]:
-                        status = 'U'
-                    else:
-                        status = 'G'
-                    pfx = '%d %s ' % (i, status)
                 patch = pname(i)
+                if self.ui.verbose:
+                    if patch in applied:
+                        stat = 'A'
+                    elif self.pushable(i)[0]:
+                        stat = 'U'
+                    else:
+                        stat = 'G'
+                    pfx = '%d %s ' % (i, stat)
                 self.ui.write('%s%s\n' % (pfx, displayname(patch)))
         else:
             msng_list = []
