@@ -106,4 +106,12 @@ echo % b.patch: +2
 echo % c.patch: unguarded
 hg qguard -l
 
+hg qnew d.patch
+hg qpop
+echo % should show new.patch and b.patch as Guarded, c.patch as Applied
+echo % and d.patch as Unapplied
+hg qseries -v
 
+hg qguard d.patch +2
+echo % new.patch, b.patch: Guarded. c.patch: Applied. d.patch: Guarded.
+hg qseries -v
