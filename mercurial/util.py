@@ -1032,6 +1032,13 @@ def shortuser(user):
         user = user[:f]
     return user
 
+def ellipsis(text, maxlength=400):
+    """Trim string to at most maxlength (default: 400) characters."""
+    if len(text) <= maxlength:
+        return text
+    else:
+        return "%s..." % (text[:maxlength-3])
+
 def walkrepos(path):
     '''yield every hg repository under path, recursively.'''
     def errhandler(err):

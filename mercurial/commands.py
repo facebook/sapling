@@ -3031,8 +3031,7 @@ def dispatch(args):
         elif not inst[1]:
             u.warn(_(" empty string\n"))
         else:
-            u.warn("\n%r%s\n" %
-                    (inst[1][:400], len(inst[1]) > 400 and '...' or ''))
+            u.warn("\n%r\n" % util.ellipsis(inst[1]))
     except util.Abort, inst:
         u.warn(_("abort: %s\n") % inst)
     except TypeError, inst:
