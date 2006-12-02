@@ -121,7 +121,7 @@ class sshrepository(remoterepository):
         try:
             l = int(l)
         except:
-            self.raise_(hg.RepoError(_("unexpected response '%s'") % l))
+            self.raise_(util.UnexpectedOutput(_("unexpected response:"), l))
         return r.read(l)
 
     def lock(self):
@@ -144,7 +144,7 @@ class sshrepository(remoterepository):
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            self.raise_(hg.RepoError(_("unexpected response '%s'") % (d[:400] + "...")))
+            self.raise_(util.UnexpectedOutput(_("unexpected response:"), d))
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -153,7 +153,7 @@ class sshrepository(remoterepository):
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            self.raise_(hg.RepoError(_("unexpected response '%s'") % (d[:400] + "...")))
+            self.raise_(util.UnexpectedOutput(_("unexpected response:"), d))
 
     def between(self, pairs):
         n = "\n".join(["-".join(map(hex, p)) for p in pairs])
@@ -162,7 +162,7 @@ class sshrepository(remoterepository):
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
-            self.raise_(hg.RepoError(_("unexpected response '%s'") % (d[:400] + "...")))
+            self.raise_(util.UnexpectedOutput(_("unexpected response:"), d))
 
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
