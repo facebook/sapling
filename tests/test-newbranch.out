@@ -4,55 +4,55 @@ foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 foo
-changeset:   5:dc140083783b
+changeset:   5:5f8fb06e083e
 branch:      foo
 tag:         tip
-parent:      4:98d14f698afe
-parent:      3:9d567d0b51f9
+parent:      4:4909a3732169
+parent:      3:bf1bc2f45e83
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     merge
 
-changeset:   4:98d14f698afe
+changeset:   4:4909a3732169
 branch:      foo
-parent:      1:0079f24813e2
+parent:      1:b699b1cec9c2
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     modify a branch
 
-changeset:   3:9d567d0b51f9
+changeset:   3:bf1bc2f45e83
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     clear branch name
 
-changeset:   2:ed2bbf4e0102
+changeset:   2:67ec16bde7f1
 branch:      bar
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     change branch name
 
-changeset:   1:0079f24813e2
+changeset:   1:b699b1cec9c2
 branch:      foo
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     add branch name
 
-changeset:   0:db01e8ea3388
+changeset:   0:be8523e69bf8
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     initial
 
-foo                            5:dc140083783b
-bar                            2:ed2bbf4e0102
+foo                            5:5f8fb06e083e
+bar                            2:67ec16bde7f1
 foo
 bar
 % test for invalid branch cache
 rolling back last transaction
-changeset:   4:98d14f698afe
+changeset:   4:4909a3732169
 branch:      foo
 tag:         tip
-parent:      1:0079f24813e2
+parent:      1:b699b1cec9c2
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     modify a branch
 

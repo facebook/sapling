@@ -6,23 +6,23 @@ hg branches
 
 echo foo > a
 hg add a
-hg ci -m "initial" -d "0 0"
+hg ci -m "initial" -d "1000000 0"
 hg branch foo
 hg branch
-hg ci -m "add branch name" -d "0 0"
+hg ci -m "add branch name" -d "1000000 0"
 hg branch bar
-hg ci -m "change branch name" -d "0 0"
+hg ci -m "change branch name" -d "1000000 0"
 hg branch ""
-hg ci -m "clear branch name" -d "0 0"
+hg ci -m "clear branch name" -d "1000000 0"
 
 hg co foo
 hg branch
 echo bleah > a
-hg ci -m "modify a branch" -d "0 0"
+hg ci -m "modify a branch" -d "1000000 0"
 
 hg merge
 hg branch
-HG_MERGE=true hg ci -m "merge" -d "0 0"
+hg ci -m "merge" -d "1000000 0"
 hg log
 
 hg branches
@@ -30,4 +30,4 @@ hg branches -q
 
 echo % test for invalid branch cache
 hg rollback
-hg tip
+hg log -r foo
