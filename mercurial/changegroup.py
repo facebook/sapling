@@ -50,8 +50,8 @@ class nocompress(object):
 bundletypes = {
     "": ("", nocompress),
     "HG10UN": ("HG10UN", nocompress),
-    "HG10BZ": ("HG10", bz2.BZ2Compressor),
-    "HG10GZ": ("HG10GZ", zlib.compressobj),
+    "HG10BZ": ("HG10", lambda: bz2.BZ2Compressor()),
+    "HG10GZ": ("HG10GZ", lambda: zlib.compressobj()),
 }
 
 def writebundle(cg, filename, bundletype):
