@@ -61,10 +61,10 @@ class changelog(revlog):
         if not text:
             return (nullid, "", (0, 0), [], "", {})
         last = text.index("\n\n")
-        desc = text[last + 2:]
+        desc = util.tolocal(text[last + 2:])
         l = text[:last].split('\n')
         manifest = bin(l[0])
-        user = l[1]
+        user = util.tolocal(l[1])
 
         extra_data = l[2].split(' ', 2)
         if len(extra_data) != 3:
@@ -87,6 +87,8 @@ class changelog(revlog):
 
     def add(self, manifest, list, desc, transaction, p1=None, p2=None,
                   user=None, date=None, extra={}):
+
+        user, desc = util.fromlocal(user), util.fromlocal(desc)
 
         if date:
             parseddate = "%d %d" % util.parsedate(date)
