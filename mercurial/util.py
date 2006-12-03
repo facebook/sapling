@@ -15,7 +15,9 @@ platform-specific details from the core.
 from i18n import gettext as _
 from demandload import *
 demandload(globals(), "cStringIO errno getpass popen2 re shutil sys tempfile")
-demandload(globals(), "os threading time calendar ConfigParser")
+demandload(globals(), "os threading time calendar ConfigParser locale")
+
+_encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding()
 
 # used by parsedate
 defaultdateformats = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
