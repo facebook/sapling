@@ -2210,7 +2210,9 @@ def tags(ui, repo):
         if ui.quiet:
             ui.write("%s\n" % t)
         else:
-            ui.write("%-30s %s\n" % (t, r))
+            t = util.localsub(t, 30)
+            t += " " * (30 - util.locallen(t))
+            ui.write("%s %s\n" % (t, r))
 
 def tip(ui, repo, **opts):
     """show the tip revision

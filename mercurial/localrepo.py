@@ -198,6 +198,7 @@ class localrepository(repo.repository):
         self.hook('pretag', throw=True, node=hex(node), tag=name, local=local)
 
         if local:
+            # local tags are stored in the current charset
             self.opener('localtags', 'a').write('%s %s\n' % (hex(node), name))
             self.hook('tag', node=hex(node), tag=name, local=local)
             return
@@ -207,7 +208,9 @@ class localrepository(repo.repository):
                 raise util.Abort(_('working copy of .hgtags is changed '
                                    '(please commit .hgtags manually)'))
 
-        self.wfile('.hgtags', 'ab').write('%s %s\n' % (hex(node), name))
+        # committed tags are stored in UTF-8
+        line = '%s %s\n' % (hex(node), util.fromlocal(name))
+        self.wfile('.hgtags', 'ab').write(line)
         if self.dirstate.state('.hgtags') == '?':
             self.add(['.hgtags'])
 
@@ -227,7 +230,7 @@ class localrepository(repo.repository):
                     self.ui.warn(_("%s: cannot parse entry\n") % context)
                     return
                 node, key = s
-                key = key.strip()
+                key = util.tolocal(key.strip()) # stored in UTF-8
                 try:
                     bin_n = bin(node)
                 except TypeError:
@@ -256,6 +259,9 @@ class localrepository(repo.repository):
                 f = self.opener("localtags")
                 count = 0
                 for l in f:
+                    # localtags are stored in the local character set
+                    # while the internal tag table is stored in UTF-8
+                    l = util.fromlocal(l)
                     count += 1
                     parsetag(l, _("localtags, line %d") % count)
             except IOError:
