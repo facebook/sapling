@@ -332,6 +332,8 @@ os.environ['TZ'] = 'GMT'
 os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
 os.environ["HGMERGE"]  = sys.executable + ' -c "import sys; sys.exit(0)"'
 os.environ["HGUSER"]   = "test"
+os.environ["HGENCODING"] = "ascii"
+os.environ["HGENCODINGMODE"] = "strict"
 
 TESTDIR = os.environ["TESTDIR"] = os.getcwd()
 HGTMP   = os.environ["HGTMP"]   = tempfile.mkdtemp("", "hgtests.")
