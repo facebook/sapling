@@ -1,0 +1,86 @@
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% should fail with encoding error
+M a
+? b.hg
+abort: decoding near 'cii 0xe9: é': 'ascii' codec can't decode byte 0xe9 in position 12: ordinal not in range(128)!
+
+transaction abort!
+rollback completed
+% these should work
+changeset:   3:d6b63b86e629
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Added tag ? for changeset 20ea57f280ca
+
+changeset:   2:20ea57f280ca
+tag:         ?
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     utf-8 e': ?
+
+changeset:   1:6355cacf842e
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     latin-1 e' encoded: ?
+
+changeset:   0:60aad1dd20a9
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     latin-1 e': ?
+
+changeset:   3:d6b63b86e629
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Added tag é for changeset 20ea57f280ca
+
+changeset:   2:20ea57f280ca
+tag:         é
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     utf-8 e': é
+
+changeset:   1:6355cacf842e
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     latin-1 e' encoded: é
+
+changeset:   0:60aad1dd20a9
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     latin-1 e': é
+
+changeset:   3:d6b63b86e629
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Added tag Ã© for changeset 20ea57f280ca
+
+changeset:   2:20ea57f280ca
+tag:         Ã©
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     utf-8 e': Ã©
+
+changeset:   1:6355cacf842e
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     latin-1 e' encoded: Ã©
+
+changeset:   0:60aad1dd20a9
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     latin-1 e': Ã©
+
+tip                                3:d6b63b86e629
+?                                  2:20ea57f280ca
+tip                                3:d6b63b86e629
+é                                  2:20ea57f280ca
+tip                                3:d6b63b86e629
+Ã©                                  2:20ea57f280ca
