@@ -2315,6 +2315,8 @@ globalopts = [
     ('', 'config', [], _('set/override config option')),
     ('', 'debug', None, _('enable debugging output')),
     ('', 'debugger', None, _('start debugger')),
+    ('', 'encoding', util._encoding, _('set the charset encoding')),
+    ('', 'encodingmode', util._encodingmode, _('set the charset encoding mode')),
     ('', 'lsprof', None, _('print improved command execution profile')),
     ('', 'traceback', None, _('print traceback on exception')),
     ('', 'time', None, _('time how long the command takes')),
@@ -2867,6 +2869,10 @@ def dispatch(args):
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)
+        if options["encoding"]:
+            util._encoding = options["encoding"]
+        if options["encodingmode"]:
+            util._encodingmode = options["encodingmode"]
         if options["time"]:
             def get_times():
                 t = os.times()
