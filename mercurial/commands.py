@@ -273,7 +273,9 @@ def branches(ui, repo):
         if ui.quiet:
             ui.write("%s\n" % t)
         else:
-            ui.write("%-30s %s:%s\n" % (t, -r, hexfunc(n)))
+            t = util.localsub(t, 30)
+            t += " " * (30 - util.locallen(t))
+            ui.write("%s %s:%s\n" % (t, -r, hexfunc(n)))
 
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file

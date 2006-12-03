@@ -322,7 +322,10 @@ class localrepository(repo.repository):
             self._updatebranchcache(partial, lrev+1, tiprev+1)
             self._writebranchcache(partial, self.changelog.tip(), tiprev)
 
-        self.branchcache = partial
+        # the branch cache is stored on disk as UTF-8, but in the local
+        # charset internally
+        for k, v in partial.items():
+            self.branchcache[util.tolocal(k)] = v
         return self.branchcache
 
     def _readbranchcache(self):
@@ -633,12 +636,12 @@ class localrepository(repo.repository):
         m2 = self.manifest.read(c2[0])
 
         if use_dirstate:
-            branchname = self.workingctx().branch()
+            branchname = util.fromlocal(self.workingctx().branch())
         else:
             branchname = ""
 
         if use_dirstate:
-            oldname = c1[5].get("branch", "")
+            oldname = c1[5].get("branch", "") # stored in UTF-8
             if not commit and not remove and not force and p2 == nullid and \
                    branchname == oldname:
                 self.ui.status(_("nothing changed\n"))
