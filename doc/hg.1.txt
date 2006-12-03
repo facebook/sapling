@@ -172,6 +172,20 @@ HGEDITOR::
 
     (deprecated, use .hgrc)
 
+HGENCODING::
+    This overrides the default locale setting detected by Mercurial.
+    This setting is used to convert data including usernames,
+    changeset descriptions, tag names, and branches. This setting can
+    be overridden with the --encoding command-line option.
+
+HGENCODINGMODE::
+    This sets Mercurial's behavior for handling unknown characters
+    while transcoding user inputs. The default is "strict", which
+    causes Mercurial to abort if it can't translate a character. Other
+    settings include "replace", which replaces unknown characters, and
+    "ignore", which drops them. This setting can be overridden with
+    the --encodingmode command-line option.
+
 HGMERGE::
     An executable to use for resolving merge conflicts. The program
     will be executed with three arguments: local file, remote file,
