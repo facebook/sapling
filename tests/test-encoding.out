@@ -6,7 +6,6 @@ added 1 changesets with 1 changes to 1 files
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % should fail with encoding error
 M a
-? b.hg
 abort: decoding near 'cii 0xe9: é': 'ascii' codec can't decode byte 0xe9 in position 12: ordinal not in range(128)!
 
 transaction abort!
