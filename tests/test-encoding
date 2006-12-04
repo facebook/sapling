@@ -7,22 +7,32 @@ cd t
 hg unbundle $TESTDIR/legacy-encoding.hg
 hg co
 
+printf "latin-1 e' encoded: \xe9" > latin-1
+printf "utf-8 e' encoded: \xc3\xa9" > utf-8
+printf "\xe9" > latin-1-tag
+
 echo % should fail with encoding error
 echo "plain old ascii" > a
 hg st
-HGENCODING=ascii hg ci -m "`printf "ascii 0xe9: \xe9"`" -d "0 0"
+HGENCODING=ascii hg ci -l latin-1 -d "0 0"
 
 echo % these should work
 echo "latin-1" > a
-HGENCODING=latin-1 hg ci -m "`printf "latin-1 e' encoded: \xe9"`" -d "0 0"
+HGENCODING=latin-1 hg ci -l latin-1 -d "0 0"
 echo "utf-8" > a
-HGENCODING=utf-8 hg ci -m "`printf "utf-8 e': \xc3\xa9"`" -d "0 0"
+HGENCODING=utf-8 hg ci -l utf-8 -d "0 0"
 
-HGENCODING=latin-1 hg tag -d "0 0" "`printf "\xe9"`"
+HGENCODING=latin-1 hg tag -d "0 0" `cat latin-1-tag`
 
+echo % ascii
 hg --encoding ascii log
+echo % latin-1
 hg --encoding latin-1 log
+echo % utf-8
 hg --encoding utf-8 log
+echo % ascii
 HGENCODING=ascii hg tags
+echo % latin-1
 HGENCODING=latin-1 hg tags
+echo % utf-8
 HGENCODING=utf-8 hg tags
