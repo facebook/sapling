@@ -87,6 +87,8 @@ rawcommit
 --cwd
 --debug
 --debugger
+--encoding
+--encodingmode
 --help
 --lsprof
 --noninteractive
@@ -112,6 +114,8 @@ rawcommit
 --daemon-pipefds
 --debug
 --debugger
+--encoding
+--encodingmode
 --errorlog
 --help
 --ipv6
