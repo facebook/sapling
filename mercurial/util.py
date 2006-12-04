@@ -633,6 +633,28 @@ def groupname(gid=None):
     except ImportError:
         return None
 
+# File system features
+
+def checkfolding(path):
+    """
+    Check whether the given path is on a case-sensitive filesystem
+
+    Requires a path (like /foo/.hg) ending with a foldable final
+    directory component.
+    """
+    s1 = os.stat(path)
+    d, b = os.path.split(path)
+    p2 = os.path.join(d, b.upper())
+    if path == p2:
+        p2 = os.path.join(d, b.lower())
+    try:
+        s2 = os.stat(p2)
+        if s2 == s1:
+            return False
+        return True
+    except:
+        return True
+
 # Platform specific variants
 if os.name == 'nt':
     demandload(globals(), "msvcrt")
