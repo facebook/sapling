@@ -141,7 +141,7 @@ class bundlerevlog(revlog.revlog):
 class bundlechangelog(bundlerevlog, changelog.changelog):
     def __init__(self, opener, bundlefile):
         changelog.changelog.__init__(self, opener)
-        bundlerevlog.__init__(self, opener, "00changelog.i", "00changelog.d",
+        bundlerevlog.__init__(self, opener, self.indexfile, self.datafile,
                               bundlefile)
 
 class bundlemanifest(bundlerevlog, manifest.manifest):
