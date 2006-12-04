@@ -29,6 +29,13 @@ import mercurial.hgweb.wsgicgi as wsgicgi
 # Alternatively you can pass a list of ('virtual/path', '/real/path') tuples
 # or use a dictionary with entries like 'virtual/path': '/real/path'
 
+# If you'd like to serve pages with UTF-8 instead of your default
+# locale charset, you can do so by uncommenting the following lines.
+# Note that this will cause your .hgrc files to be interpreted in
+# UTF-8 and all your repo files to be displayed using UTF-8.
+#
+# os.environ["HGENCODING"] = "UTF-8"
+
 def make_web_app():
     return hgwebdir("hgweb.config")
 
