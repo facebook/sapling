@@ -68,6 +68,16 @@ def checkunknown(wctx, mctx):
                 raise util.Abort(_("untracked local file '%s' differs"\
                                    " from remote version") % f)
 
+def checkcollision(mctx):
+    "check for case folding collisions in the destination context"
+    folded = {}
+    for fn in mctx.manifest():
+        fold = fn.lower()
+        if fold in folded:
+            raise util.Abort(_("case-folding collision between %s and %s")
+                             % (fn, folded[fold]))
+        folded[fold] = fn
+
 def forgetremoved(wctx, mctx):
     """
     Forget removed files
@@ -460,6 +470,8 @@ def update(repo, node, branchmerge, force, partial, wlock):
     action = []
     if not force:
         checkunknown(wc, p2)
+    if not util.checkfolding(repo.path):
+        checkcollision(p2)
     if not branchmerge:
         action += forgetremoved(wc, p2)
     action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
