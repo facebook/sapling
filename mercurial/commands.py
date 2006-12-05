@@ -10,7 +10,7 @@ from node import *
 from i18n import gettext as _
 demandload(globals(), "bisect os re sys signal imp urllib pdb shlex stat")
 demandload(globals(), "fancyopts ui hg util lock revlog bundlerepo")
-demandload(globals(), "difflib patch time")
+demandload(globals(), "difflib patch time help")
 demandload(globals(), "traceback errno version atexit")
 demandload(globals(), "archival changegroup cmdutil hgweb.server sshserver")
 
@@ -1141,6 +1141,24 @@ def help_(ui, name=None, with_version=False):
             else:
                 ui.write(' %-*s   %s\n' % (m, f, h[f]))
 
+    def helptopic(name):
+        v = None
+        for i in help.helptable:
+            l = i.split('|')
+            if name in l:
+                v = i
+                header = l[-1]
+        if not v:
+            raise UnknownCommand(name)
+
+        # description
+        doc = help.helptable[v]
+        if not doc:
+            doc = _("(No help text available)")
+
+        ui.write("%s\n" % header)
+        ui.write("%s\n" % doc.rstrip())
+
     def helpext(name):
         try:
             mod = findext(name)
@@ -1163,10 +1181,16 @@ def help_(ui, name=None, with_version=False):
         helplist(modcmds.has_key)
 
     if name and name != 'shortlist':
-        try:
-            helpcmd(name)
-        except UnknownCommand:
-            helpext(name)
+        i = None
+        for f in (helpcmd, helptopic, helpext):
+            try:
+                f(name)
+                i = None
+                break
+            except UnknownCommand, inst:
+                i = inst
+        if i:
+            raise i
 
     else:
         # program name
