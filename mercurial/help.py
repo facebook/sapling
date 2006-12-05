@@ -41,5 +41,67 @@ unixtime offset::
 
     "1145475591 -7200" (2006-04-19 21:39:51 +0200)
     ''',
+    'environment|env|Environment Variables':
+    r'''
+HGEDITOR::
+    This is the name of the editor to use when committing. Defaults to the
+    value of EDITOR.
+
+    (deprecated, use .hgrc)
+
+HGENCODING::
+    This overrides the default locale setting detected by Mercurial.
+    This setting is used to convert data including usernames,
+    changeset descriptions, tag names, and branches. This setting can
+    be overridden with the --encoding command-line option.
+
+HGENCODINGMODE::
+    This sets Mercurial's behavior for handling unknown characters
+    while transcoding user inputs. The default is "strict", which
+    causes Mercurial to abort if it can't translate a character. Other
+    settings include "replace", which replaces unknown characters, and
+    "ignore", which drops them. This setting can be overridden with
+    the --encodingmode command-line option.
+
+HGMERGE::
+    An executable to use for resolving merge conflicts. The program
+    will be executed with three arguments: local file, remote file,
+    ancestor file.
+
+    The default program is "hgmerge", which is a shell script provided
+    by Mercurial with some sensible defaults.
+
+    (deprecated, use .hgrc)
+
+HGRCPATH::
+    A list of files or directories to search for hgrc files.  Item
+    separator is ":" on Unix, ";" on Windows.  If HGRCPATH is not set,
+    platform default search path is used.  If empty, only .hg/hgrc of
+    current repository is read.
+
+    For each element in path, if a directory, all entries in directory
+    ending with ".rc" are added to path.  Else, element itself is
+    added to path.
+
+HGUSER::
+    This is the string used for the author of a commit.
+
+    (deprecated, use .hgrc)
+
+EMAIL::
+    If HGUSER is not set, this will be used as the author for a commit.
+
+LOGNAME::
+    If neither HGUSER nor EMAIL is set, LOGNAME will be used (with
+    '@hostname' appended) as the author value for a commit.
+
+EDITOR::
+    This is the name of the editor used in the hgmerge script. It will be
+    used for commit messages if HGEDITOR isn't set. Defaults to 'vi'.
+
+PYTHONPATH::
+    This is used by Python to find imported modules and may need to be set
+    appropriately if Mercurial is not installed system-wide.
+    '''
 }
 
