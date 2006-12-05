@@ -7,9 +7,11 @@ cd t
 hg unbundle $TESTDIR/legacy-encoding.hg
 hg co
 
-printf "latin-1 e' encoded: \xe9" > latin-1
-printf "utf-8 e' encoded: \xc3\xa9" > utf-8
-printf "\xe9" > latin-1-tag
+python << EOF
+f = file('latin-1', 'w'); f.write("latin-1 e' encoded: \xe9"); f.close()
+f = file('utf-8', 'w'); f.write("utf-8 e' encoded: \xc3\xa9"); f.close()
+f = file('latin-1-tag', 'w'); f.write("\xe9"); f.close()
+EOF
 
 echo % should fail with encoding error
 echo "plain old ascii" > a
