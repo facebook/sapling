@@ -1155,6 +1155,8 @@ def help_(ui, name=None, with_version=False):
         doc = help.helptable[v]
         if not doc:
             doc = _("(No help text available)")
+        if callable(doc):
+            doc = doc()
 
         ui.write("%s\n" % header)
         ui.write("%s\n" % doc.rstrip())
