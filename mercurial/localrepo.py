@@ -376,6 +376,8 @@ class localrepository(repo.repository):
             key = self.dirstate.parents()[0]
             if key == nullid:
                 raise repo.RepoError(_("no revision checked out"))
+        elif key == 'null':
+            return nullid
         n = self.changelog._match(key)
         if n:
             return n
