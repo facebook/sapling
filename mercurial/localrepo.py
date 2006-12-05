@@ -31,12 +31,15 @@ class localrepository(repo.repository):
                                            " here (.hg not found)"))
             path = p
         self.path = os.path.join(path, ".hg")
+        self.spath = self.path
 
         if not os.path.isdir(self.path):
             if create:
                 if not os.path.exists(path):
                     os.mkdir(path)
                 os.mkdir(self.path)
+                if self.spath != self.path:
+                    os.mkdir(self.spath)
             else:
                 raise repo.RepoError(_("repository %s not found") % path)
         elif create:
@@ -46,7 +49,7 @@ class localrepository(repo.repository):
         self.origroot = path
         self.ui = ui.ui(parentui=parentui)
         self.opener = util.opener(self.path)
-        self.sopener = util.opener(self.path)
+        self.sopener = util.opener(self.spath)
         self.wopener = util.opener(self.root)
 
         try:
@@ -395,7 +398,7 @@ class localrepository(repo.repository):
         return os.path.join(self.path, f)
 
     def sjoin(self, f):
-        return os.path.join(self.path, f)
+        return os.path.join(self.spath, f)
 
     def wjoin(self, f):
         return os.path.join(self.root, f)

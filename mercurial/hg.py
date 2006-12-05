@@ -129,11 +129,9 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
     dest_repo = repository(ui, dest, create=True)
 
-    dest_path = None
     dir_cleanup = None
     if dest_repo.local():
-        dest_path = os.path.realpath(dest_repo.root)
-        dir_cleanup = DirCleanup(dest_path)
+        dir_cleanup = DirCleanup(os.path.realpath(dest_repo.root))
 
     abspath = source
     copy = False
@@ -154,14 +152,16 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
     if copy:
         # we lock here to avoid premature writing to the target
-        dest_lock = lock.lock(os.path.join(dest_path, ".hg", "lock"))
+        src_store = os.path.realpath(src_repo.spath)
+        dest_store = os.path.realpath(dest_repo.spath)
+        dest_lock = lock.lock(os.path.join(dest_store, "lock"))
 
         files = ("data",
                  "00manifest.d", "00manifest.i",
                  "00changelog.d", "00changelog.i")
         for f in files:
-            src = os.path.join(source, ".hg", f)
-            dst = os.path.join(dest_path, ".hg", f)
+            src = os.path.join(src_store, f)
+            dst = os.path.join(dest_store, f)
             try:
                 util.copyfiles(src, dst)
             except OSError, inst:
