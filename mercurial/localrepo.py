@@ -1742,8 +1742,13 @@ class localrepository(repo.repository):
 
     def addchangegroup(self, source, srctype, url):
         """add changegroup to repo.
-        returns number of heads modified or added + 1."""
 
+        return values:
+        - nothing changed or no source: 0
+        - more heads than before: 1+added heads (2..n)
+        - less heads than before: -1-removed heads (-2..-n)
+        - number of heads stays the same: 1
+        """
         def csmap(x):
             self.ui.debug(_("add changeset %s\n") % short(x))
             return cl.count()
@@ -1836,7 +1841,11 @@ class localrepository(repo.repository):
                 self.hook("incoming", node=hex(self.changelog.node(i)),
                           source=srctype, url=url)
 
-        return newheads - oldheads + 1
+        # never return 0 here:
+        if newheads < oldheads:
+            return newheads - oldheads - 1
+        else:
+            return newheads - oldheads + 1
 
 
     def stream_in(self, remote):
