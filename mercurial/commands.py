@@ -2249,8 +2249,7 @@ def unbundle(ui, repo, fname, **opts):
     modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
     return postincoming(ui, repo, modheads, opts['update'])
 
-def update(ui, repo, node=None, merge=False, clean=False, force=None,
-           branch=None):
+def update(ui, repo, node=None, clean=False, branch=None):
     """update or merge working directory
 
     Update the working directory to the specified revision.
@@ -2695,10 +2694,8 @@ table = {
         (update,
          [('b', 'branch', '',
            _('checkout the head of a specific branch (DEPRECATED)')),
-          ('m', 'merge', None, _('allow merging of branches (DEPRECATED)')),
-          ('C', 'clean', None, _('overwrite locally modified files')),
-          ('f', 'force', None, _('force a merge with outstanding changes'))],
-         _('hg update [-C] [-f] [REV]')),
+          ('C', 'clean', None, _('overwrite locally modified files'))],
+         _('hg update [-C] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (version_, [], _('hg version')),
 }
