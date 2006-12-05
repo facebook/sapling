@@ -3,6 +3,7 @@ import sys, textwrap
 sys.path.insert(0, "..")
 from mercurial.commands import table, globalopts
 from mercurial.i18n import gettext as _
+from mercurial.help import helptable
 
 def get_desc(docstr):
     if not docstr:
@@ -87,6 +88,17 @@ def show_doc(ui):
             # aliases
             if d['aliases']:
                 ui.write(_("    aliases: %s\n\n") % " ".join(d['aliases']))
+
+    # print topics
+    for t in helptable:
+        l = t.split("|")
+        section = l[-1]
+        underlined(_(section).upper())
+        doc = helptable[t]
+        if callable(doc):
+            doc = doc()
+        ui.write(_(doc))
+        ui.write("\n")
 
 if __name__ == "__main__":
     show_doc(sys.stdout)
