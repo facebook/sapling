@@ -78,7 +78,7 @@ def stream_out(repo, fileobj):
     repo.ui.debug('scanning\n')
     entries = []
     total_bytes = 0
-    for name, size in walkrepo(repo.path):
+    for name, size in walkrepo(repo.spath):
         entries.append((name, size))
         total_bytes += size
     repolock.release()
@@ -89,7 +89,7 @@ def stream_out(repo, fileobj):
     for name, size in entries:
         repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
         fileobj.write('%s\0%d\n' % (name, size))
-        for chunk in util.filechunkiter(repo.opener(name), limit=size):
+        for chunk in util.filechunkiter(repo.sopener(name), limit=size):
             fileobj.write(chunk)
     flush = getattr(fileobj, 'flush', None)
     if flush: flush()

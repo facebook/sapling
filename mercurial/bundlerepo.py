@@ -199,8 +199,8 @@ class bundlerepository(localrepo.localrepository):
         else:
             raise util.Abort(_("%s: unknown bundle compression type")
                              % bundlename)
-        self.changelog = bundlechangelog(self.opener, self.bundlefile)
-        self.manifest = bundlemanifest(self.opener, self.bundlefile,
+        self.changelog = bundlechangelog(self.sopener, self.bundlefile)
+        self.manifest = bundlemanifest(self.sopener, self.bundlefile,
                                        self.changelog.rev)
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
@@ -223,10 +223,10 @@ class bundlerepository(localrepo.localrepository):
             f = f[1:]
         if f in self.bundlefilespos:
             self.bundlefile.seek(self.bundlefilespos[f])
-            return bundlefilelog(self.opener, f, self.bundlefile,
+            return bundlefilelog(self.sopener, f, self.bundlefile,
                                  self.changelog.rev)
         else:
-            return filelog.filelog(self.opener, f)
+            return filelog.filelog(self.sopener, f)
 
     def close(self):
         """Close assigned bundle file immediately."""
