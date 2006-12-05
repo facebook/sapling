@@ -150,7 +150,7 @@ def churn(ui, repo, **opts):
         amap = get_aliases(f)
         f.close()
 
-    revs = [int(r) for r in cmdutil.revrange(ui, repo, opts['rev'])]
+    revs = [int(r) for r in cmdutil.revrange(repo, opts['rev'])]
     revs.sort()
     stats = gather_stats(ui, repo, amap, revs, opts.get('progress'))
 
