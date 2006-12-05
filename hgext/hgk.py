@@ -285,7 +285,7 @@ def view(ui, repo, *etc, **opts):
     os.system(cmd)
 
 cmdtable = {
-    "view": (view,
+    "^view": (view,
              [('l', 'limit', '', 'limit number of changes displayed')],
              'hg view [-l LIMIT] [REVRANGE]'),
     "debug-diff-tree": (difftree, [('p', 'patch', None, 'generate patch'),
