@@ -25,7 +25,7 @@ def opener(base):
     """return a function that opens files over http"""
     p = base
     def o(path, mode="r"):
-        f = os.path.join(p, urllib.quote(path))
+        f = "/".join((p, urllib.quote(path)))
         return rangereader(f)
     return o
 
