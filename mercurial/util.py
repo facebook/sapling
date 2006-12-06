@@ -1061,18 +1061,20 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True):
 def strdate(string, format='%a %b %d %H:%M:%S %Y'):
     """parse a localized time string and return a (unixtime, offset) tuple.
     if the string cannot be parsed, ValueError is raised."""
-    def hastimezone(string):
-        return (string[-4:].isdigit() and
-               (string[-5] == '+' or string[-5] == '-') and
-               string[-6].isspace())
+    def timezone(string):
+        tz = string.split()[-1]
+        if tz[0] in "+-" and len(tz) == 5 and tz[1:].isdigit():
+            tz = int(tz)
+            offset = - 3600 * (tz / 100) - 60 * (tz % 100)
+            return offset
+        if tz == "GMT" or tz == "UTC":
+            return 0
+        return None
 
     # NOTE: unixtime = localunixtime + offset
-    if hastimezone(string):
-        date, tz = string[:-6], string[-5:]
-        tz = int(tz)
-        offset = - 3600 * (tz / 100) - 60 * (tz % 100)
-    else:
-        date, offset = string, None
+    offset, date = timezone(string), string
+    if offset != None:
+        date = " ".join(string.split()[:-1])
 
     # add missing elements
     if '%y' not in format.lower():
