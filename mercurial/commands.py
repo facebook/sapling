@@ -788,11 +788,17 @@ def debugdata(ui, file_, rev):
     except KeyError:
         raise util.Abort(_('invalid revision identifier %s') % rev)
 
-def debugdate(ui, date):
+def debugdate(ui, date, range=None, **opts):
     """parse and display a date"""
-    d = util.parsedate(date)
+    if opts["extended"]:
+        d = util.parsedate(date, util.extendeddateformats)
+    else:
+        d = util.parsedate(date)
     ui.write("internal: %s %s\n" % d)
     ui.write("standard: %s\n" % util.datestr(d))
+    if range:
+        m = util.matchdate(range)
+        ui.write("match: %s\n" % m(d[0]))
 
 def debugindex(ui, file_):
     """dump the contents of an index file"""
@@ -1521,6 +1527,11 @@ def log(ui, repo, *pats, **opts):
             return ncache[fn].get(dcache[1][fn])
         return None
 
+    df = False
+    if opts["date"]:
+        df = util.matchdate(opts["date"])
+
+
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     for st, rev, fns in changeiter:
         if st == 'add':
@@ -1531,6 +1542,11 @@ def log(ui, repo, *pats, **opts):
                 continue
             if opts['only_merges'] and len(parents) != 2:
                 continue
+
+            if df:
+                changes = get(rev)
+                if not df(changes[2][0]):
+                    continue
 
             if opts['keyword']:
                 changes = get(rev)
@@ -2483,7 +2499,9 @@ table = {
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
     "debugsetparents": (debugsetparents, [], _('debugsetparents REV1 [REV2]')),
     "debugstate": (debugstate, [], _('debugstate')),
-    "debugdate": (debugdate, [], _('debugdata DATE')),
+    "debugdate": (debugdate,
+                  [('e','extended', None, _('try extended date formats'))],
+                  _('debugdata [-e] DATE [RANGE]')),
     "debugdata": (debugdata, [], _('debugdata FILE REV')),
     "debugindex": (debugindex, [], _('debugindex FILE')),
     "debugindexdot": (debugindexdot, [], _('debugindexdot FILE')),
@@ -2578,6 +2596,7 @@ table = {
            _('follow changeset history, or file history across copies and renames')),
           ('', 'follow-first', None,
            _('only follow the first parent of merge changesets')),
+          ('d', 'date', '', _('show revs matching date spec')),
           ('C', 'copies', None, _('show copied files')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
