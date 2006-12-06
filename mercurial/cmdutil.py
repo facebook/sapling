@@ -554,6 +554,25 @@ def show_changeset(ui, repo, opts, buffered=False):
         return t
     return changeset_printer(ui, repo, patch, br, buffered)
 
+def finddate(ui, repo, date):
+    """Find the tipmost changeset that matches the given date spec"""
+    df = util.matchdate(date + " to " + date)
+    get = util.cachefunc(lambda r: repo.changectx(r).changeset())
+    changeiter, matchfn = walkchangerevs(ui, repo, [], get, {'rev':None})
+    results = {}
+    for st, rev, fns in changeiter:
+        if st == 'add':
+            d = get(rev)[2]
+            if df(d[0]):
+                results[rev] = d
+        elif st == 'iter':
+            if rev in results:
+                ui.status("Found revision %s from %s\n" %
+                          (rev, util.datestr(results[rev])))
+                return str(rev)
+
+    raise util.Abort(_("revision matching date not found"))
+
 def walkchangerevs(ui, repo, pats, change, opts):
     '''Iterate over files and the revs they changed in.
 

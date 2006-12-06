@@ -222,6 +222,7 @@ def backout(ui, repo, rev, **opts):
         parent = p1
     hg.clean(repo, node, show_stats=False)
     revert_opts = opts.copy()
+    revert_opts['date'] = None
     revert_opts['all'] = True
     revert_opts['rev'] = hex(parent)
     revert(ui, repo, **revert_opts)
@@ -1596,7 +1597,7 @@ def manifest(ui, repo, rev=None):
             ui.write("%3s " % (m.execf(f) and "755" or "644"))
         ui.write("%s\n" % f)
 
-def merge(ui, repo, node=None, force=None, branch=None):
+def merge(ui, repo, node=None, force=None, branch=None, date=None):
     """Merge working directory with another revision
 
     Merge the contents of the current working directory and the
@@ -1942,6 +1943,11 @@ def revert(ui, repo, *pats, **opts):
 
     If no arguments are given, no files are reverted.
     """
+
+    if opts["date"]:
+        if opts["rev"]:
+            raise util.Abort(_("you can't specify a revision and a date"))
+        opts["rev"] = cmdutil.finddate(ui, repo, opts["date"])
 
     if not pats and not opts['all']:
         raise util.Abort(_('no files or directories specified; '
@@ -2297,7 +2303,7 @@ def unbundle(ui, repo, fname, **opts):
     modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
     return postincoming(ui, repo, modheads, opts['update'])
 
-def update(ui, repo, node=None, clean=False, branch=None):
+def update(ui, repo, node=None, clean=False, branch=None, date=None):
     """update or merge working directory
 
     Update the working directory to the specified revision.
@@ -2312,6 +2318,11 @@ def update(ui, repo, node=None, clean=False, branch=None):
     By default, update will refuse to run if doing so would require
     merging or discarding local changes.
     """
+    if date:
+        if node:
+            raise util.Abort(_("you can't specify a revision and a date"))
+        node = cmdutil.finddate(ui, repo, date)
+
     node = _lookup(repo, node, branch)
     if clean:
         return hg.clean(repo, node)
@@ -2676,6 +2687,7 @@ table = {
     "^revert":
         (revert,
          [('a', 'all', None, _('revert all changes when no arguments given')),
+          ('d', 'date', '', _('tipmost revision matching date')),
           ('r', 'rev', '', _('revision to revert to')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
          ] + walkopts + dryrunopts,
@@ -2746,7 +2758,8 @@ table = {
         (update,
          [('b', 'branch', '',
            _('checkout the head of a specific branch (DEPRECATED)')),
-          ('C', 'clean', None, _('overwrite locally modified files'))],
+          ('C', 'clean', None, _('overwrite locally modified files')),
+          ('d', 'date', '', _('tipmost revision matching date'))],
          _('hg update [-C] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (version_, [], _('hg version')),
