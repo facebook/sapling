@@ -788,11 +788,17 @@ def debugdata(ui, file_, rev):
     except KeyError:
         raise util.Abort(_('invalid revision identifier %s') % rev)
 
-def debugdate(ui, date):
+def debugdate(ui, date, range=None, **opts):
     """parse and display a date"""
-    d = util.parsedate(date)
+    if opts["extended"]:
+        d = util.parsedate(date, util.extendeddateformats)
+    else:
+        d = util.parsedate(date)
     ui.write("internal: %s %s\n" % d)
     ui.write("standard: %s\n" % util.datestr(d))
+    if range:
+        m = util.matchdate(range)
+        ui.write("match: %s\n" % m(d[0]))
 
 def debugindex(ui, file_):
     """dump the contents of an index file"""
@@ -2483,7 +2489,9 @@ table = {
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
     "debugsetparents": (debugsetparents, [], _('debugsetparents REV1 [REV2]')),
     "debugstate": (debugstate, [], _('debugstate')),
-    "debugdate": (debugdate, [], _('debugdata DATE')),
+    "debugdate": (debugdate,
+                  [('e','extended', None, _('try extended date formats'))],
+                  _('debugdata [-e] DATE [RANGE]')),
     "debugdata": (debugdata, [], _('debugdata FILE REV')),
     "debugindex": (debugindex, [], _('debugindex FILE')),
     "debugindexdot": (debugindexdot, [], _('debugindexdot FILE')),

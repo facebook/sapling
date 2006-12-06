@@ -85,6 +85,8 @@ defaultdateformats = (
     '%a %b %d %H:%M:%S %Y',
     '%a %b %d %I:%M:%S%p %Y',
     '%b %d %H:%M:%S %Y',
+    '%b %d %I:%M:%S%p %Y',
+    '%b %d %H:%M:%S',
     '%b %d %I:%M:%S%p',
     '%b %d %H:%M',
     '%b %d %I:%M%p',
@@ -95,6 +97,13 @@ defaultdateformats = (
     '%H:%M',
     '%I:%M%p',
 )
+
+extendeddateformats = defaultdateformats + (
+    "%Y",
+    "%Y-%m",
+    "%b",
+    "%b %Y",
+    )
 
 class SignalInterrupt(Exception):
     """Exception raised on SIGTERM and SIGHUP."""
@@ -1058,7 +1067,7 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True):
         s += " %+03d%02d" % (-tz / 3600, ((-tz % 3600) / 60))
     return s
 
-def strdate(string, format='%a %b %d %H:%M:%S %Y'):
+def strdate(string, format, defaults):
     """parse a localized time string and return a (unixtime, offset) tuple.
     if the string cannot be parsed, ValueError is raised."""
     def timezone(string):
@@ -1076,16 +1085,12 @@ def strdate(string, format='%a %b %d %H:%M:%S %Y'):
     if offset != None:
         date = " ".join(string.split()[:-1])
 
-    # add missing elements
-    if '%y' not in format.lower():
-        date += "@" + datestr(makedate(), "%Y", False)
-        format += "@%Y"
-    if '%m' not in format and '%b' not in format:
-        date += "@" + datestr(makedate(), "%m", False)
-        format += "@%m"
-    if '%d' not in format:
-        date += "@" + datestr(makedate(), "%d", False)
-        format += "@%d"
+    # add missing elements from defaults
+    for part in defaults:
+        found = [True for p in part if ("%"+p) in format]
+        if not found:
+            date += "@" + defaults[part]
+            format += "@%" + part[0]
 
     timetuple = time.strptime(date, format)
     localunixtime = int(calendar.timegm(timetuple))
@@ -1097,7 +1102,7 @@ def strdate(string, format='%a %b %d %H:%M:%S %Y'):
         unixtime = localunixtime + offset
     return unixtime, offset
 
-def parsedate(string, formats=None):
+def parsedate(string, formats=None, defaults=None):
     """parse a localized time string and return a (unixtime, offset) tuple.
     The date may be a "unixtime offset" string or in one of the specified
     formats."""
@@ -1109,9 +1114,22 @@ def parsedate(string, formats=None):
     try:
         when, offset = map(int, string.split(' '))
     except ValueError:
+        # fill out defaults
+        if not defaults:
+            defaults = {}
+        now = makedate()
+        for part in "d mb yY HI M S".split():
+            if part not in defaults:
+                if part[0] in "HMS":
+                    defaults[part] = "00"
+                elif part[0] in "dm":
+                    defaults[part] = "1"
+                else:
+                    defaults[part] = datestr(now, "%" + part[0], False)
+
         for format in formats:
             try:
-                when, offset = strdate(string, format)
+                when, offset = strdate(string, format, defaults)
             except ValueError:
                 pass
             else:
@@ -1127,6 +1145,54 @@ def parsedate(string, formats=None):
     if offset < -50400 or offset > 43200:
         raise Abort(_('impossible time zone offset: %d') % offset)
     return when, offset
+
+def matchdate(date):
+    """Return a function that matches a given date match specifier
+
+    Formats include:
+
+    '{date}' match a given date to the accuracy provided
+
+    '<{date}' on or before a given date
+
+    '>{date}' on or after a given date
+
+    """
+
+    def lower(date):
+        return parsedate(date, extendeddateformats)[0]
+
+    def upper(date):
+        d = dict(mb="12", HI="23", M="59", S="59")
+        for days in "31 30 29".split():
+            try:
+                d["d"] = days
+                return parsedate(date, extendeddateformats, d)[0]
+            except:
+                pass
+        d["d"] = "28"
+        return parsedate(date, extendeddateformats, d)[0]
+
+    if date[0] == "<":
+        when = upper(date[1:])
+        return lambda x: x <= when
+    elif date[0] == ">":
+        when = lower(date[1:])
+        return lambda x: x >= when
+    elif date[0] == "-":
+        try:
+            days = int(date[1:])
+        except ValueError:
+            raise Abort(_("invalid day spec: %s") % date[1:])
+        when = makedate()[0] - days * 3600 * 24
+        return lambda x: x <= when
+    elif " to " in date:
+        a, b = date.split(" to ")
+        start, stop = lower(a), upper(b)
+        return lambda x: x >= start and x <= stop
+    else:
+        start, stop = lower(date), upper(date)
+        return lambda x: x >= start and x <= stop
 
 def shortuser(user):
     """Return a short representation of a user name or email address."""
