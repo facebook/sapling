@@ -1597,7 +1597,7 @@ def manifest(ui, repo, rev=None):
             ui.write("%3s " % (m.execf(f) and "755" or "644"))
         ui.write("%s\n" % f)
 
-def merge(ui, repo, node=None, force=None, branch=None, date=None):
+def merge(ui, repo, node=None, force=None, branch=None):
     """Merge working directory with another revision
 
     Merge the contents of the current working directory and the
