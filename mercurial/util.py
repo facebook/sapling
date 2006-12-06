@@ -1066,6 +1066,8 @@ def parsedate(string, formats=None):
     """parse a localized time string and return a (unixtime, offset) tuple.
     The date may be a "unixtime offset" string or in one of the specified
     formats."""
+    if not string:
+        return 0, 0
     if not formats:
         formats = defaultdateformats
     try:
