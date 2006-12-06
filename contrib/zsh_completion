@@ -619,7 +619,6 @@ _hg_cmd_unbundle() {
 _hg_cmd_update() {
   _arguments -s -w : $_hg_global_opts \
   '(--clean -C)'{-C,--clean}'[overwrite locally modified files]' \
-  '(--force -f)'{-f,--force}'[force a merge with outstanding changes]' \
   ':revision:_hg_tags'
 }
 
