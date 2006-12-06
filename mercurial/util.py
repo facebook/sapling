@@ -72,8 +72,29 @@ def localsub(s, a, b=None):
         raise Abort("decoding near '%s': %s!\n" % (sub, inst))
 
 # used by parsedate
-defaultdateformats = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
-                      '%a %b %d %H:%M:%S %Y')
+defaultdateformats = (
+    '%Y-%m-%d %H:%M:%S',
+    '%Y-%m-%d %I:%M:%S%p',
+    '%Y-%m-%d %H:%M',
+    '%Y-%m-%d %I:%M%p',
+    '%Y-%m-%d',
+    '%m-%d',
+    '%m/%d',
+    '%m/%d/%y',
+    '%m/%d/%Y',
+    '%a %b %d %H:%M:%S %Y',
+    '%a %b %d %I:%M:%S%p %Y',
+    '%b %d %H:%M:%S %Y',
+    '%b %d %I:%M:%S%p',
+    '%b %d %H:%M',
+    '%b %d %I:%M%p',
+    '%b %d %Y',
+    '%b %d',
+    '%H:%M:%S',
+    '%I:%M:%SP',
+    '%H:%M',
+    '%I:%M%p',
+)
 
 class SignalInterrupt(Exception):
     """Exception raised on SIGTERM and SIGHUP."""
@@ -1052,6 +1073,18 @@ def strdate(string, format='%a %b %d %H:%M:%S %Y'):
         offset = - 3600 * (tz / 100) - 60 * (tz % 100)
     else:
         date, offset = string, None
+
+    # add missing elements
+    if '%y' not in format.lower():
+        date += "@" + datestr(makedate(), "%Y", False)
+        format += "@%Y"
+    if '%m' not in format and '%b' not in format:
+        date += "@" + datestr(makedate(), "%m", False)
+        format += "@%m"
+    if '%d' not in format:
+        date += "@" + datestr(makedate(), "%d", False)
+        format += "@%d"
+
     timetuple = time.strptime(date, format)
     localunixtime = int(calendar.timegm(timetuple))
     if offset is None:
@@ -1070,6 +1103,7 @@ def parsedate(string, formats=None):
         return 0, 0
     if not formats:
         formats = defaultdateformats
+    string = string.strip()
     try:
         when, offset = map(int, string.split(' '))
     except ValueError:
