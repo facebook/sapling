@@ -178,7 +178,7 @@ _hg_files() {
 }
 
 _hg_status() {
-  status_files=(${(ps:\0:)"$(_hg_cmd status -0n$1 . 2>/dev/null)"})
+  status_files=(${(ps:\0:)"$(_hg_cmd status -0n$1 ./$PREFIX 2>/dev/null)"})
 }
 
 _hg_unknown() {
