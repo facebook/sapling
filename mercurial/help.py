@@ -9,37 +9,31 @@ helptable = {
     "dates|Date Formats":
     r'''
     Some commands (backout, commit, tag) allow the user to specify a date.
-    Possible formats for dates are:
+    Many date formats are acceptible. Here are some examples:
 
-YYYY-mm-dd \HH:MM[:SS] [(+|-)NNNN]::
-    This is a subset of ISO 8601, allowing just the recommended notations
-    for date and time. The last part represents the timezone; if omitted,
-    local time is assumed. Examples:
+    "Wed Dec 6 13:18:29 2006" (local timezone assumed)
+    "Dec 6 13:18 -0600" (year assumed, time offset provided)
+    "Dec 6 13:18 UTC" (UTC and GMT are aliases for +0000)
+    "Dec 6" (midnight)
+    "13:18" (today assumed)
+    "3:39" (3:39AM assumed)
+    "3:39pm" (15:39)
+    "2006-12-6 13:18:29" (ISO 8601 format)
+    "2006-12-6 13:18"
+    "2006-12-6"
+    "12-6"
+    "12/6"
+    "12/6/6" (Dec 6 2006)
+    "" (Jan 1 00:00:00 1970 UTC)
 
-    "2005-08-22 03:27 -0700"
+    Lastly, there is Mercurial's internal format:
 
-    "2006-04-19 21:39:51"
+    "1165432709 0" (Wed Dec 6 13:18:29 2006 UTC)
 
-aaa bbb dd HH:MM:SS YYYY [(+|-)NNNN]::
-    This is the date format used by the C library. Here, aaa stands for
-    abbreviated weekday name and bbb for abbreviated month name. The last
-    part represents the timezone; if omitted, local time is assumed.
-    Examples:
-
-    "Mon Aug 22 03:27:00 2005 -0700"
-
-    "Wed Apr 19 21:39:51 2006"
-
-unixtime offset::
     This is the internal representation format for dates. unixtime is
     the number of seconds since the epoch (1970-01-01 00:00 UTC). offset
     is the offset of the local timezone, in seconds west of UTC (negative
     if the timezone is east of UTC).
-    Examples:
-
-    "1124706420 25200" (2005-08-22 03:27:00 -0700)
-
-    "1145475591 -7200" (2006-04-19 21:39:51 +0200)
     ''',
 
     'environment|env|Environment Variables':

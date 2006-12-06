@@ -72,8 +72,29 @@ def localsub(s, a, b=None):
         raise Abort("decoding near '%s': %s!\n" % (sub, inst))
 
 # used by parsedate
-defaultdateformats = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
-                      '%a %b %d %H:%M:%S %Y')
+defaultdateformats = (
+    '%Y-%m-%d %H:%M:%S',
+    '%Y-%m-%d %I:%M:%S%p',
+    '%Y-%m-%d %H:%M',
+    '%Y-%m-%d %I:%M%p',
+    '%Y-%m-%d',
+    '%m-%d',
+    '%m/%d',
+    '%m/%d/%y',
+    '%m/%d/%Y',
+    '%a %b %d %H:%M:%S %Y',
+    '%a %b %d %I:%M:%S%p %Y',
+    '%b %d %H:%M:%S %Y',
+    '%b %d %I:%M:%S%p',
+    '%b %d %H:%M',
+    '%b %d %I:%M%p',
+    '%b %d %Y',
+    '%b %d',
+    '%H:%M:%S',
+    '%I:%M:%SP',
+    '%H:%M',
+    '%I:%M%p',
+)
 
 class SignalInterrupt(Exception):
     """Exception raised on SIGTERM and SIGHUP."""
@@ -1040,18 +1061,32 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True):
 def strdate(string, format='%a %b %d %H:%M:%S %Y'):
     """parse a localized time string and return a (unixtime, offset) tuple.
     if the string cannot be parsed, ValueError is raised."""
-    def hastimezone(string):
-        return (string[-4:].isdigit() and
-               (string[-5] == '+' or string[-5] == '-') and
-               string[-6].isspace())
+    def timezone(string):
+        tz = string.split()[-1]
+        if tz[0] in "+-" and len(tz) == 5 and tz[1:].isdigit():
+            tz = int(tz)
+            offset = - 3600 * (tz / 100) - 60 * (tz % 100)
+            return offset
+        if tz == "GMT" or tz == "UTC":
+            return 0
+        return None
 
     # NOTE: unixtime = localunixtime + offset
-    if hastimezone(string):
-        date, tz = string[:-6], string[-5:]
-        tz = int(tz)
-        offset = - 3600 * (tz / 100) - 60 * (tz % 100)
-    else:
-        date, offset = string, None
+    offset, date = timezone(string), string
+    if offset != None:
+        date = " ".join(string.split()[:-1])
+
+    # add missing elements
+    if '%y' not in format.lower():
+        date += "@" + datestr(makedate(), "%Y", False)
+        format += "@%Y"
+    if '%m' not in format and '%b' not in format:
+        date += "@" + datestr(makedate(), "%m", False)
+        format += "@%m"
+    if '%d' not in format:
+        date += "@" + datestr(makedate(), "%d", False)
+        format += "@%d"
+
     timetuple = time.strptime(date, format)
     localunixtime = int(calendar.timegm(timetuple))
     if offset is None:
@@ -1066,8 +1101,11 @@ def parsedate(string, formats=None):
     """parse a localized time string and return a (unixtime, offset) tuple.
     The date may be a "unixtime offset" string or in one of the specified
     formats."""
+    if not string:
+        return 0, 0
     if not formats:
         formats = defaultdateformats
+    string = string.strip()
     try:
         when, offset = map(int, string.split(' '))
     except ValueError:
@@ -1079,17 +1117,15 @@ def parsedate(string, formats=None):
             else:
                 break
         else:
-            raise ValueError(_('invalid date: %r '
-                               'see hg(1) manual page for details')
-                             % string)
+            raise Abort(_('invalid date: %r ') % string)
     # validate explicit (probably user-specified) date and
     # time zone offset. values must fit in signed 32 bits for
     # current 32-bit linux runtimes. timezones go from UTC-12
     # to UTC+14
     if abs(when) > 0x7fffffff:
-        raise ValueError(_('date exceeds 32 bits: %d') % when)
+        raise Abort(_('date exceeds 32 bits: %d') % when)
     if offset < -50400 or offset > 43200:
-        raise ValueError(_('impossible time zone offset: %d') % offset)
+        raise Abort(_('impossible time zone offset: %d') % offset)
     return when, offset
 
 def shortuser(user):
