@@ -1527,6 +1527,11 @@ def log(ui, repo, *pats, **opts):
             return ncache[fn].get(dcache[1][fn])
         return None
 
+    df = False
+    if opts["date"]:
+        df = util.matchdate(opts["date"])
+
+
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     for st, rev, fns in changeiter:
         if st == 'add':
@@ -1537,6 +1542,11 @@ def log(ui, repo, *pats, **opts):
                 continue
             if opts['only_merges'] and len(parents) != 2:
                 continue
+
+            if df:
+                changes = get(rev)
+                if not df(changes[2][0]):
+                    continue
 
             if opts['keyword']:
                 changes = get(rev)
@@ -2586,6 +2596,7 @@ table = {
            _('follow changeset history, or file history across copies and renames')),
           ('', 'follow-first', None,
            _('only follow the first parent of merge changesets')),
+          ('d', 'date', '', _('show revs matching date spec')),
           ('C', 'copies', None, _('show copied files')),
           ('k', 'keyword', [], _('search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),

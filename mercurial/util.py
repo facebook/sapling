@@ -1185,7 +1185,7 @@ def matchdate(date):
         except ValueError:
             raise Abort(_("invalid day spec: %s") % date[1:])
         when = makedate()[0] - days * 3600 * 24
-        return lambda x: x <= when
+        return lambda x: x >= when
     elif " to " in date:
         a, b = date.split(" to ")
         start, stop = lower(a), upper(b)
