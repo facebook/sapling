@@ -1079,17 +1079,15 @@ def parsedate(string, formats=None):
             else:
                 break
         else:
-            raise ValueError(_('invalid date: %r '
-                               'see hg(1) manual page for details')
-                             % string)
+            raise Abort(_('invalid date: %r ') % string)
     # validate explicit (probably user-specified) date and
     # time zone offset. values must fit in signed 32 bits for
     # current 32-bit linux runtimes. timezones go from UTC-12
     # to UTC+14
     if abs(when) > 0x7fffffff:
-        raise ValueError(_('date exceeds 32 bits: %d') % when)
+        raise Abort(_('date exceeds 32 bits: %d') % when)
     if offset < -50400 or offset > 43200:
-        raise ValueError(_('impossible time zone offset: %d') % offset)
+        raise Abort(_('impossible time zone offset: %d') % offset)
     return when, offset
 
 def shortuser(user):
