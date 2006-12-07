@@ -18,7 +18,7 @@ def revpair(repo, revs):
     be None, meaning use working dir.'''
 
     def revfix(repo, val, defval):
-        if not val and val != 0:
+        if not val and val != 0 and defval is not None:
             val = defval
         return repo.lookup(val)
 

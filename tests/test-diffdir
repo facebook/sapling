@@ -13,3 +13,8 @@ hg diff --nodates -r tip
 
 echo foo > a
 hg diff --nodates
+
+hg diff -r ""
+hg diff -r tip -r ""
+
+true
