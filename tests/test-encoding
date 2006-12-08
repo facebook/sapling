@@ -25,6 +25,9 @@ echo "utf-8" > a
 HGENCODING=utf-8 hg ci -l utf-8 -d "0 0"
 
 HGENCODING=latin-1 hg tag -d "0 0" `cat latin-1-tag`
+cp latin-1-tag .hg/branch
+HGENCODING=latin-1 hg ci -d "0 0" -m 'latin1 branch'
+rm .hg/branch
 
 echo % ascii
 hg --encoding ascii log
@@ -38,3 +41,9 @@ echo % latin-1
 HGENCODING=latin-1 hg tags
 echo % utf-8
 HGENCODING=utf-8 hg tags
+echo % ascii
+HGENCODING=ascii hg branches
+echo % latin-1
+HGENCODING=latin-1 hg branches
+echo % utf-8
+HGENCODING=utf-8 hg branches
