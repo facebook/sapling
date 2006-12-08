@@ -57,7 +57,8 @@ def add(ui, repo, *pats, **opts):
 
     Schedule files to be version controlled and added to the repository.
 
-    The files will be added to the repository at the next commit.
+    The files will be added to the repository at the next commit. To
+    undo an add before that, see hg revert.
 
     If no names are given, add all files in the repository.
     """
@@ -650,7 +651,8 @@ def copy(ui, repo, *pats, **opts):
     stand in the working directory.  If invoked with --after, the
     operation is recorded, but no copying is performed.
 
-    This command takes effect in the next commit.
+    This command takes effect in the next commit. To undo a copy
+    before that, see hg revert.
     """
     wlock = repo.wlock(0)
     errs, copied = docopy(ui, repo, pats, opts, wlock)
@@ -1861,11 +1863,13 @@ def remove(ui, repo, *pats, **opts):
 
     Schedule the indicated files for removal from the repository.
 
-    This command schedules the files to be removed at the next commit.
     This only removes files from the current branch, not from the
     entire project history.  If the files still exist in the working
     directory, they will be deleted from it.  If invoked with --after,
     files that have been manually deleted are marked as removed.
+
+    This command schedules the files to be removed at the next commit.
+    To undo a remove before that, see hg revert.
 
     Modified files and added files are not removed by default.  To
     remove them, use the -f/--force option.
@@ -1914,7 +1918,8 @@ def rename(ui, repo, *pats, **opts):
     stand in the working directory.  If invoked with --after, the
     operation is recorded, but no copying is performed.
 
-    This command takes effect in the next commit.
+    This command takes effect in the next commit. To undo a rename
+    before that, see hg revert.
     """
     wlock = repo.wlock(0)
     errs, copied = docopy(ui, repo, pats, opts, wlock)
@@ -1933,8 +1938,9 @@ def revert(ui, repo, *pats, **opts):
     With no revision specified, revert the named files or directories
     to the contents they had in the parent of the working directory.
     This restores the contents of the affected files to an unmodified
-    state.  If the working directory has two parents, you must
-    explicitly specify the revision to revert to.
+    state and unschedules adds, removes, copies, and renames. If the
+    working directory has two parents, you must explicitly specify the
+    revision to revert to.
 
     Modified files are saved with a .orig suffix before reverting.
     To disable these backups, use --no-backup.
