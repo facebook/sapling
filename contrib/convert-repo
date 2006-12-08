@@ -21,7 +21,19 @@
 # interrupted and can be run repeatedly to copy new commits.
 
 import sys, os, zlib, sha, time
+
+os.environ["HGENCODING"] = "utf-8"
+
 from mercurial import hg, ui, util
+
+def recode(s):
+    try:
+        return s.decode("utf-8").encode("utf-8")
+    except:
+        try:
+            return s.decode("latin-1").encode("utf-8")
+        except:
+            return s.decode("utf-8", "replace").encode("utf-8")
 
 class convert_git:
     def __init__(self, path):
@@ -55,6 +67,7 @@ class convert_git:
         c = self.catfile(version, "commit") # read the commit hash
         end = c.find("\n\n")
         message = c[end+2:]
+        message = recode(message)
         l = c[:end].splitlines()
         manifest = l[0].split()[1]
         parents = []
@@ -65,11 +78,13 @@ class convert_git:
                 tm, tz = p[-2:]
                 author = " ".join(p[:-2])
                 if author[0] == "<": author = author[1:-1]
+                author = recode(author)
             if n == "committer":
                 p = v.split()
                 tm, tz = p[-2:]
                 committer = " ".join(p[:-2])
                 if committer[0] == "<": committer = committer[1:-1]
+                committer = recode(committer)
                 message += "\ncommitter: %s\n" % v
             if n == "parent": parents.append(v)
 
