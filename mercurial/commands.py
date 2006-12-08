@@ -856,6 +856,10 @@ def diff(ui, repo, *pats, **opts):
 
     Differences between files are shown using the unified diff format.
 
+    NOTE: diff may generate unexpected results for merges, as it will
+    default to comparing against the working directory's first parent
+    changeset if no revisions are specified.
+
     When two revision arguments are given, then changes are shown
     between those revisions. If only one revision is specified then
     that revision is compared to the working directory, and, when no
@@ -879,7 +883,10 @@ def export(ui, repo, *changesets, **opts):
     Print the changeset header and diffs for one or more revisions.
 
     The information shown in the changeset header is: author,
-    changeset hash, parent and commit comment.
+    changeset hash, parent(s) and commit comment.
+
+    NOTE: export may generate unexpected diff output for merge changesets,
+    as it will compare the merge changeset against its first parent only.
 
     Output may be to a file, in which case the name of the file is
     given using a format string.  The formatting rules are as follows:
@@ -1477,6 +1484,12 @@ def log(ui, repo, *pats, **opts):
     non-trivial parents, user, date and time, and a summary for each
     commit. When the -v/--verbose switch is used, the list of changed
     files and full commit message is shown.
+
+    NOTE: log -p may generate unexpected diff output for merge
+    changesets, as it will compare the merge changeset against its
+    first parent only. Also, the files: list will only reflect files
+    that are different from BOTH parents.
+
     """
 
     get = util.cachefunc(lambda r: repo.changectx(r).changeset())
@@ -2173,6 +2186,11 @@ def status(ui, repo, *pats, **opts):
     Show status of files in the repository.  If names are given, only
     files that match are shown.  Files that are clean or ignored, are
     not listed unless -c (clean), -i (ignored) or -A is given.
+
+    NOTE: status may appear to disagree with diff if permissions have
+    changed or a merge has occurred. The standard diff format does not
+    report permission changes and diff only reports changes relative
+    to one merge parent.
 
     If one revision is given, it is used as the base revision.
     If two revisions are given, the difference between them is shown.
