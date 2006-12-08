@@ -136,7 +136,8 @@ add the specified files on the next commit
 
     Schedule files to be version controlled and added to the repository.
 
-    The files will be added to the repository at the next commit.
+    The files will be added to the repository at the next commit. To
+    undo an add before that, see hg revert.
 
     If no names are given, add all files in the repository.
 
@@ -152,7 +153,8 @@ add the specified files on the next commit
 
     Schedule files to be version controlled and added to the repository.
 
-    The files will be added to the repository at the next commit.
+    The files will be added to the repository at the next commit. To
+    undo an add before that, see hg revert.
 
     If no names are given, add all files in the repository.
 
@@ -168,6 +170,10 @@ diff repository (or selected files)
     Show differences between revisions for the specified files.
 
     Differences between files are shown using the unified diff format.
+
+    NOTE: diff may generate unexpected results for merges, as it will
+    default to comparing against the working directory's first parent
+    changeset if no revisions are specified.
 
     When two revision arguments are given, then changes are shown
     between those revisions. If only one revision is specified then
@@ -198,6 +204,11 @@ show changed files in the working directory
     Show status of files in the repository.  If names are given, only
     files that match are shown.  Files that are clean or ignored, are
     not listed unless -c (clean), -i (ignored) or -A is given.
+
+    NOTE: status may appear to disagree with diff if permissions have
+    changed or a merge has occurred. The standard diff format does not
+    report permission changes and diff only reports changes relative
+    to one merge parent.
 
     If one revision is given, it is used as the base revision.
     If two revisions are given, the difference between them is shown.

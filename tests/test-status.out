@@ -118,6 +118,11 @@ show changed files in the working directory
     files that match are shown.  Files that are clean or ignored, are
     not listed unless -c (clean), -i (ignored) or -A is given.
 
+    NOTE: status may appear to disagree with diff if permissions have
+    changed or a merge has occurred. The standard diff format does not
+    report permission changes and diff only reports changes relative
+    to one merge parent.
+
     If one revision is given, it is used as the base revision.
     If two revisions are given, the difference between them is shown.
 
