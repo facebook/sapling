@@ -2043,13 +2043,10 @@ def reposetup(ui, repo):
 
             return tagscache
 
-        def branchtags(self):
-            if self.branchcache != None:
-                return self.branchcache
-
+        def _branchtags(self):
             q = self.mq
             if not q.applied:
-                return super(mqrepo, self).branchtags()
+                return super(mqrepo, self)._branchtags()
 
             self.branchcache = {} # avoid recursion in changectx
             cl = self.changelog
@@ -2069,8 +2066,7 @@ def reposetup(ui, repo):
             # update the cache up to the tip
             self._updatebranchcache(partial, start, cl.count())
 
-            self.branchcache = partial
-            return self.branchcache
+            return partial
 
     if repo.local():
         repo.__class__ = mqrepo

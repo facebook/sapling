@@ -2437,10 +2437,7 @@ walkopts = [
 ]
 
 table = {
-    "^add":
-        (add,
-         walkopts + dryrunopts,
-         _('hg add [OPTION]... [FILE]...')),
+    "^add": (add, walkopts + dryrunopts, _('hg add [OPTION]... [FILE]...')),
     "addremove":
         (addremove,
          [('s', 'similarity', '',
@@ -2534,15 +2531,15 @@ table = {
     "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
     "debugsetparents": (debugsetparents, [], _('debugsetparents REV1 [REV2]')),
     "debugstate": (debugstate, [], _('debugstate')),
-    "debugdate": (debugdate,
-                  [('e','extended', None, _('try extended date formats'))],
-                  _('debugdata [-e] DATE [RANGE]')),
+    "debugdate":
+        (debugdate,
+         [('e', 'extended', None, _('try extended date formats'))],
+         _('debugdate [-e] DATE [RANGE]')),
     "debugdata": (debugdata, [], _('debugdata FILE REV')),
     "debugindex": (debugindex, [], _('debugindex FILE')),
     "debugindexdot": (debugindexdot, [], _('debugindexdot FILE')),
     "debugrename": (debugrename, [], _('debugrename FILE [REV]')),
-    "debugwalk":
-        (debugwalk, walkopts, _('debugwalk [OPTION]... [FILE]...')),
+    "debugwalk": (debugwalk, walkopts, _('debugwalk [OPTION]... [FILE]...')),
     "^diff":
         (diff,
          [('r', 'rev', [], _('revision')),

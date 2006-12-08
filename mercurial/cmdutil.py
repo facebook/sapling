@@ -18,7 +18,7 @@ def revpair(repo, revs):
     be None, meaning use working dir.'''
 
     def revfix(repo, val, defval):
-        if not val and val != 0:
+        if not val and val != 0 and defval is not None:
             val = defval
         return repo.lookup(val)
 
@@ -261,6 +261,7 @@ class changeset_printer(object):
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
 
         if branch:
+            branch = util.tolocal(branch)
             self.ui.write(_("branch:      %s\n") % branch)
         for tag in self.repo.nodetags(changenode):
             self.ui.write(_("tag:         %s\n") % tag)
@@ -404,6 +405,7 @@ class changeset_templater(changeset_printer):
         def showbranches(**args):
             branch = changes[5].get("branch")
             if branch:
+                branch = util.tolocal(branch)
                 return showlist('branch', [branch], plural='branches', **args)
             # add old style branches if requested
             if self.brinfo:
