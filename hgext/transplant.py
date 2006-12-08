@@ -178,8 +178,7 @@ class transplanter:
         fp.write("# HG changeset patch\n")
         fp.write("# User %s\n" % user)
         fp.write("# Date %d %d\n" % date)
-        fp.write(changelog[4].rstrip())
-        fp.write("\n\n")
+        fp.write(changelog[4])
         fp.close()
 
         try:
