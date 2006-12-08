@@ -384,7 +384,10 @@ class workingctx(changectx):
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
                 man[f] = man.get(copied.get(f, f), nullid) + i
-                man.set(f, util.is_exec(self._repo.wjoin(f), man.execf(f)))
+                try:
+                    man.set(f, util.is_exec(self._repo.wjoin(f), man.execf(f)))
+                except OSError:
+                    pass
 
         for f in deleted + removed:
             if f in man:
