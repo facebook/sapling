@@ -35,8 +35,5 @@ hg status modified added removed deleted unknown never-existed ignored
 hg copy modified copied
 echo "hg status -C:"
 hg status -C
-
-echo "hg status -t:"
-hg status -t
 echo "hg status -A:"
 hg status -A
