@@ -15,153 +15,153 @@ transaction abort!
 rollback completed
 % these should work
 % ascii
-changeset:   5:e4ed49b8a8f0
+changeset:   5:db5520b4645f
 branch:      ?
 tag:         tip
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin1 branch
 
-changeset:   4:a02ca5a58e99
+changeset:   4:9cff3c980b58
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     Added tag ? for changeset d47908dab82f
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     Added tag ? for changeset 770b9b11621d
 
-changeset:   3:d47908dab82f
+changeset:   3:770b9b11621d
 tag:         ?
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     utf-8 e' encoded: ?
 
-changeset:   2:9db1985f3097
+changeset:   2:0572af48b948
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e' encoded: ?
 
-changeset:   1:af6e0db4427c
+changeset:   1:0e5b7e3f9c4a
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     euc-jp: ?????? = u'\u65e5\u672c\u8a9e'
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     koi8-r: ????? = u'\u0440\u0442\u0443\u0442\u044c'
 
-changeset:   0:60aad1dd20a9
+changeset:   0:1e78a93102a3
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     latin-1 e': ?
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     latin-1 e': ? = u'\xe9'
 
 % latin-1
-changeset:   5:e4ed49b8a8f0
+changeset:   5:db5520b4645f
 branch:      é
 tag:         tip
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin1 branch
 
-changeset:   4:a02ca5a58e99
+changeset:   4:9cff3c980b58
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     Added tag é for changeset d47908dab82f
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     Added tag é for changeset 770b9b11621d
 
-changeset:   3:d47908dab82f
+changeset:   3:770b9b11621d
 tag:         é
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     utf-8 e' encoded: é
 
-changeset:   2:9db1985f3097
+changeset:   2:0572af48b948
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e' encoded: é
 
-changeset:   1:af6e0db4427c
+changeset:   1:0e5b7e3f9c4a
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     euc-jp: ÆüËÜ¸ì = u'\u65e5\u672c\u8a9e'
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     koi8-r: ÒÔÕÔØ = u'\u0440\u0442\u0443\u0442\u044c'
 
-changeset:   0:60aad1dd20a9
+changeset:   0:1e78a93102a3
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     latin-1 e': é
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     latin-1 e': é = u'\xe9'
 
 % utf-8
-changeset:   5:e4ed49b8a8f0
+changeset:   5:db5520b4645f
 branch:      Ã©
 tag:         tip
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin1 branch
 
-changeset:   4:a02ca5a58e99
+changeset:   4:9cff3c980b58
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     Added tag Ã© for changeset d47908dab82f
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     Added tag Ã© for changeset 770b9b11621d
 
-changeset:   3:d47908dab82f
+changeset:   3:770b9b11621d
 tag:         Ã©
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     utf-8 e' encoded: Ã©
 
-changeset:   2:9db1985f3097
+changeset:   2:0572af48b948
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e' encoded: Ã©
 
-changeset:   1:af6e0db4427c
+changeset:   1:0e5b7e3f9c4a
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     euc-jp: Ã†Ã¼Ã‹ÃœÂ¸Ã¬ = u'\u65e5\u672c\u8a9e'
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     koi8-r: Ã’Ã”Ã•Ã”Ã˜ = u'\u0440\u0442\u0443\u0442\u044c'
 
-changeset:   0:60aad1dd20a9
+changeset:   0:1e78a93102a3
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     latin-1 e': Ã©
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     latin-1 e': Ã© = u'\xe9'
 
 % ascii
-tip                                5:e4ed49b8a8f0
-?                                  3:d47908dab82f
+tip                                5:db5520b4645f
+?                                  3:770b9b11621d
 % latin-1
-tip                                5:e4ed49b8a8f0
-é                                  3:d47908dab82f
+tip                                5:db5520b4645f
+é                                  3:770b9b11621d
 % utf-8
-tip                                5:e4ed49b8a8f0
-Ã©                                  3:d47908dab82f
+tip                                5:db5520b4645f
+Ã©                                  3:770b9b11621d
 % ascii
-?                              5:e4ed49b8a8f0
+?                              5:db5520b4645f
 % latin-1
-é                              5:e4ed49b8a8f0
+é                              5:db5520b4645f
 % utf-8
-Ã©                              5:e4ed49b8a8f0
+Ã©                              5:db5520b4645f
 % utf-8
-changeset:   5:e4ed49b8a8f0
+changeset:   5:db5520b4645f
 branch:      Ã©
 tag:         tip
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin1 branch
 
-changeset:   4:a02ca5a58e99
+changeset:   4:9cff3c980b58
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     Added tag Ã© for changeset d47908dab82f
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     Added tag Ã© for changeset 770b9b11621d
 
-changeset:   3:d47908dab82f
+changeset:   3:770b9b11621d
 tag:         Ã©
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     utf-8 e' encoded: Ã©
 
-changeset:   2:9db1985f3097
+changeset:   2:0572af48b948
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
+date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e' encoded: Ã©
 
-changeset:   1:af6e0db4427c
+changeset:   1:0e5b7e3f9c4a
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     euc-jp: æ—¥æœ¬èªž = u'\u65e5\u672c\u8a9e'
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     koi8-r: Ñ€Ñ‚ÑƒÑ‚ÑŒ = u'\u0440\u0442\u0443\u0442\u044c'
 
-changeset:   0:60aad1dd20a9
+changeset:   0:1e78a93102a3
 user:        test
-date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     latin-1 e': ï¿½
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     latin-1 e': Ð˜ = u'\xe9'
 
