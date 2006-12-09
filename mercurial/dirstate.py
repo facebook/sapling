@@ -286,13 +286,11 @@ class dirstate(object):
 
     def rebuild(self, parent, files):
         self.clear()
-        umask = os.umask(0)
-        os.umask(umask)
         for f in files:
             if files.execf(f):
-                self.map[f] = ('n', ~umask, -1, 0)
+                self.map[f] = ('n', 0777, -1, 0)
             else:
-                self.map[f] = ('n', ~umask & 0666, -1, 0)
+                self.map[f] = ('n', 0666, -1, 0)
         self.pl = (parent, nullid)
         self.markdirty()
 
