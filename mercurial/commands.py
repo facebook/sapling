@@ -1548,7 +1548,7 @@ def log(ui, repo, *pats, **opts):
         df = util.matchdate(opts["date"])
 
 
-    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
+    displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
     for st, rev, fns in changeiter:
         if st == 'add':
             changenode = repo.changelog.node(rev)

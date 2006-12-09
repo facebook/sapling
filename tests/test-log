@@ -14,6 +14,8 @@ hg mv b dir
 hg ci -mc -d '3 0'
 
 hg mv a b
+echo a > d
+hg add d
 hg ci -md -d '4 0'
 
 hg mv dir/b e
@@ -38,6 +40,9 @@ hg mv dir/b e
 echo foo > foo
 hg ci -Ame2 -d '6 0'
 hg log -vC --template '{rev} {file_copies%filecopy}\n' -r 5
+
+echo '% log -p d'
+hg log -pv d
 
 # log --follow tests
 hg init ../follow

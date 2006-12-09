@@ -314,7 +314,7 @@ class changeset_printer(object):
     def showpatch(self, node):
         if self.patch:
             prev = self.repo.changelog.parents(node)[0]
-            patch.diff(self.repo, prev, node, fp=self.ui)
+            patch.diff(self.repo, prev, node, match=self.patch, fp=self.ui)
             self.ui.write("\n")
 
 class changeset_templater(changeset_printer):
@@ -510,7 +510,7 @@ class changeset_templater(changeset_printer):
         except SyntaxError, inst:
             raise util.Abort(_('%s: %s') % (self.t.mapfile, inst.args[0]))
 
-def show_changeset(ui, repo, opts, buffered=False):
+def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
     """show one changeset using template or regular display.
 
     Display format will be the first non-empty hit of:
@@ -522,7 +522,12 @@ def show_changeset(ui, repo, opts, buffered=False):
     regular display via changeset_printer() is done.
     """
     # options
-    patch = opts.get('patch')
+    patch = False
+    if opts.get('patch'):
+        patch = lambda x: True
+        if matchfn:
+            patch = matchfn
+
     br = None
     if opts.get('branches'):
         ui.warn(_("the --branches option is deprecated, "

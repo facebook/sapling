@@ -7,13 +7,13 @@ summary:     a
 % -f, directory
 abort: can only follow copies/renames for explicit file names
 % -f, but no args
-changeset:   4:8c1c8408f737
+changeset:   4:b30c444c7c84
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:05 1970 +0000
 summary:     e
 
-changeset:   3:c4ba038c90ce
+changeset:   3:16b60bf3f99a
 user:        test
 date:        Thu Jan 01 00:00:04 1970 +0000
 summary:     d
@@ -43,7 +43,7 @@ a
 
 
 % many renames
-changeset:   4:8c1c8408f737
+changeset:   4:b30c444c7c84
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:05 1970 +0000
@@ -86,6 +86,21 @@ a
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding foo
 5 e (dir/b)
+% log -p d
+changeset:   3:16b60bf3f99a
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+files:       a b d
+description:
+d
+
+
+diff -r 21fba396af4c -r 16b60bf3f99a d
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/d	Thu Jan 01 00:00:04 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
 adding base
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding b1
