@@ -8,4 +8,5 @@ abort: destination '../a' already exists
 255
 abort: repository a not found!
 255
+destination directory: q
 abort: destination 'q' already exists
