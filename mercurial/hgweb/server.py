@@ -201,8 +201,8 @@ def create_server(ui, repo):
             self.reqmaker = wsgiapplication(self.make_handler)
             self.daemon_threads = True
 
-            addr, port = self.socket.getsockname()
-            if addr == '0.0.0.0':
+            addr, port = self.socket.getsockname()[:2]
+            if addr in ('0.0.0.0', '::'):
                 addr = socket.gethostname()
             else:
                 try:
