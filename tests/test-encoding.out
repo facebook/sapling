@@ -10,7 +10,6 @@ M a
 ? latin-1-tag
 ? utf-8
 abort: decoding near ' encoded: é': 'ascii' codec can't decode byte 0xe9 in position 20: ordinal not in range(128)!
-
 transaction abort!
 rollback completed
 % these should work
@@ -165,3 +164,4 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e': Ð˜ = u'\xe9'
 
+abort: unknown encoding: dolphin, please check your locale settings

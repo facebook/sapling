@@ -52,3 +52,5 @@ echo '[ui]' >> .hg/hgrc
 echo 'fallbackencoding = koi8-r' >> .hg/hgrc
 echo % utf-8
 HGENCODING=utf-8 hg log
+
+HGENCODING=dolphin hg log

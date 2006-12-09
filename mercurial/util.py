@@ -17,7 +17,8 @@ from demandload import *
 demandload(globals(), "cStringIO errno getpass popen2 re shutil sys tempfile")
 demandload(globals(), "os threading time calendar ConfigParser locale")
 
-_encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding()
+_encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding() \
+            or "ascii"
 _encodingmode = os.environ.get("HGENCODINGMODE", "strict")
 _fallbackencoding = 'ISO-8859-1'
 
@@ -35,6 +36,8 @@ def tolocal(s):
         try:
             u = s.decode(e) # attempt strict decoding
             return u.encode(_encoding, "replace")
+        except LookupError, k:
+            raise Abort(_("%s, please check your locale settings") % k)
         except UnicodeDecodeError:
             pass
     u = s.decode("utf-8", "replace") # last ditch
@@ -54,7 +57,9 @@ def fromlocal(s):
         return s.decode(_encoding, _encodingmode).encode("utf-8")
     except UnicodeDecodeError, inst:
         sub = s[max(0, inst.start-10):inst.start+10]
-        raise Abort("decoding near '%s': %s!\n" % (sub, inst))
+        raise Abort("decoding near '%s': %s!" % (sub, inst))
+    except LookupError, k:
+        raise Abort(_("%s, please check your locale settings") % k)
 
 def locallen(s):
     """Find the length in characters of a local string"""
@@ -70,7 +75,7 @@ def localsub(s, a, b=None):
         return u.encode(_encoding, _encodingmode)
     except UnicodeDecodeError, inst:
         sub = s[max(0, inst.start-10), inst.start+10]
-        raise Abort("decoding near '%s': %s!\n" % (sub, inst))
+        raise Abort(_("decoding near '%s': %s!\n") % (sub, inst))
 
 # used by parsedate
 defaultdateformats = (
