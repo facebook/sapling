@@ -6,3 +6,4 @@ transaction abort!
 rollback completed
 00changelog.i
 journal.dirstate
+requires

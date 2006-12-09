@@ -149,13 +149,23 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             copy = False
 
     if copy:
-        # we lock here to avoid premature writing to the target
+        def force_copy(src, dst):
+            try:
+                util.copyfiles(src, dst)
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+
         src_store = os.path.realpath(src_repo.spath)
         dest_path = os.path.realpath(os.path.join(dest, ".hg"))
         dest_store = dest_path
         if not os.path.exists(dest):
             os.mkdir(dest)
         os.mkdir(dest_path)
+        # copy the requires file
+        force_copy(src_repo.join("requires"),
+                   os.path.join(dest_path, "requires"))
+        # we lock here to avoid premature writing to the target
         dest_lock = lock.lock(os.path.join(dest_store, "lock"))
 
         files = ("data",
@@ -164,11 +174,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         for f in files:
             src = os.path.join(src_store, f)
             dst = os.path.join(dest_store, f)
-            try:
-                util.copyfiles(src, dst)
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    raise
+            force_copy(src, dst)
 
         # we need to re-init the repo after manually copying the data
         # into it

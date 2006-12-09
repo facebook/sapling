@@ -1,0 +1,7 @@
+changeset:   0:0acdaf898367
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     test
+
+abort: requirement 'indoor-pool' not supported!

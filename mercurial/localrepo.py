@@ -16,6 +16,7 @@ demandload(globals(), "os revlog time util")
 
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
+    supported = ('revlogv1',)
 
     def __del__(self):
         self.transhandle = None
@@ -44,10 +45,27 @@ class localrepository(repo.repository):
                 os.mkdir(self.path)
                 #if self.spath != self.path:
                 #    os.mkdir(self.spath)
+                requirements = ("revlogv1",)
+                reqfile = self.opener("requires", "w")
+                for r in requirements:
+                    reqfile.write("%s\n" % r)
+                reqfile.close()
             else:
                 raise repo.RepoError(_("repository %s not found") % path)
         elif create:
             raise repo.RepoError(_("repository %s already exists") % path)
+        else:
+            # find requirements
+            try:
+                requirements = self.opener("requires").read().splitlines()
+            except IOError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+                requirements = []
+        # check them
+        for r in requirements:
+            if r not in self.supported:
+                raise repo.RepoError(_("requirement '%s' not supported") % r)
 
         # setup store
         self.spath = self.path

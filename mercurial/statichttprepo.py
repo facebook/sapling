@@ -37,7 +37,20 @@ class statichttprepository(localrepo.localrepository):
         self.ui = ui
         self.revlogversion = 0
         self.opener = opener(self.path)
+        # find requirements
+        try:
+            requirements = self.opener("requires").read().splitlines()
+        except IOError:
+            requirements = []
+        # check them
+        for r in requirements:
+            if r not in self.supported:
+                raise repo.RepoError(_("requirement '%s' not supported") % r)
+
+        # setup store
+        self.spath = self.path
         self.sopener = opener(self.spath)
+
         self.manifest = manifest.manifest(self.sopener)
         self.changelog = changelog.changelog(self.sopener)
         self.tagscache = None
