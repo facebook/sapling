@@ -524,9 +524,7 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
     # options
     patch = False
     if opts.get('patch'):
-        patch = lambda x: True
-        if matchfn:
-            patch = matchfn
+        patch = matchfn or util.always
 
     br = None
     if opts.get('branches'):
