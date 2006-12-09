@@ -2991,11 +2991,7 @@ def dispatch(args):
 
         try:
             if options['cwd']:
-                try:
-                    os.chdir(options['cwd'])
-                except OSError, inst:
-                    raise util.Abort('%s: %s' %
-                                     (options['cwd'], inst.strerror))
+                os.chdir(options['cwd'])
 
             u.updateopts(options["verbose"], options["debug"], options["quiet"],
                          not options["noninteractive"], options["traceback"],
