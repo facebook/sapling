@@ -127,15 +127,13 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
-    dest_repo = repository(ui, dest, create=True)
-
     dir_cleanup = None
-    if dest_repo.local():
-        dir_cleanup = DirCleanup(os.path.realpath(dest_repo.root))
+    if islocal(dest):
+        dir_cleanup = DirCleanup(dest)
 
     abspath = source
     copy = False
-    if src_repo.local() and dest_repo.local():
+    if src_repo.local() and islocal(dest):
         abspath = os.path.abspath(source)
         copy = not pull and not rev
 
@@ -153,7 +151,11 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     if copy:
         # we lock here to avoid premature writing to the target
         src_store = os.path.realpath(src_repo.spath)
-        dest_store = os.path.realpath(dest_repo.spath)
+        dest_path = os.path.realpath(os.path.join(dest, ".hg"))
+        dest_store = dest_path
+        if not os.path.exists(dest):
+            os.mkdir(dest)
+        os.mkdir(dest_path)
         dest_lock = lock.lock(os.path.join(dest_store, "lock"))
 
         files = ("data",
@@ -173,6 +175,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         dest_repo = repository(ui, dest)
 
     else:
+        dest_repo = repository(ui, dest, create=True)
+
         revs = None
         if rev:
             if 'lookup' not in src_repo.capabilities:
