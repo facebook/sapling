@@ -1,7 +1,7 @@
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
+added 2 changesets with 2 changes to 1 files
 (run 'hg update' to get a working copy)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % should fail with encoding error
@@ -15,28 +15,33 @@ transaction abort!
 rollback completed
 % these should work
 % ascii
-changeset:   4:d8a5d9eaf41e
+changeset:   5:e4ed49b8a8f0
 branch:      ?
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin1 branch
 
-changeset:   3:5edfc7acb541
+changeset:   4:a02ca5a58e99
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     Added tag ? for changeset 91878608adb3
+summary:     Added tag ? for changeset d47908dab82f
 
-changeset:   2:91878608adb3
+changeset:   3:d47908dab82f
 tag:         ?
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     utf-8 e' encoded: ?
 
-changeset:   1:6355cacf842e
+changeset:   2:9db1985f3097
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e' encoded: ?
+
+changeset:   1:af6e0db4427c
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     euc-jp: ?????? = u'\u65e5\u672c\u8a9e'
 
 changeset:   0:60aad1dd20a9
 user:        test
@@ -44,28 +49,33 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e': ?
 
 % latin-1
-changeset:   4:d8a5d9eaf41e
+changeset:   5:e4ed49b8a8f0
 branch:      é
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin1 branch
 
-changeset:   3:5edfc7acb541
+changeset:   4:a02ca5a58e99
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     Added tag é for changeset 91878608adb3
+summary:     Added tag é for changeset d47908dab82f
 
-changeset:   2:91878608adb3
+changeset:   3:d47908dab82f
 tag:         é
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     utf-8 e' encoded: é
 
-changeset:   1:6355cacf842e
+changeset:   2:9db1985f3097
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e' encoded: é
+
+changeset:   1:af6e0db4427c
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     euc-jp: ÆüËÜ¸ì = u'\u65e5\u672c\u8a9e'
 
 changeset:   0:60aad1dd20a9
 user:        test
@@ -73,28 +83,33 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e': é
 
 % utf-8
-changeset:   4:d8a5d9eaf41e
+changeset:   5:e4ed49b8a8f0
 branch:      Ã©
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin1 branch
 
-changeset:   3:5edfc7acb541
+changeset:   4:a02ca5a58e99
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     Added tag Ã© for changeset 91878608adb3
+summary:     Added tag Ã© for changeset d47908dab82f
 
-changeset:   2:91878608adb3
+changeset:   3:d47908dab82f
 tag:         Ã©
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     utf-8 e' encoded: Ã©
 
-changeset:   1:6355cacf842e
+changeset:   2:9db1985f3097
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e' encoded: Ã©
+
+changeset:   1:af6e0db4427c
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     euc-jp: Ã†Ã¼Ã‹ÃœÂ¸Ã¬ = u'\u65e5\u672c\u8a9e'
 
 changeset:   0:60aad1dd20a9
 user:        test
@@ -102,17 +117,51 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e': Ã©
 
 % ascii
-tip                                4:d8a5d9eaf41e
-?                                  2:91878608adb3
+tip                                5:e4ed49b8a8f0
+?                                  3:d47908dab82f
 % latin-1
-tip                                4:d8a5d9eaf41e
-é                                  2:91878608adb3
+tip                                5:e4ed49b8a8f0
+é                                  3:d47908dab82f
 % utf-8
-tip                                4:d8a5d9eaf41e
-Ã©                                  2:91878608adb3
+tip                                5:e4ed49b8a8f0
+Ã©                                  3:d47908dab82f
 % ascii
-?                              4:d8a5d9eaf41e
+?                              5:e4ed49b8a8f0
 % latin-1
-é                              4:d8a5d9eaf41e
+é                              5:e4ed49b8a8f0
 % utf-8
-Ã©                              4:d8a5d9eaf41e
+Ã©                              5:e4ed49b8a8f0
+% utf-8
+changeset:   5:e4ed49b8a8f0
+branch:      Ã©
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     latin1 branch
+
+changeset:   4:a02ca5a58e99
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Added tag Ã© for changeset d47908dab82f
+
+changeset:   3:d47908dab82f
+tag:         Ã©
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     utf-8 e' encoded: Ã©
+
+changeset:   2:9db1985f3097
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     latin-1 e' encoded: Ã©
+
+changeset:   1:af6e0db4427c
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     euc-jp: æ—¥æœ¬èªž = u'\u65e5\u672c\u8a9e'
+
+changeset:   0:60aad1dd20a9
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     latin-1 e': ï¿½
+

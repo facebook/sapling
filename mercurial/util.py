@@ -19,6 +19,7 @@ demandload(globals(), "os threading time calendar ConfigParser locale")
 
 _encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding()
 _encodingmode = os.environ.get("HGENCODINGMODE", "strict")
+_fallbackencoding = 'ISO-8859-1'
 
 def tolocal(s):
     """
@@ -30,7 +31,7 @@ def tolocal(s):
     using UTF-8, then Latin-1, and failing that, we use UTF-8 and
     replace unknown characters.
     """
-    for e in "utf-8 latin1".split():
+    for e in ('UTF-8', _fallbackencoding):
         try:
             u = s.decode(e) # attempt strict decoding
             return u.encode(_encoding, "replace")

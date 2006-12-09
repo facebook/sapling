@@ -47,3 +47,8 @@ echo % latin-1
 HGENCODING=latin-1 hg branches
 echo % utf-8
 HGENCODING=utf-8 hg branches
+
+echo '[ui]' >> .hg/hgrc
+echo 'fallbackencoding = euc-jp' >> .hg/hgrc
+echo % utf-8
+HGENCODING=utf-8 hg log

@@ -72,6 +72,10 @@ class localrepository(repo.repository):
         self.manifest = manifest.manifest(self.sopener, v)
         self.changelog = changelog.changelog(self.sopener, v)
 
+        fallback = self.ui.config('ui', 'fallbackencoding')
+        if fallback:
+            util._fallbackencoding = fallback
+
         # the changelog might not have the inline index flag
         # on.  If the format of the changelog is the same as found in
         # .hgrc, apply any flags found in the .hgrc as well.
