@@ -30,28 +30,30 @@ class localrepository(repo.repository):
                     raise repo.RepoError(_("There is no Mercurial repository"
                                            " here (.hg not found)"))
             path = p
+
         self.path = os.path.join(path, ".hg")
-        self.spath = self.path
+        self.root = os.path.realpath(path)
+        self.origroot = path
+        self.opener = util.opener(self.path)
+        self.wopener = util.opener(self.root)
 
         if not os.path.isdir(self.path):
             if create:
                 if not os.path.exists(path):
                     os.mkdir(path)
                 os.mkdir(self.path)
-                if self.spath != self.path:
-                    os.mkdir(self.spath)
+                #if self.spath != self.path:
+                #    os.mkdir(self.spath)
             else:
                 raise repo.RepoError(_("repository %s not found") % path)
         elif create:
             raise repo.RepoError(_("repository %s already exists") % path)
 
-        self.root = os.path.realpath(path)
-        self.origroot = path
-        self.ui = ui.ui(parentui=parentui)
-        self.opener = util.opener(self.path)
+        # setup store
+        self.spath = self.path
         self.sopener = util.opener(self.spath)
-        self.wopener = util.opener(self.root)
 
+        self.ui = ui.ui(parentui=parentui)
         try:
             self.ui.readconfig(self.join("hgrc"), self.root)
         except IOError:
