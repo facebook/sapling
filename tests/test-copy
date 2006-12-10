@@ -13,16 +13,16 @@ hg history -v
 echo "we should see one log entry for a"
 hg log a
 echo "this should show a revision linked to changeset 0"
-hg debugindex .hg/data/a.i
+hg debugindex .hg/store/data/a.i
 echo "we should see one log entry for b"
 hg log b
 echo "this should show a revision linked to changeset 1"
-hg debugindex .hg/data/b.i
+hg debugindex .hg/store/data/b.i
 
 echo "this should show the rename information in the metadata"
-hg debugdata .hg/data/b.d 0 | head -3 | tail -2
+hg debugdata .hg/store/data/b.d 0 | head -3 | tail -2
 
-$TESTDIR/md5sum.py .hg/data/b.i
+$TESTDIR/md5sum.py .hg/store/data/b.i
 hg cat b > bsum
 $TESTDIR/md5sum.py bsum
 hg cat a > asum

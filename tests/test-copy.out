@@ -41,7 +41,7 @@ this should show a revision linked to changeset 1
 this should show the rename information in the metadata
 copyrev: b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 copy: a
-ed156f22f0a6fde642de0b5eba0cbbb2  .hg/data/b.i
+ed156f22f0a6fde642de0b5eba0cbbb2  .hg/store/data/b.i
 60b725f10c9c85c70d97880dfe8191b3  bsum
 60b725f10c9c85c70d97880dfe8191b3  asum
 checking changesets

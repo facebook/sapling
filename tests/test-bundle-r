@@ -41,11 +41,11 @@ hg commit -m "1.3m" -d "1000000 0"
 hg update -C 3
 hg mv afile anotherfile
 hg commit -m "0.3m" -d "1000000 0"
-hg debugindex .hg/data/afile.i
-hg debugindex .hg/data/adifferentfile.i
-hg debugindex .hg/data/anotherfile.i
-hg debugindex .hg/data/fred.i
-hg debugindex .hg/00manifest.i
+hg debugindex .hg/store/data/afile.i
+hg debugindex .hg/store/data/adifferentfile.i
+hg debugindex .hg/store/data/anotherfile.i
+hg debugindex .hg/store/data/fred.i
+hg debugindex .hg/store/00manifest.i
 hg verify
 cd ..
 for i in 0 1 2 3 4 5 6 7 8; do

@@ -23,5 +23,5 @@ hg merge -y --debug
 hg status -AC
 cat b
 hg ci -m "merge" -d "0 0"
-hg debugindex .hg/data/b.i
+hg debugindex .hg/store/data/b.i
 hg debugrename b

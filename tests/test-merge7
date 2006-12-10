@@ -61,6 +61,6 @@ HGMERGE=merge hg merge --debug
 
 cat test.txt | sed "s% .*%%"
 
-hg debugindex .hg/data/test.txt.i
+hg debugindex .hg/store/data/test.txt.i
 
 hg log

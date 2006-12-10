@@ -43,6 +43,6 @@ hg -v merge
 ls -l ../test[123]/a > foo
 cut -b 1-10 < foo
 
-hg debugindex .hg/data/a.i
-hg debugindex ../test2/.hg/data/a.i
-hg debugindex ../test1/.hg/data/a.i
+hg debugindex .hg/store/data/a.i
+hg debugindex ../test2/.hg/store/data/a.i
+hg debugindex ../test1/.hg/store/data/a.i

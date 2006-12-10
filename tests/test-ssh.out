@@ -11,20 +11,20 @@ checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-1 files, 1 changesets, 1 total revisions
+2 files, 1 changesets, 2 total revisions
 # clone remote via pull
 requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 1 changes to 1 files
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 # verify
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-1 files, 1 changesets, 1 total revisions
+2 files, 1 changesets, 2 total revisions
 # empty default pull
 default = ssh://user@dummy/remote
 pulling from ssh://user@dummy/remote
@@ -34,7 +34,7 @@ no changes found
 # updating rc
 # find outgoing
 searching for changes
-changeset:   1:c54836a570be
+changeset:   1:572896fe480d
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -42,7 +42,7 @@ summary:     add
 
 # find incoming on the remote side
 searching for changes
-changeset:   1:c54836a570be
+changeset:   1:572896fe480d
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -56,7 +56,7 @@ remote: adding manifests
 remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
 # check remote tip
-changeset:   1:c54836a570be
+changeset:   1:572896fe480d
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -66,7 +66,7 @@ checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-1 files, 2 changesets, 2 total revisions
+2 files, 2 changesets, 3 total revisions
 bleah
 # push should succeed
 pushing to ssh://user@dummy/remote

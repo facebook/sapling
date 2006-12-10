@@ -22,7 +22,7 @@ echo %% no changes
 hg status
 
 echo %% uncompressed contents in repo
-hg debugdata .hg/data/a.gz.d 0
+hg debugdata .hg/store/data/a.gz.d 0
 
 echo %% uncompress our working dir copy
 gunzip < a.gz

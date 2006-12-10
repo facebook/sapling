@@ -30,12 +30,12 @@ hg ci -A -m 2 -d "1000000 0"
 hg merge 1
 hg ci -A -m m1 -d "1000000 0"
 #hg log
-#hg debugindex .hg/00manifest.i
+#hg debugindex .hg/store/00manifest.i
 hg update -C 1
 hg merge 2
 hg ci -A -m m2 -d "1000000 0"
 #hg log
-#hg debugindex .hg/00manifest.i
+#hg debugindex .hg/store/00manifest.i
 
 cd ..
 hg clone -r 3 a b

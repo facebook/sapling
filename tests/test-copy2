@@ -14,7 +14,7 @@ hg commit -m2 -d"0 0"
 hg debugstate|grep '^copy'
 
 echo "# should match"
-hg debugindex .hg/data/foo.i
+hg debugindex .hg/store/data/foo.i
 hg debugrename bar
 
 echo bleah > foo
@@ -30,9 +30,9 @@ hg debugstate|grep '^copy'
 hg commit -m3 -d"0 0"
 
 echo "# should show no parents for tip"
-hg debugindex .hg/data/bar.i
+hg debugindex .hg/store/data/bar.i
 echo "# should match"
-hg debugindex .hg/data/foo.i
+hg debugindex .hg/store/data/foo.i
 hg debugrename bar
 
 echo "# should show no copies"

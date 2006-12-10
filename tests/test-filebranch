@@ -53,22 +53,22 @@ hg debugstate | cut -b 1-16,35- | grep "^m"
 hg ci -m "merge" -d "1000000 0"
 
 echo "main: we should have a merge here"
-hg debugindex .hg/00changelog.i
+hg debugindex .hg/store/00changelog.i
 
 echo "log should show foo and quux changed"
 hg log -v -r tip
 
 echo "foo: we should have a merge here"
-hg debugindex .hg/data/foo.i
+hg debugindex .hg/store/data/foo.i
 
 echo "bar: we shouldn't have a merge here"
-hg debugindex .hg/data/bar.i
+hg debugindex .hg/store/data/bar.i
 
 echo "baz: we shouldn't have a merge here"
-hg debugindex .hg/data/baz.i
+hg debugindex .hg/store/data/baz.i
 
 echo "quux: we shouldn't have a merge here"
-hg debugindex .hg/data/quux.i
+hg debugindex .hg/store/data/quux.i
 
 echo "manifest entries should match tips of all files"
 hg manifest --debug

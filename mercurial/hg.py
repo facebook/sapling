@@ -128,15 +128,13 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
-    dest_repo = repository(ui, dest, create=True)
-
     dir_cleanup = None
-    if dest_repo.local():
-        dir_cleanup = DirCleanup(os.path.realpath(dest_repo.root))
+    if islocal(dest):
+        dir_cleanup = DirCleanup(dest)
 
     abspath = source
     copy = False
-    if src_repo.local() and dest_repo.local():
+    if src_repo.local() and islocal(dest):
         abspath = os.path.abspath(source)
         copy = not pull and not rev
 
@@ -152,9 +150,27 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             copy = False
 
     if copy:
-        # we lock here to avoid premature writing to the target
+        def force_copy(src, dst):
+            try:
+                util.copyfiles(src, dst)
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+
         src_store = os.path.realpath(src_repo.spath)
-        dest_store = os.path.realpath(dest_repo.spath)
+        if not os.path.exists(dest):
+            os.mkdir(dest)
+        dest_path = os.path.realpath(os.path.join(dest, ".hg"))
+        os.mkdir(dest_path)
+        if src_repo.spath != src_repo.path:
+            dest_store = os.path.join(dest_path, "store")
+            os.mkdir(dest_store)
+        else:
+            dest_store = dest_path
+        # copy the requires file
+        force_copy(src_repo.join("requires"),
+                   os.path.join(dest_path, "requires"))
+        # we lock here to avoid premature writing to the target
         dest_lock = lock.lock(os.path.join(dest_store, "lock"))
 
         files = ("data",
@@ -163,17 +179,15 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         for f in files:
             src = os.path.join(src_store, f)
             dst = os.path.join(dest_store, f)
-            try:
-                util.copyfiles(src, dst)
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    raise
+            force_copy(src, dst)
 
         # we need to re-init the repo after manually copying the data
         # into it
         dest_repo = repository(ui, dest)
 
     else:
+        dest_repo = repository(ui, dest, create=True)
+
         revs = None
         if rev:
             if 'lookup' not in src_repo.capabilities:

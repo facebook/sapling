@@ -6,6 +6,6 @@ hg --cwd a ci -A -m a
 hg clone a b
 echo b > b/b
 hg --cwd b ci -A -m b
-chmod 100 a/.hg
+chmod 100 a/.hg/store
 hg --cwd b push ../a
-chmod 700 a/.hg
+chmod 700 a/.hg/store

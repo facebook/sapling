@@ -43,7 +43,7 @@ def opener(*args):
         return singlebyteread(f)
     return wrapper
 
-cl = changelog.changelog(opener('.hg'))
+cl = changelog.changelog(opener('.hg/store'))
 print cl.count(), 'revisions:'
 for r in xrange(cl.count()):
     print short(cl.node(r))

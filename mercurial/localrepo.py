@@ -16,6 +16,7 @@ demandload(globals(), "os revlog time util")
 
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
+    supported = ('revlogv1', 'store')
 
     def __del__(self):
         self.transhandle = None
@@ -30,28 +31,55 @@ class localrepository(repo.repository):
                     raise repo.RepoError(_("There is no Mercurial repository"
                                            " here (.hg not found)"))
             path = p
+
         self.path = os.path.join(path, ".hg")
-        self.spath = self.path
+        self.root = os.path.realpath(path)
+        self.origroot = path
+        self.opener = util.opener(self.path)
+        self.wopener = util.opener(self.root)
 
         if not os.path.isdir(self.path):
             if create:
                 if not os.path.exists(path):
                     os.mkdir(path)
                 os.mkdir(self.path)
-                if self.spath != self.path:
-                    os.mkdir(self.spath)
+                os.mkdir(os.path.join(self.path, "store"))
+                requirements = ("revlogv1", "store")
+                reqfile = self.opener("requires", "w")
+                for r in requirements:
+                    reqfile.write("%s\n" % r)
+                reqfile.close()
+                # create an invalid changelog
+                self.opener("00changelog.i", "a").write('\0\0\0\2')
             else:
                 raise repo.RepoError(_("repository %s not found") % path)
         elif create:
             raise repo.RepoError(_("repository %s already exists") % path)
+        else:
+            # find requirements
+            try:
+                requirements = self.opener("requires").read().splitlines()
+            except IOError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+                requirements = []
+        # check them
+        for r in requirements:
+            if r not in self.supported:
+                raise repo.RepoError(_("requirement '%s' not supported") % r)
 
-        self.root = os.path.realpath(path)
-        self.origroot = path
+        # setup store
+        if "store" in requirements:
+            self.encodefn = util.encodefilename
+            self.decodefn = util.decodefilename
+            self.spath = os.path.join(self.path, "store")
+        else:
+            self.encodefn = lambda x: x
+            self.decodefn = lambda x: x
+            self.spath = self.path
+        self.sopener = util.encodedopener(util.opener(self.spath), self.encodefn)
+
         self.ui = ui.ui(parentui=parentui)
-        self.opener = util.opener(self.path)
-        self.sopener = util.opener(self.spath)
-        self.wopener = util.opener(self.root)
-
         try:
             self.ui.readconfig(self.join("hgrc"), self.root)
         except IOError:
@@ -408,6 +436,7 @@ class localrepository(repo.repository):
         return os.path.join(self.path, f)
 
     def sjoin(self, f):
+        f = self.encodefn(f)
         return os.path.join(self.spath, f)
 
     def wjoin(self, f):

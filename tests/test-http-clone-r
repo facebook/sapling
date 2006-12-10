@@ -42,11 +42,11 @@ hg commit -m "1.3m"
 hg update -C 3
 hg mv afile anotherfile
 hg commit -m "0.3m"
-hg debugindex .hg/data/afile.i
-hg debugindex .hg/data/adifferentfile.i
-hg debugindex .hg/data/anotherfile.i
-hg debugindex .hg/data/fred.i
-hg debugindex .hg/00manifest.i
+hg debugindex .hg/store/data/afile.i
+hg debugindex .hg/store/data/adifferentfile.i
+hg debugindex .hg/store/data/anotherfile.i
+hg debugindex .hg/store/data/fred.i
+hg debugindex .hg/store/00manifest.i
 hg verify
 echo "# Starting server"
 hg serve -p 20061 -d --pid-file=../hg1.pid

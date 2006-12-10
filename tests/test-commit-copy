@@ -11,4 +11,4 @@ echo >> bar
 hg ci -m 'cp bar foo; change bar'
 
 hg debugrename foo
-hg debugindex .hg/data/bar.i
+hg debugindex .hg/store/data/bar.i
