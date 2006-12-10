@@ -10,7 +10,7 @@ from node import *
 from i18n import gettext as _
 demandload(globals(), "bisect os re sys signal imp urllib pdb shlex stat")
 demandload(globals(), "fancyopts ui hg util lock revlog bundlerepo")
-demandload(globals(), "difflib patch time help")
+demandload(globals(), "difflib patch time help mdiff tempfile")
 demandload(globals(), "traceback errno version atexit")
 demandload(globals(), "archival changegroup cmdutil hgweb.server sshserver")
 
@@ -830,6 +830,13 @@ def debugindexdot(ui, file_):
 def debuginstall(ui):
     '''test Mercurial installation'''
 
+    def writetemp(contents):
+        (fd, name) = tempfile.mkstemp()
+        f = os.fdopen(fd, "wb")
+        f.write(contents)
+        f.close()
+        return name
+
     problems = 0
 
     # encoding
@@ -867,7 +874,31 @@ def debuginstall(ui):
     if not patcher:
         ui.write(_(" Can't find patch or gpatch in PATH\n"))
         problems += 1
-    # should actually attempt a patch here
+    else:
+        # actually attempt a patch here
+        a = "1\n2\n3\n4\n"
+        b = "1\n2\n3\ninsert\n4\n"
+        d = mdiff.unidiff(a, None, b, None, "a")
+        fa = writetemp(a)
+        fd = writetemp(d)
+        fp = os.popen('%s %s %s' % (patcher, fa, fd))
+        files = []
+        output = ""
+        for line in fp:
+            output += line
+            if line.startswith('patching file '):
+                pf = util.parse_patch_output(line.rstrip())
+                files.append(pf)
+        if files != [fa]:
+            ui.write(_(" unexpected patch output!"))
+            ui.write(data)
+            problems += 1
+        a = file(fa).read()
+        if a != b:
+            ui.write(_(" patch test failed!"))
+            problems += 1
+        os.unlink(fa)
+        os.unlink(fd)
 
     # merge helper
     ui.status(_("Checking merge helper...\n"))
@@ -883,7 +914,22 @@ def debuginstall(ui):
         else:
             ui.write(_(" Can't find merge helper '%s' in PATH\n") % cmd)
             problems += 1
-    # should attempt a non-conflicting merge here
+    else:
+        # actually attempt a patch here
+        fa = writetemp("1\n2\n3\n4\n")
+        fl = writetemp("1\n2\n3\ninsert\n4\n")
+        fr = writetemp("begin\n1\n2\n3\n4\n")
+        r = os.system('%s %s %s %s' % (cmd, fl, fa, fr))
+        if r:
+            ui.write(_(" got unexpected merge error %d!") % r)
+            problems += 1
+        m = file(fl).read()
+        if m != "begin\n1\n2\n3\ninsert\n4\n":
+            ui.write(_(" got unexpected merge results!") % r)
+            ui.write(m)
+        os.unlink(fa)
+        os.unlink(fl)
+        os.unlink(fr)
 
     # editor
     ui.status(_("Checking commit editor...\n"))
