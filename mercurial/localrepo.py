@@ -50,7 +50,10 @@ class localrepository(repo.repository):
                     reqfile.write("%s\n" % r)
                 reqfile.close()
                 # create an invalid changelog
-                self.opener("00changelog.i", "a").write('\0\0\0\2')
+                self.opener("00changelog.i", "a").write(
+                    '\0\0\0\2' # represents revlogv2
+                    ' dummy changelog to prevent using the old repo layout'
+                )
             else:
                 raise repo.RepoError(_("repository %s not found") % path)
         elif create:
