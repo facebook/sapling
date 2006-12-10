@@ -827,6 +827,87 @@ def debugindexdot(ui, file_):
             ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
 
+def debuginstall(ui):
+    '''test Mercurial installation'''
+
+    problems = 0
+
+    # encoding
+    ui.status(_("Checking encoding (%s)...\n") % util._encoding)
+    try:
+        util.fromlocal("test")
+    except util.Abort, inst:
+        ui.write(" %s\n" % inst)
+        problems += 1
+
+    # compiled modules
+    ui.status(_("Checking extensions...\n"))
+    try:
+        import bdiff, mpatch, base85
+    except Exception, inst:
+        ui.write(" %s\n" % inst)
+        ui.write(_(" One or more extensions could not be found,"
+                 " check your build.\n"))
+        problems += 1
+
+    # templates
+    ui.status(_("Checking templates...\n"))
+    try:
+        import templater
+        t = templater.templater(templater.templatepath("map-cmdline.default"))
+    except Exception, inst:
+        ui.write(" %s\n" % inst)
+        problems += 1
+
+    # patch
+    ui.status(_("Checking patch...\n"))
+    path = os.environ.get('PATH', '')
+    patcher = util.find_in_path('gpatch', path,
+                                util.find_in_path('patch', path, None))
+    if not patcher:
+        ui.write(_(" Can't find patch or gpatch in PATH\n"))
+        problems += 1
+    # should actually attempt a patch here
+
+    # merge helper
+    ui.status(_("Checking merge helper...\n"))
+    cmd = (os.environ.get("HGMERGE") or ui.config("ui", "merge")
+           or "hgmerge")
+    cmdpath = util.find_in_path(cmd, path)
+    if not cmdpath:
+        cmdpath = util.find_in_path(cmd.split()[0], path)
+    if not cmdpath:
+        if cmd == 'hgmerge':
+            ui.write(_(" No merge helper set and can't find default"
+                       " hgmerge script in PATH\n"))
+        else:
+            ui.write(_(" Can't find merge helper '%s' in PATH\n") % cmd)
+            problems += 1
+    # should attempt a non-conflicting merge here
+
+    # editor
+    ui.status(_("Checking commit editor...\n"))
+    editor = (os.environ.get("HGEDITOR") or
+              ui.config("ui", "editor") or
+              os.environ.get("EDITOR", "vi"))
+    cmdpath = util.find_in_path(editor, path)
+    if not cmdpath:
+        cmdpath = util.find_in_path(editor.split()[0], path)
+    if not cmdpath:
+        if cmd == 'vi':
+            ui.write(_(" No commit editor set and can't find vi in PATH\n"))
+        else:
+            ui.write(_(" Can't find editor '%s' in PATH\n") % editor)
+            problems += 1
+
+    if not problems:
+        ui.status(_("No problems detected\n"))
+    else:
+        ui.write(_("%s problems detected,"
+                   " please check your install!\n") % problems)
+
+    return problems
+
 def debugrename(ui, repo, file1, *pats, **opts):
     """dump rename information"""
 
@@ -2524,6 +2605,7 @@ table = {
         (debugcomplete,
          [('o', 'options', None, _('show the command options'))],
          _('debugcomplete [-o] CMD')),
+    "debuginstall": (debuginstall, [], _('debuginstall')),
     "debugrebuildstate":
         (debugrebuildstate,
          [('r', 'rev', '', _('revision to rebuild to'))],
@@ -2787,7 +2869,7 @@ table = {
 }
 
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
-          " debugindex debugindexdot debugdate")
+          " debugindex debugindexdot debugdate debuginstall")
 optionalrepo = ("paths serve showconfig")
 
 def findpossible(ui, cmd):
