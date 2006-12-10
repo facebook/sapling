@@ -26,7 +26,8 @@ Setting up Mercurial:
 
  And finally:
 
- $ hg                                    # test installation, show help
+ $ hg debuginstall                       # run some basic tests
+ $ hg                                    # show help
 
  If you get complaints about missing modules, you probably haven't set
  PYTHONPATH correctly.
