@@ -949,7 +949,7 @@ def debuginstall(ui):
     if not cmdpath:
         cmdpath = util.find_in_path(editor.split()[0], path)
     if not cmdpath:
-        if cmd == 'vi':
+        if editor == 'vi':
             ui.write(_(" No commit editor set and can't find vi in PATH\n"))
             ui.write(_(" (specify a commit editor in your .hgrc file)\n"))
         else:
