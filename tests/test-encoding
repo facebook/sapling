@@ -25,7 +25,7 @@ echo "utf-8" > a
 HGENCODING=utf-8 hg ci -l utf-8 -d "1000000 0"
 
 HGENCODING=latin-1 hg tag -d "1000000 0" `cat latin-1-tag`
-cp latin-1-tag .hg/branch
+HGENCODING=latin-1 hg branch `cat latin-1-tag`
 HGENCODING=latin-1 hg ci -d "1000000 0" -m 'latin1 branch'
 rm .hg/branch
 
@@ -55,4 +55,7 @@ HGENCODING=utf-8 hg log
 
 HGENCODING=dolphin hg log
 
+HGENCODING=ascii hg branch `cat latin-1-tag`
+cp latin-1-tag .hg/branch
+HGENCODING=latin-1 hg ci -d "1000000 0" -m 'should fail'
 exit 0

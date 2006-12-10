@@ -683,7 +683,11 @@ class localrepository(repo.repository):
         m2 = self.manifest.read(c2[0])
 
         if use_dirstate:
-            branchname = util.fromlocal(self.workingctx().branch())
+            branchname = self.workingctx().branch()
+            try:
+                branchname = branchname.decode('UTF-8').encode('UTF-8')
+            except UnicodeDecodeError:
+                raise util.Abort(_('branch name not in UTF-8!'))
         else:
             branchname = ""
 

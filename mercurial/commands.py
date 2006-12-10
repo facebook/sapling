@@ -256,9 +256,9 @@ def branch(ui, repo, label=None):
     """
 
     if label is not None:
-        repo.opener("branch", "w").write(label)
+        repo.opener("branch", "w").write(util.fromlocal(label) + '\n')
     else:
-        b = repo.workingctx().branch()
+        b = util.tolocal(repo.workingctx().branch())
         if b:
             ui.write("%s\n" % b)
 
@@ -1433,7 +1433,7 @@ def identify(ui, repo):
 
     if not ui.quiet:
 
-        branch = repo.workingctx().branch()
+        branch = util.tolocal(repo.workingctx().branch())
         if branch:
             output.append("(%s)" % branch)
 
