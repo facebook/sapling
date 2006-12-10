@@ -54,3 +54,5 @@ echo % utf-8
 HGENCODING=utf-8 hg log
 
 HGENCODING=dolphin hg log
+
+exit 0
