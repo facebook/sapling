@@ -10,7 +10,7 @@
 from demandload import *
 from i18n import gettext as _
 demandload(globals(), "changelog filelog httprangereader")
-demandload(globals(), "localrepo manifest os urllib urllib2 util")
+demandload(globals(), "repo localrepo manifest os urllib urllib2 util")
 
 class rangereader(httprangereader.httprangereader):
     def read(self, size=None):

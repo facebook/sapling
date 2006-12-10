@@ -902,7 +902,7 @@ else:
         The return value of a util.fstat(f) may be passed as the st argument.
         """
         if st is None:
-            st = fstat(f)
+            st = fstat(fp)
         return st.st_uid == os.getuid()
 
 def _buildencodefun():

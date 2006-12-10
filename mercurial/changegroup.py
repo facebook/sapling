@@ -99,7 +99,7 @@ def writebundle(cg, filename, bundletype):
         if cleanup is not None:
             os.unlink(cleanup)
 
-def readbundle(fh):
+def readbundle(fh, fname):
     header = fh.read(6)
     if not header.startswith("HG"):
         raise util.Abort(_("%s: not a Mercurial bundle file") % fname)
