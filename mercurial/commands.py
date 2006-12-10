@@ -845,6 +845,7 @@ def debuginstall(ui):
         util.fromlocal("test")
     except util.Abort, inst:
         ui.write(" %s\n" % inst)
+        ui.write(_(" (check that your locale is properly set)\n"))
         problems += 1
 
     # compiled modules
@@ -853,8 +854,8 @@ def debuginstall(ui):
         import bdiff, mpatch, base85
     except Exception, inst:
         ui.write(" %s\n" % inst)
-        ui.write(_(" One or more extensions could not be found,"
-                 " check your build.\n"))
+        ui.write(_(" One or more extensions could not be found"))
+        ui.write(_(" (check that you compiled the extensions)\n"))
         problems += 1
 
     # templates
@@ -864,6 +865,7 @@ def debuginstall(ui):
         t = templater.templater(templater.templatepath("map-cmdline.default"))
     except Exception, inst:
         ui.write(" %s\n" % inst)
+        ui.write(_(" (templates seem to have been installed incorrectly)\n"))
         problems += 1
 
     # patch
@@ -873,6 +875,7 @@ def debuginstall(ui):
                                 util.find_in_path('patch', path, None))
     if not patcher:
         ui.write(_(" Can't find patch or gpatch in PATH\n"))
+        ui.write(_(" (specify a patch utility in your .hgrc file)\n"))
         problems += 1
     else:
         # actually attempt a patch here
@@ -891,11 +894,13 @@ def debuginstall(ui):
                 files.append(pf)
         if files != [fa]:
             ui.write(_(" unexpected patch output!"))
+            ui.write(_(" (you may have an incompatible version of patch)\n"))
             ui.write(data)
             problems += 1
         a = file(fa).read()
         if a != b:
             ui.write(_(" patch test failed!"))
+            ui.write(_(" (you may have an incompatible version of patch)\n"))
             problems += 1
         os.unlink(fa)
         os.unlink(fd)
@@ -911,8 +916,10 @@ def debuginstall(ui):
         if cmd == 'hgmerge':
             ui.write(_(" No merge helper set and can't find default"
                        " hgmerge script in PATH\n"))
+            ui.write(_(" (specify a merge helper in your .hgrc file)\n"))
         else:
             ui.write(_(" Can't find merge helper '%s' in PATH\n") % cmd)
+            ui.write(_(" (specify a merge helper in your .hgrc file)\n"))
             problems += 1
     else:
         # actually attempt a patch here
@@ -926,6 +933,8 @@ def debuginstall(ui):
         m = file(fl).read()
         if m != "begin\n1\n2\n3\ninsert\n4\n":
             ui.write(_(" got unexpected merge results!") % r)
+            ui.write(_(" (your merge helper may have the"
+                       " wrong argument order)\n"))
             ui.write(m)
         os.unlink(fa)
         os.unlink(fl)
@@ -942,9 +951,23 @@ def debuginstall(ui):
     if not cmdpath:
         if cmd == 'vi':
             ui.write(_(" No commit editor set and can't find vi in PATH\n"))
+            ui.write(_(" (specify a commit editor in your .hgrc file)\n"))
         else:
             ui.write(_(" Can't find editor '%s' in PATH\n") % editor)
+            ui.write(_(" (specify a commit editor in your .hgrc file)\n"))
             problems += 1
+
+    # check username
+    ui.status(_("Checking username...\n"))
+    user = os.environ.get("HGUSER")
+    if user is None:
+        user = ui.config("ui", "username")
+    if user is None:
+        user = os.environ.get("EMAIL")
+    if not user:
+        ui.warn(" ")
+        ui.username()
+        ui.write(_(" (specify a username in your .hgrc file)\n"))
 
     if not problems:
         ui.status(_("No problems detected\n"))
