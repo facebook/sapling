@@ -907,7 +907,7 @@ else:
 
 def _buildencodefun():
     e = '_'
-    win_reserved = [ord(x) for x in '|\?*<":>+[]']
+    win_reserved = [ord(x) for x in '\\:*?"<>|']
     cmap = dict([ (chr(x), chr(x)) for x in xrange(127) ])
     for x in (range(32) + range(126, 256) + win_reserved):
         cmap[chr(x)] = "~%02x" % x
