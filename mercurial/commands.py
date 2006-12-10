@@ -895,7 +895,7 @@ def debuginstall(ui):
         if files != [fa]:
             ui.write(_(" unexpected patch output!"))
             ui.write(_(" (you may have an incompatible version of patch)\n"))
-            ui.write(data)
+            ui.write(output)
             problems += 1
         a = file(fa).read()
         if a != b:
