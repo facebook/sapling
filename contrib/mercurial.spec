@@ -1,6 +1,6 @@
 Summary: Mercurial -- a distributed SCM
 Name: mercurial
-Version: 0.8
+Version: snapshot
 Release: 0
 License: GPL
 Group: Development/Tools
@@ -38,5 +38,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/hg
 %{pythonlib}/templates
 %{pythonlib}/*.py*
+%{pythonlib}/hgweb/*.py*
 %{pythonlib}/*.so
 %{hgext}/*.py*
