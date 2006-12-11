@@ -1,0 +1,67 @@
+# revision 0
+adding copy
+adding move
+adding remove
+adding unchanged
+adding zzz1_merge_ok
+adding zzz2_merge_bad
+# revision 1
+# local changes to revision 0
+4 files updated, 0 files merged, 3 files removed, 0 files unresolved
+--- a/zzz1_merge_ok
++++ b/zzz1_merge_ok
++new last line
+--- a/zzz2_merge_bad
++++ b/zzz2_merge_bad
++another last line
+M zzz1_merge_ok
+M zzz2_merge_bad
+# local merge with bad merge tool
+merging zzz1_merge_ok
+merging zzz1_merge_ok failed!
+merging zzz2_merge_bad
+merging zzz2_merge_bad failed!
+3 files updated, 0 files merged, 2 files removed, 2 files unresolved
+There are unresolved merges with locally modified files.
+You can redo the full merge using:
+  hg update 0
+  hg update 1
+2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+--- a/zzz1_merge_ok
++++ b/zzz1_merge_ok
++new last line
+--- a/zzz2_merge_bad
++++ b/zzz2_merge_bad
++another last line
+M zzz1_merge_ok
+M zzz2_merge_bad
+# local merge with conflicts
+merge: warning: conflicts during merge
+merging zzz1_merge_ok
+merging zzz2_merge_bad
+merging zzz2_merge_bad failed!
+3 files updated, 1 files merged, 2 files removed, 1 files unresolved
+There are unresolved merges with locally modified files.
+You can finish the partial merge using:
+  hg update 0
+  hg update 1
+2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+--- a/zzz1_merge_ok
++++ b/zzz1_merge_ok
++new first line
++new last line
+--- a/zzz2_merge_bad
++++ b/zzz2_merge_bad
++another last line
++=======
++new last line
+M zzz1_merge_ok
+M zzz2_merge_bad
+# local merge without conflicts
+merging zzz1_merge_ok
+4 files updated, 1 files merged, 2 files removed, 0 files unresolved
+--- a/zzz1_merge_ok
++++ b/zzz1_merge_ok
++new last line
+M zzz1_merge_ok
+? zzz2_merge_bad.orig

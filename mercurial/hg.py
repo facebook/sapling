@@ -234,11 +234,19 @@ def _update(repo, node): return update(repo, node)
 
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
+    pl = repo.parents()
     stats = _merge.update(repo, node, False, False, None, None)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("There are unresolved merges with"
                          " locally modified files.\n"))
+        if stats[1]:
+            repo.ui.status(_("You can finish the partial merge using:\n"))
+        else:
+            repo.ui.status(_("You can redo the full merge using:\n"))
+        # len(pl)==1, otherwise _merge.update() would have raised util.Abort:
+        repo.ui.status(_("  hg update %s\n  hg update %s\n")
+                       % (pl[0].rev(), repo.changectx(node).rev()))
     return stats[3]
 
 def clean(repo, node, wlock=None, show_stats=True):
