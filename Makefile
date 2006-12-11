@@ -57,7 +57,7 @@ dist:	tests dist-notests
 
 dist-notests:	doc
 	hg manifest > MANIFEST
-	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py sdist
+	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py -q sdist
 	rm MANIFEST
 
 tests:
