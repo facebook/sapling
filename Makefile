@@ -56,7 +56,9 @@ install-home-doc: doc
 dist:	tests dist-notests
 
 dist-notests:	doc
-	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py sdist --force-manifest
+	hg manifest > MANIFEST
+	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py sdist
+	rm MANIFEST
 
 tests:
 	cd tests && $(PYTHON) run-tests.py
