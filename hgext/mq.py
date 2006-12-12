@@ -1475,6 +1475,7 @@ def init(ui, repo, **opts):
         fp = r.wopener('.hgignore', 'w')
         print >> fp, 'syntax: glob'
         print >> fp, 'status'
+        print >> fp, 'guards'
         fp.close()
         r.wopener('series', 'w').close()
         r.add(['.hgignore', 'series'])
