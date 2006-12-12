@@ -109,10 +109,10 @@ def findcopies(repo, m1, m2, ma, limit):
         visit = [fctx]
         while visit:
             fc = visit.pop()
-            if fc.rev() < limit:
-                continue
             if fc.path() != orig and fc.path() not in old:
                 old[fc.path()] = 1
+            if fc.rev() < limit:
+                continue
             visit += fc.parents()
 
         old = old.keys()
