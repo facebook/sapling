@@ -53,12 +53,18 @@ install-home-bin: build
 install-home-doc: doc
 	cd doc && $(MAKE) $(MFLAGS) PREFIX="$(HOME)" install
 
+MANIFEST-doc:
+	$(MAKE) -C doc MANIFEST
+
+MANIFEST: MANIFEST-doc
+	hg manifest > MANIFEST
+	echo mercurial/__version__.py >> MANIFEST
+	cat doc/MANIFEST >> MANIFEST
+
 dist:	tests dist-notests
 
-dist-notests:	doc
-	hg manifest > MANIFEST
+dist-notests:	doc MANIFEST
 	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py -q sdist
-	rm MANIFEST
 
 tests:
 	cd tests && $(PYTHON) run-tests.py
