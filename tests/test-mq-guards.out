@@ -21,7 +21,7 @@ Now at: a.patch
 c.patch: -a
 % should skip c.patch
 applying b.patch
-skipping c.patch - guarded by '- a'
+skipping c.patch - guarded by '-a'
 Now at: b.patch
 % should push c.patch
 applying c.patch
