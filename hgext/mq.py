@@ -744,7 +744,7 @@ class queue:
                 return matches[0]
             if len(self.series) > 0 and len(self.applied) > 0:
                 if s == 'qtip':
-                    return self.series[self.series_end()-1]
+                    return self.series[self.series_end(True)-1]
                 if s == 'qbase':
                     return self.series[0]
             return None
