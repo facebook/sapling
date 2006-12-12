@@ -212,7 +212,7 @@ class queue:
             if not pushable:
                 if why:
                     write(_('skipping %s - guarded by %r\n') %
-                          (self.series[idx], ' '.join(why)))
+                          (self.series[idx], why))
                 else:
                     write(_('skipping %s - no matching guards\n') %
                           self.series[idx])
