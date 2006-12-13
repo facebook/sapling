@@ -37,7 +37,7 @@ try:
 
     # Due to the use of demandload py2exe is not finding the modules.
     # packagescan.getmodules creates a list of modules included in
-    # the mercurial package plus depdent modules.
+    # the mercurial package plus dependant modules.
     from py2exe.build_exe import py2exe as build_exe
 
     class py2exe_for_demandload(build_exe):
