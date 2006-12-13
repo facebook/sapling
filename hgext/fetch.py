@@ -5,10 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:commands,hg,node,util')
+from mercurial import commands, hg, node, util
 
 def fetch(ui, repo, source='default', **opts):
     '''Pull changes from a remote repository, merge new changes if needed.

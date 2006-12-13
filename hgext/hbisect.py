@@ -7,8 +7,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from mercurial.i18n import gettext as _
-from mercurial.demandload import demandload
-demandload(globals(), "os sys sets mercurial:hg,util,commands,cmdutil")
+from mercurial import hg, util, commands, cmdutil
+import os, sys, sets
 
 versionstr = "0.0.3"
 

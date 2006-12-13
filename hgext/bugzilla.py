@@ -52,10 +52,10 @@
 #   [usermap]
 #   committer_email = bugzilla_user_name
 
-from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:cmdutil,templater,util os re time')
+from mercurial import cmdutil, templater, util
+import os, re, time
 
 MySQLdb = None
 

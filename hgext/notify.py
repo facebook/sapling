@@ -65,11 +65,10 @@
 # if you like, you can put notify config file in repo that users can
 # push changes to, they can manage their own subscriptions.
 
-from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:patch,cmdutil,templater,util,mail')
-demandload(globals(), 'email.Parser fnmatch socket time')
+from mercurial import patch, cmdutil, templater, util, mail
+import email.Parser, fnmatch, socket, time
 
 # template for single changeset can include email headers.
 single_template = '''

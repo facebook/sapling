@@ -7,12 +7,10 @@
 
 from node import *
 from i18n import gettext as _
-from demandload import *
-import repo
-demandload(globals(), "appendfile changegroup")
-demandload(globals(), "changelog dirstate filelog manifest context")
-demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
-demandload(globals(), "os revlog time util")
+import repo, appendfile, changegroup
+import changelog, dirstate, filelog, manifest, context
+import re, lock, transaction, tempfile, stat, mdiff, errno, ui
+import os, revlog, time, util
 
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')

@@ -8,10 +8,11 @@
 
 from node import *
 from repo import *
-from demandload import *
 from i18n import gettext as _
-demandload(globals(), "localrepo bundlerepo httprepo sshrepo statichttprepo")
-demandload(globals(), "errno lock os shutil util merge@_merge verify@_verify")
+import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
+import errno, lock, os, shutil, util
+import merge as _merge
+import verify as _verify
 
 def _local(path):
     return (os.path.isfile(util.drop_scheme('file', path)) and

@@ -13,10 +13,10 @@
 
 import win32api
 
-from demandload import *
 from i18n import gettext as _
-demandload(globals(), 'errno os pywintypes win32con win32file win32process')
-demandload(globals(), 'cStringIO win32com.shell:shell,shellcon winerror')
+import errno, os, pywintypes, win32con, win32file, win32process
+import cStringIO, winerror
+from win32com.shell import shell,shellcon
 
 class WinError:
     winerror_map = {

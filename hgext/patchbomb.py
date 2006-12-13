@@ -63,10 +63,9 @@
 #
 # That should be all.  Now your patchbomb is on its way out.
 
-from mercurial.demandload import *
-demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
-                         mercurial:cmdutil,commands,hg,mail,ui,patch
-                         os errno popen2 socket sys tempfile time''')
+import os, errno, popen2, socket, sys, tempfile, time
+import email.MIMEMultipart, email.MIMEText, email.Utils
+from mercurial import cmdutil, commands, hg, mail, ui, patch
 from mercurial.i18n import gettext as _
 from mercurial.node import *
 

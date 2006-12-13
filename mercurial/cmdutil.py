@@ -5,11 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), 'os sys')
-demandload(globals(), 'mdiff util templater patch')
+import os, sys, mdiff, util, templater, patch
 
 revrangesep = ':'
 

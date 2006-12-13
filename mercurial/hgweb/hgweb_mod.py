@@ -6,17 +6,13 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os
-import os.path
-import mimetypes
-from mercurial.demandload import demandload
-demandload(globals(), "re zlib ConfigParser mimetools cStringIO sys tempfile")
-demandload(globals(), 'urllib bz2')
-demandload(globals(), "mercurial:mdiff,ui,hg,util,archival,streamclone,patch")
-demandload(globals(), "mercurial:revlog,templater")
-demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile,style_map")
+import os, mimetypes, re, zlib, ConfigParser, mimetools, cStringIO, sys
+import tempfile, urllib, bz2
 from mercurial.node import *
 from mercurial.i18n import gettext as _
+from mercurial import mdiff, ui, hg, util, archival, streamclone, patch
+from mercurial import revlog, templater
+from common import get_mtime, staticfile, style_map
 
 def _up(p):
     if p[0] != "/":

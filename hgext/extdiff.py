@@ -48,10 +48,10 @@
 # needed files, so running the external diff program will actually be
 # pretty fast (at least faster than having to compare the entire tree).
 
-from mercurial.demandload import demandload
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:cmdutil,util os shutil tempfile')
+from mercurial import cmdutil, util
+import os, shutil, tempfile
 
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     def snapshot_node(files, node):

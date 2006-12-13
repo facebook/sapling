@@ -11,10 +11,9 @@
 #
 # <alias email> <actual email>
 
-from mercurial.demandload import *
+import time, sys, signal, os
 from mercurial.i18n import gettext as _
-demandload(globals(), 'time sys signal os')
-demandload(globals(), 'mercurial:hg,mdiff,fancyopts,cmdutil,ui,util,templater,node')
+from mercurial import hg, mdiff, cmdutil, ui, util, templater, node
 
 def __gather(ui, repo, node1, node2):
     def dirtywork(f, mmap1, mmap2):

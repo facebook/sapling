@@ -12,8 +12,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import *
 from i18n import gettext as _
-from demandload import demandload
-demandload(globals(), "changegroup util os struct bz2 tempfile")
+import changegroup, util, os, struct, bz2, tempfile
 
 import localrepo, changelog, manifest, filelog, revlog
 

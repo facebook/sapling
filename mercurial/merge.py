@@ -7,8 +7,7 @@
 
 from node import *
 from i18n import gettext as _
-from demandload import *
-demandload(globals(), "errno util os tempfile")
+import errno, util, os, tempfile
 
 def filemerge(repo, fw, fo, wctx, mctx):
     """perform a 3-way merge in the working directory

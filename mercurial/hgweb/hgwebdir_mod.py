@@ -6,13 +6,12 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os
-from mercurial.demandload import demandload
-demandload(globals(), "mimetools cStringIO")
-demandload(globals(), "mercurial:ui,hg,util,templater")
-demandload(globals(), "mercurial.hgweb.hgweb_mod:hgweb")
-demandload(globals(), "mercurial.hgweb.common:get_mtime,staticfile,style_map")
+from mercurial import demandimport; demandimport.enable()
+import os, mimetools, cStringIO
 from mercurial.i18n import gettext as _
+from mercurial import ui, hg, util, templater
+from common import get_mtime, staticfile, style_map
+from hgweb_mod import hgweb
 
 # This is a stopgap
 class hgwebdir(object):

@@ -6,11 +6,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial.demandload import demandload
-import os, sys, errno
-demandload(globals(), "urllib BaseHTTPServer socket SocketServer")
-demandload(globals(), "mercurial:ui,hg,util,templater")
-demandload(globals(), "hgweb_mod:hgweb hgwebdir_mod:hgwebdir request:wsgiapplication")
+import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer
+from mercurial import ui, hg, util, templater
+from hgweb_mod import hgweb
+from hgwebdir_mod import hgwebdir
+from request import wsgiapplication
 from mercurial.i18n import gettext as _
 
 def _splitURI(uri):

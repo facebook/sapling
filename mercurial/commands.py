@@ -5,14 +5,14 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import demandload
+import demandimport; demandimport.enable()
 from node import *
 from i18n import gettext as _
-demandload(globals(), "bisect os re sys signal imp urllib pdb shlex stat")
-demandload(globals(), "fancyopts ui hg util lock revlog bundlerepo")
-demandload(globals(), "difflib patch time help mdiff tempfile")
-demandload(globals(), "traceback errno version atexit")
-demandload(globals(), "archival changegroup cmdutil hgweb.server sshserver")
+import bisect, os, re, sys, signal, imp, urllib, pdb, shlex, stat
+import fancyopts, ui, hg, util, lock, revlog, bundlerepo
+import difflib, patch, time, help, mdiff, tempfile
+import traceback, errno, version, atexit
+import archival, changegroup, cmdutil, hgweb.server, sshserver
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
