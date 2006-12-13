@@ -441,6 +441,9 @@ def update(repo, node, branchmerge, force, partial, wlock):
     wlock = working dir lock, if already held
     """
 
+    if node is None:
+        node = "tip"
+
     if not wlock:
         wlock = repo.wlock()
 
