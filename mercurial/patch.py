@@ -5,12 +5,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import demandload
 from i18n import gettext as _
 from node import *
-demandload(globals(), "base85 cmdutil mdiff util")
-demandload(globals(), "cStringIO email.Parser errno os popen2 re shutil sha")
-demandload(globals(), "sys tempfile zlib")
+import base85, cmdutil, mdiff, util
+import cStringIO, email.Parser, errno, os, popen2, re, shutil, sha
+import sys, tempfile, zlib
 
 # helper functions
 

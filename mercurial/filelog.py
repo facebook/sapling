@@ -6,8 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from revlog import *
-from demandload import *
-demandload(globals(), "os")
+import os
 
 class filelog(revlog):
     def __init__(self, opener, path, defversion=REVLOG_DEFAULT_VERSION):

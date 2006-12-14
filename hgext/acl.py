@@ -45,10 +45,10 @@
 #   glob pattern = user4, user5
 #   ** = user6
 
-from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'getpass mercurial:util')
+from mercurial import util
+import getpass
 
 class checker(object):
     '''acl checker.'''

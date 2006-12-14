@@ -6,8 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import gettext as _
-from demandload import *
-demandload(globals(), "os re smtplib templater util")
+import os, re, smtplib, templater, util
 
 def _smtp(ui):
     '''send mail using smtp.'''

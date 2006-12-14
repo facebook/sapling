@@ -5,10 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import demandload
 from i18n import gettext as _
 from node import *
-demandload(globals(), "cgi re sys os time urllib util textwrap")
+import cgi, re, sys, os, time, urllib, util, textwrap
 
 def parsestring(s, quoted=True):
     '''parse a string using simple c-like syntax.

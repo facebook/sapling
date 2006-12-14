@@ -5,10 +5,9 @@
 # This software may be used and distributed according to the terms of
 # the GNU General Public License, incorporated herein by reference.
 
-from demandload import *
 from i18n import gettext as _
 from node import *
-demandload(globals(), 'cStringIO os stat tarfile time util zipfile')
+import cStringIO, os, stat, tarfile, time, util, zipfile
 
 def tidyprefix(dest, prefix, suffixes):
     '''choose prefix to use for names in archive.  make sure prefix is

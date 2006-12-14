@@ -7,9 +7,7 @@
 
 from revlog import *
 from i18n import gettext as _
-from demandload import *
-demandload(globals(), "array bisect struct")
-demandload(globals(), "mdiff")
+import array, bisect, struct, mdiff
 
 class manifestdict(dict):
     def __init__(self, mapping=None, flags=None):

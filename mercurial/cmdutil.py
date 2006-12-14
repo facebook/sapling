@@ -5,11 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import demandload
 from node import *
 from i18n import gettext as _
-demandload(globals(), 'os sys')
-demandload(globals(), 'mdiff util templater patch')
+import os, sys, mdiff, util, templater, patch
 
 revrangesep = ':'
 
@@ -199,12 +197,11 @@ def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 
-    def __init__(self, ui, repo, patch, brinfo, buffered):
+    def __init__(self, ui, repo, patch, buffered):
         self.ui = ui
         self.repo = repo
         self.buffered = buffered
         self.patch = patch
-        self.brinfo = brinfo
         self.header = {}
         self.hunk = {}
         self.lastheader = None
@@ -268,11 +265,6 @@ class changeset_printer(object):
         for parent in parents:
             self.ui.write(_("parent:      %d:%s\n") % parent)
 
-        if self.brinfo:
-            br = self.repo.branchlookup([changenode])
-            if br:
-                self.ui.write(_("branch:      %s\n") % " ".join(br[changenode]))
-
         if self.ui.debugflag:
             self.ui.write(_("manifest:    %d:%s\n") %
                           (self.repo.manifest.rev(changes[0]), hex(changes[0])))
@@ -320,8 +312,8 @@ class changeset_printer(object):
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
 
-    def __init__(self, ui, repo, patch, brinfo, mapfile, buffered):
-        changeset_printer.__init__(self, ui, repo, patch, brinfo, buffered)
+    def __init__(self, ui, repo, patch, mapfile, buffered):
+        changeset_printer.__init__(self, ui, repo, patch, buffered)
         self.t = templater.templater(mapfile, templater.common_filters,
                                      cache={'parent': '{rev}:{node|short} ',
                                             'manifest': '{rev}:{node|short}',
@@ -407,12 +399,6 @@ class changeset_templater(changeset_printer):
             if branch:
                 branch = util.tolocal(branch)
                 return showlist('branch', [branch], plural='branches', **args)
-            # add old style branches if requested
-            if self.brinfo:
-                br = self.repo.branchlookup([changenode])
-                if changenode in br:
-                    return showlist('branch', br[changenode],
-                                    plural='branches', **args)
 
         def showparents(**args):
             parents = [[('rev', log.rev(p)), ('node', hex(p))]
@@ -526,11 +512,6 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
     if opts.get('patch'):
         patch = matchfn or util.always
 
-    br = None
-    if opts.get('branches'):
-        ui.warn(_("the --branches option is deprecated, "
-                  "please use 'hg branches' instead\n"))
-        br = True
     tmpl = opts.get('template')
     mapfile = None
     if tmpl:
@@ -552,12 +533,12 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
                            or templater.templatepath(mapfile))
                 if mapname: mapfile = mapname
         try:
-            t = changeset_templater(ui, repo, patch, br, mapfile, buffered)
+            t = changeset_templater(ui, repo, patch, mapfile, buffered)
         except SyntaxError, inst:
             raise util.Abort(inst.args[0])
         if tmpl: t.use_template(tmpl)
         return t
-    return changeset_printer(ui, repo, patch, br, buffered)
+    return changeset_printer(ui, repo, patch, buffered)
 
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""

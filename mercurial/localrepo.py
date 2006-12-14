@@ -7,12 +7,10 @@
 
 from node import *
 from i18n import gettext as _
-from demandload import *
-import repo
-demandload(globals(), "appendfile changegroup")
-demandload(globals(), "changelog dirstate filelog manifest context")
-demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
-demandload(globals(), "os revlog time util")
+import repo, appendfile, changegroup
+import changelog, dirstate, filelog, manifest, context
+import re, lock, transaction, tempfile, stat, mdiff, errno, ui
+import os, revlog, time, util
 
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
@@ -992,112 +990,6 @@ class localrepository(repo.repository):
         heads = [(-self.changelog.rev(h), h) for h in heads]
         heads.sort()
         return [n for (r, n) in heads]
-
-    # branchlookup returns a dict giving a list of branches for
-    # each head.  A branch is defined as the tag of a node or
-    # the branch of the node's parents.  If a node has multiple
-    # branch tags, tags are eliminated if they are visible from other
-    # branch tags.
-    #
-    # So, for this graph:  a->b->c->d->e
-    #                       \         /
-    #                        aa -----/
-    # a has tag 2.6.12
-    # d has tag 2.6.13
-    # e would have branch tags for 2.6.12 and 2.6.13.  Because the node
-    # for 2.6.12 can be reached from the node 2.6.13, that is eliminated
-    # from the list.
-    #
-    # It is possible that more than one head will have the same branch tag.
-    # callers need to check the result for multiple heads under the same
-    # branch tag if that is a problem for them (ie checkout of a specific
-    # branch).
-    #
-    # passing in a specific branch will limit the depth of the search
-    # through the parents.  It won't limit the branches returned in the
-    # result though.
-    def branchlookup(self, heads=None, branch=None):
-        if not heads:
-            heads = self.heads()
-        headt = [ h for h in heads ]
-        chlog = self.changelog
-        branches = {}
-        merges = []
-        seenmerge = {}
-
-        # traverse the tree once for each head, recording in the branches
-        # dict which tags are visible from this head.  The branches
-        # dict also records which tags are visible from each tag
-        # while we traverse.
-        while headt or merges:
-            if merges:
-                n, found = merges.pop()
-                visit = [n]
-            else:
-                h = headt.pop()
-                visit = [h]
-                found = [h]
-                seen = {}
-            while visit:
-                n = visit.pop()
-                if n in seen:
-                    continue
-                pp = chlog.parents(n)
-                tags = self.nodetags(n)
-                if tags:
-                    for x in tags:
-                        if x == 'tip':
-                            continue
-                        for f in found:
-                            branches.setdefault(f, {})[n] = 1
-                        branches.setdefault(n, {})[n] = 1
-                        break
-                    if n not in found:
-                        found.append(n)
-                    if branch in tags:
-                        continue
-                seen[n] = 1
-                if pp[1] != nullid and n not in seenmerge:
-                    merges.append((pp[1], [x for x in found]))
-                    seenmerge[n] = 1
-                if pp[0] != nullid:
-                    visit.append(pp[0])
-        # traverse the branches dict, eliminating branch tags from each
-        # head that are visible from another branch tag for that head.
-        out = {}
-        viscache = {}
-        for h in heads:
-            def visible(node):
-                if node in viscache:
-                    return viscache[node]
-                ret = {}
-                visit = [node]
-                while visit:
-                    x = visit.pop()
-                    if x in viscache:
-                        ret.update(viscache[x])
-                    elif x not in ret:
-                        ret[x] = 1
-                        if x in branches:
-                            visit[len(visit):] = branches[x].keys()
-                viscache[node] = ret
-                return ret
-            if h not in branches:
-                continue
-            # O(n^2), but somewhat limited.  This only searches the
-            # tags visible from a specific head, not all the tags in the
-            # whole repo.
-            for b in branches[h]:
-                vis = False
-                for bb in branches[h].keys():
-                    if b != bb:
-                        if b in visible(bb):
-                            vis = True
-                            break
-                if not vis:
-                    l = out.setdefault(h, [])
-                    l[len(l):] = self.nodetags(b)
-        return out
 
     def branches(self, nodes):
         if not nodes:

@@ -52,10 +52,10 @@
 #   [usermap]
 #   committer_email = bugzilla_user_name
 
-from mercurial.demandload import *
 from mercurial.i18n import gettext as _
 from mercurial.node import *
-demandload(globals(), 'mercurial:cmdutil,templater,util os re time')
+from mercurial import cmdutil, templater, util
+import os, re, time
 
 MySQLdb = None
 
@@ -268,7 +268,7 @@ class bugzilla(object):
         mapfile = self.ui.config('bugzilla', 'style')
         tmpl = self.ui.config('bugzilla', 'template')
         t = cmdutil.changeset_templater(self.ui, self.repo,
-                                        False, None, mapfile, False)
+                                        False, mapfile, False)
         if not mapfile and not tmpl:
             tmpl = _('changeset {node|short} in repo {root} refers '
                      'to bug {bug}.\ndetails:\n\t{desc|tabindent}')

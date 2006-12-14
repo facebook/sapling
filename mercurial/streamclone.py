@@ -5,9 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import demandload
 from i18n import gettext as _
-demandload(globals(), "os stat util lock")
+import os, stat, util, lock
 
 # if server supports streaming clone, it advertises "stream"
 # capability with value that is version+flags of repo it is serving.

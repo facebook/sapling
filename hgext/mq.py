@@ -29,11 +29,9 @@ remove patch from applied stack           qpop
 refresh contents of top applied patch     qrefresh
 '''
 
-from mercurial.demandload import *
 from mercurial.i18n import gettext as _
-from mercurial import commands
-demandload(globals(), "os sys re struct traceback errno bz2")
-demandload(globals(), "mercurial:cmdutil,hg,patch,revlog,util,changegroup")
+from mercurial import commands, cmdutil, hg, patch, revlog, util, changegroup
+import os, sys, re, struct, traceback, errno, bz2
 
 commands.norepo += " qclone qversion"
 

@@ -5,11 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial.demandload import *
 from mercurial.i18n import gettext as _
-demandload(globals(), 'os tempfile')
-demandload(globals(), 'mercurial:bundlerepo,cmdutil,commands,hg,merge,patch')
-demandload(globals(), 'mercurial:revlog,util')
+import os, tempfile
+from mercurial import bundlerepo, cmdutil, commands, hg, merge, patch, revlog
+from mercurial import util
 
 '''patch transplanting tool
 

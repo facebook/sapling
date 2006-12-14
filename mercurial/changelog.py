@@ -7,8 +7,7 @@
 
 from revlog import *
 from i18n import gettext as _
-from demandload import demandload
-demandload(globals(), "os time util")
+import os, time, util
 
 def _string_escape(text):
     """
