@@ -61,7 +61,8 @@ class hgwebdir(object):
 
     def run_wsgi(self, req):
         def header(**map):
-            header_file = cStringIO.StringIO(''.join(tmpl("header", **map)))
+            header_file = cStringIO.StringIO(
+                ''.join(tmpl("header", encoding=util._encoding, **map)))
             msg = mimetools.Message(header_file, 0)
             req.header(msg.items())
             yield header_file.read()
