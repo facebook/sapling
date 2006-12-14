@@ -2610,7 +2610,7 @@ table = {
           ('n', 'number', None, _('list the revision number (default)')),
           ('c', 'changeset', None, _('list the changeset')),
          ] + walkopts,
-         _('hg annotate [-r REV] [-a] [-u] [-d] [-n] [-c] FILE...')),
+         _('hg annotate [-r REV] [-f] [-a] [-u] [-d] [-n] [-c] FILE...')),
     "archive":
         (archive,
          [('', 'no-decode', None, _('do not pass files through decoders')),
@@ -2639,7 +2639,7 @@ table = {
           ('', 'base', [],
            _('a base changeset to specify instead of a destination')),
          ] + remoteopts,
-         _('hg bundle [--base REV]... [--rev REV]... FILE [DEST]')),
+         _('hg bundle [-f] [-r REV]... [--base REV]... FILE [DEST]')),
     "cat":
         (cat,
          [('o', 'output', '', _('print output to file with formatted name')),
@@ -2708,7 +2708,7 @@ table = {
           ('B', 'ignore-blank-lines', None,
            _('ignore changes whose lines are all blank')),
          ] + walkopts,
-         _('hg diff [-a] [-I] [-X] [-r REV1 [-r REV2]] [FILE]...')),
+         _('hg diff [OPTION]... [-r REV1 [-r REV2]] [FILE]...')),
     "^export":
         (export,
          [('o', 'output', '', _('print output to file with formatted name')),
@@ -2716,7 +2716,7 @@ table = {
           ('g', 'git', None, _('use git extended diff format')),
           ('', 'nodates', None, _("don't include dates in diff headers")),
           ('', 'switch-parent', None, _('diff against the second parent'))],
-         _('hg export [-a] [-o OUTFILESPEC] REV...')),
+         _('hg export [OPTION]... [-o OUTFILESPEC] REV...')),
     "grep":
         (grep,
          [('0', 'print0', None, _('end fields with NUL')),
@@ -2760,10 +2760,12 @@ table = {
           ('r', 'rev', [], _('a specific revision up to which you would like to pull')),
           ('', 'template', '', _('display with template')),
          ] + remoteopts,
-         _('hg incoming [-p] [-n] [-M] [-r REV]...'
+         _('hg incoming [-p] [-n] [-M] [-f] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
     "^init":
-        (init, remoteopts, _('hg init [-e FILE] [--remotecmd FILE] [DEST]')),
+        (init,
+         remoteopts,
+         _('hg init [-e CMD] [--remotecmd CMD] [DEST]')),
     "locate":
         (locate,
          [('r', 'rev', '', _('search the repository as it stood at rev')),
@@ -2810,7 +2812,7 @@ table = {
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'template', '', _('display with template')),
          ] + remoteopts,
-         _('hg outgoing [-M] [-p] [-n] [-r REV]... [DEST]')),
+         _('hg outgoing [-M] [-p] [-n] [-f] [-r REV]... [DEST]')),
     "^parents":
         (parents,
          [('b', 'branches', None, _('show branches (DEPRECATED)')),
@@ -2825,15 +2827,16 @@ table = {
            _('update to new tip if changesets were pulled')),
           ('f', 'force', None,
            _('run even when remote repository is unrelated')),
-          ('r', 'rev', [], _('a specific revision up to which you would like to pull')),
+          ('r', 'rev', [],
+           _('a specific revision up to which you would like to pull')),
          ] + remoteopts,
-         _('hg pull [-u] [-r REV]... [-e FILE] [--remotecmd FILE] [SOURCE]')),
+         _('hg pull [-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]')),
     "^push":
         (push,
          [('f', 'force', None, _('force push')),
           ('r', 'rev', [], _('a specific revision you would like to push')),
          ] + remoteopts,
-         _('hg push [-f] [-r REV]... [-e FILE] [--remotecmd FILE] [DEST]')),
+         _('hg push [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]')),
     "debugrawcommit|rawcommit":
         (rawcommit,
          [('p', 'parent', [], _('parent')),
@@ -2863,7 +2866,7 @@ table = {
           ('r', 'rev', '', _('revision to revert to')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
          ] + walkopts + dryrunopts,
-         _('hg revert [-r REV] [NAME]...')),
+         _('hg revert [OPTION]... [-r REV] [NAME]...')),
     "rollback": (rollback, [], _('hg rollback')),
     "root": (root, [], _('hg root')),
     "showconfig|debugconfig":
@@ -2932,7 +2935,7 @@ table = {
            _('checkout the head of a specific branch (DEPRECATED)')),
           ('C', 'clean', None, _('overwrite locally modified files')),
           ('d', 'date', '', _('tipmost revision matching date'))],
-         _('hg update [-C] [REV]')),
+         _('hg update [-C] [-d DATE] [REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (version_, [], _('hg version')),
 }
