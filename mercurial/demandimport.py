@@ -35,8 +35,8 @@ class _demandmod(object):
         else:
             head = name
             after = []
-        self.__dict__["_data"] = (head, globals, locals, after)
-        self.__dict__["_module"] = None
+        object.__setattr__(self, "_data", (head, globals, locals, after))
+        object.__setattr__(self, "_module", None)
     def _extend(self, name):
         """add to the list of submodules to load"""
         self._data[3].append(name)
@@ -54,7 +54,7 @@ class _demandmod(object):
             # are we in the locals dictionary still?
             if locals and locals.get(head) == self:
                 locals[head] = mod
-            self.__dict__["_module"] = mod
+            object.__setattr__(self, "_module", mod)
     def __repr__(self):
         return "<unloaded module '%s'>" % self._data[0]
     def __call__(self, *args, **kwargs):
