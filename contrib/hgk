@@ -43,7 +43,9 @@ proc getcommits {rargs} {
     }
     if [catch {
 	set parse_args [concat --default HEAD $revargs]
-	set parsed_args [split [eval exec hg debug-rev-parse $parse_args] "\n"]
+	set parse_temp [eval exec hg debug-rev-parse $parse_args]
+	regsub -all "\r\n" $parse_temp "\n" parse_temp
+	set parsed_args [split $parse_temp "\n"]
     } err] {
 	# if git-rev-parse failed for some reason...
 	if {$rargs == {}} {
@@ -108,6 +110,7 @@ to allow selection of commits to be displayed.)}
 	    set leftover {}
 	}
 	set start [expr {$i + 1}]
+	regsub -all "\r\n" $cmit "\n" cmit
 	set j [string first "\n" $cmit]
 	set ok 0
 	if {$j >= 0} {
@@ -209,6 +212,7 @@ proc parsecommit {id contents listed olds} {
 	    incr ncleft($p)
 	}
     }
+    regsub -all "\r\n" $contents "\n" contents
     foreach line [split $contents "\n"] {
 	if {$inhdr} {
 	    set line [split $line]
@@ -257,7 +261,8 @@ proc readrefs {} {
     global tagids idtags headids idheads tagcontents
 
     set tags [exec hg tags]
-    set lines [split $tags '\n']
+    regsub -all "\r\n" $tags "\n" tags
+    set lines [split $tags "\n"]
     foreach f $lines {
 	set f [regexp -all -inline {\S+} $f]
 	set direct [lindex $f 0]
@@ -2856,6 +2861,7 @@ proc getblobdiffline {bdf ids} {
     if {$ids != $diffids || $bdf != $blobdifffd($ids)} {
 	return
     }
+    regsub -all "\r" $line "" line
     $ctext conf -state normal
     if {[regexp {^diff --git a/(.*) b/(.*)} $line match fname newname]} {
 	# start of a new file
@@ -2914,7 +2920,7 @@ proc getblobdiffline {bdf ids} {
 	} elseif {$diffinhdr || $x == "\\"} {
 	    # e.g. "\ No newline at end of file"
 	    $ctext insert end "$line\n" filesep
-	} else {
+	} elseif  {$line != ""} {
 	    # Something else we don't recognize
 	    if {$curdifftag != "Comments"} {
 		$ctext insert end "\n"
