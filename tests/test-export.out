@@ -48,13 +48,13 @@ foo-5f17a83f5fbd.patch
 foo-f3acbafac161.patch
 # foo-%r.patch
 exporting patches:
-foo-00000000000000000002.patch
-foo-00000000000000000003.patch
-foo-00000000000000000004.patch
-foo-00000000000000000005.patch
-foo-00000000000000000006.patch
-foo-00000000000000000007.patch
-foo-00000000000000000008.patch
-foo-00000000000000000009.patch
-foo-00000000000000000010.patch
-foo-00000000000000000011.patch
+foo-02.patch
+foo-03.patch
+foo-04.patch
+foo-05.patch
+foo-06.patch
+foo-07.patch
+foo-08.patch
+foo-09.patch
+foo-10.patch
+foo-11.patch
