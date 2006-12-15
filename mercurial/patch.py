@@ -656,7 +656,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             fp.close()
 
     for seqno, cset in enumerate(revs):
-        single(cset, seqno, fp)
+        single(cset, seqno+1, fp)
 
 def diffstat(patchlines):
     fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
