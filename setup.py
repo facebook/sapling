@@ -17,6 +17,8 @@ import mercurial.version
 import mercurial.demandimport
 mercurial.demandimport.enable = lambda: None
 
+extra = {}
+
 # py2exe needs to be installed to work
 try:
     import py2exe
@@ -34,6 +36,8 @@ try:
             modulefinder.AddPackagePath(pn, p)
     except ImportError:
         pass
+
+    extra['console'] = ['hg']
 
 except ImportError:
     pass
@@ -70,4 +74,4 @@ setup(name='mercurial',
                                    license='COPYING',
                                    readme='contrib/macosx/Readme.html',
                                    welcome='contrib/macosx/Welcome.html')),
-      console=['hg'])
+      **extra)
