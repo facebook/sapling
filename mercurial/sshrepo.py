@@ -7,7 +7,7 @@
 
 from node import *
 from remoterepo import *
-from i18n import gettext as _
+from i18n import _
 import hg, os, re, stat, util
 
 class sshrepository(remoterepository):

@@ -66,7 +66,7 @@
 import os, errno, popen2, socket, sys, tempfile, time
 import email.MIMEMultipart, email.MIMEText, email.Utils
 from mercurial import cmdutil, commands, hg, mail, ui, patch
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial.node import *
 
 try:

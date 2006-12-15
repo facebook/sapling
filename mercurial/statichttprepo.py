@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from i18n import gettext as _
+from i18n import _
 import changelog, filelog, httprangereader
 import repo, localrepo, manifest, os, urllib, urllib2, util
 

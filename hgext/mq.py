@@ -29,7 +29,7 @@ remove patch from applied stack           qpop
 refresh contents of top applied patch     qrefresh
 '''
 
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial import commands, cmdutil, hg, patch, revlog, util, changegroup
 import os, sys, re, struct, traceback, errno, bz2
 

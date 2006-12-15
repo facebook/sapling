@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import *
-from i18n import gettext as _
+from i18n import _
 import ancestor, bdiff, repo, revlog, util, os
 
 class changectx(object):

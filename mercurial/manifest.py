@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from revlog import *
-from i18n import gettext as _
+from i18n import _
 import array, bisect, struct, mdiff
 
 class manifestdict(dict):

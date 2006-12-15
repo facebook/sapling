@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 import os, tempfile
 from mercurial import bundlerepo, cmdutil, commands, hg, merge, patch, revlog
 from mercurial import util

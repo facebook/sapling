@@ -52,7 +52,7 @@
 #   [usermap]
 #   committer_email = bugzilla_user_name
 
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial.node import *
 from mercurial import cmdutil, templater, util
 import os, re, time

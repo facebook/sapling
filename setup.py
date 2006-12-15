@@ -14,6 +14,8 @@ from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
 
 import mercurial.version
+import mercurial.demandimport
+mercurial.demandimport.enable = lambda: None
 
 # py2exe needs to be installed to work
 try:
@@ -34,8 +36,7 @@ try:
         pass
 
 except ImportError:
-    py2exe_for_demandload = None
-
+    pass
 
 # specify version string, otherwise 'hg identify' will be used:
 version = ''
@@ -48,10 +49,6 @@ class install_package_data(install_data):
 
 mercurial.version.remember_version(version)
 cmdclass = {'install_data': install_package_data}
-py2exe_opts = {}
-if py2exe_for_demandload is not None:
-    cmdclass['py2exe'] = py2exe_for_demandload
-    py2exe_opts['console'] = ['hg']
 
 setup(name='mercurial',
       version=mercurial.version.get_version(),
@@ -73,4 +70,4 @@ setup(name='mercurial',
                                    license='COPYING',
                                    readme='contrib/macosx/Readme.html',
                                    welcome='contrib/macosx/Welcome.html')),
-      **py2exe_opts)
+      console=['hg'])

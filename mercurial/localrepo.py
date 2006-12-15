@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import *
-from i18n import gettext as _
+from i18n import _
 import repo, appendfile, changegroup
 import changelog, dirstate, filelog, manifest, context
 import re, lock, transaction, tempfile, stat, mdiff, errno, ui

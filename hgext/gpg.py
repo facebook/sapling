@@ -8,7 +8,7 @@
 import os, tempfile, binascii
 from mercurial import util
 from mercurial import node as hgnode
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 
 class gpg:
     def __init__(self, path, key=None):

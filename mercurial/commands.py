@@ -7,7 +7,7 @@
 
 import demandimport; demandimport.enable()
 from node import *
-from i18n import gettext as _
+from i18n import _
 import bisect, os, re, sys, signal, imp, urllib, pdb, shlex, stat
 import fancyopts, ui, hg, util, lock, revlog, bundlerepo
 import difflib, patch, time, help, mdiff, tempfile

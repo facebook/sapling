@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from revlog import *
-from i18n import gettext as _
+from i18n import _
 import os, time, util
 
 def _string_escape(text):
