@@ -13,7 +13,7 @@
 
 import win32api
 
-from i18n import gettext as _
+from i18n import _
 import errno, os, pywintypes, win32con, win32file, win32process
 import cStringIO, winerror
 from win32com.shell import shell,shellcon

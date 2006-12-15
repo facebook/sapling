@@ -8,7 +8,7 @@ of the GNU General Public License, incorporated herein by reference.
 """
 
 from node import *
-from i18n import gettext as _
+from i18n import _
 import struct, os, time, bisect, stat, strutil, util, re, errno
 
 class dirstate(object):

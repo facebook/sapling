@@ -8,7 +8,7 @@
 
 from node import *
 from repo import *
-from i18n import gettext as _
+from i18n import _
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
 import errno, lock, os, shutil, util
 import merge as _merge

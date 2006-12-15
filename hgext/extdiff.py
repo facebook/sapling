@@ -48,7 +48,7 @@
 # needed files, so running the external diff program will actually be
 # pretty fast (at least faster than having to compare the entire tree).
 
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial.node import *
 from mercurial import cmdutil, util
 import os, shutil, tempfile

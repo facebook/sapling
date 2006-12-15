@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from i18n import gettext as _
+from i18n import _
 from node import *
 import base85, cmdutil, mdiff, util
 import cStringIO, email.Parser, errno, os, popen2, re, shutil, sha

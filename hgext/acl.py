@@ -45,7 +45,7 @@
 #   glob pattern = user4, user5
 #   ** = user6
 
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial.node import *
 from mercurial import util
 import getpass

@@ -12,7 +12,7 @@ This contains helper routines that are independent of the SCM core and hide
 platform-specific details from the core.
 """
 
-from i18n import gettext as _
+from i18n import _
 import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile
 import os, threading, time, calendar, ConfigParser, locale
 

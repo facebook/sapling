@@ -11,7 +11,7 @@ of the GNU General Public License, incorporated herein by reference.
 """
 
 from node import *
-from i18n import gettext as _
+from i18n import _
 import binascii, changegroup, errno, ancestor, mdiff, os
 import sha, struct, util, zlib
 
