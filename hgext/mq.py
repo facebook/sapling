@@ -702,6 +702,7 @@ class queue:
         if saveheads:
             backupch = repo.changegroupsubset(savebases.keys(), saveheads, 'strip')
             chgrpfile = bundle(backupch)
+            chgrpfile = 'file:%s' % chgrpfile
 
         stripall(rev, revnum)
 
