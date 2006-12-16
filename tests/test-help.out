@@ -46,7 +46,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  branch       set or show the current branch name
  branches     list repository named branches
  bundle       create a changegroup file
- cat          output the latest or given revisions of files
+ cat          output the current or given revision of files
  clone        make a copy of an existing repository
  commit       commit the specified files or all outstanding changes
  copy         mark files as copied for the next commit
@@ -61,7 +61,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  init         create a new repository in the given directory
  locate       locate files matching specific patterns
  log          show revision history of entire repository or files
- manifest     output the latest or given revision of the project manifest
+ manifest     output the current or given revision of the project manifest
  merge        Merge working directory with another revision
  outgoing     show changesets not found in destination
  parents      show the parents of the working dir or revision
@@ -92,7 +92,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  branch       set or show the current branch name
  branches     list repository named branches
  bundle       create a changegroup file
- cat          output the latest or given revisions of files
+ cat          output the current or given revision of files
  clone        make a copy of an existing repository
  commit       commit the specified files or all outstanding changes
  copy         mark files as copied for the next commit
@@ -107,7 +107,7 @@ list of commands (use "hg help -v" to show aliases and global options):
  init         create a new repository in the given directory
  locate       locate files matching specific patterns
  log          show revision history of entire repository or files
- manifest     output the latest or given revision of the project manifest
+ manifest     output the current or given revision of the project manifest
  merge        Merge working directory with another revision
  outgoing     show changesets not found in destination
  parents      show the parents of the working dir or revision
