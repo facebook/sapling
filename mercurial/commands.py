@@ -342,8 +342,8 @@ def cat(ui, repo, file1, *pats, **opts):
     """output the current or given revision of files
 
     Print the specified files as they were at the given revision.
-    If no revision is given then working dir parent is used, or tip
-    if no revision is checked out.
+    If no revision is given, the parent of the working directory is used,
+    or tip if no revision is checked out.
 
     Output may be to a file, in which case the name of the file is
     given using a format string.  The formatting rules are the same as
@@ -1744,8 +1744,8 @@ def manifest(ui, repo, rev=None):
     """output the current or given revision of the project manifest
 
     Print a list of version controlled files for the given revision.
-    If no revision is given then working dir parent is used, or tip
-    if no revision is checked out.
+    If no revision is given, the parent of the working directory is used,
+    or tip if no revision is checked out.
 
     The manifest is the list of files being version controlled. If no revision
     is given then the first parent of the working directory is used.
@@ -2404,7 +2404,7 @@ def status(ui, repo, *pats, **opts):
                     ui.write('  %s%s' % (copied, end))
 
 def tag(ui, repo, name, rev_=None, **opts):
-    """add a tag for the current tip or a given revision
+    """add a tag for the current or given revision
 
     Name a particular revision using <name>.
 
@@ -2412,7 +2412,8 @@ def tag(ui, repo, name, rev_=None, **opts):
     very useful to compare different revision, to go back to significant
     earlier versions or to mark branch points as releases, etc.
 
-    If no revision is given, the parent of the working directory is used.
+    If no revision is given, the parent of the working directory is used,
+    or tip if no revision is checked out.
 
     To facilitate version control, distribution, and merging of tags,
     they are stored as a file named ".hgtags" which is managed
