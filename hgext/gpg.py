@@ -194,14 +194,25 @@ def keystr(ui, key):
         return user
 
 def sign(ui, repo, *revs, **opts):
-    """add a signature for the current tip or a given revision"""
+    """add a signature for the current or given revision
+
+    If no revision is given, the parent of the working directory is used,
+    or tip if no revision is checked out.
+    """
+
     mygpg = newgpg(ui, **opts)
     sigver = "0"
     sigmessage = ""
     if revs:
         nodes = [repo.lookup(n) for n in revs]
     else:
-        nodes = [repo.changelog.tip()]
+        nodes = [node for node in repo.dirstate.parents()
+                 if node != hgnode.nullid]
+        if len(nodes) > 1:
+            raise util.Abort(_('uncommitted merge - please provide a '
+                               'specific revision'))
+        if not nodes:
+            nodes = [repo.changelog.tip()]
 
     for n in nodes:
         hexnode = hgnode.hex(n)
