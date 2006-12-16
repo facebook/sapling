@@ -85,7 +85,7 @@ class convert_git:
                 committer = " ".join(p[:-2])
                 if committer[0] == "<": committer = committer[1:-1]
                 committer = recode(committer)
-                message += "\ncommitter: %s\n" % v
+                message += "\ncommitter: %s\n" % committer
             if n == "parent": parents.append(v)
 
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
