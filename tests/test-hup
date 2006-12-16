@@ -10,7 +10,4 @@ Q=$!
 sleep 3
 kill -HUP $P
 wait
-ls -R .hg
-
-
-
+echo .hg/* .hg/store/*
