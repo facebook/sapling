@@ -1065,7 +1065,7 @@ def export(ui, repo, *changesets, **opts):
         ui.note(_('exporting patches:\n'))
     else:
         ui.note(_('exporting patch:\n'))
-    patch.export(repo, map(repo.lookup, revs), template=opts['output'],
+    patch.export(repo, revs, template=opts['output'],
                  switch_parent=opts['switch_parent'],
                  opts=patch.diffopts(ui, opts))
 

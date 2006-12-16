@@ -1,0 +1,15 @@
+#!/bin/sh
+
+hg init repo
+cd repo
+touch foo
+hg add foo
+for i in 0 1 2 3 4 5 6 7 8 9 10 11; do
+    echo "foo-$i" >> foo
+    hg ci -m "foo-$i" -d "0 0"
+done
+
+for out in "%nof%N" "%%%H" "%b-%R" "%h" "%r"; do
+    echo "# foo-$out.patch"
+    hg export -v -o "foo-$out.patch" 2:tip
+done

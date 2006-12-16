@@ -625,7 +625,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
     '''export changesets as hg patches.'''
 
     total = len(revs)
-    revwidth = max(map(len, revs))
+    revwidth = max([len(str(rev)) for rev in revs])
 
     def single(node, seqno, fp):
         parents = [p for p in repo.changelog.parents(node) if p != nullid]
@@ -654,8 +654,8 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         if fp not in (sys.stdout, repo.ui):
             fp.close()
 
-    for seqno, cset in enumerate(revs):
-        single(cset, seqno, fp)
+    for seqno, rev in enumerate(revs):
+        single(repo.lookup(rev), seqno+1, fp)
 
 def diffstat(patchlines):
     fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
