@@ -85,7 +85,7 @@ class convert_git:
                 committer = " ".join(p[:-2])
                 if committer[0] == "<": committer = committer[1:-1]
                 committer = recode(committer)
-                message += "\ncommitter: %s\n" % v
+                message += "\ncommitter: %s\n" % committer
             if n == "parent": parents.append(v)
 
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
@@ -295,7 +295,8 @@ class convert:
             nrev = self.dest.puttags(ctags)
             # write another hash correspondence to override the previous
             # one so we don't end up with extra tag heads
-            file(self.mapfile, "a").write("%s %s\n" % (c, nrev))
+            if nrev:
+                file(self.mapfile, "a").write("%s %s\n" % (c, nrev))
 
 gitpath, hgpath, mapfile = sys.argv[1:]
 if os.path.isdir(gitpath + "/.git"):
