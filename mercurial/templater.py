@@ -203,7 +203,7 @@ def nl2br(text):
     return text.replace('\n', '<br/>\n')
 
 def obfuscate(text):
-    text = unicode(text, 'utf-8', 'replace')
+    text = unicode(text, util._encoding, 'replace')
     return ''.join(['&#%d;' % ord(c) for c in text])
 
 def domain(author):

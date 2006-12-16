@@ -500,6 +500,9 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
         oldenv[k] = os.environ.get(k)
     if cwd is not None:
         oldcwd = os.getcwd()
+    origcmd = cmd
+    if os.name == 'nt':
+        cmd = '"%s"' % cmd
     try:
         for k, v in environ.iteritems():
             os.environ[k] = py2shell(v)
@@ -507,7 +510,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
             os.chdir(cwd)
         rc = os.system(cmd)
         if rc and onerr:
-            errmsg = '%s %s' % (os.path.basename(cmd.split(None, 1)[0]),
+            errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
                                 explain_exit(rc)[0])
             if errprefix:
                 errmsg = '%s: %s' % (errprefix, errmsg)
