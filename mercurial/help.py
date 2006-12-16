@@ -24,7 +24,6 @@ helptable = {
     "12-6"
     "12/6"
     "12/6/6" (Dec 6 2006)
-    "" (Jan 1 00:00:00 1970 UTC)
 
     Lastly, there is Mercurial's internal format:
 
