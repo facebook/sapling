@@ -59,7 +59,9 @@ class _demandmod(object):
         return "<unloaded module '%s'>" % self._data[0]
     def __call__(self, *args, **kwargs):
         raise TypeError("'unloaded module' object is not callable")
-    def __getattr__(self, attr):
+    def __getattribute__(self, attr):
+        if attr in ('_data', '_extend', '_load', '_module'):
+            return object.__getattribute__(self, attr)
         self._load()
         return getattr(self._module, attr)
     def __setattr__(self, attr, val):
@@ -74,6 +76,9 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
         # import a [as b]
         if '.' in name: # a.b
             base, rest = name.split('.', 1)
+            # email.__init__ loading email.mime
+            if globals and globals.get('__name__', None) == base:
+                return _origimport(name, globals, locals, fromlist)
             # if a is already demand-loaded, add b to its submodule list
             if base in locals:
                 if isinstance(locals[base], _demandmod):
@@ -92,7 +97,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
                 setattr(mod, x, _demandmod(x, mod.__dict__, mod.__dict__))
         return mod
 
-ignore = ['_hashlib', 'email.mime']
+ignore = []
 
 def enable():
     "enable global demand-loading of modules"
