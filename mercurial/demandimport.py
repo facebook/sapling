@@ -45,12 +45,18 @@ class _demandmod(object):
             head, globals, locals, after = self._data
             mod = _origimport(head, globals, locals)
             # load submodules
+            def subload(mod, p):
+                h, t = p, None
+                if '.' in p:
+                    h, t = p.split('.', 1)
+                if not hasattr(mod, h):
+                    setattr(mod, h, _demandmod(p, mod.__dict__, mod.__dict__))
+                else:
+                    subload(getattr(mod, h), t)
+
             for x in after:
-                hx = x
-                if '.' in x:
-                    hx = x.split('.')[0]
-                if not hasattr(mod, hx):
-                    setattr(mod, hx, _demandmod(x, mod.__dict__, mod.__dict__))
+                subload(mod, x)
+
             # are we in the locals dictionary still?
             if locals and locals.get(head) == self:
                 locals[head] = mod
