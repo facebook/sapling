@@ -6,19 +6,20 @@
 # In its current form, it's hardcoded to convert incrementally between
 # git and Mercurial.
 #
-# To use, you must first import the first git version into Mercurial,
-# and establish a mapping between the git commit hash and the hash in
-# Mercurial for that version. This mapping is kept in a simple text
-# file with lines like so:
-#
-# <git hash> <mercurial hash>
-#
-# To convert the rest of the repo, run:
+# To use, run:
 #
 # convert-repo <git-dir> <hg-dir> <mapfile>
 #
-# This updates the mapfile on each commit copied, so it can be
-# interrupted and can be run repeatedly to copy new commits.
+# (don't forget to create the <hg-dir> repository beforehand)
+#
+# The <mapfile> is a simple text file that maps a git commit hash to
+# the hash in Mercurial for that version, like so:
+#
+# <git hash> <mercurial hash>
+#
+# If the file doesn't exist, it's automatically created.  It's updated
+# on each commit copied, so convert-repo can be interrupted and can
+# be run repeatedly to copy new commits.
 
 import sys, os, zlib, sha, time
 
