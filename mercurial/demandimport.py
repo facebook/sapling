@@ -103,7 +103,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
                 setattr(mod, x, _demandmod(x, mod.__dict__, mod.__dict__))
         return mod
 
-ignore = ['_hashlib']
+ignore = ['_hashlib', 'fcntl', 'win32com.gen_py']
 
 def enable():
     "enable global demand-loading of modules"
