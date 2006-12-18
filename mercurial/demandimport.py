@@ -51,7 +51,7 @@ class _demandmod(object):
                     h, t = p.split('.', 1)
                 if not hasattr(mod, h):
                     setattr(mod, h, _demandmod(p, mod.__dict__, mod.__dict__))
-                else:
+                elif t:
                     subload(getattr(mod, h), t)
 
             for x in after:
