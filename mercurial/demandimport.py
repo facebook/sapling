@@ -103,7 +103,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
                 setattr(mod, x, _demandmod(x, mod.__dict__, mod.__dict__))
         return mod
 
-ignore = []
+ignore = ['_hashlib']
 
 def enable():
     "enable global demand-loading of modules"
