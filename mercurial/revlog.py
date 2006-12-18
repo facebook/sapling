@@ -281,6 +281,7 @@ class lazymap(object):
         del self.p.map[key]
 
 class RevlogError(Exception): pass
+class LookupError(RevlogError): pass
 
 class revlog(object):
     """
@@ -471,7 +472,7 @@ class revlog(object):
         try:
             return self.nodemap[node]
         except KeyError:
-            raise RevlogError(_('%s: no node %s') % (self.indexfile, hex(node)))
+            raise LookupError(_('%s: no node %s') % (self.indexfile, hex(node)))
     def linkrev(self, node):
         return (node == nullid) and nullrev or self.index[self.rev(node)][-4]
     def parents(self, node):
@@ -766,7 +767,7 @@ class revlog(object):
                 node = id
                 r = self.rev(node) # quick search the index
                 return node
-            except RevlogError:
+            except LookupError:
                 pass # may be partial hex id
         try:
             # str(rev)
@@ -795,7 +796,7 @@ class revlog(object):
                 for n in self.nodemap:
                     if n.startswith(bin_id) and hex(n).startswith(id):
                         if node is not None:
-                            raise RevlogError(_("Ambiguous identifier"))
+                            raise LookupError(_("Ambiguous identifier"))
                         node = n
                 if node is not None:
                     return node
@@ -815,7 +816,7 @@ class revlog(object):
         if n:
             return n
 
-        raise RevlogError(_("No match found"))
+        raise LookupError(_("No match found"))
 
     def cmp(self, node, text):
         """compare text with a given file revision"""
@@ -1155,13 +1156,13 @@ class revlog(object):
 
             for p in (p1, p2):
                 if not p in self.nodemap:
-                    raise RevlogError(_("unknown parent %s") % short(p))
+                    raise LookupError(_("unknown parent %s") % short(p))
 
             if not chain:
                 # retrieve the parent revision of the delta chain
                 chain = p1
                 if not chain in self.nodemap:
-                    raise RevlogError(_("unknown base %s") % short(chain[:4]))
+                    raise LookupError(_("unknown base %s") % short(chain[:4]))
 
             # full versions are inserted when the needed deltas become
             # comparable to the uncompressed text or when the previous

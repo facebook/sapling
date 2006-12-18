@@ -9,9 +9,6 @@
 class RepoError(Exception):
     pass
 
-class LookupError(RepoError):
-    pass
-
 class repository(object):
     def capable(self, name):
         '''tell whether repo supports named capability.

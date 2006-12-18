@@ -2450,9 +2450,10 @@ def tags(ui, repo):
     hexfunc = ui.debugflag and hex or short
     for t, n in l:
         try:
+	    hn = hexfunc(n)
             r = "%5d:%s" % (repo.changelog.rev(n), hexfunc(n))
-        except KeyError:
-            r = "    ?:?"
+        except revlog.LookupError:
+            r = "    ?:%s" % hn
         if ui.quiet:
             ui.write("%s\n" % t)
         else:

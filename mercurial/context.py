@@ -83,13 +83,13 @@ class changectx(object):
             try:
                 return self._manifest[path]
             except KeyError:
-                raise repo.LookupError(_("'%s' not found in manifest") % path)
+                raise revlog.LookupError(_("'%s' not found in manifest") % path)
         if '_manifestdelta' in self.__dict__ or path in self.files():
             if path in self._manifestdelta:
                 return self._manifestdelta[path]
         node, flag = self._repo.manifest.find(self._changeset[0], path)
         if not node:
-            raise repo.LookupError(_("'%s' not found in manifest") % path)
+            raise revlog.LookupError(_("'%s' not found in manifest") % path)
 
         return node
 
@@ -149,13 +149,10 @@ class filectx(object):
             self._changeid = self._filelog.linkrev(self._filenode)
             return self._changeid
         elif name == '_filenode':
-            try:
-                if '_fileid' in self.__dict__:
-                    self._filenode = self._filelog.lookup(self._fileid)
-                else:
-                    self._filenode = self._changectx.filenode(self._path)
-            except revlog.RevlogError, inst:
-                raise repo.LookupError(str(inst))
+	    if '_fileid' in self.__dict__:
+		self._filenode = self._filelog.lookup(self._fileid)
+	    else:
+		self._filenode = self._changectx.filenode(self._path)
             return self._filenode
         elif name == '_filerev':
             self._filerev = self._filelog.rev(self._filenode)
@@ -167,7 +164,7 @@ class filectx(object):
         try:
             n = self._filenode
             return True
-        except repo.LookupError:
+        except revlog.LookupError:
             # file is missing
             return False
 

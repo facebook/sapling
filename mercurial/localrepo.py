@@ -317,7 +317,7 @@ class localrepository(repo.repository):
             rev = c.rev()
             try:
                 fnode = c.filenode('.hgtags')
-            except repo.LookupError:
+            except revlog.LookupError:
                 continue
             ret.append((rev, node, fnode))
             if fnode in last:
