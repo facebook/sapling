@@ -716,15 +716,19 @@ class revlog(object):
         assert heads
         return (orderedout, roots, heads)
 
-    def heads(self, start=None):
+    def heads(self, start=None, stop=None):
         """return the list of all nodes that have no children
 
         if start is specified, only heads that are descendants of
         start will be returned
-
+        if stop is specified, it will consider all the revs from stop
+        as if they had no children
         """
         if start is None:
             start = nullid
+        if stop is None:
+            stop = []
+        stoprevs = dict.fromkeys([self.rev(n) for n in stop])
         startrev = self.rev(start)
         reachable = {startrev: 1}
         heads = {startrev: 1}
@@ -733,10 +737,12 @@ class revlog(object):
         for r in xrange(startrev + 1, self.count()):
             for p in parentrevs(r):
                 if p in reachable:
-                    reachable[r] = 1
+                    if r not in stoprevs:
+                        reachable[r] = 1
                     heads[r] = 1
-                if p in heads:
+                if p in heads and p not in stoprevs:
                     del heads[p]
+
         return [self.node(r) for r in heads]
 
     def children(self, node):

@@ -1284,7 +1284,7 @@ class localrepository(repo.repository):
                 newheads = list(heads)
                 for r in remote_heads:
                     if r in self.changelog.nodemap:
-                        desc = self.changelog.heads(r)
+                        desc = self.changelog.heads(r, heads)
                         l = [h for h in heads if h in desc]
                         if not l:
                             newheads.append(r)
