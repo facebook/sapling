@@ -67,8 +67,6 @@ def writebundle(cg, filename, bundletype):
     cleanup = None
     try:
         if filename:
-            if os.path.exists(filename):
-                raise util.Abort(_("file '%s' already exists") % filename)
             fh = open(filename, "wb")
         else:
             fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
