@@ -1532,7 +1532,7 @@ def incoming(ui, repo, source="default", **opts):
     incoming = repo.findincoming(other, force=opts["force"])
     if not incoming:
         ui.status(_("no changes found\n"))
-        return
+        return 1
 
     cleanup = None
     try:
@@ -1812,7 +1812,7 @@ def outgoing(ui, repo, dest=None, **opts):
     o = repo.findoutgoing(other, force=opts['force'])
     if not o:
         ui.status(_("no changes found\n"))
-        return
+        return 1
     o = repo.changelog.nodesbetween(o, revs)[0]
     if opts['newest_first']:
         o.reverse()
