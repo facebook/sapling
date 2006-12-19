@@ -1,99 +1,10 @@
-MERCURIAL QUICK-START
+Basic install:
 
-Setting up Mercurial:
+ $ make            # see install targets
+ $ make install    # do a system-wide install
+ $ hg debuginstall # sanity-check setup
+ $ hg              # see help
 
- Note: some distributions fails to include bits of distutils by
- default, you'll need python-dev to install. You'll also need a C
- compiler and a 3-way merge tool like merge, tkdiff, or kdiff3.
+See http://www.selenic.com/mercurial/ for detailed installation
+instructions, platform-specific notes, and Mercurial user information.
 
- First, unpack the source:
-
- $ tar xvzf mercurial-<ver>.tar.gz
- $ cd mercurial-<ver>
-
- When installing, change python to python2.3 or python2.4 if 2.2 is the
- default on your system.
-
- To install system-wide:
-
- $ python setup.py install --force
-
- To install in your home directory (~/bin and ~/lib, actually), run:
-
- $ python setup.py install --home=${HOME} --force
- $ export PYTHONPATH=${HOME}/lib/python  # (or lib64/ on some systems)
- $ export PATH=${HOME}/bin:$PATH         # add these to your .bashrc
-
- And finally:
-
- $ hg debuginstall                       # run some basic tests
- $ hg                                    # show help
-
- If you get complaints about missing modules, you probably haven't set
- PYTHONPATH correctly.
-
-Setting up a Mercurial project:
-
- $ hg init project     # creates project directory
- $ cd project
-                       # copy files in, edit them
- $ hg add              # add all unknown files
- $ hg commit           # commit all changes, edit changelog entry
-
- Mercurial will look for a file named .hgignore in the root of your
- repository which contains a set of regular expressions to ignore in
- file paths.
-
-Branching and merging:
-
- $ hg clone project project-work    # create a new branch
- $ cd project-work
- $ <make changes>
- $ hg commit
- $ cd ../project
- $ hg pull ../project-work   # pull changesets from project-work
- $ hg merge                  # merge the new tip from project-work into
-                             # our working directory
- $ hg commit                 # commit the result of the merge
-
-Importing patches:
-
- Simple:
- $ patch < ../p/foo.patch
- $ hg commit -A
-
- Fast:
- $ cat ../p/patchlist | xargs hg import -p1 -b ../p
-
-Exporting a patch:
-
- (make changes)
- $ hg commit
- $ hg export tip > foo.patch    # export latest change
-
-Network support:
-
- # pull from the primary Mercurial repo
- foo$ hg clone http://selenic.com/hg/
- foo$ cd hg
-
- # make your current repo available via http://server:8000/
- foo$ hg serve
-
- # pushing and pulling changes to/from a remote repo with SSH
- foo$ hg push ssh://user@example.com/my/repository
- foo$ hg pull ssh://user@example.com//home/somebody/his/repository
-
- # merge changes from a remote machine (e.g. running 'hg serve')
- bar$ hg pull http://foo:8000/
- bar$ hg merge   # merge changes into your working directory
- bar$ hg commit  # commit merge in to your local repository
-
- # Set up a CGI server on your webserver
- foo$ cp hgweb.cgi ~/public_html/hg/index.cgi
- foo$ emacs ~/public_html/hg/index.cgi # adjust the defaults
-
-For more info:
-
- Documentation in doc/
- Mercurial website at http://selenic.com/mercurial
