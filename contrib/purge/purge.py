@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Copyright (C) 2006 - Marco Barisione <marco@barisione.org>
 #
 # This is a small extension for Mercurial (http://www.selenic.com/mercurial)
