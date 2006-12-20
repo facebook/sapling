@@ -869,7 +869,7 @@ class hgweb(object):
             try:
                 req.write(self.filerevision(self.filectx(req)))
                 return
-            except hg.RepoError:
+            except revlog.LookupError:
                 pass
 
         req.write(self.manifest(self.changectx(req), path))
