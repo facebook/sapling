@@ -1531,6 +1531,10 @@ def incoming(ui, repo, source="default", **opts):
     other = hg.repository(ui, source)
     incoming = repo.findincoming(other, force=opts["force"])
     if not incoming:
+        try:
+            os.unlink(opts["bundle"])
+        except:
+            pass
         ui.status(_("no changes found\n"))
         return 1
 
