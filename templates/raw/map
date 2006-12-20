@@ -14,3 +14,6 @@ diffblock = '#lines#'
 filediff = filediff.tmpl
 fileannotate = fileannotate.tmpl
 annotateline = '#author#@#rev#: #line#'
+manifest = manifest.tmpl
+manifestdirentry = 'drwxr-xr-x {basename}\n'
+manifestfileentry = '{permissions|permissions} {size} {basename}\n'
