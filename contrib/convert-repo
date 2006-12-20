@@ -3,19 +3,21 @@
 # This is a generalized framework for converting between SCM
 # repository formats.
 #
-# In its current form, it's hardcoded to convert incrementally between
-# git and Mercurial.
-#
 # To use, run:
 #
-# convert-repo <git-dir> <hg-dir> <mapfile>
+# convert-repo <source> [<dest> [<mapfile>]]
 #
-# (don't forget to create the <hg-dir> repository beforehand)
+# Currently accepted source formats: git
+# Currently accepted destination formats: hg
 #
-# The <mapfile> is a simple text file that maps a git commit hash to
-# the hash in Mercurial for that version, like so:
+# If destination isn't given, a new Mercurial repo named <src>-hg will
+# be created. If <mapfile> isn't given, it will be put in a default
+# location (<dest>/.hg/shamap by default)
 #
-# <git hash> <mercurial hash>
+# The <mapfile> is a simple text file that maps each source commit ID to
+# the destination ID for that revision, like so:
+#
+# <source ID> <destination ID>
 #
 # If the file doesn't exist, it's automatically created.  It's updated
 # on each commit copied, so convert-repo can be interrupted and can
