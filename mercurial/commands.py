@@ -1151,7 +1151,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     def display(fn, rev, states, prevstates):
         counts = {'-': 0, '+': 0}
         filerevmatches = {}
-        if incrementing or not opts['all']:
+        if not opts['all']:
             a, b, r = prevstates, states, rev
         else:
             a, b, r = states, prevstates, prev.get(fn, -1)
@@ -1179,11 +1179,9 @@ def grep(ui, repo, pattern, *pats, **opts):
     get = util.cachefunc(lambda r: repo.changectx(r).changeset())
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
     count = 0
-    incrementing = False
     follow = opts.get('follow')
     for st, rev, fns in changeiter:
         if st == 'window':
-            incrementing = rev
             matches.clear()
         elif st == 'add':
             mf = repo.changectx(rev).manifest()
@@ -1209,7 +1207,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                     if copy:
                         skip[copy] = True
                     continue
-                if incrementing or not opts['all'] or fstate[fn]:
+                if not opts['all'] or fstate[fn]:
                     pos, neg = display(fn, rev, m, fstate[fn])
                     count += pos + neg
                     if pos and not opts['all']:
@@ -1221,14 +1219,13 @@ def grep(ui, repo, pattern, *pats, **opts):
                     fstate[copy] = m
                 prev[fn] = rev
 
-    if not incrementing:
-        fstate = fstate.items()
-        fstate.sort()
-        for fn, state in fstate:
-            if fn in skip:
-                continue
-            if fn not in copies.get(prev[fn], {}):
-                display(fn, rev, {}, state)
+    fstate = fstate.items()
+    fstate.sort()
+    for fn, state in fstate:
+        if fn in skip:
+            continue
+        if fn not in copies.get(prev[fn], {}):
+            display(fn, rev, {}, state)
     return (count == 0 and 1) or 0
 
 def heads(ui, repo, **opts):
