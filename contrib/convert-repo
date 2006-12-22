@@ -3,29 +3,41 @@
 # This is a generalized framework for converting between SCM
 # repository formats.
 #
-# In its current form, it's hardcoded to convert incrementally between
-# git and Mercurial.
-#
 # To use, run:
 #
-# convert-repo <git-dir> <hg-dir> <mapfile>
+# convert-repo <source> [<dest> [<mapfile>]]
 #
-# (don't forget to create the <hg-dir> repository beforehand)
+# Currently accepted source formats: git
+# Currently accepted destination formats: hg
 #
-# The <mapfile> is a simple text file that maps a git commit hash to
-# the hash in Mercurial for that version, like so:
+# If destination isn't given, a new Mercurial repo named <src>-hg will
+# be created. If <mapfile> isn't given, it will be put in a default
+# location (<dest>/.hg/shamap by default)
 #
-# <git hash> <mercurial hash>
+# The <mapfile> is a simple text file that maps each source commit ID to
+# the destination ID for that revision, like so:
+#
+# <source ID> <destination ID>
 #
 # If the file doesn't exist, it's automatically created.  It's updated
 # on each commit copied, so convert-repo can be interrupted and can
 # be run repeatedly to copy new commits.
 
 import sys, os, zlib, sha, time
-
 os.environ["HGENCODING"] = "utf-8"
+from mercurial import hg, ui, util, fancyopts
 
-from mercurial import hg, ui, util
+class Abort(Exception): pass
+
+quiet = 0
+def status(msg):
+    if not quiet: sys.stdout.write(str(msg))
+
+def warn(msg):
+    sys.stderr.write(str(msg))
+
+def abort(msg):
+    raise Abort(msg)
 
 def recode(s):
     try:
@@ -38,7 +50,11 @@ def recode(s):
 
 class convert_git:
     def __init__(self, path):
+        if os.path.isdir(path + "/.git"):
+            path += "/.git"
         self.path = path
+        if not os.path.exists(path + "/HEAD"):
+            raise TypeError("couldn't open GIT repo %s" % path)
 
     def getheads(self):
         fh = os.popen("GIT_DIR=%s git-rev-parse --verify HEAD" % self.path)
@@ -110,7 +126,13 @@ class convert_mercurial:
     def __init__(self, path):
         self.path = path
         u = ui.ui()
-        self.repo = hg.repository(u, path)
+        try:
+            self.repo = hg.repository(u, path)
+        except:
+            raise TypeError("could open hg repo %s" % path)
+
+    def mapfile(self):
+        return os.path.join(self.path, ".hg", "shamap")
 
     def getheads(self):
         h = self.repo.changelog.heads()
@@ -170,7 +192,7 @@ class convert_mercurial:
         newlines.sort()
 
         if newlines != oldlines:
-            #print "updating tags"
+            status("updating tags\n")
             f = self.repo.wfile(".hgtags", "w")
             f.write("".join(newlines))
             f.close()
@@ -180,8 +202,21 @@ class convert_mercurial:
                                 date, self.repo.changelog.tip(), hg.nullid)
             return hg.hex(self.repo.changelog.tip())
 
+converters = [convert_git, convert_mercurial]
+
+def converter(path):
+    if not os.path.isdir(path):
+        abort("%s: not a directory\n" % path)
+    for c in converters:
+        try:
+            return c(path)
+        except TypeError:
+            pass
+    abort("%s: unknown repository type\n" % path)
+
 class convert:
     def __init__(self, source, dest, mapfile):
+
         self.source = source
         self.dest = dest
         self.mapfile = mapfile
@@ -272,17 +307,20 @@ class convert:
         file(self.mapfile, "a").write("%s %s\n" % (rev, self.map[rev]))
 
     def convert(self):
+        status("scanning source...\n")
         heads = self.source.getheads()
         parents = self.walktree(heads)
+        status("sorting...\n")
         t = self.toposort(parents)
         t = [n for n in t if n not in self.map]
         num = len(t)
         c = None
 
+        status("converting...\n")
         for c in t:
             num -= 1
             desc = self.commitcache[c][3].splitlines()[0]
-            #print num, desc
+            status("%d %s\n" % (num, desc))
             self.copy(c)
 
         tags = self.source.gettags()
@@ -299,9 +337,40 @@ class convert:
             if nrev:
                 file(self.mapfile, "a").write("%s %s\n" % (c, nrev))
 
-gitpath, hgpath, mapfile = sys.argv[1:]
-if os.path.isdir(gitpath + "/.git"):
-    gitpath += "/.git"
+def command(src, dest=None, mapfile=None, **opts):
+    srcc = converter(src)
+    if not hasattr(srcc, "getcommit"):
+        abort("%s: can't read from this repo type\n" % src)
 
-c = convert(convert_git(gitpath), convert_mercurial(hgpath), mapfile)
-c.convert()
+    if not dest:
+        dest = src + "-hg"
+        status("assuming destination %s\n" % dest)
+        if not os.path.isdir(dest):
+            status("creating repository %s\n" % dest)
+            os.system("hg init " + dest)
+    destc = converter(dest)
+    if not hasattr(destc, "putcommit"):
+        abort("%s: can't write to this repo type\n" % src)
+
+    if not mapfile:
+        try:
+            mapfile = destc.mapfile()
+        except:
+            mapfile = os.path.join(destc, "map")
+
+    c = convert(srcc, destc, mapfile)
+    c.convert()
+
+options = [('q', 'quiet', None, 'suppress output')]
+opts = {}
+args = fancyopts.fancyopts(sys.argv[1:], options, opts)
+
+if opts['quiet']:
+    quiet = 1
+
+try:
+    command(*args, **opts)
+except Abort, inst:
+    warn(inst)
+except KeyboardInterrupt:
+    status("interrupted\n")
