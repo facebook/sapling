@@ -26,3 +26,7 @@ port:2:2:+:spam:vaportight
 port:2:3:+:spam:import/export
 port:1:2:+:eggs:export
 port:0:1:+:spam:import
+color:3:orange
+color:3:+:orange
+color:2:-:orange
+color:1:+:orange

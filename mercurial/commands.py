@@ -1149,13 +1149,14 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     prev = {}
     def display(fn, rev, states, prevstates):
-        counts = {'-': 0, '+': 0}
+        found = False
         filerevmatches = {}
-        if not opts['all']:
-            a, b, r = prevstates, states, rev
+        r = prev.get(fn, -1)
+        if opts['all']:
+            iter = difflinestates(states, prevstates)
         else:
-            a, b, r = states, prevstates, prev.get(fn, -1)
-        for change, l in difflinestates(a, b):
+            iter = [('', l) for l in prevstates]
+        for change, l in iter:
             cols = [fn, str(r)]
             if opts['line_number']:
                 cols.append(str(l.linenum))
@@ -1171,14 +1172,14 @@ def grep(ui, repo, pattern, *pats, **opts):
             else:
                 cols.append(l.line)
             ui.write(sep.join(cols), eol)
-            counts[change] += 1
-        return counts['+'], counts['-']
+            found = True
+        return found
 
     fstate = {}
     skip = {}
     get = util.cachefunc(lambda r: repo.changectx(r).changeset())
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
-    count = 0
+    found = False
     follow = opts.get('follow')
     for st, rev, fns in changeiter:
         if st == 'window':
@@ -1207,10 +1208,10 @@ def grep(ui, repo, pattern, *pats, **opts):
                     if copy:
                         skip[copy] = True
                     continue
-                if not opts['all'] or fstate[fn]:
-                    pos, neg = display(fn, rev, m, fstate[fn])
-                    count += pos + neg
-                    if pos and not opts['all']:
+                if fn in prev or fstate[fn]:
+                    r = display(fn, rev, m, fstate[fn])
+                    found = found or r
+                    if r and not opts['all']:
                         skip[fn] = True
                         if copy:
                             skip[copy] = True
@@ -1225,8 +1226,8 @@ def grep(ui, repo, pattern, *pats, **opts):
         if fn in skip:
             continue
         if fn not in copies.get(prev[fn], {}):
-            display(fn, rev, {}, state)
-    return (count == 0 and 1) or 0
+            found = display(fn, rev, {}, state) or found
+    return (not found and 1) or 0
 
 def heads(ui, repo, **opts):
     """show current repository heads
