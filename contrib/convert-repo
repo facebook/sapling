@@ -189,7 +189,7 @@ class convert_cvs:
     def getheads(self):
         return self.heads
 
-    def getfile(self, name, rev):
+    def _getfile(self, name, rev):
         if rev.endswith("(DEAD)"):
             raise IOError
 
@@ -218,7 +218,7 @@ class convert_cvs:
                 data = self.readp.read(count)
             else:
                 if line == "ok\n":
-                    return data
+                    return (data, "x" in mode)
                 elif line.startswith("E "):
                     warn("cvs server: %s\n" % line[2:])
                 elif line.startswith("Remove"):
@@ -229,9 +229,18 @@ class convert_cvs:
                 else:
                     abort("unknown CVS response: %s\n" % line)
 
+    def getfile(self, file, rev):
+        data, mode = self._getfile(file, rev)
+        self.modecache[(file, rev)] = mode
+        return data
+
+    def getmode(self, file, rev):
+        return self.modecache[(file, rev)]
+
     def getchanges(self, rev):
+        self.modecache = {}
         files = self.files[rev]
-        cl = [ (f, r, 0) for f,r in files.items() ]
+        cl = files.items()
         cl.sort()
         return cl
 
@@ -264,7 +273,11 @@ class convert_git:
     def getfile(self, name, rev):
         return self.catfile(rev, "blob")
 
+    def getmode(self, name, rev):
+        return self.modecache[(name, rev)]
+
     def getchanges(self, version):
+        self.modecache = {}
         fh = os.popen("GIT_DIR=%s git-diff-tree --root -m -r %s" % (self.path, version))
         changes = []
         for l in fh:
@@ -273,7 +286,8 @@ class convert_git:
             m = m.split()
             h = m[3]
             p = (m[1] == "100755")
-            changes.append((f, h, p))
+            self.modecache[(f, h)] = p
+            changes.append((f, h))
         return changes
 
     def getcommit(self, version):
@@ -498,16 +512,17 @@ class convert:
         c = self.commitcache[rev]
         files = self.source.getchanges(rev)
 
-        for f,v,e in files:
+        for f,v in files:
             try:
                 data = self.source.getfile(f, v)
             except IOError, inst:
                 self.dest.delfile(f)
             else:
+                e = self.source.getmode(f, v)
                 self.dest.putfile(f, e, data)
 
         r = [self.map[v] for v in c.parents]
-        f = [f for f,v,e in files]
+        f = [f for f,v in files]
         self.map[rev] = self.dest.putcommit(f, r, c)
         file(self.mapfile, "a").write("%s %s\n" % (rev, self.map[rev]))
 
