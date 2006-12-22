@@ -727,11 +727,13 @@ class localrepository(repo.repository):
         # update manifest
         m1.update(new)
         remove.sort()
+        removed = []
 
         for f in remove:
             if f in m1:
                 del m1[f]
-        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0], (new, remove))
+                removed.append(f)
+        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0], (new, removed))
 
         # add changeset
         new = new.keys()
@@ -747,7 +749,7 @@ class localrepository(repo.repository):
             if p2 != nullid:
                 edittext.append("HG: branch merge")
             edittext.extend(["HG: changed %s" % f for f in changed])
-            edittext.extend(["HG: removed %s" % f for f in remove])
+            edittext.extend(["HG: removed %s" % f for f in removed])
             if not changed and not remove:
                 edittext.append("HG: no files changed")
             edittext.append("")
@@ -765,7 +767,7 @@ class localrepository(repo.repository):
         text = '\n'.join(lines)
         if branchname:
             extra["branch"] = branchname
-        n = self.changelog.add(mn, changed + remove, text, tr, p1, p2,
+        n = self.changelog.add(mn, changed + removed, text, tr, p1, p2,
                                user, date, extra)
         self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                   parent2=xp2)
@@ -775,7 +777,7 @@ class localrepository(repo.repository):
             self.dirstate.setparents(n)
             if use_dirstate:
                 self.dirstate.update(new, "n")
-                self.dirstate.forget(remove)
+                self.dirstate.forget(removed)
 
         self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
         return n
