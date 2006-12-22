@@ -434,11 +434,12 @@ def converter(path):
     abort("%s: unknown repository type\n" % path)
 
 class convert:
-    def __init__(self, source, dest, mapfile):
+    def __init__(self, source, dest, mapfile, opts):
 
         self.source = source
         self.dest = dest
         self.mapfile = mapfile
+        self.opts = opts
         self.commitcache = {}
 
         self.map = {}
@@ -501,10 +502,23 @@ class convert:
             if not dep:
                 # all n's parents are in the list
                 removed[n] = 1
-                s.append(n)
+                if n not in self.map:
+                    s.append(n)
                 if n in children:
                     for c in children[n]:
                         visit.insert(0, c)
+
+        if opts.get('datesort'):
+            depth = {}
+            for n in s:
+                depth[n] = 0
+                pl = [p for p in self.commitcache[n].parents if p not in self.map]
+                if pl:
+                    depth[n] = max([depth[p] for p in pl]) + 1
+
+            s = [(depth[n], self.commitcache[n].date, n) for n in s]
+            s.sort()
+            s = [e[2] for e in s]
 
         return s
 
@@ -532,7 +546,6 @@ class convert:
         parents = self.walktree(heads)
         status("sorting...\n")
         t = self.toposort(parents)
-        t = [n for n in t if n not in self.map]
         num = len(t)
         c = None
 
@@ -580,10 +593,11 @@ def command(src, dest=None, mapfile=None, **opts):
         except:
             mapfile = os.path.join(destc, "map")
 
-    c = convert(srcc, destc, mapfile)
+    c = convert(srcc, destc, mapfile, opts)
     c.convert()
 
-options = [('q', 'quiet', None, 'suppress output')]
+options = [('q', 'quiet', None, 'suppress output'),
+           ('', 'datesort', None, 'try to sort changesets by date')]
 opts = {}
 args = fancyopts.fancyopts(sys.argv[1:], options, opts)
 
