@@ -634,11 +634,11 @@ class localrepository(repo.repository):
         changelist.append(fn)
         return fl.add(t, meta, transaction, linkrev, fp1, fp2)
 
-    def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None):
+    def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None, extra={}):
         if p1 is None:
             p1, p2 = self.dirstate.parents()
         return self.commit(files=files, text=text, user=user, date=date,
-                           p1=p1, p2=p2, wlock=wlock)
+                           p1=p1, p2=p2, wlock=wlock, extra=extra)
 
     def commit(self, files=None, text="", user=None, date=None,
                match=util.always, force=False, lock=None, wlock=None,

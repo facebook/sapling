@@ -46,7 +46,7 @@
 ### hgk - GUI repository browser
 ### hg help view
 
-# hgk = /home/user/hg/hg/contrib/hgk.py
+# hgext.hgk =
 
 ### mq - Mercurial patch queues
 ### hg help mq
@@ -62,6 +62,11 @@
 ### hg help email
 
 # hgext.patchbomb =
+
+### churn - create a graph showing who changed the most lines
+### hg help churn
+
+# hgext.churn = /home/user/hg/hg/contrib/churn.py
 
 ### win32text - line ending conversion filters for the Windows platform
 
