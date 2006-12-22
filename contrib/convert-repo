@@ -30,6 +30,13 @@ from mercurial import hg, ui, util, fancyopts
 class Abort(Exception): pass
 class NoRepo(Exception): pass
 
+class commit:
+    def __init__(self, **parts):
+        for x in "author date desc parents".split():
+            if not x in parts:
+                abort("commit missing field %s\n" % x)
+        self.__dict__.update(parts)
+
 quiet = 0
 def status(msg):
     if not quiet: sys.stdout.write(str(msg))
@@ -58,6 +65,7 @@ class convert_cvs:
             raise NoRepo("couldn't open CVS repo %s" % path)
 
         self.changeset = {}
+        self.files = {}
         self.tags = {}
         self.lastbranch = {}
         self.parent = {}
@@ -112,7 +120,13 @@ class convert_cvs:
                 elif state == 2:
                     if l == "\n": #
                         state = 0
-                        self.changeset[id] = (date, author, log, files)
+                        p = [self.parent[id]]
+                        if id == "1":
+                            p = []
+                        c = commit(author=author, date=date, parents=p,
+                                   desc=log, branch=branch)
+                        self.changeset[id] = c
+                        self.files[id] = files
                     else:
                         file,rev = l[1:-2].rsplit(':',1)
                         rev = rev.split("->")[1]
@@ -216,7 +230,7 @@ class convert_cvs:
                     abort("unknown CVS response: %s\n" % line)
 
     def getchanges(self, rev):
-        files = self.changeset[rev][3]
+        files = self.files[rev]
         cl = [ (f, r, 0) for f,r in files.items() ]
         cl.sort()
         return cl
@@ -225,11 +239,7 @@ class convert_cvs:
         return text.decode(self.encoding, "replace").encode("utf-8")
 
     def getcommit(self, rev):
-        cs = self.changeset[rev]
-        parents = [self.parent[rev]]
-        if rev == "1":
-            parents = []
-        return (parents, cs[1], cs[0], cs[2])
+        return self.changeset[rev]
 
     def gettags(self):
         return self.tags
@@ -294,7 +304,9 @@ class convert_git:
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
         tz = -int(tzs) * (int(tzh) * 3600 + int(tzm))
         date = tm + " " + str(tz)
-        return (parents, author, date, message)
+
+        c = commit(parents=parents, date=date, author=author, desc=message)
+        return c
 
     def gettags(self):
         tags = {}
@@ -338,7 +350,7 @@ class convert_mercurial:
         except:
             pass
 
-    def putcommit(self, files, parents, author, dest, text):
+    def putcommit(self, files, parents, commit):
         seen = {}
         pl = []
         for p in parents:
@@ -351,11 +363,18 @@ class convert_mercurial:
         if len(parents) < 2: parents.append("0" * 40)
         p2 = parents.pop(0)
 
+        text = commit.desc
+        extra = {}
+        try:
+            extra["branch"] = commit.branch
+        except AttributeError:
+            pass
+
         while parents:
             p1 = p2
             p2 = parents.pop(0)
-            a = self.repo.rawcommit(files, text, author, dest,
-                                    hg.bin(p1), hg.bin(p2))
+            a = self.repo.rawcommit(files, text, commit.author, commit.date,
+                                    hg.bin(p1), hg.bin(p2), extra=extra)
             text = "(octopus merge fixup)\n"
             p2 = hg.hex(self.repo.changelog.tip())
 
@@ -425,7 +444,7 @@ class convert:
             if n in known or n in self.map: continue
             known[n] = 1
             self.commitcache[n] = self.source.getcommit(n)
-            cp = self.commitcache[n][0]
+            cp = self.commitcache[n].parents
             for p in cp:
                 parents.setdefault(n, []).append(p)
                 visit.append(p)
@@ -476,7 +495,7 @@ class convert:
         return s
 
     def copy(self, rev):
-        p, a, d, t = self.commitcache[rev]
+        c = self.commitcache[rev]
         files = self.source.getchanges(rev)
 
         for f,v,e in files:
@@ -487,9 +506,9 @@ class convert:
             else:
                 self.dest.putfile(f, e, data)
 
-        r = [self.map[v] for v in p]
+        r = [self.map[v] for v in c.parents]
         f = [f for f,v,e in files]
-        self.map[rev] = self.dest.putcommit(f, r, a, d, t)
+        self.map[rev] = self.dest.putcommit(f, r, c)
         file(self.mapfile, "a").write("%s %s\n" % (rev, self.map[rev]))
 
     def convert(self):
@@ -505,7 +524,7 @@ class convert:
         status("converting...\n")
         for c in t:
             num -= 1
-            desc = self.commitcache[c][3]
+            desc = self.commitcache[c].desc
             if "\n" in desc:
                 desc = desc.splitlines()[0]
             status("%d %s\n" % (num, desc))
