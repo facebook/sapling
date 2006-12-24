@@ -30,5 +30,5 @@ hg pull -q
 hg merge
 
 echo % revert to changeset 1 to simulate a failed merge
-rm -fr alpha beta gamma
+rm -f alpha beta gamma
 hg up -C 1
