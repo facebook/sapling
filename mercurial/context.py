@@ -7,7 +7,7 @@
 
 from node import *
 from i18n import _
-import ancestor, bdiff, repo, revlog, util, os
+import ancestor, bdiff, repo, revlog, util, os, errno
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular
@@ -501,5 +501,12 @@ class workingfilectx(filectx):
         return []
 
     def size(self): return os.stat(self._repo.wjoin(self._path)).st_size
+    def date(self):
+        t, tz = self._changectx.date()
+        try:
+            return (os.lstat(repo.wjoin(self._path)).st_mtime, tz)
+        except OSError, err:
+            if err.errno != errno.ENOENT: raise
+            return (t, tz)
 
     def cmp(self, text): return self._repo.wread(self._path) == text
