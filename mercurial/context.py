@@ -149,10 +149,10 @@ class filectx(object):
             self._changeid = self._filelog.linkrev(self._filenode)
             return self._changeid
         elif name == '_filenode':
-	    if '_fileid' in self.__dict__:
-		self._filenode = self._filelog.lookup(self._fileid)
-	    else:
-		self._filenode = self._changectx.filenode(self._path)
+            if '_fileid' in self.__dict__:
+                self._filenode = self._filelog.lookup(self._fileid)
+            else:
+                self._filenode = self._changectx.filenode(self._path)
             return self._filenode
         elif name == '_filerev':
             self._filerev = self._filelog.rev(self._filenode)
