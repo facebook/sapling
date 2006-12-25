@@ -11,7 +11,7 @@
 #
 # <alias email> <actual email>
 
-import time, sys, signal, os
+import sys
 from mercurial.i18n import gettext as _
 from mercurial import hg, mdiff, cmdutil, ui, util, templater, node
 

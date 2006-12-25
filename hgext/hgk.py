@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import time, sys, signal, os
+import sys, os
 from mercurial import hg, fancyopts, commands, ui, util, patch, revlog
 
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):

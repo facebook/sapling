@@ -8,7 +8,7 @@
 from i18n import _
 from node import *
 import base85, cmdutil, mdiff, util
-import cStringIO, email.Parser, errno, os, popen2, re, shutil, sha
+import cStringIO, email.Parser, os, popen2, re, sha
 import sys, tempfile, zlib
 
 # helper functions

@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import os, re, smtplib, templater, util
+import os, smtplib, templater, util
 
 def _smtp(ui):
     '''send mail using smtp.'''

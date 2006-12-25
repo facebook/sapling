@@ -31,7 +31,7 @@ refresh contents of top applied patch     qrefresh
 
 from mercurial.i18n import _
 from mercurial import commands, cmdutil, hg, patch, revlog, util, changegroup
-import os, sys, re, struct, traceback, errno, bz2
+import os, sys, re, errno
 
 commands.norepo += " qclone qversion"
 
