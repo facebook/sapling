@@ -125,16 +125,18 @@ class filectx(object):
         self._repo = repo
         self._path = path
 
-        assert changeid is not None or fileid is not None
+        assert (changeid is not None
+                or fileid is not None
+                or changectx is not None)
 
         if filelog:
             self._filelog = filelog
-        if changectx:
-            self._changectx = changectx
-            self._changeid = changectx.node()
 
         if fileid is None:
-            self._changeid = changeid
+            if changectx is None:
+                self._changeid = changeid
+            else:
+                self._changectx = changectx
         else:
             self._fileid = fileid
 
