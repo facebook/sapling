@@ -93,11 +93,12 @@ class changectx(object):
 
         return node
 
-    def filectx(self, path, fileid=None):
+    def filectx(self, path, fileid=None, filelog=None):
         """get a file context from this changeset"""
         if fileid is None:
             fileid = self.filenode(path)
-        return filectx(self._repo, path, fileid=fileid, changectx=self)
+        return filectx(self._repo, path, fileid=fileid,
+                       changectx=self, filelog=filelog)
 
     def filectxs(self):
         """generate a file context for each file in this changeset's
@@ -422,9 +423,10 @@ class workingctx(changectx):
     def children(self):
         return []
 
-    def filectx(self, path):
+    def filectx(self, path, filelog=None):
         """get a file context from the working directory"""
-        return workingfilectx(self._repo, path, workingctx=self)
+        return workingfilectx(self._repo, path, workingctx=self,
+                              filelog=filelog)
 
     def ancestor(self, c2):
         """return the ancestor context of self and c2"""
