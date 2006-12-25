@@ -159,10 +159,9 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
             data = fp.getvalue()
         archiver.addfile(name, mode, data)
 
-    change = repo.changelog.read(node)
-    mn = change[0]
-    archiver = archivers[kind](dest, prefix, mtime or change[2][0])
-    m = repo.manifest.read(mn)
+    ctx = repo.changectx(node)
+    archiver = archivers[kind](dest, prefix, mtime or ctx.date()[0])
+    m = ctx.manifest()
     items = m.items()
     items.sort()
     write('.hg_archival.txt', 0644,
