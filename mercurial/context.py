@@ -482,7 +482,7 @@ class workingfilectx(filectx):
         rp = self._repopath
         if rp == self._path:
             return None
-        return rp, self._workingctx._parents._manifest.get(rp, nullid)
+        return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
 
     def parents(self):
         '''return parent filectxs, following copies if necessary'''
