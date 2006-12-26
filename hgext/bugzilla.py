@@ -222,7 +222,7 @@ class bugzilla(object):
     _bug_re = None
     _split_re = None
 
-    def find_bug_ids(self, node, desc):
+    def find_bug_ids(self, ctx):
         '''find valid bug ids that are referred to in changeset
         comments and that do not already have references to this
         changeset.'''
@@ -235,7 +235,7 @@ class bugzilla(object):
         start = 0
         ids = {}
         while True:
-            m = bugzilla._bug_re.search(desc, start)
+            m = bugzilla._bug_re.search(ctx.description(), start)
             if not m:
                 break
             start = m.end()
@@ -246,10 +246,10 @@ class bugzilla(object):
         if ids:
             ids = self.filter_real_bug_ids(ids)
         if ids:
-            ids = self.filter_unknown_bug_ids(node, ids)
+            ids = self.filter_unknown_bug_ids(ctx.node(), ids)
         return ids
 
-    def update(self, bugid, node, changes):
+    def update(self, bugid, ctx):
         '''update bugzilla bug with reference to changeset.'''
 
         def webroot(root):
@@ -276,13 +276,13 @@ class bugzilla(object):
             tmpl = templater.parsestring(tmpl, quoted=False)
             t.use_template(tmpl)
         self.ui.pushbuffer()
-        t.show(changenode=node, changes=changes,
+        t.show(changenode=ctx.node(), changes=ctx.changeset(),
                bug=str(bugid),
                hgweb=self.ui.config('web', 'baseurl'),
                root=self.repo.root,
                webroot=webroot(self.repo.root))
         data = self.ui.popbuffer()
-        self.add_comment(bugid, data, templater.email(changes[1]))
+        self.add_comment(bugid, data, templater.email(ctx.user()))
 
 def hook(ui, repo, hooktype, node=None, **kwargs):
     '''add comment to bugzilla for each changeset that refers to a
@@ -300,12 +300,11 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
                          hooktype)
     try:
         bz = bugzilla(ui, repo)
-        bin_node = bin(node)
-        changes = repo.changelog.read(bin_node)
-        ids = bz.find_bug_ids(bin_node, changes[4])
+        ctx = repo.changctx(node)
+        ids = bz.find_bug_ids(ctx)
         if ids:
             for id in ids:
-                bz.update(id, bin_node, changes)
+                bz.update(id, ctx)
             bz.notify(ids)
     except MySQLdb.MySQLError, err:
         raise util.Abort(_('database error: %s') % err[1])
