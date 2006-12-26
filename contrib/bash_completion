@@ -145,6 +145,7 @@ _hg()
     # global options
     case "$prev" in
 	-R|--repository)
+	    _hg_paths
 	    _hg_repos
 	    return
 	;;
