@@ -1345,13 +1345,20 @@ def help_(ui, name=None, with_version=False):
             ui.write(d, '\n')
 
         ui.status('\n')
+
+        try:
+            ct = mod.cmdtable
+        except AttributeError:
+            ui.status(_('no commands defined\n'))
+            return
+
         if ui.verbose:
             ui.status(_('list of commands:\n\n'))
         else:
             ui.status(_('list of commands (use "hg help -v %s" '
                         'to show aliases and global options):\n\n') % name)
 
-        modcmds = dict.fromkeys([c.split('|', 1)[0] for c in mod.cmdtable])
+        modcmds = dict.fromkeys([c.split('|', 1)[0] for c in ct])
         helplist(modcmds.has_key)
 
     if name and name != 'shortlist':
