@@ -3053,9 +3053,10 @@ def load_extensions(ui):
         if uisetup:
             uisetup(ui)
         cmdtable = getattr(mod, 'cmdtable', {})
-        for t in cmdtable:
-            if t in table:
-                ui.warn(_("module %s overrides %s\n") % (name, t))
+        overrides = [cmd for cmd in cmdtable if cmd in table]
+        if overrides:
+            ui.warn(_("extension '%s' overrides commands: %s\n")
+                    % (name, " ".join(overrides)))
         table.update(cmdtable)
 
 def parseconfig(config):
