@@ -56,8 +56,7 @@ import os, shutil, tempfile
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     def snapshot_node(files, node):
         '''snapshot files as of some revision'''
-        changes = repo.changelog.read(node)
-        mf = repo.manifest.read(changes[0])
+        mf = repo.changectx(node).manifest()
         dirname = '%s.%s' % (os.path.basename(repo.root), short(node))
         base = os.path.join(tmproot, dirname)
         os.mkdir(base)
