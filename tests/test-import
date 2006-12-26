@@ -18,30 +18,30 @@ echo % message should be same
 hg --cwd b tip | grep 'second change'
 echo % committer should be same
 hg --cwd b tip | grep someone
-rm -rf b
+rm -r b
 
 echo % import of plain diff should fail without message
 hg clone -r0 a b
 hg --cwd a diff -r0:1 > tip.patch
 hg --cwd b import ../tip.patch
-rm -rf b
+rm -r b
 
 echo % import of plain diff should be ok with message
 hg clone -r0 a b
 hg --cwd a diff -r0:1 > tip.patch
 hg --cwd b import -mpatch ../tip.patch
-rm -rf b
+rm -r b
 
 echo % import from stdin
 hg clone -r0 a b
 hg --cwd a export tip | hg --cwd b import -
-rm -rf b
+rm -r b
 
 echo % override commit message
 hg clone -r0 a b
 hg --cwd a export tip | hg --cwd b import -m 'override' -
 hg --cwd b tip | grep override
-rm -rf b
+rm -r b
 
 cat > mkmsg.py <<EOF
 import email.Message, sys
@@ -58,29 +58,29 @@ hg --cwd a diff -r0:1 > tip.patch
 python mkmsg.py > msg.patch
 hg --cwd b import ../msg.patch
 hg --cwd b tip | grep email
-rm -rf b
+rm -r b
 
 echo % plain diff in email, no subject, message body
 hg clone -r0 a b
 grep -v '^Subject:' msg.patch | hg --cwd b import -
-rm -rf b
+rm -r b
 
 echo % plain diff in email, subject, no message body
 hg clone -r0 a b
 grep -v '^email ' msg.patch | hg --cwd b import -
-rm -rf b
+rm -r b
 
 echo % plain diff in email, no subject, no message body, should fail
 hg clone -r0 a b
 egrep -v '^(Subject|email)' msg.patch | hg --cwd b import -
-rm -rf b
+rm -r b
 
 echo % hg export in email, should use patch header
 hg clone -r0 a b
 hg --cwd a export tip > tip.patch
 python mkmsg.py | hg --cwd b import -
 hg --cwd b tip | grep second
-rm -rf b
+rm -r b
 
 # bug non regression test
 # importing a patch in a subdirectory failed at the commit stage

@@ -25,7 +25,7 @@ echo %% no merges expected
 env HGMERGE=../merge hg merge 1
 hg diff --nodates
 hg status
-cd ..; /bin/rm -rf t
+cd ..; rm -r t
 
 mkdir t
 cd t
@@ -48,7 +48,7 @@ echo %% merge of b expected
 env HGMERGE=../merge hg merge -f 1
 hg diff --nodates
 hg status
-cd ..; /bin/rm -rf t
+cd ..; rm -r t
 echo %%
 
 mkdir t
@@ -77,7 +77,7 @@ echo %% merge expected!
 env HGMERGE=../merge hg merge -f 2
 hg diff --nodates
 hg status
-cd ..; /bin/rm -rf t
+cd ..; rm -r t
 
 mkdir t
 cd t
@@ -101,4 +101,3 @@ echo %% merge of b expected
 env HGMERGE=../merge hg merge -f 2
 hg diff --nodates
 hg status
-cd ..; /bin/rm -rf t

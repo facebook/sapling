@@ -24,7 +24,7 @@ mkdir a
 echo a > a/a
 hg commit -Ama
 
-rm -rf a
+rm -r a
 echo a > a
 
 echo % should fail - would corrupt dirstate
@@ -40,7 +40,7 @@ mkdir b
 mkdir b/c
 echo a > b/c/d
 hg commit -Ama
-rm -rf b
+rm -r b
 echo a > b
 
 echo % should fail - would corrupt dirstate

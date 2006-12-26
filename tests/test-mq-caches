@@ -61,7 +61,7 @@ show_branch_cache 1
 
 echo
 echo '# removing the cache'
-rm -f .hg/branches.cache
+rm .hg/branches.cache
 show_branch_cache 1
 
 echo

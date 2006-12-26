@@ -27,5 +27,5 @@ hg locate
 hg locate -I ../t
 # test issue294
 cd ..
-rm -rf t
+rm -r t
 hg locate t

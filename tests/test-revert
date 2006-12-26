@@ -49,7 +49,7 @@ echo %% should add a, forget z
 hg revert --all -r0
 echo %% should forget a
 hg revert --all -rtip
-rm -f a *.orig
+rm a *.orig
 echo %% should silently add a
 hg revert -r0 a
 hg st a
