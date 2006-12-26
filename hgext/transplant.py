@@ -587,5 +587,5 @@ cmdtable = {
           ('', 'log', None, _('append transplant info to log message')),
           ('c', 'continue', None, _('continue last transplant session after repair')),
           ('', 'filter', '', _('filter changesets through FILTER'))],
-         _('hg transplant [-s REPOSITORY] [-b BRANCH] [-p REV] [-m REV] [-n] REV...'))
+         _('hg transplant [-s REPOSITORY] [-b BRANCH [-a]] [-p REV] [-m REV] [REV]...'))
 }
