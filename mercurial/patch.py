@@ -593,12 +593,13 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
     total = len(revs)
     revwidth = max([len(str(rev)) for rev in revs])
 
-    def single(node, seqno, fp):
-        parents = [p for p in repo.changelog.parents(node) if p != nullid]
+    def single(rev, seqno, fp):
+        ctx = repo.changectx(rev)
+        node = ctx.node()
+        parents = [p.node() for p in ctx.parents() if p]
         if switch_parent:
             parents.reverse()
         prev = (parents and parents[0]) or nullid
-        change = repo.changelog.read(node)
 
         if not fp:
             fp = cmdutil.make_file(repo, template, node, total=total,
@@ -607,13 +608,13 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             repo.ui.note("%s\n" % fp.name)
 
         fp.write("# HG changeset patch\n")
-        fp.write("# User %s\n" % change[1])
-        fp.write("# Date %d %d\n" % change[2])
+        fp.write("# User %s\n" % ctx.user())
+        fp.write("# Date %d %d\n" % ctx.date())
         fp.write("# Node ID %s\n" % hex(node))
         fp.write("# Parent  %s\n" % hex(prev))
         if len(parents) > 1:
             fp.write("# Parent  %s\n" % hex(parents[1]))
-        fp.write(change[4].rstrip())
+        fp.write(ctx.description().rstrip())
         fp.write("\n\n")
 
         diff(repo, prev, node, fp=fp, opts=opts)
@@ -621,7 +622,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             fp.close()
 
     for seqno, rev in enumerate(revs):
-        single(repo.lookup(rev), seqno+1, fp)
+        single(rev, seqno+1, fp)
 
 def diffstat(patchlines):
     fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
