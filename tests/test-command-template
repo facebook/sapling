@@ -61,7 +61,7 @@ echo 'changeset = q' >> t
 hg log --style ./t
 
 echo '# include works'
-rm -f q
+rm q
 echo '{rev}' > q
 hg log --style ./t
 

@@ -32,7 +32,7 @@ hg -R temp2 unbundle test2.hg
 hg -R temp tip
 hg -R temp2 tip
 
-rm -rf temp temp2 new
+rm -r temp temp2 new
 
 # test outgoing
 hg clone test test-dev

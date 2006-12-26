@@ -23,7 +23,7 @@ hg clone . ../a
 echo $?
 cd ..
 chmod 700 a
-rm -rf a b
+rm -r a b
 
 # Source of wrong type
 mkfifo a

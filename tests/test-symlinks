@@ -23,7 +23,7 @@ hg addremove
 #Assert screamed here before, should go by without consequence
 hg commit -m 'is there a bug?'
 
-cd .. ; rm -rf test
+cd .. ; rm -r test
 hg init test; cd test;
 
 mkdir dir

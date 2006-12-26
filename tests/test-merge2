@@ -14,7 +14,7 @@ hg update 0
 echo This is file b2 > b
 hg add b
 hg commit -m "commit #2" -d "1000000 0"
-cd ..; /bin/rm -rf t
+cd ..; rm -r t
 
 mkdir t
 cd t
@@ -29,7 +29,7 @@ rm b
 hg update 0
 echo This is file b2 > b
 hg commit -A -m "commit #2" -d "1000000 0"
-cd ..; /bin/rm -rf t
+cd ..; rm -r t
 
 mkdir t
 cd t
@@ -45,4 +45,3 @@ hg remove b
 hg update 0
 echo This is file b2 > b
 hg commit -A -m "commit #2" -d "1000000 0"
-cd ..; /bin/rm -rf t

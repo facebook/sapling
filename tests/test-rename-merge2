@@ -60,7 +60,7 @@ tm()
     echo
 
     cd ..
-    rm -rf t
+    rm -r t
 }
 
 up() { 

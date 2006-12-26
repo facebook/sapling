@@ -41,5 +41,4 @@ hg update -C
 hg diff
 hg status
 hg id
-cd ..; /bin/rm -rf t
 

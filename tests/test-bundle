@@ -38,7 +38,7 @@ hg --cwd empty pull ../full.hg
 hg -R empty rollback
 hg --cwd empty pull ../full.hg
 
-rm -rf empty
+rm -r empty
 hg init empty
 cd empty
 hg -R bundle://../full.hg log
@@ -49,7 +49,7 @@ echo 'changegroup = echo changegroup: u=$HG_URL' >> .hg/hgrc
 hg pull bundle://../full.hg
 cd ..
 
-rm -rf empty
+rm -r empty
 hg init empty
 hg clone -r 3 test partial
 hg clone partial partial2
