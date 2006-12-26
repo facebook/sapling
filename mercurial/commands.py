@@ -684,15 +684,12 @@ def debugcomplete(ui, cmd='', **opts):
     clist.sort()
     ui.write("%s\n" % "\n".join(clist))
 
-def debugrebuildstate(ui, repo, rev=None):
+def debugrebuildstate(ui, repo, rev=""):
     """rebuild the dirstate as it would look like for the given revision"""
-    if not rev:
+    if rev == "":
         rev = repo.changelog.tip()
-    else:
-        rev = repo.lookup(rev)
-    change = repo.changelog.read(rev)
-    n = change[0]
-    files = repo.manifest.read(n)
+    ctx = repo.changectx(rev)
+    files = ctx.manifest()
     wlock = repo.wlock()
     repo.dirstate.rebuild(rev, files)
 
@@ -703,10 +700,8 @@ def debugcheckstate(ui, repo):
     dc = repo.dirstate.map
     keys = dc.keys()
     keys.sort()
-    m1n = repo.changelog.read(parent1)[0]
-    m2n = repo.changelog.read(parent2)[0]
-    m1 = repo.manifest.read(m1n)
-    m2 = repo.manifest.read(m2n)
+    m1 = repo.changectx(parent1).manifest()
+    m2 = repo.changectx(parent2).manifest()
     errors = 0
     for f in dc:
         state = repo.dirstate.state(f)
@@ -2127,8 +2122,9 @@ def revert(ui, repo, *pats, **opts):
     if not opts['rev'] and p2 != nullid:
         raise util.Abort(_('uncommitted merge - please provide a '
                            'specific revision'))
-    node = repo.changectx(opts['rev']).node()
-    mf = repo.manifest.read(repo.changelog.read(node)[0])
+    ctx = repo.changectx(opts['rev'])
+    node = ctx.node()
+    mf = ctx.manifest()
     if node == parent:
         pmf = mf
     else:
@@ -2218,7 +2214,7 @@ def revert(ui, repo, *pats, **opts):
             if pmf is None:
                 # only need parent manifest in this unlikely case,
                 # so do not read by default
-                pmf = repo.manifest.read(repo.changelog.read(parent)[0])
+                pmf = repo.changectx(parent).manifest()
             if abs in pmf:
                 if mfentry:
                     # if version of file is same in parent and target
