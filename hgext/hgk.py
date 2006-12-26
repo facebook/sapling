@@ -12,11 +12,11 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
     def __difftree(repo, node1, node2, files=[]):
         assert node2 is not None
+        mmap = repo.changectx(node1).manifest()
         mmap2 = repo.changectx(node2).manifest()
         status = repo.status(node1, node2, files=files)[:5]
         modified, added, removed, deleted, unknown = status
 
-        mmap = repo.changectx(node1).manifest()
         empty = hg.short(hg.nullid)
 
         for f in modified:
@@ -153,6 +153,7 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
                     break
                 if full != None:
                     l[x] = repo.changectx(i + x)
+                    l[x].changeset() # force reading
                 else:
                     l[x] = 1
             for x in xrange(chunk-1, -1, -1):
