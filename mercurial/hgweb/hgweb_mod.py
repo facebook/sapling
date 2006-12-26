@@ -168,14 +168,10 @@ class hgweb(object):
                     yield self.t("diffline", line=l)
 
         r = self.repo
-        cl = r.changelog
-        mf = r.manifest
-        change1 = cl.read(node1)
-        change2 = cl.read(node2)
-        mmap1 = mf.read(change1[0])
-        mmap2 = mf.read(change2[0])
-        date1 = util.datestr(change1[2])
-        date2 = util.datestr(change2[2])
+        c1 = r.changectx(node1)
+        c2 = r.changectx(node2)
+        date1 = util.datestr(c1.date())
+        date2 = util.datestr(c2.date())
 
         modified, added, removed, deleted, unknown = r.status(node1, node2)[:5]
         if files:
@@ -184,17 +180,17 @@ class hgweb(object):
 
         diffopts = patch.diffopts(self.repo.ui, untrusted=True)
         for f in modified:
-            to = r.file(f).read(mmap1[f])
-            tn = r.file(f).read(mmap2[f])
+            to = c1.filectx(f).data()
+            tn = c2.filectx(f).data()
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
                                           opts=diffopts), f, tn)
         for f in added:
             to = None
-            tn = r.file(f).read(mmap2[f])
+            tn = c2.filectx(f).data()
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
                                           opts=diffopts), f, tn)
         for f in removed:
-            to = r.file(f).read(mmap1[f])
+            to = c1.filectx(f).data()
             tn = None
             yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
                                           opts=diffopts), f, tn)
@@ -493,8 +489,6 @@ class hgweb(object):
                      archives=self.archivelist(hex(node)))
 
     def tags(self):
-        cl = self.repo.changelog
-
         i = self.repo.tagslist()
         i.reverse()
 
@@ -505,7 +499,7 @@ class hgweb(object):
                     continue
                 yield {"parity": self.stripes(parity),
                        "tag": k,
-                       "date": cl.read(n)[2],
+                       "date": self.repo.changectx(n).date(),
                        "node": hex(n)}
                 parity += 1
 
@@ -515,8 +509,6 @@ class hgweb(object):
                      entriesnotip=lambda **x: entries(True, **x))
 
     def summary(self):
-        cl = self.repo.changelog
-
         i = self.repo.tagslist()
         i.reverse()
 
@@ -531,14 +523,11 @@ class hgweb(object):
                 if count > 10: # limit to 10 tags
                     break;
 
-                c = cl.read(n)
-                t = c[2]
-
                 yield self.t("tagentry",
-                             parity = self.stripes(parity),
-                             tag = k,
-                             node = hex(n),
-                             date = t)
+                             parity=self.stripes(parity),
+                             tag=k,
+                             node=hex(n),
+                             date=self.repo.changectx(n).date())
                 parity += 1
 
         def heads(**map):
@@ -560,40 +549,38 @@ class hgweb(object):
 
         def changelist(**map):
             parity = 0
-            cl = self.repo.changelog
             l = [] # build a list in forward order for efficiency
             for i in xrange(start, end):
-                n = cl.node(i)
-                changes = cl.read(n)
-                hn = hex(n)
-                t = changes[2]
+                ctx = self.repo.changectx(i)
+                hn = hex(ctx.node())
 
                 l.insert(0, self.t(
                     'shortlogentry',
-                    parity = parity,
-                    author = changes[1],
-                    desc = changes[4],
-                    date = t,
-                    rev = i,
-                    node = hn))
+                    parity=parity,
+                    author=ctx.user(),
+                    desc=ctx.description(),
+                    date=ctx.date(),
+                    rev=i,
+                    node=hn))
                 parity = 1 - parity
 
             yield l
 
+        cl = self.repo.changelog
         count = cl.count()
         start = max(0, count - self.maxchanges)
         end = min(count, start + self.maxchanges)
 
         yield self.t("summary",
-                 desc = self.config("web", "description", "unknown"),
-                 owner = (self.config("ui", "username") or # preferred
-                          self.config("web", "contact") or # deprecated
-                          self.config("web", "author", "unknown")), # also
-                 lastchange = cl.read(cl.tip())[2],
-                 tags = tagentries,
-                 heads = heads,
-                 shortlog = changelist,
-                 node = hex(cl.tip()),
+                 desc=self.config("web", "description", "unknown"),
+                 owner=(self.config("ui", "username") or # preferred
+                        self.config("web", "contact") or # deprecated
+                        self.config("web", "author", "unknown")), # also
+                 lastchange=cl.read(cl.tip())[2],
+                 tags=tagentries,
+                 heads=heads,
+                 shortlog=changelist,
+                 node=hex(cl.tip()),
                  archives=self.archivelist("tip"))
 
     def filediff(self, fctx):
