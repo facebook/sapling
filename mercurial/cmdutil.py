@@ -146,13 +146,12 @@ def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None):
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     if added is None or removed is None:
         added, removed = repo.status()[1:3]
-    changes = repo.changelog.read(repo.dirstate.parents()[0])
-    mf = repo.manifest.read(changes[0])
+    ctx = repo.changectx()
     for a in added:
         aa = repo.wread(a)
         bestscore, bestname = None, None
         for r in removed:
-            rr = repo.file(r).read(mf[r])
+            rr = ctx.filectx(r).data()
             delta = mdiff.textdiff(aa, rr)
             if len(delta) < len(aa):
                 myscore = 1.0 - (float(len(delta)) / len(aa))
