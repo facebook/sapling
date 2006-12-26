@@ -12,13 +12,11 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
     def __difftree(repo, node1, node2, files=[]):
         assert node2 is not None
-        change = repo.changelog.read(node2)
-        mmap2 = repo.manifest.read(change[0])
+        mmap2 = repo.changectx(node2).manifest()
         status = repo.status(node1, node2, files=files)[:5]
         modified, added, removed, deleted, unknown = status
 
-        change = repo.changelog.read(node1)
-        mmap = repo.manifest.read(change[0])
+        mmap = repo.changectx(node1).manifest()
         empty = hg.short(hg.nullid)
 
         for f in modified:
@@ -64,32 +62,30 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         if not opts['stdin']:
             break
 
-def catcommit(repo, n, prefix, changes=None):
+def catcommit(repo, n, prefix, ctx=None):
     nlprefix = '\n' + prefix;
-    (p1, p2) = repo.changelog.parents(n)
-    (h, h1, h2) = map(hg.short, (n, p1, p2))
-    (i1, i2) = map(repo.changelog.rev, (p1, p2))
-    if not changes:
-        changes = repo.changelog.read(n)
-    print "tree %s" % (hg.short(changes[0]))
-    if i1 != hg.nullrev: print "parent %s" % (h1)
-    if i2 != hg.nullrev: print "parent %s" % (h2)
-    date_ar = changes[2]
-    date = int(float(date_ar[0]))
-    lines = changes[4].splitlines()
+    if ctx is None:
+        ctx = repo.changectx(n)
+    (p1, p2) = ctx.parents()
+    print "tree %s" % (hg.short(ctx.changeset()[0])) # use ctx.node() instead ??
+    if p1: print "parent %s" % (hg.short(p1.node()))
+    if p2: print "parent %s" % (hg.short(p2.node()))
+    date = ctx.date()
+    description = ctx.description()
+    lines = description.splitlines()
     if lines and lines[-1].startswith('committer:'):
         committer = lines[-1].split(': ')[1].rstrip()
     else:
-        committer = changes[1]
+        committer = ctx.user()
 
-    print "author %s %s %s" % (changes[1], date, date_ar[1])
-    print "committer %s %s %s" % (committer, date, date_ar[1])
-    print "revision %d" % repo.changelog.rev(n)
+    print "author %s %s %s" % (ctx.user(), int(date[0]), date[1])
+    print "committer %s %s %s" % (committer, int(date[0]), date[1])
+    print "revision %d" % ctx.rev()
     print ""
     if prefix != "":
-        print "%s%s" % (prefix, changes[4].replace('\n', nlprefix).strip())
+        print "%s%s" % (prefix, description.replace('\n', nlprefix).strip())
     else:
-        print changes[4]
+        print description
     if prefix:
         sys.stdout.write('\0')
 
@@ -140,8 +136,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
 # you can specify a commit to stop at by starting the sha1 with ^
 def revtree(args, repo, full="tree", maxnr=0, parents=False):
     def chlogwalk():
-        ch = repo.changelog
-        count = ch.count()
+        count = repo.changelog.count()
         i = count
         l = [0] * 100
         chunk = 100
@@ -157,7 +152,7 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
                     l[chunk - x:] = [0] * (chunk - x)
                     break
                 if full != None:
-                    l[x] = ch.read(ch.node(i + x))
+                    l[x] = repo.changectx(i + x)
                 else:
                     l[x] = 1
             for x in xrange(chunk-1, -1, -1):
@@ -211,7 +206,7 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
 
     # walk the repository looking for commits that are in our
     # reachability graph
-    for i, changes in chlogwalk():
+    for i, ctx in chlogwalk():
         n = repo.changelog.node(i)
         mask = is_reachable(want_sha1, reachable, n)
         if mask:
@@ -226,13 +221,13 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
                 print hg.short(n) + parentstr
             elif full == "commit":
                 print hg.short(n) + parentstr
-                catcommit(repo, n, '    ', changes)
+                catcommit(repo, n, '    ', ctx)
             else:
                 (p1, p2) = repo.changelog.parents(n)
                 (h, h1, h2) = map(hg.short, (n, p1, p2))
                 (i1, i2) = map(repo.changelog.rev, (p1, p2))
 
-                date = changes[2][0]
+                date = ctx.date()[0]
                 print "%s %s:%s" % (date, h, mask),
                 mask = is_reachable(want_sha1, reachable, p1)
                 if i1 != hg.nullrev and mask > 0:
