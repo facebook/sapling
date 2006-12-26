@@ -11,16 +11,11 @@ from mercurial import hg, fancyopts, commands, ui, util, patch, revlog
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
     def __difftree(repo, node1, node2, files=[]):
-        if node2:
-            change = repo.changelog.read(node2)
-            mmap2 = repo.manifest.read(change[0])
-            status = repo.status(node1, node2, files=files)[:5]
-            modified, added, removed, deleted, unknown = status
-        else:
-            status = repo.status(node1, files=files)[:5]
-            modified, added, removed, deleted, unknown = status
-            if not node1:
-                node1 = repo.dirstate.parents()[0]
+        assert node2 is not None
+        change = repo.changelog.read(node2)
+        mmap2 = repo.manifest.read(change[0])
+        status = repo.status(node1, node2, files=files)[:5]
+        modified, added, removed, deleted, unknown = status
 
         change = repo.changelog.read(node1)
         mmap = repo.manifest.read(change[0])
