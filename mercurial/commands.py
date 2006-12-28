@@ -3277,7 +3277,11 @@ def dispatch(args):
         if hasattr(inst, "code"):
             u.warn(_("abort: %s\n") % inst)
         elif hasattr(inst, "reason"):
-            u.warn(_("abort: error: %s\n") % inst.reason[1])
+            try: # usually it is in the form (errno, strerror)
+                reason = inst.reason.args[1]
+            except: # it might be anything, for example a string
+                reason = inst.reason
+            u.warn(_("abort: error: %s\n") % reason)
         elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
             if u.debugflag:
                 u.warn(_("broken pipe\n"))
