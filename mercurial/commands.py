@@ -11,7 +11,7 @@ from i18n import gettext as _
 demandload(globals(), "bisect os re sys signal imp urllib pdb shlex stat")
 demandload(globals(), "fancyopts ui hg util lock revlog bundlerepo")
 demandload(globals(), "difflib patch time help mdiff tempfile")
-demandload(globals(), "traceback errno version atexit")
+demandload(globals(), "traceback errno version atexit socket")
 demandload(globals(), "archival changegroup cmdutil hgweb.server sshserver")
 
 class UnknownCommand(Exception):
@@ -3273,6 +3273,8 @@ def dispatch(args):
                     u.warn(_("\nbroken pipe\n"))
             else:
                 raise
+    except socket.error, inst:
+        u.warn(_("abort: %s\n") % inst[1])
     except IOError, inst:
         if hasattr(inst, "code"):
             u.warn(_("abort: %s\n") % inst)
