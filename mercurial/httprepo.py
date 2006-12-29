@@ -257,15 +257,19 @@ class httprepository(remoterepository):
             proto = resp.headers['content-type']
 
         # accept old "text/plain" and "application/hg-changegroup" for now
-        if not proto.startswith('application/mercurial') and \
+        if not proto.startswith('application/mercurial-') and \
                not proto.startswith('text/plain') and \
                not proto.startswith('application/hg-changegroup'):
             raise hg.RepoError(_("'%s' does not appear to be an hg repository") %
                                self._url)
 
-        if proto.startswith('application/mercurial'):
-            version = proto[22:]
-            if float(version) > 0.1:
+        if proto.startswith('application/mercurial-'):
+            try:
+                version = float(proto[22:])
+            except ValueError:
+                raise hg.RepoError(_("'%s' sent a broken Content-type "
+                                     "header (%s)") % (self._url, proto))
+            if version > 0.1:
                 raise hg.RepoError(_("'%s' uses newer protocol %s") %
                                    (self._url, version))
 
