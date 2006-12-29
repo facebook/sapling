@@ -13,6 +13,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  export     dump the header and diffs for one or more changesets
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
+ merge      merge working directory with another revision
  parents    show the parents of the working dir or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
@@ -20,7 +21,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  revert     revert files or dirs to their states as of some revision
  serve      export the repository via HTTP
  status     show changed files in the working directory
- update     update or merge working directory
+ update     update working directory
 0: a
 % should succeed - up is an alias, not an abbreviation
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved

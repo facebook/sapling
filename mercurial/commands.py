@@ -1773,7 +1773,7 @@ def manifest(ui, repo, rev=None):
         ui.write("%s\n" % f)
 
 def merge(ui, repo, node=None, force=None, branch=None):
-    """Merge working directory with another revision
+    """merge working directory with another revision
 
     Merge the contents of the current working directory and the
     requested revision. Files that changed between either parent are
@@ -2489,7 +2489,7 @@ def unbundle(ui, repo, fname, **opts):
     return postincoming(ui, repo, modheads, opts['update'])
 
 def update(ui, repo, node=None, clean=False, branch=None, date=None):
-    """update or merge working directory
+    """update working directory
 
     Update the working directory to the specified revision.
 
@@ -2501,7 +2501,7 @@ def update(ui, repo, node=None, clean=False, branch=None, date=None):
     merge command.
 
     By default, update will refuse to run if doing so would require
-    merging or discarding local changes.
+    discarding local changes.
     """
     if date:
         if node:
@@ -2807,7 +2807,7 @@ table = {
          ] + walkopts,
          _('hg log [OPTION]... [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
-    "merge":
+    "^merge":
         (merge,
          [('b', 'branch', '', _('merge with head of a specific branch (DEPRECATED)')),
           ('f', 'force', None, _('force a merge with outstanding changes'))],
