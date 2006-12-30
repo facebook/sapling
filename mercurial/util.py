@@ -693,6 +693,20 @@ def checkfolding(path):
     except:
         return True
 
+def checkexec(path):
+    """
+    Check whether the given path is on a filesystem with UNIX-like exec flags
+
+    Requires a directory (like /foo/.hg)
+    """
+    fh, fn = tempfile.mkstemp("", "", path)
+    os.close(fh)
+    m = os.stat(fn).st_mode
+    os.chmod(fn, m ^ 0111)
+    r = (os.stat(fn).st_mode != m)
+    os.unlink(fn)
+    return r
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
