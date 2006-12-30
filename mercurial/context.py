@@ -378,13 +378,14 @@ class workingctx(changectx):
         """generate a manifest corresponding to the working directory"""
 
         man = self._parents[0].manifest().copy()
+        is_exec = util.execfunc(self._repo.root, man.execf)
         copied = self._repo.dirstate.copies()
         modified, added, removed, deleted, unknown = self._status[:5]
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
                 man[f] = man.get(copied.get(f, f), nullid) + i
                 try:
-                    man.set(f, util.is_exec(self._repo.wjoin(f), man.execf(f)))
+                    man.set(f, is_exec(f))
                 except OSError:
                     pass
 

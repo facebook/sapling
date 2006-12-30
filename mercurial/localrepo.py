@@ -712,11 +712,12 @@ class localrepository(repo.repository):
         new = {}
         linkrev = self.changelog.count()
         commit.sort()
+        is_exec = util.execfunc(self.root, m1.execf)
         for f in commit:
             self.ui.note(f + "\n")
             try:
                 new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
-                m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
+                m1.set(f, is_exec(f))
             except IOError:
                 if use_dirstate:
                     self.ui.warn(_("trouble committing %s!\n") % f)
@@ -877,9 +878,10 @@ class localrepository(repo.repository):
                 # generate a pseudo-manifest for the working dir
                 # XXX: create it in dirstate.py ?
                 mf2 = mfmatches(self.dirstate.parents()[0])
+                is_exec = util.execfunc(self.root, mf2.execf)
                 for f in lookup + modified + added:
                     mf2[f] = ""
-                    mf2.set(f, execf=util.is_exec(self.wjoin(f), mf2.execf(f)))
+                    mf2.set(f, is_exec(f))
                 for f in removed:
                     if f in mf2:
                         del mf2[f]

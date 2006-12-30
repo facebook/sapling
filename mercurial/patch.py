@@ -524,6 +524,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     all = modified + added + removed
     all.sort()
     gone = {}
+
     for f in all:
         to = None
         tn = None

@@ -707,6 +707,12 @@ def checkexec(path):
     os.unlink(fn)
     return r
 
+def execfunc(path, fallback):
+    '''return an is_exec() function with default to fallback'''
+    if checkexec(path):
+        return lambda x: is_exec(os.path.join(path, x), False)
+    return fallback
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
