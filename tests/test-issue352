@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 # http://www.selenic.com/mercurial/bts/issue352
 
 hg init foo
 cd foo
 
-A=`echo -e -n 'he\rllo'`
+A=`printf 'he\rllo'`
 
 echo foo > "$A"
 hg add
