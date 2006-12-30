@@ -787,6 +787,9 @@ if os.name == 'nt':
     def set_exec(f, mode):
         pass
 
+    def set_link(f, mode):
+        pass
+
     def set_binary(fd):
         msvcrt.setmode(fd.fileno(), os.O_BINARY)
 
@@ -872,6 +875,30 @@ else:
             os.chmod(f, s | (s & 0444) >> 2 & ~_umask)
         else:
             os.chmod(f, s & 0666)
+
+    def is_link(f):
+        """check whether a file is a symlink"""
+        return (os.lstat(f).st_mode & 0120000 == 0120000)
+
+    def set_link(f, mode):
+        """make a file a symbolic link/regular file
+
+        if a file is changed to a link, its contents become the link data
+        if a link is changed to a file, its link data become its contents
+        """
+
+        m = is_link(f)
+        if m == bool(mode):
+            return
+
+        if mode: # switch file to link
+            data = file(f).read()
+            os.unlink(f)
+            os.symlink(data, f)
+        else:
+            data = os.readlink(f)
+            os.unlink(f)
+            file(f, "w").write(data)
 
     def set_binary(fd):
         pass
