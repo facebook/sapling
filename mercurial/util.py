@@ -713,6 +713,18 @@ def execfunc(path, fallback):
         return lambda x: is_exec(os.path.join(path, x))
     return fallback
 
+def checksymlink(path):
+    """check whether the given path is on a symlink-capable filesystem"""
+    # mktemp is not racy because symlink creation will fail if the
+    # file already exists
+    name = tempfile.mktemp(dir=path)
+    try:
+        os.symlink(".", name)
+        os.unlink(name)
+        return True
+    except OSError:
+        return False
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
