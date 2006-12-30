@@ -379,13 +379,14 @@ class workingctx(changectx):
 
         man = self._parents[0].manifest().copy()
         is_exec = util.execfunc(self._repo.root, man.execf)
+        is_link = util.linkfunc(self._repo.root, man.linkf)
         copied = self._repo.dirstate.copies()
         modified, added, removed, deleted, unknown = self._status[:5]
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
                 man[f] = man.get(copied.get(f, f), nullid) + i
                 try:
-                    man.set(f, is_exec(f))
+                    man.set(f, is_exec(f), is_link(f))
                 except OSError:
                     pass
 

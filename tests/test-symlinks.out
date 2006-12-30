@@ -1,11 +1,12 @@
+adding bar
 adding foo
 adding bomb
 adding a.c
 adding dir/a.o
 adding dir/b.o
+M dir/b.o
 ! a.c
 ! dir/a.o
-! dir/b.o
 ? .hgignore
 a.c: unsupported file type (type is fifo)
 ! a.c
