@@ -117,8 +117,7 @@ class localrepository(repo.repository):
         self.tagscache = None
         self.branchcache = None
         self.nodetagscache = None
-        self.encodepats = None
-        self.decodepats = None
+        self.filterpats = {}
         self.transhandle = None
 
         self._link = lambda x: False
@@ -483,20 +482,15 @@ class localrepository(repo.repository):
     def wfile(self, f, mode='r'):
         return self.wopener(f, mode)
 
-    def wread(self, filename):
-        if self.encodepats == None:
+    def _filter(self, filter, filename, data):
+        if filter not in self.filterpats:
             l = []
-            for pat, cmd in self.ui.configitems("encode"):
+            for pat, cmd in self.ui.configitems(filter):
                 mf = util.matcher(self.root, "", [pat], [], [])[1]
                 l.append((mf, cmd))
-            self.encodepats = l
+            self.filterpats[filter] = l
 
-        if self._link(filename):
-            data = os.readlink(self.wjoin(filename))
-        else:
-            data = self.wopener(filename, 'r').read()
-
-        for mf, cmd in self.encodepats:
+        for mf, cmd in self.filterpats[filter]:
             if mf(filename):
                 self.ui.debug(_("filtering %s through %s\n") % (filename, cmd))
                 data = util.filter(data, cmd)
@@ -504,20 +498,15 @@ class localrepository(repo.repository):
 
         return data
 
+    def wread(self, filename):
+        if self._link(filename):
+            data = os.readlink(self.wjoin(filename))
+        else:
+            data = self.wopener(filename, 'r').read()
+        return self._filter("encode", filename, data)
+
     def wwrite(self, filename, data, fd=None):
-        if self.decodepats == None:
-            l = []
-            for pat, cmd in self.ui.configitems("decode"):
-                mf = util.matcher(self.root, "", [pat], [], [])[1]
-                l.append((mf, cmd))
-            self.decodepats = l
-
-        for mf, cmd in self.decodepats:
-            if mf(filename):
-                self.ui.debug(_("filtering %s through %s\n") % (filename, cmd))
-                data = util.filter(data, cmd)
-                break
-
+        data = self._filter("decode", filename, data)
         if fd:
             return fd.write(data)
         return self.wopener(filename, 'w').write(data)
