@@ -121,6 +121,11 @@ class localrepository(repo.repository):
         self.decodepats = None
         self.transhandle = None
 
+        self._link = lambda x: False
+        if util.checklink(self.root):
+            r = self.root # avoid circular reference in lambda
+            self._link = lambda x: util.is_link(os.path.join(r, x))
+
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
 
     def url(self):
@@ -486,7 +491,10 @@ class localrepository(repo.repository):
                 l.append((mf, cmd))
             self.encodepats = l
 
-        data = self.wopener(filename, 'r').read()
+        if self._link(filename):
+            data = os.readlink(self.wjoin(filename))
+        else:
+            data = self.wopener(filename, 'r').read()
 
         for mf, cmd in self.encodepats:
             if mf(filename):
@@ -719,7 +727,7 @@ class localrepository(repo.repository):
             try:
                 new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
                 m1.set(f, is_exec(f), is_link(f))
-            except IOError:
+            except OSError:
                 if use_dirstate:
                     self.ui.warn(_("trouble committing %s!\n") % f)
                     raise
