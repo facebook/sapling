@@ -710,7 +710,7 @@ def checkexec(path):
 def execfunc(path, fallback):
     '''return an is_exec() function with default to fallback'''
     if checkexec(path):
-        return lambda x: is_exec(os.path.join(path, x), False)
+        return lambda x: is_exec(os.path.join(path, x))
     return fallback
 
 # Platform specific variants
@@ -771,9 +771,6 @@ if os.name == 'nt':
     def testpid(pid):
         '''return False if pid dead, True if running or not known'''
         return True
-
-    def is_exec(f, last):
-        return last
 
     def set_exec(f, mode):
         pass
@@ -849,7 +846,7 @@ else:
             pf = pf[1:-1] # Remove the quotes
         return pf
 
-    def is_exec(f, last):
+    def is_exec(f):
         """check whether a file is executable"""
         return (os.lstat(f).st_mode & 0100 != 0)
 
