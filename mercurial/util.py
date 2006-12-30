@@ -725,6 +725,12 @@ def checksymlink(path):
     except OSError:
         return False
 
+def linkfunc(path, fallback):
+    '''return an is_link() function with default to fallback'''
+    if checklink(path):
+        return lambda x: is_link(os.path.join(path, x))
+    return fallback
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
