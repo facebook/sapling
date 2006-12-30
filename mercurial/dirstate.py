@@ -337,14 +337,13 @@ class dirstate(object):
         return ret
 
     def supported_type(self, f, st, verbose=False):
-        if stat.S_ISREG(st.st_mode):
+        if stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode):
             return True
         if verbose:
             kind = 'unknown'
             if stat.S_ISCHR(st.st_mode): kind = _('character device')
             elif stat.S_ISBLK(st.st_mode): kind = _('block device')
             elif stat.S_ISFIFO(st.st_mode): kind = _('fifo')
-            elif stat.S_ISLNK(st.st_mode): kind = _('symbolic link')
             elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
             elif stat.S_ISDIR(st.st_mode): kind = _('directory')
             self.ui.warn(_('%s: unsupported file type (type is %s)\n') % (
