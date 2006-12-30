@@ -377,8 +377,9 @@ def updatedir(ui, repo, patches, wlock=None):
             dst = os.path.join(repo.root, gp.path)
             # patch won't create empty files
             if ctype == 'ADD' and not os.path.exists(dst):
-                repo.wwrite(gp.path, '')
-            util.set_exec(dst, x)
+                repo.wwrite(gp.path, '', x and 'x' or '')
+            else:
+                util.set_exec(dst, x)
     cmdutil.addremove(repo, cfiles, wlock=wlock)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])

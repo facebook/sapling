@@ -505,9 +505,19 @@ class localrepository(repo.repository):
             data = self.wopener(filename, 'r').read()
         return self._filter("encode", filename, data)
 
-    def wwrite(self, filename, data):
+    def wwrite(self, filename, data, flags):
         data = self._filter("decode", filename, data)
-        return self.wopener(filename, 'w').write(data)
+        if "l" in flags:
+            os.unlink(self.wjoin(filename))
+            os.symlink(data, self.wjoin(filename))
+        else:
+            try:
+                if self._link(filename):
+                    os.unlink(self.wjoin(filename))
+            except OSError:
+                pass
+            self.wopener(filename, 'w').write(data)
+            util.set_exec(self.wjoin(filename), "x" in flags)
 
     def wwritedata(self, filename, data):
         return self._filter("decode", filename, data)
@@ -971,8 +981,7 @@ class localrepository(repo.repository):
                 self.ui.warn("%s not removed!\n" % f)
             else:
                 t = self.file(f).read(m[f])
-                self.wwrite(f, t)
-                util.set_exec(self.wjoin(f), m.execf(f))
+                self.wwrite(f, t, m.flags(f))
                 self.dirstate.update([f], "n")
 
     def copy(self, source, dest, wlock=None):

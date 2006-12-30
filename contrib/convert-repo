@@ -351,11 +351,9 @@ class convert_mercurial:
         return [ hg.hex(x) for x in h ]
 
     def putfile(self, f, e, data):
-        self.repo.wfile(f, "w").write(data)
+        self.repo.wwrite(f, data, e and 'x' or '')
         if self.repo.dirstate.state(f) == '?':
             self.repo.dirstate.update([f], "a")
-
-        util.set_exec(self.repo.wjoin(f), e)
 
     def delfile(self, f):
         try:

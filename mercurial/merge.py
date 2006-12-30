@@ -346,7 +346,7 @@ def applyupdates(repo, action, wctx, mctx):
                     merged += 1
                 if f != fd:
                     repo.ui.debug(_("copying %s to %s\n") % (f, fd))
-                    repo.wwrite(fd, repo.wread(f))
+                    repo.wwrite(fd, repo.wread(f), flag and 'x' or '')
                     if move:
                         repo.ui.debug(_("removing %s\n") % f)
                         os.unlink(repo.wjoin(f))
@@ -355,22 +355,19 @@ def applyupdates(repo, action, wctx, mctx):
             flag = a[2]
             repo.ui.note(_("getting %s\n") % f)
             t = mctx.filectx(f).data()
-            repo.wwrite(f, t)
-            util.set_exec(repo.wjoin(f), flag)
+            repo.wwrite(f, t, flag and 'x' or '')
             updated += 1
         elif m == "d": # directory rename
             f2, fd, flag = a[2:]
             if f:
                 repo.ui.note(_("moving %s to %s\n") % (f, fd))
                 t = wctx.filectx(f).data()
-                repo.wwrite(fd, t)
-                util.set_exec(repo.wjoin(fd), flag)
+                repo.wwrite(fd, t, flag and 'x' or '')
                 util.unlink(repo.wjoin(f))
             if f2:
                 repo.ui.note(_("getting %s to %s\n") % (f2, fd))
                 t = mctx.filectx(f2).data()
-                repo.wwrite(fd, t)
-                util.set_exec(repo.wjoin(fd), flag)
+                repo.wwrite(fd, t, flag and 'x' or '')
             updated += 1
         elif m == "e": # exec
             flag = a[2]
