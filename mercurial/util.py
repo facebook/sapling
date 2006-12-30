@@ -851,6 +851,8 @@ if os.name == 'nt':
 
 else:
     nulldev = '/dev/null'
+    _umask = os.umask(0)
+    os.umask(_umask)
 
     def rcfiles(path):
         rcs = [os.path.join(path, 'hgrc')]
@@ -892,9 +894,7 @@ else:
         if mode:
             # Turn on +x for every +r bit when making a file executable
             # and obey umask.
-            umask = os.umask(0)
-            os.umask(umask)
-            os.chmod(f, s | (s & 0444) >> 2 & ~umask)
+            os.chmod(f, s | (s & 0444) >> 2 & ~_umask)
         else:
             os.chmod(f, s & 0666)
 
