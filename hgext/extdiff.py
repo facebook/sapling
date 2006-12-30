@@ -73,7 +73,8 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
-            repo.wwrite(wfn, repo.file(fn).read(mf[fn]), open(dest, 'w'))
+            data = repo.wwritedata(wfn, repo.file(wfn).read(mf[wfn]))
+            open(dest, 'w').write(data)
         return dirname
 
     def snapshot_wdir(files):

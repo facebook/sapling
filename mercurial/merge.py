@@ -20,8 +20,9 @@ def filemerge(repo, fw, fo, wctx, mctx):
     def temp(prefix, ctx):
         pre = "%s~%s." % (os.path.basename(ctx.path()), prefix)
         (fd, name) = tempfile.mkstemp(prefix=pre)
+        data = repo.wwritedata(ctx.path(), ctx.data())
         f = os.fdopen(fd, "wb")
-        repo.wwrite(ctx.path(), ctx.data(), f)
+        f.write(data)
         f.close()
         return name
 

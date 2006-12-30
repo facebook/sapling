@@ -505,11 +505,12 @@ class localrepository(repo.repository):
             data = self.wopener(filename, 'r').read()
         return self._filter("encode", filename, data)
 
-    def wwrite(self, filename, data, fd=None):
+    def wwrite(self, filename, data):
         data = self._filter("decode", filename, data)
-        if fd:
-            return fd.write(data)
         return self.wopener(filename, 'w').write(data)
+
+    def wwritedata(self, filename, data):
+        return self._filter("decode", filename, data)
 
     def transaction(self):
         tr = self.transhandle
