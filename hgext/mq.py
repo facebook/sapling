@@ -698,7 +698,6 @@ class queue:
         if saveheads:
             backupch = repo.changegroupsubset(savebases.keys(), saveheads, 'strip')
             chgrpfile = bundle(backupch)
-            chgrpfile = 'file:%s' % chgrpfile
 
         stripall(revnum)
 
@@ -707,7 +706,8 @@ class queue:
         repo.manifest.strip(repo.manifest.rev(change[0]), revnum)
         if saveheads:
             self.ui.status("adding branch\n")
-            commands.unbundle(self.ui, repo, chgrpfile, update=False)
+            commands.unbundle(self.ui, repo, "file:%s" % chgrpfile,
+                              update=False)
             if backup != "strip":
                 os.unlink(chgrpfile)
 

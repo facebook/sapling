@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer
+import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer, traceback
 from mercurial import ui, hg, util, templater
 from hgweb_mod import hgweb
 from hgwebdir_mod import hgwebdir
@@ -55,10 +55,17 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            self.do_hgweb()
-        except socket.error, inst:
-            if inst[0] != errno.EPIPE:
-                raise
+            try:
+                self.do_hgweb()
+            except socket.error, inst:
+                if inst[0] != errno.EPIPE:
+                    raise
+        except StandardError, inst:
+            self._start_response("500 Internal Server Error", [])
+            self._write("Internal Server Error")
+            tb = "".join(traceback.format_exception(*sys.exc_info()))
+            self.log_error("Exception happened during processing request '%s':\n%s",
+                           self.path, tb)
 
     def do_GET(self):
         self.do_POST()

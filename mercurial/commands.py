@@ -11,7 +11,7 @@ from i18n import _
 import bisect, os, re, sys, signal, imp, urllib, pdb, shlex, stat
 import fancyopts, ui, hg, util, lock, revlog, bundlerepo
 import difflib, patch, time, help, mdiff, tempfile
-import traceback, errno, version, atexit
+import traceback, errno, version, atexit, socket
 import archival, changegroup, cmdutil, hgweb.server, sshserver
 
 class UnknownCommand(Exception):
@@ -1337,13 +1337,20 @@ def help_(ui, name=None, with_version=False):
             ui.write(d, '\n')
 
         ui.status('\n')
+
+        try:
+            ct = mod.cmdtable
+        except AttributeError:
+            ui.status(_('no commands defined\n'))
+            return
+
         if ui.verbose:
             ui.status(_('list of commands:\n\n'))
         else:
             ui.status(_('list of commands (use "hg help -v %s" '
                         'to show aliases and global options):\n\n') % name)
 
-        modcmds = dict.fromkeys([c.split('|', 1)[0] for c in mod.cmdtable])
+        modcmds = dict.fromkeys([c.split('|', 1)[0] for c in ct])
         helplist(modcmds.has_key)
 
     if name and name != 'shortlist':
@@ -1761,7 +1768,7 @@ def manifest(ui, repo, rev=None):
         ui.write("%s\n" % f)
 
 def merge(ui, repo, node=None, force=None):
-    """Merge working directory with another revision
+    """merge working directory with another revision
 
     Merge the contents of the current working directory and the
     requested revision. Files that changed between either parent are
@@ -2477,7 +2484,7 @@ def unbundle(ui, repo, fname, **opts):
     return postincoming(ui, repo, modheads, opts['update'])
 
 def update(ui, repo, node=None, clean=False, date=None):
-    """update or merge working directory
+    """update working directory
 
     Update the working directory to the specified revision.
 
@@ -2489,7 +2496,7 @@ def update(ui, repo, node=None, clean=False, date=None):
     merge command.
 
     By default, update will refuse to run if doing so would require
-    merging or discarding local changes.
+    discarding local changes.
     """
     if date:
         if node:
@@ -2768,7 +2775,7 @@ table = {
          ] + walkopts,
          _('hg log [OPTION]... [FILE]')),
     "manifest": (manifest, [], _('hg manifest [REV]')),
-    "merge":
+    "^merge":
         (merge,
          [('f', 'force', None, _('force a merge with outstanding changes'))],
          _('hg merge [-f] [REV]')),
@@ -3230,11 +3237,17 @@ def dispatch(args):
                     u.warn(_("\nbroken pipe\n"))
             else:
                 raise
+    except socket.error, inst:
+        u.warn(_("abort: %s\n") % inst[1])
     except IOError, inst:
         if hasattr(inst, "code"):
             u.warn(_("abort: %s\n") % inst)
         elif hasattr(inst, "reason"):
-            u.warn(_("abort: error: %s\n") % inst.reason[1])
+            try: # usually it is in the form (errno, strerror)
+                reason = inst.reason.args[1]
+            except: # it might be anything, for example a string
+                reason = inst.reason
+            u.warn(_("abort: error: %s\n") % reason)
         elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
             if u.debugflag:
                 u.warn(_("broken pipe\n"))

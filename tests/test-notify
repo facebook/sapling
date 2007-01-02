@@ -22,6 +22,7 @@ baseurl = http://test/
 foo@bar = *
 EOF
 
+hg help notify
 hg init a
 echo a > a/a
 echo % commit
