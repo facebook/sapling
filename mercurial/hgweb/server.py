@@ -8,7 +8,7 @@
 
 from mercurial.demandload import demandload
 import os, sys, errno
-demandload(globals(), "urllib BaseHTTPServer socket SocketServer")
+demandload(globals(), "urllib BaseHTTPServer socket SocketServer traceback")
 demandload(globals(), "mercurial:ui,hg,util,templater")
 demandload(globals(), "hgweb_mod:hgweb hgwebdir_mod:hgwebdir request:wsgiapplication")
 from mercurial.i18n import gettext as _
@@ -55,10 +55,17 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            self.do_hgweb()
-        except socket.error, inst:
-            if inst[0] != errno.EPIPE:
-                raise
+            try:
+                self.do_hgweb()
+            except socket.error, inst:
+                if inst[0] != errno.EPIPE:
+                    raise
+        except StandardError, inst:
+            self._start_response("500 Internal Server Error", [])
+            self._write("Internal Server Error")
+            tb = "".join(traceback.format_exception(*sys.exc_info()))
+            self.log_error("Exception happened during processing request '%s':\n%s",
+                           self.path, tb)
 
     def do_GET(self):
         self.do_POST()
