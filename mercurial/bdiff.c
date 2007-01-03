@@ -33,7 +33,11 @@ static uint32_t htonl(uint32_t x)
 }
 #else
 #include <sys/types.h>
+#ifdef __BEOS__
+#include <ByteOrder.h>
+#else
 #include <arpa/inet.h>
+#endif
 #include <inttypes.h>
 #endif
 

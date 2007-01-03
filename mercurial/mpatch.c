@@ -42,7 +42,11 @@ static uint32_t ntohl(uint32_t x)
 #else
 /* not windows */
 # include <sys/types.h>
-# include <arpa/inet.h>
+# ifdef __BEOS__
+#  include <ByteOrder.h>
+# else
+#  include <arpa/inet.h>
+# endif
 # include <inttypes.h>
 #endif
 
