@@ -933,11 +933,12 @@ class localrepository(repo.repository):
             wlock = self.wlock()
         for f in list:
             p = self.wjoin(f)
-            if not os.path.exists(p):
+            islink = os.path.islink(p)
+            if not islink and not os.path.exists(p):
                 self.ui.warn(_("%s does not exist!\n") % f)
-            elif not os.path.isfile(p):
-                self.ui.warn(_("%s not added: only files supported currently\n")
-                             % f)
+            elif not islink and not os.path.isfile(p):
+                self.ui.warn(_("%s not added: only files and symlinks "
+                               "supported currently\n") % f)
             elif self.dirstate.state(f) in 'an':
                 self.ui.warn(_("%s already tracked!\n") % f)
             else:
