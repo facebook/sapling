@@ -722,7 +722,7 @@ def checklink(path):
         os.symlink(".", name)
         os.unlink(name)
         return True
-    except OSError:
+    except (OSError, AttributeError):
         return False
 
 def linkfunc(path, fallback):
