@@ -17,6 +17,9 @@
 # This file is part of urlgrabber, a high-level cross-protocol url-grabber
 # Copyright 2002-2004 Michael D. Stenner, Ryan Tomayko
 
+# Modified by Benoit Boissinot:
+#  - fix for digest auth (inspired from urllib2.py @ Python v2.4)
+
 """An HTTP handler for urllib2 that supports HTTP 1.1 and keepalive.
 
 >>> import urllib2
@@ -302,27 +305,14 @@ class HTTPHandler(urllib2.HTTPHandler):
         return r
 
     def _start_transaction(self, h, req):
+        headers = req.headers.copy()
+        body = req.data
+        if sys.version_info >= (2, 4):
+            headers.update(req.unredirected_hdrs)
         try:
-            if req.has_data():
-                data = req.get_data()
-                h.putrequest('POST', req.get_selector())
-                if not req.headers.has_key('Content-type'):
-                    h.putheader('Content-type',
-                                'application/x-www-form-urlencoded')
-                if not req.headers.has_key('Content-length'):
-                    h.putheader('Content-length', '%d' % len(data))
-            else:
-                h.putrequest('GET', req.get_selector())
-        except (socket.error, httplib.HTTPException), err:
+            h.request(req.get_method(), req.get_selector(), body, headers)
+        except socket.error, err: # XXX what error?
             raise urllib2.URLError(err)
-
-        for args in self.parent.addheaders:
-            h.putheader(*args)
-        for k, v in req.headers.items():
-            h.putheader(k, v)
-        h.endheaders()
-        if req.has_data():
-            h.send(data)
 
 class HTTPResponse(httplib.HTTPResponse):
     # we need to subclass HTTPResponse in order to
