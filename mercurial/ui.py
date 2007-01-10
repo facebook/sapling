@@ -385,6 +385,9 @@ class ui(object):
             if not sys.stdout.closed: sys.stdout.flush()
             for a in args:
                 sys.stderr.write(str(a))
+            # stderr may be buffered under win32 when redirected to files,
+            # including stdout.
+            if not sys.stderr.closed: sys.stderr.flush()
         except IOError, inst:
             if inst.errno != errno.EPIPE:
                 raise
