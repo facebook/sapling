@@ -762,7 +762,7 @@ class localrepository(repo.repository):
             if p2 != nullid:
                 edittext.append("HG: branch merge")
             if branchname:
-                edittext.append("HG: branch %s" % branchname)
+                edittext.append("HG: branch %s" % util.tolocal(branchname))
             edittext.extend(["HG: changed %s" % f for f in changed])
             edittext.extend(["HG: removed %s" % f for f in removed])
             if not changed and not remove:
