@@ -786,6 +786,9 @@ class localrepository(repo.repository):
                   parent2=xp2)
         tr.close()
 
+        if self.branchcache and "branch" in extra:
+            self.branchcache[util.tolocal(extra["branch"])] = n
+
         if use_dirstate or update_dirstate:
             self.dirstate.setparents(n)
             if use_dirstate:
