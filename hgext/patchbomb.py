@@ -65,8 +65,8 @@
 
 from mercurial.demandload import *
 demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
-                         mercurial:cmdutil,commands,hg,mail,ui,patch
-                         os errno popen2 socket sys tempfile time''')
+                         mercurial:cmdutil,commands,hg,mail,ui,patch,util
+                         os errno popen2 socket sys tempfile''')
 from mercurial.i18n import gettext as _
 from mercurial.node import *
 
@@ -165,10 +165,10 @@ def patchbomb(ui, repo, *revs, **opts):
         msg['X-Mercurial-Node'] = node
         return msg
 
-    start_time = int(time.time())
+    start_time = util.makedate()
 
     def genmsgid(id):
-        return '<%s.%s@%s>' % (id[:20], start_time, socket.getfqdn())
+        return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
 
     patches = []
 
@@ -254,13 +254,6 @@ def patchbomb(ui, repo, *revs, **opts):
         mailer = mail.connect(ui)
     parent = None
 
-    # Calculate UTC offset
-    if time.daylight: offset = time.altzone
-    else: offset = time.timezone
-    if offset <= 0: sign, offset = '+', -offset
-    else: sign = '-'
-    offset = '%s%02d%02d' % (sign, offset / 3600, (offset % 3600) / 60)
-
     sender_addr = email.Utils.parseaddr(sender)[1]
     for m in msgs:
         try:
@@ -271,9 +264,10 @@ def patchbomb(ui, repo, *revs, **opts):
             m['In-Reply-To'] = parent
         else:
             parent = m['Message-Id']
-        m['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(start_time)) + ' ' + offset
+        m['Date'] = util.datestr(date=start_time,
+                format="%a, %d %b %Y %H:%M:%S", timezone=True)
 
-        start_time += 1
+        start_time = (start_time[0] + 1, start_time[1])
         m['From'] = sender
         m['To'] = ', '.join(to)
         if cc: m['Cc']  = ', '.join(cc)
@@ -291,7 +285,8 @@ def patchbomb(ui, repo, *revs, **opts):
         elif opts['mbox']:
             ui.status('Writing ', m['Subject'], ' ...\n')
             fp = open(opts['mbox'], m.has_key('In-Reply-To') and 'ab+' or 'wb+')
-            date = time.asctime(time.localtime(start_time))
+            date = util.datestr(date=start_time,
+                    format='%a %b %d %H:%M:%S %Y', timezone=False)
             fp.write('From %s %s\n' % (sender_addr, date))
             fp.write(m.as_string(0))
             fp.write('\n\n')
