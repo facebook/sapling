@@ -36,7 +36,7 @@ MANIFEST: man html
 install: man
 	for i in $(MAN) ; do \
 	  subdir=`echo $$i | sed -n 's/..*\.\([0-9]\)$$/man\1/p'` ; \
-	  mkdir -p $(MANDIR)/$$subdir ; \
+	  mkdir -p $(DESTDIR)/$(MANDIR)/$$subdir ; \
 	  $(INSTALL) $$i $(DESTDIR)/$(MANDIR)/$$subdir ; \
 	done
 
