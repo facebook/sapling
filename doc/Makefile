@@ -2,7 +2,7 @@ SOURCES=$(wildcard *.[0-9].txt)
 MAN=$(SOURCES:%.txt=%)
 HTML=$(SOURCES:%.txt=%.html)
 PREFIX=/usr/local
-MANDIR=$(PREFIX)/man
+MANDIR=$(PREFIX)/share/man
 INSTALL=install -c
 
 all: man html
