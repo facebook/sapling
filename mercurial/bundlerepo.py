@@ -93,7 +93,7 @@ class bundlerevlog(revlog.revlog):
             if revb == rev1:
                 return self.chunk(rev2)
         elif not self.bundle(rev1) and not self.bundle(rev2):
-            return revlog.revlog.chunk(self, rev1, rev2)
+            return revlog.revlog.revdiff(self, rev1, rev2)
 
         return self.diff(self.revision(self.node(rev1)),
                          self.revision(self.node(rev2)))
