@@ -75,17 +75,25 @@ def netlocunsplit(host, port, user=None, passwd=None):
         return userpass + '@' + hostport
     return hostport
 
-class httpconnection(keepalive.HTTPConnection):
-    # must be able to send big bundle as stream.
+class httpsendfile(file):
+    def __len__(self):
+        return os.fstat(self.fileno()).st_size
 
-    def send(self, data):
-        if isinstance(data, str):
-            keepalive.HTTPConnection.send(self, data)
-        else:
+def _gen_sendfile(connection):
+    def _sendfile(self, data):
+        # send a file
+        if isinstance(data, httpsendfile):
             # if auth required, some data sent twice, so rewind here
             data.seek(0)
             for chunk in util.filechunkiter(data):
-                keepalive.HTTPConnection.send(self, chunk)
+                connection.send(self, chunk)
+        else:
+            connection.send(self, data)
+    return _sendfile
+
+class httpconnection(keepalive.HTTPConnection):
+    # must be able to send big bundle as stream.
+    send = _gen_sendfile(keepalive.HTTPConnection)
 
 class basehttphandler(keepalive.HTTPHandler):
     def http_open(self, req):
@@ -96,15 +104,7 @@ if has_https:
     class httpsconnection(httplib.HTTPSConnection):
         response_class = keepalive.HTTPResponse
         # must be able to send big bundle as stream.
-
-        def send(self, data):
-            if isinstance(data, str):
-                httplib.HTTPSConnection.send(self, data)
-            else:
-                # if auth required, some data sent twice, so rewind here
-                data.seek(0)
-                for chunk in util.filechunkiter(data):
-                    httplib.HTTPSConnection.send(self, chunk)
+        send = _gen_sendfile(httplib.HTTPSConnection)
 
     class httphandler(basehttphandler, urllib2.HTTPSHandler):
         def https_open(self, req):
@@ -344,14 +344,12 @@ class httprepository(remoterepository):
                     break
 
         tempname = changegroup.writebundle(cg, None, type)
-        fp = file(tempname, "rb")
+        fp = httpsendfile(tempname, "rb")
         try:
-            length = os.stat(tempname).st_size
             try:
                 rfp = self.do_cmd(
                     'unbundle', data=fp,
-                    headers={'content-length': str(length),
-                             'content-type': 'application/octet-stream'},
+                    headers={'content-type': 'application/octet-stream'},
                     heads=' '.join(map(hex, heads)))
                 try:
                     ret = int(rfp.readline())
