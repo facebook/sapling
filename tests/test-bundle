@@ -59,3 +59,22 @@ hg incoming bundle://../full.hg
 hg -R bundle://../full.hg outgoing ../partial2
 hg -R bundle://../does-not-exist.hg outgoing ../partial2
 cd ..
+
+# test for 540d1059c802
+hg init orig
+cd orig
+echo foo > foo
+hg add foo
+hg ci -m 'add foo' -d '0 0'
+
+hg clone . ../copy
+hg tag -d '0 0' foo
+
+cd ../copy
+echo >> foo
+hg ci -m 'change foo' -d '0 0'
+hg bundle ../bundle.hg ../orig
+
+cd ../orig
+hg incoming ../bundle.hg
+cd ..
