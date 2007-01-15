@@ -11,9 +11,8 @@ of the GNU General Public License, incorporated herein by reference.
 """
 
 from node import *
-from i18n import gettext as _
-from demandload import demandload
-demandload(globals(), "changegroup util os struct bz2 tempfile")
+from i18n import _
+import changegroup, util, os, struct, bz2, tempfile
 
 import localrepo, changelog, manifest, filelog, revlog
 
@@ -50,7 +49,7 @@ class bundlerevlog(revlog.revlog):
                 continue
             for p in (p1, p2):
                 if not p in self.nodemap:
-                    raise revlog.RevlogError(_("unknown parent %s") % short(p1))
+                    raise revlog.LookupError(_("unknown parent %s") % short(p1))
             if linkmapper is None:
                 link = n
             else:

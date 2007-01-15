@@ -1,0 +1,16 @@
+adding da/foo
+adding foo
+% manifest
+200 Script output follows
+
+
+drwxr-xr-x da
+-rw-r--r-- 4 foo
+
+
+200 Script output follows
+
+
+-rw-r--r-- 4 foo
+
+

@@ -145,6 +145,7 @@ _hg()
     # global options
     case "$prev" in
 	-R|--repository)
+	    _hg_paths
 	    _hg_repos
 	    return
 	;;
@@ -477,3 +478,25 @@ _hg_cmd_sign()
 {
     _hg_tags
 }
+
+
+# transplant
+_hg_cmd_transplant()
+{
+    case "$prev" in
+	-s|--source)
+	    _hg_paths
+	    _hg_repos
+	    return
+	    ;;
+	--filter)
+	    # standard filename completion
+	    return
+	    ;;
+    esac
+
+    # all other transplant options values and command parameters are revisions
+    _hg_tags
+    return
+}
+

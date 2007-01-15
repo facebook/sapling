@@ -5,11 +5,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial.demandload import *
-from mercurial.i18n import gettext as _
-demandload(globals(), 'os tempfile')
-demandload(globals(), 'mercurial:bundlerepo,cmdutil,commands,hg,merge,patch')
-demandload(globals(), 'mercurial:revlog,util')
+from mercurial.i18n import _
+import os, tempfile
+from mercurial import bundlerepo, cmdutil, commands, hg, merge, patch, revlog
+from mercurial import util
 
 '''patch transplanting tool
 
@@ -588,5 +587,5 @@ cmdtable = {
           ('', 'log', None, _('append transplant info to log message')),
           ('c', 'continue', None, _('continue last transplant session after repair')),
           ('', 'filter', '', _('filter changesets through FILTER'))],
-         _('hg transplant [-s REPOSITORY] [-b BRANCH] [-p REV] [-m REV] [-n] REV...'))
+         _('hg transplant [-s REPOSITORY] [-b BRANCH [-a]] [-p REV] [-m REV] [REV]...'))
 }

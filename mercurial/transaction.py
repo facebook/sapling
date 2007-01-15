@@ -11,9 +11,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import demandload
-from i18n import gettext as _
-demandload(globals(), 'os')
+from i18n import _
+import os
 
 class transaction(object):
     def __init__(self, report, opener, journal, after=None):

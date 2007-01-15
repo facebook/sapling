@@ -6,9 +6,9 @@ changegroup.py - Mercurial changegroup manipulation functions
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
-from i18n import gettext as _
-from demandload import *
-demandload(globals(), "struct os bz2 zlib util tempfile")
+
+from i18n import _
+import struct, os, bz2, zlib, util, tempfile
 
 def getchunk(source):
     """get a chunk from a changegroup"""
@@ -67,8 +67,6 @@ def writebundle(cg, filename, bundletype):
     cleanup = None
     try:
         if filename:
-            if os.path.exists(filename):
-                raise util.Abort(_("file '%s' already exists") % filename)
             fh = open(filename, "wb")
         else:
             fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")

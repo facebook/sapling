@@ -6,6 +6,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial.demandload import demandload
-demandload(globals(), "mercurial.hgweb.hgweb_mod:hgweb")
-demandload(globals(), "mercurial.hgweb.hgwebdir_mod:hgwebdir")
+import hgweb_mod, hgwebdir_mod
+
+def hgweb(*args, **kwargs):
+    return hgweb_mod.hgweb(*args, **kwargs)
+
+def hgwebdir(*args, **kwargs):
+    return hgwebdir_mod.hgwebdir(*args, **kwargs)
+

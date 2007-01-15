@@ -65,11 +65,10 @@
 # if you like, you can put notify config file in repo that users can
 # push changes to, they can manage their own subscriptions.
 
-from mercurial.demandload import *
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial.node import *
-demandload(globals(), 'mercurial:patch,cmdutil,templater,util,mail')
-demandload(globals(), 'email.Parser fnmatch socket time')
+from mercurial import patch, cmdutil, templater, util, mail
+import email.Parser, fnmatch, socket, time
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -113,7 +112,7 @@ class notifier(object):
         template = (self.ui.config('notify', hooktype) or
                     self.ui.config('notify', 'template'))
         self.t = cmdutil.changeset_templater(self.ui, self.repo,
-                                             False, None, mapfile, False)
+                                             False, mapfile, False)
         if not mapfile and not template:
             template = deftemplates.get(hooktype) or single_template
         if template:

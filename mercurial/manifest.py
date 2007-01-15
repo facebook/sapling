@@ -6,10 +6,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from revlog import *
-from i18n import gettext as _
-from demandload import *
-demandload(globals(), "array bisect struct")
-demandload(globals(), "mdiff")
+from i18n import _
+import array, bisect, struct, mdiff
 
 class manifestdict(dict):
     def __init__(self, mapping=None, flags=None):

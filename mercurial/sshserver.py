@@ -6,10 +6,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import demandload
-from i18n import gettext as _
+from i18n import _
 from node import *
-demandload(globals(), "os streamclone sys tempfile util")
+import os, streamclone, sys, tempfile, util
 
 class sshserver(object):
     def __init__(self, ui, repo):

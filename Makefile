@@ -67,10 +67,10 @@ dist-notests:	doc MANIFEST
 	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py -q sdist
 
 tests:
-	cd tests && $(PYTHON) run-tests.py
+	cd tests && $(PYTHON) run-tests.py $(TESTFLAGS)
 
 test-%:
-	cd tests && $(PYTHON) run-tests.py $@
+	cd tests && $(PYTHON) run-tests.py $(TESTFLAGS) $@
 
 
 .PHONY: help all local build doc clean install install-bin install-doc \

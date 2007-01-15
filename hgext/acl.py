@@ -45,10 +45,10 @@
 #   glob pattern = user4, user5
 #   ** = user6
 
-from mercurial.demandload import *
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial.node import *
-demandload(globals(), 'getpass mercurial:util')
+from mercurial import util
+import getpass
 
 class checker(object):
     '''acl checker.'''
@@ -91,7 +91,7 @@ class checker(object):
 
     def check(self, node):
         '''return if access allowed, raise exception if not.'''
-        files = self.repo.changelog.read(node)[3]
+        files = self.repo.changectx(node).files()
         if self.deniable:
             for f in files:
                 if self.deny(f):

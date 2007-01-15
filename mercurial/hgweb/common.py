@@ -7,7 +7,6 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, mimetypes
-import os.path
 
 def get_mtime(repo_path):
     store_path = os.path.join(repo_path, ".hg")

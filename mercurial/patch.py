@@ -5,12 +5,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import demandload
-from i18n import gettext as _
+from i18n import _
 from node import *
-demandload(globals(), "base85 cmdutil mdiff util")
-demandload(globals(), "cStringIO email.Parser errno os popen2 re shutil sha")
-demandload(globals(), "sys tempfile zlib")
+import base85, cmdutil, mdiff, util, context, revlog
+import cStringIO, email.Parser, os, popen2, re, sha
+import sys, tempfile, zlib
 
 # helper functions
 
@@ -378,8 +377,9 @@ def updatedir(ui, repo, patches, wlock=None):
             dst = os.path.join(repo.root, gp.path)
             # patch won't create empty files
             if ctype == 'ADD' and not os.path.exists(dst):
-                repo.wwrite(gp.path, '')
-            util.set_exec(dst, x)
+                repo.wwrite(gp.path, '', x and 'x' or '')
+            else:
+                util.set_exec(dst, x)
     cmdutil.addremove(repo, cfiles, wlock=wlock)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
@@ -437,27 +437,25 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     if not node1:
         node1 = repo.dirstate.parents()[0]
 
-    clcache = {}
-    def getchangelog(n):
-        if n not in clcache:
-            clcache[n] = repo.changelog.read(n)
-        return clcache[n]
-    mcache = {}
-    def getmanifest(n):
-        if n not in mcache:
-            mcache[n] = repo.manifest.read(n)
-        return mcache[n]
-    fcache = {}
-    def getfile(f):
-        if f not in fcache:
-            fcache[f] = repo.file(f)
-        return fcache[f]
+    ccache = {}
+    def getctx(r):
+        if r not in ccache:
+            ccache[r] = context.changectx(repo, r)
+        return ccache[r]
+
+    flcache = {}
+    def getfilectx(f, ctx):
+        flctx = ctx.filectx(f, filelog=flcache.get(f))
+        if f not in flcache:
+            flcache[f] = flctx._filelog
+        return flctx
 
     # reading the data for node1 early allows it to play nicely
     # with repo.status and the revlog cache.
-    change = getchangelog(node1)
-    mmap = getmanifest(change[0])
-    date1 = util.datestr(change[2])
+    ctx1 = context.changectx(repo, node1)
+    # force manifest reading
+    man1 = ctx1.manifest()
+    date1 = util.datestr(ctx1.date())
 
     if not changes:
         changes = repo.status(node1, node2, files, match=match)[:5]
@@ -477,67 +475,38 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     if not modified and not added and not removed:
         return
 
-    # returns False if there was no rename between n1 and n2
-    # returns None if the file was created between n1 and n2
-    # returns the (file, node) present in n1 that was renamed to f in n2
-    def renamedbetween(f, n1, n2):
-        r1, r2 = map(repo.changelog.rev, (n1, n2))
+    if node2:
+        ctx2 = context.changectx(repo, node2)
+    else:
+        ctx2 = context.workingctx(repo)
+    man2 = ctx2.manifest()
+
+    # returns False if there was no rename between ctx1 and ctx2
+    # returns None if the file was created between ctx1 and ctx2
+    # returns the (file, node) present in ctx1 that was renamed to f in ctx2
+    def renamed(f):
+        startrev = ctx1.rev()
+        c = ctx2
+        crev = c.rev()
+        if crev is None:
+            crev = repo.changelog.count()
         orig = f
-        src = None
-        while r2 > r1:
-            cl = getchangelog(n2)
-            if f in cl[3]:
-                m = getmanifest(cl[0])
+        while crev > startrev:
+            if f in c.files():
                 try:
-                    src = getfile(f).renamed(m[f])
-                except KeyError:
+                    src = getfilectx(f, c).renamed()
+                except revlog.LookupError:
                     return None
                 if src:
                     f = src[0]
-            n2 = repo.changelog.parents(n2)[0]
-            r2 = repo.changelog.rev(n2)
-        cl = getchangelog(n1)
-        m = getmanifest(cl[0])
-        if f not in m:
+            crev = c.parents()[0].rev()
+            # try to reuse
+            c = getctx(crev)
+        if f not in man1:
             return None
         if f == orig:
             return False
-        return f, m[f]
-
-    if node2:
-        change = getchangelog(node2)
-        mmap2 = getmanifest(change[0])
-        _date2 = util.datestr(change[2])
-        def date2(f):
-            return _date2
-        def read(f):
-            return getfile(f).read(mmap2[f])
-        def renamed(f):
-            return renamedbetween(f, node1, node2)
-    else:
-        tz = util.makedate()[1]
-        _date2 = util.datestr()
-        def date2(f):
-            try:
-                return util.datestr((os.lstat(repo.wjoin(f)).st_mtime, tz))
-            except OSError, err:
-                if err.errno != errno.ENOENT: raise
-                return _date2
-        def read(f):
-            return repo.wread(f)
-        def renamed(f):
-            src = repo.dirstate.copied(f)
-            parent = repo.dirstate.parents()[0]
-            if src:
-                f = src
-            of = renamedbetween(f, node1, parent)
-            if of or of is None:
-                return of
-            elif src:
-                cl = getchangelog(parent)[0]
-                return (src, getmanifest(cl)[src])
-            else:
-                return None
+        return f
 
     if repo.ui.quiet:
         r = None
@@ -551,20 +520,21 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             src = renamed(f)
             if src:
                 copied[f] = src
-        srcs = [x[1][0] for x in copied.items()]
+        srcs = [x[1] for x in copied.items()]
 
     all = modified + added + removed
     all.sort()
     gone = {}
+
     for f in all:
         to = None
         tn = None
         dodiff = True
         header = []
-        if f in mmap:
-            to = getfile(f).read(mmap[f])
+        if f in man1:
+            to = getfilectx(f, ctx1).data()
         if f not in removed:
-            tn = read(f)
+            tn = getfilectx(f, ctx2).data()
         if opts.git:
             def gitmode(x):
                 return x and '100755' or '100644'
@@ -575,13 +545,10 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
             a, b = f, f
             if f in added:
-                if node2:
-                    mode = gitmode(mmap2.execf(f))
-                else:
-                    mode = gitmode(util.is_exec(repo.wjoin(f), None))
+                mode = gitmode(man2.execf(f))
                 if f in copied:
-                    a, arev = copied[f]
-                    omode = gitmode(mmap.execf(a))
+                    a = copied[f]
+                    omode = gitmode(man1.execf(a))
                     addmodehdr(header, omode, mode)
                     if a in removed and a not in gone:
                         op = 'rename'
@@ -590,7 +557,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                         op = 'copy'
                     header.append('%s from %s\n' % (op, a))
                     header.append('%s to %s\n' % (op, f))
-                    to = getfile(a).read(arev)
+                    to = getfilectx(a, ctx1).data()
                 else:
                     header.append('new file mode %s\n' % mode)
                     if util.binary(tn):
@@ -599,14 +566,11 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                 if f in srcs:
                     dodiff = False
                 else:
-                    mode = gitmode(mmap.execf(f))
+                    mode = gitmode(man1.execf(f))
                     header.append('deleted file mode %s\n' % mode)
             else:
-                omode = gitmode(mmap.execf(f))
-                if node2:
-                    nmode = gitmode(mmap2.execf(f))
-                else:
-                    nmode = gitmode(util.is_exec(repo.wjoin(f), mmap.execf(f)))
+                omode = gitmode(man1.execf(f))
+                nmode = gitmode(man2.execf(f))
                 addmodehdr(header, omode, nmode)
                 if util.binary(to) or util.binary(tn):
                     dodiff = 'binary'
@@ -616,7 +580,10 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             fp.write(''.join(header))
             b85diff(fp, to, tn)
         elif dodiff:
-            text = mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts)
+            text = mdiff.unidiff(to, date1,
+                                 # ctx2 date may be dynamic
+                                 tn, util.datestr(ctx2.date()),
+                                 f, r, opts=opts)
             if text or len(header) > 1:
                 fp.write(''.join(header))
             fp.write(text)
@@ -628,12 +595,13 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
     total = len(revs)
     revwidth = max([len(str(rev)) for rev in revs])
 
-    def single(node, seqno, fp):
-        parents = [p for p in repo.changelog.parents(node) if p != nullid]
+    def single(rev, seqno, fp):
+        ctx = repo.changectx(rev)
+        node = ctx.node()
+        parents = [p.node() for p in ctx.parents() if p]
         if switch_parent:
             parents.reverse()
         prev = (parents and parents[0]) or nullid
-        change = repo.changelog.read(node)
 
         if not fp:
             fp = cmdutil.make_file(repo, template, node, total=total,
@@ -642,13 +610,13 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             repo.ui.note("%s\n" % fp.name)
 
         fp.write("# HG changeset patch\n")
-        fp.write("# User %s\n" % change[1])
-        fp.write("# Date %d %d\n" % change[2])
+        fp.write("# User %s\n" % ctx.user())
+        fp.write("# Date %d %d\n" % ctx.date())
         fp.write("# Node ID %s\n" % hex(node))
         fp.write("# Parent  %s\n" % hex(prev))
         if len(parents) > 1:
             fp.write("# Parent  %s\n" % hex(parents[1]))
-        fp.write(change[4].rstrip())
+        fp.write(ctx.description().rstrip())
         fp.write("\n\n")
 
         diff(repo, prev, node, fp=fp, opts=opts)
@@ -656,7 +624,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             fp.close()
 
     for seqno, rev in enumerate(revs):
-        single(repo.lookup(rev), seqno+1, fp)
+        single(rev, seqno+1, fp)
 
 def diffstat(patchlines):
     fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")

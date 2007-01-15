@@ -5,8 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from demandload import *
-demandload(globals(), "cStringIO changelog errno manifest os tempfile util")
+import cStringIO, changelog, errno, manifest, os, tempfile, util
 
 # writes to metadata files are ordered.  reads: changelog, manifest,
 # normal files.  writes: normal files, manifest, changelog.

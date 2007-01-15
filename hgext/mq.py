@@ -29,11 +29,9 @@ remove patch from applied stack           qpop
 refresh contents of top applied patch     qrefresh
 '''
 
-from mercurial.demandload import *
-from mercurial.i18n import gettext as _
-from mercurial import commands
-demandload(globals(), "os sys re struct traceback errno bz2")
-demandload(globals(), "mercurial:cmdutil,hg,patch,revlog,util,changegroup")
+from mercurial.i18n import _
+from mercurial import commands, cmdutil, hg, patch, revlog, util, changegroup
+import os, sys, re, errno
 
 commands.norepo += " qclone qversion"
 
@@ -328,11 +326,12 @@ class queue:
         hg.clean(repo, head, wlock=wlock)
         self.strip(repo, n, update=False, backup='strip', wlock=wlock)
 
-        c = repo.changelog.read(rev)
+        ctx = repo.changectx(rev)
         ret = hg.merge(repo, rev, wlock=wlock)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
-        n = repo.commit(None, c[4], c[1], force=1, wlock=wlock)
+        n = repo.commit(None, ctx.description(), ctx.user(),
+                        force=1, wlock=wlock)
         if n == None:
             raise util.Abort(_("repo commit failed"))
         try:
@@ -614,15 +613,12 @@ class queue:
             self.ui.warn("saving bundle to %s\n" % name)
             return changegroup.writebundle(cg, name, "HG10BZ")
 
-        def stripall(rev, revnum):
-            cl = repo.changelog
-            c = cl.read(rev)
-            mm = repo.manifest.read(c[0])
+        def stripall(revnum):
+            mm = repo.changectx(rev).manifest()
             seen = {}
 
-            for x in xrange(revnum, cl.count()):
-                c = cl.read(cl.node(x))
-                for f in c[3]:
+            for x in xrange(revnum, repo.changelog.count()):
+                for f in repo.changectx(x).files():
                     if f in seen:
                         continue
                     seen[f] = 1
@@ -703,7 +699,7 @@ class queue:
             backupch = repo.changegroupsubset(savebases.keys(), saveheads, 'strip')
             chgrpfile = bundle(backupch)
 
-        stripall(rev, revnum)
+        stripall(revnum)
 
         change = chlog.read(rev)
         chlog.strip(revnum, revnum)
@@ -834,14 +830,7 @@ class queue:
             wlock=None):
         def getfile(f, rev):
             t = repo.file(f).read(rev)
-            try:
-                repo.wfile(f, "w").write(t)
-            except IOError:
-                try:
-                    os.makedirs(os.path.dirname(repo.wjoin(f)))
-                except OSError, err:
-                    if err.errno != errno.EEXIST: raise
-                repo.wfile(f, "w").write(t)
+            repo.wfile(f, "w").write(t)
 
         if not wlock:
             wlock = repo.wlock()

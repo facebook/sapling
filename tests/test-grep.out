@@ -1,6 +1,8 @@
+% simple
 port:4:export
 port:4:vaportight
 port:4:import/export
+% all
 port:4:4:-:spam:import/export
 port:3:4:+:eggs:import/export
 port:2:1:-:spam:import
@@ -10,6 +12,7 @@ port:2:2:+:spam:vaportight
 port:2:3:+:spam:import/export
 port:1:2:+:eggs:export
 port:0:1:+:spam:import
+% other
 port:4:import/export
 % follow
 port:0:import
@@ -23,3 +26,7 @@ port:2:2:+:spam:vaportight
 port:2:3:+:spam:import/export
 port:1:2:+:eggs:export
 port:0:1:+:spam:import
+color:3:orange
+color:3:+:orange
+color:2:-:orange
+color:1:+:orange

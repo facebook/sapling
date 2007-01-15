@@ -12,10 +12,9 @@ This contains helper routines that are independent of the SCM core and hide
 platform-specific details from the core.
 """
 
-from i18n import gettext as _
-from demandload import *
-demandload(globals(), "cStringIO errno getpass popen2 re shutil sys tempfile")
-demandload(globals(), "os threading time calendar ConfigParser locale")
+from i18n import _
+import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile
+import os, threading, time, calendar, ConfigParser, locale
 
 _encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding() \
             or "ascii"
@@ -694,9 +693,47 @@ def checkfolding(path):
     except:
         return True
 
+def checkexec(path):
+    """
+    Check whether the given path is on a filesystem with UNIX-like exec flags
+
+    Requires a directory (like /foo/.hg)
+    """
+    fh, fn = tempfile.mkstemp("", "", path)
+    os.close(fh)
+    m = os.stat(fn).st_mode
+    os.chmod(fn, m ^ 0111)
+    r = (os.stat(fn).st_mode != m)
+    os.unlink(fn)
+    return r
+
+def execfunc(path, fallback):
+    '''return an is_exec() function with default to fallback'''
+    if checkexec(path):
+        return lambda x: is_exec(os.path.join(path, x))
+    return fallback
+
+def checklink(path):
+    """check whether the given path is on a symlink-capable filesystem"""
+    # mktemp is not racy because symlink creation will fail if the
+    # file already exists
+    name = tempfile.mktemp(dir=path)
+    try:
+        os.symlink(".", name)
+        os.unlink(name)
+        return True
+    except (OSError, AttributeError):
+        return False
+
+def linkfunc(path, fallback):
+    '''return an is_link() function with default to fallback'''
+    if checklink(path):
+        return lambda x: is_link(os.path.join(path, x))
+    return fallback
+
 # Platform specific variants
 if os.name == 'nt':
-    demandload(globals(), "msvcrt")
+    import msvcrt
     nulldev = 'NUL:'
 
     class winstdout:
@@ -753,10 +790,10 @@ if os.name == 'nt':
         '''return False if pid dead, True if running or not known'''
         return True
 
-    def is_exec(f, last):
-        return last
-
     def set_exec(f, mode):
+        pass
+
+    def set_link(f, mode):
         pass
 
     def set_binary(fd):
@@ -798,6 +835,8 @@ if os.name == 'nt':
 
 else:
     nulldev = '/dev/null'
+    _umask = os.umask(0)
+    os.umask(_umask)
 
     def rcfiles(path):
         rcs = [os.path.join(path, 'hgrc')]
@@ -828,7 +867,7 @@ else:
             pf = pf[1:-1] # Remove the quotes
         return pf
 
-    def is_exec(f, last):
+    def is_exec(f):
         """check whether a file is executable"""
         return (os.lstat(f).st_mode & 0100 != 0)
 
@@ -839,11 +878,33 @@ else:
         if mode:
             # Turn on +x for every +r bit when making a file executable
             # and obey umask.
-            umask = os.umask(0)
-            os.umask(umask)
-            os.chmod(f, s | (s & 0444) >> 2 & ~umask)
+            os.chmod(f, s | (s & 0444) >> 2 & ~_umask)
         else:
             os.chmod(f, s & 0666)
+
+    def is_link(f):
+        """check whether a file is a symlink"""
+        return (os.lstat(f).st_mode & 0120000 == 0120000)
+
+    def set_link(f, mode):
+        """make a file a symbolic link/regular file
+
+        if a file is changed to a link, its contents become the link data
+        if a link is changed to a file, its link data become its contents
+        """
+
+        m = is_link(f)
+        if m == bool(mode):
+            return
+
+        if mode: # switch file to link
+            data = file(f).read()
+            os.unlink(f)
+            os.symlink(data, f)
+        else:
+            data = os.readlink(f)
+            os.unlink(f)
+            file(f, "w").write(data)
 
     def set_binary(fd):
         pass

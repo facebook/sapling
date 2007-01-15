@@ -1,0 +1,13 @@
+#!/bin/sh
+
+hg init test
+cd test
+mkdir da
+echo foo > da/foo
+echo foo > foo
+hg ci -Ambase -d '0 0'
+hg serve -p 20060 -d --pid-file=hg.pid
+echo % manifest
+("$TESTDIR/get-with-headers.py" localhost:20060 '/file/tip/?style=raw')
+("$TESTDIR/get-with-headers.py" localhost:20060 '/file/tip/da?style=raw')
+kill `cat hg.pid`

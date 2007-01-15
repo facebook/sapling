@@ -63,11 +63,10 @@
 #
 # That should be all.  Now your patchbomb is on its way out.
 
-from mercurial.demandload import *
-demandload(globals(), '''email.MIMEMultipart email.MIMEText email.Utils
-                         mercurial:cmdutil,commands,hg,mail,ui,patch,util
-                         os errno popen2 socket sys tempfile''')
-from mercurial.i18n import gettext as _
+import os, errno, socket
+import email.MIMEMultipart, email.MIMEText, email.Utils
+from mercurial import cmdutil, commands, hg, mail, ui, patch, util
+from mercurial.i18n import _
 from mercurial.node import *
 
 try:
@@ -216,8 +215,6 @@ def patchbomb(ui, repo, *revs, **opts):
     bcc = [a.strip() for a in bcc if a.strip()]
 
     if len(patches) > 1:
-        ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
-
         tlen = len(str(len(patches)))
 
         subj = '[PATCH %0*d of %d] %s' % (
@@ -227,21 +224,13 @@ def patchbomb(ui, repo, *revs, **opts):
             prompt('Subject:', rest = ' [PATCH %0*d of %d] ' % (tlen, 0,
                 len(patches))))
 
-        ui.write(_('Finish with ^D or a dot on a line by itself.\n\n'))
-
-        body = []
-
-        while True:
-            try: l = raw_input()
-            except EOFError: break
-            if l == '.': break
-            body.append(l)
-
+        body = ''
         if opts['diffstat']:
             d = cdiffstat(_('Final summary:\n'), jumbo)
-            if d: body.append('\n' + d)
+            if d: body = '\n' + d
 
-        body = '\n'.join(body) + '\n'
+        ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
+        body = ui.edit(body, sender)
 
         msg = email.MIMEText.MIMEText(body)
         msg['Subject'] = subj

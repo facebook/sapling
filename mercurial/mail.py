@@ -5,9 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from i18n import gettext as _
-from demandload import *
-demandload(globals(), "os re smtplib templater util")
+from i18n import _
+import os, smtplib, templater, util
 
 def _smtp(ui):
     '''send mail using smtp.'''

@@ -13,9 +13,11 @@ import os
 from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
 
-# mercurial.packagescan must be the first mercurial module imported
-import mercurial.packagescan
 import mercurial.version
+import mercurial.demandimport
+mercurial.demandimport.enable = lambda: None
+
+extra = {}
 
 # py2exe needs to be installed to work
 try:
@@ -35,34 +37,10 @@ try:
     except ImportError:
         pass
 
-    # Due to the use of demandload py2exe is not finding the modules.
-    # packagescan.getmodules creates a list of modules included in
-    # the mercurial package plus dependant modules.
-    from py2exe.build_exe import py2exe as build_exe
+    extra['console'] = ['hg']
 
-    class py2exe_for_demandload(build_exe):
-        """ overwrites the py2exe command class for getting the build
-        directory and for setting the 'includes' option."""
-        def initialize_options(self):
-            self.build_lib = None
-            build_exe.initialize_options(self)
-        def finalize_options(self):
-            # Get the build directory, ie. where to search for modules.
-            self.set_undefined_options('build',
-                                       ('build_lib', 'build_lib'))
-            # Sets the 'includes' option with the list of needed modules
-            if not self.includes:
-                self.includes = []
-            else:
-                self.includes = self.includes.split(',')
-            mercurial.packagescan.scan(self.build_lib, 'mercurial')
-            mercurial.packagescan.scan(self.build_lib, 'mercurial.hgweb')
-            mercurial.packagescan.scan(self.build_lib, 'hgext')
-            self.includes += mercurial.packagescan.getmodules()
-            build_exe.finalize_options(self)
 except ImportError:
-    py2exe_for_demandload = None
-
+    pass
 
 # specify version string, otherwise 'hg identify' will be used:
 version = ''
@@ -75,10 +53,6 @@ class install_package_data(install_data):
 
 mercurial.version.remember_version(version)
 cmdclass = {'install_data': install_package_data}
-py2exe_opts = {}
-if py2exe_for_demandload is not None:
-    cmdclass['py2exe'] = py2exe_for_demandload
-    py2exe_opts['console'] = ['hg']
 
 setup(name='mercurial',
       version=mercurial.version.get_version(),
@@ -100,4 +74,4 @@ setup(name='mercurial',
                                    license='COPYING',
                                    readme='contrib/macosx/Readme.html',
                                    welcome='contrib/macosx/Welcome.html')),
-      **py2exe_opts)
+      **extra)

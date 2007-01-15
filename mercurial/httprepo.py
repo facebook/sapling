@@ -8,10 +8,9 @@
 
 from node import *
 from remoterepo import *
-from i18n import gettext as _
-from demandload import *
-demandload(globals(), "hg os urllib urllib2 urlparse zlib util httplib")
-demandload(globals(), "errno keepalive tempfile socket changegroup")
+from i18n import _
+import hg, os, urllib, urllib2, urlparse, zlib, util, httplib
+import errno, keepalive, tempfile, socket, changegroup
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):

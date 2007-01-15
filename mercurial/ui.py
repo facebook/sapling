@@ -5,10 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from i18n import gettext as _
-from demandload import *
-demandload(globals(), "errno getpass os re socket sys tempfile")
-demandload(globals(), "ConfigParser traceback util")
+from i18n import _
+import errno, getpass, os, re, socket, sys, tempfile
+import ConfigParser, traceback, util
 
 def dupconfig(orig):
     new = util.configparser(orig.defaults())
@@ -386,6 +385,9 @@ class ui(object):
             if not sys.stdout.closed: sys.stdout.flush()
             for a in args:
                 sys.stderr.write(str(a))
+            # stderr may be buffered under win32 when redirected to files,
+            # including stdout.
+            if not sys.stderr.closed: sys.stderr.flush()
         except IOError, inst:
             if inst.errno != errno.EPIPE:
                 raise

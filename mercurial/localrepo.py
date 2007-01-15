@@ -6,13 +6,11 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import *
-from i18n import gettext as _
-from demandload import *
-import repo
-demandload(globals(), "appendfile changegroup")
-demandload(globals(), "changelog dirstate filelog manifest context")
-demandload(globals(), "re lock transaction tempfile stat mdiff errno ui")
-demandload(globals(), "os revlog time util")
+from i18n import _
+import repo, appendfile, changegroup
+import changelog, dirstate, filelog, manifest, context
+import re, lock, transaction, tempfile, stat, mdiff, errno, ui
+import os, revlog, time, util
 
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
@@ -119,9 +117,13 @@ class localrepository(repo.repository):
         self.tagscache = None
         self.branchcache = None
         self.nodetagscache = None
-        self.encodepats = None
-        self.decodepats = None
+        self.filterpats = {}
         self.transhandle = None
+
+        self._link = lambda x: False
+        if util.checklink(self.root):
+            r = self.root # avoid circular reference in lambda
+            self._link = lambda x: util.is_link(os.path.join(r, x))
 
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
 
@@ -319,7 +321,7 @@ class localrepository(repo.repository):
             rev = c.rev()
             try:
                 fnode = c.filenode('.hgtags')
-            except repo.LookupError:
+            except revlog.LookupError:
                 continue
             ret.append((rev, node, fnode))
             if fnode in last:
@@ -480,17 +482,15 @@ class localrepository(repo.repository):
     def wfile(self, f, mode='r'):
         return self.wopener(f, mode)
 
-    def wread(self, filename):
-        if self.encodepats == None:
+    def _filter(self, filter, filename, data):
+        if filter not in self.filterpats:
             l = []
-            for pat, cmd in self.ui.configitems("encode"):
+            for pat, cmd in self.ui.configitems(filter):
                 mf = util.matcher(self.root, "", [pat], [], [])[1]
                 l.append((mf, cmd))
-            self.encodepats = l
+            self.filterpats[filter] = l
 
-        data = self.wopener(filename, 'r').read()
-
-        for mf, cmd in self.encodepats:
+        for mf, cmd in self.filterpats[filter]:
             if mf(filename):
                 self.ui.debug(_("filtering %s through %s\n") % (filename, cmd))
                 data = util.filter(data, cmd)
@@ -498,23 +498,32 @@ class localrepository(repo.repository):
 
         return data
 
-    def wwrite(self, filename, data, fd=None):
-        if self.decodepats == None:
-            l = []
-            for pat, cmd in self.ui.configitems("decode"):
-                mf = util.matcher(self.root, "", [pat], [], [])[1]
-                l.append((mf, cmd))
-            self.decodepats = l
+    def wread(self, filename):
+        if self._link(filename):
+            data = os.readlink(self.wjoin(filename))
+        else:
+            data = self.wopener(filename, 'r').read()
+        return self._filter("encode", filename, data)
 
-        for mf, cmd in self.decodepats:
-            if mf(filename):
-                self.ui.debug(_("filtering %s through %s\n") % (filename, cmd))
-                data = util.filter(data, cmd)
-                break
+    def wwrite(self, filename, data, flags):
+        data = self._filter("decode", filename, data)
+        if "l" in flags:
+            try:
+                os.unlink(self.wjoin(filename))
+            except OSError:
+                pass
+            os.symlink(data, self.wjoin(filename))
+        else:
+            try:
+                if self._link(filename):
+                    os.unlink(self.wjoin(filename))
+            except OSError:
+                pass
+            self.wopener(filename, 'w').write(data)
+            util.set_exec(self.wjoin(filename), "x" in flags)
 
-        if fd:
-            return fd.write(data)
-        return self.wopener(filename, 'w').write(data)
+    def wwritedata(self, filename, data):
+        return self._filter("decode", filename, data)
 
     def transaction(self):
         tr = self.transhandle
@@ -636,11 +645,11 @@ class localrepository(repo.repository):
         changelist.append(fn)
         return fl.add(t, meta, transaction, linkrev, fp1, fp2)
 
-    def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None):
+    def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None, extra={}):
         if p1 is None:
             p1, p2 = self.dirstate.parents()
         return self.commit(files=files, text=text, user=user, date=date,
-                           p1=p1, p2=p2, wlock=wlock)
+                           p1=p1, p2=p2, wlock=wlock, extra=extra)
 
     def commit(self, files=None, text="", user=None, date=None,
                match=util.always, force=False, lock=None, wlock=None,
@@ -714,12 +723,14 @@ class localrepository(repo.repository):
         new = {}
         linkrev = self.changelog.count()
         commit.sort()
+        is_exec = util.execfunc(self.root, m1.execf)
+        is_link = util.linkfunc(self.root, m1.linkf)
         for f in commit:
             self.ui.note(f + "\n")
             try:
                 new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
-                m1.set(f, util.is_exec(self.wjoin(f), m1.execf(f)))
-            except IOError:
+                m1.set(f, is_exec(f), is_link(f))
+            except OSError:
                 if use_dirstate:
                     self.ui.warn(_("trouble committing %s!\n") % f)
                     raise
@@ -729,11 +740,13 @@ class localrepository(repo.repository):
         # update manifest
         m1.update(new)
         remove.sort()
+        removed = []
 
         for f in remove:
             if f in m1:
                 del m1[f]
-        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0], (new, remove))
+                removed.append(f)
+        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0], (new, removed))
 
         # add changeset
         new = new.keys()
@@ -748,8 +761,10 @@ class localrepository(repo.repository):
             edittext.append("HG: user: %s" % user)
             if p2 != nullid:
                 edittext.append("HG: branch merge")
+            if branchname:
+                edittext.append("HG: branch %s" % util.tolocal(branchname))
             edittext.extend(["HG: changed %s" % f for f in changed])
-            edittext.extend(["HG: removed %s" % f for f in remove])
+            edittext.extend(["HG: removed %s" % f for f in removed])
             if not changed and not remove:
                 edittext.append("HG: no files changed")
             edittext.append("")
@@ -767,17 +782,20 @@ class localrepository(repo.repository):
         text = '\n'.join(lines)
         if branchname:
             extra["branch"] = branchname
-        n = self.changelog.add(mn, changed + remove, text, tr, p1, p2,
+        n = self.changelog.add(mn, changed + removed, text, tr, p1, p2,
                                user, date, extra)
         self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                   parent2=xp2)
         tr.close()
 
+        if self.branchcache and "branch" in extra:
+            self.branchcache[util.tolocal(extra["branch"])] = n
+
         if use_dirstate or update_dirstate:
             self.dirstate.setparents(n)
             if use_dirstate:
                 self.dirstate.update(new, "n")
-                self.dirstate.forget(remove)
+                self.dirstate.forget(removed)
 
         self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
         return n
@@ -877,9 +895,11 @@ class localrepository(repo.repository):
                 # generate a pseudo-manifest for the working dir
                 # XXX: create it in dirstate.py ?
                 mf2 = mfmatches(self.dirstate.parents()[0])
+                is_exec = util.execfunc(self.root, mf2.execf)
+                is_link = util.linkfunc(self.root, mf2.linkf)
                 for f in lookup + modified + added:
                     mf2[f] = ""
-                    mf2.set(f, execf=util.is_exec(self.wjoin(f), mf2.execf(f)))
+                    mf2.set(f, is_exec(f), is_link(f))
                 for f in removed:
                     if f in mf2:
                         del mf2[f]
@@ -918,11 +938,12 @@ class localrepository(repo.repository):
             wlock = self.wlock()
         for f in list:
             p = self.wjoin(f)
-            if not os.path.exists(p):
+            islink = os.path.islink(p)
+            if not islink and not os.path.exists(p):
                 self.ui.warn(_("%s does not exist!\n") % f)
-            elif not os.path.isfile(p):
-                self.ui.warn(_("%s not added: only files supported currently\n")
-                             % f)
+            elif not islink and not os.path.isfile(p):
+                self.ui.warn(_("%s not added: only files and symlinks "
+                               "supported currently\n") % f)
             elif self.dirstate.state(f) in 'an':
                 self.ui.warn(_("%s already tracked!\n") % f)
             else:
@@ -969,8 +990,7 @@ class localrepository(repo.repository):
                 self.ui.warn("%s not removed!\n" % f)
             else:
                 t = self.file(f).read(m[f])
-                self.wwrite(f, t)
-                util.set_exec(self.wjoin(f), m.execf(f))
+                self.wwrite(f, t, m.flags(f))
                 self.dirstate.update([f], "n")
 
     def copy(self, source, dest, wlock=None):
@@ -992,112 +1012,6 @@ class localrepository(repo.repository):
         heads = [(-self.changelog.rev(h), h) for h in heads]
         heads.sort()
         return [n for (r, n) in heads]
-
-    # branchlookup returns a dict giving a list of branches for
-    # each head.  A branch is defined as the tag of a node or
-    # the branch of the node's parents.  If a node has multiple
-    # branch tags, tags are eliminated if they are visible from other
-    # branch tags.
-    #
-    # So, for this graph:  a->b->c->d->e
-    #                       \         /
-    #                        aa -----/
-    # a has tag 2.6.12
-    # d has tag 2.6.13
-    # e would have branch tags for 2.6.12 and 2.6.13.  Because the node
-    # for 2.6.12 can be reached from the node 2.6.13, that is eliminated
-    # from the list.
-    #
-    # It is possible that more than one head will have the same branch tag.
-    # callers need to check the result for multiple heads under the same
-    # branch tag if that is a problem for them (ie checkout of a specific
-    # branch).
-    #
-    # passing in a specific branch will limit the depth of the search
-    # through the parents.  It won't limit the branches returned in the
-    # result though.
-    def branchlookup(self, heads=None, branch=None):
-        if not heads:
-            heads = self.heads()
-        headt = [ h for h in heads ]
-        chlog = self.changelog
-        branches = {}
-        merges = []
-        seenmerge = {}
-
-        # traverse the tree once for each head, recording in the branches
-        # dict which tags are visible from this head.  The branches
-        # dict also records which tags are visible from each tag
-        # while we traverse.
-        while headt or merges:
-            if merges:
-                n, found = merges.pop()
-                visit = [n]
-            else:
-                h = headt.pop()
-                visit = [h]
-                found = [h]
-                seen = {}
-            while visit:
-                n = visit.pop()
-                if n in seen:
-                    continue
-                pp = chlog.parents(n)
-                tags = self.nodetags(n)
-                if tags:
-                    for x in tags:
-                        if x == 'tip':
-                            continue
-                        for f in found:
-                            branches.setdefault(f, {})[n] = 1
-                        branches.setdefault(n, {})[n] = 1
-                        break
-                    if n not in found:
-                        found.append(n)
-                    if branch in tags:
-                        continue
-                seen[n] = 1
-                if pp[1] != nullid and n not in seenmerge:
-                    merges.append((pp[1], [x for x in found]))
-                    seenmerge[n] = 1
-                if pp[0] != nullid:
-                    visit.append(pp[0])
-        # traverse the branches dict, eliminating branch tags from each
-        # head that are visible from another branch tag for that head.
-        out = {}
-        viscache = {}
-        for h in heads:
-            def visible(node):
-                if node in viscache:
-                    return viscache[node]
-                ret = {}
-                visit = [node]
-                while visit:
-                    x = visit.pop()
-                    if x in viscache:
-                        ret.update(viscache[x])
-                    elif x not in ret:
-                        ret[x] = 1
-                        if x in branches:
-                            visit[len(visit):] = branches[x].keys()
-                viscache[node] = ret
-                return ret
-            if h not in branches:
-                continue
-            # O(n^2), but somewhat limited.  This only searches the
-            # tags visible from a specific head, not all the tags in the
-            # whole repo.
-            for b in branches[h]:
-                vis = False
-                for bb in branches[h].keys():
-                    if b != bb:
-                        if b in visible(bb):
-                            vis = True
-                            break
-                if not vis:
-                    l = out.setdefault(h, [])
-                    l[len(l):] = self.nodetags(b)
-        return out
 
     def branches(self, nodes):
         if not nodes:

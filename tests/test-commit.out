@@ -21,8 +21,7 @@ abort: no match under directory .../test/dir2!
 dir/file
 does-not-exist: No such file or directory
 abort: file .../test/does-not-exist not found!
-baz: unsupported file type (type is symbolic link)
-abort: can't commit .../test/baz: unsupported file type!
+abort: file .../test/baz not tracked!
 abort: file .../test/quux not tracked!
 dir/file
 % partial subdir commit test

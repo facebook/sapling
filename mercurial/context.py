@@ -6,9 +6,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import *
-from i18n import gettext as _
-from demandload import demandload
-demandload(globals(), "ancestor bdiff repo revlog util os")
+from i18n import _
+import ancestor, bdiff, repo, revlog, util, os, errno
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular
@@ -84,21 +83,22 @@ class changectx(object):
             try:
                 return self._manifest[path]
             except KeyError:
-                raise repo.LookupError(_("'%s' not found in manifest") % path)
+                raise revlog.LookupError(_("'%s' not found in manifest") % path)
         if '_manifestdelta' in self.__dict__ or path in self.files():
             if path in self._manifestdelta:
                 return self._manifestdelta[path]
         node, flag = self._repo.manifest.find(self._changeset[0], path)
         if not node:
-            raise repo.LookupError(_("'%s' not found in manifest") % path)
+            raise revlog.LookupError(_("'%s' not found in manifest") % path)
 
         return node
 
-    def filectx(self, path, fileid=None):
+    def filectx(self, path, fileid=None, filelog=None):
         """get a file context from this changeset"""
         if fileid is None:
             fileid = self.filenode(path)
-        return filectx(self._repo, path, fileid=fileid, changectx=self)
+        return filectx(self._repo, path, fileid=fileid,
+                       changectx=self, filelog=filelog)
 
     def filectxs(self):
         """generate a file context for each file in this changeset's
@@ -126,16 +126,18 @@ class filectx(object):
         self._repo = repo
         self._path = path
 
-        assert changeid is not None or fileid is not None
+        assert (changeid is not None
+                or fileid is not None
+                or changectx is not None)
 
         if filelog:
             self._filelog = filelog
-        if changectx:
-            self._changectx = changectx
-            self._changeid = changectx.node()
 
         if fileid is None:
-            self._changeid = changeid
+            if changectx is None:
+                self._changeid = changeid
+            else:
+                self._changectx = changectx
         else:
             self._fileid = fileid
 
@@ -150,13 +152,10 @@ class filectx(object):
             self._changeid = self._filelog.linkrev(self._filenode)
             return self._changeid
         elif name == '_filenode':
-            try:
-                if '_fileid' in self.__dict__:
-                    self._filenode = self._filelog.lookup(self._fileid)
-                else:
-                    self._filenode = self._changectx.filenode(self._path)
-            except revlog.RevlogError, inst:
-                raise repo.LookupError(str(inst))
+            if '_fileid' in self.__dict__:
+                self._filenode = self._filelog.lookup(self._fileid)
+            else:
+                self._filenode = self._changectx.filenode(self._path)
             return self._filenode
         elif name == '_filerev':
             self._filerev = self._filelog.rev(self._filenode)
@@ -168,7 +167,7 @@ class filectx(object):
         try:
             n = self._filenode
             return True
-        except repo.LookupError:
+        except revlog.LookupError:
             # file is missing
             return False
 
@@ -379,13 +378,15 @@ class workingctx(changectx):
         """generate a manifest corresponding to the working directory"""
 
         man = self._parents[0].manifest().copy()
+        is_exec = util.execfunc(self._repo.root, man.execf)
+        is_link = util.linkfunc(self._repo.root, man.linkf)
         copied = self._repo.dirstate.copies()
         modified, added, removed, deleted, unknown = self._status[:5]
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
                 man[f] = man.get(copied.get(f, f), nullid) + i
                 try:
-                    man.set(f, util.is_exec(self._repo.wjoin(f), man.execf(f)))
+                    man.set(f, is_exec(f), is_link(f))
                 except OSError:
                     pass
 
@@ -424,9 +425,10 @@ class workingctx(changectx):
     def children(self):
         return []
 
-    def filectx(self, path):
+    def filectx(self, path, filelog=None):
         """get a file context from the working directory"""
-        return workingfilectx(self._repo, path, workingctx=self)
+        return workingfilectx(self._repo, path, workingctx=self,
+                              filelog=filelog)
 
     def ancestor(self, c2):
         """return the ancestor context of self and c2"""
@@ -484,7 +486,7 @@ class workingfilectx(filectx):
         rp = self._repopath
         if rp == self._path:
             return None
-        return rp, self._workingctx._parents._manifest.get(rp, nullid)
+        return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
 
     def parents(self):
         '''return parent filectxs, following copies if necessary'''
@@ -505,5 +507,12 @@ class workingfilectx(filectx):
         return []
 
     def size(self): return os.stat(self._repo.wjoin(self._path)).st_size
+    def date(self):
+        t, tz = self._changectx.date()
+        try:
+            return (os.lstat(repo.wjoin(self._path)).st_mtime, tz)
+        except OSError, err:
+            if err.errno != errno.ENOENT: raise
+            return (t, tz)
 
     def cmp(self, text): return self._repo.wread(self._path) == text
