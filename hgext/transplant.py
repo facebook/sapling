@@ -119,7 +119,8 @@ class transplanter:
                     if pulls:
                         if source != repo:
                             repo.pull(source, heads=pulls, lock=lock)
-                        merge.update(repo, pulls[-1], wlock=wlock)
+                        merge.update(repo, pulls[-1], False, False, None,
+                                     wlock=wlock)
                         p1, p2 = repo.dirstate.parents()
                         pulls = []
 
@@ -161,7 +162,7 @@ class transplanter:
                             os.unlink(patchfile)
             if pulls:
                 repo.pull(source, heads=pulls, lock=lock)
-                merge.update(repo, pulls[-1], wlock=wlock)
+                merge.update(repo, pulls[-1], False, False, None, wlock=wlock)
         finally:
             self.saveseries(revmap, merges)
             self.transplants.write()
