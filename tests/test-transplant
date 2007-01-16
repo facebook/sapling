@@ -22,28 +22,25 @@ hg ci -Amb3 -d '2 0'
 
 hg log --template '{rev} {parents} {desc}\n'
 
-cd ..
-hg clone t rebase
-cd rebase
+hg clone . ../rebase
+cd ../rebase
 
 hg up -C 1
 echo '% rebase b onto r1'
 hg transplant -a -b tip
 hg log --template '{rev} {parents} {desc}\n'
 
-cd ..
-hg clone t prune
-cd prune
+hg clone ../t ../prune
+cd ../prune
 
 hg up -C 1
 echo '% rebase b onto r1, skipping b2'
 hg transplant -a -b tip -p 3
 hg log --template '{rev} {parents} {desc}\n'
 
-cd ..
 echo '% remote transplant'
-hg clone -r 1 t remote
-cd remote
+hg clone -r 1 ../t ../remote
+cd ../remote
 hg transplant --log -s ../t 2 4
 hg log --template '{rev} {parents} {desc}\n'
 
@@ -54,9 +51,8 @@ hg log --template '{rev} {parents} {desc}\n'
 echo '% skip local changes transplanted to the source'
 echo b4 > b4
 hg ci -Amb4 -d '3 0'
-cd ..
-hg clone t pullback
-cd pullback
+hg clone ../t ../pullback
+cd ../pullback
 hg transplant -s ../remote -a -b tip
 
 echo '% transplant --continue'
