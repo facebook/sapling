@@ -75,6 +75,24 @@ adding b4
 searching for changes
 applying 4333daefcb15
 4333daefcb15 transplanted to 5f42c04e07cc
+% remote transplant with pull
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+searching for changes
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+applying a53251cdf717
+a53251cdf717 transplanted to 8d9279348abb
+2  b3
+1  b1
+0  r1
 % transplant --continue
 adding foo
 adding toremove

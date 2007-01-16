@@ -55,6 +55,12 @@ hg clone ../t ../pullback
 cd ../pullback
 hg transplant -s ../remote -a -b tip
 
+echo '% remote transplant with pull'
+hg clone -r 0 ../t ../rp
+cd ../rp
+hg transplant -s ../t 2 4
+hg log --template '{rev} {parents} {desc}\n'
+
 echo '% transplant --continue'
 hg init ../tc
 cd ../tc
