@@ -35,6 +35,10 @@ import os, sys, re, errno
 
 commands.norepo += " qclone qversion"
 
+# Patch names looks like unix-file names.
+# They must be joinable with queue directory and result in the patch path.
+normname = util.normpath
+
 class statusentry:
     def __init__(self, rev, name=None):
         if not name:
@@ -1335,7 +1339,7 @@ class queue:
                 lastparent = p1
 
                 if not patchname:
-                    patchname = '%d.diff' % r
+                    patchname = normname('%d.diff' % r)
                 checkseries(patchname)
                 checkfile(patchname)
                 self.full_series.insert(0, patchname)
@@ -1357,7 +1361,7 @@ class queue:
                 if filename == '-':
                     raise util.Abort(_('-e is incompatible with import from -'))
                 if not patchname:
-                    patchname = filename
+                    patchname = normname(filename)
                 if not os.path.isfile(self.join(patchname)):
                     raise util.Abort(_("patch %s does not exist") % patchname)
             else:
@@ -1371,7 +1375,7 @@ class queue:
                 except IOError:
                     raise util.Abort(_("unable to read %s") % patchname)
                 if not patchname:
-                    patchname = os.path.basename(filename)
+                    patchname = normname(os.path.basename(filename))
                 checkfile(patchname)
                 patchf = self.opener(patchname, "w")
                 patchf.write(text)
@@ -1804,7 +1808,7 @@ def rename(ui, repo, patch, name=None, **opts):
         patch = q.lookup('qtip')
     absdest = q.join(name)
     if os.path.isdir(absdest):
-        name = os.path.join(name, os.path.basename(patch))
+        name = normname(os.path.join(name, os.path.basename(patch)))
         absdest = q.join(name)
     if os.path.exists(absdest):
         raise util.Abort(_('%s already exists') % absdest)
