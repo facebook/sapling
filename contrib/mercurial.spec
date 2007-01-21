@@ -8,6 +8,17 @@ Source: http://www.selenic.com/mercurial/release/%{name}-%{version}.tar.gz
 URL: http://www.selenic.com/mercurial
 BuildRoot: /tmp/build.%{name}-%{version}-%{release}
 
+# From the README:
+#
+#   Note: some distributions fails to include bits of distutils by
+#   default, you'll need python-dev to install. You'll also need a C
+#   compiler and a 3-way merge tool like merge, tkdiff, or kdiff3.
+#
+# python-devel provides an adequate python-dev.  The merge tool is a
+# run-time dependency.
+#
+BuildRequires: python >= 2.3, python-devel, make, gcc
+
 %define pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')
 %define pythonlib %{_libdir}/python%{pythonver}/site-packages/%{name}
 %define hgext %{_libdir}/python%{pythonver}/site-packages/hgext
