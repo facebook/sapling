@@ -71,7 +71,7 @@ def catcommit(repo, n, prefix, ctx=None):
     if p1: print "parent %s" % (hg.short(p1.node()))
     if p2: print "parent %s" % (hg.short(p2.node()))
     date = ctx.date()
-    description = ctx.description()
+    description = ctx.description().replace("\0", "")
     lines = description.splitlines()
     if lines and lines[-1].startswith('committer:'):
         committer = lines[-1].split(': ')[1].rstrip()
