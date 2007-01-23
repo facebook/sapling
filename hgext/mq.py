@@ -2013,7 +2013,7 @@ def reposetup(ui, repo):
             return super(mqrepo, self).commit(*args, **opts)
 
         def push(self, remote, force=False, revs=None):
-            if self.mq.applied and not force:
+            if self.mq.applied and not force and not revs:
                 raise util.Abort(_('source has mq patches applied'))
             return super(mqrepo, self).push(remote, force, revs)
 
