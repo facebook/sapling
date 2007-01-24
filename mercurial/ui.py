@@ -344,12 +344,14 @@ class ui(object):
             user = self.config("ui", "username")
         if user is None:
             user = os.environ.get("EMAIL")
-        if not user:
+        if user is None:
             try:
                 user = '%s@%s' % (util.getuser(), socket.getfqdn())
+                self.warn(_("No username found, using '%s' instead\n") % user)
             except KeyError:
-                raise util.Abort(_("Please specify a username."))
-            self.warn(_("No username found, using '%s' instead\n") % user)
+                pass
+        if not user:
+            raise util.Abort(_("Please specify a username."))
         return user
 
     def shortuser(self, user):

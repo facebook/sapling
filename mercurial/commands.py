@@ -2372,8 +2372,7 @@ def status(ui, repo, *pats, **opts):
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
     modified, added, removed, deleted, unknown, ignored, clean = [
-        [util.pathto(cwd, x) for x in n]
-        for n in repo.status(node1=node1, node2=node2, files=files,
+        n for n in repo.status(node1=node1, node2=node2, files=files,
                              match=matchfn,
                              list_ignored=all or opts['ignored'],
                              list_clean=all or opts['clean'])]
@@ -2398,11 +2397,11 @@ def status(ui, repo, *pats, **opts):
             format = "%s %%s%s" % (char, end)
 
         for f in changes:
-            ui.write(format % f)
+            ui.write(format % util.pathto(cwd, f))
             if ((all or opts.get('copies')) and not opts.get('no_status')):
                 copied = repo.dirstate.copied(f)
                 if copied:
-                    ui.write('  %s%s' % (copied, end))
+                    ui.write('  %s%s' % (util.pathto(cwd, copied), end))
 
 def tag(ui, repo, name, rev_=None, **opts):
     """add a tag for the current or given revision

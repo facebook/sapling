@@ -24,5 +24,8 @@ echo 1 > asdf
 hg commit -d '1000000 0' -u "foo@bar.com" -m commit-1
 hg tip
 echo 123 > asdf
+echo "[ui]" > .hg/hgrc
+echo "username = " >> .hg/hgrc
+hg commit -d '1000000 0' -m commit-1
 rm .hg/hgrc
 hg commit -d '1000000 0' -m commit-1 2>&1 | sed -e "s/'[^']*'/user@host/"
