@@ -221,7 +221,7 @@ static struct flist *decode(char *bin, int len)
 {
 	struct flist *l;
 	struct frag *lt;
-	char *end = bin + len;
+	char *data = bin + 12, *end = bin + len;
 	char decode[12]; /* for dealing with alignment issues */
 
 	/* assume worst case size, we won't have many of these lists */
@@ -231,13 +231,18 @@ static struct flist *decode(char *bin, int len)
 
 	lt = l->tail;
 
-	while (bin < end) {
+	while (data <= end) {
 		memcpy(decode, bin, 12);
 		lt->start = ntohl(*(uint32_t *)decode);
 		lt->end = ntohl(*(uint32_t *)(decode + 4));
 		lt->len = ntohl(*(uint32_t *)(decode + 8));
-		lt->data = bin + 12;
-		bin += 12 + lt->len;
+		if (lt->start > lt->end)
+			break; /* sanity check */
+		bin = data + lt->len;
+		if (bin < data)
+			break; /* big data + big (bogus) len can wrap around */
+		lt->data = data;
+		data = bin + 12;
 		lt++;
 	}
 
@@ -367,20 +372,26 @@ patchedsize(PyObject *self, PyObject *args)
 {
 	long orig, start, end, len, outlen = 0, last = 0;
 	int patchlen;
-	char *bin, *binend;
+	char *bin, *binend, *data;
 	char decode[12]; /* for dealing with alignment issues */
 
 	if (!PyArg_ParseTuple(args, "ls#", &orig, &bin, &patchlen))
 		return NULL;
 
 	binend = bin + patchlen;
+	data = bin + 12;
 
-	while (bin < binend) {
+	while (data <= binend) {
 		memcpy(decode, bin, 12);
 		start = ntohl(*(uint32_t *)decode);
 		end = ntohl(*(uint32_t *)(decode + 4));
 		len = ntohl(*(uint32_t *)(decode + 8));
-		bin += 12 + len;
+		if (start > end)
+			break; /* sanity check */
+		bin = data + len;
+		if (bin < data)
+			break; /* big data + big (bogus) len can wrap around */
+		data = bin + 12;
 		outlen += start - last;
 		last = end;
 		outlen += len;
