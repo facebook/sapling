@@ -23,7 +23,7 @@
 # on each commit copied, so convert-repo can be interrupted and can
 # be run repeatedly to copy new commits.
 
-import sys, os, zlib, sha, time, re, locale
+import sys, os, zlib, sha, time, re, locale, socket
 os.environ["HGENCODING"] = "utf-8"
 from mercurial import hg, ui, util, fancyopts
 
@@ -138,38 +138,73 @@ class convert_cvs:
 
     def _connect(self):
         root = self.cvsroot
-        local = False
+        conntype = None
         user, host = None, None
         cmd = ['cvs', 'server']
 
         status("connecting to %s\n" % root)
 
-        # only non-pserver for now
-        if root.startswith(":pserver"):
-            abort("can't handle pserver mode yet: %s\n" % root)
+        if root.startswith(":pserver:"):
+            root = root[9:]
+            m = re.match(r'(?:(.*?)(?::(.*?))?@)?([^:\/]*)(?::(\d*))?(.*)', root)
+            if m:
+                conntype = "pserver"
+                user, passw, serv, port, root = m.groups()
+                if not user:
+                    user = "anonymous"
+                rr = ":pserver:" + user + "@" + serv + ":" +  root
+                if port:
+                    rr2, port = "-", int(port)
+                else:
+                    rr2, port = rr, 2401
+                rr += str(port)
 
-        if root.startswith(":local:"):
-            local = True
+                if not passw:
+                    passw = "A"
+                    pf = open(os.path.join(os.environ["HOME"], ".cvspass"))
+                    for l in pf:
+                        # :pserver:cvs@mea.tmt.tele.fi:/cvsroot/zmailer Ah<Z
+                        m = re.match(r'(/\d+\s+/)?(.*)', l)
+                        l = m.group(2)
+                        w, p = l.split(' ', 1)
+                        if w in [rr, rr2]:
+                            passw = p
+                            break
+                    pf.close()
+
+                sck = socket.socket()
+                sck.connect((serv, port))
+                sck.send("\n".join(["BEGIN AUTH REQUEST", root, user, passw, "END AUTH REQUEST", ""]))
+                if sck.recv(128) != "I LOVE YOU\n":
+                    raise NoRepo("CVS pserver authentication failed")
+
+                self.writep = self.readp = sck.makefile('r+')
+
+        if not conntype and root.startswith(":local:"):
+            conntype = "local"
             root = root[7:]
-        else:
+
+        if not conntype:
             # :ext:user@host/home/user/path/to/cvsroot
             if root.startswith(":ext:"):
                 root = root[5:]
             m = re.match(r'(?:([^@:/]+)@)?([^:/]+):?(.*)', root)
             if not m:
-                local = True
+                conntype = "local"
             else:
-                local = False
+                conntype = "rsh"
                 user, host, root = m.group(1), m.group(2), m.group(3)
 
-        if not local:
-            rsh = os.environ.get("CVS_RSH" or "rsh")
-            if user:
-                cmd = [rsh, '-l', user, host] + cmd
-            else:
-                cmd = [rsh, host] + cmd
+        if conntype != "pserver":
+            if conntype == "rsh": 
+                rsh = os.environ.get("CVS_RSH" or "rsh")
+                if user:
+                    cmd = [rsh, '-l', user, host] + cmd
+                else:
+                    cmd = [rsh, host] + cmd
 
-        self.writep, self.readp = os.popen2(cmd)
+            self.writep, self.readp = os.popen2(cmd)
+
         self.realroot = root
 
         self.writep.write("Root %s\n" % root)
