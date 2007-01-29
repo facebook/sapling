@@ -1589,6 +1589,9 @@ def refresh(ui, repo, *pats, **opts):
     If any file patterns are provided, the refreshed patch will contain only
     the modifications that match those patterns; the remaining modifications
     will remain in the working directory.
+
+    hg add/remove/copy/rename work as usual, though you might want to use
+    git-style patches (--git or [diff] git=1) to track copies and renames.
     """
     q = repo.mq
     message = commands.logmessage(opts)
