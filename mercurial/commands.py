@@ -775,10 +775,16 @@ def debugstate(ui, repo):
     keys = dc.keys()
     keys.sort()
     for file_ in keys:
+        if dc[file_][3] == -1:
+            # Pad or slice to locale representation
+            locale_len = len(time.strftime("%x %X", time.localtime(0)))
+            timestr = 'unset'
+            timestr = timestr[:locale_len] + ' '*(locale_len - len(timestr))
+        else:
+            timestr = time.strftime("%x %X", time.localtime(dc[file_][3]))
         ui.write("%c %3o %10d %s %s\n"
                  % (dc[file_][0], dc[file_][1] & 0777, dc[file_][2],
-                    time.strftime("%x %X",
-                                  time.localtime(dc[file_][3])), file_))
+                    timestr, file_))
     for f in repo.dirstate.copies():
         ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
 
