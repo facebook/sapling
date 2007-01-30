@@ -605,7 +605,7 @@ def docopy(ui, repo, pats, opts, wlock):
         return res
 
 
-    pats = list(pats)
+    pats = util.expand_glob(pats)
     if not pats:
         raise util.Abort(_('no source or destination specified'))
     if len(pats) == 1:
@@ -622,7 +622,8 @@ def docopy(ui, repo, pats, opts, wlock):
     copylist = []
     for pat in pats:
         srcs = []
-        for tag, abssrc, relsrc, exact in cmdutil.walk(repo, [pat], opts):
+        for tag, abssrc, relsrc, exact in cmdutil.walk(repo, [pat], opts,
+                                                       globbed=True):
             origsrc = okaytocopy(abssrc, relsrc, exact)
             if origsrc:
                 srcs.append((origsrc, abssrc, relsrc, exact))

@@ -375,8 +375,10 @@ def canonpath(root, cwd, myname):
 def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
     return _matcher(canonroot, cwd, names, inc, exc, head, 'glob', src)
 
-def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
-    names = expand_glob(names)
+def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='',
+               src=None, globbed=False):
+    if not globbed:
+        names = expand_glob(names)
     return _matcher(canonroot, cwd, names, inc, exc, head, 'relpath', src)
 
 def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
