@@ -17,8 +17,11 @@ from demandload import *
 demandload(globals(), "cStringIO errno getpass popen2 re shutil sys tempfile")
 demandload(globals(), "os threading time calendar ConfigParser locale glob")
 
-_encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding() \
-            or "ascii"
+try:
+    _encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding() \
+                or "ascii"
+except locale.Error:
+    _encoding = 'ascii'
 _encodingmode = os.environ.get("HGENCODINGMODE", "strict")
 _fallbackencoding = 'ISO-8859-1'
 
