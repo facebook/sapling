@@ -29,8 +29,11 @@ class hgwebdir(object):
             self.repos = cleannames(config.items())
             self.repos.sort()
         else:
-            cp = util.configparser()
-            cp.read(config)
+            if isinstance(config, util.configparser):
+                cp = config
+            else:
+                cp = util.configparser()
+                cp.read(config)
             self.repos = []
             if cp.has_section('web'):
                 if cp.has_option('web', 'motd'):
