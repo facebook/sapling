@@ -439,6 +439,9 @@ ui::
     The committer of a changeset created when running "commit".
     Typically a person's name and email address, e.g. "Fred Widget
     <fred@example.com>".  Default is $EMAIL or username@hostname.
+    If the username in hgrc is empty, it has to be specified manually or
+    in a different hgrc file (e.g. $HOME/.hgrc, if the admin set "username ="
+    in the system hgrc).
   verbose;;
     Increase the amount of output printed.  True or False.  Default is False.
 

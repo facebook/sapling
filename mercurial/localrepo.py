@@ -616,6 +616,24 @@ class localrepository(repo.repository):
         meta = {}
         cp = self.dirstate.copied(fn)
         if cp:
+            # Mark the new revision of this file as a copy of another
+            # file.  This copy data will effectively act as a parent 
+            # of this new revision.  If this is a merge, the first 
+            # parent will be the nullid (meaning "look up the copy data")
+            # and the second one will be the other parent.  For example:
+            #
+            # 0 --- 1 --- 3   rev1 changes file foo
+            #   \       /     rev2 renames foo to bar and changes it
+            #    \- 2 -/      rev3 should have bar with all changes and
+            #                      should record that bar descends from
+            #                      bar in rev2 and foo in rev1
+            #
+            # this allows this merge to succeed:
+            #
+            # 0 --- 1 --- 3   rev4 reverts the content change from rev2
+            #   \       /     merging rev3 and rev4 should use bar@rev2
+            #    \- 2 --- 4        as the merge base
+            #
             meta["copy"] = cp
             if not manifest2: # not a branch merge
                 meta["copyrev"] = hex(manifest1.get(cp, nullid))
@@ -624,7 +642,7 @@ class localrepository(repo.repository):
                 meta["copyrev"] = hex(manifest1.get(cp, nullid))
             elif fp1 != nullid: # copied on local side, reversed
                 meta["copyrev"] = hex(manifest2.get(cp))
-                fp2 = nullid
+                fp2 = fp1
             else: # directory rename
                 meta["copyrev"] = hex(manifest1.get(cp, nullid))
             self.ui.debug(_(" %s: copy %s:%s\n") %

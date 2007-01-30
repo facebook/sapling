@@ -14,10 +14,13 @@ platform-specific details from the core.
 
 from i18n import _
 import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile
-import os, threading, time, calendar, ConfigParser, locale
+import os, threading, time, calendar, ConfigParser, locale, glob
 
-_encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding() \
-            or "ascii"
+try:
+    _encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding() \
+                or "ascii"
+except locale.Error:
+    _encoding = 'ascii'
 _encodingmode = os.environ.get("HGENCODINGMODE", "strict")
 _fallbackencoding = 'ISO-8859-1'
 
@@ -233,6 +236,22 @@ class UnexpectedOutput(Abort):
 def always(fn): return True
 def never(fn): return False
 
+def expand_glob(pats):
+    '''On Windows, expand the implicit globs in a list of patterns'''
+    if os.name != 'nt':
+        return list(pats)
+    ret = []
+    for p in pats:
+        kind, name = patkind(p, None)
+        if kind is None:
+            globbed = glob.glob(name)
+            if globbed:
+                ret.extend(globbed)
+                continue
+            # if we couldn't expand the glob, just keep it around
+        ret.append(p)
+    return ret
+
 def patkind(name, dflt_pat='glob'):
     """Split a string into an optional pattern kind prefix and the
     actual pattern."""
@@ -358,12 +377,11 @@ def canonpath(root, cwd, myname):
 def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
     return _matcher(canonroot, cwd, names, inc, exc, head, 'glob', src)
 
-def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
-    if os.name == 'nt':
-        dflt_pat = 'glob'
-    else:
-        dflt_pat = 'relpath'
-    return _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src)
+def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='',
+               src=None, globbed=False):
+    if not globbed:
+        names = expand_glob(names)
+    return _matcher(canonroot, cwd, names, inc, exc, head, 'relpath', src)
 
 def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     """build a function to match a set of file patterns
