@@ -2491,7 +2491,7 @@ def unbundle(ui, repo, fname, **opts):
     command.
     """
     if os.path.exists(fname):
-        f = open(fname)
+        f = open(fname, "rb")
     else:
         f = urllib.urlopen(fname)
     gen = changegroup.readbundle(f, fname)
