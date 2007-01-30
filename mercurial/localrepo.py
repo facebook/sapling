@@ -748,7 +748,7 @@ class localrepository(repo.repository):
             try:
                 new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
                 m1.set(f, is_exec(f), is_link(f))
-            except OSError:
+            except (OSError, IOError):
                 if use_dirstate:
                     self.ui.warn(_("trouble committing %s!\n") % f)
                     raise
