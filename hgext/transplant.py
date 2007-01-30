@@ -7,8 +7,8 @@
 
 from mercurial.i18n import _
 import os, tempfile
-from mercurial import bundlerepo, cmdutil, commands, hg, merge, patch, revlog
-from mercurial import util
+from mercurial import bundlerepo, changegroup, cmdutil, commands, hg, merge
+from mercurial import patch, revlog, util
 
 '''patch transplanting tool
 
@@ -473,7 +473,7 @@ def transplant(ui, repo, *revs, **opts):
         bundle = None
         if not source.local():
             cg = source.changegroup(incoming, 'incoming')
-            bundle = commands.write_bundle(cg, compress=False)
+            bundle = changegroup.writebundle(cg, None, 'HG10UN')
             source = bundlerepo.bundlerepository(ui, repo.root, bundle)
 
         return (source, incoming, bundle)
