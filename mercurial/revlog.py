@@ -146,6 +146,9 @@ class lazyparser(object):
         lend = len(data) / self.s
         i = blockstart / self.s
         off = 0
+        # lazyindex supports __delitem__
+        if lend > len(self.index) - i:
+            lend = len(self.index) - i
         for x in xrange(lend):
             if self.index[i + x] == None:
                 b = data[off : off + self.s]
