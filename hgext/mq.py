@@ -678,9 +678,10 @@ class queue:
             while True:
                 seen[n] = 1
                 pp = chlog.parents(n)
-                if pp[1] != revlog.nullid and chlog.rev(pp[1]) > revnum:
-                    if pp[1] not in seen:
-                        heads.append(pp[1])
+                if pp[1] != revlog.nullid:
+                    for p in pp:
+                        if chlog.rev(p) > revnum and p not in seen:
+                            heads.append(p)
                 if pp[0] == revlog.nullid:
                     break
                 if chlog.rev(pp[0]) < revnum:

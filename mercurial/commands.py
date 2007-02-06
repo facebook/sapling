@@ -2486,7 +2486,7 @@ def unbundle(ui, repo, fname, **opts):
     command.
     """
     if os.path.exists(fname):
-        f = open(fname)
+        f = open(fname, "rb")
     else:
         f = urllib.urlopen(fname)
     gen = changegroup.readbundle(f, fname)
@@ -3069,6 +3069,9 @@ def load_extensions(ui):
         uisetup = getattr(mod, 'uisetup', None)
         if uisetup:
             uisetup(ui)
+        reposetup = getattr(mod, 'reposetup', None)
+        if reposetup:
+            hg.repo_setup_hooks.append(reposetup)
         cmdtable = getattr(mod, 'cmdtable', {})
         overrides = [cmd for cmd in cmdtable if cmd in table]
         if overrides:
@@ -3152,11 +3155,6 @@ def dispatch(args):
                     if not repo:
                         repo = hg.repository(u, path=path)
                     u = repo.ui
-                    for name in external.itervalues():
-                        mod = sys.modules[name]
-                        if hasattr(mod, 'reposetup'):
-                            mod.reposetup(u, repo)
-                            hg.repo_setup_hooks.append(mod.reposetup)
                 except hg.RepoError:
                     if cmd not in optionalrepo.split():
                         raise

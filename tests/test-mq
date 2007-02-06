@@ -246,3 +246,22 @@ hg mv bleh barney
 hg qrefresh --git
 cat .hg/patches/bar
 hg log -vC --template '{rev} {file_copies%filecopy}\n' -r .
+
+echo '% strip again'
+cd ..
+hg init strip
+cd strip
+touch foo
+hg add foo
+hg ci -m 'add foo' -d '0 0'
+echo >> foo
+hg ci -m 'change foo 1' -d '0 0'
+hg up -C 0
+echo 1 >> foo
+hg ci -m 'change foo 2' -d '0 0'
+HGMERGE=true hg merge
+hg ci -m merge -d '0 0'
+hg log
+hg strip 1 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg log
+

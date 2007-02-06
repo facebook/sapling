@@ -579,7 +579,7 @@ def copyfile(src, dest):
         shutil.copyfile(src, dest)
         shutil.copymode(src, dest)
     except shutil.Error, inst:
-        raise util.Abort(str(inst))
+        raise Abort(str(inst))
 
 def copyfiles(src, dst, hardlink=None):
     """Copy a directory tree using hardlinks if possible"""

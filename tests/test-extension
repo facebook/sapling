@@ -1,0 +1,42 @@
+#!/bin/sh
+# Test basic extension support
+
+cat > foobar.py <<EOF
+import os
+from mercurial import commands
+
+def uisetup(ui):
+    ui.write("uisetup called\\n")
+
+def reposetup(ui, repo):
+    ui.write("reposetup called for %s\\n" % os.path.basename(repo.root))
+
+def foo(ui, *args, **kwargs):
+    ui.write("Foo\\n")
+
+def bar(ui, *args, **kwargs):
+    ui.write("Bar\\n")
+
+cmdtable = {
+    "foo": (foo, [], "hg foo"),
+    "bar": (bar, [], "hg bar"),
+}
+
+commands.norepo += ' bar'
+EOF
+abspath=`pwd`/foobar.py
+
+hg init a
+cd a
+echo foo > file
+hg add file
+hg commit -m 'add file'
+
+echo '[extensions]' >> $HGRCPATH
+echo "foobar = $abspath" >> $HGRCPATH
+hg foo
+
+cd ..
+hg clone a b
+
+hg bar

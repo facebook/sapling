@@ -1,0 +1,9 @@
+uisetup called
+reposetup called for a
+Foo
+uisetup called
+reposetup called for a
+reposetup called for b
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+uisetup called
+Bar
