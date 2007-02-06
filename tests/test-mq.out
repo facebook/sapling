@@ -264,3 +264,52 @@ new file mode 100644
 @@ -0,0 +1,1 @@
 +bar
 3 barney (foo)
+% strip again
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+merging foo
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+changeset:   3:99615015637b
+tag:         tip
+parent:      2:20cbbe65cff7
+parent:      1:d2871fc282d4
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     merge
+
+changeset:   2:20cbbe65cff7
+parent:      0:53245c60e682
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     change foo 2
+
+changeset:   1:d2871fc282d4
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     change foo 1
+
+changeset:   0:53245c60e682
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     add foo
+
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+saving bundle to 
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+changeset:   1:20cbbe65cff7
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     change foo 2
+
+changeset:   0:53245c60e682
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     add foo
+
