@@ -359,14 +359,18 @@ class convert_git:
 
     def gettags(self):
         tags = {}
-        for f in os.listdir(self.path + "/refs/tags"):
-            try:
-                h = file(self.path + "/refs/tags/" + f).read().strip()
-                c = self.catfile(h, "tag") # read the commit hash
-                h = c.splitlines()[0].split()[1]
-                tags[f] = h
-            except:
-                pass
+        fh = os.popen('git-ls-remote --tags "%s" 2>/dev/null' % self.path)
+        prefix = 'refs/tags/'
+        for line in fh:
+            line = line.strip()
+            if not line.endswith("^{}"):
+                continue
+            node, tag = line.split(None, 1)
+            if not tag.startswith(prefix):
+                continue
+            tag = tag[len(prefix):-3]
+            tags[tag] = node
+
         return tags
 
 class convert_mercurial:
