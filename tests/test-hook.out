@@ -138,3 +138,7 @@ added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
 # make sure --traceback works
 Traceback (most recent call last):
+Automatically installed hook
+foo
+calling hook commit.auto: <function autohook>
+Automatically installed hook

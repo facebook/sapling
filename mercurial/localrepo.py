@@ -142,32 +142,34 @@ class localrepository(repo.repository):
             be run as hooks without wrappers to convert return values.'''
 
             self.ui.note(_("calling hook %s: %s\n") % (hname, funcname))
-            d = funcname.rfind('.')
-            if d == -1:
-                raise util.Abort(_('%s hook is invalid ("%s" not in a module)')
-                                 % (hname, funcname))
-            modname = funcname[:d]
-            try:
-                obj = __import__(modname)
-            except ImportError:
-                try:
-                    # extensions are loaded with hgext_ prefix
-                    obj = __import__("hgext_%s" % modname)
-                except ImportError:
-                    raise util.Abort(_('%s hook is invalid '
-                                       '(import of "%s" failed)') %
-                                     (hname, modname))
-            try:
-                for p in funcname.split('.')[1:]:
-                    obj = getattr(obj, p)
-            except AttributeError, err:
-                raise util.Abort(_('%s hook is invalid '
-                                   '("%s" is not defined)') %
-                                 (hname, funcname))
+            obj = funcname
             if not callable(obj):
-                raise util.Abort(_('%s hook is invalid '
-                                   '("%s" is not callable)') %
-                                 (hname, funcname))
+                d = funcname.rfind('.')
+                if d == -1:
+                    raise util.Abort(_('%s hook is invalid ("%s" not in '
+                                       'a module)') % (hname, funcname))
+                modname = funcname[:d]
+                try:
+                    obj = __import__(modname)
+                except ImportError:
+                    try:
+                        # extensions are loaded with hgext_ prefix
+                        obj = __import__("hgext_%s" % modname)
+                    except ImportError:
+                        raise util.Abort(_('%s hook is invalid '
+                                           '(import of "%s" failed)') %
+                                         (hname, modname))
+                try:
+                    for p in funcname.split('.')[1:]:
+                        obj = getattr(obj, p)
+                except AttributeError, err:
+                    raise util.Abort(_('%s hook is invalid '
+                                       '("%s" is not defined)') %
+                                     (hname, funcname))
+                if not callable(obj):
+                    raise util.Abort(_('%s hook is invalid '
+                                       '("%s" is not callable)') %
+                                     (hname, funcname))
             try:
                 r = obj(ui=self.ui, repo=self, hooktype=name, **args)
             except (KeyboardInterrupt, util.SignalInterrupt):
@@ -205,7 +207,9 @@ class localrepository(repo.repository):
                  if hname.split(".", 1)[0] == name and cmd]
         hooks.sort()
         for hname, cmd in hooks:
-            if cmd.startswith('python:'):
+            if callable(cmd):
+                r = callhook(hname, cmd) or r
+            elif cmd.startswith('python:'):
                 r = callhook(hname, cmd[7:].strip()) or r
             else:
                 r = runhook(hname, cmd) or r

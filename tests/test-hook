@@ -183,4 +183,24 @@ echo 'commit.abort = python:hooktests.aborthook' >> .hg/hgrc
 echo a >> a
 hg --traceback commit -A -m a 2>&1 | grep '^Traceback'
 
+cd ..
+hg init c
+cd c
+
+cat > hookext.py <<EOF
+def autohook(**args):
+    print "Automatically installed hook"
+
+def reposetup(ui, repo):
+    repo.ui.setconfig("hooks", "commit.auto", autohook)
+EOF
+echo '[extensions]' >> .hg/hgrc
+echo 'hookext = hookext.py' >> .hg/hgrc
+
+touch foo
+hg add foo
+hg ci -m 'add foo'
+echo >> foo
+hg ci --debug -m 'change foo' | sed -e 's/ at .*>/>/'
+
 exit 0
