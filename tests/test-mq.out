@@ -60,6 +60,26 @@ A series
 A .hgignore
 A series
 A test.patch
+% qinit; qinit -c
+  .hgignore:
+syntax: glob
+status
+guards
+  series:
+abort: repository already exists!
+% qinit; <stuff>; qinit -c
+adding A
+adding B
+A .hgignore
+A A
+A B
+A series
+  .hgignore:
+status
+bleh
+  series:
+A
+B
 % qnew -m
 foo bar
 % qrefresh

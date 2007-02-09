@@ -1082,9 +1082,13 @@ class queue:
             self.push(repo, force=True, wlock=wlock)
 
     def init(self, repo, create=False):
-        if os.path.isdir(self.path):
+        if not create and os.path.isdir(self.path):
             raise util.Abort(_("patch queue directory already exists"))
-        os.mkdir(self.path)
+        try:
+            os.mkdir(self.path)
+        except OSError, inst:
+            if inst.errno != errno.EEXIST or not create:
+                raise
         if create:
             return self.qrepo(create=True)
 
@@ -1467,13 +1471,16 @@ def init(ui, repo, **opts):
     r = q.init(repo, create=opts['create_repo'])
     q.save_dirty()
     if r:
-        fp = r.wopener('.hgignore', 'w')
-        print >> fp, 'syntax: glob'
-        print >> fp, 'status'
-        print >> fp, 'guards'
-        fp.close()
-        r.wopener('series', 'w').close()
+        if not os.path.exists(r.wjoin('.hgignore')):
+            fp = r.wopener('.hgignore', 'w')
+            fp.write('syntax: glob\n')
+            fp.write('status\n')
+            fp.write('guards\n')
+            fp.close()
+        if not os.path.exists(r.wjoin('series')):
+            r.wopener('series', 'w').close()
         r.add(['.hgignore', 'series'])
+        commands.add(ui, r)
     return 0
 
 def clone(ui, source, dest=None, **opts):

@@ -40,6 +40,40 @@ echo % qnew implies add
 hg -R c qnew test.patch
 hg -R c/.hg/patches st
 
+echo '% qinit; qinit -c'
+hg init d
+cd d
+hg qinit
+hg qinit -c
+# qinit -c should create both files if they don't exist
+echo '  .hgignore:'
+cat .hg/patches/.hgignore
+echo '  series:'
+cat .hg/patches/series
+hg qinit -c 2>&1 | sed -e 's/repository.*already/repository already/'
+cd ..
+
+echo '% qinit; <stuff>; qinit -c'
+hg init e
+cd e
+hg qnew A
+echo foo > foo
+hg add foo
+hg qrefresh
+hg qnew B
+echo >> foo
+hg qrefresh
+echo status >> .hg/patches/.hgignore
+echo bleh >> .hg/patches/.hgignore
+hg qinit -c
+hg -R .hg/patches status
+# qinit -c shouldn't touch these files if they already exist
+echo '  .hgignore:'
+cat .hg/patches/.hgignore
+echo '  series:'
+cat .hg/patches/series
+cd ..
+
 cd a
 
 echo % qnew -m
