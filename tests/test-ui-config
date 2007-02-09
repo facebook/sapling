@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import ConfigParser
 from mercurial import ui, util, commands
 
 testui = ui.ui()
@@ -70,3 +71,21 @@ try:
 except util.Abort, inst:
     print inst
 print "---"
+
+cp = util.configparser()
+cp.add_section('foo')
+cp.set('foo', 'bar', 'baz')
+try:
+    # should fail - keys are case-sensitive
+    cp.get('foo', 'Bar')
+except ConfigParser.NoOptionError, inst:
+    print inst
+
+def function():
+    pass
+
+cp.add_section('hook')
+# values that aren't strings should work
+cp.set('hook', 'commit', function)
+f = cp.get('hook', 'commit')
+print "f %s= function" % (f == function and '=' or '!')

@@ -43,3 +43,5 @@ bad interpolation variable reference '%(bad)1'
 Error in configuration section [interpolation] parameter 'value5':
 '%' must be followed by '%' or '(', found: '%bad2'
 ---
+No option 'Bar' in section: 'foo'
+f == function

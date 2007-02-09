@@ -116,10 +116,22 @@ extendeddateformats = defaultdateformats + (
 class SignalInterrupt(Exception):
     """Exception raised on SIGTERM and SIGHUP."""
 
-# like SafeConfigParser but with case-sensitive keys
+# differences from SafeConfigParser:
+# - case-sensitive keys
+# - allows values that are not strings (this means that you may not
+#   be able to save the configuration to a file)
 class configparser(ConfigParser.SafeConfigParser):
     def optionxform(self, optionstr):
         return optionstr
+
+    def set(self, section, option, value):
+        return ConfigParser.ConfigParser.set(self, section, option, value)
+
+    def _interpolate(self, section, option, rawval, vars):
+        if not isinstance(rawval, basestring):
+            return rawval
+        return ConfigParser.SafeConfigParser._interpolate(self, section,
+                                                          option, rawval, vars)
 
 def cachefunc(func):
     '''cache the result of function calls'''
