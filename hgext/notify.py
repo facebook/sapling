@@ -240,7 +240,9 @@ class notifier(object):
         difflines = self.ui.popbuffer().splitlines(1)
         if self.ui.configbool('notify', 'diffstat', True):
             s = patch.diffstat(difflines)
-            self.ui.write('\ndiffstat:\n\n' + s)
+            # s may be nil, don't include the header if it is
+            if s:
+                self.ui.write('\ndiffstat:\n\n%s' % s)
         if maxdiff > 0 and len(difflines) > maxdiff:
             self.ui.write(_('\ndiffs (truncated from %d to %d lines):\n\n') %
                           (len(difflines), maxdiff))

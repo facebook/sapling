@@ -15,12 +15,13 @@ from hgweb_mod import hgweb
 
 # This is a stopgap
 class hgwebdir(object):
-    def __init__(self, config):
+    def __init__(self, config, parentui=None):
         def cleannames(items):
             return [(name.strip(os.sep), path) for name, path in items]
 
-        self.motd = ""
-        self.style = ""
+        self.parentui = parentui
+        self.motd = None
+        self.style = None
         self.repos_sorted = ('name', False)
         if isinstance(config, (list, tuple)):
             self.repos = cleannames(config)
@@ -73,13 +74,23 @@ class hgwebdir(object):
             yield tmpl("footer", **map)
 
         def motd(**map):
-            yield self.motd
+            if self.motd is not None:
+                yield self.motd
+            else:
+                yield config('web', 'motd', '')
+
+        parentui = self.parentui or ui.ui(report_untrusted=False)
+
+        def config(section, name, default=None, untrusted=True):
+            return parentui.config(section, name, default, untrusted)
 
         url = req.env['REQUEST_URI'].split('?')[0]
         if not url.endswith('/'):
             url += '/'
 
         style = self.style
+        if style is None:
+            style = config('web', 'style', '')
         if req.form.has_key('style'):
             style = req.form['style'][0]
         mapfile = style_map(templater.templatepath(), style)
@@ -113,7 +124,7 @@ class hgwebdir(object):
             rows = []
             parity = 0
             for name, path in self.repos:
-                u = ui.ui(report_untrusted=False)
+                u = ui.ui(parentui=parentui)
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
                 except IOError:
@@ -181,7 +192,8 @@ class hgwebdir(object):
             if real:
                 req.env['REPO_NAME'] = virtual
                 try:
-                    hgweb(real).run_wsgi(req)
+                    repo = hg.repository(parentui, real)
+                    hgweb(repo).run_wsgi(req)
                 except IOError, inst:
                     req.write(tmpl("error", error=inst.strerror))
                 except hg.RepoError, inst:

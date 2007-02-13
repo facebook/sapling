@@ -9,8 +9,10 @@
 # http://www.python.org/dev/peps/pep-0333/#the-server-gateway-side
 
 import os, sys
+from mercurial import util
 
 def launch(application):
+    util.set_binary(sys.stdout)
 
     environ = dict(os.environ.items())
     environ['wsgi.input'] = sys.stdin

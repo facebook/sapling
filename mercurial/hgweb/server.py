@@ -220,7 +220,7 @@ def create_server(ui, repo):
 
         def make_handler(self):
             if self.webdir_conf:
-                hgwebobj = self.webdirmaker(self.webdir_conf)
+                hgwebobj = self.webdirmaker(self.webdir_conf, ui)
             elif self.repo is not None:
                 hgwebobj = self.repoviewmaker(repo.__class__(repo.ui,
                                                              repo.origroot))

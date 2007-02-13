@@ -389,7 +389,7 @@ class dirstate(object):
 
         # self.root may end with a path separator when self.root == '/'
         common_prefix_len = len(self.root)
-        if not self.root.endswith('/'):
+        if not self.root.endswith(os.sep):
             common_prefix_len += 1
         # recursion free walker, faster than os.walk.
         def findfiles(s):
