@@ -21,8 +21,8 @@ class hgwebdir(object):
             return [(name.strip(os.sep), path) for name, path in items]
 
         self.parentui = parentui
-        self.motd = ""
-        self.style = ""
+        self.motd = None
+        self.style = None
         self.repos_sorted = ('name', False)
         if isinstance(config, (list, tuple)):
             self.repos = cleannames(config)
@@ -72,15 +72,23 @@ class hgwebdir(object):
             yield tmpl("footer", **map)
 
         def motd(**map):
-            yield self.motd
+            if self.motd is not None:
+                yield self.motd
+            else:
+                yield config('web', 'motd', '')
 
         parentui = self.parentui or ui.ui(report_untrusted=False)
+
+        def config(section, name, default=None, untrusted=True):
+            return parentui.config(section, name, default, untrusted)
 
         url = req.env['REQUEST_URI'].split('?')[0]
         if not url.endswith('/'):
             url += '/'
 
         style = self.style
+        if style is None:
+            style = config('web', 'style', '')
         if req.form.has_key('style'):
             style = req.form['style'][0]
         mapfile = style_map(templater.templatepath(), style)
