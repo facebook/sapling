@@ -802,10 +802,29 @@ class queue:
         if not wlock:
             wlock = repo.wlock()
         patch = self.lookup(patch)
-        if patch and self.isapplied(patch):
-            raise util.Abort(_("patch %s is already applied") % patch)
+        # Suppose our series file is: A B C and the current 'top' patch is B.
+        # qpush C should be performed (moving forward)
+        # qpush B is a NOP (no change)
+        # qpush A is an error (can't go backwards with qpush)
+        if patch:
+            info = self.isapplied(patch)
+            if info:
+                if info[0] < len(self.applied) - 1:
+                    raise util.Abort(_("cannot push to a previous patch: %s") %
+                                     patch)
+                if info[0] < len(self.series) - 1:
+                    self.ui.warn(_('qpush: %s is already at the top\n') % patch)
+                else:
+                    self.ui.warn(_('all patches are currently applied\n'))
+                return
+
+        # Following the above example, starting at 'top' of B:
+        #  qpush should be performed (pushes C), but a subsequent qpush without
+        #  an argument is an error (nothing to apply). This allows a loop
+        #  of "...while hg qpush..." to work as it detects an error when done
         if self.series_end() == len(self.series):
-            raise util.Abort(_("patch series fully applied"))
+            self.ui.warn(_('patch series already fully applied\n'))
+            return 1
         if not force:
             self.check_localchanges(repo)
 
@@ -847,8 +866,12 @@ class queue:
             info = self.isapplied(patch)
             if not info:
                 raise util.Abort(_("patch %s is not applied") % patch)
+
         if len(self.applied) == 0:
-            raise util.Abort(_("no patches applied"))
+            # Allow qpop -a to work repeatedly,
+            # but not qpop without an argument
+            self.ui.warn(_("no patches applied\n"))
+            return not all
 
         if not update:
             parents = repo.dirstate.parents()
@@ -1766,7 +1789,8 @@ def push(ui, repo, patch=None, **opts):
 
     if opts['all']:
         if not q.series:
-            raise util.Abort(_('no patches in series'))
+            ui.warn(_('no patches in series\n'))
+            return 0
         patch = q.series[-1]
     if opts['merge']:
         if opts['name']:
