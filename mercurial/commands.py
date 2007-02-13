@@ -2304,11 +2304,12 @@ def serve(ui, repo, **opts):
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
+    parentui = ui.parentui or ui
     optlist = ("name templates style address port ipv6"
                " accesslog errorlog webdir_conf")
     for o in optlist.split():
         if opts[o]:
-            ui.setconfig("web", o, str(opts[o]))
+            parentui.setconfig("web", o, str(opts[o]))
 
     if repo is None and not ui.config("web", "webdir_conf"):
         raise hg.RepoError(_("There is no Mercurial repository here"
@@ -2324,7 +2325,7 @@ def serve(ui, repo, **opts):
         os.read(rfd, 1)
         os._exit(0)
 
-    httpd = hgweb.server.create_server(ui, repo)
+    httpd = hgweb.server.create_server(parentui, repo)
 
     if ui.verbose:
         if httpd.port != 80:
