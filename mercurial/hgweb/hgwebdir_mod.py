@@ -16,10 +16,11 @@ from mercurial.i18n import gettext as _
 
 # This is a stopgap
 class hgwebdir(object):
-    def __init__(self, config):
+    def __init__(self, config, parentui=None):
         def cleannames(items):
             return [(name.strip(os.sep), path) for name, path in items]
 
+        self.parentui = parentui
         self.motd = ""
         self.style = ""
         self.repos_sorted = ('name', False)
@@ -73,6 +74,8 @@ class hgwebdir(object):
         def motd(**map):
             yield self.motd
 
+        parentui = self.parentui or ui.ui(report_untrusted=False)
+
         url = req.env['REQUEST_URI'].split('?')[0]
         if not url.endswith('/'):
             url += '/'
@@ -111,7 +114,7 @@ class hgwebdir(object):
             rows = []
             parity = 0
             for name, path in self.repos:
-                u = ui.ui(report_untrusted=False)
+                u = ui.ui(parentui=parentui)
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
                 except IOError:
@@ -179,7 +182,8 @@ class hgwebdir(object):
             if real:
                 req.env['REPO_NAME'] = virtual
                 try:
-                    hgweb(real).run_wsgi(req)
+                    repo = hg.repository(parentui, real)
+                    hgweb(repo).run_wsgi(req)
                 except IOError, inst:
                     req.write(tmpl("error", error=inst.strerror))
                 except hg.RepoError, inst:
