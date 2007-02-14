@@ -799,15 +799,17 @@ if os.name == 'nt':
     def os_rcpath():
         '''return default os-specific hgrc search path'''
         path = system_rcpath()
-        path.append(user_rcpath())
-        userprofile = os.environ.get('USERPROFILE')
-        if userprofile:
-            path.append(os.path.join(userprofile, 'mercurial.ini'))
+        path.extend(user_rcpath())
+        path = [os.path.normpath(f) for f in path]
         return path
 
     def user_rcpath():
         '''return os-specific hgrc search path to the user dir'''
-        return os.path.join(os.path.expanduser('~'), 'mercurial.ini')
+        path = [os.path.join(os.path.expanduser('~'), 'mercurial.ini')]
+        userprofile = os.environ.get('USERPROFILE')
+        if userprofile:
+            path.append(os.path.join(userprofile, 'mercurial.ini'))
+        return path
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
@@ -880,15 +882,22 @@ else:
 
     def os_rcpath():
         '''return default os-specific hgrc search path'''
+        path = system_rcpath()
+        path.extend(user_rcpath())
+        path = [os.path.normpath(f) for f in path]
+        return path
+
+    def system_rcpath():
         path = []
         # old mod_python does not set sys.argv
         if len(getattr(sys, 'argv', [])) > 0:
             path.extend(rcfiles(os.path.dirname(sys.argv[0]) +
                                   '/../etc/mercurial'))
         path.extend(rcfiles('/etc/mercurial'))
-        path.append(os.path.expanduser('~/.hgrc'))
-        path = [os.path.normpath(f) for f in path]
         return path
+
+    def user_rcpath():
+        return [os.path.expanduser('~/.hgrc')]
 
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
