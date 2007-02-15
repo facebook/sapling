@@ -772,6 +772,9 @@ class hgweb(object):
         port = req.env["SERVER_PORT"]
         port = port != "80" and (":" + port) or ""
         urlbase = 'http://%s%s' % (req.env['SERVER_NAME'], port)
+        staticurl = self.config("web", "staticurl") or req.url + 'static/'
+        if not staticurl.endswith('/'):
+            staticurl += '/'
 
         if not self.reponame:
             self.reponame = (self.config("web", "name")
@@ -780,6 +783,7 @@ class hgweb(object):
 
         self.t = templater.templater(mapfile, templater.common_filters,
                                      defaults={"url": req.url,
+                                               "staticurl": staticurl,
                                                "urlbase": urlbase,
                                                "repo": self.reponame,
                                                "header": header,

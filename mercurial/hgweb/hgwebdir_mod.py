@@ -88,6 +88,10 @@ class hgwebdir(object):
         if not url.endswith('/'):
             url += '/'
 
+        staticurl = config('web', 'staticurl') or url + 'static/'
+        if not staticurl.endswith('/'):
+            staticurl += '/'
+
         style = self.style
         if style is None:
             style = config('web', 'style', '')
@@ -98,7 +102,8 @@ class hgwebdir(object):
                                    defaults={"header": header,
                                              "footer": footer,
                                              "motd": motd,
-                                             "url": url})
+                                             "url": url,
+                                             "staticurl": staticurl})
 
         def archivelist(ui, nodeid, url):
             allowed = ui.configlist("web", "allow_archive", untrusted=True)

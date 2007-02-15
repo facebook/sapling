@@ -507,6 +507,11 @@ web::
   push_ssl;;
     Whether to require that inbound pushes be transported over SSL to
     prevent password sniffing.  Default is true.
+  staticurl;;
+    Base URL to use for static files. If unset, static files (e.g.
+    the hgicon.png favicon) will be served by the CGI script itself.
+    Use this setting to serve them directly with the HTTP server.
+    Example: "http://hgserver/static/"
   stripes;;
     How many lines a "zebra stripe" should span in multiline output.
     Default is 1; set to 0 to disable.
