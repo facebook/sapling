@@ -58,7 +58,10 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         '''snapshot files as of some revision'''
         changes = repo.changelog.read(node)
         mf = repo.manifest.read(changes[0])
-        dirname = '%s.%s' % (os.path.basename(repo.root), short(node))
+        dirname = os.path.basename(repo.root)
+        if dirname == "":
+            dirname = "root"
+        dirname = '%s.%s' % (dirname, short(node))
         base = os.path.join(tmproot, dirname)
         os.mkdir(base)
         if not ui.quiet:
@@ -82,6 +85,8 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         if not using snapshot, -I/-X does not work and recursive diff
         in tools like kdiff3 and meld displays too many files.'''
         dirname = os.path.basename(repo.root)
+        if dirname == "":
+            dirname = "root"
         base = os.path.join(tmproot, dirname)
         os.mkdir(base)
         if not ui.quiet:
