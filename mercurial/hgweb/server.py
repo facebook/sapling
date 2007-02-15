@@ -222,8 +222,8 @@ def create_server(ui, repo):
             if self.webdir_conf:
                 hgwebobj = self.webdirmaker(self.webdir_conf, ui)
             elif self.repo is not None:
-                hgwebobj = self.repoviewmaker(repo.__class__(repo.ui,
-                                                             repo.origroot))
+                hgwebobj = self.repoviewmaker(hg.repository(repo.ui,
+                                                            repo.root))
             else:
                 raise hg.RepoError(_("There is no Mercurial repository here"
                                      " (.hg not found)"))
