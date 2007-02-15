@@ -1,0 +1,8 @@
+#!/bin/sh
+
+hg init a
+ln -s a link
+cd a
+echo foo > foo
+hg status
+hg status ../link

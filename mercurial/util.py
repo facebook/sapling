@@ -363,6 +363,9 @@ def canonpath(root, cwd, myname):
             except OSError:
                 break
             if samestat(name_st, root_st):
+                if not rel:
+                    # name was actually the same as root (maybe a symlink)
+                    return ''
                 rel.reverse()
                 name = os.path.join(*rel)
                 audit_path(name)
