@@ -309,7 +309,7 @@ class ui(object):
         sections.sort()
         for section in sections:
             for name, value in self.configitems(section, untrusted):
-                yield section, name, value.replace('\n', '\\n')
+                yield section, name, str(value).replace('\n', '\\n')
 
     def extensions(self):
         result = self.configitems("extensions")

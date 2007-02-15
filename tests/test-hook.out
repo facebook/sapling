@@ -142,3 +142,4 @@ Automatically installed hook
 foo
 calling hook commit.auto: <function autohook>
 Automatically installed hook
+hooks.commit.auto=<function autohook>

@@ -203,4 +203,6 @@ hg ci -m 'add foo'
 echo >> foo
 hg ci --debug -m 'change foo' | sed -e 's/ at .*>/>/'
 
+hg showconfig hooks | sed -e 's/ at .*>/>/'
+
 exit 0
