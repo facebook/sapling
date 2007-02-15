@@ -798,8 +798,23 @@ if os.name == 'nt':
     def samestat(s1, s2):
         return False
 
+    # A sequence of backslashes is special iff it precedes a double quote:
+    # - if there's an even number of backslashes, the double quote is not
+    #   quoted (i.e. it ends the quoted region)
+    # - if there's an odd number of backslashes, the double quote is quoted
+    # - in both cases, every pair of backslashes is unquoted into a single
+    #   backslash
+    # (See http://msdn2.microsoft.com/en-us/library/a1y7w461.aspx )
+    # So, to quote a string, we must surround it in double quotes, double
+    # the number of backslashes that preceed double quotes and add another
+    # backslash before every double quote (being careful with the double
+    # quote we've appended to the end)
+    _quotere = None
     def shellquote(s):
-        return '"%s"' % s.replace('"', '\\"')
+        global _quotere
+        if _quotere is None:
+            _quotere = re.compile(r'(\\*)("|\\$)')
+        return '"%s"' % _quotere.sub(r'\1\1\\\2', s)
 
     def explain_exit(code):
         return _("exited with status %d") % code, code
