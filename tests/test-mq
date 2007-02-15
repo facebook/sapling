@@ -264,4 +264,42 @@ hg ci -m merge -d '0 0'
 hg log
 hg strip 1 2>&1 | sed 's/\(saving bundle to \).*/\1/'
 hg log
+cd ..
+
+echo '% qclone'
+qlog()
+{
+    echo 'main repo:'
+    hg log --template '    rev {rev}: {desc}\n'
+    echo 'patch repo:'
+    hg -R .hg/patches log --template '    rev {rev}: {desc}\n'
+}
+hg init qclonesource
+cd qclonesource
+echo foo > foo
+hg add foo
+hg ci -m 'add foo'
+hg qinit -c
+hg qnew patch1
+echo bar >> foo
+hg qrefresh -m 'change foo'
+hg qci -m checkpoint
+qlog
+cd ..
+
+# repo with patches applied
+hg qclone qclonesource qclonedest
+cd qclonedest
+qlog
+cd ..
+
+# repo with patches unapplied
+cd qclonesource
+hg qpop -a
+qlog
+cd ..
+hg qclone qclonesource qclonedest2
+cd qclonedest2
+qlog
+cd ..
 
