@@ -799,13 +799,6 @@ if os.name == 'nt':
         except:
             return [r'c:\mercurial\mercurial.ini']
 
-    def os_rcpath():
-        '''return default os-specific hgrc search path'''
-        path = system_rcpath()
-        path.extend(user_rcpath())
-        path = [os.path.normpath(f) for f in path]
-        return path
-
     def user_rcpath():
         '''return os-specific hgrc search path to the user dir'''
         path = [os.path.join(os.path.expanduser('~'), 'mercurial.ini')]
@@ -897,13 +890,6 @@ else:
         except OSError:
             pass
         return rcs
-
-    def os_rcpath():
-        '''return default os-specific hgrc search path'''
-        path = system_rcpath()
-        path.extend(user_rcpath())
-        path = [os.path.normpath(f) for f in path]
-        return path
 
     def system_rcpath():
         path = []
@@ -1390,6 +1376,13 @@ def walkrepos(path):
                 break
 
 _rcpath = None
+
+def os_rcpath():
+    '''return default os-specific hgrc search path'''
+    path = system_rcpath()
+    path.extend(user_rcpath())
+    path = [os.path.normpath(f) for f in path]
+    return path
 
 def rcpath():
     '''return hgrc search path. if env var HGRCPATH is set, use it.
