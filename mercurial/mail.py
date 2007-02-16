@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import os, smtplib, templater, util
+import os, smtplib, templater, util, socket
 
 def _smtp(ui):
     '''send mail using smtp.'''
@@ -21,6 +21,9 @@ def _smtp(ui):
             (mailhost, mailport))
     s.connect(host=mailhost, port=mailport)
     if ui.configbool('smtp', 'tls'):
+        if not hasattr(socket, 'ssl'):
+            raise util.Abort(_("can't use TLS: Python SSL support "
+                               "not installed"))
         ui.note(_('(using tls)\n'))
         s.ehlo()
         s.starttls()

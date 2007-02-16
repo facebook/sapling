@@ -8,18 +8,14 @@ notify=
 incoming.notify = python:hgext.notify.hook
 
 [notify]
-config = $HGTMP/.notify.conf
 sources = pull
-domain = test.com
-strip = 3
-template = Subject: {desc|firstline|strip}\nFrom: {author}\n\nchangeset {node|short} in {webroot}\ndescription:\n\t{desc|tabindent|strip}
 diffstat = False
-
-[web]
-baseurl = http://test/
 
 [usersubs]
 foo@bar = *
+
+[reposubs]
+* = baz
 EOF
 
 hg help notify
@@ -35,6 +31,24 @@ echo a >> a/a
 echo % commit
 hg --traceback --cwd a commit -Amb -d '1 0'
 
+echo '% pull (minimal config)'
+hg --traceback --cwd b pull ../a 2>&1 | sed -e 's/\(Message-Id:\).*/\1/' \
+  -e 's/changeset \([0-9a-f]* \)\?in .*test-notif/changeset \1in test-notif/' \
+  -e 's/^details: .*test-notify/details: test-notify/'
+
+cat <<EOF >> $HGRCPATH
+[notify]
+config = $HGTMP/.notify.conf
+domain = test.com
+strip = 3
+template = Subject: {desc|firstline|strip}\nFrom: {author}\n\nchangeset {node|short} in {webroot}\ndescription:\n\t{desc|tabindent|strip}
+
+[web]
+baseurl = http://test/
+EOF
+
 echo % pull
+hg --cwd b rollback
 hg --traceback --cwd b pull ../a 2>&1 | sed -e 's/\(Message-Id:\).*/\1/' \
   -e 's/changeset \([0-9a-f]*\) in .*/changeset \1/'
+

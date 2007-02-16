@@ -1134,8 +1134,12 @@ class hgweb(object):
                 try:
                     url = 'remote:%s:%s' % (proto,
                                             req.env.get('REMOTE_HOST', ''))
-                    ret = self.repo.addchangegroup(util.chunkbuffer(gen),
-                                                   'serve', url)
+                    try:
+                        ret = self.repo.addchangegroup(util.chunkbuffer(gen),
+                                                       'serve', url)
+                    except util.Abort, inst:
+                        sys.stdout.write("abort: %s\n" % inst)
+                        ret = 0
                 finally:
                     val = sys.stdout.getvalue()
                     sys.stdout = old_stdout

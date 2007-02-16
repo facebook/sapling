@@ -57,7 +57,10 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     def snapshot_node(files, node):
         '''snapshot files as of some revision'''
         mf = repo.changectx(node).manifest()
-        dirname = '%s.%s' % (os.path.basename(repo.root), short(node))
+        dirname = os.path.basename(repo.root)
+        if dirname == "":
+            dirname = "root"
+        dirname = '%s.%s' % (dirname, short(node))
         base = os.path.join(tmproot, dirname)
         os.mkdir(base)
         if not ui.quiet:
@@ -74,7 +77,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
             data = repo.wwritedata(wfn, repo.file(wfn).read(mf[wfn]))
-            open(dest, 'w').write(data)
+            open(dest, 'wb').write(data)
         return dirname
 
     def snapshot_wdir(files):
@@ -82,6 +85,8 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         if not using snapshot, -I/-X does not work and recursive diff
         in tools like kdiff3 and meld displays too many files.'''
         dirname = os.path.basename(repo.root)
+        if dirname == "":
+            dirname = "root"
         base = os.path.join(tmproot, dirname)
         os.mkdir(base)
         if not ui.quiet:
@@ -94,7 +99,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
-            fp = open(dest, 'w')
+            fp = open(dest, 'wb')
             for chunk in util.filechunkiter(repo.wopener(wfn)):
                 fp.write(chunk)
         return dirname

@@ -333,3 +333,26 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add foo
 
+% qclone
+main repo:
+    rev 1: change foo
+    rev 0: add foo
+patch repo:
+    rev 0: checkpoint
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+main repo:
+    rev 0: add foo
+patch repo:
+    rev 0: checkpoint
+Patch queue now empty
+main repo:
+    rev 0: add foo
+patch repo:
+    rev 0: checkpoint
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+main repo:
+    rev 0: add foo
+patch repo:
+    rev 0: checkpoint

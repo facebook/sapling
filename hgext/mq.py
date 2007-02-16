@@ -1501,7 +1501,6 @@ def clone(ui, source, dest=None, **opts):
     sr = hg.repository(ui, ui.expandpath(source))
     qbase, destrev = None, None
     if sr.local():
-        reposetup(ui, sr)
         if sr.mq.applied:
             qbase = revlog.bin(sr.mq.applied[0].rev)
             if not hg.islocal(dest):
@@ -1521,7 +1520,6 @@ def clone(ui, source, dest=None, **opts):
     if dr.local():
         if qbase:
             ui.note(_('stripping applied patches from destination repo\n'))
-            reposetup(ui, dr)
             dr.mq.strip(dr, qbase, update=False, backup=None)
         if not opts['noupdate']:
             ui.note(_('updating destination repo\n'))
