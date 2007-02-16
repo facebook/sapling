@@ -137,11 +137,12 @@ class notifier(object):
         '''try to clean up email addresses.'''
 
         addr = templater.email(addr.strip())
-        a = addr.find('@localhost')
-        if a != -1:
-            addr = addr[:a]
-        if '@' not in addr:
-            return addr + '@' + self.domain
+        if self.domain:
+            a = addr.find('@localhost')
+            if a != -1:
+                addr = addr[:a]
+            if '@' not in addr:
+                return addr + '@' + self.domain
         return addr
 
     def subscribers(self):
