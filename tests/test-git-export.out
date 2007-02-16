@@ -66,6 +66,11 @@ fQItJW-{SoTm)8|5##k|m00000NkvXXu0mjf{mKw4
 % import binary diff
 applying b.diff
 
+% rename binary file
+diff --git a/binfile.bin b/renamed.bin
+rename from binfile.bin
+rename to renamed.bin
+
 % diff across many revisions
 diff --git a/dst2 b/dst3
 rename from dst2

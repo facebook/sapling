@@ -61,6 +61,11 @@ hg import -mfoo b.diff
 cmp binfile.bin $TESTDIR/binfile.bin
 
 echo
+echo '% rename binary file'
+hg mv binfile.bin renamed.bin
+hg diff --git
+
+echo
 echo '% diff across many revisions'
 hg mv dst dst2
 hg ci -m 'mv dst dst2' -d '0 0'

@@ -412,6 +412,8 @@ def b85diff(fp, to, tn):
             yield text[i:i+csize]
             i += csize
 
+    if to == tn:
+        return
     # TODO: deltas
     l = len(tn)
     fp.write('index %s..%s\nGIT binary patch\nliteral %s\n' %
@@ -593,8 +595,8 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     to = getfile(a).read(arev)
                 else:
                     header.append('new file mode %s\n' % mode)
-                    if util.binary(tn):
-                        dodiff = 'binary'
+                if util.binary(tn):
+                    dodiff = 'binary'
             elif f in removed:
                 if f in srcs:
                     dodiff = False
