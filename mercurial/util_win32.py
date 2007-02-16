@@ -187,7 +187,7 @@ def system_rcpath_win32():
         filename = win32api.GetModuleFileName(0)
     return [os.path.join(os.path.dirname(filename), 'mercurial.ini')]
 
-def user_rcpath():
+def user_rcpath_win32():
     '''return os-specific hgrc search path to the user dir'''
     userdir = os.path.expanduser('~')
     if userdir == '~':
