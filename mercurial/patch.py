@@ -415,14 +415,15 @@ def b85diff(fp, to, tn):
     tohash = gitindex(to)
     tnhash = gitindex(tn)
     if tohash == tnhash:
-        return
-    # TODO: deltas
-    fp.write('index %s..%s\nGIT binary patch\nliteral %s\n' %
-             (tohash, tnhash, len(tn)))
+        return ""
 
-    tn = ''.join([fmtline(l) for l in chunk(zlib.compress(tn))])
-    fp.write(tn)
-    fp.write('\n')
+    # TODO: deltas
+    ret = ['index %s..%s\nGIT binary patch\nliteral %s\n' %
+           (tohash, tnhash, len(tn))]
+    for l in chunk(zlib.compress(tn)):
+        ret.append(fmtline(l))
+    ret.append('\n')
+    return ''.join(ret)
 
 def diff(repo, node1=None, node2=None, files=None, match=util.always,
          fp=None, changes=None, opts=None):
@@ -615,11 +616,11 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     dodiff = 'binary'
             r = None
             header.insert(0, 'diff --git a/%s b/%s\n' % (a, b))
-        if dodiff == 'binary':
-            fp.write(''.join(header))
-            b85diff(fp, to, tn)
-        elif dodiff:
-            text = mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts)
+        if dodiff:
+            if dodiff == 'binary':
+                text = b85diff(fp, to, tn)
+            else:
+                text = mdiff.unidiff(to, date1, tn, date2(f), f, r, opts=opts)
             if text or len(header) > 1:
                 fp.write(''.join(header))
             fp.write(text)
