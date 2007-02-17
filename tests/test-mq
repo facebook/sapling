@@ -169,6 +169,46 @@ echo % push should succeed
 hg qpop -a
 hg push ../../k
 
+echo % qpush/qpop error codes
+errorcode()
+{
+    hg "$@" && echo "  $@ succeeds" || echo "  $@ fails"
+}
+
+# we want to start with some patches applied
+hg qpush -a
+echo "  % pops all patches and succeeds"
+errorcode qpop -a
+echo "  % does nothing and succeeds"
+errorcode qpop -a
+echo "  % fails - nothing else to pop"
+errorcode qpop
+echo "  % pushes a patch and succeeds"
+errorcode qpush
+echo "  % pops a patch and succeeds"
+errorcode qpop
+echo "  % pushes up to test1b.patch and succeeds"
+errorcode qpush test1b.patch
+echo "  % does nothing and succeeds"
+errorcode qpush test1b.patch
+echo "  % does nothing and succeeds"
+errorcode qpop test1b.patch
+echo "  % fails - can't push to this patch"
+errorcode qpush test.patch
+echo "  % fails - can't pop to this patch"
+errorcode qpop test2.patch
+echo "  % pops up to test.patch and succeeds"
+errorcode qpop test.patch
+echo "  % pushes all patches and succeeds"
+errorcode qpush -a
+echo "  % does nothing and succeeds"
+errorcode qpush -a
+echo "  % fails - nothing else to push"
+errorcode qpush
+echo "  % does nothing and succeeds"
+errorcode qpush test2.patch
+
+
 echo % strip
 cd ../../b
 echo x>x

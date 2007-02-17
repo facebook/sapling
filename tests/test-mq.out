@@ -156,6 +156,61 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+% qpush/qpop error codes
+applying test.patch
+applying test1b.patch
+applying test2.patch
+Now at: test2.patch
+  % pops all patches and succeeds
+Patch queue now empty
+  qpop -a succeeds
+  % does nothing and succeeds
+no patches applied
+  qpop -a succeeds
+  % fails - nothing else to pop
+no patches applied
+  qpop fails
+  % pushes a patch and succeeds
+applying test.patch
+Now at: test.patch
+  qpush succeeds
+  % pops a patch and succeeds
+Patch queue now empty
+  qpop succeeds
+  % pushes up to test1b.patch and succeeds
+applying test.patch
+applying test1b.patch
+Now at: test1b.patch
+  qpush test1b.patch succeeds
+  % does nothing and succeeds
+qpush: test1b.patch is already at the top
+  qpush test1b.patch succeeds
+  % does nothing and succeeds
+qpop: test1b.patch is already at the top
+  qpop test1b.patch succeeds
+  % fails - can't push to this patch
+abort: cannot push to a previous patch: test.patch
+  qpush test.patch fails
+  % fails - can't pop to this patch
+abort: patch test2.patch is not applied
+  qpop test2.patch fails
+  % pops up to test.patch and succeeds
+Now at: test.patch
+  qpop test.patch succeeds
+  % pushes all patches and succeeds
+applying test1b.patch
+applying test2.patch
+Now at: test2.patch
+  qpush -a succeeds
+  % does nothing and succeeds
+all patches are currently applied
+  qpush -a succeeds
+  % fails - nothing else to push
+patch series already fully applied
+  qpush fails
+  % does nothing and succeeds
+all patches are currently applied
+  qpush test2.patch succeeds
 % strip
 adding x
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
