@@ -412,12 +412,13 @@ def b85diff(fp, to, tn):
             yield text[i:i+csize]
             i += csize
 
-    if to == tn:
+    tohash = gitindex(to)
+    tnhash = gitindex(tn)
+    if tohash == tnhash:
         return
     # TODO: deltas
-    l = len(tn)
     fp.write('index %s..%s\nGIT binary patch\nliteral %s\n' %
-             (gitindex(to), gitindex(tn), len(tn)))
+             (tohash, tnhash, len(tn)))
 
     tn = ''.join([fmtline(l) for l in chunk(zlib.compress(tn))])
     fp.write(tn)
