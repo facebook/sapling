@@ -1792,9 +1792,10 @@ def pop(ui, repo, patch=None, **opts):
         localupdate = False
     else:
         q = repo.mq
-    q.pop(repo, patch, force=opts['force'], update=localupdate, all=opts['all'])
+    ret = q.pop(repo, patch, force=opts['force'], update=localupdate,
+                all=opts['all'])
     q.save_dirty()
-    return 0
+    return ret
 
 def rename(ui, repo, patch, name=None, **opts):
     """rename a patch
