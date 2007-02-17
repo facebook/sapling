@@ -7,7 +7,7 @@
 
 from demandload import demandload
 import bdiff, mpatch
-demandload(globals(), "re struct util")
+demandload(globals(), "re struct util md5")
 
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
@@ -59,6 +59,11 @@ def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
     epoch = util.datestr((0, 0))
 
     if not opts.text and (util.binary(a) or util.binary(b)):
+        def h(v):
+            # md5 is used instead of sha1 because md5 is supposedly faster
+            return md5.new(v).digest()
+        if a and b and len(a) == len(b) and h(a) == h(b):
+            return ""
         l = ['Binary file %s has changed\n' % fn]
     elif not a:
         b = splitnewlines(b)
