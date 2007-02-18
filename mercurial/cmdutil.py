@@ -7,7 +7,7 @@
 
 from node import *
 from i18n import _
-import os, sys, mdiff, util, templater, patch
+import os, sys, mdiff, bdiff, util, templater, patch
 
 revrangesep = ':'
 
@@ -146,20 +146,29 @@ def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None,
         yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):
+    '''find renamed files -- yields (before, after, score) tuples'''
     if added is None or removed is None:
         added, removed = repo.status()[1:3]
     ctx = repo.changectx()
     for a in added:
         aa = repo.wread(a)
-        bestscore, bestname = None, None
+        bestname, bestscore = None, threshold
         for r in removed:
             rr = ctx.filectx(r).data()
-            delta = mdiff.textdiff(aa, rr)
-            if len(delta) < len(aa):
-                myscore = 1.0 - (float(len(delta)) / len(aa))
-                if bestscore is None or myscore > bestscore:
-                    bestscore, bestname = myscore, r
-        if bestname and bestscore >= threshold:
+
+            # bdiff.blocks() returns blocks of matching lines
+            # count the number of bytes in each
+            equal = 0
+            alines = mdiff.splitnewlines(aa)
+            matches = bdiff.blocks(aa, rr)
+            for x1,x2,y1,y2 in matches:
+                for line in alines[x1:x2]:
+                    equal += len(line)
+
+            myscore = equal*2.0 / (len(aa)+len(rr))
+            if myscore >= bestscore:
+                bestname, bestscore = r, myscore
+        if bestname:
             yield bestname, a, bestscore
 
 def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,

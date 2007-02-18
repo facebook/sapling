@@ -1,0 +1,12 @@
+adding empty-file
+adding large-file
+adding another-file
+removing empty-file
+removing large-file
+recording removal of large-file as rename to another-file (99% similar)
+adding large-file
+adding tiny-file
+adding small-file
+removing large-file
+removing tiny-file
+recording removal of tiny-file as rename to small-file (82% similar)
