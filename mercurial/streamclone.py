@@ -79,7 +79,7 @@ def stream_out(repo, fileobj):
     entries = []
     total_bytes = 0
     for name, size in walkrepo(repo.spath):
-        name = util.pconvert(repo.decodefn(name))
+        name = repo.decodefn(util.pconvert(name))
         entries.append((name, size))
         total_bytes += size
     repolock.release()
