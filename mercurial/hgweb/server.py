@@ -197,6 +197,11 @@ def create_server(ui, repo):
                 pass
 
     class MercurialHTTPServer(object, _mixin, BaseHTTPServer.HTTPServer):
+        
+        # SO_REUSEADDR has broken semantics on windows
+        if os.name == 'nt':
+            allow_reuse_address = 0
+    
         def __init__(self, *args, **kargs):
             BaseHTTPServer.HTTPServer.__init__(self, *args, **kargs)
             self.accesslog = accesslog
