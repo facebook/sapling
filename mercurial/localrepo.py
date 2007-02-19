@@ -1949,6 +1949,8 @@ class localrepository(repo.repository):
                 ofp.write(chunk)
             ofp.close()
         elapsed = time.time() - start
+        if elapsed <= 0:
+            elapsed = 0.001
         self.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
                        (util.bytecount(total_bytes), elapsed,
                         util.bytecount(total_bytes / elapsed)))
