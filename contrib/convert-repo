@@ -102,8 +102,8 @@ class convert_cvs:
                     elif l.startswith("Author"):
                         author = self.recode(l[8:-1])
                     elif l.startswith("Tag: "):
-                        t = l[5:-1]
-                        if t != "(none) ":
+                        t = l[5:-1].rstrip()
+                        if t != "(none)":
                             self.tags[t] = id
                     elif l.startswith("Log:"):
                         state = 1
