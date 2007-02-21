@@ -293,7 +293,7 @@ class convert_git:
         if os.path.isdir(path + "/.git"):
             path += "/.git"
         self.path = path
-        if not os.path.exists(path + "/HEAD"):
+        if not os.path.exists(path + "/objects"):
             raise NoRepo("couldn't open GIT repo %s" % path)
 
     def getheads(self):
