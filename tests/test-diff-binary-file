@@ -1,0 +1,25 @@
+#!/bin/sh
+
+hg init a
+cd a
+cp $TESTDIR/binfile.bin .
+hg add binfile.bin
+hg ci -m 'add binfile.bin' -d '0 0'
+
+echo >> binfile.bin
+hg ci -m 'change binfile.bin' -d '0 0'
+
+hg revert -r 0 binfile.bin
+hg ci -m 'revert binfile.bin' -d '0 0'
+
+echo % diff -r 0 -r 1
+hg diff --nodates -r 0 -r 1
+
+echo % diff -r 0 -r 2
+hg diff --nodates -r 0 -r 2
+
+echo % diff --git -r 0 -r 1
+hg diff --git -r 0 -r 1
+
+echo % diff --git -r 0 -r 2
+hg diff --git -r 0 -r 2
