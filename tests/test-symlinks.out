@@ -14,3 +14,9 @@ a.c: unsupported file type (type is fifo)
 A f
 # try symlink outside repo to file inside
 abort: ../z not under root
+# try cloning symlink in a subdir
+1. commit a symlink
+? a/b/c/demo
+adding a/b/c/demo
+2. clone it
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved

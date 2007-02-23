@@ -525,11 +525,15 @@ class localrepository(repo.repository):
     def wwrite(self, filename, data, flags):
         data = self._filter("decode", filename, data)
         if "l" in flags:
+            f = self.wjoin(filename)
             try:
-                os.unlink(self.wjoin(filename))
+                os.unlink(f)
             except OSError:
                 pass
-            os.symlink(data, self.wjoin(filename))
+            d = os.path.dirname(f)
+            if not os.path.exists(d):
+                os.makedirs(d)
+            os.symlink(data, f)
         else:
             try:
                 if self._link(filename):

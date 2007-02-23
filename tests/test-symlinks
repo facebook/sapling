@@ -55,3 +55,18 @@ echo '# try symlink outside repo to file inside'
 ln -s x/f ../z
 # this should fail
 hg status ../z && { echo hg mistakenly exited with status 0; exit 1; } || :
+
+cd .. ; rm -r test
+hg init test; cd test;
+
+echo '# try cloning symlink in a subdir'
+echo '1. commit a symlink'
+mkdir -p a/b/c
+cd a/b/c
+ln -s /path/to/symlink/source demo
+cd ../../..
+hg stat
+hg commit -A -m 'add symlink in a/b/c subdir'
+echo '2. clone it'
+cd ..
+hg clone test testclone
