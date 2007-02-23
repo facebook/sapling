@@ -510,7 +510,7 @@ class workingfilectx(filectx):
     def date(self):
         t, tz = self._changectx.date()
         try:
-            return (os.lstat(repo.wjoin(self._path)).st_mtime, tz)
+            return (os.lstat(self._repo.wjoin(self._path)).st_mtime, tz)
         except OSError, err:
             if err.errno != errno.ENOENT: raise
             return (t, tz)
