@@ -85,7 +85,7 @@ class convert_cvs:
             os.chdir(self.path)
             id = None
             state = 0
-            for l in os.popen("cvsps -A"):
+            for l in os.popen("cvsps -A -u --cvs-direct -q"):
                 if state == 0: # header
                     if l.startswith("PatchSet"):
                         id = l[9:-2]
@@ -102,8 +102,8 @@ class convert_cvs:
                     elif l.startswith("Author"):
                         author = self.recode(l[8:-1])
                     elif l.startswith("Tag: "):
-                        t = l[5:-1]
-                        if t != "(none) ":
+                        t = l[5:-1].rstrip()
+                        if t != "(none)":
                             self.tags[t] = id
                     elif l.startswith("Log:"):
                         state = 1
