@@ -217,6 +217,37 @@ class localrepository(repo.repository):
 
     tag_disallowed = ':\r\n'
 
+    def _tag(self, name, node, message, local, user, date, parent=None):
+        use_dirstate = parent is None
+
+        for c in self.tag_disallowed:
+            if c in name:
+                raise util.Abort(_('%r cannot be used in a tag name') % c)
+
+        self.hook('pretag', throw=True, node=hex(node), tag=name, local=local)
+
+        if local:
+            # local tags are stored in the current charset
+            self.opener('localtags', 'a').write('%s %s\n' % (hex(node), name))
+            self.hook('tag', node=hex(node), tag=name, local=local)
+            return
+
+        # committed tags are stored in UTF-8
+        line = '%s %s\n' % (hex(node), util.fromlocal(name))
+        if use_dirstate:
+            self.wfile('.hgtags', 'ab').write(line)
+        else:
+            ntags = self.filectx('.hgtags', parent).data()
+            self.wfile('.hgtags', 'ab').write(ntags + line)
+        if use_dirstate and self.dirstate.state('.hgtags') == '?':
+            self.add(['.hgtags'])
+
+        tagnode = self.commit(['.hgtags'], message, user, date, p1=parent)
+
+        self.hook('tag', node=hex(node), tag=name, local=local)
+
+        return tagnode
+
     def tag(self, name, node, message, local, user, date):
         '''tag a revision with a symbolic name.
 
@@ -235,31 +266,13 @@ class localrepository(repo.repository):
 
         date: date tuple to use if committing'''
 
-        for c in self.tag_disallowed:
-            if c in name:
-                raise util.Abort(_('%r cannot be used in a tag name') % c)
-
-        self.hook('pretag', throw=True, node=hex(node), tag=name, local=local)
-
-        if local:
-            # local tags are stored in the current charset
-            self.opener('localtags', 'a').write('%s %s\n' % (hex(node), name))
-            self.hook('tag', node=hex(node), tag=name, local=local)
-            return
-
         for x in self.status()[:5]:
             if '.hgtags' in x:
                 raise util.Abort(_('working copy of .hgtags is changed '
                                    '(please commit .hgtags manually)'))
 
-        # committed tags are stored in UTF-8
-        line = '%s %s\n' % (hex(node), util.fromlocal(name))
-        self.wfile('.hgtags', 'ab').write(line)
-        if self.dirstate.state('.hgtags') == '?':
-            self.add(['.hgtags'])
 
-        self.commit(['.hgtags'], message, user, date)
-        self.hook('tag', node=hex(node), tag=name, local=local)
+        self._tag(name, node, message, local, user, date)
 
     def tags(self):
         '''return a mapping of tag to node'''
