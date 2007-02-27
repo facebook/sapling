@@ -8,7 +8,7 @@
 #
 # To enable the "purge" extension put these lines in your ~/.hgrc:
 #  [extensions]
-#  purge = /path/to/purge.py
+#  hgext.purge =
 #
 # For help on the usage of "hg purge" use:
 #  hg help purge

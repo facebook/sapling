@@ -2,7 +2,7 @@
 
 cat <<EOF >> $HGRCPATH
 [extensions]
-purge=${TESTDIR}/../contrib/purge/purge.py
+hgext.purge=
 EOF
 
 echo % init
