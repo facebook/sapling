@@ -18,10 +18,8 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 from mercurial import hg, util
+from mercurial.i18n import _
 import os
-
-def _(s):
-    return s
 
 class Purge(object):
     def __init__(self, act=True, abort_on_err=False, eol='\n'):
