@@ -3,6 +3,16 @@
 # This is a small extension for Mercurial (http://www.selenic.com/mercurial)
 # that removes files not known to mercurial
 #
+# This program was inspired by the "cvspurge" script contained in CVS utilities
+# (http://www.red-bean.com/cvsutils/).
+#
+# To enable the "purge" extension put these lines in your ~/.hgrc:
+#  [extensions]
+#  purge = /path/to/purge.py
+#
+# For help on the usage of "hg purge" use:
+#  hg help purge
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
