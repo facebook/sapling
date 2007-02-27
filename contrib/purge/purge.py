@@ -70,24 +70,25 @@ class Purge(object):
         # directory.
         if self._repo.dirstate.state(relative_name) != '?':
             return
-        self._ui.note(_('Removing file %s\n') % name)
+        self._ui.note(_('Removing file %s\n') % relative_name)
         if self._act:
             try:
                 os.remove(name)
             except OSError, e:
-                self._error(_('%s cannot be removed') % name)
+                self._error(_('%s cannot be removed') % relative_name)
         else:
-            self._ui.write('%s%s' % (name, self._eol))
+            self._ui.write('%s%s' % (relative_name, self._eol))
 
     def _remove_dir(self, name):
-        self._ui.note(_('Removing directory %s\n') % name)
+        relative_name = self._relative_name(name)
+        self._ui.note(_('Removing directory %s\n') % relative_name)
         if self._act:
             try:
                 os.rmdir(name)
             except OSError, e:
-                self._error(_('%s cannot be removed') % name)
+                self._error(_('%s cannot be removed') % relative_name)
         else:
-            self._ui.write('%s%s' % (name, self._eol))
+            self._ui.write('%s%s' % (relative_name, self._eol))
 
     def _relative_name(self, path):
         '''
