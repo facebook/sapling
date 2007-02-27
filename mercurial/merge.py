@@ -184,7 +184,7 @@ def findcopies(repo, m1, m2, ma, limit):
             invalid[dsrc] = True
             del dirmove[dsrc]
         else:
-            dirmove[dsrc] = ddst
+            dirmove[dsrc + "/"] = ddst + "/"
 
     del d1, d2, invalid
 
@@ -194,9 +194,10 @@ def findcopies(repo, m1, m2, ma, limit):
     # check unaccounted nonoverlapping files
     for f in u1 + u2:
         if f not in fullcopy:
-            d = os.path.dirname(f)
-            if d in dirmove:
-                copy[f] = dirmove[d] + "/" + os.path.basename(f)
+            for d in dirmove:
+                if f.startswith(d):
+                    copy[f] = dirmove[d] + f[len(d):]
+                    break
 
     return copy
 
