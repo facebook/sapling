@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Since it's not easy to write a test that portably deals
 # with files from different users/groups, we cheat a bit by
 # monkey-patching some functions in the util module

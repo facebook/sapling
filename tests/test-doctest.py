@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-#
-
 import doctest
 
 import mercurial.changelog
