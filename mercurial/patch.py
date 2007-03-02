@@ -610,7 +610,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         if not fp:
             fp = cmdutil.make_file(repo, template, node, total=total,
                                    seqno=seqno, revwidth=revwidth)
-        if hasattr(fp, 'name'):
+        if fp != sys.stdout and hasattr(fp, 'name'):
             repo.ui.note("%s\n" % fp.name)
 
         fp.write("# HG changeset patch\n")
