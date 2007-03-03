@@ -1,6 +1,8 @@
 adding x
 Patch queue now empty
 % should fail
+abort: no patch named does-not-exist.patch
+% should fail
 abort: no patches applied
 applying a.patch
 Now at: a.patch

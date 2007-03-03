@@ -1712,7 +1712,10 @@ def guard(ui, repo, *args, **opts):
     if patch is None:
         raise util.Abort(_('no patch to work with'))
     if args or opts['none']:
-        q.set_guards(q.find_series(patch), args)
+        idx = q.find_series(patch)
+        if idx is None:
+            raise util.Abort(_('no patch named %s') % patch)
+        q.set_guards(idx, args)
         q.save_dirty()
     else:
         status(q.series.index(q.lookup(patch)))
