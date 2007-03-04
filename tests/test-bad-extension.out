@@ -1,4 +1,4 @@
-*** failed to import extension badext: invalid syntax (badext.py, line 1)
+*** failed to import extension badext: bit bucket overflow
 extension 'hgext.gpg' overrides commands: sigs sigcheck sign
 hg help [COMMAND]
 

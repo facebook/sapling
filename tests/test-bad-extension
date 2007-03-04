@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo 'syntax error' > badext.py
+echo 'raise Exception("bit bucket overflow")' > badext.py
 abspath=`pwd`/badext.py
 
 echo '[extensions]' >> $HGRCPATH
