@@ -156,8 +156,7 @@ def patchbomb(ui, repo, *revs, **opts):
             body += '\n'.join(patch)
             msg = email.MIMEText.MIMEText(body)
 
-        subj = desc[0].strip()
-        if subj.endswith('.'): subj = subj[:-1]
+        subj = desc[0].strip().rstrip('. ')
         if total == 1:
             subj = '[PATCH] ' + (opts['subject'] or subj)
         else:
