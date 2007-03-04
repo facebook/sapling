@@ -26,7 +26,7 @@ mkdir foo foo/Bar quux
 echo 'in foo' > foo/file.txt
 echo 'in foo/Bar' > foo/Bar/file.txt
 echo 'in quux' > quux/file.py
-hg add
+hg add -q
 hg ci -m 'add files' -d '1000000 0'
 echo >> foo/file.txt
 hg ci -m 'change foo/file' -d '1000001 0'
