@@ -126,6 +126,7 @@ class httprepository(remoterepository):
     def __init__(self, ui, path):
         self.path = path
         self.caps = None
+        self.handler = None
         scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
         if query or frag:
             raise util.Abort(_('unsupported URL component: "%s"') %
@@ -140,7 +141,8 @@ class httprepository(remoterepository):
 
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
         # XXX proxyauthinfo = None
-        handlers = [httphandler()]
+        self.handler = httphandler()
+        handlers = [self.handler]
 
         if proxyurl:
             # proxy can be proper url or host[:port]
@@ -198,6 +200,11 @@ class httprepository(remoterepository):
         # 1.0 here is the _protocol_ version
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
         urllib2.install_opener(opener)
+    
+    def __del__(self):
+        if self.handler:
+            self.handler.close_all()
+            self.handler = None
 
     def url(self):
         return self.path

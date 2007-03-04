@@ -790,6 +790,14 @@ if os.name == 'nt':
                 if inst.errno != 0: raise
                 self.close()
                 raise IOError(errno.EPIPE, 'Broken pipe')
+                
+        def flush(self):
+            try:
+                return self.fp.flush()
+            except IOError, inst:
+                if inst.errno != errno.EINVAL: raise
+                self.close()
+                raise IOError(errno.EPIPE, 'Broken pipe')
 
     sys.stdout = winstdout(sys.stdout)
 

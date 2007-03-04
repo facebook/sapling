@@ -27,6 +27,9 @@ hg qrefresh
 hg qpop -a
 
 echo % should fail
+hg qguard does-not-exist.patch +bleh
+
+echo % should fail
 hg qguard +fail
 
 hg qpush
