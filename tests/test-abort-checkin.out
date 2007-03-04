@@ -1,6 +1,8 @@
-abort: edit failed: false exited with status 1
+error: pretxncommit.nocommits hook failed: no commits allowed
+abort: no commits allowed
 transaction abort!
 rollback completed
-abort: edit failed: false exited with status 1
+error: pretxncommit.nocommits hook failed: no commits allowed
+abort: no commits allowed
 transaction abort!
 rollback completed

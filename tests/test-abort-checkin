@@ -1,12 +1,19 @@
 #!/bin/sh
 
+cat > abortcommit.py <<EOF
+from mercurial import util
+
+def hook(**args):
+    raise util.Abort("no commits allowed")
+
+def reposetup(ui, repo):
+    repo.ui.setconfig("hooks", "pretxncommit.nocommits", hook)
+EOF
+abspath=`pwd`/abortcommit.py
+
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
-cat > $HGTMP/false <<EOF
-#!/bin/sh
-exit 1
-EOF
-chmod +x $HGTMP/false
+echo "abortcommit = $abspath" >> $HGRCPATH
 
 hg init foo
 cd foo
@@ -15,7 +22,7 @@ hg add foo
 
 # mq may keep a reference to the repository so __del__ will not be called
 # and .hg/journal.dirstate will not be deleted:
-HGEDITOR=$HGTMP/false hg ci
-HGEDITOR=$HGTMP/false hg ci
+hg ci -m foo
+hg ci -m foo
 
 exit 0
