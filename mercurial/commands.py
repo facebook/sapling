@@ -275,9 +275,8 @@ def branches(ui, repo):
         if ui.quiet:
             ui.write("%s\n" % t)
         else:
-            t = util.localsub(t, 30)
-            t += " " * (30 - util.locallen(t))
-            ui.write("%s %s:%s\n" % (t, -r, hexfunc(n)))
+            spaces = " " * (30 - util.locallen(t))
+            ui.write("%s%s %s:%s\n" % (t, spaces, -r, hexfunc(n)))
 
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
@@ -2474,9 +2473,8 @@ def tags(ui, repo):
         if ui.quiet:
             ui.write("%s\n" % t)
         else:
-            t = util.localsub(t, 30)
-            t += " " * (30 - util.locallen(t))
-            ui.write("%s %s\n" % (t, r))
+            spaces = " " * (30 - util.locallen(t))
+            ui.write("%s%s %s\n" % (t, spaces, r))
 
 def tip(ui, repo, **opts):
     """show the tip revision

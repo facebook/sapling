@@ -10,6 +10,9 @@ hg commit -m "test" -d "1000000 0"
 hg co
 hg identify
 T=`hg tip --debug | head -n 1 | cut -d : -f 3`
+hg tag -l "This is a local tag with a really long name!"
+hg tags
+rm .hg/localtags
 echo "$T first" > .hgtags
 cat .hgtags
 hg add .hgtags
