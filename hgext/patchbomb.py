@@ -154,12 +154,13 @@ def patchbomb(ui, repo, *revs, **opts):
         else:
             body += '\n'.join(patch)
             msg = email.MIMEText.MIMEText(body)
+
+        subj = desc[0].strip().rstrip('. ')
         if total == 1:
-            subj = '[PATCH] ' + desc[0].strip()
+            subj = '[PATCH] ' + (opts['subject'] or subj)
         else:
             tlen = len(str(total))
-            subj = '[PATCH %0*d of %d] %s' % (tlen, idx, total, desc[0].strip())
-        if subj.endswith('.'): subj = subj[:-1]
+            subj = '[PATCH %0*d of %d] %s' % (tlen, idx, total, subj)
         msg['Subject'] = subj
         msg['X-Mercurial-Node'] = node
         return msg
@@ -298,7 +299,7 @@ cmdtable = {
       ('', 'plain', None, 'omit hg patch header'),
       ('n', 'test', None, 'print messages that would be sent'),
       ('m', 'mbox', '', 'write messages to mbox file instead of sending them'),
-      ('s', 'subject', '', 'subject of introductory message'),
+      ('s', 'subject', '', 'subject of first message (intro or single patch)'),
       ('t', 'to', [], 'email addresses of recipients')],
      "hg email [OPTION]... [REV]...")
     }
