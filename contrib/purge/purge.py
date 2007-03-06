@@ -22,31 +22,24 @@ from mercurial.i18n import _
 import os
 
 class Purge(object):
-    def __init__(self, act=True, abort_on_err=False, eol='\n'):
-        self._repo = None
-        self._ui = None
-        self._act = act
-        self._abort_on_err = abort_on_err
-        self._eol = eol
+    def __init__(self):
+        pass
 
-    def purge(self, ui, repo, dirs=None):
-        self._repo = repo
-        self._ui = ui
-
-        def error(self, msg):
-            if self._abort_on_err:
+    def purge(self, ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n'):
+        def error(msg):
+            if abort_on_err:
                 raise util.Abort(msg)
             else:
-                self._ui.warn(_('warning: %s\n') % msg)
+                ui.warn(_('warning: %s\n') % msg)
 
         def remove(remove_func, name):
-            if self._act:
+            if act:
                 try:
-                    remove_func(os.path.join(self._repo.root, name))
+                    remove_func(os.path.join(repo.root, name))
                 except OSError, e:
                     error(_('%s cannot be removed') % name)
             else:
-                self._ui.write('%s%s' % (name, self._eol))
+                ui.write('%s%s' % (name, eol))
 
         directories = []
         files = []
@@ -100,8 +93,8 @@ def purge(ui, repo, *dirs, **opts):
     if eol == '\0':
         # --print0 implies --print
         act = False
-    p = Purge(act, abort_on_err, eol)
-    p.purge(ui, repo, dirs)
+    p = Purge()
+    p.purge(ui, repo, dirs, act, abort_on_err, eol)
 
 
 cmdtable = {
