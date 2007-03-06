@@ -25,7 +25,6 @@ class Purge(object):
     def __init__(self, act=True, abort_on_err=False, eol='\n'):
         self._repo = None
         self._ui = None
-        self._hg_root = None
         self._act = act
         self._abort_on_err = abort_on_err
         self._eol = eol
@@ -33,7 +32,6 @@ class Purge(object):
     def purge(self, ui, repo, dirs=None):
         self._repo = repo
         self._ui = ui
-        self._hg_root = self._split_path(repo.root)
         
         directories = []
         files = []
@@ -47,16 +45,14 @@ class Purge(object):
         directories.sort()
 
         for f in files:
-            self._remove_file(os.path.join(repo.root, f))
+            self._remove_file(f)
 
         for f in directories[::-1]:
-            f = os.path.join(repo.root, f)
-            if not os.listdir(f):
+            if not os.listdir(repo.wjoin(f)):
                 self._remove_dir(f)
 
         self._repo = None
         self._ui = None
-        self._hg_root = None
 
     def _error(self, msg):
         if self._abort_on_err:
@@ -65,72 +61,28 @@ class Purge(object):
             self._ui.warn(_('warning: %s\n') % msg)
 
     def _remove_file(self, name):
-        relative_name = self._relative_name(name)
         # dirstate.state() requires a path relative to the root
         # directory.
-        if self._repo.dirstate.state(relative_name) != '?':
+        if self._repo.dirstate.state(name) != '?':
             return
-        self._ui.note(_('Removing file %s\n') % relative_name)
+        self._ui.note(_('Removing file %s\n') % name)
         if self._act:
             try:
-                os.remove(name)
+                os.remove(self._repo.wjoin(name))
             except OSError, e:
-                self._error(_('%s cannot be removed') % relative_name)
+                self._error(_('%s cannot be removed') % name)
         else:
-            self._ui.write('%s%s' % (relative_name, self._eol))
+            self._ui.write('%s%s' % (name, self._eol))
 
     def _remove_dir(self, name):
-        relative_name = self._relative_name(name)
-        self._ui.note(_('Removing directory %s\n') % relative_name)
+        self._ui.note(_('Removing directory %s\n') % name)
         if self._act:
             try:
-                os.rmdir(name)
+                os.rmdir(self._repo.wjoin(name))
             except OSError, e:
-                self._error(_('%s cannot be removed') % relative_name)
+                self._error(_('%s cannot be removed') % name)
         else:
-            self._ui.write('%s%s' % (relative_name, self._eol))
-
-    def _relative_name(self, path):
-        '''
-        Returns "path" but relative to the root directory of the
-        repository and with '\\' replaced with '/'.
-        This is needed because this is the format required by
-        self._repo.dirstate.state().
-        '''
-        splitted_path = self._split_path(path)[len(self._hg_root):]
-        # Even on Windows self._repo.dirstate.state() wants '/'.
-        return self._join_path(splitted_path).replace('\\', '/')
-
-    def _split_path(self, path):
-        '''
-        Returns a list of the single files/directories in "path".
-        For instance:
-          '/home/user/test' -> ['/', 'home', 'user', 'test']
-          'C:\\Mercurial'   -> ['C:\\', 'Mercurial']
-        '''
-        ret = []
-        while True:
-            head, tail = os.path.split(path)
-            if tail:
-                ret.append(tail)
-            if head == path:
-                ret.append(head)
-                break
-            path = head
-        ret.reverse()
-        return ret
-
-    def _join_path(self, splitted_path):
-        '''
-        Joins a list returned by _split_path().
-        '''
-        ret = ''
-        for part in splitted_path:
-            if ret:
-                ret = os.path.join(ret, part)
-            else:
-                ret = part
-        return ret
+            self._ui.write('%s%s' % (name, self._eol))
 
 
 def purge(ui, repo, *dirs, **opts):
