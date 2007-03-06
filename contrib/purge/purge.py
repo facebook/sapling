@@ -32,7 +32,22 @@ class Purge(object):
     def purge(self, ui, repo, dirs=None):
         self._repo = repo
         self._ui = ui
-        
+
+        def error(self, msg):
+            if self._abort_on_err:
+                raise util.Abort(msg)
+            else:
+                self._ui.warn(_('warning: %s\n') % msg)
+
+        def remove(remove_func, name):
+            if self._act:
+                try:
+                    remove_func(os.path.join(self._repo.root, name))
+                except OSError, e:
+                    error(_('%s cannot be removed') % name)
+            else:
+                self._ui.write('%s%s' % (name, self._eol))
+
         directories = []
         files = []
         for src, f, st in repo.dirstate.statwalk(files=dirs, ignored=True,
@@ -45,32 +60,14 @@ class Purge(object):
         directories.sort()
 
         for f in files:
-            if f not in self._repo.dirstate:
-                self._ui.note(_('Removing file %s\n') % f)
-                self._remove(os.remove, f)
+            if f not in repo.dirstate:
+                ui.note(_('Removing file %s\n') % f)
+                remove(os.remove, f)
 
         for f in directories[::-1]:
             if not os.listdir(repo.wjoin(f)):
-                self._ui.note(_('Removing directory %s\n') % f)
-                self._remove(os.rmdir, f)
-
-        self._repo = None
-        self._ui = None
-
-    def _error(self, msg):
-        if self._abort_on_err:
-            raise util.Abort(msg)
-        else:
-            self._ui.warn(_('warning: %s\n') % msg)
-
-    def _remove(self, remove_func, name):
-        if self._act:
-            try:
-                remove_func(self._repo.wjoin(name))
-            except OSError, e:
-                self._error(_('%s cannot be removed') % name)
-        else:
-            self._ui.write('%s%s' % (name, self._eol))
+                ui.note(_('Removing directory %s\n') % f)
+                remove(os.rmdir, f)
 
 
 def purge(ui, repo, *dirs, **opts):
