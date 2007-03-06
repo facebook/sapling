@@ -61,9 +61,7 @@ class Purge(object):
             self._ui.warn(_('warning: %s\n') % msg)
 
     def _remove_file(self, name):
-        # dirstate.state() requires a path relative to the root
-        # directory.
-        if self._repo.dirstate.state(name) != '?':
+        if name in self._repo.dirstate:
             return
         self._ui.note(_('Removing file %s\n') % name)
         if self._act:
