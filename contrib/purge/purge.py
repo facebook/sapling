@@ -21,46 +21,42 @@ from mercurial import hg, util
 from mercurial.i18n import _
 import os
 
-class Purge(object):
-    def __init__(self):
-        pass
+def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n'):
+    def error(msg):
+        if abort_on_err:
+            raise util.Abort(msg)
+        else:
+            ui.warn(_('warning: %s\n') % msg)
 
-    def purge(self, ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n'):
-        def error(msg):
-            if abort_on_err:
-                raise util.Abort(msg)
-            else:
-                ui.warn(_('warning: %s\n') % msg)
+    def remove(remove_func, name):
+        if act:
+            try:
+                remove_func(os.path.join(repo.root, name))
+            except OSError, e:
+                error(_('%s cannot be removed') % name)
+        else:
+            ui.write('%s%s' % (name, eol))
 
-        def remove(remove_func, name):
-            if act:
-                try:
-                    remove_func(os.path.join(repo.root, name))
-                except OSError, e:
-                    error(_('%s cannot be removed') % name)
-            else:
-                ui.write('%s%s' % (name, eol))
+    directories = []
+    files = []
+    for src, f, st in repo.dirstate.statwalk(files=dirs, ignored=True,
+                                             directories=True):
+        if   src == 'd':
+            directories.append(f)
+        elif src == 'f' and f not in repo.dirstate:
+            files.append(f)
 
-        directories = []
-        files = []
-        for src, f, st in repo.dirstate.statwalk(files=dirs, ignored=True,
-                                                 directories=True):
-            if   src == 'd':
-                directories.append(f)
-            elif src == 'f' and f not in repo.dirstate:
-                files.append(f)
+    directories.sort()
 
-        directories.sort()
+    for f in files:
+        if f not in repo.dirstate:
+            ui.note(_('Removing file %s\n') % f)
+            remove(os.remove, f)
 
-        for f in files:
-            if f not in repo.dirstate:
-                ui.note(_('Removing file %s\n') % f)
-                remove(os.remove, f)
-
-        for f in directories[::-1]:
-            if not os.listdir(repo.wjoin(f)):
-                ui.note(_('Removing directory %s\n') % f)
-                remove(os.rmdir, f)
+    for f in directories[::-1]:
+        if not os.listdir(repo.wjoin(f)):
+            ui.note(_('Removing directory %s\n') % f)
+            remove(os.rmdir, f)
 
 
 def purge(ui, repo, *dirs, **opts):
@@ -93,8 +89,7 @@ def purge(ui, repo, *dirs, **opts):
     if eol == '\0':
         # --print0 implies --print
         act = False
-    p = Purge()
-    p.purge(ui, repo, dirs, act, abort_on_err, eol)
+    dopurge(ui, repo, dirs, act, abort_on_err, eol)
 
 
 cmdtable = {
