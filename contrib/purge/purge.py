@@ -34,23 +34,25 @@ class Purge(object):
         self._repo = repo
         self._ui = ui
         self._hg_root = self._split_path(repo.root)
+        
+        directories = []
+        files = []
+        for src, f, st in repo.dirstate.statwalk(files=dirs, ignored=True,
+                                                 directories=True):
+            if   src == 'd':
+                directories.append(f)
+            elif src == 'f' and f not in repo.dirstate:
+                files.append(f)
 
-        if not dirs:
-            dirs = [repo.root]
+        directories.sort()
 
-        for path in dirs:
-            path = os.path.abspath(path)
-            for root, dirs, files in os.walk(path, topdown=False):
-                if '.hg' in self._split_path(root):
-                    # Skip files in the .hg directory.
-                    # Note that if the repository is in a directory
-                    # called .hg this command does not work.
-                    continue
-                for name in files:
-                    self._remove_file(os.path.join(root, name))
-                if not os.listdir(root):
-                    # Remove this directory if it is empty.
-                    self._remove_dir(root)
+        for f in files:
+            self._remove_file(os.path.join(repo.root, f))
+
+        for f in directories[::-1]:
+            f = os.path.join(repo.root, f)
+            if not os.listdir(f):
+                self._remove_dir(f)
 
         self._repo = None
         self._ui = None
