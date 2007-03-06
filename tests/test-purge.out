@@ -1,0 +1,36 @@
+% init
+% setup
+% delete an empty directory
+empty_dir
+Removing directory empty_dir
+directory
+r1
+% delete an untracked directory
+untracked_dir/untracked_file1
+untracked_dir/untracked_file2
+Removing file untracked_dir/untracked_file1
+Removing file untracked_dir/untracked_file2
+Removing directory untracked_dir
+directory
+r1
+% delete an untracked file
+untracked_file
+Removing file untracked_file
+directory
+r1
+% delete an untracked file in a tracked directory
+directory/untracked_file
+Removing file directory/untracked_file
+directory
+r1
+% delete nested directories
+untracked_directory/nested_directory
+Removing directory untracked_directory/nested_directory
+Removing directory untracked_directory
+directory
+r1
+% delete ignored files
+ignored
+Removing file ignored
+directory
+r1

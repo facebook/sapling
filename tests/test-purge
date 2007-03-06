@@ -1,0 +1,57 @@
+#!/bin/sh
+
+cat <<EOF >> $HGRCPATH
+[extensions]
+purge=${TESTDIR}/../contrib/purge/purge.py
+EOF
+
+echo % init
+hg init t
+cd t
+
+echo % setup
+echo r1 > r1
+hg ci -qAmr1 -d'0 0'
+mkdir directory
+echo r2 > directory/r2
+hg ci -qAmr2 -d'1 0'
+echo 'ignored' > .hgignore
+hg ci -qAmr3 -d'2 0'
+
+echo % delete an empty directory
+mkdir empty_dir
+hg purge -p
+hg purge -v
+ls
+
+echo % delete an untracked directory
+mkdir untracked_dir
+touch untracked_dir/untracked_file1
+touch untracked_dir/untracked_file2
+hg purge -p
+hg purge -v
+ls
+
+echo % delete an untracked file
+touch untracked_file
+hg purge -p
+hg purge -v
+ls
+
+echo % delete an untracked file in a tracked directory
+touch directory/untracked_file
+hg purge -p
+hg purge -v
+ls
+
+echo % delete nested directories
+mkdir -p untracked_directory/nested_directory
+hg purge -p
+hg purge -v
+ls
+
+echo % delete ignored files
+touch ignored
+hg purge -p
+hg purge -v
+ls
