@@ -236,7 +236,7 @@ options:
  -d --deleted    show only deleted (but tracked) files
  -c --clean      show only files without changes
  -u --unknown    show only unknown (not tracked) files
- -i --ignored    show ignored files
+ -i --ignored    show only ignored files
  -n --no-status  hide status prefix
  -C --copies     show source of copied files
  -0 --print0     end filenames with NUL, for use with xargs

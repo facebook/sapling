@@ -2919,7 +2919,7 @@ table = {
           ('d', 'deleted', None, _('show only deleted (but tracked) files')),
           ('c', 'clean', None, _('show only files without changes')),
           ('u', 'unknown', None, _('show only unknown (not tracked) files')),
-          ('i', 'ignored', None, _('show ignored files')),
+          ('i', 'ignored', None, _('show only ignored files')),
           ('n', 'no-status', None, _('hide status prefix')),
           ('C', 'copies', None, _('show source of copied files')),
           ('0', 'print0', None,
