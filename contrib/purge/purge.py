@@ -45,11 +45,14 @@ class Purge(object):
         directories.sort()
 
         for f in files:
-            self._remove_file(f)
+            if f not in self._repo.dirstate:
+                self._ui.note(_('Removing file %s\n') % f)
+                self._remove(os.remove, f)
 
         for f in directories[::-1]:
             if not os.listdir(repo.wjoin(f)):
-                self._remove_dir(f)
+                self._ui.note(_('Removing directory %s\n') % f)
+                self._remove(os.rmdir, f)
 
         self._repo = None
         self._ui = None
@@ -60,23 +63,10 @@ class Purge(object):
         else:
             self._ui.warn(_('warning: %s\n') % msg)
 
-    def _remove_file(self, name):
-        if name in self._repo.dirstate:
-            return
-        self._ui.note(_('Removing file %s\n') % name)
+    def _remove(self, remove_func, name):
         if self._act:
             try:
-                os.remove(self._repo.wjoin(name))
-            except OSError, e:
-                self._error(_('%s cannot be removed') % name)
-        else:
-            self._ui.write('%s%s' % (name, self._eol))
-
-    def _remove_dir(self, name):
-        self._ui.note(_('Removing directory %s\n') % name)
-        if self._act:
-            try:
-                os.rmdir(self._repo.wjoin(name))
+                remove_func(self._repo.wjoin(name))
             except OSError, e:
                 self._error(_('%s cannot be removed') % name)
         else:
