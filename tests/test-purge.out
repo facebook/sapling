@@ -29,6 +29,19 @@ Removing directory untracked_directory/nested_directory
 Removing directory untracked_directory
 directory
 r1
+% delete nested directories from a subdir
+untracked_directory/nested_directory
+Removing directory untracked_directory/nested_directory
+Removing directory untracked_directory
+directory
+r1
+% delete only part of the tree
+untracked_directory/nested_directory
+Removing directory untracked_directory/nested_directory
+Removing directory untracked_directory
+directory
+r1
+directory/untracked_file
 % delete ignored files
 ignored
 Removing file ignored

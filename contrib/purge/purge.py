@@ -49,9 +49,10 @@ def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n'):
 
     directories = []
     files = []
-    for src, f, st in repo.dirstate.statwalk(files=dirs, ignored=True,
-                                             directories=True):
-        if   src == 'd':
+    roots, match, anypats = util.cmdmatcher(repo.root, repo.getcwd(), dirs)
+    for src, f, st in repo.dirstate.statwalk(files=roots, match=match,
+                                             ignored=True, directories=True):
+        if src == 'd':
             directories.append(f)
         elif src == 'f' and f not in repo.dirstate:
             files.append(f)

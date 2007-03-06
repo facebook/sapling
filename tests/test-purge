@@ -50,6 +50,25 @@ hg purge -p
 hg purge -v
 ls
 
+echo % delete nested directories from a subdir
+mkdir -p untracked_directory/nested_directory
+cd directory
+hg purge -p
+hg purge -v
+cd ..
+ls
+
+echo % delete only part of the tree
+mkdir -p untracked_directory/nested_directory
+touch directory/untracked_file
+cd directory
+hg purge -p ../untracked_directory
+hg purge -v ../untracked_directory
+cd ..
+ls
+ls directory/untracked_file
+rm directory/untracked_file
+
 echo % delete ignored files
 touch ignored
 hg purge -p
