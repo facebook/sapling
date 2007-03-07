@@ -881,9 +881,9 @@ class localrepository(repo.repository):
         If node2 is None, compare node1 with working directory.
         """
 
-        def fcmp(fn, mf):
+        def fcmp(fn, getnode):
             t1 = self.wread(fn)
-            return self.file(fn).cmp(mf.get(fn, nullid), t1)
+            return self.file(fn).cmp(getnode(fn), t1)
 
         def mfmatches(node):
             change = self.changelog.read(node)
@@ -922,8 +922,9 @@ class localrepository(repo.repository):
                 if lookup:
                     # do a full compare of any files that might have changed
                     mf2 = mfmatches(self.dirstate.parents()[0])
+                    getnode = lambda fn: mf2.get(fn, nullid)
                     for f in lookup:
-                        if fcmp(f, mf2):
+                        if fcmp(f, getnode):
                             modified.append(f)
                         else:
                             clean.append(f)
@@ -954,10 +955,12 @@ class localrepository(repo.repository):
             # reasonable order
             mf2keys = mf2.keys()
             mf2keys.sort()
+            getnode = lambda fn: mf1.get(fn, nullid)
             for fn in mf2keys:
                 if mf1.has_key(fn):
                     if mf1.flags(fn) != mf2.flags(fn) or \
-                       (mf1[fn] != mf2[fn] and (mf2[fn] != "" or fcmp(fn, mf1))):
+                       (mf1[fn] != mf2[fn] and (mf2[fn] != "" or
+                                                fcmp(fn, getnode))):
                         modified.append(fn)
                     elif list_clean:
                         clean.append(fn)
