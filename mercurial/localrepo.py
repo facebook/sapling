@@ -921,8 +921,9 @@ class localrepository(repo.repository):
             if compareworking:
                 if lookup:
                     # do a full compare of any files that might have changed
-                    mf2 = mfmatches(self.dirstate.parents()[0])
-                    getnode = lambda fn: mf2.get(fn, nullid)
+                    mnode = self.changelog.read(self.dirstate.parents()[0])[0]
+                    getnode = lambda fn: (self.manifest.find(mnode, fn)[0] or
+                                          nullid)
                     for f in lookup:
                         if fcmp(f, getnode):
                             modified.append(f)
