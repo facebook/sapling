@@ -106,7 +106,7 @@ class manifest(revlog):
 
     def find(self, node, f):
         '''look up entry for a single file efficiently.
-        return (node, flag) pair if found, (None, None) if not.'''
+        return (node, flags) pair if found, (None, None) if not.'''
         if self.mapcache and node == self.mapcache[0]:
             return self.mapcache[1].get(f), self.mapcache[1].flags(f)
         text = self.revision(node)
@@ -115,7 +115,7 @@ class manifest(revlog):
             return None, None
         l = text[start:end]
         f, n = l.split('\0')
-        return bin(n[:40]), n[40:-1] == 'x'
+        return bin(n[:40]), n[40:-1]
 
     def add(self, map, transaction, link, p1=None, p2=None,
             changed=None):
