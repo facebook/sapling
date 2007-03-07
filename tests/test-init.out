@@ -3,6 +3,7 @@ adding foo
 #test failure
 abort: repository local already exists!
 # init+push to remote2
+comparing with local
 changeset:   0:c4e059d443be
 tag:         tip
 user:        test

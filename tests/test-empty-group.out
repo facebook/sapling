@@ -21,6 +21,7 @@ adding manifests
 adding file changes
 added 4 changesets with 3 changes to 3 files
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+comparing with b
 searching for changes
 changeset:   4:fdb3c546e859
 tag:         tip
@@ -30,6 +31,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     m2
 
+comparing with c
 searching for changes
 changeset:   3:f40f830c0024
 parent:      2:de997049e034
@@ -38,6 +40,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     m1
 
+comparing with c
 searching for changes
 changeset:   3:f40f830c0024
 tag:         tip
@@ -47,6 +50,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     m1
 
+comparing with b
 searching for changes
 changeset:   3:fdb3c546e859
 tag:         tip

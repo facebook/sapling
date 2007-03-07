@@ -33,6 +33,7 @@ no changes found
 # local change
 # updating rc
 # find outgoing
+comparing with ssh://user@dummy/remote
 searching for changes
 changeset:   1:572896fe480d
 tag:         tip
@@ -41,6 +42,7 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     add
 
 # find incoming on the remote side
+comparing with ssh://user@dummy/local
 searching for changes
 changeset:   1:572896fe480d
 tag:         tip

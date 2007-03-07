@@ -4,6 +4,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 9 changesets, 9 total revisions
+comparing with http://localhost:20059/
 changeset:   0:9cb21d99fe27
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -50,6 +51,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     8
 
+comparing with http://localhost:20059/
 changeset:   0:9cb21d99fe27
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -75,77 +77,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     4
 
-changeset:   0:9cb21d99fe27
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     0
-
-changeset:   1:d717f5dfad6a
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     1
-
-changeset:   2:c0d6b86da426
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     2
-
-changeset:   3:dfacbd43b3fe
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     3
-
-changeset:   4:1f3a964b6022
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     4
-
-changeset:   5:c028bcc7a28a
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     5
-
-changeset:   6:a0c0095f3389
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     6
-
-changeset:   7:d4be65f4e891
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     7
-
-changeset:   8:92b83e334ef8
-tag:         tip
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     8
-
-changeset:   0:9cb21d99fe27
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     0
-
-changeset:   1:d717f5dfad6a
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     1
-
-changeset:   2:c0d6b86da426
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     2
-
-changeset:   3:dfacbd43b3fe
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     3
-
-changeset:   4:1f3a964b6022
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     4
-
+comparing with test
 changeset:   0:9cb21d99fe27
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -192,6 +124,80 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     8
 
+comparing with test
+changeset:   0:9cb21d99fe27
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0
+
+changeset:   1:d717f5dfad6a
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1
+
+changeset:   2:c0d6b86da426
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     2
+
+changeset:   3:dfacbd43b3fe
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     3
+
+changeset:   4:1f3a964b6022
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     4
+
+comparing with http://localhost:20059/
+changeset:   0:9cb21d99fe27
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0
+
+changeset:   1:d717f5dfad6a
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1
+
+changeset:   2:c0d6b86da426
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     2
+
+changeset:   3:dfacbd43b3fe
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     3
+
+changeset:   4:1f3a964b6022
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     4
+
+changeset:   5:c028bcc7a28a
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     5
+
+changeset:   6:a0c0095f3389
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     6
+
+changeset:   7:d4be65f4e891
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     7
+
+changeset:   8:92b83e334ef8
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     8
+
+comparing with test
 changeset:   0:9cb21d99fe27
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -266,6 +272,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 14 changesets, 14 total revisions
+comparing with test
 searching for changes
 changeset:   9:3741c3ad1096
 user:        test
@@ -293,6 +300,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     13
 
+comparing with http://localhost:20059/
 searching for changes
 changeset:   9:3741c3ad1096
 user:        test
@@ -320,6 +328,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     13
 
+comparing with http://localhost:20059/
 searching for changes
 changeset:   9:3741c3ad1096
 user:        test

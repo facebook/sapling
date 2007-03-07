@@ -1535,6 +1535,7 @@ def incoming(ui, repo, source="default", **opts):
     setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
+    ui.status(_('comparing with %s\n') % source)
     incoming = repo.findincoming(other, force=opts["force"])
     if not incoming:
         try:
@@ -1819,6 +1820,7 @@ def outgoing(ui, repo, dest=None, **opts):
         revs = [repo.lookup(rev) for rev in opts['rev']]
 
     other = hg.repository(ui, dest)
+    ui.status(_('comparing with %s\n') % dest)
     o = repo.findoutgoing(other, force=opts['force'])
     if not o:
         ui.status(_("no changes found\n"))
