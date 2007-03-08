@@ -606,9 +606,13 @@ class hgweb(object):
         'zip': ('application/zip', 'zip', '.zip', None),
         }
 
-    def archive(self, req, cnode, type_):
+    def archive(self, req, id, type_):
         reponame = re.sub(r"\W+", "-", os.path.basename(self.reponame))
-        name = "%s-%s" % (reponame, short(cnode))
+        cnode = self.repo.lookup(id)
+        arch_version = id
+        if cnode == id:
+            arch_version = short(cnode)
+        name = "%s-%s" % (reponame, arch_version)
         mimetype, artype, extension, encoding = self.archive_specs[type_]
         headers = [('Content-type', mimetype),
                    ('Content-disposition', 'attachment; filename=%s%s' %
@@ -989,12 +993,11 @@ class hgweb(object):
         req.write(z.flush())
 
     def do_archive(self, req):
-        changeset = self.repo.lookup(req.form['node'][0])
         type_ = req.form['type'][0]
         allowed = self.configlist("web", "allow_archive")
         if (type_ in self.archives and (type_ in allowed or
             self.configbool("web", "allow" + type_, False))):
-            self.archive(req, changeset, type_)
+            self.archive(req, req.form['node'][0], type_)
             return
 
         req.write(self.t("error"))
