@@ -1,5 +1,11 @@
 # creating 'local'
+store created
+00changelog.i created
+revlogv1
+store
 adding foo
+# creating repo with old format
+revlogv1
 #test failure
 abort: repository local already exists!
 # init+push to remote2

@@ -22,10 +22,30 @@ $2
 EOF
 chmod +x dummyssh
 
+checknewrepo()
+{
+    name=$1
+
+    if [ -d $name/.hg/store ]; then
+	echo store created
+    fi
+
+    if [ -f $name/.hg/00changelog.i ]; then
+	echo 00changelog.i created
+    fi
+
+    cat $name/.hg/requires
+}
+
 echo "# creating 'local'"
 hg init local
+checknewrepo local
 echo this > local/foo
 hg ci --cwd local -A -m "init" -d "1000000 0"
+
+echo "# creating repo with old format"
+hg --config format.usestore=false init old
+checknewrepo old
 
 echo "#test failure"
 hg init local

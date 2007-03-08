@@ -41,20 +41,19 @@ class localrepository(repo.repository):
                 if not os.path.exists(path):
                     os.mkdir(path)
                 os.mkdir(self.path)
-                if parentui.config('format', 'usestore', 1):
+                requirements = ["revlogv1"]
+                if parentui.configbool('format', 'usestore', True):
                     os.mkdir(os.path.join(self.path, "store"))
-                    requirements = ("revlogv1", "store")
-                else:
-                    requirements = ("revlogv1")
+                    requirements.append("store")
+                    # create an invalid changelog
+                    self.opener("00changelog.i", "a").write(
+                        '\0\0\0\2' # represents revlogv2
+                        ' dummy changelog to prevent using the old repo layout'
+                    )
                 reqfile = self.opener("requires", "w")
                 for r in requirements:
                     reqfile.write("%s\n" % r)
                 reqfile.close()
-                # create an invalid changelog
-                self.opener("00changelog.i", "a").write(
-                    '\0\0\0\2' # represents revlogv2
-                    ' dummy changelog to prevent using the old repo layout'
-                )
             else:
                 raise repo.RepoError(_("repository %s not found") % path)
         elif create:
