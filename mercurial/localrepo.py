@@ -41,8 +41,11 @@ class localrepository(repo.repository):
                 if not os.path.exists(path):
                     os.mkdir(path)
                 os.mkdir(self.path)
-                os.mkdir(os.path.join(self.path, "store"))
-                requirements = ("revlogv1", "store")
+                if parentui.config('format', 'usestore', 1):
+                    os.mkdir(os.path.join(self.path, "store"))
+                    requirements = ("revlogv1", "store")
+                else:
+                    requirements = ("revlogv1")
                 reqfile = self.opener("requires", "w")
                 for r in requirements:
                     reqfile.write("%s\n" % r)

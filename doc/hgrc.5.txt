@@ -215,6 +215,15 @@ extensions::
     # (this extension will get loaded from the file specified)
     myfeature = ~/.hgext/myfeature.py
 
+format::
+
+  usestore;;
+    Enable or disable the "store" repository format which improves
+    compatibility with systems that fold case or otherwise mangle
+    filenames. Enabled by default. Disabling this option will allow
+    you to store longer filenames in some situations at the expense of
+    compatibility.
+
 hooks::
   Commands or Python functions that get automatically executed by
   various actions such as starting or finishing a commit. Multiple
