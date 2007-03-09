@@ -38,3 +38,28 @@ rm .hg/branches.cache
 echo corrupted > .hg/branches.cache
 hg log -qr foo
 cat .hg/branches.cache
+
+echo % test for different branch cache features
+echo '4909a3732169c0c20011c4f4b8fdff4e3d89b23f 4' > .hg/branches.cache
+hg branches --debug
+echo ' features: unnamed dummy foo bar' > .hg/branches.cache
+hg branches --debug
+echo ' features: dummy' > .hg/branches.cache
+hg branches --debug
+
+echo % test old hg reading branch cache with feature list
+python << EOF
+import binascii
+f = file('.hg/branches.cache')
+lines = f.read().split('\n')
+f.close()
+firstline = lines[0]
+last, lrev = lines.pop(0).rstrip().split(" ", 1)
+try:
+    last, lrev = binascii.unhexlify(last), int(lrev)
+except ValueError, inst:
+    if str(inst) == "invalid literal for int():%s" % firstline:
+        print "ValueError raised correctly, good."
+    else:
+        print "ValueError: %s" % inst
+EOF
