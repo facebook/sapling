@@ -17,6 +17,7 @@ demandload(globals(), "os revlog time util")
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
     supported = ('revlogv1', 'store')
+    branchcache_features = ('unnamed',)
 
     def __del__(self):
         self.transhandle = None
@@ -376,6 +377,22 @@ class localrepository(repo.repository):
             f = self.opener("branches.cache")
             lines = f.read().split('\n')
             f.close()
+            features = lines.pop(0).strip()
+            if not features.startswith('features: '):
+                raise ValueError(_('branch cache: no features specified'))
+            features = features.split(' ', 1)[1].split()
+            missing_features = []
+            for feature in self.branchcache_features:
+                try:
+                    features.remove(feature)
+                except ValueError, inst:
+                    missing_features.append(feature)
+            if missing_features:
+                raise ValueError(_('branch cache: missing features: %s')
+                                 % ', '.join(missing_features))
+            if features:
+                raise ValueError(_('branch cache: unknown features: %s')
+                                 % ', '.join(features))
             last, lrev = lines.pop(0).split(" ", 1)
             last, lrev = bin(last), int(lrev)
             if not (lrev < self.changelog.count() and
@@ -397,6 +414,7 @@ class localrepository(repo.repository):
     def _writebranchcache(self, branches, tip, tiprev):
         try:
             f = self.opener("branches.cache", "w")
+            f.write(" features: %s\n" % ' '.join(self.branchcache_features))
             f.write("%s %s\n" % (hex(tip), tiprev))
             for label, node in branches.iteritems():
                 f.write("%s %s\n" % (hex(node), label))
