@@ -376,7 +376,7 @@ class localrepository(repo.repository):
             f = self.opener("branches.cache")
             lines = f.read().split('\n')
             f.close()
-            last, lrev = lines.pop(0).rstrip().split(" ", 1)
+            last, lrev = lines.pop(0).split(" ", 1)
             last, lrev = bin(last), int(lrev)
             if not (lrev < self.changelog.count() and
                     self.changelog.node(lrev) == last): # sanity check
@@ -384,8 +384,8 @@ class localrepository(repo.repository):
                 raise ValueError('Invalid branch cache: unknown tip')
             for l in lines:
                 if not l: continue
-                node, label = l.rstrip().split(" ", 1)
-                partial[label] = bin(node)
+                node, label = l.split(" ", 1)
+                partial[label.strip()] = bin(node)
         except (KeyboardInterrupt, util.SignalInterrupt):
             raise
         except Exception, inst:
@@ -407,8 +407,7 @@ class localrepository(repo.repository):
         for r in xrange(start, end):
             c = self.changectx(r)
             b = c.branch()
-            if b:
-                partial[b] = c.node()
+            partial[b] = c.node()
 
     def lookup(self, key):
         if key == '.':

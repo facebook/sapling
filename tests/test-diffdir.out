@@ -1,19 +1,19 @@
-diff -r acd8075edac9 b
+diff -r 4da5fa99f904 b
 --- /dev/null
 +++ b/b
 @@ -0,0 +1,1 @@
 +123
-diff -r acd8075edac9 b
+diff -r 4da5fa99f904 b
 --- /dev/null
 +++ b/b
 @@ -0,0 +1,1 @@
 +123
-diff -r acd8075edac9 a
+diff -r 4da5fa99f904 a
 --- a/a
 +++ b/a
 @@ -0,0 +1,1 @@
 +foo
-diff -r acd8075edac9 b
+diff -r 4da5fa99f904 b
 --- /dev/null
 +++ b/b
 @@ -0,0 +1,1 @@
