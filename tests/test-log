@@ -47,6 +47,7 @@ hg log -pv d
 # log --follow tests
 hg init ../follow
 cd ../follow
+hg branch dummy # needed so -r "" doesn't point to the unnamed/default branch
 echo base > base
 hg ci -Ambase -d '1 0'
 
