@@ -397,19 +397,23 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     inc - patterns to include
     exc - patterns to exclude
     head - a regex to prepend to patterns to control whether a match is rooted
+    dflt_pat - if a pattern in names has no explicit type, assume this one
+    src - where these patterns came from (e.g. .hgignore)
 
     a pattern is one of:
-    'glob:<rooted glob>'
-    're:<rooted regexp>'
-    'path:<rooted path>'
-    'relglob:<relative glob>'
-    'relpath:<relative path>'
-    'relre:<relative regexp>'
-    '<rooted path or regexp>'
+    'glob:<glob>' - a glob relative to cwd
+    're:<regexp>' - a regular expression
+    'path:<path>' - a path relative to canonroot
+    'relglob:<glob>' - an unrooted glob (*.c matches C files in all dirs)
+    'relpath:<path>' - a path relative to cwd
+    'relre:<regexp>' - a regexp that doesn't have to match the start of a name
+    '<something>' - one of the cases above, selected by the dflt_pat argument
 
     returns:
     a 3-tuple containing
-    - list of explicit non-pattern names passed in
+    - list of roots (places where one should start a recursive walk of the fs);
+      this often matches the explicit non-pattern names passed in, but also
+      includes the initial part of glob: patterns that has no glob characters
     - a bool match(filename) function
     - a bool indicating if any patterns were passed in
 
