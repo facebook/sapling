@@ -1,5 +1,19 @@
 #!/bin/sh
 
+debugwalk()
+{
+    echo "hg debugwalk $@"
+    hg debugwalk "$@"
+    echo
+}
+
+chdir()
+{
+    echo "cd $@"
+    cd "$@"
+    echo
+}
+
 mkdir t
 cd t
 hg init
@@ -18,51 +32,51 @@ echo fiddlehead > fiddlehead
 echo glob:glob > glob:glob
 hg addremove
 hg commit -m "commit #0" -d "1000000 0"
-hg debugwalk
-hg debugwalk -I.
-cd mammals
-hg debugwalk .
-hg debugwalk -I.
-hg debugwalk Procyonidae
-cd Procyonidae
-hg debugwalk .
-hg debugwalk ..
-cd ..
-hg debugwalk ../beans
-hg debugwalk .
-hg debugwalk .hg
-hg debugwalk ../.hg
-cd ..
-hg debugwalk -Ibeans
-hg debugwalk 'glob:mammals/../beans/b*'
-hg debugwalk '-X*/Procyonidae' mammals
-hg debugwalk path:mammals
-hg debugwalk ..
-hg debugwalk beans/../..
-hg debugwalk .hg
-hg debugwalk beans/../.hg
-hg debugwalk beans/../.hg/data
-hg debugwalk beans/.hg
+debugwalk
+debugwalk -I.
+chdir mammals
+debugwalk .
+debugwalk -I.
+debugwalk Procyonidae
+chdir Procyonidae
+debugwalk .
+debugwalk ..
+chdir ..
+debugwalk ../beans
+debugwalk .
+debugwalk .hg
+debugwalk ../.hg
+chdir ..
+debugwalk -Ibeans
+debugwalk 'glob:mammals/../beans/b*'
+debugwalk '-X*/Procyonidae' mammals
+debugwalk path:mammals
+debugwalk ..
+debugwalk beans/../..
+debugwalk .hg
+debugwalk beans/../.hg
+debugwalk beans/../.hg/data
+debugwalk beans/.hg
 # Don't know how to test absolute paths without always getting a false
 # error.
-#hg debugwalk `pwd`/beans
-#hg debugwalk `pwd`/..
-hg debugwalk glob:\*
-hg debugwalk 're:.*[kb]$'
-hg debugwalk path:beans/black
-hg debugwalk path:beans//black
-hg debugwalk relglob:Procyonidae
-hg debugwalk relglob:Procyonidae/ fennel
-hg debugwalk beans 'glob:beans/*'
-hg debugwalk 'glob:mamm**'
-hg debugwalk 'glob:mamm**' fennel
-hg debugwalk 'glob:j*'
-hg debugwalk NOEXIST
+#debugwalk `pwd`/beans
+#debugwalk `pwd`/..
+debugwalk glob:\*
+debugwalk 're:.*[kb]$'
+debugwalk path:beans/black
+debugwalk path:beans//black
+debugwalk relglob:Procyonidae
+debugwalk relglob:Procyonidae/ fennel
+debugwalk beans 'glob:beans/*'
+debugwalk 'glob:mamm**'
+debugwalk 'glob:mamm**' fennel
+debugwalk 'glob:j*'
+debugwalk NOEXIST
 mkfifo fifo
-hg debugwalk fifo
+debugwalk fifo
 rm fenugreek
-hg debugwalk fenugreek
+debugwalk fenugreek
 hg rm fenugreek
-hg debugwalk fenugreek
+debugwalk fenugreek
 touch new
-hg debugwalk new
+debugwalk new

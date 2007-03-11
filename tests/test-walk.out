@@ -12,6 +12,7 @@ adding mammals/Procyonidae/cacomistle
 adding mammals/Procyonidae/coatimundi
 adding mammals/Procyonidae/raccoon
 adding mammals/skunk
+hg debugwalk 
 f  beans/black                     beans/black
 f  beans/borlotti                  beans/borlotti
 f  beans/kidney                    beans/kidney
@@ -26,6 +27,8 @@ f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
 f  mammals/skunk                   mammals/skunk
+
+hg debugwalk -I.
 f  beans/black                     beans/black
 f  beans/borlotti                  beans/borlotti
 f  beans/kidney                    beans/kidney
@@ -40,93 +43,170 @@ f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
 f  mammals/skunk                   mammals/skunk
+
+cd mammals
+
+hg debugwalk .
 f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
 f  mammals/skunk                   skunk
+
+hg debugwalk -I.
 f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
 f  mammals/skunk                   skunk
+
+hg debugwalk Procyonidae
 f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
+
+cd Procyonidae
+
+hg debugwalk .
 f  mammals/Procyonidae/cacomistle  cacomistle
 f  mammals/Procyonidae/coatimundi  coatimundi
 f  mammals/Procyonidae/raccoon     raccoon
+
+hg debugwalk ..
 f  mammals/Procyonidae/cacomistle  cacomistle
 f  mammals/Procyonidae/coatimundi  coatimundi
 f  mammals/Procyonidae/raccoon     raccoon
 f  mammals/skunk                   ../skunk
+
+cd ..
+
+hg debugwalk ../beans
 f  beans/black     ../beans/black
 f  beans/borlotti  ../beans/borlotti
 f  beans/kidney    ../beans/kidney
 f  beans/navy      ../beans/navy
 f  beans/pinto     ../beans/pinto
 f  beans/turtle    ../beans/turtle
+
+hg debugwalk .
 f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
 f  mammals/skunk                   skunk
+
+hg debugwalk .hg
 .hg: No such file or directory
+
+hg debugwalk ../.hg
 abort: path contains illegal component: .hg
 
+
+cd ..
+
+hg debugwalk -Ibeans
 f  beans/black     beans/black
 f  beans/borlotti  beans/borlotti
 f  beans/kidney    beans/kidney
 f  beans/navy      beans/navy
 f  beans/pinto     beans/pinto
 f  beans/turtle    beans/turtle
+
+hg debugwalk glob:mammals/../beans/b*
 f  beans/black     beans/black
 f  beans/borlotti  beans/borlotti
+
+hg debugwalk -X*/Procyonidae mammals
 f  mammals/skunk  mammals/skunk
+
+hg debugwalk path:mammals
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
 f  mammals/skunk                   mammals/skunk
+
+hg debugwalk ..
 abort: .. not under root
+
+hg debugwalk beans/../..
 abort: beans/../.. not under root
+
+hg debugwalk .hg
 abort: path contains illegal component: .hg
 
+
+hg debugwalk beans/../.hg
 abort: path contains illegal component: .hg
 
+
+hg debugwalk beans/../.hg/data
 abort: path contains illegal component: .hg/data
 
+
+hg debugwalk beans/.hg
 beans/.hg: No such file or directory
+
+hg debugwalk glob:*
 f  fennel      fennel
 f  fenugreek   fenugreek
 f  fiddlehead  fiddlehead
 f  glob:glob   glob:glob
+
+hg debugwalk re:.*[kb]$
 f  beans/black    beans/black
 f  fenugreek      fenugreek
 f  glob:glob      glob:glob
 f  mammals/skunk  mammals/skunk
+
+hg debugwalk path:beans/black
 f  beans/black  beans/black  exact
+
+hg debugwalk path:beans//black
 f  beans/black  beans/black  exact
+
+hg debugwalk relglob:Procyonidae
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
+
+hg debugwalk relglob:Procyonidae/ fennel
 f  fennel                          fennel                          exact
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
+
+hg debugwalk beans glob:beans/*
 f  beans/black     beans/black
 f  beans/borlotti  beans/borlotti
 f  beans/kidney    beans/kidney
 f  beans/navy      beans/navy
 f  beans/pinto     beans/pinto
 f  beans/turtle    beans/turtle
+
+hg debugwalk glob:mamm**
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
 f  mammals/skunk                   mammals/skunk
+
+hg debugwalk glob:mamm** fennel
 f  fennel                          fennel                          exact
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
 f  mammals/skunk                   mammals/skunk
+
+hg debugwalk glob:j*
+
+hg debugwalk NOEXIST
 NOEXIST: No such file or directory
+
+hg debugwalk fifo
 fifo: unsupported file type (type is fifo)
+
+hg debugwalk fenugreek
 m  fenugreek  fenugreek  exact
+
+hg debugwalk fenugreek
 m  fenugreek  fenugreek  exact
+
+hg debugwalk new
 f  new  new  exact
+
