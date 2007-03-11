@@ -378,17 +378,17 @@ def canonpath(root, cwd, myname):
 
         raise Abort('%s not under root' % myname)
 
-def matcher(canonroot, cwd='', names=[], inc=[], exc=[], head='', src=None):
-    return _matcher(canonroot, cwd, names, inc, exc, head, 'glob', src)
+def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None):
+    return _matcher(canonroot, cwd, names, inc, exc, 'glob', src)
 
-def cmdmatcher(canonroot, cwd='', names=[], inc=[], exc=[], head='',
-               src=None, globbed=False, default=None):
+def cmdmatcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None,
+               globbed=False, default=None):
     default = default or 'relpath'
     if default == 'relpath' and not globbed:
         names = expand_glob(names)
-    return _matcher(canonroot, cwd, names, inc, exc, head, default, src)
+    return _matcher(canonroot, cwd, names, inc, exc, default, src)
 
-def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
+def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
     """build a function to match a set of file patterns
 
     arguments:
@@ -397,7 +397,6 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     names - patterns to find
     inc - patterns to include
     exc - patterns to exclude
-    head - a regex to prepend to patterns to control whether a match is rooted
     dflt_pat - if a pattern in names has no explicit type, assume this one
     src - where these patterns came from (e.g. .hgignore)
 
@@ -417,9 +416,6 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
       includes the initial part of glob: patterns that has no glob characters
     - a bool match(filename) function
     - a bool indicating if any patterns were passed in
-
-    todo:
-    make head regex a rooted bool
     """
 
     def contains_glob(name):
@@ -436,14 +432,14 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
         elif kind == 'path':
             return '^' + re.escape(name) + '(?:/|$)'
         elif kind == 'relglob':
-            return head + globre(name, '(?:|.*/)', '(?:/|$)')
+            return globre(name, '(?:|.*/)', '(?:/|$)')
         elif kind == 'relpath':
-            return head + re.escape(name) + '(?:/|$)'
+            return re.escape(name) + '(?:/|$)'
         elif kind == 'relre':
             if name.startswith('^'):
                 return name
             return '.*' + name
-        return head + globre(name, '', tail)
+        return globre(name, '', tail)
 
     def matchfn(pats, tail):
         """build a matching function from a set of patterns"""
