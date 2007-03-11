@@ -63,3 +63,11 @@ except ValueError, inst:
     else:
         print "ValueError: %s" % inst
 EOF
+
+echo % update with no arguments: tipmost revision of the current branch
+hg up -q -C 0
+hg up -q
+hg id
+hg up -q 1
+hg up -q
+hg id

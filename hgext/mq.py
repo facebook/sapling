@@ -1031,10 +1031,10 @@ class queue:
             m = util.unique(mm)
             r = util.unique(dd)
             a = util.unique(aa)
-            filelist = filter(matchfn, util.unique(m + r + a))
+            c = [filter(matchfn, l) for l in (m, a, r, [], u)]
+            filelist = util.unique(c[0] + c[1] + c[2])
             patch.diff(repo, patchparent, files=filelist, match=matchfn,
-                       fp=patchf, changes=(m, a, r, [], u),
-                       opts=self.diffopts())
+                       fp=patchf, changes=c, opts=self.diffopts())
             patchf.close()
 
             repo.dirstate.setparents(*cparents)
@@ -1082,7 +1082,8 @@ class queue:
                 message = msg
 
             self.strip(repo, top, update=False, backup='strip', wlock=wlock)
-            n = repo.commit(filelist, message, changes[1], force=1, wlock=wlock)
+            n = repo.commit(filelist, message, changes[1], match=matchfn,
+                            force=1, wlock=wlock)
             self.applied[-1] = statusentry(revlog.hex(n), patchfn)
             self.applied_dirty = 1
         else:
@@ -1527,7 +1528,11 @@ def clone(ui, source, dest=None, **opts):
         if sr.mq.applied:
             qbase = revlog.bin(sr.mq.applied[0].rev)
             if not hg.islocal(dest):
-                destrev = sr.parents(qbase)[0]
+                heads = dict.fromkeys(sr.heads())
+                for h in sr.heads(qbase):
+                    del heads[h]
+                destrev = heads.keys()
+                destrev.append(sr.changelog.parents(qbase)[0])
     ui.note(_('cloning main repo\n'))
     sr, dr = hg.clone(ui, sr, dest,
                       pull=opts['pull'],

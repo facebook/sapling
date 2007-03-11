@@ -444,15 +444,15 @@ def update(repo, node, branchmerge, force, partial, wlock):
     wlock = working dir lock, if already held
     """
 
-    if node is None:
-        node = "tip"
-
     if not wlock:
         wlock = repo.wlock()
 
+    wc = repo.workingctx()
+    if node is None:
+        # tip of current branch
+        node = repo.branchtags()[wc.branch()]
     overwrite = force and not branchmerge
     forcemerge = force and branchmerge
-    wc = repo.workingctx()
     pl = wc.parents()
     p1, p2 = pl[0], repo.changectx(node)
     pa = p1.ancestor(p2)

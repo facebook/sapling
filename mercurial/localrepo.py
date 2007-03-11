@@ -31,8 +31,8 @@ class localrepository(repo.repository):
                                            " here (.hg not found)"))
             path = p
 
-        self.path = os.path.join(path, ".hg")
         self.root = os.path.realpath(path)
+        self.path = os.path.join(self.root, ".hg")
         self.origroot = path
         self.opener = util.opener(self.path)
         self.wopener = util.opener(self.root)

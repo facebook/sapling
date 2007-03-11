@@ -91,6 +91,17 @@ diff -r  xa
 @@ -1,1 +1,2 @@ a
  a
 +a
+% empty qrefresh
+revision:
+patch:
+foo bar
+
+working dir diff:
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@ a
+ a
++a
 % qpop
 Patch queue now empty
 % qpush

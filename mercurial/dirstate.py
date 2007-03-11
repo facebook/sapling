@@ -375,7 +375,7 @@ class dirstate(object):
 
         # walk all files by default
         if not files:
-            files = [self.root]
+            files = ['.']
             dc = self.map.copy()
         else:
             files = util.unique(files)
