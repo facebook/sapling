@@ -84,6 +84,13 @@ f  fenugreek      fenugreek
 f  glob:glob      glob:glob
 f  mammals/skunk  mammals/skunk
 f  beans/black  beans/black
+f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
+f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
+f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
+f  fennel                          fennel                          exact
+f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
+f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
+f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
 f  beans/black     beans/black
 f  beans/borlotti  beans/borlotti
 f  beans/kidney    beans/kidney

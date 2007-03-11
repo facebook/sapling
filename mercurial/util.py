@@ -433,7 +433,7 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
         elif kind == 'path':
             return '^' + re.escape(name) + '(?:/|$)'
         elif kind == 'relglob':
-            return head + globre(name, '(?:|.*/)', tail)
+            return head + globre(name, '(?:|.*/)', '(?:/|$)')
         elif kind == 'relpath':
             return head + re.escape(name) + tail
         elif kind == 'relre':
@@ -479,7 +479,9 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
             name = canonpath(canonroot, cwd, name)
             if name == '':
                 kind, name = 'glob', '**'
-        if kind in ('glob', 'path', 're'):
+        elif kind == 'relglob':
+            name = normpath(name)
+        if kind in ('glob', 'path', 're', 'relglob'):
             pats.append((kind, name))
         if kind == 'glob':
             root = globprefix(name)
@@ -487,6 +489,8 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
         elif kind == 'relpath':
             files.append((kind, name))
             roots.append(name)
+        elif kind == 'relglob':
+            roots.append('.')
 
     patmatch = matchfn(pats, '$') or always
     filematch = matchfn(files, '(?:/|$)') or always
