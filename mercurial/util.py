@@ -418,6 +418,10 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
     - a bool indicating if any patterns were passed in
     """
 
+    # a common case: no patterns at all
+    if not names and not inc and not exc:
+        return [], always, False
+
     def contains_glob(name):
         for c in name:
             if c in _globchars: return True
