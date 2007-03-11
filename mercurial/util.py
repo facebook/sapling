@@ -509,9 +509,13 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
         dummy, exckinds, dummy = normalizepats(exc, 'glob')
         excmatch = matchfn(exckinds, '(?:/|$)')
 
-    return (roots,
-            lambda fn: (incmatch(fn) and not excmatch(fn) and patmatch(fn)),
-            (inc or exc or anypats) and True)
+    if not names and inc and not exc:
+        # common case: hgignore patterns
+        match = incmatch
+    else:
+        match = lambda fn: incmatch(fn) and not excmatch(fn) and patmatch(fn)
+
+    return (roots, match, (inc or exc or anypats) and True)
 
 def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     '''enhanced shell command execution.
