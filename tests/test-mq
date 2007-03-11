@@ -55,6 +55,18 @@ sed -e "s/^\(diff -r \)\([a-f0-9]* \)/\1 x/" \
     -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" .hg/patches/test.patch
 
+echo % empty qrefresh
+
+hg qrefresh -X a
+echo 'revision:'
+hg diff -r -2 -r -1
+echo 'patch:'
+cat .hg/patches/test.patch
+echo 'working dir diff:'
+hg diff --nodates -q
+# restore things
+hg qrefresh
+
 echo % qpop
 
 hg qpop

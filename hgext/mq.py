@@ -1015,10 +1015,10 @@ class queue:
             m = util.unique(mm)
             r = util.unique(dd)
             a = util.unique(aa)
-            filelist = filter(matchfn, util.unique(m + r + a))
+            c = [filter(matchfn, l) for l in (m, a, r, [], u)]
+            filelist = util.unique(c[0] + c[1] + c[2])
             patch.diff(repo, patchparent, files=filelist, match=matchfn,
-                       fp=patchf, changes=(m, a, r, [], u),
-                       opts=self.diffopts())
+                       fp=patchf, changes=c, opts=self.diffopts())
             patchf.close()
 
             repo.dirstate.setparents(*cparents)
@@ -1066,7 +1066,8 @@ class queue:
                 message = msg
 
             self.strip(repo, top, update=False, backup='strip', wlock=wlock)
-            n = repo.commit(filelist, message, changes[1], force=1, wlock=wlock)
+            n = repo.commit(filelist, message, changes[1], match=matchfn,
+                            force=1, wlock=wlock)
             self.applied[-1] = statusentry(revlog.hex(n), patchfn)
             self.applied_dirty = 1
         else:
