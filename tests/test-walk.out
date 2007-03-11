@@ -90,6 +90,15 @@ f  beans/kidney    beans/kidney
 f  beans/navy      beans/navy
 f  beans/pinto     beans/pinto
 f  beans/turtle    beans/turtle
+f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
+f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
+f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
+f  mammals/skunk                   mammals/skunk
+f  fennel                          fennel                          exact
+f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
+f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
+f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
+f  mammals/skunk                   mammals/skunk
 NOEXIST: No such file or directory
 fifo: unsupported file type (type is fifo)
 m  fenugreek  fenugreek  exact

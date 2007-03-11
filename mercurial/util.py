@@ -469,7 +469,7 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
         for p in pat.split('/'):
             if contains_glob(p): break
             root.append(p)
-        return '/'.join(root)
+        return '/'.join(root) or '.'
 
     pats = []
     files = []
@@ -483,7 +483,7 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
             pats.append((kind, name))
         if kind == 'glob':
             root = globprefix(name)
-            if root: roots.append(root)
+            roots.append(root)
         elif kind == 'relpath':
             files.append((kind, name))
             roots.append(name)

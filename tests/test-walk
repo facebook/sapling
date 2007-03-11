@@ -49,6 +49,8 @@ hg debugwalk glob:\*
 hg debugwalk 're:.*[kb]$'
 hg debugwalk path:beans/black
 hg debugwalk beans 'glob:beans/*'
+hg debugwalk 'glob:mamm**'
+hg debugwalk 'glob:mamm**' fennel
 hg debugwalk 'glob:j*'
 hg debugwalk NOEXIST
 mkfifo fifo
