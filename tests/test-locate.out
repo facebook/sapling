@@ -3,18 +3,14 @@ adding b
 adding t.h
 adding t/x
 a
-NONEXISTENT: No such file or directory
 a
 b
 t.h
 t/x
-a: No such file or directory
-NONEXISTENT: No such file or directory
 b
 t.h
 t/x
 a
-NONEXISTENT: No such file in rev ce18e5bc5cd3
 a
 b
 t.h

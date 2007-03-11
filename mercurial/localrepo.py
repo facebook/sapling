@@ -832,6 +832,9 @@ class localrepository(repo.repository):
 
         if node:
             fdict = dict.fromkeys(files)
+            # for dirstate.walk, files=['.'] means "walk the whole tree".
+            # follow that here, too
+            fdict.pop('.', None)
             mdict = self.manifest.read(self.changelog.read(node)[0])
             mfiles = mdict.keys()
             mfiles.sort()

@@ -1602,9 +1602,8 @@ def locate(ui, repo, *pats, **opts):
     Print all files under Mercurial control whose names match the
     given patterns.
 
-    This command searches the current directory and its
-    subdirectories.  To search an entire repository, move to the root
-    of the repository.
+    This command searches the entire repository by default.  To search
+    just the current directory and its subdirectories, use "--include .".
 
     If no patterns are given to match, this command prints all file
     names.
@@ -1622,7 +1621,7 @@ def locate(ui, repo, *pats, **opts):
         node = None
 
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts, node=node,
-                                             head='(?:.*/|)'):
+                                             default='relglob'):
         if not node and repo.dirstate.state(abs) == '?':
             continue
         if opts['fullpath']:
