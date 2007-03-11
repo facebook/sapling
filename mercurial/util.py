@@ -378,10 +378,10 @@ def canonpath(root, cwd, myname):
 
         raise Abort('%s not under root' % myname)
 
-def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
+def matcher(canonroot, cwd='', names=[], inc=[], exc=[], head='', src=None):
     return _matcher(canonroot, cwd, names, inc, exc, head, 'glob', src)
 
-def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='',
+def cmdmatcher(canonroot, cwd='', names=[], inc=[], exc=[], head='',
                src=None, globbed=False):
     if not globbed:
         names = expand_glob(names)
@@ -428,6 +428,8 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
 
     def regex(kind, name, tail):
         '''convert a pattern into a regular expression'''
+        if not name:
+            return ''
         if kind == 're':
             return name
         elif kind == 'path':
@@ -477,8 +479,6 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     for kind, name in [patkind(p, dflt_pat) for p in names]:
         if kind in ('glob', 'relpath'):
             name = canonpath(canonroot, cwd, name)
-            if name == '':
-                kind, name = 'glob', '**'
         elif kind in ('relglob', 'path'):
             name = normpath(name)
         if kind in ('glob', 're', 'relglob'):
@@ -509,7 +509,7 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
                          (not pats and not files) or
                          (pats and patmatch(fn)) or
                          (files and filematch(fn)))),
-            (inc or exc or (pats and pats != [('glob', '**')])) and True)
+            (inc or exc or pats) and True)
 
 def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     '''enhanced shell command execution.

@@ -19,8 +19,10 @@ echo glob:glob > glob:glob
 hg addremove
 hg commit -m "commit #0" -d "1000000 0"
 hg debugwalk
+hg debugwalk -I.
 cd mammals
 hg debugwalk .
+hg debugwalk -I.
 hg debugwalk Procyonidae
 cd Procyonidae
 hg debugwalk .
