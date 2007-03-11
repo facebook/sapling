@@ -129,13 +129,7 @@ def make_file(repo, pat, node=None,
 
 def matchpats(repo, pats=[], opts={}, head='', globbed=False):
     cwd = repo.getcwd()
-    if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i)
-                           for i in opts.get('include', [])]
-        opts['exclude'] = [os.path.join(cwd, x)
-                           for x in opts.get('exclude', [])]
-        cwd = ''
-    return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
+    return util.cmdmatcher(repo.root, cwd, pats or [], opts.get('include'),
                            opts.get('exclude'), head, globbed=globbed)
 
 def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None,

@@ -6,16 +6,17 @@ cd foo
 
 A=`echo -e -n 'he\rllo'`
 
-echo foo > "hell
-o"
 echo foo > "$A"
 hg add
 hg ci -A -m m
 rm "$A"
-ls
+
+echo foo > "hell
+o"
 hg add
-# BUG ? we don't walk on filenames with '\n' (regexp related) ?
-hg debugwalk
 hg ci -A -m m
+
+echo foo > "$A"
+hg debugwalk
 
 exit 0
