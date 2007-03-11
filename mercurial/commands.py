@@ -2544,7 +2544,11 @@ def _lookup(repo, node, branch=None):
         else:
             raise util.Abort(_("branch %s not found") % branch)
     else:
-        node = node and repo.lookup(node) or repo.changelog.tip()
+        if node:
+            node = repo.lookup(node)
+        else:
+            wc = repo.workingctx()
+            node = repo.branchtags()[wc.branch()]
     return node
 
 def verify(ui, repo):
