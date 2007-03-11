@@ -386,7 +386,10 @@ class dirstate(object):
                 return False
             return match(file_)
 
-        if ignored: imatch = match
+        ignore = self.ignore
+        if ignored:
+            imatch = match
+            ignore = util.never
 
         # self.root may end with a path separator when self.root == '/'
         common_prefix_len = len(self.root)
@@ -421,8 +424,7 @@ class dirstate(object):
                     # don't trip over symlinks
                     st = os.lstat(p)
                     if stat.S_ISDIR(st.st_mode):
-                        ds = util.pconvert(os.path.join(nd, f +'/'))
-                        if imatch(ds):
+                        if not ignore(p):
                             work.append(p)
                             if directories:
                                 yield 'd', np, st

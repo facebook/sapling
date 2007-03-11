@@ -125,21 +125,16 @@ def make_file(repo, pat, node=None,
                               pathname),
                 mode)
 
-def matchpats(repo, pats=[], opts={}, head='', globbed=False):
+def matchpats(repo, pats=[], opts={}, globbed=False, default=None):
     cwd = repo.getcwd()
-    if not pats and cwd:
-        opts['include'] = [os.path.join(cwd, i)
-                           for i in opts.get('include', [])]
-        opts['exclude'] = [os.path.join(cwd, x)
-                           for x in opts.get('exclude', [])]
-        cwd = ''
-    return util.cmdmatcher(repo.root, cwd, pats or ['.'], opts.get('include'),
-                           opts.get('exclude'), head, globbed=globbed)
+    return util.cmdmatcher(repo.root, cwd, pats or [], opts.get('include'),
+                           opts.get('exclude'), globbed=globbed,
+                           default=default)
 
-def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None,
-         globbed=False):
-    files, matchfn, anypats = matchpats(repo, pats, opts, head,
-                                        globbed=globbed)
+def walk(repo, pats=[], opts={}, node=None, badmatch=None, globbed=False,
+         default=None):
+    files, matchfn, anypats = matchpats(repo, pats, opts, globbed=globbed,
+                                        default=default)
     exact = dict.fromkeys(files)
     for src, fn in repo.walk(node=node, files=files, match=matchfn,
                              badmatch=badmatch):

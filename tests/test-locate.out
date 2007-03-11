@@ -3,22 +3,20 @@ adding b
 adding t.h
 adding t/x
 a
-NONEXISTENT: No such file or directory
+locate succeeded
+locate failed
 a
 b
 t.h
 t/x
-a: No such file or directory
-NONEXISTENT: No such file or directory
 b
 t.h
 t/x
 a
-NONEXISTENT: No such file in rev ce18e5bc5cd3
 a
-t/x
 b
 t.h
+t/x
 % -I/-X with relative path should work
 b
 t.h

@@ -2,6 +2,13 @@ adding hello
 abort: '\n' and '\r' disallowed in filenames
 adding hello
 abort: '\n' and '\r' disallowed in filenames
-hell
+adding hell
 o
-nothing changed
+abort: '\n' and '\r' disallowed in filenames
+adding hell
+o
+abort: '\n' and '\r' disallowed in filenames
+f  hello  hello
+f  hell
+o  hell
+o

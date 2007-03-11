@@ -10,8 +10,8 @@ mkdir t
 echo 0 > t/x
 hg ci -A -m m -d "1000000 0"
 touch nottracked
-hg locate a
-hg locate NONEXISTENT
+hg locate a && echo locate succeeded || echo locate failed
+hg locate NONEXISTENT && echo locate succeeded || echo locate failed
 hg locate
 hg rm a
 hg ci -m m -d "1000000 0"

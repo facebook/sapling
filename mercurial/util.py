@@ -389,16 +389,17 @@ def canonpath(root, cwd, myname):
 
         raise Abort('%s not under root' % myname)
 
-def matcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='', src=None):
-    return _matcher(canonroot, cwd, names, inc, exc, head, 'glob', src)
+def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None):
+    return _matcher(canonroot, cwd, names, inc, exc, 'glob', src)
 
-def cmdmatcher(canonroot, cwd='', names=['.'], inc=[], exc=[], head='',
-               src=None, globbed=False):
-    if not globbed:
+def cmdmatcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None,
+               globbed=False, default=None):
+    default = default or 'relpath'
+    if default == 'relpath' and not globbed:
         names = expand_glob(names)
-    return _matcher(canonroot, cwd, names, inc, exc, head, 'relpath', src)
+    return _matcher(canonroot, cwd, names, inc, exc, default, src)
 
-def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
+def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
     """build a function to match a set of file patterns
 
     arguments:
@@ -407,26 +408,30 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     names - patterns to find
     inc - patterns to include
     exc - patterns to exclude
-    head - a regex to prepend to patterns to control whether a match is rooted
+    dflt_pat - if a pattern in names has no explicit type, assume this one
+    src - where these patterns came from (e.g. .hgignore)
 
     a pattern is one of:
-    'glob:<rooted glob>'
-    're:<rooted regexp>'
-    'path:<rooted path>'
-    'relglob:<relative glob>'
-    'relpath:<relative path>'
-    'relre:<relative regexp>'
-    '<rooted path or regexp>'
+    'glob:<glob>' - a glob relative to cwd
+    're:<regexp>' - a regular expression
+    'path:<path>' - a path relative to canonroot
+    'relglob:<glob>' - an unrooted glob (*.c matches C files in all dirs)
+    'relpath:<path>' - a path relative to cwd
+    'relre:<regexp>' - a regexp that doesn't have to match the start of a name
+    '<something>' - one of the cases above, selected by the dflt_pat argument
 
     returns:
     a 3-tuple containing
-    - list of explicit non-pattern names passed in
+    - list of roots (places where one should start a recursive walk of the fs);
+      this often matches the explicit non-pattern names passed in, but also
+      includes the initial part of glob: patterns that has no glob characters
     - a bool match(filename) function
     - a bool indicating if any patterns were passed in
-
-    todo:
-    make head regex a rooted bool
     """
+
+    # a common case: no patterns at all
+    if not names and not inc and not exc:
+        return [], always, False
 
     def contains_glob(name):
         for c in name:
@@ -435,19 +440,21 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
 
     def regex(kind, name, tail):
         '''convert a pattern into a regular expression'''
+        if not name:
+            return ''
         if kind == 're':
             return name
         elif kind == 'path':
             return '^' + re.escape(name) + '(?:/|$)'
         elif kind == 'relglob':
-            return head + globre(name, '(?:|.*/)', tail)
+            return globre(name, '(?:|.*/)', '(?:/|$)')
         elif kind == 'relpath':
-            return head + re.escape(name) + tail
+            return re.escape(name) + '(?:/|$)'
         elif kind == 'relre':
             if name.startswith('^'):
                 return name
             return '.*' + name
-        return head + globre(name, '', tail)
+        return globre(name, '', tail)
 
     def matchfn(pats, tail):
         """build a matching function from a set of patterns"""
@@ -473,46 +480,53 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     def globprefix(pat):
         '''return the non-glob prefix of a path, e.g. foo/* -> foo'''
         root = []
-        for p in pat.split(os.sep):
+        for p in pat.split('/'):
             if contains_glob(p): break
             root.append(p)
-        return '/'.join(root)
+        return '/'.join(root) or '.'
 
-    pats = []
-    files = []
-    roots = []
-    for kind, name in [patkind(p, dflt_pat) for p in names]:
-        if kind in ('glob', 'relpath'):
-            name = canonpath(canonroot, cwd, name)
-            if name == '':
-                kind, name = 'glob', '**'
-        if kind in ('glob', 'path', 're'):
-            pats.append((kind, name))
-        if kind == 'glob':
-            root = globprefix(name)
-            if root: roots.append(root)
-        elif kind == 'relpath':
-            files.append((kind, name))
-            roots.append(name)
+    def normalizepats(names, default):
+        pats = []
+        files = []
+        roots = []
+        anypats = False
+        for kind, name in [patkind(p, default) for p in names]:
+            if kind in ('glob', 'relpath'):
+                name = canonpath(canonroot, cwd, name)
+            elif kind in ('relglob', 'path'):
+                name = normpath(name)
+            if kind in ('glob', 're', 'relglob', 'relre'):
+                pats.append((kind, name))
+                anypats = True
+            if kind == 'glob':
+                root = globprefix(name)
+                roots.append(root)
+            elif kind in ('relpath', 'path'):
+                files.append((kind, name))
+                roots.append(name)
+            elif kind == 'relglob':
+                roots.append('.')
+        return roots, pats + files, anypats
+
+    roots, pats, anypats = normalizepats(names, dflt_pat)
 
     patmatch = matchfn(pats, '$') or always
-    filematch = matchfn(files, '(?:/|$)') or always
     incmatch = always
     if inc:
-        inckinds = [patkind(canonpath(canonroot, cwd, i)) for i in inc]
+        dummy, inckinds, dummy = normalizepats(inc, 'glob')
         incmatch = matchfn(inckinds, '(?:/|$)')
     excmatch = lambda fn: False
     if exc:
-        exckinds = [patkind(canonpath(canonroot, cwd, x)) for x in exc]
+        dummy, exckinds, dummy = normalizepats(exc, 'glob')
         excmatch = matchfn(exckinds, '(?:/|$)')
 
-    return (roots,
-            lambda fn: (incmatch(fn) and not excmatch(fn) and
-                        (fn.endswith('/') or
-                         (not pats and not files) or
-                         (pats and patmatch(fn)) or
-                         (files and filematch(fn)))),
-            (inc or exc or (pats and pats != [('glob', '**')])) and True)
+    if not names and inc and not exc:
+        # common case: hgignore patterns
+        match = incmatch
+    else:
+        match = lambda fn: incmatch(fn) and not excmatch(fn) and patmatch(fn)
+
+    return (roots, match, (inc or exc or anypats) and True)
 
 def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     '''enhanced shell command execution.
