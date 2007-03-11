@@ -73,28 +73,28 @@ f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
 f  mammals/skunk                   skunk
 
 hg debugwalk -I *k
-m  mammals/skunk  skunk
+f  mammals/skunk  skunk
 
 hg debugwalk -I glob:*k
-m  mammals/skunk  skunk
+f  mammals/skunk  skunk
 
 hg debugwalk -I relglob:*k
+f  beans/black    ../beans/black
 f  fenugreek      ../fenugreek
-m  beans/black    ../beans/black
-m  mammals/skunk  skunk
+f  mammals/skunk  skunk
 
 hg debugwalk -I relglob:*k .
 f  mammals/skunk  skunk
 
 hg debugwalk -I re:.*k$
+f  beans/black    ../beans/black
 f  fenugreek      ../fenugreek
-m  beans/black    ../beans/black
-m  mammals/skunk  skunk
+f  mammals/skunk  skunk
 
 hg debugwalk -I relre:.*k$
+f  beans/black    ../beans/black
 f  fenugreek      ../fenugreek
-m  beans/black    ../beans/black
-m  mammals/skunk  skunk
+f  mammals/skunk  skunk
 
 hg debugwalk -I path:beans
 f  beans/black     ../beans/black

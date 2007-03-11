@@ -509,8 +509,7 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
         excmatch = matchfn(exckinds, '(?:/|$)')
 
     return (roots,
-            lambda fn: (incmatch(fn) and not excmatch(fn) and
-                        (fn.endswith('/') or patmatch(fn))),
+            lambda fn: (incmatch(fn) and not excmatch(fn) and patmatch(fn)),
             (inc or exc or anypats) and True)
 
 def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
