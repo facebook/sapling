@@ -832,7 +832,10 @@ class localrepository(repo.repository):
 
         if node:
             fdict = dict.fromkeys(files)
-            for fn in self.manifest.read(self.changelog.read(node)[0]):
+            mdict = self.manifest.read(self.changelog.read(node)[0])
+            mfiles = mdict.keys()
+            mfiles.sort()
+            for fn in mfiles:
                 for ffn in fdict:
                     # match if the file is the exact name or a directory
                     if ffn == fn or fn.startswith("%s/" % ffn):
@@ -840,7 +843,9 @@ class localrepository(repo.repository):
                         break
                 if match(fn):
                     yield 'm', fn
-            for fn in fdict:
+            ffiles = fdict.keys()
+            ffiles.sort()
+            for fn in ffiles:
                 if badmatch and badmatch(fn):
                     if match(fn):
                         yield 'b', fn

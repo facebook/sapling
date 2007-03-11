@@ -16,9 +16,9 @@ t/x
 a
 NONEXISTENT: No such file in rev ce18e5bc5cd3
 a
-t/x
 b
 t.h
+t/x
 % -I/-X with relative path should work
 b
 t.h
