@@ -2507,7 +2507,8 @@ def unbundle(ui, repo, fname, **opts):
 def update(ui, repo, node=None, clean=False, date=None):
     """update working directory
 
-    Update the working directory to the specified revision.
+    Update the working directory to the specified revision, or the
+    tip of the current branch if none is specified.
 
     If there are no outstanding changes in the working directory and
     there is a linear relationship between the current version and the
