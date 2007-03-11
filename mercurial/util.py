@@ -462,7 +462,7 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
     def globprefix(pat):
         '''return the non-glob prefix of a path, e.g. foo/* -> foo'''
         root = []
-        for p in pat.split(os.sep):
+        for p in pat.split('/'):
             if contains_glob(p): break
             root.append(p)
         return '/'.join(root)
