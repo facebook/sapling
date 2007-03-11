@@ -437,7 +437,7 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
         elif kind == 'relglob':
             return head + globre(name, '(?:|.*/)', '(?:/|$)')
         elif kind == 'relpath':
-            return head + re.escape(name) + tail
+            return head + re.escape(name) + '(?:/|$)'
         elif kind == 'relre':
             if name.startswith('^'):
                 return name
@@ -473,43 +473,45 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
             root.append(p)
         return '/'.join(root) or '.'
 
-    pats = []
-    files = []
-    roots = []
-    for kind, name in [patkind(p, dflt_pat) for p in names]:
-        if kind in ('glob', 'relpath'):
-            name = canonpath(canonroot, cwd, name)
-        elif kind in ('relglob', 'path'):
-            name = normpath(name)
-        if kind in ('glob', 're', 'relglob'):
-            pats.append((kind, name))
-        if kind == 'glob':
-            root = globprefix(name)
-            roots.append(root)
-        elif kind in ('relpath', 'path'):
-            files.append((kind, name))
-            roots.append(name)
-        elif kind == 'relglob':
-            roots.append('.')
+    def normalizepats(names, default):
+        pats = []
+        files = []
+        roots = []
+        anypats = False
+        for kind, name in [patkind(p, default) for p in names]:
+            if kind in ('glob', 'relpath'):
+                name = canonpath(canonroot, cwd, name)
+            elif kind in ('relglob', 'path'):
+                name = normpath(name)
+            if kind in ('glob', 're', 'relglob', 'relre'):
+                pats.append((kind, name))
+                anypats = True
+            if kind == 'glob':
+                root = globprefix(name)
+                roots.append(root)
+            elif kind in ('relpath', 'path'):
+                files.append((kind, name))
+                roots.append(name)
+            elif kind == 'relglob':
+                roots.append('.')
+        return roots, pats + files, anypats
+
+    roots, pats, anypats = normalizepats(names, dflt_pat)
 
     patmatch = matchfn(pats, '$') or always
-    filematch = matchfn(files, '(?:/|$)') or always
     incmatch = always
     if inc:
-        inckinds = [patkind(canonpath(canonroot, cwd, i)) for i in inc]
+        dummy, inckinds, dummy = normalizepats(inc, 'glob')
         incmatch = matchfn(inckinds, '(?:/|$)')
     excmatch = lambda fn: False
     if exc:
-        exckinds = [patkind(canonpath(canonroot, cwd, x)) for x in exc]
+        dummy, exckinds, dummy = normalizepats(exc, 'glob')
         excmatch = matchfn(exckinds, '(?:/|$)')
 
     return (roots,
             lambda fn: (incmatch(fn) and not excmatch(fn) and
-                        (fn.endswith('/') or
-                         (not pats and not files) or
-                         (pats and patmatch(fn)) or
-                         (files and filematch(fn)))),
-            (inc or exc or pats) and True)
+                        (fn.endswith('/') or patmatch(fn))),
+            (inc or exc or anypats) and True)
 
 def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     '''enhanced shell command execution.

@@ -35,6 +35,16 @@ hg commit -m "commit #0" -d "1000000 0"
 debugwalk
 debugwalk -I.
 chdir mammals
+debugwalk
+debugwalk -X ../beans
+debugwalk -I '*k'
+debugwalk -I 'glob:*k'
+debugwalk -I 'relglob:*k'
+debugwalk -I 'relglob:*k' .
+debugwalk -I 're:.*k$'
+debugwalk -I 'relre:.*k$'
+debugwalk -I 'path:beans'
+debugwalk -I 'relpath:../beans'
 debugwalk .
 debugwalk -I.
 debugwalk Procyonidae

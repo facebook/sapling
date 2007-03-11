@@ -46,6 +46,72 @@ f  mammals/skunk                   mammals/skunk
 
 cd mammals
 
+hg debugwalk 
+f  beans/black                     ../beans/black
+f  beans/borlotti                  ../beans/borlotti
+f  beans/kidney                    ../beans/kidney
+f  beans/navy                      ../beans/navy
+f  beans/pinto                     ../beans/pinto
+f  beans/turtle                    ../beans/turtle
+f  fennel                          ../fennel
+f  fenugreek                       ../fenugreek
+f  fiddlehead                      ../fiddlehead
+f  glob:glob                       ../glob:glob
+f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
+f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
+f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
+f  mammals/skunk                   skunk
+
+hg debugwalk -X ../beans
+f  fennel                          ../fennel
+f  fenugreek                       ../fenugreek
+f  fiddlehead                      ../fiddlehead
+f  glob:glob                       ../glob:glob
+f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
+f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
+f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
+f  mammals/skunk                   skunk
+
+hg debugwalk -I *k
+m  mammals/skunk  skunk
+
+hg debugwalk -I glob:*k
+m  mammals/skunk  skunk
+
+hg debugwalk -I relglob:*k
+f  fenugreek      ../fenugreek
+m  beans/black    ../beans/black
+m  mammals/skunk  skunk
+
+hg debugwalk -I relglob:*k .
+f  mammals/skunk  skunk
+
+hg debugwalk -I re:.*k$
+f  fenugreek      ../fenugreek
+m  beans/black    ../beans/black
+m  mammals/skunk  skunk
+
+hg debugwalk -I relre:.*k$
+f  fenugreek      ../fenugreek
+m  beans/black    ../beans/black
+m  mammals/skunk  skunk
+
+hg debugwalk -I path:beans
+f  beans/black     ../beans/black
+f  beans/borlotti  ../beans/borlotti
+f  beans/kidney    ../beans/kidney
+f  beans/navy      ../beans/navy
+f  beans/pinto     ../beans/pinto
+f  beans/turtle    ../beans/turtle
+
+hg debugwalk -I relpath:../beans
+f  beans/black     ../beans/black
+f  beans/borlotti  ../beans/borlotti
+f  beans/kidney    ../beans/kidney
+f  beans/navy      ../beans/navy
+f  beans/pinto     ../beans/pinto
+f  beans/turtle    ../beans/turtle
+
 hg debugwalk .
 f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
