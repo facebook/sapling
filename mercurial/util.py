@@ -479,14 +479,14 @@ def _matcher(canonroot, cwd, names, inc, exc, head, dflt_pat, src):
             name = canonpath(canonroot, cwd, name)
             if name == '':
                 kind, name = 'glob', '**'
-        elif kind == 'relglob':
+        elif kind in ('relglob', 'path'):
             name = normpath(name)
-        if kind in ('glob', 'path', 're', 'relglob'):
+        if kind in ('glob', 're', 'relglob'):
             pats.append((kind, name))
         if kind == 'glob':
             root = globprefix(name)
             roots.append(root)
-        elif kind == 'relpath':
+        elif kind in ('relpath', 'path'):
             files.append((kind, name))
             roots.append(name)
         elif kind == 'relglob':
