@@ -1620,6 +1620,7 @@ def locate(ui, repo, *pats, **opts):
     else:
         node = None
 
+    ret = 1
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts, node=node,
                                              default='relglob'):
         if not node and repo.dirstate.state(abs) == '?':
@@ -1628,6 +1629,9 @@ def locate(ui, repo, *pats, **opts):
             ui.write(os.path.join(repo.root, abs), end)
         else:
             ui.write(((pats and rel) or abs), end)
+        ret = 0
+
+    return ret
 
 def log(ui, repo, *pats, **opts):
     """show revision history of entire repository or files
