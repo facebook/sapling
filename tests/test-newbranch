@@ -12,7 +12,9 @@ hg branch
 hg ci -m "add branch name" -d "1000000 0"
 hg branch bar
 hg ci -m "change branch name" -d "1000000 0"
+echo % branch shadowing
 hg branch ""
+hg branch -f ''
 hg ci -m "clear branch name" -d "1000000 0"
 
 hg co foo

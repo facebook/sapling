@@ -1,4 +1,6 @@
 foo
+% branch shadowing
+abort: a branch of the same name already exists (use --force to override)
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
