@@ -247,14 +247,21 @@ def backout(ui, repo, rev, **opts):
             ui.status(_('(use "backout --merge" '
                         'if you want to auto-merge)\n'))
 
-def branch(ui, repo, label=None):
+def branch(ui, repo, label=None, **opts):
     """set or show the current branch name
 
     With <name>, set the current branch name. Otherwise, show the
     current branch name.
+
+    Unless --force is specified, branch will not let you set a
+    branch name that shadows an existing branch.
     """
 
     if label is not None:
+        if not opts.get('force') and label in repo.branchtags():
+            if label not in [p.branch() for p in repo.workingctx().parents()]:
+                raise util.Abort(_('a branch of the same name already exists'
+                                   ' (use --force to override)'))
         repo.opener("branch", "w").write(util.fromlocal(label) + '\n')
     else:
         b = util.tolocal(repo.workingctx().branch())
@@ -2622,7 +2629,10 @@ table = {
           ('u', 'user', '', _('record user as committer')),
          ] + walkopts + commitopts,
          _('hg backout [OPTION]... REV')),
-    "branch": (branch, [], _('hg branch [NAME]')),
+    "branch": (branch,
+               [('f', 'force', None,
+                 _('create branch even if it shadows an existing branch'))],
+                _('hg branch [NAME]')),
     "branches": (branches, [], _('hg branches')),
     "bundle":
         (bundle,
