@@ -58,6 +58,10 @@ def extract(ui, fileobj):
         date = None
 
         if message:
+            if message.startswith('[PATCH'):
+                pend = message.find(']')
+                if pend:
+                    message = message[pend+2:]
             message = message.replace('\n\t', ' ')
             ui.debug('Subject: %s\n' % message)
         if user:
