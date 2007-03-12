@@ -2631,7 +2631,7 @@ table = {
          _('hg backout [OPTION]... REV')),
     "branch": (branch,
                [('f', 'force', None,
-                 _('create branch even if it shadows an existing branch'))],
+                 _('set branch name even if it shadows an existing branch'))],
                 _('hg branch [NAME]')),
     "branches": (branches, [], _('hg branches')),
     "bundle":
