@@ -67,7 +67,7 @@ class changectx(object):
     def date(self): return self._changeset[2]
     def files(self): return self._changeset[3]
     def description(self): return self._changeset[4]
-    def branch(self): return self._changeset[5].get("branch", "")
+    def branch(self): return self._changeset[5].get("branch")
 
     def parents(self):
         """return contexts for each parent changeset"""
