@@ -1070,7 +1070,7 @@ class queue:
                     mm.append(m[i])
                     del m[i]
             repo.dirstate.update(m, 'n')
-            repo.dirstate.update(mm, 'n', st_mtime=0)
+            repo.dirstate.update(mm, 'n', st_mtime=-1, st_size=-1)
             repo.dirstate.forget(forget)
 
             if not msg:
