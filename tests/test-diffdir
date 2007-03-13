@@ -1,7 +1,6 @@
 #!/bin/sh
 
 hg init
-hg branch dummy # needed so -r "" doesn't point to the unnamed/default branch
 touch a
 hg add a
 hg ci -m "a" -d "1000000 0"
