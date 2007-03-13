@@ -74,26 +74,10 @@ modify a branch
 
 
 4:4909a3732169
- features: default
 4909a3732169c0c20011c4f4b8fdff4e3d89b23f 4
 bf1bc2f45e834c75404d0ddab57d53beab56e2f8 default
 4909a3732169c0c20011c4f4b8fdff4e3d89b23f foo
 67ec16bde7f1575d523313b9bca000f6a6f12dca bar
-% test for different branch cache features
-branch cache: no features specified
-foo                            4:4909a3732169c0c20011c4f4b8fdff4e3d89b23f
-default                        3:bf1bc2f45e834c75404d0ddab57d53beab56e2f8
-bar                            2:67ec16bde7f1575d523313b9bca000f6a6f12dca
-branch cache: missing features: default
-foo                            4:4909a3732169c0c20011c4f4b8fdff4e3d89b23f
-default                        3:bf1bc2f45e834c75404d0ddab57d53beab56e2f8
-bar                            2:67ec16bde7f1575d523313b9bca000f6a6f12dca
-branch cache: missing features: default
-foo                            4:4909a3732169c0c20011c4f4b8fdff4e3d89b23f
-default                        3:bf1bc2f45e834c75404d0ddab57d53beab56e2f8
-bar                            2:67ec16bde7f1575d523313b9bca000f6a6f12dca
-% test old hg reading branch cache with feature list
-ValueError raised correctly, good.
 % update with no arguments: tipmost revision of the current branch
 bf1bc2f45e83
 4909a3732169 (foo) tip

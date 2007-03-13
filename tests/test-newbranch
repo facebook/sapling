@@ -30,39 +30,14 @@ hg branches -q
 
 echo % test for invalid branch cache
 hg rollback
-cp .hg/branches.cache .hg/bc-invalid
+cp .hg/branch.cache .hg/bc-invalid
 hg log -r foo
-cp .hg/bc-invalid .hg/branches.cache
+cp .hg/bc-invalid .hg/branch.cache
 hg --debug log -r foo
-rm .hg/branches.cache
-echo corrupted > .hg/branches.cache
+rm .hg/branch.cache
+echo corrupted > .hg/branch.cache
 hg log -qr foo
-cat .hg/branches.cache
-
-echo % test for different branch cache features
-echo '4909a3732169c0c20011c4f4b8fdff4e3d89b23f 4' > .hg/branches.cache
-hg branches --debug
-echo ' features: unnamed dummy foo bar' > .hg/branches.cache
-hg branches --debug
-echo ' features: dummy' > .hg/branches.cache
-hg branches --debug
-
-echo % test old hg reading branch cache with feature list
-python << EOF
-import binascii
-f = file('.hg/branches.cache')
-lines = f.read().split('\n')
-f.close()
-firstline = lines[0]
-last, lrev = lines.pop(0).rstrip().split(" ", 1)
-try:
-    last, lrev = binascii.unhexlify(last), int(lrev)
-except ValueError, inst:
-    if str(inst) == "invalid literal for int():%s" % firstline:
-        print "ValueError raised correctly, good."
-    else:
-        print "ValueError: %s" % inst
-EOF
+cat .hg/branch.cache
 
 echo % update with no arguments: tipmost revision of the current branch
 hg up -q -C 0
