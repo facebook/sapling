@@ -1447,7 +1447,7 @@ def identify(ui, repo):
     if not ui.quiet:
 
         branch = util.tolocal(repo.workingctx().branch())
-        if branch:
+        if branch != 'default':
             output.append("(%s)" % branch)
 
         # multiple tags for a single parent separated by '/'

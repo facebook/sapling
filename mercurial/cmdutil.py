@@ -262,7 +262,8 @@ class changeset_printer(object):
 
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
 
-        if branch:
+        # don't show the default branch name
+        if branch != 'default':
             branch = util.tolocal(branch)
             self.ui.write(_("branch:      %s\n") % branch)
         for tag in self.repo.nodetags(changenode):
@@ -406,7 +407,7 @@ class changeset_templater(changeset_printer):
 
         def showbranches(**args):
             branch = changes[5].get("branch")
-            if branch:
+            if branch != 'default':
                 branch = util.tolocal(branch)
                 return showlist('branch', [branch], plural='branches', **args)
             # add old style branches if requested

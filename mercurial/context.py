@@ -413,9 +413,9 @@ class workingctx(changectx):
     def clean(self): return self._status[5]
     def branch(self):
         try:
-            return self._repo.opener("branch").read().strip()
+            return self._repo.opener("branch").read().strip() or "default"
         except IOError:
-            return ""
+            return "default"
 
     def parents(self):
         """return contexts for each parent changeset"""

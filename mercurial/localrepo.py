@@ -17,7 +17,7 @@ demandload(globals(), "os revlog time util")
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
     supported = ('revlogv1', 'store')
-    branchcache_features = ('unnamed',)
+    branchcache_features = ('default',)
 
     def __del__(self):
         self.transhandle = None
@@ -727,7 +727,7 @@ class localrepository(repo.repository):
             branchname = ""
 
         if use_dirstate:
-            oldname = c1[5].get("branch", "") # stored in UTF-8
+            oldname = c1[5].get("branch") or "default" # stored in UTF-8
             if not commit and not remove and not force and p2 == nullid and \
                    branchname == oldname:
                 self.ui.status(_("nothing changed\n"))

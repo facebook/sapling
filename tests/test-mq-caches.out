@@ -7,7 +7,7 @@ No .hg/branches.cache
 # some regular revisions
 Patch queue now empty
 tip: 1
- features: unnamed
+ features: default
 3f910abad313ff802d3a23a7529433872df9b3ae 1
 3f910abad313ff802d3a23a7529433872df9b3ae bar
 9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
@@ -16,12 +16,12 @@ tip: 1
 applying p1
 Now at: p1
 tip: 2
- features: unnamed
+ features: default
 3f910abad313ff802d3a23a7529433872df9b3ae 1
 3f910abad313ff802d3a23a7529433872df9b3ae bar
 9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
 tip: 3
- features: unnamed
+ features: default
 3f910abad313ff802d3a23a7529433872df9b3ae 1
 3f910abad313ff802d3a23a7529433872df9b3ae bar
 9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
@@ -30,7 +30,7 @@ branch bar: 2
 
 # removing the cache
 tip: 3
- features: unnamed
+ features: default
 3f910abad313ff802d3a23a7529433872df9b3ae 1
 3f910abad313ff802d3a23a7529433872df9b3ae bar
 9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
@@ -39,7 +39,7 @@ branch bar: 2
 
 # importing rev 1 (the cache now ends in one of the patches)
 tip: 3
- features: unnamed
+ features: default
 3f910abad313ff802d3a23a7529433872df9b3ae 1
 3f910abad313ff802d3a23a7529433872df9b3ae bar
 9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
@@ -54,6 +54,6 @@ applying p1
 applying p2
 Now at: p2
 tip: 3
- features: unnamed
+ features: default
 9539f35bdc80732cc9a3f84e46508f1ed1ec8cff 0
 9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo

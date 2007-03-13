@@ -59,7 +59,7 @@ class changelog(revlog):
         changelog v0 doesn't use extra
         """
         if not text:
-            return (nullid, "", (0, 0), [], "", {})
+            return (nullid, "", (0, 0), [], "", {'branch': 'default'})
         last = text.index("\n\n")
         desc = util.tolocal(text[last + 2:])
         l = text[:last].split('\n')
@@ -79,6 +79,8 @@ class changelog(revlog):
             time, timezone, extra = extra_data
             time, timezone = float(time), int(timezone)
             extra = self.decode_extra(extra)
+        if not extra.get('branch'):
+            extra['branch'] = 'default'
         files = l[3:]
         return (manifest, user, (time, timezone), files, desc, extra)
 
@@ -94,6 +96,8 @@ class changelog(revlog):
             parseddate = "%d %d" % util.parsedate(date)
         else:
             parseddate = "%d %d" % util.makedate()
+        if extra and extra.get("branch") in ("default", ""):
+            del extra["branch"]
         if extra:
             extra = self.encode_extra(extra)
             parseddate = "%s %s" % (parseddate, extra)
