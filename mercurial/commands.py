@@ -255,12 +255,10 @@ def branch(ui, repo, label=None):
     current branch name.
     """
 
-    if label is not None:
-        repo.opener("branch", "w").write(util.fromlocal(label) + '\n')
+    if label:
+        repo.dirstate.setbranch(util.fromlocal(label))
     else:
-        b = util.tolocal(repo.workingctx().branch())
-        if b:
-            ui.write("%s\n" % b)
+        ui.write("%s\n" % util.tolocal(repo.dirstate.branch()))
 
 def branches(ui, repo):
     """list repository named branches

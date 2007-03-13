@@ -411,11 +411,7 @@ class workingctx(changectx):
     def deleted(self): return self._status[3]
     def unknown(self): return self._status[4]
     def clean(self): return self._status[5]
-    def branch(self):
-        try:
-            return self._repo.opener("branch").read().strip() or "default"
-        except IOError:
-            return "default"
+    def branch(self): return self._repo.dirstate.branch()
 
     def parents(self):
         """return contexts for each parent changeset"""
