@@ -610,7 +610,7 @@ class hgweb(object):
         reponame = re.sub(r"\W+", "-", os.path.basename(self.reponame))
         cnode = self.repo.lookup(id)
         arch_version = id
-        if cnode == id:
+        if cnode == id or id == 'tip':
             arch_version = short(cnode)
         name = "%s-%s" % (reponame, arch_version)
         mimetype, artype, extension, encoding = self.archive_specs[type_]
