@@ -260,10 +260,12 @@ class localrepository(repo.repository):
         if self.tagscache:
             return self.tagscache
 
-        self.tagscache = {}
+        globaltags = {}
+        globalover = {}
 
         def readtags(lines, fn):
             filetags = {}
+            fileover = {}
             count = 0
 
             def warn(msg):
@@ -287,11 +289,30 @@ class localrepository(repo.repository):
                 if bin_n not in self.changelog.nodemap:
                     warn(_("tag '%s' refers to unknown node") % key)
                     continue
-                self.tagscache[key] = bin_n
 
-        # read the tags file from each head, ending with the tip,
-        # and add each tag found to the map, with "newer" ones
-        # taking precedence
+                h = {}
+                if key in filetags:
+                    n, h = filetags[key]
+                    h[n] = True
+                filetags[key] = (bin_n, h)
+
+            for k,nh in filetags.items():
+                if k not in globaltags:
+                    globaltags[k] = nh
+                    continue
+                # we prefer the global tag if:
+                #  it supercedes us OR
+                #  mutual supercedes and it has a higher rank
+                # otherwise we win because we're tip-most
+                an, ah = nh
+                bn, bh = globaltags[k]
+                if bn != an and an in bh and \
+                   (bn not in ah or len(bh) > len(ah)):
+                    an = bn
+                ah.update(bh)
+                globaltags[k] = an, ah
+
+        # read the tags file from each head, ending with the tip
         f = None
         for rev, node, fnode in self._hgtagsnodes():
             f = (f and f.filectx(fnode) or
@@ -306,6 +327,10 @@ class localrepository(repo.repository):
         except IOError:
             pass
 
+        self.tagscache = {}
+        for k,nh in globaltags.items():
+            n = nh[0]
+            self.tagscache[k] = n
         self.tagscache['tip'] = self.changelog.tip()
 
         return self.tagscache

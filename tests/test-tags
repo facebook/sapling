@@ -63,7 +63,7 @@ hg commit -m "head" -d "1000000 0"
 hg tags
 hg tip
 
-# tags from later heads override previous ones
+# test tag precedence rules
 cd ..
 hg init t2
 cd t2
