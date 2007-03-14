@@ -306,6 +306,15 @@ class queue:
             message.insert(0, subject)
         return (message, comments, user, date, diffstart > 1)
 
+    def removeundo(self, repo):
+        undo = repo.sjoin('undo')
+        if not os.path.exists(undo):
+            return
+        try:
+            os.unlink(undo)
+        except OSError, inst:
+            self.ui.warn('error removing undo: %s\n' % str(inst))
+
     def printdiff(self, repo, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
         fns, matchfn, anypats = cmdutil.matchpats(repo, files, opts)
@@ -349,6 +358,7 @@ class queue:
             patchf.write(comments)
         self.printdiff(repo, head, n, fp=patchf)
         patchf.close()
+        self.removeundo(repo)
         return (0, n)
 
     def qparents(self, repo, rev=None):
@@ -381,6 +391,7 @@ class queue:
             pname = ".hg.patches.merge.marker"
             n = repo.commit(None, '[mq]: merge marker', user=None, force=1,
                             wlock=wlock)
+            self.removeundo(repo)
             self.applied.append(statusentry(revlog.hex(n), pname))
             self.applied_dirty = 1
 
@@ -488,6 +499,7 @@ class queue:
                 err = 1
                 break
         tr.close()
+        self.removeundo(repo)
         return (err, n)
 
     def delete(self, repo, patches, opts):
@@ -586,6 +598,7 @@ class queue:
         if r: r.add([patch])
         if commitfiles:
             self.refresh(repo, short=True)
+        self.removeundo(repo)
 
     def strip(self, repo, rev, update=True, backup="all", wlock=None):
         def limitheads(chlog, stop):
@@ -709,6 +722,7 @@ class queue:
         change = chlog.read(rev)
         chlog.strip(revnum, revnum)
         repo.manifest.strip(repo.manifest.rev(change[0]), revnum)
+        self.removeundo(repo)
         if saveheads:
             self.ui.status("adding branch\n")
             commands.unbundle(self.ui, repo, "file:%s" % chgrpfile,
@@ -1086,6 +1100,7 @@ class queue:
                             force=1, wlock=wlock)
             self.applied[-1] = statusentry(revlog.hex(n), patchfn)
             self.applied_dirty = 1
+            self.removeundo(repo)
         else:
             self.printdiff(repo, patchparent, fp=patchf)
             patchf.close()
@@ -1268,6 +1283,7 @@ class queue:
             return 1
         self.applied.append(statusentry(revlog.hex(n),'.hg.patches.save.line'))
         self.applied_dirty = 1
+        self.removeundo(undo)
 
     def full_series_end(self):
         if len(self.applied) > 0:
