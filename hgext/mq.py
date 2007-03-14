@@ -2085,14 +2085,15 @@ def reposetup(ui, repo):
             if not q.applied:
                 return tagscache
 
-            mqtags = [(patch.rev, patch.name) for patch in q.applied]
+            mqtags = [(revlog.bin(patch.rev), patch.name) for patch in q.applied]
             mqtags.append((mqtags[-1][0], 'qtip'))
             mqtags.append((mqtags[0][0], 'qbase'))
+            mqtags.append((self.changelog.parents(mqtags[0][0])[0], 'qparent'))
             for patch in mqtags:
                 if patch[1] in tagscache:
                     self.ui.warn('Tag %s overrides mq patch of the same name\n' % patch[1])
                 else:
-                    tagscache[patch[1]] = revlog.bin(patch[0])
+                    tagscache[patch[1]] = patch[0]
 
             return tagscache
 

@@ -262,6 +262,9 @@ echo bar > foo
 hg qpush -a
 hg st
 
+echo % mq tags
+hg log --template '{rev} {tags}\n' -r qparent:qtip
+
 cat >>$HGRCPATH <<EOF
 [diff]
 git = True

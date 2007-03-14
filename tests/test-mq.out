@@ -265,6 +265,10 @@ patch failed, rejects left in working dir
 Errors during apply, please fix and refresh bar
 ? foo
 ? foo.rej
+% mq tags
+0 qparent
+1 qbase foo
+2 qtip bar tip
 new file
 
 diff --git a/new b/new
