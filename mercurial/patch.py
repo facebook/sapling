@@ -48,8 +48,6 @@ def extract(ui, fileobj):
     fd, tmpname = tempfile.mkstemp(prefix='hg-patch-')
     tmpfp = os.fdopen(fd, 'w')
     try:
-        hgpatch = False
-
         msg = email.Parser.Parser().parse(fileobj)
 
         message = msg['Subject']
@@ -77,6 +75,9 @@ def extract(ui, fileobj):
             payload = part.get_payload(decode=True)
             m = diffre.search(payload)
             if m:
+                hgpatch = False
+                ignoretext = False
+
                 ui.debug(_('found patch at byte %d\n') % m.start(0))
                 diffs_seen += 1
                 cfp = cStringIO.StringIO()
@@ -96,7 +97,9 @@ def extract(ui, fileobj):
                             ui.debug('From: %s\n' % user)
                         elif line.startswith("# Date "):
                             date = line[7:]
-                    if not line.startswith('# '):
+                    elif line == '---' and 'git-send-email' in msg['X-Mailer']:
+                        ignoretext = True
+                    if not line.startswith('# ') and not ignoretext:
                         cfp.write(line)
                         cfp.write('\n')
                 message = cfp.getvalue()
