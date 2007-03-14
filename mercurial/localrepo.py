@@ -257,55 +257,56 @@ class localrepository(repo.repository):
 
     def tags(self):
         '''return a mapping of tag to node'''
-        if not self.tagscache:
-            self.tagscache = {}
+        if self.tagscache:
+            return self.tagscache
 
-            def parsetag(line, context):
-                if not line:
-                    return
+        self.tagscache = {}
+
+        def readtags(lines, fn):
+            filetags = {}
+            count = 0
+
+            def warn(msg):
+                self.ui.warn(_("%s, line %s: %s\n") % (fn, count, msg))
+
+            for l in lines:
+                count += 1
+                if not l:
+                    continue
                 s = l.split(" ", 1)
                 if len(s) != 2:
-                    self.ui.warn(_("%s: cannot parse entry\n") % context)
-                    return
+                    warn(_("cannot parse entry"))
+                    continue
                 node, key = s
                 key = util.tolocal(key.strip()) # stored in UTF-8
                 try:
                     bin_n = bin(node)
                 except TypeError:
-                    self.ui.warn(_("%s: node '%s' is not well formed\n") %
-                                 (context, node))
-                    return
+                    warn(_("node '%s' is not well formed") % node)
+                    continue
                 if bin_n not in self.changelog.nodemap:
-                    self.ui.warn(_("%s: tag '%s' refers to unknown node\n") %
-                                 (context, key))
-                    return
+                    warn(_("tag '%s' refers to unknown node") % key)
+                    continue
                 self.tagscache[key] = bin_n
 
-            # read the tags file from each head, ending with the tip,
-            # and add each tag found to the map, with "newer" ones
-            # taking precedence
-            f = None
-            for rev, node, fnode in self._hgtagsnodes():
-                f = (f and f.filectx(fnode) or
-                     self.filectx('.hgtags', fileid=fnode))
-                count = 0
-                for l in f.data().splitlines():
-                    count += 1
-                    parsetag(l, _("%s, line %d") % (str(f), count))
+        # read the tags file from each head, ending with the tip,
+        # and add each tag found to the map, with "newer" ones
+        # taking precedence
+        f = None
+        for rev, node, fnode in self._hgtagsnodes():
+            f = (f and f.filectx(fnode) or
+                 self.filectx('.hgtags', fileid=fnode))
+            readtags(f.data().splitlines(), f)
 
-            try:
-                f = self.opener("localtags")
-                count = 0
-                for l in f:
-                    # localtags are stored in the local character set
-                    # while the internal tag table is stored in UTF-8
-                    l = util.fromlocal(l)
-                    count += 1
-                    parsetag(l, _("localtags, line %d") % count)
-            except IOError:
-                pass
+        try:
+            data = util.fromlocal(self.opener("localtags").read())
+            # localtags are stored in the local character set
+            # while the internal tag table is stored in UTF-8
+            readtags(data.splitlines(), "localtags")
+        except IOError:
+            pass
 
-            self.tagscache['tip'] = self.changelog.tip()
+        self.tagscache['tip'] = self.changelog.tip()
 
         return self.tagscache
 
