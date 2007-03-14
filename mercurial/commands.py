@@ -257,16 +257,14 @@ def branch(ui, repo, label=None, **opts):
     branch name that shadows an existing branch.
     """
 
-    if label is not None:
+    if label:
         if not opts.get('force') and label in repo.branchtags():
             if label not in [p.branch() for p in repo.workingctx().parents()]:
                 raise util.Abort(_('a branch of the same name already exists'
                                    ' (use --force to override)'))
-        repo.opener("branch", "w").write(util.fromlocal(label) + '\n')
+        repo.dirstate.setbranch(util.fromlocal(label))
     else:
-        b = util.tolocal(repo.workingctx().branch())
-        if b:
-            ui.write("%s\n" % b)
+        ui.write("%s\n" % util.tolocal(repo.dirstate.branch()))
 
 def branches(ui, repo):
     """list repository named branches
@@ -1446,7 +1444,7 @@ def identify(ui, repo):
     if not ui.quiet:
 
         branch = util.tolocal(repo.workingctx().branch())
-        if branch:
+        if branch != 'default':
             output.append("(%s)" % branch)
 
         # multiple tags for a single parent separated by '/'

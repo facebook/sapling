@@ -1283,7 +1283,7 @@ class queue:
             return 1
         self.applied.append(statusentry(revlog.hex(n),'.hg.patches.save.line'))
         self.applied_dirty = 1
-        self.removeundo(undo)
+        self.removeundo(repo)
 
     def full_series_end(self):
         if len(self.applied) > 0:

@@ -24,6 +24,7 @@ class dirstate(object):
         self.dirs = None
         self.copymap = {}
         self.ignorefunc = None
+        self._branch = None
 
     def wjoin(self, f):
         return os.path.join(self.root, f)
@@ -136,6 +137,15 @@ class dirstate(object):
         self.lazyread()
         return self.pl
 
+    def branch(self):
+        if not self._branch:
+            try:
+                self._branch = self.opener("branch").read().strip()\
+                               or "default"
+            except IOError:
+                self._branch = "default"
+        return self._branch
+
     def markdirty(self):
         if not self.dirty:
             self.dirty = 1
@@ -144,6 +154,10 @@ class dirstate(object):
         self.lazyread()
         self.markdirty()
         self.pl = p1, p2
+
+    def setbranch(self, branch):
+        self._branch = branch
+        self.opener("branch", "w").write(branch + '\n')
 
     def state(self, key):
         try:

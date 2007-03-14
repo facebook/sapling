@@ -5,7 +5,7 @@ echo 'hgext.mq=' >> $HGRCPATH
 
 show_branch_cache()
 {
-    branches=.hg/branches.cache
+    branches=.hg/branch.cache
     # force cache (re)generation
     hg log -r does-not-exist 2> /dev/null
     hg log -r tip --template 'tip: #rev#\n'
@@ -61,7 +61,7 @@ show_branch_cache 1
 
 echo
 echo '# removing the cache'
-rm .hg/branches.cache
+rm .hg/branch.cache
 show_branch_cache 1
 
 echo
