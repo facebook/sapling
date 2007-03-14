@@ -361,7 +361,7 @@ class ui(object):
 
     def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
-        if "://" in loc or os.path.isdir(loc):
+        if "://" in loc or os.path.isdir(os.path.join(loc, '.hg')):
             return loc
 
         path = self.config("paths", loc)
