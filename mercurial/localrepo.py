@@ -261,11 +261,9 @@ class localrepository(repo.repository):
             return self.tagscache
 
         globaltags = {}
-        globalover = {}
 
         def readtags(lines, fn):
             filetags = {}
-            fileover = {}
             count = 0
 
             def warn(msg):
