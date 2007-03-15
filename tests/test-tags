@@ -63,7 +63,7 @@ hg commit -m "head" -d "1000000 0"
 hg tags
 hg tip
 
-# tags from later heads override previous ones
+# test tag precedence rules
 cd ..
 hg init t2
 cd t2
@@ -78,4 +78,8 @@ hg tag -r 1 -d '1000000 0' bar         # rev 3
 hg up -C 1
 echo >> foo
 hg ci -m 'change foo 2' -d '1000000 0' # rev 4
+hg tags
+
+hg tag --remove -d '1000000 0' bar 
+hg tip
 hg tags
