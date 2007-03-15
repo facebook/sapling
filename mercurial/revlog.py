@@ -425,10 +425,13 @@ class revlog(object):
                 self.nodemap[e[-1]] = n
                 n += 1
                 if inline:
+                    if e[1] < 0:
+                        break
                     off += e[1]
                     if off > l:
                         # some things don't seek well, just read it
                         fp.read(off - l)
+                        break
             if not st:
                 break
 
