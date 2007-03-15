@@ -79,3 +79,7 @@ hg up -C 1
 echo >> foo
 hg ci -m 'change foo 2' -d '1000000 0' # rev 4
 hg tags
+
+hg tag --remove -d '1000000 0' bar 
+hg tip
+hg tags

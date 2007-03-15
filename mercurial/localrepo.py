@@ -328,7 +328,8 @@ class localrepository(repo.repository):
         self.tagscache = {}
         for k,nh in globaltags.items():
             n = nh[0]
-            self.tagscache[k] = n
+            if n != nullid:
+                self.tagscache[k] = n
         self.tagscache['tip'] = self.changelog.tip()
 
         return self.tagscache
