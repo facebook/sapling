@@ -257,55 +257,80 @@ class localrepository(repo.repository):
 
     def tags(self):
         '''return a mapping of tag to node'''
-        if not self.tagscache:
-            self.tagscache = {}
+        if self.tagscache:
+            return self.tagscache
 
-            def parsetag(line, context):
-                if not line:
-                    return
+        globaltags = {}
+
+        def readtags(lines, fn):
+            filetags = {}
+            count = 0
+
+            def warn(msg):
+                self.ui.warn(_("%s, line %s: %s\n") % (fn, count, msg))
+
+            for l in lines:
+                count += 1
+                if not l:
+                    continue
                 s = l.split(" ", 1)
                 if len(s) != 2:
-                    self.ui.warn(_("%s: cannot parse entry\n") % context)
-                    return
+                    warn(_("cannot parse entry"))
+                    continue
                 node, key = s
                 key = util.tolocal(key.strip()) # stored in UTF-8
                 try:
                     bin_n = bin(node)
                 except TypeError:
-                    self.ui.warn(_("%s: node '%s' is not well formed\n") %
-                                 (context, node))
-                    return
+                    warn(_("node '%s' is not well formed") % node)
+                    continue
                 if bin_n not in self.changelog.nodemap:
-                    self.ui.warn(_("%s: tag '%s' refers to unknown node\n") %
-                                 (context, key))
-                    return
-                self.tagscache[key] = bin_n
+                    warn(_("tag '%s' refers to unknown node") % key)
+                    continue
 
-            # read the tags file from each head, ending with the tip,
-            # and add each tag found to the map, with "newer" ones
-            # taking precedence
-            f = None
-            for rev, node, fnode in self._hgtagsnodes():
-                f = (f and f.filectx(fnode) or
-                     self.filectx('.hgtags', fileid=fnode))
-                count = 0
-                for l in f.data().splitlines():
-                    count += 1
-                    parsetag(l, _("%s, line %d") % (str(f), count))
+                h = {}
+                if key in filetags:
+                    n, h = filetags[key]
+                    h[n] = True
+                filetags[key] = (bin_n, h)
 
-            try:
-                f = self.opener("localtags")
-                count = 0
-                for l in f:
-                    # localtags are stored in the local character set
-                    # while the internal tag table is stored in UTF-8
-                    l = util.fromlocal(l)
-                    count += 1
-                    parsetag(l, _("localtags, line %d") % count)
-            except IOError:
-                pass
+            for k,nh in filetags.items():
+                if k not in globaltags:
+                    globaltags[k] = nh
+                    continue
+                # we prefer the global tag if:
+                #  it supercedes us OR
+                #  mutual supercedes and it has a higher rank
+                # otherwise we win because we're tip-most
+                an, ah = nh
+                bn, bh = globaltags[k]
+                if bn != an and an in bh and \
+                   (bn not in ah or len(bh) > len(ah)):
+                    an = bn
+                ah.update(bh)
+                globaltags[k] = an, ah
 
-            self.tagscache['tip'] = self.changelog.tip()
+        # read the tags file from each head, ending with the tip
+        f = None
+        for rev, node, fnode in self._hgtagsnodes():
+            f = (f and f.filectx(fnode) or
+                 self.filectx('.hgtags', fileid=fnode))
+            readtags(f.data().splitlines(), f)
+
+        try:
+            data = util.fromlocal(self.opener("localtags").read())
+            # localtags are stored in the local character set
+            # while the internal tag table is stored in UTF-8
+            readtags(data.splitlines(), "localtags")
+        except IOError:
+            pass
+
+        self.tagscache = {}
+        for k,nh in globaltags.items():
+            n = nh[0]
+            if n != nullid:
+                self.tagscache[k] = n
+        self.tagscache['tip'] = self.changelog.tip()
 
         return self.tagscache
 

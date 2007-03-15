@@ -2439,14 +2439,20 @@ def tag(ui, repo, name, rev_=None, **opts):
                   "please use 'hg tag [-r REV] NAME' instead\n"))
         if opts['rev']:
             raise util.Abort(_("use only one form to specify the revision"))
+    if opts['rev'] and opts['remove']:
+        raise util.Abort(_("--rev and --remove are incompatible"))
     if opts['rev']:
         rev_ = opts['rev']
+    message = opts['message']
+    if opts['remove']:
+        rev_ = nullid
+        if not message:
+            message = _('Removed tag %s') % name
     if not rev_ and repo.dirstate.parents()[1] != nullid:
         raise util.Abort(_('uncommitted merge - please provide a '
                            'specific revision'))
     r = repo.changectx(rev_).node()
 
-    message = opts['message']
     if not message:
         message = _('Added tag %s for changeset %s') % (name, short(r))
 
@@ -2935,7 +2941,8 @@ table = {
           ('m', 'message', '', _('message for tag commit log entry')),
           ('d', 'date', '', _('record datecode as commit date')),
           ('u', 'user', '', _('record user as commiter')),
-          ('r', 'rev', '', _('revision to tag'))],
+          ('r', 'rev', '', _('revision to tag')),
+          ('', 'remove', None, _('remove a tag'))],
          _('hg tag [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME')),
     "tags": (tags, [], _('hg tags')),
     "tip":
