@@ -276,3 +276,16 @@ m  fenugreek  fenugreek  exact
 hg debugwalk new
 f  new  new  exact
 
+cd ..
+
+hg debugwalk -R t t/mammals/skunk
+f  mammals/skunk  t/mammals/skunk  exact
+
+cd t2
+
+hg debugwalk -R ../t ../t/mammals/skunk
+f  mammals/skunk  ../t/mammals/skunk  exact
+
+hg debugwalk --cwd ../t mammals/skunk
+f  mammals/skunk  mammals/skunk  exact
+

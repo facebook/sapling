@@ -83,3 +83,4 @@ bf1bc2f45e834c75404d0ddab57d53beab56e2f8 default
 % update with no arguments: tipmost revision of the current branch
 bf1bc2f45e83
 4909a3732169 (foo) tip
+abort: branch foobar not found

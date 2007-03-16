@@ -32,6 +32,17 @@ hg --cwd a diff -r0:1 > tip.patch
 hg --cwd b import -mpatch ../tip.patch
 rm -r b
 
+echo % hg -R repo import
+# put the clone in a subdir - having a directory named "a"
+# used to hide a bug.
+mkdir dir
+hg clone -r0 a dir/b
+hg --cwd a export tip > dir/tip.patch
+cd dir
+hg -R b import tip.patch
+cd ..
+rm -r dir
+
 echo % import from stdin
 hg clone -r0 a b
 hg --cwd a export tip | hg --cwd b import -

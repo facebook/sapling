@@ -450,7 +450,10 @@ def update(repo, node, branchmerge, force, partial, wlock):
     wc = repo.workingctx()
     if node is None:
         # tip of current branch
-        node = repo.branchtags()[wc.branch()]
+        try:
+            node = repo.branchtags()[wc.branch()]
+        except KeyError:
+            raise util.Abort(_("branch %s not found") % wc.branch())
     overwrite = force and not branchmerge
     forcemerge = force and branchmerge
     pl = wc.parents()

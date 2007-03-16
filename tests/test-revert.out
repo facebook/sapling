@@ -61,3 +61,4 @@ reverting a
 %% issue332
 adding b/b
 reverting b/b
+forgetting newdir/newfile

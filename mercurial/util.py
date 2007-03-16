@@ -325,13 +325,22 @@ def globre(pat, head='^', tail='$'):
 
 _globchars = {'[': 1, '{': 1, '*': 1, '?': 1}
 
-def pathto(n1, n2):
+def pathto(root, n1, n2):
     '''return the relative path from one place to another.
+    root should use os.sep to separate directories
     n1 should use os.sep to separate directories
     n2 should use "/" to separate directories
     returns an os.sep-separated path.
+
+    If n1 is a relative path, it's assumed it's
+    relative to root.
+    n2 should always be relative to root.
     '''
     if not n1: return localpath(n2)
+    if os.path.isabs(n1):
+        if os.path.splitdrive(root)[0] != os.path.splitdrive(n1)[0]:
+            return os.path.join(root, localpath(n2))
+        n2 = '/'.join((pconvert(root), n2))
     a, b = n1.split(os.sep), n2.split('/')
     a.reverse()
     b.reverse()

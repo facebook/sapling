@@ -68,8 +68,8 @@ guards
   series:
 abort: repository already exists!
 % qinit; <stuff>; qinit -c
-adding A
-adding B
+adding .hg/patches/A
+adding .hg/patches/B
 A .hgignore
 A A
 A B

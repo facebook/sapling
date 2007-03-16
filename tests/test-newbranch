@@ -48,3 +48,7 @@ hg id
 hg up -q 1
 hg up -q
 hg id
+hg branch foobar
+hg up
+
+exit 0

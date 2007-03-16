@@ -1066,8 +1066,6 @@ class hgweb(object):
                  headers={'status': '401 Unauthorized'})
             return
 
-        req.httphdr("application/mercurial-0.1")
-
         their_heads = req.form['heads'][0].split(' ')
 
         def check_heads():
@@ -1079,6 +1077,8 @@ class hgweb(object):
             bail(_('unsynced changes\n'))
             return
 
+        req.httphdr("application/mercurial-0.1")
+
         # do not lock repo until all changegroup data is
         # streamed. save to temporary file.
 
@@ -1089,67 +1089,78 @@ class hgweb(object):
             for s in util.filechunkiter(req, limit=length):
                 fp.write(s)
 
-            lock = self.repo.lock()
             try:
-                if not check_heads():
-                    req.write('0\n')
-                    req.write(_('unsynced changes\n'))
-                    return
-
-                fp.seek(0)
-                header = fp.read(6)
-                if not header.startswith("HG"):
-                    # old client with uncompressed bundle
-                    def generator(f):
-                        yield header
-                        for chunk in f:
-                            yield chunk
-                elif not header.startswith("HG10"):
-                    req.write("0\n")
-                    req.write(_("unknown bundle version\n"))
-                    return
-                elif header == "HG10GZ":
-                    def generator(f):
-                        zd = zlib.decompressobj()
-                        for chunk in f:
-                            yield zd.decompress(chunk)
-                elif header == "HG10BZ":
-                    def generator(f):
-                        zd = bz2.BZ2Decompressor()
-                        zd.decompress("BZ")
-                        for chunk in f:
-                            yield zd.decompress(chunk)
-                elif header == "HG10UN":
-                    def generator(f):
-                        for chunk in f:
-                            yield chunk
-                else:
-                    req.write("0\n")
-                    req.write(_("unknown bundle compression type\n"))
-                    return
-                gen = generator(util.filechunkiter(fp, 4096))
-
-                # send addchangegroup output to client
-
-                old_stdout = sys.stdout
-                sys.stdout = cStringIO.StringIO()
-
+                lock = self.repo.lock()
                 try:
-                    url = 'remote:%s:%s' % (proto,
-                                            req.env.get('REMOTE_HOST', ''))
+                    if not check_heads():
+                        req.write('0\n')
+                        req.write(_('unsynced changes\n'))
+                        return
+
+                    fp.seek(0)
+                    header = fp.read(6)
+                    if not header.startswith("HG"):
+                        # old client with uncompressed bundle
+                        def generator(f):
+                            yield header
+                            for chunk in f:
+                                yield chunk
+                    elif not header.startswith("HG10"):
+                        req.write("0\n")
+                        req.write(_("unknown bundle version\n"))
+                        return
+                    elif header == "HG10GZ":
+                        def generator(f):
+                            zd = zlib.decompressobj()
+                            for chunk in f:
+                                yield zd.decompress(chunk)
+                    elif header == "HG10BZ":
+                        def generator(f):
+                            zd = bz2.BZ2Decompressor()
+                            zd.decompress("BZ")
+                            for chunk in f:
+                                yield zd.decompress(chunk)
+                    elif header == "HG10UN":
+                        def generator(f):
+                            for chunk in f:
+                                yield chunk
+                    else:
+                        req.write("0\n")
+                        req.write(_("unknown bundle compression type\n"))
+                        return
+                    gen = generator(util.filechunkiter(fp, 4096))
+
+                    # send addchangegroup output to client
+
+                    old_stdout = sys.stdout
+                    sys.stdout = cStringIO.StringIO()
+
                     try:
-                        ret = self.repo.addchangegroup(util.chunkbuffer(gen),
-                                                       'serve', url)
-                    except util.Abort, inst:
-                        sys.stdout.write("abort: %s\n" % inst)
-                        ret = 0
+                        url = 'remote:%s:%s' % (proto,
+                                                req.env.get('REMOTE_HOST', ''))
+                        try:
+                            ret = self.repo.addchangegroup(
+                                        util.chunkbuffer(gen), 'serve', url)
+                        except util.Abort, inst:
+                            sys.stdout.write("abort: %s\n" % inst)
+                            ret = 0
+                    finally:
+                        val = sys.stdout.getvalue()
+                        sys.stdout = old_stdout
+                    req.write('%d\n' % ret)
+                    req.write(val)
                 finally:
-                    val = sys.stdout.getvalue()
-                    sys.stdout = old_stdout
-                req.write('%d\n' % ret)
-                req.write(val)
-            finally:
-                lock.release()
+                    lock.release()
+            except (OSError, IOError), inst:
+                req.write('0\n')
+                filename = getattr(inst, 'filename', '')
+                # Don't send our filesystem layout to the client
+                if filename.startswith(self.repo.root):
+                    filename = filename[len(self.repo.root)+1:]
+                else:
+                    filename = ''
+                error = getattr(inst, 'strerror', 'Unknown error')
+                req.write('%s: %s\n' % (error, filename))
         finally:
             fp.close()
             os.unlink(tempname)

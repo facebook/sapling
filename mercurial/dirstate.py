@@ -33,10 +33,14 @@ class dirstate(object):
         cwd = os.getcwd()
         if cwd == self.root: return ''
         # self.root ends with a path separator if self.root is '/' or 'C:\'
-        common_prefix_len = len(self.root)
-        if not self.root.endswith(os.sep):
-            common_prefix_len += 1
-        return cwd[common_prefix_len:]
+        rootsep = self.root
+        if not rootsep.endswith(os.sep):
+            rootsep += os.sep
+        if cwd.startswith(rootsep):
+            return cwd[len(rootsep):]
+        else:
+            # we're outside the repo. return an absolute path.
+            return cwd
 
     def hgignore(self):
         '''return the contents of .hgignore files as a list of patterns.
@@ -361,7 +365,7 @@ class dirstate(object):
             elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
             elif stat.S_ISDIR(st.st_mode): kind = _('directory')
             self.ui.warn(_('%s: unsupported file type (type is %s)\n') % (
-                util.pathto(self.getcwd(), f),
+                util.pathto(self.root, self.getcwd(), f),
                 kind))
         return False
 
@@ -471,7 +475,7 @@ class dirstate(object):
                 if not found:
                     if inst.errno != errno.ENOENT or not badmatch:
                         self.ui.warn('%s: %s\n' % (
-                            util.pathto(self.getcwd(), ff),
+                            util.pathto(self.root, self.getcwd(), ff),
                             inst.strerror))
                     elif badmatch and badmatch(ff) and imatch(nf):
                         yield 'b', ff, None

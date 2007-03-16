@@ -138,7 +138,7 @@ def walk(repo, pats=[], opts={}, node=None, badmatch=None, globbed=False,
     exact = dict.fromkeys(files)
     for src, fn in repo.walk(node=node, files=files, match=matchfn,
                              badmatch=badmatch):
-        yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
+        yield src, fn, util.pathto(repo.root, repo.getcwd(), fn), fn in exact
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
