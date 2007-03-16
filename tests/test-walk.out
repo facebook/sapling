@@ -95,3 +95,6 @@ fifo: unsupported file type (type is fifo)
 m  fenugreek  fenugreek  exact
 m  fenugreek  fenugreek  exact
 f  new  new  exact
+f  mammals/skunk  t/mammals/skunk  exact
+f  mammals/skunk  ../t/mammals/skunk  exact
+f  mammals/skunk  mammals/skunk  exact

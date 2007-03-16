@@ -326,6 +326,10 @@ def pathto(root, n1, n2):
     n2 should always be relative to root.
     '''
     if not n1: return localpath(n2)
+    if os.path.isabs(n1):
+        if os.path.splitdrive(root)[0] != os.path.splitdrive(n1)[0]:
+            return os.path.join(root, localpath(n2))
+        n2 = '/'.join((pconvert(root), n2))
     a, b = n1.split(os.sep), n2.split('/')
     a.reverse()
     b.reverse()

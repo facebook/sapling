@@ -59,3 +59,9 @@ hg rm fenugreek
 hg debugwalk fenugreek
 touch new
 hg debugwalk new
+cd ..
+hg -R t debugwalk t/mammals/skunk
+mkdir t2
+cd t2
+hg -R ../t debugwalk ../t/mammals/skunk
+hg --cwd ../t debugwalk mammals/skunk
