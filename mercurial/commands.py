@@ -2563,7 +2563,10 @@ def _lookup(repo, node, branch=None):
             node = repo.lookup(node)
         else:
             wc = repo.workingctx()
-            node = repo.branchtags()[wc.branch()]
+            try:
+                node = repo.branchtags()[wc.branch()]
+            except KeyError:
+                raise util.Abort(_("branch %s not found") % wc.branch())
     return node
 
 def verify(ui, repo):
