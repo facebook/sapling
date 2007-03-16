@@ -145,7 +145,7 @@ def walk(repo, pats=[], opts={}, node=None, head='', badmatch=None,
     exact = dict.fromkeys(files)
     for src, fn in repo.walk(node=node, files=files, match=matchfn,
                              badmatch=badmatch):
-        yield src, fn, util.pathto(repo.getcwd(), fn), fn in exact
+        yield src, fn, util.pathto(repo.root, repo.getcwd(), fn), fn in exact
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     if added is None or removed is None:

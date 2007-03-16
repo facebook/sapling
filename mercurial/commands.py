@@ -487,7 +487,7 @@ def docopy(ui, repo, pats, opts, wlock):
     # target: ossep
     def copy(origsrc, abssrc, relsrc, target, exact):
         abstarget = util.canonpath(repo.root, cwd, target)
-        reltarget = util.pathto(cwd, abstarget)
+        reltarget = util.pathto(repo.root, cwd, abstarget)
         prevsrc = targets.get(abstarget)
         if prevsrc is not None:
             ui.warn(_('%s: not overwriting - %s collides with %s\n') %
@@ -2418,11 +2418,12 @@ def status(ui, repo, *pats, **opts):
             format = "%s %%s%s" % (char, end)
 
         for f in changes:
-            ui.write(format % util.pathto(cwd, f))
+            ui.write(format % util.pathto(repo.root, cwd, f))
             if ((all or opts.get('copies')) and not opts.get('no_status')):
                 copied = repo.dirstate.copied(f)
                 if copied:
-                    ui.write('  %s%s' % (util.pathto(cwd, copied), end))
+                    ui.write('  %s%s' % (util.pathto(repo.root, cwd, copied),
+                                         end))
 
 def tag(ui, repo, name, rev_=None, **opts):
     """add a tag for the current or given revision

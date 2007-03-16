@@ -853,7 +853,7 @@ class localrepository(repo.repository):
                         yield 'b', fn
                 else:
                     self.ui.warn(_('%s: No such file in rev %s\n') % (
-                        util.pathto(self.getcwd(), fn), short(node)))
+                        util.pathto(self.root, self.getcwd(), fn), short(node)))
         else:
             for src, fn in self.dirstate.walk(files, match, badmatch=badmatch):
                 yield src, fn

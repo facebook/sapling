@@ -353,7 +353,7 @@ def updatedir(ui, repo, patches, wlock=None):
     cfiles = patches.keys()
     cwd = repo.getcwd()
     if cwd:
-        cfiles = [util.pathto(cwd, f) for f in patches.keys()]
+        cfiles = [util.pathto(repo.root, cwd, f) for f in patches.keys()]
     for f in patches:
         ctype, gp = patches[f]
         if ctype == 'RENAME':

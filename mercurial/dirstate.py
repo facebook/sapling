@@ -363,7 +363,7 @@ class dirstate(object):
             elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
             elif stat.S_ISDIR(st.st_mode): kind = _('directory')
             self.ui.warn(_('%s: unsupported file type (type is %s)\n') % (
-                util.pathto(self.getcwd(), f),
+                util.pathto(self.root, self.getcwd(), f),
                 kind))
         return False
 
@@ -466,7 +466,7 @@ class dirstate(object):
                 if not found:
                     if inst.errno != errno.ENOENT or not badmatch:
                         self.ui.warn('%s: %s\n' % (
-                            util.pathto(self.getcwd(), ff),
+                            util.pathto(self.root, self.getcwd(), ff),
                             inst.strerror))
                     elif badmatch and badmatch(ff) and imatch(nf):
                         yield 'b', ff, None
