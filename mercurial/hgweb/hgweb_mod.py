@@ -530,6 +530,23 @@ class hgweb(object):
                              date=self.repo.changectx(n).date())
                 parity += 1
 
+
+        def branches(**map):
+            parity = 0
+
+            b = self.repo.branchtags()
+            l = [(-self.repo.changelog.rev(n), n, t) for t, n in b.items()]
+            l.sort()
+
+            for r,n,t in l:
+                ctx = self.repo.changectx(n)
+
+                yield {'parity': self.stripes(parity),
+                       'branch': t,
+                       'node': hex(n),
+                       'date': ctx.date()}
+                parity += 1
+
         def heads(**map):
             parity = 0
             count = 0
@@ -578,6 +595,7 @@ class hgweb(object):
                         self.config("web", "author", "unknown")), # also
                  lastchange=cl.read(cl.tip())[2],
                  tags=tagentries,
+                 branches=branches,
                  heads=heads,
                  shortlog=changelist,
                  node=hex(cl.tip()),

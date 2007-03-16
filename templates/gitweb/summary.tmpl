@@ -36,8 +36,15 @@ summary |
 <tr class="light"><td colspan="3"><a class="list" href="{url}tags{sessionvars%urlparameter}">...</a></td></tr>
 </table>
 
-<div><a class="title"
-href="#">heads</a></div>
+<div><a class="title" href="#">branches</a></div>
+<table cellspacing="0">
+{branches%branchentry}
+<tr class="light">
+  <td colspan="3"><a class="list"  href="#">...</a></td>
+</tr>
+</table>
+
+<div><a class="title" href="#">heads</a></div>
 <table cellspacing="0">
 {heads%headentry}
 <tr class="light">
