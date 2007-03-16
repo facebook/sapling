@@ -2166,9 +2166,19 @@ def revert(ui, repo, *pats, **opts):
 
     # walk target manifest.
 
+    def badmatch(path):
+        if path in names:
+            return True
+        path_ = path + '/'
+        for f in names:
+            if f.startswith(path_):
+                return True
+        return False
+
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts, node=node,
-                                             badmatch=names.has_key):
-        if abs in names: continue
+                                             badmatch=badmatch):
+        if abs in names or src == 'b':
+            continue
         names[abs] = (rel, exact)
         target_only[abs] = True
 
