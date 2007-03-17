@@ -92,4 +92,6 @@ mkdir newdir
 echo foo > newdir/newfile
 hg add newdir/newfile
 hg revert b newdir
+echo foobar > b/b
+hg revert .
 true
