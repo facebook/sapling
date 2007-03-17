@@ -1,6 +1,8 @@
 adding a
 adding b
 adding t.h
+adding t/b
+adding t/e.h
 adding t/x
 hg locate a
 a
@@ -13,6 +15,8 @@ hg locate
 a
 b
 t.h
+t/b
+t/e.h
 t/x
 
 hg locate a
@@ -22,6 +26,8 @@ hg locate NONEXISTENT
 hg locate 
 b
 t.h
+t/b
+t/e.h
 t/x
 
 hg locate -r 0 a
@@ -33,17 +39,55 @@ hg locate -r 0
 a
 b
 t.h
+t/b
+t/e.h
 t/x
 
 % -I/-X with relative path should work
 hg locate 
 b
 t.h
+t/b
+t/e.h
 t/x
 
 hg locate -I ../t
+t/b
+t/e.h
 t/x
 
 hg locate t
+t/b
+t/e.h
 t/x
+
+hg locate b
+../b
+../t/b
+
+hg locate *.h
+../t.h
+../t/e.h
+
+hg locate path:t/x
+../t/x
+
+hg locate re:.*\.h
+../t.h
+../t/e.h
+
+hg locate -r 0 b
+../b
+../t/b
+
+hg locate -r 0 *.h
+../t.h
+../t/e.h
+
+hg locate -r 0 path:t/x
+../t/x
+
+hg locate -r 0 re:.*\.h
+../t.h
+../t/e.h
 
