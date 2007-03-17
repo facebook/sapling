@@ -492,7 +492,7 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
                 roots.append(root)
             elif kind in ('relpath', 'path'):
                 files.append((kind, name))
-                roots.append(name)
+                roots.append(name or '.')
             elif kind == 'relglob':
                 roots.append('.')
         return roots, pats + files, anypats
