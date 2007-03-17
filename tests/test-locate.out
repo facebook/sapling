@@ -2,24 +2,48 @@ adding a
 adding b
 adding t.h
 adding t/x
+hg locate a
 a
+
 locate succeeded
+hg locate NONEXISTENT
+
 locate failed
+hg locate 
 a
 b
 t.h
 t/x
+
+hg locate a
+
+hg locate NONEXISTENT
+
+hg locate 
 b
 t.h
 t/x
+
+hg locate -r 0 a
 a
+
+hg locate -r 0 NONEXISTENT
+
+hg locate -r 0
 a
 b
 t.h
 t/x
+
 % -I/-X with relative path should work
+hg locate 
 b
 t.h
 t/x
+
+hg locate -I ../t
 t/x
+
+hg locate t
 t/x
+

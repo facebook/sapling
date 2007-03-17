@@ -1,5 +1,14 @@
 #!/bin/sh
-#
+
+hglocate()
+{
+    echo "hg locate $@"
+    hg locate "$@"
+    ret=$?
+    echo
+    return $ret
+}
+
 mkdir t
 cd t
 hg init
@@ -10,22 +19,22 @@ mkdir t
 echo 0 > t/x
 hg ci -A -m m -d "1000000 0"
 touch nottracked
-hg locate a && echo locate succeeded || echo locate failed
-hg locate NONEXISTENT && echo locate succeeded || echo locate failed
-hg locate
+hglocate a && echo locate succeeded || echo locate failed
+hglocate NONEXISTENT && echo locate succeeded || echo locate failed
+hglocate
 hg rm a
 hg ci -m m -d "1000000 0"
-hg locate a
-hg locate NONEXISTENT
-hg locate
-hg locate -r 0 a
-hg locate -r 0 NONEXISTENT
-hg locate -r 0
+hglocate a
+hglocate NONEXISTENT
+hglocate
+hglocate -r 0 a
+hglocate -r 0 NONEXISTENT
+hglocate -r 0
 echo % -I/-X with relative path should work
 cd t
-hg locate
-hg locate -I ../t
+hglocate
+hglocate -I ../t
 # test issue294
 cd ..
 rm -r t
-hg locate t
+hglocate t
