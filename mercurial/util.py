@@ -476,7 +476,6 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
 
     def normalizepats(names, default):
         pats = []
-        files = []
         roots = []
         anypats = False
         for kind, name in [patkind(p, default) for p in names]:
@@ -484,18 +483,20 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
                 name = canonpath(canonroot, cwd, name)
             elif kind in ('relglob', 'path'):
                 name = normpath(name)
+
+            pats.append((kind, name))
+
             if kind in ('glob', 're', 'relglob', 'relre'):
-                pats.append((kind, name))
                 anypats = True
+
             if kind == 'glob':
                 root = globprefix(name)
                 roots.append(root)
             elif kind in ('relpath', 'path'):
-                files.append((kind, name))
                 roots.append(name or '.')
             elif kind == 'relglob':
                 roots.append('.')
-        return roots, pats + files, anypats
+        return roots, pats, anypats
 
     roots, pats, anypats = normalizepats(names, dflt_pat)
 
