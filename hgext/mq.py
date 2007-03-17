@@ -1142,6 +1142,8 @@ class queue:
                     else:
                         stat = 'G'
                     pfx = '%d %s ' % (i, stat)
+                elif status == 'U' and not self.pushable(i)[0]:
+                    continue
                 self.ui.write('%s%s\n' % (pfx, displayname(patch)))
         else:
             msng_list = []
@@ -1438,8 +1440,8 @@ def unapplied(ui, repo, patch=None, **opts):
             raise util.Abort(_("patch %s is not in series file") % patch)
         start = q.series.index(patch) + 1
     else:
-        start = q.series_end()
-    q.qseries(repo, start=start, summary=opts.get('summary'))
+        start = q.series_end(True)
+    q.qseries(repo, start=start, status='U', summary=opts.get('summary'))
 
 def qimport(ui, repo, *filename, **opts):
     """import a patch
