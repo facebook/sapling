@@ -1111,7 +1111,7 @@ class queue:
             self.explain_pushable(i)
         return unapplied
 
-    def qseries(self, repo, missing=None, start=0, length=0, status=None,
+    def qseries(self, repo, missing=None, start=0, length=None, status=None,
                 summary=False):
         def displayname(patchname):
             if summary:
@@ -1121,28 +1121,22 @@ class queue:
                 msg = ''
             return '%s%s' % (patchname, msg)
 
-        def pname(i):
-            if status == 'A':
-                return self.applied[i].name
-            else:
-                return self.series[i]
-
         applied = dict.fromkeys([p.name for p in self.applied])
-        if not length:
+        if length is None:
             length = len(self.series) - start
         if not missing:
             for i in xrange(start, start+length):
+                patch = self.series[i]
+                if patch in applied:
+                    stat = 'A'
+                elif self.pushable(i)[0]:
+                    stat = 'U'
+                else:
+                    stat = 'G'
                 pfx = ''
-                patch = pname(i)
                 if self.ui.verbose:
-                    if patch in applied:
-                        stat = 'A'
-                    elif self.pushable(i)[0]:
-                        stat = 'U'
-                    else:
-                        stat = 'G'
                     pfx = '%d %s ' % (i, stat)
-                elif status == 'U' and not self.pushable(i)[0]:
+                elif status and status != stat:
                     continue
                 self.ui.write('%s%s\n' % (pfx, displayname(patch)))
         else:
@@ -1426,10 +1420,7 @@ def applied(ui, repo, patch=None, **opts):
             raise util.Abort(_("patch %s is not in series file") % patch)
         end = q.series.index(patch) + 1
     else:
-        end = len(q.applied)
-    if not end:
-        return
-
+        end = q.series_end(True)
     return q.qseries(repo, length=end, status='A', summary=opts.get('summary'))
 
 def unapplied(ui, repo, patch=None, **opts):
