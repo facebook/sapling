@@ -65,3 +65,34 @@ description:
 commit-subdir-1
 
 
+% dot and subdir commit test
+% full log
+changeset:   1:d9180e04fa8a
+tag:         tip
+user:        test
+date:        Sat Jan 24 03:33:20 1970 +0000
+files:       foo/plain-file
+description:
+commit-foo-dot
+
+
+changeset:   0:80b572aaf098
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+files:       foo/plain-file
+description:
+commit-foo-subdir
+
+
+% subdir log
+changeset:   1:d9180e04fa8a
+tag:         tip
+user:        test
+date:        Sat Jan 24 03:33:20 1970 +0000
+summary:     commit-foo-dot
+
+changeset:   0:80b572aaf098
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     commit-foo-subdir
+
