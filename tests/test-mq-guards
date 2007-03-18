@@ -143,3 +143,8 @@ for patch in `hg qseries`; do
     echo % hg qunapplied $patch
     hg qunapplied $patch
 done
+
+echo % hg qseries -m: only b.patch should be shown
+echo the guards file was not ignored in the past
+hg qdelete -k b.patch
+hg qseries -m

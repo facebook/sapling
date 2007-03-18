@@ -1146,7 +1146,8 @@ class queue:
                 for f in files:
                     fl = os.path.join(d, f)
                     if (fl not in self.series and
-                        fl not in (self.status_path, self.series_path)
+                        fl not in (self.status_path, self.series_path,
+                                   self.guards_path)
                         and not fl.startswith('.')):
                         msng_list.append(fl)
             msng_list.sort()
