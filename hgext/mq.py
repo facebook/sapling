@@ -2111,7 +2111,7 @@ cmdtable = {
          'hg qfold [-e] [-m <text>] [-l <file] PATCH...'),
     'qguard': (guard, [('l', 'list', None, _('list all patches and guards')),
                        ('n', 'none', None, _('drop all guards'))],
-               'hg qguard [PATCH] [+GUARD...] [-GUARD...]'),
+               'hg qguard [PATCH] [+GUARD]... [-GUARD]...'),
     'qheader': (header, [],
                 _('hg qheader [PATCH]')),
     "^qimport":
@@ -2156,7 +2156,7 @@ cmdtable = {
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))
           ] + commands.commitopts,
-         'hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] FILES...'),
+         'hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...'),
     'qrename|qmv':
         (rename, [], 'hg qrename PATCH1 [PATCH2]'),
     "qrestore":
@@ -2177,7 +2177,7 @@ cmdtable = {
                  ('', 'pop', None,
                   _('pop to before first guarded applied patch')),
                  ('', 'reapply', None, _('pop, then reapply patches'))],
-                'hg qselect [OPTION...] [GUARD...]'),
+                'hg qselect [OPTION]... [GUARD]...'),
     "qseries":
         (series,
          [('m', 'missing', None, 'print patches not in series')] + seriesopts,
