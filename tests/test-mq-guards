@@ -118,3 +118,33 @@ hg qseries -v
 hg qguard d.patch +2
 echo % new.patch, b.patch: Guarded. c.patch: Applied. d.patch: Guarded.
 hg qseries -v
+
+qappunappv()
+(
+    for command in qapplied "qapplied -v" qunapplied "qunapplied -v"; do
+        echo % hg $command
+        hg $command
+    done
+)
+
+hg qpop -a
+hg qguard -l
+qappunappv
+hg qselect 1
+qappunappv
+hg qpush -a
+qappunappv
+hg qselect 2
+qappunappv
+
+for patch in `hg qseries`; do
+    echo % hg qapplied $patch
+    hg qapplied $patch
+    echo % hg qunapplied $patch
+    hg qunapplied $patch
+done
+
+echo % hg qseries -m: only b.patch should be shown
+echo the guards file was not ignored in the past
+hg qdelete -k b.patch
+hg qseries -m

@@ -1146,7 +1146,7 @@ class queue:
             self.explain_pushable(i)
         return unapplied
 
-    def qseries(self, repo, missing=None, start=0, length=0, status=None,
+    def qseries(self, repo, missing=None, start=0, length=None, status=None,
                 summary=False):
         def displayname(patchname):
             if summary:
@@ -1156,27 +1156,23 @@ class queue:
                 msg = ''
             return '%s%s' % (patchname, msg)
 
-        def pname(i):
-            if status == 'A':
-                return self.applied[i].name
-            else:
-                return self.series[i]
-
         applied = dict.fromkeys([p.name for p in self.applied])
-        if not length:
+        if length is None:
             length = len(self.series) - start
         if not missing:
             for i in xrange(start, start+length):
+                patch = self.series[i]
+                if patch in applied:
+                    stat = 'A'
+                elif self.pushable(i)[0]:
+                    stat = 'U'
+                else:
+                    stat = 'G'
                 pfx = ''
-                patch = pname(i)
                 if self.ui.verbose:
-                    if patch in applied:
-                        stat = 'A'
-                    elif self.pushable(i)[0]:
-                        stat = 'U'
-                    else:
-                        stat = 'G'
                     pfx = '%d %s ' % (i, stat)
+                elif status and status != stat:
+                    continue
                 self.ui.write('%s%s\n' % (pfx, displayname(patch)))
         else:
             msng_list = []
@@ -1185,7 +1181,8 @@ class queue:
                 for f in files:
                     fl = os.path.join(d, f)
                     if (fl not in self.series and
-                        fl not in (self.status_path, self.series_path)
+                        fl not in (self.status_path, self.series_path,
+                                   self.guards_path)
                         and not fl.startswith('.')):
                         msng_list.append(fl)
             msng_list.sort()
@@ -1460,10 +1457,7 @@ def applied(ui, repo, patch=None, **opts):
             raise util.Abort(_("patch %s is not in series file") % patch)
         end = q.series.index(patch) + 1
     else:
-        end = len(q.applied)
-    if not end:
-        return
-
+        end = q.series_end(True)
     return q.qseries(repo, length=end, status='A', summary=opts.get('summary'))
 
 def unapplied(ui, repo, patch=None, **opts):
@@ -1474,8 +1468,8 @@ def unapplied(ui, repo, patch=None, **opts):
             raise util.Abort(_("patch %s is not in series file") % patch)
         start = q.series.index(patch) + 1
     else:
-        start = q.series_end()
-    q.qseries(repo, start=start, summary=opts.get('summary'))
+        start = q.series_end(True)
+    q.qseries(repo, start=start, status='U', summary=opts.get('summary'))
 
 def qimport(ui, repo, *filename, **opts):
     """import a patch
@@ -2162,7 +2156,7 @@ cmdtable = {
          'hg qfold [-e] [-m <text>] [-l <file] PATCH...'),
     'qguard': (guard, [('l', 'list', None, _('list all patches and guards')),
                        ('n', 'none', None, _('drop all guards'))],
-               'hg qguard [PATCH] [+GUARD...] [-GUARD...]'),
+               'hg qguard [PATCH] [+GUARD]... [-GUARD]...'),
     'qheader': (header, [],
                 _('hg qheader [PATCH]')),
     "^qimport":
@@ -2207,7 +2201,7 @@ cmdtable = {
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns'))
           ] + commands.commitopts,
-         'hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] FILES...'),
+         'hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...'),
     'qrename|qmv':
         (rename, [], 'hg qrename PATCH1 [PATCH2]'),
     "qrestore":
@@ -2228,7 +2222,7 @@ cmdtable = {
                  ('', 'pop', None,
                   _('pop to before first guarded applied patch')),
                  ('', 'reapply', None, _('pop, then reapply patches'))],
-                'hg qselect [OPTION...] [GUARD...]'),
+                'hg qselect [OPTION]... [GUARD]...'),
     "qseries":
         (series,
          [('m', 'missing', None, 'print patches not in series')] + seriesopts,
