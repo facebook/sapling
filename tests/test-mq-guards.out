@@ -103,3 +103,74 @@ Now at: c.patch
 1 G b.patch
 2 A c.patch
 3 G d.patch
+Patch queue now empty
+new.patch: +1 +2 -3
+b.patch: +2
+c.patch: unguarded
+d.patch: +2
+% hg qapplied
+% hg qapplied -v
+% hg qunapplied
+c.patch
+% hg qunapplied -v
+0 G new.patch
+1 G b.patch
+2 U c.patch
+3 G d.patch
+number of unguarded, unapplied patches has changed from 1 to 2
+% hg qapplied
+% hg qapplied -v
+% hg qunapplied
+new.patch
+c.patch
+% hg qunapplied -v
+0 U new.patch
+1 G b.patch
+2 U c.patch
+3 G d.patch
+applying new.patch
+skipping b.patch - guarded by ['+2']
+applying c.patch
+skipping d.patch - guarded by ['+2']
+Now at: c.patch
+% hg qapplied
+new.patch
+c.patch
+% hg qapplied -v
+0 A new.patch
+1 G b.patch
+2 A c.patch
+% hg qunapplied
+% hg qunapplied -v
+3 G d.patch
+number of unguarded, unapplied patches has changed from 0 to 1
+number of guarded, applied patches has changed from 1 to 0
+% hg qapplied
+new.patch
+c.patch
+% hg qapplied -v
+0 A new.patch
+1 U b.patch
+2 A c.patch
+% hg qunapplied
+d.patch
+% hg qunapplied -v
+3 U d.patch
+% hg qapplied new.patch
+new.patch
+% hg qunapplied new.patch
+b.patch
+d.patch
+% hg qapplied b.patch
+new.patch
+% hg qunapplied b.patch
+d.patch
+% hg qapplied c.patch
+new.patch
+c.patch
+% hg qunapplied c.patch
+d.patch
+% hg qapplied d.patch
+new.patch
+c.patch
+% hg qunapplied d.patch
