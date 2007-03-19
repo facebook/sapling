@@ -17,20 +17,6 @@ class wsgiapplication(object):
     def __call__(self, wsgienv, start_response):
         return _wsgirequest(self.destmaker(), wsgienv, start_response)
 
-class _wsgioutputfile(object):
-    def __init__(self, request):
-        self.request = request
-
-    def write(self, data):
-        self.request.write(data)
-    def writelines(self, lines):
-        for line in lines:
-            self.write(line)
-    def flush(self):
-        return None
-    def close(self):
-        return None
-
 class _wsgirequest(object):
     def __init__(self, destination, wsgienv, start_response):
         version = wsgienv['wsgi.version']
@@ -38,7 +24,6 @@ class _wsgirequest(object):
             raise RuntimeError("Unknown and unsupported WSGI version %d.%d" \
                                % version)
         self.inp = wsgienv['wsgi.input']
-        self.out = _wsgioutputfile(self)
         self.server_write = None
         self.err = wsgienv['wsgi.errors']
         self.threaded = wsgienv['wsgi.multithread']
@@ -49,6 +34,8 @@ class _wsgirequest(object):
         self.start_response = start_response
         self.headers = []
         destination.run_wsgi(self)
+
+    out = property(lambda self: self)
 
     def __iter__(self):
         return iter([])
@@ -75,6 +62,16 @@ class _wsgirequest(object):
                 except socket.error, inst:
                     if inst[0] != errno.ECONNRESET:
                         raise
+
+    def writelines(self, lines):
+        for line in lines:
+            self.write(line)
+
+    def flush(self):
+        return None
+
+    def close(self):
+        return None
 
     def header(self, headers=[('Content-type','text/html')]):
         self.headers.extend(headers)
