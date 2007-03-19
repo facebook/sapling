@@ -797,19 +797,22 @@ class hgweb(object):
                                                "sessionvars": sessionvars
                                                })
 
-        if not req.form.has_key('cmd'):
-            req.form['cmd'] = [self.t.cache['default']]
+        try:
+            if not req.form.has_key('cmd'):
+                req.form['cmd'] = [self.t.cache['default']]
 
-        cmd = req.form['cmd'][0]
+            cmd = req.form['cmd'][0]
 
-        method = getattr(self, 'do_' + cmd, None)
-        if method:
-            try:
-                method(req)
-            except (hg.RepoError, revlog.RevlogError), inst:
-                req.write(self.t("error", error=str(inst)))
-        else:
-            req.write(self.t("error", error='No such method: ' + cmd))
+            method = getattr(self, 'do_' + cmd, None)
+            if method:
+                try:
+                    method(req)
+                except (hg.RepoError, revlog.RevlogError), inst:
+                    req.write(self.t("error", error=str(inst)))
+            else:
+                req.write(self.t("error", error='No such method: ' + cmd))
+        finally:
+            self.t = None
 
     def changectx(self, req):
         if req.form.has_key('node'):

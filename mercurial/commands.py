@@ -765,7 +765,11 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     if not rev2:
         rev2 = hex(nullid)
 
-    repo.dirstate.setparents(repo.lookup(rev1), repo.lookup(rev2))
+    wlock = repo.wlock()
+    try:
+        repo.dirstate.setparents(repo.lookup(rev1), repo.lookup(rev2))
+    finally:
+        wlock.release()
 
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""

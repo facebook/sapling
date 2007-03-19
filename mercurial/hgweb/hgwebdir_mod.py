@@ -179,53 +179,56 @@ class hgwebdir(object):
                     parity = 1 - parity
                     yield row
 
-        virtual = req.env.get("PATH_INFO", "").strip('/')
-        if virtual.startswith('static/'):
-            static = os.path.join(templater.templatepath(), 'static')
-            fname = virtual[7:]
-            req.write(staticfile(static, fname, req) or
-                      tmpl('error', error='%r not found' % fname))
-        elif virtual:
-            while virtual:
-                real = dict(self.repos).get(virtual)
+        try:
+            virtual = req.env.get("PATH_INFO", "").strip('/')
+            if virtual.startswith('static/'):
+                static = os.path.join(templater.templatepath(), 'static')
+                fname = virtual[7:]
+                req.write(staticfile(static, fname, req) or
+                          tmpl('error', error='%r not found' % fname))
+            elif virtual:
+                while virtual:
+                    real = dict(self.repos).get(virtual)
+                    if real:
+                        break
+                    up = virtual.rfind('/')
+                    if up < 0:
+                        break
+                    virtual = virtual[:up]
                 if real:
-                    break
-                up = virtual.rfind('/')
-                if up < 0:
-                    break
-                virtual = virtual[:up]
-            if real:
-                req.env['REPO_NAME'] = virtual
-                try:
-                    repo = hg.repository(parentui, real)
-                    hgweb(repo).run_wsgi(req)
-                except IOError, inst:
-                    req.write(tmpl("error", error=inst.strerror))
-                except hg.RepoError, inst:
-                    req.write(tmpl("error", error=str(inst)))
+                    req.env['REPO_NAME'] = virtual
+                    try:
+                        repo = hg.repository(parentui, real)
+                        hgweb(repo).run_wsgi(req)
+                    except IOError, inst:
+                        req.write(tmpl("error", error=inst.strerror))
+                    except hg.RepoError, inst:
+                        req.write(tmpl("error", error=str(inst)))
+                else:
+                    req.write(tmpl("notfound", repo=virtual))
             else:
-                req.write(tmpl("notfound", repo=virtual))
-        else:
-            if req.form.has_key('static'):
-                static = os.path.join(templater.templatepath(), "static")
-                fname = req.form['static'][0]
-                req.write(staticfile(static, fname, req)
-                          or tmpl("error", error="%r not found" % fname))
-            else:
-                sortable = ["name", "description", "contact", "lastchange"]
-                sortcolumn, descending = self.repos_sorted
-                if req.form.has_key('sort'):
-                    sortcolumn = req.form['sort'][0]
-                    descending = sortcolumn.startswith('-')
-                    if descending:
-                        sortcolumn = sortcolumn[1:]
-                    if sortcolumn not in sortable:
-                        sortcolumn = ""
+                if req.form.has_key('static'):
+                    static = os.path.join(templater.templatepath(), "static")
+                    fname = req.form['static'][0]
+                    req.write(staticfile(static, fname, req)
+                              or tmpl("error", error="%r not found" % fname))
+                else:
+                    sortable = ["name", "description", "contact", "lastchange"]
+                    sortcolumn, descending = self.repos_sorted
+                    if req.form.has_key('sort'):
+                        sortcolumn = req.form['sort'][0]
+                        descending = sortcolumn.startswith('-')
+                        if descending:
+                            sortcolumn = sortcolumn[1:]
+                        if sortcolumn not in sortable:
+                            sortcolumn = ""
 
-                sort = [("sort_%s" % column,
-                         "%s%s" % ((not descending and column == sortcolumn)
-                                   and "-" or "", column))
-                        for column in sortable]
-                req.write(tmpl("index", entries=entries,
-                               sortcolumn=sortcolumn, descending=descending,
-                               **dict(sort)))
+                    sort = [("sort_%s" % column,
+                             "%s%s" % ((not descending and column == sortcolumn)
+                                       and "-" or "", column))
+                            for column in sortable]
+                    req.write(tmpl("index", entries=entries,
+                                   sortcolumn=sortcolumn, descending=descending,
+                                   **dict(sort)))
+        finally:
+            tmpl = None
