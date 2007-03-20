@@ -151,10 +151,10 @@ class transplanter:
                                           log=opts.get('log'),
                                           filter=opts.get('filter'),
                                           lock=lock, wlock=wlock)
-                        if domerge:
+                        if n and domerge:
                             self.ui.status(_('%s merged at %s\n') % (revstr,
                                       revlog.short(n)))
-                        else:
+                        elif n:
                             self.ui.status(_('%s transplanted to %s\n') % (revlog.short(node),
                                                                        revlog.short(n)))
                     finally:
@@ -217,7 +217,7 @@ class transplanter:
                                        files=files)
                     if not files:
                         self.ui.warn(_('%s: empty changeset') % revlog.hex(node))
-                        return
+                        return None
                 finally:
                     files = patch.updatedir(self.ui, repo, files, wlock=wlock)
             except Exception, inst:
