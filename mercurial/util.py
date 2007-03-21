@@ -427,7 +427,7 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
             if c in _globchars: return True
         return False
 
-    def regex(kind, name, tail):
+    def regex(kind, name):
         '''convert a pattern into a regular expression'''
         if not name:
             return ''
@@ -443,16 +443,16 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
             if name.startswith('^'):
                 return name
             return '.*' + name
-        return globre(name, '', tail)
+        return globre(name, '', '(?:/|$)')
 
-    def matchfn(pats, tail):
+    def matchfn(pats):
         """build a matching function from a set of patterns"""
         if not pats:
             return
         matches = []
         for k, p in pats:
             try:
-                pat = '(?:%s)' % regex(k, p, tail)
+                pat = '(?:%s)' % regex(k, p)
                 matches.append(re.compile(pat).match)
             except re.error:
                 if src: raise Abort("%s: invalid pattern (%s): %s" % (src, k, p))
@@ -500,15 +500,15 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
 
     roots, pats, anypats = normalizepats(names, dflt_pat)
 
-    patmatch = matchfn(pats, '$') or always
+    patmatch = matchfn(pats) or always
     incmatch = always
     if inc:
         dummy, inckinds, dummy = normalizepats(inc, 'glob')
-        incmatch = matchfn(inckinds, '(?:/|$)')
+        incmatch = matchfn(inckinds)
     excmatch = lambda fn: False
     if exc:
         dummy, exckinds, dummy = normalizepats(exc, 'glob')
-        excmatch = matchfn(exckinds, '(?:/|$)')
+        excmatch = matchfn(exckinds)
 
     if not names and inc and not exc:
         # common case: hgignore patterns

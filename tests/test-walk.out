@@ -210,10 +210,20 @@ hg debugwalk beans/.hg
 beans/.hg: No such file or directory
 
 hg debugwalk glob:*
-f  fennel      fennel
-f  fenugreek   fenugreek
-f  fiddlehead  fiddlehead
-f  glob:glob   glob:glob
+f  beans/black                     beans/black
+f  beans/borlotti                  beans/borlotti
+f  beans/kidney                    beans/kidney
+f  beans/navy                      beans/navy
+f  beans/pinto                     beans/pinto
+f  beans/turtle                    beans/turtle
+f  fennel                          fennel
+f  fenugreek                       fenugreek
+f  fiddlehead                      fiddlehead
+f  glob:glob                       glob:glob
+f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
+f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
+f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
+f  mammals/skunk                   mammals/skunk
 
 hg debugwalk re:.*[kb]$
 f  beans/black    beans/black
