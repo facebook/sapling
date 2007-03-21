@@ -423,7 +423,7 @@ class dirstate(object):
                     # don't trip over symlinks
                     st = os.lstat(p)
                     if stat.S_ISDIR(st.st_mode):
-                        if not ignore(p):
+                        if not ignore(np):
                             work.append(p)
                         if imatch(np) and np in dc:
                             yield 'm', np, st
