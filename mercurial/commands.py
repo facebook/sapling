@@ -426,6 +426,8 @@ def commit(ui, repo, *pats, **opts):
         files = modified + added + removed
         slist = None
         for f in fns:
+            if f == '.':
+                continue
             if f not in files:
                 rf = repo.wjoin(f)
                 if f in unknown:
