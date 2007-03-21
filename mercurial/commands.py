@@ -1526,18 +1526,26 @@ def import_(ui, repo, patch1, *patches, **opts):
                 message = None
             ui.debug(_('message:\n%s\n') % message)
 
-            files = {}
+            wp = repo.workingctx().parents()
             if opts.get('exact'):
                 if not nodeid or not p1:
                     raise util.Abort(_('not a mercurial patch'))
                 p1 = repo.lookup(p1)
                 p2 = repo.lookup(p2 or hex(nullid))
 
-                wctx = repo.workingctx()
-                wp = repo.workingctx().parents()
                 if p1 != wp[0].node():
                     hg.clean(repo, p1, wlock=wlock)
                 repo.dirstate.setparents(p1, p2)
+            elif p2:
+                try:
+                    p1 = repo.lookup(p1)
+                    p2 = repo.lookup(p2)
+                    if p1 == wp[0].node():
+                        repo.dirstate.setparents(p1, p2)
+                except RepoError:
+                    pass
+
+            files = {}
             try:
                 fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
                                    files=files)
