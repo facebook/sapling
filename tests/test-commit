@@ -71,4 +71,21 @@ echo % full log
 hg log -v
 cd ..
 
+echo % dot and subdir commit test
+hg init test3
+cd test3
+mkdir foo
+echo foo content > foo/plain-file
+hg add foo/plain-file
+hg ci -d '1000000 0' -u test -m commit-foo-subdir foo
+echo modified foo content > foo/plain-file
+hg ci -d '2000000 0' -u test -m commit-foo-dot .
+echo % full log
+hg log -v
+echo % subdir log
+cd foo
+hg log .
+cd ..
+cd ..
+
 exit 0
