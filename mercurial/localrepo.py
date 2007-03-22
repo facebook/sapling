@@ -1072,10 +1072,11 @@ class localrepository(repo.repository):
 
     def copy(self, source, dest, wlock=None):
         p = self.wjoin(dest)
-        if not os.path.exists(p):
+        if not (os.path.exists(p) or os.path.islink(p)):
             self.ui.warn(_("%s does not exist!\n") % dest)
-        elif not os.path.isfile(p):
-            self.ui.warn(_("copy failed: %s is not a file\n") % dest)
+        elif not (os.path.isfile(p) or os.path.islink(p)):
+            self.ui.warn(_("copy failed: %s is not a file or a "
+                           "symbolic link\n") % dest)
         else:
             if not wlock:
                 wlock = self.wlock()
