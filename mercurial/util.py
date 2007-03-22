@@ -614,11 +614,18 @@ def unlink(f):
 
 def copyfile(src, dest):
     "copy a file, preserving mode"
-    try:
-        shutil.copyfile(src, dest)
-        shutil.copymode(src, dest)
-    except shutil.Error, inst:
-        raise Abort(str(inst))
+    if os.path.islink(src):
+        try:
+            os.unlink(dest)
+        except:
+            pass
+        os.symlink(os.readlink(src), dest)
+    else:
+        try:
+            shutil.copyfile(src, dest)
+            shutil.copymode(src, dest)
+        except shutil.Error, inst:
+            raise Abort(str(inst))
 
 def copyfiles(src, dst, hardlink=None):
     """Copy a directory tree using hardlinks if possible"""
