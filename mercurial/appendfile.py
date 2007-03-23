@@ -152,10 +152,3 @@ class appendchangelog(changelog.changelog, appendopener):
         changelog.changelog.__init__(self, self)
     def checkinlinesize(self, fp, tr):
         return
-
-class appendmanifest(manifest.manifest, appendopener):
-    def __init__(self, opener):
-        appendopener.__init__(self, opener)
-        manifest.manifest.__init__(self, self)
-    def checkinlinesize(self, fp, tr):
-        return
