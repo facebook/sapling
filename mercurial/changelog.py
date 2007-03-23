@@ -26,9 +26,88 @@ def _string_escape(text):
 def _string_unescape(text):
     return text.decode('string_escape')
 
+class appender:
+    '''the changelog index must be update last on disk, so we use this class
+    to delay writes to it'''
+    def __init__(self, fp, buf):
+        self.data = buf
+        self.fp = fp
+        self.offset = fp.tell()
+        self.size = util.fstat(fp).st_size
+
+    def end(self):
+        return self.size + len("".join(self.data))
+    def tell(self):
+        return self.offset
+    def flush(self):
+        pass
+    def close(self):
+        close(self.fp)
+
+    def seek(self, offset, whence=0):
+        '''virtual file offset spans real file and data'''
+        if whence == 0:
+            self.offset = offset
+        elif whence == 1:
+            self.offset += offset
+        elif whence == 2:
+            self.offset = self.end() + offset
+        if self.offset < self.size:
+            self.fp.seek(self.offset)
+
+    def read(self, count=-1):
+        '''only trick here is reads that span real file and data'''
+        ret = ""
+        old_offset = self.offset
+        if self.offset < self.size:
+            s = self.fp.read(count)
+            ret = s
+            self.offset += len(s)
+            if count > 0:
+                count -= len(s)
+        if count != 0:
+            doff = self.offset - self.size
+            self.data.insert(0, "".join(self.data))
+            del self.data[1:]
+            s = self.data[0][doff:doff+count]
+            self.offset += len(s)
+            ret += s
+        return ret
+
+    def write(self, s):
+        self.data.append(s)
+        self.offset += len(s)
+
 class changelog(revlog):
     def __init__(self, opener):
         revlog.__init__(self, opener, "00changelog.i")
+
+    def delayupdate(self):
+        "delay visibility of index updates to other readers"
+        self._realopener = self.opener
+        self.opener = self._appendopener
+        self._delaybuf = []
+
+    def finalize(self, tr):
+        "finalize index updates"
+        self.opener = self._realopener
+        if self._delaybuf:
+            fp = self.opener(self.indexfile, 'a')
+            fp.write("".join(self._delaybuf))
+            fp.close()
+            del self._delaybuf
+        self.checkinlinesize(tr)
+
+    def _appendopener(self, name, mode='r'):
+        fp = self._realopener(name, mode)
+        if not name == self.indexfile:
+            return fp
+        return appender(fp, self._delaybuf)
+
+    def checkinlinesize(self, tr, fp=None):
+        if self.opener == self._appendopener:
+            return
+        return revlog.checkinlinesize(self, tr, fp)
 
     def decode_extra(self, text):
         extra = {}

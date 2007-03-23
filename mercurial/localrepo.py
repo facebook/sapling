@@ -7,7 +7,7 @@
 
 from node import *
 from i18n import _
-import repo, appendfile, changegroup
+import repo, changegroup
 import changelog, dirstate, filelog, manifest, context
 import re, lock, transaction, tempfile, stat, mdiff, errno, ui
 import os, revlog, time, util
@@ -1782,52 +1782,45 @@ class localrepository(repo.repository):
 
         # write changelog data to temp files so concurrent readers will not see
         # inconsistent view
-        cl = None
-        try:
-            cl = appendfile.appendchangelog(self.sopener)
-            oldheads = len(cl.heads())
+        cl = self.changelog
+        cl.delayupdate()
+        oldheads = len(cl.heads())
 
-            # pull off the changeset group
-            self.ui.status(_("adding changesets\n"))
-            cor = cl.count() - 1
+        # pull off the changeset group
+        self.ui.status(_("adding changesets\n"))
+        cor = cl.count() - 1
+        chunkiter = changegroup.chunkiter(source)
+        if cl.addgroup(chunkiter, csmap, tr, 1) is None:
+            raise util.Abort(_("received changelog group is empty"))
+        cnr = cl.count() - 1
+        changesets = cnr - cor
+
+        # pull off the manifest group
+        self.ui.status(_("adding manifests\n"))
+        chunkiter = changegroup.chunkiter(source)
+        # no need to check for empty manifest group here:
+        # if the result of the merge of 1 and 2 is the same in 3 and 4,
+        # no new manifest will be created and the manifest group will
+        # be empty during the pull
+        self.manifest.addgroup(chunkiter, revmap, tr)
+
+        # process the files
+        self.ui.status(_("adding file changes\n"))
+        while 1:
+            f = changegroup.getchunk(source)
+            if not f:
+                break
+            self.ui.debug(_("adding %s revisions\n") % f)
+            fl = self.file(f)
+            o = fl.count()
             chunkiter = changegroup.chunkiter(source)
-            if cl.addgroup(chunkiter, csmap, tr, 1) is None:
-                raise util.Abort(_("received changelog group is empty"))
-            cnr = cl.count() - 1
-            changesets = cnr - cor
-
-            # pull off the manifest group
-            self.ui.status(_("adding manifests\n"))
-            chunkiter = changegroup.chunkiter(source)
-            # no need to check for empty manifest group here:
-            # if the result of the merge of 1 and 2 is the same in 3 and 4,
-            # no new manifest will be created and the manifest group will
-            # be empty during the pull
-            self.manifest.addgroup(chunkiter, revmap, tr)
-
-            # process the files
-            self.ui.status(_("adding file changes\n"))
-            while 1:
-                f = changegroup.getchunk(source)
-                if not f:
-                    break
-                self.ui.debug(_("adding %s revisions\n") % f)
-                fl = self.file(f)
-                o = fl.count()
-                chunkiter = changegroup.chunkiter(source)
-                if fl.addgroup(chunkiter, revmap, tr) is None:
-                    raise util.Abort(_("received file revlog group is empty"))
-                revisions += fl.count() - o
-                files += 1
-
-            cl.writedata()
-        finally:
-            if cl:
-                cl.cleanup()
+            if fl.addgroup(chunkiter, revmap, tr) is None:
+                raise util.Abort(_("received file revlog group is empty"))
+            revisions += fl.count() - o
+            files += 1
 
         # make changelog see real files again
-        self.changelog = changelog.changelog(self.sopener)
-        self.changelog.checkinlinesize(tr)
+        cl.finalize(tr)
 
         newheads = len(self.changelog.heads())
         heads = ""
