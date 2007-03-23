@@ -17,7 +17,7 @@ import changegroup, util, os, struct, bz2, tempfile
 import localrepo, changelog, manifest, filelog, revlog
 
 class bundlerevlog(revlog.revlog):
-    def __init__(self, opener, indexfile, datafile, bundlefile,
+    def __init__(self, opener, indexfile, bundlefile,
                  linkmapper=None):
         # How it works:
         # to retrieve a revision, we need to know the offset of
@@ -28,7 +28,7 @@ class bundlerevlog(revlog.revlog):
         # len(index[r]). If the tuple is bigger than 7, it is a bundle
         # (it is bigger since we store the node to which the delta is)
         #
-        revlog.revlog.__init__(self, opener, indexfile, datafile)
+        revlog.revlog.__init__(self, opener, indexfile)
         self.bundlefile = bundlefile
         self.basemap = {}
         def chunkpositer():
@@ -140,20 +140,19 @@ class bundlerevlog(revlog.revlog):
 class bundlechangelog(bundlerevlog, changelog.changelog):
     def __init__(self, opener, bundlefile):
         changelog.changelog.__init__(self, opener)
-        bundlerevlog.__init__(self, opener, self.indexfile, self.datafile,
-                              bundlefile)
+        bundlerevlog.__init__(self, opener, self.indexfile, bundlefile)
 
 class bundlemanifest(bundlerevlog, manifest.manifest):
     def __init__(self, opener, bundlefile, linkmapper):
         manifest.manifest.__init__(self, opener)
-        bundlerevlog.__init__(self, opener, self.indexfile, self.datafile,
-                              bundlefile, linkmapper)
+        bundlerevlog.__init__(self, opener, self.indexfile, bundlefile,
+                              linkmapper)
 
 class bundlefilelog(bundlerevlog, filelog.filelog):
     def __init__(self, opener, path, bundlefile, linkmapper):
         filelog.filelog.__init__(self, opener, path)
-        bundlerevlog.__init__(self, opener, self.indexfile, self.datafile,
-                              bundlefile, linkmapper)
+        bundlerevlog.__init__(self, opener, self.indexfile, bundlefile,
+                              linkmapper)
 
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):

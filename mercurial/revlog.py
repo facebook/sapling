@@ -311,8 +311,7 @@ class revlog(object):
     remove data, and can use some simple techniques to avoid the need
     for locking while reading.
     """
-    def __init__(self, opener, indexfile, datafile,
-                 defversion=REVLOG_DEFAULT_VERSION):
+    def __init__(self, opener, indexfile, defversion=REVLOG_DEFAULT_VERSION):
         """
         create a revlog object
 
@@ -320,7 +319,7 @@ class revlog(object):
         and can be used to implement COW semantics or the like.
         """
         self.indexfile = indexfile
-        self.datafile = datafile
+        self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
 
         self.indexstat = None

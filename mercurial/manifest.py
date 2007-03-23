@@ -38,8 +38,7 @@ class manifest(revlog):
     def __init__(self, opener, defversion=REVLOGV0):
         self.mapcache = None
         self.listcache = None
-        revlog.__init__(self, opener, "00manifest.i", "00manifest.d",
-                        defversion)
+        revlog.__init__(self, opener, "00manifest.i", defversion)
 
     def parselines(self, lines):
         for l in lines.splitlines(1):

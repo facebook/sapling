@@ -12,7 +12,6 @@ class filelog(revlog):
     def __init__(self, opener, path, defversion=REVLOG_DEFAULT_VERSION):
         revlog.__init__(self, opener,
                         "/".join(("data", self.encodedir(path + ".i"))),
-                        "/".join(("data", self.encodedir(path + ".d"))),
                         defversion)
 
     # This avoids a collision between a file named foo and a dir named
