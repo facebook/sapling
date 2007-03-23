@@ -105,43 +105,41 @@ class appendopener(object):
 
     def __init__(self, opener):
         self.realopener = opener
-        # key: file name, value: appendfile name
-        self.tmpnames = {}
+        self.tmpname = None
 
     def __call__(self, name, mode='r'):
         '''open file.'''
-
+        # only handle .i file
+        if not name.endswith("."):
+            return self.realopener(name, mode)
         assert mode in 'ra+'
         try:
             realfp = self.realopener(name, 'r')
         except IOError, err:
             if err.errno != errno.ENOENT: raise
-            realfp = self.realopener(name, 'w+')
-        tmpname = self.tmpnames.get(name)
-        fp = appendfile(realfp, tmpname)
+            self.realfp = self.realopener(name, 'w+')
+        fp = appendfile(realfp, self.tmpname)
         if tmpname is None:
-            self.tmpnames[name] = fp.tmpname
+            self.tmpname = fp.tmpname
+            self.name = name
         return fp
 
     def writedata(self):
         '''copy data from temp files to real files.'''
-        # write .d file before .i file.
-        tmpnames = self.tmpnames.items()
-        tmpnames.sort()
-        for name, tmpname in tmpnames:
-            ifp = open(tmpname, 'rb')
-            ofp = self.realopener(name, 'a')
-            for chunk in util.filechunkiter(ifp):
-                ofp.write(chunk)
-            ifp.close()
-            os.unlink(tmpname)
-            del self.tmpnames[name]
-            ofp.close()
+        if not self.tmpname:
+            return
+        ifp = open(self.tmpname, 'rb')
+        ofp = self.realopener(self.name, 'a')
+        for chunk in util.filechunkiter(ifp):
+            ofp.write(chunk)
+        ifp.close()
+        os.unlink(self.tmpname)
+        ofp.close()
 
     def cleanup(self):
         '''delete temp files (this discards unwritten data!)'''
-        for tmpname in self.tmpnames.values():
-            os.unlink(tmpname)
+        if self.tmpname:
+            os.unlink(self.tmpname)
 
 # files for changelog and manifest are in different appendopeners, so
 # not mixed up together.
