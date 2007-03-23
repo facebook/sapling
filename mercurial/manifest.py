@@ -35,10 +35,10 @@ class manifestdict(dict):
         return manifestdict(dict.copy(self), dict.copy(self._flags))
 
 class manifest(revlog):
-    def __init__(self, opener, defversion=REVLOGV0):
+    def __init__(self, opener):
         self.mapcache = None
         self.listcache = None
-        revlog.__init__(self, opener, "00manifest.i", defversion)
+        revlog.__init__(self, opener, "00manifest.i")
 
     def parselines(self, lines):
         for l in lines.splitlines(1):

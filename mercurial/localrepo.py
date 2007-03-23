@@ -88,33 +88,13 @@ class localrepository(repo.repository):
         except IOError:
             pass
 
-        v = self.ui.configrevlog()
-        self.revlogversion = int(v.get('format', revlog.REVLOG_DEFAULT_FORMAT))
-        self.revlogv1 = self.revlogversion != revlog.REVLOGV0
-        fl = v.get('flags', None)
-        flags = 0
-        if fl != None:
-            for x in fl.split():
-                flags |= revlog.flagstr(x)
-        elif self.revlogv1:
-            flags = revlog.REVLOG_DEFAULT_FLAGS
-
-        v = self.revlogversion | flags
-        self.manifest = manifest.manifest(self.sopener, v)
-        self.changelog = changelog.changelog(self.sopener, v)
+        self.changelog = changelog.changelog(self.sopener)
+        self.sopener.defversion = self.changelog.version
+        self.manifest = manifest.manifest(self.sopener)
 
         fallback = self.ui.config('ui', 'fallbackencoding')
         if fallback:
             util._fallbackencoding = fallback
-
-        # the changelog might not have the inline index flag
-        # on.  If the format of the changelog is the same as found in
-        # .hgrc, apply any flags found in the .hgrc as well.
-        # Otherwise, just version from the changelog
-        v = self.changelog.version
-        if v == self.revlogversion:
-            v |= flags
-        self.revlogversion = v
 
         self.tagscache = None
         self.branchcache = None
@@ -493,7 +473,7 @@ class localrepository(repo.repository):
     def file(self, f):
         if f[0] == '/':
             f = f[1:]
-        return filelog.filelog(self.sopener, f, self.revlogversion)
+        return filelog.filelog(self.sopener, f)
 
     def changectx(self, changeid=None):
         return context.changectx(self, changeid)
@@ -1804,9 +1784,7 @@ class localrepository(repo.repository):
         # inconsistent view
         cl = None
         try:
-            cl = appendfile.appendchangelog(self.sopener,
-                                            self.changelog.version)
-
+            cl = appendfile.appendchangelog(self.sopener)
             oldheads = len(cl.heads())
 
             # pull off the changeset group
@@ -1848,8 +1826,7 @@ class localrepository(repo.repository):
                 cl.cleanup()
 
         # make changelog see real files again
-        self.changelog = changelog.changelog(self.sopener,
-                                             self.changelog.version)
+        self.changelog = changelog.changelog(self.sopener)
         self.changelog.checkinlinesize(tr)
 
         newheads = len(self.changelog.heads())

@@ -73,7 +73,7 @@ class sshserver(object):
 
         caps = ['unbundle', 'lookup', 'changegroupsubset']
         if self.ui.configbool('server', 'uncompressed'):
-            caps.append('stream=%d' % self.repo.revlogversion)
+            caps.append('stream=%d' % self.repo.changelog.version)
         self.respond("capabilities: %s\n" % (' '.join(caps),))
 
     def do_lock(self):

@@ -27,8 +27,8 @@ def _string_unescape(text):
     return text.decode('string_escape')
 
 class changelog(revlog):
-    def __init__(self, opener, defversion=REVLOGV0):
-        revlog.__init__(self, opener, "00changelog.i", defversion)
+    def __init__(self, opener):
+        revlog.__init__(self, opener, "00changelog.i")
 
     def decode_extra(self, text):
         extra = {}

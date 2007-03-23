@@ -1018,7 +1018,7 @@ class hgweb(object):
     def do_capabilities(self, req):
         caps = ['lookup', 'changegroupsubset']
         if self.configbool('server', 'uncompressed'):
-            caps.append('stream=%d' % self.repo.revlogversion)
+            caps.append('stream=%d' % self.repo.changelog.version)
         # XXX: make configurable and/or share code with do_unbundle:
         unbundleversions = ['HG10GZ', 'HG10BZ', 'HG10UN']
         if unbundleversions:

@@ -39,8 +39,8 @@ def verify(repo):
         elif revlogv1:
             warn(_("warning: `%s' uses revlog format 0") % name)
 
-    revlogv1 = repo.revlogversion != revlog.REVLOGV0
-    if repo.ui.verbose or revlogv1 != repo.revlogv1:
+    revlogv1 = repo.changelog.version != revlog.REVLOGV0
+    if repo.ui.verbose or not revlogv1:
         repo.ui.status(_("repository uses revlog format %d\n") %
                        (revlogv1 and 1 or 0))
 

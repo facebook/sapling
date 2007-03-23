@@ -311,7 +311,7 @@ class revlog(object):
     remove data, and can use some simple techniques to avoid the need
     for locking while reading.
     """
-    def __init__(self, opener, indexfile, defversion=REVLOG_DEFAULT_VERSION):
+    def __init__(self, opener, indexfile):
         """
         create a revlog object
 
@@ -325,7 +325,9 @@ class revlog(object):
         self.indexstat = None
         self.cache = None
         self.chunkcache = None
-        self.defversion = defversion
+        self.defversion=REVLOG_DEFAULT_VERSION
+        if hasattr(opener, "defversion"):
+            self.defversion = opener.defversion
         self.load()
 
     def load(self):

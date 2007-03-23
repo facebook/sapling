@@ -325,12 +325,6 @@ class ui(object):
                 result.append(os.path.expanduser(value))
         return result
 
-    def configrevlog(self):
-        result = {}
-        for key, value in self.configitems("revlog"):
-            result[key.lower()] = value
-        return result
-
     def username(self):
         """Return default username to be used in commits.
 
