@@ -33,11 +33,11 @@ def copyfile(src, dst, basedir=None):
 def extract(ui, fileobj):
     '''extract patch from data read from fileobj.
 
-    patch can be normal patch or contained in email message.
+    patch can be a normal patch or contained in an email message.
 
-    return tuple (filename, message, user, date). any item in returned
-    tuple can be None.  if filename is None, fileobj did not contain
-    patch. caller must unlink filename when done.'''
+    return tuple (filename, message, user, date, node, p1, p2).
+    Any item in the returned tuple can be None. If filename is None,
+    fileobj did not contain a patch. Caller must unlink filename when done.'''
 
     # attempt to detect the start of a patch
     # (this heuristic is borrowed from quilt)
@@ -54,6 +54,8 @@ def extract(ui, fileobj):
         user = msg['From']
         # should try to parse msg['Date']
         date = None
+        nodeid = None
+        parents = []
 
         if message:
             if message.startswith('[PATCH'):
@@ -97,6 +99,10 @@ def extract(ui, fileobj):
                             ui.debug('From: %s\n' % user)
                         elif line.startswith("# Date "):
                             date = line[7:]
+                        elif line.startswith("# Node ID "):
+                            nodeid = line[10:]
+                        elif line.startswith("# Parent "):
+                            parents.append(line[10:])
                     elif line == '---' and 'git-send-email' in msg['X-Mailer']:
                         ignoretext = True
                     if not line.startswith('# ') and not ignoretext:
@@ -117,8 +123,10 @@ def extract(ui, fileobj):
     tmpfp.close()
     if not diffs_seen:
         os.unlink(tmpname)
-        return None, message, user, date
-    return tmpname, message, user, date
+        return None, message, user, date, None, None, None
+    p1 = parents and parents.pop(0) or None
+    p2 = parents and parents.pop(0) or None
+    return tmpname, message, user, date, nodeid, p1, p2
 
 GP_PATCH  = 1 << 0  # we have to run patch
 GP_FILTER = 1 << 1  # there's some copy/rename operation
