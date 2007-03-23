@@ -288,10 +288,10 @@ class localrepository(repo.repository):
                     warn(_("tag '%s' refers to unknown node") % key)
                     continue
 
-                h = {}
+                h = []
                 if key in filetags:
                     n, h = filetags[key]
-                    h[n] = True
+                    h.append(n)
                 filetags[key] = (bin_n, h)
 
             for k,nh in filetags.items():
@@ -307,7 +307,7 @@ class localrepository(repo.repository):
                 if bn != an and an in bh and \
                    (bn not in ah or len(bh) > len(ah)):
                     an = bn
-                ah.update(bh)
+                ah.append([n for n in bh if n not in ah])
                 globaltags[k] = an, ah
 
         # read the tags file from each head, ending with the tip
