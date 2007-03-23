@@ -2463,6 +2463,9 @@ def tag(ui, repo, name, rev_=None, **opts):
         rev_ = nullid
         if not message:
             message = _('Removed tag %s') % name
+    elif name in repo.tags() and not opts['force']:
+        raise util.Abort(_('a tag named %s already exists (use -f to force)')
+                         % name)
     if not rev_ and repo.dirstate.parents()[1] != nullid:
         raise util.Abort(_('uncommitted merge - please provide a '
                            'specific revision'))
@@ -2955,7 +2958,8 @@ table = {
          _('hg status [OPTION]... [FILE]...')),
     "tag":
         (tag,
-         [('l', 'local', None, _('make the tag local')),
+         [('f', 'force', None, _('replace existing tag')),
+          ('l', 'local', None, _('make the tag local')),
           ('m', 'message', '', _('message for tag commit log entry')),
           ('d', 'date', '', _('record datecode as commit date')),
           ('u', 'user', '', _('record user as commiter')),
