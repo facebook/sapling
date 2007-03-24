@@ -74,12 +74,34 @@ hg tag -d '1000000 0' bar              # rev 1
 echo >> foo
 hg ci -m 'change foo 1' -d '1000000 0' # rev 2
 hg up -C 1
-hg tag -r 1 -d '1000000 0' bar         # rev 3
+hg tag -r 1 -d '1000000 0' -f bar      # rev 3
 hg up -C 1
 echo >> foo
 hg ci -m 'change foo 2' -d '1000000 0' # rev 4
 hg tags
 
+# test tag removal
 hg tag --remove -d '1000000 0' bar 
 hg tip
+hg tags
+
+# test tag rank
+cd ..
+hg init t3
+cd t3
+echo foo > foo
+hg add foo
+hg ci -m 'add foo' -d '1000000 0'       # rev 0
+hg tag -d '1000000 0' -f bar            # rev 1 bar -> 0
+hg tag -d '1000000 0' -f bar            # rev 2 bar -> 1
+hg tag -d '1000000 0' -fr 0 bar         # rev 3 bar -> 0
+hg tag -d '1000000 0' -fr 1 bar         # rev 3 bar -> 1
+hg tag -d '1000000 0' -fr 0 bar         # rev 4 bar -> 0
+hg tags
+hg co 3
+echo barbar > foo
+hg ci -m 'change foo' -d '1000000 0'    # rev 0
+hg tags
+
+hg tag -d '1000000 0' -r 3 bar         # should complain
 hg tags
