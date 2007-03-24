@@ -102,11 +102,6 @@ class localrepository(repo.repository):
         self.filterpats = {}
         self.transhandle = None
 
-        self._link = lambda x: False
-        if util.checklink(self.root):
-            r = self.root # avoid circular reference in lambda
-            self._link = lambda x: util.is_link(os.path.join(r, x))
-
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
 
     def url(self):
@@ -504,6 +499,9 @@ class localrepository(repo.repository):
 
     def wfile(self, f, mode='r'):
         return self.wopener(f, mode)
+
+    def _link(self, f):
+        return os.path.islink(self.wjoin(f))
 
     def _filter(self, filter, filename, data):
         if filter not in self.filterpats:
@@ -1052,10 +1050,11 @@ class localrepository(repo.repository):
 
     def copy(self, source, dest, wlock=None):
         p = self.wjoin(dest)
-        if not os.path.exists(p):
+        if not (os.path.exists(p) or os.path.islink(p)):
             self.ui.warn(_("%s does not exist!\n") % dest)
-        elif not os.path.isfile(p):
-            self.ui.warn(_("copy failed: %s is not a file\n") % dest)
+        elif not (os.path.isfile(p) or os.path.islink(p)):
+            self.ui.warn(_("copy failed: %s is not a file or a "
+                           "symbolic link\n") % dest)
         else:
             if not wlock:
                 wlock = self.wlock()
