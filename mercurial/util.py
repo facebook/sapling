@@ -792,7 +792,7 @@ def checklink(path):
 def linkfunc(path, fallback):
     '''return an is_link() function with default to fallback'''
     if checklink(path):
-        return lambda x: is_link(os.path.join(path, x))
+        return lambda x: os.path.islink(os.path.join(path, x))
     return fallback
 
 # Platform specific variants
@@ -968,10 +968,6 @@ else:
         else:
             os.chmod(f, s & 0666)
 
-    def is_link(f):
-        """check whether a file is a symlink"""
-        return (os.lstat(f).st_mode & 0120000 == 0120000)
-
     def set_link(f, mode):
         """make a file a symbolic link/regular file
 
@@ -979,7 +975,7 @@ else:
         if a link is changed to a file, its link data become its contents
         """
 
-        m = is_link(f)
+        m = os.path.islink(f)
         if m == bool(mode):
             return
 

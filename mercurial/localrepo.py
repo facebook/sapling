@@ -122,11 +122,6 @@ class localrepository(repo.repository):
         self.filterpats = {}
         self.transhandle = None
 
-        self._link = lambda x: False
-        if util.checklink(self.root):
-            r = self.root # avoid circular reference in lambda
-            self._link = lambda x: util.is_link(os.path.join(r, x))
-
         self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
 
     def url(self):
@@ -524,6 +519,9 @@ class localrepository(repo.repository):
 
     def wfile(self, f, mode='r'):
         return self.wopener(f, mode)
+
+    def _link(self, f):
+        return os.path.islink(self.wjoin(f))
 
     def _filter(self, filter, filename, data):
         if filter not in self.filterpats:
