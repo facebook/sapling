@@ -85,27 +85,39 @@ class changelog(revlog):
     def delayupdate(self):
         "delay visibility of index updates to other readers"
         self._realopener = self.opener
-        self.opener = self._appendopener
+        self.opener = self._delayopener
+        self._delaycount = self.count()
         self._delaybuf = []
+        self._delayname = None
 
     def finalize(self, tr):
         "finalize index updates"
         self.opener = self._realopener
-        if self._delaybuf:
+        # move redirected index data back into place
+        if self._delayname:
+            util.rename(self._delayname + ".a", self._delayname)
+        elif self._delaybuf:
             fp = self.opener(self.indexfile, 'a')
             fp.write("".join(self._delaybuf))
             fp.close()
             del self._delaybuf
+        # split when we're done
         self.checkinlinesize(tr)
 
-    def _appendopener(self, name, mode='r'):
+    def _delayopener(self, name, mode='r'):
         fp = self._realopener(name, mode)
+        # only divert the index
         if not name == self.indexfile:
             return fp
+        # if we're doing an initial clone, divert to another file
+        if self._delaycount == 0:
+            self._delayname = fp.name
+            return self._realopener(name + ".a", mode)
+        # otherwise, divert to memory
         return appender(fp, self._delaybuf)
 
     def checkinlinesize(self, tr, fp=None):
-        if self.opener == self._appendopener:
+        if self.opener == self._delayopener:
             return
         return revlog.checkinlinesize(self, tr, fp)
 
