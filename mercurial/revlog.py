@@ -325,7 +325,7 @@ class revlog(object):
         self.indexstat = None
         self.cache = None
         self.chunkcache = None
-        self.defversion=REVLOG_DEFAULT_VERSION
+        self.defversion = REVLOG_DEFAULT_VERSION
         if hasattr(opener, "defversion"):
             self.defversion = opener.defversion
         self.load()
