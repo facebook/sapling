@@ -185,11 +185,11 @@ def patchbomb(ui, repo, *revs, **opts):
         o = repo.changelog.nodesbetween(o, revs or None)[0]
         return [str(repo.changelog.rev(r)) for r in o]
 
-    def getbundle(dest, revs):
+    def getbundle(dest):
         tmpdir = tempfile.mkdtemp(prefix='hg-email-bundle-')
         tmpfn = os.path.join(tmpdir, 'bundle')
         try:
-            commands.bundle(ui, repo, tmpfn, dest, *revs, **{'force': 0})
+            commands.bundle(ui, repo, tmpfn, dest, **opts)
             return open(tmpfn).read()
         finally:
             try:
@@ -216,6 +216,8 @@ def patchbomb(ui, repo, *revs, **opts):
 
     if opts.get('outgoing'):
         revs = outgoing(dest, opts.get('rev'))
+    if opts.get('bundle'):
+        opts['revs'] = revs
 
     # start
     start_time = util.makedate()
@@ -311,7 +313,7 @@ def patchbomb(ui, repo, *revs, **opts):
         return [msg]
 
     if opts.get('bundle'):
-        msgs = getbundlemsgs(getbundle(dest, revs))
+        msgs = getbundlemsgs(getbundle(dest))
     else:
         msgs = getexportmsgs()
 
@@ -380,6 +382,10 @@ cmdtable = {
       ('b', 'bundle', None, _('send changes not in target as a binary bundle')),
       ('r', 'rev', [], _('a revision to send')),
       ('s', 'subject', '', 'subject of first message (intro or single patch)'),
-      ('t', 'to', [], 'email addresses of recipients')] + commands.remoteopts,
+      ('t', 'to', [], 'email addresses of recipients'),
+      ('', 'force', None, _('run even when remote repository is unrelated (with -b)')),
+      ('', 'base', [],
+          _('a base changeset to specify instead of a destination (with -b)'))]
+      + commands.remoteopts,
      "hg email [OPTION]... [DEST]...")
     }
