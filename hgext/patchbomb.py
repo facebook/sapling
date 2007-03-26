@@ -63,8 +63,9 @@
 #
 # That should be all.  Now your patchbomb is on its way out.
 
-import os, errno, socket
-import email.MIMEMultipart, email.MIMEText, email.Utils
+import os, errno, socket, tempfile
+import email.MIMEMultipart, email.MIMEText, email.MIMEBase
+import email.Utils, email.Encoders
 from mercurial import cmdutil, commands, hg, mail, ui, patch, util
 from mercurial.i18n import _
 from mercurial.node import *
@@ -184,9 +185,25 @@ def patchbomb(ui, repo, *revs, **opts):
         o = repo.changelog.nodesbetween(o, revs or None)[0]
         return [str(repo.changelog.rev(r)) for r in o]
 
+    def getbundle(dest, revs):
+        tmpdir = tempfile.mkdtemp(prefix='hg-email-bundle-')
+        tmpfn = os.path.join(tmpdir, 'bundle')
+        try:
+            commands.bundle(ui, repo, tmpfn, dest, *revs, **{'force': 0})
+            return open(tmpfn).read()
+        finally:
+            try:
+                os.unlink(tmpfn)
+            except:
+                pass
+            os.rmdir(tmpdir)
+
     # option handling
     commands.setremoteconfig(ui, opts)
-    if opts.get('outgoing'):
+    if opts.get('outgoint') and opts.get('bundle'):
+        raise util.Abort(_("--outgoing mode always on with --bundle; do not re-specify --outgoing"))
+
+    if opts.get('outgoing') or opts.get('bundle'):
         if len(revs) > 1:
             raise util.Abort(_("too many destinations"))
         dest = revs and revs[0] or None
@@ -206,35 +223,6 @@ def patchbomb(ui, repo, *revs, **opts):
     def genmsgid(id):
         return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
 
-    patches = []
-
-    class exportee:
-        def __init__(self, container):
-            self.lines = []
-            self.container = container
-            self.name = 'email'
-
-        def write(self, data):
-            self.lines.append(data)
-
-        def close(self):
-            self.container.append(''.join(self.lines).split('\n'))
-            self.lines = []
-
-    commands.export(ui, repo, *revs, **{'output': exportee(patches),
-                                        'switch_parent': False,
-                                        'text': None,
-                                        'git': opts.get('git')})
-
-    jumbo = []
-    msgs = []
-
-    ui.write(_('This patch series consists of %d patches.\n\n') % len(patches))
-
-    for p, i in zip(patches, xrange(len(patches))):
-        jumbo.extend(p)
-        msgs.append(makepatch(p, i + 1, len(patches)))
-
     sender = (opts['from'] or ui.config('email', 'from') or
               ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
@@ -244,6 +232,7 @@ def patchbomb(ui, repo, *revs, **opts):
                               ui.config('patchbomb', opt) or
                               prompt(prpt, default = default)).split(',')
         return [a.strip() for a in addrs if a.strip()]
+
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
 
@@ -251,28 +240,80 @@ def patchbomb(ui, repo, *revs, **opts):
                           ui.config('patchbomb', 'bcc') or '').split(',')
     bcc = [a.strip() for a in bcc if a.strip()]
 
-    if len(patches) > 1:
-        tlen = len(str(len(patches)))
+    def getexportmsgs():
+        patches = []
 
-        subj = '[PATCH %0*d of %d] %s' % (
-            tlen, 0,
-            len(patches),
-            opts['subject'] or
-            prompt('Subject:', rest = ' [PATCH %0*d of %d] ' % (tlen, 0,
-                len(patches))))
+        class exportee:
+            def __init__(self, container):
+                self.lines = []
+                self.container = container
+                self.name = 'email'
 
-        body = ''
-        if opts['diffstat']:
-            d = cdiffstat(_('Final summary:\n'), jumbo)
-            if d: body = '\n' + d
+            def write(self, data):
+                self.lines.append(data)
 
-        ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
-        body = ui.edit(body, sender)
+            def close(self):
+                self.container.append(''.join(self.lines).split('\n'))
+                self.lines = []
 
-        msg = email.MIMEText.MIMEText(body)
+        commands.export(ui, repo, *revs, **{'output': exportee(patches),
+                                            'switch_parent': False,
+                                            'text': None,
+                                            'git': opts.get('git')})
+
+        jumbo = []
+        msgs = []
+
+        ui.write(_('This patch series consists of %d patches.\n\n') % len(patches))
+
+        for p, i in zip(patches, xrange(len(patches))):
+            jumbo.extend(p)
+            msgs.append(makepatch(p, i + 1, len(patches)))
+
+        if len(patches) > 1:
+            tlen = len(str(len(patches)))
+
+            subj = '[PATCH %0*d of %d] %s' % (
+                tlen, 0,
+                len(patches),
+                opts['subject'] or
+                prompt('Subject:', rest = ' [PATCH %0*d of %d] ' % (tlen, 0,
+                    len(patches))))
+
+            body = ''
+            if opts['diffstat']:
+                d = cdiffstat(_('Final summary:\n'), jumbo)
+                if d: body = '\n' + d
+
+            ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
+            body = ui.edit(body, sender)
+
+            msg = email.MIMEText.MIMEText(body)
+            msg['Subject'] = subj
+
+            msgs.insert(0, msg)
+        return msgs
+
+    def getbundlemsgs(bundle):
+        subj = opts['subject'] or \
+                prompt('Subject:', default='A bundle for your repository')
+        ui.write(_('\nWrite the introductory message for the bundle.\n\n'))
+        body = ui.edit('', sender)
+
+        msg = email.MIMEMultipart.MIMEMultipart()
+        if body:
+            msg.attach(email.MIMEText.MIMEText(body, 'plain'))
+        datapart = email.MIMEBase.MIMEBase('application', 'x-mercurial-bundle')
+        datapart.set_payload(bundle)
+        email.Encoders.encode_base64(datapart)
+        msg.attach(datapart)
         msg['Subject'] = subj
+        return [msg]
 
-        msgs.insert(0, msg)
+    if opts.get('bundle'):
+        msgs = getbundlemsgs(getbundle(dest, revs))
+    else:
+        msgs = getexportmsgs()
 
     ui.write('\n')
 
@@ -336,6 +377,7 @@ cmdtable = {
       ('n', 'test', None, 'print messages that would be sent'),
       ('m', 'mbox', '', 'write messages to mbox file instead of sending them'),
       ('o', 'outgoing', None, _('send changes not found in the target repository')),
+      ('b', 'bundle', None, _('send changes not in target as a binary bundle')),
       ('r', 'rev', [], _('a revision to send')),
       ('s', 'subject', '', 'subject of first message (intro or single patch)'),
       ('t', 'to', [], 'email addresses of recipients')] + commands.remoteopts,
