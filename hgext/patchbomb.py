@@ -332,6 +332,8 @@ def patchbomb(ui, repo, *revs, **opts):
             msg.attach(email.MIMEText.MIMEText(body, 'plain'))
         datapart = email.MIMEBase.MIMEBase('application', 'x-mercurial-bundle')
         datapart.set_payload(bundle)
+        datapart.add_header('Content-Disposition', 'attachment',
+                            filename='bundle.hg')
         email.Encoders.encode_base64(datapart)
         msg.attach(datapart)
         msg['Subject'] = subj
