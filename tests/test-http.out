@@ -31,7 +31,7 @@ checking files
 1 files, 1 changesets, 1 total revisions
 adding bar
 % pull
-changegroup: u=http://localhost:20059/
+changegroup hook: HG_NODE=cfbd11a1fa315300a080c3de8fe36b0fc5820acf HG_SOURCE=pull HG_URL=http://localhost:20059/ 
 pulling from http://localhost:20059/
 searching for changes
 adding changesets
