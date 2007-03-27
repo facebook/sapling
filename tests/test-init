@@ -2,25 +2,26 @@
 
 # This test tries to exercise the ssh functionality with a dummy script
 
-cat <<'EOF' > dummyssh
-#!/bin/sh
-# this attempts to deal with relative pathnames
-cd `dirname $0`
+cat <<EOF > dummyssh
+import sys
+import os
 
-# check for proper args
-if [ $1 != "user@dummy" ] ; then
-	exit -1
-fi
+os.chdir(os.path.dirname(sys.argv[0]))
+if sys.argv[1] != "user@dummy":
+    sys.exit(-1)
 
-# check that we're in the right directory
-if [ ! -x dummyssh ] ; then
-	exit -1
-fi
+if not os.path.exists("dummyssh"):
+    sys.exit(-1)
 
-echo Got arguments 1:$1 2:$2 3:$3 4:$4 5:$5 >> dummylog
-$2
+log = open("dummylog", "ab")
+log.write("Got arguments")
+for i, arg in enumerate(sys.argv[1:]):
+    log.write(" %d:%s" % (i+1, arg))
+log.write("\n")
+log.close()
+r = os.system(sys.argv[2])
+sys.exit(bool(r))
 EOF
-chmod +x dummyssh
 
 checknewrepo()
 {
@@ -51,18 +52,18 @@ echo "#test failure"
 hg init local
 
 echo "# init+push to remote2"
-hg init -e ./dummyssh ssh://user@dummy/remote2
+hg init -e "python ./dummyssh" ssh://user@dummy/remote2
 hg incoming -R remote2 local
-hg push -R local -e ./dummyssh ssh://user@dummy/remote2
+hg push -R local -e "python ./dummyssh" ssh://user@dummy/remote2
 
 echo "# clone to remote1"
-hg clone -e ./dummyssh local ssh://user@dummy/remote1
+hg clone -e "python ./dummyssh" local ssh://user@dummy/remote1
 
 echo "# init to existing repo"
-hg init -e ./dummyssh ssh://user@dummy/remote1
+hg init -e "python ./dummyssh" ssh://user@dummy/remote1
 
 echo "# clone to existing repo"
-hg clone -e ./dummyssh local ssh://user@dummy/remote1
+hg clone -e "python ./dummyssh" local ssh://user@dummy/remote1
 
 echo "# output of dummyssh"
 cat dummylog
