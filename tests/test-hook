@@ -1,13 +1,16 @@
 #!/bin/sh
 
+cp "$TESTDIR"/printenv.py .
+
 # commit hooks can see env vars
 hg init a
 cd a
 echo "[hooks]" > .hg/hgrc
-echo 'commit = echo commit hook: n=$HG_NODE p1=$HG_PARENT1 p2=$HG_PARENT2' >> .hg/hgrc
-echo 'commit.b = echo commit hook b' >> .hg/hgrc
-echo 'precommit = echo precommit hook: p1=$HG_PARENT1 p2=$HG_PARENT2' >> .hg/hgrc
-echo 'pretxncommit = echo pretxncommit hook: n=$HG_NODE p1=$HG_PARENT1 p2=$HG_PARENT2; hg -q tip' >> .hg/hgrc
+echo 'commit = python ../printenv.py commit' >> .hg/hgrc
+echo 'commit.b = python ../printenv.py commit.b' >> .hg/hgrc
+echo 'precommit = python ../printenv.py precommit' >> .hg/hgrc
+echo 'pretxncommit = python ../printenv.py pretxncommit' >> .hg/hgrc
+echo 'pretxncommit.tip = hg -q tip' >> .hg/hgrc
 echo a > a
 hg add a
 hg commit -m a -d "1000000 0"
@@ -17,9 +20,9 @@ cd ../b
 
 # changegroup hooks can see env vars
 echo '[hooks]' > .hg/hgrc
-echo 'prechangegroup = echo prechangegroup hook: u=`echo $HG_URL | sed s,file:.*,file:,`' >> .hg/hgrc
-echo 'changegroup = echo changegroup hook: n=$HG_NODE u=`echo $HG_URL | sed s,file:.*,file:,`' >> .hg/hgrc
-echo 'incoming = echo incoming hook: n=$HG_NODE u=`echo $HG_URL | sed s,file:.*,file:,`' >> .hg/hgrc
+echo 'prechangegroup = python ../printenv.py prechangegroup' >> .hg/hgrc
+echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
+echo 'incoming = python ../printenv.py incoming' >> .hg/hgrc
 
 # pretxncommit and commit hooks can see both parents of merge
 cd ../a
@@ -37,19 +40,20 @@ hg pull ../a
 
 # tag hooks can see env vars
 cd ../a
-echo 'pretag = echo pretag hook: t=$HG_TAG n=$HG_NODE l=$HG_LOCAL' >> .hg/hgrc
-echo 'tag = echo tag hook: t=$HG_TAG n=$HG_NODE l=$HG_LOCAL' >> .hg/hgrc
+echo 'pretag = python ../printenv.py pretag' >> .hg/hgrc
+echo 'tag = python ../printenv.py tag' >> .hg/hgrc
 hg tag -d '3 0' a
 hg tag -l la
 
 # pretag hook can forbid tagging
-echo 'pretag.forbid = echo pretag.forbid hook; exit 1' >> .hg/hgrc
+echo 'pretag.forbid = python ../printenv.py pretag.forbid 1' >> .hg/hgrc
 hg tag -d '4 0' fa
 hg tag -l fla
 
 # pretxncommit hook can see changeset, can roll back txn, changeset
 # no more there after
-echo 'pretxncommit.forbid = echo pretxncommit.forbid hook: tip=`hg -q tip`; exit 1' >> .hg/hgrc
+echo 'pretxncommit.forbid0 = hg tip -q' >> .hg/hgrc
+echo 'pretxncommit.forbid1 = python ../printenv.py pretxncommit.forbid 1' >> .hg/hgrc
 echo z > z
 hg add z
 hg -q tip
@@ -57,42 +61,43 @@ hg commit -m 'fail' -d '4 0'
 hg -q tip
 
 # precommit hook can prevent commit
-echo 'precommit.forbid = echo precommit.forbid hook; exit 1' >> .hg/hgrc
+echo 'precommit.forbid = python ../printenv.py precommit.forbid 1' >> .hg/hgrc
 hg commit -m 'fail' -d '4 0'
 hg -q tip
 
 # preupdate hook can prevent update
-echo 'preupdate = echo preupdate hook: p1=$HG_PARENT1 p2=$HG_PARENT2' >> .hg/hgrc
+echo 'preupdate = python ../printenv.py preupdate' >> .hg/hgrc
 hg update 1
 
 # update hook
-echo 'update = echo update hook: p1=$HG_PARENT1 p2=$HG_PARENT2 err=$HG_ERROR' >> .hg/hgrc
+echo 'update = python ../printenv.py update' >> .hg/hgrc
 hg update
 
 # prechangegroup hook can prevent incoming changes
 cd ../b
 hg -q tip
 echo '[hooks]' > .hg/hgrc
-echo 'prechangegroup.forbid = echo prechangegroup.forbid hook; exit 1' >> .hg/hgrc
+echo 'prechangegroup.forbid = python ../printenv.py prechangegroup.forbid 1' >> .hg/hgrc
 hg pull ../a
 
 # pretxnchangegroup hook can see incoming changes, can roll back txn,
 # incoming changes no longer there after
 echo '[hooks]' > .hg/hgrc
-echo 'pretxnchangegroup.forbid = echo pretxnchangegroup.forbid hook: tip=`hg -q tip`; exit 1' >> .hg/hgrc
+echo 'pretxnchangegroup.forbid0 = hg tip -q' >> .hg/hgrc
+echo 'pretxnchangegroup.forbid1 = python ../printenv.py pretxnchangegroup.forbid 1' >> .hg/hgrc
 hg pull ../a
 hg -q tip
 
 # outgoing hooks can see env vars
 rm .hg/hgrc
 echo '[hooks]' > ../a/.hg/hgrc
-echo 'preoutgoing = echo preoutgoing hook: s=$HG_SOURCE' >> ../a/.hg/hgrc
-echo 'outgoing = echo outgoing hook: n=$HG_NODE s=$HG_SOURCE' >> ../a/.hg/hgrc
+echo 'preoutgoing = python ../printenv.py preoutgoing' >> ../a/.hg/hgrc
+echo 'outgoing = python ../printenv.py outgoing' >> ../a/.hg/hgrc
 hg pull ../a
 hg rollback
 
 # preoutgoing hook can prevent outgoing changes
-echo 'preoutgoing.forbid = echo preoutgoing.forbid hook; exit 1' >> ../a/.hg/hgrc
+echo 'preoutgoing.forbid = python ../printenv.py preoutgoing.forbid 1' >> ../a/.hg/hgrc
 hg pull ../a
 
 cat > hooktests.py <<EOF
