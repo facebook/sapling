@@ -3,11 +3,11 @@
 # This test makes sure that we don't mark a file as merged with its ancestor
 # when we do a merge.
 
-cat <<'EOF' > merge
-#!/bin/sh
-echo merging for `basename $1`
+cat <<EOF > merge
+import sys, os
+print "merging for", os.path.basename(sys.argv[1])
 EOF
-chmod +x merge
+HGMERGE="python ../merge"; export HGMERGE
 
 echo creating base
 hg init a
@@ -41,7 +41,7 @@ hg debugstate | cut -b 1-16,35-
 
 echo merging
 hg pull ../a
-env HGMERGE=../merge hg merge -v
+hg merge -v
 
 echo 2m > foo
 echo 2b > baz
