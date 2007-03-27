@@ -1,5 +1,7 @@
 #!/bin/sh
 
+cp "$TESTDIR"/printenv.py .
+
 hg init test
 cd test
 echo 0 > afile
@@ -43,7 +45,7 @@ hg init empty
 cd empty
 hg -R bundle://../full.hg log
 echo '[hooks]' >> .hg/hgrc
-echo 'changegroup = echo changegroup: u=$HG_URL' >> .hg/hgrc
+echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
 #doesn't work (yet ?)
 #hg -R bundle://../full.hg verify
 hg pull bundle://../full.hg

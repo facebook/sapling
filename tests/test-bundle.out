@@ -87,7 +87,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     0.0
 
-changegroup: u=bundle:../full.hg
+changegroup hook: HG_NODE=5649c9d34dd87d0ecb5fd39672128376e83b22e1 HG_SOURCE=pull HG_URL=bundle:../full.hg 
 pulling from bundle://../full.hg
 requesting all changes
 adding changesets
