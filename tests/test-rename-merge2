@@ -3,11 +3,13 @@
 mkdir -p t
 cd t
 
-cat <<'EOF' > merge
-#!/bin/sh
-echo merge $1 $2 $3 > $1
+cat <<EOF > merge
+import sys, os
+f = open(sys.argv[1], "wb")
+f.write("merge %s %s %s" % (sys.argv[1], sys.argv[2], sys.argv[3]))
+f.close()
 EOF
-chmod +x merge
+HGMERGE="python ../merge"; export HGMERGE
 
 # perform a test merge with possible renaming
 # 
@@ -49,7 +51,7 @@ tm()
     echo "--------------"
     echo "test L:$1 R:$2 W:$3 - $4"
     echo "--------------"
-    env HGMERGE=../merge hg merge -y --debug --traceback
+    hg merge -y --debug --traceback
 
     echo "--------------"
     hg status -camC -X rev
