@@ -2,27 +2,28 @@
 
 # This test tries to exercise the ssh functionality with a dummy script
 
-cat <<'EOF' > dummyssh
-#!/bin/sh
-# this attempts to deal with relative pathnames
-cd `dirname $0`
+cat <<EOF > dummyssh
+import sys
+import os
 
-# check for proper args
-if [ $1 != "user@dummy" ] ; then
-	exit -1
-fi
+os.chdir(os.path.dirname(sys.argv[0]))
+if sys.argv[1] != "user@dummy":
+    sys.exit(-1)
 
-# check that we're in the right directory
-if [ ! -x dummyssh ] ; then
-	exit -1
-fi
+if not os.path.exists("dummyssh"):
+    sys.exit(-1)
 
-SSH_CLIENT='127.0.0.1 1 2'
-export SSH_CLIENT
-echo Got arguments 1:$1 2:$2 3:$3 4:$4 5:$5 >> dummylog
-$2
+os.environ["SSH_CLIENT"] = "127.0.0.1 1 2"
+
+log = open("dummylog", "ab")
+log.write("Got arguments")
+for i, arg in enumerate(sys.argv[1:]):
+    log.write(" %d:%s" % (i+1, arg))
+log.write("\n")
+log.close()
+r = os.system(sys.argv[2])
+sys.exit(bool(r))
 EOF
-chmod +x dummyssh
 
 hg init remote
 cd remote
@@ -76,7 +77,7 @@ cd ..
 
 echo "# clone remote via stream"
 for i in 0 1 2 3 4 5 6 7 8; do
-   hg clone -e ./dummyssh --uncompressed -r "$i" ssh://user@dummy/remote test-"$i" 2>&1
+   hg clone -e "python ./dummyssh" --uncompressed -r "$i" ssh://user@dummy/remote test-"$i" 2>&1
    if cd test-"$i"; then
       hg verify
       cd ..
@@ -87,13 +88,13 @@ hg pull ../test-7
 hg verify
 cd ..
 cd test-1
-hg pull -e ../dummyssh -r 4 ssh://user@dummy/remote 2>&1
+hg pull -e "python ../dummyssh" -r 4 ssh://user@dummy/remote 2>&1
 hg verify
-hg pull -e ../dummyssh ssh://user@dummy/remote 2>&1
+hg pull -e "python ../dummyssh" ssh://user@dummy/remote 2>&1
 cd ..
 cd test-2
-hg pull -e ../dummyssh -r 5 ssh://user@dummy/remote 2>&1
+hg pull -e "python ../dummyssh" -r 5 ssh://user@dummy/remote 2>&1
 hg verify
-hg pull -e ../dummyssh ssh://user@dummy/remote 2>&1
+hg pull -e "python ../dummyssh" ssh://user@dummy/remote 2>&1
 hg verify
 cd ..
