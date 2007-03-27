@@ -1,11 +1,10 @@
 #!/bin/sh
 
-cat <<'EOF' > merge
-#!/bin/sh
-echo merging for `basename $1`
+cat <<EOF > merge
+import sys, os
+print "merging for", os.path.basename(sys.argv[1])
 EOF
-chmod +x merge
-HGMERGE=./merge; export HGMERGE
+HGMERGE="python ../merge"; export HGMERGE
 
 mkdir A1
 cd A1
