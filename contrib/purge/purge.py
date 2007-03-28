@@ -31,7 +31,8 @@ from mercurial import hg, util
 from mercurial.i18n import _
 import os
 
-def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n'):
+def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n',
+            force=False):
     def error(msg):
         if abort_on_err:
             raise util.Abort(msg)
@@ -49,13 +50,18 @@ def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n'):
 
     directories = []
     files = []
+    missing = []
     roots, match, anypats = util.cmdmatcher(repo.root, repo.getcwd(), dirs)
     for src, f, st in repo.dirstate.statwalk(files=roots, match=match,
                                              ignored=True, directories=True):
         if src == 'd':
             directories.append(f)
+        elif src == 'm':
+            missing.append(f)
         elif src == 'f' and f not in repo.dirstate:
             files.append(f)
+
+    _check_missing(ui, repo, missing, force)
 
     directories.sort()
 
@@ -68,6 +74,43 @@ def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n'):
         if not os.listdir(repo.wjoin(f)):
             ui.note(_('Removing directory %s\n') % f)
             remove(os.rmdir, f)
+
+def _check_missing(ui, repo, missing, force=False):
+    """Abort if there is the chance of having problems with name-mangling fs
+
+    In a name mangling filesystem (e.g. a case insensitive one)
+    dirstate.walk() can yield filenames different from the ones
+    stored in the dirstate. This already confuses the status and
+    add commands, but with purge this may cause data loss.
+    
+    To prevent this, _check_missing will abort if there are missing
+    files. The force option will let the user skip the check if he 
+    knows it is safe.
+    
+    Even with the force option this function will check if any of the 
+    missing files is still available in the working dir: if so there
+    may be some problem with the underlying filesystem, so it
+    aborts unconditionally."""
+
+    found = [f for f in missing if util.lexists(repo.wjoin(f))]
+
+    if found:
+        if not ui.quiet:
+            ui.warn(_("The following tracked files weren't listed by the "
+                      "filesystem, but could still be found:\n"))
+            for f in found:
+                ui.warn("%s\n" % f)
+            if util.checkfolding(repo.path):
+                ui.warn(_("This is probably due to a case-insensitive "
+                          "filesystem\n"))
+        raise util.Abort(_("purging on name mangling filesystems is not "
+                           "yet fully supported"))
+
+    if missing and not force:
+        raise util.Abort(_("there are missing files in the working dir and "
+                           "purge still has problems with them due to name "
+                           "mangling filesystems. "
+                           "Use --force if you know what you are doing"))
 
 
 def purge(ui, repo, *dirs, **opts):
@@ -100,13 +143,15 @@ def purge(ui, repo, *dirs, **opts):
     if eol == '\0':
         # --print0 implies --print
         act = False
-    dopurge(ui, repo, dirs, act, abort_on_err, eol)
+    force = bool(opts['force'])
+    dopurge(ui, repo, dirs, act, abort_on_err, eol, force)
 
 
 cmdtable = {
     'purge':
         (purge,
          [('a', 'abort-on-err', None, _('abort if an error occurs')),
+          ('f', 'force', None, _('purge even when missing files are detected')),
           ('p', 'print', None, _('print the file names instead of deleting them')),
           ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
                                   ' (implies -p)'))],
