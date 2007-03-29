@@ -2841,7 +2841,7 @@ table = {
            _('only follow the first parent of merge changesets')),
           ('d', 'date', '', _('show revs matching date spec')),
           ('C', 'copies', None, _('show copied files')),
-          ('k', 'keyword', [], _('search for a keyword')),
+          ('k', 'keyword', [], _('do case-insensitive search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
           ('', 'removed', None, _('include revs where files were removed')),
