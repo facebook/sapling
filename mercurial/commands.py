@@ -1745,7 +1745,7 @@ def log(ui, repo, *pats, **opts):
                 for k in [kw.lower() for kw in opts['keyword']]:
                     if not (k in changes[1].lower() or
                             k in changes[4].lower() or
-                            k in " ".join(changes[3][:20]).lower()):
+                            k in " ".join(changes[3]).lower()):
                         miss = 1
                         break
                 if miss:
