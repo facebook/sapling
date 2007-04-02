@@ -26,11 +26,6 @@ REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 
-def flagstr(flag):
-    if flag == "inline":
-        return REVLOGNGINLINEDATA
-    raise RevlogError(_("unknown revlog flag %s") % flag)
-
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
 
@@ -328,6 +323,8 @@ class revlog(object):
         self.defversion = REVLOG_DEFAULT_VERSION
         if hasattr(opener, "defversion"):
             self.defversion = opener.defversion
+            if self.defversion & REVLOGNG:
+                self.defversion |= REVLOGNGINLINEDATA
         self.load()
 
     def load(self):
