@@ -25,6 +25,8 @@ hg locate a
 
 hg locate NONEXISTENT
 
+hg locate relpath:NONEXISTENT
+
 hg locate 
 b
 dir.h/foo
@@ -37,6 +39,8 @@ hg locate -r 0 a
 a
 
 hg locate -r 0 NONEXISTENT
+
+hg locate -r 0 relpath:NONEXISTENT
 
 hg locate -r 0
 a

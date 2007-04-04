@@ -30,9 +30,11 @@ hg rm a
 hg ci -m m -d "1000000 0"
 hglocate a
 hglocate NONEXISTENT
+hglocate relpath:NONEXISTENT
 hglocate
 hglocate -r 0 a
 hglocate -r 0 NONEXISTENT
+hglocate -r 0 relpath:NONEXISTENT
 hglocate -r 0
 echo % -I/-X with relative path should work
 cd t

@@ -1624,7 +1624,10 @@ def locate(ui, repo, *pats, **opts):
 
     ret = 1
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts, node=node,
+                                             badmatch=util.always,
                                              default='relglob'):
+        if src == 'b':
+            continue
         if not node and repo.dirstate.state(abs) == '?':
             continue
         if opts['fullpath']:
