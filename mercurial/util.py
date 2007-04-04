@@ -436,7 +436,7 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
         elif kind == 'path':
             return '^' + re.escape(name) + '(?:/|$)'
         elif kind == 'relglob':
-            return globre(name, '(?:|.*/)', '(?:/|$)')
+            return globre(name, '(?:|.*/)', tail)
         elif kind == 'relpath':
             return re.escape(name) + '(?:/|$)'
         elif kind == 'relre':

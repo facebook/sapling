@@ -77,7 +77,8 @@ debugwalk 're:.*[kb]$'
 debugwalk path:beans/black
 debugwalk path:beans//black
 debugwalk relglob:Procyonidae
-debugwalk relglob:Procyonidae/ fennel
+debugwalk 'relglob:Procyonidae/**'
+debugwalk 'relglob:Procyonidae/**' fennel
 debugwalk beans 'glob:beans/*'
 debugwalk 'glob:mamm**'
 debugwalk 'glob:mamm**' fennel

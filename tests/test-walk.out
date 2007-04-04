@@ -232,11 +232,13 @@ hg debugwalk path:beans//black
 f  beans/black  beans/black  exact
 
 hg debugwalk relglob:Procyonidae
+
+hg debugwalk relglob:Procyonidae/**
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
 f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
 
-hg debugwalk relglob:Procyonidae/ fennel
+hg debugwalk relglob:Procyonidae/** fennel
 f  fennel                          fennel                          exact
 f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi

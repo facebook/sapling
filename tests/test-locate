@@ -19,6 +19,8 @@ mkdir t
 echo 0 > t/x
 echo 0 > t/b
 echo 0 > t/e.h
+mkdir dir.h
+echo 0 > dir.h/foo
 hg ci -A -m m -d "1000000 0"
 touch nottracked
 hglocate a && echo locate succeeded || echo locate failed
@@ -39,14 +41,14 @@ hglocate -I ../t
 # test issue294
 cd ..
 rm -r t
-hglocate t
+hglocate 't/**'
 mkdir otherdir
 cd otherdir
 hglocate b
 hglocate '*.h'
 hglocate path:t/x
-hglocate 're:.*\.h'
+hglocate 're:.*\.h$'
 hglocate -r 0 b
 hglocate -r 0 '*.h'
 hglocate -r 0 path:t/x
-hglocate -r 0 're:.*\.h'
+hglocate -r 0 're:.*\.h$'
