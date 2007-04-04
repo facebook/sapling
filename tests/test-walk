@@ -72,6 +72,7 @@ debugwalk beans/.hg
 #debugwalk `pwd`/beans
 #debugwalk `pwd`/..
 debugwalk glob:\*
+debugwalk 'glob:**e'
 debugwalk 're:.*[kb]$'
 debugwalk path:beans/black
 debugwalk path:beans//black
