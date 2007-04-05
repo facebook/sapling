@@ -88,14 +88,15 @@ resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local 94b33a1b7f2d+ remote 735846fee2d7
  rev: versions differ -> m
- b: remote created -> g
-getting b
+ a: remote copied to b -> m
+copying a to b
 merging rev
 my rev@94b33a1b7f2d+ other rev@735846fee2d7 ancestor rev@924404dff337
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
 M b
+  a
 C a
 --------------
 
@@ -105,14 +106,16 @@ test L:nc a b R:       W:       - 6  nothing
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ac809aeed39a+ remote 97c705ade336
+ b: local copied to a -> m
  rev: versions differ -> m
 merging rev
 my rev@ac809aeed39a+ other rev@97c705ade336 ancestor rev@924404dff337
-0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
+M b
+  a
 C a
-C b
 --------------
 
 --------------
@@ -121,17 +124,17 @@ test L:       R:nm a b W:       - 7  get b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local 94b33a1b7f2d+ remote e03727d2d66b
- a: other deleted -> r
  rev: versions differ -> m
- b: remote created -> g
+ a: remote moved to b -> m
+copying a to b
 removing a
-getting b
 merging rev
 my rev@94b33a1b7f2d+ other rev@e03727d2d66b ancestor rev@924404dff337
-1 files updated, 1 files merged, 1 files removed, 0 files unresolved
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
 M b
+  a
 --------------
 
 --------------
@@ -140,13 +143,15 @@ test L:nm a b R:       W:       - 8  nothing
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ecf3cb2a4219+ remote 97c705ade336
+ b: local moved to a -> m
  rev: versions differ -> m
 merging rev
 my rev@ecf3cb2a4219+ other rev@97c705ade336 ancestor rev@924404dff337
-0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
-C b
+M b
+  a
 --------------
 
 --------------
