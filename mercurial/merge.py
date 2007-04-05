@@ -129,15 +129,15 @@ def findcopies(repo, m1, m2, ma, limit):
         '''check possible copies for filectx c'''
         for of in findold(c):
             if of not in man:
-                return
+                continue
             c2 = ctx(of, man[of])
             ca = c.ancestor(c2)
             if not ca: # unrelated
-                return
+                continue
             if ca.path() == c.path() or ca.path() == c2.path():
                 fullcopy[c.path()] = of
-                if c == ca or c2 == ca: # no merge needed, ignore copy
-                    return
+                if c == ca and c2 == ca: # no merge needed, ignore copy
+                    continue
                 copy[c.path()] = of
 
     def dirs(files):
