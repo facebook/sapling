@@ -3,7 +3,7 @@ adding a
 hg: unknown command 'an'
 Mercurial Distributed SCM
 
-basic commands (use "hg help" for the full list or option "-v" for details):
+basic commands:
 
  add        add the specified files on the next commit
  annotate   show changeset information per file line
@@ -22,6 +22,8 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update working directory
+
+use "hg help" for the full list of commands or "hg -v" for details
 0: a
 % should succeed - up is an alias, not an abbreviation
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved

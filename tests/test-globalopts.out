@@ -117,7 +117,7 @@ Mercurial Distributed SCM (version xxx)
 %% -h/--help
 Mercurial Distributed SCM
 
-list of commands (use "hg help -v" to show aliases and global options):
+list of commands:
 
  add          add the specified files on the next commit
  addremove    add all new files, delete all missing files
@@ -165,9 +165,11 @@ list of commands (use "hg help -v" to show aliases and global options):
  update       update working directory
  verify       verify the integrity of the repository
  version      output version and copyright information
+
+use "hg -v help" to show aliases and global options
 Mercurial Distributed SCM
 
-list of commands (use "hg help -v" to show aliases and global options):
+list of commands:
 
  add          add the specified files on the next commit
  addremove    add all new files, delete all missing files
@@ -215,4 +217,6 @@ list of commands (use "hg help -v" to show aliases and global options):
  update       update working directory
  verify       verify the integrity of the repository
  version      output version and copyright information
+
+use "hg -v help" to show aliases and global options
 %% not tested: --debugger
