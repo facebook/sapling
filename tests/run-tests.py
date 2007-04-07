@@ -240,9 +240,15 @@ def run_one(test):
     os.mkdir(tmpd)
     os.chdir(tmpd)
 
+    try:
+        tf = open(testpath)
+        firstline = tf.readline().rstrip()
+        tf.close()
+    except:
+        firstline = ''
     lctest = test.lower()
 
-    if lctest.endswith('.py'):
+    if lctest.endswith('.py') or firstline == '#!/usr/bin/env python':
         cmd = '%s "%s"' % (python, testpath)
     elif lctest.endswith('.bat'):
         # do not run batch scripts on non-windows
