@@ -45,6 +45,7 @@ parser.set_defaults(timeout=180)
 (options, args) = parser.parse_args()
 verbose = options.verbose
 coverage = options.cover or options.cover_stdlib or options.annotate
+python = sys.executable
 
 def vlog(*msg):
     if verbose:
@@ -115,6 +116,7 @@ def use_correct_python():
         shutil.copymode(sys.executable, my_python)
 
 def install_hg():
+    global python
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
 
@@ -154,6 +156,8 @@ def install_hg():
             os.path.join(BINDIR, '_hg.py')))
         f.close()
         os.chmod(os.path.join(BINDIR, 'hg'), 0700)
+        python = '"%s" "%s" -x' % (sys.executable,
+                                   os.path.join(TESTDIR,'coverage.py'))
 
 def output_coverage():
     vlog("# Producing coverage report")
@@ -163,7 +167,7 @@ def output_coverage():
         omit += [x for x in sys.path if x != '']
     omit = ','.join(omit)
     os.chdir(PYTHONDIR)
-    cmd = '"%s" "%s" -r "--omit=%s"' % (
+    cmd = '"%s" "%s" -i -r "--omit=%s"' % (
         sys.executable, os.path.join(TESTDIR, 'coverage.py'), omit)
     vlog("# Running: "+cmd)
     os.system(cmd)
@@ -171,7 +175,7 @@ def output_coverage():
         adir = os.path.join(TESTDIR, 'annotated')
         if not os.path.isdir(adir):
             os.mkdir(adir)
-        cmd = '"%s" "%s" -a "--directory=%s" "--omit=%s"' % (
+        cmd = '"%s" "%s" -i -a "--directory=%s" "--omit=%s"' % (
             sys.executable, os.path.join(TESTDIR, 'coverage.py'),
             adir, omit)
         vlog("# Running: "+cmd)
@@ -226,6 +230,7 @@ def run_one(test):
 
     err = os.path.join(TESTDIR, test+".err")
     ref = os.path.join(TESTDIR, test+".out")
+    testpath = os.path.join(TESTDIR, test)
 
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
@@ -235,10 +240,16 @@ def run_one(test):
     os.mkdir(tmpd)
     os.chdir(tmpd)
 
+    try:
+        tf = open(testpath)
+        firstline = tf.readline().rstrip()
+        tf.close()
+    except:
+        firstline = ''
     lctest = test.lower()
 
-    if lctest.endswith('.py'):
-        cmd = '%s "%s"' % (sys.executable, os.path.join(TESTDIR, test))
+    if lctest.endswith('.py') or firstline == '#!/usr/bin/env python':
+        cmd = '%s "%s"' % (python, testpath)
     elif lctest.endswith('.bat'):
         # do not run batch scripts on non-windows
         if os.name != 'nt':
@@ -246,17 +257,17 @@ def run_one(test):
             return None
         # To reliably get the error code from batch files on WinXP,
         # the "cmd /c call" prefix is needed. Grrr
-        cmd = 'cmd /c call "%s"' % (os.path.join(TESTDIR, test))
+        cmd = 'cmd /c call "%s"' % testpath
     else:
         # do not run shell scripts on windows
         if os.name == 'nt':
             print '\nSkipping %s: shell script' % test
             return None
         # do not try to run non-executable programs
-        if not os.access(os.path.join(TESTDIR, test), os.X_OK):
+        if not os.access(testpath, os.X_OK):
             print '\nSkipping %s: not executable' % test
             return None
-        cmd = '"%s"' % (os.path.join(TESTDIR, test))
+        cmd = '"%s"' % testpath
 
     if options.timeout > 0:
         signal.alarm(options.timeout)

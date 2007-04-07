@@ -1,6 +1,6 @@
 Mercurial Distributed SCM
 
-basic commands (use "hg help" for the full list or option "-v" for details):
+basic commands:
 
  add        add the specified files on the next commit
  annotate   show changeset information per file line
@@ -19,6 +19,8 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update working directory
+
+use "hg help" for the full list of commands or "hg -v" for details
  add        add the specified files on the next commit
  annotate   show changeset information per file line
  clone      make a copy of an existing repository
@@ -38,7 +40,7 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  update     update working directory
 Mercurial Distributed SCM
 
-list of commands (use "hg help -v" to show aliases and global options):
+list of commands:
 
  add          add the specified files on the next commit
  addremove    add all new files, delete all missing files
@@ -86,6 +88,8 @@ list of commands (use "hg help -v" to show aliases and global options):
  update       update working directory
  verify       verify the integrity of the repository
  version      output version and copyright information
+
+use "hg -v help" to show aliases and global options
  add          add the specified files on the next commit
  addremove    add all new files, delete all missing files
  annotate     show changeset information per file line
@@ -148,6 +152,8 @@ options:
  -I --include  include names matching the given patterns
  -X --exclude  exclude names matching the given patterns
  -n --dry-run  do not perform actions, just print output
+
+use "hg -v help add" to show global options
 hg add: option --skjdfks not recognized
 hg add [OPTION]... [FILE]...
 
@@ -165,6 +171,8 @@ options:
  -I --include  include names matching the given patterns
  -X --exclude  exclude names matching the given patterns
  -n --dry-run  do not perform actions, just print output
+
+use "hg -v help add" to show global options
 hg diff [OPTION]... [-r REV1 [-r REV2]] [FILE]...
 
 diff repository (or selected files)
@@ -199,6 +207,8 @@ options:
  -B --ignore-blank-lines   ignore changes whose lines are all blank
  -I --include              include names matching the given patterns
  -X --exclude              exclude names matching the given patterns
+
+use "hg -v help diff" to show global options
 hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
@@ -243,13 +253,15 @@ options:
     --rev        show difference from revision
  -I --include    include names matching the given patterns
  -X --exclude    exclude names matching the given patterns
+
+use "hg -v help status" to show global options
 hg status [OPTION]... [FILE]...
 
 show changed files in the working directory
 hg: unknown command 'foo'
 Mercurial Distributed SCM
 
-basic commands (use "hg help" for the full list or option "-v" for details):
+basic commands:
 
  add        add the specified files on the next commit
  annotate   show changeset information per file line
@@ -268,10 +280,12 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update working directory
+
+use "hg help" for the full list of commands or "hg -v" for details
 hg: unknown command 'skjdfks'
 Mercurial Distributed SCM
 
-basic commands (use "hg help" for the full list or option "-v" for details):
+basic commands:
 
  add        add the specified files on the next commit
  annotate   show changeset information per file line
@@ -290,3 +304,5 @@ basic commands (use "hg help" for the full list or option "-v" for details):
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update working directory
+
+use "hg help" for the full list of commands or "hg -v" for details

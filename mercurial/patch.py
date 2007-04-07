@@ -635,6 +635,8 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         single(rev, seqno+1, fp)
 
 def diffstat(patchlines):
+    if not util.find_in_path('diffstat', os.environ.get('PATH', '')):
+        return
     fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
     try:
         p = popen2.Popen3('diffstat -p1 -w79 2>/dev/null > ' + name)

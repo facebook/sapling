@@ -257,7 +257,7 @@ class hgweb(object):
                 for q in qw:
                     if not (q in ctx.user().lower() or
                             q in ctx.description().lower() or
-                            q in " ".join(ctx.files()[:20]).lower()):
+                            q in " ".join(ctx.files()).lower()):
                         miss = 1
                         break
                 if miss:

@@ -1268,6 +1268,23 @@ def help_(ui, name=None, with_version=False):
     commands it provides."""
     option_lists = []
 
+    def addglobalopts(aliases):
+        if ui.verbose:
+            option_lists.append((_("global options:"), globalopts))
+            if name == 'shortlist':
+                option_lists.append((_('use "hg help" for the full list '
+                                       'of commands'), ()))
+        else:
+            if name == 'shortlist':
+                msg = _('use "hg help" for the full list of commands '
+                        'or "hg -v" for details')
+            elif aliases:
+                msg = _('use "hg -v help%s" to show aliases and '
+                        'global options') % (name and " " + name or "")
+            else:
+                msg = _('use "hg -v help %s" to show global options') % name
+            option_lists.append((msg, ()))
+
     def helpcmd(name):
         if with_version:
             version_(ui)
@@ -1291,7 +1308,9 @@ def help_(ui, name=None, with_version=False):
 
             # options
             if i[1]:
-                option_lists.append(("options", i[1]))
+                option_lists.append((_("options:\n"), i[1]))
+
+            addglobalopts(False)
 
     def helplist(select=None):
         h = {}
@@ -1320,6 +1339,9 @@ def help_(ui, name=None, with_version=False):
                 ui.write(" %s:\n      %s\n"%(commands, h[f]))
             else:
                 ui.write(' %-*s   %s\n' % (m, f, h[f]))
+
+        if not ui.quiet:
+            addglobalopts(True)
 
     def helptopic(name):
         v = None
@@ -1360,12 +1382,7 @@ def help_(ui, name=None, with_version=False):
             ui.status(_('no commands defined\n'))
             return
 
-        if ui.verbose:
-            ui.status(_('list of commands:\n\n'))
-        else:
-            ui.status(_('list of commands (use "hg help -v %s" '
-                        'to show aliases and global options):\n\n') % name)
-
+        ui.status(_('list of commands:\n\n'))
         modcmds = dict.fromkeys([c.split('|', 1)[0] for c in ct])
         helplist(modcmds.has_key)
 
@@ -1391,24 +1408,16 @@ def help_(ui, name=None, with_version=False):
 
         # list of commands
         if name == "shortlist":
-            ui.status(_('basic commands (use "hg help" '
-                        'for the full list or option "-v" for details):\n\n'))
-        elif ui.verbose:
-            ui.status(_('list of commands:\n\n'))
+            ui.status(_('basic commands:\n\n'))
         else:
-            ui.status(_('list of commands (use "hg help -v" '
-                        'to show aliases and global options):\n\n'))
+            ui.status(_('list of commands:\n\n'))
 
         helplist()
-
-    # global options
-    if ui.verbose:
-        option_lists.append(("global options", globalopts))
 
     # list all option lists
     opt_output = []
     for title, options in option_lists:
-        opt_output.append(("\n%s:\n" % title, None))
+        opt_output.append(("\n%s" % title, None))
         for shortopt, longopt, default, desc in options:
             if "DEPRECATED" in desc and not ui.verbose: continue
             opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
@@ -1419,7 +1428,7 @@ def help_(ui, name=None, with_version=False):
                                          or "")))
 
     if opt_output:
-        opts_len = max([len(line[0]) for line in opt_output if line[1]])
+        opts_len = max([len(line[0]) for line in opt_output if line[1]] or [0])
         for first, second in opt_output:
             if second:
                 ui.write(" %-*s  %s\n" % (opts_len, first, second))
@@ -1775,7 +1784,7 @@ def log(ui, repo, *pats, **opts):
                 for k in [kw.lower() for kw in opts['keyword']]:
                     if not (k in changes[1].lower() or
                             k in changes[4].lower() or
-                            k in " ".join(changes[3][:20]).lower()):
+                            k in " ".join(changes[3]).lower()):
                         miss = 1
                         break
                 if miss:
@@ -2845,7 +2854,7 @@ table = {
            _('only follow the first parent of merge changesets')),
           ('d', 'date', '', _('show revs matching date spec')),
           ('C', 'copies', None, _('show copied files')),
-          ('k', 'keyword', [], _('search for a keyword')),
+          ('k', 'keyword', [], _('do case-insensitive search for a keyword')),
           ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
           ('', 'removed', None, _('include revs where files were removed')),

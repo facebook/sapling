@@ -20,6 +20,9 @@ EOF
 python dumb.py 2>/dev/null &
 echo $! >> $DAEMON_PIDS
 
+# give the server some time to start running
+sleep 1
+
 http_proxy= hg clone http://localhost:20059/foo copy2 2>&1 | \
     sed -e 's/404.*/404/' -e 's/Date:.*/Date:/'
 echo $?
