@@ -163,7 +163,7 @@ def output_coverage():
         omit += [x for x in sys.path if x != '']
     omit = ','.join(omit)
     os.chdir(PYTHONDIR)
-    cmd = '"%s" "%s" -r "--omit=%s"' % (
+    cmd = '"%s" "%s" -i -r "--omit=%s"' % (
         sys.executable, os.path.join(TESTDIR, 'coverage.py'), omit)
     vlog("# Running: "+cmd)
     os.system(cmd)
@@ -171,7 +171,7 @@ def output_coverage():
         adir = os.path.join(TESTDIR, 'annotated')
         if not os.path.isdir(adir):
             os.mkdir(adir)
-        cmd = '"%s" "%s" -a "--directory=%s" "--omit=%s"' % (
+        cmd = '"%s" "%s" -i -a "--directory=%s" "--omit=%s"' % (
             sys.executable, os.path.join(TESTDIR, 'coverage.py'),
             adir, omit)
         vlog("# Running: "+cmd)
