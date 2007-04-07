@@ -45,6 +45,7 @@ parser.set_defaults(timeout=180)
 (options, args) = parser.parse_args()
 verbose = options.verbose
 coverage = options.cover or options.cover_stdlib or options.annotate
+python = sys.executable
 
 def vlog(*msg):
     if verbose:
@@ -115,6 +116,7 @@ def use_correct_python():
         shutil.copymode(sys.executable, my_python)
 
 def install_hg():
+    global python
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
 
@@ -154,6 +156,8 @@ def install_hg():
             os.path.join(BINDIR, '_hg.py')))
         f.close()
         os.chmod(os.path.join(BINDIR, 'hg'), 0700)
+        python = '"%s" "%s" -x' % (sys.executable,
+                                   os.path.join(TESTDIR,'coverage.py'))
 
 def output_coverage():
     vlog("# Producing coverage report")
@@ -238,7 +242,7 @@ def run_one(test):
     lctest = test.lower()
 
     if lctest.endswith('.py'):
-        cmd = '%s "%s"' % (sys.executable, os.path.join(TESTDIR, test))
+        cmd = '%s "%s"' % (python, os.path.join(TESTDIR, test))
     elif lctest.endswith('.bat'):
         # do not run batch scripts on non-windows
         if os.name != 'nt':
