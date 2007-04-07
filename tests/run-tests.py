@@ -230,6 +230,7 @@ def run_one(test):
 
     err = os.path.join(TESTDIR, test+".err")
     ref = os.path.join(TESTDIR, test+".out")
+    testpath = os.path.join(TESTDIR, test)
 
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
@@ -242,7 +243,7 @@ def run_one(test):
     lctest = test.lower()
 
     if lctest.endswith('.py'):
-        cmd = '%s "%s"' % (python, os.path.join(TESTDIR, test))
+        cmd = '%s "%s"' % (python, testpath)
     elif lctest.endswith('.bat'):
         # do not run batch scripts on non-windows
         if os.name != 'nt':
@@ -250,17 +251,17 @@ def run_one(test):
             return None
         # To reliably get the error code from batch files on WinXP,
         # the "cmd /c call" prefix is needed. Grrr
-        cmd = 'cmd /c call "%s"' % (os.path.join(TESTDIR, test))
+        cmd = 'cmd /c call "%s"' % testpath
     else:
         # do not run shell scripts on windows
         if os.name == 'nt':
             print '\nSkipping %s: shell script' % test
             return None
         # do not try to run non-executable programs
-        if not os.access(os.path.join(TESTDIR, test), os.X_OK):
+        if not os.access(testpath, os.X_OK):
             print '\nSkipping %s: not executable' % test
             return None
-        cmd = '"%s"' % (os.path.join(TESTDIR, test))
+        cmd = '"%s"' % testpath
 
     if options.timeout > 0:
         signal.alarm(options.timeout)
