@@ -213,7 +213,7 @@ class lazyparser(object):
                 end = end * self.s
                 blocksize = end - blockstart
             else:
-                blockstart = (i & ~(32)) * self.s
+                blockstart = (i & ~63) * self.s
                 blocksize = self.s * 64
                 end = blockstart + blocksize
         while blockstart < end:
