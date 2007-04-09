@@ -1009,14 +1009,26 @@ def opener(base, audit=True):
         d, fn = os.path.split(name)
         fd, temp = tempfile.mkstemp(prefix='.%s-' % fn, dir=d)
         os.close(fd)
-        ofp = posixfile(temp, "wb")
+        # Temporary files are created with mode 0600, which is usually not
+        # what we want.  If the original file already exists, just copy
+        # its mode.  Otherwise, manually obey umask.
+        try:
+            st_mode = os.lstat(name).st_mode
+        except OSError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
+            st_mode = 0666 & ~_umask
+        os.chmod(temp, st_mode)
         try:
             try:
                 ifp = posixfile(name, "rb")
             except IOError, inst:
+                if inst.errno == errno.ENOENT:
+                    return temp
                 if not getattr(inst, 'filename', None):
                     inst.filename = name
                 raise
+            ofp = posixfile(temp, "wb")
             for chunk in filechunkiter(ifp):
                 ofp.write(chunk)
             ifp.close()
@@ -1025,8 +1037,6 @@ def opener(base, audit=True):
             try: os.unlink(temp)
             except: pass
             raise
-        st = os.lstat(name)
-        os.chmod(temp, st.st_mode)
         return temp
 
     class atomictempfile(posixfile):
@@ -1067,16 +1077,16 @@ def opener(base, audit=True):
             try:
                 nlink = nlinks(f)
             except OSError:
+                nlink = 0
                 d = os.path.dirname(f)
                 if not os.path.isdir(d):
                     os.makedirs(d)
-            else:
-                if atomic:
-                    return atomicfile(f, mode)
-                elif atomictemp:
-                    return atomictempfile(f, mode)
-                if nlink > 1:
-                    rename(mktempcopy(f), f)
+            if atomic:
+                return atomicfile(f, mode)
+            elif atomictemp:
+                return atomictempfile(f, mode)
+            if nlink > 1:
+                rename(mktempcopy(f), f)
         return posixfile(f, mode)
 
     return o
