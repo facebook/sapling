@@ -1005,7 +1005,7 @@ def opener(base, audit=True):
     p = base
     audit_p = audit
 
-    def mktempcopy(name):
+    def mktempcopy(name, emptyok=False):
         d, fn = os.path.split(name)
         fd, temp = tempfile.mkstemp(prefix='.%s-' % fn, dir=d)
         os.close(fd)
@@ -1019,6 +1019,8 @@ def opener(base, audit=True):
                 raise
             st_mode = 0666 & ~_umask
         os.chmod(temp, st_mode)
+        if emptyok:
+            return temp
         try:
             try:
                 ifp = posixfile(name, "rb")
@@ -1043,7 +1045,7 @@ def opener(base, audit=True):
         """the file will only be copied when rename is called"""
         def __init__(self, name, mode):
             self.__name = name
-            self.temp = mktempcopy(name)
+            self.temp = mktempcopy(name, emptyok=('w' in mode))
             posixfile.__init__(self, self.temp, mode)
         def rename(self):
             if not self.closed:
