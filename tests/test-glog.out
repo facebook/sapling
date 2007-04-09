@@ -1,0 +1,309 @@
+% init
+% empty repo
+% building tree
+% glog -q
+@  34:0eed7cd895e0
+|
+| o  33:2e9d1b521374
+| |
+o |    32:77f7d8438a3c
+|\ \
+| o \    31:82ee55204a79
+| |\ \
+| | o \    30:777dfc428649
+| | |\ \
+| | | o |  29:f8e7fee63353
+| | | | |
+| | o | |    28:4b6e9bd48cf9
+| | |\ \ \
+o | | | | |  27:e9e08174cd30
+|/ / / / /
+| | o---+  26:720dc079a855
+| | | | |
++---o | |  25:9d4ed048d013
+| | | | |
+| | o | |  24:4a68967db00d
+| | |\| |
+| | o | |  23:bc31393cabdf
+| |/| | |
++---o---+  22:a37f2ea6ebc6
+| |  / /
+o | | |    21:e758e8f4ace9
+|\ \ \ \
+| o---+-+  20:aeccadad74b4
+|  / / /
+o | | |    19:138069b5dad7
+|\ \ \ \
++---+---o  18:5a8c9a29ef81
+| | | |
+| o | |    17:43e52b935494
+| |\ \ \
+| | o---+  16:449a2f9562a4
+| | |/ /
+o | | |    15:c0b4283d4c1d
+|\ \ \ \
+| o-----+  14:9d533950abf0
+| |/ / /
+o | | |    13:c39d0a2b8165
+|\ \ \ \
++---o | |  12:74dc7aea4494
+| | |/ /
+| o | |    11:c3c395dd8b98
+| |\ \ \
+| | o---+  10:8094c50149ef
+| |/ / /
+o | | |    9:79ab1812f961
+|\ \ \ \
+| o-----+  8:d7aa38594334
+|/ / / /
+o | | |    7:699392d1259e
+|\ \ \ \
++---o | |  6:0ca7c061cf45
+| |/ / /
+| o | |    5:3589c3c477ab
+| |\ \ \
+| | o | |  4:e2cad8233c77
+| |/|/ /
+| o / /  3:02173ffbf857
+|/ / /
+o / /  2:e8ea2256f9ec
+|/ /
+o /  1:3cae7826a707
+|/
+o  0:7aa22e58e8c1
+
+% glog
+@  changeset:   34:0eed7cd895e0
+|  tag:         tip
+|  parent:      32:77f7d8438a3c
+|  user:        test
+|  date:        Thu Jan 01 00:00:34 1970 +0000
+|  summary:     (34) head
+|
+| o  changeset:   33:2e9d1b521374
+| |  parent:      18:5a8c9a29ef81
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:33 1970 +0000
+| |  summary:     (33) head
+| |
+o |    changeset:   32:77f7d8438a3c
+|\ \   parent:      27:e9e08174cd30
+| | |  parent:      31:82ee55204a79
+| | |  user:        test
+| | |  date:        Thu Jan 01 00:00:32 1970 +0000
+| | |  summary:     (32) expand
+| | |
+| o |    changeset:   31:82ee55204a79
+| |\ \   parent:      21:e758e8f4ace9
+| | | |  parent:      30:777dfc428649
+| | | |  user:        test
+| | | |  date:        Thu Jan 01 00:00:31 1970 +0000
+| | | |  summary:     (31) expand
+| | | |
+| | o |    changeset:   30:777dfc428649
+| | |\ \   parent:      28:4b6e9bd48cf9
+| | | | |  parent:      29:f8e7fee63353
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:30 1970 +0000
+| | | | |  summary:     (30) expand
+| | | | |
+| | | o |  changeset:   29:f8e7fee63353
+| | | | |  parent:      0:7aa22e58e8c1
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:29 1970 +0000
+| | | | |  summary:     (29) regular commit
+| | | | |
+| | o | |    changeset:   28:4b6e9bd48cf9
+| | |\ \ \   parent:      1:3cae7826a707
+| | | | | |  parent:      26:720dc079a855
+| | | | | |  user:        test
+| | | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
+| | | | | |  summary:     (28) merge zero known
+| | | | | |
+o | | | | |  changeset:   27:e9e08174cd30
+|/ / / / /   parent:      21:e758e8f4ace9
+| | | | |    user:        test
+| | | | |    date:        Thu Jan 01 00:00:27 1970 +0000
+| | | | |    summary:     (27) collapse
+| | | | |
+| | o---+  changeset:   26:720dc079a855
+| | | | |  parent:      18:5a8c9a29ef81
+| | | | |  parent:      25:9d4ed048d013
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
+| | | | |  summary:     (26) merge one known; far right
+| | | | |
++---o | |  changeset:   25:9d4ed048d013
+| | | | |  parent:      21:e758e8f4ace9
+| | | | |  parent:      24:4a68967db00d
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
+| | | | |  summary:     (25) merge one known; far left
+| | | | |
+| | o | |  changeset:   24:4a68967db00d
+| | |\| |  parent:      0:7aa22e58e8c1
+| | | | |  parent:      23:bc31393cabdf
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
+| | | | |  summary:     (24) merge one known; immediate right
+| | | | |
+| | o | |  changeset:   23:bc31393cabdf
+| |/| | |  parent:      1:3cae7826a707
+| | | | |  parent:      22:a37f2ea6ebc6
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
+| | | | |  summary:     (23) merge one known; immediate left
+| | | | |
++---o---+  changeset:   22:a37f2ea6ebc6
+| |   | |  parent:      18:5a8c9a29ef81
+| |  / /   parent:      21:e758e8f4ace9
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:22 1970 +0000
+| | | |    summary:     (22) merge two known; one far left, one far right
+| | | |
+o | | |    changeset:   21:e758e8f4ace9
+|\ \ \ \   parent:      19:138069b5dad7
+| | | | |  parent:      20:aeccadad74b4
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
+| | | | |  summary:     (21) expand
+| | | | |
+| o---+-+  changeset:   20:aeccadad74b4
+|   | | |  parent:      0:7aa22e58e8c1
+|  / / /   parent:      18:5a8c9a29ef81
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:20 1970 +0000
+| | | |    summary:     (20) merge two known; two far right
+| | | |
+o | | |    changeset:   19:138069b5dad7
+|\ \ \ \   parent:      15:c0b4283d4c1d
+| | | | |  parent:      17:43e52b935494
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
+| | | | |  summary:     (19) expand
+| | | | |
++---+---o  changeset:   18:5a8c9a29ef81
+| | | |    parent:      1:3cae7826a707
+| | | |    parent:      15:c0b4283d4c1d
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:18 1970 +0000
+| | | |    summary:     (18) merge two known; two far left
+| | | |
+| o | |    changeset:   17:43e52b935494
+| |\ \ \   parent:      12:74dc7aea4494
+| | | | |  parent:      16:449a2f9562a4
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
+| | | | |  summary:     (17) expand
+| | | | |
+| | o---+  changeset:   16:449a2f9562a4
+| | | | |  parent:      0:7aa22e58e8c1
+| | |/ /   parent:      1:3cae7826a707
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:16 1970 +0000
+| | | |    summary:     (16) merge two known; one immediate right, one near right
+| | | |
+o | | |    changeset:   15:c0b4283d4c1d
+|\ \ \ \   parent:      13:c39d0a2b8165
+| | | | |  parent:      14:9d533950abf0
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
+| | | | |  summary:     (15) expand
+| | | | |
+| o-----+  changeset:   14:9d533950abf0
+| | | | |  parent:      0:7aa22e58e8c1
+| |/ / /   parent:      12:74dc7aea4494
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:14 1970 +0000
+| | | |    summary:     (14) merge two known; one immediate right, one far right
+| | | |
+o | | |    changeset:   13:c39d0a2b8165
+|\ \ \ \   parent:      9:79ab1812f961
+| | | | |  parent:      11:c3c395dd8b98
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
+| | | | |  summary:     (13) expand
+| | | | |
++---o | |  changeset:   12:74dc7aea4494
+| | |/ /   parent:      1:3cae7826a707
+| | | |    parent:      9:79ab1812f961
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:12 1970 +0000
+| | | |    summary:     (12) merge two known; one immediate right, one far left
+| | | |
+| o | |    changeset:   11:c3c395dd8b98
+| |\ \ \   parent:      6:0ca7c061cf45
+| | | | |  parent:      10:8094c50149ef
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
+| | | | |  summary:     (11) expand
+| | | | |
+| | o---+  changeset:   10:8094c50149ef
+| | | | |  parent:      0:7aa22e58e8c1
+| |/ / /   parent:      6:0ca7c061cf45
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:10 1970 +0000
+| | | |    summary:     (10) merge two known; one immediate left, one near right
+| | | |
+o | | |    changeset:   9:79ab1812f961
+|\ \ \ \   parent:      7:699392d1259e
+| | | | |  parent:      8:d7aa38594334
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
+| | | | |  summary:     (9) expand
+| | | | |
+| o-----+  changeset:   8:d7aa38594334
+| | | | |  parent:      0:7aa22e58e8c1
+|/ / / /   parent:      7:699392d1259e
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:08 1970 +0000
+| | | |    summary:     (8) merge two known; one immediate left, one far right
+| | | |
+o | | |    changeset:   7:699392d1259e
+|\ \ \ \   parent:      2:e8ea2256f9ec
+| | | | |  parent:      5:3589c3c477ab
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
+| | | | |  summary:     (7) expand
+| | | | |
++---o | |  changeset:   6:0ca7c061cf45
+| |/ / /   parent:      2:e8ea2256f9ec
+| | | |    parent:      5:3589c3c477ab
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:06 1970 +0000
+| | | |    summary:     (6) merge two known; one immediate left, one far left
+| | | |
+| o | |    changeset:   5:3589c3c477ab
+| |\ \ \   parent:      3:02173ffbf857
+| | | | |  parent:      4:e2cad8233c77
+| | | | |  user:        test
+| | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
+| | | | |  summary:     (5) expand
+| | | | |
+| | o | |  changeset:   4:e2cad8233c77
+| |/|/ /   parent:      1:3cae7826a707
+| | | |    parent:      3:02173ffbf857
+| | | |    user:        test
+| | | |    date:        Thu Jan 01 00:00:04 1970 +0000
+| | | |    summary:     (4) merge two known; one immediate left, one immediate right
+| | | |
+| o | |  changeset:   3:02173ffbf857
+|/ / /   user:        test
+| | |    date:        Thu Jan 01 00:00:03 1970 +0000
+| | |    summary:     (3) collapse
+| | |
+o | |  changeset:   2:e8ea2256f9ec
+|/ /   user:        test
+| |    date:        Thu Jan 01 00:00:02 1970 +0000
+| |    summary:     (2) collapse
+| |
+o |  changeset:   1:3cae7826a707
+|/   user:        test
+|    date:        Thu Jan 01 00:00:01 1970 +0000
+|    summary:     (1) collapse
+|
+o  changeset:   0:7aa22e58e8c1
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     (0) root
+
