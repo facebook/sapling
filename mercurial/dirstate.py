@@ -314,7 +314,7 @@ class dirstate(object):
     def write(self):
         if not self.dirty:
             return
-        st = self.opener("dirstate", "w", atomic=True)
+        st = self.opener("dirstate", "w", atomictemp=True)
         st.write("".join(self.pl))
         for f, e in self.map.items():
             c = self.copied(f)
@@ -322,6 +322,7 @@ class dirstate(object):
                 f = f + "\0" + c
             e = struct.pack(self.format, e[0], e[1], e[2], e[3], len(f))
             st.write(e + f)
+        st.rename()
         self.dirty = 0
 
     def filterfiles(self, files):

@@ -417,10 +417,11 @@ class localrepository(repo.repository):
 
     def _writebranchcache(self, branches, tip, tiprev):
         try:
-            f = self.opener("branch.cache", "w")
+            f = self.opener("branch.cache", "w", atomictemp=True)
             f.write("%s %s\n" % (hex(tip), tiprev))
             for label, node in branches.iteritems():
                 f.write("%s %s\n" % (hex(node), label))
+            f.rename()
         except IOError:
             pass
 

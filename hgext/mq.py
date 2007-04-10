@@ -471,8 +471,16 @@ class queue:
             patcherr = not patcherr
 
             if merge and files:
-                # Mark as merged and update dirstate parent info
-                repo.dirstate.update(repo.dirstate.filterfiles(files.keys()), 'm')
+                # Mark as removed/merged and update dirstate parent info
+                removed = []
+                merged = []
+                for f in files:
+                    if os.path.exists(repo.dirstate.wjoin(f)):
+                        merged.append(f)
+                    else:
+                        removed.append(f)
+                repo.dirstate.update(repo.dirstate.filterfiles(removed), 'r')
+                repo.dirstate.update(repo.dirstate.filterfiles(merged), 'm')
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
             files = patch.updatedir(self.ui, repo, files, wlock=wlock)
