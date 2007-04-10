@@ -28,7 +28,7 @@ class templater(object):
     is treated as name of template file.
 
     templater is asked to expand a key in map. it looks up key, and
-    looks for atrings like this: {foo}. it expands {foo} by looking up
+    looks for strings like this: {foo}. it expands {foo} by looking up
     foo in map, and substituting it. expansion is recursive: it stops
     when there is no more {foo} to replace.
 
