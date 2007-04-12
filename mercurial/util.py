@@ -766,6 +766,9 @@ def checkfolding(path):
     except:
         return True
 
+_umask = os.umask(0)
+os.umask(_umask)
+
 def checkexec(path):
     """
     Check whether the given path is on a filesystem with UNIX-like exec flags
