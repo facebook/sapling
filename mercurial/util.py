@@ -807,6 +807,9 @@ def linkfunc(path, fallback):
         return lambda x: os.path.islink(os.path.join(path, x))
     return fallback
 
+_umask = os.umask(0)
+os.umask(_umask)
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
@@ -933,8 +936,6 @@ if os.name == 'nt':
 
 else:
     nulldev = '/dev/null'
-    _umask = os.umask(0)
-    os.umask(_umask)
 
     def rcfiles(path):
         rcs = [os.path.join(path, 'hgrc')]
