@@ -1547,7 +1547,7 @@ def series(ui, repo, **opts):
 def top(ui, repo, **opts):
     """print the name of the current patch"""
     q = repo.mq
-    t = len(q.applied)
+    t = q.series_end()
     if t:
         return q.qseries(repo, start=t-1, length=1, status='A',
                          summary=opts.get('summary'))
