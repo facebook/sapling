@@ -76,6 +76,10 @@ hg qpop -a
 hg qselect 2
 echo % should push b.patch
 hg qpush
+hg qpush -a
+# Used to be an issue with holes in the patch sequence
+# So, put one hole on the base and ask for topmost patch.
+hg qtop
 hg qpop -a
 
 hg qselect 1 2
