@@ -46,6 +46,9 @@ Patch queue now empty
 % should push b.patch
 applying b.patch
 Now at: b.patch
+applying c.patch
+Now at: c.patch
+c.patch
 Patch queue now empty
 number of unguarded, unapplied patches has changed from 2 to 3
 % should push a.patch, b.patch
