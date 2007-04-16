@@ -224,7 +224,7 @@ class changeset_printer(object):
             return 1
         return 0
 
-    def show(self, rev=0, changenode=None, copies=None, **props):
+    def show(self, rev=0, changenode=None, copies=(), **props):
         if self.buffered:
             self.ui.pushbuffer()
             self._show(rev, changenode, copies, props)
@@ -325,10 +325,14 @@ class changeset_templater(changeset_printer):
 
     def __init__(self, ui, repo, patch, brinfo, mapfile, buffered):
         changeset_printer.__init__(self, ui, repo, patch, brinfo, buffered)
-        self.t = templater.templater(mapfile, templater.common_filters,
-                                     cache={'parent': '{rev}:{node|short} ',
-                                            'manifest': '{rev}:{node|short}',
-                                            'filecopy': '{name} ({source})'})
+        filters = templater.common_filters.copy()
+        filters['formatnode'] = (ui.debugflag and (lambda x: x)
+                                 or (lambda x: x[:12]))
+        self.t = templater.templater(mapfile, filters,
+                                     cache={
+                                         'parent': '{rev}:{node|formatnode} ',
+                                         'manifest': '{rev}:{node|formatnode}',
+                                         'filecopy': '{name} ({source})'})
 
     def use_template(self, t):
         '''set template string to use'''
