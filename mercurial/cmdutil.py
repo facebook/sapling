@@ -224,7 +224,7 @@ class changeset_printer(object):
             return 1
         return 0
 
-    def show(self, rev=0, changenode=None, copies=None, **props):
+    def show(self, rev=0, changenode=None, copies=(), **props):
         if self.buffered:
             self.ui.pushbuffer()
             self._show(rev, changenode, copies, props)

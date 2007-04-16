@@ -39,6 +39,9 @@ hg log --debug > log.out
 hg log --debug --style default > style.out
 diff log.out style.out
 
+echo '# revision with no copies (used to print a traceback)'
+hg tip -v --template '\n'
+
 echo '# compact style works'
 hg log --style compact
 hg log -v --style compact
