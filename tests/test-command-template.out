@@ -230,11 +230,11 @@ manifest--verbose:
 manifest--verbose: 
 manifest--verbose: 
 manifest--verbose: 
-manifest--debug: 4:90ae8dda64e1
-manifest--debug: 3:cb5a1327723b
-manifest--debug: 2:6e0e82995c35
-manifest--debug: 1:4e8d705b1e53
-manifest--debug: 0:a0c8bcbbb45c
+manifest--debug: 4:90ae8dda64e1a876c792bccb9af66284f6018363
+manifest--debug: 3:cb5a1327723bada42f117e4c55a303246eaf9ccc
+manifest--debug: 2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1
+manifest--debug: 1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
+manifest--debug: 0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
 node: 32a18f097fcccf76ef282f62f8a85b3adf8d13c4
 node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
 node: 97054abb4ab824450e9164180baf491ae0078465
@@ -260,11 +260,11 @@ parents--verbose:
 parents--verbose: 
 parents--verbose: 
 parents--verbose: 
-parents--debug: 3:10e46f2dcbf4 -1:000000000000 
-parents--debug: 2:97054abb4ab8 -1:000000000000 
-parents--debug: 1:b608e9d1a3f0 -1:000000000000 
-parents--debug: 0:1e4e1b8f71e0 -1:000000000000 
-parents--debug: -1:000000000000 -1:000000000000 
+parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000 
+parents--debug: 2:97054abb4ab824450e9164180baf491ae0078465 -1:0000000000000000000000000000000000000000 
+parents--debug: 1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965 -1:0000000000000000000000000000000000000000 
+parents--debug: 0:1e4e1b8f71e05681d422154f5421e385fec3454f -1:0000000000000000000000000000000000000000 
+parents--debug: -1:0000000000000000000000000000000000000000 -1:0000000000000000000000000000000000000000 
 rev: 4
 rev: 3
 rev: 2
@@ -336,6 +336,15 @@ line 1
 97054abb4ab8
 b608e9d1a3f0
 1e4e1b8f71e0
+# formatnode filter works
+#  quiet
+1e4e1b8f71e0
+#  normal
+1e4e1b8f71e0
+#  verbose
+1e4e1b8f71e0
+#  debug
+1e4e1b8f71e05681d422154f5421e385fec3454f
 # error on syntax
 abort: t:3: unmatched quotes
 # done
