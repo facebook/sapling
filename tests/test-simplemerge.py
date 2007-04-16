@@ -14,10 +14,20 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import os
+import unittest
+from unittest import TestCase
+import imp
+import shutil
+from mercurial import util
 
-from bzrlib.tests import TestCaseInTempDir, TestCase
-from bzrlib.merge3 import Merge3
-from bzrlib.errors import CantReprocessAndShowBase, BinaryFile
+# copy simplemerge to the cwd to avoid creating a .pyc file in the source tree
+shutil.copyfile(os.path.join(os.environ['TESTDIR'], os.path.pardir,
+                             'contrib', 'simplemerge'),
+                'simplemerge.py')
+simplemerge = imp.load_source('simplemerge', 'simplemerge.py')
+Merge3 = simplemerge.Merge3
+CantReprocessAndShowBase = simplemerge.CantReprocessAndShowBase
 
 def split_lines(t):
     from cStringIO import StringIO
@@ -92,6 +102,8 @@ MERGED_RESULT = split_lines("""     The Way that can be told of is not the etern
 """)
 
 class TestMerge3(TestCase):
+    def log(self, msg):
+        pass
 
     def test_no_changes(self):
         """No conflicts because nothing changed"""
@@ -310,10 +322,11 @@ bbb
         m3 = Merge3(base_text, other_text, this_text)
         m_lines = m3.merge_lines('OTHER', 'THIS', reprocess=True)
         merged_text = "".join(list(m_lines))
-        optimal_text = ("a\n" * 10 + "<<<<<<< OTHER\nc\n"
-            + 8* "b\n" + "c\n=======\n"
-            + 10*"b\n" + ">>>>>>> THIS\n")
-        self.assertEqualDiff(optimal_text, merged_text)
+        optimal_text = ("a\n" * 10 + "<<<<<<< OTHER\nc\n=======\n"
+            + ">>>>>>> THIS\n"
+            + 8* "b\n" + "<<<<<<< OTHER\nc\n=======\n"
+            + 2* "b\n" + ">>>>>>> THIS\n")
+        self.assertEquals(optimal_text, merged_text)
 
     def test_minimal_conflicts_unique(self):
         def add_newline(s):
@@ -331,7 +344,7 @@ bbb
             + add_newline('OPQRSTUVWXY')
             + ["<<<<<<< OTHER\n2\n=======\nZ\n>>>>>>> THIS\n"]
             )
-        self.assertEqualDiff(optimal_text, merged_text)
+        self.assertEquals(optimal_text, merged_text)
 
     def test_minimal_conflicts_nonunique(self):
         def add_newline(s):
@@ -349,7 +362,7 @@ bbb
             + add_newline('lmontfpr')
             + ["<<<<<<< OTHER\nd\n=======\nz\n>>>>>>> THIS\n"]
             )
-        self.assertEqualDiff(optimal_text, merged_text)
+        self.assertEquals(optimal_text, merged_text)
 
     def test_reprocess_and_base(self):
         """Reprocessing and showing base breaks correctly"""
@@ -362,7 +375,7 @@ bbb
         self.assertRaises(CantReprocessAndShowBase, list, m_lines)
 
     def test_binary(self):
-        self.assertRaises(BinaryFile, Merge3, ['\x00'], ['a'], ['b'])
+        self.assertRaises(util.Abort, Merge3, ['\x00'], ['a'], ['b'])
 
     def test_dos_text(self):
         base_text = 'a\r\n'
@@ -383,3 +396,14 @@ bbb
         m_lines = m3.merge_lines('OTHER', 'THIS')
         self.assertEqual('<<<<<<< OTHER\rc\r=======\rb\r'
             '>>>>>>> THIS\r'.splitlines(True), list(m_lines))
+
+if __name__ == '__main__':
+    # hide the timer
+    import time
+    orig = time.time
+    try:
+        time.time = lambda: 0
+        unittest.main()
+    finally:
+        time.time = orig
+

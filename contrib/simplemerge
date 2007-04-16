@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright (C) 2004, 2005 Canonical Ltd
 #
 # This program is free software; you can redistribute it and/or modify
@@ -19,9 +20,12 @@
 # s: "i hate that."
 
 
-from bzrlib.errors import CantReprocessAndShowBase
-import bzrlib.patiencediff
-from bzrlib.textfile import check_text_lines
+from mercurial import util, mdiff
+from mercurial.i18n import _
+
+
+class CantReprocessAndShowBase(Exception):
+    pass
 
 
 def intersect(ra, rb):
@@ -61,16 +65,21 @@ def compare_range(a, astart, aend, b, bstart, bend):
 
 
 
-class Merge3(object):
+class Merge3Text(object):
     """3-way merge of texts.
 
-    Given BASE, OTHER, THIS, tries to produce a combined text
-    incorporating the changes from both BASE->OTHER and BASE->THIS.
-    All three will typically be sequences of lines."""
-    def __init__(self, base, a, b):
-        check_text_lines(base)
-        check_text_lines(a)
-        check_text_lines(b)
+    Given strings BASE, OTHER, THIS, tries to produce a combined text
+    incorporating the changes from both BASE->OTHER and BASE->THIS."""
+    def __init__(self, basetext, atext, btext, base=None, a=None, b=None):
+        self.basetext = basetext
+        self.atext = atext
+        self.btext = btext
+        if base is None:
+            base = mdiff.splitnewlines(basetext)
+        if a is None:
+            a = mdiff.splitnewlines(atext)
+        if b is None:
+            b = mdiff.splitnewlines(btext)
         self.base = base
         self.a = a
         self.b = b
@@ -300,8 +309,8 @@ class Merge3(object):
             type, iz, zmatch, ia, amatch, ib, bmatch = region
             a_region = self.a[ia:amatch]
             b_region = self.b[ib:bmatch]
-            matches = bzrlib.patiencediff.PatienceSequenceMatcher(
-                    None, a_region, b_region).get_matching_blocks()
+            matches = mdiff.get_matching_blocks(''.join(a_region),
+                                                ''.join(b_region))
             next_a = ia
             next_b = ib
             for region_ia, region_ib, region_len in matches[:-1]:
@@ -319,10 +328,10 @@ class Merge3(object):
                 yield reg
 
 
-    @staticmethod
     def mismatch_region(next_a, region_ia,  next_b, region_ib):
         if next_a < region_ia or next_b < region_ib:
             return 'conflict', None, None, next_a, region_ia, next_b, region_ib
+    mismatch_region = staticmethod(mismatch_region)
             
 
     def find_sync_regions(self):
@@ -333,10 +342,8 @@ class Merge3(object):
         """
 
         ia = ib = 0
-        amatches = bzrlib.patiencediff.PatienceSequenceMatcher(
-                None, self.base, self.a).get_matching_blocks()
-        bmatches = bzrlib.patiencediff.PatienceSequenceMatcher(
-                None, self.base, self.b).get_matching_blocks()
+        amatches = mdiff.get_matching_blocks(self.basetext, self.atext)
+        bmatches = mdiff.get_matching_blocks(self.basetext, self.btext)
         len_a = len(amatches)
         len_b = len(bmatches)
 
@@ -392,10 +399,8 @@ class Merge3(object):
 
     def find_unconflicted(self):
         """Return a list of ranges in base that are not conflicted."""
-        am = bzrlib.patiencediff.PatienceSequenceMatcher(
-                None, self.base, self.a).get_matching_blocks()
-        bm = bzrlib.patiencediff.PatienceSequenceMatcher(
-                None, self.base, self.b).get_matching_blocks()
+        am = mdiff.get_matching_blocks(self.basetext, self.atext)
+        bm = mdiff.get_matching_blocks(self.basetext, self.btext)
 
         unc = []
 
@@ -416,6 +421,22 @@ class Merge3(object):
                 del bm[0]
                 
         return unc
+
+
+# bzr compatible interface, for the tests
+class Merge3(Merge3Text):
+    """3-way merge of texts.
+
+    Given BASE, OTHER, THIS, tries to produce a combined text
+    incorporating the changes from both BASE->OTHER and BASE->THIS.
+    All three will typically be sequences of lines."""
+    def __init__(self, base, a, b):
+        basetext = '\n'.join([i.strip('\n') for i in base] + [''])
+        atext = '\n'.join([i.strip('\n') for i in a] + [''])
+        btext = '\n'.join([i.strip('\n') for i in b] + [''])
+        if util.binary(basetext) or util.binary(atext) or util.binary(btext):
+            raise util.Abort(_("don't know how to merge binary files"))
+        Merge3Text.__init__(self, basetext, atext, btext, base, a, b)
 
 
 def main(argv):
