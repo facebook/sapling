@@ -1,5 +1,7 @@
 #!/bin/sh
 
+HGMERGE=true; export HGMERGE
+
 echo % init
 hg init
 

@@ -38,13 +38,13 @@ hg diff --nodates | grep "^[+-][^<>]"
 hg st
 
 echo "# local merge with conflicts"
-HGMERGE=merge hg co
+hg co
 hg co 0
 hg diff --nodates | grep "^[+-][^<>]"
 hg st
 
 echo "# local merge without conflicts"
 hg revert zzz2_merge_bad
-HGMERGE=merge hg co
+hg co
 hg diff --nodates | grep "^[+-][^<>]"
 hg st

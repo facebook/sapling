@@ -36,7 +36,7 @@ You can redo the full merge using:
 M zzz1_merge_ok
 M zzz2_merge_bad
 # local merge with conflicts
-merge: warning: conflicts during merge
+warning: conflicts during merge.
 merging zzz1_merge_ok
 merging zzz2_merge_bad
 merging zzz2_merge_bad failed!

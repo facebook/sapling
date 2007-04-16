@@ -1,5 +1,7 @@
 #!/bin/sh
 
+HGMERGE=true; export HGMERGE
+
 echo '# basic operation'
 hg init basic
 cd basic

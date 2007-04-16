@@ -17,7 +17,7 @@ cd ..
 hg clone a c
 cd c
 hg pull -f ../b
-HGMERGE=merge hg merge
+hg merge
 
 cd ..
 

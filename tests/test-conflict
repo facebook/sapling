@@ -9,7 +9,6 @@ hg commit -m branch1 -d "1000000 0"
 hg co 0
 echo "something else" > a
 hg commit -m branch2 -d "1000000 0"
-HGMERGE=merge; export HGMERGE
 hg merge 1
 hg id
 egrep -v ">>>|<<<" a

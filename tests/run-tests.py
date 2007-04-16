@@ -19,7 +19,7 @@ import sys
 import tempfile
 import time
 
-required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed", "merge"]
+required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
 parser = optparse.OptionParser("%prog [options] [tests]")
 parser.add_option("-v", "--verbose", action="store_true",
@@ -340,16 +340,17 @@ check_required_tools()
 os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
 os.environ['TZ'] = 'GMT'
 
-os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
-os.environ["HGMERGE"]  = sys.executable + ' -c "import sys; sys.exit(0)"'
-os.environ["HGUSER"]   = "test"
-os.environ["HGENCODING"] = "ascii"
-os.environ["HGENCODINGMODE"] = "strict"
-
 TESTDIR = os.environ["TESTDIR"] = os.getcwd()
 HGTMP   = os.environ["HGTMP"]   = tempfile.mkdtemp("", "hgtests.")
 DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
 HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
+
+os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+os.environ["HGMERGE"]  = 'python "%s"' % os.path.join(TESTDIR, os.path.pardir,
+                                                      'contrib', 'simplemerge')
+os.environ["HGUSER"]   = "test"
+os.environ["HGENCODING"] = "ascii"
+os.environ["HGENCODINGMODE"] = "strict"
 
 vlog("# Using TESTDIR", TESTDIR)
 vlog("# Using HGTMP", HGTMP)
