@@ -716,7 +716,7 @@ class hgweb(object):
                     # strip leading /
                     pi = pi[1:]
                     if pi:
-                        root = root[:root.rfind(root, pi)]
+                        root = root[:root.rfind(pi)]
                     if req.env.has_key('REPO_NAME'):
                         rn = req.env['REPO_NAME'] + '/'
                         root += rn
