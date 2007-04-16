@@ -19,8 +19,10 @@
 # mbp: "you know that thing where cvs gives you conflict markers?"
 # s: "i hate that."
 
+from mercurial import demandimport
+demandimport.enable()
 
-from mercurial import util, mdiff
+from mercurial import util, mdiff, fancyopts
 from mercurial.i18n import _
 
 
@@ -97,6 +99,7 @@ class Merge3Text(object):
                     reprocess=False):
         """Return merge in cvs-like form.
         """
+        self.conflicts = False
         newline = '\n'
         if len(self.a) > 0:
             if self.a[0].endswith('\r\n'):
@@ -126,6 +129,7 @@ class Merge3Text(object):
                 for i in range(t[1], t[2]):
                     yield self.b[i]
             elif what == 'conflict':
+                self.conflicts = True
                 yield start_marker + newline
                 for i in range(t[3], t[4]):
                     yield self.a[i]
@@ -439,21 +443,115 @@ class Merge3(Merge3Text):
         Merge3Text.__init__(self, basetext, atext, btext, base, a, b)
 
 
+def simplemerge(local, base, other, **opts):
+    def readfile(filename):
+        f = open(filename, "rb")
+        text = f.read()
+        f.close()
+        if util.binary(text):
+            msg = _("%s looks like a binary file.") % filename
+            if not opts.get('text'):
+                raise util.Abort(msg)
+            elif not opts.get('quiet'):
+                sys.stderr.write(_('warning: %s\n') % msg)
+        return text
+
+    name_a = local
+    name_b = other
+    labels = opts.get('label', [])
+    if labels:
+        name_a = labels.pop(0)
+    if labels:
+        name_b = labels.pop(0)
+    if labels:
+        raise util.Abort(_("can only specify two labels."))
+
+    localtext = readfile(local)
+    basetext = readfile(base)
+    othertext = readfile(other)
+
+    orig = local
+    local = os.path.realpath(local)
+    if not opts.get('print'):
+        opener = util.opener(os.path.dirname(local))
+        out = opener(os.path.basename(local), "w", atomictemp=True)
+    else:
+        out = sys.stdout
+
+    reprocess = not opts.get('no_minimal')
+
+    m3 = Merge3Text(basetext, localtext, othertext)
+    for line in m3.merge_lines(name_a=name_a, name_b=name_b,
+                               reprocess=reprocess):
+        out.write(line)
+
+    if not opts.get('print'):
+        out.rename()
+
+    if m3.conflicts:
+        if not opts.get('quiet'):
+            sys.stdout.flush()
+            sys.stderr.write(_("warning: conflicts during merge.\n"))
+        return 1
+
+options = [('L', 'label', [], _('labels to use on conflict markers')),
+           ('a', 'text', None, _('treat all files as text')),
+           ('p', 'print', None,
+            _('print results instead of overwriting LOCAL')),
+           ('', 'no-minimal', None,
+            _('do not try to minimize conflict regions')),
+           ('h', 'help', None, _('display help and exit')),
+           ('q', 'quiet', None, _('suppress output'))]
+
+usage = _('''simplemerge [OPTS] LOCAL BASE OTHER
+
+    Simple three-way file merge utility with a minimal feature set.
+    
+    Apply to LOCAL the changes necessary to go from BASE to OTHER.
+    
+    By default, LOCAL is overwritten with the results of this operation.
+''')
+
+def showhelp():
+    sys.stdout.write(usage)
+    sys.stdout.write('\noptions:\n')
+
+    out_opts = []
+    for shortopt, longopt, default, desc in options:
+        out_opts.append(('%2s%s' % (shortopt and '-%s' % shortopt,
+                                    longopt and ' --%s' % longopt),
+                         '%s' % desc))
+    opts_len = max([len(opt[0]) for opt in out_opts])
+    for first, second in out_opts:
+        sys.stdout.write(' %-*s  %s\n' % (opts_len, first, second))
+
+class ParseError(Exception):
+    """Exception raised on errors in parsing the command line."""
+
 def main(argv):
-    # as for diff3 and meld the syntax is "MINE BASE OTHER"
-    a = file(argv[1], 'rt').readlines()
-    base = file(argv[2], 'rt').readlines()
-    b = file(argv[3], 'rt').readlines()
-
-    m3 = Merge3(base, a, b)
-
-    #for sr in m3.find_sync_regions():
-    #    print sr
-
-    # sys.stdout.writelines(m3.merge_lines(name_a=argv[1], name_b=argv[3]))
-    sys.stdout.writelines(m3.merge_annotated())
-
+    try:
+        opts = {}
+        try:
+            args = fancyopts.fancyopts(argv[1:], options, opts)
+        except fancyopts.getopt.GetoptError, e:
+            raise ParseError(e)
+        if opts['help']:
+            showhelp()
+            return 0
+        if len(args) != 3:
+                raise ParseError(_('wrong number of arguments'))
+        return simplemerge(*args, **opts)
+    except ParseError, e:
+        sys.stdout.write("%s: %s\n" % (sys.argv[0], e))
+        showhelp()
+        return 1
+    except util.Abort, e:
+        sys.stderr.write("abort: %s\n" % e)
+        return 255
+    except KeyboardInterrupt:
+        return 255
 
 if __name__ == '__main__':
     import sys
+    import os
     sys.exit(main(sys.argv))
