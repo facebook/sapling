@@ -105,10 +105,15 @@ def findcopies(repo, m1, m2, ma, limit):
     def findold(fctx):
         "find files that path was copied from, back to linkrev limit"
         old = {}
+        seen = {}
         orig = fctx.path()
         visit = [fctx]
         while visit:
             fc = visit.pop()
+            s = str(fc)
+            if s in seen:
+                continue
+            seen[s] = 1
             if fc.path() != orig and fc.path() not in old:
                 old[fc.path()] = 1
             if fc.rev() < limit:

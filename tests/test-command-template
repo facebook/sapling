@@ -19,6 +19,12 @@ echo c >> c
 hg commit -m 'no user, no domain' -d '1300000 0' -u 'person'
 echo foo > .hg/branch
 hg commit -m 'new branch' -d '1400000 0' -u 'person'
+hg co -q 3
+echo other 4 >> d
+hg add d
+hg commit -m 'new head' -d '1500000 0' -u 'person'
+hg merge -q
+hg commit -m 'merge' -d '1500001 0' -u 'person'
 
 # make sure user/global hgrc does not affect tests
 echo '[ui]' > .hg/hgrc
@@ -38,6 +44,9 @@ echo '#  debug'
 hg log --debug > log.out
 hg log --debug --style default > style.out
 diff log.out style.out
+
+echo '# revision with no copies (used to print a traceback)'
+hg tip -v --template '\n'
 
 echo '# compact style works'
 hg log --style compact
@@ -92,6 +101,16 @@ hg log --template '{date|isodate}\n'
 hg log --template '{date|rfc822date}\n'
 hg log --template '{desc|firstline}\n'
 hg log --template '{node|short}\n'
+
+echo '# formatnode filter works'
+echo '#  quiet'
+hg -q log -r 0 --template '#node|formatnode#\n'
+echo '#  normal'
+hg log -r 0 --template '#node|formatnode#\n'
+echo '#  verbose'
+hg -v log -r 0 --template '#node|formatnode#\n'
+echo '#  debug'
+hg --debug log -r 0 --template '#node|formatnode#\n'
 
 echo '# error on syntax'
 echo 'x = "f' >> t
