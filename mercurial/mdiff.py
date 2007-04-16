@@ -250,6 +250,10 @@ def patchtext(bin):
 def patch(a, bin):
     return mpatch.patches(a, [bin])
 
+# similar to difflib.SequenceMatcher.get_matching_blocks
+def get_matching_blocks(a, b):
+    return [(d[0], d[2], d[1] - d[0]) for d in bdiff.blocks(a, b)]
+
 patches = mpatch.patches
 patchedsize = mpatch.patchedsize
 textdiff = bdiff.bdiff
