@@ -280,11 +280,12 @@ class httprepository(remoterepository):
 
         if proto.startswith('application/mercurial-'):
             try:
-                version = float(proto[22:])
+                version = proto.split('-', 1)[1]
+                version_info = tuple([int(n) for n in version.split('.')])
             except ValueError:
                 raise hg.RepoError(_("'%s' sent a broken Content-type "
                                      "header (%s)") % (self._url, proto))
-            if version > 0.1:
+            if version_info > (0, 1):
                 raise hg.RepoError(_("'%s' uses newer protocol %s") %
                                    (self._url, version))
 
