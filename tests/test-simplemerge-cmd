@@ -42,7 +42,7 @@ echo '% too many labels'
 python simplemerge -p -L foo -L bar -L baz conflict-local base conflict-other
 
 echo '% binary file'
-printf '\x00' > binary-local
+python -c "f = file('binary-local', 'w'); f.write('\x00'); f.close()"
 cat orig >> binary-local
 python simplemerge -p binary-local base other
 
