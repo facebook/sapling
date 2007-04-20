@@ -136,7 +136,7 @@ class bisect(object):
             return d
 
         if head in stop:
-            raise util.Abort(_("Unconsistent state, %s:%s is good and bad")
+            raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
                              % (cl.rev(head), hg.short(head)))
         n_child = num_children(head)
         for i in xrange(cl.rev(head)+1):
