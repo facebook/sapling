@@ -20,6 +20,7 @@ class dirstate(object):
         self.dirty = 0
         self.ui = ui
         self.map = None
+        self.fp = None
         self.pl = None
         self.dirs = None
         self.copymap = {}
@@ -133,12 +134,28 @@ class dirstate(object):
             self.lazyread()
             return self[key]
 
+    _unknown = ('?', 0, 0, 0)
+
+    def get(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            return self._unknown
+
     def __contains__(self, key):
         self.lazyread()
         return key in self.map
 
     def parents(self):
-        self.lazyread()
+        if self.pl is None:
+            self.pl = [nullid, nullid]
+            try:
+                self.fp = self.opener('dirstate')
+                st = self.fp.read(40)
+                if len(st) == 40:
+                    self.pl = st[:20], st[20:40]
+            except IOError, err:
+                if err.errno != errno.ENOENT: raise
         return self.pl
 
     def branch(self):
@@ -202,7 +219,12 @@ class dirstate(object):
         self.map = {}
         self.pl = [nullid, nullid]
         try:
-            st = self.opener("dirstate").read()
+            if self.fp:
+                self.fp.seek(0)
+                st = self.fp.read()
+                self.fp = None
+            else:
+                st = self.opener("dirstate").read()
             if st:
                 self.parse(st)
         except IOError, err:
