@@ -44,7 +44,8 @@ class tarit:
         if isinstance(dest, str):
             self.z = tarfile.open(dest, mode='w:'+kind)
         else:
-            self.z = tarfile.open(mode='w|'+kind, fileobj=dest)
+            # Python 2.5-2.5.1 have a regression that requires a name arg
+            self.z = tarfile.open(name='', mode='w|'+kind, fileobj=dest)
 
     def addfile(self, name, mode, data):
         i = tarfile.TarInfo(self.prefix + name)
