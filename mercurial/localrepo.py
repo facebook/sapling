@@ -596,7 +596,7 @@ class localrepository(repo.repository):
             self.ui.warn(_("no rollback information available\n"))
 
     def wreload(self):
-        self.dirstate.read()
+        self.dirstate.reload()
 
     def reload(self):
         self.changelog.load()
