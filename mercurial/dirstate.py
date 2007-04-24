@@ -10,6 +10,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import _
 import struct, os, time, bisect, stat, strutil, util, re, errno
+import cStringIO
 
 class dirstate(object):
     format = ">cllll"
@@ -336,15 +337,17 @@ class dirstate(object):
     def write(self):
         if not self.dirty:
             return
-        st = self.opener("dirstate", "w", atomictemp=True)
-        st.write("".join(self.pl))
-        for f, e in self.map.items():
+        cs = cStringIO.StringIO()
+        cs.write("".join(self.pl))
+        for f, e in self.map.iteritems():
             c = self.copied(f)
             if c:
                 f = f + "\0" + c
             e = struct.pack(self.format, e[0], e[1], e[2], e[3], len(f))
-            st.write(e + f)
-        st.rename()
+            cs.write(e)
+            cs.write(f)
+        st = self.opener("dirstate", "w", atomic=True)
+        st.write(cs.getvalue())
         self.dirty = 0
 
     def filterfiles(self, files):
