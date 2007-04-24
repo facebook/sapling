@@ -469,22 +469,20 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
         """build a matching function from a set of patterns"""
         if not pats:
             return
-        matches = []
-        for k, p in pats:
-            try:
-                pat = '(?:%s)' % regex(k, p, tail)
-                matches.append(re.compile(pat).match)
-            except re.error:
-                if src: raise Abort("%s: invalid pattern (%s): %s" % (src, k, p))
-                else: raise Abort("invalid pattern (%s): %s" % (k, p))
-
-        def buildfn(text):
-            for m in matches:
-                r = m(text)
-                if r:
-                    return r
-
-        return buildfn
+        try:
+            pat = '(?:%s)' % '|'.join([regex(k, p, tail) for (k, p) in pats])
+            return re.compile(pat).match
+        except re.error:
+            for k, p in pats:
+                try:
+                    re.compile('(?:%s)' % regex(k, p, tail))
+                except re.error:
+                    if src:
+                        raise Abort("%s: invalid pattern (%s): %s" %
+                                    (src, k, p))
+                    else:
+                        raise Abort("invalid pattern (%s): %s" % (k, p))
+            raise Abort("invalid pattern")
 
     def globprefix(pat):
         '''return the non-glob prefix of a path, e.g. foo/* -> foo'''
