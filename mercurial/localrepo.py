@@ -919,13 +919,10 @@ class localrepository(repo.repository):
             # all the revisions in parent->child order.
             mf1 = mfmatches(node1)
 
+        mywlock = False
+
         # are we comparing the working directory?
         if not node2:
-            if not wlock:
-                try:
-                    wlock = self.wlock(wait=0)
-                except lock.LockException:
-                    wlock = None
             (lookup, modified, added, removed, deleted, unknown,
              ignored, clean) = self.dirstate.status(files, match,
                                                     list_ignored, list_clean)
@@ -942,7 +939,13 @@ class localrepository(repo.repository):
                             modified.append(f)
                         else:
                             clean.append(f)
-                            if wlock is not None:
+                            if not wlock and not mywlock:
+                                mywlock = True
+                                try:
+                                    wlock = self.wlock(wait=0)
+                                except lock.LockException:
+                                    pass
+                            if wlock:
                                 self.dirstate.update([f], "n")
             else:
                 # we are comparing working dir against non-parent
@@ -957,6 +960,9 @@ class localrepository(repo.repository):
                 for f in removed:
                     if f in mf2:
                         del mf2[f]
+
+            if mywlock and wlock:
+                wlock.release()
         else:
             # we are comparing two revisions
             mf2 = mfmatches(node2)
