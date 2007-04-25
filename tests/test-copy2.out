@@ -20,3 +20,6 @@ copy: foo -> bar
      1         5       7      1       2 dd12c926cf16 2ed2a3912a0b 000000000000
 bar renamed from foo:dd12c926cf165e3eb4cf87b084955cb617221c17
 # should show no copies
+# copy --after on an added file
+A baz
+  bar

@@ -503,7 +503,7 @@ def docopy(ui, repo, pats, opts, wlock):
                      util.localpath(prevsrc)))
             return
         if (not opts['after'] and os.path.exists(reltarget) or
-            opts['after'] and repo.dirstate.state(abstarget) not in '?r'):
+            opts['after'] and repo.dirstate.state(abstarget) not in '?ar'):
             if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %
                         reltarget)
