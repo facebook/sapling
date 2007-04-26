@@ -43,13 +43,13 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
 
     def log_error(self, format, *args):
         errorlog = self.server.errorlog
-        errorlog.write("%s - - [%s] %s\n" % (self.address_string(),
+        errorlog.write("%s - - [%s] %s\n" % (self.client_address[0],
                                              self.log_date_time_string(),
                                              format % args))
 
     def log_message(self, format, *args):
         accesslog = self.server.accesslog
-        accesslog.write("%s - - [%s] %s\n" % (self.address_string(),
+        accesslog.write("%s - - [%s] %s\n" % (self.client_address[0],
                                               self.log_date_time_string(),
                                               format % args))
 
@@ -80,12 +80,10 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         env['SERVER_PORT'] = str(self.server.server_port)
         env['REQUEST_URI'] = self.path
         env['PATH_INFO'] = path_info
+        env['REMOTE_HOST'] = self.client_address[0]
+        env['REMOTE_ADDR'] = self.client_address[0]
         if query:
             env['QUERY_STRING'] = query
-        host = self.address_string()
-        if host != self.client_address[0]:
-            env['REMOTE_HOST'] = host
-            env['REMOTE_ADDR'] = self.client_address[0]
 
         if self.headers.typeheader is None:
             env['CONTENT_TYPE'] = self.headers.type
