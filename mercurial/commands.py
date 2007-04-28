@@ -1550,7 +1550,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     p2 = repo.lookup(p2)
                     if p1 == wp[0].node():
                         repo.dirstate.setparents(p1, p2)
-                except RepoError:
+                except hg.RepoError:
                     pass
 
             files = {}
