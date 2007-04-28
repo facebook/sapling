@@ -2375,44 +2375,27 @@ def serve(ui, repo, **opts):
         raise hg.RepoError(_("There is no Mercurial repository here"
                              " (.hg not found)"))
 
-    if opts['daemon'] and not opts['daemon_pipefds']:
-        rfd, wfd = os.pipe()
-        args = sys.argv[:]
-        args.append('--daemon-pipefds=%d,%d' % (rfd, wfd))
-        pid = os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
-                         args[0], args)
-        os.close(wfd)
-        os.read(rfd, 1)
-        os._exit(0)
+    class service:
+        def init(self):
+            try:
+                self.httpd = hgweb.server.create_server(parentui, repo)
+            except socket.error, inst:
+                raise util.Abort(_('cannot start server: ') + inst.args[1])
 
-    httpd = hgweb.server.create_server(parentui, repo)
+            if not ui.verbose: return
 
-    if ui.verbose:
-        if httpd.port != 80:
-            ui.status(_('listening at http://%s:%d/\n') %
-                      (httpd.addr, httpd.port))
-        else:
-            ui.status(_('listening at http://%s/\n') % httpd.addr)
+            if httpd.port != 80:
+                ui.status(_('listening at http://%s:%d/\n') %
+                          (httpd.addr, httpd.port))
+            else:
+                ui.status(_('listening at http://%s/\n') % httpd.addr)
 
-    if opts['pid_file']:
-        fp = open(opts['pid_file'], 'w')
-        fp.write(str(os.getpid()) + '\n')
-        fp.close()
+        def run(self):
+            self.httpd.serve_forever()
 
-    if opts['daemon_pipefds']:
-        rfd, wfd = [int(x) for x in opts['daemon_pipefds'].split(',')]
-        os.close(rfd)
-        os.write(wfd, 'y')
-        os.close(wfd)
-        sys.stdout.flush()
-        sys.stderr.flush()
-        fd = os.open(util.nulldev, os.O_RDWR)
-        if fd != 0: os.dup2(fd, 0)
-        if fd != 1: os.dup2(fd, 1)
-        if fd != 2: os.dup2(fd, 2)
-        if fd not in (0, 1, 2): os.close(fd)
+    service = service()
 
-    httpd.serve_forever()
+    cmdutil.service(opts, initfn=service.init, runfn=service.run)
 
 def status(ui, repo, *pats, **opts):
     """show changed files in the working directory
