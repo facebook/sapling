@@ -33,11 +33,11 @@ There are unresolved merges, you can redo the full merge using:
   hg update -C 3
   hg merge 4
 one
-<<<<<<<
+<<<<<<< my
 two-point-five
 =======
 two-point-one
->>>>>>>
+>>>>>>> other
 three
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       7      0       0 01365c4cca56 000000000000 000000000000

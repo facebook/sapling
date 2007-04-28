@@ -59,7 +59,7 @@ cd ../test-b
 hg pull ../test-a
 hg merge --debug
 
-cat test.txt | sed "s% .*%%"
+cat test.txt
 
 hg debugindex .hg/store/data/test.txt.i
 

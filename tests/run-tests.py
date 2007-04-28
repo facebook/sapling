@@ -346,8 +346,9 @@ DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
 HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
 
 os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
-os.environ["HGMERGE"]  = 'python "%s"' % os.path.join(TESTDIR, os.path.pardir,
-                                                      'contrib', 'simplemerge')
+os.environ["HGMERGE"]  = ('python "%s" -L my -L other'
+                          % os.path.join(TESTDIR, os.path.pardir, 'contrib',
+                                         'simplemerge'))
 os.environ["HGUSER"]   = "test"
 os.environ["HGENCODING"] = "ascii"
 os.environ["HGENCODINGMODE"] = "strict"
