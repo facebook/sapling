@@ -891,27 +891,28 @@ def debuginstall(ui):
         # actually attempt a patch here
         a = "1\n2\n3\n4\n"
         b = "1\n2\n3\ninsert\n4\n"
-        d = mdiff.unidiff(a, None, b, None, "a")
         fa = writetemp(a)
+        d = mdiff.unidiff(a, None, b, None, os.path.basename(fa))
         fd = writetemp(d)
-        fp = os.popen('%s %s %s' % (patcher, fa, fd))
-        files = []
-        output = ""
-        for line in fp:
-            output += line
-            if line.startswith('patching file '):
-                pf = util.parse_patch_output(line.rstrip())
-                files.append(pf)
-        if files != [fa]:
-            ui.write(_(" unexpected patch output!"))
-            ui.write(_(" (you may have an incompatible version of patch)\n"))
-            ui.write(output)
+        
+        files = {}
+        try:
+            patch.patch(fd, ui, cwd=os.path.dirname(fa), files=files)
+        except util.Abort, e:
+            ui.write(_(" patch call failed:\n"))
+            ui.write(" " + str(e) + "\n")
             problems += 1
-        a = file(fa).read()
-        if a != b:
-            ui.write(_(" patch test failed!"))
-            ui.write(_(" (you may have an incompatible version of patch)\n"))
-            problems += 1
+        else:            
+            if list(files) != [os.path.basename(fa)]:
+                ui.write(_(" unexpected patch output!"))
+                ui.write(_(" (you may have an incompatible version of patch)\n"))
+                problems += 1
+            a = file(fa).read()
+            if a != b:
+                ui.write(_(" patch test failed!"))
+                ui.write(_(" (you may have an incompatible version of patch)\n"))
+                problems += 1
+                
         os.unlink(fa)
         os.unlink(fd)
 
