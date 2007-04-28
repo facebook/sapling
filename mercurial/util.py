@@ -1161,11 +1161,19 @@ def opener(base, audit=True):
     class atomicfile(atomictempfile):
         """the file will only be copied on close"""
         def __init__(self, name, mode):
+            self._err = False
             atomictempfile.__init__(self, name, mode)
+        def write(self, s):
+            try:
+                atomictempfile.write(self, s)
+            except:
+                self._err = True
+                raise
         def close(self):
             self.rename()
         def __del__(self):
-            self.rename()
+            if not self._err:
+                self.rename()
 
     def o(path, mode="r", text=False, atomic=False, atomictemp=False):
         if audit_p:
