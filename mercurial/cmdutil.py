@@ -200,6 +200,50 @@ def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
             if not dry_run:
                 repo.copy(old, new, wlock=wlock)
 
+def service(opts, parentfn=None, initfn=None, runfn=None):
+    '''Run a command as a service.'''
+
+    if opts['daemon'] and not opts['daemon_pipefds']:
+        rfd, wfd = os.pipe()
+        args = sys.argv[:]
+        args.append('--daemon-pipefds=%d,%d' % (rfd, wfd))
+        pid = os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
+                         args[0], args)
+        os.close(wfd)
+        os.read(rfd, 1)
+        if parentfn:
+            return parentfn(pid)
+        else:
+            os._exit(0)
+
+    if initfn:
+        initfn()
+
+    if opts['pid_file']:
+        fp = open(opts['pid_file'], 'w')
+        fp.write(str(os.getpid()) + '\n')
+        fp.close()
+
+    if opts['daemon_pipefds']:
+        rfd, wfd = [int(x) for x in opts['daemon_pipefds'].split(',')]
+        os.close(rfd)
+        try:
+            os.setsid()
+        except AttributeError:
+            pass
+        os.write(wfd, 'y')
+        os.close(wfd)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        fd = os.open(util.nulldev, os.O_RDWR)
+        if fd != 0: os.dup2(fd, 0)
+        if fd != 1: os.dup2(fd, 1)
+        if fd != 2: os.dup2(fd, 2)
+        if fd not in (0, 1, 2): os.close(fd)
+
+    if runfn:
+        return runfn()
+
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 

@@ -297,5 +297,30 @@ class posixfile_nt(object):
             win32file.SetEndOfFile(self.handle)
         except pywintypes.error, err:
             raise WinIOError(err)
+            
+def find_in_path(name, path, default=None):
+    '''find name in search path. path can be string (will be split
+    with os.pathsep), or iterable thing that returns strings.  if name
+    found, return path to name. else return default. name is looked up
+    using cmd.exe rules, using PATHEXT.'''
+    if isinstance(path, str):
+        path = path.split(os.pathsep)
+        
+    pathext = os.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
+    pathext = pathext.lower().split(os.pathsep)
+    isexec = os.path.splitext(name)[1].lower() in pathext
+    
+    for p in path:
+        p_name = os.path.join(p, name)
+        
+        if isexec and os.path.exists(p_name):
+            return p_name
+        
+        for ext in pathext:
+            p_name_ext = p_name + ext
+            if os.path.exists(p_name_ext):
+                return p_name_ext
+            
+    return default
 
 getuser_fallback = win32api.GetUserName

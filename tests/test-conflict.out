@@ -7,7 +7,9 @@ There are unresolved merges, you can redo the full merge using:
   hg update -C 2
   hg merge 1
 e7fe8eb3e180+0d24b7662d3e+ tip
+<<<<<<< my
 something else
 =======
 something
+>>>>>>> other
 M a

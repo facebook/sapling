@@ -11,5 +11,5 @@ echo "something else" > a
 hg commit -m branch2 -d "1000000 0"
 hg merge 1
 hg id
-egrep -v ">>>|<<<" a
+cat a
 hg status

@@ -46,14 +46,21 @@ hg
       other Mercurial commands should work fine for you.</p>
 
     <h1>Configuration notes</h1>
-    <p>The default editor for commit messages is 'notepad'. You can set the EDITOR
+	<h4>Default editor</h4>
+	The default editor for commit messages is 'notepad'. You can set the EDITOR
     (or HGEDITOR) environment variable to specify your preference or set it in
-    mercurial.ini:</p>
+    mercurial.ini:
     <pre>
 [ui]
 editor = whatever
 </pre>
 
+	<h4>Configuring a Merge program</h4>
+	It should be emphasized that Mercurial by itself doesn't attempt to do a 
+	Merge at the file level, neither does it make any attempt to Resolve the conflicts.
+
+    By default, Mercurial will use the merge program defined by the HGMERGE environment 
+    variable, or uses the one defined in the mercurial.ini file. (see <a href="http://www.selenic.com/mercurial/wiki/index.cgi/MergeProgram">MergeProgram</a> on the Mercurial Wiki for more information)
 
     <h1>Reporting problems</h1>
 
