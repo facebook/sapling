@@ -23,10 +23,13 @@ hg add a
 hg rm a
 hg rm -f a
 echo b > b
+echo c > c
 hg ci -A -m 3 -d "1000001 0"
 echo c >> b
 hg rm b
 hg rm -f b
+hg rm -A c
+cat c
 
 cd ..
 hg clone a b

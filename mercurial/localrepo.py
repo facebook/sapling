@@ -1031,8 +1031,7 @@ class localrepository(repo.repository):
         if not wlock:
             wlock = self.wlock()
         for f in list:
-            p = self.wjoin(f)
-            if os.path.exists(p):
+            if unlink and os.path.exists(self.wjoin(f)):
                 self.ui.warn(_("%s still exists!\n") % f)
             elif self.dirstate.state(f) == 'a':
                 self.dirstate.forget([f])

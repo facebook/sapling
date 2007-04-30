@@ -527,7 +527,7 @@ def docopy(ui, repo, pats, opts, wlock):
                     restore = False
                 finally:
                     if restore:
-                        repo.remove([abstarget], wlock)
+                        repo.remove([abstarget], wlock=wlock)
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
                     ui.warn(_('%s: deleted in working copy\n') % relsrc)
@@ -2082,7 +2082,8 @@ def remove(ui, repo, *pats, **opts):
     This only removes files from the current branch, not from the
     entire project history.  If the files still exist in the working
     directory, they will be deleted from it.  If invoked with --after,
-    files that have been manually deleted are marked as removed.
+    files are marked as removed, but not actually unlinked unless --force
+    is also given.
 
     This command schedules the files to be removed at the next commit.
     To undo a remove before that, see hg revert.
@@ -2100,9 +2101,7 @@ def remove(ui, repo, *pats, **opts):
     remove, forget = [], []
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
         reason = None
-        if abs not in deleted and opts['after']:
-            reason = _('is still present')
-        elif abs in modified and not opts['force']:
+        if abs in modified and not opts['force']:
             reason = _('is modified (use -f to force removal)')
         elif abs in added:
             if opts['force']:
@@ -2121,7 +2120,7 @@ def remove(ui, repo, *pats, **opts):
                 ui.status(_('removing %s\n') % rel)
             remove.append(abs)
     repo.forget(forget)
-    repo.remove(remove, unlink=not opts['after'])
+    repo.remove(remove, unlink=opts['force'] or not opts['after'])
 
 def rename(ui, repo, *pats, **opts):
     """rename files; equivalent of copy + remove
@@ -2145,7 +2144,7 @@ def rename(ui, repo, *pats, **opts):
             ui.status(_('removing %s\n') % rel)
         names.append(abs)
     if not opts.get('dry_run'):
-        repo.remove(names, True, wlock)
+        repo.remove(names, True, wlock=wlock)
     return errs
 
 def revert(ui, repo, *pats, **opts):
