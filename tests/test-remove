@@ -29,7 +29,14 @@ echo c >> b
 hg rm b
 hg rm -f b
 hg rm -A c
+hg st
 cat c
+hg revert c
+hg rm -A
+hg st
+rm c
+hg rm -A
+hg st
 
 cd ..
 hg clone a b

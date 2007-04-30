@@ -54,5 +54,11 @@ adding a
 adding b
 adding c
 not removing b: file is modified (use -f to force removal)
+R b
+R c
 c
+R b
+removing c
+R b
+R c
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
