@@ -2083,7 +2083,7 @@ def remove(ui, repo, *pats, **opts):
     entire project history.  If the files still exist in the working
     directory, they will be deleted from it.  If invoked with --after,
     files are marked as removed, but not actually unlinked unless --force
-    is also given. Without an explicit pattern, --after will only mark
+    is also given. Without exact file names, --after will only mark
     files as removed if they are no longer in the working directory.
 
     This command schedules the files to be removed at the next commit.
@@ -2111,7 +2111,7 @@ def remove(ui, repo, *pats, **opts):
             reason = _('has been marked for add (use -f to force removal)')
         elif abs in unknown:
             reason = _('is not managed')
-        elif opts['after'] and not pats and abs not in deleted:
+        elif opts['after'] and not exact and abs not in deleted:
             continue
         elif abs in removed:
             continue

@@ -52,13 +52,15 @@ diff -r 8ba83d44753d -r a1fce69c50d9 foo
 not removing a: file has been marked for add (use -f to force removal)
 adding a
 adding b
-adding c
+adding c/d
 not removing b: file is modified (use -f to force removal)
 R b
-R c
-c
+R c/d
+d
+undeleting c/d
 R b
-removing c
 R b
-R c
+removing c/d
+R b
+R c/d
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -23,18 +23,21 @@ hg add a
 hg rm a
 hg rm -f a
 echo b > b
-echo c > c
+mkdir c
+echo d > c/d
 hg ci -A -m 3 -d "1000001 0"
 echo c >> b
 hg rm b
 hg rm -f b
-hg rm -A c
+hg rm -A c/d
 hg st
-cat c
+cat c/d
 hg revert c
 hg rm -A
 hg st
-rm c
+hg rm -A c
+hg st
+rm c/d
 hg rm -A
 hg st
 
