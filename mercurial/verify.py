@@ -17,6 +17,8 @@ def verify(repo):
     warnings = [0]
     neededmanifests = {}
 
+    lock = repo.lock()
+
     def err(msg):
         repo.ui.warn(msg + "\n")
         errors[0] += 1
