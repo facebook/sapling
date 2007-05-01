@@ -985,8 +985,11 @@ class queue:
             if comments:
                 # Remove existing message.
                 ci = 0
+                subj = None
                 for mi in xrange(len(message)):
-                    while message[mi] != comments[ci]:
+                    if comments[ci].lower().startswith('subject: '):
+                        subj = comments[ci][9:]
+                    while message[mi] != comments[ci] and message[mi] != subj:
                         ci += 1
                     del comments[ci]
             comments.append(msg)
