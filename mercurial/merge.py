@@ -157,7 +157,7 @@ def findcopies(repo, m1, m2, ma, limit):
             # named changed on only one side?
             if ca.path() == c.path() or ca.path() == c2.path():
                 fullcopy[c.path()] = of # remember for dir rename detection
-                if c == ca and c2 == ca: # no merge needed, ignore copy
+                if c == c2: # no merge needed, ignore copy
                     continue
                 copy[c.path()] = of
 
