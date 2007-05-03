@@ -205,10 +205,13 @@ def findcopies(repo, m1, m2, ma, limit):
         elif dsrc in dirmove and dirmove[dsrc] != ddst:
             # files from the same directory moved to two different places
             invalid[dsrc] = True
-            del dirmove[dsrc]
         else:
             # looks good so far
             dirmove[dsrc + "/"] = ddst + "/"
+
+    for i in invalid:
+        if i in dirmove:
+            del dirmove[i]
 
     del d1, d2, invalid
 
