@@ -102,6 +102,12 @@ def findcopies(repo, m1, m2, ma, limit):
     Find moves and copies between m1 and m2 back to limit linkrev
     """
 
+    def nonoverlap(d1, d2, d3):
+        "Return list of elements in d1 not in d2 or d3"
+        l = [d for d in d1 if d not in d3 and d not in d2]
+        l.sort()
+        return l
+
     def dirname(f):
         s = f.rfind("/")
         if s == -1:
@@ -139,11 +145,8 @@ def findcopies(repo, m1, m2, ma, limit):
         old.sort()
         return old
 
-    def nonoverlap(d1, d2, d3):
-        "Return list of elements in d1 not in d2 or d3"
-        l = [d for d in d1 if d not in d3 and d not in d2]
-        l.sort()
-        return l
+    copy = {}
+    fullcopy = {}
 
     def checkcopies(c, man):
         '''check possible copies for filectx c'''
@@ -169,8 +172,6 @@ def findcopies(repo, m1, m2, ma, limit):
         return {}
 
     dcopies = repo.dirstate.copies()
-    copy = {}
-    fullcopy = {}
     u1 = nonoverlap(m1, m2, ma)
     u2 = nonoverlap(m2, m1, ma)
     ctx = util.cachefunc(lambda f, n: repo.filectx(f, fileid=n[:20]))
