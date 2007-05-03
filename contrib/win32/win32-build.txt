@@ -4,7 +4,7 @@ jury-rigged fashion.
 It has the following prerequisites, at least as I build it:
 
   Python for Windows
-      http://www.python.org/ftp/python/2.4.1/python-2.4.1.msi
+      http://www.python.org/ftp/python/2.4.3/python-2.4.3.msi
 
   MinGW
       http://www.mingw.org/
@@ -21,7 +21,7 @@ It has the following prerequisites, at least as I build it:
   Inno Setup
       http://www.jrsoftware.org/isinfo.php
 
-  ISTool
+  ISTool - optional
       http://www.istool.org/default.aspx/
 
   add_path (you need only add_path.exe in the zip file)
@@ -35,13 +35,37 @@ C:\hg\hg-release.
 
 In a shell, build a standalone copy of the hg.exe program:
 
-  python setup.py build -c mingw32 py2exe -b 1
+  python setup.py build -c mingw32 
+  python setup.py py2exe -b 1
 
-Copy mfc71.dll and add_path.exe into the dist directory that just
-got created.
+Note: the previously suggested combined command of "python setup.py build -c
+mingw32 py2exe -b 1" doesn't work correctly anymore as it doesn't include the
+extensions in the mercurial subdirectory.
 
-Run ISTool, and open the C:\hg\hg-release\contrib\win32\mercurial.iss
-file.
+If you want to create a file named setup.cfg with the contents:
 
-In ISTool, type Ctrl-F9 to compile the installer file.  The actual
-installer will be in the C:\hg\hg-release\Output directory.
+[build]
+compiler=mingw32
+
+you can skip the first build step.
+
+Copy mfc71.dll and add_path.exe into the dist directory that just got created.
+
+If you use ISTool, you open the C:\hg\hg-release\contrib\win32\mercurial.iss
+file and type Ctrl-F9 to compile the installer file.
+
+Otherwise you run the Inno Setup compiler.  Assuming it's on the path you run:
+
+  iscc contrib\win32\mercurial.iss
+
+The actual installer will be in the C:\hg\hg-release\Output directory.
+
+To automate the steps above you may want to create a batchfile based on the
+following:
+
+  echo [build] > setup.cfg
+  echo compiler=mingw32 >> setup.cfg
+  python setup.py py2exe -b 1
+  iscc contrib\win32\mercurial.iss
+
+and run it from the root of the hg repository (c:\hg\hg-release).
