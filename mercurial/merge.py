@@ -133,14 +133,15 @@ def findcopies(repo, m1, m2, ma, limit):
     def checkcopies(c, man):
         '''check possible copies for filectx c'''
         for of in findold(c):
-            if of not in man:
+            if of not in man: # original file not in other manifest?
                 continue
             c2 = ctx(of, man[of])
             ca = c.ancestor(c2)
-            if not ca: # unrelated
+            if not ca: # unrelated?
                 continue
+            # named changed on only one side?
             if ca.path() == c.path() or ca.path() == c2.path():
-                fullcopy[c.path()] = of
+                fullcopy[c.path()] = of # remember for dir rename detection
                 if c == ca and c2 == ca: # no merge needed, ignore copy
                     continue
                 copy[c.path()] = of
@@ -179,16 +180,25 @@ def findcopies(repo, m1, m2, ma, limit):
     invalid = {}
     dirmove = {}
 
+    # examine each file copy for a potential directory move, which is
+    # when all the files in a directory are moved to a new directory
     for dst, src in fullcopy.items():
         dsrc, ddst = os.path.dirname(src), os.path.dirname(dst)
         if dsrc in invalid:
+            # already seen to be uninteresting
             continue
-        elif (dsrc in d1 and ddst in d1) or (dsrc in d2 and ddst in d2):
+        elif dsrc in d1 and ddst in d1:
+            # directory wasn't entirely moved locally
+            invalid[dsrc] = True
+        elif dsrc in d2 and ddst in d2:
+            # directory wasn't entirely moved remotely
             invalid[dsrc] = True
         elif dsrc in dirmove and dirmove[dsrc] != ddst:
+            # files from the same directory moved to two different places
             invalid[dsrc] = True
             del dirmove[dsrc]
         else:
+            # looks good so far
             dirmove[dsrc + "/"] = ddst + "/"
 
     del d1, d2, invalid
@@ -196,11 +206,12 @@ def findcopies(repo, m1, m2, ma, limit):
     if not dirmove:
         return copy
 
-    # check unaccounted nonoverlapping files
+    # check unaccounted nonoverlapping files against directory moves
     for f in u1 + u2:
         if f not in fullcopy:
             for d in dirmove:
                 if f.startswith(d):
+                    # new file added in a directory that was moved, move it
                     copy[f] = dirmove[d] + f[len(d):]
                     break
 
