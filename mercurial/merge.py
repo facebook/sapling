@@ -102,6 +102,21 @@ def findcopies(repo, m1, m2, ma, limit):
     Find moves and copies between m1 and m2 back to limit linkrev
     """
 
+    def dirname(f):
+        s = f.rfind("/")
+        if s == -1:
+            return ""
+        return f[:s]
+
+    def dirs(files):
+        d = {}
+        for f in files:
+            f = dirname(f)
+            while f not in d:
+                d[f] = True
+                f = dirname(f)
+        return d
+
     def findold(fctx):
         "find files that path was copied from, back to linkrev limit"
         old = {}
@@ -146,12 +161,6 @@ def findcopies(repo, m1, m2, ma, limit):
                     continue
                 copy[c.path()] = of
 
-    def dirs(files):
-        d = {}
-        for f in files:
-            d[os.path.dirname(f)] = True
-        return d
-
     if not repo.ui.configbool("merge", "followcopies", True):
         return {}
 
@@ -183,7 +192,7 @@ def findcopies(repo, m1, m2, ma, limit):
     # examine each file copy for a potential directory move, which is
     # when all the files in a directory are moved to a new directory
     for dst, src in fullcopy.items():
-        dsrc, ddst = os.path.dirname(src), os.path.dirname(dst)
+        dsrc, ddst = dirname(src), dirname(dst)
         if dsrc in invalid:
             # already seen to be uninteresting
             continue
