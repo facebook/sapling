@@ -317,6 +317,18 @@ If the command does not exit with a zero status code, raise an error."
 	       (car res))
       (cdr res))))
 
+(defmacro hg-do-across-repo (path &rest body)
+  (let ((root-name (gensym "root-"))
+	(buf-name (gensym "buf-")))
+    `(let ((,root-name (hg-root ,path)))
+       (save-excursion
+	 (dolist (,buf-name (buffer-list))
+	   (set-buffer ,buf-name)
+	   (when (and hg-status (equal (hg-root buffer-file-name) ,root-name))
+	     ,@body))))))
+
+(put 'hg-do-across-repo 'lisp-indent-function 1)
+
 (defun hg-sync-buffers (path)
   "Sync buffers visiting PATH with their on-disk copies.
 If PATH is not being visited, but is under the repository root, sync
@@ -539,18 +551,6 @@ directory names from the file system.  We do not penalise URLs."
 	    (set-buffer buf)
 	    (hg-mode-line-internal status parents)))))))
   
-(defmacro hg-do-across-repo (path &rest body)
-  (let ((root-name (gensym "root-"))
-	(buf-name (gensym "buf-")))
-    `(let ((,root-name (hg-root ,path)))
-       (save-excursion
-	 (dolist (,buf-name (buffer-list))
-	   (set-buffer ,buf-name)
-	   (when (and hg-status (equal (hg-root buffer-file-name) ,root-name))
-	     ,@body))))))
-
-(put 'hg-do-across-repo 'lisp-indent-function 1)
-
 
 ;;; View mode bits.
 
