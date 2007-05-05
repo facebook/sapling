@@ -750,8 +750,9 @@ Push changes                          G    C-c h >      hg-push"
   (run-hooks 'hg-mode-hook))
 
 (defun hg-find-file-hook ()
-  (when (hg-mode-line)
-    (hg-mode)))
+  (ignore-errors
+    (when (hg-mode-line)
+      (hg-mode))))
 
 (add-hook 'find-file-hooks 'hg-find-file-hook)
 
