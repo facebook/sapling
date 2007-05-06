@@ -1264,6 +1264,10 @@ class queue:
         return 0
 
     def series_end(self, all_patches=False):
+        """If all_patches is False, return the index of the next pushable patch
+        in the series, or the series length. If all_patches is True, return the
+        index of the first patch past the last applied one.
+        """
         end = 0
         def next(start):
             if all_patches:
@@ -1547,7 +1551,7 @@ def series(ui, repo, **opts):
 def top(ui, repo, **opts):
     """print the name of the current patch"""
     q = repo.mq
-    t = q.series_end()
+    t = q.applied and q.series_end(True) or 0
     if t:
         return q.qseries(repo, start=t-1, length=1, status='A',
                          summary=opts.get('summary'))
