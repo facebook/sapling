@@ -54,6 +54,8 @@ hg qguard c.patch
 
 echo % should skip c.patch
 hg qpush -a
+echo % should display b.patch
+hg qtop
 
 hg qguard -n c.patch
 echo % should push c.patch
