@@ -28,6 +28,12 @@ from mercurial.i18n import _
 
 class CantReprocessAndShowBase(Exception):
     pass
+    
+
+def warn(message):
+    sys.stdout.flush()
+    sys.stderr.write(message)
+    sys.stderr.flush()
 
 
 def intersect(ra, rb):
@@ -453,7 +459,7 @@ def simplemerge(local, base, other, **opts):
             if not opts.get('text'):
                 raise util.Abort(msg)
             elif not opts.get('quiet'):
-                sys.stderr.write(_('warning: %s\n') % msg)
+                warn(_('warning: %s\n') % msg)
         return text
 
     name_a = local
@@ -490,8 +496,7 @@ def simplemerge(local, base, other, **opts):
 
     if m3.conflicts:
         if not opts.get('quiet'):
-            sys.stdout.flush()
-            sys.stderr.write(_("warning: conflicts during merge.\n"))
+            warn(_("warning: conflicts during merge.\n"))
         return 1
 
 options = [('L', 'label', [], _('labels to use on conflict markers')),
