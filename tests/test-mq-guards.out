@@ -25,6 +25,8 @@ c.patch: -a
 applying b.patch
 skipping c.patch - guarded by '-a'
 Now at: b.patch
+% should display b.patch
+b.patch
 % should push c.patch
 applying c.patch
 Now at: c.patch
