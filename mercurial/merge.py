@@ -489,14 +489,19 @@ def update(repo, node, branchmerge, force, partial, wlock):
     p1, p2 = pl[0], repo.changectx(node)
     pa = p1.ancestor(p2)
     fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
+    fastforward = False
 
     ### check phase
     if not overwrite and len(pl) > 1:
         raise util.Abort(_("outstanding uncommitted merges"))
     if pa == p1 or pa == p2: # is there a linear path from p1 to p2?
         if branchmerge:
-            raise util.Abort(_("there is nothing to merge, just use "
-                               "'hg update' or look at 'hg heads'"))
+            if p1.branch() != p2.branch():
+                fastforward = True
+                branchmerge = False
+            else:
+                raise util.Abort(_("there is nothing to merge, just use "
+                                   "'hg update' or look at 'hg heads'"))
     elif not (overwrite or branchmerge):
         raise util.Abort(_("update spans branches, use 'hg merge' "
                            "or 'hg update -C' to lose changes"))
@@ -525,7 +530,7 @@ def update(repo, node, branchmerge, force, partial, wlock):
     if not partial:
         recordupdates(repo, action, branchmerge)
         repo.dirstate.setparents(fp1, fp2)
-        if not branchmerge:
+        if not branchmerge and not fastforward:
             repo.dirstate.setbranch(p2.branch())
         repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
 

@@ -84,3 +84,18 @@ bf1bc2f45e834c75404d0ddab57d53beab56e2f8 default
 bf1bc2f45e83
 4909a3732169 (foo) tip
 abort: branch foobar not found
+% fastforward merge
+adding ff
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+foo
+changeset:   6:9cc105113eeb
+branch:      foo
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     Merge ff into foo
+
+a
+ff

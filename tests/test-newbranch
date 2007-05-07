@@ -51,4 +51,15 @@ hg id
 hg branch foobar
 hg up
 
+echo % fastforward merge
+hg branch ff
+echo ff > ff
+hg ci -Am'fast forward' -d '1000000 0'
+hg up foo
+hg merge ff
+hg branch
+hg commit -m'Merge ff into foo' -d '1000000 0'
+hg parents
+hg manifest
+
 exit 0
