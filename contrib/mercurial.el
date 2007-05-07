@@ -43,22 +43,28 @@
 
 ;;; Code:
 
-(require 'advice)
-(require 'cl)
+(eval-when-compile (require 'cl))
 (require 'diff-mode)
 (require 'easymenu)
 (require 'executable)
 (require 'vc)
 
+(defmacro hg-feature-cond (&rest clauses)
+  "Test CLAUSES for feature at compile time.
+Each clause is (FEATURE BODY...)."
+  (dolist (x clauses)
+    (let ((feature (car x))
+	  (body (cdr x)))
+      (when (or (eq feature t)
+		(featurep feature))
+	(return (cons 'progn body))))))
+
 
 ;;; XEmacs has view-less, while GNU Emacs has view.  Joy.
 
-(condition-case nil
-    (require 'view-less)
-  (error nil))
-(condition-case nil
-    (require 'view)
-  (error nil))
+(hg-feature-cond
+ (xemacs (require 'view-less))
+ (t (require 'view)))
 
 
 ;;; Variables accessible through the custom system.
@@ -147,9 +153,6 @@ repository-related commands."
 
 ;;; Other variables.
 
-(defconst hg-running-xemacs (string-match "XEmacs" emacs-version)
-  "Is mercurial.el running under XEmacs?")
-
 (defvar hg-mode nil
   "Is this file managed by Mercurial?")
 (make-variable-buffer-local 'hg-mode)
@@ -167,12 +170,21 @@ repository-related commands."
 (make-variable-buffer-local 'hg-root)
 (put 'hg-root 'permanent-local t)
 
+(defvar hg-view-mode nil)
+(make-variable-buffer-local 'hg-view-mode)
+(put 'hg-view-mode 'permanent-local t)
+
+(defvar hg-view-file-name nil)
+(make-variable-buffer-local 'hg-view-file-name)
+(put 'hg-view-file-name 'permanent-local t)
+
 (defvar hg-output-buffer-name "*Hg*"
   "The name to use for Mercurial output buffers.")
 
 (defvar hg-file-history nil)
 (defvar hg-repo-history nil)
 (defvar hg-rev-history nil)
+(defvar hg-repo-completion-table nil)	; shut up warnings
 
 
 ;;; Random constants.
@@ -183,85 +195,96 @@ repository-related commands."
 (defconst hg-commit-message-end
   "--- Files in bold will be committed.  Click to toggle selection. ---\n")
 
+(defconst hg-state-alist
+  '((?M . modified)
+    (?A . added)
+    (?R . removed)
+    (?! . deleted)
+    (?C . normal)
+    (?I . ignored)
+    (?? . nil)))
 
 ;;; hg-mode keymap.
 
-(defvar hg-mode-map (make-sparse-keymap))
-(define-key hg-mode-map "\C-xv" 'hg-prefix-map)
-
 (defvar hg-prefix-map
-  (let ((map (copy-keymap vc-prefix-map)))
-    (if (functionp 'set-keymap-name)
-      (set-keymap-name map 'hg-prefix-map)); XEmacs
+  (let ((map (make-sparse-keymap)))
+    (hg-feature-cond (xemacs (set-keymap-name map 'hg-prefix-map))) ; XEmacs
+    (set-keymap-parent map vc-prefix-map)
+    (define-key map "=" 'hg-diff)
+    (define-key map "c" 'hg-undo)
+    (define-key map "g" 'hg-annotate)
+    (define-key map "i" 'hg-add)
+    (define-key map "l" 'hg-log)
+    (define-key map "n" 'hg-commit-start)
+    ;; (define-key map "r" 'hg-update)
+    (define-key map "u" 'hg-revert-buffer)
+    (define-key map "~" 'hg-version-other-window)
     map)
   "This keymap overrides some default vc-mode bindings.")
-(fset 'hg-prefix-map hg-prefix-map)
-(define-key hg-prefix-map "=" 'hg-diff)
-(define-key hg-prefix-map "c" 'hg-undo)
-(define-key hg-prefix-map "g" 'hg-annotate)
-(define-key hg-prefix-map "l" 'hg-log)
-(define-key hg-prefix-map "n" 'hg-commit-start)
-;; (define-key hg-prefix-map "r" 'hg-update)
-(define-key hg-prefix-map "u" 'hg-revert-buffer)
-(define-key hg-prefix-map "~" 'hg-version-other-window)
+
+(defvar hg-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-xv" hg-prefix-map)
+    map))
 
 (add-minor-mode 'hg-mode 'hg-mode hg-mode-map)
 
 
 ;;; Global keymap.
 
-(global-set-key "\C-xvi" 'hg-add)
+(defvar hg-global-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "," 'hg-incoming)
+    (define-key map "." 'hg-outgoing)
+    (define-key map "<" 'hg-pull)
+    (define-key map "=" 'hg-diff-repo)
+    (define-key map ">" 'hg-push)
+    (define-key map "?" 'hg-help-overview)
+    (define-key map "A" 'hg-addremove)
+    (define-key map "U" 'hg-revert)
+    (define-key map "a" 'hg-add)
+    (define-key map "c" 'hg-commit-start)
+    (define-key map "f" 'hg-forget)
+    (define-key map "h" 'hg-help-overview)
+    (define-key map "i" 'hg-init)
+    (define-key map "l" 'hg-log-repo)
+    (define-key map "r" 'hg-root)
+    (define-key map "s" 'hg-status)
+    (define-key map "u" 'hg-update)
+    map))
 
-(defvar hg-global-map (make-sparse-keymap))
-(fset 'hg-global-map hg-global-map)
-(global-set-key hg-global-prefix 'hg-global-map)
-(define-key hg-global-map "," 'hg-incoming)
-(define-key hg-global-map "." 'hg-outgoing)
-(define-key hg-global-map "<" 'hg-pull)
-(define-key hg-global-map "=" 'hg-diff-repo)
-(define-key hg-global-map ">" 'hg-push)
-(define-key hg-global-map "?" 'hg-help-overview)
-(define-key hg-global-map "A" 'hg-addremove)
-(define-key hg-global-map "U" 'hg-revert)
-(define-key hg-global-map "a" 'hg-add)
-(define-key hg-global-map "c" 'hg-commit-start)
-(define-key hg-global-map "f" 'hg-forget)
-(define-key hg-global-map "h" 'hg-help-overview)
-(define-key hg-global-map "i" 'hg-init)
-(define-key hg-global-map "l" 'hg-log-repo)
-(define-key hg-global-map "r" 'hg-root)
-(define-key hg-global-map "s" 'hg-status)
-(define-key hg-global-map "u" 'hg-update)
-
+(global-set-key hg-global-prefix hg-global-map)
 
 ;;; View mode keymap.
 
 (defvar hg-view-mode-map
-  (let ((map (copy-keymap (if (boundp 'view-minor-mode-map)
-			      view-minor-mode-map
-			    view-mode-map))))
-    (if (functionp 'set-keymap-name)
-      (set-keymap-name map 'hg-view-mode-map)); XEmacs
+  (let ((map (make-sparse-keymap)))
+    (hg-feature-cond (xemacs (set-keymap-name map 'hg-view-mode-map))) ; XEmacs
+    (define-key map (hg-feature-cond (xemacs [button2])
+				     (t [mouse-2]))
+      'hg-buffer-mouse-clicked)
     map))
-(fset 'hg-view-mode-map hg-view-mode-map)
-(define-key hg-view-mode-map
-  (if hg-running-xemacs [button2] [mouse-2])
-  'hg-buffer-mouse-clicked)
+
+(add-minor-mode 'hg-view-mode "" hg-view-mode-map)
 
 
 ;;; Commit mode keymaps.
 
-(defvar hg-commit-mode-map (make-sparse-keymap))
-(define-key hg-commit-mode-map "\C-c\C-c" 'hg-commit-finish)
-(define-key hg-commit-mode-map "\C-c\C-k" 'hg-commit-kill)
-(define-key hg-commit-mode-map "\C-xv=" 'hg-diff-repo)
+(defvar hg-commit-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-c" 'hg-commit-finish)
+    (define-key map "\C-c\C-k" 'hg-commit-kill)
+    (define-key map "\C-xv=" 'hg-diff-repo)
+    map))
 
-(defvar hg-commit-mode-file-map (make-sparse-keymap))
-(define-key hg-commit-mode-file-map
-  (if hg-running-xemacs [button2] [mouse-2])
-  'hg-commit-mouse-clicked)
-(define-key hg-commit-mode-file-map " " 'hg-commit-toggle-file)
-(define-key hg-commit-mode-file-map "\r" 'hg-commit-toggle-file)
+(defvar hg-commit-mode-file-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (hg-feature-cond (xemacs [button2])
+				     (t [mouse-2]))
+      'hg-commit-mouse-clicked)
+    (define-key map " " 'hg-commit-toggle-file)
+    (define-key map "\r" 'hg-commit-toggle-file)
+    map))
 
 
 ;;; Convenience functions.
@@ -278,9 +301,9 @@ replacement.
 
 This function bridges yet another pointless impedance gap between
 XEmacs and GNU Emacs."
-  (if (fboundp 'replace-in-string)
-      (replace-in-string str regexp newtext literal)
-    (replace-regexp-in-string regexp newtext str nil literal)))
+  (hg-feature-cond
+   (xemacs (replace-in-string str regexp newtext literal))
+   (t (replace-regexp-in-string regexp newtext str nil literal))))
 
 (defsubst hg-strip (str)
   "Strip leading and trailing blank lines from a string."
@@ -318,8 +341,8 @@ If the command does not exit with a zero status code, raise an error."
       (cdr res))))
 
 (defmacro hg-do-across-repo (path &rest body)
-  (let ((root-name (gensym "root-"))
-	(buf-name (gensym "buf-")))
+  (let ((root-name (make-symbol "root-"))
+	(buf-name (make-symbol "buf-")))
     `(let ((,root-name (hg-root ,path)))
        (save-excursion
 	 (dolist (,buf-name (buffer-list))
@@ -344,29 +367,23 @@ all buffers visiting files in the repository."
   "Use the properties of a character to do something sensible."
   (interactive "d")
   (let ((rev (get-char-property pnt 'rev))
-	(file (get-char-property pnt 'file))
-	(date (get-char-property pnt 'date))
-	(user (get-char-property pnt 'user))
-	(host (get-char-property pnt 'host))
-	(prev-buf (current-buffer)))
+	(file (get-char-property pnt 'file)))
     (cond
      (file
       (find-file-other-window file))
      (rev
-      (hg-diff hg-view-file-name rev rev prev-buf))
+      (hg-diff hg-view-file-name rev rev))
      ((message "I don't know how to do that yet")))))
 
 (defsubst hg-event-point (event)
   "Return the character position of the mouse event EVENT."
-  (if hg-running-xemacs
-      (event-point event)
-    (posn-point (event-start event))))
+  (hg-feature-cond (xemacs (event-point event))
+		   (t (posn-point (event-start event)))))
 
 (defsubst hg-event-window (event)
   "Return the window over which mouse event EVENT occurred."
-  (if hg-running-xemacs
-      (event-window event)
-    (posn-window (event-start event))))
+  (hg-feature-cond (xemacs (event-window event))
+		   (t (posn-window (event-start event)))))
 
 (defun hg-buffer-mouse-clicked (event)
   "Translate the mouse clicks in a HG log buffer to character events.
@@ -377,15 +394,10 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
   (select-window (hg-event-window event))
   (hg-buffer-commands (hg-event-point event)))
 
-(unless (fboundp 'view-minor-mode)
-  (defun view-minor-mode (prev-buffer exit-func)
-    (view-mode)))
-
 (defsubst hg-abbrev-file-name (file)
   "Portable wrapper around abbreviate-file-name."
-  (if hg-running-xemacs
-      (abbreviate-file-name file t)
-    (abbreviate-file-name file)))
+  (hg-feature-cond (xemacs (abbreviate-file-name file t))
+		   (t (abbreviate-file-name file))))
 
 (defun hg-read-file-name (&optional prompt default)
   "Read a file or directory name, or a pattern, to use with a command."
@@ -403,9 +415,9 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
                         (and path (file-name-directory path))
                         nil nil
                         (and path (file-name-nondirectory path))
-                        (if hg-running-xemacs
-                            (cons (quote 'hg-file-history) nil)
-                          nil))))
+                        (hg-feature-cond
+			 (xemacs (cons (quote 'hg-file-history) nil))
+			 (t nil)))))
         path))))
 
 (defun hg-read-number (&optional prompt default)
@@ -477,7 +489,10 @@ directory names from the file system.  We do not penalise URLs."
 	    (dolist (path (hg-config-section "paths" (hg-read-config)))
 	      (setq hg-repo-completion-table
 		    (cons (cons (car path) t) hg-repo-completion-table))
-	      (unless (hg-string-starts-with directory-sep-char (cdr path))
+	      (unless (hg-string-starts-with (hg-feature-cond
+					      (xemacs directory-sep-char)
+					      (t ?/))
+					     (cdr path))
 		(setq hg-repo-completion-table
 		      (cons (cons (cdr path) t) hg-repo-completion-table))))
 	    (completing-read (format "Repository%s: " (or prompt ""))
@@ -498,8 +513,8 @@ directory names from the file system.  We do not penalise URLs."
       (if current-prefix-arg
 	  (let ((revs (split-string
 		       (hg-chomp
-			(hg-run0 "-q" "log" "-r"
-				 (format "-%d:tip" hg-rev-completion-limit)))
+			(hg-run0 "-q" "log" "-l"
+				 (format "%d" hg-rev-completion-limit)))
 		       "[\n:]")))
 	    (dolist (line (split-string (hg-chomp (hg-run0 "tags")) "\n"))
 	      (setq revs (cons (car (split-string line "\\s-")) revs)))
@@ -568,12 +583,13 @@ current frame."
   (goto-char (point-min))
   (set-buffer-modified-p nil)
   (toggle-read-only t)
-  (view-minor-mode prev-buffer 'hg-exit-view-mode)
-  (use-local-map hg-view-mode-map)
+  (hg-feature-cond (xemacs (view-minor-mode prev-buffer 'hg-exit-view-mode))
+		   (t (view-mode-enter nil 'hg-exit-view-mode)))
+  (setq hg-view-mode t)
   (setq truncate-lines t)
   (when file-name
-    (set (make-local-variable 'hg-view-file-name)
-	 (hg-abbrev-file-name file-name))))
+    (setq hg-view-file-name 
+	  (hg-abbrev-file-name file-name))))
 
 (defun hg-file-status (file)
   "Return status of FILE, or nil if FILE does not exist or is unmanaged."
@@ -581,12 +597,9 @@ current frame."
 	 (exit (car s))
 	 (output (cdr s)))
     (if (= exit 0)
-	(let ((state (assoc (substring output 0 (min (length output) 2))
-			    '(("M " . modified)
-			      ("A " . added)
-			      ("R " . removed)
-			      ("! " . deleted)
-			      ("? " . nil)))))
+	(let ((state (and (>= (length output) 2)
+			  (= (aref output 1) ? )
+			  (assq (aref output 0) hg-state-alist))))
 	  (if state
 	      (cdr state)
 	    'normal)))))
@@ -598,17 +611,11 @@ Each entry is a pair (FILE-NAME . STATUS)."
 	result)
     (dolist (entry (split-string (hg-chomp (cdr s)) "\n") (nreverse result))
       (let (state name)
-	(if (equal (substring entry 1 2) " ")
-	    (setq state (cdr (assoc (substring entry 0 2)
-				    '(("M " . modified)
-				      ("A " . added)
-				      ("R " . removed)
-				      ("! " . deleted)
-				      ("C " . normal)
-				      ("I " . ignored)
-				      ("? " . nil))))
-		  name (substring entry 2))
-	  (setq name (substring entry 0 (search ": " entry :from-end t))))
+	(cond ((= (aref entry 1) ? )
+	       (setq state (assq (aref entry 0) hg-state-alist)
+		     name (substring entry 2)))
+	      ((string-match "\\(.*\\): " entry)
+	       (setq name (match-string 1 entry))))
 	(setq result (cons (cons name state) result))))))
 
 (defmacro hg-view-output (args &rest body)
@@ -618,7 +625,7 @@ minibuffer.  Otherwise, the buffer is displayed in view-mode.
 ARGS is of the form (BUFFER-NAME &optional FILE), where BUFFER-NAME is
 the name of the buffer to create, and FILE is the name of the file
 being viewed."
-  (let ((prev-buf (gensym "prev-buf-"))
+  (let ((prev-buf (make-symbol "prev-buf-"))
 	(v-b-name (car args))
 	(v-m-rest (cdr args)))
     `(let ((view-buf-name ,v-b-name)
