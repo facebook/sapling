@@ -717,8 +717,8 @@ you're already familiar with VC, the same keybindings and functions
 will generally work.
 
 Below is a list of many common SCM tasks.  In the list, `G/L\'
-indicates whether a key binding is global (G) to a repository or local
-(L) to a file.  Many commands take a prefix argument.
+indicates whether a key binding is global (G) to a repository or
+local (L) to a file.  Many commands take a prefix argument.
 
 SCM Task                              G/L  Key Binding  Command Name
 --------                              ---  -----------  ------------
