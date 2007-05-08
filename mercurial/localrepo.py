@@ -401,6 +401,10 @@ class localrepository(repo.repository):
             f = self.opener("branch.cache")
             lines = f.read().split('\n')
             f.close()
+        except (IOError, OSError):
+            return {}, nullid, nullrev
+
+        try:
             last, lrev = lines.pop(0).split(" ", 1)
             last, lrev = bin(last), int(lrev)
             if not (lrev < self.changelog.count() and
@@ -426,7 +430,7 @@ class localrepository(repo.repository):
             for label, node in branches.iteritems():
                 f.write("%s %s\n" % (hex(node), label))
             f.rename()
-        except IOError:
+        except (IOError, OSError):
             pass
 
     def _updatebranchcache(self, partial, start, end):
