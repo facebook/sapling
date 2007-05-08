@@ -64,6 +64,7 @@
 (define-key mq-global-map "<" 'mq-pop-all)
 (define-key mq-global-map "r" 'mq-refresh)
 (define-key mq-global-map "e" 'mq-refresh-edit)
+(define-key mq-global-map "i" 'mq-new)
 (define-key mq-global-map "n" 'mq-next)
 (define-key mq-global-map "p" 'mq-previous)
 (define-key mq-global-map "t" 'mq-top)
@@ -80,12 +81,12 @@
 
 ;;; Helper functions.
 
-(defun mq-read-patch-name (&optional source prompt)
+(defun mq-read-patch-name (&optional source prompt force)
   "Read a patch name to use with a command.
 May return nil, meaning \"use the default\"."
   (let ((patches (split-string
 		  (hg-chomp (hg-run0 (or source "qseries"))) "\n")))
-    (when current-prefix-arg
+    (when force
       (completing-read (format "Patch%s: " (or prompt ""))
 		       (map 'list 'cons patches patches)
 		       nil
@@ -120,7 +121,8 @@ May return nil, meaning \"use the default\"."
 (defun mq-push (&optional patch)
   "Push patches until PATCH is reached.
 If PATCH is nil, push at most one patch."
-  (interactive (list (mq-read-patch-name "qunapplied" " to push")))
+  (interactive (list (mq-read-patch-name "qunapplied" " to push"
+					 current-prefix-arg)))
   (let ((root (hg-root))
 	(prev-buf (current-buffer))
 	last-line ok)
@@ -158,7 +160,8 @@ If PATCH is nil, push at most one patch."
 (defun mq-pop (&optional patch)
   "Pop patches until PATCH is reached.
 If PATCH is nil, pop at most one patch."
-  (interactive (list (mq-read-patch-name "qapplied" " to pop to")))
+  (interactive (list (mq-read-patch-name "qapplied" " to pop to"
+					 current-prefix-arg)))
   (let ((root (hg-root))
 	last-line ok)
     (unless root
@@ -317,6 +320,22 @@ Key bindings
       (mq-edit-mode)
       (cd root)))
   (message "Type `C-c C-c' to finish editing and refresh the patch."))
+
+(defun mq-new (name)
+  "Create a new empty patch named NAME.
+The patch is applied on top of the current topmost patch.
+With a prefix argument, forcibly create the patch even if the working
+directory is modified."
+  (interactive (list (mq-read-patch-name "qseries" " to create" t)))
+  (message "Creating patch...")
+  (let ((ret (if current-prefix-arg
+		 (hg-run "qnew" "-f" name)
+	       (hg-run "qnew" name))))
+    (if (equal (car ret) 0)
+	(progn
+	  (hg-update-mode-lines (buffer-file-name))
+	  (message "Creating patch... done."))
+      (error "Creating patch... %s" (hg-chomp (cdr ret))))))
 
 
 (provide 'mq)
