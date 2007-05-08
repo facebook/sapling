@@ -8,7 +8,7 @@
 from node import *
 from i18n import gettext as _
 from demandload import *
-demandload(globals(), "errno util os tempfile")
+demandload(globals(), "errno util os tempfile context")
 
 def filemerge(repo, fw, fo, wctx, mctx):
     """perform a 3-way merge in the working directory
@@ -123,6 +123,14 @@ def findcopies(repo, m1, m2, ma, limit):
                 f = dirname(f)
         return d
 
+    wctx = repo.workingctx()
+
+    def makectx(f, n):
+        if len(n) == 20:
+            return repo.filectx(f, fileid=n)
+        return wctx.filectx(f)
+    ctx = util.cachefunc(makectx)
+
     def findold(fctx):
         "find files that path was copied from, back to linkrev limit"
         old = {}
@@ -160,7 +168,7 @@ def findcopies(repo, m1, m2, ma, limit):
             # named changed on only one side?
             if ca.path() == c.path() or ca.path() == c2.path():
                 fullcopy[c.path()] = of # remember for dir rename detection
-                if c == c2: # no merge needed, ignore copy
+                if c == ca or c2 == ca: # no merge needed, ignore copy
                     continue
                 copy[c.path()] = of
 
@@ -171,13 +179,11 @@ def findcopies(repo, m1, m2, ma, limit):
     if not m1 or not m2 or not ma:
         return {}
 
-    dcopies = repo.dirstate.copies()
     u1 = nonoverlap(m1, m2, ma)
     u2 = nonoverlap(m2, m1, ma)
-    ctx = util.cachefunc(lambda f, n: repo.filectx(f, fileid=n[:20]))
 
     for f in u1:
-        checkcopies(ctx(dcopies.get(f, f), m1[f]), m2)
+        checkcopies(ctx(f, m1[f]), m2)
 
     for f in u2:
         checkcopies(ctx(f, m2[f]), m1)
