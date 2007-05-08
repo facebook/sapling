@@ -41,6 +41,11 @@
   :type 'sexp
   :group 'mercurial)
 
+(defcustom mq-signoff-address nil
+  "Address with which to sign off on a patch."
+  :type 'string
+  :group 'mercurial)
+
 
 ;;; Internal variables.
 
@@ -72,6 +77,7 @@
 (define-key mq-global-map "e" 'mq-refresh-edit)
 (define-key mq-global-map "i" 'mq-new)
 (define-key mq-global-map "n" 'mq-next)
+(define-key mq-global-map "o" 'mq-signoff)
 (define-key mq-global-map "p" 'mq-previous)
 (define-key mq-global-map "s" 'mq-edit-series)
 (define-key mq-global-map "t" 'mq-top)
@@ -84,6 +90,7 @@
 (defvar mq-edit-mode-map (make-sparse-keymap))
 (define-key mq-edit-mode-map "\C-c\C-c" 'mq-edit-finish)
 (define-key mq-edit-mode-map "\C-c\C-k" 'mq-edit-kill)
+(define-key mq-edit-mode-map "\C-c\C-s" 'mq-signoff)
 
 
 ;;; Helper functions.
@@ -365,6 +372,34 @@ With a prefix argument, display a git-compatible diff."
     (call-process (hg-binary) nil t nil "qdiff"))
     (diff-mode)
     (font-lock-fontify-buffer)))
+
+(defun mq-signoff ()
+  "Sign off on the current patch, in the style used by the Linux kernel.
+If the variable mq-signoff-address is non-nil, it will be used, otherwise
+the value of the ui.username item from your hgrc will be used."
+  (interactive)
+  (let ((was-editing (eq major-mode 'mq-edit-mode))
+	signed)
+    (unless was-editing
+      (mq-refresh-edit))
+    (save-excursion
+      (let* ((user (or mq-signoff-address
+		       (hg-run0 "debugconfig" "ui.username")))
+	     (signoff (concat "Signed-off-by: " user)))
+	(if (search-forward signoff nil t)
+	    (message "You have already signed off on this patch.")
+	  (goto-char (point-max))
+	  (let ((case-fold-search t))
+	    (if (re-search-backward "^Signed-off-by: " nil t)
+		(forward-line 1)
+	      (insert "\n")))
+	  (insert signoff)
+	  (message "%s" signoff)
+	  (setq signed t))))
+    (unless was-editing
+      (if signed
+	  (mq-edit-finish)
+	(mq-edit-kill)))))
 
 
 (provide 'mq)
