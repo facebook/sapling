@@ -62,6 +62,7 @@
 (define-key mq-global-map ">" 'mq-push-all)
 (define-key mq-global-map "," 'mq-pop)
 (define-key mq-global-map "<" 'mq-pop-all)
+(define-key mq-global-map "=" 'mq-diff)
 (define-key mq-global-map "r" 'mq-refresh)
 (define-key mq-global-map "e" 'mq-refresh-edit)
 (define-key mq-global-map "i" 'mq-new)
@@ -345,6 +346,14 @@ directory is modified."
     (unless root
       (error "Not in an MQ repository!"))
     (find-file (concat root ".hg/patches/series"))))
+
+(defun mq-diff ()
+  "Display a diff of the topmost applied patch."
+  (interactive)
+  (hg-view-output ((format "MQ: Diff of %s" (mq-patch-info "qtop")))
+    (call-process (hg-binary) nil t nil "qdiff")
+    (diff-mode)
+    (font-lock-fontify-buffer)))
 
 
 (provide 'mq)
