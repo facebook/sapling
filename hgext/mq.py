@@ -421,7 +421,27 @@ class queue:
         return (True, files, fuzz)
 
     def apply(self, repo, series, list=False, update_status=True,
-              strict=False, patchdir=None, merge=None, wlock=None):
+              strict=False, patchdir=None, merge=None, wlock=None,
+              all_files={}):
+        tr = repo.transaction()
+        try:
+            ret = self._apply(tr, repo, series, list, update_status,
+                              strict, patchdir, merge, wlock,
+                              all_files=all_files)
+            tr.close()
+            self.save_dirty()
+            return ret
+        except:
+            try:
+                tr.abort()
+            finally:
+                repo.reload()
+                repo.wreload()
+            raise
+
+    def _apply(self, tr, repo, series, list=False, update_status=True,
+               strict=False, patchdir=None, merge=None, wlock=None,
+               all_files={}):
         # TODO unify with commands.py
         if not patchdir:
             patchdir = self.path
@@ -429,7 +449,6 @@ class queue:
         if not wlock:
             wlock = repo.wlock()
         lock = repo.lock()
-        tr = repo.transaction()
         n = None
         for patchname in series:
             pushable, reason = self.pushable(patchname)
@@ -454,6 +473,7 @@ class queue:
                 message = '\n'.join(message)
 
             (patcherr, files, fuzz) = self.patch(repo, pf)
+            all_files.update(files)
             patcherr = not patcherr
 
             if merge and files:
@@ -492,7 +512,6 @@ class queue:
                 self.ui.warn("fuzz found when applying patch, stopping\n")
                 err = 1
                 break
-        tr.close()
         return (err, n)
 
     def delete(self, repo, patches, opts):
@@ -827,10 +846,25 @@ class queue:
         else:
             end = self.series.index(patch, start) + 1
         s = self.series[start:end]
-        if mergeq:
-            ret = self.mergepatch(repo, mergeq, s, wlock)
-        else:
-            ret = self.apply(repo, s, list, wlock=wlock)
+        all_files = {}
+        try:
+            if mergeq:
+                ret = self.mergepatch(repo, mergeq, s, wlock)
+            else:
+                ret = self.apply(repo, s, list, wlock=wlock,
+                                 all_files=all_files)
+        except:
+            self.ui.warn(_('cleaning up working directory...'))
+            node = repo.dirstate.parents()[0]
+            hg.revert(repo, node, None, wlock)
+            unknown = repo.status(wlock=wlock)[4]
+            # only remove unknown files that we know we touched or
+            # created while patching
+            for f in unknown:
+                if f in all_files:
+                    util.unlink(repo.wjoin(f))
+            self.ui.warn(_('done\n'))
+            raise
         top = self.applied[-1].name
         if ret[0]:
             self.ui.write("Errors during apply, please fix and refresh %s\n" %
@@ -1791,7 +1825,6 @@ def push(ui, repo, patch=None, **opts):
         ui.warn("merging with queue at: %s\n" % mergeq.path)
     ret = q.push(repo, patch, force=opts['force'], list=opts['list'],
                  mergeq=mergeq)
-    q.save_dirty()
     return ret
 
 def pop(ui, repo, patch=None, **opts):
