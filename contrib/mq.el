@@ -147,7 +147,8 @@ If PATCH is nil, push at most one patch."
 			   (if patch (list patch))))
 	    last-line (mq-last-line))
       (let ((lines (count-lines (point-min) (point-max))))
-	(if (and (equal lines 2) (string-match "Now at:" last-line))
+	(if (or (<= lines 1)
+		(and (equal lines 2) (string-match "Now at:" last-line)))
 	    (progn
 	      (kill-buffer (current-buffer))
 	      (delete-window))
