@@ -67,6 +67,7 @@
 (define-key mq-global-map "i" 'mq-new)
 (define-key mq-global-map "n" 'mq-next)
 (define-key mq-global-map "p" 'mq-previous)
+(define-key mq-global-map "s" 'mq-edit-series)
 (define-key mq-global-map "t" 'mq-top)
 
 (add-minor-mode 'mq-mode 'mq-mode)
@@ -336,6 +337,14 @@ directory is modified."
 	  (hg-update-mode-lines (buffer-file-name))
 	  (message "Creating patch... done."))
       (error "Creating patch... %s" (hg-chomp (cdr ret))))))
+
+(defun mq-edit-series ()
+  "Edit the MQ series file directly."
+  (interactive)
+  (let ((root (hg-root)))
+    (unless root
+      (error "Not in an MQ repository!"))
+    (find-file (concat root ".hg/patches/series"))))
 
 
 (provide 'mq)
