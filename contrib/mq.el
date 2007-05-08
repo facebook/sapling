@@ -197,13 +197,14 @@ If PATCH is nil, pop at most one patch."
 	  (message "Refreshing %s... done." patch)
 	(error "Refreshing %s... %s" patch (hg-chomp (cdr ret)))))))
 
-(defun mq-refresh ()
-  "Refresh the topmost applied patch."
-  (interactive)
+(defun mq-refresh (&optional git)
+  "Refresh the topmost applied patch.
+With a prefix argument, generate a git-compatible patch."
+  (interactive "P")
   (let ((root (hg-root)))
     (unless root
       (error "Cannot refresh outside of a repository!"))
-  (mq-refresh-internal root)))
+    (apply 'mq-refresh-internal root (if git '("--git")))))
 
 (defun mq-patch-info (cmd &optional msg)
   (let* ((ret (hg-run cmd))
