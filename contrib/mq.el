@@ -36,6 +36,11 @@
   :type 'sexp
   :group 'mercurial)
 
+(defcustom mq-edit-finish-hook nil
+  "Hook run before a patch description is finished up with."
+  :type 'sexp
+  :group 'mercurial)
+
 
 ;;; Internal variables.
 
@@ -237,6 +242,7 @@ This would become the active patch if popped to."
   (unless (equal (mq-patch-info "qtop") mq-top)
     (error "Topmost patch has changed!"))
   (hg-sync-buffers hg-root)
+  (run-hooks 'mq-edit-finish-hook)
   (mq-refresh-internal hg-root "-m" (buffer-substring (point-min) (point-max)))
   (let ((buf mq-prev-buffer))
     (kill-buffer nil)
