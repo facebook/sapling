@@ -347,11 +347,14 @@ directory is modified."
       (error "Not in an MQ repository!"))
     (find-file (concat root ".hg/patches/series"))))
 
-(defun mq-diff ()
-  "Display a diff of the topmost applied patch."
-  (interactive)
+(defun mq-diff (&optional git)
+  "Display a diff of the topmost applied patch.
+With a prefix argument, display a git-compatible diff."
+  (interactive "P")
   (hg-view-output ((format "MQ: Diff of %s" (mq-patch-info "qtop")))
-    (call-process (hg-binary) nil t nil "qdiff")
+    (if git
+	(call-process (hg-binary) nil t nil "qdiff" "--git")
+    (call-process (hg-binary) nil t nil "qdiff"))
     (diff-mode)
     (font-lock-fontify-buffer)))
 
