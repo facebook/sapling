@@ -446,7 +446,7 @@ class workingfilectx(filectx):
 
     def __getattr__(self, name):
         if name == '_changectx':
-            self._changectx = workingctx(repo)
+            self._changectx = workingctx(self._repo)
             return self._changectx
         elif name == '_repopath':
             self._repopath = (self._repo.dirstate.copied(self._path)
