@@ -251,6 +251,33 @@ enum cmdline {
 
     
 /*
+ * attempt to verify that a directory is really a hg repo, by testing
+ * for the existence of a subdirectory.
+ */
+static int validate_repo(const char *repo_root, const char *subdir)
+{
+    char *abs_path;
+    struct stat st;
+    int ret;
+
+    if (asprintf(&abs_path, "%s.hg/%s", repo_root, subdir) == -1) {
+	ret = -1;
+	goto bail;
+    }
+
+    /* verify that we really are looking at valid repo. */
+
+    if (stat(abs_path, &st) == -1) {
+	ret = 0;
+    } else {
+	ret = 1;
+    }
+
+bail:
+    return ret;
+}
+
+/*
  * paranoid wrapper, runs hg executable in server mode.
  */
 static void serve_data(int argc, char **argv)
@@ -259,7 +286,6 @@ static void serve_data(int argc, char **argv)
     char *repo, *repo_root;
     enum cmdline cmd;
     char *nargv[6];
-    struct stat st;
     size_t repolen;
     int i;
 
@@ -315,15 +341,23 @@ static void serve_data(int argc, char **argv)
 	/* only hg init expects no repo. */
 
 	if (cmd != hg_init) {
-	    char *abs_path;
+	    int valid;
 	    
-	    if (asprintf(&abs_path, "%s.hg/data", repo_root) == -1) {
+	    valid = validate_repo(repo_root, "data");
+
+	    if (valid == -1) {
 		goto badargs;
 	    }
+	    
+	    if (valid == 0) {
+		valid = validate_repo(repo_root, "store");
 
-	    /* verify that we really are looking at valid repo. */
-
-	    if (stat(abs_path, &st) == -1) {
+		if (valid == -1) {
+		    goto badargs;
+		}
+	    }
+	    
+	    if (valid == 0) {
 		perror(repo);
 		exit(EX_DATAERR);
 	    }

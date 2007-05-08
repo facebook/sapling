@@ -36,6 +36,16 @@
   :type 'sexp
   :group 'mercurial)
 
+(defcustom mq-edit-finish-hook nil
+  "Hook run before a patch description is finished up with."
+  :type 'sexp
+  :group 'mercurial)
+
+(defcustom mq-signoff-address nil
+  "Address with which to sign off on a patch."
+  :type 'string
+  :group 'mercurial)
+
 
 ;;; Internal variables.
 
@@ -62,10 +72,14 @@
 (define-key mq-global-map ">" 'mq-push-all)
 (define-key mq-global-map "," 'mq-pop)
 (define-key mq-global-map "<" 'mq-pop-all)
+(define-key mq-global-map "=" 'mq-diff)
 (define-key mq-global-map "r" 'mq-refresh)
 (define-key mq-global-map "e" 'mq-refresh-edit)
+(define-key mq-global-map "i" 'mq-new)
 (define-key mq-global-map "n" 'mq-next)
+(define-key mq-global-map "o" 'mq-signoff)
 (define-key mq-global-map "p" 'mq-previous)
+(define-key mq-global-map "s" 'mq-edit-series)
 (define-key mq-global-map "t" 'mq-top)
 
 (add-minor-mode 'mq-mode 'mq-mode)
@@ -76,16 +90,17 @@
 (defvar mq-edit-mode-map (make-sparse-keymap))
 (define-key mq-edit-mode-map "\C-c\C-c" 'mq-edit-finish)
 (define-key mq-edit-mode-map "\C-c\C-k" 'mq-edit-kill)
+(define-key mq-edit-mode-map "\C-c\C-s" 'mq-signoff)
 
 
 ;;; Helper functions.
 
-(defun mq-read-patch-name (&optional source prompt)
+(defun mq-read-patch-name (&optional source prompt force)
   "Read a patch name to use with a command.
 May return nil, meaning \"use the default\"."
   (let ((patches (split-string
 		  (hg-chomp (hg-run0 (or source "qseries"))) "\n")))
-    (when current-prefix-arg
+    (when force
       (completing-read (format "Patch%s: " (or prompt ""))
 		       (map 'list 'cons patches patches)
 		       nil
@@ -120,7 +135,8 @@ May return nil, meaning \"use the default\"."
 (defun mq-push (&optional patch)
   "Push patches until PATCH is reached.
 If PATCH is nil, push at most one patch."
-  (interactive (list (mq-read-patch-name "qunapplied" " to push")))
+  (interactive (list (mq-read-patch-name "qunapplied" " to push"
+					 current-prefix-arg)))
   (let ((root (hg-root))
 	(prev-buf (current-buffer))
 	last-line ok)
@@ -138,7 +154,8 @@ If PATCH is nil, push at most one patch."
 			   (if patch (list patch))))
 	    last-line (mq-last-line))
       (let ((lines (count-lines (point-min) (point-max))))
-	(if (and (equal lines 2) (string-match "Now at:" last-line))
+	(if (or (<= lines 1)
+		(and (equal lines 2) (string-match "Now at:" last-line)))
 	    (progn
 	      (kill-buffer (current-buffer))
 	      (delete-window))
@@ -158,7 +175,8 @@ If PATCH is nil, push at most one patch."
 (defun mq-pop (&optional patch)
   "Pop patches until PATCH is reached.
 If PATCH is nil, pop at most one patch."
-  (interactive (list (mq-read-patch-name "qapplied" " to pop to")))
+  (interactive (list (mq-read-patch-name "qapplied" " to pop to"
+					 current-prefix-arg)))
   (let ((root (hg-root))
 	last-line ok)
     (unless root
@@ -192,13 +210,14 @@ If PATCH is nil, pop at most one patch."
 	  (message "Refreshing %s... done." patch)
 	(error "Refreshing %s... %s" patch (hg-chomp (cdr ret)))))))
 
-(defun mq-refresh ()
-  "Refresh the topmost applied patch."
-  (interactive)
+(defun mq-refresh (&optional git)
+  "Refresh the topmost applied patch.
+With a prefix argument, generate a git-compatible patch."
+  (interactive "P")
   (let ((root (hg-root)))
     (unless root
       (error "Cannot refresh outside of a repository!"))
-  (mq-refresh-internal root)))
+    (apply 'mq-refresh-internal root (if git '("--git")))))
 
 (defun mq-patch-info (cmd &optional msg)
   (let* ((ret (hg-run cmd))
@@ -231,6 +250,7 @@ This would become the active patch if popped to."
   (unless (equal (mq-patch-info "qtop") mq-top)
     (error "Topmost patch has changed!"))
   (hg-sync-buffers hg-root)
+  (run-hooks 'mq-edit-finish-hook)
   (mq-refresh-internal hg-root "-m" (buffer-substring (point-min) (point-max)))
   (let ((buf mq-prev-buffer))
     (kill-buffer nil)
@@ -317,6 +337,69 @@ Key bindings
       (mq-edit-mode)
       (cd root)))
   (message "Type `C-c C-c' to finish editing and refresh the patch."))
+
+(defun mq-new (name)
+  "Create a new empty patch named NAME.
+The patch is applied on top of the current topmost patch.
+With a prefix argument, forcibly create the patch even if the working
+directory is modified."
+  (interactive (list (mq-read-patch-name "qseries" " to create" t)))
+  (message "Creating patch...")
+  (let ((ret (if current-prefix-arg
+		 (hg-run "qnew" "-f" name)
+	       (hg-run "qnew" name))))
+    (if (equal (car ret) 0)
+	(progn
+	  (hg-update-mode-lines (buffer-file-name))
+	  (message "Creating patch... done."))
+      (error "Creating patch... %s" (hg-chomp (cdr ret))))))
+
+(defun mq-edit-series ()
+  "Edit the MQ series file directly."
+  (interactive)
+  (let ((root (hg-root)))
+    (unless root
+      (error "Not in an MQ repository!"))
+    (find-file (concat root ".hg/patches/series"))))
+
+(defun mq-diff (&optional git)
+  "Display a diff of the topmost applied patch.
+With a prefix argument, display a git-compatible diff."
+  (interactive "P")
+  (hg-view-output ((format "MQ: Diff of %s" (mq-patch-info "qtop")))
+    (if git
+	(call-process (hg-binary) nil t nil "qdiff" "--git")
+    (call-process (hg-binary) nil t nil "qdiff"))
+    (diff-mode)
+    (font-lock-fontify-buffer)))
+
+(defun mq-signoff ()
+  "Sign off on the current patch, in the style used by the Linux kernel.
+If the variable mq-signoff-address is non-nil, it will be used, otherwise
+the value of the ui.username item from your hgrc will be used."
+  (interactive)
+  (let ((was-editing (eq major-mode 'mq-edit-mode))
+	signed)
+    (unless was-editing
+      (mq-refresh-edit))
+    (save-excursion
+      (let* ((user (or mq-signoff-address
+		       (hg-run0 "debugconfig" "ui.username")))
+	     (signoff (concat "Signed-off-by: " user)))
+	(if (search-forward signoff nil t)
+	    (message "You have already signed off on this patch.")
+	  (goto-char (point-max))
+	  (let ((case-fold-search t))
+	    (if (re-search-backward "^Signed-off-by: " nil t)
+		(forward-line 1)
+	      (insert "\n")))
+	  (insert signoff)
+	  (message "%s" signoff)
+	  (setq signed t))))
+    (unless was-editing
+      (if signed
+	  (mq-edit-finish)
+	(mq-edit-kill)))))
 
 
 (provide 'mq)
