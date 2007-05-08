@@ -1762,6 +1762,17 @@ def fold(ui, repo, *files, **opts):
     q.delete(repo, patches, opts)
     q.save_dirty()
 
+def goto(ui, repo, patch, **opts):
+    '''push or pop patches until named patch is at top of stack'''
+    q = repo.mq
+    patch = q.lookup(patch)
+    if q.isapplied(patch):
+        ret = q.pop(repo, patch, force=opts['force'])
+    else:
+        ret = q.push(repo, patch, force=opts['force'])
+    q.save_dirty()
+    return ret
+
 def guard(ui, repo, *args, **opts):
     '''set or print guards for a patch
 
@@ -2202,6 +2213,8 @@ cmdtable = {
           ('k', 'keep', None, _('keep folded patch files'))
           ] + commands.commitopts,
          'hg qfold [-e] [-m <text>] [-l <file] PATCH...'),
+    'qgoto': (goto, [('f', 'force', None, _('overwrite any local changes'))],
+              'hg qgoto [OPT]... PATCH'),
     'qguard': (guard, [('l', 'list', None, _('list all patches and guards')),
                        ('n', 'none', None, _('drop all guards'))],
                'hg qguard [PATCH] [+GUARD]... [-GUARD]...'),
