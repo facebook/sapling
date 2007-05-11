@@ -56,3 +56,17 @@ untracked_file still around
 Removing file untracked_file
 directory
 r1
+% skip excluded files
+directory
+excluded_file
+r1
+% skip files in excluded dirs
+directory
+excluded_dir
+r1
+file
+% skip excluded empty dirs
+directory
+excluded_dir
+r1
+% skip patterns

@@ -32,7 +32,7 @@ from mercurial.i18n import _
 import os
 
 def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n',
-            force=False):
+            force=False, include=None, exclude=None):
     def error(msg):
         if abort_on_err:
             raise util.Abort(msg)
@@ -51,7 +51,8 @@ def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n',
     directories = []
     files = []
     missing = []
-    roots, match, anypats = util.cmdmatcher(repo.root, repo.getcwd(), dirs)
+    roots, match, anypats = util.cmdmatcher(repo.root, repo.getcwd(), dirs,
+                                            include, exclude)
     for src, f, st in repo.dirstate.statwalk(files=roots, match=match,
                                              ignored=True, directories=True):
         if src == 'd':
@@ -71,7 +72,7 @@ def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n',
             remove(os.remove, f)
 
     for f in directories[::-1]:
-        if not os.listdir(repo.wjoin(f)):
+        if match(f) and not os.listdir(repo.wjoin(f)):
             ui.note(_('Removing directory %s\n') % f)
             remove(os.rmdir, f)
 
@@ -144,7 +145,9 @@ def purge(ui, repo, *dirs, **opts):
         # --print0 implies --print
         act = False
     force = bool(opts['force'])
-    dopurge(ui, repo, dirs, act, abort_on_err, eol, force)
+    include = opts['include']
+    exclude = opts['exclude']
+    dopurge(ui, repo, dirs, act, abort_on_err, eol, force, include, exclude)
 
 
 cmdtable = {
@@ -154,6 +157,8 @@ cmdtable = {
           ('f', 'force', None, _('purge even when missing files are detected')),
           ('p', 'print', None, _('print the file names instead of deleting them')),
           ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
-                                  ' (implies -p)'))],
+                                  ' (implies -p)')),
+          ('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
          _('hg purge [OPTION]... [DIR]...'))
 }
