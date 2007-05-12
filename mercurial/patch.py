@@ -293,11 +293,13 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
         """patch and updates the files and fuzz variables"""
         fuzz = False
 
-        patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''),
-                                    'patch')
         args = []
-        if util.needbinarypatch():
-            args.append('--binary')
+        patcher = ui.config('ui', 'patch')
+        if not patcher:
+            patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''),
+                                        'patch')
+            if util.needbinarypatch():
+                args.append('--binary')
                                     
         if cwd:
             args.append('-d %s' % util.shellquote(cwd))

@@ -432,6 +432,9 @@ ui::
   merge;;
     The conflict resolution program to use during a manual merge.
     Default is "hgmerge".
+  patch;;
+    command to use to apply patches. Look for 'gpatch' or 'patch' in PATH if
+    unset.
   quiet;;
     Reduce the amount of output printed.  True or False.  Default is False.
   remotecmd;;

@@ -881,8 +881,10 @@ def debuginstall(ui):
     # patch
     ui.status(_("Checking patch...\n"))
     path = os.environ.get('PATH', '')
-    patcher = util.find_in_path('gpatch', path,
-                                util.find_in_path('patch', path, None))
+    patcher = ui.config('ui', 'patch')
+    if not patcher:
+        patcher = util.find_in_path('gpatch', path,
+                                    util.find_in_path('patch', path, None))
     if not patcher:
         ui.write(_(" Can't find patch or gpatch in PATH\n"))
         ui.write(_(" (specify a patch utility in your .hgrc file)\n"))
