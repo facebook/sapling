@@ -793,6 +793,10 @@ def linkfunc(path, fallback):
 _umask = os.umask(0)
 os.umask(_umask)
 
+def needbinarypatch():
+    """return True if patches should be applied in binary mode by default."""
+    return os.name == 'nt'
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt

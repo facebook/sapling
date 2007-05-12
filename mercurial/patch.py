@@ -296,6 +296,9 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
         patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''),
                                     'patch')
         args = []
+        if util.needbinarypatch():
+            args.append('--binary')
+                                    
         if cwd:
             args.append('-d %s' % util.shellquote(cwd))
         fp = os.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
