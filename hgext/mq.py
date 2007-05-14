@@ -417,6 +417,7 @@ class queue:
                 self.applied_dirty = 1
             if err:
                 return (err, head)
+        self.save_dirty()
         return (0, head)
 
     def patch(self, repo, patchfile):

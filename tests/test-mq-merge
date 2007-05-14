@@ -37,3 +37,6 @@ hg ci -m update
 hg manifest
 hg qpush -a -m 2>&1 | rewrite_path
 hg manifest
+
+# ensure status is correct after merge
+hg qpop -a
