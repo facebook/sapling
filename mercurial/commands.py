@@ -182,7 +182,7 @@ def archive(ui, repo, dest, **opts):
     archival.archive(repo, dest, node, kind, not opts['no_decode'],
                      matchfn, prefix)
 
-def backout(ui, repo, rev, **opts):
+def backout(ui, repo, node=None, rev=None, **opts):
     '''reverse effect of earlier changeset
 
     Commit the backed out changes as a new changeset.  The new
@@ -199,6 +199,11 @@ def backout(ui, repo, rev, **opts):
     changeset afterwards.  This saves you from doing the merge by
     hand.  The result of this merge is not committed, as for a normal
     merge.'''
+    if rev and node:
+        raise util.Abort(_("please specify just one revision"))
+
+    if not rev:
+        rev = node
 
     bail_if_changed(repo)
     op1, op2 = repo.dirstate.parents()
@@ -1832,7 +1837,7 @@ def manifest(ui, repo, rev=None):
             ui.write("%3s " % (m.execf(f) and "755" or "644"))
         ui.write("%s\n" % f)
 
-def merge(ui, repo, node=None, force=None):
+def merge(ui, repo, node=None, force=None, rev=None):
     """merge working directory with another revision
 
     Merge the contents of the current working directory and the
@@ -1845,6 +1850,12 @@ def merge(ui, repo, node=None, force=None):
     the other head is merged with by default.  Otherwise, an explicit
     revision to merge with must be provided.
     """
+
+    if rev and node:
+        raise util.Abort(_("please specify just one revision"))
+
+    if not node:
+        node = rev
 
     if not node:
         heads = repo.heads()
@@ -2558,7 +2569,7 @@ def unbundle(ui, repo, fname, **opts):
     modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
     return postincoming(ui, repo, modheads, opts['update'])
 
-def update(ui, repo, node=None, clean=False, date=None):
+def update(ui, repo, node=None, rev=None, clean=False, date=None):
     """update working directory
 
     Update the working directory to the specified revision, or the
@@ -2574,15 +2585,21 @@ def update(ui, repo, node=None, clean=False, date=None):
     By default, update will refuse to run if doing so would require
     discarding local changes.
     """
+    if rev and node:
+        raise util.Abort(_("please specify just one revision"))
+
+    if not rev:
+        rev = node
+
     if date:
-        if node:
+        if rev:
             raise util.Abort(_("you can't specify a revision and a date"))
-        node = cmdutil.finddate(ui, repo, date)
+        rev = cmdutil.finddate(ui, repo, date)
 
     if clean:
-        return hg.clean(repo, node)
+        return hg.clean(repo, rev)
     else:
-        return hg.update(repo, node)
+        return hg.update(repo, rev)
 
 def verify(ui, repo):
     """verify the integrity of the repository
@@ -2682,8 +2699,9 @@ table = {
           ('d', 'date', '', _('record datecode as commit date')),
           ('', 'parent', '', _('parent to choose when backing out merge')),
           ('u', 'user', '', _('record user as committer')),
+          ('r', 'rev', '', _('revision to backout')),
          ] + walkopts + commitopts,
-         _('hg backout [OPTION]... REV')),
+         _('hg backout [OPTION]... [-r] REV')),
     "branch": (branch,
                [('f', 'force', None,
                  _('set branch name even if it shadows an existing branch'))],
@@ -2858,8 +2876,10 @@ table = {
     "manifest": (manifest, [], _('hg manifest [REV]')),
     "^merge":
         (merge,
-         [('f', 'force', None, _('force a merge with outstanding changes'))],
-         _('hg merge [-f] [REV]')),
+         [('f', 'force', None, _('force a merge with outstanding changes')),
+          ('r', 'rev', '', _('revision to merge')),
+             ],
+         _('hg merge [-f] [[-r] REV]')),
     "outgoing|out": (outgoing,
          [('M', 'no-merges', None, _('do not show merges')),
           ('f', 'force', None,
@@ -2990,8 +3010,9 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('C', 'clean', None, _('overwrite locally modified files')),
-          ('d', 'date', '', _('tipmost revision matching date'))],
-         _('hg update [-C] [-d DATE] [REV]')),
+          ('d', 'date', '', _('tipmost revision matching date')),
+          ('r', 'rev', '', _('revision'))],
+         _('hg update [-C] [-d DATE] [[-r] REV]')),
     "verify": (verify, [], _('hg verify')),
     "version": (version_, [], _('hg version')),
 }
