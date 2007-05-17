@@ -1565,7 +1565,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             n = repo.commit(files, message, user, date, wlock=wlock, lock=lock)
             if opts.get('exact'):
                 if hex(n) != nodeid:
-                    repo.rollback()
+                    repo.rollback(wlock=wlock, lock=lock)
                     raise util.Abort(_('patch is damaged or loses information'))
         finally:
             os.unlink(tmpname)

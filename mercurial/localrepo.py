@@ -586,10 +586,11 @@ class localrepository(repo.repository):
             self.ui.warn(_("no interrupted transaction available\n"))
             return False
 
-    def rollback(self, wlock=None):
+    def rollback(self, wlock=None, lock=None):
         if not wlock:
             wlock = self.wlock()
-        l = self.lock()
+        if not lock:
+            lock = self.lock()
         if os.path.exists(self.sjoin("undo")):
             self.ui.status(_("rolling back last transaction\n"))
             transaction.rollback(self.sopener, self.sjoin("undo"))
