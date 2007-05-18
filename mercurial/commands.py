@@ -1547,6 +1547,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 if p1 != wp[0].node():
                     hg.clean(repo, p1, wlock=wlock)
                 repo.dirstate.setparents(p1, p2)
+                repo.dirstate.setbranch(branch or 'default')
             elif p2:
                 try:
                     p1 = repo.lookup(p1)
