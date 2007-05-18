@@ -1516,10 +1516,10 @@ def import_(ui, repo, patch1, *patches, **opts):
 
         if pf == '-':
             ui.status(_("applying patch from stdin\n"))
-            tmpname, message, user, date, nodeid, p1, p2 = patch.extract(ui, sys.stdin)
+            tmpname, message, user, date, branch, nodeid, p1, p2 = patch.extract(ui, sys.stdin)
         else:
             ui.status(_("applying %s\n") % p)
-            tmpname, message, user, date, nodeid, p1, p2 = patch.extract(ui, file(pf))
+            tmpname, message, user, date, branch, nodeid, p1, p2 = patch.extract(ui, file(pf))
 
         if tmpname is None:
             raise util.Abort(_('no diffs found'))
