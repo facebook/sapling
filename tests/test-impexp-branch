@@ -37,3 +37,9 @@ hg init b
 cd b
 hg -R ../a export 0 | hg import -
 hg -R ../a export 1 | hg import -
+cd ..
+rm -rf b
+hg init b
+cd b
+hg -R ../a export 0 | hg import --exact -
+hg -R ../a export 1 | hg import --exact -
