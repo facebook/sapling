@@ -65,6 +65,8 @@ class dirstate(object):
         syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:'}
         def parselines(fp):
             for line in fp:
+                if not line.endswith('\n'):
+                    line += '\n'
                 escape = False
                 for i in xrange(len(line)):
                     if escape: escape = False
