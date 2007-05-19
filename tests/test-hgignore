@@ -1,6 +1,25 @@
 #!/bin/sh
 
 hg init
+
+# Test issue 562: .hgignore requires newline at end
+touch foo
+touch bar
+touch baz
+cat > makeignore.py <<EOF
+f = open(".hgignore", "w")
+f.write("ignore\n")
+f.write("foo\n")
+# No EOL here
+f.write("bar")
+f.close()
+EOF
+
+python makeignore.py
+echo % should display baz only
+hg status
+rm foo bar baz .hgignore makeignore.py
+
 touch a.o
 touch a.c
 touch syntax
