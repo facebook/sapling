@@ -764,10 +764,11 @@ Push changes                          G    C-c h >      hg-push"
 (add-hook 'find-file-hooks 'hg-find-file-hook)
 
 (defun hg-after-save-hook ()
-  (let ((old-status hg-status))
-    (hg-mode-line)
-    (if (and (not old-status) hg-status)
-	(hg-mode))))
+  (ignore-errors
+    (let ((old-status hg-status))
+      (hg-mode-line)
+      (if (and (not old-status) hg-status)
+	  (hg-mode)))))
 
 (add-hook 'after-save-hook 'hg-after-save-hook)
 
