@@ -1083,20 +1083,19 @@ With a prefix argument, prompt for the path to forget."
   "Display the revision history of PATH.
 History is displayed between REV1 and REV2.
 Number of displayed changesets is limited to LOG-LIMIT.
-REV1 defaults to the tip, while
-REV2 defaults to `hg-rev-completion-limit' changes from the tip revision.
+REV1 defaults to the tip, while REV2 defaults to 0.
 LOG-LIMIT defaults to `hg-log-limit'.
 With a prefix argument, prompt for each parameter."
   (interactive (list (hg-read-file-name " to log")
                      (hg-read-rev " to start with"
                                   "tip")
                      (hg-read-rev " to end with"
-                                  (format "%d" (- hg-rev-completion-limit)))
+				  "0")
                      (hg-read-number "Output limited to: "
                                      hg-log-limit)))
   (let ((a-path (hg-abbrev-file-name path))
-        (r1 (or rev1 (format "-%d" hg-rev-completion-limit)))
-        (r2 (or rev2 rev1 "tip"))
+        (r1 (or rev1 "tip"))
+        (r2 (or rev2 "0"))
         (limit (format "%d" (or log-limit hg-log-limit))))
     (hg-view-output ((if (equal r1 r2)
                          (format "Mercurial: Log of rev %s of %s" rev1 a-path)
@@ -1117,15 +1116,14 @@ With a prefix argument, prompt for each parameter."
   "Display the revision history of the repository containing PATH.
 History is displayed between REV1 and REV2.
 Number of displayed changesets is limited to LOG-LIMIT,
-REV1 defaults to the tip, while
-REV2 defaults to `hg-rev-completion-limit' changes from the tip revision.
+REV1 defaults to the tip, while REV2 defaults to 0.
 LOG-LIMIT defaults to `hg-log-limit'.
 With a prefix argument, prompt for each parameter."
   (interactive (list (hg-read-file-name " to log")
                      (hg-read-rev " to start with"
                                   "tip")
                      (hg-read-rev " to end with" 
-                                  (format "%d" (- hg-rev-completion-limit)))
+				  "0")
                      (hg-read-number "Output limited to: "
                                      hg-log-limit)))
   (hg-log (hg-root path) rev1 rev2 log-limit))
