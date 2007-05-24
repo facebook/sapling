@@ -1,51 +1,23 @@
-#!/usr/bin/env python
+# convert.py Foreign SCM converter
 #
-# This is a generalized framework for converting between SCM
-# repository formats.
+# Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 #
-# To use, run:
-#
-# convert-repo <source> [<dest> [<mapfile>]]
-#
-# Currently accepted source formats: git, cvs
-# Currently accepted destination formats: hg
-#
-# If destination isn't given, a new Mercurial repo named <src>-hg will
-# be created. If <mapfile> isn't given, it will be put in a default
-# location (<dest>/.hg/shamap by default)
-#
-# The <mapfile> is a simple text file that maps each source commit ID to
-# the destination ID for that revision, like so:
-#
-# <source ID> <destination ID>
-#
-# If the file doesn't exist, it's automatically created.  It's updated
-# on each commit copied, so convert-repo can be interrupted and can
-# be run repeatedly to copy new commits.
+# This software may be used and distributed according to the terms
+# of the GNU General Public License, incorporated herein by reference.
 
 import sys, os, zlib, sha, time, re, locale, socket
-os.environ["HGENCODING"] = "utf-8"
-from mercurial import hg, ui, util, fancyopts
+from mercurial import hg, ui, util, commands
 
-class Abort(Exception): pass
+commands.norepo += " convert"
+
 class NoRepo(Exception): pass
 
 class commit(object):
     def __init__(self, **parts):
         for x in "author date desc parents".split():
             if not x in parts:
-                abort("commit missing field %s\n" % x)
+                raise util.Abort("commit missing field %s\n" % x)
         self.__dict__.update(parts)
-
-quiet = 0
-def status(msg):
-    if not quiet: sys.stdout.write(str(msg))
-
-def warn(msg):
-    sys.stderr.write(str(msg))
-
-def abort(msg):
-    raise Abort(msg)
 
 def recode(s):
     try:
@@ -59,7 +31,7 @@ def recode(s):
 class converter_source(object):
     """Conversion source interface"""
 
-    def __init__(self, path):
+    def __init__(self, ui, path):
         """Initialize conversion source (or raise NoRepo("message")
         exception if path is not a valid repository)"""
         raise NotImplementedError()
@@ -94,7 +66,7 @@ class converter_source(object):
 class converter_sink(object):
     """Conversion sink (target) interface"""
 
-    def __init__(self, path):
+    def __init__(self, ui, path):
         """Initialize conversion sink (or raise NoRepo("message")
         exception if path is not a valid repository)"""
         raise NotImplementedError()
@@ -139,8 +111,9 @@ class converter_sink(object):
 
 # CVS conversion code inspired by hg-cvs-import and git-cvsimport
 class convert_cvs(converter_source):
-    def __init__(self, path):
+    def __init__(self, ui, path):
         self.path = path
+        self.ui = ui
         cvs = os.path.join(path, "CVS")
         if not os.path.exists(cvs):
             raise NoRepo("couldn't open CVS repo %s" % path)
@@ -223,7 +196,7 @@ class convert_cvs(converter_source):
         user, host = None, None
         cmd = ['cvs', 'server']
 
-        status("connecting to %s\n" % root)
+        self.ui.status("connecting to %s\n" % root)
 
         if root.startswith(":pserver:"):
             root = root[9:]
@@ -296,7 +269,7 @@ class convert_cvs(converter_source):
         self.writep.flush()
         r = self.readp.readline()
         if not r.startswith("Valid-requests"):
-            abort("server sucks\n")
+            raise util.Abort("server sucks\n")
         if "UseUnchanged" in r:
             self.writep.write("UseUnchanged\n")
             self.writep.flush()
@@ -336,14 +309,14 @@ class convert_cvs(converter_source):
                 if line == "ok\n":
                     return (data, "x" in mode and "x" or "")
                 elif line.startswith("E "):
-                    warn("cvs server: %s\n" % line[2:])
+                    self.ui.warn("cvs server: %s\n" % line[2:])
                 elif line.startswith("Remove"):
                     l = self.readp.readline()
                     l = self.readp.readline()
                     if l != "ok\n":
-                        abort("unknown CVS response: %s\n" % l)
+                        raise util.Abort("unknown CVS response: %s\n" % l)
                 else:
-                    abort("unknown CVS response: %s\n" % line)
+                    raise util.Abort("unknown CVS response: %s\n" % line)
 
     def getfile(self, file, rev):
         data, mode = self._getfile(file, rev)
@@ -370,10 +343,11 @@ class convert_cvs(converter_source):
         return self.tags
 
 class convert_git(converter_source):
-    def __init__(self, path):
+    def __init__(self, ui, path):
         if os.path.isdir(path + "/.git"):
             path += "/.git"
         self.path = path
+        self.ui = ui
         if not os.path.exists(path + "/objects"):
             raise NoRepo("couldn't open GIT repo %s" % path)
 
@@ -456,11 +430,11 @@ class convert_git(converter_source):
         return tags
 
 class convert_mercurial(converter_sink):
-    def __init__(self, path):
+    def __init__(self, ui, path):
         self.path = path
-        u = ui.ui()
+        self.ui = ui
         try:
-            self.repo = hg.repository(u, path)
+            self.repo = hg.repository(self.ui, path)
         except:
             raise NoRepo("could open hg repo %s" % path)
 
@@ -530,7 +504,7 @@ class convert_mercurial(converter_sink):
         newlines.sort()
 
         if newlines != oldlines:
-            status("updating tags\n")
+            self.ui.status("updating tags\n")
             f = self.repo.wfile(".hgtags", "w")
             f.write("".join(newlines))
             f.close()
@@ -542,21 +516,22 @@ class convert_mercurial(converter_sink):
 
 converters = [convert_cvs, convert_git, convert_mercurial]
 
-def converter(path):
+def converter(ui, path):
     if not os.path.isdir(path):
-        abort("%s: not a directory\n" % path)
+        raise util.Abort("%s: not a directory\n" % path)
     for c in converters:
         try:
-            return c(path)
+            return c(ui, path)
         except NoRepo:
             pass
-    abort("%s: unknown repository type\n" % path)
+    raise util.Abort("%s: unknown repository type\n" % path)
 
 class convert(object):
-    def __init__(self, source, dest, mapfile, opts):
+    def __init__(self, ui, source, dest, mapfile, opts):
 
         self.source = source
         self.dest = dest
+        self.ui = ui
         self.mapfile = mapfile
         self.opts = opts
         self.commitcache = {}
@@ -627,7 +602,7 @@ class convert(object):
                     for c in children[n]:
                         visit.insert(0, c)
 
-        if opts.get('datesort'):
+        if self.opts.get('datesort'):
             depth = {}
             for n in s:
                 depth[n] = 0
@@ -660,21 +635,21 @@ class convert(object):
         file(self.mapfile, "a").write("%s %s\n" % (rev, self.map[rev]))
 
     def convert(self):
-        status("scanning source...\n")
+        self.ui.status("scanning source...\n")
         heads = self.source.getheads()
         parents = self.walktree(heads)
-        status("sorting...\n")
+        self.ui.status("sorting...\n")
         t = self.toposort(parents)
         num = len(t)
         c = None
 
-        status("converting...\n")
+        self.ui.status("converting...\n")
         for c in t:
             num -= 1
             desc = self.commitcache[c].desc
             if "\n" in desc:
                 desc = desc.splitlines()[0]
-            status("%d %s\n" % (num, desc))
+            self.ui.status("%d %s\n" % (num, desc))
             self.copy(c)
 
         tags = self.source.gettags()
@@ -691,20 +666,43 @@ class convert(object):
             if nrev:
                 file(self.mapfile, "a").write("%s %s\n" % (c, nrev))
 
-def command(src, dest=None, mapfile=None, **opts):
-    srcc = converter(src)
+def _convert(ui, src, dest=None, mapfile=None, **opts):
+    '''Convert a foreign SCM repository to a Mercurial one.
+
+    Accepted source formats:
+    - GIT
+    - CVS
+
+    Accepted destination formats:
+    - Mercurial
+
+    If destination isn't given, a new Mercurial repo named <src>-hg will
+    be created. If <mapfile> isn't given, it will be put in a default
+    location (<dest>/.hg/shamap by default)
+
+    The <mapfile> is a simple text file that maps each source commit ID to
+    the destination ID for that revision, like so:
+
+    <source ID> <destination ID>
+
+    If the file doesn't exist, it's automatically created.  It's updated
+    on each commit copied, so convert-repo can be interrupted and can
+    be run repeatedly to copy new commits.
+    '''
+
+    srcc = converter(ui, src)
     if not hasattr(srcc, "getcommit"):
-        abort("%s: can't read from this repo type\n" % src)
+        raise util.Abort("%s: can't read from this repo type\n" % src)
 
     if not dest:
         dest = src + "-hg"
-        status("assuming destination %s\n" % dest)
+        ui.status("assuming destination %s\n" % dest)
         if not os.path.isdir(dest):
-            status("creating repository %s\n" % dest)
+            ui.status("creating repository %s\n" % dest)
             os.system("hg init " + dest)
-    destc = converter(dest)
+    destc = converter(ui, dest)
     if not hasattr(destc, "putcommit"):
-        abort("%s: can't write to this repo type\n" % src)
+        raise util.Abort("%s: can't write to this repo type\n" % src)
 
     if not mapfile:
         try:
@@ -712,20 +710,11 @@ def command(src, dest=None, mapfile=None, **opts):
         except:
             mapfile = os.path.join(destc, "map")
 
-    c = convert(srcc, destc, mapfile, opts)
+    c = convert(ui, srcc, destc, mapfile, opts)
     c.convert()
 
-options = [('q', 'quiet', None, 'suppress output'),
-           ('', 'datesort', None, 'try to sort changesets by date')]
-opts = {}
-args = fancyopts.fancyopts(sys.argv[1:], options, opts)
-
-if opts['quiet']:
-    quiet = 1
-
-try:
-    command(*args, **opts)
-except Abort, inst:
-    warn(inst)
-except KeyboardInterrupt:
-    status("interrupted\n")
+cmdtable = {
+    "convert": (_convert,
+                [('', 'datesort', None, 'try to sort changesets by date')],
+                'hg convert [OPTIONS] <src> [dst [map]]'),
+}
