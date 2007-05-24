@@ -13,6 +13,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+Date:
 Subject: changeset in test-notify/b: b
 From: test
 X-Hg-Notification: changeset 0647d048b600
@@ -41,6 +42,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+Date:
 Subject: b
 From: test@test.com
 X-Hg-Notification: changeset 0647d048b600
