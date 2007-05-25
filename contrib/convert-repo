@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+#
+# Wrapper script around the convert.py hgext extension
+# for foreign SCM conversion to mercurial format.
+#
+
+import sys
+from mercurial import ui, fancyopts
+from hgext import convert
+
+# Options extracted from the cmdtable
+func, options, help = convert.cmdtable['convert']
+
+# An ui instance
+u = ui.ui()
+
+opts = {}
+args = []
+try:
+    args = fancyopts.fancyopts(sys.argv[1:], options, opts)
+except fancyopts.getopt.GetoptError, inst:
+    u.warn('Usage:\n%s' % help)
+    sys.exit(-1)
+
+convert._convert(u, *args, **opts)
