@@ -70,12 +70,6 @@ from mercurial import cmdutil, commands, hg, mail, ui, patch, util
 from mercurial.i18n import _
 from mercurial.node import *
 
-try:
-    # readline gives raw_input editing capabilities, but is not
-    # present on windows
-    import readline
-except ImportError: pass
-
 def patchbomb(ui, repo, *revs, **opts):
     '''send changesets by email
 
@@ -120,6 +114,12 @@ def patchbomb(ui, repo, *revs, **opts):
     '''
 
     def prompt(prompt, default = None, rest = ': ', empty_ok = False):
+        try:
+            # readline gives raw_input editing capabilities, but is not
+            # present on windows
+            import readline
+        except ImportError: pass
+
         if default: prompt += ' [%s]' % default
         prompt += rest
         while True:
