@@ -270,7 +270,7 @@ class ui(object):
             result = result.replace(",", " ").split()
         return result
 
-    def has_config(self, section, untrusted=False):
+    def has_section(self, section, untrusted=False):
         '''tell whether section exists in config.'''
         cdata = self._get_cdata(untrusted)
         return cdata.has_section(section)

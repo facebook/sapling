@@ -55,7 +55,7 @@ class checker(object):
 
     def buildmatch(self, key):
         '''return tuple of (match function, list enabled).'''
-        if not self.ui.has_config(key):
+        if not self.ui.has_section(key):
             self.ui.debug(_('acl: %s not enabled\n') % key)
             return None, False
 
