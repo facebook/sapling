@@ -325,14 +325,14 @@ def patchbomb(ui, repo, *revs, **opts):
         msg['Subject'] = subj
         return [msg]
 
+    sender = (opts['from'] or ui.config('email', 'from') or
+              ui.config('patchbomb', 'from') or
+              prompt('From', ui.username()))
+
     if opts.get('bundle'):
         msgs = getbundlemsgs(getbundle(dest))
     else:
         msgs = getexportmsgs()
-
-    sender = (opts['from'] or ui.config('email', 'from') or
-              ui.config('patchbomb', 'from') or
-              prompt('From', ui.username()))
 
     def getaddrs(opt, prpt, default = None):
         addrs = opts[opt] or (ui.config('email', opt) or
