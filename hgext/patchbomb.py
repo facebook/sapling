@@ -228,7 +228,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     # option handling
     commands.setremoteconfig(ui, opts)
-    if opts.get('outgoint') and opts.get('bundle'):
+    if opts.get('outgoing') and opts.get('bundle'):
         raise util.Abort(_("--outgoing mode always on with --bundle; do not re-specify --outgoing"))
 
     if opts.get('outgoing') or opts.get('bundle'):
