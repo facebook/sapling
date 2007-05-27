@@ -250,23 +250,6 @@ def patchbomb(ui, repo, *revs, **opts):
     def genmsgid(id):
         return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
 
-    sender = (opts['from'] or ui.config('email', 'from') or
-              ui.config('patchbomb', 'from') or
-              prompt('From', ui.username()))
-
-    def getaddrs(opt, prpt, default = None):
-        addrs = opts[opt] or (ui.config('email', opt) or
-                              ui.config('patchbomb', opt) or
-                              prompt(prpt, default = default)).split(',')
-        return [a.strip() for a in addrs if a.strip()]
-
-    to = getaddrs('to', 'To')
-    cc = getaddrs('cc', 'Cc', '')
-
-    bcc = opts['bcc'] or (ui.config('email', 'bcc') or
-                          ui.config('patchbomb', 'bcc') or '').split(',')
-    bcc = [a.strip() for a in bcc if a.strip()]
-
     def getexportmsgs():
         patches = []
 
@@ -343,6 +326,23 @@ def patchbomb(ui, repo, *revs, **opts):
         msgs = getbundlemsgs(getbundle(dest))
     else:
         msgs = getexportmsgs()
+
+    sender = (opts['from'] or ui.config('email', 'from') or
+              ui.config('patchbomb', 'from') or
+              prompt('From', ui.username()))
+
+    def getaddrs(opt, prpt, default = None):
+        addrs = opts[opt] or (ui.config('email', opt) or
+                              ui.config('patchbomb', opt) or
+                              prompt(prpt, default = default)).split(',')
+        return [a.strip() for a in addrs if a.strip()]
+
+    to = getaddrs('to', 'To')
+    cc = getaddrs('cc', 'Cc', '')
+
+    bcc = opts['bcc'] or (ui.config('email', 'bcc') or
+                          ui.config('patchbomb', 'bcc') or '').split(',')
+    bcc = [a.strip() for a in bcc if a.strip()]
 
     ui.write('\n')
 
