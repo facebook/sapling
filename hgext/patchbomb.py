@@ -223,6 +223,9 @@ def patchbomb(ui, repo, *revs, **opts):
                 pass
             os.rmdir(tmpdir)
 
+    if not opts['test']:
+        mail.validateconfig(ui)
+
     # option handling
     commands.setremoteconfig(ui, opts)
     if opts.get('outgoint') and opts.get('bundle'):
