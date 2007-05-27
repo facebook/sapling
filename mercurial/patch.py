@@ -55,6 +55,7 @@ def extract(ui, fileobj):
         # should try to parse msg['Date']
         date = None
         nodeid = None
+        branch = None
         parents = []
 
         if message:
@@ -99,6 +100,8 @@ def extract(ui, fileobj):
                             ui.debug('From: %s\n' % user)
                         elif line.startswith("# Date "):
                             date = line[7:]
+                        elif line.startswith("# Branch "):
+                            branch = line[9:]
                         elif line.startswith("# Node ID "):
                             nodeid = line[10:]
                         elif line.startswith("# Parent "):
@@ -123,10 +126,10 @@ def extract(ui, fileobj):
     tmpfp.close()
     if not diffs_seen:
         os.unlink(tmpname)
-        return None, message, user, date, None, None, None
+        return None, message, user, date, branch, None, None, None
     p1 = parents and parents.pop(0) or None
     p2 = parents and parents.pop(0) or None
-    return tmpname, message, user, date, nodeid, p1, p2
+    return tmpname, message, user, date, branch, nodeid, p1, p2
 
 GP_PATCH  = 1 << 0  # we have to run patch
 GP_FILTER = 1 << 1  # there's some copy/rename operation

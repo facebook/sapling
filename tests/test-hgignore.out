@@ -1,3 +1,5 @@
+% should display baz only
+? baz
 --
 A dir/b.o
 ? a.c

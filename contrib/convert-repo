@@ -30,7 +30,7 @@ from mercurial import hg, ui, util, fancyopts
 class Abort(Exception): pass
 class NoRepo(Exception): pass
 
-class commit:
+class commit(object):
     def __init__(self, **parts):
         for x in "author date desc parents".split():
             if not x in parts:
@@ -56,8 +56,89 @@ def recode(s):
         except:
             return s.decode("utf-8", "replace").encode("utf-8")
 
+class converter_source(object):
+    """Conversion source interface"""
+
+    def __init__(self, path):
+        """Initialize conversion source (or raise NoRepo("message")
+        exception if path is not a valid repository)"""
+        raise NotImplementedError()
+
+    def getheads(self):
+        """Return a list of this repository's heads"""
+        raise NotImplementedError()
+
+    def getfile(self, name, rev):
+        """Return file contents as a string"""
+        raise NotImplementedError()
+
+    def getmode(self, name, rev):
+        """Return file mode, eg. '', 'x', or 'l'"""
+        raise NotImplementedError()
+
+    def getchanges(self, version):
+        """Return sorted list of (filename, id) tuples for all files changed in rev.
+        
+        id just tells us which revision to return in getfile(), e.g. in
+        git it's an object hash."""
+        raise NotImplementedError()
+
+    def getcommit(self, version):
+        """Return the commit object for version"""
+        raise NotImplementedError()
+
+    def gettags(self):
+        """Return the tags as a dictionary of name: revision"""
+        raise NotImplementedError()
+
+class converter_sink(object):
+    """Conversion sink (target) interface"""
+
+    def __init__(self, path):
+        """Initialize conversion sink (or raise NoRepo("message")
+        exception if path is not a valid repository)"""
+        raise NotImplementedError()
+
+    def getheads(self):
+        """Return a list of this repository's heads"""
+        raise NotImplementedError()
+
+    def mapfile(self):
+        """Path to a file that will contain lines
+        source_rev_id sink_rev_id
+        mapping equivalent revision identifiers for each system."""
+        raise NotImplementedError()
+
+    def putfile(self, f, e, data):
+        """Put file for next putcommit().
+        f: path to file
+        e: '', 'x', or 'l' (regular file, executable, or symlink)
+        data: file contents"""
+        raise NotImplementedError()
+
+    def delfile(self, f):
+        """Delete file for next putcommit().
+        f: path to file"""
+        raise NotImplementedError()
+
+    def putcommit(self, files, parents, commit):
+        """Create a revision with all changed files listed in 'files'
+        and having listed parents. 'commit' is a commit object containing
+        at a minimum the author, date, and message for this changeset.
+        Called after putfile() and delfile() calls. Note that the sink
+        repository is not told to update itself to a particular revision
+        (or even what that revision would be) before it receives the
+        file data."""
+        raise NotImplementedError()
+
+    def puttags(self, tags):
+        """Put tags into sink.
+        tags: {tagname: sink_rev_id, ...}"""
+        raise NotImplementedError()
+
+
 # CVS conversion code inspired by hg-cvs-import and git-cvsimport
-class convert_cvs:
+class convert_cvs(converter_source):
     def __init__(self, path):
         self.path = path
         cvs = os.path.join(path, "CVS")
@@ -288,7 +369,7 @@ class convert_cvs:
     def gettags(self):
         return self.tags
 
-class convert_git:
+class convert_git(converter_source):
     def __init__(self, path):
         if os.path.isdir(path + "/.git"):
             path += "/.git"
@@ -374,7 +455,7 @@ class convert_git:
 
         return tags
 
-class convert_mercurial:
+class convert_mercurial(converter_sink):
     def __init__(self, path):
         self.path = path
         u = ui.ui()
@@ -471,7 +552,7 @@ def converter(path):
             pass
     abort("%s: unknown repository type\n" % path)
 
-class convert:
+class convert(object):
     def __init__(self, source, dest, mapfile, opts):
 
         self.source = source
