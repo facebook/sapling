@@ -880,11 +880,10 @@ def debuginstall(ui):
 
     # patch
     ui.status(_("Checking patch...\n"))
-    path = os.environ.get('PATH', '')
     patcher = ui.config('ui', 'patch')
-    if not patcher:
-        patcher = util.find_in_path('gpatch', path,
-                                    util.find_in_path('patch', path, None))
+    patcher = ((patcher and util.find_exe(patcher)) or
+               util.find_exe('gpatch') or
+               util.find_exe('patch'))
     if not patcher:
         ui.write(_(" Can't find patch or gpatch in PATH\n"))
         ui.write(_(" (specify a patch utility in your .hgrc file)\n"))
@@ -922,9 +921,7 @@ def debuginstall(ui):
     ui.status(_("Checking merge helper...\n"))
     cmd = (os.environ.get("HGMERGE") or ui.config("ui", "merge")
            or "hgmerge")
-    cmdpath = util.find_in_path(cmd, path)
-    if not cmdpath:
-        cmdpath = util.find_in_path(cmd.split()[0], path)
+    cmdpath = util.find_exe(cmd) or util.find_exe(cmd.split()[0])
     if not cmdpath:
         if cmd == 'hgmerge':
             ui.write(_(" No merge helper set and can't find default"
@@ -958,9 +955,7 @@ def debuginstall(ui):
     editor = (os.environ.get("HGEDITOR") or
               ui.config("ui", "editor") or
               os.environ.get("EDITOR", "vi"))
-    cmdpath = util.find_in_path(editor, path)
-    if not cmdpath:
-        cmdpath = util.find_in_path(editor.split()[0], path)
+    cmdpath = util.find_exe(editor) or util.find_exe(editor.split()[0])
     if not cmdpath:
         if editor == 'vi':
             ui.write(_(" No commit editor set and can't find vi in PATH\n"))

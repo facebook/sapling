@@ -1087,6 +1087,18 @@ else:
                 return p_name
         return default
 
+def find_exe(name, default=None):
+    '''find path of an executable.
+    if name contains a path component, return it as is.  otherwise,
+    use normal executable search path.'''
+
+    if os.sep in name:
+        # don't check the executable bit.  if the file isn't
+        # executable, whoever tries to actually run it will give a
+        # much more useful error message.
+        return name
+    return find_in_path(name, os.environ.get('PATH', ''), default=default)
+
 def _buildencodefun():
     e = '_'
     win_reserved = [ord(x) for x in '\\:*?"<>|']

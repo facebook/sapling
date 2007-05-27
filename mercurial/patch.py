@@ -295,11 +295,13 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
 
         args = []
         patcher = ui.config('ui', 'patch')
+        patcher = ((patcher and util.find_exe(patcher)) or
+                   util.find_exe('gpatch') or
+                   util.find_exe('patch'))
         if not patcher:
-            patcher = util.find_in_path('gpatch', os.environ.get('PATH', ''),
-                                        'patch')
-            if util.needbinarypatch():
-                args.append('--binary')
+            raise util.Abort(_('no patch command found in hgrc or PATH'))
+        if util.needbinarypatch():
+            args.append('--binary')
                                     
         if cwd:
             args.append('-d %s' % util.shellquote(cwd))
@@ -643,7 +645,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         single(rev, seqno+1, fp)
 
 def diffstat(patchlines):
-    if not util.find_in_path('diffstat', os.environ.get('PATH', '')):
+    if not util.find_exe('diffstat'):
         return
     fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
     try:
