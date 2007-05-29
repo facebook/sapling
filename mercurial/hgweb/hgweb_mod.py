@@ -484,6 +484,7 @@ class hgweb(object):
                      node=hex(node),
                      path=abspath,
                      up=_up(abspath),
+                     upparity=self.stripes(0),
                      fentries=filelist,
                      dentries=dirlist,
                      archives=self.archivelist(hex(node)))
