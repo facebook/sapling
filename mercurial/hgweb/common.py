@@ -60,3 +60,19 @@ def style_map(templatepath, style):
             return mapfile
     raise RuntimeError("No hgweb templates found in %r" % templatepath)
 
+def paritygen(stripecount, offset=0):
+    """count parity of horizontal stripes for easier reading"""
+    if stripecount and offset:
+        # account for offset, e.g. due to building the list in reverse
+        count = (stripecount + offset) % stripecount
+        parity = (stripecount + offset) / stripecount & 1
+    else:
+        count = 0
+        parity = 0
+    while True:
+        yield parity
+        count += 1
+        if stripecount and count >= stripecount:
+            parity = 1 - parity
+            count = 0
+
