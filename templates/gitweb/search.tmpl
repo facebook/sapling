@@ -1,27 +1,32 @@
 #header#
+<title>#repo|escape#: Search</title>
+<link rel="alternate" type="application/rss+xml"
+   href="{url}rss-log" title="RSS feed for #repo|escape#">
+</head>
+<body>
+
+<div class="page_header">
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / search
+
+<form action="{url}log">
+{sessionvars%hiddenformentry}
+<div class="search">
+<input type="text" name="rev" value="#query|escape#" />
+</div>
+</form>
+</div>
+
 <div class="page_nav">
 <a href="{url}summary{sessionvars%urlparameter}">summary</a> |
 <a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
 <a href="{url}log{sessionvars%urlparameter}">changelog</a> |
 <a href="{url}tags{sessionvars%urlparameter}">tags</a> |
-<a href="{url}file/#node|short#{sessionvars%urlparameter}">manifest</a><br/>
+<a href="{url}file/#node|short#{sessionvars%urlparameter}">manifest</a>#archives%archiveentry#
+<br/>
 </div>
 
-<h2>searching for #query|escape#</h2>
-
-<form action="{url}log">
-{sessionvars%hiddenformentry}
-search:
-<input name="rev" type="text" width="30" value="#query|escape#">
-</form>
+<div class="title">searching for #query|escape#</div>
 
 #entries#
-
-<form action="{url}log">
-{sessionvars%hiddenformentry}
-search:
-<input type="hidden" name="style" value="gitweb">
-<input name="rev" type="text" width="30">
-</form>
 
 #footer#
