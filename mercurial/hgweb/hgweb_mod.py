@@ -133,6 +133,16 @@ class hgweb(object):
             return [dict(file=r[0], node=hex(r[1]))]
         return []
 
+    def taglistdict(self,node):
+        return [{"name":i} for i in self.repo.nodetags(node)]
+
+    def branchlistdict(self,node):
+        l=[]
+        for t, tn in self.repo.branchtags().items():
+            if tn == node:
+                l.append({"name":t})
+        return l
+
     def showtag(self, t1, node=nullid, **args):
         for t in self.repo.nodetags(node):
             yield self.t(t1, tag=t, **args)
@@ -211,7 +221,9 @@ class hgweb(object):
                              "date": ctx.date(),
                              "files": self.listfilediffs(ctx.files(), n),
                              "rev": i,
-                             "node": hex(n)})
+                             "node": hex(n),
+                             "tags": self.taglistdict(n),
+                             "branches": self.branchlistdict(n)})
 
             for e in l:
                 yield e
@@ -274,7 +286,9 @@ class hgweb(object):
                              date=ctx.date(),
                              files=self.listfilediffs(ctx.files(), n),
                              rev=ctx.rev(),
-                             node=hex(n))
+                             node=hex(n),
+                             tags=self.taglistdict(n),
+                             branches=self.branchlistdict(n))
 
                 if count >= self.maxchanges:
                     break
@@ -314,7 +328,9 @@ class hgweb(object):
                      desc=ctx.description(),
                      date=ctx.date(),
                      files=files,
-                     archives=self.archivelist(hex(n)))
+                     archives=self.archivelist(hex(n)),
+                     tags=self.taglistdict(n),
+                     branches=self.branchlistdict(n))
 
     def filelog(self, fctx):
         f = fctx.path()
@@ -482,7 +498,9 @@ class hgweb(object):
                      upparity=parity.next(),
                      fentries=filelist,
                      dentries=dirlist,
-                     archives=self.archivelist(hex(node)))
+                     archives=self.archivelist(hex(node)),
+                     tags=self.taglistdict(node),
+                     branches=self.branchlistdict(node))
 
     def tags(self):
         i = self.repo.tagslist()
@@ -545,7 +563,8 @@ class hgweb(object):
             l = [] # build a list in forward order for efficiency
             for i in xrange(start, end):
                 ctx = self.repo.changectx(i)
-                hn = hex(ctx.node())
+                n = ctx.node()
+                hn = hex(n)
 
                 l.insert(0, self.t(
                     'shortlogentry',
@@ -554,7 +573,9 @@ class hgweb(object):
                     desc=ctx.description(),
                     date=ctx.date(),
                     rev=i,
-                    node=hn))
+                    node=hn,
+                    tags=self.taglistdict(n),
+                    branches=self.branchlistdict(n)))
 
             yield l
 
