@@ -16,6 +16,12 @@ hg addremove -s50
 
 hg commit -m B
 
+echo % comparing two empty files caused ZeroDivisionError in the past
+hg update -C 0
+rm empty-file
+touch another-empty-file
+hg addremove -s50
+
 cd ..
 
 hg init rep2; cd rep2
