@@ -1554,7 +1554,14 @@ def incoming(ui, repo, source="default", **opts):
     setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
-    incoming = repo.findincoming(other, force=opts["force"])
+    revs = None
+    if opts['rev']:
+        if 'lookup' in other.capabilities:
+            revs = [other.lookup(rev) for rev in opts['rev']]
+        else:
+            error = _("Other repository doesn't support revision lookup, so a rev cannot be specified.")
+            raise util.Abort(error)
+    incoming = repo.findincoming(other, heads=revs, force=opts["force"])
     if not incoming:
         ui.status(_("no changes found\n"))
         return
@@ -1564,7 +1571,12 @@ def incoming(ui, repo, source="default", **opts):
         fname = opts["bundle"]
         if fname or not other.local():
             # create a bundle (uncompressed if other repo is not local)
-            cg = other.changegroup(incoming, "incoming")
+            if revs is None:
+                cg = other.changegroup(incoming, "incoming")
+            else:
+                if 'changegroupsubset' not in other.capabilities:
+                    raise util.Abort(_("Partial incoming cannot be done because other repository doesn't support changegroupsubset."))
+                cg = other.changegroupsubset(incoming, revs, 'incoming')
             bundletype = other.local() and "HG10BZ" or "HG10UN"
             fname = cleanup = changegroup.writebundle(cg, fname, bundletype)
             # keep written bundle?
@@ -1574,9 +1586,6 @@ def incoming(ui, repo, source="default", **opts):
                 # use the created uncompressed bundlerepo
                 other = bundlerepo.bundlerepository(ui, repo.root, fname)
 
-        revs = None
-        if opts['rev']:
-            revs = [other.lookup(rev) for rev in opts['rev']]
         o = other.changelog.nodesbetween(incoming, revs)[0]
         if opts['newest_first']:
             o.reverse()
