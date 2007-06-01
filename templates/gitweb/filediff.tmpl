@@ -6,7 +6,7 @@
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / annotate
+<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / diff
 </div>
 
 <div class="page_nav">
@@ -27,21 +27,16 @@ diff |
 
 <table>
 <tr>
- <td class="metatag">changeset {rev}:</td>
- <td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
-</tr>
+ <td>changeset {rev}</td>
+ <td style="font-family:monospace"><a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>
 {parent%filediffparent}
 {child%filediffchild}
-<tr>
- <td class="metatag">manifest:</td>
- <td><a href="{url}file/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
-</tr>
 </table>
 
+<div class="list_head"></div>
+
 <div class="page_body">
-<table>
 {diff}
-</table>
 </div>
 
 {footer}

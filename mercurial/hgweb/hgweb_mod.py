@@ -285,7 +285,8 @@ class hgweb(object):
         yield self.t('search',
                      query=query,
                      node=hex(cl.tip()),
-                     entries=changelist)
+                     entries=changelist,
+                     archives=self.archivelist("tip"))
 
     def changeset(self, ctx):
         n = ctx.node()
