@@ -336,7 +336,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
                         visit.append(p)
     else:
         setremoteconfig(ui, opts)
-        dest = ui.expandpath(dest or 'default-push', dest or 'default')
+        dest, revs = cmdutil.parseurl(
+            ui.expandpath(dest or 'default-push', dest or 'default'), revs)
         other = hg.repository(ui, dest)
         o = repo.findoutgoing(other, force=opts['force'])
 
@@ -407,7 +408,7 @@ def clone(ui, source, dest=None, **opts):
     about ssh:// URLs.
     """
     setremoteconfig(ui, opts)
-    hg.clone(ui, ui.expandpath(source), dest,
+    hg.clone(ui, source, dest,
              pull=opts['pull'],
              stream=opts['uncompressed'],
              rev=opts['rev'],
@@ -1588,15 +1589,14 @@ def incoming(ui, repo, source="default", **opts):
 
     See pull for valid source format details.
     """
-    source = ui.expandpath(source)
+    source, revs = cmdutil.parseurl(ui.expandpath(source), opts['rev'])
     setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
     ui.status(_('comparing with %s\n') % source)
-    revs = None
-    if opts['rev']:
+    if revs:
         if 'lookup' in other.capabilities:
-            revs = [other.lookup(rev) for rev in opts['rev']]
+            revs = [other.lookup(rev) for rev in revs]
         else:
             error = _("Other repository doesn't support revision lookup, so a rev cannot be specified.")
             raise util.Abort(error)
@@ -1891,11 +1891,11 @@ def outgoing(ui, repo, dest=None, **opts):
 
     See pull for valid destination format details.
     """
-    dest = ui.expandpath(dest or 'default-push', dest or 'default')
+    dest, revs = cmdutil.parseurl(
+        ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
     setremoteconfig(ui, opts)
-    revs = None
-    if opts['rev']:
-        revs = [repo.lookup(rev) for rev in opts['rev']]
+    if revs:
+        revs = [repo.lookup(rev) for rev in revs]
 
     other = hg.repository(ui, dest)
     ui.status(_('comparing with %s\n') % dest)
@@ -1989,6 +1989,9 @@ def pull(ui, repo, source="default", **opts):
     allows access to a Mercurial repository where you simply use a web
     server to publish the .hg directory as static content.
 
+    An optional identifier after # indicates a particular branch, tag,
+    or changeset to pull.
+
     Some notes about using SSH with Mercurial:
     - SSH requires an accessible shell account on the destination machine
       and a copy of hg in the remote path or specified with as remotecmd.
@@ -2004,18 +2007,18 @@ def pull(ui, repo, source="default", **opts):
       Alternatively specify "ssh -C" as your ssh command in your hgrc or
       with the --ssh command line option.
     """
-    source = ui.expandpath(source)
+    source, revs = cmdutil.parseurl(ui.expandpath(source), opts['rev'])
     setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
     ui.status(_('pulling from %s\n') % (source))
-    revs = None
-    if opts['rev']:
+    if revs:
         if 'lookup' in other.capabilities:
-            revs = [other.lookup(rev) for rev in opts['rev']]
+            revs = [other.lookup(rev) for rev in revs]
         else:
             error = _("Other repository doesn't support revision lookup, so a rev cannot be specified.")
             raise util.Abort(error)
+
     modheads = repo.pull(other, heads=revs, force=opts['force'])
     return postincoming(ui, repo, modheads, opts['update'])
 
@@ -2040,20 +2043,23 @@ def push(ui, repo, dest=None, **opts):
       http://[user@]host[:port]/[path]
       https://[user@]host[:port]/[path]
 
+    An optional identifier after # indicates a particular branch, tag,
+    or changeset to push.
+
     Look at the help text for the pull command for important details
     about ssh:// URLs.
 
     Pushing to http:// and https:// URLs is only possible, if this
     feature is explicitly enabled on the remote Mercurial server.
     """
-    dest = ui.expandpath(dest or 'default-push', dest or 'default')
+    dest, revs = cmdutil.parseurl(
+        ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
     setremoteconfig(ui, opts)
 
     other = hg.repository(ui, dest)
     ui.status('pushing to %s\n' % (dest))
-    revs = None
-    if opts['rev']:
-        revs = [repo.lookup(rev) for rev in opts['rev']]
+    if revs:
+        revs = [repo.lookup(rev) for rev in revs]
     r = repo.push(other, opts['force'], revs=revs)
     return r == 0
 

@@ -11,6 +11,15 @@ import os, sys, mdiff, bdiff, util, templater, patch
 
 revrangesep = ':'
 
+def parseurl(url, revs):
+    '''parse url#branch, returning url, branch + revs'''
+
+    if '#' not in url:
+        return url, (revs or None)
+
+    url, rev = url.split('#', 1)
+    return url, revs + [rev]
+
 def revpair(repo, revs):
     '''return pair of nodes, given list of revisions. second item can
     be None, meaning use working dir.'''
