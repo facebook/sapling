@@ -218,7 +218,11 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dest_lock.release()
 
         if update:
-            _update(dest_repo, dest_repo.changelog.tip())
+            try:
+                checkout = dest_repo.lookup("default")
+            except:
+                checkout = dest_repo.changelog.tip()
+            _update(dest_repo, checkout)
     if dir_cleanup:
         dir_cleanup.close()
 
