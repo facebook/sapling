@@ -7,7 +7,15 @@
 
 <div class="page_header">
 <a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / summary
+
+<form action="{url}log">
+{sessionvars%hiddenformentry}
+<div class="search">
+<input type="text" name="rev"  />
 </div>
+</form>
+</div>
+
 <div class="page_nav">
 summary |
 <a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
@@ -27,7 +35,7 @@ summary |
 <div><a  class="title" href="{url}log{sessionvars%urlparameter}">changes</a></div>
 <table cellspacing="0">
 #shortlog#
-<tr class="light"><td colspan="3"><a class="list" href="{url}log{sessionvars%urlparameter}">...</a></td></tr>
+<tr class="light"><td colspan="4"><a class="list" href="{url}log{sessionvars%urlparameter}">...</a></td></tr>
 </table>
 
 <div><a class="title" href="{url}tags{sessionvars%urlparameter}">tags</a></div>
@@ -40,7 +48,7 @@ summary |
 <table cellspacing="0">
 {branches%branchentry}
 <tr class="light">
-  <td colspan="3"><a class="list"  href="#">...</a></td>
+  <td colspan="4"><a class="list"  href="#">...</a></td>
 </tr>
 </table>
 #footer#

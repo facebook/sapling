@@ -1006,6 +1006,12 @@ class localrepository(repo.repository):
         for f in list:
             p = self.wjoin(f)
             islink = os.path.islink(p)
+            size = os.lstat(p).st_size
+            if size > 10000000:
+                self.ui.warn(_("%s: files over 10MB may cause memory and"
+                               " performance problems\n"
+                               "(use 'hg revert %s' to unadd the file)\n")
+                               % (f, f))
             if not islink and not os.path.exists(p):
                 self.ui.warn(_("%s does not exist!\n") % f)
             elif not islink and not os.path.isfile(p):

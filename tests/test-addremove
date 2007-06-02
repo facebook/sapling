@@ -22,5 +22,5 @@ hg commit -Ama
 mv a b
 rm c
 echo d > d
-hg addremove -s 0.5
+hg addremove -s 50
 hg commit -mb

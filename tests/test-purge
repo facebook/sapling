@@ -97,3 +97,34 @@ fi
 hg purge -v --force
 hg revert --all --quiet
 ls
+
+echo % skip excluded files
+touch excluded_file
+hg purge -p -X excluded_file
+hg purge -v -X excluded_file
+ls
+rm excluded_file
+
+echo % skip files in excluded dirs
+mkdir excluded_dir
+touch excluded_dir/file
+hg purge -p -X excluded_dir
+hg purge -v -X excluded_dir
+ls
+ls excluded_dir
+rm -R excluded_dir
+
+echo % skip excluded empty dirs
+mkdir excluded_dir
+hg purge -p -X excluded_dir
+hg purge -v -X excluded_dir
+ls
+rmdir excluded_dir
+
+echo % skip patterns
+mkdir .svn
+touch .svn/foo
+mkdir directory/.svn
+touch directory/.svn/foo
+hg purge -p -X .svn -X '*/.svn'
+hg purge -p -X re:.*.svn

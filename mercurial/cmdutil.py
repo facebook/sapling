@@ -11,6 +11,15 @@ import os, sys, mdiff, bdiff, util, templater, patch
 
 revrangesep = ':'
 
+def parseurl(url, revs):
+    '''parse url#branch, returning url, branch + revs'''
+
+    if '#' not in url:
+        return url, (revs or None)
+
+    url, rev = url.split('#', 1)
+    return url, revs + [rev]
+
 def revpair(repo, revs):
     '''return pair of nodes, given list of revisions. second item can
     be None, meaning use working dir.'''
@@ -160,9 +169,11 @@ def findrenames(repo, added=None, removed=None, threshold=0.5):
                 for line in alines[x1:x2]:
                     equal += len(line)
 
-            myscore = equal*2.0 / (len(aa)+len(rr))
-            if myscore >= bestscore:
-                bestname, bestscore = r, myscore
+            lengths = len(aa) + len(rr)
+            if lengths:
+                myscore = equal*2.0 / lengths
+                if myscore >= bestscore:
+                    bestname, bestscore = r, myscore
         if bestname:
             yield bestname, a, bestscore
 

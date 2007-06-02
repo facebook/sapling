@@ -4,6 +4,10 @@ adding another-file
 removing empty-file
 removing large-file
 recording removal of large-file as rename to another-file (99% similar)
+% comparing two empty files caused ZeroDivisionError in the past
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding another-empty-file
+removing empty-file
 adding large-file
 adding tiny-file
 adding small-file

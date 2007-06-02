@@ -10,7 +10,7 @@ from mercurial import demandimport; demandimport.enable()
 import os, mimetools, cStringIO
 from mercurial.i18n import gettext as _
 from mercurial import ui, hg, util, templater
-from common import get_mtime, staticfile, style_map
+from common import get_mtime, staticfile, style_map, paritygen
 from hgweb_mod import hgweb
 
 # This is a stopgap
@@ -22,6 +22,7 @@ class hgwebdir(object):
         self.parentui = parentui
         self.motd = None
         self.style = None
+        self.stripecount = None
         self.repos_sorted = ('name', False)
         if isinstance(config, (list, tuple)):
             self.repos = cleannames(config)
@@ -41,6 +42,8 @@ class hgwebdir(object):
                     self.motd = cp.get('web', 'motd')
                 if cp.has_option('web', 'style'):
                     self.style = cp.get('web', 'style')
+                if cp.has_option('web', 'stripes'):
+                    self.stripecount = int(cp.get('web', 'stripes'))
             if cp.has_section('paths'):
                 self.repos.extend(cleannames(cp.items('paths')))
             if cp.has_section('collections'):
@@ -97,6 +100,8 @@ class hgwebdir(object):
             style = config('web', 'style', '')
         if req.form.has_key('style'):
             style = req.form['style'][0]
+        if self.stripecount is None:
+            self.stripecount = int(config('web', 'stripes', 1))
         mapfile = style_map(templater.templatepath(), style)
         tmpl = templater.templater(mapfile, templater.common_filters,
                                    defaults={"header": header,
@@ -127,7 +132,7 @@ class hgwebdir(object):
                     separator = ';'
 
             rows = []
-            parity = 0
+            parity = paritygen(self.stripecount)
             for name, path in self.repos:
                 u = ui.ui(parentui=parentui)
                 try:
@@ -165,8 +170,7 @@ class hgwebdir(object):
                 if (not sortcolumn
                     or (sortcolumn, descending) == self.repos_sorted):
                     # fast path for unsorted output
-                    row['parity'] = parity
-                    parity = 1 - parity
+                    row['parity'] = parity.next()
                     yield row
                 else:
                     rows.append((row["%s_sort" % sortcolumn], row))
@@ -175,8 +179,7 @@ class hgwebdir(object):
                 if descending:
                     rows.reverse()
                 for key, row in rows:
-                    row['parity'] = parity
-                    parity = 1 - parity
+                    row['parity'] = parity.next()
                     yield row
 
         try:

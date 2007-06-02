@@ -1594,7 +1594,7 @@ def clone(ui, source, dest=None, **opts):
                 destrev = heads.keys()
                 destrev.append(sr.changelog.parents(qbase)[0])
     ui.note(_('cloning main repo\n'))
-    sr, dr = hg.clone(ui, sr, dest,
+    sr, dr = hg.clone(ui, sr.url(), dest,
                       pull=opts['pull'],
                       rev=destrev,
                       update=False,

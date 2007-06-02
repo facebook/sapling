@@ -12,7 +12,7 @@ from mercurial.node import *
 from mercurial.i18n import gettext as _
 from mercurial import mdiff, ui, hg, util, archival, streamclone, patch
 from mercurial import revlog, templater
-from common import get_mtime, staticfile, style_map
+from common import get_mtime, staticfile, style_map, paritygen
 
 def _up(p):
     if p[0] != "/":
@@ -147,14 +147,13 @@ class hgweb(object):
                 l += [x for x in files if x.startswith(t)]
             return l
 
-        parity = [0]
+        parity = paritygen(self.stripecount)
         def diffblock(diff, f, fn):
             yield self.t("diffblock",
                          lines=prettyprintlines(diff),
-                         parity=parity[0],
+                         parity=parity.next(),
                          file=f,
                          filenode=hex(fn or nullid))
-            parity[0] = 1 - parity[0]
 
         def prettyprintlines(diff):
             for l in diff.splitlines(1):
@@ -197,14 +196,13 @@ class hgweb(object):
 
     def changelog(self, ctx, shortlog=False):
         def changelist(**map):
-            parity = (start - end) & 1
             cl = self.repo.changelog
             l = [] # build a list in forward order for efficiency
             for i in xrange(start, end):
                 ctx = self.repo.changectx(i)
                 n = ctx.node()
 
-                l.insert(0, {"parity": parity,
+                l.insert(0, {"parity": parity.next(),
                              "author": ctx.user(),
                              "parent": self.siblings(ctx.parents(), i - 1),
                              "child": self.siblings(ctx.children(), i + 1),
@@ -214,7 +212,6 @@ class hgweb(object):
                              "files": self.listfilediffs(ctx.files(), n),
                              "rev": i,
                              "node": hex(n)})
-                parity = 1 - parity
 
             for e in l:
                 yield e
@@ -226,6 +223,7 @@ class hgweb(object):
         start = max(0, pos - maxchanges + 1)
         end = min(count, start + maxchanges)
         pos = end - 1
+        parity = paritygen(self.stripecount, offset=start-end)
 
         changenav = revnavgen(pos, maxchanges, count, self.repo.changectx)
 
@@ -267,7 +265,7 @@ class hgweb(object):
                 n = ctx.node()
 
                 yield self.t('searchentry',
-                             parity=self.stripes(count),
+                             parity=parity.next(),
                              author=ctx.user(),
                              parent=self.siblings(ctx.parents()),
                              child=self.siblings(ctx.children()),
@@ -282,11 +280,13 @@ class hgweb(object):
                     break
 
         cl = self.repo.changelog
+        parity = paritygen(self.stripecount)
 
         yield self.t('search',
                      query=query,
                      node=hex(cl.tip()),
-                     entries=changelist)
+                     entries=changelist,
+                     archives=self.archivelist("tip"))
 
     def changeset(self, ctx):
         n = ctx.node()
@@ -294,12 +294,11 @@ class hgweb(object):
         p1 = parents[0].node()
 
         files = []
-        parity = 0
+        parity = paritygen(self.stripecount)
         for f in ctx.files():
             files.append(self.t("filenodelink",
                                 node=hex(n), file=f,
-                                parity=parity))
-            parity = 1 - parity
+                                parity=parity.next()))
 
         def diff(**map):
             yield self.diff(p1, n, None)
@@ -326,16 +325,16 @@ class hgweb(object):
         start = max(0, pos - pagelen + 1)
         end = min(count, start + pagelen)
         pos = end - 1
+        parity = paritygen(self.stripecount, offset=start-end)
 
         def entries(**map):
             l = []
-            parity = (count - 1) & 1
 
             for i in xrange(start, end):
                 ctx = fctx.filectx(i)
                 n = fl.node(i)
 
-                l.insert(0, {"parity": parity,
+                l.insert(0, {"parity": parity.next(),
                              "filerev": i,
                              "file": f,
                              "node": hex(ctx.node()),
@@ -345,7 +344,6 @@ class hgweb(object):
                              "parent": self.siblings(fctx.parents()),
                              "child": self.siblings(fctx.children()),
                              "desc": ctx.description()})
-                parity = 1 - parity
 
             for e in l:
                 yield e
@@ -360,6 +358,7 @@ class hgweb(object):
         text = fctx.data()
         fl = fctx.filelog()
         n = fctx.filenode()
+        parity = paritygen(self.stripecount)
 
         mt = mimetypes.guess_type(f)[0]
         rawtext = text
@@ -372,7 +371,7 @@ class hgweb(object):
             for l, t in enumerate(text.splitlines(1)):
                 yield {"line": t,
                        "linenumber": "% 6d" % (l + 1),
-                       "parity": self.stripes(l)}
+                       "parity": parity.next()}
 
         yield self.t("filerevision",
                      file=f,
@@ -394,19 +393,18 @@ class hgweb(object):
         f = fctx.path()
         n = fctx.filenode()
         fl = fctx.filelog()
+        parity = paritygen(self.stripecount)
 
         def annotate(**map):
-            parity = 0
             last = None
             for f, l in fctx.annotate(follow=True):
                 fnode = f.filenode()
                 name = self.repo.ui.shortuser(f.user())
 
                 if last != fnode:
-                    parity = 1 - parity
                     last = fnode
 
-                yield {"parity": parity,
+                yield {"parity": parity.next(),
                        "node": hex(f.node()),
                        "rev": f.rev(),
                        "author": name,
@@ -432,6 +430,7 @@ class hgweb(object):
         node = ctx.node()
 
         files = {}
+        parity = paritygen(self.stripecount)
 
         if path and path[-1] != "/":
             path += "/"
@@ -450,7 +449,6 @@ class hgweb(object):
                 files[short] = (f, n)
 
         def filelist(**map):
-            parity = 0
             fl = files.keys()
             fl.sort()
             for f in fl:
@@ -459,14 +457,12 @@ class hgweb(object):
                     continue
 
                 yield {"file": full,
-                       "parity": self.stripes(parity),
+                       "parity": parity.next(),
                        "basename": f,
                        "size": ctx.filectx(full).size(),
                        "permissions": mf.execf(full)}
-                parity += 1
 
         def dirlist(**map):
-            parity = 0
             fl = files.keys()
             fl.sort()
             for f in fl:
@@ -474,16 +470,16 @@ class hgweb(object):
                 if fnode:
                     continue
 
-                yield {"parity": self.stripes(parity),
+                yield {"parity": parity.next(),
                        "path": os.path.join(abspath, f),
                        "basename": f[:-1]}
-                parity += 1
 
         yield self.t("manifest",
                      rev=ctx.rev(),
                      node=hex(node),
                      path=abspath,
                      up=_up(abspath),
+                     upparity=parity.next(),
                      fentries=filelist,
                      dentries=dirlist,
                      archives=self.archivelist(hex(node)))
@@ -491,17 +487,16 @@ class hgweb(object):
     def tags(self):
         i = self.repo.tagslist()
         i.reverse()
+        parity = paritygen(self.stripecount)
 
         def entries(notip=False, **map):
-            parity = 0
             for k, n in i:
                 if notip and k == "tip":
                     continue
-                yield {"parity": self.stripes(parity),
+                yield {"parity": parity.next(),
                        "tag": k,
                        "date": self.repo.changectx(n).date(),
                        "node": hex(n)}
-                parity += 1
 
         yield self.t("tags",
                      node=hex(self.repo.changelog.tip()),
@@ -513,7 +508,7 @@ class hgweb(object):
         i.reverse()
 
         def tagentries(**map):
-            parity = 0
+            parity = paritygen(self.stripecount)
             count = 0
             for k, n in i:
                 if k == "tip": # skip tip
@@ -524,15 +519,14 @@ class hgweb(object):
                     break;
 
                 yield self.t("tagentry",
-                             parity=self.stripes(parity),
+                             parity=parity.next(),
                              tag=k,
                              node=hex(n),
                              date=self.repo.changectx(n).date())
-                parity += 1
 
 
         def branches(**map):
-            parity = 0
+            parity = paritygen(self.stripecount)
 
             b = self.repo.branchtags()
             l = [(-self.repo.changelog.rev(n), n, t) for t, n in b.items()]
@@ -541,14 +535,13 @@ class hgweb(object):
             for r,n,t in l:
                 ctx = self.repo.changectx(n)
 
-                yield {'parity': self.stripes(parity),
+                yield {'parity': parity.next(),
                        'branch': t,
                        'node': hex(n),
                        'date': ctx.date()}
-                parity += 1
 
         def changelist(**map):
-            parity = 0
+            parity = paritygen(self.stripecount, offset=start-end)
             l = [] # build a list in forward order for efficiency
             for i in xrange(start, end):
                 ctx = self.repo.changectx(i)
@@ -556,13 +549,12 @@ class hgweb(object):
 
                 l.insert(0, self.t(
                     'shortlogentry',
-                    parity=parity,
+                    parity=parity.next(),
                     author=ctx.user(),
                     desc=ctx.description(),
                     date=ctx.date(),
                     rev=i,
                     node=hn))
-                parity = 1 - parity
 
             yield l
 
@@ -844,13 +836,6 @@ class hgweb(object):
             fctx = self.repo.filectx(path, fileid=changeid)
 
         return fctx
-
-    def stripes(self, parity):
-        "make horizontal stripes for easier reading"
-        if self.stripecount:
-            return (1 + parity / self.stripecount) & 1
-        else:
-            return 0
 
     def do_log(self, req):
         if req.form.has_key('file') and req.form['file'][0]:
