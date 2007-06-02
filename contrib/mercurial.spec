@@ -24,7 +24,7 @@ rm -rf $RPM_BUILD_ROOT
 python setup.py build
 
 %install
-python setup.py install --root $RPM_BUILD_ROOT
+python setup.py install --root $RPM_BUILD_ROOT --prefix %{_prefix}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
