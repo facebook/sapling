@@ -495,9 +495,12 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
     if node2:
         ctx2 = context.changectx(repo, node2)
+        execf2 = ctx2.manifest().execf
     else:
         ctx2 = context.workingctx(repo)
-    man2 = ctx2.manifest()
+        execf2 = util.execfunc(repo.root, None)
+        if execf2 is None:
+            execf2 = ctx2.parents()[0].manifest().copy().execf
 
     # returns False if there was no rename between ctx1 and ctx2
     # returns None if the file was created between ctx1 and ctx2
@@ -563,7 +566,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
             a, b = f, f
             if f in added:
-                mode = gitmode(man2.execf(f))
+                mode = gitmode(execf2(f))
                 if f in copied:
                     a = copied[f]
                     omode = gitmode(man1.execf(a))
@@ -588,7 +591,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     header.append('deleted file mode %s\n' % mode)
             else:
                 omode = gitmode(man1.execf(f))
-                nmode = gitmode(man2.execf(f))
+                nmode = gitmode(execf2(f))
                 addmodehdr(header, omode, nmode)
                 if util.binary(to) or util.binary(tn):
                     dodiff = 'binary'
