@@ -36,6 +36,22 @@ python setup.py build
 
 %install
 python setup.py install --root $RPM_BUILD_ROOT --prefix %{_prefix}
+install contrib/hgk          $RPM_BUILD_ROOT%{_bindir}
+install contrib/convert-repo $RPM_BUILD_ROOT%{_bindir}/mercurial-convert-repo
+install contrib/hg-ssh       $RPM_BUILD_ROOT%{_bindir}
+install contrib/git-viz/{hg-viz,git-rev-tree} $RPM_BUILD_ROOT%{_bindir}
+
+bash_completion_dir=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
+mkdir -p $bash_completion_dir
+install contrib/bash_completion $bash_completion_dir/mercurial.sh
+
+zsh_completion_dir=$RPM_BUILD_ROOT%{_datadir}/zsh/site-functions
+mkdir -p $zsh_completion_dir
+install contrib/zsh_completion $zsh_completion_dir/_mercurial
+
+lisp_dir=$RPM_BUILD_ROOT%{_datadir}/emacs/site-lisp
+mkdir -p $lisp_dir
+install contrib/mercurial.el $lisp_dir
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -45,8 +61,16 @@ rm -rf $RPM_BUILD_ROOT
 %doc doc/* *.cgi
 %dir %{pythonlib}
 %dir %{hgext}
-%{_bindir}/hgmerge
+%{_sysconfdir}/bash_completion.d/mercurial.sh
+%{_datadir}/zsh/site-functions/_mercurial
+%{_datadir}/emacs/site-lisp/mercurial.el
 %{_bindir}/hg
+%{_bindir}/hgk
+%{_bindir}/hgmerge
+%{_bindir}/hg-ssh
+%{_bindir}/hg-viz
+%{_bindir}/git-rev-tree
+%{_bindir}/mercurial-convert-repo
 %{pythonlib}/templates
 %{pythonlib}/*.py*
 %{pythonlib}/hgweb/*.py*
