@@ -40,6 +40,19 @@ sed -e 's,^Source:.*,Source: /dev/null,' \
     -e 's,^%setup.*,,' \
     $specfile > $tmpspec
 
+cat <<EOF >> $tmpspec
+%changelog
+* `date +'%a %b %d %Y'` `hg showconfig ui.username` $version-$release
+- Automatically built via $0
+
+EOF
+hg log \
+     --template '* {date|rfc822date} {author}\n- {desc|firstline}\n\n' \
+     .hgtags \
+  | sed -e 's/^\(\* [MTWFS][a-z][a-z]\), \([0-3][0-9]\) \([A-Z][a-z][a-z]\) /\1 \3 \2 /' \
+        -e '/^\* [MTWFS][a-z][a-z] /{s/ [012][0-9]:[0-9][0-9]:[0-9][0-9] [+-][0-9]\{4\}//}' \
+   >> $tmpspec
+
 rpmbuild --define "_topdir $rpmdir" -bb $tmpspec
 if [ $? = 0 ]; then
     rm -rf $tmpspec $rpmdir/BUILD
