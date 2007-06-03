@@ -470,12 +470,11 @@ adding foo/file.txt revisions
 adding quux/file.py revisions
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
-acl: acl.allow enabled, 1 entries for user barney
-acl: acl.deny enabled, 0 entries for user barney
-acl: allowing changeset ef1ea85a6374
-acl: allowing changeset f9cafe1212c8
-acl: allowing changeset 911600dab2ae
-rolling back last transaction
+error: pretxnchangegroup.acl hook failed: unable to open ../acl.config: No such file or directory
+abort: unable to open ../acl.config: No such file or directory
+transaction abort!
+rollback completed
+no rollback information available
 0:6675d58eff77
 
 betty is allowed inside foo/ by a acl.config file

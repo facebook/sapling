@@ -34,6 +34,9 @@ diff -r cb9a9f314b8b -r 0647d048b600 a
  a
 +a
 (run 'hg update' to get a working copy)
+% fail for config file is missing
+rolling back last transaction
+pull failed
 % pull
 rolling back last transaction
 pulling from ../a

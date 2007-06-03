@@ -48,6 +48,12 @@ template = Subject: {desc|firstline|strip}\nFrom: {author}\n\nchangeset {node|sh
 baseurl = http://test/
 EOF
 
+echo % fail for config file is missing
+hg --cwd b rollback
+hg --cwd b pull ../a 2>&1 | grep 'unable to open.*\.notify\.conf' > /dev/null && echo pull failed
+
+touch "$HGTMP/.notify.conf"
+
 echo % pull
 hg --cwd b rollback
 hg --traceback --cwd b pull ../a 2>&1 | sed -e 's/\(Message-Id:\).*/\1/' \

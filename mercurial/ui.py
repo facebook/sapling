@@ -170,7 +170,15 @@ class ui(object):
 
         cdata = util.configparser()
         try:
-            cdata.read(filename)
+            try:
+                fp = open(filename)
+            except IOError, inst:
+                raise util.Abort(_("unable to open %s: %s") % (filename, 
+                                   getattr(inst, "strerror", inst)))
+            try:
+                cdata.readfp(fp, filename)
+            finally:
+                fp.close()
         except ConfigParser.ParsingError, inst:
             raise util.Abort(_("failed to parse %s\n%s") % (filename,
                                                             inst))
