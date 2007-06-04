@@ -264,9 +264,8 @@ proc readrefs {} {
     regsub -all "\r\n" $tags "\n" tags
     set lines [split $tags "\n"]
     foreach f $lines {
-	set f [regexp -all -inline {\S+} $f]
-	set direct [lindex $f 0]
-	set full [lindex $f 1]
+	regexp {(\S+)$} $f full
+	regsub {\s+(\S+)$} $f "" direct
 	set sha [split $full ':']
 	set tag [lindex $sha 1]
 	lappend tagids($direct) $tag
@@ -356,15 +355,15 @@ proc makewindow {} {
     set canv .ctop.top.clist.canv
     canvas $canv -height $geometry(canvh) -width $geometry(canv1) \
 	-bg white -bd 0 \
-	-yscrollincr $linespc -yscrollcommand "$cscroll set"
+	-yscrollincr $linespc -yscrollcommand "$cscroll set" -selectbackground grey
     .ctop.top.clist add $canv
     set canv2 .ctop.top.clist.canv2
     canvas $canv2 -height $geometry(canvh) -width $geometry(canv2) \
-	-bg white -bd 0 -yscrollincr $linespc
+	-bg white -bd 0 -yscrollincr $linespc -selectbackground grey
     .ctop.top.clist add $canv2
     set canv3 .ctop.top.clist.canv3
     canvas $canv3 -height $geometry(canvh) -width $geometry(canv3) \
-	-bg white -bd 0 -yscrollincr $linespc
+	-bg white -bd 0 -yscrollincr $linespc -selectbackground grey
     .ctop.top.clist add $canv3
     bind .ctop.top.clist <Configure> {resizeclistpanes %W %w}
 
