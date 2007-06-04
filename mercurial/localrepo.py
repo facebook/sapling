@@ -307,7 +307,7 @@ class localrepository(repo.repository):
                 if bn != an and an in bh and \
                    (bn not in ah or len(bh) > len(ah)):
                     an = bn
-                ah.append([n for n in bh if n not in ah])
+                ah.extend([n for n in bh if n not in ah])
                 globaltags[k] = an, ah
 
         # read the tags file from each head, ending with the tip

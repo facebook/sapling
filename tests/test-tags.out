@@ -57,3 +57,9 @@ bar                                0:b409d9da318e
 abort: a tag named bar already exists (use -f to force)
 tip                                6:b5ff9d142648
 bar                                0:b409d9da318e
+adding foo
+tip                                3:ca8479b4351c
+bar                                2:72b852876a42
+% bar should still point to rev 2
+tip                                4:40af5d225513
+bar                                2:72b852876a42
