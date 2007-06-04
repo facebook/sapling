@@ -346,7 +346,8 @@ class revlog(object):
                 if (oldst and st.st_dev == oldst.st_dev
                     and st.st_ino == oldst.st_ino
                     and st.st_mtime == oldst.st_mtime
-                    and st.st_ctime == oldst.st_ctime):
+                    and st.st_ctime == oldst.st_ctime
+                    and st.st_size == oldst.st_size):
                     return
                 self.indexstat = st
             if len(i) > 0:
