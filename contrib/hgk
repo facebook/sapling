@@ -264,9 +264,8 @@ proc readrefs {} {
     regsub -all "\r\n" $tags "\n" tags
     set lines [split $tags "\n"]
     foreach f $lines {
-	set f [regexp -all -inline {\S+} $f]
-	set direct [lindex $f 0]
-	set full [lindex $f 1]
+	regexp {(\S+)$} $f full
+	regsub {\s+(\S+)$} $f "" direct
 	set sha [split $full ':']
 	set tag [lindex $sha 1]
 	lappend tagids($direct) $tag
