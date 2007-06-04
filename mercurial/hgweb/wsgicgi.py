@@ -12,6 +12,7 @@ import os, sys
 from mercurial import util
 
 def launch(application):
+    util.set_binary(sys.stdin)
     util.set_binary(sys.stdout)
 
     environ = dict(os.environ.items())
