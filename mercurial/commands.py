@@ -2411,11 +2411,11 @@ def serve(ui, repo, **opts):
 
             if not ui.verbose: return
 
-            if httpd.port != 80:
+            if self.httpd.port != 80:
                 ui.status(_('listening at http://%s:%d/\n') %
-                          (httpd.addr, httpd.port))
+                          (self.httpd.addr, self.httpd.port))
             else:
-                ui.status(_('listening at http://%s/\n') % httpd.addr)
+                ui.status(_('listening at http://%s/\n') % self.httpd.addr)
 
         def run(self):
             self.httpd.serve_forever()
