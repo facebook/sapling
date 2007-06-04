@@ -93,7 +93,7 @@ summary: {desc|firstline}
 
 deftemplates = {
     'changegroup': multiple_template,
-    }
+}
 
 class notifier(object):
     '''email notification class.'''
@@ -212,7 +212,8 @@ class notifier(object):
             msg['From'] = sender
 
         msg['Date'] = util.datestr(date=util.makedate(),
-                format="%a, %d %b %Y %H:%M:%S", timezone=True)
+                                   format="%a, %d %b %Y %H:%M:%S",
+                                   timezone=True)
         fix_subject()
         fix_sender()
 
@@ -230,7 +231,7 @@ class notifier(object):
                 self.ui.write('\n')
         else:
             self.ui.status(_('notify: sending %d subscribers %d changes\n') %
-                             (len(self.subs), count))
+                           (len(self.subs), count))
             mail.sendmail(self.ui, templater.email(msg['From']),
                           self.subs, msgtext)
 
@@ -266,7 +267,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         return
     if n.skipsource(source):
         ui.debug(_('notify: changes have source "%s" - skipping\n') %
-                  source)
+                 source)
         return
     node = bin(node)
     ui.pushbuffer()
