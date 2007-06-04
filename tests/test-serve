@@ -1,0 +1,12 @@
+#!/bin/sh
+
+hg init test
+cd test
+
+echo % Without -v
+hg serve -a localhost -p 20063 -d --pid-file=hg.pid
+kill `cat hg.pid`
+
+echo % With -v
+hg serve -a localhost -p 20063 -d --pid-file=hg.pid -v
+kill `cat hg.pid`
