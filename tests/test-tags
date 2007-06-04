@@ -105,3 +105,20 @@ hg tags
 
 hg tag -d '1000000 0' -r 3 bar         # should complain
 hg tags
+
+# test tag rank with 3 heads
+cd ..
+hg init t4
+cd t4
+echo foo > foo
+hg add
+hg ci -m 'add foo' -d '0 0'                # rev 0
+hg tag -d '0 0' bar                        # rev 1 bar -> 0
+hg tag -d '0 0' -f bar                     # rev 2 bar -> 1
+hg up -qC 0
+hg tag -d '0 0' -fr 2 bar                  # rev 3 bar -> 2
+hg tags
+hg up -qC 0
+hg tag -d '0 0' -m 'retag rev 0' -fr 0 bar # rev 4 bar -> 0, but bar stays at 2
+echo % bar should still point to rev 2
+hg tags
