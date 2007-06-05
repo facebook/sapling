@@ -5,8 +5,8 @@ cd test
 
 echo % Without -v
 hg serve -a localhost -p 20063 -d --pid-file=hg.pid
-kill `cat hg.pid`
+cat hg.pid >> "$DAEMON_PIDS"
 
 echo % With -v
-hg serve -a localhost -p 20063 -d --pid-file=hg.pid -v
-kill `cat hg.pid`
+hg serve -a localhost -p 20064 -d --pid-file=hg.pid -v
+cat hg.pid >> "$DAEMON_PIDS"
