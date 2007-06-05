@@ -358,8 +358,9 @@ class dirstate(object):
             e = struct.pack(self.format, e[0], e[1], e[2], e[3], len(f))
             cs.write(e)
             cs.write(f)
-        st = self.opener("dirstate", "w", atomic=True)
+        st = self.opener("dirstate", "w", atomictemp=True)
         st.write(cs.getvalue())
+        st.rename()
         self.dirty = 0
 
     def filterfiles(self, files):
