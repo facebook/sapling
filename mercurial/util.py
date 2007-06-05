@@ -1195,24 +1195,7 @@ def opener(base, audit=True):
                 except: pass
                 posixfile.close(self)
 
-    class atomicfile(atomictempfile):
-        """the file will only be copied on close"""
-        def __init__(self, name, mode):
-            self._err = False
-            atomictempfile.__init__(self, name, mode)
-        def write(self, s):
-            try:
-                atomictempfile.write(self, s)
-            except:
-                self._err = True
-                raise
-        def close(self):
-            self.rename()
-        def __del__(self):
-            if not self._err:
-                self.rename()
-
-    def o(path, mode="r", text=False, atomic=False, atomictemp=False):
+    def o(path, mode="r", text=False, atomictemp=False):
         if audit_p:
             audit_path(path)
         f = os.path.join(p, path)
@@ -1228,9 +1211,7 @@ def opener(base, audit=True):
                 d = os.path.dirname(f)
                 if not os.path.isdir(d):
                     os.makedirs(d)
-            if atomic:
-                return atomicfile(f, mode)
-            elif atomictemp:
+            if atomictemp:
                 return atomictempfile(f, mode)
             if nlink > 1:
                 rename(mktempcopy(f), f)
