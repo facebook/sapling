@@ -182,7 +182,9 @@ class convert_cvs(converter_source):
                         self.changeset[id] = c
                         self.files[id] = files
                     else:
-                        file,rev = l[1:-2].rsplit(':',1)
+                        colon = l.rfind(':')
+                        file = l[1:colon]
+                        rev = l[colon+1:-2]
                         rev = rev.split("->")[1]
                         files[file] = rev
 
