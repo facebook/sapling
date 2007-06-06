@@ -31,7 +31,8 @@ from mercurial import hg, util
 from mercurial.i18n import _
 import os
 
-def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n',
+def dopurge(ui, repo, dirs=None, act=True, ignored=False, 
+            abort_on_err=False, eol='\n',
             force=False, include=None, exclude=None):
     def error(msg):
         if abort_on_err:
@@ -54,7 +55,7 @@ def dopurge(ui, repo, dirs=None, act=True, abort_on_err=False, eol='\n',
     roots, match, anypats = util.cmdmatcher(repo.root, repo.getcwd(), dirs,
                                             include, exclude)
     for src, f, st in repo.dirstate.statwalk(files=roots, match=match,
-                                             ignored=True, directories=True):
+                                             ignored=ignored, directories=True):
         if src == 'd':
             directories.append(f)
         elif src == 'm':
@@ -139,6 +140,7 @@ def purge(ui, repo, *dirs, **opts):
     files that this program would delete use the --print option.
     '''
     act = not opts['print']
+    ignored = bool(opts['all'])
     abort_on_err = bool(opts['abort_on_err'])
     eol = opts['print0'] and '\0' or '\n'
     if eol == '\0':
@@ -147,13 +149,15 @@ def purge(ui, repo, *dirs, **opts):
     force = bool(opts['force'])
     include = opts['include']
     exclude = opts['exclude']
-    dopurge(ui, repo, dirs, act, abort_on_err, eol, force, include, exclude)
+    dopurge(ui, repo, dirs, act, ignored, abort_on_err,
+            eol, force, include, exclude)
 
 
 cmdtable = {
     'purge':
         (purge,
          [('a', 'abort-on-err', None, _('abort if an error occurs')),
+          ('',  'all', None, _('purge ignored files too')),
           ('f', 'force', None, _('purge even when missing files are detected')),
           ('p', 'print', None, _('print the file names instead of deleting them')),
           ('0', 'print0', None, _('end filenames with NUL, for use with xargs'

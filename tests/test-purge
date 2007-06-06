@@ -69,10 +69,13 @@ ls
 ls directory/untracked_file
 rm directory/untracked_file
 
-echo % delete ignored files
+echo % skip ignored files if --all not specified
 touch ignored
 hg purge -p
 hg purge -v
+ls
+hg purge -p --all
+hg purge -v --all
 ls
 
 echo % abort with missing files until we support name mangling filesystems

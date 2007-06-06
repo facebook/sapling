@@ -42,7 +42,10 @@ Removing directory untracked_directory
 directory
 r1
 directory/untracked_file
-% delete ignored files
+% skip ignored files if --all not specified
+directory
+ignored
+r1
 ignored
 Removing file ignored
 directory
