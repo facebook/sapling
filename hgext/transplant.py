@@ -336,7 +336,7 @@ class transplanter:
                 inmsg = True
                 message.append(line)
         return (node, user, date, '\n'.join(message), parents)
-            
+
     def log(self, user, date, message, p1, p2, merge=False):
         '''journal changelog metadata for later recover'''
 

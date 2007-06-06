@@ -155,7 +155,7 @@ print 'untrusted:'
 print u2.config('foobar', 'baz', untrusted=True)
 print u2.config('paths', 'interpolated', untrusted=True)
 
-print 
+print
 print "# error handling"
 
 def assertraises(f, exc=util.Abort):

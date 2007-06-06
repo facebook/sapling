@@ -305,7 +305,7 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
             raise util.Abort(_('no patch command found in hgrc or PATH'))
         if util.needbinarypatch():
             args.append('--binary')
-                                    
+
         if cwd:
             args.append('-d %s' % util.shellquote(cwd))
         fp = os.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,

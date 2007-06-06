@@ -208,7 +208,7 @@ class httprepository(remoterepository):
         # 1.0 here is the _protocol_ version
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
         urllib2.install_opener(opener)
-    
+
     def __del__(self):
         if self.handler:
             self.handler.close_all()

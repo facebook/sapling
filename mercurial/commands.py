@@ -901,7 +901,7 @@ def debuginstall(ui):
         fa = writetemp(a)
         d = mdiff.unidiff(a, None, b, None, os.path.basename(fa))
         fd = writetemp(d)
-        
+
         files = {}
         try:
             patch.patch(fd, ui, cwd=os.path.dirname(fa), files=files)
@@ -909,7 +909,7 @@ def debuginstall(ui):
             ui.write(_(" patch call failed:\n"))
             ui.write(" " + str(e) + "\n")
             problems += 1
-        else:            
+        else:
             if list(files) != [os.path.basename(fa)]:
                 ui.write(_(" unexpected patch output!"))
                 ui.write(_(" (you may have an incompatible version of patch)\n"))
@@ -919,7 +919,7 @@ def debuginstall(ui):
                 ui.write(_(" patch test failed!"))
                 ui.write(_(" (you may have an incompatible version of patch)\n"))
                 problems += 1
-                
+
         os.unlink(fa)
         os.unlink(fd)
 
@@ -2548,7 +2548,7 @@ def tags(ui, repo):
     hexfunc = ui.debugflag and hex or short
     for t, n in l:
         try:
-	    hn = hexfunc(n)
+            hn = hexfunc(n)
             r = "%5d:%s" % (repo.changelog.rev(n), hexfunc(n))
         except revlog.LookupError:
             r = "    ?:%s" % hn

@@ -38,7 +38,7 @@ def split_lines(t):
 # common base
 TZU = split_lines("""     The Nameless is the origin of Heaven and Earth;
      The named is the mother of all things.
-     
+
      Therefore let there always be non-being,
        so we may see their subtlety,
      And let there always be being,
@@ -69,7 +69,7 @@ TAO = split_lines("""     The Way that can be told of is not the eternal Way;
      The name that can be named is not the eternal name.
      The Nameless is the origin of Heaven and Earth;
      The named is the mother of all things.
-     
+
      Therefore let there always be non-being,
        so we may see their subtlety,
      And let there always be being,
@@ -77,7 +77,7 @@ TAO = split_lines("""     The Way that can be told of is not the eternal Way;
      The two are the same,
      But after they are produced,
        they have different names.
-     
+
        -- The Way of Lao-Tzu, tr. Wing-tsit Chan
 
 """)
@@ -95,7 +95,7 @@ MERGED_RESULT = split_lines("""     The Way that can be told of is not the etern
        they have different names.
 <<<<<<< LAO
 =======
-     
+
        -- The Way of Lao-Tzu, tr. Wing-tsit Chan
 
 >>>>>>> TAO
@@ -144,7 +144,7 @@ class TestMerge3(TestCase):
         self.assertEquals(list(m3.merge_groups()),
                           [('a', ['aaa', 'bbb']),
                            ('unchanged', ['zz'])])
-        
+
     def test_null_insert(self):
         m3 = Merge3([],
                     ['aaa', 'bbb'],
@@ -235,7 +235,7 @@ bbb
                             mid_marker='--',
                             end_marker='>>')
         self.assertEquals(''.join(ml), 'aaa\n222\nbbb\n')
-        
+
 
     def test_insert_clash(self):
         """Both try to insert lines in the same place."""
@@ -370,7 +370,7 @@ bbb
         this_text = ("a\n"*10+"b\n" * 10).splitlines(True)
         other_text = ("a\n"*10+"c\n"+"b\n" * 8 + "c\n").splitlines(True)
         m3 = Merge3(base_text, other_text, this_text)
-        m_lines = m3.merge_lines('OTHER', 'THIS', reprocess=True, 
+        m_lines = m3.merge_lines('OTHER', 'THIS', reprocess=True,
                                  base_marker='|||||||')
         self.assertRaises(CantReprocessAndShowBase, list, m_lines)
 

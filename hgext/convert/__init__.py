@@ -50,7 +50,7 @@ class converter_source(object):
 
     def getchanges(self, version):
         """Return sorted list of (filename, id) tuples for all files changed in rev.
-        
+
         id just tells us which revision to return in getfile(), e.g. in
         git it's an object hash."""
         raise NotImplementedError()
@@ -252,7 +252,7 @@ class convert_cvs(converter_source):
                 user, host, root = m.group(1), m.group(2), m.group(3)
 
         if conntype != "pserver":
-            if conntype == "rsh": 
+            if conntype == "rsh":
                 rsh = os.environ.get("CVS_RSH" or "rsh")
                 if user:
                     cmd = [rsh, '-l', user, host] + cmd

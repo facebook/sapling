@@ -651,8 +651,8 @@ class localrepository(repo.repository):
         cp = self.dirstate.copied(fn)
         if cp:
             # Mark the new revision of this file as a copy of another
-            # file.  This copy data will effectively act as a parent 
-            # of this new revision.  If this is a merge, the first 
+            # file.  This copy data will effectively act as a parent
+            # of this new revision.  If this is a merge, the first
             # parent will be the nullid (meaning "look up the copy data")
             # and the second one will be the other parent.  For example:
             #

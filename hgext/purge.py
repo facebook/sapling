@@ -83,12 +83,12 @@ def _check_missing(ui, repo, missing, force=False):
     dirstate.walk() can yield filenames different from the ones
     stored in the dirstate. This already confuses the status and
     add commands, but with purge this may cause data loss.
-    
+
     To prevent this, _check_missing will abort if there are missing
-    files. The force option will let the user skip the check if he 
+    files. The force option will let the user skip the check if he
     knows it is safe.
-    
-    Even with the force option this function will check if any of the 
+
+    Even with the force option this function will check if any of the
     missing files is still available in the working dir: if so there
     may be some problem with the underlying filesystem, so it
     aborts unconditionally."""

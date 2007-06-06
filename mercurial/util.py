@@ -823,7 +823,7 @@ if os.name == 'nt':
                 if inst.errno != 0: raise
                 self.close()
                 raise IOError(errno.EPIPE, 'Broken pipe')
-                
+
         def flush(self):
             try:
                 return self.fp.flush()
@@ -912,7 +912,7 @@ if os.name == 'nt':
     # username and groupname functions above, too.
     def isowner(fp, st=None):
         return True
-        
+
     def find_in_path(name, path, default=None):
         '''find name in search path. path can be string (will be split
         with os.pathsep), or iterable thing that returns strings.  if name
@@ -920,17 +920,17 @@ if os.name == 'nt':
         using cmd.exe rules, using PATHEXT.'''
         if isinstance(path, str):
             path = path.split(os.pathsep)
-            
+
         pathext = os.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
         pathext = pathext.lower().split(os.pathsep)
         isexec = os.path.splitext(name)[1].lower() in pathext
-        
+
         for p in path:
             p_name = os.path.join(p, name)
-            
+
             if isexec and os.path.exists(p_name):
                 return p_name
-            
+
             for ext in pathext:
                 p_name_ext = p_name + ext
                 if os.path.exists(p_name_ext):
@@ -1074,7 +1074,7 @@ else:
         if st is None:
             st = fstat(fp)
         return st.st_uid == os.getuid()
-        
+
     def find_in_path(name, path, default=None):
         '''find name in search path. path can be string (will be split
         with os.pathsep), or iterable thing that returns strings.  if name
