@@ -144,6 +144,23 @@ summary:     b1
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+% log -r . with two parents
+warning: working directory has two parents, tag '.' uses the first
+changeset:   3:e62f78d544b4
+parent:      1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1
+
+% log -r . with one parent
+changeset:   5:302e9dd6890d
+tag:         tip
+parent:      3:e62f78d544b4
+parent:      4:ddb82e70d1a1
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     m12
+
 % log --follow-first
 changeset:   6:2404bbcab562
 tag:         tip

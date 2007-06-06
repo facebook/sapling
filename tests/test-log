@@ -47,6 +47,7 @@ hg log -pv d
 # log --follow tests
 hg init ../follow
 cd ../follow
+
 echo base > base
 hg ci -Ambase -d '1 0'
 
@@ -71,7 +72,14 @@ hg log -f -r 1:tip
 
 hg up -C 3
 hg merge tip
+
+echo % log -r .  with two parents
+hg log -r .
+
 hg ci -mm12 -d '1 0'
+
+echo % log -r .  with one parent
+hg log -r .
 
 echo postm >> b1
 hg ci -Amb1.1 -d'1 0'
