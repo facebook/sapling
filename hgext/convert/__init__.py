@@ -177,6 +177,8 @@ class convert_cvs(converter_source):
                         p = [self.parent[id]]
                         if id == "1":
                             p = []
+                        if branch == "HEAD":
+                            branch = ""
                         c = commit(author=author, date=date, parents=p,
                                    desc=log, branch=branch)
                         self.changeset[id] = c
