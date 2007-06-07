@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import sys, os, zlib, sha, time, re, locale, socket
-from mercurial import hg, ui, util, commands
+from mercurial import hg, ui, util, commands, repo
 
 commands.norepo += " convert"
 
@@ -701,9 +701,28 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     if not dest:
         dest = src + "-hg"
         ui.status("assuming destination %s\n" % dest)
-        if not os.path.isdir(dest):
-            ui.status("creating repository %s\n" % dest)
-            os.system("hg init " + dest)
+
+    # Try to be smart and initalize things when required
+    if os.path.isdir(dest):
+        if len(os.listdir(dest)) > 0:
+            try:
+                hg.repository(ui, dest)
+                ui.status("destination %s is a Mercurial repository\n" % dest)
+            except repo.RepoError:
+                raise util.Abort(
+"""destination directory %s is not empty.
+Please specify an empty directory to be initialized or an already initialized
+mercurial repository
+""" % dest)
+        else:
+            ui.status("initializing destination %s repository\n" % dest)
+            hg.repository(ui, dest, create=True)
+    elif os.path.exists(dest):
+        raise util.Abort("destination %s exists and is not a directory\n" % dest)
+    else:
+        ui.status("initializing destination %s repository\n" % dest)
+        hg.repository(ui, dest, create=True)
+  
     destc = converter(ui, dest)
     if not hasattr(destc, "putcommit"):
         raise util.Abort("%s: can't write to this repo type\n" % src)
