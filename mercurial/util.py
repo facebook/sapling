@@ -202,6 +202,8 @@ def tempfilter(s, cmd):
         cmd = cmd.replace('INFILE', inname)
         cmd = cmd.replace('OUTFILE', outname)
         code = os.system(cmd)
+        if sys.platform == 'OpenVMS' and code & 1:
+            code = 0
         if code: raise Abort(_("command '%s' failed: %s") %
                              (cmd, explain_exit(code)))
         return open(outname, 'rb').read()
@@ -579,6 +581,8 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
         if cwd is not None and oldcwd != cwd:
             os.chdir(cwd)
         rc = os.system(cmd)
+        if sys.platform == 'OpenVMS' and rc & 1:
+            rc = 0
         if rc and onerr:
             errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
                                 explain_exit(rc)[0])
@@ -1000,8 +1004,12 @@ else:
     def parse_patch_output(output_line):
         """parses the output produced by patch and returns the file name"""
         pf = output_line[14:]
-        if pf.startswith("'") and pf.endswith("'") and " " in pf:
-            pf = pf[1:-1] # Remove the quotes
+        if os.sys.platform == 'OpenVMS':
+            if pf[0] == '`':
+                pf = pf[1:-1] # Remove the quotes
+        else:
+           if pf.startswith("'") and pf.endswith("'") and " " in pf:
+                pf = pf[1:-1] # Remove the quotes
         return pf
 
     def is_exec(f):
@@ -1064,16 +1072,21 @@ else:
         try:
             return os.readlink(pathname)
         except OSError, why:
-            if why.errno == errno.EINVAL:
+            if why.errno in (errno.EINVAL, errno.ENOSYS):
                 return _readlock_file(pathname)
             else:
                 raise
 
     def shellquote(s):
-        return "'%s'" % s.replace("'", "'\\''")
+        if os.sys.platform == 'OpenVMS':
+            return '"%s"' % s
+        else:
+            return "'%s'" % s.replace("'", "'\\''")
 
     def testpid(pid):
         '''return False if pid dead, True if running or not sure'''
+        if os.sys.platform == 'OpenVMS':
+            return True
         try:
             os.kill(pid, 0)
             return True
@@ -1122,7 +1135,7 @@ def find_exe(name, default=None):
     if name contains a path component, return it as is.  otherwise,
     use normal executable search path.'''
 
-    if os.sep in name:
+    if os.sep in name or sys.platform == 'OpenVMS':
         # don't check the executable bit.  if the file isn't
         # executable, whoever tries to actually run it will give a
         # much more useful error message.
@@ -1227,7 +1240,7 @@ def opener(base, audit=True):
             audit_path(path)
         f = os.path.join(base, path)
 
-        if not text:
+        if not text and "b" not in mode:
             mode += "b" # for that other OS
 
         if mode[0] != "r":
