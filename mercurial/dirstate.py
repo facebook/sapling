@@ -44,6 +44,11 @@ class dirstate(object):
             # we're outside the repo. return an absolute path.
             return cwd
 
+    def pathto(self, f, cwd=None):
+        if cwd is None:
+            cwd = self.getcwd()
+        return util.pathto(self.root, cwd, f)
+
     def hgignore(self):
         '''return the contents of .hgignore files as a list of patterns.
 
@@ -403,9 +408,8 @@ class dirstate(object):
             elif stat.S_ISFIFO(st.st_mode): kind = _('fifo')
             elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
             elif stat.S_ISDIR(st.st_mode): kind = _('directory')
-            self.ui.warn(_('%s: unsupported file type (type is %s)\n') % (
-                util.pathto(self.root, self.getcwd(), f),
-                kind))
+            self.ui.warn(_('%s: unsupported file type (type is %s)\n')
+                         % (self.pathto(f), kind))
         return False
 
     def walk(self, files=None, match=util.always, badmatch=None):
@@ -513,9 +517,8 @@ class dirstate(object):
                         break
                 if not found:
                     if inst.errno != errno.ENOENT or not badmatch:
-                        self.ui.warn('%s: %s\n' % (
-                            util.pathto(self.root, self.getcwd(), ff),
-                            inst.strerror))
+                        self.ui.warn('%s: %s\n' % (self.pathto(ff),
+                                                   inst.strerror))
                     elif badmatch and badmatch(ff) and imatch(nf):
                         yield 'b', ff, None
                 continue

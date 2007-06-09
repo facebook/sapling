@@ -505,6 +505,9 @@ class localrepository(repo.repository):
     def getcwd(self):
         return self.dirstate.getcwd()
 
+    def pathto(self, f, cwd=None):
+        return self.dirstate.pathto(f, cwd)
+
     def wfile(self, f, mode='r'):
         return self.wopener(f, mode)
 
@@ -888,8 +891,8 @@ class localrepository(repo.repository):
                     if match(fn):
                         yield 'b', fn
                 else:
-                    self.ui.warn(_('%s: No such file in rev %s\n') % (
-                        util.pathto(self.root, self.getcwd(), fn), short(node)))
+                    self.ui.warn(_('%s: No such file in rev %s\n')
+                                 % (self.pathto(fn), short(node)))
         else:
             for src, fn in self.dirstate.walk(files, match, badmatch=badmatch):
                 yield src, fn
