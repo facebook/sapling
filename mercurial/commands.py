@@ -507,8 +507,8 @@ def docopy(ui, repo, pats, opts, wlock):
         target = repo.wjoin(abstarget)
         if prevsrc is not None:
             ui.warn(_('%s: not overwriting - %s collides with %s\n') %
-                    (reltarget, util.localpath(abssrc),
-                     util.localpath(prevsrc)))
+                    (reltarget, repo.pathto(abssrc, cwd),
+                     repo.pathto(prevsrc, cwd)))
             return
         if (not opts['after'] and os.path.exists(target) or
             opts['after'] and repo.dirstate.state(abstarget) not in '?ar'):
