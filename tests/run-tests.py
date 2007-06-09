@@ -226,6 +226,8 @@ def run_one(test):
 
     # create a fresh hgrc
     hgrc = file(HGRCPATH, 'w+')
+    hgrc.write('[ui]\n')
+    hgrc.write('slash = True\n')
     hgrc.close()
 
     err = os.path.join(TESTDIR, test+".err")
