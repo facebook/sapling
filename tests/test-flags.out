@@ -7,6 +7,8 @@ adding file changes
 added 1 changesets with 2 changes to 2 files
 (run 'hg update' to get a working copy)
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% the changelog should mention file a:
+a
 pulling from ../test2
 searching for changes
 adding changesets

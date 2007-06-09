@@ -784,7 +784,16 @@ class localrepository(repo.repository):
             self.ui.note(f + "\n")
             try:
                 new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
-                m1.set(f, is_exec(f), is_link(f))
+                new_exec = is_exec(f)
+                new_link = is_link(f)
+                if not changed or changed[-1] != f:
+                    # mention the file in the changelog if some flag changed,
+                    # even if there was no content change.
+                    old_exec = m1.execf(f)
+                    old_link = m1.linkf(f)
+                    if old_exec != new_exec or old_link != new_link:
+                        changed.append(f)
+                m1.set(f, new_exec, new_link)
             except (OSError, IOError):
                 if use_dirstate:
                     self.ui.warn(_("trouble committing %s!\n") % f)
