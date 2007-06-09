@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import sys, os, zlib, sha, time, re, locale, socket
-from mercurial import hg, ui, util, commands, repo
+from mercurial import hg, ui, util, commands
 
 commands.norepo += " convert"
 
@@ -16,7 +16,7 @@ class commit(object):
     def __init__(self, **parts):
         for x in "author date desc parents".split():
             if not x in parts:
-                raise util.Abort("commit missing field %s\n" % x)
+                raise util.Abort("commit missing field %s" % x)
         self.__dict__.update(parts)
 
 def recode(s):
@@ -148,7 +148,7 @@ class convert_cvs(converter_source):
                         date = util.datestr(date)
                     elif l.startswith("Branch"):
                         branch = l[8:-1]
-                        self.parent[id] = self.lastbranch.get(branch,'bad')
+                        self.parent[id] = self.lastbranch.get(branch, 'bad')
                         self.lastbranch[branch] = id
                     elif l.startswith("Ancestor branch"):
                         ancestor = l[17:-1]
@@ -204,7 +204,8 @@ class convert_cvs(converter_source):
 
         if root.startswith(":pserver:"):
             root = root[9:]
-            m = re.match(r'(?:(.*?)(?::(.*?))?@)?([^:\/]*)(?::(\d*))?(.*)', root)
+            m = re.match(r'(?:(.*?)(?::(.*?))?@)?([^:\/]*)(?::(\d*))?(.*)',
+                         root)
             if m:
                 conntype = "pserver"
                 user, passw, serv, port, root = m.groups()
@@ -232,7 +233,8 @@ class convert_cvs(converter_source):
 
                 sck = socket.socket()
                 sck.connect((serv, port))
-                sck.send("\n".join(["BEGIN AUTH REQUEST", root, user, passw, "END AUTH REQUEST", ""]))
+                sck.send("\n".join(["BEGIN AUTH REQUEST", root, user, passw,
+                                    "END AUTH REQUEST", ""]))
                 if sck.recv(128) != "I LOVE YOU\n":
                     raise NoRepo("CVS pserver authentication failed")
 
@@ -273,7 +275,7 @@ class convert_cvs(converter_source):
         self.writep.flush()
         r = self.readp.readline()
         if not r.startswith("Valid-requests"):
-            raise util.Abort("server sucks\n")
+            raise util.Abort("server sucks")
         if "UseUnchanged" in r:
             self.writep.write("UseUnchanged\n")
             self.writep.flush()
@@ -318,9 +320,9 @@ class convert_cvs(converter_source):
                     l = self.readp.readline()
                     l = self.readp.readline()
                     if l != "ok\n":
-                        raise util.Abort("unknown CVS response: %s\n" % l)
+                        raise util.Abort("unknown CVS response: %s" % l)
                 else:
-                    raise util.Abort("unknown CVS response: %s\n" % line)
+                    raise util.Abort("unknown CVS response: %s" % line)
 
     def getfile(self, file, rev):
         data, mode = self._getfile(file, rev)
@@ -361,7 +363,8 @@ class convert_git(converter_source):
 
     def catfile(self, rev, type):
         if rev == "0" * 40: raise IOError()
-        fh = os.popen("GIT_DIR=%s git-cat-file %s %s 2>/dev/null" % (self.path, type, rev))
+        fh = os.popen("GIT_DIR=%s git-cat-file %s %s 2>/dev/null"
+                      % (self.path, type, rev))
         return fh.read()
 
     def getfile(self, name, rev):
@@ -372,7 +375,8 @@ class convert_git(converter_source):
 
     def getchanges(self, version):
         self.modecache = {}
-        fh = os.popen("GIT_DIR=%s git-diff-tree --root -m -r %s" % (self.path, version))
+        fh = os.popen("GIT_DIR=%s git-diff-tree --root -m -r %s"
+                      % (self.path, version))
         changes = []
         for l in fh:
             if "\t" not in l: continue
@@ -394,7 +398,7 @@ class convert_git(converter_source):
         manifest = l[0].split()[1]
         parents = []
         for e in l[1:]:
-            n,v = e.split(" ", 1)
+            n, v = e.split(" ", 1)
             if n == "author":
                 p = v.split()
                 tm, tz = p[-2:]
@@ -522,13 +526,13 @@ converters = [convert_cvs, convert_git, convert_mercurial]
 
 def converter(ui, path):
     if not os.path.isdir(path):
-        raise util.Abort("%s: not a directory\n" % path)
+        raise util.Abort("%s: not a directory" % path)
     for c in converters:
         try:
             return c(ui, path)
         except NoRepo:
             pass
-    raise util.Abort("%s: unknown repository type\n" % path)
+    raise util.Abort("%s: unknown repository type" % path)
 
 class convert(object):
     def __init__(self, ui, source, dest, mapfile, opts):
@@ -610,7 +614,8 @@ class convert(object):
             depth = {}
             for n in s:
                 depth[n] = 0
-                pl = [p for p in self.commitcache[n].parents if p not in self.map]
+                pl = [p for p in self.commitcache[n].parents
+                      if p not in self.map]
                 if pl:
                     depth[n] = max([depth[p] for p in pl]) + 1
 
@@ -624,7 +629,7 @@ class convert(object):
         c = self.commitcache[rev]
         files = self.source.getchanges(rev)
 
-        for f,v in files:
+        for f, v in files:
             try:
                 data = self.source.getfile(f, v)
             except IOError, inst:
@@ -634,7 +639,7 @@ class convert(object):
                 self.dest.putfile(f, e, data)
 
         r = [self.map[v] for v in c.parents]
-        f = [f for f,v in files]
+        f = [f for f, v in files]
         self.map[rev] = self.dest.putcommit(f, r, c)
         file(self.mapfile, "a").write("%s %s\n" % (rev, self.map[rev]))
 
@@ -696,7 +701,7 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
 
     srcc = converter(ui, src)
     if not hasattr(srcc, "getcommit"):
-        raise util.Abort("%s: can't read from this repo type\n" % src)
+        raise util.Abort("%s: can't read from this repo type" % src)
 
     if not dest:
         dest = src + "-hg"
@@ -708,24 +713,24 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
             try:
                 hg.repository(ui, dest)
                 ui.status("destination %s is a Mercurial repository\n" % dest)
-            except repo.RepoError:
+            except hg.RepoError:
                 raise util.Abort(
-"""destination directory %s is not empty.
-Please specify an empty directory to be initialized or an already initialized
-mercurial repository
-""" % dest)
+                    "destination directory %s is not empty.\n"
+                    "Please specify an empty directory to be initialized\n"
+                    "or an already initialized mercurial repository"
+                    % dest)
         else:
             ui.status("initializing destination %s repository\n" % dest)
             hg.repository(ui, dest, create=True)
     elif os.path.exists(dest):
-        raise util.Abort("destination %s exists and is not a directory\n" % dest)
+        raise util.Abort("destination %s exists and is not a directory" % dest)
     else:
         ui.status("initializing destination %s repository\n" % dest)
         hg.repository(ui, dest, create=True)
-  
+
     destc = converter(ui, dest)
     if not hasattr(destc, "putcommit"):
-        raise util.Abort("%s: can't write to this repo type\n" % src)
+        raise util.Abort("%s: can't write to this repo type" % src)
 
     if not mapfile:
         try:
@@ -737,7 +742,8 @@ mercurial repository
     c.convert()
 
 cmdtable = {
-    "convert": (_convert,
-                [('', 'datesort', None, 'try to sort changesets by date')],
-                'hg convert [OPTIONS] <src> [dst [map]]'),
+    "convert":
+        (_convert,
+         [('', 'datesort', None, 'try to sort changesets by date')],
+         'hg convert [OPTION]... SOURCE [DEST [MAPFILE]]'),
 }
