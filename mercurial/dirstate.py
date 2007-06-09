@@ -27,6 +27,7 @@ class dirstate(object):
         self.copymap = {}
         self.ignorefunc = None
         self._branch = None
+        self._slash = None
 
     def wjoin(self, f):
         return os.path.join(self.root, f)
@@ -47,7 +48,12 @@ class dirstate(object):
     def pathto(self, f, cwd=None):
         if cwd is None:
             cwd = self.getcwd()
-        return util.pathto(self.root, cwd, f)
+        path = util.pathto(self.root, cwd, f)
+        if self._slash is None:
+            self._slash = self.ui.configbool('ui', 'slash') and os.sep != '/'
+        if self._slash:
+            path = path.replace(os.sep, '/')
+        return path
 
     def hgignore(self):
         '''return the contents of .hgignore files as a list of patterns.

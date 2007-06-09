@@ -439,6 +439,11 @@ ui::
     Reduce the amount of output printed.  True or False.  Default is False.
   remotecmd;;
     remote command to use for clone/push/pull operations. Default is 'hg'.
+  slash;;
+    Display paths using a slash ("/") as the path separator.  This only
+    makes a difference on systems where the default path separator is not
+    the slash character (e.g. Windows uses the backslash character ("\")).
+    Default is False.
   ssh;;
     command to use for SSH connections. Default is 'ssh'.
   strict;;
