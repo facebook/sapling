@@ -2293,16 +2293,17 @@ def revert(ui, repo, *pats, **opts):
 
     for abs, (rel, exact) in entries:
         mfentry = mf.get(abs)
+        target = repo.wjoin(abs)
         def handle(xlist, dobackup):
             xlist[0].append(abs)
             update[abs] = 1
             if (dobackup and not opts['no_backup'] and
-                (os.path.islink(rel) or os.path.exists(rel))):
+                (os.path.islink(target) or os.path.exists(target))):
                 bakname = "%s.orig" % rel
                 ui.note(_('saving current version of %s as %s\n') %
                         (rel, bakname))
                 if not opts.get('dry_run'):
-                    util.copyfile(rel, bakname)
+                    util.copyfile(target, bakname)
             if ui.verbose or not exact:
                 ui.status(xlist[1] % rel)
         for table, hitlist, misslist, backuphit, backupmiss in disptable:
