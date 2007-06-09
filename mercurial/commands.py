@@ -498,29 +498,31 @@ def docopy(ui, repo, pats, opts, wlock):
     # origsrc: hgsep
     # abssrc: hgsep
     # relsrc: ossep
-    # target: ossep
-    def copy(origsrc, abssrc, relsrc, target, exact):
-        abstarget = util.canonpath(repo.root, cwd, target)
+    # otarget: ossep
+    def copy(origsrc, abssrc, relsrc, otarget, exact):
+        abstarget = util.canonpath(repo.root, cwd, otarget)
         reltarget = util.pathto(repo.root, cwd, abstarget)
         prevsrc = targets.get(abstarget)
+        src = repo.wjoin(abssrc)
+        target = repo.wjoin(abstarget)
         if prevsrc is not None:
             ui.warn(_('%s: not overwriting - %s collides with %s\n') %
                     (reltarget, util.localpath(abssrc),
                      util.localpath(prevsrc)))
             return
-        if (not opts['after'] and os.path.exists(reltarget) or
+        if (not opts['after'] and os.path.exists(target) or
             opts['after'] and repo.dirstate.state(abstarget) not in '?ar'):
             if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %
                         reltarget)
                 return
             if not opts['after'] and not opts.get('dry_run'):
-                os.unlink(reltarget)
+                os.unlink(target)
         if opts['after']:
-            if not os.path.exists(reltarget):
+            if not os.path.exists(target):
                 return
         else:
-            targetdir = os.path.dirname(reltarget) or '.'
+            targetdir = os.path.dirname(target) or '.'
             if not os.path.isdir(targetdir) and not opts.get('dry_run'):
                 os.makedirs(targetdir)
             try:
@@ -529,7 +531,7 @@ def docopy(ui, repo, pats, opts, wlock):
                     repo.undelete([abstarget], wlock)
                 try:
                     if not opts.get('dry_run'):
-                        util.copyfile(relsrc, reltarget)
+                        util.copyfile(src, target)
                     restore = False
                 finally:
                     if restore:
