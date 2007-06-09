@@ -164,7 +164,6 @@ hg debugwalk .hg
 hg debugwalk ../.hg
 abort: path contains illegal component: .hg
 
-
 cd ..
 
 hg debugwalk -Ibeans
@@ -197,14 +196,11 @@ abort: beans/../.. not under root
 hg debugwalk .hg
 abort: path contains illegal component: .hg
 
-
 hg debugwalk beans/../.hg
 abort: path contains illegal component: .hg
 
-
 hg debugwalk beans/../.hg/data
 abort: path contains illegal component: .hg/data
-
 
 hg debugwalk beans/.hg
 beans/.hg: No such file or directory

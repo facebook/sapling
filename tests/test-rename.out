@@ -284,19 +284,14 @@ M d1/b
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 # check illegal path components
 abort: path contains illegal component: .hg/foo
-
 abort: ../foo not under root
 abort: path contains illegal component: .hg/foo
-
 ! d1/d11/a1
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 abort: path contains illegal component: .hg/a1
-
 abort: ../a1 not under root
 abort: path contains illegal component: .hg/a1
-
 ! d1/d11/a1
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 abort: path contains illegal component: .hg/foo
-
 abort: ../../../foo not under root

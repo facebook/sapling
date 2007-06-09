@@ -77,7 +77,7 @@ def localsub(s, a, b=None):
         return u.encode(_encoding, _encodingmode)
     except UnicodeDecodeError, inst:
         sub = s[max(0, inst.start-10), inst.start+10]
-        raise Abort(_("decoding near '%s': %s!\n") % (sub, inst))
+        raise Abort(_("decoding near '%s': %s!") % (sub, inst))
 
 # used by parsedate
 defaultdateformats = (
@@ -650,7 +650,7 @@ def audit_path(path):
     parts = os.path.normcase(path).split(os.sep)
     if (os.path.splitdrive(path)[0] or parts[0] in ('.hg', '')
         or os.pardir in parts):
-        raise Abort(_("path contains illegal component: %s\n") % path)
+        raise Abort(_("path contains illegal component: %s") % path)
 
 def _makelock_file(info, pathname):
     ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
