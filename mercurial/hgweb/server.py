@@ -216,14 +216,10 @@ def create_server(ui, repo):
                 return hgwebobj
             self.reqmaker = wsgiapplication(make_handler)
 
-            addr, port = self.socket.getsockname()[:2]
-            if addr in ('0.0.0.0', '::'):
+            addr = address
+            if addr in ('', '::'):
                 addr = socket.gethostname()
-            else:
-                try:
-                    addr = socket.gethostbyaddr(addr)[0]
-                except socket.error:
-                    pass
+
             self.addr, self.port = addr, port
 
     class IPv6HTTPServer(MercurialHTTPServer):
