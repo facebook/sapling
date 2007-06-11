@@ -810,6 +810,8 @@ class localrepository(repo.repository):
             if f in m1:
                 del m1[f]
                 removed.append(f)
+            elif f in m2:
+                removed.append(f)
         mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0], (new, removed))
 
         # add changeset
