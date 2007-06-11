@@ -1,0 +1,19 @@
+#!/bin/sh
+# a test for issue586
+
+hg init a
+cd a
+echo a > a
+hg ci -Ama
+
+hg init ../b
+cd ../b
+echo b > b
+hg ci -Amb
+
+hg pull -f ../a
+hg merge
+hg rm -f a
+hg ci -Amc
+
+hg st -A
