@@ -17,8 +17,15 @@ import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile
 import os, threading, time, calendar, ConfigParser, locale, glob
 
 try:
-    _encoding = os.environ.get("HGENCODING") or locale.getpreferredencoding() \
-                or "ascii"
+    _encoding = os.environ.get("HGENCODING")
+    if sys.platform == 'darwin' and not _encoding:
+        # On darwin, getpreferredencoding ignores the locale environment and
+        # always returns mac-roman. We override this if the environment is
+        # not C (has been customized by the user).
+        locale.setlocale(locale.LC_CTYPE, '')
+        _encoding = locale.getlocale()[1]
+    if not _encoding:
+        _encoding = locale.getpreferredencoding() or 'ascii'
 except locale.Error:
     _encoding = 'ascii'
 _encodingmode = os.environ.get("HGENCODINGMODE", "strict")
