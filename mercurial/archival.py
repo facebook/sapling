@@ -8,6 +8,7 @@
 from i18n import _
 from node import *
 import cStringIO, os, stat, tarfile, time, util, zipfile
+import zlib, gzip
 
 def tidyprefix(dest, prefix, suffixes):
     '''choose prefix to use for names in archive.  make sure prefix is
@@ -36,15 +37,54 @@ class tarit:
     '''write archive to tar file or stream.  can write uncompressed,
     or compress with gzip or bzip2.'''
 
+    class GzipFileWithTime(gzip.GzipFile):
+
+        def __init__(self, *args, **kw):
+            timestamp = None
+            if 'timestamp' in kw:
+                timestamp = kw.pop('timestamp')
+            if timestamp == None:
+                self.timestamp = time.time()
+            else:
+                self.timestamp = timestamp
+            gzip.GzipFile.__init__(self, *args, **kw)
+
+        def _write_gzip_header(self):
+            self.fileobj.write('\037\213')             # magic header
+            self.fileobj.write('\010')                 # compression method
+            fname = self.filename[:-3]
+            flags = 0
+            if fname:
+                flags = gzip.FNAME
+            self.fileobj.write(chr(flags))
+            gzip.write32u(self.fileobj, long(self.timestamp))
+            self.fileobj.write('\002')
+            self.fileobj.write('\377')
+            if fname:
+                self.fileobj.write(fname + '\000')
+
     def __init__(self, dest, prefix, mtime, kind=''):
         self.prefix = tidyprefix(dest, prefix, ['.tar', '.tar.bz2', '.tar.gz',
                                                 '.tgz', '.tbz2'])
         self.mtime = mtime
+
+        def taropen(name, mode, fileobj=None):
+            if kind == 'gz':
+                mode = mode[0]
+                if not fileobj:
+                    fileobj = open(name, mode)
+                gzfileobj = self.GzipFileWithTime(name, mode + 'b',
+                                                  zlib.Z_BEST_COMPRESSION,
+                                                  fileobj, timestamp=mtime)
+                return tarfile.TarFile.taropen(name, mode, gzfileobj)
+            else:
+                return tarfile.open(name, mode + kind, fileobj)
+
         if isinstance(dest, str):
-            self.z = tarfile.open(dest, mode='w:'+kind)
+            self.z = taropen(dest, mode='w:')
         else:
             # Python 2.5-2.5.1 have a regression that requires a name arg
-            self.z = tarfile.open(name='', mode='w|'+kind, fileobj=dest)
+            self.z = taropen(name='', mode='w|', fileobj=dest)
 
     def addfile(self, name, mode, data):
         i = tarfile.TarInfo(self.prefix + name)
