@@ -266,7 +266,7 @@ def dispatch(ui, args):
 
     # read the local repository .hgrc into a local ui object
     # this will trigger its extensions to load
-    path = earlygetopt(["-R", "--repository"], args)
+    path = earlygetopt(["-R", "--repository", "--repo"], args)
     if not path:
         path = findrepo() or ""
     if path:
