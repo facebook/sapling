@@ -132,3 +132,12 @@ options:
     --remotecmd  specify hg command to run on the remote side
 
 use "hg -v help email" to show global options
+This patch series consists of 2 patches.
+
+
+Write the introductory message for the patch series.
+
+
+Writing [PATCH 0 of 2] test ...
+Writing [PATCH 1 of 2] a ...
+Writing [PATCH 2 of 2] b ...

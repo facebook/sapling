@@ -223,7 +223,9 @@ def patchbomb(ui, repo, *revs, **opts):
                 pass
             os.rmdir(tmpdir)
 
-    if not opts['test']:
+    really_sending = not (opts['test'] or opts['mbox'])
+
+    if really_sending:
         mail.validateconfig(ui)
 
     if not (revs or opts.get('rev') or opts.get('outgoing')):
@@ -351,7 +353,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     ui.write('\n')
 
-    if not opts['test'] and not opts['mbox']:
+    if really_sending:
         mailer = mail.connect(ui)
     parent = None
 
