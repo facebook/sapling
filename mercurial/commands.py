@@ -3034,7 +3034,105 @@ norepo = ("clone init version help debugancestor debugcomplete debugdata"
 optionalrepo = ("paths serve showconfig")
 
 def run():
-    sys.exit(dispatch(sys.argv[1:]))
+    try:
+        u = ui.ui(traceback='--traceback' in sys.argv[1:])
+    except util.Abort, inst:
+        sys.stderr.write(_("abort: %s\n") % inst)
+        return -1
+    sys.exit(runcatch(u, sys.argv[1:]))
+
+def runcatch(u, args):
+    def catchterm(*args):
+        raise util.SignalInterrupt
+
+    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
+        num = getattr(signal, name, None)
+        if num: signal.signal(num, catchterm)
+
+    try:
+        return dispatch(u, args)
+    except hg.RepoError, inst:
+        u.warn(_("abort: %s!\n") % inst)
+    except lock.LockHeld, inst:
+        if inst.errno == errno.ETIMEDOUT:
+            reason = _('timed out waiting for lock held by %s') % inst.locker
+        else:
+            reason = _('lock held by %s') % inst.locker
+        u.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
+    except lock.LockUnavailable, inst:
+        u.warn(_("abort: could not lock %s: %s\n") %
+               (inst.desc or inst.filename, inst.strerror))
+    except revlog.RevlogError, inst:
+        u.warn(_("abort: %s!\n") % inst)
+    except util.SignalInterrupt:
+        u.warn(_("killed!\n"))
+    except KeyboardInterrupt:
+        try:
+            u.warn(_("interrupted!\n"))
+        except IOError, inst:
+            if inst.errno == errno.EPIPE:
+                if u.debugflag:
+                    u.warn(_("\nbroken pipe\n"))
+            else:
+                raise
+    except socket.error, inst:
+        u.warn(_("abort: %s\n") % inst[1])
+    except IOError, inst:
+        if hasattr(inst, "code"):
+            u.warn(_("abort: %s\n") % inst)
+        elif hasattr(inst, "reason"):
+            try: # usually it is in the form (errno, strerror)
+                reason = inst.reason.args[1]
+            except: # it might be anything, for example a string
+                reason = inst.reason
+            u.warn(_("abort: error: %s\n") % reason)
+        elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
+            if u.debugflag:
+                u.warn(_("broken pipe\n"))
+        elif getattr(inst, "strerror", None):
+            if getattr(inst, "filename", None):
+                u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
+            else:
+                u.warn(_("abort: %s\n") % inst.strerror)
+        else:
+            raise
+    except OSError, inst:
+        if getattr(inst, "filename", None):
+            u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
+        else:
+            u.warn(_("abort: %s\n") % inst.strerror)
+    except util.UnexpectedOutput, inst:
+        u.warn(_("abort: %s") % inst[0])
+        if not isinstance(inst[1], basestring):
+            u.warn(" %r\n" % (inst[1],))
+        elif not inst[1]:
+            u.warn(_(" empty string\n"))
+        else:
+            u.warn("\n%r\n" % util.ellipsis(inst[1]))
+    except util.Abort, inst:
+        u.warn(_("abort: %s\n") % inst)
+    except TypeError, inst:
+        # was this an argument error?
+        tb = traceback.extract_tb(sys.exc_info()[2])
+        if len(tb) > 2: # no
+            raise
+        u.debug(inst, "\n")
+        u.warn(_("%s: invalid arguments\n") % cmd)
+        help_(u, cmd)
+    except SystemExit, inst:
+        # Commands shouldn't sys.exit directly, but give a return code.
+        # Just in case catch this and and pass exit code to caller.
+        return inst.code
+    except:
+        u.warn(_("** unknown exception encountered, details follow\n"))
+        u.warn(_("** report bug details to "
+                 "http://www.selenic.com/mercurial/bts\n"))
+        u.warn(_("** or mercurial@selenic.com\n"))
+        u.warn(_("** Mercurial Distributed SCM (version %s)\n")
+               % version.get_version())
+        raise
+
+    return -1
 
 def findpossible(ui, cmd):
     """
@@ -3137,20 +3235,7 @@ def parseconfig(config):
             raise util.Abort(_('malformed --config option: %s') % cfg)
     return parsed
 
-def catchterm(*args):
-    raise util.SignalInterrupt
-
-def dispatch(args):
-    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
-        num = getattr(signal, name, None)
-        if num: signal.signal(num, catchterm)
-
-    try:
-        u = ui.ui(traceback='--traceback' in sys.argv[1:])
-    except util.Abort, inst:
-        sys.stderr.write(_("abort: %s\n") % inst)
-        return -1
-
+def dispatch(u, args):
     extensions.loadall(u)
     u.addreadhook(extensions.loadall)
 
@@ -3268,85 +3353,3 @@ def dispatch(args):
     except UnknownCommand, inst:
         u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         help_(u, 'shortlist')
-    except hg.RepoError, inst:
-        u.warn(_("abort: %s!\n") % inst)
-    except lock.LockHeld, inst:
-        if inst.errno == errno.ETIMEDOUT:
-            reason = _('timed out waiting for lock held by %s') % inst.locker
-        else:
-            reason = _('lock held by %s') % inst.locker
-        u.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
-    except lock.LockUnavailable, inst:
-        u.warn(_("abort: could not lock %s: %s\n") %
-               (inst.desc or inst.filename, inst.strerror))
-    except revlog.RevlogError, inst:
-        u.warn(_("abort: %s!\n") % inst)
-    except util.SignalInterrupt:
-        u.warn(_("killed!\n"))
-    except KeyboardInterrupt:
-        try:
-            u.warn(_("interrupted!\n"))
-        except IOError, inst:
-            if inst.errno == errno.EPIPE:
-                if u.debugflag:
-                    u.warn(_("\nbroken pipe\n"))
-            else:
-                raise
-    except socket.error, inst:
-        u.warn(_("abort: %s\n") % inst[1])
-    except IOError, inst:
-        if hasattr(inst, "code"):
-            u.warn(_("abort: %s\n") % inst)
-        elif hasattr(inst, "reason"):
-            try: # usually it is in the form (errno, strerror)
-                reason = inst.reason.args[1]
-            except: # it might be anything, for example a string
-                reason = inst.reason
-            u.warn(_("abort: error: %s\n") % reason)
-        elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
-            if u.debugflag:
-                u.warn(_("broken pipe\n"))
-        elif getattr(inst, "strerror", None):
-            if getattr(inst, "filename", None):
-                u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
-            else:
-                u.warn(_("abort: %s\n") % inst.strerror)
-        else:
-            raise
-    except OSError, inst:
-        if getattr(inst, "filename", None):
-            u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
-        else:
-            u.warn(_("abort: %s\n") % inst.strerror)
-    except util.UnexpectedOutput, inst:
-        u.warn(_("abort: %s") % inst[0])
-        if not isinstance(inst[1], basestring):
-            u.warn(" %r\n" % (inst[1],))
-        elif not inst[1]:
-            u.warn(_(" empty string\n"))
-        else:
-            u.warn("\n%r\n" % util.ellipsis(inst[1]))
-    except util.Abort, inst:
-        u.warn(_("abort: %s\n") % inst)
-    except TypeError, inst:
-        # was this an argument error?
-        tb = traceback.extract_tb(sys.exc_info()[2])
-        if len(tb) > 2: # no
-            raise
-        u.debug(inst, "\n")
-        u.warn(_("%s: invalid arguments\n") % cmd)
-        help_(u, cmd)
-    except SystemExit, inst:
-        # Commands shouldn't sys.exit directly, but give a return code.
-        # Just in case catch this and and pass exit code to caller.
-        return inst.code
-    except:
-        u.warn(_("** unknown exception encountered, details follow\n"))
-        u.warn(_("** report bug details to "
-                 "http://www.selenic.com/mercurial/bts\n"))
-        u.warn(_("** or mercurial@selenic.com\n"))
-        u.warn(_("** Mercurial Distributed SCM (version %s)\n")
-               % version.get_version())
-        raise
-
-    return -1
