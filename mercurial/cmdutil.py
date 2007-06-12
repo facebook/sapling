@@ -238,7 +238,20 @@ def parseconfig(config):
             raise util.Abort(_('malformed --config option: %s') % cfg)
     return parsed
 
+def earlygetopt(aliases, args):
+    if "--" in args:
+        args = args[:args.index("--")]
+    for opt in aliases:
+        if opt in args:
+            return args[args.index(opt) + 1]
+    return None
+
 def dispatch(ui, args):
+    # check for cwd first
+    cwd = earlygetopt(['--cwd'], args)
+    if cwd:
+        os.chdir(cwd)
+
     extensions.loadall(ui)
     ui.addreadhook(extensions.loadall)
 
@@ -260,9 +273,6 @@ def dispatch(ui, args):
             ui.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
                 (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
         atexit.register(print_time)
-
-    if options['cwd']:
-        os.chdir(options['cwd'])
 
     ui.updateopts(options["verbose"], options["debug"], options["quiet"],
                  not options["noninteractive"], options["traceback"],
