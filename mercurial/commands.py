@@ -3149,52 +3149,52 @@ def findext(name):
                 return sys.modules[v]
         raise KeyError(name)
 
-def load_extensions(ui):
-    added = []
-    for ext_name, load_from_name in ui.extensions():
-        if ext_name in external:
-            continue
+def load_extension(ui, name, load):
+    if name in external:
+        return
+    if load:
+        # the module will be loaded in sys.modules
+        # choose an unique name so that it doesn't
+        # conflicts with other modules
+        module_name = "hgext_%s" % name.replace('.', '_')
+        mod = imp.load_source(module_name, load)
+    else:
+        def importh(name):
+            mod = __import__(name)
+            components = name.split('.')
+            for comp in components[1:]:
+                mod = getattr(mod, comp)
+            return mod
         try:
-            if load_from_name:
-                # the module will be loaded in sys.modules
-                # choose an unique name so that it doesn't
-                # conflicts with other modules
-                module_name = "hgext_%s" % ext_name.replace('.', '_')
-                mod = imp.load_source(module_name, load_from_name)
-            else:
-                def importh(name):
-                    mod = __import__(name)
-                    components = name.split('.')
-                    for comp in components[1:]:
-                        mod = getattr(mod, comp)
-                    return mod
-                try:
-                    mod = importh("hgext.%s" % ext_name)
-                except ImportError:
-                    mod = importh(ext_name)
-            external[ext_name] = mod.__name__
-            added.append((mod, ext_name))
+            mod = importh("hgext.%s" % name)
+        except ImportError:
+            mod = importh(name)
+    external[name] = mod.__name__
+
+    uisetup = getattr(mod, 'uisetup', None)
+    if uisetup:
+        uisetup(ui)
+    reposetup = getattr(mod, 'reposetup', None)
+    if reposetup:
+        hg.repo_setup_hooks.append(reposetup)
+    cmdtable = getattr(mod, 'cmdtable', {})
+    overrides = [cmd for cmd in cmdtable if cmd in table]
+    if overrides:
+        ui.warn(_("extension '%s' overrides commands: %s\n")
+                % (name, " ".join(overrides)))
+    table.update(cmdtable)
+
+def load_extensions(ui):
+    for name, load in ui.extensions():
+        try:
+            load_extension(ui, name, load)
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
             ui.warn(_("*** failed to import extension %s: %s\n") %
-                    (ext_name, inst))
+                    (name, inst))
             if ui.print_exc():
                 return 1
-
-    for mod, name in added:
-        uisetup = getattr(mod, 'uisetup', None)
-        if uisetup:
-            uisetup(ui)
-        reposetup = getattr(mod, 'reposetup', None)
-        if reposetup:
-            hg.repo_setup_hooks.append(reposetup)
-        cmdtable = getattr(mod, 'cmdtable', {})
-        overrides = [cmd for cmd in cmdtable if cmd in table]
-        if overrides:
-            ui.warn(_("extension '%s' overrides commands: %s\n")
-                    % (name, " ".join(overrides)))
-        table.update(cmdtable)
 
 def catchterm(*args):
     raise util.SignalInterrupt
