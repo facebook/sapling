@@ -3033,6 +3033,9 @@ norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall")
 optionalrepo = ("paths serve showconfig")
 
+def run():
+    sys.exit(dispatch(sys.argv[1:]))
+
 def findpossible(ui, cmd):
     """
     Return cmd -> (aliases, command table entry)
@@ -3079,12 +3082,6 @@ def findcmd(ui, cmd):
 
     raise UnknownCommand(cmd)
 
-def catchterm(*args):
-    raise util.SignalInterrupt
-
-def run():
-    sys.exit(dispatch(sys.argv[1:]))
-
 class ParseError(Exception):
     """Exception raised on errors in parsing the command line."""
 
@@ -3125,6 +3122,20 @@ def parse(ui, args):
         del cmdoptions[n]
 
     return (cmd, cmd and i[0] or None, args, options, cmdoptions)
+
+def parseconfig(config):
+    """parse the --config options from the command line"""
+    parsed = []
+    for cfg in config:
+        try:
+            name, value = cfg.split('=', 1)
+            section, name = name.split('.', 1)
+            if not section or not name:
+                raise IndexError
+            parsed.append((section, name, value))
+        except (IndexError, ValueError):
+            raise util.Abort(_('malformed --config option: %s') % cfg)
+    return parsed
 
 external = {}
 
@@ -3185,19 +3196,8 @@ def load_extensions(ui):
                     % (name, " ".join(overrides)))
         table.update(cmdtable)
 
-def parseconfig(config):
-    """parse the --config options from the command line"""
-    parsed = []
-    for cfg in config:
-        try:
-            name, value = cfg.split('=', 1)
-            section, name = name.split('.', 1)
-            if not section or not name:
-                raise IndexError
-            parsed.append((section, name, value))
-        except (IndexError, ValueError):
-            raise util.Abort(_('malformed --config option: %s') % cfg)
-    return parsed
+def catchterm(*args):
+    raise util.SignalInterrupt
 
 def dispatch(args):
     for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
