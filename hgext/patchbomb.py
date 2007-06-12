@@ -229,7 +229,7 @@ def patchbomb(ui, repo, *revs, **opts):
     if not (revs or opts.get('rev') or opts.get('outgoing')):
         raise util.Abort(_('specify at least one changeset with -r or -o'))
 
-    commands.setremoteconfig(ui, opts)
+    cmdutil.setremoteconfig(ui, opts)
     if opts.get('outgoing') and opts.get('bundle'):
         raise util.Abort(_("--outgoing mode always on with --bundle; do not re-specify --outgoing"))
 
