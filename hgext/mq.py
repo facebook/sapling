@@ -1579,7 +1579,7 @@ def clone(ui, source, dest=None, **opts):
     Source patch repository is looked for in <src>/.hg/patches by
     default.  Use -p <url> to change.
     '''
-    commands.setremoteconfig(ui, opts)
+    cmdutil.setremoteconfig(ui, opts)
     if dest is None:
         dest = hg.defaultdest(source)
     sr = hg.repository(ui, ui.expandpath(source))
@@ -1670,7 +1670,7 @@ def new(ui, repo, patch, **opts):
     If none is specified, the patch header is empty and the
     commit message is 'New patch: PATCH'"""
     q = repo.mq
-    message = commands.logmessage(opts)
+    message = cmdutil.logmessage(opts)
     if opts['edit']:
         message = ui.edit(message, ui.username())
     q.new(repo, patch, msg=message, force=opts['force'])
@@ -1688,7 +1688,7 @@ def refresh(ui, repo, *pats, **opts):
     git-style patches (--git or [diff] git=1) to track copies and renames.
     """
     q = repo.mq
-    message = commands.logmessage(opts)
+    message = cmdutil.logmessage(opts)
     if opts['edit']:
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
@@ -1724,7 +1724,7 @@ def fold(ui, repo, *files, **opts):
     if not q.check_toppatch(repo):
         raise util.Abort(_('No patches applied'))
 
-    message = commands.logmessage(opts)
+    message = cmdutil.logmessage(opts)
     if opts['edit']:
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
@@ -1964,7 +1964,7 @@ def restore(ui, repo, rev, **opts):
 def save(ui, repo, **opts):
     """save current queue state"""
     q = repo.mq
-    message = commands.logmessage(opts)
+    message = cmdutil.logmessage(opts)
     ret = q.save(repo, msg=message)
     if ret:
         return ret

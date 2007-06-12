@@ -8,47 +8,11 @@
 import demandimport; demandimport.enable()
 from node import *
 from i18n import _
-import bisect, os, re, sys, signal, urllib, pdb, shlex, stat
-import fancyopts, ui, hg, util, lock, revlog, bundlerepo, extensions
+import bisect, os, re, sys, urllib, shlex, stat
+import ui, hg, util, revlog, bundlerepo, extensions
 import difflib, patch, time, help, mdiff, tempfile
-import traceback, errno, version, atexit, socket
+import errno, version, socket
 import archival, changegroup, cmdutil, hgweb.server, sshserver
-
-class UnknownCommand(Exception):
-    """Exception raised if command is not in the command table."""
-class AmbiguousCommand(Exception):
-    """Exception raised if command shortcut matches more than one command."""
-
-def bail_if_changed(repo):
-    modified, added, removed, deleted = repo.status()[:4]
-    if modified or added or removed or deleted:
-        raise util.Abort(_("outstanding uncommitted changes"))
-
-def logmessage(opts):
-    """ get the log message according to -m and -l option """
-    message = opts['message']
-    logfile = opts['logfile']
-
-    if message and logfile:
-        raise util.Abort(_('options --message and --logfile are mutually '
-                           'exclusive'))
-    if not message and logfile:
-        try:
-            if logfile == '-':
-                message = sys.stdin.read()
-            else:
-                message = open(logfile).read()
-        except IOError, inst:
-            raise util.Abort(_("can't read commit message '%s': %s") %
-                             (logfile, inst.strerror))
-    return message
-
-def setremoteconfig(ui, opts):
-    "copy remote options to ui tree"
-    if opts.get('ssh'):
-        ui.setconfig("ui", "ssh", opts['ssh'])
-    if opts.get('remotecmd'):
-        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
 # Commands start here, listed alphabetically
 
@@ -205,7 +169,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     if not rev:
         rev = node
 
-    bail_if_changed(repo)
+    cmdutil.bail_if_changed(repo)
     op1, op2 = repo.dirstate.parents()
     if op2 != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
@@ -335,7 +299,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                         seen[p] = 1
                         visit.append(p)
     else:
-        setremoteconfig(ui, opts)
+        cmdutil.setremoteconfig(ui, opts)
         dest, revs = cmdutil.parseurl(
             ui.expandpath(dest or 'default-push', dest or 'default'), revs)
         other = hg.repository(ui, dest)
@@ -407,7 +371,7 @@ def clone(ui, source, dest=None, **opts):
     Look at the help text for the pull command for important details
     about ssh:// URLs.
     """
-    setremoteconfig(ui, opts)
+    cmdutil.setremoteconfig(ui, opts)
     hg.clone(ui, source, dest,
              pull=opts['pull'],
              stream=opts['uncompressed'],
@@ -425,7 +389,7 @@ def commit(ui, repo, *pats, **opts):
     If no commit message is specified, the editor configured in your hgrc
     or in the EDITOR environment variable is started to enter a message.
     """
-    message = logmessage(opts)
+    message = cmdutil.logmessage(opts)
 
     if opts['addremove']:
         cmdutil.addremove(repo, pats, opts)
@@ -685,7 +649,7 @@ def debugcomplete(ui, cmd='', **opts):
         options = []
         otables = [globalopts]
         if cmd:
-            aliases, entry = findcmd(ui, cmd)
+            aliases, entry = cmdutil.findcmd(ui, cmd)
             otables.append(entry[1])
         for t in otables:
             for o in t:
@@ -695,7 +659,7 @@ def debugcomplete(ui, cmd='', **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    clist = findpossible(ui, cmd).keys()
+    clist = cmdutil.findpossible(ui, cmd).keys()
     clist.sort()
     ui.write("%s\n" % "\n".join(clist))
 
@@ -1295,7 +1259,7 @@ def help_(ui, name=None, with_version=False):
         if with_version:
             version_(ui)
             ui.write('\n')
-        aliases, i = findcmd(ui, name)
+        aliases, i = cmdutil.findcmd(ui, name)
         # synopsis
         ui.write("%s\n\n" % i[2])
 
@@ -1357,7 +1321,7 @@ def help_(ui, name=None, with_version=False):
                 v = i
                 header = l[-1]
         if not v:
-            raise UnknownCommand(name)
+            raise cmdutil.UnknownCommand(name)
 
         # description
         doc = help.helptable[v]
@@ -1373,7 +1337,7 @@ def help_(ui, name=None, with_version=False):
         try:
             mod = extensions.find(name)
         except KeyError:
-            raise UnknownCommand(name)
+            raise cmdutil.UnknownCommand(name)
 
         doc = (mod.__doc__ or _('No help text available')).splitlines(0)
         ui.write(_('%s extension - %s\n') % (name.split('.')[-1], doc[0]))
@@ -1399,7 +1363,7 @@ def help_(ui, name=None, with_version=False):
                 f(name)
                 i = None
                 break
-            except UnknownCommand, inst:
+            except cmdutil.UnknownCommand, inst:
                 i = inst
         if i:
             raise i
@@ -1506,7 +1470,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     patches = (patch1,) + patches
 
     if opts.get('exact') or not opts['force']:
-        bail_if_changed(repo)
+        cmdutil.bail_if_changed(repo)
 
     d = opts["base"]
     strip = opts["strip"]
@@ -1528,7 +1492,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             raise util.Abort(_('no diffs found'))
 
         try:
-            cmdline_message = logmessage(opts)
+            cmdline_message = cmdutil.logmessage(opts)
             if cmdline_message:
                 # pickup the cmdline msg
                 message = cmdline_message
@@ -1587,7 +1551,7 @@ def incoming(ui, repo, source="default", **opts):
     See pull for valid source format details.
     """
     source, revs = cmdutil.parseurl(ui.expandpath(source), opts['rev'])
-    setremoteconfig(ui, opts)
+    cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
     ui.status(_('comparing with %s\n') % source)
@@ -1653,7 +1617,7 @@ def init(ui, dest=".", **opts):
     Look at the help text for the pull command for important details
     about ssh:// URLs.
     """
-    setremoteconfig(ui, opts)
+    cmdutil.setremoteconfig(ui, opts)
     hg.repository(ui, dest, create=1)
 
 def locate(ui, repo, *pats, **opts):
@@ -1890,7 +1854,7 @@ def outgoing(ui, repo, dest=None, **opts):
     """
     dest, revs = cmdutil.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
-    setremoteconfig(ui, opts)
+    cmdutil.setremoteconfig(ui, opts)
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
@@ -2005,7 +1969,7 @@ def pull(ui, repo, source="default", **opts):
       with the --ssh command line option.
     """
     source, revs = cmdutil.parseurl(ui.expandpath(source), opts['rev'])
-    setremoteconfig(ui, opts)
+    cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
     ui.status(_('pulling from %s\n') % (source))
@@ -2051,7 +2015,7 @@ def push(ui, repo, dest=None, **opts):
     """
     dest, revs = cmdutil.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
-    setremoteconfig(ui, opts)
+    cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, dest)
     ui.status('pushing to %s\n' % (dest))
@@ -2075,7 +2039,7 @@ def rawcommit(ui, repo, *pats, **opts):
 
     ui.warn(_("(the rawcommit command is deprecated)\n"))
 
-    message = logmessage(opts)
+    message = cmdutil.logmessage(opts)
 
     files, match, anypats = cmdutil.matchpats(repo, pats, opts)
     if opts['files']:
@@ -3039,272 +3003,5 @@ def run():
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
-    sys.exit(runcatch(u, sys.argv[1:]))
-
-def runcatch(u, args):
-    def catchterm(*args):
-        raise util.SignalInterrupt
-
-    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
-        num = getattr(signal, name, None)
-        if num: signal.signal(num, catchterm)
-
-    try:
-        return dispatch(u, args)
-    except hg.RepoError, inst:
-        u.warn(_("abort: %s!\n") % inst)
-    except lock.LockHeld, inst:
-        if inst.errno == errno.ETIMEDOUT:
-            reason = _('timed out waiting for lock held by %s') % inst.locker
-        else:
-            reason = _('lock held by %s') % inst.locker
-        u.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
-    except lock.LockUnavailable, inst:
-        u.warn(_("abort: could not lock %s: %s\n") %
-               (inst.desc or inst.filename, inst.strerror))
-    except revlog.RevlogError, inst:
-        u.warn(_("abort: %s!\n") % inst)
-    except util.SignalInterrupt:
-        u.warn(_("killed!\n"))
-    except KeyboardInterrupt:
-        try:
-            u.warn(_("interrupted!\n"))
-        except IOError, inst:
-            if inst.errno == errno.EPIPE:
-                if u.debugflag:
-                    u.warn(_("\nbroken pipe\n"))
-            else:
-                raise
-    except socket.error, inst:
-        u.warn(_("abort: %s\n") % inst[1])
-    except IOError, inst:
-        if hasattr(inst, "code"):
-            u.warn(_("abort: %s\n") % inst)
-        elif hasattr(inst, "reason"):
-            try: # usually it is in the form (errno, strerror)
-                reason = inst.reason.args[1]
-            except: # it might be anything, for example a string
-                reason = inst.reason
-            u.warn(_("abort: error: %s\n") % reason)
-        elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
-            if u.debugflag:
-                u.warn(_("broken pipe\n"))
-        elif getattr(inst, "strerror", None):
-            if getattr(inst, "filename", None):
-                u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
-            else:
-                u.warn(_("abort: %s\n") % inst.strerror)
-        else:
-            raise
-    except OSError, inst:
-        if getattr(inst, "filename", None):
-            u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
-        else:
-            u.warn(_("abort: %s\n") % inst.strerror)
-    except util.UnexpectedOutput, inst:
-        u.warn(_("abort: %s") % inst[0])
-        if not isinstance(inst[1], basestring):
-            u.warn(" %r\n" % (inst[1],))
-        elif not inst[1]:
-            u.warn(_(" empty string\n"))
-        else:
-            u.warn("\n%r\n" % util.ellipsis(inst[1]))
-    except util.Abort, inst:
-        u.warn(_("abort: %s\n") % inst)
-    except TypeError, inst:
-        # was this an argument error?
-        tb = traceback.extract_tb(sys.exc_info()[2])
-        if len(tb) > 2: # no
-            raise
-        u.debug(inst, "\n")
-        u.warn(_("%s: invalid arguments\n") % cmd)
-        help_(u, cmd)
-    except SystemExit, inst:
-        # Commands shouldn't sys.exit directly, but give a return code.
-        # Just in case catch this and and pass exit code to caller.
-        return inst.code
-    except:
-        u.warn(_("** unknown exception encountered, details follow\n"))
-        u.warn(_("** report bug details to "
-                 "http://www.selenic.com/mercurial/bts\n"))
-        u.warn(_("** or mercurial@selenic.com\n"))
-        u.warn(_("** Mercurial Distributed SCM (version %s)\n")
-               % version.get_version())
-        raise
-
-    return -1
-
-def findpossible(ui, cmd):
-    """
-    Return cmd -> (aliases, command table entry)
-    for each matching command.
-    Return debug commands (or their aliases) only if no normal command matches.
-    """
-    choice = {}
-    debugchoice = {}
-    for e in table.keys():
-        aliases = e.lstrip("^").split("|")
-        found = None
-        if cmd in aliases:
-            found = cmd
-        elif not ui.config("ui", "strict"):
-            for a in aliases:
-                if a.startswith(cmd):
-                    found = a
-                    break
-        if found is not None:
-            if aliases[0].startswith("debug") or found.startswith("debug"):
-                debugchoice[found] = (aliases, table[e])
-            else:
-                choice[found] = (aliases, table[e])
-
-    if not choice and debugchoice:
-        choice = debugchoice
-
-    return choice
-
-def findcmd(ui, cmd):
-    """Return (aliases, command table entry) for command string."""
-    choice = findpossible(ui, cmd)
-
-    if choice.has_key(cmd):
-        return choice[cmd]
-
-    if len(choice) > 1:
-        clist = choice.keys()
-        clist.sort()
-        raise AmbiguousCommand(cmd, clist)
-
-    if choice:
-        return choice.values()[0]
-
-    raise UnknownCommand(cmd)
-
-class ParseError(Exception):
-    """Exception raised on errors in parsing the command line."""
-
-def parse(ui, args):
-    options = {}
-    cmdoptions = {}
-
-    try:
-        args = fancyopts.fancyopts(args, globalopts, options)
-    except fancyopts.getopt.GetoptError, inst:
-        raise ParseError(None, inst)
-
-    if args:
-        cmd, args = args[0], args[1:]
-        aliases, i = findcmd(ui, cmd)
-        cmd = aliases[0]
-        defaults = ui.config("defaults", cmd)
-        if defaults:
-            args = shlex.split(defaults) + args
-        c = list(i[1])
-    else:
-        cmd = None
-        c = []
-
-    # combine global options into local
-    for o in globalopts:
-        c.append((o[0], o[1], options[o[1]], o[3]))
-
-    try:
-        args = fancyopts.fancyopts(args, c, cmdoptions)
-    except fancyopts.getopt.GetoptError, inst:
-        raise ParseError(cmd, inst)
-
-    # separate global options back out
-    for o in globalopts:
-        n = o[1]
-        options[n] = cmdoptions[n]
-        del cmdoptions[n]
-
-    return (cmd, cmd and i[0] or None, args, options, cmdoptions)
-
-def parseconfig(config):
-    """parse the --config options from the command line"""
-    parsed = []
-    for cfg in config:
-        try:
-            name, value = cfg.split('=', 1)
-            section, name = name.split('.', 1)
-            if not section or not name:
-                raise IndexError
-            parsed.append((section, name, value))
-        except (IndexError, ValueError):
-            raise util.Abort(_('malformed --config option: %s') % cfg)
-    return parsed
-
-def dispatch(u, args):
-    extensions.loadall(u)
-    u.addreadhook(extensions.loadall)
-
-    try:
-        cmd, func, args, options, cmdoptions = parse(u, args)
-    except ParseError, inst:
-        if inst.args[0]:
-            u.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
-            help_(u, inst.args[0])
-        else:
-            u.warn(_("hg: %s\n") % inst.args[1])
-            help_(u, 'shortlist')
-        return -1
-    except AmbiguousCommand, inst:
-        u.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
-                (inst.args[0], " ".join(inst.args[1])))
-        return -1
-    except UnknownCommand, inst:
-        u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
-        help_(u, 'shortlist')
-        return -1
-
-    if options["encoding"]:
-        util._encoding = options["encoding"]
-    if options["encodingmode"]:
-        util._encodingmode = options["encodingmode"]
-    if options["time"]:
-        def get_times():
-            t = os.times()
-            if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
-                t = (t[0], t[1], t[2], t[3], time.clock())
-            return t
-        s = get_times()
-        def print_time():
-            t = get_times()
-            u.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
-                (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
-        atexit.register(print_time)
-
-    if options['cwd']:
-        os.chdir(options['cwd'])
-
-    u.updateopts(options["verbose"], options["debug"], options["quiet"],
-                 not options["noninteractive"], options["traceback"],
-                 parseconfig(options["config"]))
-
-    path = u.expandpath(options["repository"]) or ""
-    repo = path and hg.repository(u, path=path) or None
-    if repo and not repo.local():
-        raise util.Abort(_("repository '%s' is not local") % path)
-
-    if options['help']:
-        return help_(u, cmd, options['version'])
-    elif options['version']:
-        return version_(u)
-    elif not cmd:
-        return help_(u, 'shortlist')
-
-    if cmd not in norepo.split():
-        try:
-            if not repo:
-                repo = hg.repository(u, path=path)
-            u = repo.ui
-        except hg.RepoError:
-            if cmd not in optionalrepo.split():
-                raise
-        d = lambda: func(u, repo, *args, **cmdoptions)
-    else:
-        d = lambda: func(u, *args, **cmdoptions)
-
-    return cmdutil.runcommand(u, options, d)
+    sys.exit(cmdutil.runcatch(u, sys.argv[1:]))
 

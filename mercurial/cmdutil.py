@@ -7,9 +7,278 @@
 
 from node import *
 from i18n import _
-import os, sys, mdiff, bdiff, util, templater, patch
+import os, sys, mdiff, bdiff, util, templater, patch, commands
+import atexit, signal, pdb, hg, lock, fancyopts, traceback
+import socket, revlog, version, extensions, errno
 
 revrangesep = ':'
+
+class UnknownCommand(Exception):
+    """Exception raised if command is not in the command table."""
+class AmbiguousCommand(Exception):
+    """Exception raised if command shortcut matches more than one command."""
+class ParseError(Exception):
+    """Exception raised on errors in parsing the command line."""
+
+def runcatch(u, args):
+    def catchterm(*args):
+        raise util.SignalInterrupt
+
+    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
+        num = getattr(signal, name, None)
+        if num: signal.signal(num, catchterm)
+
+    try:
+        return dispatch(u, args)
+    except ParseError, inst:
+        if inst.args[0]:
+            u.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
+            commands.help_(u, inst.args[0])
+        else:
+            u.warn(_("hg: %s\n") % inst.args[1])
+            commands.help_(u, 'shortlist')
+    except AmbiguousCommand, inst:
+        u.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
+                (inst.args[0], " ".join(inst.args[1])))
+    except UnknownCommand, inst:
+        u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
+        commands.help_(u, 'shortlist')
+    except hg.RepoError, inst:
+        u.warn(_("abort: %s!\n") % inst)
+    except lock.LockHeld, inst:
+        if inst.errno == errno.ETIMEDOUT:
+            reason = _('timed out waiting for lock held by %s') % inst.locker
+        else:
+            reason = _('lock held by %s') % inst.locker
+        u.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
+    except lock.LockUnavailable, inst:
+        u.warn(_("abort: could not lock %s: %s\n") %
+               (inst.desc or inst.filename, inst.strerror))
+    except revlog.RevlogError, inst:
+        u.warn(_("abort: %s!\n") % inst)
+    except util.SignalInterrupt:
+        u.warn(_("killed!\n"))
+    except KeyboardInterrupt:
+        try:
+            u.warn(_("interrupted!\n"))
+        except IOError, inst:
+            if inst.errno == errno.EPIPE:
+                if u.debugflag:
+                    u.warn(_("\nbroken pipe\n"))
+            else:
+                raise
+    except socket.error, inst:
+        u.warn(_("abort: %s\n") % inst[1])
+    except IOError, inst:
+        if hasattr(inst, "code"):
+            u.warn(_("abort: %s\n") % inst)
+        elif hasattr(inst, "reason"):
+            try: # usually it is in the form (errno, strerror)
+                reason = inst.reason.args[1]
+            except: # it might be anything, for example a string
+                reason = inst.reason
+            u.warn(_("abort: error: %s\n") % reason)
+        elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
+            if u.debugflag:
+                u.warn(_("broken pipe\n"))
+        elif getattr(inst, "strerror", None):
+            if getattr(inst, "filename", None):
+                u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
+            else:
+                u.warn(_("abort: %s\n") % inst.strerror)
+        else:
+            raise
+    except OSError, inst:
+        if getattr(inst, "filename", None):
+            u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
+        else:
+            u.warn(_("abort: %s\n") % inst.strerror)
+    except util.UnexpectedOutput, inst:
+        u.warn(_("abort: %s") % inst[0])
+        if not isinstance(inst[1], basestring):
+            u.warn(" %r\n" % (inst[1],))
+        elif not inst[1]:
+            u.warn(_(" empty string\n"))
+        else:
+            u.warn("\n%r\n" % util.ellipsis(inst[1]))
+    except util.Abort, inst:
+        u.warn(_("abort: %s\n") % inst)
+    except TypeError, inst:
+        # was this an argument error?
+        tb = traceback.extract_tb(sys.exc_info()[2])
+        if len(tb) > 2: # no
+            raise
+        u.debug(inst, "\n")
+        u.warn(_("%s: invalid arguments\n") % cmd)
+        commands.help_(u, cmd)
+    except SystemExit, inst:
+        # Commands shouldn't sys.exit directly, but give a return code.
+        # Just in case catch this and and pass exit code to caller.
+        return inst.code
+    except:
+        u.warn(_("** unknown exception encountered, details follow\n"))
+        u.warn(_("** report bug details to "
+                 "http://www.selenic.com/mercurial/bts\n"))
+        u.warn(_("** or mercurial@selenic.com\n"))
+        u.warn(_("** Mercurial Distributed SCM (version %s)\n")
+               % version.get_version())
+        raise
+
+    return -1
+
+def findpossible(ui, cmd):
+    """
+    Return cmd -> (aliases, command table entry)
+    for each matching command.
+    Return debug commands (or their aliases) only if no normal command matches.
+    """
+    choice = {}
+    debugchoice = {}
+    for e in commands.table.keys():
+        aliases = e.lstrip("^").split("|")
+        found = None
+        if cmd in aliases:
+            found = cmd
+        elif not ui.config("ui", "strict"):
+            for a in aliases:
+                if a.startswith(cmd):
+                    found = a
+                    break
+        if found is not None:
+            if aliases[0].startswith("debug") or found.startswith("debug"):
+                debugchoice[found] = (aliases, commands.table[e])
+            else:
+                choice[found] = (aliases, commands.table[e])
+
+    if not choice and debugchoice:
+        choice = debugchoice
+
+    return choice
+
+def findcmd(ui, cmd):
+    """Return (aliases, command table entry) for command string."""
+    choice = findpossible(ui, cmd)
+
+    if choice.has_key(cmd):
+        return choice[cmd]
+
+    if len(choice) > 1:
+        clist = choice.keys()
+        clist.sort()
+        raise AmbiguousCommand(cmd, clist)
+
+    if choice:
+        return choice.values()[0]
+
+    raise UnknownCommand(cmd)
+
+def parse(ui, args):
+    options = {}
+    cmdoptions = {}
+
+    try:
+        args = fancyopts.fancyopts(args, commands.globalopts, options)
+    except fancyopts.getopt.GetoptError, inst:
+        raise ParseError(None, inst)
+
+    if args:
+        cmd, args = args[0], args[1:]
+        aliases, i = findcmd(ui, cmd)
+        cmd = aliases[0]
+        defaults = ui.config("defaults", cmd)
+        if defaults:
+            args = shlex.split(defaults) + args
+        c = list(i[1])
+    else:
+        cmd = None
+        c = []
+
+    # combine global options into local
+    for o in commands.globalopts:
+        c.append((o[0], o[1], options[o[1]], o[3]))
+
+    try:
+        args = fancyopts.fancyopts(args, c, cmdoptions)
+    except fancyopts.getopt.GetoptError, inst:
+        raise ParseError(cmd, inst)
+
+    # separate global options back out
+    for o in commands.globalopts:
+        n = o[1]
+        options[n] = cmdoptions[n]
+        del cmdoptions[n]
+
+    return (cmd, cmd and i[0] or None, args, options, cmdoptions)
+
+def parseconfig(config):
+    """parse the --config options from the command line"""
+    parsed = []
+    for cfg in config:
+        try:
+            name, value = cfg.split('=', 1)
+            section, name = name.split('.', 1)
+            if not section or not name:
+                raise IndexError
+            parsed.append((section, name, value))
+        except (IndexError, ValueError):
+            raise util.Abort(_('malformed --config option: %s') % cfg)
+    return parsed
+
+def dispatch(u, args):
+    extensions.loadall(u)
+    u.addreadhook(extensions.loadall)
+
+    cmd, func, args, options, cmdoptions = parse(u, args)
+
+    if options["encoding"]:
+        util._encoding = options["encoding"]
+    if options["encodingmode"]:
+        util._encodingmode = options["encodingmode"]
+    if options["time"]:
+        def get_times():
+            t = os.times()
+            if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
+                t = (t[0], t[1], t[2], t[3], time.clock())
+            return t
+        s = get_times()
+        def print_time():
+            t = get_times()
+            u.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
+                (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
+        atexit.register(print_time)
+
+    if options['cwd']:
+        os.chdir(options['cwd'])
+
+    u.updateopts(options["verbose"], options["debug"], options["quiet"],
+                 not options["noninteractive"], options["traceback"],
+                 parseconfig(options["config"]))
+
+    path = u.expandpath(options["repository"]) or ""
+    repo = path and hg.repository(u, path=path) or None
+    if repo and not repo.local():
+        raise util.Abort(_("repository '%s' is not local") % path)
+
+    if options['help']:
+        return commands.help_(u, cmd, options['version'])
+    elif options['version']:
+        return commands.version_(u)
+    elif not cmd:
+        return commands.help_(u, 'shortlist')
+
+    if cmd not in commands.norepo.split():
+        try:
+            if not repo:
+                repo = hg.repository(u, path=path)
+            u = repo.ui
+        except hg.RepoError:
+            if cmd not in commands.optionalrepo.split():
+                raise
+        d = lambda: func(u, repo, *args, **cmdoptions)
+    else:
+        d = lambda: func(u, *args, **cmdoptions)
+
+    return runcommand(u, options, d)
 
 def runcommand(u, options, d):
     # enter the debugger before command execution
@@ -63,6 +332,37 @@ def runcommand(u, options, d):
             pdb.post_mortem(sys.exc_info()[2])
         u.print_exc()
         raise
+
+def bail_if_changed(repo):
+    modified, added, removed, deleted = repo.status()[:4]
+    if modified or added or removed or deleted:
+        raise util.Abort(_("outstanding uncommitted changes"))
+
+def logmessage(opts):
+    """ get the log message according to -m and -l option """
+    message = opts['message']
+    logfile = opts['logfile']
+
+    if message and logfile:
+        raise util.Abort(_('options --message and --logfile are mutually '
+                           'exclusive'))
+    if not message and logfile:
+        try:
+            if logfile == '-':
+                message = sys.stdin.read()
+            else:
+                message = open(logfile).read()
+        except IOError, inst:
+            raise util.Abort(_("can't read commit message '%s': %s") %
+                             (logfile, inst.strerror))
+    return message
+
+def setremoteconfig(ui, opts):
+    "copy remote options to ui tree"
+    if opts.get('ssh'):
+        ui.setconfig("ui", "ssh", opts['ssh'])
+    if opts.get('remotecmd'):
+        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
 def parseurl(url, revs):
     '''parse url#branch, returning url, branch + revs'''

@@ -7,7 +7,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import *
-from mercurial import commands, hg, node, util
+from mercurial import commands, cmdutil, hg, node, util
 
 def fetch(ui, repo, source='default', **opts):
     '''Pull changes from a remote repository, merge new changes if needed.
@@ -42,7 +42,7 @@ def fetch(ui, repo, source='default', **opts):
                       (len(newheads) - 1))
         if not err:
             mod, add, rem = repo.status(wlock=wlock)[:3]
-            message = (commands.logmessage(opts) or
+            message = (cmdutil.logmessage(opts) or
                        (_('Automated merge with %s') % other.url()))
             n = repo.commit(mod + add + rem, message,
                             opts['user'], opts['date'], lock=lock, wlock=wlock,
@@ -51,7 +51,7 @@ def fetch(ui, repo, source='default', **opts):
                         'with local\n') % (repo.changelog.rev(n),
                                            short(n)))
     def pull():
-        commands.setremoteconfig(ui, opts)
+        cmdutil.setremoteconfig(ui, opts)
 
         other = hg.repository(ui, ui.expandpath(source))
         ui.status(_('pulling from %s\n') % ui.expandpath(source))
