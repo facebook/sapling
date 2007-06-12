@@ -1,0 +1,15 @@
+#!/bin/sh
+# test command parsing and dispatch
+
+hg init a
+cd a
+echo a > a
+hg ci -Ama -d '0 0'
+
+echo '% [defaults]'
+hg cat a
+cat > $HGRCPATH <<EOF
+[defaults]
+cat = -v
+EOF
+hg cat a
