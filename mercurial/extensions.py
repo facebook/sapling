@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import imp, commands, hg, util
+import imp, commands, hg, util, sys
 from i18n import _
 
 _extensions = {}
