@@ -255,8 +255,11 @@ def dispatch(ui, args):
     extensions.loadall(ui)
     ui.addreadhook(extensions.loadall)
 
-    # read the local extension info into a local ui object
-    path = earlygetopt(["-R", "--repository"], args) or localrepo.findrepo() or ""
+    # read the local repository .hgrc into a local ui object
+    # this will trigger its extensions to load
+    path = earlygetopt(["-R", "--repository"], args)
+    if not path:
+        path = localrepo.findrepo() or ""
     if path:
         try:
             lui = commands.ui.ui(parentui=ui)
@@ -298,7 +301,7 @@ def dispatch(ui, args):
         repo = None
         try:
             repo = hg.repository(ui, path=path)
-            #ui = repo.ui
+            ui = repo.ui
             if not repo.local():
                 raise util.Abort(_("repository '%s' is not local") % path)
         except hg.RepoError:

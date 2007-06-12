@@ -29,12 +29,7 @@ class localrepository(repo.repository):
         self.transhandle = None
     def __init__(self, parentui, path=None, create=0):
         repo.repository.__init__(self)
-        if not path:
-            path = findrepo()
-            if not path:
-                raise repo.RepoError(_("There is no Mercurial repository"
-                                       " here (.hg not found)"))
-
+        self.path = path
         self.root = os.path.realpath(path)
         self.path = os.path.join(self.root, ".hg")
         self.origroot = path
