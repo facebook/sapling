@@ -20,7 +20,7 @@ class AmbiguousCommand(Exception):
 class ParseError(Exception):
     """Exception raised on errors in parsing the command line."""
 
-def runcatch(u, args):
+def runcatch(ui, args):
     def catchterm(*args):
         raise util.SignalInterrupt
 
@@ -34,107 +34,107 @@ def runcatch(u, args):
             if '--debugger' in args:
                 pdb.set_trace()
             try:
-                return dispatch(u, args)
+                return dispatch(ui, args)
             finally:
-                u.flush()
+                ui.flush()
         except:
             # enter the debugger when we hit an exception
             if '--debugger' in args:
                 pdb.post_mortem(sys.exc_info()[2])
-            u.print_exc()
+            ui.print_exc()
             raise
 
     except ParseError, inst:
         if inst.args[0]:
-            u.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
-            commands.help_(u, inst.args[0])
+            ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
+            commands.help_(ui, inst.args[0])
         else:
-            u.warn(_("hg: %s\n") % inst.args[1])
-            commands.help_(u, 'shortlist')
+            ui.warn(_("hg: %s\n") % inst.args[1])
+            commands.help_(ui, 'shortlist')
     except AmbiguousCommand, inst:
-        u.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
+        ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
     except UnknownCommand, inst:
-        u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
-        commands.help_(u, 'shortlist')
+        ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
+        commands.help_(ui, 'shortlist')
     except hg.RepoError, inst:
-        u.warn(_("abort: %s!\n") % inst)
+        ui.warn(_("abort: %s!\n") % inst)
     except lock.LockHeld, inst:
         if inst.errno == errno.ETIMEDOUT:
             reason = _('timed out waiting for lock held by %s') % inst.locker
         else:
             reason = _('lock held by %s') % inst.locker
-        u.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
+        ui.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
     except lock.LockUnavailable, inst:
-        u.warn(_("abort: could not lock %s: %s\n") %
+        ui.warn(_("abort: could not lock %s: %s\n") %
                (inst.desc or inst.filename, inst.strerror))
     except revlog.RevlogError, inst:
-        u.warn(_("abort: %s!\n") % inst)
+        ui.warn(_("abort: %s!\n") % inst)
     except util.SignalInterrupt:
-        u.warn(_("killed!\n"))
+        ui.warn(_("killed!\n"))
     except KeyboardInterrupt:
         try:
-            u.warn(_("interrupted!\n"))
+            ui.warn(_("interrupted!\n"))
         except IOError, inst:
             if inst.errno == errno.EPIPE:
-                if u.debugflag:
-                    u.warn(_("\nbroken pipe\n"))
+                if ui.debugflag:
+                    ui.warn(_("\nbroken pipe\n"))
             else:
                 raise
     except socket.error, inst:
-        u.warn(_("abort: %s\n") % inst[1])
+        ui.warn(_("abort: %s\n") % inst[1])
     except IOError, inst:
         if hasattr(inst, "code"):
-            u.warn(_("abort: %s\n") % inst)
+            ui.warn(_("abort: %s\n") % inst)
         elif hasattr(inst, "reason"):
             try: # usually it is in the form (errno, strerror)
                 reason = inst.reason.args[1]
             except: # it might be anything, for example a string
                 reason = inst.reason
-            u.warn(_("abort: error: %s\n") % reason)
+            ui.warn(_("abort: error: %s\n") % reason)
         elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
-            if u.debugflag:
-                u.warn(_("broken pipe\n"))
+            if ui.debugflag:
+                ui.warn(_("broken pipe\n"))
         elif getattr(inst, "strerror", None):
             if getattr(inst, "filename", None):
-                u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
+                ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
             else:
-                u.warn(_("abort: %s\n") % inst.strerror)
+                ui.warn(_("abort: %s\n") % inst.strerror)
         else:
             raise
     except OSError, inst:
         if getattr(inst, "filename", None):
-            u.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
+            ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
         else:
-            u.warn(_("abort: %s\n") % inst.strerror)
+            ui.warn(_("abort: %s\n") % inst.strerror)
     except util.UnexpectedOutput, inst:
-        u.warn(_("abort: %s") % inst[0])
+        ui.warn(_("abort: %s") % inst[0])
         if not isinstance(inst[1], basestring):
-            u.warn(" %r\n" % (inst[1],))
+            ui.warn(" %r\n" % (inst[1],))
         elif not inst[1]:
-            u.warn(_(" empty string\n"))
+            ui.warn(_(" empty string\n"))
         else:
-            u.warn("\n%r\n" % util.ellipsis(inst[1]))
+            ui.warn("\n%r\n" % util.ellipsis(inst[1]))
     except util.Abort, inst:
-        u.warn(_("abort: %s\n") % inst)
+        ui.warn(_("abort: %s\n") % inst)
     except TypeError, inst:
         # was this an argument error?
         tb = traceback.extract_tb(sys.exc_info()[2])
         if len(tb) > 2: # no
             raise
-        u.debug(inst, "\n")
-        u.warn(_("%s: invalid arguments\n") % cmd)
-        commands.help_(u, cmd)
+        ui.debug(inst, "\n")
+        ui.warn(_("%s: invalid arguments\n") % cmd)
+        commands.help_(ui, cmd)
     except SystemExit, inst:
         # Commands shouldn't sys.exit directly, but give a return code.
         # Just in case catch this and and pass exit code to caller.
         return inst.code
     except:
-        u.warn(_("** unknown exception encountered, details follow\n"))
-        u.warn(_("** report bug details to "
+        ui.warn(_("** unknown exception encountered, details follow\n"))
+        ui.warn(_("** report bug details to "
                  "http://www.selenic.com/mercurial/bts\n"))
-        u.warn(_("** or mercurial@selenic.com\n"))
-        u.warn(_("** Mercurial Distributed SCM (version %s)\n")
+        ui.warn(_("** or mercurial@selenic.com\n"))
+        ui.warn(_("** Mercurial Distributed SCM (version %s)\n")
                % version.get_version())
         raise
 
@@ -238,11 +238,11 @@ def parseconfig(config):
             raise util.Abort(_('malformed --config option: %s') % cfg)
     return parsed
 
-def dispatch(u, args):
-    extensions.loadall(u)
-    u.addreadhook(extensions.loadall)
+def dispatch(ui, args):
+    extensions.loadall(ui)
+    ui.addreadhook(extensions.loadall)
 
-    cmd, func, args, options, cmdoptions = parse(u, args)
+    cmd, func, args, options, cmdoptions = parse(ui, args)
 
     if options["encoding"]:
         util._encoding = options["encoding"]
@@ -257,53 +257,53 @@ def dispatch(u, args):
         s = get_times()
         def print_time():
             t = get_times()
-            u.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
+            ui.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
                 (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
         atexit.register(print_time)
 
     if options['cwd']:
         os.chdir(options['cwd'])
 
-    u.updateopts(options["verbose"], options["debug"], options["quiet"],
+    ui.updateopts(options["verbose"], options["debug"], options["quiet"],
                  not options["noninteractive"], options["traceback"],
                  parseconfig(options["config"]))
 
-    path = u.expandpath(options["repository"]) or ""
-    repo = path and hg.repository(u, path=path) or None
+    path = ui.expandpath(options["repository"]) or ""
+    repo = path and hg.repository(ui, path=path) or None
     if repo and not repo.local():
         raise util.Abort(_("repository '%s' is not local") % path)
 
     if options['help']:
-        return commands.help_(u, cmd, options['version'])
+        return commands.help_(ui, cmd, options['version'])
     elif options['version']:
-        return commands.version_(u)
+        return commands.version_(ui)
     elif not cmd:
-        return commands.help_(u, 'shortlist')
+        return commands.help_(ui, 'shortlist')
 
     if cmd not in commands.norepo.split():
         try:
             if not repo:
-                repo = hg.repository(u, path=path)
-            u = repo.ui
+                repo = hg.repository(ui, path=path)
+            ui = repo.ui
         except hg.RepoError:
             if cmd not in commands.optionalrepo.split():
                 raise
-        d = lambda: func(u, repo, *args, **cmdoptions)
+        d = lambda: func(ui, repo, *args, **cmdoptions)
     else:
-        d = lambda: func(u, *args, **cmdoptions)
+        d = lambda: func(ui, *args, **cmdoptions)
 
-    return runcommand(u, options, d)
+    return runcommand(ui, options, d)
 
-def runcommand(u, options, d):
+def runcommand(ui, options, cmdfunc):
     if options['profile']:
         import hotshot, hotshot.stats
         prof = hotshot.Profile("hg.prof")
         try:
             try:
-                return prof.runcall(d)
+                return prof.runcall(cmdfunc)
             except:
                 try:
-                    u.warn(_('exception raised - generating '
+                    ui.warn(_('exception raised - generating '
                              'profile anyway\n'))
                 except:
                     pass
@@ -324,14 +324,14 @@ def runcommand(u, options, d):
         p = lsprof.Profiler()
         p.enable(subcalls=True)
         try:
-            return d()
+            return cmdfunc()
         finally:
             p.disable()
             stats = lsprof.Stats(p.getstats())
             stats.sort()
             stats.pprint(top=10, file=sys.stderr, climit=5)
     else:
-        return d()
+        return cmdfunc()
 
 def bail_if_changed(repo):
     modified, added, removed, deleted = repo.status()[:4]
