@@ -12,6 +12,15 @@ import changelog, dirstate, filelog, manifest, context
 import re, lock, transaction, tempfile, stat, mdiff, errno, ui
 import os, revlog, time, util
 
+def findrepo():
+    p = os.getcwd()
+    while not os.path.isdir(os.path.join(p, ".hg")):
+        oldp, p = p, os.path.dirname(p)
+        if p == oldp:
+            return None
+
+    return p
+
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
     supported = ('revlogv1', 'store')
@@ -21,14 +30,10 @@ class localrepository(repo.repository):
     def __init__(self, parentui, path=None, create=0):
         repo.repository.__init__(self)
         if not path:
-            p = os.getcwd()
-            while not os.path.isdir(os.path.join(p, ".hg")):
-                oldp = p
-                p = os.path.dirname(p)
-                if p == oldp:
-                    raise repo.RepoError(_("There is no Mercurial repository"
-                                           " here (.hg not found)"))
-            path = p
+            path = findrepo()
+            if not path:
+                raise repo.RepoError(_("There is no Mercurial repository"
+                                       " here (.hg not found)"))
 
         self.root = os.path.realpath(path)
         self.path = os.path.join(self.root, ".hg")
