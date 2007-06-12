@@ -29,7 +29,21 @@ def runcatch(u, args):
         if num: signal.signal(num, catchterm)
 
     try:
-        return dispatch(u, args)
+        try:
+            # enter the debugger before command execution
+            if '--debugger' in args:
+                pdb.set_trace()
+            try:
+                return dispatch(u, args)
+            finally:
+                u.flush()
+        except:
+            # enter the debugger when we hit an exception
+            if '--debugger' in args:
+                pdb.post_mortem(sys.exc_info()[2])
+            u.print_exc()
+            raise
+
     except ParseError, inst:
         if inst.args[0]:
             u.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
@@ -281,57 +295,43 @@ def dispatch(u, args):
     return runcommand(u, options, d)
 
 def runcommand(u, options, d):
-    # enter the debugger before command execution
-    if options['debugger']:
-        pdb.set_trace()
-
-    try:
+    if options['profile']:
+        import hotshot, hotshot.stats
+        prof = hotshot.Profile("hg.prof")
         try:
-            if options['profile']:
-                import hotshot, hotshot.stats
-                prof = hotshot.Profile("hg.prof")
+            try:
+                return prof.runcall(d)
+            except:
                 try:
-                    try:
-                        return prof.runcall(d)
-                    except:
-                        try:
-                            u.warn(_('exception raised - generating '
-                                     'profile anyway\n'))
-                        except:
-                            pass
-                        raise
-                finally:
-                    prof.close()
-                    stats = hotshot.stats.load("hg.prof")
-                    stats.strip_dirs()
-                    stats.sort_stats('time', 'calls')
-                    stats.print_stats(40)
-            elif options['lsprof']:
-                try:
-                    from mercurial import lsprof
-                except ImportError:
-                    raise util.Abort(_(
-                        'lsprof not available - install from '
-                        'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
-                p = lsprof.Profiler()
-                p.enable(subcalls=True)
-                try:
-                    return d()
-                finally:
-                    p.disable()
-                    stats = lsprof.Stats(p.getstats())
-                    stats.sort()
-                    stats.pprint(top=10, file=sys.stderr, climit=5)
-            else:
-                return d()
+                    u.warn(_('exception raised - generating '
+                             'profile anyway\n'))
+                except:
+                    pass
+                raise
         finally:
-            u.flush()
-    except:
-        # enter the debugger when we hit an exception
-        if options['debugger']:
-            pdb.post_mortem(sys.exc_info()[2])
-        u.print_exc()
-        raise
+            prof.close()
+            stats = hotshot.stats.load("hg.prof")
+            stats.strip_dirs()
+            stats.sort_stats('time', 'calls')
+            stats.print_stats(40)
+    elif options['lsprof']:
+        try:
+            from mercurial import lsprof
+        except ImportError:
+            raise util.Abort(_(
+                'lsprof not available - install from '
+                'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
+        p = lsprof.Profiler()
+        p.enable(subcalls=True)
+        try:
+            return d()
+        finally:
+            p.disable()
+            stats = lsprof.Stats(p.getstats())
+            stats.sort()
+            stats.pprint(top=10, file=sys.stderr, climit=5)
+    else:
+        return d()
 
 def bail_if_changed(repo):
     modified, added, removed, deleted = repo.status()[:4]
