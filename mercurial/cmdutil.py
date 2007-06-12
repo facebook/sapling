@@ -9,7 +9,7 @@ from node import *
 from i18n import _
 import os, sys, mdiff, bdiff, util, templater, patch, commands
 import atexit, signal, pdb, hg, lock, fancyopts, traceback
-import socket, revlog, version, extensions, errno
+import socket, revlog, version, extensions, errno, localrepo
 
 revrangesep = ':'
 
@@ -254,6 +254,15 @@ def dispatch(ui, args):
 
     extensions.loadall(ui)
     ui.addreadhook(extensions.loadall)
+
+    # read the local extension info into a local ui object
+    rcpath = earlygetopt(["-R", "--repository"], args) or localrepo.findrepo()
+    if rcpath:
+        try:
+            lui = commands.ui.ui(parentui=ui)
+            lui.readconfig(os.path.join(rcpath, ".hg", "hgrc"))
+        except IOError:
+            pass
 
     cmd, func, args, options, cmdoptions = parse(ui, args)
 
