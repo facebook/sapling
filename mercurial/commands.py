@@ -3275,42 +3275,45 @@ def dispatch(u, args):
                 (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
         atexit.register(print_time)
 
+    if options['cwd']:
+        os.chdir(options['cwd'])
+
+    u.updateopts(options["verbose"], options["debug"], options["quiet"],
+                 not options["noninteractive"], options["traceback"],
+                 parseconfig(options["config"]))
+
+    path = u.expandpath(options["repository"]) or ""
+    repo = path and hg.repository(u, path=path) or None
+    if repo and not repo.local():
+        raise util.Abort(_("repository '%s' is not local") % path)
+
+    if options['help']:
+        return help_(u, cmd, options['version'])
+    elif options['version']:
+        return version_(u)
+    elif not cmd:
+        return help_(u, 'shortlist')
+
+    if cmd not in norepo.split():
+        try:
+            if not repo:
+                repo = hg.repository(u, path=path)
+            u = repo.ui
+        except hg.RepoError:
+            if cmd not in optionalrepo.split():
+                raise
+        d = lambda: func(u, repo, *args, **cmdoptions)
+    else:
+        d = lambda: func(u, *args, **cmdoptions)
+
+    return runcommand(u, options, d)
+
+def runcommand(u, options, d):
     # enter the debugger before command execution
     if options['debugger']:
         pdb.set_trace()
 
     try:
-        if options['cwd']:
-            os.chdir(options['cwd'])
-
-        u.updateopts(options["verbose"], options["debug"], options["quiet"],
-                     not options["noninteractive"], options["traceback"],
-                     parseconfig(options["config"]))
-
-        path = u.expandpath(options["repository"]) or ""
-        repo = path and hg.repository(u, path=path) or None
-        if repo and not repo.local():
-            raise util.Abort(_("repository '%s' is not local") % path)
-
-        if options['help']:
-            return help_(u, cmd, options['version'])
-        elif options['version']:
-            return version_(u)
-        elif not cmd:
-            return help_(u, 'shortlist')
-
-        if cmd not in norepo.split():
-            try:
-                if not repo:
-                    repo = hg.repository(u, path=path)
-                u = repo.ui
-            except hg.RepoError:
-                if cmd not in optionalrepo.split():
-                    raise
-            d = lambda: func(u, repo, *args, **cmdoptions)
-        else:
-            d = lambda: func(u, *args, **cmdoptions)
-
         try:
             if options['profile']:
                 import hotshot, hotshot.stats
