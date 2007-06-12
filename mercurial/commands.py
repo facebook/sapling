@@ -2997,11 +2997,13 @@ norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall")
 optionalrepo = ("paths serve showconfig")
 
-def run():
+def dispatch(args):
     try:
-        u = ui.ui(traceback='--traceback' in sys.argv[1:])
+        u = ui.ui(traceback='--traceback' in args)
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
-    sys.exit(cmdutil.runcatch(u, sys.argv[1:]))
+    return cmdutil.runcatch(u, args)
 
+def run():
+    sys.exit(dispatch(sys.argv[1:]))
