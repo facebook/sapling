@@ -8,8 +8,8 @@
 import demandimport; demandimport.enable()
 from node import *
 from i18n import _
-import bisect, os, re, sys, signal, imp, urllib, pdb, shlex, stat
-import fancyopts, ui, hg, util, lock, revlog, bundlerepo
+import bisect, os, re, sys, signal, urllib, pdb, shlex, stat
+import fancyopts, ui, hg, util, lock, revlog, bundlerepo, extensions
 import difflib, patch, time, help, mdiff, tempfile
 import traceback, errno, version, atexit, socket
 import archival, changegroup, cmdutil, hgweb.server, sshserver
@@ -1371,7 +1371,7 @@ def help_(ui, name=None, with_version=False):
 
     def helpext(name):
         try:
-            mod = findext(name)
+            mod = extensions.find(name)
         except KeyError:
             raise UnknownCommand(name)
 
@@ -3137,65 +3137,6 @@ def parseconfig(config):
             raise util.Abort(_('malformed --config option: %s') % cfg)
     return parsed
 
-external = {}
-
-def findext(name):
-    '''return module with given extension name'''
-    try:
-        return sys.modules[external[name]]
-    except KeyError:
-        for k, v in external.iteritems():
-            if k.endswith('.' + name) or k.endswith('/' + name) or v == name:
-                return sys.modules[v]
-        raise KeyError(name)
-
-def load_extension(ui, name, load):
-    if name in external:
-        return
-    if load:
-        # the module will be loaded in sys.modules
-        # choose an unique name so that it doesn't
-        # conflicts with other modules
-        module_name = "hgext_%s" % name.replace('.', '_')
-        mod = imp.load_source(module_name, load)
-    else:
-        def importh(name):
-            mod = __import__(name)
-            components = name.split('.')
-            for comp in components[1:]:
-                mod = getattr(mod, comp)
-            return mod
-        try:
-            mod = importh("hgext.%s" % name)
-        except ImportError:
-            mod = importh(name)
-    external[name] = mod.__name__
-
-    uisetup = getattr(mod, 'uisetup', None)
-    if uisetup:
-        uisetup(ui)
-    reposetup = getattr(mod, 'reposetup', None)
-    if reposetup:
-        hg.repo_setup_hooks.append(reposetup)
-    cmdtable = getattr(mod, 'cmdtable', {})
-    overrides = [cmd for cmd in cmdtable if cmd in table]
-    if overrides:
-        ui.warn(_("extension '%s' overrides commands: %s\n")
-                % (name, " ".join(overrides)))
-    table.update(cmdtable)
-
-def load_extensions(ui):
-    for name, load in ui.extensions():
-        try:
-            load_extension(ui, name, load)
-        except (util.SignalInterrupt, KeyboardInterrupt):
-            raise
-        except Exception, inst:
-            ui.warn(_("*** failed to import extension %s: %s\n") %
-                    (name, inst))
-            if ui.print_exc():
-                return 1
-
 def catchterm(*args):
     raise util.SignalInterrupt
 
@@ -3210,8 +3151,8 @@ def dispatch(args):
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
 
-    load_extensions(u)
-    u.addreadhook(load_extensions)
+    extensions.loadall(u)
+    u.addreadhook(extensions.loadall)
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)
