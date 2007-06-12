@@ -1,6 +1,6 @@
 # creating 'remote'
 # repo not found error
-remote: abort: repository nonexistent not found!
+remote: abort: There is no Mercurial repository here (.hg not found)!
 abort: no suitable response from remote hg!
 # clone remote via stream
 streaming all changes

@@ -256,11 +256,11 @@ def dispatch(ui, args):
     ui.addreadhook(extensions.loadall)
 
     # read the local extension info into a local ui object
-    rcpath = earlygetopt(["-R", "--repository"], args) or localrepo.findrepo()
-    if rcpath:
+    path = earlygetopt(["-R", "--repository"], args) or localrepo.findrepo() or ""
+    if path:
         try:
             lui = commands.ui.ui(parentui=ui)
-            lui.readconfig(os.path.join(rcpath, ".hg", "hgrc"))
+            lui.readconfig(os.path.join(path, ".hg", "hgrc"))
         except IOError:
             pass
 
@@ -287,11 +287,6 @@ def dispatch(ui, args):
                  not options["noninteractive"], options["traceback"],
                  parseconfig(options["config"]))
 
-    path = ui.expandpath(options["repository"]) or ""
-    repo = path and hg.repository(ui, path=path) or None
-    if repo and not repo.local():
-        raise util.Abort(_("repository '%s' is not local") % path)
-
     if options['help']:
         return commands.help_(ui, cmd, options['version'])
     elif options['version']:
@@ -300,10 +295,12 @@ def dispatch(ui, args):
         return commands.help_(ui, 'shortlist')
 
     if cmd not in commands.norepo.split():
+        repo = None
         try:
-            if not repo:
-                repo = hg.repository(ui, path=path)
-            ui = repo.ui
+            repo = hg.repository(ui, path=path)
+            #ui = repo.ui
+            if not repo.local():
+                raise util.Abort(_("repository '%s' is not local") % path)
         except hg.RepoError:
             if cmd not in commands.optionalrepo.split():
                 raise
