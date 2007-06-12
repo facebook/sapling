@@ -12,15 +12,6 @@ import changelog, dirstate, filelog, manifest, context
 import re, lock, transaction, tempfile, stat, mdiff, errno, ui
 import os, revlog, time, util
 
-def findrepo():
-    p = os.getcwd()
-    while not os.path.isdir(os.path.join(p, ".hg")):
-        oldp, p = p, os.path.dirname(p)
-        if p == oldp:
-            return None
-
-    return p
-
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
     supported = ('revlogv1', 'store')

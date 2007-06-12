@@ -9,7 +9,7 @@ from node import *
 from i18n import _
 import os, sys, mdiff, bdiff, util, templater, patch, commands
 import atexit, signal, pdb, hg, lock, fancyopts, traceback
-import socket, revlog, version, extensions, errno, localrepo
+import socket, revlog, version, extensions, errno
 
 revrangesep = ':'
 
@@ -186,6 +186,15 @@ def findcmd(ui, cmd):
 
     raise UnknownCommand(cmd)
 
+def findrepo():
+    p = os.getcwd()
+    while not os.path.isdir(os.path.join(p, ".hg")):
+        oldp, p = p, os.path.dirname(p)
+        if p == oldp:
+            return None
+
+    return p
+
 def parse(ui, args):
     options = {}
     cmdoptions = {}
@@ -259,7 +268,7 @@ def dispatch(ui, args):
     # this will trigger its extensions to load
     path = earlygetopt(["-R", "--repository"], args)
     if not path:
-        path = localrepo.findrepo() or ""
+        path = findrepo() or ""
     if path:
         try:
             lui = commands.ui.ui(parentui=ui)
