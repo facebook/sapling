@@ -252,7 +252,10 @@ def patchbomb(ui, repo, *revs, **opts):
         opts['revs'] = revs
 
     # start
-    start_time = util.makedate()
+    if opts.get('date'):
+        start_time = util.parsedate(opts['date'])
+    else:
+        start_time = util.makedate()
 
     def genmsgid(id):
         return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
@@ -407,6 +410,7 @@ cmdtable = {
       ('', 'bcc', [], 'email addresses of blind copy recipients'),
       ('c', 'cc', [], 'email addresses of copy recipients'),
       ('d', 'diffstat', None, 'add diffstat output to messages'),
+      ('', 'date', '', _('use the given date as the sending date')),
       ('g', 'git', None, _('use git extended diff format')),
       ('f', 'from', '', 'email address of sender'),
       ('', 'plain', None, 'omit hg patch header'),
