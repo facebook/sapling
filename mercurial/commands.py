@@ -3241,105 +3241,6 @@ def dispatch(u, args):
 
     try:
         cmd, func, args, options, cmdoptions = parse(u, args)
-        if options["encoding"]:
-            util._encoding = options["encoding"]
-        if options["encodingmode"]:
-            util._encodingmode = options["encodingmode"]
-        if options["time"]:
-            def get_times():
-                t = os.times()
-                if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
-                    t = (t[0], t[1], t[2], t[3], time.clock())
-                return t
-            s = get_times()
-            def print_time():
-                t = get_times()
-                u.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
-                    (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
-            atexit.register(print_time)
-
-        # enter the debugger before command execution
-        if options['debugger']:
-            pdb.set_trace()
-
-        try:
-            if options['cwd']:
-                os.chdir(options['cwd'])
-
-            u.updateopts(options["verbose"], options["debug"], options["quiet"],
-                         not options["noninteractive"], options["traceback"],
-                         parseconfig(options["config"]))
-
-            path = u.expandpath(options["repository"]) or ""
-            repo = path and hg.repository(u, path=path) or None
-            if repo and not repo.local():
-                raise util.Abort(_("repository '%s' is not local") % path)
-
-            if options['help']:
-                return help_(u, cmd, options['version'])
-            elif options['version']:
-                return version_(u)
-            elif not cmd:
-                return help_(u, 'shortlist')
-
-            if cmd not in norepo.split():
-                try:
-                    if not repo:
-                        repo = hg.repository(u, path=path)
-                    u = repo.ui
-                except hg.RepoError:
-                    if cmd not in optionalrepo.split():
-                        raise
-                d = lambda: func(u, repo, *args, **cmdoptions)
-            else:
-                d = lambda: func(u, *args, **cmdoptions)
-
-            try:
-                if options['profile']:
-                    import hotshot, hotshot.stats
-                    prof = hotshot.Profile("hg.prof")
-                    try:
-                        try:
-                            return prof.runcall(d)
-                        except:
-                            try:
-                                u.warn(_('exception raised - generating '
-                                         'profile anyway\n'))
-                            except:
-                                pass
-                            raise
-                    finally:
-                        prof.close()
-                        stats = hotshot.stats.load("hg.prof")
-                        stats.strip_dirs()
-                        stats.sort_stats('time', 'calls')
-                        stats.print_stats(40)
-                elif options['lsprof']:
-                    try:
-                        from mercurial import lsprof
-                    except ImportError:
-                        raise util.Abort(_(
-                            'lsprof not available - install from '
-                            'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
-                    p = lsprof.Profiler()
-                    p.enable(subcalls=True)
-                    try:
-                        return d()
-                    finally:
-                        p.disable()
-                        stats = lsprof.Stats(p.getstats())
-                        stats.sort()
-                        stats.pprint(top=10, file=sys.stderr, climit=5)
-                else:
-                    return d()
-            finally:
-                u.flush()
-        except:
-            # enter the debugger when we hit an exception
-            if options['debugger']:
-                pdb.post_mortem(sys.exc_info()[2])
-            u.print_exc()
-            raise
     except ParseError, inst:
         if inst.args[0]:
             u.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
@@ -3347,9 +3248,112 @@ def dispatch(u, args):
         else:
             u.warn(_("hg: %s\n") % inst.args[1])
             help_(u, 'shortlist')
+        return -1
     except AmbiguousCommand, inst:
         u.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
+        return -1
     except UnknownCommand, inst:
         u.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         help_(u, 'shortlist')
+        return -1
+
+    if options["encoding"]:
+        util._encoding = options["encoding"]
+    if options["encodingmode"]:
+        util._encodingmode = options["encodingmode"]
+    if options["time"]:
+        def get_times():
+            t = os.times()
+            if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
+                t = (t[0], t[1], t[2], t[3], time.clock())
+            return t
+        s = get_times()
+        def print_time():
+            t = get_times()
+            u.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
+                (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
+        atexit.register(print_time)
+
+    # enter the debugger before command execution
+    if options['debugger']:
+        pdb.set_trace()
+
+    try:
+        if options['cwd']:
+            os.chdir(options['cwd'])
+
+        u.updateopts(options["verbose"], options["debug"], options["quiet"],
+                     not options["noninteractive"], options["traceback"],
+                     parseconfig(options["config"]))
+
+        path = u.expandpath(options["repository"]) or ""
+        repo = path and hg.repository(u, path=path) or None
+        if repo and not repo.local():
+            raise util.Abort(_("repository '%s' is not local") % path)
+
+        if options['help']:
+            return help_(u, cmd, options['version'])
+        elif options['version']:
+            return version_(u)
+        elif not cmd:
+            return help_(u, 'shortlist')
+
+        if cmd not in norepo.split():
+            try:
+                if not repo:
+                    repo = hg.repository(u, path=path)
+                u = repo.ui
+            except hg.RepoError:
+                if cmd not in optionalrepo.split():
+                    raise
+            d = lambda: func(u, repo, *args, **cmdoptions)
+        else:
+            d = lambda: func(u, *args, **cmdoptions)
+
+        try:
+            if options['profile']:
+                import hotshot, hotshot.stats
+                prof = hotshot.Profile("hg.prof")
+                try:
+                    try:
+                        return prof.runcall(d)
+                    except:
+                        try:
+                            u.warn(_('exception raised - generating '
+                                     'profile anyway\n'))
+                        except:
+                            pass
+                        raise
+                finally:
+                    prof.close()
+                    stats = hotshot.stats.load("hg.prof")
+                    stats.strip_dirs()
+                    stats.sort_stats('time', 'calls')
+                    stats.print_stats(40)
+            elif options['lsprof']:
+                try:
+                    from mercurial import lsprof
+                except ImportError:
+                    raise util.Abort(_(
+                        'lsprof not available - install from '
+                        'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
+                p = lsprof.Profiler()
+                p.enable(subcalls=True)
+                try:
+                    return d()
+                finally:
+                    p.disable()
+                    stats = lsprof.Stats(p.getstats())
+                    stats.sort()
+                    stats.pprint(top=10, file=sys.stderr, climit=5)
+            else:
+                return d()
+        finally:
+            u.flush()
+    except:
+        # enter the debugger when we hit an exception
+        if options['debugger']:
+            pdb.post_mortem(sys.exc_info()[2])
+        u.print_exc()
+        raise
