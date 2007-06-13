@@ -419,7 +419,7 @@ def commit(ui, repo, *pats, **opts):
                     if i >= len(slist) or not slist[i].startswith(name):
                         raise util.Abort(_("no match under directory %s!")
                                          % rf)
-                elif not stat.S_ISREG(mode):
+                elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
                     raise util.Abort(_("can't commit %s: "
                                        "unsupported file type!") % rf)
     else:
