@@ -2099,7 +2099,7 @@ def remove(ui, repo, *pats, **opts):
                 forget.append(abs)
                 continue
             reason = _('has been marked for add (use -f to force removal)')
-        elif abs in unknown:
+        elif repo.dirstate.state(abs) == '?':
             reason = _('is not managed')
         elif opts['after'] and not exact and abs not in deleted:
             continue
