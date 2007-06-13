@@ -14,4 +14,6 @@ echo b > b
 hg commit -Amb -d '2 0'
 
 hg email --date '1970-1-1 0:2' -n -f quux -t foo -c bar -s test 0:tip | \
-  sed -e 's/\(Message-Id:.*@\|In-Reply-To:.*@\).*/\1/'
+  sed -e 's/\(Message-Id:.*@\).*/\1/' | \
+  sed -e 's/\(In-Reply-To:.*@\).*/\1/'
+
