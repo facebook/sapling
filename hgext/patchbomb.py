@@ -223,13 +223,15 @@ def patchbomb(ui, repo, *revs, **opts):
                 pass
             os.rmdir(tmpdir)
 
-    if not opts['test']:
+    really_sending = not (opts['test'] or opts['mbox'])
+
+    if really_sending:
         mail.validateconfig(ui)
 
     if not (revs or opts.get('rev') or opts.get('outgoing')):
         raise util.Abort(_('specify at least one changeset with -r or -o'))
 
-    commands.setremoteconfig(ui, opts)
+    cmdutil.setremoteconfig(ui, opts)
     if opts.get('outgoing') and opts.get('bundle'):
         raise util.Abort(_("--outgoing mode always on with --bundle; do not re-specify --outgoing"))
 
@@ -250,7 +252,10 @@ def patchbomb(ui, repo, *revs, **opts):
         opts['revs'] = revs
 
     # start
-    start_time = util.makedate()
+    if opts.get('date'):
+        start_time = util.parsedate(opts['date'])
+    else:
+        start_time = util.makedate()
 
     def genmsgid(id):
         return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
@@ -351,7 +356,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     ui.write('\n')
 
-    if not opts['test'] and not opts['mbox']:
+    if really_sending:
         mailer = mail.connect(ui)
     parent = None
 
@@ -405,6 +410,7 @@ cmdtable = {
       ('', 'bcc', [], 'email addresses of blind copy recipients'),
       ('c', 'cc', [], 'email addresses of copy recipients'),
       ('d', 'diffstat', None, 'add diffstat output to messages'),
+      ('', 'date', '', _('use the given date as the sending date')),
       ('g', 'git', None, _('use git extended diff format')),
       ('f', 'from', '', 'email address of sender'),
       ('', 'plain', None, 'omit hg patch header'),
