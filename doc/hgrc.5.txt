@@ -551,6 +551,9 @@ web::
     Which template map style to use.
   templates;;
     Where to find the HTML templates. Default is install path.
+  encoding;;
+    Character encoding name.
+    Example: "UTF-8"
 
 
 AUTHOR

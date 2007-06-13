@@ -103,6 +103,7 @@ class hgweb(object):
             self.maxshortchanges = int(self.config("web", "maxshortchanges", 60))
             self.maxfiles = int(self.config("web", "maxfiles", 10))
             self.allowpull = self.configbool("web", "allowpull", True)
+            self.encoding = self.config("web", "encoding", util._encoding)
 
     def archivelist(self, nodeid):
         allowed = self.configlist("web", "allow_archive")
@@ -655,7 +656,7 @@ class hgweb(object):
     def run_wsgi(self, req):
         def header(**map):
             header_file = cStringIO.StringIO(
-                ''.join(self.t("header", encoding=util._encoding, **map)))
+                ''.join(self.t("header", encoding=self.encoding, **map)))
             msg = mimetools.Message(header_file, 0)
             req.header(msg.items())
             yield header_file.read()
