@@ -79,10 +79,6 @@ class localrepository(repo.repository):
         except IOError:
             pass
 
-        self.changelog = changelog.changelog(self.sopener)
-        self.sopener.defversion = self.changelog.version
-        self.manifest = manifest.manifest(self.sopener)
-
         fallback = self.ui.config('ui', 'fallbackencoding')
         if fallback:
             util._fallbackencoding = fallback
@@ -93,7 +89,20 @@ class localrepository(repo.repository):
         self.filterpats = {}
         self.transhandle = None
 
-        self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
+    def __getattr__(self, name):
+        if name == 'changelog':
+            self.changelog = changelog.changelog(self.sopener)
+            self.sopener.defversion = self.changelog.version
+            return self.changelog
+        if name == 'manifest':
+            self.changelog
+            self.manifest = manifest.manifest(self.sopener)
+            return self.manifest
+        if name == 'dirstate':
+            self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
+            return self.dirstate
+        else:
+            raise AttributeError, name
 
     def url(self):
         return 'file:' + self.root
