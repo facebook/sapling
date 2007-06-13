@@ -404,8 +404,6 @@ def commit(ui, repo, *pats, **opts):
                 continue
             if f not in files:
                 rf = repo.wjoin(f)
-                if f in unknown:
-                    raise util.Abort(_("file %s not tracked!") % rf)
                 try:
                     mode = os.lstat(rf)[stat.ST_MODE]
                 except OSError:
@@ -422,6 +420,8 @@ def commit(ui, repo, *pats, **opts):
                 elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
                     raise util.Abort(_("can't commit %s: "
                                        "unsupported file type!") % rf)
+                elif repo.dirstate.state(f) == '?':
+                    raise util.Abort(_("file %s not tracked!") % rf)
     else:
         files = []
     try:
