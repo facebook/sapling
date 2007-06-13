@@ -1,109 +1,19 @@
-adding a
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [PATCH] a
-X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
-Message-Id: <8580ff50825a50c8f716.60@
-Date: Thu, 01 Jan 1970 00:01:00 +0000
-From: quux
-To: foo
-Cc: bar
+#!/bin/sh
 
-# HG changeset patch
-# User test
-# Date 1 0
-# Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
-# Parent  0000000000000000000000000000000000000000
-a
+echo "[extensions]" >> $HGRCPATH
+echo "patchbomb=" >> $HGRCPATH
 
-diff -r 000000000000 -r 8580ff50825a a
---- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/a	Thu Jan 01 00:00:01 1970 +0000
-@@ -0,0 +1,1 @@
-+a
+hg init
+echo a > a
+hg commit -Ama -d '1 0'
 
-This patch series consists of 1 patches.
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar tip | \
+  sed -e 's/\(Message-Id:.*@\).*/\1/'
 
+echo b > b
+hg commit -Amb -d '2 0'
 
-Displaying [PATCH] a ...
-adding b
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [PATCH 0 of 2] test
-Message-Id: <patchbomb.120@
-Date: Thu, 01 Jan 1970 00:02:00 +0000
-From: quux
-To: foo
-Cc: bar
+hg email --date '1970-1-1 0:2' -n -f quux -t foo -c bar -s test 0:tip | \
+  sed -e 's/\(Message-Id:.*@\|In-Reply-To:.*@\).*/\1/'
 
-
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [PATCH 1 of 2] a
-X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
-Message-Id: <8580ff50825a50c8f716.121@
-In-Reply-To: <patchbomb.120@
-Date: Thu, 01 Jan 1970 00:02:01 +0000
-From: quux
-To: foo
-Cc: bar
-
-# HG changeset patch
-# User test
-# Date 1 0
-# Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
-# Parent  0000000000000000000000000000000000000000
-a
-
-diff -r 000000000000 -r 8580ff50825a a
---- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/a	Thu Jan 01 00:00:01 1970 +0000
-@@ -0,0 +1,1 @@
-+a
-
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [PATCH 2 of 2] b
-X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
-Message-Id: <97d72e5f12c7e84f8506.122@
-In-Reply-To: <patchbomb.120@
-Date: Thu, 01 Jan 1970 00:02:02 +0000
-From: quux
-To: foo
-Cc: bar
-
-# HG changeset patch
-# User test
-# Date 2 0
-# Node ID 97d72e5f12c7e84f85064aa72e5a297142c36ed9
-# Parent  8580ff50825a50c8f716709acdf8de0deddcd6ab
-b
-
-diff -r 8580ff50825a -r 97d72e5f12c7 b
---- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/b	Thu Jan 01 00:00:02 1970 +0000
-@@ -0,0 +1,1 @@
-+b
-
-This patch series consists of 2 patches.
-
-
-Write the introductory message for the patch series.
-
-
-Displaying [PATCH 0 of 2] test ...
-Displaying [PATCH 1 of 2] a ...
-Displaying [PATCH 2 of 2] b ...
-This patch series consists of 2 patches.
-
-
-Write the introductory message for the patch series.
-
-
-Writing [PATCH 0 of 2] test ...
-Writing [PATCH 1 of 2] a ...
-Writing [PATCH 2 of 2] b ...
+hg email -m test.mbox -f quux -t foo -c bar -s test 0:tip
