@@ -574,9 +574,7 @@ def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        islink = os.path.islink(target)
-        if (repo.dirstate.state(abs) != 'r' and not islink
-            and not os.path.exists(target)):
+        if repo.dirstate.state(abs) != 'r' and not util.lexists(target):
             remove.append(abs)
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
