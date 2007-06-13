@@ -13,3 +13,9 @@ ui == repo.ui
 uisetup called
 ui.parentui is None
 Bar
+% module/__init__.py-style
+uisetup called
+ui.parentui is None
+reposetup called for a
+ui == repo.ui
+Foo

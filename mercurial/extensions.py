@@ -5,7 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import imp, commands, hg, util, sys
+import imp, os
+import commands, hg, util, sys
 from i18n import _
 
 _extensions = {}
@@ -28,7 +29,12 @@ def load(ui, name, path):
         # choose an unique name so that it doesn't
         # conflicts with other modules
         module_name = "hgext_%s" % name.replace('.', '_')
-        mod = imp.load_source(module_name, path)
+        if os.path.isdir(path):
+            # module/__init__.py style
+            fd, fpath, desc = imp.find_module('', [path])
+            mod = imp.load_module(module_name, fd, fpath, desc)
+        else:
+            mod = imp.load_source(module_name, path)
     else:
         def importh(name):
             mod = __import__(name)

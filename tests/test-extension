@@ -29,6 +29,10 @@ commands.norepo += ' bar'
 EOF
 abspath=`pwd`/foobar.py
 
+mkdir barfoo
+cp foobar.py barfoo/__init__.py
+barfoopath=`pwd`/barfoo
+
 hg init a
 cd a
 echo foo > file
@@ -43,3 +47,9 @@ cd ..
 hg clone a b
 
 hg bar
+
+echo '% module/__init__.py-style'
+echo '[extensions]' > $HGRCPATH
+echo "barfoo = $barfoopath" >> $HGRCPATH
+cd a
+hg foo
