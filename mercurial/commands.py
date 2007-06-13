@@ -2261,8 +2261,7 @@ def revert(ui, repo, *pats, **opts):
         def handle(xlist, dobackup):
             xlist[0].append(abs)
             update[abs] = 1
-            if (dobackup and not opts['no_backup'] and
-                (os.path.islink(target) or os.path.exists(target))):
+            if dobackup and not opts['no_backup'] and util.lexists(target):
                 bakname = "%s.orig" % rel
                 ui.note(_('saving current version of %s as %s\n') %
                         (rel, bakname))
