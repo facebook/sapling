@@ -17,8 +17,8 @@ def find(name):
         return _extensions[name]
     except KeyError:
         for k, v in _extensions.iteritems():
-            if k.endswith('.' + name) or k.endswith('/' + name) or v == name:
-                return sys.modules[v]
+            if k.endswith('.' + name) or k.endswith('/' + name):
+                return v
         raise KeyError(name)
 
 def load(ui, name, path):
