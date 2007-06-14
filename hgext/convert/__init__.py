@@ -33,15 +33,18 @@ class convert(object):
         self.source = source
         self.dest = dest
         self.ui = ui
-        self.mapfile = mapfile
         self.opts = opts
         self.commitcache = {}
+        self.mapfile = mapfile
+        self.mapfilefd = None
 
         self.map = {}
         try:
-            for l in file(self.mapfile):
+            origmapfile = open(self.mapfile, 'r')
+            for l in origmapfile:
                 sv, dv = l[:-1].split()
                 self.map[sv] = dv
+            origmapfile.close()
         except IOError:
             pass
 
@@ -118,6 +121,16 @@ class convert(object):
 
         return s
 
+    def mapentry(self, src, dst):
+        if self.mapfilefd is None:
+            try:
+                self.mapfilefd = open(self.mapfile, "a")
+            except IOError, (errno, strerror):
+                raise util.Abort("Could not open map file %s: %s, %s\n" % (self.mapfile, errno, strerror))
+        self.map[src] = dst
+        self.mapfilefd.write("%s %s\n" % (src, dst))
+        self.mapfilefd.flush()
+
     def copy(self, rev):
         c = self.commitcache[rev]
         files = self.source.getchanges(rev)
@@ -133,40 +146,47 @@ class convert(object):
 
         r = [self.map[v] for v in c.parents]
         f = [f for f, v in files]
-        self.map[rev] = self.dest.putcommit(f, r, c)
-        file(self.mapfile, "a").write("%s %s\n" % (rev, self.map[rev]))
+        newnode = self.dest.putcommit(f, r, c)
+        self.mapentry(rev, newnode)
 
     def convert(self):
-        self.ui.status("scanning source...\n")
-        heads = self.source.getheads()
-        parents = self.walktree(heads)
-        self.ui.status("sorting...\n")
-        t = self.toposort(parents)
-        num = len(t)
-        c = None
+        try:
+            self.ui.status("scanning source...\n")
+            heads = self.source.getheads()
+            parents = self.walktree(heads)
+            self.ui.status("sorting...\n")
+            t = self.toposort(parents)
+            num = len(t)
+            c = None
 
-        self.ui.status("converting...\n")
-        for c in t:
-            num -= 1
-            desc = self.commitcache[c].desc
-            if "\n" in desc:
-                desc = desc.splitlines()[0]
-            self.ui.status("%d %s\n" % (num, desc))
-            self.copy(c)
+            self.ui.status("converting...\n")
+            for c in t:
+                num -= 1
+                desc = self.commitcache[c].desc
+                if "\n" in desc:
+                    desc = desc.splitlines()[0]
+                self.ui.status("%d %s\n" % (num, desc))
+                self.copy(c)
 
-        tags = self.source.gettags()
-        ctags = {}
-        for k in tags:
-            v = tags[k]
-            if v in self.map:
-                ctags[k] = self.map[v]
+            tags = self.source.gettags()
+            ctags = {}
+            for k in tags:
+                v = tags[k]
+                if v in self.map:
+                    ctags[k] = self.map[v]
 
-        if c and ctags:
-            nrev = self.dest.puttags(ctags)
-            # write another hash correspondence to override the previous
-            # one so we don't end up with extra tag heads
-            if nrev:
-                file(self.mapfile, "a").write("%s %s\n" % (c, nrev))
+            if c and ctags:
+                nrev = self.dest.puttags(ctags)
+                # write another hash correspondence to override the previous
+                # one so we don't end up with extra tag heads
+                if nrev:
+                    self.mapentry(c, nrev)
+        finally:
+            self.cleanup()
+
+    def cleanup(self):
+       if self.mapfilefd:
+           self.mapfilefd.close()
 
 def _convert(ui, src, dest=None, mapfile=None, **opts):
     '''Convert a foreign SCM repository to a Mercurial one.
