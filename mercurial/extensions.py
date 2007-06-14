@@ -31,7 +31,8 @@ def load(ui, name, path):
         module_name = "hgext_%s" % name.replace('.', '_')
         if os.path.isdir(path):
             # module/__init__.py style
-            fd, fpath, desc = imp.find_module('', [path])
+            d, f = os.path.split(path)
+            fd, fpath, desc = imp.find_module(f, [d])
             mod = imp.load_module(module_name, fd, fpath, desc)
         else:
             mod = imp.load_source(module_name, path)
