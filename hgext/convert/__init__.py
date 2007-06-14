@@ -56,8 +56,6 @@ class convert(object):
             self.readauthormap(authorfile)
         # Extend/Override with new author map if necessary
         if opts.get('authors'):
-            import pdb
-            pdb.set_trace()
             self.readauthormap(opts.get('authors'))
             self.authorfile = self.dest.authorfile()
 
