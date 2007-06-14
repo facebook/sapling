@@ -66,7 +66,7 @@ class converter_sink(object):
         """Path to a file that will contain lines
         srcauthor=dstauthor
         mapping equivalent authors identifiers for each system."""
-        raise NotImplementedError()
+        return None
 
     def putfile(self, f, e, data):
         """Put file for next putcommit().

@@ -38,7 +38,7 @@ class convert(object):
         self.mapfile = mapfile
         self.mapfilefd = None
         self.authors = {}
-        self.writeauthors = False
+        self.authorfile = None
 
         self.map = {}
         try:
@@ -51,12 +51,15 @@ class convert(object):
             pass
 
         # Read first the dst author map if any
-        if  hasattr(self.dest, 'authorfile'):
-            self.readauthormap(self.dest.authorfile())
+        authorfile = self.dest.authorfile()
+        if authorfile and os.path.exists(authorfile):
+            self.readauthormap(authorfile)
         # Extend/Override with new author map if necessary
-        if 'authors' in opts:
+        if opts.get('authors'):
+            import pdb
+            pdb.set_trace()
             self.readauthormap(opts.get('authors'))
-            self.writeauthors = True
+            self.authorfile = self.dest.authorfile()
 
     def walktree(self, heads):
         visit = heads
@@ -142,8 +145,8 @@ class convert(object):
         self.mapfilefd.flush()
 
     def writeauthormap(self):
-        if self.writeauthors == True and len(self.authors) > 0 and hasattr(self.dest, 'authorfile'):
-           authorfile = self.dest.authorfile()
+        authorfile = self.authorfile
+        if authorfile:
            self.ui.status('Writing author map file %s\n' % authorfile)
            ofile = open(authorfile, 'w+')
            for author in self.authors:
@@ -151,28 +154,24 @@ class convert(object):
            ofile.close()
 
     def readauthormap(self, authorfile):
-        try:
-            afile = open(authorfile, 'r')
-            for line in afile:
-                try:
-                    srcauthor = line.split('=')[0].strip()
-                    dstauthor = line.split('=')[1].strip()
-                    if srcauthor in self.authors and dstauthor != self.authors[srcauthor]:
-                        self.ui.status(
-                            'Overriding mapping for author %s, was %s, will be %s\n'
-                            % (srcauthor, self.authors[srcauthor], dstauthor))
-                    else:
-                        self.ui.debug('Mapping author %s to %s\n'
-			    % (srcauthor, dstauthor))
+        afile = open(authorfile, 'r')
+        for line in afile:
+            try:
+                srcauthor = line.split('=')[0].strip()
+                dstauthor = line.split('=')[1].strip()
+                if srcauthor in self.authors and dstauthor != self.authors[srcauthor]:
+                    self.ui.status(
+                        'Overriding mapping for author %s, was %s, will be %s\n'
+                        % (srcauthor, self.authors[srcauthor], dstauthor))
+                else:
+                    self.ui.debug('Mapping author %s to %s\n'
+                                  % (srcauthor, dstauthor))
                     self.authors[srcauthor] = dstauthor
-		    
-                except IndexError:
-                    self.ui.warn(
-                        'Ignoring bad line in author file map %s: %s\n'
-                        % (authorfile, line))
-            afile.close()
-        except IOError:
-            self.ui.warn('Error reading author file map %s.\n' % authorfile)
+            except IndexError:
+                self.ui.warn(
+                    'Ignoring bad line in author file map %s: %s\n'
+                    % (authorfile, line))
+        afile.close()
 
     def copy(self, rev):
         c = self.commitcache[rev]
