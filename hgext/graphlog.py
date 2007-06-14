@@ -147,7 +147,7 @@ def graphlog(ui, repo, *args, **opts):
     Print a revision history alongside a revision graph drawn with
     ASCII characters.
 
-    Nodes printed as a . character are parents of the working
+    Nodes printed as an @ character are parents of the working
     directory.
     """
 
@@ -199,10 +199,10 @@ def graphlog(ui, repo, *args, **opts):
         #     o | |            o | |
         fix_nodeline_tail = len(log_strings) <= 2 and not add_padding_line
 
-        # nodeline is the line containing the node character (. or o).
+        # nodeline is the line containing the node character (@ or o).
         nodeline = ["|", " "] * node_index
         if node in repo_parents:
-            node_ch = "."
+            node_ch = "@"
         else:
             node_ch = "o"
         nodeline.extend([node_ch, " "])
