@@ -37,6 +37,8 @@ class convert(object):
         self.commitcache = {}
         self.mapfile = mapfile
         self.mapfilefd = None
+        self.authors = {}
+        self.writeauthors = False
 
         self.map = {}
         try:
@@ -47,6 +49,14 @@ class convert(object):
             origmapfile.close()
         except IOError:
             pass
+
+        # Read first the dst author map if any
+        if  hasattr(self.dest, 'authorfile'):
+            self.readauthormap(self.dest.authorfile())
+        # Extend/Override with new author map if necessary
+        if 'authors' in opts:
+            self.readauthormap(opts.get('authors'))
+            self.writeauthors = True
 
     def walktree(self, heads):
         visit = heads
@@ -131,6 +141,39 @@ class convert(object):
         self.mapfilefd.write("%s %s\n" % (src, dst))
         self.mapfilefd.flush()
 
+    def writeauthormap(self):
+        if self.writeauthors == True and len(self.authors) > 0 and hasattr(self.dest, 'authorfile'):
+           authorfile = self.dest.authorfile()
+           self.ui.status('Writing author map file %s\n' % authorfile)
+           ofile = open(authorfile, 'w+')
+           for author in self.authors:
+               ofile.write("%s=%s\n" % (author, self.authors[author]))
+           ofile.close()
+
+    def readauthormap(self, authorfile):
+        try:
+            afile = open(authorfile, 'r')
+            for line in afile:
+                try:
+                    srcauthor = line.split('=')[0].strip()
+                    dstauthor = line.split('=')[1].strip()
+                    if srcauthor in self.authors and dstauthor != self.authors[srcauthor]:
+                        self.ui.status(
+                            'Overriding mapping for author %s, was %s, will be %s\n'
+                            % (srcauthor, self.authors[srcauthor], dstauthor))
+                    else:
+                        self.ui.debug('Mapping author %s to %s\n'
+			    % (srcauthor, dstauthor))
+                    self.authors[srcauthor] = dstauthor
+		    
+                except IndexError:
+                    self.ui.warn(
+                        'Ignoring bad line in author file map %s: %s\n'
+                        % (authorfile, line))
+            afile.close()
+        except IOError:
+            self.ui.warn('Error reading author file map %s.\n' % authorfile)
+
     def copy(self, rev):
         c = self.commitcache[rev]
         files = self.source.getchanges(rev)
@@ -165,6 +208,9 @@ class convert(object):
                 desc = self.commitcache[c].desc
                 if "\n" in desc:
                     desc = desc.splitlines()[0]
+                author = self.commitcache[c].author
+                author = self.authors.get(author, author)
+                self.commitcache[c].author = author
                 self.ui.status("%d %s\n" % (num, desc))
                 self.copy(c)
 
@@ -181,6 +227,8 @@ class convert(object):
                 # one so we don't end up with extra tag heads
                 if nrev:
                     self.mapentry(c, nrev)
+
+            self.writeauthormap()
         finally:
             self.cleanup()
 
@@ -204,12 +252,17 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
 
     The <mapfile> is a simple text file that maps each source commit ID to
     the destination ID for that revision, like so:
-
     <source ID> <destination ID>
 
     If the file doesn't exist, it's automatically created.  It's updated
     on each commit copied, so convert-repo can be interrupted and can
     be run repeatedly to copy new commits.
+
+    The [username mapping] file is a simple text file that maps each source
+    commit author to a destination commit author. It is handy for source SCMs
+    that use unix logins to identify authors (eg: CVS). One line per author
+    mapping and the line format is:
+    srcauthor=whatever string you want
     '''
 
     srcc = converter(ui, src)
@@ -257,6 +310,7 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
 cmdtable = {
     "convert":
         (_convert,
-         [('', 'datesort', None, 'try to sort changesets by date')],
+         [('A', 'authors', '', 'username mapping filename'),
+          ('', 'datesort', None, 'try to sort changesets by date')],
          'hg convert [OPTION]... SOURCE [DEST [MAPFILE]]'),
 }

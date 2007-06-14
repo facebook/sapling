@@ -17,6 +17,9 @@ class convert_mercurial(converter_sink):
     def mapfile(self):
         return os.path.join(self.path, ".hg", "shamap")
 
+    def authorfile(self):
+        return os.path.join(self.path, ".hg", "authormap")
+
     def getheads(self):
         h = self.repo.changelog.heads()
         return [ hg.hex(x) for x in h ]

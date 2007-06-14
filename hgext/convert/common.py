@@ -62,6 +62,12 @@ class converter_sink(object):
         mapping equivalent revision identifiers for each system."""
         raise NotImplementedError()
 
+    def authorfile(self):
+        """Path to a file that will contain lines
+        srcauthor=dstauthor
+        mapping equivalent authors identifiers for each system."""
+        raise NotImplementedError()
+
     def putfile(self, f, e, data):
         """Put file for next putcommit().
         f: path to file
