@@ -1,0 +1,27 @@
+#!/bin/sh
+# test parents command
+
+hg init a
+cd a
+echo % no working directory
+hg parents
+
+echo a > a
+echo b > b
+hg ci -Amab -d '0 0'
+echo a >> a
+hg ci -Ama -d '1 0'
+echo b >> b
+hg ci -Amb -d '2 0'
+
+echo % hg parents
+hg parents
+
+echo % hg parents a
+hg parents a
+
+echo % hg parents -r 2
+hg parents -r 2
+
+echo % hg parents -r 2 a
+hg parents -r 2 a

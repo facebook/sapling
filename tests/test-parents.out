@@ -1,0 +1,28 @@
+% no working directory
+adding a
+adding b
+% hg parents
+changeset:   2:6cfac479f009
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     b
+
+% hg parents a
+changeset:   0:b6a1406d8886
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     ab
+
+% hg parents -r 2
+changeset:   1:d786049f033a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     a
+
+% hg parents -r 2 a
+changeset:   0:b6a1406d8886
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     ab
+

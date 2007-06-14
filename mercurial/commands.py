@@ -1863,17 +1863,20 @@ def outgoing(ui, repo, dest=None, **opts):
 def parents(ui, repo, file_=None, **opts):
     """show the parents of the working dir or revision
 
-    Print the working directory's parent revisions.
+    Print the working directory's parent revisions. If a
+    revision is given via --rev, the parent of that revision
+    will be printed. If a file argument is given, revision in
+    which the file was last changed (before the working directory
+    revision or the argument to --rev if given) is printed.
     """
     rev = opts.get('rev')
-    if rev:
-        if file_:
-            ctx = repo.filectx(file_, changeid=rev)
-        else:
-            ctx = repo.changectx(rev)
-        p = [cp.node() for cp in ctx.parents()]
+    if file_:
+        ctx = repo.filectx(file_, changeid=rev)
+    elif rev:
+        ctx = repo.changectx(rev)
     else:
-        p = repo.dirstate.parents()
+        ctx = repo.workingctx()
+    p = [cp.node() for cp in ctx.parents()]
 
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in p:
