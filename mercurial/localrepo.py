@@ -951,7 +951,8 @@ class localrepository(repo.repository):
                         if fcmp(f, getnode):
                             modified.append(f)
                         else:
-                            clean.append(f)
+                            if list_clean:
+                                clean.append(f)
                             if not wlock and not mywlock:
                                 mywlock = True
                                 try:
@@ -1013,16 +1014,17 @@ class localrepository(repo.repository):
             wlock = self.wlock()
         for f in list:
             p = self.wjoin(f)
-            islink = os.path.islink(p)
-            size = os.lstat(p).st_size
-            if size > 10000000:
+            try:
+                st = os.lstat(p)
+            except:
+                self.ui.warn(_("%s does not exist!\n") % f)
+                continue
+            if st.st_size > 10000000:
                 self.ui.warn(_("%s: files over 10MB may cause memory and"
                                " performance problems\n"
                                "(use 'hg revert %s' to unadd the file)\n")
                                % (f, f))
-            if not islink and not os.path.exists(p):
-                self.ui.warn(_("%s does not exist!\n") % f)
-            elif not islink and not os.path.isfile(p):
+            if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                 self.ui.warn(_("%s not added: only files and symlinks "
                                "supported currently\n") % f)
             elif self.dirstate.state(f) in 'an':

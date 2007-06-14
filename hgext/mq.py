@@ -438,11 +438,14 @@ class queue:
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, wlock=None,
               all_files={}):
+        if not wlock:
+            wlock = repo.wlock()
+        lock = repo.lock()
         tr = repo.transaction()
         try:
             ret = self._apply(tr, repo, series, list, update_status,
                               strict, patchdir, merge, wlock,
-                              all_files=all_files)
+                              lock=lock, all_files=all_files)
             tr.close()
             self.save_dirty()
             return ret
@@ -456,14 +459,11 @@ class queue:
 
     def _apply(self, tr, repo, series, list=False, update_status=True,
                strict=False, patchdir=None, merge=None, wlock=None,
-               all_files={}):
+               lock=None, all_files={}):
         # TODO unify with commands.py
         if not patchdir:
             patchdir = self.path
         err = 0
-        if not wlock:
-            wlock = repo.wlock()
-        lock = repo.lock()
         n = None
         for patchname in series:
             pushable, reason = self.pushable(patchname)
@@ -1057,9 +1057,11 @@ class queue:
             aaa = aa[:]
             if opts.get('short'):
                 filelist = mm + aa + dd
+                match = dict.fromkeys(filelist).__contains__
             else:
                 filelist = None
-            m, a, r, d, u = repo.status(files=filelist)[:5]
+                match = util.always
+            m, a, r, d, u = repo.status(files=filelist, match=match)[:5]
 
             # we might end up with files that were added between tip and
             # the dirstate parent, but then changed in the local dirstate.

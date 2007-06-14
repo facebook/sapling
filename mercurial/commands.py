@@ -404,8 +404,6 @@ def commit(ui, repo, *pats, **opts):
                 continue
             if f not in files:
                 rf = repo.wjoin(f)
-                if f in unknown:
-                    raise util.Abort(_("file %s not tracked!") % rf)
                 try:
                     mode = os.lstat(rf)[stat.ST_MODE]
                 except OSError:
@@ -419,9 +417,11 @@ def commit(ui, repo, *pats, **opts):
                     if i >= len(slist) or not slist[i].startswith(name):
                         raise util.Abort(_("no match under directory %s!")
                                          % rf)
-                elif not stat.S_ISREG(mode):
+                elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
                     raise util.Abort(_("can't commit %s: "
                                        "unsupported file type!") % rf)
+                elif repo.dirstate.state(f) == '?':
+                    raise util.Abort(_("file %s not tracked!") % rf)
     else:
         files = []
     try:
@@ -2099,7 +2099,7 @@ def remove(ui, repo, *pats, **opts):
                 forget.append(abs)
                 continue
             reason = _('has been marked for add (use -f to force removal)')
-        elif abs in unknown:
+        elif repo.dirstate.state(abs) == '?':
             reason = _('is not managed')
         elif opts['after'] and not exact and abs not in deleted:
             continue
@@ -2261,8 +2261,7 @@ def revert(ui, repo, *pats, **opts):
         def handle(xlist, dobackup):
             xlist[0].append(abs)
             update[abs] = 1
-            if (dobackup and not opts['no_backup'] and
-                (os.path.islink(target) or os.path.exists(target))):
+            if dobackup and not opts['no_backup'] and util.lexists(target):
                 bakname = "%s.orig" % rel
                 ui.note(_('saving current version of %s as %s\n') %
                         (rel, bakname))

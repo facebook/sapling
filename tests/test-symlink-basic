@@ -1,5 +1,10 @@
 #!/bin/sh
 
+cleanpath()
+{
+    sed -e "s:/.*\(/test-symlink-basic/.*\):...\1:"
+}
+
 cat >> readlink.py <<EOF
 import os
 import sys
@@ -11,6 +16,7 @@ EOF
 hg init a
 cd a
 ln -s nothing dangling
+hg commit -m 'commit symlink without adding' -d '0 0' dangling 2>&1 | cleanpath
 hg add dangling
 hg commit -m 'add symlink' -d '0 0'
 
