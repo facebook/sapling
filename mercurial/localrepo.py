@@ -951,7 +951,8 @@ class localrepository(repo.repository):
                         if fcmp(f, getnode):
                             modified.append(f)
                         else:
-                            clean.append(f)
+                            if list_clean:
+                                clean.append(f)
                             if not wlock and not mywlock:
                                 mywlock = True
                                 try:
