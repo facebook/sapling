@@ -2,7 +2,7 @@
 % empty repo
 % building tree
 % glog -q
-.  34:0eed7cd895e0
+@  34:0eed7cd895e0
 |
 | o  33:2e9d1b521374
 | |
@@ -73,7 +73,7 @@ o /  1:3cae7826a707
 o  0:7aa22e58e8c1
 
 % glog
-.  changeset:   34:0eed7cd895e0
+@  changeset:   34:0eed7cd895e0
 |  tag:         tip
 |  parent:      32:77f7d8438a3c
 |  user:        test
