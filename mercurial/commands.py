@@ -1514,7 +1514,6 @@ def import_(ui, repo, patch1, *patches, **opts):
                 if p1 != wp[0].node():
                     hg.clean(repo, p1, wlock=wlock)
                 repo.dirstate.setparents(p1, p2)
-                repo.dirstate.setbranch(branch or 'default')
             elif p2:
                 try:
                     p1 = repo.lookup(p1)
@@ -1523,6 +1522,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                         repo.dirstate.setparents(p1, p2)
                 except hg.RepoError:
                     pass
+            if opts.get('exact') or opts.get('import-branch'):
+                repo.dirstate.setbranch(branch or 'default')
 
             files = {}
             try:
@@ -2803,7 +2804,9 @@ table = {
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes')),
           ('', 'exact', None,
-           _('apply patch to the nodes from which it was generated'))] + commitopts,
+           _('apply patch to the nodes from which it was generated')),
+          ('', 'import-branch', None,
+           _('Use any branch information in patch (implied by --exact)'))] + commitopts,
          _('hg import [-p NUM] [-m MESSAGE] [-f] PATCH...')),
     "incoming|in": (incoming,
          [('M', 'no-merges', None, _('do not show merges')),
