@@ -1057,9 +1057,11 @@ class queue:
             aaa = aa[:]
             if opts.get('short'):
                 filelist = mm + aa + dd
+                match = dict.fromkeys(filelist).__contains__
             else:
                 filelist = None
-            m, a, r, d, u = repo.status(files=filelist)[:5]
+                match = util.always
+            m, a, r, d, u = repo.status(files=filelist, match=match)[:5]
 
             # we might end up with files that were added between tip and
             # the dirstate parent, but then changed in the local dirstate.
