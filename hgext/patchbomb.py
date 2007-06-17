@@ -44,7 +44,8 @@
 # the "email" command with the "-n" option (test only).  You will be
 # prompted for an email recipient address, a subject an an introductory
 # message describing the patches of your patchbomb.  Then when all is
-# done, your pager will be fired up once for each patchbomb message, so
+# done, patchbomb messages are displayed. If PAGER environment variable
+# is set, your pager will be fired up once for each patchbomb message, so
 # you can verify everything is alright.
 #
 # The "-m" (mbox) option is also very useful.  Instead of previewing
@@ -381,14 +382,18 @@ def patchbomb(ui, repo, *revs, **opts):
         if opts['test']:
             ui.status('Displaying ', m['Subject'], ' ...\n')
             ui.flush()
-            fp = os.popen(os.getenv('PAGER', 'more'), 'w')
+            if 'PAGER' in os.environ:
+                fp = os.popen(os['PAGER'], 'w')
+            else:
+                fp = ui
             try:
                 fp.write(m.as_string(0))
                 fp.write('\n')
             except IOError, inst:
                 if inst.errno != errno.EPIPE:
                     raise
-            fp.close()
+            if fp is not ui:
+                fp.close()
         elif opts['mbox']:
             ui.status('Writing ', m['Subject'], ' ...\n')
             fp = open(opts['mbox'], m.has_key('In-Reply-To') and 'ab+' or 'wb+')
