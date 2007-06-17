@@ -1522,7 +1522,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                         repo.dirstate.setparents(p1, p2)
                 except hg.RepoError:
                     pass
-            if opts.get('exact') or opts.get('import-branch'):
+            if opts.get('exact') or opts.get('import_branch'):
                 repo.dirstate.setbranch(branch or 'default')
 
             files = {}
