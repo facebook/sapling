@@ -1,4 +1,8 @@
 adding a
+This patch series consists of 1 patches.
+
+
+Displaying [PATCH] a ...
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
@@ -23,11 +27,14 @@ diff -r 000000000000 -r 8580ff50825a a
 @@ -0,0 +1,1 @@
 +a
 
-This patch series consists of 1 patches.
-
-
-Displaying [PATCH] a ...
 adding b
+This patch series consists of 2 patches.
+
+
+Write the introductory message for the patch series.
+
+
+Displaying [PATCH 0 of 2] test ...
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
@@ -39,6 +46,7 @@ To: foo
 Cc: bar
 
 
+Displaying [PATCH 1 of 2] a ...
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
@@ -64,6 +72,7 @@ diff -r 000000000000 -r 8580ff50825a a
 @@ -0,0 +1,1 @@
 +a
 
+Displaying [PATCH 2 of 2] b ...
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
@@ -89,15 +98,6 @@ diff -r 8580ff50825a -r 97d72e5f12c7 b
 @@ -0,0 +1,1 @@
 +b
 
-This patch series consists of 2 patches.
-
-
-Write the introductory message for the patch series.
-
-
-Displaying [PATCH 0 of 2] test ...
-Displaying [PATCH 1 of 2] a ...
-Displaying [PATCH 2 of 2] b ...
 This patch series consists of 2 patches.
 
 
