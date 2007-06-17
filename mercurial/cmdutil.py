@@ -8,7 +8,7 @@
 from node import *
 from i18n import _
 import os, sys, atexit, signal, pdb, traceback, socket, errno, shlex
-import mdiff, bdiff, util, templater, patch, commands, hg, lock
+import mdiff, bdiff, util, templater, patch, commands, hg, lock, time
 import fancyopts, revlog, version, extensions
 
 revrangesep = ':'
