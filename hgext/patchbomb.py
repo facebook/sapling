@@ -275,6 +275,7 @@ def patchbomb(ui, repo, *revs, **opts):
         if bcc: m['Bcc'] = ', '.join(bcc)
         if opts['test']:
             ui.status('Displaying ', m['Subject'], ' ...\n')
+            ui.flush()
             fp = os.popen(os.getenv('PAGER', 'more'), 'w')
             try:
                 fp.write(m.as_string(0))
