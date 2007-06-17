@@ -7,13 +7,15 @@ hg init
 echo a > a
 hg commit -Ama -d '1 0'
 
-hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar tip | \
-  sed -e 's/\(Message-Id:.*@\).*/\1/'
+hg email -n -f quux -t foo -c bar tip | \
+  sed -e 's/\(Message-Id:\).*@.*/\1/' | \
+  sed -e 's/\(Date:\).*/\1/'
 
 echo b > b
 hg commit -Amb -d '2 0'
 
-hg email --date '1970-1-1 0:2' -n -f quux -t foo -c bar -s test 0:tip | \
-  sed -e 's/\(Message-Id:.*@\).*/\1/' | \
-  sed -e 's/\(In-Reply-To:.*@\).*/\1/'
-
+# Pipe something to make raw_input() happy even under pysh+win32
+echo test | hg email -n -f quux -t foo -c bar -s test 0:tip | \
+  sed -e 's/\(Message-Id:\).*@.*/\1/' | \
+  sed -e 's/\(In-Reply-To:\).*@.*/\1/' | \
+  sed -e 's/\(Date:\).*/\1/'
