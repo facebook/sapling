@@ -182,26 +182,19 @@ class dirstate(object):
             self._dirs.setdefault(pc, 0)
             self._dirs[pc] -= 1
 
-    def checkinterfering(self, files):
-        def prefixes(f):
-            for c in strutil.rfindall(f, '/'):
-                yield f[:c]
-        seendirs = {}
-        for f in files:
-            # shadows
-            if self._dirs.get(f):
-                raise util.Abort(_('directory named %r already in dirstate') %
-                                 f)
-            for d in prefixes(f):
-                if d in seendirs:
-                    break
-                if d in self._map:
-                    raise util.Abort(_('file named %r already in dirstate') %
-                                     d)
-                seendirs[d] = True
-            # disallowed
-            if '\r' in f or '\n' in f:
-                raise util.Abort(_("'\\n' and '\\r' disallowed in filenames"))
+    def _incpathcheck(self, f):
+        if '\r' in f or '\n' in f:
+            raise util.Abort(_("'\\n' and '\\r' disallowed in filenames"))
+        # shadows
+        if f in self._dirs:
+            raise util.Abort(_('directory named %r already in dirstate') % f)
+        for c in strutil.rfindall(f, '/'):
+            d = f[:c]
+            if d in self._dirs:
+                break
+            if d in self._map:
+                raise util.Abort(_('file named %r already in dirstate') % d)
+        self._incpath(f)
 
     def update(self, files, state, **kw):
         ''' current states:
@@ -212,21 +205,21 @@ class dirstate(object):
 
         if not files: return
         self.markdirty()
-        if state == "a":
-            self.checkinterfering(files)
         for f in files:
+            if self._copymap.has_key(f):
+                del self._copymap[f]
+
             if state == "r":
                 self._map[f] = ('r', 0, 0, 0)
                 self._decpath(f)
+                continue
             else:
                 if state == "a":
-                    self._incpath(f)
+                    self._incpathcheck(f)
                 s = os.lstat(self.wjoin(f))
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
                 self._map[f] = (state, s.st_mode, st_size, st_mtime)
-            if self._copymap.has_key(f):
-                del self._copymap[f]
 
     def forget(self, files):
         if not files: return
