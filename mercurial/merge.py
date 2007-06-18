@@ -504,7 +504,6 @@ def update(repo, node, branchmerge, force, partial, wlock):
         if branchmerge:
             if p1.branch() != p2.branch():
                 fastforward = True
-                branchmerge = False
             else:
                 raise util.Abort(_("there is nothing to merge, just use "
                                    "'hg update' or look at 'hg heads'"))
