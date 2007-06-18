@@ -20,7 +20,6 @@ class dirstate(object):
         self.root = root
         self.dirty = 0
         self.ui = ui
-        self.dirs = None
         self.ignorefunc = None
         self._slash = None
 
@@ -47,6 +46,11 @@ class dirstate(object):
             except IOError, err:
                 if err.errno != errno.ENOENT: raise
             return self.pl
+        elif name == 'dirs':
+            self.dirs = {}
+            for f in self.map:
+                self.updatedirs(f, 1)
+            return self.dirs
         else:
             raise AttributeError, name
 
@@ -256,24 +260,16 @@ class dirstate(object):
     def copies(self):
         return self.copymap
 
-    def initdirs(self):
-        if self.dirs is None:
-            self.dirs = {}
-            for f in self.map:
-                self.updatedirs(f, 1)
-
     def updatedirs(self, path, delta):
-        if self.dirs is not None:
-            for c in strutil.findall(path, '/'):
-                pc = path[:c]
-                self.dirs.setdefault(pc, 0)
-                self.dirs[pc] += delta
+        for c in strutil.findall(path, '/'):
+            pc = path[:c]
+            self.dirs.setdefault(pc, 0)
+            self.dirs[pc] += delta
 
     def checkinterfering(self, files):
         def prefixes(f):
             for c in strutil.rfindall(f, '/'):
                 yield f[:c]
-        self.initdirs()
         seendirs = {}
         for f in files:
             # shadows
@@ -301,7 +297,6 @@ class dirstate(object):
         if not files: return
         self.markdirty()
         if state == "a":
-            self.initdirs()
             self.checkinterfering(files)
         for f in files:
             if state == "r":
@@ -320,7 +315,6 @@ class dirstate(object):
     def forget(self, files):
         if not files: return
         self.markdirty()
-        self.initdirs()
         for f in files:
             try:
                 del self.map[f]
