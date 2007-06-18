@@ -9,7 +9,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import *
 from i18n import _
-import struct, os, time, bisect, stat, strutil, util, re, errno
+import struct, os, time, bisect, stat, strutil, util, re, errno, ignore
 import cStringIO
 
 class dirstate(object):
@@ -20,7 +20,6 @@ class dirstate(object):
         self.root = root
         self.dirty = 0
         self.ui = ui
-        self.ignorefunc = None
         self._slash = None
 
     def __getattr__(self, name):
@@ -51,6 +50,10 @@ class dirstate(object):
             for f in self.map:
                 self.updatedirs(f, 1)
             return self.dirs
+        elif name == '_ignore':
+            files = [self.wjoin('.hgignore')] + self.ui.hgignorefiles()
+            self._ignore = ignore.ignore(self.root, files, self.ui.warn)
+            return self._ignore
         else:
             raise AttributeError, name
 
@@ -79,88 +82,6 @@ class dirstate(object):
         if self._slash:
             path = path.replace(os.sep, '/')
         return path
-
-    def hgignore(self):
-        '''return the contents of .hgignore files as a list of patterns.
-
-        the files parsed for patterns include:
-        .hgignore in the repository root
-        any additional files specified in the [ui] section of ~/.hgrc
-
-        trailing white space is dropped.
-        the escape character is backslash.
-        comments start with #.
-        empty lines are skipped.
-
-        lines can be of the following formats:
-
-        syntax: regexp # defaults following lines to non-rooted regexps
-        syntax: glob   # defaults following lines to non-rooted globs
-        re:pattern     # non-rooted regular expression
-        glob:pattern   # non-rooted glob
-        pattern        # pattern of the current default type'''
-        syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:'}
-        def parselines(fp):
-            for line in fp:
-                if not line.endswith('\n'):
-                    line += '\n'
-                escape = False
-                for i in xrange(len(line)):
-                    if escape: escape = False
-                    elif line[i] == '\\': escape = True
-                    elif line[i] == '#': break
-                line = line[:i].rstrip()
-                if line: yield line
-        repoignore = self.wjoin('.hgignore')
-        files = [repoignore]
-        files.extend(self.ui.hgignorefiles())
-        pats = {}
-        for f in files:
-            try:
-                pats[f] = []
-                fp = open(f)
-                syntax = 'relre:'
-                for line in parselines(fp):
-                    if line.startswith('syntax:'):
-                        s = line[7:].strip()
-                        try:
-                            syntax = syntaxes[s]
-                        except KeyError:
-                            self.ui.warn(_("%s: ignoring invalid "
-                                           "syntax '%s'\n") % (f, s))
-                        continue
-                    pat = syntax + line
-                    for s in syntaxes.values():
-                        if line.startswith(s):
-                            pat = line
-                            break
-                    pats[f].append(pat)
-            except IOError, inst:
-                if f != repoignore:
-                    self.ui.warn(_("skipping unreadable ignore file"
-                                   " '%s': %s\n") % (f, inst.strerror))
-        return pats
-
-    def ignore(self, fn):
-        '''default match function used by dirstate and
-        localrepository.  this honours the repository .hgignore file
-        and any other files specified in the [ui] section of .hgrc.'''
-        if not self.ignorefunc:
-            ignore = self.hgignore()
-            allpats = []
-            [allpats.extend(patlist) for patlist in ignore.values()]
-            if allpats:
-                try:
-                    files, self.ignorefunc, anypats = (
-                        util.matcher(self.root, inc=allpats, src='.hgignore'))
-                except util.Abort:
-                    # Re-raise an exception where the src is the right file
-                    for f, patlist in ignore.items():
-                        files, self.ignorefunc, anypats = (
-                            util.matcher(self.root, inc=patlist, src=f))
-            else:
-                self.ignorefunc = util.never
-        return self.ignorefunc(fn)
 
     def __del__(self):
         if self.dirty:
@@ -241,10 +162,9 @@ class dirstate(object):
             pos = newpos
 
     def reload(self):
-        for a in "map copymap _branch pl dirs".split():
+        for a in "map copymap _branch pl dirs _ignore".split():
             if hasattr(self, a):
                 self.__delattr__(a)
-        self.ignorefunc = None
 
     def copy(self, source, dest):
         self.markdirty()
@@ -420,11 +340,11 @@ class dirstate(object):
             dc = self.filterfiles(files)
 
         def imatch(file_):
-            if file_ not in dc and self.ignore(file_):
+            if file_ not in dc and self._ignore(file_):
                 return False
             return match(file_)
 
-        ignore = self.ignore
+        ignore = self._ignore
         if ignored:
             imatch = match
             ignore = util.never
@@ -529,7 +449,7 @@ class dirstate(object):
             try:
                 type_, mode, size, time = self[fn]
             except KeyError:
-                if list_ignored and self.ignore(fn):
+                if list_ignored and self._ignore(fn):
                     ignored.append(fn)
                 else:
                     unknown.append(fn)
