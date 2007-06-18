@@ -453,8 +453,8 @@ class queue:
             try:
                 tr.abort()
             finally:
-                repo.reload()
-                repo.wreload()
+                repo.invalidate()
+                repo.dirstate.invalidate()
             raise
 
     def _apply(self, tr, repo, series, list=False, update_status=True,

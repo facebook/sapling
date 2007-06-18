@@ -6,6 +6,9 @@ cd a
 echo a > a
 hg ci -Ama -d '0 0'
 
+echo "# missing arg"
+hg cat
+
 echo '% [defaults]'
 hg cat a
 cat > $HGRCPATH <<EOF
@@ -13,3 +16,4 @@ cat > $HGRCPATH <<EOF
 cat = -v
 EOF
 hg cat a
+

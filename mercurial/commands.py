@@ -677,10 +677,7 @@ def debugrebuildstate(ui, repo, rev=""):
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
     parent1, parent2 = repo.dirstate.parents()
-    repo.dirstate.read()
-    dc = repo.dirstate.map
-    keys = dc.keys()
-    keys.sort()
+    dc = repo.dirstate
     m1 = repo.changectx(parent1).manifest()
     m2 = repo.changectx(parent2).manifest()
     errors = 0
@@ -749,11 +746,8 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""
-    repo.dirstate.read()
-    dc = repo.dirstate.map
-    keys = dc.keys()
-    keys.sort()
-    for file_ in keys:
+    dc = repo.dirstate
+    for file_ in dc:
         if dc[file_][3] == -1:
             # Pad or slice to locale representation
             locale_len = len(time.strftime("%x %X", time.localtime(0)))

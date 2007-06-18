@@ -117,14 +117,6 @@ def runcatch(ui, args):
             ui.warn("\n%r\n" % util.ellipsis(inst[1]))
     except util.Abort, inst:
         ui.warn(_("abort: %s\n") % inst)
-    except TypeError, inst:
-        # was this an argument error?
-        tb = traceback.extract_tb(sys.exc_info()[2])
-        if len(tb) > 2: # no
-            raise
-        ui.debug(inst, "\n")
-        ui.warn(_("%s: invalid arguments\n") % cmd)
-        commands.help_(ui, cmd)
     except SystemExit, inst:
         # Commands shouldn't sys.exit directly, but give a return code.
         # Just in case catch this and and pass exit code to caller.
@@ -261,20 +253,24 @@ def dispatch(ui, args):
     if cwd:
         os.chdir(cwd)
 
-    extensions.loadall(ui)
-    ui.addreadhook(extensions.loadall)
-
     # read the local repository .hgrc into a local ui object
     # this will trigger its extensions to load
     path = earlygetopt(["-R", "--repository", "--repo"], args)
     if not path:
         path = findrepo() or ""
+    lui = ui
     if path:
         try:
             lui = commands.ui.ui(parentui=ui)
             lui.readconfig(os.path.join(path, ".hg", "hgrc"))
         except IOError:
             pass
+
+    extensions.loadall(lui)
+    # check for fallback encoding
+    fallback = lui.config('ui', 'fallbackencoding')
+    if fallback:
+        util._fallbackencoding = fallback
 
     cmd, func, args, options, cmdoptions = parse(ui, args)
 
@@ -320,15 +316,25 @@ def dispatch(ui, args):
     else:
         d = lambda: func(ui, *args, **cmdoptions)
 
-    return runcommand(ui, options, d)
+    return runcommand(ui, options, cmd, d)
 
-def runcommand(ui, options, cmdfunc):
+def runcommand(ui, options, cmd, cmdfunc):
+    def checkargs():
+        try:
+            return cmdfunc()
+        except TypeError, inst:
+            # was this an argument error?
+            tb = traceback.extract_tb(sys.exc_info()[2])
+            if len(tb) != 2: # no
+                raise
+            raise ParseError(cmd, _("invalid arguments"))
+
     if options['profile']:
         import hotshot, hotshot.stats
         prof = hotshot.Profile("hg.prof")
         try:
             try:
-                return prof.runcall(cmdfunc)
+                return prof.runcall(checkargs)
             except:
                 try:
                     ui.warn(_('exception raised - generating '
@@ -352,14 +358,14 @@ def runcommand(ui, options, cmdfunc):
         p = lsprof.Profiler()
         p.enable(subcalls=True)
         try:
-            return cmdfunc()
+            return checkargs()
         finally:
             p.disable()
             stats = lsprof.Stats(p.getstats())
             stats.sort()
             stats.pprint(top=10, file=sys.stderr, climit=5)
     else:
-        return cmdfunc()
+        return checkargs()
 
 def bail_if_changed(repo):
     modified, added, removed, deleted = repo.status()[:4]

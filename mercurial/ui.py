@@ -32,7 +32,6 @@ class ui(object):
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
-            self.readhooks = []
             self.quiet = quiet
             self.verbose = verbose
             self.debugflag = debug
@@ -52,7 +51,6 @@ class ui(object):
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
-            self.readhooks = self.parentui.readhooks[:]
             self.trusted_users = parentui.trusted_users.copy()
             self.trusted_groups = parentui.trusted_groups.copy()
             self.cdata = dupconfig(self.parentui.cdata)
@@ -154,11 +152,6 @@ class ui(object):
         if root is None:
             root = os.path.expanduser('~')
         self.fixconfig(root=root)
-        for hook in self.readhooks:
-            hook(self)
-
-    def addreadhook(self, hook):
-        self.readhooks.append(hook)
 
     def readsections(self, filename, *sections):
         """Read filename and add only the specified sections to the config data
@@ -318,20 +311,6 @@ class ui(object):
         for section in sections:
             for name, value in self.configitems(section, untrusted):
                 yield section, name, str(value).replace('\n', '\\n')
-
-    def extensions(self):
-        result = self.configitems("extensions")
-        for i, (key, value) in enumerate(result):
-            if value:
-                result[i] = (key, os.path.expanduser(value))
-        return result
-
-    def hgignorefiles(self):
-        result = []
-        for key, value in self.configitems("ui"):
-            if key == 'ignore' or key.startswith('ignore.'):
-                result.append(os.path.expanduser(value))
-        return result
 
     def username(self):
         """Return default username to be used in commits.

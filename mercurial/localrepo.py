@@ -10,7 +10,7 @@ from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context
 import re, lock, transaction, tempfile, stat, mdiff, errno, ui
-import os, revlog, time, util
+import os, revlog, time, util, extensions, hook
 
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
@@ -76,12 +76,9 @@ class localrepository(repo.repository):
         self.ui = ui.ui(parentui=parentui)
         try:
             self.ui.readconfig(self.join("hgrc"), self.root)
+            extensions.loadall(self.ui)
         except IOError:
             pass
-
-        fallback = self.ui.config('ui', 'fallbackencoding')
-        if fallback:
-            util._fallbackencoding = fallback
 
         self.tagscache = None
         self.branchcache = None
@@ -108,89 +105,7 @@ class localrepository(repo.repository):
         return 'file:' + self.root
 
     def hook(self, name, throw=False, **args):
-        def callhook(hname, funcname):
-            '''call python hook. hook is callable object, looked up as
-            name in python module. if callable returns "true", hook
-            fails, else passes. if hook raises exception, treated as
-            hook failure. exception propagates if throw is "true".
-
-            reason for "true" meaning "hook failed" is so that
-            unmodified commands (e.g. mercurial.commands.update) can
-            be run as hooks without wrappers to convert return values.'''
-
-            self.ui.note(_("calling hook %s: %s\n") % (hname, funcname))
-            obj = funcname
-            if not callable(obj):
-                d = funcname.rfind('.')
-                if d == -1:
-                    raise util.Abort(_('%s hook is invalid ("%s" not in '
-                                       'a module)') % (hname, funcname))
-                modname = funcname[:d]
-                try:
-                    obj = __import__(modname)
-                except ImportError:
-                    try:
-                        # extensions are loaded with hgext_ prefix
-                        obj = __import__("hgext_%s" % modname)
-                    except ImportError:
-                        raise util.Abort(_('%s hook is invalid '
-                                           '(import of "%s" failed)') %
-                                         (hname, modname))
-                try:
-                    for p in funcname.split('.')[1:]:
-                        obj = getattr(obj, p)
-                except AttributeError, err:
-                    raise util.Abort(_('%s hook is invalid '
-                                       '("%s" is not defined)') %
-                                     (hname, funcname))
-                if not callable(obj):
-                    raise util.Abort(_('%s hook is invalid '
-                                       '("%s" is not callable)') %
-                                     (hname, funcname))
-            try:
-                r = obj(ui=self.ui, repo=self, hooktype=name, **args)
-            except (KeyboardInterrupt, util.SignalInterrupt):
-                raise
-            except Exception, exc:
-                if isinstance(exc, util.Abort):
-                    self.ui.warn(_('error: %s hook failed: %s\n') %
-                                 (hname, exc.args[0]))
-                else:
-                    self.ui.warn(_('error: %s hook raised an exception: '
-                                   '%s\n') % (hname, exc))
-                if throw:
-                    raise
-                self.ui.print_exc()
-                return True
-            if r:
-                if throw:
-                    raise util.Abort(_('%s hook failed') % hname)
-                self.ui.warn(_('warning: %s hook failed\n') % hname)
-            return r
-
-        def runhook(name, cmd):
-            self.ui.note(_("running hook %s: %s\n") % (name, cmd))
-            env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()])
-            r = util.system(cmd, environ=env, cwd=self.root)
-            if r:
-                desc, r = util.explain_exit(r)
-                if throw:
-                    raise util.Abort(_('%s hook %s') % (name, desc))
-                self.ui.warn(_('warning: %s hook %s\n') % (name, desc))
-            return r
-
-        r = False
-        hooks = [(hname, cmd) for hname, cmd in self.ui.configitems("hooks")
-                 if hname.split(".", 1)[0] == name and cmd]
-        hooks.sort()
-        for hname, cmd in hooks:
-            if callable(cmd):
-                r = callhook(hname, cmd) or r
-            elif cmd.startswith('python:'):
-                r = callhook(hname, cmd[7:].strip()) or r
-            else:
-                r = runhook(hname, cmd) or r
-        return r
+        return hook.hook(self.ui, self, name, throw, **args)
 
     tag_disallowed = ':\r\n'
 
@@ -586,7 +501,7 @@ class localrepository(repo.repository):
         if os.path.exists(self.sjoin("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
             transaction.rollback(self.sopener, self.sjoin("journal"))
-            self.reload()
+            self.invalidate()
             return True
         else:
             self.ui.warn(_("no interrupted transaction available\n"))
@@ -601,17 +516,15 @@ class localrepository(repo.repository):
             self.ui.status(_("rolling back last transaction\n"))
             transaction.rollback(self.sopener, self.sjoin("undo"))
             util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-            self.reload()
-            self.wreload()
+            self.invalidate()
+            self.dirstate.invalidate()
         else:
             self.ui.warn(_("no rollback information available\n"))
 
-    def wreload(self):
-        self.dirstate.reload()
-
-    def reload(self):
-        self.changelog.load()
-        self.manifest.load()
+    def invalidate(self):
+        for a in "changelog manifest".split():
+            if hasattr(self, a):
+                self.__delattr__(a)
         self.tagscache = None
         self.nodetagscache = None
 
@@ -632,12 +545,13 @@ class localrepository(repo.repository):
         return l
 
     def lock(self, wait=1):
-        return self.do_lock(self.sjoin("lock"), wait, acquirefn=self.reload,
+        return self.do_lock(self.sjoin("lock"), wait,
+                            acquirefn=self.invalidate,
                             desc=_('repository %s') % self.origroot)
 
     def wlock(self, wait=1):
         return self.do_lock(self.join("wlock"), wait, self.dirstate.write,
-                            self.wreload,
+                            self.dirstate.invalidate,
                             desc=_('working directory of %s') % self.origroot)
 
     def filecommit(self, fn, manifest1, manifest2, linkrev, transaction, changelist):
@@ -1932,7 +1846,7 @@ class localrepository(repo.repository):
         self.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
                        (util.bytecount(total_bytes), elapsed,
                         util.bytecount(total_bytes / elapsed)))
-        self.reload()
+        self.invalidate()
         return len(self.heads()) + 1
 
     def clone(self, remote, heads=[], stream=False):
