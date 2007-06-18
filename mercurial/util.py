@@ -161,7 +161,7 @@ def cachefunc(func):
 
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
-    (pout, pin) = popen2.popen2(cmd, -1, 'b')
+    (pin, pout) = os.popen2(cmd, 'b')
     def writer():
         try:
             pin.write(s)
