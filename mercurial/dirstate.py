@@ -149,7 +149,7 @@ class dirstate(object):
             dmap[f] = e[:4]
             pos = newpos
 
-    def reload(self):
+    def invalidate(self):
         for a in "map copymap _branch pl dirs _ignore".split():
             if hasattr(self, a):
                 self.__delattr__(a)
@@ -228,7 +228,7 @@ class dirstate(object):
                 pass
 
     def rebuild(self, parent, files):
-        self.reload()
+        self.invalidate()
         for f in files:
             if files.execf(f):
                 self.map[f] = ('n', 0777, -1, 0)

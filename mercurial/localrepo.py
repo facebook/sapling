@@ -586,7 +586,7 @@ class localrepository(repo.repository):
         if os.path.exists(self.sjoin("journal")):
             self.ui.status(_("rolling back interrupted transaction\n"))
             transaction.rollback(self.sopener, self.sjoin("journal"))
-            self.reload()
+            self.invalidate()
             return True
         else:
             self.ui.warn(_("no interrupted transaction available\n"))
@@ -601,17 +601,15 @@ class localrepository(repo.repository):
             self.ui.status(_("rolling back last transaction\n"))
             transaction.rollback(self.sopener, self.sjoin("undo"))
             util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-            self.reload()
-            self.wreload()
+            self.invalidate()
+            self.dirstate.invalidate()
         else:
             self.ui.warn(_("no rollback information available\n"))
 
-    def wreload(self):
-        self.dirstate.reload()
-
-    def reload(self):
-        self.changelog.load()
-        self.manifest.load()
+    def invalidate(self):
+        for a in "changelog manifest".split():
+            if hasattr(self, a):
+                self.__delattr__(a)
         self.tagscache = None
         self.nodetagscache = None
 
@@ -632,12 +630,13 @@ class localrepository(repo.repository):
         return l
 
     def lock(self, wait=1):
-        return self.do_lock(self.sjoin("lock"), wait, acquirefn=self.reload,
+        return self.do_lock(self.sjoin("lock"), wait,
+                            acquirefn=self.invalidate,
                             desc=_('repository %s') % self.origroot)
 
     def wlock(self, wait=1):
         return self.do_lock(self.join("wlock"), wait, self.dirstate.write,
-                            self.wreload,
+                            self.dirstate.invalidate,
                             desc=_('working directory of %s') % self.origroot)
 
     def filecommit(self, fn, manifest1, manifest2, linkrev, transaction, changelist):
@@ -1932,7 +1931,7 @@ class localrepository(repo.repository):
         self.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
                        (util.bytecount(total_bytes), elapsed,
                         util.bytecount(total_bytes / elapsed)))
-        self.reload()
+        self.invalidate()
         return len(self.heads()) + 1
 
     def clone(self, remote, heads=[], stream=False):
