@@ -25,17 +25,18 @@ SolidCompression=true
 SetupIconFile=contrib\favicon.ico
 AllowNoIcons=true
 DefaultGroupName=Mercurial
+PrivilegesRequired=none
 
 [Files]
-Source: ..\..\msys\1.0\bin\patch.exe; DestDir: {app}
 Source: contrib\mercurial.el; DestDir: {app}/Contrib
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Flags: confirmoverwrite
 Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
-Source: dist\hg.exe; DestDir: {app}
+Source: dist\hg.exe; DestDir: {app}; AfterInstall: Touch('{app}\hg.exe.local')
 Source: dist\library.zip; DestDir: {app}
-Source: dist\mfc71.dll; DestDir: {sys}; Flags: sharedfile uninsnosharedfileprompt
-Source: dist\msvcr71.dll; DestDir: {sys}; Flags: sharedfile uninsnosharedfileprompt
+Source: dist\patch.exe; DestDir: {app}
+Source: dist\mfc71.dll; DestDir: {app}
+Source: dist\msvcr71.dll; DestDir: {app}
 Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.txt; DestDir: {app}\Docs
@@ -59,3 +60,12 @@ Filename: "{app}\add_path.exe"; Parameters: "{app}"; Flags: postinstall; Descrip
 
 [UninstallRun]
 Filename: "{app}\add_path.exe"; Parameters: "/del {app}"
+
+[UninstallDelete]
+Type: files; Name: "{app}\hg.exe.local"
+
+[Code]
+procedure Touch(fn: String);
+begin
+  SaveStringToFile(ExpandConstant(fn), '', False);
+end;
