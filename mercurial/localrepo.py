@@ -80,10 +80,6 @@ class localrepository(repo.repository):
         except IOError:
             pass
 
-        fallback = self.ui.config('ui', 'fallbackencoding')
-        if fallback:
-            util._fallbackencoding = fallback
-
         self.tagscache = None
         self.branchcache = None
         self.nodetagscache = None

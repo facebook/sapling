@@ -261,20 +261,24 @@ def dispatch(ui, args):
     if cwd:
         os.chdir(cwd)
 
-    extensions.loadall(ui)
-
     # read the local repository .hgrc into a local ui object
     # this will trigger its extensions to load
     path = earlygetopt(["-R", "--repository", "--repo"], args)
     if not path:
         path = findrepo() or ""
+    lui = ui
     if path:
         try:
             lui = commands.ui.ui(parentui=ui)
             lui.readconfig(os.path.join(path, ".hg", "hgrc"))
-            extensions.loadall(lui)
         except IOError:
-            extensions.loadall(ui)
+            pass
+
+    extensions.loadall(lui)
+    # check for fallback encoding
+    fallback = lui.config('ui', 'fallbackencoding')
+    if fallback:
+        util._fallbackencoding = fallback
 
     cmd, func, args, options, cmdoptions = parse(ui, args)
 
