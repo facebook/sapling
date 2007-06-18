@@ -18,57 +18,57 @@ _format = ">cllll"
 class dirstate(object):
 
     def __init__(self, opener, ui, root):
-        self.opener = opener
-        self.root = root
+        self._opener = opener
+        self._root = root
         self._dirty = 0
-        self.ui = ui
+        self._ui = ui
 
     def __getattr__(self, name):
-        if name == 'map':
+        if name == '_map':
             self.read()
-            return self.map
-        elif name == 'copymap':
+            return self._map
+        elif name == '_copymap':
             self.read()
-            return self.copymap
+            return self._copymap
         elif name == '_branch':
             try:
-                self._branch = self.opener("branch").read().strip()\
+                self._branch = self._opener("branch").read().strip()\
                                or "default"
             except IOError:
                 self._branch = "default"
             return self._branch
-        elif name == 'pl':
-            self.pl = [nullid, nullid]
+        elif name == '_pl':
+            self._pl = [nullid, nullid]
             try:
-                st = self.opener("dirstate").read(40)
+                st = self._opener("dirstate").read(40)
                 if len(st) == 40:
-                    self.pl = st[:20], st[20:40]
+                    self._pl = st[:20], st[20:40]
             except IOError, err:
                 if err.errno != errno.ENOENT: raise
-            return self.pl
+            return self._pl
         elif name == 'dirs':
             self.dirs = {}
-            for f in self.map:
+            for f in self._map:
                 self.updatedirs(f, 1)
             return self.dirs
         elif name == '_ignore':
-            files = [self.wjoin('.hgignore')] + self.ui.hgignorefiles()
-            self._ignore = ignore.ignore(self.root, files, self.ui.warn)
+            files = [self.wjoin('.hgignore')] + self._ui.hgignorefiles()
+            self._ignore = ignore.ignore(self._root, files, self._ui.warn)
             return self._ignore
         elif name == '_slash':
-            self._slash = self.ui.configbool('ui', 'slash') and os.sep != '/'
+            self._slash = self._ui.configbool('ui', 'slash') and os.sep != '/'
             return self._slash
         else:
             raise AttributeError, name
 
     def wjoin(self, f):
-        return os.path.join(self.root, f)
+        return os.path.join(self._root, f)
 
     def getcwd(self):
         cwd = os.getcwd()
-        if cwd == self.root: return ''
-        # self.root ends with a path separator if self.root is '/' or 'C:\'
-        rootsep = self.root
+        if cwd == self._root: return ''
+        # self._root ends with a path separator if self._root is '/' or 'C:\'
+        rootsep = self._root
         if not rootsep.endswith(os.sep):
             rootsep += os.sep
         if cwd.startswith(rootsep):
@@ -80,7 +80,7 @@ class dirstate(object):
     def pathto(self, f, cwd=None):
         if cwd is None:
             cwd = self.getcwd()
-        path = util.pathto(self.root, cwd, f)
+        path = util.pathto(self._root, cwd, f)
         if self._slash:
             return path.replace(os.sep, '/')
         return path
@@ -89,13 +89,19 @@ class dirstate(object):
         self.write()
 
     def __getitem__(self, key):
-        return self.map[key]
+        return self._map[key]
 
     def __contains__(self, key):
-        return key in self.map
+        return key in self._map
+
+    def __iter__(self):
+        a = self._map.keys()
+        a.sort()
+        for x in a:
+            yield x
 
     def parents(self):
-        return self.pl
+        return self._pl
 
     def branch(self):
         return self._branch
@@ -105,32 +111,32 @@ class dirstate(object):
 
     def setparents(self, p1, p2=nullid):
         self.markdirty()
-        self.pl = p1, p2
+        self._pl = p1, p2
 
     def setbranch(self, branch):
         self._branch = branch
-        self.opener("branch", "w").write(branch + '\n')
+        self._opener("branch", "w").write(branch + '\n')
 
     def state(self, key):
-        return self.map.get(key, ("?",))[0]
+        return self._map.get(key, ("?",))[0]
 
     def read(self):
-        self.map = {}
-        self.copymap = {}
-        self.pl = [nullid, nullid]
+        self._map = {}
+        self._copymap = {}
+        self._pl = [nullid, nullid]
         try:
-            st = self.opener("dirstate").read()
+            st = self._opener("dirstate").read()
         except IOError, err:
             if err.errno != errno.ENOENT: raise
             return
         if not st:
             return
 
-        self.pl = [st[:20], st[20: 40]]
+        self._pl = [st[:20], st[20: 40]]
 
         # deref fields so they will be local in loop
-        dmap = self.map
-        copymap = self.copymap
+        dmap = self._map
+        copymap = self._copymap
         unpack = struct.unpack
 
         pos = 40
@@ -150,19 +156,19 @@ class dirstate(object):
             pos = newpos
 
     def invalidate(self):
-        for a in "map copymap _branch pl dirs _ignore".split():
+        for a in "_map _copymap _branch pl dirs _ignore".split():
             if hasattr(self, a):
                 self.__delattr__(a)
 
     def copy(self, source, dest):
         self.markdirty()
-        self.copymap[dest] = source
+        self._copymap[dest] = source
 
     def copied(self, file):
-        return self.copymap.get(file, None)
+        return self._copymap.get(file, None)
 
     def copies(self):
-        return self.copymap
+        return self._copymap
 
     def updatedirs(self, path, delta):
         for c in strutil.findall(path, '/'):
@@ -183,7 +189,7 @@ class dirstate(object):
             for d in prefixes(f):
                 if d in seendirs:
                     break
-                if d in self.map:
+                if d in self._map:
                     raise util.Abort(_('file named %r already in dirstate') %
                                      d)
                 seendirs[d] = True
@@ -204,7 +210,7 @@ class dirstate(object):
             self.checkinterfering(files)
         for f in files:
             if state == "r":
-                self.map[f] = ('r', 0, 0, 0)
+                self._map[f] = ('r', 0, 0, 0)
                 self.updatedirs(f, -1)
             else:
                 if state == "a":
@@ -212,44 +218,44 @@ class dirstate(object):
                 s = os.lstat(self.wjoin(f))
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
-                self.map[f] = (state, s.st_mode, st_size, st_mtime)
-            if self.copymap.has_key(f):
-                del self.copymap[f]
+                self._map[f] = (state, s.st_mode, st_size, st_mtime)
+            if self._copymap.has_key(f):
+                del self._copymap[f]
 
     def forget(self, files):
         if not files: return
         self.markdirty()
         for f in files:
             try:
-                del self.map[f]
+                del self._map[f]
                 self.updatedirs(f, -1)
             except KeyError:
-                self.ui.warn(_("not in dirstate: %s!\n") % f)
+                self._ui.warn(_("not in dirstate: %s!\n") % f)
                 pass
 
     def rebuild(self, parent, files):
         self.invalidate()
         for f in files:
             if files.execf(f):
-                self.map[f] = ('n', 0777, -1, 0)
+                self._map[f] = ('n', 0777, -1, 0)
             else:
-                self.map[f] = ('n', 0666, -1, 0)
-        self.pl = (parent, nullid)
+                self._map[f] = ('n', 0666, -1, 0)
+        self._pl = (parent, nullid)
         self.markdirty()
 
     def write(self):
         if not self._dirty:
             return
         cs = cStringIO.StringIO()
-        cs.write("".join(self.pl))
-        for f, e in self.map.iteritems():
+        cs.write("".join(self._pl))
+        for f, e in self._map.iteritems():
             c = self.copied(f)
             if c:
                 f = f + "\0" + c
             e = struct.pack(_format, e[0], e[1], e[2], e[3], len(f))
             cs.write(e)
             cs.write(f)
-        st = self.opener("dirstate", "w", atomictemp=True)
+        st = self._opener("dirstate", "w", atomictemp=True)
         st.write(cs.getvalue())
         st.rename()
         self._dirty = 0
@@ -260,16 +266,16 @@ class dirstate(object):
 
         for x in files:
             if x == '.':
-                return self.map.copy()
-            if x not in self.map:
+                return self._map.copy()
+            if x not in self._map:
                 unknown.append(x)
             else:
-                ret[x] = self.map[x]
+                ret[x] = self._map[x]
 
         if not unknown:
             return ret
 
-        b = self.map.keys()
+        b = self._map.keys()
         b.sort()
         blen = len(b)
 
@@ -278,7 +284,7 @@ class dirstate(object):
             while bs < blen:
                 s = b[bs]
                 if len(s) > len(x) and s.startswith(x):
-                    ret[s] = self.map[s]
+                    ret[s] = self._map[s]
                 else:
                     break
                 bs += 1
@@ -294,7 +300,7 @@ class dirstate(object):
             elif stat.S_ISFIFO(st.st_mode): kind = _('fifo')
             elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
             elif stat.S_ISDIR(st.st_mode): kind = _('directory')
-            self.ui.warn(_('%s: unsupported file type (type is %s)\n')
+            self._ui.warn(_('%s: unsupported file type (type is %s)\n')
                          % (self.pathto(f), kind))
         return False
 
@@ -322,7 +328,7 @@ class dirstate(object):
         # walk all files by default
         if not files:
             files = ['.']
-            dc = self.map.copy()
+            dc = self._map.copy()
         else:
             files = util.unique(files)
             dc = self.filterfiles(files)
@@ -337,9 +343,9 @@ class dirstate(object):
             imatch = match
             ignore = util.never
 
-        # self.root may end with a path separator when self.root == '/'
-        common_prefix_len = len(self.root)
-        if not self.root.endswith(os.sep):
+        # self._root may end with a path separator when self._root == '/'
+        common_prefix_len = len(self._root)
+        if not self._root.endswith(os.sep):
             common_prefix_len += 1
         # recursion free walker, faster than os.walk.
         def findfiles(s):
@@ -402,7 +408,7 @@ class dirstate(object):
                         break
                 if not found:
                     if inst.errno != errno.ENOENT or not badmatch:
-                        self.ui.warn('%s: %s\n' % (self.pathto(ff),
+                        self._ui.warn('%s: %s\n' % (self.pathto(ff),
                                                    inst.strerror))
                     elif badmatch and badmatch(ff) and imatch(nf):
                         yield 'b', ff, None
