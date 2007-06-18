@@ -383,7 +383,7 @@ def patchbomb(ui, repo, *revs, **opts):
             ui.status('Displaying ', m['Subject'], ' ...\n')
             ui.flush()
             if 'PAGER' in os.environ:
-                fp = os.popen(os['PAGER'], 'w')
+                fp = os.popen(os.environ['PAGER'], 'w')
             else:
                 fp = ui
             try:
