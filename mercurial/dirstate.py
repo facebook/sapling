@@ -204,11 +204,22 @@ class dirstate(object):
         except KeyError:
             return "?"
 
-    def parse(self, st):
+    def read(self):
+        self.map = {}
+        self.copymap = {}
+        self.pl = [nullid, nullid]
+        try:
+            st = self.opener("dirstate").read()
+        except IOError, err:
+            if err.errno != errno.ENOENT: raise
+            return
+        if not st:
+            return
+
         self.pl = [st[:20], st[20: 40]]
 
         # deref fields so they will be local in loop
-        map = self.map
+        dmap = self.map
         copymap = self.copymap
         format = self.format
         unpack = struct.unpack
@@ -226,19 +237,8 @@ class dirstate(object):
             if '\0' in f:
                 f, c = f.split('\0')
                 copymap[f] = c
-            map[f] = e[:4]
+            dmap[f] = e[:4]
             pos = newpos
-
-    def read(self):
-        self.map = {}
-        self.copymap = {}
-        self.pl = [nullid, nullid]
-        try:
-            st = self.opener("dirstate").read()
-            if st:
-                self.parse(st)
-        except IOError, err:
-            if err.errno != errno.ENOENT: raise
 
     def reload(self):
         for a in "map copymap _branch pl dirs".split():
