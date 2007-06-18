@@ -219,8 +219,9 @@ def backout(ui, repo, node=None, rev=None, **opts):
 def branch(ui, repo, label=None, **opts):
     """set or show the current branch name
 
-    With <name>, set the current branch name. Otherwise, show the
-    current branch name.
+    With no argument, show the current branch name. With one argument,
+    set the working directory branch name (the branch does not exist in
+    the repository until the next commit).
 
     Unless --force is specified, branch will not let you set a
     branch name that shadows an existing branch.
@@ -232,6 +233,7 @@ def branch(ui, repo, label=None, **opts):
                 raise util.Abort(_('a branch of the same name already exists'
                                    ' (use --force to override)'))
         repo.dirstate.setbranch(util.fromlocal(label))
+        ui.status(_('marked working directory as branch %s\n') % label)
     else:
         ui.write("%s\n" % util.tolocal(repo.dirstate.branch()))
 
