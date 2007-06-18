@@ -20,7 +20,6 @@ class dirstate(object):
         self.root = root
         self.dirty = 0
         self.ui = ui
-        self.map = None
         self.fp = None
         self.pl = None
         self.dirs = None
@@ -28,6 +27,13 @@ class dirstate(object):
         self.ignorefunc = None
         self._branch = None
         self._slash = None
+
+    def __getattr__(self, name):
+        if name == 'map':
+            self.read()
+            return self.map
+        else:
+            raise AttributeError, name
 
     def wjoin(self, f):
         return os.path.join(self.root, f)
@@ -142,11 +148,7 @@ class dirstate(object):
             self.write()
 
     def __getitem__(self, key):
-        try:
-            return self.map[key]
-        except TypeError:
-            self.lazyread()
-            return self[key]
+        return self.map[key]
 
     _unknown = ('?', 0, 0, 0)
 
@@ -157,7 +159,6 @@ class dirstate(object):
             return self._unknown
 
     def __contains__(self, key):
-        self.lazyread()
         return key in self.map
 
     def parents(self):
@@ -186,7 +187,6 @@ class dirstate(object):
             self.dirty = 1
 
     def setparents(self, p1, p2=nullid):
-        self.lazyread()
         self.markdirty()
         self.pl = p1, p2
 
@@ -199,10 +199,6 @@ class dirstate(object):
             return self[key][0]
         except KeyError:
             return "?"
-
-    def lazyread(self):
-        if self.map is None:
-            self.read()
 
     def parse(self, st):
         self.pl = [st[:20], st[20: 40]]
@@ -255,7 +251,6 @@ class dirstate(object):
             self.ignorefunc = None
 
     def copy(self, source, dest):
-        self.lazyread()
         self.markdirty()
         self.copymap[dest] = source
 
@@ -282,7 +277,6 @@ class dirstate(object):
         def prefixes(f):
             for c in strutil.rfindall(f, '/'):
                 yield f[:c]
-        self.lazyread()
         self.initdirs()
         seendirs = {}
         for f in files:
@@ -309,7 +303,6 @@ class dirstate(object):
         a  marked for addition'''
 
         if not files: return
-        self.lazyread()
         self.markdirty()
         if state == "a":
             self.initdirs()
@@ -330,7 +323,6 @@ class dirstate(object):
 
     def forget(self, files):
         if not files: return
-        self.lazyread()
         self.markdirty()
         self.initdirs()
         for f in files:
@@ -438,7 +430,6 @@ class dirstate(object):
 
         and st is the stat result if the file was found in the directory.
         '''
-        self.lazyread()
 
         # walk all files by default
         if not files:
