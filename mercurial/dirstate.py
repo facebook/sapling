@@ -25,10 +25,10 @@ class dirstate(object):
 
     def __getattr__(self, name):
         if name == '_map':
-            self.read()
+            self._read()
             return self._map
         elif name == '_copymap':
-            self.read()
+            self._read()
             return self._copymap
         elif name == '_branch':
             try:
@@ -46,11 +46,11 @@ class dirstate(object):
             except IOError, err:
                 if err.errno != errno.ENOENT: raise
             return self._pl
-        elif name == 'dirs':
-            self.dirs = {}
+        elif name == '_dirs':
+            self._dirs = {}
             for f in self._map:
-                self.updatedirs(f, 1)
-            return self.dirs
+                self._incpath(f)
+            return self._dirs
         elif name == '_ignore':
             files = [self.wjoin('.hgignore')] + self._ui.hgignorefiles()
             self._ignore = ignore.ignore(self._root, files, self._ui.warn)
@@ -120,7 +120,7 @@ class dirstate(object):
     def state(self, key):
         return self._map.get(key, ("?",))[0]
 
-    def read(self):
+    def _read(self):
         self._map = {}
         self._copymap = {}
         self._pl = [nullid, nullid]
@@ -156,7 +156,7 @@ class dirstate(object):
             pos = newpos
 
     def invalidate(self):
-        for a in "_map _copymap _branch pl dirs _ignore".split():
+        for a in "_map _copymap _branch pl _dirs _ignore".split():
             if hasattr(self, a):
                 self.__delattr__(a)
 
@@ -170,11 +170,17 @@ class dirstate(object):
     def copies(self):
         return self._copymap
 
-    def updatedirs(self, path, delta):
+    def _incpath(self, path):
         for c in strutil.findall(path, '/'):
             pc = path[:c]
-            self.dirs.setdefault(pc, 0)
-            self.dirs[pc] += delta
+            self._dirs.setdefault(pc, 0)
+            self._dirs[pc] += 1
+
+    def _decpath(self, path):
+        for c in strutil.findall(path, '/'):
+            pc = path[:c]
+            self._dirs.setdefault(pc, 0)
+            self._dirs[pc] -= 1
 
     def checkinterfering(self, files):
         def prefixes(f):
@@ -183,7 +189,7 @@ class dirstate(object):
         seendirs = {}
         for f in files:
             # shadows
-            if self.dirs.get(f):
+            if self._dirs.get(f):
                 raise util.Abort(_('directory named %r already in dirstate') %
                                  f)
             for d in prefixes(f):
@@ -211,10 +217,10 @@ class dirstate(object):
         for f in files:
             if state == "r":
                 self._map[f] = ('r', 0, 0, 0)
-                self.updatedirs(f, -1)
+                self._decpath(f)
             else:
                 if state == "a":
-                    self.updatedirs(f, 1)
+                    self._incpath(f)
                 s = os.lstat(self.wjoin(f))
                 st_size = kw.get('st_size', s.st_size)
                 st_mtime = kw.get('st_mtime', s.st_mtime)
@@ -228,7 +234,7 @@ class dirstate(object):
         for f in files:
             try:
                 del self._map[f]
-                self.updatedirs(f, -1)
+                self._decpath(f)
             except KeyError:
                 self._ui.warn(_("not in dirstate: %s!\n") % f)
                 pass
@@ -290,7 +296,7 @@ class dirstate(object):
                 bs += 1
         return ret
 
-    def supported_type(self, f, st, verbose=False):
+    def _supported(self, f, st, verbose=False):
         if stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode):
             return True
         if verbose:
@@ -383,7 +389,7 @@ class dirstate(object):
                         if imatch(np) and np in dc:
                             yield 'm', np, st
                     elif imatch(np):
-                        if self.supported_type(np, st):
+                        if self._supported(np, st):
                             yield 'f', np, st
                         elif np in dc:
                             yield 'm', np, st
@@ -421,7 +427,7 @@ class dirstate(object):
                     yield e
             else:
                 if not seen(nf) and match(nf):
-                    if self.supported_type(ff, st, verbose=True):
+                    if self._supported(ff, st, verbose=True):
                         yield 'f', nf, st
                     elif ff in dc:
                         yield 'm', nf, st
@@ -458,7 +464,7 @@ class dirstate(object):
                             raise
                         st = None
                     # We need to re-check that it is a valid file
-                    if st and self.supported_type(fn, st):
+                    if st and self._supported(fn, st):
                         nonexistent = False
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
