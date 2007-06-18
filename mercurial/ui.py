@@ -312,13 +312,6 @@ class ui(object):
             for name, value in self.configitems(section, untrusted):
                 yield section, name, str(value).replace('\n', '\\n')
 
-    def hgignorefiles(self):
-        result = []
-        for key, value in self.configitems("ui"):
-            if key == 'ignore' or key.startswith('ignore.'):
-                result.append(os.path.expanduser(value))
-        return result
-
     def username(self):
         """Return default username to be used in commits.
 

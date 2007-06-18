@@ -52,7 +52,10 @@ class dirstate(object):
                 self._incpath(f)
             return self._dirs
         elif name == '_ignore':
-            files = [self.wjoin('.hgignore')] + self._ui.hgignorefiles()
+            files = [self.wjoin('.hgignore')]
+            for name, path in self._ui.configitems("ui"):
+                if name == 'ignore' or name.startswith('ignore.'):
+                    files.append(os.path.expanduser(path))
             self._ignore = ignore.ignore(self._root, files, self._ui.warn)
             return self._ignore
         elif name == '_slash':
