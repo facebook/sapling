@@ -10,7 +10,7 @@ from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context
 import re, lock, transaction, tempfile, stat, mdiff, errno, ui
-import os, revlog, time, util
+import os, revlog, time, util, extensions
 
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
@@ -76,6 +76,7 @@ class localrepository(repo.repository):
         self.ui = ui.ui(parentui=parentui)
         try:
             self.ui.readconfig(self.join("hgrc"), self.root)
+            extensions.loadall(self.ui)
         except IOError:
             pass
 

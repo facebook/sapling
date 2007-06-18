@@ -262,7 +262,6 @@ def dispatch(ui, args):
         os.chdir(cwd)
 
     extensions.loadall(ui)
-    ui.addreadhook(extensions.loadall)
 
     # read the local repository .hgrc into a local ui object
     # this will trigger its extensions to load
@@ -273,8 +272,9 @@ def dispatch(ui, args):
         try:
             lui = commands.ui.ui(parentui=ui)
             lui.readconfig(os.path.join(path, ".hg", "hgrc"))
+            extensions.loadall(lui)
         except IOError:
-            pass
+            extensions.loadall(ui)
 
     cmd, func, args, options, cmdoptions = parse(ui, args)
 

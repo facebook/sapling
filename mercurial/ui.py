@@ -32,7 +32,6 @@ class ui(object):
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
-            self.readhooks = []
             self.quiet = quiet
             self.verbose = verbose
             self.debugflag = debug
@@ -52,7 +51,6 @@ class ui(object):
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
-            self.readhooks = self.parentui.readhooks[:]
             self.trusted_users = parentui.trusted_users.copy()
             self.trusted_groups = parentui.trusted_groups.copy()
             self.cdata = dupconfig(self.parentui.cdata)
@@ -154,11 +152,6 @@ class ui(object):
         if root is None:
             root = os.path.expanduser('~')
         self.fixconfig(root=root)
-        for hook in self.readhooks:
-            hook(self)
-
-    def addreadhook(self, hook):
-        self.readhooks.append(hook)
 
     def readsections(self, filename, *sections):
         """Read filename and add only the specified sections to the config data
