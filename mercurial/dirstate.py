@@ -20,18 +20,33 @@ class dirstate(object):
         self.root = root
         self.dirty = 0
         self.ui = ui
-        self.fp = None
-        self.pl = None
         self.dirs = None
-        self.copymap = {}
         self.ignorefunc = None
-        self._branch = None
         self._slash = None
 
     def __getattr__(self, name):
         if name == 'map':
             self.read()
             return self.map
+        elif name == 'copymap':
+            self.read()
+            return self.copymap
+        elif name == '_branch':
+            try:
+                self._branch = self.opener("branch").read().strip()\
+                               or "default"
+            except IOError:
+                self._branch = "default"
+            return self._branch
+        elif name == 'pl':
+            self.pl = [nullid, nullid]
+            try:
+                st = self.opener("dirstate").read(40)
+                if len(st) == 40:
+                    self.pl = st[:20], st[20:40]
+            except IOError, err:
+                if err.errno != errno.ENOENT: raise
+            return self.pl
         else:
             raise AttributeError, name
 
@@ -162,24 +177,9 @@ class dirstate(object):
         return key in self.map
 
     def parents(self):
-        if self.pl is None:
-            self.pl = [nullid, nullid]
-            try:
-                self.fp = self.opener('dirstate')
-                st = self.fp.read(40)
-                if len(st) == 40:
-                    self.pl = st[:20], st[20:40]
-            except IOError, err:
-                if err.errno != errno.ENOENT: raise
         return self.pl
 
     def branch(self):
-        if not self._branch:
-            try:
-                self._branch = self.opener("branch").read().strip()\
-                               or "default"
-            except IOError:
-                self._branch = "default"
         return self._branch
 
     def markdirty(self):
@@ -227,14 +227,10 @@ class dirstate(object):
 
     def read(self):
         self.map = {}
+        self.copymap = {}
         self.pl = [nullid, nullid]
         try:
-            if self.fp:
-                self.fp.seek(0)
-                st = self.fp.read()
-                self.fp = None
-            else:
-                st = self.opener("dirstate").read()
+            st = self.opener("dirstate").read()
             if st:
                 self.parse(st)
         except IOError, err:
