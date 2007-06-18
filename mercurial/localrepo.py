@@ -10,7 +10,7 @@ from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context
 import re, lock, transaction, tempfile, stat, mdiff, errno, ui
-import os, revlog, time, util, extensions
+import os, revlog, time, util, extensions, hook
 
 class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
@@ -105,89 +105,7 @@ class localrepository(repo.repository):
         return 'file:' + self.root
 
     def hook(self, name, throw=False, **args):
-        def callhook(hname, funcname):
-            '''call python hook. hook is callable object, looked up as
-            name in python module. if callable returns "true", hook
-            fails, else passes. if hook raises exception, treated as
-            hook failure. exception propagates if throw is "true".
-
-            reason for "true" meaning "hook failed" is so that
-            unmodified commands (e.g. mercurial.commands.update) can
-            be run as hooks without wrappers to convert return values.'''
-
-            self.ui.note(_("calling hook %s: %s\n") % (hname, funcname))
-            obj = funcname
-            if not callable(obj):
-                d = funcname.rfind('.')
-                if d == -1:
-                    raise util.Abort(_('%s hook is invalid ("%s" not in '
-                                       'a module)') % (hname, funcname))
-                modname = funcname[:d]
-                try:
-                    obj = __import__(modname)
-                except ImportError:
-                    try:
-                        # extensions are loaded with hgext_ prefix
-                        obj = __import__("hgext_%s" % modname)
-                    except ImportError:
-                        raise util.Abort(_('%s hook is invalid '
-                                           '(import of "%s" failed)') %
-                                         (hname, modname))
-                try:
-                    for p in funcname.split('.')[1:]:
-                        obj = getattr(obj, p)
-                except AttributeError, err:
-                    raise util.Abort(_('%s hook is invalid '
-                                       '("%s" is not defined)') %
-                                     (hname, funcname))
-                if not callable(obj):
-                    raise util.Abort(_('%s hook is invalid '
-                                       '("%s" is not callable)') %
-                                     (hname, funcname))
-            try:
-                r = obj(ui=self.ui, repo=self, hooktype=name, **args)
-            except (KeyboardInterrupt, util.SignalInterrupt):
-                raise
-            except Exception, exc:
-                if isinstance(exc, util.Abort):
-                    self.ui.warn(_('error: %s hook failed: %s\n') %
-                                 (hname, exc.args[0]))
-                else:
-                    self.ui.warn(_('error: %s hook raised an exception: '
-                                   '%s\n') % (hname, exc))
-                if throw:
-                    raise
-                self.ui.print_exc()
-                return True
-            if r:
-                if throw:
-                    raise util.Abort(_('%s hook failed') % hname)
-                self.ui.warn(_('warning: %s hook failed\n') % hname)
-            return r
-
-        def runhook(name, cmd):
-            self.ui.note(_("running hook %s: %s\n") % (name, cmd))
-            env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()])
-            r = util.system(cmd, environ=env, cwd=self.root)
-            if r:
-                desc, r = util.explain_exit(r)
-                if throw:
-                    raise util.Abort(_('%s hook %s') % (name, desc))
-                self.ui.warn(_('warning: %s hook %s\n') % (name, desc))
-            return r
-
-        r = False
-        hooks = [(hname, cmd) for hname, cmd in self.ui.configitems("hooks")
-                 if hname.split(".", 1)[0] == name and cmd]
-        hooks.sort()
-        for hname, cmd in hooks:
-            if callable(cmd):
-                r = callhook(hname, cmd) or r
-            elif cmd.startswith('python:'):
-                r = callhook(hname, cmd[7:].strip()) or r
-            else:
-                r = runhook(hname, cmd) or r
-        return r
+        return hook.hook(self.ui, self, name, throw, **args)
 
     tag_disallowed = ':\r\n'
 
