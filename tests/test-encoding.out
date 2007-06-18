@@ -13,6 +13,7 @@ abort: decoding near ' encoded: é': 'ascii' codec can't decode byte 0xe9 in posi
 transaction abort!
 rollback completed
 % these should work
+marked working directory as branch é
 % ascii
 changeset:   5:db5520b4645f
 branch:      ?

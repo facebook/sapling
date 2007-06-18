@@ -1,6 +1,9 @@
+marked working directory as branch foo
 foo
+marked working directory as branch bar
 % branch shadowing
 abort: a branch of the same name already exists (use --force to override)
+marked working directory as branch default
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -83,8 +86,10 @@ bf1bc2f45e834c75404d0ddab57d53beab56e2f8 default
 % update with no arguments: tipmost revision of the current branch
 bf1bc2f45e83
 4909a3732169 (foo) tip
+marked working directory as branch foobar
 abort: branch foobar not found
 % fastforward merge
+marked working directory as branch ff
 adding ff
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
