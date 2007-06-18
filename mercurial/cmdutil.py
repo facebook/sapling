@@ -9,7 +9,7 @@ from node import *
 from i18n import _
 import os, sys, atexit, signal, pdb, traceback, socket, errno, shlex
 import mdiff, bdiff, util, templater, patch, commands, hg, lock, time
-import fancyopts, revlog, version, extensions
+import fancyopts, revlog, version, extensions, hook
 
 revrangesep = ':'
 
@@ -272,6 +272,7 @@ def dispatch(ui, args):
     if fallback:
         util._fallbackencoding = fallback
 
+    fullargs = args
     cmd, func, args, options, cmdoptions = parse(ui, args)
 
     if options["encoding"]:
@@ -302,8 +303,8 @@ def dispatch(ui, args):
     elif not cmd:
         return commands.help_(ui, 'shortlist')
 
+    repo = None
     if cmd not in commands.norepo.split():
-        repo = None
         try:
             repo = hg.repository(ui, path=path)
             ui = repo.ui
@@ -316,7 +317,15 @@ def dispatch(ui, args):
     else:
         d = lambda: func(ui, *args, **cmdoptions)
 
-    return runcommand(ui, options, cmd, d)
+    # run pre-hook, and abort if it fails
+    ret = hook.hook(ui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs))
+    if ret:
+        return ret
+    ret = runcommand(ui, options, cmd, d)
+    # run post-hook, passing command result
+    hook.hook(ui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
+                    result = ret)
+    return ret
 
 def runcommand(ui, options, cmd, cmdfunc):
     def checkargs():

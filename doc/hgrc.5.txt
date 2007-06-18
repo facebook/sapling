@@ -312,10 +312,20 @@ hooks::
     new parent is in $HG_PARENT1.  If merge, ID of second new parent
     is in $HG_PARENT2.  If update succeeded, $HG_ERROR=0.  If update
     failed (e.g. because conflicts not resolved), $HG_ERROR=1.
+  pre-<command>;;
+    Run before executing the associated command. The contents of the
+    command line are passed as $HG_ARGS. If the hook returns failure,
+    the command doesn't execute and Mercurial returns the failure code.
+  post-<command>;;
+    Run after successful invocations of the associated command. The
+    contents of the command line are passed as $HG_ARGS and the result
+    code in $HG_RESULT. Hook failure is ignored.
 
-  Note: In earlier releases, the names of hook environment variables
-  did not have a "HG_" prefix.  The old unprefixed names are no longer
-  provided in the environment.
+  Note: it is generally better to use standard hooks rather than the
+  generic pre- and post- command hooks as they are guaranteed to be
+  called in the appropriate contexts for influencing transactions.
+  Also, hooks like "commit" will be called in all contexts that
+  generate a commit (eg. tag) and not just the commit command.
 
   The syntax for Python hooks is as follows:
 

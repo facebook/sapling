@@ -11,6 +11,9 @@ echo 'commit.b = unset HG_LOCAL HG_TAG; python ../printenv.py commit.b' >> .hg/h
 echo 'precommit = unset HG_LOCAL HG_NODE HG_TAG; python ../printenv.py precommit' >> .hg/hgrc
 echo 'pretxncommit = unset HG_LOCAL HG_TAG; python ../printenv.py pretxncommit' >> .hg/hgrc
 echo 'pretxncommit.tip = hg -q tip' >> .hg/hgrc
+echo 'pre-identify = false' >> .hg/hgrc
+echo 'pre-cat = echo "meow $HG_ARGS"' >> .hg/hgrc
+echo 'post-cat = echo "purr $HG_RESULT"' >> .hg/hgrc
 echo a > a
 hg add a
 hg commit -m a -d "1000000 0"
@@ -34,6 +37,10 @@ hg add b
 hg commit -m b -d '1 0'
 hg merge 1
 hg commit -m merge -d '2 0'
+
+# test generic hooks
+hg id
+hg cat b 
 
 cd ../b
 hg pull ../a
