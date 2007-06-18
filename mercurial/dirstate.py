@@ -22,7 +22,6 @@ class dirstate(object):
         self.root = root
         self.dirty = 0
         self.ui = ui
-        self._slash = None
 
     def __getattr__(self, name):
         if name == 'map':
@@ -56,6 +55,9 @@ class dirstate(object):
             files = [self.wjoin('.hgignore')] + self.ui.hgignorefiles()
             self._ignore = ignore.ignore(self.root, files, self.ui.warn)
             return self._ignore
+        elif name == '_slash':
+            self._slash = self.ui.configbool('ui', 'slash') and os.sep != '/'
+            return self._slash
         else:
             raise AttributeError, name
 
@@ -79,10 +81,8 @@ class dirstate(object):
         if cwd is None:
             cwd = self.getcwd()
         path = util.pathto(self.root, cwd, f)
-        if self._slash is None:
-            self._slash = self.ui.configbool('ui', 'slash') and os.sep != '/'
         if self._slash:
-            path = path.replace(os.sep, '/')
+            return path.replace(os.sep, '/')
         return path
 
     def __del__(self):
