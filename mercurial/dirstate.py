@@ -12,8 +12,10 @@ from i18n import _
 import struct, os, time, bisect, stat, strutil, util, re, errno, ignore
 import cStringIO
 
+_unknown = ('?', 0, 0, 0)
+_format = ">cllll"
+
 class dirstate(object):
-    format = ">cllll"
 
     def __init__(self, opener, ui, root):
         self.opener = opener
@@ -90,14 +92,6 @@ class dirstate(object):
     def __getitem__(self, key):
         return self.map[key]
 
-    _unknown = ('?', 0, 0, 0)
-
-    def get(self, key):
-        try:
-            return self[key]
-        except KeyError:
-            return self._unknown
-
     def __contains__(self, key):
         return key in self.map
 
@@ -120,10 +114,7 @@ class dirstate(object):
         self.opener("branch", "w").write(branch + '\n')
 
     def state(self, key):
-        try:
-            return self[key][0]
-        except KeyError:
-            return "?"
+        return self.map.get(key, ("?",))[0]
 
     def read(self):
         self.map = {}
@@ -142,15 +133,14 @@ class dirstate(object):
         # deref fields so they will be local in loop
         dmap = self.map
         copymap = self.copymap
-        format = self.format
         unpack = struct.unpack
 
         pos = 40
-        e_size = struct.calcsize(format)
+        e_size = struct.calcsize(_format)
 
         while pos < len(st):
             newpos = pos + e_size
-            e = unpack(format, st[pos:newpos])
+            e = unpack(_format, st[pos:newpos])
             l = e[4]
             pos = newpos
             newpos = pos + l
@@ -258,7 +248,7 @@ class dirstate(object):
             c = self.copied(f)
             if c:
                 f = f + "\0" + c
-            e = struct.pack(self.format, e[0], e[1], e[2], e[3], len(f))
+            e = struct.pack(_format, e[0], e[1], e[2], e[3], len(f))
             cs.write(e)
             cs.write(f)
         st = self.opener("dirstate", "w", atomictemp=True)
