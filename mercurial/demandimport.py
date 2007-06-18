@@ -96,6 +96,8 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
         mod = _origimport(name, globals, locals)
         # recurse down the module chain
         for comp in name.split('.')[1:]:
+            if not hasattr(mod, comp):
+                setattr(mod, comp, _demandmod(comp, mod.__dict__, mod.__dict__))
             mod = getattr(mod, comp)
         for x in fromlist:
             # set requested submodules for demand load
