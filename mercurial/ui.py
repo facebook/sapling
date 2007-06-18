@@ -319,13 +319,6 @@ class ui(object):
             for name, value in self.configitems(section, untrusted):
                 yield section, name, str(value).replace('\n', '\\n')
 
-    def extensions(self):
-        result = self.configitems("extensions")
-        for i, (key, value) in enumerate(result):
-            if value:
-                result[i] = (key, os.path.expanduser(value))
-        return result
-
     def hgignorefiles(self):
         result = []
         for key, value in self.configitems("ui"):
