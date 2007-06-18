@@ -241,14 +241,10 @@ class dirstate(object):
             if err.errno != errno.ENOENT: raise
 
     def reload(self):
-        def mtime():
-            m = self.map and self.map.get('.hgignore')
-            return m and m[-1]
-
-        old_mtime = self.ignorefunc and mtime()
-        self.read()
-        if old_mtime != mtime():
-            self.ignorefunc = None
+        for a in "map copymap _branch pl dirs".split():
+            if hasattr(self, a):
+                self.__delattr__(a)
+        self.ignorefunc = None
 
     def copy(self, source, dest):
         self.markdirty()
