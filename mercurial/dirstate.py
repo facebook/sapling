@@ -20,7 +20,7 @@ class dirstate(object):
     def __init__(self, opener, ui, root):
         self.opener = opener
         self.root = root
-        self.dirty = 0
+        self._dirty = 0
         self.ui = ui
 
     def __getattr__(self, name):
@@ -86,8 +86,7 @@ class dirstate(object):
         return path
 
     def __del__(self):
-        if self.dirty:
-            self.write()
+        self.write()
 
     def __getitem__(self, key):
         return self.map[key]
@@ -102,8 +101,7 @@ class dirstate(object):
         return self._branch
 
     def markdirty(self):
-        if not self.dirty:
-            self.dirty = 1
+        self._dirty = 1
 
     def setparents(self, p1, p2=nullid):
         self.markdirty()
@@ -240,7 +238,7 @@ class dirstate(object):
         self.markdirty()
 
     def write(self):
-        if not self.dirty:
+        if not self._dirty:
             return
         cs = cStringIO.StringIO()
         cs.write("".join(self.pl))
@@ -254,7 +252,7 @@ class dirstate(object):
         st = self.opener("dirstate", "w", atomictemp=True)
         st.write(cs.getvalue())
         st.rename()
-        self.dirty = 0
+        self._dirty = 0
 
     def filterfiles(self, files):
         ret = {}
