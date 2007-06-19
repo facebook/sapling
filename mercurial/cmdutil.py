@@ -115,6 +115,14 @@ def runcatch(ui, args):
             ui.warn(_(" empty string\n"))
         else:
             ui.warn("\n%r\n" % util.ellipsis(inst[1]))
+    except ImportError, inst:
+        m = str(inst).split()[-1]
+        ui.warn(_("abort: could not import module %s!\n" % m))
+        if m in "mpatch bdiff".split():
+            ui.warn(_("(did you forget to compile extensions?)\n"))
+        elif m in "zlib".split():
+            ui.warn(_("(is your Python install correct?)\n"))
+            
     except util.Abort, inst:
         ui.warn(_("abort: %s\n") % inst)
     except SystemExit, inst:
