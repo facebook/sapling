@@ -17,6 +17,12 @@ import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile
 import os, threading, time, calendar, ConfigParser, locale, glob
 
 try:
+    set = set
+    frozenset = frozenset
+except NameError:
+    from sets import Set as set, ImmutableSet as frozenset
+
+try:
     _encoding = os.environ.get("HGENCODING")
     if sys.platform == 'darwin' and not _encoding:
         # On darwin, getpreferredencoding ignores the locale environment and
