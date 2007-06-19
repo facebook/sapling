@@ -1206,19 +1206,51 @@ def grep(ui, repo, pattern, *pats, **opts):
             found = display(fn, rev, {}, state) or found
     return (not found and 1) or 0
 
-def heads(ui, repo, **opts):
-    """show current repository heads
+def heads(ui, repo, *branchrevs, **opts):
+    """show current repository heads or show branch heads
 
-    Show all repository head changesets.
+    With no arguments, show all repository head changesets.
 
-    Repository "heads" are changesets that don't have children
+    If branch or revisions names are given this will show the heads of
+    the specified branches or the branches those revisions are tagged
+    with.
+
+    Repository "heads" are changesets that don't have child
     changesets. They are where development generally takes place and
     are the usual targets for update and merge operations.
+
+    Branch heads are changesets that have a given branch tag, but have
+    no child changesets with that tag.  They are usually where
+    development on the given branch takes place.
     """
     if opts['rev']:
-        heads = repo.heads(repo.lookup(opts['rev']))
+        start = repo.lookup(opts['rev'])
     else:
-        heads = repo.heads()
+        start = None
+    if not branchrevs:
+        # Assume we're looking repo-wide heads if no revs were specified.
+        heads = repo.heads(start)
+    else:
+        heads = []
+        visitedset = set()
+        displayer = cmdutil.show_changeset(ui, repo, opts)
+        for branchrev in branchrevs:
+            branch = repo.changectx(branchrev).branch()
+            if branch in visitedset:
+                continue
+            visitedset.add(branch)
+            bheads = repo.branchheads(branch, start)
+            if not bheads:
+                if branch != branchrev:
+                    ui.warn(_("no changes on branch %s containing %s are "
+                              "reachable from %s\n")
+                            % (branch, branchrev, opts['rev']))
+                else:
+                    ui.warn(_("no changes on branch %s are reachable from %s\n")
+                            % (branch, opts['rev']))
+            heads.extend(bheads)
+    if not heads:
+        return 1
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in heads:
         displayer.show(changenode=n)
@@ -2790,7 +2822,7 @@ table = {
          [('', 'style', '', _('display using template map file')),
           ('r', 'rev', '', _('show only heads which are descendants of rev')),
           ('', 'template', '', _('display with template'))],
-         _('hg heads [-r REV]')),
+         _('hg heads [-r REV] [REV]...')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id": (identify, [], _('hg identify')),
     "import|patch":

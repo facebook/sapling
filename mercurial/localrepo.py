@@ -1019,6 +1019,52 @@ class localrepository(repo.repository):
         heads.sort()
         return [n for (r, n) in heads]
 
+    def branchheads(self, branch, start=None):
+        branches = self.branchtags()
+        if branch not in branches:
+            return []
+        # The basic algorithm is this:
+        #
+        # Start from the branch tip since there are no later revisions that can
+        # possibly be in this branch, and the tip is a guaranteed head.
+        #
+        # Remember the tip's parents as the first ancestors, since these by
+        # definition are not heads.
+        #
+        # Step backwards from the brach tip through all the revisions. We are
+        # guaranteed by the rules of Mercurial that we will now be visiting the
+        # nodes in reverse topological order (children before parents).
+        #
+        # If a revision is one of the ancestors of a head then we can toss it
+        # out of the ancestors set (we've already found it and won't be
+        # visiting it again) and put its parents in the ancestors set.
+        #
+        # Otherwise, if a revision is in the branch it's another head, since it
+        # wasn't in the ancestor list of an existing head.  So add it to the
+        # head list, and add its parents to the ancestor list.
+        #
+        # If it is not in the branch ignore it.
+        #
+        # Once we have a list of heads, use nodesbetween to filter out all the
+        # heads that cannot be reached from startrev.  There may be a more
+        # efficient way to do this as part of the previous algorithm.
+
+        set = util.set
+        heads = [self.changelog.rev(branches[branch])]
+        # Don't care if ancestors contains nullrev or not.
+        ancestors = set(self.changelog.parentrevs(heads[0]))
+        for rev in xrange(heads[0] - 1, nullrev, -1):
+            if rev in ancestors:
+                ancestors.update(self.changelog.parentrevs(rev))
+                ancestors.remove(rev)
+            elif self.changectx(rev).branch() == branch:
+                heads.append(rev)
+                ancestors.update(self.changelog.parentrevs(rev))
+        heads = [self.changelog.node(rev) for rev in heads]
+        if start is not None:
+            heads = self.changelog.nodesbetween([start], heads)[2]
+        return heads
+
     def branches(self, nodes):
         if not nodes:
             nodes = [self.changelog.tip()]

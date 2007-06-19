@@ -1,0 +1,608 @@
+changeset:   0:19709c5a4e75
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Adding root node
+
+-------
+changeset:   0:19709c5a4e75
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Adding root node
+
+=======
+marked working directory as branch a
+changeset:   1:dd6b440dd85a
+branch:      a
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   1:dd6b440dd85a
+branch:      a
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+=======
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+marked working directory as branch b
+changeset:   2:ac22033332d1
+branch:      b
+tag:         tip
+parent:      0:19709c5a4e75
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     Adding b branch
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   2:ac22033332d1
+branch:      b
+tag:         tip
+parent:      0:19709c5a4e75
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     Adding b branch
+
+=======
+changeset:   3:aee39cd168d0
+branch:      b
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   3:aee39cd168d0
+branch:      b
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+=======
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+changeset:   4:22df7444f7c1
+branch:      b
+tag:         tip
+parent:      2:ac22033332d1
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   4:22df7444f7c1
+branch:      b
+tag:         tip
+parent:      2:ac22033332d1
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+=======
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+changeset:   5:0d57af4f9583
+branch:      b
+tag:         tip
+parent:      2:ac22033332d1
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+summary:     Adding b branch head 3
+
+changeset:   4:22df7444f7c1
+branch:      b
+parent:      2:ac22033332d1
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   5:0d57af4f9583
+branch:      b
+tag:         tip
+parent:      2:ac22033332d1
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+summary:     Adding b branch head 3
+
+changeset:   4:22df7444f7c1
+branch:      b
+parent:      2:ac22033332d1
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+=======
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+changeset:   6:00432327d822
+branch:      b
+tag:         tip
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   6:00432327d822
+branch:      b
+tag:         tip
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+=======
+marked working directory as branch c
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+=======
+No changes on branch c (the branch of revision .) are reachable from revision 3
+1
+-------
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+0
+-------
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+0
+-------
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+0
+-------
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   6:00432327d822
+branch:      b
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+0
+-------
+No changes on branch b (the branch of revision .) are reachable from revision 7
+1
+=======
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   0:19709c5a4e75
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Adding root node
+
+-------
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   6:00432327d822
+branch:      b
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+-------
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   6:00432327d822
+branch:      b
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+-------
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   6:00432327d822
+branch:      b
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+-------
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   6:00432327d822
+branch:      b
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+-------
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   6:00432327d822
+branch:      b
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+-------
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+-------
+=======
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+-------
+changeset:   6:00432327d822
+branch:      b
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+-------
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+
+-------
+abort: unknown revision 'z'!
+-------
+=======
+changeset:   0:19709c5a4e75
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Adding root node
+
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+changeset:   6:00432327d822
+branch:      b
+parent:      5:0d57af4f9583
+parent:      4:22df7444f7c1
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     Merging b branch head 2 and b branch head 3
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   7:9fb091bb9835
+branch:      c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:07 1970 +0000
+summary:     Adding c branch
+

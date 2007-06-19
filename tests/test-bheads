@@ -1,0 +1,108 @@
+#!/bin/sh
+
+hg init a
+cd a
+echo 'root' >root
+hg add root
+hg commit -d '0 0' -u test -m "Adding root node"
+hg heads
+echo '-------'
+hg heads .
+
+echo '======='
+echo 'a' >a
+hg add a
+hg branch a
+hg commit -d '1 0' -u test -m "Adding a branch"
+hg heads
+echo '-------'
+hg heads .
+
+echo '======='
+hg update -C 0
+echo 'b' >b
+hg add b
+hg branch b
+hg commit -d '2 0' -u test -m "Adding b branch"
+hg heads
+echo '-------'
+hg heads .
+
+echo '======='
+echo 'bh1' >bh1
+hg add bh1
+hg commit -d '3 0' -u test -m "Adding b branch head 1"
+hg heads
+echo '-------'
+hg heads .
+
+echo '======='
+hg update -C 2
+echo 'bh2' >bh2
+hg add bh2
+hg commit -d '4 0' -u test -m "Adding b branch head 2"
+hg heads
+echo '-------'
+hg heads .
+
+echo '======='
+hg update -C 2
+echo 'bh3' >bh3
+hg add bh3
+hg commit -d '5 0' -u test -m "Adding b branch head 3"
+hg heads
+echo '-------'
+hg heads .
+
+echo '======='
+hg merge 4
+hg commit -d '6 0' -u test -m "Merging b branch head 2 and b branch head 3"
+hg heads
+echo '-------'
+hg heads .
+
+echo '======='
+echo 'c' >c
+hg add c
+hg branch c
+hg commit -d '7 0' -u test -m "Adding c branch"
+hg heads
+echo '-------'
+hg heads .
+
+echo '======='
+hg heads -r 3 .
+echo $?
+echo '-------'
+hg heads -r 2 .
+echo $?
+echo '-------'
+hg update -C 4
+echo $?
+echo '-------'
+hg heads -r 3 .
+echo $?
+echo '-------'
+hg heads -r 2 .
+echo $?
+echo '-------'
+hg heads -r 7 .
+echo $?
+
+echo '======='
+for i in 0 1 2 3 4 5 6 7; do
+    hg update -C "$i"
+    hg heads
+    echo '-------'
+    hg heads .
+    echo '-------'
+done
+
+echo '======='
+for i in a b c z; do
+    hg heads "$i"
+    echo '-------'
+done
+
+echo '======='
+hg heads 0 1 2 3 4 5 6 7
