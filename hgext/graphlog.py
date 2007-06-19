@@ -185,10 +185,9 @@ def graphlog(ui, repo, *args, **opts):
         #     |  / /         |   | |  # <--- padding line
         #     o | |          |  / /
         #                    o | |
-        add_padding_line = \
-            len(log_strings) > 2 and \
-            n_columns_diff == -1 and \
-            [x for (x, y) in edges if x + 1 < y]
+        add_padding_line = (len(log_strings) > 2 and
+                            n_columns_diff == -1 and
+                            [x for (x, y) in edges if x + 1 < y])
 
         # fix_nodeline_tail says whether to rewrite
         #

@@ -66,7 +66,7 @@ def loadall(ui):
     result = ui.configitems("extensions")
     for i, (name, path) in enumerate(result):
         if path:
-                path = os.path.expanduser(path)
+            path = os.path.expanduser(path)
         try:
             load(ui, name, path)
         except (util.SignalInterrupt, KeyboardInterrupt):

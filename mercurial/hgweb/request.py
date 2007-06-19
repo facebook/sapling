@@ -20,7 +20,7 @@ class _wsgirequest(object):
     def __init__(self, destination, wsgienv, start_response):
         version = wsgienv['wsgi.version']
         if (version < (1, 0)) or (version >= (2, 0)):
-            raise RuntimeError("Unknown and unsupported WSGI version %d.%d" \
+            raise RuntimeError("Unknown and unsupported WSGI version %d.%d"
                                % version)
         self.inp = wsgienv['wsgi.input']
         self.server_write = None

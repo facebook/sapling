@@ -214,15 +214,14 @@ class TestMerge3(TestCase):
                             mid_marker='--',
                             end_marker='>>')
         self.assertEquals(''.join(ml),
-'''\
-aaa
-bbb
-<< a
-222
---
-333
->> b
-''')
+                          'aaa\n'
+                          'bbb\n'
+                          '<< a\n'
+                          '222\n'
+                          '--\n'
+                          '333\n'
+                          '>> b\n'
+                         )
 
     def test_insert_agreement(self):
         m3 = Merge3(['aaa\n', 'bbb\n'],

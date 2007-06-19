@@ -65,7 +65,7 @@ def checkunknown(wctx, mctx):
     for f in wctx.unknown():
         if f in man:
             if mctx.filectx(f).cmp(wctx.filectx(f).data()):
-                raise util.Abort(_("untracked local file '%s' differs"\
+                raise util.Abort(_("untracked local file '%s' differs"
                                    " from remote version") % f)
 
 def checkcollision(mctx):

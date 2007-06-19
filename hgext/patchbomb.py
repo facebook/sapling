@@ -316,8 +316,8 @@ def patchbomb(ui, repo, *revs, **opts):
         return msgs
 
     def getbundlemsgs(bundle):
-        subj = opts['subject'] or \
-                prompt('Subject:', default='A bundle for your repository')
+        subj = (opts['subject']
+                or prompt('Subject:', default='A bundle for your repository'))
         ui.write(_('\nWrite the introductory message for the bundle.\n\n'))
         body = ui.edit('', sender)
 

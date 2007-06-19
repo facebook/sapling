@@ -205,7 +205,7 @@ class localrepository(repo.repository):
                     h.append(n)
                 filetags[key] = (bin_n, h)
 
-            for k,nh in filetags.items():
+            for k, nh in filetags.items():
                 if k not in globaltags:
                     globaltags[k] = nh
                     continue
@@ -215,8 +215,8 @@ class localrepository(repo.repository):
                 # otherwise we win because we're tip-most
                 an, ah = nh
                 bn, bh = globaltags[k]
-                if bn != an and an in bh and \
-                   (bn not in ah or len(bh) > len(ah)):
+                if (bn != an and an in bh and
+                    (bn not in ah or len(bh) > len(ah))):
                     an = bn
                 ah.extend([n for n in bh if n not in ah])
                 globaltags[k] = an, ah
@@ -671,8 +671,8 @@ class localrepository(repo.repository):
 
         if use_dirstate:
             oldname = c1[5].get("branch") # stored in UTF-8
-            if not commit and not remove and not force and p2 == nullid and \
-                   branchname == oldname:
+            if (not commit and not remove and not force and p2 == nullid
+                and branchname == oldname):
                 self.ui.status(_("nothing changed\n"))
                 return None
 
@@ -915,9 +915,9 @@ class localrepository(repo.repository):
             getnode = lambda fn: mf1.get(fn, nullid)
             for fn in mf2keys:
                 if mf1.has_key(fn):
-                    if mf1.flags(fn) != mf2.flags(fn) or \
-                       (mf1[fn] != mf2[fn] and (mf2[fn] != "" or
-                                                fcmp(fn, getnode))):
+                    if (mf1.flags(fn) != mf2.flags(fn) or
+                        (mf1[fn] != mf2[fn] and
+                         (mf2[fn] != "" or fcmp(fn, getnode)))):
                         modified.append(fn)
                     elif list_clean:
                         clean.append(fn)

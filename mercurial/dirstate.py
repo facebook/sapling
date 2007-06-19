@@ -32,8 +32,8 @@ class dirstate(object):
             return self._copymap
         elif name == '_branch':
             try:
-                self._branch = self._opener("branch").read().strip()\
-                               or "default"
+                self._branch = (self._opener("branch").read().strip()
+                                or "default")
             except IOError:
                 self._branch = "default"
             return self._branch
@@ -303,7 +303,7 @@ class dirstate(object):
             elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
             elif stat.S_ISDIR(st.st_mode): kind = _('directory')
             self._ui.warn(_('%s: unsupported file type (type is %s)\n')
-                         % (self.pathto(f), kind))
+                          % (self.pathto(f), kind))
         return False
 
     def walk(self, files=None, match=util.always, badmatch=None):
@@ -410,8 +410,8 @@ class dirstate(object):
                         break
                 if not found:
                     if inst.errno != errno.ENOENT or not badmatch:
-                        self._ui.warn('%s: %s\n' % (self.pathto(ff),
-                                                   inst.strerror))
+                        self._ui.warn('%s: %s\n' %
+                                      (self.pathto(ff), inst.strerror))
                     elif badmatch and badmatch(ff) and imatch(nf):
                         yield 'b', ff, None
                 continue

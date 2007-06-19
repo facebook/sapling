@@ -122,7 +122,7 @@ def runcatch(ui, args):
             ui.warn(_("(did you forget to compile extensions?)\n"))
         elif m in "zlib".split():
             ui.warn(_("(is your Python install correct?)\n"))
-            
+
     except util.Abort, inst:
         ui.warn(_("abort: %s\n") % inst)
     except SystemExit, inst:
@@ -332,7 +332,7 @@ def dispatch(ui, args):
     ret = runcommand(ui, options, cmd, d)
     # run post-hook, passing command result
     hook.hook(ui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
-                    result = ret)
+              result = ret)
     return ret
 
 def runcommand(ui, options, cmd, cmdfunc):

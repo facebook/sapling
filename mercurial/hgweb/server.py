@@ -92,7 +92,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         length = self.headers.getheader('content-length')
         if length:
             env['CONTENT_LENGTH'] = length
-        for header in [h for h in self.headers.keys() \
+        for header in [h for h in self.headers.keys()
                        if h not in ('content-type', 'content-length')]:
             hkey = 'HTTP_' + header.replace('-', '_').upper()
             hval = self.headers.getheader(header)
@@ -148,8 +148,8 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         code = int(code)
         self.saved_status = http_status
         bad_headers = ('connection', 'transfer-encoding')
-        self.saved_headers = [ h for h in headers \
-                               if h[0].lower() not in bad_headers ]
+        self.saved_headers = [h for h in headers
+                              if h[0].lower() not in bad_headers]
         return self._write
 
     def _write(self, data):

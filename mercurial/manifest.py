@@ -132,7 +132,7 @@ class manifest(revlog):
                     addlist[start:end] = array.array('c', x[i][2])
                 else:
                     del addlist[start:end]
-            return "".join([struct.pack(">lll", d[0], d[1], len(d[2])) + d[2] \
+            return "".join([struct.pack(">lll", d[0], d[1], len(d[2])) + d[2]
                             for d in x ])
 
         def checkforbidden(f):
@@ -141,8 +141,7 @@ class manifest(revlog):
 
         # if we're using the listcache, make sure it is valid and
         # parented by the same node we're diffing against
-        if not changed or not self.listcache or not p1 or \
-               self.mapcache[0] != p1:
+        if not (changed and self.listcache and p1 and self.mapcache[0] == p1):
             files = map.keys()
             files.sort()
 
@@ -151,7 +150,8 @@ class manifest(revlog):
 
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
-            text = ["%s\000%s%s\n" % (f, hex(map[f]), map.flags(f)) for f in files]
+            text = ["%s\000%s%s\n" % (f, hex(map[f]), map.flags(f))
+                    for f in files]
             self.listcache = array.array('c', "".join(text))
             cachedelta = None
         else:
@@ -208,8 +208,8 @@ class manifest(revlog):
                 cachedelta = None
             self.listcache = addlist
 
-        n = self.addrevision(buffer(self.listcache), transaction, link, p1,  \
-                             p2, cachedelta)
+        n = self.addrevision(buffer(self.listcache), transaction, link,
+                             p1, p2, cachedelta)
         self.mapcache = (n, map)
 
         return n

@@ -150,10 +150,10 @@ def install_hg():
         os.rename(os.path.join(BINDIR, "hg"), os.path.join(BINDIR, "_hg.py"))
         f = open(os.path.join(BINDIR, 'hg'), 'w')
         f.write('#!' + sys.executable + '\n')
-        f.write('import sys, os; os.execv(sys.executable, [sys.executable, '+ \
-            '"%s", "-x", "%s"] + sys.argv[1:])\n' % (
-            os.path.join(TESTDIR, 'coverage.py'),
-            os.path.join(BINDIR, '_hg.py')))
+        f.write('import sys, os; os.execv(sys.executable, [sys.executable, '
+                '"%s", "-x", "%s"] + sys.argv[1:])\n' %
+                (os.path.join(TESTDIR, 'coverage.py'),
+                 os.path.join(BINDIR, '_hg.py')))
         f.close()
         os.chmod(os.path.join(BINDIR, 'hg'), 0700)
         python = '"%s" "%s" -x' % (sys.executable,

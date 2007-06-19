@@ -271,11 +271,11 @@ class httprepository(remoterepository):
             proto = resp.headers['content-type']
 
         # accept old "text/plain" and "application/hg-changegroup" for now
-        if not proto.startswith('application/mercurial-') and \
-               not proto.startswith('text/plain') and \
-               not proto.startswith('application/hg-changegroup'):
-            raise hg.RepoError(_("'%s' does not appear to be an hg repository") %
-                               self._url)
+        if not (proto.startswith('application/mercurial-') or
+                proto.startswith('text/plain') or
+                proto.startswith('application/hg-changegroup')):
+            raise hg.RepoError(_("'%s' does not appear to be an hg repository")
+                               % self._url)
 
         if proto.startswith('application/mercurial-'):
             try:
