@@ -2760,7 +2760,9 @@ table = {
     "debugdata": (debugdata, [], _('debugdata FILE REV')),
     "debugindex": (debugindex, [], _('debugindex FILE')),
     "debugindexdot": (debugindexdot, [], _('debugindexdot FILE')),
-    "debugrename": (debugrename, [], _('debugrename FILE [REV]')),
+    "debugrename": (debugrename,
+                    [('r', 'rev', '', _('revision to debug'))],
+                    _('debugrename [-r REV] FILE')),
     "debugwalk": (debugwalk, walkopts, _('debugwalk [OPTION]... [FILE]...')),
     "^diff":
         (diff,
