@@ -298,13 +298,14 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
 
         args = []
         patcher = ui.config('ui', 'patch')
-        patcher = ((patcher and util.find_exe(patcher)) or
-                   util.find_exe('gpatch') or
-                   util.find_exe('patch'))
+        if not patcher:
+            patcher = util.find_exe('gpatch') or util.find_exe('patch')
+            # Try to be smart only if patch call was not supplied
+            if util.needbinarypatch():
+                args.append('--binary')
+                
         if not patcher:
             raise util.Abort(_('no patch command found in hgrc or PATH'))
-        if util.needbinarypatch():
-            args.append('--binary')
 
         if cwd:
             args.append('-d %s' % util.shellquote(cwd))
