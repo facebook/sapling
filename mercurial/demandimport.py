@@ -61,7 +61,10 @@ class _demandmod(object):
             if locals and locals.get(head) == self:
                 locals[head] = mod
             object.__setattr__(self, "_module", mod)
+
     def __repr__(self):
+        if self._module:
+            return "<proxied module '%s'>" % self._data[0]
         return "<unloaded module '%s'>" % self._data[0]
     def __call__(self, *args, **kwargs):
         raise TypeError("'unloaded module' object is not callable")
@@ -102,7 +105,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
         for x in fromlist:
             # set requested submodules for demand load
             if not(hasattr(mod, x)):
-                setattr(mod, x, _demandmod(x, mod.__dict__, mod.__dict__))
+                setattr(mod, x, _demandmod(x, mod.__dict__, locals))
         return mod
 
 ignore = ['_hashlib', '_xmlplus', 'fcntl', 'win32com.gen_py']
