@@ -291,11 +291,10 @@ class filectx(object):
 
         # sort by revision (per file) which is a topological order
         visit = []
-        files.reverse()
         for f in files:
-            fn = [(n._filerev, n) for n in needed.keys() if n._path == f]
-            fn.sort()
+            fn = [(n.rev(), n) for n in needed.keys() if n._path == f]
             visit.extend(fn)
+        visit.sort()
         hist = {}
 
         for r, f in visit:
