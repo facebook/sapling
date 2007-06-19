@@ -1482,7 +1482,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             tmpname, message, user, date, branch, nodeid, p1, p2 = patch.extract(ui, sys.stdin)
         else:
             ui.status(_("applying %s\n") % p)
-            tmpname, message, user, date, branch, nodeid, p1, p2 = patch.extract(ui, file(pf))
+            tmpname, message, user, date, branch, nodeid, p1, p2 = patch.extract(ui, file(pf, 'rb'))
 
         if tmpname is None:
             raise util.Abort(_('no diffs found'))
