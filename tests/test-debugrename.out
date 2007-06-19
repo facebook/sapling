@@ -1,0 +1,5 @@
+adding a
+b renamed from a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
+a renamed from b:9a263dd772e0159ddfa70fb8a448bb6c7ec8c69f
+% test with --rev
+b renamed from a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
