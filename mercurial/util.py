@@ -2,7 +2,7 @@
 util.py - Mercurial utility functions and platform specfic implementations
 
  Copyright 2005 K. Thananchayan <thananck@yahoo.com>
- Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
+ Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
  Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 
 This software may be used and distributed according to the terms

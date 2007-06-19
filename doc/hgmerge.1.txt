@@ -30,6 +30,6 @@ hg(1) - the command line interface to Mercurial SCM
 
 COPYING
 -------
-Copyright \(C) 2005, 2006 Matt Mackall.
+Copyright \(C) 2005-2007 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General
 Public License (GPL).

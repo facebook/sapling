@@ -862,6 +862,6 @@ http://selenic.com/mailman/listinfo/mercurial[メーリングリスト]
 
 著作権情報
 -----
-Copyright (C) 2005, 2006 Matt Mackall.
+Copyright (C) 2005-2007 Matt Mackall.
 このソフトウェアの自由な使用は GNU 一般公有使用許諾 (GPL) のもとで
 認められます。

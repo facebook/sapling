@@ -4,7 +4,7 @@ bundlerepo.py - repository class for viewing uncompressed bundles
 This provides a read-only repository interface to bundles as if
 they were part of the actual repository.
 
-Copyright 2006 Benoit Boissinot <benoit.boissinot@ens-lyon.org>
+Copyright 2006, 2007 Benoit Boissinot <bboissin@gmail.com>
 
 This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
