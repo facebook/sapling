@@ -25,7 +25,10 @@ if len(sys.argv) > 2:
     if len(sys.argv) > 3:
         out = open(sys.argv[3], "ab")
 
-env = [v for v in os.environ if v.startswith("HG_")]
+# variables with empty values may not exist on all platforms, filter
+# them now for portability sake.
+env = [k for k,v in os.environ.iteritems() 
+       if k.startswith("HG_") and v]
 env.sort()
 
 # edit the variable part of the variable
