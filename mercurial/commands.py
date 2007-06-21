@@ -1232,8 +1232,7 @@ def heads(ui, repo, *branchrevs, **opts):
         heads = repo.heads(start)
     else:
         heads = []
-        visitedset = set()
-        displayer = cmdutil.show_changeset(ui, repo, opts)
+        visitedset = util.set()
         for branchrev in branchrevs:
             branch = repo.changectx(branchrev).branch()
             if branch in visitedset:

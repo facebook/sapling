@@ -234,7 +234,7 @@ date:        Thu Jan 01 00:00:07 1970 +0000
 summary:     Adding c branch
 
 =======
-No changes on branch c (the branch of revision .) are reachable from revision 3
+no changes on branch c containing . are reachable from 3
 1
 -------
 changeset:   7:9fb091bb9835
@@ -273,7 +273,7 @@ summary:     Merging b branch head 2 and b branch head 3
 
 0
 -------
-No changes on branch b (the branch of revision .) are reachable from revision 7
+no changes on branch b containing . are reachable from 7
 1
 =======
 0 files updated, 0 files merged, 2 files removed, 0 files unresolved
