@@ -3,7 +3,7 @@ a { text-decoration:none; }
 .indexlinks { white-space:nowrap; }
 .parity0 { background-color: #dddddd; }
 .parity1 { background-color: #eeeeee; }
-.lineno { width: 60px; color: #aaaaaa; font-size: smaller; 
+.lineno { width: 60px; color: #aaaaaa; font-size: smaller;
           text-align: right; padding-right:1em; }
 .plusline { color: green; }
 .minusline { color: red; }
@@ -46,7 +46,7 @@ pre { margin: 0; }
 
 .logo a {
   font-weight: bold;
-  font-size: 150%; 
+  font-size: 150%;
   color: #999;
 }
 

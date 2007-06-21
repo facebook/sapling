@@ -303,7 +303,7 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
             # Try to be smart only if patch call was not supplied
             if util.needbinarypatch():
                 args.append('--binary')
-                
+
         if not patcher:
             raise util.Abort(_('no patch command found in hgrc or PATH'))
 

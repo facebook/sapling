@@ -78,7 +78,7 @@ echo % linkrev vs rev
 hg annotate -r tip a
 
 # test issue 589
-# annotate was crashing when trying to --follow something 
+# annotate was crashing when trying to --follow something
 # like A -> B -> A
 echo % generate ABA rename configuration
 echo foo > foo

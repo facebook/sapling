@@ -27,7 +27,7 @@ if len(sys.argv) > 2:
 
 # variables with empty values may not exist on all platforms, filter
 # them now for portability sake.
-env = [k for k,v in os.environ.iteritems() 
+env = [k for k, v in os.environ.iteritems()
        if k.startswith("HG_") and v]
 env.sort()
 

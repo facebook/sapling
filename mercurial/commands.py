@@ -2515,7 +2515,7 @@ def tag(ui, repo, name, rev_=None, **opts):
         rev_ = opts['rev']
     message = opts['message']
     if opts['remove']:
-        if not name in repo.tags(): 
+        if not name in repo.tags():
             raise util.Abort(_('tag %s does not exist') % name)
         rev_ = nullid
         if not message:

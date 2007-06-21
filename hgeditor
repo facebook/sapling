@@ -42,7 +42,7 @@ HGTMP="${TMPDIR-/tmp}/hgeditor.$RANDOM.$RANDOM.$RANDOM.$$"
 cat "$1" > "$HGTMP/msg"
 
 MD5=$(which md5sum 2>/dev/null) || \
-    MD5=$(which md5 2>/dev/null) 
+    MD5=$(which md5 2>/dev/null)
 [ -x "${MD5}" ] && CHECKSUM=`${MD5} "$HGTMP/msg"`
 if [ -s "$HGTMP/diff" ]; then
     $EDITOR "$HGTMP/msg" "$HGTMP/diff" || exit $?

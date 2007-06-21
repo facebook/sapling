@@ -4,17 +4,17 @@
 echo % file replaced with directory
 
 hg init a
-cd a       
-echo a > a 
-hg commit -Ama 
-rm a       
-mkdir a    
+cd a
+echo a > a
+hg commit -Ama
+rm a
+mkdir a
 echo a > a/a
 
 echo % should fail - would corrupt dirstate
 hg add a/a
 
-cd ..      
+cd ..
 
 echo % directory replaced with file
 

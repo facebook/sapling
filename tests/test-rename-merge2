@@ -12,7 +12,7 @@ EOF
 HGMERGE="python ../merge"; export HGMERGE
 
 # perform a test merge with possible renaming
-# 
+#
 # args:
 # $1 = action in local branch
 # $2 = action in remote branch
@@ -57,7 +57,7 @@ tm()
     hg status -camC -X rev
 
     hg ci -m "merge" -d "0 0"
-    
+
     echo "--------------"
     echo
 
@@ -65,10 +65,10 @@ tm()
     rm -r t
 }
 
-up() { 
+up() {
     cp rev $1
     hg add $1 2> /dev/null
-    if [ "$2" != "" ] ; then 
+    if [ "$2" != "" ] ; then
 	cp rev $2
 	hg add $2 2> /dev/null
     fi
@@ -95,7 +95,7 @@ tm "up b  " "nm a b" "      " "13 merge b no ancestor"
 tm "nc a b" "up a b" "      " "14 merge b no ancestor"
 tm "up b  " "nm a b" "      " "15 merge b no ancestor, remove a"
 tm "nc a b" "up a b" "      " "16 get a, merge b no ancestor"
-tm "up a b" "nc a b" "      " "17 keep a, merge b no ancestor" 
+tm "up a b" "nc a b" "      " "17 keep a, merge b no ancestor"
 tm "nm a b" "up a b" "      " "18 merge b no ancestor"
 tm "up a b" "nm a b" "      " "19 merge b no ancestor, prompt remove a"
 tm "up a  " "um a b" "      " "20 merge a and b to b, remove a"

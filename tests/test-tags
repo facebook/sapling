@@ -81,7 +81,7 @@ hg ci -m 'change foo 2' -d '1000000 0' # rev 4
 hg tags
 
 # test tag removal
-hg tag --remove -d '1000000 0' bar 
+hg tag --remove -d '1000000 0' bar
 hg tip
 hg tags
 

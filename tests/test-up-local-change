@@ -63,6 +63,6 @@ echo a > a/a
 echo a > b/a
 hg --cwd a commit -A -m a
 cd b
-hg add a 
+hg add a
 hg pull -u ../a
 hg st

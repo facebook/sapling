@@ -19,7 +19,7 @@ echo
 
 # Testing changing message with -m
 echo bbbb > file
-hg qrefresh -m "Second commit message" 
+hg qrefresh -m "Second commit message"
 echo =======================
 echo "Should display 'Second commit message'"
 hg log -l1 -v | sed -n '/description/,$p'
@@ -41,7 +41,7 @@ hg qnew -m "First commit message" second-patch
 echo aaaa > file2
 hg add file2
 echo bbbb > file2
-(echo "Fifth commit message" 
+(echo "Fifth commit message"
 echo " This is the 5th log message" >> logfile) |\
 hg qrefresh -l-
 echo =======================

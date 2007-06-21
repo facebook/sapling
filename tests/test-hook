@@ -40,7 +40,7 @@ hg commit -m merge -d '2 0'
 
 # test generic hooks
 hg id
-hg cat b 
+hg cat b
 
 cd ../b
 hg pull ../a
