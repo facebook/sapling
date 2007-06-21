@@ -4,15 +4,12 @@ mkdir test
 cd test
 hg init
 echo foo>foo
-hg addremove
-hg commit -m 1
+hg commit -Am 1 -d '1 0'
 echo bar>bar
-hg addremove
-hg commit -m 2
+hg commit -Am 2 -d '2 0'
 mkdir baz
 echo bletch>baz/bletch
-hg addremove
-hg commit -m 3
+hg commit -Am 3 -d '1000000000 0'
 echo "[web]" >> .hg/hgrc
 echo "name = test-archive" >> .hg/hgrc
 echo "allow_archive = gz bz2, zip" >> .hg/hgrc
@@ -41,6 +38,17 @@ bunzip2 -dc test.tar.bz2 | tar tf -
 
 hg archive -t tgz -p %b-%h test-%h.tar.gz
 gzip -dc test-$QTIP.tar.gz | tar tf - | sed "s/$QTIP/TIP/"
+
+cat > md5check.py <<EOF
+import md5, sys
+print md5.md5(file(sys.argv[1], 'rb').read()).hexdigest()
+EOF
+
+hg archive -t tgz tip.tar.gz
+python md5check.py tip.tar.gz
+sleep 1
+hg archive -t tgz tip.tar.gz
+python md5check.py tip.tar.gz
 
 hg archive -t zip -p /illegal test.zip
 hg archive -t zip -p very/../bad test.zip
