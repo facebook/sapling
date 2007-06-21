@@ -67,6 +67,7 @@ class changectx(object):
     def files(self): return self._changeset[3]
     def description(self): return self._changeset[4]
     def branch(self): return self._changeset[5].get("branch")
+    def tags(self): return self._repo.nodetags(self._node)
 
     def parents(self):
         """return contexts for each parent changeset"""
@@ -412,6 +413,11 @@ class workingctx(changectx):
     def unknown(self): return self._status[4]
     def clean(self): return self._status[5]
     def branch(self): return self._repo.dirstate.branch()
+
+    def tags(self):
+        t = []
+        [t.extend(p.tags()) for p in self.parents()]
+        return t
 
     def parents(self):
         """return contexts for each parent changeset"""
