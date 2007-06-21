@@ -327,9 +327,10 @@ hooks::
   Also, hooks like "commit" will be called in all contexts that
   generate a commit (eg. tag) and not just the commit command.
 
-  Note2: Environment variables with empty values will not be passed to
-  hooks. For instance, $HG_PARENT2 will not be set for non-merge
-  changesets.
+  Note2: Environment variables with empty values may not be passed to
+  hooks on platforms like Windows. For instance, $HG_PARENT2 will
+  not be available under Windows for non-merge changesets while being
+  set to an empty value under Unix-like systems.
 
   The syntax for Python hooks is as follows:
 
