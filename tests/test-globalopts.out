@@ -134,7 +134,7 @@ list of commands:
  diff         diff repository (or selected files)
  export       dump the header and diffs for one or more changesets
  grep         search for a pattern in specified files and revisions
- heads        show current repository heads
+ heads        show current repository heads or show branch heads
  help         show help for a command, extension, or list of commands
  identify     print information about the working copy
  import       import an ordered set of patches
@@ -186,7 +186,7 @@ list of commands:
  diff         diff repository (or selected files)
  export       dump the header and diffs for one or more changesets
  grep         search for a pattern in specified files and revisions
- heads        show current repository heads
+ heads        show current repository heads or show branch heads
  help         show help for a command, extension, or list of commands
  identify     print information about the working copy
  import       import an ordered set of patches
