@@ -1432,32 +1432,36 @@ def help_(ui, name=None, with_version=False):
             else:
                 ui.write("%s\n" % first)
 
-def identify(ui, repo):
-    """print information about the working copy
+def identify(ui, repo, rev=None):
+    """identify the working copy or specified revision
 
-    Print a short summary of the current state of the repo.
+    With no argument, print a summary of the current state of the repo.
 
     This summary identifies the repository state using one or two parent
     hash identifiers, followed by a "+" if there are uncommitted changes
-    in the working directory, followed by a list of tags for this revision.
+    in the working directory, a list of tags for this revision and a branch
+    name for non-default branches.
     """
 
     hexfunc = ui.debugflag and hex or short
 
-    wctx = repo.workingctx()
-    parents = wctx.parents()
-    changed = wctx.files() + wctx.deleted()
-
-    output = ["%s%s" % ('+'.join([hexfunc(p.node()) for p in parents]),
-                        (changed) and "+" or "")]
+    if not rev:
+        ctx = repo.workingctx()
+        parents = ctx.parents()
+        changed = ctx.files() + ctx.deleted()
+        output = ["%s%s" % ('+'.join([hexfunc(p.node()) for p in parents]),
+                            (changed) and "+" or "")]
+    else:
+        ctx = repo.changectx(rev)
+        output = [hexfunc(ctx.node())]
 
     if not ui.quiet:
-        branch = util.tolocal(wctx.branch())
+        branch = util.tolocal(ctx.branch())
         if branch != 'default':
             output.append("(%s)" % branch)
 
         # multiple tags for a single parent separated by '/'
-        tags = "/".join(wctx.tags())
+        tags = "/".join(ctx.tags())
         if tags:
             output.append(tags)
 
@@ -2821,7 +2825,10 @@ table = {
           ('', 'template', '', _('display with template'))],
          _('hg heads [-r REV] [REV]...')),
     "help": (help_, [], _('hg help [COMMAND]')),
-    "identify|id": (identify, [], _('hg identify')),
+    "identify|id":
+        (identify,
+         [('r', 'rev', '', _('identify the specified rev'))],
+         _('hg identify [-r REV]')),
     "import|patch":
         (import_,
          [('p', 'strip', 1,

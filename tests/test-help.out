@@ -59,7 +59,7 @@ list of commands:
  grep         search for a pattern in specified files and revisions
  heads        show current repository heads or show branch heads
  help         show help for a command, extension, or list of commands
- identify     print information about the working copy
+ identify     identify the working copy or specified revision
  import       import an ordered set of patches
  incoming     show new changesets found in source
  init         create a new repository in the given directory
@@ -107,7 +107,7 @@ use "hg -v help" to show aliases and global options
  grep         search for a pattern in specified files and revisions
  heads        show current repository heads or show branch heads
  help         show help for a command, extension, or list of commands
- identify     print information about the working copy
+ identify     identify the working copy or specified revision
  import       import an ordered set of patches
  incoming     show new changesets found in source
  init         create a new repository in the given directory
