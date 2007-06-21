@@ -1447,7 +1447,14 @@ def identify(ui, repo, rev=None, num=None, id=None, branch=None, tags=None):
     default = not (num or id or branch or tags)
     output = []
 
-    if not rev:
+    if not repo.local():
+        if not rev:
+            rev = "tip"
+        if num or branch or tags:
+            raise util.Abort(
+                "can't query remote revision number, branch, or tags")
+        output = [hexfunc(repo.lookup(rev))]
+    elif not rev:
         ctx = repo.workingctx()
         parents = ctx.parents()
         changed = False
@@ -1466,7 +1473,7 @@ def identify(ui, repo, rev=None, num=None, id=None, branch=None, tags=None):
         if num:
             output.append(str(ctx.rev()))
 
-    if default and not ui.quiet:
+    if repo.local() and default and not ui.quiet:
         b = util.tolocal(ctx.branch())
         if b != 'default':
             output.append("(%s)" % b)
@@ -3056,6 +3063,7 @@ table = {
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall")
 optionalrepo = ("paths serve showconfig")
+remoterepo = ("identify")
 
 def dispatch(args):
     try:
