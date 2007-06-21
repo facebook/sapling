@@ -321,7 +321,7 @@ def dispatch(ui, args):
         try:
             repo = hg.repository(ui, path=path)
             ui = repo.ui
-            if not repo.local() and cmd not in commands.remoterepo.split():
+            if not repo.local():
                 raise util.Abort(_("repository '%s' is not local") % path)
         except hg.RepoError:
             if cmd not in commands.optionalrepo.split():

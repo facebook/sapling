@@ -1432,10 +1432,13 @@ def help_(ui, name=None, with_version=False):
             else:
                 ui.write("%s\n" % first)
 
-def identify(ui, repo, rev=None, num=None, id=None, branch=None, tags=None):
+def identify(ui, repo, source=None,
+             rev=None, num=None, id=None, branch=None, tags=None):
     """identify the working copy or specified revision
 
-    With no argument, print a summary of the current state of the repo.
+    With no revision, print a summary of the current state of the repo.
+
+    With a path, do a lookup in another repository.
 
     This summary identifies the repository state using one or two parent
     hash identifiers, followed by a "+" if there are uncommitted changes
@@ -1447,13 +1450,17 @@ def identify(ui, repo, rev=None, num=None, id=None, branch=None, tags=None):
     default = not (num or id or branch or tags)
     output = []
 
-    if not repo.local():
+    if source:
+        source, revs = cmdutil.parseurl(ui.expandpath(source), [])
+        srepo = hg.repository(ui, source)
+        if not rev and revs:
+            rev = revs[0]
         if not rev:
             rev = "tip"
         if num or branch or tags:
             raise util.Abort(
                 "can't query remote revision number, branch, or tags")
-        output = [hexfunc(repo.lookup(rev))]
+        output = [hexfunc(srepo.lookup(rev))]
     elif not rev:
         ctx = repo.workingctx()
         parents = ctx.parents()
@@ -1473,7 +1480,7 @@ def identify(ui, repo, rev=None, num=None, id=None, branch=None, tags=None):
         if num:
             output.append(str(ctx.rev()))
 
-    if repo.local() and default and not ui.quiet:
+    if not source and default and not ui.quiet:
         b = util.tolocal(ctx.branch())
         if b != 'default':
             output.append("(%s)" % b)
@@ -2856,7 +2863,7 @@ table = {
           ('i', 'id', None, _('show global revision id')),
           ('b', 'branch', None, _('show branch')),
           ('t', 'tags', None, _('show tags'))],
-         _('hg identify [-nibt] [-r REV]')),
+         _('hg identify [-nibt] [-r REV] [SOURCE]')),
     "import|patch":
         (import_,
          [('p', 'strip', 1,
@@ -3063,7 +3070,6 @@ table = {
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall")
 optionalrepo = ("paths serve showconfig")
-remoterepo = ("identify")
 
 def dispatch(args):
     try:
