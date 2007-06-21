@@ -1,0 +1,43 @@
+#!/bin/sh
+
+# Test that qpush cleans things up if it doesn't complete
+
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+
+hg init repo
+cd repo
+
+echo foo > foo
+hg ci -Am 'add foo' -d '0 0'
+
+touch untracked-file
+echo 'syntax: glob' > .hgignore
+echo '.hgignore' >> .hgignore
+
+hg qinit
+hg qnew patch1
+echo >> foo
+hg qrefresh -m 'patch 1'
+
+hg qnew patch2
+echo bar > bar
+hg add bar
+hg qrefresh -m 'patch 2'
+
+hg qnew bad-patch
+echo >> foo
+hg qrefresh
+
+hg qpop -a
+
+python -c 'print "\xe9"' > message
+cat .hg/patches/bad-patch >> message
+mv message .hg/patches/bad-patch
+
+hg qpush -a && echo 'qpush succeded?!'
+
+hg parents
+
+echo '% bar should be gone; other unknown/ignored files should still be around'
+hg status -A
