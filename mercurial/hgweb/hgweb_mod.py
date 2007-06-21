@@ -619,11 +619,11 @@ class hgweb(object):
         'zip': ('application/zip', 'zip', '.zip', None),
         }
 
-    def archive(self, req, id, type_):
+    def archive(self, req, key, type_):
         reponame = re.sub(r"\W+", "-", os.path.basename(self.reponame))
-        cnode = self.repo.lookup(id)
-        arch_version = id
-        if cnode == id or id == 'tip':
+        cnode = self.repo.lookup(key)
+        arch_version = key
+        if cnode == key or key == 'tip':
             arch_version = short(cnode)
         name = "%s-%s" % (reponame, arch_version)
         mimetype, artype, extension, encoding = self.archive_specs[type_]
