@@ -28,3 +28,5 @@ use "hg -v help cat" to show global options
 % [defaults]
 a
 a
+% no repo
+abort: There is no Mercurial repository here (.hg not found)!

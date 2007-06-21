@@ -320,6 +320,9 @@ def dispatch(ui, args):
                 raise util.Abort(_("repository '%s' is not local") % path)
         except hg.RepoError:
             if cmd not in commands.optionalrepo.split():
+                if not path:
+                    raise hg.RepoError(_("There is no Mercurial repository here"
+                                         " (.hg not found)"))
                 raise
         d = lambda: func(ui, repo, *args, **cmdoptions)
     else:

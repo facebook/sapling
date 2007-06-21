@@ -17,3 +17,9 @@ cat = -v
 EOF
 hg cat a
 
+echo '% no repo'
+cd ..
+hg cat
+
+exit 0
+ 
