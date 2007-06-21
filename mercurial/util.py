@@ -1152,9 +1152,6 @@ def opener(base, audit=True):
     this function is used to hide the details of COW semantics and
     remote file access from higher level code.
     """
-    p = base
-    audit_p = audit
-
     def mktempcopy(name, emptyok=False):
         d, fn = os.path.split(name)
         fd, temp = tempfile.mkstemp(prefix='.%s-' % fn, dir=d)
@@ -1209,9 +1206,9 @@ def opener(base, audit=True):
                 posixfile.close(self)
 
     def o(path, mode="r", text=False, atomictemp=False):
-        if audit_p:
+        if audit:
             audit_path(path)
-        f = os.path.join(p, path)
+        f = os.path.join(base, path)
 
         if not text:
             mode += "b" # for that other OS
