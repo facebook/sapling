@@ -173,8 +173,12 @@ test L:nm a b R:nm a c W:       - 11 get c, keep b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ecf3cb2a4219+ remote e6abcc1a30c2
+ a: divergent renames -> dr
  rev: versions differ -> m
  c: remote created -> g
+warning: detected divergent renames of a to:
+ b
+ c
 getting c
 merging rev
 my rev@ecf3cb2a4219+ other rev@e6abcc1a30c2 ancestor rev@924404dff337

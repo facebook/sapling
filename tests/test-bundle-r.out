@@ -197,6 +197,9 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 3 files, 7 changesets, 6 total revisions
+warning: detected divergent renames of afile to:
+ anotherfile
+ adifferentfile
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved

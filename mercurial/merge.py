@@ -155,11 +155,15 @@ def findcopies(repo, m1, m2, ma, limit):
 
     copy = {}
     fullcopy = {}
+    diverge = {}
 
     def checkcopies(c, man):
         '''check possible copies for filectx c'''
         for of in findold(c):
+            fullcopy[c.path()] = of # remember for dir rename detection
             if of not in man: # original file not in other manifest?
+                if of in ma:
+                    diverge.setdefault(of, []).append(c.path())
                 continue
             c2 = ctx(of, man[of])
             ca = c.ancestor(c2)
@@ -167,17 +171,16 @@ def findcopies(repo, m1, m2, ma, limit):
                 continue
             # named changed on only one side?
             if ca.path() == c.path() or ca.path() == c2.path():
-                fullcopy[c.path()] = of # remember for dir rename detection
                 if c == ca or c2 == ca: # no merge needed, ignore copy
                     continue
                 copy[c.path()] = of
 
     if not repo.ui.configbool("merge", "followcopies", True):
-        return {}
+        return {}, {}
 
     # avoid silly behavior for update from empty dir
     if not m1 or not m2 or not ma:
-        return {}
+        return {}, {}
 
     u1 = nonoverlap(m1, m2, ma)
     u2 = nonoverlap(m2, m1, ma)
@@ -188,8 +191,16 @@ def findcopies(repo, m1, m2, ma, limit):
     for f in u2:
         checkcopies(ctx(f, m2[f]), m1)
 
+    d2 = {}
+    for of, fl in diverge.items():
+        for f in fl:
+            fo = list(fl)
+            fo.remove(f)
+            d2[f] = (of, fo)
+    #diverge = d2
+
     if not fullcopy or not repo.ui.configbool("merge", "followdirs", True):
-        return copy
+        return copy, diverge
 
     # generate a directory move map
     d1, d2 = dirs(m1), dirs(m2)
@@ -223,7 +234,7 @@ def findcopies(repo, m1, m2, ma, limit):
     del d1, d2, invalid
 
     if not dirmove:
-        return copy
+        return copy, diverge
 
     # check unaccounted nonoverlapping files against directory moves
     for f in u1 + u2:
@@ -234,7 +245,7 @@ def findcopies(repo, m1, m2, ma, limit):
                     copy[f] = dirmove[d] + f[len(d):]
                     break
 
-    return copy
+    return copy, diverge
 
 def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     """
@@ -254,6 +265,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     backwards = (pa == p2)
     action = []
     copy = {}
+    diverge = {}
 
     def fmerge(f, f2=None, fa=None):
         """merge flags"""
@@ -273,7 +285,11 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         action.append((f, m) + args)
 
     if not (backwards or overwrite):
-        copy = findcopies(repo, m1, m2, ma, pa.rev())
+        copy, diverge = findcopies(repo, m1, m2, ma, pa.rev())
+
+    for of, fl in diverge.items():
+        act("divergent renames", "dr", of, fl)
+
     copied = dict.fromkeys(copy.values())
 
     # Compare manifests
@@ -410,6 +426,11 @@ def applyupdates(repo, action, wctx, mctx):
                 t = mctx.filectx(f2).data()
                 repo.wwrite(fd, t, flags)
             updated += 1
+        elif m == "dr": # divergent renames
+            fl = a[2]
+            repo.ui.warn("warning: detected divergent renames of %s to:\n" % f)
+            for nf in fl:
+                repo.ui.warn(" %s\n" % nf)
         elif m == "e": # exec
             flags = a[2]
             util.set_exec(repo.wjoin(f), flags)
