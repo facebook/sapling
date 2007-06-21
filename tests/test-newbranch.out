@@ -48,8 +48,8 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     initial
 
 foo                            5:5f8fb06e083e
-default                        3:bf1bc2f45e83
-bar                            2:67ec16bde7f1
+default                        3:bf1bc2f45e83 (inactive)
+bar                            2:67ec16bde7f1 (inactive)
 foo
 default
 bar
