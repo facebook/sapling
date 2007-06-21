@@ -1442,28 +1442,24 @@ def identify(ui, repo):
     in the working directory, followed by a list of tags for this revision.
     """
 
-    parents = [p for p in repo.dirstate.parents() if p != nullid]
-    if not parents:
-        parents = [nullid]
-
     hexfunc = ui.debugflag and hex or short
-    modified, added, removed, deleted = repo.status()[:4]
-    output = ["%s%s" %
-              ('+'.join([hexfunc(parent) for parent in parents]),
-              (modified or added or removed or deleted) and "+" or "")]
+
+    wctx = repo.workingctx()
+    parents = wctx.parents()
+    changed = wctx.files() + wctx.deleted()
+
+    output = ["%s%s" % ('+'.join([hexfunc(p.node()) for p in parents]),
+                        (changed) and "+" or "")]
 
     if not ui.quiet:
-
-        branch = util.tolocal(repo.workingctx().branch())
+        branch = util.tolocal(wctx.branch())
         if branch != 'default':
             output.append("(%s)" % branch)
 
         # multiple tags for a single parent separated by '/'
-        parenttags = ['/'.join(tags)
-                      for tags in map(repo.nodetags, parents) if tags]
-        # tags for multiple parents separated by ' + '
-        if parenttags:
-            output.append(' + '.join(parenttags))
+        tags = "/".join(wctx.tags())
+        if tags:
+            output.append(tags)
 
     ui.write("%s\n" % ' '.join(output))
 
