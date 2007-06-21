@@ -162,6 +162,7 @@ class dirstate(object):
         for a in "_map _copymap _branch _pl _dirs _ignore".split():
             if hasattr(self, a):
                 self.__delattr__(a)
+        self._dirty = 0
 
     def copy(self, source, dest):
         self.markdirty()
