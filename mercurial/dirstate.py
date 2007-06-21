@@ -159,7 +159,7 @@ class dirstate(object):
             pos = newpos
 
     def invalidate(self):
-        for a in "_map _copymap _branch pl _dirs _ignore".split():
+        for a in "_map _copymap _branch _pl _dirs _ignore".split():
             if hasattr(self, a):
                 self.__delattr__(a)
 
