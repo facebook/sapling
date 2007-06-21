@@ -1100,6 +1100,9 @@ else:
                 return p_name
         return default
 
+    def set_signal_handler():
+        pass
+
 def find_exe(name, default=None):
     '''find path of an executable.
     if name contains a path component, return it as is.  otherwise,

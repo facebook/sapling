@@ -2432,6 +2432,7 @@ def serve(ui, repo, **opts):
 
     class service:
         def init(self):
+            util.set_signal_handler()
             try:
                 self.httpd = hgweb.server.create_server(parentui, repo)
             except socket.error, inst:
