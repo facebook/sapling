@@ -262,17 +262,22 @@ def dispatch(ui, args):
         os.chdir(cwd)
 
     # read the local repository .hgrc into a local ui object
-    # this will trigger its extensions to load
-    path = earlygetopt(["-R", "--repository", "--repo"], args)
+    path = findrepo() or ""
     if not path:
-        path = findrepo() or ""
-    lui = ui
+        lui = ui
     if path:
         try:
             lui = commands.ui.ui(parentui=ui)
             lui.readconfig(os.path.join(path, ".hg", "hgrc"))
         except IOError:
             pass
+
+    # now we can expand paths, even ones in .hg/hgrc
+    rpath = earlygetopt(["-R", "--repository", "--repo"], args)
+    if rpath:
+        path = lui.expandpath(rpath)
+        lui = commands.ui.ui(parentui=ui)
+        lui.readconfig(os.path.join(path, ".hg", "hgrc"))
 
     extensions.loadall(lui)
     # check for fallback encoding
