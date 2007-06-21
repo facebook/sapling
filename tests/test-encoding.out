@@ -127,13 +127,13 @@ tip                                5:db5520b4645f
 é                                  3:770b9b11621d
 % ascii
 ?                              5:db5520b4645f
-default                        4:9cff3c980b58
+default                        4:9cff3c980b58 (inactive)
 % latin-1
 �                              5:db5520b4645f
-default                        4:9cff3c980b58
+default                        4:9cff3c980b58 (inactive)
 % utf-8
 é                              5:db5520b4645f
-default                        4:9cff3c980b58
+default                        4:9cff3c980b58 (inactive)
 % utf-8
 changeset:   5:db5520b4645f
 branch:      é
