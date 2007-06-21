@@ -1441,10 +1441,10 @@ def identify(ui, repo):
     hash identifiers, followed by a "+" if there are uncommitted changes
     in the working directory, followed by a list of tags for this revision.
     """
+
     parents = [p for p in repo.dirstate.parents() if p != nullid]
     if not parents:
-        ui.write(_("unknown\n"))
-        return
+        parents = [nullid]
 
     hexfunc = ui.debugflag and hex or short
     modified, added, removed, deleted = repo.status()[:4]
