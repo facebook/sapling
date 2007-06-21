@@ -1432,7 +1432,7 @@ def help_(ui, name=None, with_version=False):
             else:
                 ui.write("%s\n" % first)
 
-def identify(ui, repo, rev=None):
+def identify(ui, repo, rev=None, num=None, id=None, branch=None, tags=None):
     """identify the working copy or specified revision
 
     With no argument, print a summary of the current state of the repo.
@@ -1444,26 +1444,43 @@ def identify(ui, repo, rev=None):
     """
 
     hexfunc = ui.debugflag and hex or short
+    default = not (num or id or branch or tags)
+    output = []
 
     if not rev:
         ctx = repo.workingctx()
         parents = ctx.parents()
-        changed = ctx.files() + ctx.deleted()
-        output = ["%s%s" % ('+'.join([hexfunc(p.node()) for p in parents]),
-                            (changed) and "+" or "")]
+        changed = False
+        if default or id or num:
+            changed = ctx.files() + ctx.deleted()
+        if default or id:
+            output = ["%s%s" % ('+'.join([hexfunc(p.node()) for p in parents]),
+                                (changed) and "+" or "")]
+        if num:
+            output.append("%s%s" % ('+'.join([str(p.rev()) for p in parents]),
+                                    (changed) and "+" or ""))
     else:
         ctx = repo.changectx(rev)
-        output = [hexfunc(ctx.node())]
+        if default or id:
+            output = [hexfunc(ctx.node())]
+        if num:
+            output.append(str(ctx.rev()))
 
-    if not ui.quiet:
-        branch = util.tolocal(ctx.branch())
-        if branch != 'default':
-            output.append("(%s)" % branch)
+    if default and not ui.quiet:
+        b = util.tolocal(ctx.branch())
+        if b != 'default':
+            output.append("(%s)" % b)
 
         # multiple tags for a single parent separated by '/'
-        tags = "/".join(ctx.tags())
-        if tags:
-            output.append(tags)
+        t = "/".join(ctx.tags())
+        if t:
+            output.append(t)
+
+    if branch:
+        output.append(util.tolocal(ctx.branch()))
+
+    if tags:
+        output.extend(ctx.tags())
 
     ui.write("%s\n" % ' '.join(output))
 
@@ -2827,8 +2844,12 @@ table = {
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id":
         (identify,
-         [('r', 'rev', '', _('identify the specified rev'))],
-         _('hg identify [-r REV]')),
+         [('r', 'rev', '', _('identify the specified rev')),
+          ('n', 'num', None, _('show local revision number')),
+          ('i', 'id', None, _('show global revision id')),
+          ('b', 'branch', None, _('show branch')),
+          ('t', 'tags', None, _('show tags'))],
+         _('hg identify [-nibt] [-r REV]')),
     "import|patch":
         (import_,
          [('p', 'strip', 1,
