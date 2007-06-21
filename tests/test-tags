@@ -85,6 +85,10 @@ hg tag --remove -d '1000000 0' bar
 hg tip
 hg tags
 
+echo '% remove nonexistent tag'
+hg tag --remove -d '1000000 0' foobar
+hg tip
+
 # test tag rank
 cd ..
 hg init t3

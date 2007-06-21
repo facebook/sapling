@@ -49,6 +49,14 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     Removed tag bar
 
 tip                                5:57e1983b4a60
+% remove nonexistent tag
+abort: tag foobar does not exist
+changeset:   5:57e1983b4a60
+tag:         tip
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     Removed tag bar
+
 tip                                5:d8bb4d1eff25
 bar                                0:b409d9da318e
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
