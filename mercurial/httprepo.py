@@ -121,6 +121,20 @@ else:
     class httphandler(basehttphandler):
         pass
 
+# In python < 2.5 AbstractDigestAuthHandler raises a ValueError if
+# it doesn't know about the auth type requested.  This can happen if
+# somebody is using BasicAuth and types a bad password.
+class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
+    def http_error_auth_reqed(self, auth_header, host, req, headers):
+        try:
+            return urllib2.HTTPDigestAuthHandler.http_error_auth_reqed(
+                        self, auth_header, host, req, headers)
+        except ValueError, inst:
+            arg = inst.args[0]
+            if arg.startswith("AbstractDigestAuthHandler doesn't know "):
+                return
+            raise
+
 def zgenerator(f):
     zd = zlib.decompressobj()
     try:
@@ -202,7 +216,7 @@ class httprepository(remoterepository):
             passmgr.add_password(None, host, user, passwd or '')
 
         handlers.extend((urllib2.HTTPBasicAuthHandler(passmgr),
-                         urllib2.HTTPDigestAuthHandler(passmgr)))
+                         httpdigestauthhandler(passmgr)))
         opener = urllib2.build_opener(*handlers)
 
         # 1.0 here is the _protocol_ version
