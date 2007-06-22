@@ -2398,7 +2398,9 @@ def rollback(ui, repo):
       unbundle
 
     This command should be used with care. There is only one level of
-    rollback, and there is no way to undo a rollback.
+    rollback, and there is no way to undo a rollback. It will also
+    restore the dirstate at the time of the last transaction, which
+    may lose subsequent dirstate changes.
 
     This command is not intended for use on public repositories. Once
     changes are visible for pull by other users, rolling a transaction
