@@ -44,4 +44,10 @@ hg add baz
 hg cp -A bar baz
 hg st -C
 
+echo "# foo was clean:"
+hg st -AC foo
+echo "# but it's considered modified after a copy --after --force"
+hg copy -Af bar foo
+hg st -AC foo
+
 exit 0

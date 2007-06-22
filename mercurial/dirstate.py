@@ -472,8 +472,9 @@ class dirstate(object):
             if type_ == 'n':
                 if not st:
                     st = os.lstat(self.wjoin(fn))
-                if size >= 0 and (size != st.st_size
-                                  or (mode ^ st.st_mode) & 0100):
+                if (size >= 0 and (size != st.st_size
+                                   or (mode ^ st.st_mode) & 0100)
+                    or fn in self._copymap):
                     modified.append(fn)
                 elif time != int(st.st_mtime):
                     lookup.append(fn)

@@ -23,3 +23,8 @@ bar renamed from foo:dd12c926cf165e3eb4cf87b084955cb617221c17
 # copy --after on an added file
 A baz
   bar
+# foo was clean:
+C foo
+# but it's considered modified after a copy --after --force
+M foo
+  bar
