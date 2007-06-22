@@ -96,8 +96,8 @@ class transplanter:
         diffopts = patch.diffopts(self.ui, opts)
         diffopts.git = True
 
-        lock = repo.lock()
         wlock = repo.wlock()
+        lock = repo.lock()
         try:
             for rev in revs:
                 node = revmap[rev]
