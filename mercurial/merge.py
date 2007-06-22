@@ -401,12 +401,12 @@ def applyupdates(repo, action, wctx, mctx):
                     updated += 1
                 else:
                     merged += 1
-                if f != fd:
-                    repo.ui.debug(_("copying %s to %s\n") % (f, fd))
-                    repo.wwrite(fd, repo.wread(f), flags)
-                    if move:
-                        repo.ui.debug(_("removing %s\n") % f)
-                        os.unlink(repo.wjoin(f))
+            if f != fd:
+                repo.ui.debug(_("copying %s to %s\n") % (f, fd))
+                repo.wwrite(fd, repo.wread(f), flags)
+                if move:
+                    repo.ui.debug(_("removing %s\n") % f)
+                    os.unlink(repo.wjoin(f))
             util.set_exec(repo.wjoin(fd), "x" in flags)
         elif m == "g": # get
             flags = a[2]

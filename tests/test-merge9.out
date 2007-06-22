@@ -1,0 +1,21 @@
+adding bar
+adding foo
+adding quux1
+adding quux2
+merging bar
+merging bar failed!
+merging foo and baz
+merging foo failed!
+1 files updated, 0 files merged, 0 files removed, 2 files unresolved
+There are unresolved merges, you can redo the full merge using:
+  hg update -C 2
+  hg merge 1
+3 files updated, 0 files merged, 1 files removed, 0 files unresolved
+merging bar
+merging bar failed!
+merging baz and foo
+merging baz failed!
+1 files updated, 0 files merged, 0 files removed, 2 files unresolved
+There are unresolved merges, you can redo the full merge using:
+  hg update -C 1
+  hg merge 2

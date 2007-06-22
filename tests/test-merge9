@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# test that we don't interrupt the merge session if
+# a file-level merge failed
+
+hg init repo
+cd repo
+
+echo foo > foo
+echo a > bar
+hg ci -Am 'add foo' -d '0 0'
+
+hg mv foo baz
+echo b >> bar
+echo quux > quux1
+hg ci -Am 'mv foo baz' -d '0 0'
+
+hg up -qC 0
+echo >> foo
+echo c >> bar
+echo quux > quux2
+hg ci -Am 'change foo' -d '0 0'
+
+# test with the rename on the remote side
+HGMERGE=false hg merge
+
+# test with the rename on the local side
+hg up -C 1
+HGMERGE=false hg merge
+
+true
