@@ -140,3 +140,9 @@ hg mv brand-new2 brand-new3-2
 hg ci -m 'multiple renames/copies'
 hg diff --git -r -2 -r -1
 
+echo '% there should be a trailing TAB if there are spaces in the file name'
+echo foo > 'with spaces'
+hg add 'with spaces'
+hg diff --git
+hg ci -m 'add filename with spaces'
+

@@ -145,3 +145,10 @@ rename to brand-new3
 diff --git a/brand-new2 b/brand-new3-2
 copy from brand-new2
 copy to brand-new3-2
+% there should be a trailing TAB if there are spaces in the file name
+diff --git a/with spaces b/with spaces
+new file mode 100644
+--- /dev/null
++++ b/with spaces	
+@@ -0,0 +1,1 @@
++foo

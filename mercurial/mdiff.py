@@ -50,8 +50,12 @@ class diffopts(object):
 defaultopts = diffopts()
 
 def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
-    def datetag(date):
-        return (opts.git or opts.nodates) and '\n' or '\t%s\n' % date
+    def datetag(date, addtab=True):
+        if not opts.git and not opts.nodates:
+            return '\t%s\n' % date
+        if addtab and ' ' in fn:
+            return '\t\n'
+        return '\n'
 
     if not a and not b: return ""
     epoch = util.datestr((0, 0))
@@ -66,7 +70,7 @@ def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
     elif not a:
         b = splitnewlines(b)
         if a is None:
-            l1 = '--- /dev/null%s' % datetag(epoch)
+            l1 = '--- /dev/null%s' % datetag(epoch, False)
         else:
             l1 = "--- %s%s" % ("a/" + fn, datetag(ad))
         l2 = "+++ %s%s" % ("b/" + fn, datetag(bd))
@@ -76,7 +80,7 @@ def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
         a = splitnewlines(a)
         l1 = "--- %s%s" % ("a/" + fn, datetag(ad))
         if b is None:
-            l2 = '+++ /dev/null%s' % datetag(epoch)
+            l2 = '+++ /dev/null%s' % datetag(epoch, False)
         else:
             l2 = "+++ %s%s" % ("b/" + fn, datetag(bd))
         l3 = "@@ -1,%d +0,0 @@\n" % len(a)

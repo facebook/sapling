@@ -181,3 +181,16 @@ Mc\${NkU|\`?^000jF3jhEB
 
 EOF
 hg manifest --debug | grep mbinary
+
+echo % filenames with spaces
+hg import -m spaces - <<EOF
+diff --git a/foo bar b/foo bar
+new file mode 100644
+index 0000000..257cc56
+--- /dev/null
++++ b/foo bar	
+@@ -0,0 +1 @@
++foo
+EOF
+cat "foo bar"
+
