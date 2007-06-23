@@ -133,7 +133,6 @@ class zipit:
     def addfile(self, name, mode, data):
         i = zipfile.ZipInfo(self.prefix + name, self.date_time)
         i.compress_type = self.z.compression
-        i.flag_bits = 0x08
         # unzip will not honor unix file modes unless file creator is
         # set to unix (id 3).
         i.create_system = 3
