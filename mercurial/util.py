@@ -537,6 +537,17 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
 
     return (roots, match, (inc or exc or anypats) and True)
 
+_hgexecutable = None
+
+def set_hgexecutable(path):
+    """remember location of the 'hg' executable if easily possible
+
+    path might be None or empty if hg was loaded as a module,
+    fall back to 'hg' in this case.
+    """
+    global _hgexecutable
+    _hgexecutable = path and os.path.abspath(path) or 'hg'
+
 def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     '''enhanced shell command execution.
     run with environment maybe modified, maybe in different dir.
@@ -562,6 +573,8 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     try:
         for k, v in environ.iteritems():
             os.environ[k] = py2shell(v)
+        if 'HG' not in os.environ:
+            os.environ['HG'] = _hgexecutable
         if cwd is not None and oldcwd != cwd:
             os.chdir(cwd)
         rc = os.system(cmd)
