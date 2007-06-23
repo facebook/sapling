@@ -35,7 +35,7 @@ HGTMP="${TMPDIR-/tmp}/hgeditor.$RANDOM.$RANDOM.$RANDOM.$$"
 
 (
     grep '^HG: changed' "$1" | cut -b 13- | while read changed; do
-        hg diff "$changed" >> "$HGTMP/diff"
+        "$HG" diff "$changed" >> "$HGTMP/diff"
     done
 )
 
