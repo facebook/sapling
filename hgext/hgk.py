@@ -272,7 +272,7 @@ def view(ui, repo, *etc, **opts):
     optstr = ' '.join(['--%s %s' % (k, v) for k, v in opts.iteritems() if v])
     cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
     ui.debug("running %s\n" % cmd)
-    os.system(cmd)
+    util.system(cmd)
 
 cmdtable = {
     "^view": (view,
