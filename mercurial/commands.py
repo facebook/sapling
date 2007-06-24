@@ -1699,7 +1699,8 @@ def locate(ui, repo, *pats, **opts):
     given patterns.
 
     This command searches the entire repository by default.  To search
-    just the current directory and its subdirectories, use "--include .".
+    just the current directory and its subdirectories, use
+    "--include .".
 
     If no patterns are given to match, this command prints all file
     names.
