@@ -154,7 +154,7 @@ def purge(ui, repo, *dirs, **opts):
 
 
 cmdtable = {
-    'purge':
+    'purge|clean':
         (purge,
          [('a', 'abort-on-err', None, _('abort if an error occurs')),
           ('',  'all', None, _('purge ignored files too')),
