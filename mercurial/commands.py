@@ -342,10 +342,13 @@ def cat(ui, repo, file1, *pats, **opts):
     %p   root-relative path name of file being printed
     """
     ctx = repo.changectx(opts['rev'])
+    err = 1
     for src, abs, rel, exact in cmdutil.walk(repo, (file1,) + pats, opts,
                                              ctx.node()):
         fp = cmdutil.make_file(repo, opts['output'], ctx.node(), pathname=abs)
         fp.write(ctx.filectx(abs).data())
+        err = 0
+    return err
 
 def clone(ui, source, dest=None, **opts):
     """make a copy of an existing repository
