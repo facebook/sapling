@@ -84,7 +84,7 @@ list of commands:
  tag          add a tag for the current or given revision
  tags         list repository tags
  tip          show the tip revision
- unbundle     apply a changegroup file
+ unbundle     apply one or more changegroup files
  update       update working directory
  verify       verify the integrity of the repository
  version      output version and copyright information
@@ -132,7 +132,7 @@ use "hg -v help" to show aliases and global options
  tag          add a tag for the current or given revision
  tags         list repository tags
  tip          show the tip revision
- unbundle     apply a changegroup file
+ unbundle     apply one or more changegroup files
  update       update working directory
  verify       verify the integrity of the repository
  version      output version and copyright information

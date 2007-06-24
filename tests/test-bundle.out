@@ -211,6 +211,15 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     0.3m
 
 abort: No such file or directory: ../does-not-exist.hg
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 searching for changes
 comparing with ../bundle.hg

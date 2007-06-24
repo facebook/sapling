@@ -62,6 +62,13 @@ hg -R bundle://../full.hg outgoing ../partial2
 hg -R bundle://../does-not-exist.hg outgoing ../partial2
 cd ..
 
+# test for http://www.selenic.com/mercurial/bts/issue216
+rm -r empty
+hg init empty
+hg -R test bundle --base null -r 0 ../0.hg
+hg -R test bundle --base 0    -r 1 ../1.hg
+hg -R empty unbundle -u ../0.hg ../1.hg
+
 # test for 540d1059c802
 hg init orig
 cd orig
