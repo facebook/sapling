@@ -1,0 +1,19 @@
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+pulling from ../a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+merging testdir/subdir/a and testdir/a
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+M testdir/subdir/a
+diff -r d02b3fc32762 testdir/subdir/a
+--- a/testdir/subdir/a
++++ b/testdir/subdir/a
+@@ -1,1 +1,1 @@ a
+-a
++alpha
