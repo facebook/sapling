@@ -259,6 +259,14 @@ hooks::
     Run after sending changes from local repository to another.  ID of
     first changeset sent is in $HG_NODE.  Source of operation is in
     $HG_SOURCE; see "preoutgoing" hook for description.
+  post-<command>;;
+    Run after successful invocations of the associated command. The
+    contents of the command line are passed as $HG_ARGS and the result
+    code in $HG_RESULT. Hook failure is ignored.
+  pre-<command>;;
+    Run before executing the associated command. The contents of the
+    command line are passed as $HG_ARGS. If the hook returns failure,
+    the command doesn't execute and Mercurial returns the failure code.
   prechangegroup;;
     Run before a changegroup is added via push, pull or unbundle.
     Exit status 0 allows the changegroup to proceed.  Non-zero status
@@ -312,14 +320,6 @@ hooks::
     new parent is in $HG_PARENT1.  If merge, ID of second new parent
     is in $HG_PARENT2.  If update succeeded, $HG_ERROR=0.  If update
     failed (e.g. because conflicts not resolved), $HG_ERROR=1.
-  pre-<command>;;
-    Run before executing the associated command. The contents of the
-    command line are passed as $HG_ARGS. If the hook returns failure,
-    the command doesn't execute and Mercurial returns the failure code.
-  post-<command>;;
-    Run after successful invocations of the associated command. The
-    contents of the command line are passed as $HG_ARGS and the result
-    code in $HG_RESULT. Hook failure is ignored.
 
   Note: it is generally better to use standard hooks rather than the
   generic pre- and post- command hooks as they are guaranteed to be
@@ -442,8 +442,6 @@ ui::
     Allow to prompt the user.  True or False.  Default is True.
   logtemplate;;
     Template string for commands that print changesets.
-  style;;
-    Name of style to use for command output.
   merge;;
     The conflict resolution program to use during a manual merge.
     Default is "hgmerge".
@@ -464,6 +462,8 @@ ui::
   strict;;
     Require exact command names, instead of allowing unambiguous
     abbreviations.  True or False.  Default is False.
+  style;;
+    Name of style to use for command output.
   timeout;;
     The timeout used when a lock is held (in seconds), a negative value
     means no timeout. Default is 600.
@@ -523,6 +523,9 @@ web::
   description;;
     Textual description of the repository's purpose or contents.
     Default is "unknown".
+  encoding;;
+    Character encoding name.
+    Example: "UTF-8"
   errorlog;;
     Where to output the error log. Default is stderr.
   hidden;;
@@ -553,9 +556,6 @@ web::
     Which template map style to use.
   templates;;
     Where to find the HTML templates. Default is install path.
-  encoding;;
-    Character encoding name.
-    Example: "UTF-8"
 
 
 AUTHOR
