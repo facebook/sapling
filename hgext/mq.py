@@ -60,12 +60,12 @@ def _strip(ui, repo, rev, backup="all"):
                 p[pn] = 1
         return h
 
-    def bundle(cg):
+    def bundle(repo, bases, heads, rev, suffix):
+        cg = repo.changegroupsubset(bases, heads, 'strip')
         backupdir = repo.join("strip-backup")
         if not os.path.isdir(backupdir):
             os.mkdir(backupdir)
-        name = os.path.join(backupdir, "%s" % revlog.short(rev))
-        name = savename(name)
+        name = os.path.join(backupdir, "%s-%s" % (revlog.short(rev), suffix))
         ui.warn("saving bundle to %s\n" % name)
         return changegroup.writebundle(cg, name, "HG10BZ")
 
@@ -141,11 +141,9 @@ def _strip(ui, repo, rev, backup="all"):
 
     # create a changegroup for all the branches we need to keep
     if backup == "all":
-        backupch = repo.changegroupsubset([rev], chlog.heads(), 'strip')
-        bundle(backupch)
+        bundle(repo, [rev], chlog.heads(), rev, 'backup')
     if saveheads:
-        backupch = repo.changegroupsubset(savebases.keys(), saveheads, 'strip')
-        chgrpfile = bundle(backupch)
+        chgrpfile = bundle(repo, savebases.keys(), saveheads, rev, 'temp')
 
     stripall(revnum)
 
