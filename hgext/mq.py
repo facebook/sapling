@@ -596,10 +596,17 @@ class queue:
                 else:
                     raise util.Abort(_("local changes found"))
         return m, a, r, d
-    def new(self, repo, patch, msg=None, force=None):
+
+    def new(self, repo, patch, *pats, **opts):
+        msg = opts.get('msg')
+        force = opts.get('force')
         if os.path.exists(self.join(patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
-        m, a, r, d = self.check_localchanges(repo, force)
+        if opts.get('include') or opts.get('exclude') or pats:
+            fns, match, anypats = cmdutil.matchpats(repo, pats, opts)
+            m, a, r, d = repo.status(files=fns, match=match)[:4]
+        else:
+            m, a, r, d = self.check_localchanges(repo, force)
         commitfiles = m + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
@@ -1546,13 +1553,15 @@ def prev(ui, repo, **opts):
     return q.qseries(repo, start=l-2, length=1, status='A',
                      summary=opts.get('summary'))
 
-def new(ui, repo, patch, **opts):
+def new(ui, repo, patch, *args, **opts):
     """create a new patch
 
     qnew creates a new patch on top of the currently-applied patch
     (if any). It will refuse to run if there are any outstanding
     changes unless -f is specified, in which case the patch will
-    be initialised with them.
+    be initialised with them. You may also use -I, -X, and/or a list of
+    files after the patch name to add only changes to matching files
+    to the new patch, leaving the rest as uncommitted modifications.
 
     -e, -m or -l set the patch header as well as the commit message.
     If none is specified, the patch header is empty and the
@@ -1561,7 +1570,8 @@ def new(ui, repo, patch, **opts):
     message = cmdutil.logmessage(opts)
     if opts['edit']:
         message = ui.edit(message, ui.username())
-    q.new(repo, patch, msg=message, force=opts['force'])
+    opts['msg'] = message
+    q.new(repo, patch, *args, **opts)
     q.save_dirty()
     return 0
 
@@ -2124,9 +2134,11 @@ cmdtable = {
     "qnew":
         (new,
          [('e', 'edit', None, _('edit commit message')),
-          ('f', 'force', None, _('import uncommitted changes into patch'))
+          ('f', 'force', None, _('import uncommitted changes into patch')),
+          ('I', 'include', [], _('include names matching the given patterns')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns'))
           ] + commands.commitopts,
-         'hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH'),
+         'hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]...'),
     "qnext": (next, [] + seriesopts, 'hg qnext [-s]'),
     "qprev": (prev, [] + seriesopts, 'hg qprev [-s]'),
     "^qpop":
