@@ -452,6 +452,9 @@ ui::
     Reduce the amount of output printed.  True or False.  Default is False.
   remotecmd;;
     remote command to use for clone/push/pull operations. Default is 'hg'.
+  report_untrusted;;
+    Warn if a .hg/hgrc file is ignored due to not being owned by a
+    trusted user or group.  True or False.  Default is True.
   slash;;
     Display paths using a slash ("/") as the path separator.  This only
     makes a difference on systems where the default path separator is not

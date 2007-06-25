@@ -199,13 +199,15 @@ class ui(object):
                     if path and "://" not in path and not os.path.isabs(path):
                         cdata.set("paths", n, os.path.join(root, path))
 
-        # update quiet/verbose/debug and interactive status
+        # update verbosity/interactive/report_untrusted settings
         if section is None or section == 'ui':
             if name is None or name in ('quiet', 'verbose', 'debug'):
                 self.verbosity_constraints()
-
             if name is None or name == 'interactive':
                 self.interactive = self.configbool("ui", "interactive", True)
+            if name is None or name == 'report_untrusted':
+                self.report_untrusted = (
+                    self.configbool("ui", "report_untrusted", True))
 
         # update trust information
         if (section is None or section == 'trusted') and self.trusted_users:

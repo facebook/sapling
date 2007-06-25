@@ -275,7 +275,13 @@ def dispatch(ui, args, argv0=None):
     # remember how to call 'hg' before changing the working dir
     util.set_hgexecutable(argv0)
 
-    # check for cwd first
+    # read --config before doing anything else
+    # (e.g. to change trust settings for reading .hg/hgrc)
+    config = earlygetopt(['--config'], args)
+    if config:
+        ui.updateopts(config=parseconfig(config))
+
+    # check for cwd
     cwd = earlygetopt(['--cwd'], args)
     if cwd:
         os.chdir(cwd[-1])
@@ -325,8 +331,7 @@ def dispatch(ui, args, argv0=None):
         atexit.register(print_time)
 
     ui.updateopts(options["verbose"], options["debug"], options["quiet"],
-                 not options["noninteractive"], options["traceback"],
-                 parseconfig(options["config"]))
+                 not options["noninteractive"], options["traceback"])
 
     if options['help']:
         return commands.help_(ui, cmd, options['version'])
