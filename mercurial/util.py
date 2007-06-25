@@ -105,6 +105,7 @@ defaultdateformats = (
     '%m/%d/%Y',
     '%a %b %d %H:%M:%S %Y',
     '%a %b %d %I:%M:%S%p %Y',
+    '%a, %d %b %Y %H:%M:%S',        #  GNU coreutils "/bin/date --rfc-2822"
     '%b %d %H:%M:%S %Y',
     '%b %d %I:%M:%S%p %Y',
     '%b %d %H:%M:%S',
