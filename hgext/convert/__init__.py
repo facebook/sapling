@@ -60,6 +60,8 @@ class convert(object):
             self.authorfile = self.dest.authorfile()
 
     def walktree(self, heads):
+        '''Return a mapping that identifies the uncommitted parents of every
+        uncommitted changeset.'''
         visit = heads
         known = {}
         parents = {}
@@ -69,13 +71,16 @@ class convert(object):
             known[n] = 1
             self.commitcache[n] = self.source.getcommit(n)
             cp = self.commitcache[n].parents
+            parents[n] = []
             for p in cp:
-                parents.setdefault(n, []).append(p)
+                parents[n].append(p)
                 visit.append(p)
 
         return parents
 
     def toposort(self, parents):
+        '''Return an ordering such that every uncommitted changeset is
+        preceeded by all its uncommitted ancestors.'''
         visit = parents.keys()
         seen = {}
         children = {}
@@ -84,13 +89,13 @@ class convert(object):
             n = visit.pop(0)
             if n in seen: continue
             seen[n] = 1
-            pc = 0
-            if n in parents:
-                for p in parents[n]:
-                    if p not in self.map: pc += 1
+            # Ensure that nodes without parents are present in the 'children'
+            # mapping.
+            children.setdefault(n, [])
+            for p in parents[n]:
+                if not p in self.map:
                     visit.append(p)
-                    children.setdefault(p, []).append(n)
-            if not pc: root = n
+                children.setdefault(p, []).append(n)
 
         s = []
         removed = {}
