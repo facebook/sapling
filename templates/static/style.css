@@ -58,10 +58,10 @@ pre { margin: 0; }
 .logEntry th.firstline { text-align: left; width: inherit; }
 
 /* Shortlog entries */
-.slogEntry { width: 100%; font-size: smaller; }
-.slogEntry .age { width: 7%; }
+.slogEntry { width: 100%; }
+.slogEntry .age { width: 8em; }
 .slogEntry td { font-weight: normal; text-align: left; vertical-align: top; }
-.slogEntry td.author { width: 35%; }
+.slogEntry td.author { width: 15em; }
 
 /* Tag entries */
 #tagEntries { list-style: none; margin: 0; padding: 0; }
