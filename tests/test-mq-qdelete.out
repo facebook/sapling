@@ -12,12 +12,12 @@ a
 b
 series
 status
-1 New patch: a
+1 [mq]: a
 0 base
 abort: cannot delete revision 3 above applied patches
 f
-4 New patch: f
-3 New patch: e
-2 New patch: d
-1 New patch: a
+4 [mq]: f
+3 [mq]: e
+2 [mq]: d
+1 [mq]: a
 0 base

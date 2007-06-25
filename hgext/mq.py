@@ -612,11 +612,10 @@ class queue:
         wlock = repo.wlock()
         insert = self.full_series_end()
         if msg:
-            n = repo.commit(commitfiles, "[mq]: %s" % msg, force=True,
-                            wlock=wlock)
+            n = repo.commit(commitfiles, msg, force=True, wlock=wlock)
         else:
             n = repo.commit(commitfiles,
-                            "New patch: %s" % patch, force=True, wlock=wlock)
+                            "[mq]: %s" % patch, force=True, wlock=wlock)
         if n == None:
             raise util.Abort(_("repo commit failed"))
         self.full_series[insert:insert] = [patch]
@@ -1029,7 +1028,7 @@ class queue:
 
             if not msg:
                 if not message:
-                    message = "patch queue: %s\n" % patchfn
+                    message = "[mq]: %s\n" % patchfn
                 else:
                     message = "\n".join(message)
             else:
@@ -1565,7 +1564,7 @@ def new(ui, repo, patch, *args, **opts):
 
     -e, -m or -l set the patch header as well as the commit message.
     If none is specified, the patch header is empty and the
-    commit message is 'New patch: PATCH'"""
+    commit message is '[mq]: PATCH'"""
     q = repo.mq
     message = cmdutil.logmessage(opts)
     if opts['edit']:
