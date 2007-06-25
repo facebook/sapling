@@ -1,21 +1,21 @@
 # basic operation
 adding a
 reverting a
-changeset 2:b38a34ddfd9f backs out changeset 1:a820f4f40a57
+changeset 2:2929462c3dff backs out changeset 1:a820f4f40a57
 a
 # file that was removed is recreated
 adding a
 adding a
-changeset 2:44cd84c7349a backs out changeset 1:76862dcce372
+changeset 2:de31bdc76c0d backs out changeset 1:76862dcce372
 content
 # backout of backout is as if nothing happened
 removing a
-changeset 3:0dd8a0ed5e99 backs out changeset 2:44cd84c7349a
+changeset 3:7f6d0f120113 backs out changeset 2:de31bdc76c0d
 cat: a: No such file or directory
 # backout with merge
 adding a
 reverting a
-changeset 3:6c77ecc28460 backs out changeset 1:314f55b1bf23
+changeset 3:3eb045e364a4 backs out changeset 1:314f55b1bf23
 merging with changeset 2:b66ea5b77abb
 merging a
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -25,7 +25,7 @@ line 1
 adding a
 adding b
 reverting a
-changeset 3:4cbb1e70196a backs out changeset 1:22bca4c721e5
+changeset 3:3202beb76721 backs out changeset 1:22bca4c721e5
 the backout changeset is a new head - do not forget to merge
 (use "backout --merge" if you want to auto-merge)
 adding a
@@ -43,8 +43,8 @@ abort: cb9a9f314b8b is not a parent of b2f3bb92043e
 abort: cannot use --parent on non-merge changeset
 # backout with valid parent should be ok
 removing d
-changeset 5:11fbd9be634c backs out changeset 4:b2f3bb92043e
+changeset 5:10e5328c8435 backs out changeset 4:b2f3bb92043e
 rolling back last transaction
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 removing c
-changeset 5:1a5f1a63bf2c backs out changeset 4:b2f3bb92043e
+changeset 5:033590168430 backs out changeset 4:b2f3bb92043e
