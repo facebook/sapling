@@ -142,6 +142,9 @@ class hgwebdir(object):
                 def get(section, name, default=None):
                     return u.config(section, name, default, untrusted=True)
 
+                if u.configbool("web", "hidden", untrusted=True):
+                    continue
+
                 url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
                        .replace("//", "/")) + '/'
 

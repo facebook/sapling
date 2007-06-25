@@ -525,6 +525,8 @@ web::
     Default is "unknown".
   errorlog;;
     Where to output the error log. Default is stderr.
+  hidden;;
+    Whether to hide the repository in the hgwebdir index. Default is false.
   ipv6;;
     Whether to use IPv6. Default is false.
   name;;
