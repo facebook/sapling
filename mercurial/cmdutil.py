@@ -248,12 +248,28 @@ def parseconfig(config):
     return parsed
 
 def earlygetopt(aliases, args):
-    if "--" in args:
-        args = args[:args.index("--")]
-    for opt in aliases:
-        if opt in args:
-            return args[args.index(opt) + 1]
-    return None
+    """Return list of values for a option (with aliases) in given order"""
+    try:
+        argcount = args.index("--")
+    except ValueError:
+        argcount = len(args)
+    values = []
+    pos = 0
+    while pos < argcount:
+        valuepos = argcount
+        for opt in aliases:
+            # find next occurance of current alias
+            try:
+                candidate = args.index(opt, pos, argcount) + 1
+                # ignore and let getopt report an error if there is no value
+                if candidate < valuepos:
+                    valuepos = candidate
+            except ValueError:
+                pass
+        if valuepos < argcount:
+            values.append(args[valuepos])
+        pos = valuepos
+    return values
 
 def dispatch(ui, args, argv0=None):
     # remember how to call 'hg' before changing the working dir
@@ -262,7 +278,7 @@ def dispatch(ui, args, argv0=None):
     # check for cwd first
     cwd = earlygetopt(['--cwd'], args)
     if cwd:
-        os.chdir(cwd)
+        os.chdir(cwd[-1])
 
     # read the local repository .hgrc into a local ui object
     path = findrepo() or ""
@@ -278,7 +294,7 @@ def dispatch(ui, args, argv0=None):
     # now we can expand paths, even ones in .hg/hgrc
     rpath = earlygetopt(["-R", "--repository", "--repo"], args)
     if rpath:
-        path = lui.expandpath(rpath)
+        path = lui.expandpath(rpath[-1])
         lui = commands.ui.ui(parentui=ui)
         lui.readconfig(os.path.join(path, ".hg", "hgrc"))
 
