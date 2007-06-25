@@ -784,7 +784,8 @@ class changeset_printer(object):
     def showpatch(self, node):
         if self.patch:
             prev = self.repo.changelog.parents(node)[0]
-            patch.diff(self.repo, prev, node, match=self.patch, fp=self.ui)
+            patch.diff(self.repo, prev, node, match=self.patch, fp=self.ui,
+                       opts=patch.diffopts(self.ui))
             self.ui.write("\n")
 
 class changeset_templater(changeset_printer):
