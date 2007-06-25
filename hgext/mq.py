@@ -1551,8 +1551,9 @@ def init(ui, repo, **opts):
 
     The queue repository is unversioned by default. If -c is
     specified, qinit will create a separate nested repository
-    for patches. Use qcommit to commit changes to this queue
-    repository."""
+    for patches (qinit -c may also be run later to convert
+    an unversioned patch repository into a versioned one).
+    You can use qcommit to commit changes to this queue repository."""
     q = repo.mq
     r = q.init(repo, create=opts['create_repo'])
     q.save_dirty()
