@@ -32,6 +32,24 @@ user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     b
 
+%% earlygetopt with duplicate options (36d23de02da1)
+changeset:   1:b6c483daf290
+tag:         tip
+parent:      -1:000000000000
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b
+
+changeset:   0:8580ff50825a
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     a
+
+%% earlygetopt short option without spaces (79cc512a34ed)
+0:8580ff50825a
+0:b6c483daf290
+1:b6c483daf290
 %% --cwd
 changeset:   0:8580ff50825a
 tag:         tip

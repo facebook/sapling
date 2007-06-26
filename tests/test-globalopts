@@ -28,6 +28,15 @@ hg --repository b tip
 echo %% abbrev of long option
 hg --repo c tip
 
+echo "%% earlygetopt with duplicate options (36d23de02da1)"
+hg --cwd a --cwd b --cwd c tip
+hg --repo c --repository b -R a tip
+
+echo "%% earlygetopt short option without spaces (79cc512a34ed)"
+hg -qR a tip
+hg -q -Rb tip
+hg -qRc tip
+
 echo %% --cwd
 hg --cwd a parents
 
