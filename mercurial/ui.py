@@ -237,7 +237,7 @@ class ui(object):
             try:
                 func = getattr(cdata, funcname)
                 return func(section, name)
-            except ConfigParser.InterpolationError, inst:
+            except (ConfigParser.InterpolationError, ValueError), inst:
                 msg = _("Error in configuration section [%s] "
                         "parameter '%s':\n%s") % (section, name, inst)
                 if abort:

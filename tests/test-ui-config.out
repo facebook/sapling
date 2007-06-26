@@ -8,6 +8,7 @@ Error in configuration section [interpolation]:
 'false'
 None
 ---
+Error in configuration section [values] parameter 'string':
 Not a boolean: string value
 True
 False
