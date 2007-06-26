@@ -255,11 +255,11 @@ def graphlog(ui, repo, *args, **opts):
 
 cmdtable = {
     "glog":
-    (graphlog,
-     [("l", "limit", "", _("limit number of changes displayed")),
-      ("p", "patch", False, _("show patch")),
-      ("r", "rev", [], _("show the specified revision or range")),
-      ("", "style", "", _("display using template map file")),
-      ("", "template", "", _("display with template"))],
-     "hg glog [OPTIONS]"),
+        (graphlog,
+         [('l', 'limit', '', _('limit number of changes displayed')),
+          ('p', 'patch', False, _('show patch')),
+          ('r', 'rev', [], _('show the specified revision or range')),
+          ('', 'style', '', _('display using template map file')),
+          ('', 'template', '', _('display with template'))],
+         _('hg glog [OPTION]...')),
 }

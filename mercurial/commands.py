@@ -2768,14 +2768,16 @@ table = {
           ('r', 'rev', '', _('revision to backout')),
          ] + walkopts + commitopts,
          _('hg backout [OPTION]... [-r] REV')),
-    "branch": (branch,
-               [('f', 'force', None,
-                 _('set branch name even if it shadows an existing branch'))],
-                _('hg branch [NAME]')),
-    "branches": (branches,
-                 [('a', 'active', False,
-                   _("show only branches that have unmerged heads"))],
-                 _('hg branches [-a]')),
+    "branch":
+        (branch,
+         [('f', 'force', None,
+           _('set branch name even if it shadows an existing branch'))],
+         _('hg branch [NAME]')),
+    "branches":
+        (branches,
+         [('a', 'active', False,
+           _('show only branches that have unmerged heads'))],
+         _('hg branches [-a]')),
     "bundle":
         (bundle,
          [('f', 'force', None,
@@ -2837,9 +2839,10 @@ table = {
     "debugdata": (debugdata, [], _('debugdata FILE REV')),
     "debugindex": (debugindex, [], _('debugindex FILE')),
     "debugindexdot": (debugindexdot, [], _('debugindexdot FILE')),
-    "debugrename": (debugrename,
-                    [('r', 'rev', '', _('revision to debug'))],
-                    _('debugrename [-r REV] FILE')),
+    "debugrename":
+        (debugrename,
+         [('r', 'rev', '', _('revision to debug'))],
+         _('debugrename [-r REV] FILE')),
     "debugwalk": (debugwalk, walkopts, _('debugwalk [OPTION]... [FILE]...')),
     "^diff":
         (diff,

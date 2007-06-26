@@ -275,25 +275,34 @@ def view(ui, repo, *etc, **opts):
     util.system(cmd)
 
 cmdtable = {
-    "^view": (view,
-             [('l', 'limit', '', 'limit number of changes displayed')],
-             'hg view [-l LIMIT] [REVRANGE]'),
-    "debug-diff-tree": (difftree, [('p', 'patch', None, 'generate patch'),
-                            ('r', 'recursive', None, 'recursive'),
-                            ('P', 'pretty', None, 'pretty'),
-                            ('s', 'stdin', None, 'stdin'),
-                            ('C', 'copy', None, 'detect copies'),
-                            ('S', 'search', "", 'search')],
-                            "hg git-diff-tree [options] node1 node2 [files...]"),
-    "debug-cat-file": (catfile, [('s', 'stdin', None, 'stdin')],
-                 "hg debug-cat-file [options] type file"),
-    "debug-merge-base": (base, [], "hg debug-merge-base node node"),
-    'debug-rev-parse': (revparse,
-                        [('', 'default', '', 'ignored')],
-                        "hg debug-rev-parse rev"),
-    "debug-rev-list": (revlist, [('H', 'header', None, 'header'),
-                           ('t', 'topo-order', None, 'topo-order'),
-                           ('p', 'parents', None, 'parents'),
-                           ('n', 'max-count', 0, 'max-count')],
-                 "hg debug-rev-list [options] revs"),
+    "^view":
+        (view,
+         [('l', 'limit', '', 'limit number of changes displayed')],
+         'hg view [-l LIMIT] [REVRANGE]'),
+    "debug-diff-tree":
+        (difftree,
+         [('p', 'patch', None, 'generate patch'),
+          ('r', 'recursive', None, 'recursive'),
+          ('P', 'pretty', None, 'pretty'),
+          ('s', 'stdin', None, 'stdin'),
+          ('C', 'copy', None, 'detect copies'),
+          ('S', 'search', "", 'search')],
+         'hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]...'),
+    "debug-cat-file":
+        (catfile,
+         [('s', 'stdin', None, 'stdin')],
+         'hg debug-cat-file [OPTION]... TYPE FILE'),
+    "debug-merge-base":
+        (base, [], 'hg debug-merge-base node node'),
+    "debug-rev-parse":
+        (revparse,
+         [('', 'default', '', 'ignored')],
+         'hg debug-rev-parse REV'),
+    "debug-rev-list":
+        (revlist,
+         [('H', 'header', None, 'header'),
+          ('t', 'topo-order', None, 'topo-order'),
+          ('p', 'parents', None, 'parents'),
+          ('n', 'max-count', 0, 'max-count')],
+         'hg debug-rev-list [options] revs'),
 }

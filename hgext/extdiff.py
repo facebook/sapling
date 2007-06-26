@@ -189,4 +189,4 @@ def uisetup(ui):
             return mydiff
         cmdtable[cmd] = (save(cmd, path, diffopts),
                          cmdtable['extdiff'][1][1:],
-                         _('hg %s [OPT]... [FILE]...') % cmd)
+                         _('hg %s [OPTION]... [FILE]...') % cmd)

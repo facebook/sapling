@@ -266,14 +266,14 @@ def node2txt(repo, node, ver):
 cmdtable = {
     "sign":
         (sign,
-         [('l', 'local', None, _("make the signature local")),
-          ('f', 'force', None, _("sign even if the sigfile is modified")),
-          ('', 'no-commit', None, _("do not commit the sigfile after signing")),
-          ('m', 'message', "", _("commit message")),
-          ('d', 'date', "", _("date code")),
-          ('u', 'user', "", _("user")),
-          ('k', 'key', "", _("the key id to sign with"))],
-         _("hg sign [OPTION]... [REVISION]...")),
+         [('l', 'local', None, _('make the signature local')),
+          ('f', 'force', None, _('sign even if the sigfile is modified')),
+          ('', 'no-commit', None, _('do not commit the sigfile after signing')),
+          ('m', 'message', '', _('commit message')),
+          ('d', 'date', '', _('date code')),
+          ('u', 'user', '', _('user')),
+          ('k', 'key', '', _('the key id to sign with'))],
+         _('hg sign [OPTION]... [REVISION]...')),
     "sigcheck": (check, [], _('hg sigcheck REVISION')),
     "sigs": (sigs, [], _('hg sigs')),
 }

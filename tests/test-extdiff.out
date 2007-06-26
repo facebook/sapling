@@ -5,7 +5,7 @@ Only in a: a
 making snapshot of 0 files from rev 000000000000
 making snapshot of 1 files from working dir
 diffing a.000000000000 a
-hg falabala [OPT]... [FILE]...
+hg falabala [OPTION]... [FILE]...
 
 use 'echo' to diff repository (or selected files)
 
