@@ -169,6 +169,9 @@ def backout(ui, repo, node=None, rev=None, **opts):
     if not rev:
         rev = node
 
+    if not rev:
+        raise util.Abort(_("please specify a revision to backout"))
+
     cmdutil.bail_if_changed(repo)
     op1, op2 = repo.dirstate.parents()
     if op2 != nullid:

@@ -2,9 +2,14 @@
 
 HGMERGE=true; export HGMERGE
 
-echo '# basic operation'
 hg init basic
 cd basic
+
+echo '# should complain'
+hg backout
+hg backout -r 0 0
+
+echo '# basic operation'
 echo a > a
 hg commit -d '0 0' -A -m a
 echo b >> a

@@ -1,3 +1,6 @@
+# should complain
+abort: please specify a revision to backout
+abort: please specify just one revision
 # basic operation
 adding a
 reverting a
