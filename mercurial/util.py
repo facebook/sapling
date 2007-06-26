@@ -968,6 +968,12 @@ if os.name == 'nt':
                     return p_name_ext
         return default
 
+    def set_signal_handler():
+        try:
+            set_signal_handler_win32()
+        except NameError:
+            pass
+
     try:
         # override functions with win32 versions if possible
         from util_win32 import *
