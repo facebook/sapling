@@ -72,7 +72,7 @@ class tarit:
             if kind == 'gz':
                 mode = mode[0]
                 if not fileobj:
-                    fileobj = open(name, mode)
+                    fileobj = open(name, mode + 'b')
                 gzfileobj = self.GzipFileWithTime(name, mode + 'b',
                                                   zlib.Z_BEST_COMPRESSION,
                                                   fileobj, timestamp=mtime)
