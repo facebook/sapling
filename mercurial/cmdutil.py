@@ -263,22 +263,16 @@ def earlygetopt(aliases, args):
     while pos < argcount:
         valuepos = argcount
         for opt in aliases:
-            # short option can have no spaces, e.g. hg log -qRfoo:
+            # short option can have no following space, e.g. hg log -Rfoo:
             if len(opt) == 2:
                 i = argcount
                 while i > 0:
                     i -= 1
                     arg = args[i]
-                    if len(arg) > 2 and arg[0] == '-' and arg[1] != '-':
-                        optpos = arg.find(opt[1])
-                        # split Rfoo -> R foo
-                        if 0 < optpos < len(arg)-1:
-                            args[i:i+1] = [arg[:optpos+1], arg[optpos+1:]]
-                            argcount += 1
-                        # split -qR -> -q -R
-                        if optpos > 1:
-                            args[i:i+1] = [arg[:optpos], opt]
-                            argcount += 1
+                    if len(arg) > 2 and arg.startswith(opt):
+                        # split -Rfoo -> -R foo
+                        args[i:i+1] = [opt, arg[2:]]
+                        argcount += 1
             # find next occurance of current alias
             try:
                 candidate = args.index(opt, pos, argcount) + 1

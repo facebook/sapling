@@ -46,10 +46,8 @@ user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     a
 
-%% earlygetopt short option without spaces (79cc512a34ed)
-0:8580ff50825a
+%% earlygetopt short option without following space
 0:b6c483daf290
-1:b6c483daf290
 %% --cwd
 changeset:   0:8580ff50825a
 tag:         tip
