@@ -318,6 +318,15 @@ def dispatch(ui, args, argv0=None):
     fullargs = args
     cmd, func, args, options, cmdoptions = parse(ui, args)
 
+    if options["config"]:
+        raise util.Abort(_("Option --config may not be abbreviated!"))
+    if options["cwd"]:
+        raise util.Abort(_("Option --cwd may not be abbreviated!"))
+    if options["repository"]:
+        raise util.Abort(_(
+            "Option -R has to be separated from other options (i.e. not -qR) "
+            "and --repository may only be abbreviated as --repo!"))
+
     if options["encoding"]:
         util._encoding = options["encoding"]
     if options["encodingmode"]:

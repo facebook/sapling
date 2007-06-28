@@ -35,6 +35,14 @@ hg --repo c --repository b -R a tip
 echo "%% earlygetopt short option without following space"
 hg -q -Rb tip
 
+echo "%% earlygetopt with illegal abbreviations"
+hg --confi "foo.bar=baz"
+hg --cw a tip
+hg --rep a tip
+hg --repositor a tip
+hg -qR a tip
+hg -qRa tip
+
 echo %% --cwd
 hg --cwd a parents
 
