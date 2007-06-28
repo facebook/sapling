@@ -141,7 +141,7 @@ def get_revs(repo, rev_opt):
     else:
         return (repo.changelog.count() - 1, 0)
 
-def graphlog(ui, repo, *args, **opts):
+def graphlog(ui, repo, **opts):
     """show revision history alongside an ASCII revision graph
 
     Print a revision history alongside a revision graph drawn with

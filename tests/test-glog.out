@@ -307,3 +307,9 @@ o  changeset:   0:7aa22e58e8c1
    date:        Thu Jan 01 00:00:00 1970 +0000
    summary:     (0) root
 
+% unused arguments
+hg glog: invalid arguments
+hg glog [OPTION]...
+
+show revision history alongside an ASCII revision graph
+failed

@@ -138,3 +138,6 @@ hg glog -q
 
 echo % glog
 hg glog
+
+echo % unused arguments
+hg glog -q foo || echo failed
