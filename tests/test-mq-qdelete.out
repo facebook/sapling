@@ -1,5 +1,5 @@
 adding base
-abort: missing patch name
+abort: qdelete requires at least one revision or patch name
 abort: cannot delete applied patch c
 Now at: b
 a

@@ -533,7 +533,8 @@ class queue:
 
     def delete(self, repo, patches, opts):
         if not patches and not opts.get('rev'):
-            raise util.Abort(_('missing patch name'))
+            raise util.Abort(_('qdelete requires at least one revision or '
+                               'patch name'))
 
         realpatches = []
         for patch in patches:
@@ -1383,11 +1384,13 @@ class queue:
 def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
-    With --rev, mq will stop managing the named revisions. The
-    patches must be applied and at the base of the stack. This option
-    is useful when the patches have been applied upstream.
+    The patches must not be applied, unless they are arguments to
+    the --rev parameter. At least one patch or revision is required.
 
-    Otherwise, the patches must not be applied.
+    With --rev, mq will stop managing the named revisions (converting
+    them to regular mercurial changesets). The patches must be applied
+    and at the base of the stack. This option is useful when the patches
+    have been applied upstream.
 
     With --keep, the patch files are preserved in the patch directory."""
     q = repo.mq
@@ -2109,7 +2112,7 @@ cmdtable = {
         (delete,
          [('k', 'keep', None, _('keep patch file')),
           ('r', 'rev', [], _('stop managing a revision'))],
-         _('hg qdelete [-k] [-r REV]... PATCH...')),
+         _('hg qdelete [-k] [-r REV]... [PATCH]...')),
     'qfold':
         (fold,
          [('e', 'edit', None, _('edit patch header')),
