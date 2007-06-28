@@ -13,6 +13,8 @@ hg qnew a
 hg qnew b
 hg qnew c
 
+hg qdel
+
 hg qdel c
 hg qpop
 hg qdel c

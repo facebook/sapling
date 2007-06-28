@@ -532,6 +532,9 @@ class queue:
         return (err, n)
 
     def delete(self, repo, patches, opts):
+        if not patches and not opts.get('rev'):
+            raise util.Abort(_('missing patch name'))
+
         realpatches = []
         for patch in patches:
             patch = self.lookup(patch, strict=True)
