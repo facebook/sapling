@@ -248,42 +248,32 @@ def parseconfig(config):
     return parsed
 
 def earlygetopt(aliases, args):
-    """Return list of values for a option (with aliases) in given order
+    """Return list of values for an option (or aliases).
 
-    Short option aliases have to occur before long aliases, e.g.:
-    earlygetopt(["-R", "--repository", "--repo"], args)
-    (this is not checked!)
+    The values are listed in the order they appear in args.
+    The options and values are removed from args.
     """
     try:
         argcount = args.index("--")
     except ValueError:
         argcount = len(args)
+    shortopts = [opt for opt in aliases if len(opt) == 2]
     values = []
     pos = 0
     while pos < argcount:
-        valuepos = argcount
-        for opt in aliases:
-            # short option can have no following space, e.g. hg log -Rfoo:
-            if len(opt) == 2:
-                i = argcount
-                while i > 0:
-                    i -= 1
-                    arg = args[i]
-                    if len(arg) > 2 and arg.startswith(opt):
-                        # split -Rfoo -> -R foo
-                        args[i:i+1] = [opt, arg[2:]]
-                        argcount += 1
-            # find next occurance of current alias
-            try:
-                candidate = args.index(opt, pos, argcount) + 1
+        if args[pos] in aliases:
+            if pos + 1 >= argcount:
                 # ignore and let getopt report an error if there is no value
-                if candidate < valuepos:
-                    valuepos = candidate
-            except ValueError:
-                pass
-        if valuepos < argcount:
-            values.append(args[valuepos])
-        pos = valuepos
+                break
+            del args[pos]
+            values.append(args.pop(pos))
+            argcount -= 2
+        elif args[pos][:2] in shortopts:
+            # short option can have no following space, e.g. hg log -Rfoo
+            values.append(args.pop(pos)[2:])
+            argcount -= 1
+        else:
+            pos += 1
     return values
 
 def dispatch(ui, args, argv0=None):
