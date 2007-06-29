@@ -1395,6 +1395,8 @@ def help_(ui, name=None, with_version=False):
         try:
             ct = mod.cmdtable
         except AttributeError:
+            ct = None
+        if not ct:
             ui.status(_('no commands defined\n'))
             return
 

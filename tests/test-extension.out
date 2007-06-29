@@ -19,3 +19,6 @@ ui.parentui isnot None
 reposetup called for a
 ui == repo.ui
 Foo
+empty extension - empty cmdtable
+
+no commands defined

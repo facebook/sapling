@@ -53,3 +53,14 @@ echo '[extensions]' > $HGRCPATH
 echo "barfoo = $barfoopath" >> $HGRCPATH
 cd a
 hg foo
+
+cd ..
+cat > empty.py <<EOF
+'''empty cmdtable
+'''
+cmdtable = {}
+EOF
+emptypath=`pwd`/empty.py
+echo '[extensions]' > $HGRCPATH
+echo "empty = $emptypath" >> $HGRCPATH
+hg help empty
