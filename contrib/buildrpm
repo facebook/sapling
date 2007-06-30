@@ -29,7 +29,7 @@ tmpspec=/tmp/`basename "$specfile"`.$$
 version=`hg tags | perl -e 'while(<STDIN>){if(/^(\d\S+)/){print$1;exit}}'`
 # Compute the release number as the difference in revision numbers
 # between the tip and the most recent tag.
-release=`hg tags | perl -e 'while(<STDIN>){/^(\S+)\s+(\d+)/;if($1eq"tip"){$t=$2}else{print$t-$2+1;exit}}'`
+release=`hg tags | perl -e 'while(<STDIN>){($tag,$id)=/^(\S+)\s+(\d+)/;if($tag eq "tip"){$tip = $id}elsif($tag=~/^\d/){print $tip-$id+1;exit}}'`
 tip=`hg -q tip`
 
 # Beat up the spec file
