@@ -79,3 +79,4 @@ rm -rf $RPM_BUILD_ROOT
 %{pythonlib}/hgweb/*.py*
 %{pythonlib}/*.so
 %{hgext}/*.py*
+%{hgext}/convert/*.py*
