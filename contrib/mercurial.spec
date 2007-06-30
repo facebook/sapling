@@ -17,7 +17,7 @@ BuildRoot: /tmp/build.%{name}-%{version}-%{release}
 # python-devel provides an adequate python-dev.  The merge tool is a
 # run-time dependency.
 #
-BuildRequires: python >= 2.3, python-devel, make, gcc
+BuildRequires: python >= 2.3, python-devel, make, gcc, asciidoc, xmlto
 
 %define pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')
 %define pythonlib %{_libdir}/python%{pythonver}/site-packages/%{name}
@@ -32,10 +32,12 @@ rm -rf $RPM_BUILD_ROOT
 %setup -q
 
 %build
-python setup.py build
+make all
 
 %install
 python setup.py install --root $RPM_BUILD_ROOT --prefix %{_prefix}
+make install-doc DESTDIR=$RPM_BUILD_ROOT MANDIR=%{_mandir}
+
 install contrib/hgk          $RPM_BUILD_ROOT%{_bindir}
 install contrib/convert-repo $RPM_BUILD_ROOT%{_bindir}/mercurial-convert-repo
 install contrib/hg-ssh       $RPM_BUILD_ROOT%{_bindir}
@@ -58,7 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc doc/* *.cgi
+%doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html doc/ja *.cgi
+%{_mandir}/man?/hg*.gz
 %dir %{pythonlib}
 %dir %{hgext}
 %{_sysconfdir}/bash_completion.d/mercurial.sh
