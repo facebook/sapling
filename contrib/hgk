@@ -43,7 +43,7 @@ proc getcommits {rargs} {
     }
     if [catch {
 	set parse_args [concat --default HEAD $revargs]
-	set parse_temp [eval exec {$env(HG)} debug-rev-parse $parse_args]
+	set parse_temp [eval exec {$env(HG)} --config ui.report_untrusted=false debug-rev-parse $parse_args]
 	regsub -all "\r\n" $parse_temp "\n" parse_temp
 	set parsed_args [split $parse_temp "\n"]
     } err] {
@@ -57,7 +57,7 @@ proc getcommits {rargs} {
 	set parsed_args [concat -n $limit $parsed_args]
     }
     if [catch {
-	set commfd [open "|{$env(HG)} debug-rev-list --header --topo-order --parents $parsed_args" r]
+	set commfd [open "|{$env(HG)} --config ui.report_untrusted=false debug-rev-list --header --topo-order --parents $parsed_args" r]
     } err] {
 	puts stderr "Error executing hg debug-rev-list: $err"
 	exit 1
@@ -180,7 +180,7 @@ proc doupdate {reading} {
 
 proc readcommit {id} {
     global env
-    if [catch {set contents [exec $env(HG) debug-cat-file commit $id]}] return
+    if [catch {set contents [exec $env(HG) --config ui.report_untrusted=false debug-cat-file commit $id]}] return
     parsecommit $id $contents 0 {}
 }
 
@@ -261,7 +261,7 @@ proc parsecommit {id contents listed olds} {
 proc readrefs {} {
     global tagids idtags headids idheads tagcontents env
 
-    set tags [exec $env(HG) tags]
+    set tags [exec $env(HG) --config ui.report_untrusted=false tags]
     regsub -all "\r\n" $tags "\n" tags
     set lines [split $tags "\n"]
     foreach f $lines {
@@ -1734,8 +1734,7 @@ proc findpatches {} {
     }
 
     if {[catch {
-	set f [open [list | $env(HG) debug-diff-tree --stdin -s -r -S$findstring \
-			 << $inputids] r]
+	set f [open [list | $env(HG) --config ui.report_untrusted=false debug-diff-tree --stdin -s -r -S$findstring << $inputids] r]
     } err]} {
 	error_popup "Error starting search process: $err"
 	return
@@ -1838,7 +1837,7 @@ proc findfiles {} {
     # start off a git-diff-tree process if needed
     if {$diffsneeded ne {}} {
 	if {[catch {
-	    set df [open [list | $env(HG) debug-diff-tree -r --stdin << $diffsneeded] r]
+	    set df [open [list | $env(HG) --config ui.report_untrusted=false debug-diff-tree -r --stdin << $diffsneeded] r]
 	} err ]} {
 	    error_popup "Error starting search process: $err"
 	    return
@@ -2262,7 +2261,7 @@ proc findgca {ids} {
 	    set gca $id
 	} else {
 	    if {[catch {
-		set gca [exec $env(HG) debug-merge-base $gca $id]
+		set gca [exec $env(HG) --config ui.report_untrusted=false debug-merge-base $gca $id]
 	    } err]} {
 		return {}
 	    }
@@ -2351,7 +2350,7 @@ proc showmergediff {} {
     catch {unset grouphunks}
     set groupfilelast -1
     foreach p $parents($diffmergeid) {
-	set cmd [list | $env(HG) debug-diff-tree -p $p $diffmergeid]
+	set cmd [list | $env(HG) --config ui.report_untrusted=false debug-diff-tree -p $p $diffmergeid]
 	set cmd [concat $cmd $mergefilelist($diffmergeid)]
 	if {[catch {set f [open $cmd r]} err]} {
 	    error_popup "Error getting diffs: $err"
@@ -2795,7 +2794,7 @@ proc gettreediffs {ids} {
     set treediff {}
     set id [lindex $ids 0]
     set p [lindex $ids 1]
-    if [catch {set gdtf [open "|{$env(HG)} debug-diff-tree -r $p $id" r]}] return
+    if [catch {set gdtf [open "|{$env(HG)} --config ui.report_untrusted=false debug-diff-tree -r $p $id" r]}] return
     fconfigure $gdtf -blocking 0
     fileevent $gdtf readable [list gettreediffline $gdtf $ids]
 }
@@ -2831,7 +2830,7 @@ proc getblobdiffs {ids} {
     set id [lindex $ids 0]
     set p [lindex $ids 1]
     set env(GIT_DIFF_OPTS) $diffopts
-    set cmd [list | $env(HG) debug-diff-tree -r -p -C $p $id]
+    set cmd [list | $env(HG) --config ui.report_untrusted=false debug-diff-tree -r -p -C $p $id]
     if {[catch {set bdf [open $cmd r]} err]} {
 	puts "error getting diffs: $err"
 	return
@@ -3419,7 +3418,7 @@ proc mkpatchgo {} {
     set oldid [$patchtop.fromsha1 get]
     set newid [$patchtop.tosha1 get]
     set fname [$patchtop.fname get]
-    if {[catch {exec $env(HG) debug-diff-tree -p $oldid $newid >$fname &} err]} {
+    if {[catch {exec $env(HG) --config ui.report_untrusted=false debug-diff-tree -p $oldid $newid >$fname &} err]} {
 	error_popup "Error creating patch: $err"
     }
     catch {destroy $patchtop}
@@ -3478,7 +3477,7 @@ proc domktag {} {
 	return
     }
     if {[catch {
-	set out [exec $env(HG) tag -r $id $tag]
+	set out [exec $env(HG) --config ui.report_untrusted=false tag -r $id $tag]
     } err]} {
 	error_popup "Error creating tag: $err"
 	return
@@ -3640,7 +3639,7 @@ proc doquit {} {
 set datemode 0
 set boldnames 0
 set diffopts "-U 5 -p"
-set wrcomcmd "\"\$HG\" debug-diff-tree --stdin -p --pretty"
+set wrcomcmd "\"\$HG\" --config ui.report_untrusted=false debug-diff-tree --stdin -p --pretty"
 
 set mainfont {Helvetica 9}
 set textfont {Courier 9}
