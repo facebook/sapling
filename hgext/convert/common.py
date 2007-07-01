@@ -12,7 +12,7 @@ class commit(object):
 class converter_source(object):
     """Conversion source interface"""
 
-    def __init__(self, ui, path):
+    def __init__(self, ui, path, rev=None):
         """Initialize conversion source (or raise NoRepo("message")
         exception if path is not a valid repository)"""
         raise NotImplementedError()

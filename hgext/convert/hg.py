@@ -6,7 +6,7 @@ from mercurial import hg
 from common import NoRepo, converter_sink
 
 class convert_mercurial(converter_sink):
-    def __init__(self, ui, path):
+    def __init__(self, ui, path, rev=None):
         self.path = path
         self.ui = ui
         try:

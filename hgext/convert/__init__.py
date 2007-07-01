@@ -17,12 +17,15 @@ commands.norepo += " convert"
 
 converters = [convert_cvs, convert_git, convert_mercurial]
 
-def converter(ui, path):
+def converter(ui, path, rev=None):
     if not os.path.isdir(path):
         raise util.Abort("%s: not a directory" % path)
     for c in converters:
         try:
-            return c(ui, path)
+            if rev:
+                return c(ui, path, rev=rev)
+            else:
+                return c(ui, path)
         except NoRepo:
             pass
     raise util.Abort("%s: unknown repository type" % path)
@@ -248,6 +251,10 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     Accepted destination formats:
     - Mercurial
 
+    If no revision is given, all revisions will be converted. Otherwise,
+    convert will only import up to the named revision (given in a format
+    understood by the source).
+
     If destination isn't given, a new Mercurial repo named <src>-hg will
     be created. If <mapfile> isn't given, it will be put in a default
     location (<dest>/.hg/shamap by default)
@@ -267,7 +274,7 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     srcauthor=whatever string you want
     '''
 
-    srcc = converter(ui, src)
+    srcc = converter(ui, src, rev=opts.get('rev'))
     if not hasattr(srcc, "getcommit"):
         raise util.Abort("%s: can't read from this repo type" % src)
 
@@ -313,6 +320,7 @@ cmdtable = {
     "convert":
         (_convert,
          [('A', 'authors', '', 'username mapping filename'),
+          ('r', 'rev', '', 'import up to target revision REV'),
           ('', 'datesort', None, 'try to sort changesets by date')],
          'hg convert [OPTION]... SOURCE [DEST [MAPFILE]]'),
 }

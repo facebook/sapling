@@ -6,9 +6,10 @@ from mercurial import util
 from common import NoRepo, commit, converter_source
 
 class convert_cvs(converter_source):
-    def __init__(self, ui, path):
+    def __init__(self, ui, path, rev=None):
         self.path = path
         self.ui = ui
+        self.rev = rev
         cvs = os.path.join(path, "CVS")
         if not os.path.exists(cvs):
             raise NoRepo("couldn't open CVS repo %s" % path)
@@ -29,15 +30,32 @@ class convert_cvs(converter_source):
         if self.changeset:
             return
 
+        maxrev = 0
+        cmd = 'cvsps -A -u --cvs-direct -q'
+        if self.rev:
+            # TODO: handle tags
+            try:
+                # patchset number?
+                maxrev = int(self.rev)
+            except ValueError:
+                try:
+                    # date
+                    util.parsedate(self.rev, ['%Y/%m/%d %H:%M:%S'])
+                    cmd = "%s -d '1970/01/01 00:00:01' -d '%s'" % (cmd, self.rev)
+                except util.Abort:
+                    raise util.Abort('revision %s is not a patchset number or date' % self.rev)
+
         d = os.getcwd()
         try:
             os.chdir(self.path)
             id = None
             state = 0
-            for l in os.popen("cvsps -A -u --cvs-direct -q"):
+            for l in os.popen(cmd):
                 if state == 0: # header
                     if l.startswith("PatchSet"):
                         id = l[9:-2]
+                        if maxrev and int(id) > maxrev:
+                            state = 3
                     elif l.startswith("Date"):
                         date = util.parsedate(l[6:-1], ["%Y/%m/%d %H:%M:%S"])
                         date = util.datestr(date)
@@ -85,6 +103,8 @@ class convert_cvs(converter_source):
                         rev = l[colon+1:-2]
                         rev = rev.split("->")[1]
                         files[file] = rev
+                elif state == 3:
+                    continue
 
             self.heads = self.lastbranch.values()
         finally:

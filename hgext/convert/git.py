@@ -5,7 +5,7 @@ import os
 from common import NoRepo, commit, converter_source
 
 class convert_git(converter_source):
-    def __init__(self, ui, path):
+    def __init__(self, ui, path, rev=None):
         if os.path.isdir(path + "/.git"):
             path += "/.git"
         if not os.path.exists(path + "/objects"):
@@ -13,10 +13,12 @@ class convert_git(converter_source):
 
         self.path = path
         self.ui = ui
+        self.rev = rev
         self.encoding = 'utf-8'
 
     def getheads(self):
-        fh = os.popen("GIT_DIR=%s git-rev-parse --verify HEAD" % self.path)
+        rev = self.rev or 'HEAD'
+        fh = os.popen("GIT_DIR=%s git-rev-parse --verify %s" % (self.path, rev))
         return [fh.read()[:-1]]
 
     def catfile(self, rev, type):
