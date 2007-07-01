@@ -2819,7 +2819,9 @@ proc gettreediffline {gdtf ids} {
 	}
 	return
     }
-    set file [lindex $line 5]
+    set tab1 [expr [string first "\t" $line] + 1]
+    set tab2 [expr [string first "\t" $line $tab1] - 1]
+    set file [string range $line $tab1 $tab2]
     lappend treediff $file
 }
 
