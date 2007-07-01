@@ -29,6 +29,9 @@ class convert_mercurial(converter_sink):
         if self.repo.dirstate.state(f) == '?':
             self.repo.dirstate.update([f], "a")
 
+    def copyfile(self, source, dest):
+        self.repo.copy(source, dest)
+
     def delfile(self, f):
         try:
             os.unlink(self.repo.wjoin(f))

@@ -193,6 +193,8 @@ class convert(object):
     def copy(self, rev):
         c = self.commitcache[rev]
         files = self.source.getchanges(rev)
+        
+        do_copies = (hasattr(c, 'copies') and hasattr(self.dest, 'copyfile'))
 
         for f, v in files:
             try:
@@ -202,6 +204,11 @@ class convert(object):
             else:
                 e = self.source.getmode(f, v)
                 self.dest.putfile(f, e, data)
+                if do_copies:
+                    if f in c.copies:
+                        # Merely marks that a copy happened.
+                        self.dest.copyfile(c.copies[f], f)
+
 
         r = [self.map[v] for v in c.parents]
         f = [f for f, v in files]
@@ -258,6 +265,7 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     Accepted source formats:
     - GIT
     - CVS
+    - SVN
 
     Accepted destination formats:
     - Mercurial
