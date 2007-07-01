@@ -4,23 +4,16 @@ import os
 
 from common import NoRepo, commit, converter_source
 
-def recode(s):
-    try:
-        return s.decode("utf-8").encode("utf-8")
-    except:
-        try:
-            return s.decode("latin-1").encode("utf-8")
-        except:
-            return s.decode("utf-8", "replace").encode("utf-8")
-
 class convert_git(converter_source):
     def __init__(self, ui, path):
         if os.path.isdir(path + "/.git"):
             path += "/.git"
-        self.path = path
-        self.ui = ui
         if not os.path.exists(path + "/objects"):
             raise NoRepo("couldn't open GIT repo %s" % path)
+
+        self.path = path
+        self.ui = ui
+        self.encoding = 'utf-8'
 
     def getheads(self):
         fh = os.popen("GIT_DIR=%s git-rev-parse --verify HEAD" % self.path)
@@ -58,7 +51,7 @@ class convert_git(converter_source):
         c = self.catfile(version, "commit") # read the commit hash
         end = c.find("\n\n")
         message = c[end+2:]
-        message = recode(message)
+        message = self.recode(message)
         l = c[:end].splitlines()
         manifest = l[0].split()[1]
         parents = []
@@ -69,13 +62,13 @@ class convert_git(converter_source):
                 tm, tz = p[-2:]
                 author = " ".join(p[:-2])
                 if author[0] == "<": author = author[1:-1]
-                author = recode(author)
+                author = self.recode(author)
             if n == "committer":
                 p = v.split()
                 tm, tz = p[-2:]
                 committer = " ".join(p[:-2])
                 if committer[0] == "<": committer = committer[1:-1]
-                committer = recode(committer)
+                committer = self.recode(committer)
                 message += "\ncommitter: %s\n" % committer
             if n == "parent": parents.append(v)
 

@@ -235,9 +235,6 @@ class convert_cvs(converter_source):
         cl.sort()
         return cl
 
-    def recode(self, text):
-        return text.decode(self.encoding, "replace").encode("utf-8")
-
     def getcommit(self, rev):
         return self.changeset[rev]
 

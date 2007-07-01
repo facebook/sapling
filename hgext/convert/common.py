@@ -44,6 +44,18 @@ class converter_source(object):
         """Return the tags as a dictionary of name: revision"""
         raise NotImplementedError()
 
+    def recode(self, s, encoding=None):
+        if not encoding:
+            encoding = hasattr(self, 'encoding') and self.encoding or 'utf-8'
+            
+        try:
+            return s.decode(encoding).encode("utf-8")
+        except:
+            try:
+                return s.decode("latin-1").encode("utf-8")
+            except:
+                return s.decode(encoding, "replace").encode("utf-8")
+
 class converter_sink(object):
     """Conversion sink (target) interface"""
 
