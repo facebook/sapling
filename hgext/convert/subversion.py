@@ -193,9 +193,6 @@ class convert_svn(converter_source):
                 received.append((orig_paths, revnum, author, date, message))
            
         def after_received(orig_paths, revnum, author, date, message):
-            if revnum == 1172:
-                import pdb
-                pdb.set_trace()
             if revnum in self.modulemap:
                 new_module = self.modulemap[revnum]
                 if new_module != self.module:
