@@ -10,7 +10,7 @@ from cvs import convert_cvs
 from git import convert_git
 from hg import convert_mercurial
 
-import os
+import os, shutil
 from mercurial import hg, ui, util, commands
 
 commands.norepo += " convert"
@@ -274,15 +274,12 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     srcauthor=whatever string you want
     '''
 
-    srcc = converter(ui, src, rev=opts.get('rev'))
-    if not hasattr(srcc, "getcommit"):
-        raise util.Abort("%s: can't read from this repo type" % src)
-
     if not dest:
         dest = src + "-hg"
         ui.status("assuming destination %s\n" % dest)
 
     # Try to be smart and initalize things when required
+    created = False
     if os.path.isdir(dest):
         if len(os.listdir(dest)) > 0:
             try:
@@ -297,15 +294,26 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
         else:
             ui.status("initializing destination %s repository\n" % dest)
             hg.repository(ui, dest, create=True)
+            created = True
     elif os.path.exists(dest):
         raise util.Abort("destination %s exists and is not a directory" % dest)
     else:
         ui.status("initializing destination %s repository\n" % dest)
         hg.repository(ui, dest, create=True)
+        created = True
 
     destc = converter(ui, dest)
     if not hasattr(destc, "putcommit"):
         raise util.Abort("%s: can't write to this repo type" % src)
+
+    try:
+        srcc = converter(ui, src, rev=opts.get('rev'))
+        if not hasattr(srcc, "getcommit"):
+            raise util.Abort("%s: can't read from this repo type" % src)
+    except Exception:
+        if created:
+            shutil.rmtree(dest, True)
+        raise
 
     if not mapfile:
         try:
