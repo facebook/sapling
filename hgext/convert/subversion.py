@@ -160,11 +160,21 @@ class convert_svn(converter_source):
         svn.ra.reparent(self.ra, svn_url.encode(self.encoding))
 
     def _fetch_revisions(self, from_revnum = 0, to_revnum = 347, pb=None):
+        # batching is broken for branches
+        to_revnum = 0
         if not hasattr(self, 'child_rev'):
             self.child_rev = from_revnum
             self.child_cset = self.commits.get(self.child_rev)
         else:
             self.commits[self.child_rev] = self.child_cset
+            # batching broken
+            return
+            # if the branch was created in the middle of the last batch,
+            # svn log will complain that the path doesn't exist in this batch
+            # so we roll the parser back to the last revision where this branch appeared
+            revnum = self.revnum(self.child_rev)
+            if revnum > from_revnum:
+                from_revnum = revnum
 
         self.ui.debug('Fetching revisions %d to %d\n' % (from_revnum, to_revnum))
 
