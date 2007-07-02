@@ -131,6 +131,9 @@ class convert_svn(converter_source):
 
     def rev(self, revnum):
         return (u"svn:%s%s@%s" % (self.uuid, self.module, revnum)).decode(self.encoding)
+
+    def revnum(self, rev):
+        return int(rev.split('@')[-1])
             
     def get_blacklist(self):
         """Avoid certain revision numbers.
@@ -428,7 +431,7 @@ class convert_svn(converter_source):
         # TODO: ra.get_file transmits the whole file instead of diffs.
         mode = ''
         try:
-            revnum = int(rev.split("@")[-1])
+            revnum = self.revnum(rev)
             if self.module != self.modulemap[revnum]:
                 self.module = self.modulemap[revnum]
                 self.reparent(self.module)
@@ -467,7 +470,7 @@ class convert_svn(converter_source):
 
     def getcommit(self, rev):
         if rev not in self.commits:
-            revnum = int(rev.split('@')[-1])
+            revnum = self.revnum(rev)
             minrev = revnum - LOG_BATCH_SIZE > 0 and revnum - LOG_BATCH_SIZE or 0
             self._fetch_revisions(from_revnum=revnum, to_revnum=minrev)
         return self.commits[rev]
