@@ -8,6 +8,8 @@ class commit(object):
             if not x in parts:
                 raise util.Abort("commit missing field %s" % x)
         self.__dict__.update(parts)
+        if not self.desc or self.desc.isspace():
+            self.desc = '*** empty log message ***'
 
 class converter_source(object):
     """Conversion source interface"""

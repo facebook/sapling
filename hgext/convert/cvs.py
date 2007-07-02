@@ -80,8 +80,6 @@ class convert_cvs(converter_source):
                     if l == "Members: \n":
                         files = {}
                         log = self.recode(log[:-1])
-                        if log.isspace():
-                            log = "*** empty log message ***\n"
                         state = 2
                     else:
                         log += l
