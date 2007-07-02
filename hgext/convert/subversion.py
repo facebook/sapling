@@ -239,12 +239,15 @@ class convert_svn(converter_source):
                                 # Maybe it was added and there is no more history.
                     entrypath = get_entry_from_path(path, module=self.module)
                     # self.ui.write("entrypath %s\n" % entrypath)
-                    if not entrypath:
+                    if entrypath is None:
                         # Outside our area of interest
                         self.ui.debug("boring@%s: %s\n" % (revnum, path))
                         continue
                     entry = entrypath.decode(self.encoding)
                     ent = orig_paths[path]
+                    if not entrypath:
+                        # TODO: branch creation event
+                        pass
 
                     kind = svn.ra.check_path(self.ra, entrypath, revnum)
                     if kind == svn.core.svn_node_file:
@@ -393,6 +396,8 @@ class convert_svn(converter_source):
                 # a list of (filename, id) where id lets us retrieve the file.
                 # eg in git, id is the object hash. for svn it'll be the 
                 self.files[rev] = zip(entries, [rev] * len(entries))
+                if not entries:
+                    return
 
                 # Example SVN datetime. Includes microseconds.
                 # ISO-8601 conformant
