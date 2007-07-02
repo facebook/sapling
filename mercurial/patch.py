@@ -91,6 +91,7 @@ def extract(ui, fileobj):
                         # drop earlier commit message content
                         cfp.seek(0)
                         cfp.truncate()
+                        subject = None
                     elif hgpatch:
                         if line.startswith('# User '):
                             user = line[7:]
