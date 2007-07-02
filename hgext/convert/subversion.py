@@ -123,6 +123,8 @@ class convert_svn(converter_source):
         if not latest:
             latest = svn.ra.get_latest_revnum(self.ra)
         dirent = svn.ra.stat(self.ra, self.module, latest)
+        if not dirent:
+            raise util.Abort('module %s not found in revision %d' % (self.module, latest))
         self.last_changed = dirent.created_rev
 
         self.head = self.rev(self.last_changed)
