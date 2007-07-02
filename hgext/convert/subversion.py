@@ -207,6 +207,8 @@ class convert_svn(converter_source):
                 rev = self.rev(revnum)
                 try:
                     branch = self.module.split("/")[-1]
+                    if branch == 'trunk':
+                        branch = ''
                 except IndexError:
                     branch = None
                 
