@@ -27,7 +27,7 @@ except ImportError:
 
 class CompatibilityException(Exception): pass
 
-nbRevisionsPerFetch = 50
+LOG_BATCH_SIZE = 50
 
 class svn_entry(object):
     """Emulate a Subversion path change."""
@@ -127,9 +127,6 @@ class convert_svn(converter_source):
 
         self.head = self.rev(self.last_changed)
 
-        # Should lazily fetch revisions in batches of, say, 1,000...:
-        self._fetch_revisions(from_revnum=self.last_changed, to_revnum=0)
-
     def rev(self, revnum):
         return (u"svn:%s%s@%s" % (self.uuid, self.module, revnum)).decode(self.encoding)
             
@@ -158,9 +155,12 @@ class convert_svn(converter_source):
         svn.ra.reparent(self.ra, svn_url.encode(self.encoding))
 
     def _fetch_revisions(self, from_revnum = 0, to_revnum = 347, pb=None):
-        self.parent_cset = None
-        self.child_cset = None
-        
+        if not hasattr(self, 'child_rev'):
+            self.child_rev = from_revnum
+            self.child_cset = self.commits.get(self.child_rev)
+        else:
+            self.commits[self.child_rev] = self.child_cset
+
         self.ui.debug('Fetching revisions %d to %d\n' % (from_revnum, to_revnum))
 
         def get_entry_from_path(path, module=self.module):
@@ -388,18 +388,17 @@ class convert_svn(converter_source):
                 author = author and self.recode(author) or ''
 
                 cset = commit(author=author,
-                        date=util.datestr(date), 
-                        desc=log, 
-                        parents=[],
-                        copies=copies,
-                        branch=branch)
+                              date=util.datestr(date), 
+                              desc=log, 
+                              parents=[],
+                              copies=copies,
+                              branch=branch)
 
-                if self.child_cset is not None:
+                if self.child_cset and self.child_rev != rev:
                     self.child_cset.parents = [rev]
-
+                    self.commits[self.child_rev] = self.child_cset
                 self.child_cset = cset
-
-                self.commits[rev] = cset
+                self.child_rev = rev
 
         try:
             discover_changed_paths = True
@@ -465,6 +464,10 @@ class convert_svn(converter_source):
         return cl
 
     def getcommit(self, rev):
+        if rev not in self.commits:
+            revnum = int(rev.split('@')[-1])
+            minrev = revnum - LOG_BATCH_SIZE > 0 and revnum - LOG_BATCH_SIZE or 0
+            self._fetch_revisions(from_revnum=revnum, to_revnum=minrev)
         return self.commits[rev]
 
     def gettags(self):
