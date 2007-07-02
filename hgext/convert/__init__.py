@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from common import NoRepo
+from common import NoRepo, converter_source, converter_sink
 from cvs import convert_cvs
 from git import convert_git
 from hg import convert_mercurial
@@ -17,18 +17,29 @@ commands.norepo += " convert"
 
 converters = [convert_cvs, convert_git, convert_mercurial]
 
-def converter(ui, path, rev=None):
+def convertsource(ui, path, rev=None):
+    for c in converters:
+        try:
+            converter = c(ui, path, rev=rev)
+            if not isinstance(converter, converter_source):
+                raise util.Abort('%s: cannot read from this repository type' % path)
+            return converter
+        except NoRepo:
+            pass
+    raise util.Abort('%s: unknown repository type' % path)
+
+def convertsink(ui, path):
     if not os.path.isdir(path):
         raise util.Abort("%s: not a directory" % path)
     for c in converters:
         try:
-            if rev:
-                return c(ui, path, rev=rev)
-            else:
-                return c(ui, path)
+            converter = c(ui, path)
+            if not isinstance(converter, converter_sink):
+                raise util.Abort('%s: cannot write to this repository type' % path)
+            return converter
         except NoRepo:
             pass
-    raise util.Abort("%s: unknown repository type" % path)
+    raise util.Abort('%s: unknown repository type' % path)
 
 class convert(object):
     def __init__(self, ui, source, dest, mapfile, opts):
@@ -302,14 +313,10 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
         hg.repository(ui, dest, create=True)
         created = True
 
-    destc = converter(ui, dest)
-    if not hasattr(destc, "putcommit"):
-        raise util.Abort("%s: can't write to this repo type" % src)
+    destc = convertsink(ui, dest)
 
     try:
-        srcc = converter(ui, src, rev=opts.get('rev'))
-        if not hasattr(srcc, "getcommit"):
-            raise util.Abort("%s: can't read from this repo type" % src)
+        srcc = convertsource(ui, src, rev=opts.get('rev'))
     except Exception:
         if created:
             shutil.rmtree(dest, True)
