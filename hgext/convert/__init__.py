@@ -9,21 +9,21 @@ from common import NoRepo, converter_source, converter_sink
 from cvs import convert_cvs
 from git import convert_git
 from hg import convert_mercurial
+from subversion import convert_svn
 
 import os, shutil
 from mercurial import hg, ui, util, commands
 
 commands.norepo += " convert"
 
-converters = [convert_cvs, convert_git, convert_mercurial]
+converters = [convert_cvs, convert_git, convert_svn, convert_mercurial]
 
 def convertsource(ui, path, rev=None):
     for c in converters:
+        if not hasattr(c, 'getcommit'):
+            continue
         try:
-            converter = c(ui, path, rev=rev)
-            if not isinstance(converter, converter_source):
-                raise util.Abort('%s: cannot read from this repository type' % path)
-            return converter
+            return c(ui, path, rev=rev)
         except NoRepo:
             pass
     raise util.Abort('%s: unknown repository type' % path)
@@ -32,11 +32,10 @@ def convertsink(ui, path):
     if not os.path.isdir(path):
         raise util.Abort("%s: not a directory" % path)
     for c in converters:
+        if not hasattr(c, 'putcommit'):
+            continue
         try:
-            converter = c(ui, path)
-            if not isinstance(converter, converter_sink):
-                raise util.Abort('%s: cannot write to this repository type' % path)
-            return converter
+            return c(ui, path)
         except NoRepo:
             pass
     raise util.Abort('%s: unknown repository type' % path)

@@ -11,15 +11,19 @@ from mercurial import util
 # e.g. SVN 1.5 or backports. Thanks to the bzr folks for enhancing
 # these bindings.
 
-from svn.core import SubversionException, Pool
-import svn.core
-import svn.ra
-import svn.delta
-import svn
-import transport
 from cStringIO import StringIO
 
-from common import NoRepo, commit, converter_source, recode, nocommitmsg
+from common import NoRepo, commit, converter_source
+
+try:
+    from svn.core import SubversionException, Pool
+    import svn.core
+    import svn.ra
+    import svn.delta
+    import svn
+    import transport
+except ImportError:
+    pass
 
 class CompatibilityException(Exception): pass
 
@@ -74,16 +78,29 @@ class svn_paths(object):
 
 # SVN conversion code stolen from bzr-svn and tailor
 class convert_svn(converter_source):
-    def __init__(self, ui, url):
+    def __init__(self, ui, url, rev=None):
+        try:
+            SubversionException
+        except NameError:
+            msg = 'subversion python bindings could not be loaded\n'
+            ui.warn(msg)
+            raise NoRepo(msg)
+
         self.ui = ui
         self.encoding = locale.getpreferredencoding()
+        latest = None
+        if rev:
+            try:
+                latest = int(rev)
+            except ValueError:
+                raise util.Abort('svn: revision %s is not an integer' % rev)
         try:
             # Support file://path@rev syntax. Useful e.g. to convert
             # deleted branches.
             url, latest = url.rsplit("@", 1)
             latest = int(latest)
         except ValueError, e:
-            latest = None
+            pass
         self.url = url
         self.encoding = 'UTF-8' # Subversion is always nominal UTF-8
         try:
@@ -368,7 +385,7 @@ class convert_svn(converter_source):
                 # '2007-01-04T17:35:00.902377Z'
                 date = util.parsedate(date[:18] + " UTC", ["%Y-%m-%dT%H:%M:%S"])
 
-                log = message and self.recode(message) or nocommitmsg
+                log = message and self.recode(message)
                 author = author and self.recode(author) or ''
 
                 cset = commit(author=author,
@@ -506,6 +523,3 @@ class convert_svn(converter_source):
 
         self.reparent(self.module)
         return [path + "/" + c for c in children]
-
-    def recode(self, s):
-        return recode(self.encoding, s)
