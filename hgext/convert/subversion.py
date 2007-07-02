@@ -478,7 +478,7 @@ class convert_svn(converter_source):
             optrev = svn.core.svn_opt_revision_t()
             optrev.kind = svn.core.svn_opt_revision_number
             optrev.value.number = revnum
-            rpath = '/'.join([self.url, path]).strip('/')
+            rpath = '/'.join([self.base, path]).strip('/')
             return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev, True, self.client_ctx).keys()]
 
         if hasattr(self, '_find_children_fallback'):
