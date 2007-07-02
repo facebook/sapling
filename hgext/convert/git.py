@@ -20,9 +20,11 @@ class convert_git(converter_source):
         self.encoding = 'utf-8'
 
     def getheads(self):
-        rev = self.rev or 'HEAD'
-        fh = self.gitcmd("git-rev-parse --verify %s" % rev)
-        return [fh.read()[:-1]]
+        if not self.rev:
+            return self.gitcmd('git-rev-parse --branches').read().splitlines()
+        else:
+            fh = self.gitcmd("git-rev-parse --verify %s" % self.rev)
+            return [fh.read()[:-1]]
 
     def catfile(self, rev, type):
         if rev == "0" * 40: raise IOError()
