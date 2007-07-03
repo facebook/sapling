@@ -500,11 +500,12 @@ class convert_svn(converter_source):
             # SWIG python bindings for getdir are broken up to at least 1.4.3
             if not hasattr(self, 'client_ctx'):
                 self.client_ctx = svn.client.create_context()
+            pool = Pool()
             optrev = svn.core.svn_opt_revision_t()
             optrev.kind = svn.core.svn_opt_revision_number
             optrev.value.number = revnum
             rpath = '/'.join([self.base, path]).strip('/')
-            return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev, True, self.client_ctx).keys()]
+            return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev, True, self.client_ctx, pool).keys()]
 
         if hasattr(self, '_find_children_fallback'):
             return _find_children_fallback(path, revnum)
