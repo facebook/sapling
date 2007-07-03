@@ -120,12 +120,7 @@ class convert_svn(converter_source):
         except IOError, e:
             pass
 
-        if not latest:
-            latest = svn.ra.get_latest_revnum(self.ra)
-        dirent = svn.ra.stat(self.ra, self.module, latest)
-        if not dirent:
-            raise util.Abort('module %s not found in revision %d' % (self.module, latest))
-        self.last_changed = dirent.created_rev
+        self.last_changed = self.latest(self.module, latest)
 
         self.head = self.rev(self.last_changed)
 
@@ -134,7 +129,23 @@ class convert_svn(converter_source):
 
     def revnum(self, rev):
         return int(rev.split('@')[-1])
-            
+
+    def latest(self, path, revnum, stop=0):
+        'find the latest revision affecting path, up to stop'
+        if not stop:
+            stop = svn.ra.get_latest_revnum(self.ra)
+        try:
+            self.reparent('')
+            dirent = svn.ra.stat(self.ra, path.strip('/'), stop)
+            self.reparent(self.module)
+        except SubversionException:
+            dirent = None
+        if not dirent:
+            raise util.Abort('module %s not found up to revision %d' \
+                             % (self.module, stop))
+
+        return dirent.created_rev
+
     def get_blacklist(self):
         """Avoid certain revision numbers.
         It is not uncommon for two nearby revisions to cancel each other
