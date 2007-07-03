@@ -209,19 +209,18 @@ class convert_svn(converter_source):
             self.ui.debug('Ignoring %r since it is not under %r\n' % (path, module))
             return None
 
-        received = []
-        def rcvr(*arg, **args):
+        def parselogentry(*arg, **args):
             orig_paths, revnum, author, date, message, pool = arg
-            new_orig_paths = svn_paths(orig_paths)
-            rcvr2(new_orig_paths, revnum, author, date, message, pool)
+            orig_paths = svn_paths(orig_paths)
 
-        def rcvr2(orig_paths, revnum, author, date, message, pool, better_paths = None):
-            if not self.is_blacklisted(revnum):
-                received.append((orig_paths, revnum, author, date, message))
-           
-        def after_received(orig_paths, revnum, author, date, message):
+            if self.is_blacklisted(revnum):
+                self.ui.note('skipping blacklisted revision %d\n' % revnum)
+                return
+
             self.ui.note("parsing revision %d\n" % revnum)
+           
             if orig_paths is None:
+                self.ui.debug('revision %d has no entries\n' % revnum)
                 return
 
             if revnum in self.modulemap:
@@ -437,10 +436,9 @@ class convert_svn(converter_source):
         try:
             discover_changed_paths = True
             strict_node_history = False
-            svn.ra.get_log(self.ra, [self.module], from_revnum, to_revnum, 
-                           0, discover_changed_paths, strict_node_history, rcvr)
-            for args in received:
-                after_received(*args)
+            svn.ra.get_log(self.ra, [self.module], from_revnum, to_revnum, 0,
+                           discover_changed_paths, strict_node_history,
+                           parselogentry)
             self.last_revnum = to_revnum
         except SubversionException, (_, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
