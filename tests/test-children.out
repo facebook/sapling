@@ -1,6 +1,5 @@
 % init
 % no working directory
-abort: All non-merge changesets are children of the null revision!
 % setup
 0 files updated, 0 files merged, 2 files removed, 0 files unresolved
 % hg children at revision 3 (tip)
@@ -16,7 +15,18 @@ summary:     2
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % hg children at revision 2 (other head)
 % hg children -r null
-abort: All non-merge changesets are children of the null revision!
+changeset:   0:4df8521a7374
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     0
+
+changeset:   3:e2962852269d
+tag:         tip
+parent:      -1:000000000000
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     3
+
 % hg children -r 0
 changeset:   1:708c093edef0
 user:        test

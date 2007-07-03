@@ -7,9 +7,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial import cmdutil, util
+from mercurial import cmdutil
 from mercurial.i18n import _
-from mercurial.node import nullid
 
 
 def children(ui, repo, file_=None, **opts):
@@ -26,9 +25,6 @@ def children(ui, repo, file_=None, **opts):
         ctx = repo.filectx(file_, changeid=rev)
     else:
         ctx = repo.changectx(rev)
-    if ctx.node() == nullid:
-        raise util.Abort(_("All non-merge changesets are children of "
-                           "the null revision!"))
 
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for node in [cp.node() for cp in ctx.children()]:
