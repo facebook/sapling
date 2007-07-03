@@ -2,9 +2,26 @@
 
 hg init
 echo foo > foo
+echo "# should fail - foo is not managed"
+hg mv foo bar
+hg st -A
 hg add foo
+echo "# dry-run; print a warning that this is not a real copy; foo is added"
+hg mv --dry-run foo bar
+hg st -A
+echo "# should print a warning that this is not a real copy; bar is added"
+hg mv foo bar
+hg st -A
+echo "# should print a warning that this is not a real copy; foo is added"
+hg cp bar foo
+hg rm -f bar
+rm bar
+hg st -A
 hg commit -m1 -d"0 0"
 
+echo "# dry-run; should show that foo is clean"
+hg copy --dry-run foo bar
+hg st -A
 echo "# should show copy"
 hg copy foo bar
 hg st -C

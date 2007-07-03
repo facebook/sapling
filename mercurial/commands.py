@@ -466,18 +466,17 @@ def docopy(ui, repo, pats, opts, wlock):
     # return: hgsep
     def okaytocopy(abs, rel, exact):
         reasons = {'?': _('is not managed'),
-                   'a': _('has been marked for add'),
                    'r': _('has been marked for remove')}
         state = repo.dirstate.state(abs)
         reason = reasons.get(state)
         if reason:
+            if exact:
+                ui.warn(_('%s: not copying - file %s\n') % (rel, reason))
+        else:
             if state == 'a':
                 origsrc = repo.dirstate.copied(abs)
                 if origsrc is not None:
                     return origsrc
-            if exact:
-                ui.warn(_('%s: not copying - file %s\n') % (rel, reason))
-        else:
             return abs
 
     # origsrc: hgsep
@@ -532,8 +531,15 @@ def docopy(ui, repo, pats, opts, wlock):
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
-        if abstarget != origsrc and not opts.get('dry_run'):
-            repo.copy(origsrc, abstarget, wlock)
+        if abstarget != origsrc:
+            if repo.dirstate.state(origsrc) == 'a':
+                ui.warn(_("%s was marked for addition. "
+                          "%s will not be committed as a copy.\n")
+                        % (repo.pathto(origsrc, cwd), reltarget))
+                if abstarget not in repo.dirstate and not opts.get('dry_run'):
+                    repo.add([abstarget], wlock)
+            elif not opts.get('dry_run'):
+                repo.copy(origsrc, abstarget, wlock)
         copied.append((abssrc, relsrc, exact))
 
     # pat: ossep
