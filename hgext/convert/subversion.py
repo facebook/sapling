@@ -141,8 +141,8 @@ class convert_svn(converter_source):
         except SubversionException:
             dirent = None
         if not dirent:
-            raise util.Abort('module %s not found up to revision %d' \
-                             % (self.module, stop))
+            raise util.Abort('%s not found up to revision %d' \
+                             % (path, stop))
 
         return dirent.created_rev
 
