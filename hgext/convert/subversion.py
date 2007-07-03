@@ -218,207 +218,209 @@ class convert_svn(converter_source):
             copies = {}
             entries = []
             self.ui.debug("Parsing revision %d\n" % revnum)
-            if orig_paths is not None:
-                rev = self.rev(revnum)
-                try:
-                    branch = self.module.split("/")[-1]
-                    if branch == 'trunk':
-                        branch = ''
-                except IndexError:
-                    branch = None
+            if orig_paths is None:
+                return
+
+            rev = self.rev(revnum)
+            try:
+                branch = self.module.split("/")[-1]
+                if branch == 'trunk':
+                    branch = ''
+            except IndexError:
+                branch = None
                 
-                for path in orig_paths:
-                    # self.ui.write("path %s\n" % path)
-                    if path == self.module: # Follow branching back in history
-                        ent = orig_paths[path]
-                        if ent:
-                            if ent.copyfrom_path:
-                                self.modulemap[ent.copyfrom_rev] = ent.copyfrom_path
-                            else:
-                                self.ui.debug("No copyfrom path, don't know what to do.\n")
-                                # Maybe it was added and there is no more history.
-                    entrypath = get_entry_from_path(path, module=self.module)
-                    # self.ui.write("entrypath %s\n" % entrypath)
-                    if entrypath is None:
-                        # Outside our area of interest
-                        self.ui.debug("boring@%s: %s\n" % (revnum, path))
-                        continue
-                    entry = entrypath.decode(self.encoding)
+            for path in orig_paths:
+                # self.ui.write("path %s\n" % path)
+                if path == self.module: # Follow branching back in history
                     ent = orig_paths[path]
-                    if not entrypath:
-                        # TODO: branch creation event
-                        pass
-
-                    kind = svn.ra.check_path(self.ra, entrypath, revnum)
-                    if kind == svn.core.svn_node_file:
+                    if ent:
                         if ent.copyfrom_path:
-                            copyfrom_path = get_entry_from_path(ent.copyfrom_path)
-                            if copyfrom_path:
-                                self.ui.debug("Copied to %s from %s@%s\n" % (entry, copyfrom_path, ent.copyfrom_rev))
-                                # It's probably important for hg that the source
-                                # exists in the revision's parent, not just the
-                                # ent.copyfrom_rev
-                                fromkind = svn.ra.check_path(self.ra, copyfrom_path, ent.copyfrom_rev)
-                                if fromkind != 0:
-                                    copies[self.recode(entry)] = self.recode(copyfrom_path)
-                        entries.append(self.recode(entry))
-                    elif kind == 0: # gone, but had better be a deleted *file*
-                        self.ui.debug("gone from %s\n" % ent.copyfrom_rev)
-
-                        fromrev = revnum - 1
-                        # might always need to be revnum - 1 in these 3 lines?
-                        old_module = self.modulemap.get(fromrev, self.module)
-                        basepath = old_module + "/" + get_entry_from_path(path, module=self.module)
-                        entrypath = old_module + "/" + get_entry_from_path(path, module=self.module)
-
-                        def lookup_parts(p):
-                            rc = None
-                            parts = p.split("/")
-                            for i in range(len(parts)):
-                                part = "/".join(parts[:i])
-                                info = part, copyfrom.get(part, None)
-                                if info[1] is not None:
-                                    self.ui.debug("Found parent directory %s\n" % info)
-                                    rc = info
-                            return rc
-
-                        self.ui.debug("base, entry %s %s\n" % (basepath, entrypath))
-
-                        frompath, froment = lookup_parts(entrypath) or (None, revnum - 1)
-
-                        # need to remove fragment from lookup_parts and replace with copyfrom_path
-                        if frompath is not None:
-                            self.ui.debug("munge-o-matic\n")
-                            self.ui.debug(entrypath + '\n')
-                            self.ui.debug(entrypath[len(frompath):] + '\n')
-                            entrypath = froment.copyfrom_path + entrypath[len(frompath):]
-                            fromrev = froment.copyfrom_rev
-                            self.ui.debug("Info: %s %s %s %s\n" % (frompath, froment, ent, entrypath))
-
-                        fromkind = svn.ra.check_path(self.ra, entrypath, fromrev)
-                        if fromkind == svn.core.svn_node_file:   # a deleted file
-                            entries.append(self.recode(entry))
+                            self.modulemap[ent.copyfrom_rev] = ent.copyfrom_path
                         else:
-                            # print "Deleted/moved non-file:", revnum, path, ent
-                            # children = self._find_children(path, revnum - 1)
-                            # print "find children %s@%d from %d action %s" % (path, revnum, ent.copyfrom_rev, ent.action)
-                            # Sometimes this is tricky. For example: in
-                            # The Subversion Repository revision 6940 a dir
-                            # was copied and one of its files was deleted 
-                            # from the new location in the same commit. This
-                            # code can't deal with that yet.
-                            if ent.action == 'C':
-                                children = self._find_children(path, fromrev)
-                            else:
-                                oroot = entrypath.strip('/')
-                                nroot = path.strip('/')
-                                children = self._find_children(oroot, fromrev)
-                                children = [s.replace(oroot,nroot) for s in children]
-                            # Mark all [files, not directories] as deleted.
-                            for child in children:
-                                # Can we move a child directory and its
-                                # parent in the same commit? (probably can). Could
-                                # cause problems if instead of revnum -1, 
-                                # we have to look in (copyfrom_path, revnum - 1)
-                                entrypath = get_entry_from_path("/" + child, module=old_module)
-                                if entrypath:
-                                    entry = self.recode(entrypath.decode(self.encoding))
-                                    if entry in copies:
-                                        # deleted file within a copy
-                                        del copies[entry]
-                                    else:
-                                        entries.append(entry)
-                    elif kind == svn.core.svn_node_dir:
-                        # Should probably synthesize normal file entries
-                        # and handle as above to clean up copy/rename handling.
+                            self.ui.debug("No copyfrom path, don't know what to do.\n")
+                            # Maybe it was added and there is no more history.
+                entrypath = get_entry_from_path(path, module=self.module)
+                # self.ui.write("entrypath %s\n" % entrypath)
+                if entrypath is None:
+                    # Outside our area of interest
+                    self.ui.debug("boring@%s: %s\n" % (revnum, path))
+                    continue
+                entry = entrypath.decode(self.encoding)
+                ent = orig_paths[path]
+                if not entrypath:
+                    # TODO: branch creation event
+                    pass
 
-                        # If the directory just had a prop change,
-                        # then we shouldn't need to look for its children.
-                        # Also this could create duplicate entries. Not sure
-                        # whether this will matter. Maybe should make entries a set.
-                        # print "Changed directory", revnum, path, ent.action, ent.copyfrom_path, ent.copyfrom_rev
-                        # This will fail if a directory was copied
-                        # from another branch and then some of its files
-                        # were deleted in the same transaction.
-                        children = self._find_children(path, revnum)
-                        children.sort()
+                kind = svn.ra.check_path(self.ra, entrypath, revnum)
+                if kind == svn.core.svn_node_file:
+                    if ent.copyfrom_path:
+                        copyfrom_path = get_entry_from_path(ent.copyfrom_path)
+                        if copyfrom_path:
+                            self.ui.debug("Copied to %s from %s@%s\n" % (entry, copyfrom_path, ent.copyfrom_rev))
+                            # It's probably important for hg that the source
+                            # exists in the revision's parent, not just the
+                            # ent.copyfrom_rev
+                            fromkind = svn.ra.check_path(self.ra, copyfrom_path, ent.copyfrom_rev)
+                            if fromkind != 0:
+                                copies[self.recode(entry)] = self.recode(copyfrom_path)
+                    entries.append(self.recode(entry))
+                elif kind == 0: # gone, but had better be a deleted *file*
+                    self.ui.debug("gone from %s\n" % ent.copyfrom_rev)
+
+                    fromrev = revnum - 1
+                    # might always need to be revnum - 1 in these 3 lines?
+                    old_module = self.modulemap.get(fromrev, self.module)
+                    basepath = old_module + "/" + get_entry_from_path(path, module=self.module)
+                    entrypath = old_module + "/" + get_entry_from_path(path, module=self.module)
+
+                    def lookup_parts(p):
+                        rc = None
+                        parts = p.split("/")
+                        for i in range(len(parts)):
+                            part = "/".join(parts[:i])
+                            info = part, copyfrom.get(part, None)
+                            if info[1] is not None:
+                                self.ui.debug("Found parent directory %s\n" % info)
+                                rc = info
+                        return rc
+
+                    self.ui.debug("base, entry %s %s\n" % (basepath, entrypath))
+
+                    frompath, froment = lookup_parts(entrypath) or (None, revnum - 1)
+
+                    # need to remove fragment from lookup_parts and replace with copyfrom_path
+                    if frompath is not None:
+                        self.ui.debug("munge-o-matic\n")
+                        self.ui.debug(entrypath + '\n')
+                        self.ui.debug(entrypath[len(frompath):] + '\n')
+                        entrypath = froment.copyfrom_path + entrypath[len(frompath):]
+                        fromrev = froment.copyfrom_rev
+                        self.ui.debug("Info: %s %s %s %s\n" % (frompath, froment, ent, entrypath))
+
+                    fromkind = svn.ra.check_path(self.ra, entrypath, fromrev)
+                    if fromkind == svn.core.svn_node_file:   # a deleted file
+                        entries.append(self.recode(entry))
+                    else:
+                        # print "Deleted/moved non-file:", revnum, path, ent
+                        # children = self._find_children(path, revnum - 1)
+                        # print "find children %s@%d from %d action %s" % (path, revnum, ent.copyfrom_rev, ent.action)
+                        # Sometimes this is tricky. For example: in
+                        # The Subversion Repository revision 6940 a dir
+                        # was copied and one of its files was deleted 
+                        # from the new location in the same commit. This
+                        # code can't deal with that yet.
+                        if ent.action == 'C':
+                            children = self._find_children(path, fromrev)
+                        else:
+                            oroot = entrypath.strip('/')
+                            nroot = path.strip('/')
+                            children = self._find_children(oroot, fromrev)
+                            children = [s.replace(oroot,nroot) for s in children]
+                        # Mark all [files, not directories] as deleted.
                         for child in children:
                             # Can we move a child directory and its
                             # parent in the same commit? (probably can). Could
                             # cause problems if instead of revnum -1, 
                             # we have to look in (copyfrom_path, revnum - 1)
-                            entrypath = get_entry_from_path("/" + child, module=self.module)
-                            # print child, self.module, entrypath
+                            entrypath = get_entry_from_path("/" + child, module=old_module)
                             if entrypath:
-                                # Need to filter out directories here...
-                                kind = svn.ra.check_path(self.ra, entrypath, revnum)
-                                if kind != svn.core.svn_node_dir:
-                                    entries.append(self.recode(entrypath))
+                                entry = self.recode(entrypath.decode(self.encoding))
+                                if entry in copies:
+                                    # deleted file within a copy
+                                    del copies[entry]
+                                else:
+                                    entries.append(entry)
+                elif kind == svn.core.svn_node_dir:
+                    # Should probably synthesize normal file entries
+                    # and handle as above to clean up copy/rename handling.
 
-                        # Copies here (must copy all from source)
-                        # Probably not a real problem for us if
-                        # source does not exist
+                    # If the directory just had a prop change,
+                    # then we shouldn't need to look for its children.
+                    # Also this could create duplicate entries. Not sure
+                    # whether this will matter. Maybe should make entries a set.
+                    # print "Changed directory", revnum, path, ent.action, ent.copyfrom_path, ent.copyfrom_rev
+                    # This will fail if a directory was copied
+                    # from another branch and then some of its files
+                    # were deleted in the same transaction.
+                    children = self._find_children(path, revnum)
+                    children.sort()
+                    for child in children:
+                        # Can we move a child directory and its
+                        # parent in the same commit? (probably can). Could
+                        # cause problems if instead of revnum -1, 
+                        # we have to look in (copyfrom_path, revnum - 1)
+                        entrypath = get_entry_from_path("/" + child, module=self.module)
+                        # print child, self.module, entrypath
+                        if entrypath:
+                            # Need to filter out directories here...
+                            kind = svn.ra.check_path(self.ra, entrypath, revnum)
+                            if kind != svn.core.svn_node_dir:
+                                entries.append(self.recode(entrypath))
 
-                        # Can do this with the copy command "hg copy"
-                        # if ent.copyfrom_path:
-                        #     copyfrom_entry = get_entry_from_path(ent.copyfrom_path.decode(self.encoding),
-                        #             module=self.module)
-                        #     copyto_entry = entrypath
-                        #
-                        #     print "copy directory", copyfrom_entry, 'to', copyto_entry
-                        #
-                        #     copies.append((copyfrom_entry, copyto_entry))
-                        
-                        if ent.copyfrom_path:
-                            copyfrom_path = ent.copyfrom_path.decode(self.encoding)
-                            copyfrom_entry = get_entry_from_path(copyfrom_path, module=self.module)
-                            if copyfrom_entry:
-                                copyfrom[path] = ent
-                                self.ui.debug("mark %s came from %s\n" % (path, copyfrom[path]))
+                    # Copies here (must copy all from source)
+                    # Probably not a real problem for us if
+                    # source does not exist
 
-                                # Good, /probably/ a regular copy. Really should check
-                                # to see whether the parent revision actually contains
-                                # the directory in question.
-                                children = self._find_children(self.recode(copyfrom_path), ent.copyfrom_rev)
-                                children.sort()
-                                for child in children:
-                                    entrypath = get_entry_from_path("/" + child, module=self.module)
-                                    if entrypath:
-                                        entry = entrypath.decode(self.encoding)
-                                        # print "COPY COPY From", copyfrom_entry, entry
-                                        copyto_path = path + entry[len(copyfrom_entry):]
-                                        copyto_entry =  get_entry_from_path(copyto_path, module=self.module)
-                                        # print "COPY", entry, "COPY To", copyto_entry
-                                        copies[self.recode(copyto_entry)] = self.recode(entry)
-                                        # copy from quux splort/quuxfile
-              
-                self.modulemap[revnum] = self.module # track backwards in time
-                # a list of (filename, id) where id lets us retrieve the file.
-                # eg in git, id is the object hash. for svn it'll be the 
-                self.files[rev] = zip(entries, [rev] * len(entries))
-                if not entries:
-                    return
+                    # Can do this with the copy command "hg copy"
+                    # if ent.copyfrom_path:
+                    #     copyfrom_entry = get_entry_from_path(ent.copyfrom_path.decode(self.encoding),
+                    #             module=self.module)
+                    #     copyto_entry = entrypath
+                    #
+                    #     print "copy directory", copyfrom_entry, 'to', copyto_entry
+                    #
+                    #     copies.append((copyfrom_entry, copyto_entry))
 
-                # Example SVN datetime. Includes microseconds.
-                # ISO-8601 conformant
-                # '2007-01-04T17:35:00.902377Z'
-                date = util.parsedate(date[:18] + " UTC", ["%Y-%m-%dT%H:%M:%S"])
+                    if ent.copyfrom_path:
+                        copyfrom_path = ent.copyfrom_path.decode(self.encoding)
+                        copyfrom_entry = get_entry_from_path(copyfrom_path, module=self.module)
+                        if copyfrom_entry:
+                            copyfrom[path] = ent
+                            self.ui.debug("mark %s came from %s\n" % (path, copyfrom[path]))
 
-                log = message and self.recode(message)
-                author = author and self.recode(author) or ''
+                            # Good, /probably/ a regular copy. Really should check
+                            # to see whether the parent revision actually contains
+                            # the directory in question.
+                            children = self._find_children(self.recode(copyfrom_path), ent.copyfrom_rev)
+                            children.sort()
+                            for child in children:
+                                entrypath = get_entry_from_path("/" + child, module=self.module)
+                                if entrypath:
+                                    entry = entrypath.decode(self.encoding)
+                                    # print "COPY COPY From", copyfrom_entry, entry
+                                    copyto_path = path + entry[len(copyfrom_entry):]
+                                    copyto_entry =  get_entry_from_path(copyto_path, module=self.module)
+                                    # print "COPY", entry, "COPY To", copyto_entry
+                                    copies[self.recode(copyto_entry)] = self.recode(entry)
+                                    # copy from quux splort/quuxfile
 
-                cset = commit(author=author,
-                              date=util.datestr(date), 
-                              desc=log, 
-                              parents=[],
-                              copies=copies,
-                              branch=branch)
+            self.modulemap[revnum] = self.module # track backwards in time
+            # a list of (filename, id) where id lets us retrieve the file.
+            # eg in git, id is the object hash. for svn it'll be the 
+            self.files[rev] = zip(entries, [rev] * len(entries))
+            if not entries:
+                return
 
-                if self.child_cset and self.child_rev != rev:
-                    self.child_cset.parents = [rev]
-                    self.commits[self.child_rev] = self.child_cset
-                self.child_cset = cset
-                self.child_rev = rev
+            # Example SVN datetime. Includes microseconds.
+            # ISO-8601 conformant
+            # '2007-01-04T17:35:00.902377Z'
+            date = util.parsedate(date[:18] + " UTC", ["%Y-%m-%dT%H:%M:%S"])
+
+            log = message and self.recode(message)
+            author = author and self.recode(author) or ''
+
+            cset = commit(author=author,
+                          date=util.datestr(date), 
+                          desc=log, 
+                          parents=[],
+                          copies=copies,
+                          branch=branch)
+
+            if self.child_cset and self.child_rev != rev:
+                self.child_cset.parents = [rev]
+                self.commits[self.child_rev] = self.child_cset
+            self.child_cset = cset
+            self.child_rev = rev
 
         try:
             discover_changed_paths = True
