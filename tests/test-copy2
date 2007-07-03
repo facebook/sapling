@@ -2,16 +2,33 @@
 
 hg init
 echo foo > foo
+echo "# should fail - foo is not managed"
+hg mv foo bar
+hg st -A
 hg add foo
+echo "# dry-run; print a warning that this is not a real copy; foo is added"
+hg mv --dry-run foo bar
+hg st -A
+echo "# should print a warning that this is not a real copy; bar is added"
+hg mv foo bar
+hg st -A
+echo "# should print a warning that this is not a real copy; foo is added"
+hg cp bar foo
+hg rm -f bar
+rm bar
+hg st -A
 hg commit -m1 -d"0 0"
 
+echo "# dry-run; should show that foo is clean"
+hg copy --dry-run foo bar
+hg st -A
 echo "# should show copy"
 hg copy foo bar
-hg debugstate|grep '^copy'
+hg st -C
 
 echo "# shouldn't show copy"
 hg commit -m2 -d"0 0"
-hg debugstate|grep '^copy'
+hg st -C
 
 echo "# should match"
 hg debugindex .hg/store/data/foo.i
@@ -26,7 +43,7 @@ hg debugrename bar
 
 hg copy -f foo bar
 echo "# should show copy"
-hg debugstate|grep '^copy'
+hg st -C
 hg commit -m3 -d"0 0"
 
 echo "# should show no parents for tip"
@@ -36,7 +53,7 @@ hg debugindex .hg/store/data/foo.i
 hg debugrename bar
 
 echo "# should show no copies"
-hg debugstate|grep '^copy'
+hg st -C
 
 echo "# copy --after on an added file"
 cp bar baz

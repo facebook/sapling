@@ -12,79 +12,79 @@ hg commit -m "1" -d "1000000 0"
 
 echo "# rename a single file"
 hg rename d1/d11/a1 d2/c
-hg status
+hg status -C
 hg update -C
 
 echo "# rename --after a single file"
 mv d1/d11/a1 d2/c
 hg rename --after d1/d11/a1 d2/c
-hg status
+hg status -C
 hg update -C
 
 echo "# move a single file to an existing directory"
 hg rename d1/d11/a1 d2
-hg status
+hg status -C
 hg update -C
 
 echo "# move --after a single file to an existing directory"
 mv d1/d11/a1 d2
 hg rename --after d1/d11/a1 d2
-hg status
+hg status -C
 hg update -C
 
 echo "# rename a file using a relative path"
 (cd d1/d11; hg rename ../../d2/b e)
-hg status
+hg status -C
 hg update -C
 
 echo "# rename --after a file using a relative path"
 (cd d1/d11; mv ../../d2/b e; hg rename --after ../../d2/b e)
-hg status
+hg status -C
 hg update -C
 
 echo "# rename directory d1 as d3"
 hg rename d1/ d3
-hg status
+hg status -C
 hg update -C
 
 echo "# rename --after directory d1 as d3"
 mv d1 d3
 hg rename --after d1 d3
-hg status
+hg status -C
 hg update -C
 
 echo "# move a directory using a relative path"
 (cd d2; mkdir d3; hg rename ../d1/d11 d3)
-hg status
+hg status -C
 hg update -C
 
 echo "# move --after a directory using a relative path"
 (cd d2; mkdir d3; mv ../d1/d11 d3; hg rename --after ../d1/d11 d3)
-hg status
+hg status -C
 hg update -C
 
 echo "# move directory d1/d11 to an existing directory d2 (removes empty d1)"
 hg rename d1/d11/ d2
-hg status
+hg status -C
 hg update -C
 
 echo "# move directories d1 and d2 to a new directory d3"
 mkdir d3
 hg rename d1 d2 d3
-hg status
+hg status -C
 hg update -C
 
 echo "# move --after directories d1 and d2 to a new directory d3"
 mkdir d3
 mv d1 d2 d3
 hg rename --after d1 d2 d3
-hg status
+hg status -C
 hg update -C
 
 echo "# move everything under directory d1 to existing directory d2, do not"
 echo "# overwrite existing files (d2/b)"
 hg rename d1/* d2
-hg status
+hg status -C
 diff d1/b d2/b
 hg update -C
 
@@ -95,117 +95,116 @@ hg rename 'glob:d1/**' dx
 echo "# move every file under d1 to d2/d21 (glob)"
 mkdir d2/d21
 hg rename 'glob:d1/**' d2/d21
-hg status
+hg status -C
 hg update -C
 
 echo "# move --after some files under d1 to d2/d21 (glob)"
 mkdir d2/d21
 mv d1/a d1/d11/a1 d2/d21
 hg rename --after 'glob:d1/**' d2/d21
-hg status
+hg status -C
 hg update -C
 
 echo "# move every file under d1 starting with an 'a' to d2/d21 (regexp)"
 mkdir d2/d21
 hg rename 're:d1/([^a][^/]*/)*a.*' d2/d21
-hg status
+hg status -C
 hg update -C
 
 echo "# attempt to overwrite an existing file"
 echo "ca" > d1/ca
 hg rename d1/ba d1/ca
-hg status
+hg status -C
 hg update -C
 
 echo "# forced overwrite of an existing file"
 echo "ca" > d1/ca
 hg rename --force d1/ba d1/ca
-hg status
+hg status -C
 hg update -C
 
 echo "# replace a symlink with a file"
 ln -s ba d1/ca
 hg rename --force d1/ba d1/ca
-hg status
+hg status -C
 hg update -C
 
 echo "# do not copy more than one source file to the same destination file"
 mkdir d3
 hg rename d1/* d2/* d3
-hg status
+hg status -C
 hg update -C
 
 echo "# move a whole subtree with \"hg rename .\""
 mkdir d3
 (cd d1; hg rename . ../d3)
-hg status
+hg status -C
 hg update -C
 
 echo "# move a whole subtree with \"hg rename --after .\""
 mkdir d3
 mv d1/* d3
 (cd d1; hg rename --after . ../d3)
-hg status
+hg status -C
 hg update -C
 
 echo "# move the parent tree with \"hg rename ..\""
 (cd d1/d11; hg rename .. ../../d3)
-hg status
+hg status -C
 hg update -C
 
 echo "# skip removed files"
 hg remove d1/b
 hg rename d1 d3
-hg status
+hg status -C
 hg update -C
 
 echo "# transitive rename"
 hg rename d1/b d1/bb
 hg rename d1/bb d1/bc
-hg status
+hg status -C
 hg update -C
 
 echo "# transitive rename --after"
 hg rename d1/b d1/bb
 mv d1/bb d1/bc
 hg rename --after d1/bb d1/bc
-hg status
+hg status -C
 hg update -C
 
 echo "# idempotent renames (d1/b -> d1/bb followed by d1/bb -> d1/b)"
 hg rename d1/b d1/bb
 echo "some stuff added to d1/bb" >> d1/bb
 hg rename d1/bb d1/b
-hg status
-hg debugstate | grep copy
+hg status -C
 hg update -C
 
 echo "# check illegal path components"
 
 hg rename d1/d11/a1 .hg/foo
-hg status
+hg status -C
 hg rename d1/d11/a1 ../foo
-hg status
+hg status -C
 
 mv d1/d11/a1 .hg/foo
 hg rename --after d1/d11/a1 .hg/foo
-hg status
+hg status -C
 hg update -C
 rm .hg/foo
 
 hg rename d1/d11/a1 .hg
-hg status
+hg status -C
 hg rename d1/d11/a1 ..
-hg status
+hg status -C
 
 mv d1/d11/a1 .hg
 hg rename --after d1/d11/a1 .hg
-hg status
+hg status -C
 hg update -C
 rm .hg/a1
 
 (cd d1/d11; hg rename ../../d2/b ../../.hg/foo)
-hg status
+hg status -C
 (cd d1/d11; hg rename ../../d2/b ../../../foo)
-hg status
+hg status -C
 

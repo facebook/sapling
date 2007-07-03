@@ -404,7 +404,7 @@ class hgweb(object):
                      parent=self.siblings(fctx.parents()),
                      child=self.siblings(fctx.children()),
                      rename=self.renamelink(fl, n),
-                     permissions=fctx.manifest().execf(f))
+                     permissions=fctx.manifest().flags(f))
 
     def fileannotate(self, fctx):
         f = fctx.path()
@@ -440,7 +440,7 @@ class hgweb(object):
                      rename=self.renamelink(fl, n),
                      parent=self.siblings(fctx.parents()),
                      child=self.siblings(fctx.children()),
-                     permissions=fctx.manifest().execf(f))
+                     permissions=fctx.manifest().flags(f))
 
     def manifest(self, ctx, path):
         mf = ctx.manifest()
@@ -477,7 +477,7 @@ class hgweb(object):
                        "parity": parity.next(),
                        "basename": f,
                        "size": ctx.filectx(full).size(),
-                       "permissions": mf.execf(full)}
+                       "permissions": mf.flags(full)}
 
         def dirlist(**map):
             fl = files.keys()

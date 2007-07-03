@@ -245,6 +245,13 @@ def indent(text, prefix):
                 yield '\n'
     return "".join(indenter())
 
+def permissions(flags):
+    if "l" in flags:
+        return "lrwxrwxrwx"
+    if "x" in flags:
+        return "-rwxr-xr-x"
+    return "-rw-r--r--"
+
 common_filters = {
     "addbreaks": nl2br,
     "basename": os.path.basename,
@@ -260,7 +267,7 @@ common_filters = {
     "hgdate": hgdate,
     "isodate": isodate,
     "obfuscate": obfuscate,
-    "permissions": lambda x: x and "-rwxr-xr-x" or "-rw-r--r--",
+    "permissions": permissions,
     "person": person,
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
     "short": lambda x: x[:12],
