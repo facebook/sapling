@@ -18,12 +18,12 @@ commands.norepo += " convert"
 
 converters = [convert_cvs, convert_git, convert_svn, convert_mercurial]
 
-def convertsource(ui, path, rev=None):
+def convertsource(ui, path, **opts):
     for c in converters:
         if not hasattr(c, 'getcommit'):
             continue
         try:
-            return c(ui, path, rev=rev)
+            return c(ui, path, **opts)
         except NoRepo:
             pass
     raise util.Abort('%s: unknown repository type' % path)
