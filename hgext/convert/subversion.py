@@ -187,7 +187,8 @@ class convert_svn(converter_source):
             if revnum > from_revnum:
                 from_revnum = revnum
 
-        self.ui.debug('Fetching revisions %d to %d\n' % (from_revnum, to_revnum))
+        self.ui.note('fetching revision log from %d to %d\n' % \
+                     (from_revnum, to_revnum))
 
         def get_entry_from_path(path, module=self.module):
             # Given the repository url of this wc, say
@@ -219,6 +220,10 @@ class convert_svn(converter_source):
                 received.append((orig_paths, revnum, author, date, message))
            
         def after_received(orig_paths, revnum, author, date, message):
+            self.ui.note("parsing revision %d\n" % revnum)
+            if orig_paths is None:
+                return
+
             if revnum in self.modulemap:
                 new_module = self.modulemap[revnum]
                 if new_module != self.module:
@@ -228,10 +233,6 @@ class convert_svn(converter_source):
             copyfrom = {} # Map of entrypath, revision for finding source of deleted revisions.
             copies = {}
             entries = []
-            self.ui.debug("Parsing revision %d\n" % revnum)
-            if orig_paths is None:
-                return
-
             rev = self.rev(revnum)
             try:
                 branch = self.module.split("/")[-1]
