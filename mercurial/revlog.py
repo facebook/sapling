@@ -756,9 +756,13 @@ class revlog(object):
         c = []
         p = self.rev(node)
         for r in range(p + 1, self.count()):
-            for pr in self.parentrevs(r):
-                if pr == p:
-                    c.append(self.node(r))
+            prevs = [pr for pr in self.parentrevs(r) if pr != nullrev]
+            if prevs:
+                for pr in prevs:
+                    if pr == p:
+                        c.append(self.node(r))
+            elif p == nullrev:
+                c.append(self.node(r))
         return c
 
     def _match(self, id):
