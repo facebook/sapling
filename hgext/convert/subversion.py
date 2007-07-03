@@ -130,6 +130,16 @@ class convert_svn(converter_source):
     def revnum(self, rev):
         return int(rev.split('@')[-1])
 
+    def revsplit(self, rev):
+        url, revnum = rev.encode(self.encoding).split('@', 1)
+        revnum = int(revnum)
+        parts = url.split('/', 1)
+        uuid = parts.pop(0)[4:]
+        mod = '/'
+        if parts:
+            mod += parts[0]
+        return uuid, mod, revnum
+
     def latest(self, path, stop=0):
         'find the latest revision affecting path, up to stop'
         if not stop:
@@ -170,7 +180,7 @@ class convert_svn(converter_source):
         self.ui.debug("reparent to %s\n" % svn_url.encode(self.encoding))
         svn.ra.reparent(self.ra, svn_url.encode(self.encoding))
 
-    def _fetch_revisions(self, from_revnum = 0, to_revnum = 347, pb=None):
+    def _fetch_revisions(self, from_revnum = 0, to_revnum = 347, module=None):
         # batching is broken for branches
         to_revnum = 0
         if not hasattr(self, 'child_rev'):
@@ -433,10 +443,12 @@ class convert_svn(converter_source):
             self.child_cset = cset
             self.child_rev = rev
 
+        if module is None:
+            module = self.module
         try:
             discover_changed_paths = True
             strict_node_history = False
-            svn.ra.get_log(self.ra, [self.module], from_revnum, to_revnum, 0,
+            svn.ra.get_log(self.ra, [module], from_revnum, to_revnum, 0,
                            discover_changed_paths, strict_node_history,
                            parselogentry)
             self.last_revnum = to_revnum
@@ -497,9 +509,10 @@ class convert_svn(converter_source):
 
     def getcommit(self, rev):
         if rev not in self.commits:
-            revnum = self.revnum(rev)
+            uuid, module, revnum = self.revsplit(rev)
             minrev = revnum - LOG_BATCH_SIZE > 0 and revnum - LOG_BATCH_SIZE or 0
-            self._fetch_revisions(from_revnum=revnum, to_revnum=minrev)
+            self._fetch_revisions(from_revnum=revnum, to_revnum=minrev,
+                                  module=module)
         return self.commits[rev]
 
     def gettags(self):
