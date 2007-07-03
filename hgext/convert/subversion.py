@@ -130,7 +130,7 @@ class convert_svn(converter_source):
     def revnum(self, rev):
         return int(rev.split('@')[-1])
 
-    def latest(self, path, revnum, stop=0):
+    def latest(self, path, stop=0):
         'find the latest revision affecting path, up to stop'
         if not stop:
             stop = svn.ra.get_latest_revnum(self.ra)
