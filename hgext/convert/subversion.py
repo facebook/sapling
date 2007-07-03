@@ -124,8 +124,10 @@ class convert_svn(converter_source):
 
         self.head = self.rev(self.last_changed)
 
-    def rev(self, revnum):
-        return (u"svn:%s%s@%s" % (self.uuid, self.module, revnum)).decode(self.encoding)
+    def rev(self, revnum, module=None):
+        if not module:
+            module = self.module
+        return (u"svn:%s%s@%s" % (self.uuid, module, revnum)).decode(self.encoding)
 
     def revnum(self, rev):
         return int(rev.split('@')[-1])
@@ -243,6 +245,7 @@ class convert_svn(converter_source):
             copies = {}
             entries = []
             rev = self.rev(revnum)
+            parents = []
             try:
                 branch = self.module.split("/")[-1]
                 if branch == 'trunk':
@@ -253,10 +256,13 @@ class convert_svn(converter_source):
             for path in orig_paths:
                 # self.ui.write("path %s\n" % path)
                 if path == self.module: # Follow branching back in history
+                    import pdb
+                    pdb.set_trace()
                     ent = orig_paths[path]
                     if ent:
                         if ent.copyfrom_path:
                             self.modulemap[ent.copyfrom_rev] = ent.copyfrom_path
+                            parents = [self.rev(ent.copyfrom_rev, ent.copyfrom_path)]
                         else:
                             self.ui.debug("No copyfrom path, don't know what to do.\n")
                             # Maybe it was added and there is no more history.
@@ -268,9 +274,6 @@ class convert_svn(converter_source):
                     continue
                 entry = entrypath.decode(self.encoding)
                 ent = orig_paths[path]
-                if not entrypath:
-                    # TODO: branch creation event
-                    pass
 
                 kind = svn.ra.check_path(self.ra, entrypath, revnum)
                 if kind == svn.core.svn_node_file:
@@ -433,7 +436,7 @@ class convert_svn(converter_source):
             cset = commit(author=author,
                           date=util.datestr(date), 
                           desc=log, 
-                          parents=[],
+                          parents=parents,
                           copies=copies,
                           branch=branch)
 
