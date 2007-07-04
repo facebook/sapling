@@ -1,0 +1,32 @@
+#!/bin/sh
+
+cat > $HGRCPATH <<EOF
+[extensions]
+alias=
+
+[alias]
+myinit = init
+cleanstatus = status -c
+unknown = bargle
+ambiguous = s
+recursive = recursive
+EOF
+
+echo '% basic'
+hg myinit alias
+
+echo '% unknown'
+hg unknown
+
+echo '% ambiguous'
+hg ambiguous
+
+echo '% recursive'
+hg recursive
+
+cd alias
+echo foo > foo
+hg ci -Amfoo
+
+echo '% with opts'
+hg cleanst
