@@ -313,7 +313,7 @@ class convert_svn(converter_source):
                     fromkind = svn.ra.check_path(self.ra, entrypath, fromrev)
                     if fromkind == svn.core.svn_node_file:   # a deleted file
                         entries.append(self.recode(entry))
-                    else:
+                    elif fromkind == svn.core.svn_node_dir:
                         # print "Deleted/moved non-file:", revnum, path, ent
                         # children = self._find_children(path, revnum - 1)
                         # print "find children %s@%d from %d action %s" % (path, revnum, ent.copyfrom_rev, ent.action)
@@ -343,6 +343,9 @@ class convert_svn(converter_source):
                                     del copies[entry]
                                 else:
                                     entries.append(entry)
+                    else:
+                        self.ui.debug('unknown path in revision %d: %s\n' % \
+                                      (revnum, path))
                 elif kind == svn.core.svn_node_dir:
                     # Should probably synthesize normal file entries
                     # and handle as above to clean up copy/rename handling.
