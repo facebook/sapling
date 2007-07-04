@@ -27,8 +27,6 @@ except ImportError:
 
 class CompatibilityException(Exception): pass
 
-LOG_BATCH_SIZE = 50
-
 class svn_entry(object):
     """Emulate a Subversion path change."""
     __slots__ = ['path', 'copyfrom_path', 'copyfrom_rev', 'action']
@@ -106,6 +104,7 @@ class convert_svn(converter_source):
         try:
             self.transport = transport.SvnRaTransport(url = url)
             self.ra = self.transport.ra
+            self.ctx = svn.client.create_context()
             self.base = svn.ra.get_repos_root(self.ra)
             self.module = self.url[len(self.base):]
             self.modulemap = {} # revision, module
@@ -137,9 +136,9 @@ class convert_svn(converter_source):
         revnum = int(revnum)
         parts = url.split('/', 1)
         uuid = parts.pop(0)[4:]
-        mod = '/'
+        mod = ''
         if parts:
-            mod += parts[0]
+            mod = '/' + parts[0]
         return uuid, mod, revnum
 
     def latest(self, path, stop=0):
@@ -182,7 +181,7 @@ class convert_svn(converter_source):
         self.ui.debug("reparent to %s\n" % svn_url.encode(self.encoding))
         svn.ra.reparent(self.ra, svn_url.encode(self.encoding))
 
-    def _fetch_revisions(self, from_revnum = 0, to_revnum = 347, module=None):
+    def _fetch_revisions(self, from_revnum = 0, to_revnum = 347):
         def get_entry_from_path(path, module=self.module):
             # Given the repository url of this wc, say
             #   "http://server/plone/CMFPlone/branches/Plone-2_0-branch"
@@ -211,7 +210,7 @@ class convert_svn(converter_source):
                 self.ui.note('skipping blacklisted revision %d\n' % revnum)
                 return
 
-            self.ui.note("parsing revision %d\n" % revnum)
+            self.ui.debug("parsing revision %d\n" % revnum)
            
             if orig_paths is None:
                 self.ui.debug('revision %d has no entries\n' % revnum)
@@ -242,9 +241,11 @@ class convert_svn(converter_source):
                     if ent:
                         if ent.copyfrom_path:
                             # ent.copyfrom_rev may not be the actual last revision
-                            prev = self.latest(ent.copyfrom_path, revnum)
+                            prev = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
                             self.modulemap[prev] = ent.copyfrom_path
                             parents = [self.rev(prev, ent.copyfrom_path)]
+                            self.ui.note('found parent of branch %s at %d: %s\n' % \
+                                         (self.module, prev, ent.copyfrom_path))
                         else:
                             self.ui.debug("No copyfrom path, don't know what to do.\n")
                             # Maybe it was added and there is no more history.
@@ -273,9 +274,15 @@ class convert_svn(converter_source):
                 elif kind == 0: # gone, but had better be a deleted *file*
                     self.ui.debug("gone from %s\n" % ent.copyfrom_rev)
 
-                    fromrev = revnum - 1
-                    # might always need to be revnum - 1 in these 3 lines?
-                    old_module = self.modulemap.get(fromrev, self.module)
+                    # if a branch is created but entries are removed in the same
+                    # changeset, get the right fromrev
+                    if parents:
+                        uuid, old_module, fromrev = self.revsplit(parents[0])
+                    else:
+                        fromrev = revnum - 1
+                        # might always need to be revnum - 1 in these 3 lines?
+                        old_module = self.modulemap.get(fromrev, self.module)
+
                     basepath = old_module + "/" + get_entry_from_path(path, module=self.module)
                     entrypath = old_module + "/" + get_entry_from_path(path, module=self.module)
 
@@ -286,7 +293,7 @@ class convert_svn(converter_source):
                             part = "/".join(parts[:i])
                             info = part, copyfrom.get(part, None)
                             if info[1] is not None:
-                                self.ui.debug("Found parent directory %s\n" % info)
+                                self.ui.debug("Found parent directory %s\n" % info[1])
                                 rc = info
                         return rc
 
@@ -427,15 +434,13 @@ class convert_svn(converter_source):
                 self.child_cset.parents = [rev]
             self.child_cset = cset
 
-        self.ui.note('fetching revision log from %d to %d\n' % \
-                     (from_revnum, to_revnum))
+        self.ui.note('fetching revision log for "%s" from %d to %d\n' % \
+                     (self.module, from_revnum, to_revnum))
 
-        if module is None:
-            module = self.module
         try:
             discover_changed_paths = True
             strict_node_history = False
-            svn.ra.get_log(self.ra, [module], from_revnum, to_revnum, 0,
+            svn.ra.get_log(self.ra, [self.module], from_revnum, to_revnum, 0,
                            discover_changed_paths, strict_node_history,
                            parselogentry)
             self.last_revnum = to_revnum
@@ -446,10 +451,26 @@ class convert_svn(converter_source):
             raise
 
     def getheads(self):
-        # svn-url@rev
-        # Not safe if someone committed:
-        self.heads = [self.head]
-        # print self.commits.keys()
+        # detect standard /branches, /tags, /trunk layout
+        optrev = svn.core.svn_opt_revision_t()
+        optrev.kind = svn.core.svn_opt_revision_number
+        optrev.value.number = self.last_changed
+        rpath = self.url.strip('/')
+        paths = svn.client.ls(rpath, optrev, False, self.ctx)
+        if 'branches' in paths and 'trunk' in paths:
+            self.module += '/trunk'
+            lt = self.latest(self.module, self.last_changed)
+            self.head = self.rev(lt)
+            self.heads = [self.head]
+            branches = svn.client.ls(rpath + '/branches', optrev, False, self.ctx)
+            for branch in branches.keys():
+                module = '/branches/' + branch
+                brevnum = self.latest(module, self.last_changed)
+                brev = self.rev(brevnum, module)
+                self.ui.note('found branch %s at %d\n' % (branch, brevnum))
+                self.heads.append(brev)
+        else:
+            self.heads = [self.head]
         return self.heads
 
     def _getfile(self, file, rev):
@@ -497,9 +518,9 @@ class convert_svn(converter_source):
     def getcommit(self, rev):
         if rev not in self.commits:
             uuid, module, revnum = self.revsplit(rev)
-            minrev = revnum - LOG_BATCH_SIZE > 0 and revnum - LOG_BATCH_SIZE or 0
-            self._fetch_revisions(from_revnum=revnum, to_revnum=0,
-                                  module=module)
+            self.module = module
+            self.reparent(module)
+            self._fetch_revisions(from_revnum=revnum, to_revnum=0)
         return self.commits[rev]
 
     def gettags(self):
@@ -528,14 +549,12 @@ class convert_svn(converter_source):
 
         def _find_children_fallback(path, revnum):
             # SWIG python bindings for getdir are broken up to at least 1.4.3
-            if not hasattr(self, 'client_ctx'):
-                self.client_ctx = svn.client.create_context()
             pool = Pool()
             optrev = svn.core.svn_opt_revision_t()
             optrev.kind = svn.core.svn_opt_revision_number
             optrev.value.number = revnum
             rpath = '/'.join([self.base, path]).strip('/')
-            return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev, True, self.client_ctx, pool).keys()]
+            return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev, True, self.ctx, pool).keys()]
 
         if hasattr(self, '_find_children_fallback'):
             return _find_children_fallback(path, revnum)
