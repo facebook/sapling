@@ -929,16 +929,17 @@ def debuginstall(ui):
         fa = writetemp("1\n2\n3\n4\n")
         fl = writetemp("1\n2\n3\ninsert\n4\n")
         fr = writetemp("begin\n1\n2\n3\n4\n")
-        r = os.system('%s %s %s %s' % (cmd, fl, fa, fr))
+        r = util.system('%s "%s" "%s" "%s"' % (cmd, fl, fa, fr))
         if r:
-            ui.write(_(" got unexpected merge error %d!") % r)
+            ui.write(_(" Got unexpected merge error %d!\n") % r)
             problems += 1
         m = file(fl).read()
         if m != "begin\n1\n2\n3\ninsert\n4\n":
-            ui.write(_(" got unexpected merge results!") % r)
+            ui.write(_(" Got unexpected merge results!\n"))
             ui.write(_(" (your merge helper may have the"
                        " wrong argument order)\n"))
-            ui.write(m)
+            ui.write(_(" Result: %r\n") % m)
+            problems += 1
         os.unlink(fa)
         os.unlink(fl)
         os.unlink(fr)
