@@ -183,25 +183,6 @@ class convert_svn(converter_source):
         svn.ra.reparent(self.ra, svn_url.encode(self.encoding))
 
     def _fetch_revisions(self, from_revnum = 0, to_revnum = 347, module=None):
-        # batching is broken for branches
-        to_revnum = 0
-        if not hasattr(self, 'child_rev'):
-            self.child_rev = from_revnum
-            self.child_cset = self.commits.get(self.child_rev)
-        else:
-            self.commits[self.child_rev] = self.child_cset
-            # batching broken
-            return
-            # if the branch was created in the middle of the last batch,
-            # svn log will complain that the path doesn't exist in this batch
-            # so we roll the parser back to the last revision where this branch appeared
-            revnum = self.revnum(self.child_rev)
-            if revnum > from_revnum:
-                from_revnum = revnum
-
-        self.ui.note('fetching revision log from %d to %d\n' % \
-                     (from_revnum, to_revnum))
-
         def get_entry_from_path(path, module=self.module):
             # Given the repository url of this wc, say
             #   "http://server/plone/CMFPlone/branches/Plone-2_0-branch"
@@ -221,6 +202,7 @@ class convert_svn(converter_source):
             self.ui.debug('Ignoring %r since it is not under %r\n' % (path, module))
             return None
 
+        self.child_cset = None
         def parselogentry(*arg, **args):
             orig_paths, revnum, author, date, message, pool = arg
             orig_paths = svn_paths(orig_paths)
@@ -256,13 +238,13 @@ class convert_svn(converter_source):
             for path in orig_paths:
                 # self.ui.write("path %s\n" % path)
                 if path == self.module: # Follow branching back in history
-                    import pdb
-                    pdb.set_trace()
                     ent = orig_paths[path]
                     if ent:
                         if ent.copyfrom_path:
-                            self.modulemap[ent.copyfrom_rev] = ent.copyfrom_path
-                            parents = [self.rev(ent.copyfrom_rev, ent.copyfrom_path)]
+                            # ent.copyfrom_rev may not be the actual last revision
+                            prev = self.latest(ent.copyfrom_path, revnum)
+                            self.modulemap[prev] = ent.copyfrom_path
+                            parents = [self.rev(prev, ent.copyfrom_path)]
                         else:
                             self.ui.debug("No copyfrom path, don't know what to do.\n")
                             # Maybe it was added and there is no more history.
@@ -440,11 +422,13 @@ class convert_svn(converter_source):
                           copies=copies,
                           branch=branch)
 
-            if self.child_cset and self.child_rev != rev:
+            self.commits[rev] = cset
+            if self.child_cset and not self.child_cset.parents:
                 self.child_cset.parents = [rev]
-                self.commits[self.child_rev] = self.child_cset
             self.child_cset = cset
-            self.child_rev = rev
+
+        self.ui.note('fetching revision log from %d to %d\n' % \
+                     (from_revnum, to_revnum))
 
         if module is None:
             module = self.module
@@ -514,12 +498,30 @@ class convert_svn(converter_source):
         if rev not in self.commits:
             uuid, module, revnum = self.revsplit(rev)
             minrev = revnum - LOG_BATCH_SIZE > 0 and revnum - LOG_BATCH_SIZE or 0
-            self._fetch_revisions(from_revnum=revnum, to_revnum=minrev,
+            self._fetch_revisions(from_revnum=revnum, to_revnum=0,
                                   module=module)
         return self.commits[rev]
 
     def gettags(self):
-        return []
+        tags = {}
+        def parselogentry(*arg, **args):
+            orig_paths, revnum, author, date, message, pool = arg
+            orig_paths = svn_paths(orig_paths)
+            for path in orig_paths:
+                ent = orig_paths[path]
+                source = ent.copyfrom_path
+                rev = ent.copyfrom_rev
+                tag = path.split('/', 2)[2]
+                tags[tag] = self.rev(rev, module=source)
+
+        start = self.revnum(self.head)
+        try:
+            svn.ra.get_log(self.ra, ['/tags'], start, 0, 1, True, False,
+                           parselogentry)
+            return tags
+        except SubversionException:
+            self.ui.note('no tags found at revision %d\n' % start)
+            return {}
 
     def _find_children(self, path, revnum):
         path = path.strip("/")
