@@ -532,6 +532,8 @@ class convert_svn(converter_source):
             orig_paths, revnum, author, date, message, pool = arg
             orig_paths = svn_paths(orig_paths)
             for path in orig_paths:
+                if not path.startswith('/tags/'):
+                    continue
                 ent = orig_paths[path]
                 source = ent.copyfrom_path
                 rev = ent.copyfrom_rev
@@ -540,7 +542,7 @@ class convert_svn(converter_source):
 
         start = self.revnum(self.head)
         try:
-            svn.ra.get_log(self.ra, ['/tags'], start, 0, 1, True, False,
+            svn.ra.get_log(self.ra, ['/tags'], 0, start, 0, True, False,
                            parselogentry)
             return tags
         except SubversionException:
