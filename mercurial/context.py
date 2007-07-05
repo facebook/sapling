@@ -40,6 +40,9 @@ class changectx(object):
         except AttributeError:
             return False
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __nonzero__(self):
         return self._rev != nullrev
 
@@ -184,6 +187,9 @@ class filectx(object):
                     and self._changeid == other._changeid)
         except AttributeError:
             return False
+
+    def __ne__(self, other):
+        return not (self == other)
 
     def filectx(self, fileid):
         '''opens an arbitrary revision of the file without

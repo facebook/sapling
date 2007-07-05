@@ -10,7 +10,7 @@ from node import *
 from repo import *
 from i18n import _
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
-import errno, lock, os, shutil, util, cmdutil
+import errno, lock, os, shutil, util, cmdutil, extensions
 import merge as _merge
 import verify as _verify
 
@@ -50,13 +50,11 @@ def islocal(repo):
             return False
     return repo.local()
 
-repo_setup_hooks = []
-
 def repository(ui, path='', create=False):
     """return a repository object for the specified path"""
     repo = _lookup(path).instance(ui, path, create)
     ui = getattr(repo, "ui", ui)
-    for hook in repo_setup_hooks:
+    for hook in extensions.setuphooks:
         hook(ui, repo)
     return repo
 

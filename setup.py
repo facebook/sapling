@@ -2,8 +2,8 @@
 #
 # This is the mercurial setup script.
 #
-# './setup.py install', or
-# './setup.py --help' for more options
+# 'python setup.py install', or
+# 'python setup.py --help' for more options
 
 import sys
 if not hasattr(sys, 'version_info') or sys.version_info < (2, 3, 0, 'final'):

@@ -1,0 +1,10 @@
+adding a
+marked working directory as branch b
+adding b
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+fast-forward
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+bogus fast-forward should fail
+abort: there is nothing to merge, just use 'hg update' or look at 'hg heads'
+done

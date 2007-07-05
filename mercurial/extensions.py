@@ -6,10 +6,12 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import imp, os
-import commands, hg, util, sys
+import util, sys
 from i18n import _
 
 _extensions = {}
+commandtable = {}
+setuphooks = []
 
 def find(name):
     '''return module with given extension name'''
@@ -54,13 +56,13 @@ def load(ui, name, path):
         uisetup(ui)
     reposetup = getattr(mod, 'reposetup', None)
     if reposetup:
-        hg.repo_setup_hooks.append(reposetup)
+        setuphooks.append(reposetup)
     cmdtable = getattr(mod, 'cmdtable', {})
-    overrides = [cmd for cmd in cmdtable if cmd in commands.table]
+    overrides = [cmd for cmd in cmdtable if cmd in commandtable]
     if overrides:
         ui.warn(_("extension '%s' overrides commands: %s\n")
                 % (name, " ".join(overrides)))
-    commands.table.update(cmdtable)
+    commandtable.update(cmdtable)
 
 def loadall(ui):
     result = ui.configitems("extensions")
