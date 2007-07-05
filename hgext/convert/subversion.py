@@ -202,6 +202,12 @@ class convert_svn(converter_source):
             self.ui.debug('Ignoring %r since it is not under %r\n' % (path, module))
             return None
 
+        received = []
+        # svn.ra.get_log requires no other calls to the ra until it completes,
+        # so we just collect the log entries and parse them afterwards
+        def receivelog(*arg, **args):
+            received.append(arg)
+
         self.child_cset = None
         def parselogentry(*arg, **args):
             orig_paths, revnum, author, date, message, pool = arg
@@ -446,7 +452,9 @@ class convert_svn(converter_source):
             strict_node_history = False
             svn.ra.get_log(self.ra, [self.module], from_revnum, to_revnum, 0,
                            discover_changed_paths, strict_node_history,
-                           parselogentry)
+                           receivelog)
+            for entry in received:
+                parselogentry(*entry)
             self.last_revnum = to_revnum
         except SubversionException, (_, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
