@@ -87,6 +87,8 @@ class convert_svn(converter_source):
             raise NoRepo(msg)
 
         self.encoding = locale.getpreferredencoding()
+        self.lastrevs = {}
+
         latest = None
         if rev:
             try:
@@ -455,12 +457,20 @@ class convert_svn(converter_source):
                            receivelog)
             for entry in received:
                 parselogentry(*entry)
-            self.last_revnum = to_revnum
         except SubversionException, (_, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % to_revnum)
             raise
+
+    def setrevmap(self, revmap):
+        lastrevs = {}
+        for revid in revmap.keys():
+            uuid, module, revnum = self.revsplit(revid)
+            lastrevnum = lastrevs.setdefault(module, revnum)
+            if revnum > lastrevnum:
+                lastrevs[module] = revnum
+        self.lastrevs = lastrevs
 
     def getheads(self):
         # detect standard /branches, /tags, /trunk layout
@@ -532,7 +542,8 @@ class convert_svn(converter_source):
             uuid, module, revnum = self.revsplit(rev)
             self.module = module
             self.reparent(module)
-            self._fetch_revisions(from_revnum=revnum, to_revnum=0)
+            stop = self.lastrevs.get(module, 0)
+            self._fetch_revisions(from_revnum=revnum, to_revnum=stop)
         return self.commits[rev]
 
     def gettags(self):
