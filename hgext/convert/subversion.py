@@ -188,13 +188,18 @@ class convert_svn(converter_source):
             entries = []
             rev = self.revid(revnum)
             parents = []
+
+            # branch log might return entries for a parent we already have
+            if rev in self.commits:
+                return
+
             try:
                 branch = self.module.split("/")[-1]
                 if branch == 'trunk':
                     branch = ''
             except IndexError:
                 branch = None
-                
+
             for path in sorted(orig_paths):
                 # self.ui.write("path %s\n" % path)
                 if path == self.module: # Follow branching back in history
@@ -487,6 +492,8 @@ class convert_svn(converter_source):
         files = self.files[rev]
         cl = files
         cl.sort()
+        # caller caches the result, so free it here to release memory
+        del self.files[rev]
         return cl
 
     def getcommit(self, rev):
@@ -496,7 +503,10 @@ class convert_svn(converter_source):
             self.reparent(module)
             stop = self.lastrevs.get(module, 0)
             self._fetch_revisions(from_revnum=revnum, to_revnum=stop)
-        return self.commits[rev]
+        commit = self.commits[rev]
+        # caller caches the result, so free it here to release memory
+        del self.commits[rev]
+        return commit
 
     def gettags(self):
         tags = {}
