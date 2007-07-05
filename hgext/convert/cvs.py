@@ -9,9 +9,6 @@ class convert_cvs(converter_source):
     def __init__(self, ui, path, rev=None):
         super(convert_cvs, self).__init__(ui, path, rev=rev)
 
-        self.path = path
-        self.ui = ui
-        self.rev = rev
         cvs = os.path.join(path, "CVS")
         if not os.path.exists(cvs):
             raise NoRepo("couldn't open CVS repo %s" % path)

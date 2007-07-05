@@ -15,11 +15,7 @@ class convert_git(converter_source):
             path += "/.git"
         if not os.path.exists(path + "/objects"):
             raise NoRepo("couldn't open GIT repo %s" % path)
-
         self.path = path
-        self.ui = ui
-        self.rev = rev
-        self.encoding = 'utf-8'
 
     def getheads(self):
         if not self.rev:

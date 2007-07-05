@@ -17,7 +17,11 @@ class converter_source(object):
     def __init__(self, ui, path, rev=None):
         """Initialize conversion source (or raise NoRepo("message")
         exception if path is not a valid repository)"""
-        pass
+        self.ui = ui
+        self.path = path
+        self.rev = rev
+
+        self.encoding = 'utf-8'
 
     def getheads(self):
         """Return a list of this repository's heads"""
@@ -48,7 +52,7 @@ class converter_source(object):
 
     def recode(self, s, encoding=None):
         if not encoding:
-            encoding = hasattr(self, 'encoding') and self.encoding or 'utf-8'
+            encoding = self.encoding or 'utf-8'
             
         try:
             return s.decode(encoding).encode("utf-8")

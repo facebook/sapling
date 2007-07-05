@@ -86,7 +86,6 @@ class convert_svn(converter_source):
             ui.warn(msg)
             raise NoRepo(msg)
 
-        self.ui = ui
         self.encoding = locale.getpreferredencoding()
         latest = None
         if rev:
@@ -123,9 +122,9 @@ class convert_svn(converter_source):
 
         self.last_changed = self.latest(self.module, latest)
 
-        self.head = self.rev(self.last_changed)
+        self.head = self.revid(self.last_changed)
 
-    def rev(self, revnum, module=None):
+    def revid(self, revnum, module=None):
         if not module:
             module = self.module
         return (u"svn:%s%s@%s" % (self.uuid, module, revnum)).decode(self.encoding)
@@ -227,7 +226,7 @@ class convert_svn(converter_source):
             copyfrom = {} # Map of entrypath, revision for finding source of deleted revisions.
             copies = {}
             entries = []
-            rev = self.rev(revnum)
+            rev = self.revid(revnum)
             parents = []
             try:
                 branch = self.module.split("/")[-1]
@@ -245,7 +244,7 @@ class convert_svn(converter_source):
                             # ent.copyfrom_rev may not be the actual last revision
                             prev = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
                             self.modulemap[prev] = ent.copyfrom_path
-                            parents = [self.rev(prev, ent.copyfrom_path)]
+                            parents = [self.revid(prev, ent.copyfrom_path)]
                             self.ui.note('found parent of branch %s at %d: %s\n' % \
                                          (self.module, prev, ent.copyfrom_path))
                         else:
@@ -465,13 +464,13 @@ class convert_svn(converter_source):
         if 'branches' in paths and 'trunk' in paths:
             self.module += '/trunk'
             lt = self.latest(self.module, self.last_changed)
-            self.head = self.rev(lt)
+            self.head = self.revid(lt)
             self.heads = [self.head]
             branches = svn.client.ls(rpath + '/branches', optrev, False, self.ctx)
             for branch in branches.keys():
                 module = '/branches/' + branch
                 brevnum = self.latest(module, self.last_changed)
-                brev = self.rev(brevnum, module)
+                brev = self.revid(brevnum, module)
                 self.ui.note('found branch %s at %d\n' % (branch, brevnum))
                 self.heads.append(brev)
         else:
@@ -540,7 +539,7 @@ class convert_svn(converter_source):
                 source = ent.copyfrom_path
                 rev = ent.copyfrom_rev
                 tag = path.split('/', 2)[2]
-                tags[tag] = self.rev(rev, module=source)
+                tags[tag] = self.revid(rev, module=source)
 
         start = self.revnum(self.head)
         try:
