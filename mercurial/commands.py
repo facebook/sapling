@@ -2254,7 +2254,7 @@ def revert(ui, repo, *pats, **opts):
     directory, the reverted files will thus appear modified
     afterwards.
 
-    If a file has been deleted, it is recreated.  If the executable
+    If a file has been deleted, it is restored.  If the executable
     mode of a file was changed, it is reset.
 
     If names are given, all files matching the names are reverted.
