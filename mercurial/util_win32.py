@@ -300,7 +300,7 @@ class posixfile_nt(object):
 
 getuser_fallback = win32api.GetUserName
 
-def set_signal_handler():
+def set_signal_handler_win32():
     """Register a termination handler for console events including
     CTRL+C. python signal handlers do not work well with socket
     operations.
