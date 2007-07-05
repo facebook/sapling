@@ -523,7 +523,7 @@ def update(repo, node, branchmerge, force, partial, wlock):
         raise util.Abort(_("outstanding uncommitted merges"))
     if pa == p1 or pa == p2: # is there a linear path from p1 to p2?
         if branchmerge:
-            if p1.branch() != p2.branch():
+            if p1.branch() != p2.branch() and pa != p2:
                 fastforward = True
             else:
                 raise util.Abort(_("there is nothing to merge, just use "
