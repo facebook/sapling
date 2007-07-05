@@ -40,6 +40,7 @@ Source: dist\msvcr71.dll; DestDir: {app}
 Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.txt; DestDir: {app}\Docs
+Source: doc\*.html; DestDir: {app}\Docs
 Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
 Source: COPYING; DestDir: {app}; DestName: Copying.txt
@@ -52,7 +53,7 @@ Type: files; Name: {app}\Mercurial.url
 
 [Icons]
 Name: {group}\Uninstall Mercurial; Filename: {uninstallexe}
-Name: {group}\Mercurial Command Reference; Filename: {app}\Docs\hg.1.txt
+Name: {group}\Mercurial Command Reference; Filename: {app}\Docs\hg.1.html
 Name: {group}\Mercurial Web Site; Filename: {app}\Mercurial.url
 
 [Run]
