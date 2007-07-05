@@ -216,6 +216,7 @@ class convert(object):
 
     def convert(self):
         try:
+            self.source.setrevmap(self.map)
             self.ui.status("scanning source...\n")
             heads = self.source.getheads()
             parents = self.walktree(heads)

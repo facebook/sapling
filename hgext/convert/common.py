@@ -22,6 +22,11 @@ class converter_source(object):
         self.rev = rev
 
         self.encoding = 'utf-8'
+        self.revmap = {}
+
+    def setrevmap(self, revmap):
+        """set the map of already-converted revisions"""
+        self.revmap = revmap
 
     def getheads(self):
         """Return a list of this repository's heads"""
