@@ -478,6 +478,9 @@ def recordupdates(repo, action, branchmerge):
                     repo.dirstate.forget([f])
         elif m == "d": # directory rename
             f2, fd, flag = a[2:]
+            if not f2 and f not in repo.dirstate:
+                # untracked file moved
+                continue
             if branchmerge:
                 repo.dirstate.update([fd], 'a')
                 if f:
