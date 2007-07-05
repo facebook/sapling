@@ -77,6 +77,8 @@ class svn_paths(object):
 # SVN conversion code stolen from bzr-svn and tailor
 class convert_svn(converter_source):
     def __init__(self, ui, url, rev=None):
+        super(convert_svn, self).__init__(ui, url, rev=rev)
+
         try:
             SubversionException
         except NameError:

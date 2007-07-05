@@ -7,6 +7,8 @@ from common import NoRepo, commit, converter_source
 
 class convert_cvs(converter_source):
     def __init__(self, ui, path, rev=None):
+        super(convert_cvs, self).__init__(ui, path, rev=rev)
+
         self.path = path
         self.ui = ui
         self.rev = rev

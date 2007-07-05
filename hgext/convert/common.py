@@ -17,7 +17,7 @@ class converter_source(object):
     def __init__(self, ui, path, rev=None):
         """Initialize conversion source (or raise NoRepo("message")
         exception if path is not a valid repository)"""
-        raise NotImplementedError()
+        pass
 
     def getheads(self):
         """Return a list of this repository's heads"""

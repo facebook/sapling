@@ -9,6 +9,8 @@ class convert_git(converter_source):
         return os.popen('GIT_DIR=%s %s' % (self.path, s))
 
     def __init__(self, ui, path, rev=None):
+        super(convert_git, self).__init__(ui, path, rev=rev)
+
         if os.path.isdir(path + "/.git"):
             path += "/.git"
         if not os.path.exists(path + "/objects"):
