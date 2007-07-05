@@ -27,53 +27,6 @@ except ImportError:
 
 class CompatibilityException(Exception): pass
 
-class svn_entry(object):
-    """Emulate a Subversion path change."""
-    __slots__ = ['path', 'copyfrom_path', 'copyfrom_rev', 'action']
-    def __init__(self, entry):
-        self.copyfrom_path = entry.copyfrom_path
-        self.copyfrom_rev = entry.copyfrom_rev
-        self.action = entry.action
-
-    def __str__(self):
-        return "%s %s %s" % (self.action, self.copyfrom_path, self.copyfrom_rev)
-
-    def __repr__(self):
-        return self.__str__()
-
-class svn_paths(object):
-    """Emulate a Subversion ordered dictionary of changed paths."""
-    __slots__ = ['values', 'order']
-    def __init__(self, orig_paths):
-        self.order = []
-        self.values = {}
-        if hasattr(orig_paths, 'keys'):
-            self.order = sorted(orig_paths.keys())
-            self.values.update(orig_paths)
-            return
-        if not orig_paths:
-            return
-        for path in orig_paths:
-            self.order.append(path)
-            self.values[path] = svn_entry(orig_paths[path])
-        self.order.sort() # maybe the order it came in isn't so great...
-
-    def __iter__(self):
-        return iter(self.order)
-
-    def __getitem__(self, key):
-        return self.values[key]
-
-    def __str__(self):
-        s = "{\n"
-        for path in self.order:
-            s += "'%s': %s,\n" % (path, self.values[path])
-        s += "}"
-        return s
-    
-    def __repr__(self):
-        return self.__str__()
-
 # SVN conversion code stolen from bzr-svn and tailor
 class convert_svn(converter_source):
     def __init__(self, ui, url, rev=None):
@@ -213,7 +166,6 @@ class convert_svn(converter_source):
         self.child_cset = None
         def parselogentry(*arg, **args):
             orig_paths, revnum, author, date, message, pool = arg
-            orig_paths = svn_paths(orig_paths)
 
             if self.is_blacklisted(revnum):
                 self.ui.note('skipping blacklisted revision %d\n' % revnum)
@@ -243,7 +195,7 @@ class convert_svn(converter_source):
             except IndexError:
                 branch = None
                 
-            for path in orig_paths:
+            for path in sorted(orig_paths):
                 # self.ui.write("path %s\n" % path)
                 if path == self.module: # Follow branching back in history
                     ent = orig_paths[path]
@@ -550,7 +502,6 @@ class convert_svn(converter_source):
         tags = {}
         def parselogentry(*arg, **args):
             orig_paths, revnum, author, date, message, pool = arg
-            orig_paths = svn_paths(orig_paths)
             for path in orig_paths:
                 if not path.startswith('/tags/'):
                     continue
