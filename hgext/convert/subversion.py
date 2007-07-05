@@ -79,6 +79,91 @@ class convert_svn(converter_source):
 
         self.head = self.revid(self.last_changed)
 
+    def setrevmap(self, revmap):
+        lastrevs = {}
+        for revid in revmap.keys():
+            uuid, module, revnum = self.revsplit(revid)
+            lastrevnum = lastrevs.setdefault(module, revnum)
+            if revnum > lastrevnum:
+                lastrevs[module] = revnum
+        self.lastrevs = lastrevs
+
+    def getheads(self):
+        # detect standard /branches, /tags, /trunk layout
+        optrev = svn.core.svn_opt_revision_t()
+        optrev.kind = svn.core.svn_opt_revision_number
+        optrev.value.number = self.last_changed
+        rpath = self.url.strip('/')
+        paths = svn.client.ls(rpath, optrev, False, self.ctx)
+        if 'branches' in paths and 'trunk' in paths:
+            self.module += '/trunk'
+            lt = self.latest(self.module, self.last_changed)
+            self.head = self.revid(lt)
+            self.heads = [self.head]
+            branches = svn.client.ls(rpath + '/branches', optrev, False, self.ctx)
+            for branch in branches.keys():
+                module = '/branches/' + branch
+                brevnum = self.latest(module, self.last_changed)
+                brev = self.revid(brevnum, module)
+                self.ui.note('found branch %s at %d\n' % (branch, brevnum))
+                self.heads.append(brev)
+        else:
+            self.heads = [self.head]
+        return self.heads
+
+    def getfile(self, file, rev):
+        data, mode = self._getfile(file, rev)
+        self.modecache[(file, rev)] = mode
+        return data
+
+    def getmode(self, file, rev):        
+        return self.modecache[(file, rev)]
+
+    def getchanges(self, rev):
+        self.modecache = {}
+        files = self.files[rev]
+        cl = files
+        cl.sort()
+        # caller caches the result, so free it here to release memory
+        del self.files[rev]
+        return cl
+
+    def getcommit(self, rev):
+        if rev not in self.commits:
+            uuid, module, revnum = self.revsplit(rev)
+            self.module = module
+            self.reparent(module)
+            stop = self.lastrevs.get(module, 0)
+            self._fetch_revisions(from_revnum=revnum, to_revnum=stop)
+        commit = self.commits[rev]
+        # caller caches the result, so free it here to release memory
+        del self.commits[rev]
+        return commit
+
+    def gettags(self):
+        tags = {}
+        def parselogentry(*arg, **args):
+            orig_paths, revnum, author, date, message, pool = arg
+            for path in orig_paths:
+                if not path.startswith('/tags/'):
+                    continue
+                ent = orig_paths[path]
+                source = ent.copyfrom_path
+                rev = ent.copyfrom_rev
+                tag = path.split('/', 2)[2]
+                tags[tag] = self.revid(rev, module=source)
+
+        start = self.revnum(self.head)
+        try:
+            svn.ra.get_log(self.ra, ['/tags'], 0, start, 0, True, False,
+                           parselogentry)
+            return tags
+        except SubversionException:
+            self.ui.note('no tags found at revision %d\n' % start)
+            return {}
+
+    # -- helper functions --
+
     def revid(self, revnum, module=None):
         if not module:
             module = self.module
@@ -421,38 +506,6 @@ class convert_svn(converter_source):
                     revision="Revision number %d" % to_revnum)
             raise
 
-    def setrevmap(self, revmap):
-        lastrevs = {}
-        for revid in revmap.keys():
-            uuid, module, revnum = self.revsplit(revid)
-            lastrevnum = lastrevs.setdefault(module, revnum)
-            if revnum > lastrevnum:
-                lastrevs[module] = revnum
-        self.lastrevs = lastrevs
-
-    def getheads(self):
-        # detect standard /branches, /tags, /trunk layout
-        optrev = svn.core.svn_opt_revision_t()
-        optrev.kind = svn.core.svn_opt_revision_number
-        optrev.value.number = self.last_changed
-        rpath = self.url.strip('/')
-        paths = svn.client.ls(rpath, optrev, False, self.ctx)
-        if 'branches' in paths and 'trunk' in paths:
-            self.module += '/trunk'
-            lt = self.latest(self.module, self.last_changed)
-            self.head = self.revid(lt)
-            self.heads = [self.head]
-            branches = svn.client.ls(rpath + '/branches', optrev, False, self.ctx)
-            for branch in branches.keys():
-                module = '/branches/' + branch
-                brevnum = self.latest(module, self.last_changed)
-                brev = self.revid(brevnum, module)
-                self.ui.note('found branch %s at %d\n' % (branch, brevnum))
-                self.heads.append(brev)
-        else:
-            self.heads = [self.head]
-        return self.heads
-
     def _getfile(self, file, rev):
         io = StringIO()
         # TODO: ra.get_file transmits the whole file instead of diffs.
@@ -479,57 +532,6 @@ class convert_svn(converter_source):
             if data.startswith(link_prefix):
                 data = data[len(link_prefix):]
         return data, mode
-
-    def getfile(self, file, rev):
-        data, mode = self._getfile(file, rev)
-        self.modecache[(file, rev)] = mode
-        return data
-
-    def getmode(self, file, rev):        
-        return self.modecache[(file, rev)]
-
-    def getchanges(self, rev):
-        self.modecache = {}
-        files = self.files[rev]
-        cl = files
-        cl.sort()
-        # caller caches the result, so free it here to release memory
-        del self.files[rev]
-        return cl
-
-    def getcommit(self, rev):
-        if rev not in self.commits:
-            uuid, module, revnum = self.revsplit(rev)
-            self.module = module
-            self.reparent(module)
-            stop = self.lastrevs.get(module, 0)
-            self._fetch_revisions(from_revnum=revnum, to_revnum=stop)
-        commit = self.commits[rev]
-        # caller caches the result, so free it here to release memory
-        del self.commits[rev]
-        return commit
-
-    def gettags(self):
-        tags = {}
-        def parselogentry(*arg, **args):
-            orig_paths, revnum, author, date, message, pool = arg
-            for path in orig_paths:
-                if not path.startswith('/tags/'):
-                    continue
-                ent = orig_paths[path]
-                source = ent.copyfrom_path
-                rev = ent.copyfrom_rev
-                tag = path.split('/', 2)[2]
-                tags[tag] = self.revid(rev, module=source)
-
-        start = self.revnum(self.head)
-        try:
-            svn.ra.get_log(self.ra, ['/tags'], 0, start, 0, True, False,
-                           parselogentry)
-            return tags
-        except SubversionException:
-            self.ui.note('no tags found at revision %d\n' % start)
-            return {}
 
     def _find_children(self, path, revnum):
         path = path.strip("/")
