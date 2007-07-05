@@ -42,7 +42,6 @@ class lazycommand(object):
             return
 
         try:
-            self._loading = True
             self._cmd = findcmd(self._ui, self._target)[1]
             if self._cmd == self:
                 raise RecursiveCommand()
