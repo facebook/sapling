@@ -26,8 +26,7 @@ test-TIP/.hg_archival.txt
 test-TIP/bar
 test-TIP/baz/bletch
 test-TIP/foo
-76ce33f5d5cf8151558e2d9a396c7504
-76ce33f5d5cf8151558e2d9a396c7504
+True
 abort: archive prefix contains illegal components
 Archive:  test.zip
     testing: test/.hg_archival.txt    OK
