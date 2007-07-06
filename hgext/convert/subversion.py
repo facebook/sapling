@@ -286,7 +286,9 @@ class convert_svn(converter_source):
             except IndexError:
                 branch = None
 
-            for path in sorted(orig_paths):
+            paths = orig_paths.keys()
+            paths.sort()
+            for path in paths:
                 # self.ui.write("path %s\n" % path)
                 if path == self.module: # Follow branching back in history
                     ent = orig_paths[path]

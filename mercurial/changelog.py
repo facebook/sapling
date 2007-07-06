@@ -132,7 +132,9 @@ class changelog(revlog):
 
     def encode_extra(self, d):
         # keys must be sorted to produce a deterministic changelog entry
-        items = [_string_escape('%s:%s' % (k, d[k])) for k in sorted(d)]
+        keys = d.keys()
+        keys.sort()
+        items = [_string_escape('%s:%s' % (k, d[k])) for k in keys]
         return "\0".join(items)
 
     def extract(self, text):
