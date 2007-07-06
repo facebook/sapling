@@ -90,8 +90,12 @@ class hgwebdir(object):
         url = req.env['REQUEST_URI'].split('?')[0]
         if not url.endswith('/'):
             url += '/'
+        pathinfo = req.env.get('PATH_INFO', '').strip('/') + '/'
+        base = url[:len(url) - len(pathinfo)]
+        if not base.endswith('/'):
+            base += '/'
 
-        staticurl = config('web', 'staticurl') or url + 'static/'
+        staticurl = config('web', 'staticurl') or base + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
 
@@ -118,7 +122,7 @@ class hgwebdir(object):
                     yield {"type" : i[0], "extension": i[1],
                            "node": nodeid, "url": url}
 
-        def entries(sortcolumn="", descending=False, **map):
+        def entries(sortcolumn="", descending=False, subdir="", **map):
             def sessionvars(**map):
                 fields = []
                 if req.form.has_key('style'):
@@ -134,6 +138,9 @@ class hgwebdir(object):
             rows = []
             parity = paritygen(self.stripecount)
             for name, path in self.repos:
+                if not name.startswith(subdir):
+                    continue
+
                 u = ui.ui(parentui=parentui)
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
@@ -145,7 +152,7 @@ class hgwebdir(object):
                 if u.configbool("web", "hidden", untrusted=True):
                     continue
 
-                url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
+                url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name[len(subdir):]])
                        .replace("//", "/")) + '/'
 
                 # update time with local timezone
@@ -185,6 +192,25 @@ class hgwebdir(object):
                     row['parity'] = parity.next()
                     yield row
 
+        def makeindex(req, subdir=""):
+            sortable = ["name", "description", "contact", "lastchange"]
+            sortcolumn, descending = self.repos_sorted
+            if req.form.has_key('sort'):
+                sortcolumn = req.form['sort'][0]
+                descending = sortcolumn.startswith('-')
+                if descending:
+                    sortcolumn = sortcolumn[1:]
+                if sortcolumn not in sortable:
+                    sortcolumn = ""
+
+            sort = [("sort_%s" % column,
+                     "%s%s" % ((not descending and column == sortcolumn)
+                               and "-" or "", column))
+                    for column in sortable]
+            req.write(tmpl("index", entries=entries, subdir=subdir,
+                           sortcolumn=sortcolumn, descending=descending,
+                           **dict(sort)))
+
         try:
             virtual = req.env.get("PATH_INFO", "").strip('/')
             if virtual.startswith('static/'):
@@ -211,7 +237,11 @@ class hgwebdir(object):
                     except hg.RepoError, inst:
                         req.write(tmpl("error", error=str(inst)))
                 else:
-                    req.write(tmpl("notfound", repo=virtual))
+                    subdir=req.env.get("PATH_INFO", "").strip('/') + '/'
+                    if [r for r in self.repos if r[0].startswith(subdir)]:
+                        makeindex(req, subdir)
+                    else:
+                        req.write(tmpl("notfound", repo=virtual))
             else:
                 if req.form.has_key('static'):
                     static = os.path.join(templater.templatepath(), "static")
@@ -219,22 +249,6 @@ class hgwebdir(object):
                     req.write(staticfile(static, fname, req)
                               or tmpl("error", error="%r not found" % fname))
                 else:
-                    sortable = ["name", "description", "contact", "lastchange"]
-                    sortcolumn, descending = self.repos_sorted
-                    if req.form.has_key('sort'):
-                        sortcolumn = req.form['sort'][0]
-                        descending = sortcolumn.startswith('-')
-                        if descending:
-                            sortcolumn = sortcolumn[1:]
-                        if sortcolumn not in sortable:
-                            sortcolumn = ""
-
-                    sort = [("sort_%s" % column,
-                             "%s%s" % ((not descending and column == sortcolumn)
-                                       and "-" or "", column))
-                            for column in sortable]
-                    req.write(tmpl("index", entries=entries,
-                                   sortcolumn=sortcolumn, descending=descending,
-                                   **dict(sort)))
+                    makeindex(req)
         finally:
             tmpl = None
