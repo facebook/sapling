@@ -140,6 +140,7 @@ class hgwebdir(object):
             for name, path in self.repos:
                 if not name.startswith(subdir):
                     continue
+                name = name[len(subdir):]
 
                 u = ui.ui(parentui=parentui)
                 try:
@@ -152,7 +153,7 @@ class hgwebdir(object):
                 if u.configbool("web", "hidden", untrusted=True):
                     continue
 
-                url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name[len(subdir):]])
+                url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
                        .replace("//", "/")) + '/'
 
                 # update time with local timezone
