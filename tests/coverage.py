@@ -504,7 +504,7 @@ class coverage:
     def get_suite_spots(self, tree, spots):
         import symbol, token
         for i in range(1, len(tree)):
-            if type(tree[i]) == type(()):
+            if isinstance(tree[i], tuple):
                 if tree[i][0] == symbol.suite:
                     # Found a suite, look back for the colon and keyword.
                     lineno_colon = lineno_word = None
