@@ -834,7 +834,7 @@ def debuginstall(ui):
     '''test Mercurial installation'''
 
     def writetemp(contents):
-        (fd, name) = tempfile.mkstemp()
+        (fd, name) = tempfile.mkstemp(prefix="hg-debuginstall-")
         f = os.fdopen(fd, "wb")
         f.write(contents)
         f.close()
