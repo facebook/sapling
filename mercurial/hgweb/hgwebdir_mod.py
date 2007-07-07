@@ -220,8 +220,15 @@ class hgwebdir(object):
                 req.write(staticfile(static, fname, req) or
                           tmpl('error', error='%r not found' % fname))
             elif virtual:
+                repos = dict(self.repos)
+                # browse subdirectories
+                subdir = virtual + '/'
+                if [r for r in repos if r.startswith(subdir)]:
+                    makeindex(req, subdir)
+                    return
+
                 while virtual:
-                    real = dict(self.repos).get(virtual)
+                    real = repos.get(virtual)
                     if real:
                         break
                     up = virtual.rfind('/')
@@ -238,11 +245,7 @@ class hgwebdir(object):
                     except hg.RepoError, inst:
                         req.write(tmpl("error", error=str(inst)))
                 else:
-                    subdir=req.env.get("PATH_INFO", "").strip('/') + '/'
-                    if [r for r in self.repos if r[0].startswith(subdir)]:
-                        makeindex(req, subdir)
-                    else:
-                        req.write(tmpl("notfound", repo=virtual))
+                    req.write(tmpl("notfound", repo=virtual))
             else:
                 if req.form.has_key('static'):
                     static = os.path.join(templater.templatepath(), "static")
