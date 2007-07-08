@@ -221,31 +221,31 @@ class hgwebdir(object):
                           tmpl('error', error='%r not found' % fname))
             elif virtual:
                 repos = dict(self.repos)
-                # browse subdirectories
-                subdir = virtual + '/'
-                if [r for r in repos if r.startswith(subdir)]:
-                    makeindex(req, subdir)
-                    return
-
                 while virtual:
                     real = repos.get(virtual)
                     if real:
-                        break
+                        req.env['REPO_NAME'] = virtual
+                        try:
+                            repo = hg.repository(parentui, real)
+                            hgweb(repo).run_wsgi(req)
+                        except IOError, inst:
+                            req.write(tmpl("error", error=inst.strerror))
+                        except hg.RepoError, inst:
+                            req.write(tmpl("error", error=str(inst)))
+                        return
+
+                    # browse subdirectories
+                    subdir = virtual + '/'
+                    if [r for r in repos if r.startswith(subdir)]:
+                        makeindex(req, subdir)
+                        return
+
                     up = virtual.rfind('/')
                     if up < 0:
                         break
                     virtual = virtual[:up]
-                if real:
-                    req.env['REPO_NAME'] = virtual
-                    try:
-                        repo = hg.repository(parentui, real)
-                        hgweb(repo).run_wsgi(req)
-                    except IOError, inst:
-                        req.write(tmpl("error", error=inst.strerror))
-                    except hg.RepoError, inst:
-                        req.write(tmpl("error", error=str(inst)))
-                else:
-                    req.write(tmpl("notfound", repo=virtual))
+                
+                req.write(tmpl("notfound", repo=virtual))
             else:
                 if req.form.has_key('static'):
                     static = os.path.join(templater.templatepath(), "static")
