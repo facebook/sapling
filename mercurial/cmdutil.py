@@ -758,14 +758,8 @@ class changeset_printer(object):
 
         hexfunc = self.ui.debugflag and hex or short
 
-        parents = log.parentrevs(rev)
-        if not self.ui.debugflag:
-            if parents[1] == nullrev:
-                if parents[0] >= rev - 1:
-                    parents = []
-                else:
-                    parents = [parents[0]]
-        parents = [(p, hexfunc(log.node(p))) for p in parents]
+        parents = [(p, hexfunc(log.node(p)))
+                   for p in self._meaningful_parentrevs(log, rev)]
 
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
 
@@ -822,6 +816,22 @@ class changeset_printer(object):
             patch.diff(self.repo, prev, node, match=self.patch, fp=self.ui,
                        opts=patch.diffopts(self.ui))
             self.ui.write("\n")
+
+    def _meaningful_parentrevs(self, log, rev):
+        """Return list of meaningful (or all if debug) parentrevs for rev.
+
+        For merges (two non-nullrev revisions) both parents are meaningful.
+        Otherwise the first parent revision is considered meaningful if it
+        is not the preceding revision.
+        """
+        parents = log.parentrevs(rev)
+        if not self.ui.debugflag and parents[1] == nullrev:
+            if parents[0] >= rev - 1:
+                parents = []
+            else:
+                parents = [parents[0]]
+        return parents
+
 
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
@@ -919,12 +929,8 @@ class changeset_templater(changeset_printer):
                 return showlist('branch', [branch], plural='branches', **args)
 
         def showparents(**args):
-            parents = [[('rev', log.rev(p)), ('node', hex(p))]
-                       for p in log.parents(changenode)
-                       if self.ui.debugflag or p != nullid]
-            if (not self.ui.debugflag and len(parents) == 1 and
-                parents[0][0][1] == rev - 1):
-                return
+            parents = [[('rev', p), ('node', hex(log.node(p)))]
+                       for p in self._meaningful_parentrevs(log, rev)]
             return showlist('parent', parents, **args)
 
         def showtags(**args):
@@ -966,7 +972,7 @@ class changeset_templater(changeset_printer):
             'author': changes[1],
             'branches': showbranches,
             'date': changes[2],
-            'desc': changes[4],
+            'desc': changes[4].strip(),
             'file_adds': showadds,
             'file_dels': showdels,
             'files': showfiles,

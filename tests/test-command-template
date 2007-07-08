@@ -25,6 +25,11 @@ hg add d
 hg commit -m 'new head' -d '1500000 0' -u 'person'
 hg merge -q
 hg commit -m 'merge' -d '1500001 0' -u 'person'
+# second branch starting at nullrev
+hg update null
+echo second > second
+hg add second
+hg commit -m second -d '1000000 0' -u 'User Name <user@hostname>'
 
 # make sure user/global hgrc does not affect tests
 echo '[ui]' > .hg/hgrc
