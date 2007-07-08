@@ -70,18 +70,30 @@ def annotate(ui, repo, *pats, **opts):
     detects as binary. With -a, annotate will generate an annotation
     anyway, probably with undesirable results.
     """
-    getdate = util.cachefunc(lambda x: util.datestr(x.date()))
+    getdate = util.cachefunc(lambda x: util.datestr(x[0].date()))
 
     if not pats:
         raise util.Abort(_('at least one file name or pattern required'))
 
-    opmap = [['user', lambda x: ui.shortuser(x.user())],
-             ['number', lambda x: str(x.rev())],
-             ['changeset', lambda x: short(x.node())],
-             ['date', getdate], ['follow', lambda x: x.path()]]
+    opmap = [('user', lambda x: ui.shortuser(x[0].user())),
+             ('number', lambda x: str(x[0].rev())),
+             ('changeset', lambda x: short(x[0].node())),
+             ('date', getdate),
+             ('follow', lambda x: x[0].path()),
+            ]
+
     if (not opts['user'] and not opts['changeset'] and not opts['date']
         and not opts['follow']):
         opts['number'] = 1
+
+    linenumber = opts.get('line_number') is not None
+    if (linenumber and (not opts['changeset']) and (not opts['number'])):
+        raise util.Abort(_('at least one of -n/-c is required for -l'))
+
+    funcmap = [func for op, func in opmap if opts.get(op)]
+    if linenumber:
+        lastfunc = funcmap[-1]
+        funcmap[-1] = lambda x: "%s:%s" % (lastfunc(x), x[1])
 
     ctx = repo.changectx(opts['rev'])
 
@@ -92,15 +104,15 @@ def annotate(ui, repo, *pats, **opts):
             ui.write(_("%s: binary file\n") % ((pats and rel) or abs))
             continue
 
-        lines = fctx.annotate(follow=opts.get('follow'))
+        lines = fctx.annotate(follow=opts.get('follow'),
+                              linenumber=linenumber)
         pieces = []
 
-        for o, f in opmap:
-            if opts[o]:
-                l = [f(n) for n, dummy in lines]
-                if l:
-                    m = max(map(len, l))
-                    pieces.append(["%*s" % (m, x) for x in l])
+        for f in funcmap:
+            l = [f(n) for n, dummy in lines]
+            if l:
+                m = max(map(len, l))
+                pieces.append(["%*s" % (m, x) for x in l])
 
         if pieces:
             for p, l in zip(zip(*pieces), lines):
@@ -2757,8 +2769,10 @@ table = {
           ('d', 'date', None, _('list the date')),
           ('n', 'number', None, _('list the revision number (default)')),
           ('c', 'changeset', None, _('list the changeset')),
+          ('l', 'line-number', None,
+           _('show line number at the first appearance'))
          ] + walkopts,
-         _('hg annotate [-r REV] [-f] [-a] [-u] [-d] [-n] [-c] FILE...')),
+         _('hg annotate [-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE...')),
     "archive":
         (archive,
          [('', 'no-decode', None, _('do not pass files through decoders')),
