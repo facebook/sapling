@@ -409,9 +409,6 @@ class httpsrepository(httprepository):
 def instance(ui, path, create):
     if create:
         raise util.Abort(_('cannot create new http repository'))
-    if path.startswith('hg:'):
-        ui.warn(_("hg:// syntax is deprecated, please use http:// instead\n"))
-        path = 'http:' + path[3:]
     if path.startswith('https:'):
         return httpsrepository(ui, path)
     return httprepository(ui, path)

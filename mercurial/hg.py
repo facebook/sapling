@@ -21,13 +21,11 @@ def _local(path):
 schemes = {
     'bundle': bundlerepo,
     'file': _local,
-    'hg': httprepo,
     'http': httprepo,
     'https': httprepo,
-    'old-http': statichttprepo,
     'ssh': sshrepo,
     'static-http': statichttprepo,
-    }
+}
 
 def _lookup(path):
     scheme = 'file'
