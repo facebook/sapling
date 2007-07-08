@@ -966,7 +966,7 @@ class changeset_templater(changeset_printer):
             'author': changes[1],
             'branches': showbranches,
             'date': changes[2],
-            'desc': changes[4],
+            'desc': changes[4].strip(),
             'file_adds': showadds,
             'file_dels': showdels,
             'files': showfiles,
