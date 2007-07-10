@@ -2464,7 +2464,7 @@ def serve(ui, repo, **opts):
 
     parentui = ui.parentui or ui
     optlist = ("name templates style address port ipv6"
-               " accesslog errorlog webdir_conf")
+               " accesslog errorlog webdir_conf certificate")
     for o in optlist.split():
         if opts[o]:
             parentui.setconfig("web", o, str(opts[o]))
@@ -3072,7 +3072,8 @@ table = {
           ('', 'stdio', None, _('for remote clients')),
           ('t', 'templates', '', _('web templates to use')),
           ('', 'style', '', _('template style to use')),
-          ('6', 'ipv6', None, _('use IPv6 in addition to IPv4'))],
+          ('6', 'ipv6', None, _('use IPv6 in addition to IPv4')),
+          ('', 'certificate', '', _('SSL certificate file'))],
          _('hg serve [OPTION]...')),
     "^status|st":
         (status,
