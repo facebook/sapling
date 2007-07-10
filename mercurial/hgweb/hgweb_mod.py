@@ -787,9 +787,16 @@ class hgweb(object):
             style = req.form['style'][0]
         mapfile = style_map(self.templatepath, style)
 
+        if req.env.get('HTTPS'):
+            proto = 'https'
+            default_port = "443"
+        else:
+            proto = 'http'
+            default_port = "80"
+
         port = req.env["SERVER_PORT"]
-        port = port != "80" and (":" + port) or ""
-        urlbase = 'http://%s%s' % (req.env['SERVER_NAME'], port)
+        port = port != default_port and (":" + port) or ""
+        urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
         staticurl = self.config("web", "staticurl") or req.url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
