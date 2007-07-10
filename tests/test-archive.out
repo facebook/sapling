@@ -38,3 +38,5 @@ test-TIP/.hg_archival.txt
 test-TIP/bar
 test-TIP/baz/bletch
 test-TIP/foo
+% empty repo
+abort: repository has no revisions

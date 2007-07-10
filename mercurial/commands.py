@@ -142,7 +142,10 @@ def archive(ui, repo, dest, **opts):
     The default is the basename of the archive, with suffixes removed.
     '''
 
-    node = repo.changectx(opts['rev']).node()
+    ctx = repo.changectx(opts['rev'])
+    if not ctx:
+        raise util.Abort(_('repository has no revisions'))
+    node = ctx.node()
     dest = cmdutil.make_filename(repo, dest, node)
     if os.path.realpath(dest) == repo.root:
         raise util.Abort(_('repository root cannot be destination'))
