@@ -39,3 +39,5 @@ test-TIP/bar
 test-TIP/baz/bletch
 test-TIP/foo
 rev-0.tar created
+% empty repo
+abort: repository has no revisions
