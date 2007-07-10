@@ -368,10 +368,17 @@ cd qclonesource
 echo foo > foo
 hg add foo
 hg ci -m 'add foo'
-hg qinit -c
+hg qinit
 hg qnew patch1
 echo bar >> foo
 hg qrefresh -m 'change foo'
+cd ..
+
+# repo with unversioned patch dir
+hg qclone qclonesource failure
+
+cd qclonesource
+hg qinit -c
 hg qci -m checkpoint
 qlog
 cd ..

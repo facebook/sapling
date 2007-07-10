@@ -407,6 +407,8 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add foo
 
 % qclone
+abort: versioned patch repository not found (see qinit -c)
+adding .hg/patches/patch1
 main repo:
     rev 1: change foo
     rev 0: add foo
