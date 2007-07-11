@@ -1260,6 +1260,12 @@ class opener(object):
         self.base = base
         self.audit = audit
 
+    def __getattr__(self, name):
+        if name == '_can_symlink':
+            self._can_symlink = checklink(self.base)
+            return self._can_symlink
+        raise AttributeError(name)
+
     def __call__(self, path, mode="r", text=False, atomictemp=False):
         if self.audit:
             audit_path(path)
@@ -1281,6 +1287,26 @@ class opener(object):
             if nlink > 1:
                 rename(mktempcopy(f), f)
         return posixfile(f, mode)
+
+    def symlink(self, src, dst):
+        if self.audit:
+            audit_path(dst)
+        linkname = os.path.join(self.base, dst)
+        try:
+            os.unlink(linkname)
+        except OSError:
+            pass
+
+        dirname = os.path.dirname(linkname)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        if self._can_symlink:
+            os.symlink(src, linkname)
+        else:
+            f = self(self, dst, "w")
+            f.write(src)
+            f.close()
 
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
