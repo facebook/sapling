@@ -133,7 +133,7 @@ class localrepository(repo.repository):
                 ntags = self.filectx('.hgtags', parent).data()
             except revlog.LookupError:
                 ntags = ''
-            self.wfile('.hgtags', 'ab').write(ntags + line)
+            self.wfile('.hgtags', 'wb').write(ntags + line)
         if use_dirstate and self.dirstate.state('.hgtags') == '?':
             self.add(['.hgtags'])
 
