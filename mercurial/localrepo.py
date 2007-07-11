@@ -109,7 +109,8 @@ class localrepository(repo.repository):
 
     tag_disallowed = ':\r\n'
 
-    def _tag(self, name, node, message, local, user, date, parent=None):
+    def _tag(self, name, node, message, local, user, date, parent=None,
+             extra={}):
         use_dirstate = parent is None
 
         for c in self.tag_disallowed:
@@ -134,7 +135,8 @@ class localrepository(repo.repository):
         if use_dirstate and self.dirstate.state('.hgtags') == '?':
             self.add(['.hgtags'])
 
-        tagnode = self.commit(['.hgtags'], message, user, date, p1=parent)
+        tagnode = self.commit(['.hgtags'], message, user, date, p1=parent,
+                              extra=extra)
 
         self.hook('tag', node=hex(node), tag=name, local=local)
 
