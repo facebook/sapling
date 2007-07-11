@@ -172,12 +172,12 @@ def create_server(ui, repo):
             return open(opt, 'w')
         return default
 
-    address = ui.config("web", "address", "")
-    port = int(ui.config("web", "port", 8000))
-    use_ipv6 = ui.configbool("web", "ipv6")
-    webdir_conf = ui.config("web", "webdir_conf")
-    accesslog = openlog(ui.config("web", "accesslog", "-"), sys.stdout)
-    errorlog = openlog(ui.config("web", "errorlog", "-"), sys.stderr)
+    address = repo.ui.config("web", "address", "")
+    port = int(repo.ui.config("web", "port", 8000))
+    use_ipv6 = repo.ui.configbool("web", "ipv6")
+    webdir_conf = repo.ui.config("web", "webdir_conf")
+    accesslog = openlog(repo.ui.config("web", "accesslog", "-"), sys.stdout)
+    errorlog = openlog(repo.ui.config("web", "errorlog", "-"), sys.stderr)
 
     if use_threads:
         try:
