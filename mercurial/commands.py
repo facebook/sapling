@@ -533,9 +533,10 @@ def docopy(ui, repo, pats, opts, wlock):
         targets[abstarget] = abssrc
         if abstarget != origsrc:
             if repo.dirstate.state(origsrc) == 'a':
-                ui.warn(_("%s was marked for addition. "
-                          "%s will not be committed as a copy.\n")
-                        % (repo.pathto(origsrc, cwd), reltarget))
+                if not ui.quiet:
+                    ui.warn(_("%s has not been committed yet, so no copy "
+                              "data will be stored for %s.\n")
+                            % (repo.pathto(origsrc, cwd), reltarget))
                 if abstarget not in repo.dirstate and not opts.get('dry_run'):
                     repo.add([abstarget], wlock)
             elif not opts.get('dry_run'):

@@ -3,13 +3,13 @@ foo: not copying - file is not managed
 abort: no files to copy
 ? foo
 # dry-run; print a warning that this is not a real copy; foo is added
-foo was marked for addition. bar will not be committed as a copy.
+foo has not been committed yet, so no copy data will be stored for bar.
 A foo
 # should print a warning that this is not a real copy; bar is added
-foo was marked for addition. bar will not be committed as a copy.
+foo has not been committed yet, so no copy data will be stored for bar.
 A bar
 # should print a warning that this is not a real copy; foo is added
-bar was marked for addition. foo will not be committed as a copy.
+bar has not been committed yet, so no copy data will be stored for foo.
 A foo
 # dry-run; should show that foo is clean
 C foo
