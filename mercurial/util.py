@@ -1181,70 +1181,89 @@ def encodedopener(openerfn, fn):
         return openerfn(fn(path), *args, **kw)
     return o
 
-def opener(base, audit=True):
-    """
-    return a function that opens files relative to base
+def mktempcopy(name, emptyok=False):
+    """Create a temporary file with the same contents from name
 
-    this function is used to hide the details of COW semantics and
+    The permission bits are copied from the original file.
+
+    If the temporary file is going to be truncated immediately, you
+    can use emptyok=True as an optimization.
+
+    Returns the name of the temporary file.
+    """
+    d, fn = os.path.split(name)
+    fd, temp = tempfile.mkstemp(prefix='.%s-' % fn, dir=d)
+    os.close(fd)
+    # Temporary files are created with mode 0600, which is usually not
+    # what we want.  If the original file already exists, just copy
+    # its mode.  Otherwise, manually obey umask.
+    try:
+        st_mode = os.lstat(name).st_mode
+    except OSError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+        st_mode = 0666 & ~_umask
+    os.chmod(temp, st_mode)
+    if emptyok:
+        return temp
+    try:
+        try:
+            ifp = posixfile(name, "rb")
+        except IOError, inst:
+            if inst.errno == errno.ENOENT:
+                return temp
+            if not getattr(inst, 'filename', None):
+                inst.filename = name
+            raise
+        ofp = posixfile(temp, "wb")
+        for chunk in filechunkiter(ifp):
+            ofp.write(chunk)
+        ifp.close()
+        ofp.close()
+    except:
+        try: os.unlink(temp)
+        except: pass
+        raise
+    return temp
+
+class atomictempfile(posixfile):
+    """file-like object that atomically updates a file
+
+    All writes will be redirected to a temporary copy of the original
+    file.  When rename is called, the copy is renamed to the original
+    name, making the changes visible.
+    """
+    def __init__(self, name, mode):
+        self.__name = name
+        self.temp = mktempcopy(name, emptyok=('w' in mode))
+        posixfile.__init__(self, self.temp, mode)
+
+    def rename(self):
+        if not self.closed:
+            posixfile.close(self)
+            rename(self.temp, localpath(self.__name))
+
+    def __del__(self):
+        if not self.closed:
+            try:
+                os.unlink(self.temp)
+            except: pass
+            posixfile.close(self)
+
+class opener(object):
+    """Open files relative to a base directory
+
+    This class is used to hide the details of COW semantics and
     remote file access from higher level code.
     """
-    def mktempcopy(name, emptyok=False):
-        d, fn = os.path.split(name)
-        fd, temp = tempfile.mkstemp(prefix='.%s-' % fn, dir=d)
-        os.close(fd)
-        # Temporary files are created with mode 0600, which is usually not
-        # what we want.  If the original file already exists, just copy
-        # its mode.  Otherwise, manually obey umask.
-        try:
-            st_mode = os.lstat(name).st_mode
-        except OSError, inst:
-            if inst.errno != errno.ENOENT:
-                raise
-            st_mode = 0666 & ~_umask
-        os.chmod(temp, st_mode)
-        if emptyok:
-            return temp
-        try:
-            try:
-                ifp = posixfile(name, "rb")
-            except IOError, inst:
-                if inst.errno == errno.ENOENT:
-                    return temp
-                if not getattr(inst, 'filename', None):
-                    inst.filename = name
-                raise
-            ofp = posixfile(temp, "wb")
-            for chunk in filechunkiter(ifp):
-                ofp.write(chunk)
-            ifp.close()
-            ofp.close()
-        except:
-            try: os.unlink(temp)
-            except: pass
-            raise
-        return temp
+    def __init__(self, base, audit=True):
+        self.base = base
+        self.audit = audit
 
-    class atomictempfile(posixfile):
-        """the file will only be copied when rename is called"""
-        def __init__(self, name, mode):
-            self.__name = name
-            self.temp = mktempcopy(name, emptyok=('w' in mode))
-            posixfile.__init__(self, self.temp, mode)
-        def rename(self):
-            if not self.closed:
-                posixfile.close(self)
-                rename(self.temp, localpath(self.__name))
-        def __del__(self):
-            if not self.closed:
-                try:
-                    os.unlink(self.temp)
-                except: pass
-                posixfile.close(self)
-
-    def o(path, mode="r", text=False, atomictemp=False):
-        if audit:
+    def __call__(self, path, mode="r", text=False, atomictemp=False):
+        if self.audit:
             audit_path(path)
-        f = os.path.join(base, path)
+        f = os.path.join(self.base, path)
 
         if not text and "b" not in mode:
             mode += "b" # for that other OS
@@ -1262,8 +1281,6 @@ def opener(base, audit=True):
             if nlink > 1:
                 rename(mktempcopy(f), f)
         return posixfile(f, mode)
-
-    return o
 
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
