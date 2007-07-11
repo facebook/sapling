@@ -86,12 +86,19 @@ class tarit:
             # Python 2.5-2.5.1 have a regression that requires a name arg
             self.z = taropen(name='', mode='w|', fileobj=dest)
 
-    def addfile(self, name, mode, data):
+    def addfile(self, name, mode, islink, data):
         i = tarfile.TarInfo(self.prefix + name)
         i.mtime = self.mtime
         i.size = len(data)
-        i.mode = mode
-        self.z.addfile(i, cStringIO.StringIO(data))
+        if islink:
+            i.type = tarfile.SYMTYPE
+            i.mode = 0777
+            i.linkname = data
+            data = None
+        else:
+            i.mode = mode
+            data = cStringIO.StringIO(data)
+        self.z.addfile(i, data)
 
     def done(self):
         self.z.close()
@@ -130,13 +137,17 @@ class zipit:
                                  zipfile.ZIP_STORED)
         self.date_time = time.gmtime(mtime)[:6]
 
-    def addfile(self, name, mode, data):
+    def addfile(self, name, mode, islink, data):
         i = zipfile.ZipInfo(self.prefix + name, self.date_time)
         i.compress_type = self.z.compression
         # unzip will not honor unix file modes unless file creator is
         # set to unix (id 3).
         i.create_system = 3
-        i.external_attr = (mode | stat.S_IFREG) << 16L
+        ftype = stat.S_IFREG
+        if islink:
+            mode = 0777
+            ftype = stat.S_IFLNK
+        i.external_attr = (mode | ftype) << 16L
         self.z.writestr(i, data)
 
     def done(self):
@@ -149,19 +160,17 @@ class fileit:
         if prefix:
             raise util.Abort(_('cannot give prefix when archiving to files'))
         self.basedir = name
-        self.dirs = {}
-        self.oflags = (os.O_CREAT | os.O_EXCL | os.O_WRONLY |
-                       getattr(os, 'O_BINARY', 0) |
-                       getattr(os, 'O_NOFOLLOW', 0))
+        self.opener = util.opener(self.basedir)
 
-    def addfile(self, name, mode, data):
+    def addfile(self, name, mode, islink, data):
+        if islink:
+            self.opener.symlink(data, name)
+            return
+        f = self.opener(name, "w", atomictemp=True)
+        f.write(data)
+        f.rename()
         destfile = os.path.join(self.basedir, name)
-        destdir = os.path.dirname(destfile)
-        if destdir not in self.dirs:
-            if not os.path.isdir(destdir):
-                os.makedirs(destdir)
-            self.dirs[destdir] = 1
-        os.fdopen(os.open(destfile, self.oflags, mode), 'wb').write(data)
+        os.chmod(destfile, mode)
 
     def done(self):
         pass
@@ -191,20 +200,20 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
 
     prefix is name of path to put before every archive member.'''
 
-    def write(name, mode, data):
+    def write(name, mode, islink, data):
         if matchfn and not matchfn(name): return
         if decode:
             data = repo.wwritedata(name, data)
-        archiver.addfile(name, mode, data)
+        archiver.addfile(name, mode, islink, data)
 
     ctx = repo.changectx(node)
     archiver = archivers[kind](dest, prefix, mtime or ctx.date()[0])
     m = ctx.manifest()
     items = m.items()
     items.sort()
-    write('.hg_archival.txt', 0644,
+    write('.hg_archival.txt', 0644, False,
           'repo: %s\nnode: %s\n' % (hex(repo.changelog.node(0)), hex(node)))
     for filename, filenode in items:
-        write(filename, m.execf(filename) and 0755 or 0644,
+        write(filename, m.execf(filename) and 0755 or 0644, m.linkf(filename),
               repo.file(filename).read(filenode))
     archiver.done()

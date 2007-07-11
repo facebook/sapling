@@ -1184,4 +1184,4 @@ class hgweb(object):
 
     def do_stream_out(self, req):
         req.httphdr("application/mercurial-0.1")
-        streamclone.stream_out(self.repo, req)
+        streamclone.stream_out(self.repo, req, untrusted=True)

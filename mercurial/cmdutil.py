@@ -542,9 +542,9 @@ def make_filename(repo, pat, node,
     try:
         if node:
             expander.update(node_expander)
-        if node and revwidth is not None:
+        if node:
             expander['r'] = (lambda:
-                    str(repo.changelog.rev(node)).zfill(revwidth))
+                    str(repo.changelog.rev(node)).zfill(revwidth or 0))
         if total is not None:
             expander['N'] = lambda: str(total)
         if seqno is not None:

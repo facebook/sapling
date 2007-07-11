@@ -64,6 +64,11 @@ unzip -t test.zip
 
 hg archive -t tar - | tar tf - | sed "s/$QTIP/TIP/"
 
+hg archive -r 0 -t tar rev-%r.tar
+if [ -f rev-0.tar ]; then
+    echo 'rev-0.tar created'
+fi
+
 echo '% empty repo'
 hg init ../empty
 cd ../empty

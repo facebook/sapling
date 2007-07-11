@@ -56,11 +56,11 @@ def walkrepo(root):
 #
 #   server writes out raw file data.
 
-def stream_out(repo, fileobj):
+def stream_out(repo, fileobj, untrusted=False):
     '''stream out all metadata files in repository.
     writes to file-like object, must support write() and optional flush().'''
 
-    if not repo.ui.configbool('server', 'uncompressed'):
+    if not repo.ui.configbool('server', 'uncompressed', untrusted=untrusted):
         fileobj.write('1\n')
         return
 
