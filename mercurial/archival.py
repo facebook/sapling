@@ -149,19 +149,14 @@ class fileit:
         if prefix:
             raise util.Abort(_('cannot give prefix when archiving to files'))
         self.basedir = name
-        self.dirs = {}
-        self.oflags = (os.O_CREAT | os.O_EXCL | os.O_WRONLY |
-                       getattr(os, 'O_BINARY', 0) |
-                       getattr(os, 'O_NOFOLLOW', 0))
+        self.opener = util.opener(self.basedir)
 
     def addfile(self, name, mode, data):
+        f = self.opener(name, "w", atomictemp=True)
+        f.write(data)
+        f.rename()
         destfile = os.path.join(self.basedir, name)
-        destdir = os.path.dirname(destfile)
-        if destdir not in self.dirs:
-            if not os.path.isdir(destdir):
-                os.makedirs(destdir)
-            self.dirs[destdir] = 1
-        os.fdopen(os.open(destfile, self.oflags, mode), 'wb').write(data)
+        os.chmod(destfile, mode)
 
     def done(self):
         pass
