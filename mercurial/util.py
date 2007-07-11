@@ -540,7 +540,7 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
 
     return (roots, match, (inc or exc or anypats) and True)
 
-_hgexecutable = None
+_hgexecutable = 'hg'
 
 def set_hgexecutable(path):
     """remember location of the 'hg' executable if easily possible
@@ -549,7 +549,8 @@ def set_hgexecutable(path):
     fall back to 'hg' in this case.
     """
     global _hgexecutable
-    _hgexecutable = path and os.path.abspath(path) or 'hg'
+    if path:
+        _hgexecutable = os.path.abspath(path)
 
 def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     '''enhanced shell command execution.
