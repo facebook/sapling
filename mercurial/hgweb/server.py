@@ -37,6 +37,9 @@ class _error_logger(object):
             self.handler.log_error("HG error:  %s", msg)
 
 class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
+
+    url_scheme = 'http'
+    
     def __init__(self, *args, **kargs):
         self.protocol_version = 'HTTP/1.1'
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kargs)
@@ -104,7 +107,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
                 env[hkey] = hval
         env['SERVER_PROTOCOL'] = self.request_version
         env['wsgi.version'] = (1, 0)
-        env['wsgi.url_scheme'] = 'http'
+        env['wsgi.url_scheme'] = type(self).url_scheme
         env['wsgi.input'] = self.rfile
         env['wsgi.errors'] = _error_logger(self)
         env['wsgi.multithread'] = isinstance(self.server,
@@ -168,6 +171,9 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.flush()
 
 class _shgwebhandler(_hgwebhandler):
+
+    url_scheme = 'https'
+    
     def setup(self):
         self.connection = self.request
         self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
