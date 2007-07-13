@@ -787,7 +787,8 @@ class hgweb(object):
             style = req.form['style'][0]
         mapfile = style_map(self.templatepath, style)
 
-        if req.env.get('HTTPS'):
+        proto = req.env.get('wsgi.url_scheme')
+        if proto == 'https':
             proto = 'https'
             default_port = "443"
         else:
@@ -1070,7 +1071,7 @@ class hgweb(object):
         # replayed
         ssl_req = self.configbool('web', 'push_ssl', True)
         if ssl_req:
-            if not req.env.get('HTTPS'):
+            if req.env.get('wsgi.url_scheme') != 'https':
                 bail(_('ssl required\n'))
                 return
             proto = 'https'
