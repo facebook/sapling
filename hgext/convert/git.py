@@ -80,7 +80,8 @@ class convert_git(converter_source):
         date = tm + " " + str(tz)
         author = author or "unknown"
 
-        c = commit(parents=parents, date=date, author=author, desc=message)
+        c = commit(parents=parents, date=date, author=author, desc=message,
+                   rev=version)
         return c
 
     def gettags(self):

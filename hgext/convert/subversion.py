@@ -484,7 +484,8 @@ class convert_svn(converter_source):
                           desc=log, 
                           parents=parents,
                           copies=copies,
-                          branch=branch)
+                          branch=branch,
+                          rev=rev.encode('utf-8'))
 
             self.commits[rev] = cset
             if self.child_cset and not self.child_cset.parents:

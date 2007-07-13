@@ -4,6 +4,9 @@ class NoRepo(Exception): pass
 
 class commit(object):
     def __init__(self, **parts):
+        self.rev = None
+        self.branch = None
+
         for x in "author date desc parents".split():
             if not x in parts:
                 raise util.Abort("commit missing field %s" % x)

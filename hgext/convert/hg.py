@@ -54,11 +54,11 @@ class convert_mercurial(converter_sink):
 
         text = commit.desc
         extra = {}
-        try:
-            extra["branch"] = commit.branch
-        except AttributeError:
-            pass
-
+        if commit.branch:
+            extra['branch'] = commit.branch
+        if commit.rev:
+            extra['convert_revision'] = commit.rev
+            
         while parents:
             p1 = p2
             p2 = parents.pop(0)
