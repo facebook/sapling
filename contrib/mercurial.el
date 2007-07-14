@@ -1261,9 +1261,22 @@ Names are displayed relative to the repository root."
   (interactive)
   (error "not implemented"))
 
-(defun hg-version-other-window ()
-  (interactive)
-  (error "not implemented"))
+(defun hg-version-other-window (rev)
+  "Visit version REV of the current file in another window.
+If the current file is named `F', the version is named `F.~REV~'.
+If `F.~REV~' already exists, use it instead of checking it out again."
+  (interactive "sVersion to visit (default is workfile version): ")
+  (let* ((file buffer-file-name)
+       	 (version (if (string-equal rev "")
+		       "tip"
+		        rev))
+ 	 (automatic-backup (vc-version-backup-file-name file version))
+          (manual-backup (vc-version-backup-file-name file version 'manual)))
+     (unless (file-exists-p manual-backup)
+       (if (file-exists-p automatic-backup)
+           (rename-file automatic-backup manual-backup nil)
+         (hg-run0 "-q" "cat" "-r" version "-o" manual-backup file)))
+     (find-file-other-window manual-backup)))
 
 
 (provide 'mercurial)
