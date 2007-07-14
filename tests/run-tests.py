@@ -19,6 +19,9 @@ import sys
 import tempfile
 import time
 
+# hghave reserved exit code to skip test
+SKIPPED_STATUS = 80
+
 required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
 parser = optparse.OptionParser("%prog [options] [tests]")
@@ -67,6 +70,17 @@ def splitnewlines(text):
             return lines
         lines.append(text[i:n+1])
         i = n + 1
+
+def extract_missing_features(lines):
+    '''Extract missing/unknown features log lines as a list'''
+    missing = []
+    for line in lines:
+        if not line.startswith('hghave: '):
+            continue
+        line = line.splitlines()[0]
+        missing.append(line[8:])
+
+    return missing
 
 def show_diff(expected, output):
     for line in difflib.unified_diff(expected, output,
@@ -283,6 +297,7 @@ def run_one(test):
     if options.timeout > 0:
         signal.alarm(0)
 
+    skipped = (ret == SKIPPED_STATUS)
     diffret = 0
     # If reference output file exists, check test output against it
     if os.path.exists(ref):
@@ -291,16 +306,22 @@ def run_one(test):
         f.close()
     else:
         ref_out = []
-    if out != ref_out:
+    if not skipped and out != ref_out:
         diffret = 1
         print "\nERROR: %s output changed" % (test)
         show_diff(ref_out, out)
-    if ret:
+    if skipped:
+        missing = extract_missing_features(out)
+        if not missing:
+            missing = ['irrelevant']
+        print '\nSkipping %s: %s' % (test, missing[-1])
+    elif ret:
         print "\nERROR: %s failed with error code %d" % (test, ret)
     elif diffret:
         ret = diffret
 
-    if ret != 0: # Save errors to a file for diagnosis
+    if ret != 0 and not skipped: 
+        # Save errors to a file for diagnosis
         f = open(err, "wb")
         for line in out:
             f.write(line)
@@ -332,6 +353,8 @@ def run_one(test):
 
     os.chdir(TESTDIR)
     shutil.rmtree(tmpd, True)
+    if skipped:
+        return None
     return ret == 0
 
 
