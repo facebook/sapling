@@ -1,3 +1,5 @@
+% pattern error
+grep: invalid match pattern: nothing to repeat!
 % simple
 port:4:export
 port:4:vaportight

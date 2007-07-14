@@ -1107,7 +1107,11 @@ def grep(ui, repo, pattern, *pats, **opts):
     reflags = 0
     if opts['ignore_case']:
         reflags |= re.I
-    regexp = re.compile(pattern, reflags)
+    try:
+        regexp = re.compile(pattern, reflags)
+    except Exception, inst:
+        ui.warn(_("grep: invalid match pattern: %s!\n") % inst)
+        return None
     sep, eol = ':', '\n'
     if opts['print0']:
         sep = eol = '\0'

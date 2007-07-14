@@ -17,6 +17,8 @@ hg commit -m 3 -u eggs -d '3 0'
 head -n 3 port > port1
 mv port1 port
 hg commit -m 4 -u spam -d '4 0'
+echo % pattern error
+hg grep '**test**'
 echo % simple
 hg grep port port
 echo % all
