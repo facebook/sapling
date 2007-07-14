@@ -205,6 +205,8 @@ def run(cmd):
             proc.tochild.close()
             output = proc.fromchild.read()
             ret = proc.wait()
+            if os.WIFEXITED(ret):
+                ret = os.WEXITSTATUS(ret)
         except Timeout:
             vlog('# Process %d timed out - killing it' % proc.pid)
             os.kill(proc.pid, signal.SIGTERM)
