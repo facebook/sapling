@@ -49,6 +49,16 @@ class diffopts(object):
 
 defaultopts = diffopts()
 
+def wsclean(opts, text):
+    if opts.ignorews:
+        text = re.sub('[ \t]+', '', text)
+    elif opts.ignorewsamount:
+        text = re.sub('[ \t]+', ' ', text)
+        text = re.sub('[ \t]+\n', '\n', text)
+    if opts.ignoreblanklines:
+        text = re.sub('\n+', '', text)
+    return text
+
 def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
     def datetag(date, addtab=True):
         if not opts.git and not opts.nodates:
@@ -151,13 +161,6 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
 
     if opts.showfunc:
         funcre = re.compile('\w')
-    if opts.ignorewsamount:
-        wsamountre = re.compile('[ \t]+')
-        wsappendedre = re.compile(' \n')
-    if opts.ignoreblanklines:
-        wsblanklinesre = re.compile('\n')
-    if opts.ignorews:
-        wsre = re.compile('[ \t]')
 
     # bdiff.blocks gives us the matching sequences in the files.  The loop
     # below finds the spaces between those matching sequences and translates
@@ -189,24 +192,8 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
         if not old and not new:
             continue
 
-        if opts.ignoreblanklines:
-            wsold = wsblanklinesre.sub('', "".join(old))
-            wsnew = wsblanklinesre.sub('', "".join(new))
-            if wsold == wsnew:
-                continue
-
-        if opts.ignorewsamount:
-            wsold = wsamountre.sub(' ', "".join(old))
-            wsold = wsappendedre.sub('\n', wsold)
-            wsnew = wsamountre.sub(' ', "".join(new))
-            wsnew = wsappendedre.sub('\n', wsnew)
-            if wsold == wsnew:
-                continue
-
-        if opts.ignorews:
-            wsold = wsre.sub('', "".join(old))
-            wsnew = wsre.sub('', "".join(new))
-            if wsold == wsnew:
+        if opts.ignorews or opts.ignorewsamount or opts.ignoreblanklines:
+            if wsclean(opts, "".join(old)) == wsclean(opts, "".join(new)):
                 continue
 
         astart = contextstart(a1)
