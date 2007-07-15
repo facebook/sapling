@@ -248,12 +248,14 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     Accepted destination formats:
     - Mercurial
 
-    If destination isn't given, a new Mercurial repo named <src>-hg will
-    be created. If <mapfile> isn't given, it will be put in a default
-    location (<dest>/.hg/shamap by default)
+    If no destination directory name is specified, it defaults to the
+    basename of the source with '-hg' appended.  If the destination
+    repository doesn't exist, it will be created.
 
-    The <mapfile> is a simple text file that maps each source commit ID to
-    the destination ID for that revision, like so:
+    If <mapfile> isn't given, it will be put in a default location
+    (<dest>/.hg/shamap by default).  The <mapfile> is a simple text
+    file that maps each source commit ID to the destination ID for
+    that revision, like so:
     <source ID> <destination ID>
 
     If the file doesn't exist, it's automatically created.  It's updated
@@ -272,7 +274,7 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
         raise util.Abort("%s: can't read from this repo type" % src)
 
     if not dest:
-        dest = src + "-hg"
+        dest = hg.defaultdest(src) + "-hg"
         ui.status("assuming destination %s\n" % dest)
 
     # Try to be smart and initalize things when required
