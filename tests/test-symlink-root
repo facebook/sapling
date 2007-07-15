@@ -1,5 +1,7 @@
 #!/bin/sh
 
+"$TESTDIR/hghave" symlink || exit 80
+
 hg init a
 ln -s a link
 cd a
