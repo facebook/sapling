@@ -2,6 +2,8 @@
 #Test bug regarding symlinks that showed up in hg 0.7
 #Author: Matthew Elder <sseses@gmail.com>
 
+"$TESTDIR/hghave" symlink || exit 80
+
 #make and initialize repo
 hg init test; cd test;
 

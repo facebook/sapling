@@ -1,5 +1,7 @@
 #!/bin/sh
 
+"$TESTDIR/hghave" symlink || exit 80
+
 cleanpath()
 {
     sed -e "s:/.*\(/test-symlink-basic/.*\):...\1:"
