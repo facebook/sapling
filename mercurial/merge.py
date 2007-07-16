@@ -157,13 +157,17 @@ def findcopies(repo, m1, m2, ma, limit):
     fullcopy = {}
     diverge = {}
 
-    def checkcopies(c, man):
+    def checkcopies(c, man, aman):
         '''check possible copies for filectx c'''
         for of in findold(c):
             fullcopy[c.path()] = of # remember for dir rename detection
             if of not in man: # original file not in other manifest?
                 if of in ma:
                     diverge.setdefault(of, []).append(c.path())
+                continue
+            # if the original file is unchanged on the other branch,
+            # no merge needed
+            if man[of] == aman.get(of):
                 continue
             c2 = ctx(of, man[of])
             ca = c.ancestor(c2)
@@ -186,10 +190,10 @@ def findcopies(repo, m1, m2, ma, limit):
     u2 = nonoverlap(m2, m1, ma)
 
     for f in u1:
-        checkcopies(ctx(f, m1[f]), m2)
+        checkcopies(ctx(f, m1[f]), m2, ma)
 
     for f in u2:
-        checkcopies(ctx(f, m2[f]), m1)
+        checkcopies(ctx(f, m2[f]), m1, ma)
 
     d2 = {}
     for of, fl in diverge.items():
@@ -197,7 +201,6 @@ def findcopies(repo, m1, m2, ma, limit):
             fo = list(fl)
             fo.remove(f)
             d2[f] = (of, fo)
-    #diverge = d2
 
     if not fullcopy or not repo.ui.configbool("merge", "followdirs", True):
         return copy, diverge
