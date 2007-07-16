@@ -184,7 +184,7 @@ class filectx(object):
     def __eq__(self, other):
         try:
             return (self._path == other._path
-                    and self._changeid == other._changeid)
+                    and self._fileid == other._fileid)
         except AttributeError:
             return False
 
