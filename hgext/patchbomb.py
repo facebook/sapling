@@ -306,8 +306,12 @@ def patchbomb(ui, repo, *revs, **opts):
                 d = cdiffstat(_('Final summary:\n'), jumbo)
                 if d: body = '\n' + d
 
-            ui.write(_('\nWrite the introductory message for the patch series.\n\n'))
-            body = ui.edit(body, sender)
+            if opts['desc']:
+                body = open(opts['desc']).read()
+            else:
+                ui.write(_('\nWrite the introductory message for the '
+                           'patch series.\n\n'))
+                body = ui.edit(body, sender)
 
             msg = email.MIMEText.MIMEText(body)
             msg['Subject'] = subj
@@ -417,6 +421,7 @@ cmdtable = {
           ('c', 'cc', [], _('email addresses of copy recipients')),
           ('d', 'diffstat', None, _('add diffstat output to messages')),
           ('', 'date', '', _('use the given date as the sending date')),
+          ('', 'desc', '', _('use the given file as the series description')),
           ('g', 'git', None, _('use git extended diff format')),
           ('f', 'from', '', _('email address of sender')),
           ('', 'plain', None, _('omit hg patch header')),
