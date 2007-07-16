@@ -319,6 +319,8 @@ hg log -vC --template '{rev} {file_copies%filecopy}\n' -r .
 hg qrefresh --git
 cat .hg/patches/bar
 hg log -vC --template '{rev} {file_copies%filecopy}\n' -r .
+hg qrefresh
+grep 'diff --git' .hg/patches/bar
 
 echo
 hg up -C 1
