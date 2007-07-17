@@ -262,7 +262,8 @@ M a
 Patch queue now empty
 applying foo
 applying bar
-1 out of 1 hunk ignored -- saving rejects to file foo.rej
+file foo already exists
+1 out of 1 hunk FAILED -- saving rejects to file foo.rej
 patch failed, unable to continue (try -v)
 patch failed, rejects left in working dir
 Errors during apply, please fix and refresh bar
