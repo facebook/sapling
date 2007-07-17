@@ -828,8 +828,10 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
             if x.startswith('\ '):
                 current_hunk.fix_newline()
             ret = current_file.apply(current_hunk, reverse)
-            if ret > 0:
-                err = 1
+            if ret >= 0:
+                changed.setdefault(current_file.fname, (None, None))
+                if ret > 0:
+                    err = 1
             current_hunk = None
             gitworkdone = False
         if ((sourcefile or state == BFILE) and ((not context and x[0] == '@') or
@@ -850,7 +852,6 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
                     current_file = selectfile(afile, bfile, current_hunk,
                                               strip, reverse)
                     current_file = patchfile(ui, current_file)
-                changed.setdefault(current_file.fname, (None, None))
         elif state == BFILE and x.startswith('GIT binary patch'):
             current_hunk = binhunk(changed[bfile[2:]][1])
             if not current_file:
@@ -917,8 +918,10 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
     if current_hunk:
         if current_hunk.complete():
             ret = current_file.apply(current_hunk, reverse)
-            if ret > 0:
-                err = 1
+            if ret >= 0:
+                changed.setdefault(current_file.fname, (None, None))
+                if ret > 0:
+                    err = 1
         else:
             fname = current_file and current_file.fname or None
             raise PatchError(_("malformed patch %s %s") % (fname,
