@@ -15,6 +15,9 @@ import sys, tempfile, zlib
 class PatchError(Exception):
     pass
 
+class NoHunks(PatchError):
+    pass
+
 # helper functions
 
 def copyfile(src, dst, basedir=None):
@@ -73,7 +76,7 @@ def extract(ui, fileobj):
             ui.debug('From: %s\n' % user)
         diffs_seen = 0
         ok_types = ('text/plain', 'text/x-diff', 'text/x-patch')
-
+        message = ''
         for part in msg.walk():
             content_type = part.get_content_type()
             ui.debug('Content-Type: %s\n' % content_type)
@@ -213,25 +216,83 @@ def readgitpatch(fp, firstline):
     return (dopatch, gitpatches)
 
 def patch(patchname, ui, strip=1, cwd=None, files={}):
-    """apply the patch <patchname> to the working directory.
-    a list of patched files is returned"""
-    fp = file(patchname)
+    """apply <patchname> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+    patcher = ui.config('ui', 'patch')
+    args = []
+    try:
+        if patcher:
+            return externalpatch(patcher, args, patchname, ui, strip, cwd,
+                                 files)
+        else:
+            try:
+                return internalpatch(patchname, ui, strip, cwd, files)
+            except NoHunks:
+                patcher = util.find_exe('gpatch') or util.find_exe('patch')
+                ui.debug('no valid hunks found; trying with %r instead\n' %
+                         patcher)
+                if util.needbinarypatch():
+                    args.append('--binary')
+                return externalpatch(patcher, args, patchname, ui, strip, cwd,
+                                     files)
+    except PatchError, err:
+        s = str(err)
+        if s:
+            raise util.Abort(s)
+        else:
+            raise util.Abort(_('patch failed to apply'))
+
+def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
+    """use <patcher> to apply <patchname> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+
     fuzz = False
+    if cwd:
+        args.append('-d %s' % util.shellquote(cwd))
+    fp = os.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
+                                       util.shellquote(patchname)))
+
+    for line in fp:
+        line = line.rstrip()
+        ui.note(line + '\n')
+        if line.startswith('patching file '):
+            pf = util.parse_patch_output(line)
+            printed_file = False
+            files.setdefault(pf, (None, None))
+        elif line.find('with fuzz') >= 0:
+            fuzz = True
+            if not printed_file:
+                ui.warn(pf + '\n')
+                printed_file = True
+            ui.warn(line + '\n')
+        elif line.find('saving rejects to file') >= 0:
+            ui.warn(line + '\n')
+        elif line.find('FAILED') >= 0:
+            if not printed_file:
+                ui.warn(pf + '\n')
+                printed_file = True
+            ui.warn(line + '\n')
+    code = fp.close()
+    if code:
+        raise PatchError(_("patch command failed: %s") %
+                         util.explain_exit(code)[0])
+    return fuzz
+
+def internalpatch(patchname, ui, strip, cwd, files):
+    """use builtin patch to apply <patchname> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+    fp = file(patchname)
     if cwd:
         curdir = os.getcwd()
         os.chdir(cwd)
     try:
         ret = applydiff(ui, fp, files, strip=strip)
-    except PatchError, err:
-        ui.debug(err)
-        raise util.Abort(_("patch failed to apply"))
-    if cwd:
-        os.chdir(curdir)
+    finally:
+        if cwd:
+            os.chdir(curdir)
     if ret < 0:
-        raise util.Abort(_("patch failed to apply"))
-    if ret > 0:
-        fuzz = True
-    return fuzz
+        raise PatchError
+    return ret > 0
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
@@ -936,7 +997,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
     if rejects:
         return -1
     if hunknum == 0 and dopatch and not gitworkdone:
-        raise PatchError(_("no valid hunks found"))
+        raise NoHunks
     return err
 
 def diffopts(ui, opts={}, untrusted=False):
