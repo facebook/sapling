@@ -18,3 +18,9 @@ hg co
 cat foo
 hg manifest --debug
 hg pull
+
+echo % issue 622
+cd ..
+hg init empty
+cd empty
+hg pull -u ../test
