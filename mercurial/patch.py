@@ -222,7 +222,8 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
         os.chdir(cwd)
     try:
         ret = applydiff(ui, fp, files, strip=strip)
-    except PatchError:
+    except PatchError, err:
+        ui.debug(err)
         raise util.Abort(_("patch failed to apply"))
     if cwd:
         os.chdir(curdir)
@@ -269,7 +270,7 @@ class patchfile:
             return
         if warn or self.ui.verbose:
             self.fileprinted = True
-        s = _("patching file %s\n" % self.fname)
+        s = _("patching file %s\n") % self.fname
         if warn:
             self.ui.warn(s)
         else:
@@ -316,8 +317,8 @@ class patchfile:
 
         fname = self.fname + ".rej"
         self.ui.warn(
-                 _("%d out of %d hunk%s FAILED -- saving rejects to file %s\n" %
-                 (len(self.rej), self.hunks, hunkstr, fname)))
+            _("%d out of %d hunk%s FAILED -- saving rejects to file %s\n") %
+            (len(self.rej), self.hunks, hunkstr, fname))
         try: os.unlink(fname)
         except:
             pass
@@ -352,7 +353,7 @@ class patchfile:
 
     def apply(self, h, reverse):
         if not h.complete():
-            raise PatchError("bad hunk #%d %s (%d %d %d %d)" %
+            raise PatchError(_("bad hunk #%d %s (%d %d %d %d)") %
                             (h.number, h.desc, len(h.a), h.lena, len(h.b),
                             h.lenb))
 
@@ -361,7 +362,7 @@ class patchfile:
             h.reverse()
 
         if self.exists and h.createfile():
-            self.ui.warn(_("file %s already exists\n" % self.fname))
+            self.ui.warn(_("file %s already exists\n") % self.fname)
             self.rej.append(h)
             return -1
 
@@ -423,11 +424,11 @@ class patchfile:
                             linestr = "line"
                         else:
                             linestr = "lines"
-                        f(_("Hunk #%d succeeded at %d %s(offset %d %s).\n" %
-                           (h.number, l+1, fuzzstr, offset, linestr)))
+                        f(_("Hunk #%d succeeded at %d %s(offset %d %s).\n") %
+                          (h.number, l+1, fuzzstr, offset, linestr))
                         return fuzzlen
         self.printfile(True)
-        self.ui.warn(_("Hunk #%d FAILED at %d\n" % (h.number, orig_start)))
+        self.ui.warn(_("Hunk #%d FAILED at %d\n") % (h.number, orig_start))
         self.rej.append(h)
         return -1
 
@@ -446,7 +447,7 @@ class hunk:
     def read_unified_hunk(self, lr):
         m = unidesc.match(self.desc)
         if not m:
-            raise PatchError("bad hunk #%d" % self.number)
+            raise PatchError(_("bad hunk #%d") % self.number)
         self.starta, foo, self.lena, self.startb, foo2, self.lenb = m.groups()
         if self.lena == None:
             self.lena = 1
@@ -472,7 +473,7 @@ class hunk:
         self.desc = lr.readline()
         m = contextdesc.match(self.desc)
         if not m:
-            raise PatchError("bad hunk #%d" % self.number)
+            raise PatchError(_("bad hunk #%d") % self.number)
         foo, self.starta, foo2, aend, foo3 = m.groups()
         self.starta = int(self.starta)
         if aend == None:
@@ -491,7 +492,8 @@ class hunk:
             elif l.startswith('  '):
                 u = ' ' + s
             else:
-                raise PatchError("bad hunk #%d old text line %d" % (self.number, x))
+                raise PatchError(_("bad hunk #%d old text line %d") %
+                                 (self.number, x))
             self.a.append(u)
             self.hunk.append(u)
 
@@ -503,7 +505,7 @@ class hunk:
             l = lr.readline()
         m = contextdesc.match(l)
         if not m:
-            raise PatchError("bad hunk #%d" % self.number)
+            raise PatchError(_("bad hunk #%d") % self.number)
         foo, self.startb, foo2, bend, foo3 = m.groups()
         self.startb = int(self.startb)
         if bend == None:
@@ -532,7 +534,8 @@ class hunk:
                 lr.push(l)
                 break
             else:
-                raise PatchError("bad hunk #%d old text line %d" % (self.number, x))
+                raise PatchError(_("bad hunk #%d old text line %d") %
+                                 (self.number, x))
             self.b.append(s)
             while True:
                 if hunki >= len(self.hunk):
@@ -676,7 +679,7 @@ class binhunk:
             line = fp.readline()
             self.hunk.append(line)
         if not line:
-            raise PatchError('could not extract binary patch')
+            raise PatchError(_('could not extract binary patch'))
         size = int(line[8:].rstrip())
         dec = []
         line = fp.readline()
@@ -692,7 +695,7 @@ class binhunk:
             self.hunk.append(line)
         text = zlib.decompress(''.join(dec))
         if len(text) != size:
-            raise PatchError('binary patch is %d bytes, not %d' %
+            raise PatchError(_('binary patch is %d bytes, not %d') %
                              len(text), size)
         self.text = text
 
@@ -715,7 +718,7 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
         while count > 0:
             i = path.find(os.sep, i)
             if i == -1:
-                raise PatchError("Unable to strip away %d dirs from %s" %
+                raise PatchError(_("unable to strip away %d dirs from %s") %
                                  (count, path))
             i += 1
             # consume '//' in the path
@@ -737,8 +740,8 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
     if reverse:
         createfunc = hunk.rmfile
     if not goodb and not gooda and not createfunc():
-        raise PatchError(_("Unable to find %s or %s for patching\n" %
-                        (afile, bfile)))
+        raise PatchError(_("unable to find %s or %s for patching") %
+                         (afile, bfile))
     if gooda and goodb:
         fname = bfile
         if afile in bfile:
@@ -835,7 +838,8 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
                 if context == None and x.startswith('***************'):
                     context = True
                 current_hunk = hunk(x, hunknum + 1, lr, context)
-            except PatchError:
+            except PatchError, err:
+                ui.debug(err)
                 current_hunk = None
                 continue
             hunknum += 1
@@ -917,7 +921,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
                 err = 1
         else:
             fname = current_file and current_file.fname or None
-            raise PatchError("malformed patch %s %s" % (fname,
+            raise PatchError(_("malformed patch %s %s") % (fname,
                              current_hunk.desc))
     if current_file:
         current_file.close()
@@ -929,7 +933,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
     if rejects:
         return -1
     if hunknum == 0 and dopatch and not gitworkdone:
-        raise PatchError("No valid hunks found")
+        raise PatchError(_("no valid hunks found"))
     return err
 
 def diffopts(ui, opts={}, untrusted=False):
