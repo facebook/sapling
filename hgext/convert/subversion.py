@@ -1,6 +1,17 @@
 # Subversion 1.4/1.5 Python API backend
 #
 # Copyright(C) 2007 Daniel Holth et al
+#
+# Configuration options:
+#
+# convert.svn.trunk
+#   Relative path to the trunk (default: "trunk")
+# convert.svn.branches
+#   Relative path to tree of branches (default: "branches")
+#
+# Set these in a hgrc, or on the command line as follows:
+#
+#   hg convert --config convert.svn.trunk=wackoname [...]
 
 import pprint
 import locale
@@ -88,26 +99,47 @@ class convert_svn(converter_source):
                 lastrevs[module] = revnum
         self.lastrevs = lastrevs
 
+    def exists(self, path, optrev):
+        try:
+            return svn.client.ls(self.url.rstrip('/') + '/' + path,
+                                 optrev, False, self.ctx)
+        except SubversionException, err:
+            return []
+
     def getheads(self):
         # detect standard /branches, /tags, /trunk layout
         optrev = svn.core.svn_opt_revision_t()
         optrev.kind = svn.core.svn_opt_revision_number
         optrev.value.number = self.last_changed
         rpath = self.url.strip('/')
-        paths = svn.client.ls(rpath, optrev, False, self.ctx)
-        if 'branches' in paths and 'trunk' in paths:
-            self.module += '/trunk'
+        cfgtrunk = self.ui.config('convert', 'svn.trunk')
+        cfgbranches = self.ui.config('convert', 'svn.branches')
+        trunk = (cfgtrunk or 'trunk').strip('/')
+        branches = (cfgbranches or 'branches').strip('/')
+        if self.exists(trunk, optrev) and self.exists(branches, optrev):
+            self.ui.note('found trunk at %r and branches at %r\n' %
+                         (trunk, branches))
+            oldmodule = self.module
+            self.module += '/' + trunk
             lt = self.latest(self.module, self.last_changed)
             self.head = self.revid(lt)
             self.heads = [self.head]
-            branches = svn.client.ls(rpath + '/branches', optrev, False, self.ctx)
-            for branch in branches.keys():
-                module = '/branches/' + branch
+            branchnames = svn.client.ls(rpath + '/' + branches, optrev, False,
+                                        self.ctx)
+            for branch in branchnames.keys():
+                if oldmodule:
+                    module = '/' + oldmodule + '/' + branches + '/' + branch
+                else:
+                    module = '/' + branches + '/' + branch
                 brevnum = self.latest(module, self.last_changed)
                 brev = self.revid(brevnum, module)
                 self.ui.note('found branch %s at %d\n' % (branch, brevnum))
                 self.heads.append(brev)
+        elif cfgtrunk or cfgbranches:
+            raise util.Abort(_('trunk/branch layout expected, '
+                               'but not found'))
         else:
+            self.ui.note('working with one branch\n')
             self.heads = [self.head]
         return self.heads
 
@@ -193,8 +225,8 @@ class convert_svn(converter_source):
         except SubversionException:
             dirent = None
         if not dirent:
-            raise util.Abort('%s not found up to revision %d' \
-                             % (path, stop))
+            print self.base, path
+            raise util.Abort('%s not found up to revision %d' % (path, stop))
 
         return dirent.created_rev
 
