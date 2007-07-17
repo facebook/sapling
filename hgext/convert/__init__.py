@@ -269,6 +269,8 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     srcauthor=whatever string you want
     '''
 
+    util._encoding = 'UTF-8'
+
     srcc = converter(ui, src)
     if not hasattr(srcc, "getcommit"):
         raise util.Abort("%s: can't read from this repo type" % src)
