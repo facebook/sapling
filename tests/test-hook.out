@@ -40,6 +40,7 @@ adding file changes
 added 3 changesets with 2 changes to 2 files
 (run 'hg update' to get a working copy)
 pretag hook: HG_LOCAL=0 HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_TAG=a 
+tag hook: HG_LOCAL=0 HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_TAG=a 
 precommit hook: HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 
 pretxncommit hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 
 4:8ea2ef7ad3e8
