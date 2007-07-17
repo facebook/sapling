@@ -281,7 +281,7 @@ def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
 def internalpatch(patchname, ui, strip, cwd, files):
     """use builtin patch to apply <patchname> to the working directory.
     returns whether patch was applied with fuzz factor."""
-    fp = file(patchname)
+    fp = file(patchname, 'rb')
     if cwd:
         curdir = os.getcwd()
         os.chdir(cwd)
@@ -303,7 +303,7 @@ class patchfile:
         self.fname = fname
         self.ui = ui
         try:
-            fp = file(fname, 'r')
+            fp = file(fname, 'rb')
             self.lines = fp.readlines()
             self.exists = True
         except IOError:
@@ -383,7 +383,7 @@ class patchfile:
         try: os.unlink(fname)
         except:
             pass
-        fp = file(fname, 'w')
+        fp = file(fname, 'wb')
         base = os.path.basename(self.fname)
         fp.write("--- %s\n+++ %s\n" % (base, base))
         for x in self.rej:
@@ -402,7 +402,7 @@ class patchfile:
                 if st.st_nlink > 1:
                     os.unlink(dest)
             except: pass
-            fp = file(dest, 'w')
+            fp = file(dest, 'wb')
             if st:
                 os.chmod(dest, st.st_mode)
             fp.writelines(self.lines)
@@ -777,13 +777,13 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
         if count == 0:
             return path.rstrip()
         while count > 0:
-            i = path.find(os.sep, i)
+            i = path.find('/', i)
             if i == -1:
                 raise PatchError(_("unable to strip away %d dirs from %s") %
                                  (count, path))
             i += 1
             # consume '//' in the path
-            while i < pathlen - 1 and path[i] == os.sep:
+            while i < pathlen - 1 and path[i] == '/':
                 i += 1
             count -= 1
         return path[i:].rstrip()
