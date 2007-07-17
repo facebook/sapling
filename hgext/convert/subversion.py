@@ -62,8 +62,10 @@ class convert_svn(converter_source):
         try:
             # Support file://path@rev syntax. Useful e.g. to convert
             # deleted branches.
-            url, latest = url.rsplit("@", 1)
-            latest = int(latest)
+            at = url.rfind('@')
+            if at >= 0:
+                latest = int(url[at+1:])
+                url = url[:at]
         except ValueError, e:
             pass
         self.url = url
