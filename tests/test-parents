@@ -1,8 +1,8 @@
 #!/bin/sh
 # test parents command
 
-hg init a
-cd a
+hg init repo
+cd repo
 echo % no working directory
 hg parents
 
@@ -25,3 +25,20 @@ hg parents -r 2
 
 echo % hg parents -r 2 a
 hg parents -r 2 a
+
+echo % hg parents -r 2 ../a
+hg parents -r 2 ../a
+
+echo '% cd dir; hg parents -r 2 ../a'
+mkdir dir
+cd dir
+hg parents -r 2 ../a
+
+echo '% hg parents -r 2 path:a'
+hg parents -r 2 path:a
+
+echo '% hg parents -r 2 glob:a'
+cd ..
+hg parents -r 2 glob:a
+
+true

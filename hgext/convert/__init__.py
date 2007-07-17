@@ -295,6 +295,8 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     srcauthor=whatever string you want
     '''
 
+    util._encoding = 'UTF-8'
+
     if not dest:
         dest = hg.defaultdest(src) + "-hg"
         ui.status("assuming destination %s\n" % dest)

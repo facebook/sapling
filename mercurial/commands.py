@@ -1993,7 +1993,10 @@ def parents(ui, repo, file_=None, **opts):
     """
     rev = opts.get('rev')
     if file_:
-        ctx = repo.filectx(file_, changeid=rev)
+        files, match, anypats = cmdutil.matchpats(repo, (file_,), opts)
+        if anypats or len(files) != 1:
+            raise util.Abort(_('can only specify an explicit file name'))
+        ctx = repo.filectx(files[0], changeid=rev)
     elif rev:
         ctx = repo.changectx(rev)
     else:
