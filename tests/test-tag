@@ -27,4 +27,17 @@ cat .hg/localtags
 hg tag -l 'xx
 newline'
 hg tag -l 'xx:xx'
-true
+
+echo % issue 601
+mv .hg/localtags .hg/ltags
+head -1 .hg/ltags | tr -d '\n' > .hg/localtags
+cat .hg/localtags
+hg tag -l localnewline
+cat .hg/localtags
+
+mv .hgtags hgtags
+head -1 hgtags | tr -d '\n' > .hgtags
+hg ci -d '1000000 0' -m'broken manual edit of .hgtags'
+cat .hgtags
+hg tag -d '1000000 0' newline
+cat .hgtags
