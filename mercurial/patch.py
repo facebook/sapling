@@ -777,13 +777,13 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
         if count == 0:
             return path.rstrip()
         while count > 0:
-            i = path.find(os.sep, i)
+            i = path.find('/', i)
             if i == -1:
                 raise PatchError(_("unable to strip away %d dirs from %s") %
                                  (count, path))
             i += 1
             # consume '//' in the path
-            while i < pathlen - 1 and path[i] == os.sep:
+            while i < pathlen - 1 and path[i] == '/':
                 i += 1
             count -= 1
         return path[i:].rstrip()
