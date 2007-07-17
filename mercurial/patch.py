@@ -281,7 +281,7 @@ def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
 def internalpatch(patchname, ui, strip, cwd, files):
     """use builtin patch to apply <patchname> to the working directory.
     returns whether patch was applied with fuzz factor."""
-    fp = file(patchname)
+    fp = file(patchname, 'rb')
     if cwd:
         curdir = os.getcwd()
         os.chdir(cwd)
@@ -303,7 +303,7 @@ class patchfile:
         self.fname = fname
         self.ui = ui
         try:
-            fp = file(fname, 'r')
+            fp = file(fname, 'rb')
             self.lines = fp.readlines()
             self.exists = True
         except IOError:
@@ -383,7 +383,7 @@ class patchfile:
         try: os.unlink(fname)
         except:
             pass
-        fp = file(fname, 'w')
+        fp = file(fname, 'wb')
         base = os.path.basename(self.fname)
         fp.write("--- %s\n+++ %s\n" % (base, base))
         for x in self.rej:
@@ -402,7 +402,7 @@ class patchfile:
                 if st.st_nlink > 1:
                     os.unlink(dest)
             except: pass
-            fp = file(dest, 'w')
+            fp = file(dest, 'wb')
             if st:
                 os.chmod(dest, st.st_mode)
             fp.writelines(self.lines)
