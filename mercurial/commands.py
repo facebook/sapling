@@ -2013,13 +2013,11 @@ def paths(ui, repo, search=None):
         for name, path in ui.configitems("paths"):
             ui.write("%s = %s\n" % (name, path))
 
-def postincoming(ui, repo, modheads, optupdate, wasempty):
+def postincoming(ui, repo, modheads, optupdate):
     if modheads == 0:
         return
     if optupdate:
-        if wasempty:
-            return hg.update(repo, repo.lookup('default'))
-        elif modheads == 1:
+        if modheads == 1:
             return hg.update(repo, repo.changelog.tip()) # update
         else:
             ui.status(_("not updating, since new heads added\n"))
@@ -2081,9 +2079,8 @@ def pull(ui, repo, source="default", **opts):
             error = _("Other repository doesn't support revision lookup, so a rev cannot be specified.")
             raise util.Abort(error)
 
-    wasempty = repo.changelog.count() == 0
     modheads = repo.pull(other, heads=revs, force=opts['force'])
-    return postincoming(ui, repo, modheads, opts['update'], wasempty)
+    return postincoming(ui, repo, modheads, opts['update'])
 
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
@@ -2647,7 +2644,6 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     """
     fnames = (fname1,) + fnames
     result = None
-    wasempty = repo.changelog.count() == 0
     for fname in fnames:
         if os.path.exists(fname):
             f = open(fname, "rb")
@@ -2656,7 +2652,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         gen = changegroup.readbundle(f, fname)
         modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
 
-    return postincoming(ui, repo, modheads, opts['update'], wasempty)
+    return postincoming(ui, repo, modheads, opts['update'])
 
 def update(ui, repo, node=None, rev=None, clean=False, date=None):
     """update working directory
