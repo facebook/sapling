@@ -2018,7 +2018,7 @@ def postincoming(ui, repo, modheads, optupdate):
         return
     if optupdate:
         if modheads == 1:
-            return hg.update(repo, repo.changelog.tip()) # update
+            return hg.update(repo, None)
         else:
             ui.status(_("not updating, since new heads added\n"))
     if modheads > 1:
