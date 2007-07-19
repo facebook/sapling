@@ -206,6 +206,7 @@ class convert_svn(converter_source):
                                strict_node_history,
                                receiver)
             except SubversionException, (_, num):
+                self.ui.print_exc()
                 pickle.dump(num, fp, protocol)
             else:
                 pickle.dump(None, fp, protocol)
@@ -238,16 +239,20 @@ class convert_svn(converter_source):
 
     def gettags(self):
         tags = {}
-        for entry in self.get_log(['/tags'], 0, self.revnum(self.head)):
-            orig_paths, revnum, author, date, message = entry
-            for path in orig_paths:
-                if not path.startswith('/tags/'):
-                    continue
-                ent = orig_paths[path]
-                source = ent.copyfrom_path
-                rev = ent.copyfrom_rev
-                tag = path.split('/', 2)[2]
-                tags[tag] = self.revid(rev, module=source)
+        start = self.revnum(self.head)
+        try:
+            for entry in self.get_log(['/tags'], 0, start):
+                orig_paths, revnum, author, date, message = entry
+                for path in orig_paths:
+                    if not path.startswith('/tags/'):
+                        continue
+                    ent = orig_paths[path]
+                    source = ent.copyfrom_path
+                    rev = ent.copyfrom_rev
+                    tag = path.split('/', 2)[2]
+                    tags[tag] = self.revid(rev, module=source)
+        except SubversionException, (_, num):
+            self.ui.note('no tags found at revision %d\n' % start)
         return tags
 
     # -- helper functions --
