@@ -279,9 +279,7 @@ class convert_svn(converter_source):
         received = []
         # svn.ra.get_log requires no other calls to the ra until it completes,
         # so we just collect the log entries and parse them afterwards
-        def receivelog(*arg, **args):
-            orig_paths, revnum, author, date, message, pool = arg
-
+        def receivelog(orig_paths, revnum, author, date, message, pool):
             if self.is_blacklisted(revnum):
                 self.ui.note('skipping blacklisted revision %d\n' % revnum)
                 return
