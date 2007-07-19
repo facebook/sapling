@@ -1340,7 +1340,7 @@ def help_(ui, name=None, with_version=False):
 
             addglobalopts(False)
 
-    def helplist(select=None):
+    def helplist(header, select=None):
         h = {}
         cmds = {}
         for c, e in table.items():
@@ -1358,6 +1358,11 @@ def help_(ui, name=None, with_version=False):
             h[f] = doc.splitlines(0)[0].rstrip()
             cmds[f] = c.lstrip("^")
 
+        if not h:
+            ui.status(_('no commands defined\n'))
+            return
+
+        ui.status(header)
         fns = h.keys()
         fns.sort()
         m = max(map(len, fns))
@@ -1407,14 +1412,10 @@ def help_(ui, name=None, with_version=False):
         try:
             ct = mod.cmdtable
         except AttributeError:
-            ct = None
-        if not ct:
-            ui.status(_('no commands defined\n'))
-            return
+            ct = {}
 
-        ui.status(_('list of commands:\n\n'))
         modcmds = dict.fromkeys([c.split('|', 1)[0] for c in ct])
-        helplist(modcmds.has_key)
+        helplist(_('list of commands:\n\n'), modcmds.has_key)
 
     if name and name != 'shortlist':
         i = None
@@ -1438,11 +1439,11 @@ def help_(ui, name=None, with_version=False):
 
         # list of commands
         if name == "shortlist":
-            ui.status(_('basic commands:\n\n'))
+            header = _('basic commands:\n\n')
         else:
-            ui.status(_('list of commands:\n\n'))
+            header = _('list of commands:\n\n')
 
-        helplist()
+        helplist(header)
 
     # list all option lists
     opt_output = []
