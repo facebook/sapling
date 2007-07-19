@@ -280,21 +280,21 @@ class convert_svn(converter_source):
         # svn.ra.get_log requires no other calls to the ra until it completes,
         # so we just collect the log entries and parse them afterwards
         def receivelog(*arg, **args):
-            received.append(arg)
-
-        self.child_cset = None
-        def parselogentry(*arg, **args):
             orig_paths, revnum, author, date, message, pool = arg
 
             if self.is_blacklisted(revnum):
                 self.ui.note('skipping blacklisted revision %d\n' % revnum)
                 return
-
-            self.ui.debug("parsing revision %d\n" % revnum)
            
             if orig_paths is None:
                 self.ui.debug('revision %d has no entries\n' % revnum)
                 return
+
+            received.append((revnum, orig_paths.items(), author, date, message))
+
+        self.child_cset = None
+        def parselogentry((revnum, orig_paths, author, date, message)):
+            self.ui.debug("parsing revision %d\n" % revnum)
 
             if revnum in self.modulemap:
                 new_module = self.modulemap[revnum]
@@ -320,12 +320,10 @@ class convert_svn(converter_source):
             except IndexError:
                 branch = None
 
-            paths = orig_paths.keys()
-            paths.sort()
-            for path in paths:
+            orig_paths.sort()
+            for path, ent in orig_paths:
                 # self.ui.write("path %s\n" % path)
                 if path == self.module: # Follow branching back in history
-                    ent = orig_paths[path]
                     if ent:
                         if ent.copyfrom_path:
                             # ent.copyfrom_rev may not be the actual last revision
@@ -344,7 +342,6 @@ class convert_svn(converter_source):
                     self.ui.debug("boring@%s: %s\n" % (revnum, path))
                     continue
                 entry = entrypath.decode(self.encoding)
-                ent = orig_paths[path]
 
                 kind = svn.ra.check_path(self.ra, entrypath, revnum)
                 if kind == svn.core.svn_node_file:
@@ -526,7 +523,7 @@ class convert_svn(converter_source):
                 self.child_cset.parents = [rev]
             self.child_cset = cset
 
-        self.ui.note('fetching revision log for "%s" from %d to %d\n' % \
+        self.ui.note('fetching revision log for "%s" from %d to %d\n' %
                      (self.module, from_revnum, to_revnum))
 
         try:
@@ -535,8 +532,10 @@ class convert_svn(converter_source):
             svn.ra.get_log(self.ra, [self.module], from_revnum, to_revnum, 0,
                            discover_changed_paths, strict_node_history,
                            receivelog)
+            self.ui.note('parsing %d log entries for "%s"\n' %
+                         (len(received), self.module))
             for entry in received:
-                parselogentry(*entry)
+                parselogentry(entry)
         except SubversionException, (_, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
