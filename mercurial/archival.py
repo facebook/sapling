@@ -200,8 +200,9 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
 
     prefix is name of path to put before every archive member.'''
 
-    def write(name, mode, islink, data):
+    def write(name, mode, islink, getdata):
         if matchfn and not matchfn(name): return
+        data = getdata()
         if decode:
             data = repo.wwritedata(name, data)
         archiver.addfile(name, mode, islink, data)
@@ -212,8 +213,8 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     items = m.items()
     items.sort()
     write('.hg_archival.txt', 0644, False,
-          'repo: %s\nnode: %s\n' % (hex(repo.changelog.node(0)), hex(node)))
+          lambda: 'repo: %s\nnode: %s\n' % (hex(repo.changelog.node(0)), hex(node)))
     for filename, filenode in items:
         write(filename, m.execf(filename) and 0755 or 0644, m.linkf(filename),
-              repo.file(filename).read(filenode))
+              lambda: repo.file(filename).read(filenode))
     archiver.done()
