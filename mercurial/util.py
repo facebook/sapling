@@ -1303,7 +1303,11 @@ class opener(object):
             os.makedirs(dirname)
 
         if self._can_symlink:
-            os.symlink(src, linkname)
+            try:
+                os.symlink(src, linkname)
+            except OSError, err:
+                raise OSError(err.errno, _('could not symlink to %r: %s') %
+                              (src, err.strerror), linkname)
         else:
             f = self(self, dst, "w")
             f.write(src)
