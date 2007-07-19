@@ -21,6 +21,7 @@ class dirstate(object):
         self._opener = opener
         self._root = root
         self._dirty = 0
+        self._dirtypl = 0
         self._ui = ui
 
     def __getattr__(self, name):
@@ -114,6 +115,7 @@ class dirstate(object):
 
     def setparents(self, p1, p2=nullid):
         self.markdirty()
+        self._dirtypl = 1
         self._pl = p1, p2
 
     def setbranch(self, branch):
@@ -126,7 +128,8 @@ class dirstate(object):
     def _read(self):
         self._map = {}
         self._copymap = {}
-        self._pl = [nullid, nullid]
+        if not self._dirtypl:
+            self._pl = [nullid, nullid]
         try:
             st = self._opener("dirstate").read()
         except IOError, err:
@@ -135,7 +138,8 @@ class dirstate(object):
         if not st:
             return
 
-        self._pl = [st[:20], st[20: 40]]
+        if not self._dirtypl:
+            self._pl = [st[:20], st[20: 40]]
 
         # deref fields so they will be local in loop
         dmap = self._map
@@ -262,6 +266,7 @@ class dirstate(object):
         st.write(cs.getvalue())
         st.rename()
         self._dirty = 0
+        self._dirtypl = 0
 
     def filterfiles(self, files):
         ret = {}
