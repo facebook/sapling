@@ -24,6 +24,7 @@ from tempfile import mktemp
 
 from svn.core import SubversionException, Pool
 import svn.ra
+import svn.client
 import svn.core
 
 # Some older versions of the Python bindings need to be 
@@ -48,21 +49,6 @@ def _create_auth_baton(pool):
         ]
     return svn.core.svn_auth_open(providers, pool)
 
-
-#    # The SVN libraries don't like trailing slashes...
-#    return url.rstrip('/')
-
-
-class SvnRaCallbacks(svn.ra.callbacks2_t):
-    """Remote access callbacks implementation for bzr-svn."""
-    def __init__(self, pool):
-        svn.ra.callbacks2_t.__init__(self)
-        self.auth_baton = _create_auth_baton(pool)
-        self.pool = pool
-    
-    def open_tmp_file(self, pool):
-        return mktemp(prefix='tailor-svn')
-
 class NotBranchError(SubversionException):
     pass
 
@@ -73,25 +59,30 @@ class SvnRaTransport(object):
     def __init__(self, url="", ra=None):
         self.pool = Pool()
         self.svn_url = url
+        self.username = ''
+        self.password = ''
 
         # Only Subversion 1.4 has reparent()
         if ra is None or not hasattr(svn.ra, 'reparent'):
-            self.callbacks = SvnRaCallbacks(self.pool)
+            self.client = svn.client.create_context(self.pool)
+            ab = _create_auth_baton(self.pool)
+            if False:
+                svn.core.svn_auth_set_parameter(
+                    ab, svn.core.SVN_AUTH_PARAM_DEFAULT_USERNAME, self.username)
+                svn.core.svn_auth_set_parameter(
+                    ab, svn.core.SVN_AUTH_PARAM_DEFAULT_PASSWORD, self.password)
+            self.client.auth_baton = ab
+            self.client.config = svn_config
             try:
-                ver = svn.ra.version()
-                try: # Older SVN bindings
-                    self.ra = svn.ra.open2(self.svn_url.encode('utf8'), self.callbacks, None, svn_config, None)
-                except TypeError, e:
-                    self.ra = svn.ra.open2(self.svn_url.encode('utf8'), self.callbacks, svn_config, None)
+                self.ra = svn.client.open_ra_session(
+                    self.svn_url.encode('utf8'), 
+                    self.client, self.pool)
             except SubversionException, (_, num):
-                if num == svn.core.SVN_ERR_RA_ILLEGAL_URL:
-                    raise NotBranchError(url)
-                if num == svn.core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED:
-                    raise NotBranchError(url)
-                if num == svn.core.SVN_ERR_BAD_URL:
+                if num in (svn.core.SVN_ERR_RA_ILLEGAL_URL,
+                           svn.core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,
+                           svn.core.SVN_ERR_BAD_URL):
                     raise NotBranchError(url)
                 raise
-
         else:
             self.ra = ra
             svn.ra.reparent(self.ra, self.svn_url.encode('utf8'))
