@@ -64,3 +64,18 @@ emptypath=`pwd`/empty.py
 echo '[extensions]' > $HGRCPATH
 echo "empty = $emptypath" >> $HGRCPATH
 hg help empty
+
+cat > debugextension.py <<EOF
+'''only debugcommands
+'''
+def debugfoobar(ui, repo, *args, **opts):
+    "yet another debug command"
+    pass
+
+cmdtable = {"debugfoobar": (debugfoobar, (), "hg debugfoobar")}
+EOF
+debugpath=`pwd`/debugextension.py
+echo '[extensions]' > $HGRCPATH
+echo "debugextension = $debugpath" >> $HGRCPATH
+hg help debugextension
+hg --debug help debugextension
