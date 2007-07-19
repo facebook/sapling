@@ -164,8 +164,8 @@ class dirstate(object):
 
     def invalidate(self):
         for a in "_map _copymap _branch _pl _dirs _ignore".split():
-            if hasattr(self, a):
-                self.__delattr__(a)
+            if a in self.__dict__:
+                delattr(self, a)
         self._dirty = 0
 
     def copy(self, source, dest):
