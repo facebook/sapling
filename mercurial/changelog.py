@@ -58,7 +58,6 @@ class appender:
     def read(self, count=-1):
         '''only trick here is reads that span real file and data'''
         ret = ""
-        old_offset = self.offset
         if self.offset < self.size:
             s = self.fp.read(count)
             ret = s

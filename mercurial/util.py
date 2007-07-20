@@ -616,7 +616,7 @@ def rename(src, dst):
     """forcibly rename a file"""
     try:
         os.rename(src, dst)
-    except OSError, err:
+    except OSError, err: # FIXME: check err (EEXIST ?)
         # on windows, rename to existing file is not allowed, so we
         # must delete destination first. but if file is open, unlink
         # schedules it for delete but does not delete it. rename

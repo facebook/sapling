@@ -8,7 +8,7 @@
 import demandimport; demandimport.enable()
 from node import *
 from i18n import _
-import bisect, os, re, sys, urllib, shlex, stat
+import bisect, os, re, sys, urllib, stat
 import ui, hg, util, revlog, bundlerepo, extensions
 import difflib, patch, time, help, mdiff, tempfile
 import errno, version, socket
@@ -2197,7 +2197,6 @@ def remove(ui, repo, *pats, **opts):
     Modified files and added files are not removed by default.  To
     remove them, use the -f/--force option.
     """
-    names = []
     if not opts['after'] and not pats:
         raise util.Abort(_('no files specified'))
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
@@ -2659,7 +2658,6 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     bundle command.
     """
     fnames = (fname1,) + fnames
-    result = None
     for fname in fnames:
         if os.path.exists(fname):
             f = open(fname, "rb")
