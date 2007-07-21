@@ -546,8 +546,7 @@ class localrepository(repo.repository):
         self.tagscache = None
         self.nodetagscache = None
 
-    def do_lock(self, lockname, wait, releasefn=None, acquirefn=None,
-                desc=None):
+    def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
             l = lock.lock(lockname, 0, releasefn, desc=desc)
         except lock.LockHeld, inst:
@@ -563,14 +562,13 @@ class localrepository(repo.repository):
         return l
 
     def lock(self, wait=1):
-        return self.do_lock(self.sjoin("lock"), wait,
-                            acquirefn=self.invalidate,
-                            desc=_('repository %s') % self.origroot)
+        return self._lock(self.sjoin("lock"), wait, None, self.invalidate,
+                          _('repository %s') % self.origroot)
 
     def wlock(self, wait=1):
-        return self.do_lock(self.join("wlock"), wait, self.dirstate.write,
-                            self.dirstate.invalidate,
-                            desc=_('working directory of %s') % self.origroot)
+        return self._lock(self.join("wlock"), wait, self.dirstate.write,
+                          self.dirstate.invalidate,
+                          _('working directory of %s') % self.origroot)
 
     def filecommit(self, fn, manifest1, manifest2, linkrev, transaction, changelist):
         """
