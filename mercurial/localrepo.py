@@ -561,11 +561,11 @@ class localrepository(repo.repository):
             acquirefn()
         return l
 
-    def lock(self, wait=1):
+    def lock(self, wait=True):
         return self._lock(self.sjoin("lock"), wait, None, self.invalidate,
                           _('repository %s') % self.origroot)
 
-    def wlock(self, wait=1):
+    def wlock(self, wait=True):
         return self._lock(self.join("wlock"), wait, self.dirstate.write,
                           self.dirstate.invalidate,
                           _('working directory of %s') % self.origroot)
@@ -898,7 +898,7 @@ class localrepository(repo.repository):
                         cleanup = False
                         if not wlock:
                             try:
-                                wlock = self.wlock(wait=0)
+                                wlock = self.wlock(False)
                                 cleanup = True
                             except lock.LockException:
                                 pass

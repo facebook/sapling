@@ -675,7 +675,7 @@ def copy(ui, repo, *pats, **opts):
     This command takes effect in the next commit. To undo a copy
     before that, see hg revert.
     """
-    wlock = repo.wlock(0)
+    wlock = repo.wlock(False)
     errs, copied = docopy(ui, repo, pats, opts, wlock)
     return errs
 
@@ -2247,7 +2247,7 @@ def rename(ui, repo, *pats, **opts):
     This command takes effect in the next commit. To undo a rename
     before that, see hg revert.
     """
-    wlock = repo.wlock(0)
+    wlock = repo.wlock(False)
     errs, copied = docopy(ui, repo, pats, opts, wlock)
     names = []
     for abs, rel, exact in copied:
