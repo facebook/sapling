@@ -1872,7 +1872,7 @@ def rename(ui, repo, patch, name=None, **opts):
     r = q.qrepo()
     if r:
         wlock = r.wlock()
-        if r.dirstate.state(name) == 'r':
+        if r.dirstate[name] == 'r':
             r.undelete([name], wlock)
         r.copy(patch, name, wlock)
         r.remove([patch], False, wlock)

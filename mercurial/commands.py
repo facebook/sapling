@@ -33,7 +33,7 @@ def add(ui, repo, *pats, **opts):
             if ui.verbose:
                 ui.status(_('adding %s\n') % rel)
             names.append(abs)
-        elif repo.dirstate.state(abs) == '?':
+        elif abs not in repo.dirstate:
             ui.status(_('adding %s\n') % rel)
             names.append(abs)
     if not opts.get('dry_run'):
@@ -456,7 +456,7 @@ def commit(ui, repo, *pats, **opts):
                 elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
                     raise util.Abort(_("can't commit %s: "
                                        "unsupported file type!") % rf)
-                elif repo.dirstate.state(f) == '?':
+                elif f not in repo.dirstate:
                     raise util.Abort(_("file %s not tracked!") % rf)
     else:
         files = []
@@ -482,7 +482,7 @@ def docopy(ui, repo, pats, opts, wlock):
     def okaytocopy(abs, rel, exact):
         reasons = {'?': _('is not managed'),
                    'r': _('has been marked for remove')}
-        state = repo.dirstate.state(abs)
+        state = repo.dirstate[abs]
         reason = reasons.get(state)
         if reason:
             if exact:
@@ -510,7 +510,7 @@ def docopy(ui, repo, pats, opts, wlock):
                      repo.pathto(prevsrc, cwd)))
             return
         if (not opts['after'] and os.path.exists(target) or
-            opts['after'] and repo.dirstate.state(abstarget) not in '?ar'):
+            opts['after'] and repo.dirstate[abstarget] in 'mn'):
             if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %
                         reltarget)
@@ -525,7 +525,7 @@ def docopy(ui, repo, pats, opts, wlock):
             if not os.path.isdir(targetdir) and not opts.get('dry_run'):
                 os.makedirs(targetdir)
             try:
-                restore = repo.dirstate.state(abstarget) == 'r'
+                restore = repo.dirstate[abstarget] == 'r'
                 if restore and not opts.get('dry_run'):
                     repo.undelete([abstarget], wlock)
                 try:
@@ -547,7 +547,7 @@ def docopy(ui, repo, pats, opts, wlock):
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
         if abstarget != origsrc:
-            if repo.dirstate.state(origsrc) == 'a':
+            if repo.dirstate[origsrc] == 'a':
                 if not ui.quiet:
                     ui.warn(_("%s has not been committed yet, so no copy "
                               "data will be stored for %s.\n")
@@ -718,12 +718,11 @@ def debugrebuildstate(ui, repo, rev=""):
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
     parent1, parent2 = repo.dirstate.parents()
-    dc = repo.dirstate
     m1 = repo.changectx(parent1).manifest()
     m2 = repo.changectx(parent2).manifest()
     errors = 0
-    for f in dc:
-        state = repo.dirstate.state(f)
+    for f in repo.dirstate:
+        state = repo.dirstate[f]
         if state in "nr" and f not in m1:
             ui.warn(_("%s in state %s, but not in manifest1\n") % (f, state))
             errors += 1
@@ -735,7 +734,7 @@ def debugcheckstate(ui, repo):
                     (f, state))
             errors += 1
     for f in m1:
-        state = repo.dirstate.state(f)
+        state = repo.dirstate[f]
         if state not in "nrm":
             ui.warn(_("%s in manifest1, but listed as state %s") % (f, state))
             errors += 1
@@ -787,8 +786,10 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""
-    dc = repo.dirstate
-    for file_ in dc:
+    dc = repo.dirstate._map
+    k = dc.keys()
+    k.sort()
+    for file_ in k:
         if dc[file_][3] == -1:
             # Pad or slice to locale representation
             locale_len = len(time.strftime("%x %X", time.localtime(0)))
@@ -1758,7 +1759,7 @@ def locate(ui, repo, *pats, **opts):
                                              default='relglob'):
         if src == 'b':
             continue
-        if not node and repo.dirstate.state(abs) == '?':
+        if not node and abs not in repo.dirstate:
             continue
         if opts['fullpath']:
             ui.write(os.path.join(repo.root, abs), end)
@@ -2216,7 +2217,7 @@ def remove(ui, repo, *pats, **opts):
                 forget.append(abs)
                 continue
             reason = _('has been marked for add (use -f to force removal)')
-        elif repo.dirstate.state(abs) == '?':
+        elif abs not in repo.dirstate:
             reason = _('is not managed')
         elif opts['after'] and not exact and abs not in deleted:
             continue

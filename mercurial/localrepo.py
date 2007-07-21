@@ -125,7 +125,7 @@ class localrepository(repo.repository):
             fp.write('%s %s\n' % (hex(node), munge and munge(name) or name))
             fp.close()
             self.hook('tag', node=hex(node), tag=name, local=local)
-            
+
         prevtags = ''
         if local:
             try:
@@ -156,7 +156,7 @@ class localrepository(repo.repository):
         # committed tags are stored in UTF-8
         writetag(fp, name, util.fromlocal, prevtags)
 
-        if use_dirstate and self.dirstate.state('.hgtags') == '?':
+        if use_dirstate and '.hgtags' not in self.dirstate:
             self.add(['.hgtags'])
 
         tagnode = self.commit(['.hgtags'], message, user, date, p1=parent,
@@ -651,8 +651,8 @@ class localrepository(repo.repository):
         if use_dirstate:
             if files:
                 for f in files:
-                    s = self.dirstate.state(f)
-                    if s in 'nmai':
+                    s = self.dirstate[f]
+                    if s in 'nma':
                         commit.append(f)
                     elif s == 'r':
                         remove.append(f)
@@ -970,7 +970,7 @@ class localrepository(repo.repository):
             if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                 self.ui.warn(_("%s not added: only files and symlinks "
                                "supported currently\n") % f)
-            elif self.dirstate.state(f) in 'an':
+            elif self.dirstate[f] in 'an':
                 self.ui.warn(_("%s already tracked!\n") % f)
             else:
                 self.dirstate.add(f)
@@ -979,7 +979,7 @@ class localrepository(repo.repository):
         if not wlock:
             wlock = self.wlock()
         for f in list:
-            if self.dirstate.state(f) not in 'ai':
+            if self.dirstate[f] != 'a':
                 self.ui.warn(_("%s not added!\n") % f)
             else:
                 self.dirstate.forget(f)
@@ -997,7 +997,7 @@ class localrepository(repo.repository):
         for f in list:
             if unlink and os.path.exists(self.wjoin(f)):
                 self.ui.warn(_("%s still exists!\n") % f)
-            elif self.dirstate.state(f) == 'a':
+            elif self.dirstate[f] == 'a':
                 self.dirstate.forget(f)
             elif f not in self.dirstate:
                 self.ui.warn(_("%s not tracked!\n") % f)
@@ -1011,7 +1011,7 @@ class localrepository(repo.repository):
         if not wlock:
             wlock = self.wlock()
         for f in list:
-            if self.dirstate.state(f) not in  "r":
+            if self.dirstate[f] != 'r':
                 self.ui.warn("%s not removed!\n" % f)
             else:
                 t = self.file(f).read(m[f])
@@ -1028,7 +1028,7 @@ class localrepository(repo.repository):
         else:
             if not wlock:
                 wlock = self.wlock()
-            if self.dirstate.state(dest) == '?':
+            if dest not in self.dirstate:
                 self.dirstate.add(dest)
             self.dirstate.copy(source, dest)
 

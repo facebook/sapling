@@ -638,12 +638,12 @@ def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
     mapping = {}
     for src, abs, rel, exact in walk(repo, pats, opts):
         target = repo.wjoin(abs)
-        if src == 'f' and repo.dirstate.state(abs) == '?':
+        if src == 'f' and abs not in repo.dirstate:
             add.append(abs)
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        if repo.dirstate.state(abs) != 'r' and not util.lexists(target):
+        if repo.dirstate[abs] != 'r' and not util.lexists(target):
             remove.append(abs)
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:

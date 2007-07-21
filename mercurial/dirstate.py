@@ -88,11 +88,14 @@ class dirstate(object):
             return path.replace(os.sep, '/')
         return path
 
-    def __del__(self):
-        self.write()
-
     def __getitem__(self, key):
-        return self._map[key]
+        ''' current states:
+        n  normal
+        m  needs merging
+        r  marked for removal
+        a  marked for addition
+        ?  not tracked'''
+        return self._map.get(key, ("?",))[0]
 
     def __contains__(self, key):
         return key in self._map
@@ -116,14 +119,6 @@ class dirstate(object):
     def setbranch(self, branch):
         self._branch = branch
         self._opener("branch", "w").write(branch + '\n')
-
-    def state(self, key):
-        ''' current states:
-        n  normal
-        m  needs merging
-        r  marked for removal
-        a  marked for addition'''
-        return self._map.get(key, ("?",))[0]
 
     def _read(self):
         self._map = {}
@@ -460,7 +455,7 @@ class dirstate(object):
 
         for src, fn, st in self.statwalk(files, match, ignored=list_ignored):
             try:
-                type_, mode, size, time = self[fn]
+                type_, mode, size, time = self._map[fn]
             except KeyError:
                 if list_ignored and self._ignore(fn):
                     ignored.append(fn)
