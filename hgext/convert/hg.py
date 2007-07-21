@@ -58,7 +58,7 @@ class convert_mercurial(converter_sink):
             extra['branch'] = commit.branch
         if commit.rev:
             extra['convert_revision'] = commit.rev
-            
+
         while parents:
             p1 = p2
             p2 = parents.pop(0)

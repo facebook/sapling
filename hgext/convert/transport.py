@@ -27,7 +27,7 @@ import svn.ra
 import svn.client
 import svn.core
 
-# Some older versions of the Python bindings need to be 
+# Some older versions of the Python bindings need to be
 # explicitly initialized. But what we want to do probably
 # won't work worth a darn against those libraries anyway!
 svn.ra.initialize()
@@ -75,7 +75,7 @@ class SvnRaTransport(object):
             self.client.config = svn_config
             try:
                 self.ra = svn.client.open_ra_session(
-                    self.svn_url.encode('utf8'), 
+                    self.svn_url.encode('utf8'),
                     self.client, self.pool)
             except SubversionException, (_, num):
                 if num in (svn.core.SVN_ERR_RA_ILLEGAL_URL,

@@ -244,7 +244,7 @@ class hgwebdir(object):
                     if up < 0:
                         break
                     virtual = virtual[:up]
-                
+
                 req.write(tmpl("notfound", repo=virtual))
             else:
                 if req.form.has_key('static'):

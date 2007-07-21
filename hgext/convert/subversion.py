@@ -157,7 +157,7 @@ class convert_svn(converter_source):
         self.modecache[(file, rev)] = mode
         return data
 
-    def getmode(self, file, rev):        
+    def getmode(self, file, rev):
         return self.modecache[(file, rev)]
 
     def getchanges(self, rev):
@@ -449,7 +449,7 @@ class convert_svn(converter_source):
                         # print "find children %s@%d from %d action %s" % (path, revnum, ent.copyfrom_rev, ent.action)
                         # Sometimes this is tricky. For example: in
                         # The Subversion Repository revision 6940 a dir
-                        # was copied and one of its files was deleted 
+                        # was copied and one of its files was deleted
                         # from the new location in the same commit. This
                         # code can't deal with that yet.
                         if ent.action == 'C':
@@ -463,7 +463,7 @@ class convert_svn(converter_source):
                         for child in children:
                             # Can we move a child directory and its
                             # parent in the same commit? (probably can). Could
-                            # cause problems if instead of revnum -1, 
+                            # cause problems if instead of revnum -1,
                             # we have to look in (copyfrom_path, revnum - 1)
                             entrypath = get_entry_from_path("/" + child, module=old_module)
                             if entrypath:
@@ -493,7 +493,7 @@ class convert_svn(converter_source):
                     for child in children:
                         # Can we move a child directory and its
                         # parent in the same commit? (probably can). Could
-                        # cause problems if instead of revnum -1, 
+                        # cause problems if instead of revnum -1,
                         # we have to look in (copyfrom_path, revnum - 1)
                         entrypath = get_entry_from_path("/" + child, module=self.module)
                         # print child, self.module, entrypath
@@ -542,7 +542,7 @@ class convert_svn(converter_source):
 
             self.modulemap[revnum] = self.module # track backwards in time
             # a list of (filename, id) where id lets us retrieve the file.
-            # eg in git, id is the object hash. for svn it'll be the 
+            # eg in git, id is the object hash. for svn it'll be the
             self.files[rev] = zip(entries, [rev] * len(entries))
             if not entries:
                 return
@@ -556,8 +556,8 @@ class convert_svn(converter_source):
             author = author and self.recode(author) or ''
 
             cset = commit(author=author,
-                          date=util.datestr(date), 
-                          desc=log, 
+                          date=util.datestr(date),
+                          desc=log,
                           parents=parents,
                           copies=copies,
                           branch=branch,
@@ -585,7 +585,7 @@ class convert_svn(converter_source):
                 parselogentry(orig_paths, revnum, author, date, message)
         except SubversionException, (_, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
-                raise NoSuchRevision(branch=self, 
+                raise NoSuchRevision(branch=self,
                     revision="Revision number %d" % to_revnum)
             raise
 

@@ -60,7 +60,7 @@ class converter_source(object):
     def recode(self, s, encoding=None):
         if not encoding:
             encoding = self.encoding or 'utf-8'
-            
+
         try:
             return s.decode(encoding).encode("utf-8")
         except:
