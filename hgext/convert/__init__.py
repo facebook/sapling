@@ -260,7 +260,7 @@ class convert(object):
            self.mapfilefd.close()
 
 def _convert(ui, src, dest=None, mapfile=None, **opts):
-    '''Convert a foreign SCM repository to a Mercurial one.
+    """Convert a foreign SCM repository to a Mercurial one.
 
     Accepted source formats:
     - GIT
@@ -275,16 +275,16 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     understood by the source).
 
     If no destination directory name is specified, it defaults to the
-    basename of the source with \'-hg\' appended.  If the destination
-    repository doesn\'t exist, it will be created.
+    basename of the source with '-hg' appended.  If the destination
+    repository doesn't exist, it will be created.
 
-    If <mapfile> isn\'t given, it will be put in a default location
+    If <mapfile> isn't given, it will be put in a default location
     (<dest>/.hg/shamap by default).  The <mapfile> is a simple text
     file that maps each source commit ID to the destination ID for
     that revision, like so:
     <source ID> <destination ID>
 
-    If the file doesn\'t exist, it\'s automatically created.  It\'s updated
+    If the file doesn't exist, it's automatically created.  It's updated
     on each commit copied, so convert-repo can be interrupted and can
     be run repeatedly to copy new commits.
 
@@ -293,7 +293,7 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     that use unix logins to identify authors (eg: CVS). One line per author
     mapping and the line format is:
     srcauthor=whatever string you want
-    '''
+    """
 
     util._encoding = 'UTF-8'
 
