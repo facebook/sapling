@@ -281,6 +281,17 @@ class lazymap(object):
 class RevlogError(Exception): pass
 class LookupError(RevlogError): pass
 
+def getoffset(q):
+    if q & 0xFFFF:
+        raise RevlogError(_('incompatible revision flag %x') % q)
+    return int(q >> 16)
+
+def gettype(q):
+    return int(q & 0xFFFF)
+
+def offset_type(offset, type):
+    return long(long(offset) << 16 | type)
+
 class revlog(object):
     """
     the underlying revision storage object
@@ -333,6 +344,8 @@ class revlog(object):
             f = self.opener(self.indexfile)
             i = f.read(4)
             f.seek(0)
+            if len(i) > 0:
+                v = struct.unpack(versionformat, i)[0]
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
@@ -351,8 +364,6 @@ class revlog(object):
                     and st.st_size == oldst.st_size):
                     return
                 self.indexstat = st
-            if len(i) > 0:
-                v = struct.unpack(versionformat, i)[0]
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
         if fmt == REVLOGV0:
@@ -385,8 +396,8 @@ class revlog(object):
                 self.parseindex(f, st)
             if self.version != REVLOGV0:
                 e = list(self.index[0])
-                type = self.ngtype(e[0])
-                e[0] = self.offset_type(0, type)
+                type = gettype(e[0])
+                e[0] = offset_type(0, type)
                 self.index[0] = e
         else:
             self.nodemap = {nullid: nullrev}
@@ -438,18 +449,6 @@ class revlog(object):
                 break
 
 
-    def ngoffset(self, q):
-        if q & 0xFFFF:
-            raise RevlogError(_('%s: incompatible revision flag %x') %
-                              (self.indexfile, q))
-        return long(q >> 16)
-
-    def ngtype(self, q):
-        return int(q & 0xFFFF)
-
-    def offset_type(self, offset, type):
-        return long(long(offset) << 16 | type)
-
     def loadindex(self, start, end):
         """load a block of indexes all at once from the lazy parser"""
         if isinstance(self.index, lazyindex):
@@ -498,7 +497,7 @@ class revlog(object):
         if rev == nullrev:
             return 0
         if self.version != REVLOGV0:
-            return self.ngoffset(self.index[rev][0])
+            return getoffset(self.index[rev][0])
         return self.index[rev][0]
 
     def end(self, rev): return self.start(rev) + self.length(rev)
@@ -1042,7 +1041,7 @@ class revlog(object):
         if self.version == REVLOGV0:
             e = (offset, l, base, link, p1, p2, node)
         else:
-            e = (self.offset_type(offset, 0), l, len(text),
+            e = (offset_type(offset, 0), l, len(text),
                  base, link, self.rev(p1), self.rev(p2), node)
 
         self.index.append(e)
@@ -1205,7 +1204,7 @@ class revlog(object):
                 if self.version == REVLOGV0:
                     e = (end, len(cdelta), base, link, p1, p2, node)
                 else:
-                    e = (self.offset_type(end, 0), len(cdelta), textlen, base,
+                    e = (offset_type(end, 0), len(cdelta), textlen, base,
                          link, self.rev(p1), self.rev(p2), node)
                 self.index.append(e)
                 self.nodemap[node] = r
