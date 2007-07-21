@@ -42,7 +42,7 @@ class appender:
     def flush(self):
         pass
     def close(self):
-        close(self.fp)
+        self.fp.close()
 
     def seek(self, offset, whence=0):
         '''virtual file offset spans real file and data'''
