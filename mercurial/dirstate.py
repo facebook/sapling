@@ -217,8 +217,7 @@ class dirstate(object):
         'mark a file added'
         self._dirty = True
         self._incpathcheck(f)
-        s = os.lstat(self._join(f))
-        self._map[f] = ('a', s.st_mode, s.st_size, s.st_mtime)
+        self._map[f] = ('a', 0, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
 
