@@ -448,8 +448,7 @@ class dirstate(object):
             if not seen(k) and imatch(k):
                 yield 'm', k, None
 
-    def status(self, files=None, match=util.always, list_ignored=False,
-               list_clean=False):
+    def status(self, files, match, list_ignored, list_clean):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
