@@ -60,6 +60,18 @@ class changectx(object):
         else:
             raise AttributeError, name
 
+    def __contains__(self, key):
+        return key in self._manifest
+
+    def __getitem__(self, key):
+        return self.filectx(key)
+
+    def __iter__(self):
+        a = self._manifest.keys()
+        a.sort()
+        for f in a:
+            return f
+
     def changeset(self): return self._changeset
     def manifest(self): return self._manifest
 
