@@ -72,6 +72,5 @@ def uisetup(ui):
         args = target.split(' ')
         tcmd = args.pop(0)
         if args:
-            pui = ui.parentui or ui
-            pui.setconfig('defaults', cmd, ' '.join(args))
+            ui.setconfig('defaults', cmd, ' '.join(args))
         cmdtable[cmd] = lazycommand(ui, cmd, tcmd)

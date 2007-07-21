@@ -39,7 +39,7 @@ class _error_logger(object):
 class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
 
     url_scheme = 'http'
-    
+
     def __init__(self, *args, **kargs):
         self.protocol_version = 'HTTP/1.1'
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kargs)
@@ -173,7 +173,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
 class _shgwebhandler(_hgwebhandler):
 
     url_scheme = 'https'
-    
+
     def setup(self):
         self.connection = self.request
         self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)

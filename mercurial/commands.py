@@ -8,7 +8,7 @@
 import demandimport; demandimport.enable()
 from node import *
 from i18n import _
-import bisect, os, re, sys, urllib, shlex, stat
+import bisect, os, re, sys, urllib, stat
 import ui, hg, util, revlog, bundlerepo, extensions
 import difflib, patch, time, help, mdiff, tempfile
 import errno, version, socket
@@ -1362,7 +1362,7 @@ def help_(ui, name=None, with_version=False):
 
             addglobalopts(False)
 
-    def helplist(select=None):
+    def helplist(header, select=None):
         h = {}
         cmds = {}
         for c, e in table.items():
@@ -1380,6 +1380,11 @@ def help_(ui, name=None, with_version=False):
             h[f] = doc.splitlines(0)[0].rstrip()
             cmds[f] = c.lstrip("^")
 
+        if not h:
+            ui.status(_('no commands defined\n'))
+            return
+
+        ui.status(header)
         fns = h.keys()
         fns.sort()
         m = max(map(len, fns))
@@ -1429,14 +1434,10 @@ def help_(ui, name=None, with_version=False):
         try:
             ct = mod.cmdtable
         except AttributeError:
-            ct = None
-        if not ct:
-            ui.status(_('no commands defined\n'))
-            return
+            ct = {}
 
-        ui.status(_('list of commands:\n\n'))
         modcmds = dict.fromkeys([c.split('|', 1)[0] for c in ct])
-        helplist(modcmds.has_key)
+        helplist(_('list of commands:\n\n'), modcmds.has_key)
 
     if name and name != 'shortlist':
         i = None
@@ -1460,11 +1461,11 @@ def help_(ui, name=None, with_version=False):
 
         # list of commands
         if name == "shortlist":
-            ui.status(_('basic commands:\n\n'))
+            header = _('basic commands:\n\n')
         else:
-            ui.status(_('list of commands:\n\n'))
+            header = _('list of commands:\n\n')
 
-        helplist()
+        helplist(header)
 
     # list all option lists
     opt_output = []
@@ -2040,14 +2041,12 @@ def paths(ui, repo, search=None):
         for name, path in ui.configitems("paths"):
             ui.write("%s = %s\n" % (name, path))
 
-def postincoming(ui, repo, modheads, optupdate, wasempty):
+def postincoming(ui, repo, modheads, optupdate):
     if modheads == 0:
         return
     if optupdate:
-        if wasempty:
-            return hg.update(repo, repo.lookup('default'))
-        elif modheads == 1:
-            return hg.update(repo, repo.changelog.tip()) # update
+        if modheads == 1:
+            return hg.update(repo, None)
         else:
             ui.status(_("not updating, since new heads added\n"))
     if modheads > 1:
@@ -2108,9 +2107,8 @@ def pull(ui, repo, source="default", **opts):
             error = _("Other repository doesn't support revision lookup, so a rev cannot be specified.")
             raise util.Abort(error)
 
-    wasempty = repo.changelog.count() == 0
     modheads = repo.pull(other, heads=revs, force=opts['force'])
-    return postincoming(ui, repo, modheads, opts['update'], wasempty)
+    return postincoming(ui, repo, modheads, opts['update'])
 
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
@@ -2211,7 +2209,6 @@ def remove(ui, repo, *pats, **opts):
     Modified files and added files are not removed by default.  To
     remove them, use the -f/--force option.
     """
-    names = []
     if not opts['after'] and not pats:
         raise util.Abort(_('no files specified'))
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
@@ -2681,8 +2678,6 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     bundle command.
     """
     fnames = (fname1,) + fnames
-    result = None
-    wasempty = repo.changelog.count() == 0
     for fname in fnames:
         if os.path.exists(fname):
             f = open(fname, "rb")
@@ -2691,7 +2686,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         gen = changegroup.readbundle(f, fname)
         modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
 
-    return postincoming(ui, repo, modheads, opts['update'], wasempty)
+    return postincoming(ui, repo, modheads, opts['update'])
 
 def update(ui, repo, node=None, rev=None, clean=False, date=None):
     """update working directory

@@ -616,7 +616,7 @@ def rename(src, dst):
     """forcibly rename a file"""
     try:
         os.rename(src, dst)
-    except OSError, err:
+    except OSError, err: # FIXME: check err (EEXIST ?)
         # on windows, rename to existing file is not allowed, so we
         # must delete destination first. but if file is open, unlink
         # schedules it for delete but does not delete it. rename
@@ -1303,7 +1303,11 @@ class opener(object):
             os.makedirs(dirname)
 
         if self._can_symlink:
-            os.symlink(src, linkname)
+            try:
+                os.symlink(src, linkname)
+            except OSError, err:
+                raise OSError(err.errno, _('could not symlink to %r: %s') %
+                              (src, err.strerror), linkname)
         else:
             f = self(self, dst, "w")
             f.write(src)

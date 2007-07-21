@@ -1,10 +1,21 @@
 # Subversion 1.4/1.5 Python API backend
 #
 # Copyright(C) 2007 Daniel Holth et al
+#
+# Configuration options:
+#
+# convert.svn.trunk
+#   Relative path to the trunk (default: "trunk")
+# convert.svn.branches
+#   Relative path to tree of branches (default: "branches")
+#
+# Set these in a hgrc, or on the command line as follows:
+#
+#   hg convert --config convert.svn.trunk=wackoname [...]
 
-import pprint
 import locale
-
+import os
+import cPickle as pickle
 from mercurial import util
 
 # Subversion stuff. Works best with very recent Python SVN bindings
@@ -26,6 +37,12 @@ except ImportError:
     pass
 
 class CompatibilityException(Exception): pass
+
+class changedpath(object):
+    def __init__(self, p):
+        self.copyfrom_path = p.copyfrom_path
+        self.copyfrom_rev = p.copyfrom_rev
+        self.action = p.action
 
 # SVN conversion code stolen from bzr-svn and tailor
 class convert_svn(converter_source):
@@ -51,16 +68,18 @@ class convert_svn(converter_source):
         try:
             # Support file://path@rev syntax. Useful e.g. to convert
             # deleted branches.
-            url, latest = url.rsplit("@", 1)
-            latest = int(latest)
+            at = url.rfind('@')
+            if at >= 0:
+                latest = int(url[at+1:])
+                url = url[:at]
         except ValueError, e:
             pass
         self.url = url
         self.encoding = 'UTF-8' # Subversion is always nominal UTF-8
         try:
-            self.transport = transport.SvnRaTransport(url = url)
+            self.transport = transport.SvnRaTransport(url=url)
             self.ra = self.transport.ra
-            self.ctx = svn.client.create_context()
+            self.ctx = self.transport.client
             self.base = svn.ra.get_repos_root(self.ra)
             self.module = self.url[len(self.base):]
             self.modulemap = {} # revision, module
@@ -88,26 +107,47 @@ class convert_svn(converter_source):
                 lastrevs[module] = revnum
         self.lastrevs = lastrevs
 
+    def exists(self, path, optrev):
+        try:
+            return svn.client.ls(self.url.rstrip('/') + '/' + path,
+                                 optrev, False, self.ctx)
+        except SubversionException, err:
+            return []
+
     def getheads(self):
         # detect standard /branches, /tags, /trunk layout
         optrev = svn.core.svn_opt_revision_t()
         optrev.kind = svn.core.svn_opt_revision_number
         optrev.value.number = self.last_changed
         rpath = self.url.strip('/')
-        paths = svn.client.ls(rpath, optrev, False, self.ctx)
-        if 'branches' in paths and 'trunk' in paths:
-            self.module += '/trunk'
+        cfgtrunk = self.ui.config('convert', 'svn.trunk')
+        cfgbranches = self.ui.config('convert', 'svn.branches')
+        trunk = (cfgtrunk or 'trunk').strip('/')
+        branches = (cfgbranches or 'branches').strip('/')
+        if self.exists(trunk, optrev) and self.exists(branches, optrev):
+            self.ui.note('found trunk at %r and branches at %r\n' %
+                         (trunk, branches))
+            oldmodule = self.module
+            self.module += '/' + trunk
             lt = self.latest(self.module, self.last_changed)
             self.head = self.revid(lt)
             self.heads = [self.head]
-            branches = svn.client.ls(rpath + '/branches', optrev, False, self.ctx)
-            for branch in branches.keys():
-                module = '/branches/' + branch
+            branchnames = svn.client.ls(rpath + '/' + branches, optrev, False,
+                                        self.ctx)
+            for branch in branchnames.keys():
+                if oldmodule:
+                    module = '/' + oldmodule + '/' + branches + '/' + branch
+                else:
+                    module = '/' + branches + '/' + branch
                 brevnum = self.latest(module, self.last_changed)
                 brev = self.revid(brevnum, module)
                 self.ui.note('found branch %s at %d\n' % (branch, brevnum))
                 self.heads.append(brev)
+        elif cfgtrunk or cfgbranches:
+            raise util.Abort(_('trunk/branch layout expected, '
+                               'but not found'))
         else:
+            self.ui.note('working with one branch\n')
             self.heads = [self.head]
         return self.heads
 
@@ -116,7 +156,7 @@ class convert_svn(converter_source):
         self.modecache[(file, rev)] = mode
         return data
 
-    def getmode(self, file, rev):        
+    def getmode(self, file, rev):
         return self.modecache[(file, rev)]
 
     def getchanges(self, rev):
@@ -140,27 +180,79 @@ class convert_svn(converter_source):
         del self.commits[rev]
         return commit
 
+    def get_log(self, paths, start, end, limit=0, discover_changed_paths=True,
+                strict_node_history=False):
+        '''wrapper for svn.ra.get_log.
+        on a large repository, svn.ra.get_log pins huge amounts of
+        memory that cannot be recovered.  work around it by forking
+        and writing results over a pipe.'''
+
+        def child(fp):
+            protocol = -1
+            def receiver(orig_paths, revnum, author, date, message, pool):
+                if orig_paths is not None:
+                    for k, v in orig_paths.iteritems():
+                        orig_paths[k] = changedpath(v)
+                pickle.dump((orig_paths, revnum, author, date, message),
+                            fp, protocol)
+
+            try:
+                # Use an ra of our own so that our parent can consume
+                # our results without confusing the server.
+                t = transport.SvnRaTransport(url=self.url)
+                svn.ra.get_log(t.ra, paths, start, end, limit,
+                               discover_changed_paths,
+                               strict_node_history,
+                               receiver)
+            except SubversionException, (_, num):
+                self.ui.print_exc()
+                pickle.dump(num, fp, protocol)
+            else:
+                pickle.dump(None, fp, protocol)
+            fp.close()
+
+        def parent(fp):
+            while True:
+                entry = pickle.load(fp)
+                try:
+                    orig_paths, revnum, author, date, message = entry
+                except:
+                    if entry is None:
+                        break
+                    raise SubversionException("child raised exception", entry)
+                yield entry
+
+        rfd, wfd = os.pipe()
+        pid = os.fork()
+        if pid:
+            os.close(wfd)
+            for p in parent(os.fdopen(rfd, 'rb')):
+                yield p
+            ret = os.waitpid(pid, 0)[1]
+            if ret:
+                raise util.Abort(_('get_log %s') % util.explain_exit(ret))
+        else:
+            os.close(rfd)
+            child(os.fdopen(wfd, 'wb'))
+            os._exit(0)
+
     def gettags(self):
         tags = {}
-        def parselogentry(*arg, **args):
-            orig_paths, revnum, author, date, message, pool = arg
-            for path in orig_paths:
-                if not path.startswith('/tags/'):
-                    continue
-                ent = orig_paths[path]
-                source = ent.copyfrom_path
-                rev = ent.copyfrom_rev
-                tag = path.split('/', 2)[2]
-                tags[tag] = self.revid(rev, module=source)
-
         start = self.revnum(self.head)
         try:
-            svn.ra.get_log(self.ra, ['/tags'], 0, start, 0, True, False,
-                           parselogentry)
-            return tags
-        except SubversionException:
+            for entry in self.get_log(['/tags'], 0, start):
+                orig_paths, revnum, author, date, message = entry
+                for path in orig_paths:
+                    if not path.startswith('/tags/'):
+                        continue
+                    ent = orig_paths[path]
+                    source = ent.copyfrom_path
+                    rev = ent.copyfrom_rev
+                    tag = path.split('/', 2)[2]
+                    tags[tag] = self.revid(rev, module=source)
+        except SubversionException, (_, num):
             self.ui.note('no tags found at revision %d\n' % start)
-            return {}
+        return tags
 
     # -- helper functions --
 
@@ -193,8 +285,8 @@ class convert_svn(converter_source):
         except SubversionException:
             dirent = None
         if not dirent:
-            raise util.Abort('%s not found up to revision %d' \
-                             % (path, stop))
+            print self.base, path
+            raise util.Abort('%s not found up to revision %d' % (path, stop))
 
         return dirent.created_rev
 
@@ -242,25 +334,10 @@ class convert_svn(converter_source):
             self.ui.debug('Ignoring %r since it is not under %r\n' % (path, module))
             return None
 
-        received = []
-        # svn.ra.get_log requires no other calls to the ra until it completes,
-        # so we just collect the log entries and parse them afterwards
-        def receivelog(*arg, **args):
-            received.append(arg)
-
         self.child_cset = None
-        def parselogentry(*arg, **args):
-            orig_paths, revnum, author, date, message, pool = arg
-
-            if self.is_blacklisted(revnum):
-                self.ui.note('skipping blacklisted revision %d\n' % revnum)
-                return
-
-            self.ui.debug("parsing revision %d\n" % revnum)
-           
-            if orig_paths is None:
-                self.ui.debug('revision %d has no entries\n' % revnum)
-                return
+        def parselogentry(orig_paths, revnum, author, date, message):
+            self.ui.debug("parsing revision %d (%d changes)\n" %
+                          (revnum, len(orig_paths)))
 
             if revnum in self.modulemap:
                 new_module = self.modulemap[revnum]
@@ -286,12 +363,11 @@ class convert_svn(converter_source):
             except IndexError:
                 branch = None
 
-            paths = orig_paths.keys()
-            paths.sort()
-            for path in paths:
+            orig_paths = orig_paths.items()
+            orig_paths.sort()
+            for path, ent in orig_paths:
                 # self.ui.write("path %s\n" % path)
                 if path == self.module: # Follow branching back in history
-                    ent = orig_paths[path]
                     if ent:
                         if ent.copyfrom_path:
                             # ent.copyfrom_rev may not be the actual last revision
@@ -310,7 +386,6 @@ class convert_svn(converter_source):
                     self.ui.debug("boring@%s: %s\n" % (revnum, path))
                     continue
                 entry = entrypath.decode(self.encoding)
-                ent = orig_paths[path]
 
                 kind = svn.ra.check_path(self.ra, entrypath, revnum)
                 if kind == svn.core.svn_node_file:
@@ -373,7 +448,7 @@ class convert_svn(converter_source):
                         # print "find children %s@%d from %d action %s" % (path, revnum, ent.copyfrom_rev, ent.action)
                         # Sometimes this is tricky. For example: in
                         # The Subversion Repository revision 6940 a dir
-                        # was copied and one of its files was deleted 
+                        # was copied and one of its files was deleted
                         # from the new location in the same commit. This
                         # code can't deal with that yet.
                         if ent.action == 'C':
@@ -387,7 +462,7 @@ class convert_svn(converter_source):
                         for child in children:
                             # Can we move a child directory and its
                             # parent in the same commit? (probably can). Could
-                            # cause problems if instead of revnum -1, 
+                            # cause problems if instead of revnum -1,
                             # we have to look in (copyfrom_path, revnum - 1)
                             entrypath = get_entry_from_path("/" + child, module=old_module)
                             if entrypath:
@@ -417,7 +492,7 @@ class convert_svn(converter_source):
                     for child in children:
                         # Can we move a child directory and its
                         # parent in the same commit? (probably can). Could
-                        # cause problems if instead of revnum -1, 
+                        # cause problems if instead of revnum -1,
                         # we have to look in (copyfrom_path, revnum - 1)
                         entrypath = get_entry_from_path("/" + child, module=self.module)
                         # print child, self.module, entrypath
@@ -466,7 +541,7 @@ class convert_svn(converter_source):
 
             self.modulemap[revnum] = self.module # track backwards in time
             # a list of (filename, id) where id lets us retrieve the file.
-            # eg in git, id is the object hash. for svn it'll be the 
+            # eg in git, id is the object hash. for svn it'll be the
             self.files[rev] = zip(entries, [rev] * len(entries))
             if not entries:
                 return
@@ -480,8 +555,8 @@ class convert_svn(converter_source):
             author = author and self.recode(author) or ''
 
             cset = commit(author=author,
-                          date=util.datestr(date), 
-                          desc=log, 
+                          date=util.datestr(date),
+                          desc=log,
                           parents=parents,
                           copies=copies,
                           branch=branch,
@@ -492,20 +567,24 @@ class convert_svn(converter_source):
                 self.child_cset.parents = [rev]
             self.child_cset = cset
 
-        self.ui.note('fetching revision log for "%s" from %d to %d\n' % \
+        self.ui.note('fetching revision log for "%s" from %d to %d\n' %
                      (self.module, from_revnum, to_revnum))
 
         try:
             discover_changed_paths = True
             strict_node_history = False
-            svn.ra.get_log(self.ra, [self.module], from_revnum, to_revnum, 0,
-                           discover_changed_paths, strict_node_history,
-                           receivelog)
-            for entry in received:
-                parselogentry(*entry)
+            for entry in self.get_log([self.module], from_revnum, to_revnum):
+                orig_paths, revnum, author, date, message = entry
+                if self.is_blacklisted(revnum):
+                    self.ui.note('skipping blacklisted revision %d\n' % revnum)
+                    continue
+                if orig_paths is None:
+                    self.ui.debug('revision %d has no entries\n' % revnum)
+                    continue
+                parselogentry(orig_paths, revnum, author, date, message)
         except SubversionException, (_, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
-                raise NoSuchRevision(branch=self, 
+                raise NoSuchRevision(branch=self,
                     revision="Revision number %d" % to_revnum)
             raise
 
@@ -567,7 +646,6 @@ class convert_svn(converter_source):
             dirents = getdir[0]
             if type(dirents) == int:
                 # got here once due to infinite recursion bug
-                # pprint.pprint(getdir)
                 return
             c = dirents.keys()
             c.sort()

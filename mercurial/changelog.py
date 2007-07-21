@@ -42,7 +42,7 @@ class appender:
     def flush(self):
         pass
     def close(self):
-        close(self.fp)
+        self.fp.close()
 
     def seek(self, offset, whence=0):
         '''virtual file offset spans real file and data'''
@@ -58,7 +58,6 @@ class appender:
     def read(self, count=-1):
         '''only trick here is reads that span real file and data'''
         ret = ""
-        old_offset = self.offset
         if self.offset < self.size:
             s = self.fp.read(count)
             ret = s

@@ -21,6 +21,7 @@ class dirstate(object):
         self._opener = opener
         self._root = root
         self._dirty = False
+        self._dirtypl = False
         self._ui = ui
 
     def __getattr__(self, name):
@@ -113,7 +114,7 @@ class dirstate(object):
         return self._branch
 
     def setparents(self, p1, p2=nullid):
-        self._dirty = True
+        self._dirty = self._dirtypl = True
         self._pl = p1, p2
 
     def setbranch(self, branch):
@@ -123,7 +124,8 @@ class dirstate(object):
     def _read(self):
         self._map = {}
         self._copymap = {}
-        self._pl = [nullid, nullid]
+        if not self._dirtypl:
+            self._pl = [nullid, nullid]
         try:
             st = self._opener("dirstate").read()
         except IOError, err:
@@ -132,7 +134,8 @@ class dirstate(object):
         if not st:
             return
 
-        self._pl = [st[:20], st[20: 40]]
+        if not self._dirtypl:
+            self._pl = [st[:20], st[20: 40]]
 
         # deref fields so they will be local in loop
         dmap = self._map
@@ -157,8 +160,8 @@ class dirstate(object):
 
     def invalidate(self):
         for a in "_map _copymap _branch _pl _dirs _ignore".split():
-            if hasattr(self, a):
-                self.__delattr__(a)
+            if a in self.__dict__:
+                delattr(self, a)
         self._dirty = False
 
     def copy(self, source, dest):
@@ -271,7 +274,7 @@ class dirstate(object):
         st = self._opener("dirstate", "w", atomictemp=True)
         st.write(cs.getvalue())
         st.rename()
-        self._dirty = False
+        self._dirty = self._dirtypl = False
 
     def _filter(self, files):
         ret = {}

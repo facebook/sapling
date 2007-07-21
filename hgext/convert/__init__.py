@@ -192,7 +192,7 @@ class convert(object):
     def copy(self, rev):
         c = self.commitcache[rev]
         files = self.source.getchanges(rev)
-        
+
         do_copies = (hasattr(c, 'copies') and hasattr(self.dest, 'copyfile'))
 
         for f, v in files:
@@ -260,7 +260,7 @@ class convert(object):
            self.mapfilefd.close()
 
 def _convert(ui, src, dest=None, mapfile=None, **opts):
-    '''Convert a foreign SCM repository to a Mercurial one.
+    """Convert a foreign SCM repository to a Mercurial one.
 
     Accepted source formats:
     - GIT
@@ -293,7 +293,7 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     that use unix logins to identify authors (eg: CVS). One line per author
     mapping and the line format is:
     srcauthor=whatever string you want
-    '''
+    """
 
     util._encoding = 'UTF-8'
 

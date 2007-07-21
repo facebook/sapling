@@ -316,7 +316,7 @@ def dispatch(ui, args, argv0=None):
         util._fallbackencoding = fallback
 
     fullargs = args
-    cmd, func, args, options, cmdoptions = parse(ui, args)
+    cmd, func, args, options, cmdoptions = parse(lui, args)
 
     if options["config"]:
         raise util.Abort(_("Option --config may not be abbreviated!"))

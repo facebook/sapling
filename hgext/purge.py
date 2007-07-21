@@ -31,7 +31,7 @@ from mercurial import hg, util
 from mercurial.i18n import _
 import os
 
-def dopurge(ui, repo, dirs=None, act=True, ignored=False, 
+def dopurge(ui, repo, dirs=None, act=True, ignored=False,
             abort_on_err=False, eol='\n',
             force=False, include=None, exclude=None):
     def error(msg):
