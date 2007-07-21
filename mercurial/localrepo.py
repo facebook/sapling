@@ -887,11 +887,9 @@ class localrepository(repo.repository):
             if compareworking:
                 if lookup:
                     # do a full compare of any files that might have changed
-                    mnode = self.changelog.read(self.dirstate.parents()[0])[0]
-                    getnode = lambda fn: (self.manifest.find(mnode, fn)[0] or
-                                          nullid)
+                    ctx = self.changectx()
                     for f in lookup:
-                        if fcmp(f, getnode):
+                        if f not in ctx or ctx[f].cmp(self.wread(f)):
                             modified.append(f)
                         else:
                             if list_clean:
