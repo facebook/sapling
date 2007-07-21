@@ -8,7 +8,7 @@
 from node import *
 from i18n import _
 import repo, changegroup
-import changelog, dirstate, filelog, manifest, context
+import changelog, dirstate, filelog, manifest, context, weakref
 import re, lock, transaction, tempfile, stat, mdiff, errno, ui
 import os, revlog, time, util, extensions, hook
 
@@ -16,8 +16,6 @@ class localrepository(repo.repository):
     capabilities = ('lookup', 'changegroupsubset')
     supported = ('revlogv1', 'store')
 
-    def __del__(self):
-        self.transhandle = None
     def __init__(self, parentui, path=None, create=0):
         repo.repository.__init__(self)
         self.path = path
@@ -84,7 +82,7 @@ class localrepository(repo.repository):
         self.branchcache = None
         self.nodetagscache = None
         self.filterpats = {}
-        self.transhandle = None
+        self._transref = self._lockref = self._wlockref = None
 
     def __getattr__(self, name):
         if name == 'changelog':
@@ -396,6 +394,11 @@ class localrepository(repo.repository):
         n = self.changelog._partialmatch(key)
         if n:
             return n
+        try:
+            if len(key) == 20:
+                key = hex(key)
+        except:
+            pass
         raise repo.RepoError(_("unknown revision '%s'") % key)
 
     def dev(self):
@@ -495,9 +498,8 @@ class localrepository(repo.repository):
         return self._filter("decode", filename, data)
 
     def transaction(self):
-        tr = self.transhandle
-        if tr != None and tr.running():
-            return tr.nest()
+        if self._transref and self._transref():
+            return self._transref().nest()
 
         # save dirstate for rollback
         try:
@@ -511,7 +513,7 @@ class localrepository(repo.repository):
         tr = transaction.transaction(self.ui.warn, self.sopener,
                                        self.sjoin("journal"),
                                        aftertrans(renames))
-        self.transhandle = tr
+        self._transref = weakref.ref(tr)
         return tr
 
     def recover(self):
