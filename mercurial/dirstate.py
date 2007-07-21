@@ -20,7 +20,7 @@ class dirstate(object):
     def __init__(self, opener, ui, root):
         self._opener = opener
         self._root = root
-        self._dirty = 0
+        self._dirty = False
         self._ui = ui
 
     def __getattr__(self, name):
@@ -109,11 +109,8 @@ class dirstate(object):
     def branch(self):
         return self._branch
 
-    def markdirty(self):
-        self._dirty = 1
-
     def setparents(self, p1, p2=nullid):
-        self.markdirty()
+        self._dirty = True
         self._pl = p1, p2
 
     def setbranch(self, branch):
@@ -162,10 +159,10 @@ class dirstate(object):
         for a in "_map _copymap _branch _pl _dirs _ignore".split():
             if hasattr(self, a):
                 self.__delattr__(a)
-        self._dirty = 0
+        self._dirty = False
 
     def copy(self, source, dest):
-        self.markdirty()
+        self._dirty = True
         self._copymap[dest] = source
 
     def copied(self, file):
@@ -208,7 +205,7 @@ class dirstate(object):
         a  marked for addition'''
 
         if not files: return
-        self.markdirty()
+        self._dirty = True
         for f in files:
             if self._copymap.has_key(f):
                 del self._copymap[f]
@@ -227,7 +224,7 @@ class dirstate(object):
 
     def forget(self, files):
         if not files: return
-        self.markdirty()
+        self._dirty = True
         for f in files:
             try:
                 del self._map[f]
@@ -244,7 +241,7 @@ class dirstate(object):
             else:
                 self._map[f] = ('n', 0666, -1, 0)
         self._pl = (parent, nullid)
-        self.markdirty()
+        self._dirty = True
 
     def write(self):
         if not self._dirty:
@@ -261,7 +258,7 @@ class dirstate(object):
         st = self._opener("dirstate", "w", atomictemp=True)
         st.write(cs.getvalue())
         st.rename()
-        self._dirty = 0
+        self._dirty = False
 
     def filterfiles(self, files):
         ret = {}
