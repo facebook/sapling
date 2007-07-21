@@ -466,7 +466,7 @@ def commit(ui, repo, *pats, **opts):
     except ValueError, inst:
         raise util.Abort(str(inst))
 
-def docopy(ui, repo, pats, opts, wlock):
+def docopy(ui, repo, pats, opts):
     # called with the repo lock held
     #
     # hgsep => pathname that uses "/" to separate directories
@@ -527,14 +527,14 @@ def docopy(ui, repo, pats, opts, wlock):
             try:
                 restore = repo.dirstate[abstarget] == 'r'
                 if restore and not opts.get('dry_run'):
-                    repo.undelete([abstarget], wlock)
+                    repo.undelete([abstarget])
                 try:
                     if not opts.get('dry_run'):
                         util.copyfile(src, target)
                     restore = False
                 finally:
                     if restore:
-                        repo.remove([abstarget], wlock=wlock)
+                        repo.remove([abstarget])
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
                     ui.warn(_('%s: deleted in working copy\n') % relsrc)
@@ -553,9 +553,9 @@ def docopy(ui, repo, pats, opts, wlock):
                               "data will be stored for %s.\n")
                             % (repo.pathto(origsrc, cwd), reltarget))
                 if abstarget not in repo.dirstate and not opts.get('dry_run'):
-                    repo.add([abstarget], wlock)
+                    repo.add([abstarget])
             elif not opts.get('dry_run'):
-                repo.copy(origsrc, abstarget, wlock)
+                repo.copy(origsrc, abstarget)
         copied.append((abssrc, relsrc, exact))
 
     # pat: ossep
@@ -677,7 +677,7 @@ def copy(ui, repo, *pats, **opts):
     """
     wlock = repo.wlock(False)
     try:
-        errs, copied = docopy(ui, repo, pats, opts, wlock)
+        errs, copied = docopy(ui, repo, pats, opts)
     finally:
         del wlock
     return errs
@@ -1627,7 +1627,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     p2 = repo.lookup(p2 or hex(nullid))
 
                     if p1 != wp[0].node():
-                        hg.clean(repo, p1, wlock=wlock)
+                        hg.clean(repo, p1)
                     repo.dirstate.setparents(p1, p2)
                 elif p2:
                     try:
@@ -1645,12 +1645,11 @@ def import_(ui, repo, patch1, *patches, **opts):
                     fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
                                        files=files)
                 finally:
-                    files = patch.updatedir(ui, repo, files, wlock=wlock)
-                n = repo.commit(files, message, user, date, wlock=wlock,
-                                lock=lock)
+                    files = patch.updatedir(ui, repo, files)
+                n = repo.commit(files, message, user, date)
                 if opts.get('exact'):
                     if hex(n) != nodeid:
-                        repo.rollback(wlock=wlock, lock=lock)
+                        repo.rollback()
                         raise util.Abort(_('patch is damaged' +
                                            ' or loses information'))
             finally:
@@ -2261,14 +2260,14 @@ def rename(ui, repo, *pats, **opts):
     """
     wlock = repo.wlock(False)
     try:
-        errs, copied = docopy(ui, repo, pats, opts, wlock)
+        errs, copied = docopy(ui, repo, pats, opts)
         names = []
         for abs, rel, exact in copied:
             if ui.verbose or not exact:
                 ui.status(_('removing %s\n') % rel)
             names.append(abs)
         if not opts.get('dry_run'):
-            repo.remove(names, True, wlock=wlock)
+            repo.remove(names, True)
         return errs
     finally:
         del wlock
@@ -2359,7 +2358,7 @@ def revert(ui, repo, *pats, **opts):
             names[abs] = (rel, exact)
             target_only[abs] = True
 
-        changes = repo.status(match=names.has_key, wlock=wlock)[:5]
+        changes = repo.status(match=names.has_key)[:5]
         modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
 
         revert = ([], _('reverting %s\n'))
@@ -2432,7 +2431,7 @@ def revert(ui, repo, *pats, **opts):
         if not opts.get('dry_run'):
             for f in forget[0]:
                 repo.dirstate.forget(f)
-            r = hg.revert(repo, node, update.has_key, wlock)
+            r = hg.revert(repo, node, update.has_key)
             for f in add[0]:
                 repo.dirstate.add(f)
             for f in undelete[0]:

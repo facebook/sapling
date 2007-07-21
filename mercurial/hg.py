@@ -237,7 +237,7 @@ def _update(repo, node): return update(repo, node)
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
     pl = repo.parents()
-    stats = _merge.update(repo, node, False, False, None, None)
+    stats = _merge.update(repo, node, False, False, None)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("There are unresolved merges with"
@@ -251,15 +251,15 @@ def update(repo, node):
                        % (pl[0].rev(), repo.changectx(node).rev()))
     return stats[3]
 
-def clean(repo, node, wlock=None, show_stats=True):
+def clean(repo, node, show_stats=True):
     """forcibly switch the working directory to node, clobbering changes"""
-    stats = _merge.update(repo, node, False, True, None, wlock)
+    stats = _merge.update(repo, node, False, True, None)
     if show_stats: _showstats(repo, stats)
     return stats[3]
 
-def merge(repo, node, force=None, remind=True, wlock=None):
+def merge(repo, node, force=None, remind=True):
     """branch merge with node, resolving changes"""
-    stats = _merge.update(repo, node, True, force, False, wlock)
+    stats = _merge.update(repo, node, True, force, False)
     _showstats(repo, stats)
     if stats[3]:
         pl = repo.parents()
@@ -272,9 +272,9 @@ def merge(repo, node, force=None, remind=True, wlock=None):
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
     return stats[3]
 
-def revert(repo, node, choose, wlock):
+def revert(repo, node, choose):
     """revert changes to revision in node without updating dirstate"""
-    return _merge.update(repo, node, False, True, choose, wlock)[3]
+    return _merge.update(repo, node, False, True, choose)[3]
 
 def verify(repo):
     """verify the consistency of a repository"""

@@ -323,10 +323,10 @@ class queue:
         patch.diff(repo, node1, node2, fns, match=matchfn,
                    fp=fp, changes=changes, opts=self.diffopts())
 
-    def mergeone(self, repo, mergeq, head, patch, rev, wlock):
+    def mergeone(self, repo, mergeq, head, patch, rev):
         # first try just applying the patch
         (err, n) = self.apply(repo, [ patch ], update_status=False,
-                              strict=True, merge=rev, wlock=wlock)
+                              strict=True, merge=rev)
 
         if err == 0:
             return (err, n)
@@ -337,15 +337,14 @@ class queue:
         self.ui.warn("patch didn't work out, merging %s\n" % patch)
 
         # apply failed, strip away that rev and merge.
-        hg.clean(repo, head, wlock=wlock)
-        self.strip(repo, n, update=False, backup='strip', wlock=wlock)
+        hg.clean(repo, head)
+        self.strip(repo, n, update=False, backup='strip')
 
         ctx = repo.changectx(rev)
-        ret = hg.merge(repo, rev, wlock=wlock)
+        ret = hg.merge(repo, rev)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
-        n = repo.commit(None, ctx.description(), ctx.user(),
-                        force=1, wlock=wlock)
+        n = repo.commit(None, ctx.description(), ctx.user(), force=1)
         if n == None:
             raise util.Abort(_("repo commit failed"))
         try:
@@ -381,7 +380,7 @@ class queue:
                 return pp[1]
         return pp[0]
 
-    def mergepatch(self, repo, mergeq, series, wlock):
+    def mergepatch(self, repo, mergeq, series):
         if len(self.applied) == 0:
             # each of the patches merged in will have two parents.  This
             # can confuse the qrefresh, qdiff, and strip code because it
@@ -390,8 +389,7 @@ class queue:
             # the first patch in the queue is never a merge patch
             #
             pname = ".hg.patches.merge.marker"
-            n = repo.commit(None, '[mq]: merge marker', user=None, force=1,
-                            wlock=wlock)
+            n = repo.commit(None, '[mq]: merge marker', user=None, force=1)
             self.removeundo(repo)
             self.applied.append(statusentry(revlog.hex(n), pname))
             self.applied_dirty = 1
@@ -412,7 +410,7 @@ class queue:
                 self.ui.warn("patch %s is not applied\n" % patch)
                 return (1, None)
             rev = revlog.bin(info[1])
-            (err, head) = self.mergeone(repo, mergeq, head, patch, rev, wlock)
+            (err, head) = self.mergeone(repo, mergeq, head, patch, rev)
             if head:
                 self.applied.append(statusentry(revlog.hex(head), patch))
                 self.applied_dirty = 1
@@ -437,18 +435,15 @@ class queue:
         return (True, files, fuzz)
 
     def apply(self, repo, series, list=False, update_status=True,
-              strict=False, patchdir=None, merge=None, wlock=None,
-              all_files={}):
-        lock = tr = None
+              strict=False, patchdir=None, merge=None, all_files={}):
+        wlock = lock = tr = None
         try:
-            if not wlock:
-                wlock = repo.wlock()
+            wlock = repo.wlock()
             lock = repo.lock()
             tr = repo.transaction()
             try:
                 ret = self._apply(tr, repo, series, list, update_status,
-                                  strict, patchdir, merge, wlock,
-                                  lock=lock, all_files=all_files)
+                                  strict, patchdir, merge, all_files=all_files)
                 tr.close()
                 self.save_dirty()
                 return ret
@@ -463,8 +458,7 @@ class queue:
             del lock, wlock, tr
 
     def _apply(self, tr, repo, series, list=False, update_status=True,
-               strict=False, patchdir=None, merge=None, wlock=None,
-               lock=None, all_files={}):
+               strict=False, patchdir=None, merge=None, all_files={}):
         # TODO unify with commands.py
         if not patchdir:
             patchdir = self.path
@@ -511,9 +505,8 @@ class queue:
                     repo.dirstate.merge(f)
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
-            files = patch.updatedir(self.ui, repo, files, wlock=wlock)
-            n = repo.commit(files, message, user, date, force=1, lock=lock,
-                            wlock=wlock)
+            files = patch.updatedir(self.ui, repo, files)
+            n = repo.commit(files, message, user, date, force=1)
 
             if n == None:
                 raise util.Abort(_("repo commit failed"))
@@ -623,10 +616,9 @@ class queue:
         try:
             insert = self.full_series_end()
             if msg:
-                n = repo.commit(commitfiles, msg, force=True, wlock=wlock)
+                n = repo.commit(commitfiles, msg, force=True)
             else:
-                n = repo.commit(commitfiles,
-                                "[mq]: %s" % patch, force=True, wlock=wlock)
+                n = repo.commit(commitfiles, "[mq]: %s" % patch, force=True)
             if n == None:
                 raise util.Abort(_("repo commit failed"))
             self.full_series[insert:insert] = [patch]
@@ -648,17 +640,16 @@ class queue:
         finally:
             del wlock
 
-    def strip(self, repo, rev, update=True, backup="all", wlock=None):
-        lock = None
+    def strip(self, repo, rev, update=True, backup="all"):
+        wlock = lock = None
         try:
-            if not wlock:
-                wlock = repo.wlock()
+            wlock = repo.wlock()
             lock = repo.lock()
 
             if update:
                 self.check_localchanges(repo, refresh=False)
                 urev = self.qparents(repo, rev)
-                hg.clean(repo, urev, wlock=wlock)
+                hg.clean(repo, urev)
                 repo.dirstate.write()
 
             self.removeundo(repo)
@@ -748,9 +739,8 @@ class queue:
         raise util.Abort(_("patch %s not in series") % patch)
 
     def push(self, repo, patch=None, force=False, list=False,
-             mergeq=None, wlock=None):
-        if not wlock:
-            wlock = repo.wlock()
+             mergeq=None):
+        wlock = repo.wlock()
         try:
             patch = self.lookup(patch)
             # Suppose our series file is: A B C and the current 'top'
@@ -794,15 +784,14 @@ class queue:
             all_files = {}
             try:
                 if mergeq:
-                    ret = self.mergepatch(repo, mergeq, s, wlock)
+                    ret = self.mergepatch(repo, mergeq, s)
                 else:
-                    ret = self.apply(repo, s, list, wlock=wlock,
-                                     all_files=all_files)
+                    ret = self.apply(repo, s, list, all_files=all_files)
             except:
                 self.ui.warn(_('cleaning up working directory...'))
                 node = repo.dirstate.parents()[0]
-                hg.revert(repo, node, None, wlock)
-                unknown = repo.status(wlock=wlock)[4]
+                hg.revert(repo, node, None)
+                unknown = repo.status()[4]
                 # only remove unknown files that we know we touched or
                 # created while patching
                 for f in unknown:
@@ -820,14 +809,12 @@ class queue:
         finally:
             del wlock
 
-    def pop(self, repo, patch=None, force=False, update=True, all=False,
-            wlock=None):
+    def pop(self, repo, patch=None, force=False, update=True, all=False):
         def getfile(f, rev):
             t = repo.file(f).read(rev)
             repo.wfile(f, "w").write(t)
 
-        if not wlock:
-            wlock = repo.wlock()
+        wlock = repo.wlock()
         try:
             if patch:
                 # index, rev, patch
@@ -899,7 +886,7 @@ class queue:
                     except: pass
                     repo.dirstate.forget(f)
                 repo.dirstate.setparents(qp, revlog.nullid)
-            self.strip(repo, rev, update=False, backup='strip', wlock=wlock)
+            self.strip(repo, rev, update=False, backup='strip')
             del self.applied[start:end]
             if len(self.applied):
                 self.ui.write("Now at: %s\n" % self.applied[-1].name)
@@ -1075,9 +1062,9 @@ class queue:
                     message = msg
 
                 self.strip(repo, top, update=False,
-                           backup='strip', wlock=wlock)
+                           backup='strip')
                 n = repo.commit(filelist, message, changes[1], match=matchfn,
-                                force=1, wlock=wlock)
+                                force=1)
                 self.applied[-1] = statusentry(revlog.hex(n), patchfn)
                 self.applied_dirty = 1
                 self.removeundo(repo)
@@ -1097,8 +1084,8 @@ class queue:
                     # forget the file copies in the dirstate
                     # push should readd the files later on
                     repo.dirstate.forget(a)
-                self.pop(repo, force=True, wlock=wlock)
-                self.push(repo, force=True, wlock=wlock)
+                self.pop(repo, force=True)
+                self.push(repo, force=True)
         finally:
             del wlock
 
@@ -1898,9 +1885,9 @@ def rename(ui, repo, patch, name=None, **opts):
         wlock = r.wlock()
         try:
             if r.dirstate[name] == 'r':
-                r.undelete([name], wlock)
-            r.copy(patch, name, wlock)
-            r.remove([patch], False, wlock)
+                r.undelete([name])
+            r.copy(patch, name)
+            r.remove([patch], False)
         finally:
             del wlock
 

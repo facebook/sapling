@@ -1013,7 +1013,7 @@ def diffopts(ui, opts={}, untrusted=False):
         ignorewsamount=get('ignore_space_change', 'ignorewsamount'),
         ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'))
 
-def updatedir(ui, repo, patches, wlock=None):
+def updatedir(ui, repo, patches):
     '''Update dirstate after patch application according to metadata'''
     if not patches:
         return
@@ -1035,11 +1035,11 @@ def updatedir(ui, repo, patches, wlock=None):
     for src, dst, after in copies:
         if not after:
             copyfile(src, dst, repo.root)
-        repo.copy(src, dst, wlock=wlock)
+        repo.copy(src, dst)
     removes = removes.keys()
     if removes:
         removes.sort()
-        repo.remove(removes, True, wlock=wlock)
+        repo.remove(removes, True)
     for f in patches:
         ctype, gp = patches[f]
         if gp and gp.mode:
@@ -1050,7 +1050,7 @@ def updatedir(ui, repo, patches, wlock=None):
                 repo.wwrite(gp.path, '', x and 'x' or '')
             else:
                 util.set_exec(dst, x)
-    cmdutil.addremove(repo, cfiles, wlock=wlock)
+    cmdutil.addremove(repo, cfiles)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
     files.sort()

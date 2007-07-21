@@ -119,9 +119,8 @@ class transplanter:
                         continue
                     if pulls:
                         if source != repo:
-                            repo.pull(source, heads=pulls, lock=lock)
-                        merge.update(repo, pulls[-1], False, False, None,
-                                     wlock=wlock)
+                            repo.pull(source, heads=pulls)
+                        merge.update(repo, pulls[-1], False, False, None)
                         p1, p2 = repo.dirstate.parents()
                         pulls = []
 
@@ -132,7 +131,7 @@ class transplanter:
                     # fail.
                     domerge = True
                     if not hasnode(repo, node):
-                        repo.pull(source, heads=[node], lock=lock)
+                        repo.pull(source, heads=[node])
 
                 if parents[1] != revlog.nullid:
                     self.ui.note(_('skipping merge changeset %s:%s\n')
@@ -147,11 +146,11 @@ class transplanter:
                 del revmap[rev]
                 if patchfile or domerge:
                     try:
-                        n = self.applyone(repo, node, source.changelog.read(node),
+                        n = self.applyone(repo, node,
+                                          source.changelog.read(node),
                                           patchfile, merge=domerge,
                                           log=opts.get('log'),
-                                          filter=opts.get('filter'),
-                                          lock=lock, wlock=wlock)
+                                          filter=opts.get('filter'))
                         if n and domerge:
                             self.ui.status(_('%s merged at %s\n') % (revstr,
                                       revlog.short(n)))
@@ -162,8 +161,8 @@ class transplanter:
                         if patchfile:
                             os.unlink(patchfile)
             if pulls:
-                repo.pull(source, heads=pulls, lock=lock)
-                merge.update(repo, pulls[-1], False, False, None, wlock=wlock)
+                repo.pull(source, heads=pulls)
+                merge.update(repo, pulls[-1], False, False, None)
         finally:
             self.saveseries(revmap, merges)
             self.transplants.write()
@@ -195,7 +194,7 @@ class transplanter:
         return (user, date, msg)
 
     def applyone(self, repo, node, cl, patchfile, merge=False, log=False,
-                 filter=None, lock=None, wlock=None):
+                 filter=None):
         '''apply the patch in patchfile to the repository as a transplant'''
         (manifest, user, (time, timezone), files, message) = cl[:5]
         date = "%d %d" % (time, timezone)
@@ -221,7 +220,7 @@ class transplanter:
                         self.ui.warn(_('%s: empty changeset') % revlog.hex(node))
                         return None
                 finally:
-                    files = patch.updatedir(self.ui, repo, files, wlock=wlock)
+                    files = patch.updatedir(self.ui, repo, files)
             except Exception, inst:
                 if filter:
                     os.unlink(patchfile)
@@ -239,8 +238,7 @@ class transplanter:
             p1, p2 = repo.dirstate.parents()
             repo.dirstate.setparents(p1, node)
 
-        n = repo.commit(files, message, user, date, lock=lock, wlock=wlock,
-                        extra=extra)
+        n = repo.commit(files, message, user, date, extra=extra)
         if not merge:
             self.transplants.set(n, node)
 
@@ -282,8 +280,7 @@ class transplanter:
                                  revlog.hex(parents[0]))
             if merge:
                 repo.dirstate.setparents(p1, parents[1])
-            n = repo.commit(None, message, user, date, wlock=wlock,
-                            extra=extra)
+            n = repo.commit(None, message, user, date, extra=extra)
             if not n:
                 raise util.Abort(_('commit failed'))
             if not merge:

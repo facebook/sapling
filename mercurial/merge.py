@@ -496,20 +496,17 @@ def recordupdates(repo, action, branchmerge):
                 if f:
                     repo.dirstate.forget(f)
 
-def update(repo, node, branchmerge, force, partial, wlock):
+def update(repo, node, branchmerge, force, partial):
     """
     Perform a merge between the working directory and the given node
 
     branchmerge = whether to merge between branches
     force = whether to force branch merging or file overwriting
     partial = a function to filter file lists (dirstate not updated)
-    wlock = working dir lock, if already held
     """
 
+    wlock = repo.wlock()
     try:
-        if not wlock:
-            wlock = repo.wlock()
-
         wc = repo.workingctx()
         if node is None:
             # tip of current branch

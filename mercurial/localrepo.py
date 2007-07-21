@@ -530,12 +530,11 @@ class localrepository(repo.repository):
         finally:
             del l
 
-    def rollback(self, wlock=None, lock=None):
+    def rollback(self):
+        wlock = lock = None
         try:
-            if not wlock:
-                wlock = self.wlock()
-            if not lock:
-                lock = self.lock()
+            wlock = self.wlock()
+            lock = self.lock()
             if os.path.exists(self.sjoin("undo")):
                 self.ui.status(_("rolling back last transaction\n"))
                 transaction.rollback(self.sopener, self.sjoin("undo"))
@@ -570,13 +569,23 @@ class localrepository(repo.repository):
         return l
 
     def lock(self, wait=True):
-        return self._lock(self.sjoin("lock"), wait, None, self.invalidate,
-                          _('repository %s') % self.origroot)
+        if self._lockref and self._lockref():
+            return self._lockref()
+
+        l = self._lock(self.sjoin("lock"), wait, None, self.invalidate,
+                       _('repository %s') % self.origroot)
+        self._lockref = weakref.ref(l)
+        return l
 
     def wlock(self, wait=True):
-        return self._lock(self.join("wlock"), wait, self.dirstate.write,
-                          self.dirstate.invalidate,
-                          _('working directory of %s') % self.origroot)
+        if self._wlockref and self._wlockref():
+            return self._wlockref()
+
+        l = self._lock(self.join("wlock"), wait, self.dirstate.write,
+                       self.dirstate.invalidate, _('working directory of %s') %
+                       self.origroot)
+        self._wlockref = weakref.ref(l)
+        return l
 
     def filecommit(self, fn, manifest1, manifest2, linkrev, transaction, changelist):
         """
@@ -638,16 +647,16 @@ class localrepository(repo.repository):
         changelist.append(fn)
         return fl.add(t, meta, transaction, linkrev, fp1, fp2)
 
-    def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None, extra={}):
+    def rawcommit(self, files, text, user, date, p1=None, p2=None, extra={}):
         if p1 is None:
             p1, p2 = self.dirstate.parents()
         return self.commit(files=files, text=text, user=user, date=date,
-                           p1=p1, p2=p2, wlock=wlock, extra=extra)
+                           p1=p1, p2=p2, extra=extra)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False, lock=None, wlock=None,
-               force_editor=False, p1=None, p2=None, extra={}):
-        tr = None
+               match=util.always, force=False, force_editor=False,
+               p1=None, p2=None, extra={}):
+        wlock = lock = tr = None
         try:
             commit = []
             remove = []
@@ -707,10 +716,8 @@ class localrepository(repo.repository):
 
             self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
 
-            if not wlock:
-                wlock = self.wlock()
-            if not lock:
-                lock = self.lock()
+            wlock = self.wlock()
+            lock = self.lock()
             tr = self.transaction()
 
             # check in files
@@ -854,7 +861,7 @@ class localrepository(repo.repository):
                 yield src, fn
 
     def status(self, node1=None, node2=None, files=[], match=util.always,
-                wlock=None, list_ignored=False, list_clean=False):
+               list_ignored=False, list_clean=False):
         """return status of files between two nodes or node and working directory
 
         If node1 is None, use the first dirstate parent instead.
@@ -908,18 +915,17 @@ class localrepository(repo.repository):
 
                     # update dirstate for files that are actually clean
                     if fixup:
-                        fixlock = wlock
+                        wlock = None
                         try:
-                            if not fixlock:
-                                try:
-                                    fixlock = self.wlock(False)
-                                except lock.LockException:
-                                    pass
-                            if fixlock:
+                            try:
+                                wlock = self.wlock(False)
+                            except lock.LockException:
+                                pass
+                            if wlock:
                                 for f in fixup:
                                     self.dirstate.normal(f)
                         finally:
-                            del fixlock
+                            del wlock
             else:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
@@ -966,10 +972,9 @@ class localrepository(repo.repository):
             l.sort()
         return (modified, added, removed, deleted, unknown, ignored, clean)
 
-    def add(self, list, wlock=None):
+    def add(self, list):
+        wlock = self.wlock()
         try:
-            if not wlock:
-                wlock = self.wlock()
             for f in list:
                 p = self.wjoin(f)
                 try:
@@ -992,10 +997,9 @@ class localrepository(repo.repository):
         finally:
             del wlock
 
-    def forget(self, list, wlock=None):
+    def forget(self, list):
+        wlock = self.wlock()
         try:
-            if not wlock:
-                wlock = self.wlock()
             for f in list:
                 if self.dirstate[f] != 'a':
                     self.ui.warn(_("%s not added!\n") % f)
@@ -1004,7 +1008,8 @@ class localrepository(repo.repository):
         finally:
             del wlock
 
-    def remove(self, list, unlink=False, wlock=None):
+    def remove(self, list, unlink=False):
+        wlock = None
         try:
             if unlink:
                 for f in list:
@@ -1013,8 +1018,7 @@ class localrepository(repo.repository):
                     except OSError, inst:
                         if inst.errno != errno.ENOENT:
                             raise
-            if not wlock:
-                wlock = self.wlock()
+            wlock = self.wlock()
             for f in list:
                 if unlink and os.path.exists(self.wjoin(f)):
                     self.ui.warn(_("%s still exists!\n") % f)
@@ -1027,13 +1031,13 @@ class localrepository(repo.repository):
         finally:
             del wlock
 
-    def undelete(self, list, wlock=None):
+    def undelete(self, list):
+        wlock = None
         try:
             p = self.dirstate.parents()[0]
             mn = self.changelog.read(p)[0]
             m = self.manifest.read(mn)
-            if not wlock:
-                wlock = self.wlock()
+            wlock = self.wlock()
             for f in list:
                 if self.dirstate[f] != 'r':
                     self.ui.warn("%s not removed!\n" % f)
@@ -1044,7 +1048,8 @@ class localrepository(repo.repository):
         finally:
             del wlock
 
-    def copy(self, source, dest, wlock=None):
+    def copy(self, source, dest):
+        wlock = None
         try:
             p = self.wjoin(dest)
             if not (os.path.exists(p) or os.path.islink(p)):
@@ -1053,8 +1058,7 @@ class localrepository(repo.repository):
                 self.ui.warn(_("copy failed: %s is not a file or a "
                                "symbolic link\n") % dest)
             else:
-                if not wlock:
-                    wlock = self.wlock()
+                wlock = self.wlock()
                 if dest not in self.dirstate:
                     self.dirstate.add(dest)
                 self.dirstate.copy(source, dest)
@@ -1336,10 +1340,9 @@ class localrepository(repo.repository):
         else:
             return subset
 
-    def pull(self, remote, heads=None, force=False, lock=None):
+    def pull(self, remote, heads=None, force=False):
+        lock = self.lock()
         try:
-            if not lock:
-                lock = self.lock()
             fetch = self.findincoming(remote, force=force)
             if fetch == [nullid]:
                 self.ui.status(_("requesting all changes\n"))
