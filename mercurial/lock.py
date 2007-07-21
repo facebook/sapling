@@ -60,7 +60,7 @@ class lock(object):
     def trylock(self):
         if lock._host is None:
             lock._host = socket.gethostname()
-        lockname = lock._host + ':' + str(os.getpid())
+        lockname = '%s:%s' % (lock._host, os.getpid())
         while not self.held:
             try:
                 util.makelock(lockname, self.f)
