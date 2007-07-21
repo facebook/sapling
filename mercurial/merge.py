@@ -447,25 +447,25 @@ def recordupdates(repo, action, branchmerge):
         f, m = a[:2]
         if m == "r": # remove
             if branchmerge:
-                repo.dirstate.update([f], 'r')
+                repo.dirstate.remove(f)
             else:
-                repo.dirstate.forget([f])
+                repo.dirstate.forget(f)
         elif m == "f": # forget
-            repo.dirstate.forget([f])
+            repo.dirstate.forget(f)
         elif m == "g": # get
             if branchmerge:
-                repo.dirstate.update([f], 'n', st_mtime=-1)
+                repo.dirstate.normaldirty(f)
             else:
-                repo.dirstate.update([f], 'n')
+                repo.dirstate.normal(f)
         elif m == "m": # merge
             f2, fd, flag, move = a[2:]
             if branchmerge:
                 # We've done a branch merge, mark this file as merged
                 # so that we properly record the merger later
-                repo.dirstate.update([fd], 'm')
+                repo.dirstate.merge(fd)
                 if f != f2: # copy/rename
                     if move:
-                        repo.dirstate.update([f], 'r')
+                        repo.dirstate.remove(f)
                     if f != fd:
                         repo.dirstate.copy(f, fd)
                     else:
@@ -476,25 +476,25 @@ def recordupdates(repo, action, branchmerge):
                 # of that file some time in the past. Thus our
                 # merge will appear as a normal local file
                 # modification.
-                repo.dirstate.update([fd], 'n', st_size=-1, st_mtime=-1)
+                repo.dirstate.normaldirty(fd)
                 if move:
-                    repo.dirstate.forget([f])
+                    repo.dirstate.forget(f)
         elif m == "d": # directory rename
             f2, fd, flag = a[2:]
             if not f2 and f not in repo.dirstate:
                 # untracked file moved
                 continue
             if branchmerge:
-                repo.dirstate.update([fd], 'a')
+                repo.dirstate.add(fd)
                 if f:
-                    repo.dirstate.update([f], 'r')
+                    repo.dirstate.remove(f)
                     repo.dirstate.copy(f, fd)
                 if f2:
                     repo.dirstate.copy(f2, fd)
             else:
-                repo.dirstate.update([fd], 'n')
+                repo.dirstate.normal(fd)
                 if f:
-                    repo.dirstate.forget([f])
+                    repo.dirstate.forget(f)
 
 def update(repo, node, branchmerge, force, partial, wlock):
     """

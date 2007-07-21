@@ -2415,11 +2415,15 @@ def revert(ui, repo, *pats, **opts):
                     handle(remove, False)
 
     if not opts.get('dry_run'):
-        repo.dirstate.forget(forget[0])
+        for f in forget[0]:
+            repo.dirstate.forget(f)
         r = hg.revert(repo, node, update.has_key, wlock)
-        repo.dirstate.update(add[0], 'a')
-        repo.dirstate.update(undelete[0], 'n')
-        repo.dirstate.update(remove[0], 'r')
+        for f in add[0]:
+            repo.dirstate.add(f)
+        for f in undelete[0]:
+            repo.dirstate.normal(f)
+        for f in remove[0]:
+            repo.dirstate.remove(f)
         return r
 
 def rollback(ui, repo):

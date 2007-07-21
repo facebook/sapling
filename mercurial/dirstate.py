@@ -118,6 +118,11 @@ class dirstate(object):
         self._opener("branch", "w").write(branch + '\n')
 
     def state(self, key):
+        ''' current states:
+        n  normal
+        m  needs merging
+        r  marked for removal
+        a  marked for addition'''
         return self._map.get(key, ("?",))[0]
 
     def _read(self):
@@ -197,41 +202,55 @@ class dirstate(object):
                 raise util.Abort(_('file named %r already in dirstate') % d)
         self._incpath(f)
 
-    def update(self, files, state, **kw):
-        ''' current states:
-        n  normal
-        m  needs merging
-        r  marked for removal
-        a  marked for addition'''
-
-        if not files: return
+    def normal(self, f):
+        'mark a file normal'
         self._dirty = True
-        for f in files:
-            if self._copymap.has_key(f):
-                del self._copymap[f]
+        s = os.lstat(self.wjoin(f))
+        self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime)
+        if self._copymap.has_key(f):
+            del self._copymap[f]
 
-            if state == "r":
-                self._map[f] = ('r', 0, 0, 0)
-                self._decpath(f)
-                continue
-            else:
-                if state == "a":
-                    self._incpathcheck(f)
-                s = os.lstat(self.wjoin(f))
-                st_size = kw.get('st_size', s.st_size)
-                st_mtime = kw.get('st_mtime', s.st_mtime)
-                self._map[f] = (state, s.st_mode, st_size, st_mtime)
-
-    def forget(self, files):
-        if not files: return
+    def normaldirty(self, f):
+        'mark a file normal, but possibly dirty'
         self._dirty = True
-        for f in files:
-            try:
-                del self._map[f]
-                self._decpath(f)
-            except KeyError:
-                self._ui.warn(_("not in dirstate: %s!\n") % f)
-                pass
+        s = os.lstat(self.wjoin(f))
+        self._map[f] = ('n', s.st_mode, -1, -1)
+        if f in self._copymap:
+            del self._copymap[f]
+
+    def add(self, f):
+        'mark a file added'
+        self._dirty = True
+        self._incpathcheck(f)
+        s = os.lstat(self.wjoin(f))
+        self._map[f] = ('a', s.st_mode, s.st_size, s.st_mtime)
+        if f in self._copymap:
+            del self._copymap[f]
+
+    def remove(self, f):
+        'mark a file removed'
+        self._dirty = True
+        self._map[f] = ('r', 0, 0, 0)
+        self._decpath(f)
+        if f in self._copymap:
+            del self._copymap[f]
+
+    def merge(self, f):
+        'mark a file merged'
+        self._dirty = True
+        s = os.lstat(self.wjoin(f))
+        self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime)
+        if f in self._copymap:
+            del self._copymap[f]
+
+    def forget(self, f):
+        'forget a file'
+        self._dirty = True
+        try:
+            del self._map[f]
+            self._decpath(f)
+        except KeyError:
+            self._ui.warn(_("not in dirstate: %s!\n") % f)
 
     def rebuild(self, parent, files):
         self.invalidate()

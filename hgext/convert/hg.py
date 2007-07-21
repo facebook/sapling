@@ -27,7 +27,7 @@ class convert_mercurial(converter_sink):
     def putfile(self, f, e, data):
         self.repo.wwrite(f, data, e)
         if self.repo.dirstate.state(f) == '?':
-            self.repo.dirstate.update([f], "a")
+            self.repo.dirstate.add(f)
 
     def copyfile(self, source, dest):
         self.repo.copy(source, dest)

@@ -792,8 +792,10 @@ class localrepository(repo.repository):
         if use_dirstate or update_dirstate:
             self.dirstate.setparents(n)
             if use_dirstate:
-                self.dirstate.update(new, "n")
-                self.dirstate.forget(removed)
+                for f in new:
+                    self.dirstate.normal(f)
+                for f in removed:
+                    self.dirstate.forget(f)
 
         self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
         return n
@@ -901,7 +903,7 @@ class localrepository(repo.repository):
                                 except lock.LockException:
                                     pass
                             if wlock:
-                                self.dirstate.update([f], "n")
+                                self.dirstate.normal(f)
             else:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
@@ -971,7 +973,7 @@ class localrepository(repo.repository):
             elif self.dirstate.state(f) in 'an':
                 self.ui.warn(_("%s already tracked!\n") % f)
             else:
-                self.dirstate.update([f], "a")
+                self.dirstate.add(f)
 
     def forget(self, list, wlock=None):
         if not wlock:
@@ -980,7 +982,7 @@ class localrepository(repo.repository):
             if self.dirstate.state(f) not in 'ai':
                 self.ui.warn(_("%s not added!\n") % f)
             else:
-                self.dirstate.forget([f])
+                self.dirstate.forget(f)
 
     def remove(self, list, unlink=False, wlock=None):
         if unlink:
@@ -996,11 +998,11 @@ class localrepository(repo.repository):
             if unlink and os.path.exists(self.wjoin(f)):
                 self.ui.warn(_("%s still exists!\n") % f)
             elif self.dirstate.state(f) == 'a':
-                self.dirstate.forget([f])
+                self.dirstate.forget(f)
             elif f not in self.dirstate:
                 self.ui.warn(_("%s not tracked!\n") % f)
             else:
-                self.dirstate.update([f], "r")
+                self.dirstate.remove(f)
 
     def undelete(self, list, wlock=None):
         p = self.dirstate.parents()[0]
@@ -1014,7 +1016,7 @@ class localrepository(repo.repository):
             else:
                 t = self.file(f).read(m[f])
                 self.wwrite(f, t, m.flags(f))
-                self.dirstate.update([f], "n")
+                self.dirstate.normal(f)
 
     def copy(self, source, dest, wlock=None):
         p = self.wjoin(dest)
@@ -1027,7 +1029,7 @@ class localrepository(repo.repository):
             if not wlock:
                 wlock = self.wlock()
             if self.dirstate.state(dest) == '?':
-                self.dirstate.update([dest], "a")
+                self.dirstate.add(dest)
             self.dirstate.copy(source, dest)
 
     def heads(self, start=None):

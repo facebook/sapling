@@ -501,8 +501,10 @@ class queue:
                         merged.append(f)
                     else:
                         removed.append(f)
-                repo.dirstate.update(repo.dirstate.filterfiles(removed), 'r')
-                repo.dirstate.update(repo.dirstate.filterfiles(merged), 'm')
+                for f in removed:
+                    repo.dirstate.remove(f)
+                for f in merged:
+                    repo.dirstate.merge(f)
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
             files = patch.updatedir(self.ui, repo, files, wlock=wlock)
@@ -868,7 +870,8 @@ class queue:
             for f in r:
                 getfile(f, mmap[f])
                 util.set_exec(repo.wjoin(f), mmap.execf(f))
-            repo.dirstate.update(m + r, 'n')
+            for f in m + r:
+                repo.dirstate.normal(f)
             for f in a:
                 try:
                     os.unlink(repo.wjoin(f))
@@ -877,8 +880,7 @@ class queue:
                         raise
                 try: os.removedirs(os.path.dirname(repo.wjoin(f)))
                 except: pass
-            if a:
-                repo.dirstate.forget(a)
+                repo.dirstate.forget(f)
             repo.dirstate.setparents(qp, revlog.nullid)
         self.strip(repo, rev, update=False, backup='strip', wlock=wlock)
         del self.applied[start:end]
@@ -1010,7 +1012,7 @@ class queue:
                 if src is None:
                     continue
                 copies.setdefault(src, []).append(dst)
-            repo.dirstate.update(a, 'a')
+                repo.dirstate.add(dst)
             # remember the copies between patchparent and tip
             # this may be slow, so don't do it if we're not tracking copies
             if self.diffopts().git:
@@ -1027,7 +1029,8 @@ class queue:
             for src, dsts in copies.iteritems():
                 for dst in dsts:
                     repo.dirstate.copy(src, dst)
-            repo.dirstate.update(r, 'r')
+            for f in r:
+                repo.dirstate.remove(f)
             # if the patch excludes a modified file, mark that file with mtime=0
             # so status can see it.
             mm = []
@@ -1035,9 +1038,12 @@ class queue:
                 if not matchfn(m[i]):
                     mm.append(m[i])
                     del m[i]
-            repo.dirstate.update(m, 'n')
-            repo.dirstate.update(mm, 'n', st_mtime=-1, st_size=-1)
-            repo.dirstate.forget(forget)
+            for f in m:
+                repo.dirstate.normal(f)
+            for f in mm:
+                repo.dirstate.normaldirty(f)
+            for f in forget:
+                repo.dirstate.forget(f)
 
             if not msg:
                 if not message:
@@ -1066,9 +1072,9 @@ class queue:
                         raise
                 try: os.removedirs(os.path.dirname(f))
                 except: pass
-            # forget the file copies in the dirstate
-            # push should readd the files later on
-            repo.dirstate.forget(added)
+                # forget the file copies in the dirstate
+                # push should readd the files later on
+                repo.dirstate.forget(a)
             self.pop(repo, force=True, wlock=wlock)
             self.push(repo, force=True, wlock=wlock)
 
