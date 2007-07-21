@@ -831,14 +831,6 @@ class revlog(object):
         p1, p2 = self.parents(node)
         return hash(text, p1, p2) != node
 
-    def makenode(self, node, text):
-        """calculate a file nodeid for text, descended or possibly
-        unchanged from node"""
-
-        if self.cmp(node, text):
-            return hash(text, node, nullid)
-        return node
-
     def diff(self, a, b):
         """return a delta between two revisions"""
         return mdiff.textdiff(a, b)
