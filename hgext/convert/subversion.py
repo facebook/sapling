@@ -13,7 +13,6 @@
 #
 #   hg convert --config convert.svn.trunk=wackoname [...]
 
-import pprint
 import locale
 import os
 import cPickle as pickle
@@ -647,7 +646,6 @@ class convert_svn(converter_source):
             dirents = getdir[0]
             if type(dirents) == int:
                 # got here once due to infinite recursion bug
-                # pprint.pprint(getdir)
                 return
             c = dirents.keys()
             c.sort()
