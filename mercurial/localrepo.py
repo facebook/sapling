@@ -875,8 +875,6 @@ class localrepository(repo.repository):
             # all the revisions in parent->child order.
             mf1 = mfmatches(node1)
 
-        mywlock = False
-
         # are we comparing the working directory?
         if not node2:
             (lookup, modified, added, removed, deleted, unknown,
@@ -886,22 +884,31 @@ class localrepository(repo.repository):
             # are we comparing working dir against its parent?
             if compareworking:
                 if lookup:
+                    fixup = []
                     # do a full compare of any files that might have changed
                     ctx = self.changectx()
                     for f in lookup:
                         if f not in ctx or ctx[f].cmp(self.wread(f)):
                             modified.append(f)
                         else:
+                            fixup.append(f)
                             if list_clean:
                                 clean.append(f)
-                            if not wlock and not mywlock:
-                                mywlock = True
-                                try:
-                                    wlock = self.wlock(wait=0)
-                                except lock.LockException:
-                                    pass
-                            if wlock:
+
+                    # update dirstate for files that are actually clean
+                    if fixup:
+                        cleanup = False
+                        if not wlock:
+                            try:
+                                wlock = self.wlock(wait=0)
+                                cleanup = True
+                            except lock.LockException:
+                                pass
+                        if wlock:
+                            for f in fixup:
                                 self.dirstate.normal(f)
+                        if cleanup:
+                                wlock.release()
             else:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
@@ -916,8 +923,6 @@ class localrepository(repo.repository):
                     if f in mf2:
                         del mf2[f]
 
-            if mywlock and wlock:
-                wlock.release()
         else:
             # we are comparing two revisions
             mf2 = mfmatches(node2)
