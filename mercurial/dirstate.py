@@ -52,7 +52,7 @@ class dirstate(object):
                 self._incpath(f)
             return self._dirs
         elif name == '_ignore':
-            files = [self.wjoin('.hgignore')]
+            files = [self._join('.hgignore')]
             for name, path in self._ui.configitems("ui"):
                 if name == 'ignore' or name.startswith('ignore.'):
                     files.append(os.path.expanduser(path))
@@ -64,7 +64,7 @@ class dirstate(object):
         else:
             raise AttributeError, name
 
-    def wjoin(self, f):
+    def _join(self, f):
         return os.path.join(self._root, f)
 
     def getcwd(self):
@@ -205,7 +205,7 @@ class dirstate(object):
     def normal(self, f):
         'mark a file normal'
         self._dirty = True
-        s = os.lstat(self.wjoin(f))
+        s = os.lstat(self._join(f))
         self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime)
         if self._copymap.has_key(f):
             del self._copymap[f]
@@ -213,7 +213,7 @@ class dirstate(object):
     def normaldirty(self, f):
         'mark a file normal, but possibly dirty'
         self._dirty = True
-        s = os.lstat(self.wjoin(f))
+        s = os.lstat(self._join(f))
         self._map[f] = ('n', s.st_mode, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
@@ -222,7 +222,7 @@ class dirstate(object):
         'mark a file added'
         self._dirty = True
         self._incpathcheck(f)
-        s = os.lstat(self.wjoin(f))
+        s = os.lstat(self._join(f))
         self._map[f] = ('a', s.st_mode, s.st_size, s.st_mtime)
         if f in self._copymap:
             del self._copymap[f]
@@ -238,7 +238,7 @@ class dirstate(object):
     def merge(self, f):
         'mark a file merged'
         self._dirty = True
-        s = os.lstat(self.wjoin(f))
+        s = os.lstat(self._join(f))
         self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime)
         if f in self._copymap:
             del self._copymap[f]
@@ -416,7 +416,7 @@ class dirstate(object):
         files.sort()
         for ff in files:
             nf = util.normpath(ff)
-            f = self.wjoin(ff)
+            f = self._join(ff)
             try:
                 st = os.lstat(f)
             except OSError, inst:
@@ -471,7 +471,7 @@ class dirstate(object):
                 nonexistent = True
                 if not st:
                     try:
-                        st = os.lstat(self.wjoin(fn))
+                        st = os.lstat(self._join(fn))
                     except OSError, inst:
                         if inst.errno != errno.ENOENT:
                             raise
@@ -487,7 +487,7 @@ class dirstate(object):
             # check the common case first
             if type_ == 'n':
                 if not st:
-                    st = os.lstat(self.wjoin(fn))
+                    st = os.lstat(self._join(fn))
                 if (size >= 0 and (size != st.st_size
                                    or (mode ^ st.st_mode) & 0100)
                     or fn in self._copymap):
