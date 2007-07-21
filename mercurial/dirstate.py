@@ -274,7 +274,7 @@ class dirstate(object):
         st.rename()
         self._dirty = False
 
-    def filterfiles(self, files):
+    def _filter(self, files):
         ret = {}
         unknown = []
 
@@ -345,7 +345,7 @@ class dirstate(object):
             dc = self._map.copy()
         else:
             files = util.unique(files)
-            dc = self.filterfiles(files)
+            dc = self._filter(files)
 
         def imatch(file_):
             if file_ not in dc and self._ignore(file_):
