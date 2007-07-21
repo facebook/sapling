@@ -66,22 +66,25 @@ def stream_out(repo, fileobj, untrusted=False):
 
     # get consistent snapshot of repo. lock during scan so lock not
     # needed while we stream, and commits can happen.
+    lock = None
     try:
-        repolock = repo.lock()
-    except (lock.LockHeld, lock.LockUnavailable), inst:
-        repo.ui.warn('locking the repository failed: %s\n' % (inst,))
-        fileobj.write('2\n')
-        return
+        try:
+            repolock = repo.lock()
+        except (lock.LockHeld, lock.LockUnavailable), inst:
+            repo.ui.warn('locking the repository failed: %s\n' % (inst,))
+            fileobj.write('2\n')
+            return
 
-    fileobj.write('0\n')
-    repo.ui.debug('scanning\n')
-    entries = []
-    total_bytes = 0
-    for name, size in walkrepo(repo.spath):
-        name = repo.decodefn(util.pconvert(name))
-        entries.append((name, size))
-        total_bytes += size
-    repolock.release()
+        fileobj.write('0\n')
+        repo.ui.debug('scanning\n')
+        entries = []
+        total_bytes = 0
+        for name, size in walkrepo(repo.spath):
+            name = repo.decodefn(util.pconvert(name))
+            entries.append((name, size))
+            total_bytes += size
+    finally:
+        del repolock
 
     repo.ui.debug('%d files, %d bytes to transfer\n' %
                   (len(entries), total_bytes))

@@ -506,65 +506,67 @@ def update(repo, node, branchmerge, force, partial, wlock):
     wlock = working dir lock, if already held
     """
 
-    if not wlock:
-        wlock = repo.wlock()
+    try:
+        if not wlock:
+            wlock = repo.wlock()
 
-    wc = repo.workingctx()
-    if node is None:
-        # tip of current branch
-        try:
-            node = repo.branchtags()[wc.branch()]
-        except KeyError:
-            raise util.Abort(_("branch %s not found") % wc.branch())
-    overwrite = force and not branchmerge
-    forcemerge = force and branchmerge
-    pl = wc.parents()
-    p1, p2 = pl[0], repo.changectx(node)
-    pa = p1.ancestor(p2)
-    fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
-    fastforward = False
+        wc = repo.workingctx()
+        if node is None:
+            # tip of current branch
+            try:
+                node = repo.branchtags()[wc.branch()]
+            except KeyError:
+                raise util.Abort(_("branch %s not found") % wc.branch())
+        overwrite = force and not branchmerge
+        forcemerge = force and branchmerge
+        pl = wc.parents()
+        p1, p2 = pl[0], repo.changectx(node)
+        pa = p1.ancestor(p2)
+        fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
+        fastforward = False
 
-    ### check phase
-    if not overwrite and len(pl) > 1:
-        raise util.Abort(_("outstanding uncommitted merges"))
-    if pa == p1 or pa == p2: # is there a linear path from p1 to p2?
-        if branchmerge:
-            if p1.branch() != p2.branch() and pa != p2:
-                fastforward = True
-            else:
-                raise util.Abort(_("there is nothing to merge, just use "
-                                   "'hg update' or look at 'hg heads'"))
-    elif not (overwrite or branchmerge):
-        raise util.Abort(_("update spans branches, use 'hg merge' "
-                           "or 'hg update -C' to lose changes"))
-    if branchmerge and not forcemerge:
-        if wc.files():
-            raise util.Abort(_("outstanding uncommitted changes"))
+        ### check phase
+        if not overwrite and len(pl) > 1:
+            raise util.Abort(_("outstanding uncommitted merges"))
+        if pa == p1 or pa == p2: # is there a linear path from p1 to p2?
+            if branchmerge:
+                if p1.branch() != p2.branch() and pa != p2:
+                    fastforward = True
+                else:
+                    raise util.Abort(_("there is nothing to merge, just use "
+                                       "'hg update' or look at 'hg heads'"))
+        elif not (overwrite or branchmerge):
+            raise util.Abort(_("update spans branches, use 'hg merge' "
+                               "or 'hg update -C' to lose changes"))
+        if branchmerge and not forcemerge:
+            if wc.files():
+                raise util.Abort(_("outstanding uncommitted changes"))
 
-    ### calculate phase
-    action = []
-    if not force:
-        checkunknown(wc, p2)
-    if not util.checkfolding(repo.path):
-        checkcollision(p2)
-    if not branchmerge:
-        action += forgetremoved(wc, p2)
-    action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
+        ### calculate phase
+        action = []
+        if not force:
+            checkunknown(wc, p2)
+        if not util.checkfolding(repo.path):
+            checkcollision(p2)
+        if not branchmerge:
+            action += forgetremoved(wc, p2)
+        action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
 
-    ### apply phase
-    if not branchmerge: # just jump to the new rev
-        fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
-    if not partial:
-        repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
+        ### apply phase
+        if not branchmerge: # just jump to the new rev
+            fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
+        if not partial:
+            repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
-    stats = applyupdates(repo, action, wc, p2)
+        stats = applyupdates(repo, action, wc, p2)
 
-    if not partial:
-        recordupdates(repo, action, branchmerge)
-        repo.dirstate.setparents(fp1, fp2)
-        if not branchmerge and not fastforward:
-            repo.dirstate.setbranch(p2.branch())
-        repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
+        if not partial:
+            recordupdates(repo, action, branchmerge)
+            repo.dirstate.setparents(fp1, fp2)
+            if not branchmerge and not fastforward:
+                repo.dirstate.setbranch(p2.branch())
+            repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
 
-    return stats
-
+        return stats
+    finally:
+        del wlock

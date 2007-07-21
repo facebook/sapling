@@ -1168,7 +1168,7 @@ class hgweb(object):
                     req.write('%d\n' % ret)
                     req.write(val)
                 finally:
-                    lock.release()
+                    del lock
             except (OSError, IOError), inst:
                 req.write('0\n')
                 filename = getattr(inst, 'filename', '')

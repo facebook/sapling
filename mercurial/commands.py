@@ -676,7 +676,10 @@ def copy(ui, repo, *pats, **opts):
     before that, see hg revert.
     """
     wlock = repo.wlock(False)
-    errs, copied = docopy(ui, repo, pats, opts, wlock)
+    try:
+        errs, copied = docopy(ui, repo, pats, opts, wlock)
+    finally:
+        del wlock
     return errs
 
 def debugancestor(ui, index, rev1, rev2):
@@ -713,7 +716,10 @@ def debugrebuildstate(ui, repo, rev=""):
     ctx = repo.changectx(rev)
     files = ctx.manifest()
     wlock = repo.wlock()
-    repo.dirstate.rebuild(rev, files)
+    try:
+        repo.dirstate.rebuild(rev, files)
+    finally:
+        del wlock
 
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
@@ -782,7 +788,7 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     try:
         repo.dirstate.setparents(repo.lookup(rev1), repo.lookup(rev2))
     finally:
-        wlock.release()
+        del wlock
 
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""
@@ -1581,70 +1587,76 @@ def import_(ui, repo, patch1, *patches, **opts):
 
     d = opts["base"]
     strip = opts["strip"]
+    wlock = lock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        for p in patches:
+            pf = os.path.join(d, p)
 
-    wlock = repo.wlock()
-    lock = repo.lock()
-
-    for p in patches:
-        pf = os.path.join(d, p)
-
-        if pf == '-':
-            ui.status(_("applying patch from stdin\n"))
-            tmpname, message, user, date, branch, nodeid, p1, p2 = patch.extract(ui, sys.stdin)
-        else:
-            ui.status(_("applying %s\n") % p)
-            tmpname, message, user, date, branch, nodeid, p1, p2 = patch.extract(ui, file(pf, 'rb'))
-
-        if tmpname is None:
-            raise util.Abort(_('no diffs found'))
-
-        try:
-            cmdline_message = cmdutil.logmessage(opts)
-            if cmdline_message:
-                # pickup the cmdline msg
-                message = cmdline_message
-            elif message:
-                # pickup the patch msg
-                message = message.strip()
+            if pf == '-':
+                ui.status(_("applying patch from stdin\n"))
+                data = patch.extract(ui, sys.stdin)
             else:
-                # launch the editor
-                message = None
-            ui.debug(_('message:\n%s\n') % message)
+                ui.status(_("applying %s\n") % p)
+                data = patch.extract(ui, file(pf, 'rb'))
 
-            wp = repo.workingctx().parents()
-            if opts.get('exact'):
-                if not nodeid or not p1:
-                    raise util.Abort(_('not a mercurial patch'))
-                p1 = repo.lookup(p1)
-                p2 = repo.lookup(p2 or hex(nullid))
+            tmpname, message, user, date, branch, nodeid, p1, p2 = data
 
-                if p1 != wp[0].node():
-                    hg.clean(repo, p1, wlock=wlock)
-                repo.dirstate.setparents(p1, p2)
-            elif p2:
-                try:
-                    p1 = repo.lookup(p1)
-                    p2 = repo.lookup(p2)
-                    if p1 == wp[0].node():
-                        repo.dirstate.setparents(p1, p2)
-                except hg.RepoError:
-                    pass
-            if opts.get('exact') or opts.get('import_branch'):
-                repo.dirstate.setbranch(branch or 'default')
+            if tmpname is None:
+                raise util.Abort(_('no diffs found'))
 
-            files = {}
             try:
-                fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
-                                   files=files)
+                cmdline_message = cmdutil.logmessage(opts)
+                if cmdline_message:
+                    # pickup the cmdline msg
+                    message = cmdline_message
+                elif message:
+                    # pickup the patch msg
+                    message = message.strip()
+                else:
+                    # launch the editor
+                    message = None
+                ui.debug(_('message:\n%s\n') % message)
+
+                wp = repo.workingctx().parents()
+                if opts.get('exact'):
+                    if not nodeid or not p1:
+                        raise util.Abort(_('not a mercurial patch'))
+                    p1 = repo.lookup(p1)
+                    p2 = repo.lookup(p2 or hex(nullid))
+
+                    if p1 != wp[0].node():
+                        hg.clean(repo, p1, wlock=wlock)
+                    repo.dirstate.setparents(p1, p2)
+                elif p2:
+                    try:
+                        p1 = repo.lookup(p1)
+                        p2 = repo.lookup(p2)
+                        if p1 == wp[0].node():
+                            repo.dirstate.setparents(p1, p2)
+                    except hg.RepoError:
+                        pass
+                if opts.get('exact') or opts.get('import_branch'):
+                    repo.dirstate.setbranch(branch or 'default')
+
+                files = {}
+                try:
+                    fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
+                                       files=files)
+                finally:
+                    files = patch.updatedir(ui, repo, files, wlock=wlock)
+                n = repo.commit(files, message, user, date, wlock=wlock,
+                                lock=lock)
+                if opts.get('exact'):
+                    if hex(n) != nodeid:
+                        repo.rollback(wlock=wlock, lock=lock)
+                        raise util.Abort(_('patch is damaged' +
+                                           ' or loses information'))
             finally:
-                files = patch.updatedir(ui, repo, files, wlock=wlock)
-            n = repo.commit(files, message, user, date, wlock=wlock, lock=lock)
-            if opts.get('exact'):
-                if hex(n) != nodeid:
-                    repo.rollback(wlock=wlock, lock=lock)
-                    raise util.Abort(_('patch is damaged or loses information'))
-        finally:
-            os.unlink(tmpname)
+                os.unlink(tmpname)
+    finally:
+        del wlock, lock
 
 def incoming(ui, repo, source="default", **opts):
     """show new changesets found in source
@@ -2248,15 +2260,18 @@ def rename(ui, repo, *pats, **opts):
     before that, see hg revert.
     """
     wlock = repo.wlock(False)
-    errs, copied = docopy(ui, repo, pats, opts, wlock)
-    names = []
-    for abs, rel, exact in copied:
-        if ui.verbose or not exact:
-            ui.status(_('removing %s\n') % rel)
-        names.append(abs)
-    if not opts.get('dry_run'):
-        repo.remove(names, True, wlock=wlock)
-    return errs
+    try:
+        errs, copied = docopy(ui, repo, pats, opts, wlock)
+        names = []
+        for abs, rel, exact in copied:
+            if ui.verbose or not exact:
+                ui.status(_('removing %s\n') % rel)
+            names.append(abs)
+        if not opts.get('dry_run'):
+            repo.remove(names, True, wlock=wlock)
+        return errs
+    finally:
+        del wlock
 
 def revert(ui, repo, *pats, **opts):
     """revert files or dirs to their states as of some revision
@@ -2310,8 +2325,6 @@ def revert(ui, repo, *pats, **opts):
     else:
         pmf = None
 
-    wlock = repo.wlock()
-
     # need all matching names in dirstate and manifest of target rev,
     # so have to walk both. do not print errors if files exist in one
     # but not other.
@@ -2319,113 +2332,116 @@ def revert(ui, repo, *pats, **opts):
     names = {}
     target_only = {}
 
-    # walk dirstate.
+    wlock = repo.wlock()
+    try:
+        # walk dirstate.
+        for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
+                                                 badmatch=mf.has_key):
+            names[abs] = (rel, exact)
+            if src == 'b':
+                target_only[abs] = True
 
-    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
-                                             badmatch=mf.has_key):
-        names[abs] = (rel, exact)
-        if src == 'b':
+        # walk target manifest.
+
+        def badmatch(path):
+            if path in names:
+                return True
+            path_ = path + '/'
+            for f in names:
+                if f.startswith(path_):
+                    return True
+            return False
+
+        for src, abs, rel, exact in cmdutil.walk(repo, pats, opts, node=node,
+                                                 badmatch=badmatch):
+            if abs in names or src == 'b':
+                continue
+            names[abs] = (rel, exact)
             target_only[abs] = True
 
-    # walk target manifest.
+        changes = repo.status(match=names.has_key, wlock=wlock)[:5]
+        modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
 
-    def badmatch(path):
-        if path in names:
-            return True
-        path_ = path + '/'
-        for f in names:
-            if f.startswith(path_):
-                return True
-        return False
+        revert = ([], _('reverting %s\n'))
+        add = ([], _('adding %s\n'))
+        remove = ([], _('removing %s\n'))
+        forget = ([], _('forgetting %s\n'))
+        undelete = ([], _('undeleting %s\n'))
+        update = {}
 
-    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts, node=node,
-                                             badmatch=badmatch):
-        if abs in names or src == 'b':
-            continue
-        names[abs] = (rel, exact)
-        target_only[abs] = True
+        disptable = (
+            # dispatch table:
+            #   file state
+            #   action if in target manifest
+            #   action if not in target manifest
+            #   make backup if in target manifest
+            #   make backup if not in target manifest
+            (modified, revert, remove, True, True),
+            (added, revert, forget, True, False),
+            (removed, undelete, None, False, False),
+            (deleted, revert, remove, False, False),
+            (unknown, add, None, True, False),
+            (target_only, add, None, False, False),
+            )
 
-    changes = repo.status(match=names.has_key, wlock=wlock)[:5]
-    modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
+        entries = names.items()
+        entries.sort()
 
-    revert = ([], _('reverting %s\n'))
-    add = ([], _('adding %s\n'))
-    remove = ([], _('removing %s\n'))
-    forget = ([], _('forgetting %s\n'))
-    undelete = ([], _('undeleting %s\n'))
-    update = {}
-
-    disptable = (
-        # dispatch table:
-        #   file state
-        #   action if in target manifest
-        #   action if not in target manifest
-        #   make backup if in target manifest
-        #   make backup if not in target manifest
-        (modified, revert, remove, True, True),
-        (added, revert, forget, True, False),
-        (removed, undelete, None, False, False),
-        (deleted, revert, remove, False, False),
-        (unknown, add, None, True, False),
-        (target_only, add, None, False, False),
-        )
-
-    entries = names.items()
-    entries.sort()
-
-    for abs, (rel, exact) in entries:
-        mfentry = mf.get(abs)
-        target = repo.wjoin(abs)
-        def handle(xlist, dobackup):
-            xlist[0].append(abs)
-            update[abs] = 1
-            if dobackup and not opts['no_backup'] and util.lexists(target):
-                bakname = "%s.orig" % rel
-                ui.note(_('saving current version of %s as %s\n') %
-                        (rel, bakname))
-                if not opts.get('dry_run'):
-                    util.copyfile(target, bakname)
-            if ui.verbose or not exact:
-                ui.status(xlist[1] % rel)
-        for table, hitlist, misslist, backuphit, backupmiss in disptable:
-            if abs not in table: continue
-            # file has changed in dirstate
-            if mfentry:
-                handle(hitlist, backuphit)
-            elif misslist is not None:
-                handle(misslist, backupmiss)
-            else:
-                if exact: ui.warn(_('file not managed: %s\n') % rel)
-            break
-        else:
-            # file has not changed in dirstate
-            if node == parent:
-                if exact: ui.warn(_('no changes needed to %s\n') % rel)
-                continue
-            if pmf is None:
-                # only need parent manifest in this unlikely case,
-                # so do not read by default
-                pmf = repo.changectx(parent).manifest()
-            if abs in pmf:
+        for abs, (rel, exact) in entries:
+            mfentry = mf.get(abs)
+            target = repo.wjoin(abs)
+            def handle(xlist, dobackup):
+                xlist[0].append(abs)
+                update[abs] = 1
+                if dobackup and not opts['no_backup'] and util.lexists(target):
+                    bakname = "%s.orig" % rel
+                    ui.note(_('saving current version of %s as %s\n') %
+                            (rel, bakname))
+                    if not opts.get('dry_run'):
+                        util.copyfile(target, bakname)
+                if ui.verbose or not exact:
+                    ui.status(xlist[1] % rel)
+            for table, hitlist, misslist, backuphit, backupmiss in disptable:
+                if abs not in table: continue
+                # file has changed in dirstate
                 if mfentry:
-                    # if version of file is same in parent and target
-                    # manifests, do nothing
-                    if pmf[abs] != mfentry:
-                        handle(revert, False)
+                    handle(hitlist, backuphit)
+                elif misslist is not None:
+                    handle(misslist, backupmiss)
                 else:
-                    handle(remove, False)
+                    if exact: ui.warn(_('file not managed: %s\n') % rel)
+                break
+            else:
+                # file has not changed in dirstate
+                if node == parent:
+                    if exact: ui.warn(_('no changes needed to %s\n') % rel)
+                    continue
+                if pmf is None:
+                    # only need parent manifest in this unlikely case,
+                    # so do not read by default
+                    pmf = repo.changectx(parent).manifest()
+                if abs in pmf:
+                    if mfentry:
+                        # if version of file is same in parent and target
+                        # manifests, do nothing
+                        if pmf[abs] != mfentry:
+                            handle(revert, False)
+                    else:
+                        handle(remove, False)
 
-    if not opts.get('dry_run'):
-        for f in forget[0]:
-            repo.dirstate.forget(f)
-        r = hg.revert(repo, node, update.has_key, wlock)
-        for f in add[0]:
-            repo.dirstate.add(f)
-        for f in undelete[0]:
-            repo.dirstate.normal(f)
-        for f in remove[0]:
-            repo.dirstate.remove(f)
-        return r
+        if not opts.get('dry_run'):
+            for f in forget[0]:
+                repo.dirstate.forget(f)
+            r = hg.revert(repo, node, update.has_key, wlock)
+            for f in add[0]:
+                repo.dirstate.add(f)
+            for f in undelete[0]:
+                repo.dirstate.normal(f)
+            for f in remove[0]:
+                repo.dirstate.remove(f)
+            return r
+    finally:
+        del wlock
 
 def rollback(ui, repo):
     """roll back the last transaction in this repository

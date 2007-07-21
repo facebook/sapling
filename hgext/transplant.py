@@ -96,9 +96,10 @@ class transplanter:
         diffopts = patch.diffopts(self.ui, opts)
         diffopts.git = True
 
-        wlock = repo.wlock()
-        lock = repo.lock()
+        lock = wlock = None
         try:
+            wlock = repo.wlock()
+            lock = repo.lock()
             for rev in revs:
                 node = revmap[rev]
                 revstr = '%s:%s' % (rev, revlog.short(node))
@@ -166,6 +167,7 @@ class transplanter:
         finally:
             self.saveseries(revmap, merges)
             self.transplants.write()
+            del lock, wlock
 
     def filter(self, filter, changelog, patchfile):
         '''arbitrarily rewrite changeset before applying it'''
@@ -272,20 +274,25 @@ class transplanter:
 
         extra = {'transplant_source': node}
         wlock = repo.wlock()
-        p1, p2 = repo.dirstate.parents()
-        if p1 != parents[0]:
-            raise util.Abort(_('working dir not at transplant parent %s') %
-                             revlog.hex(parents[0]))
-        if merge:
-            repo.dirstate.setparents(p1, parents[1])
-        n = repo.commit(None, message, user, date, wlock=wlock, extra=extra)
-        if not n:
-            raise util.Abort(_('commit failed'))
-        if not merge:
-            self.transplants.set(n, node)
-        self.unlog()
+        try:
+            p1, p2 = repo.dirstate.parents()
+            if p1 != parents[0]:
+                raise util.Abort(
+                    _('working dir not at transplant parent %s') %
+                                 revlog.hex(parents[0]))
+            if merge:
+                repo.dirstate.setparents(p1, parents[1])
+            n = repo.commit(None, message, user, date, wlock=wlock,
+                            extra=extra)
+            if not n:
+                raise util.Abort(_('commit failed'))
+            if not merge:
+                self.transplants.set(n, node)
+            self.unlog()
 
-        return n, node
+            return n, node
+        finally:
+            del wlock
 
     def readseries(self):
         nodes = []

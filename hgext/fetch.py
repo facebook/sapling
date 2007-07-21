@@ -19,7 +19,7 @@ def fetch(ui, repo, source='default', **opts):
     merged, and the result of the merge is committed.  Otherwise, the
     working directory is updated.'''
 
-    def postincoming(other, modheads):
+    def postincoming(other, modheads, lock, wlock):
         if modheads == 0:
             return 0
         if modheads == 1:
@@ -50,7 +50,7 @@ def fetch(ui, repo, source='default', **opts):
             ui.status(_('new changeset %d:%s merges remote changes '
                         'with local\n') % (repo.changelog.rev(n),
                                            short(n)))
-    def pull():
+    def pull(lock, wlock):
         cmdutil.setremoteconfig(ui, opts)
 
         other = hg.repository(ui, ui.expandpath(source))
@@ -61,7 +61,7 @@ def fetch(ui, repo, source='default', **opts):
         elif opts['rev']:
             revs = [other.lookup(rev) for rev in opts['rev']]
         modheads = repo.pull(other, heads=revs, lock=lock)
-        return postincoming(other, modheads)
+        return postincoming(other, modheads, lock, wlock)
 
     parent, p2 = repo.dirstate.parents()
     if parent != repo.changelog.tip():
@@ -69,19 +69,19 @@ def fetch(ui, repo, source='default', **opts):
                            '(use "hg update" to check out tip)'))
     if p2 != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
-    wlock = repo.wlock()
-    lock = repo.lock()
+    wlock = lock = None
     try:
+        wlock = repo.wlock()
+        lock = repo.lock()
         mod, add, rem = repo.status(wlock=wlock)[:3]
         if mod or add or rem:
             raise util.Abort(_('outstanding uncommitted changes'))
         if len(repo.heads()) > 1:
             raise util.Abort(_('multiple heads in this repository '
                                '(use "hg heads" and "hg merge" to merge)'))
-        return pull()
+        return pull(lock, wlock)
     finally:
-        lock.release()
-        wlock.release()
+        del lock, wlock
 
 cmdtable = {
     'fetch':
