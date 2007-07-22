@@ -41,3 +41,9 @@ hg addremove -s50
 
 hg commit -m B
 
+echo % should all fail
+hg addremove -s foo
+hg addremove -s -1
+hg addremove -s 1e6
+
+true

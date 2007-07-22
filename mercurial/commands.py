@@ -53,7 +53,10 @@ def addremove(ui, repo, *pats, **opts):
     between 0 (disabled) and 100 (files must be identical) as its
     parameter.  Detecting renamed files this way can be expensive.
     """
-    sim = float(opts.get('similarity') or 0)
+    try:
+        sim = float(opts.get('similarity') or 0)
+    except ValueError:
+        raise util.Abort(_('similarity must be a number'))
     if sim < 0 or sim > 100:
         raise util.Abort(_('similarity must be between 0 and 100'))
     return cmdutil.addremove(repo, pats, opts, similarity=sim/100.)
