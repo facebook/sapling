@@ -14,3 +14,7 @@ adding small-file
 removing large-file
 removing tiny-file
 recording removal of tiny-file as rename to small-file (82% similar)
+% should all fail
+abort: similarity must be a number
+abort: similarity must be between 0 and 100
+abort: similarity must be between 0 and 100
