@@ -5,6 +5,74 @@
 # and distributed under the terms of the GNU General Public Licence,
 # either version 2, or (at your option) any later version.
 
+
+# Modified version of Tip 171:
+# http://www.tcl.tk/cgi-bin/tct/tip/171.html
+#
+# The in_mousewheel global was added to fix strange reentrancy issues.
+# The whole snipped is activated only under windows, mouse wheel
+# bindings working already under MacOSX and Linux.
+
+if {[tk windowingsystem] eq "win32"} {
+
+set mw_classes [list Text Listbox Table TreeCtrl]
+   foreach class $mw_classes { bind $class <MouseWheel> {} }
+
+set in_mousewheel 0
+
+proc ::tk::MouseWheel {wFired X Y D {shifted 0}} {
+    global in_mousewheel
+    if { $in_mousewheel != 0 } { return }
+    # Set event to check based on call
+    set evt "<[expr {$shifted?{Shift-}:{}}]MouseWheel>"
+    # do not double-fire in case the class already has a binding
+    if {[bind [winfo class $wFired] $evt] ne ""} { return }
+    # obtain the window the mouse is over
+    set w [winfo containing $X $Y]
+    # if we are outside the app, try and scroll the focus widget
+    if {![winfo exists $w]} { catch {set w [focus]} }
+    if {[winfo exists $w]} {
+        
+        if {[bind $w $evt] ne ""} {
+            # Awkward ... this widget has a MouseWheel binding, but to
+            # trigger successfully in it, we must give it focus.
+            catch {focus} old
+            if {$w ne $old} { focus $w }
+            set in_mousewheel 1
+            event generate $w $evt -rootx $X -rooty $Y -delta $D
+            set in_mousewheel 0
+            if {$w ne $old} { focus $old }
+            return
+        }
+
+        # aqua and x11/win32 have different delta handling
+        if {[tk windowingsystem] ne "aqua"} {
+            set delta [expr {- ($D / 30)}]
+        } else {
+            set delta [expr {- ($D)}]
+        }
+        # scrollbars have different call conventions
+        if {[string match "*Scrollbar" [winfo class $w]]} {
+            catch {tk::ScrollByUnits $w \
+                       [string index [$w cget -orient] 0] $delta}
+        } else {
+            set cmd [list $w [expr {$shifted ? "xview" : "yview"}] \
+                         scroll $delta units]
+            # Walking up to find the proper widget (handles cases like
+            # embedded widgets in a canvas)
+            while {[catch $cmd] && [winfo toplevel $w] ne $w} {
+                set w [winfo parent $w]
+            }
+        }
+    }
+}
+
+bind all <MouseWheel> [list ::tk::MouseWheel %W %X %Y %D 0]
+
+# end of win32 section
+} 
+
+
 proc gitdir {} {
     global env
     if {[info exists env(GIT_DIR)]} {
