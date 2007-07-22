@@ -299,6 +299,11 @@ proc readotherrefs {base dname excl} {
     }
 }
 
+proc allcansmousewheel {delta} {
+    set delta [expr -5*(int($delta)/abs($delta))]
+    allcanvs yview scroll $delta units
+}
+
 proc error_popup msg {
     set w .error
     toplevel $w
@@ -470,6 +475,7 @@ proc makewindow {} {
 
     bindall <1> {selcanvline %W %x %y}
     #bindall <B1-Motion> {selcanvline %W %x %y}
+    bindall <MouseWheel> "allcansmousewheel %D"
     bindall <ButtonRelease-4> "allcanvs yview scroll -5 units"
     bindall <ButtonRelease-5> "allcanvs yview scroll 5 units"
     bindall <2> "allcanvs scan mark 0 %y"
