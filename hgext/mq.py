@@ -442,7 +442,7 @@ class queue:
             lock = repo.lock()
             tr = repo.transaction()
             try:
-                ret = self._apply(tr, repo, series, list, update_status,
+                ret = self._apply(repo, series, list, update_status,
                                   strict, patchdir, merge, all_files=all_files)
                 tr.close()
                 self.save_dirty()
@@ -457,7 +457,7 @@ class queue:
         finally:
             del lock, wlock, tr
 
-    def _apply(self, tr, repo, series, list=False, update_status=True,
+    def _apply(self, repo, series, list=False, update_status=True,
                strict=False, patchdir=None, merge=None, all_files={}):
         # TODO unify with commands.py
         if not patchdir:

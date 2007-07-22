@@ -1,4 +1,6 @@
 % commit date test
+transaction abort!
+rollback completed
 abort: impossible time zone offset: 4444444
 transaction abort!
 rollback completed
@@ -6,8 +8,6 @@ abort: invalid date: '1\t15.1'
 transaction abort!
 rollback completed
 abort: invalid date: 'foo bar' 
-transaction abort!
-rollback completed
 nothing changed
 % partial commit test
 trouble committing bar!

@@ -587,7 +587,7 @@ class localrepository(repo.repository):
         self._wlockref = weakref.ref(l)
         return l
 
-    def filecommit(self, fn, manifest1, manifest2, linkrev, transaction, changelist):
+    def filecommit(self, fn, manifest1, manifest2, linkrev, tr, changelist):
         """
         commit an individual file as part of a larger transaction
         """
@@ -645,7 +645,7 @@ class localrepository(repo.repository):
             return fp1
 
         changelist.append(fn)
-        return fl.add(t, meta, transaction, linkrev, fp1, fp2)
+        return fl.add(t, meta, tr, linkrev, fp1, fp2)
 
     def rawcommit(self, files, text, user, date, p1=None, p2=None, extra={}):
         if p1 is None:
@@ -719,6 +719,7 @@ class localrepository(repo.repository):
             wlock = self.wlock()
             lock = self.lock()
             tr = self.transaction()
+            trp = weakref.proxy(tr)
 
             # check in files
             new = {}
@@ -729,7 +730,7 @@ class localrepository(repo.repository):
             for f in commit:
                 self.ui.note(f + "\n")
                 try:
-                    new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
+                    new[f] = self.filecommit(f, m1, m2, linkrev, trp, changed)
                     new_exec = is_exec(f)
                     new_link = is_link(f)
                     if not changed or changed[-1] != f:
@@ -759,7 +760,7 @@ class localrepository(repo.repository):
                     removed.append(f)
                 elif f in m2:
                     removed.append(f)
-            mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0],
+            mn = self.manifest.add(m1, trp, linkrev, c1[0], c2[0],
                                    (new, removed))
 
             # add changeset
@@ -796,7 +797,7 @@ class localrepository(repo.repository):
             text = '\n'.join(lines)
             if branchname:
                 extra["branch"] = branchname
-            n = self.changelog.add(mn, changed + removed, text, tr, p1, p2,
+            n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
                                    user, date, extra)
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                       parent2=xp2)
@@ -1831,11 +1832,12 @@ class localrepository(repo.repository):
 
         tr = self.transaction()
         try:
+            trp = weakref.proxy(tr)
             # pull off the changeset group
             self.ui.status(_("adding changesets\n"))
             cor = cl.count() - 1
             chunkiter = changegroup.chunkiter(source)
-            if cl.addgroup(chunkiter, csmap, tr, 1) is None:
+            if cl.addgroup(chunkiter, csmap, trp, 1) is None:
                 raise util.Abort(_("received changelog group is empty"))
             cnr = cl.count() - 1
             changesets = cnr - cor
@@ -1847,7 +1849,7 @@ class localrepository(repo.repository):
             # if the result of the merge of 1 and 2 is the same in 3 and 4,
             # no new manifest will be created and the manifest group will
             # be empty during the pull
-            self.manifest.addgroup(chunkiter, revmap, tr)
+            self.manifest.addgroup(chunkiter, revmap, trp)
 
             # process the files
             self.ui.status(_("adding file changes\n"))
@@ -1859,13 +1861,13 @@ class localrepository(repo.repository):
                 fl = self.file(f)
                 o = fl.count()
                 chunkiter = changegroup.chunkiter(source)
-                if fl.addgroup(chunkiter, revmap, tr) is None:
+                if fl.addgroup(chunkiter, revmap, trp) is None:
                     raise util.Abort(_("received file revlog group is empty"))
                 revisions += fl.count() - o
                 files += 1
 
             # make changelog see real files again
-            cl.finalize(tr)
+            cl.finalize(trp)
 
             newheads = len(self.changelog.heads())
             heads = ""
