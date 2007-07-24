@@ -12,11 +12,9 @@ import binascii
 nullrev = -1
 nullid = "\0" * 20
 
-def hex(node):
-    return binascii.hexlify(node)
-
-def bin(node):
-    return binascii.unhexlify(node)
+# This ugly style has a noticeable effect in manifest parsing
+hex = binascii.hexlify
+bin = binascii.unhexlify
 
 def short(node):
     return hex(node[:6])
