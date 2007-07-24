@@ -319,7 +319,7 @@ class revlogio(object):
 
     def parseindex(self, fp, st, inline):
         if (lazyparser.safe_to_use and not inline and
-            st and st.st_size > 10000):
+            st and st.st_size > 1000000):
             # big index, let's parse it on demand
             parser = lazyparser(fp, st.st_size, indexformatng, ngshaoffset)
             index = lazyindex(parser)
