@@ -977,7 +977,7 @@ class revlog(object):
         tr.replace(self.indexfile, trindex * calc)
         self._io.chunkcache = None
 
-    def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
+    def addrevision(self, text, transaction, link, p1, p2, d=None):
         """add a revision to the log
 
         text - the revision data to add
@@ -986,89 +986,67 @@ class revlog(object):
         p1, p2 - the parent nodeids of the revision
         d - an optional precomputed delta
         """
+        dfh = None
         if not self._inline():
             dfh = self.opener(self.datafile, "a")
-        else:
-            dfh = None
         ifh = self.opener(self.indexfile, "a+")
         return self._addrevision(text, transaction, link, p1, p2, d, ifh, dfh)
 
     def _addrevision(self, text, transaction, link, p1, p2, d, ifh, dfh):
-        if text is None:
-            text = ""
-        if p1 is None:
-            p1 = self.tip()
-        if p2 is None:
-            p2 = nullid
-
         node = hash(text, p1, p2)
-
         if node in self.nodemap:
             return node
 
-        n = self.count()
-        t = n - 1
+        curr = self.count()
+        prev = curr - 1
+        base = self.base(prev)
+        offset = self.end(prev)
 
-        if n:
-            base = self.base(t)
-            start = self.start(base)
-            end = self.end(t)
+        if curr:
             if not d:
-                prev = self.revision(self.tip())
-                d = self.diff(prev, text)
+                ptext = self.revision(self.node(prev))
+                d = self.diff(ptext, text)
             data = compress(d)
             l = len(data[1]) + len(data[0])
-            dist = end - start + l
+            dist = l + offset - self.start(base)
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
-        if not n or dist > len(text) * 2:
+        if not curr or dist > len(text) * 2:
             data = compress(text)
             l = len(data[1]) + len(data[0])
-            base = n
-        else:
-            base = self.base(t)
-
-        offset = 0
-        if t >= 0:
-            offset = self.end(t)
+            base = curr
 
         e = (offset_type(offset, 0), l, len(text),
              base, link, self.rev(p1), self.rev(p2), node)
-
         self.index.insert(-1, e)
-        self.nodemap[node] = n
+        self.nodemap[node] = curr
 
         if self.version == REVLOGV0:
             e = (offset, l, base, link, p1, p2, node)
             entry = struct.pack(indexformatv0, *e)
         else:
             entry = struct.pack(indexformatng, *e)
+            if not curr:
+                entry = struct.pack(versionformat, self.version) + entry[4:]
 
         if not self._inline():
             transaction.add(self.datafile, offset)
-            transaction.add(self.indexfile, n * len(entry))
+            transaction.add(self.indexfile, curr * len(entry))
             if data[0]:
                 dfh.write(data[0])
             dfh.write(data[1])
             dfh.flush()
+            ifh.write(entry)
         else:
             ifh.seek(0, 2)
-            transaction.add(self.indexfile, ifh.tell(), self.count() - 1)
-
-        if self.count() == 1 and self.version != REVLOGV0:
-            l = struct.pack(versionformat, self.version)
-            ifh.write(l)
-            entry = entry[4:]
-
-        ifh.write(entry)
-
-        if self._inline():
+            transaction.add(self.indexfile, ifh.tell(), prev)
+            ifh.write(entry)
             ifh.write(data[0])
             ifh.write(data[1])
             self.checkinlinesize(transaction, ifh)
 
-        self.cache = (node, n, text)
+        self.cache = (node, curr, text)
         return node
 
     def ancestor(self, a, b):
