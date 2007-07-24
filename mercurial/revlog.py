@@ -206,7 +206,7 @@ class lazyparser(object):
         all = False
         if i == None:
             blockstart = 0
-            blocksize = (512 / self.s) * self.s
+            blocksize = (65536 / self.s) * self.s
             end = self.datasize
             all = True
         else:
@@ -215,8 +215,8 @@ class lazyparser(object):
                 end = end * self.s
                 blocksize = end - blockstart
             else:
-                blockstart = (i & ~63) * self.s
-                blocksize = self.s * 64
+                blockstart = (i & ~1023) * self.s
+                blocksize = self.s * 1024
                 end = blockstart + blocksize
         while blockstart < end:
             self.loadblock(blockstart, blocksize)
