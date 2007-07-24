@@ -77,7 +77,7 @@ class bundlerevlog(revlog.revlog):
         # not against rev - 1
         # XXX: could use some caching
         if not self.bundle(rev):
-            return revlog.revlog.chunk(self, rev, df, cachelen)
+            return revlog.revlog.chunk(self, rev, df)
         self.bundlefile.seek(self.start(rev))
         return self.bundlefile.read(self.length(rev))
 

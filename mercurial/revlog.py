@@ -838,16 +838,15 @@ class revlog(object):
         """apply a list of patches to a string"""
         return mdiff.patches(t, pl)
 
-    def chunk(self, rev, df=None, cachelen=4096):
+    def chunk(self, rev, df=None):
         start, length = self.start(rev), self.length(rev)
-        inline = self._inline
-        if inline:
+        if self._inline:
             start += (rev + 1) * self._io.size
         end = start + length
         def loadcache(df):
-            cache_length = max(cachelen, length) # 4k
+            cache_length = max(65536, length)
             if not df:
-                if inline:
+                if self._inline:
                     df = self.opener(self.indexfile)
                 else:
                     df = self.opener(self.datafile)
@@ -866,7 +865,12 @@ class revlog(object):
             loadcache(df)
             offset = 0
 
-        return decompress(self._chunkcache[1][offset:offset + length])
+        # avoid copying large chunks
+        c = self._chunkcache[1]
+        if len(c) > length:
+            c = c[offset:offset + length]
+
+        return decompress(c)
 
     def delta(self, node):
         """return or calculate a delta between a node and its predecessor"""
