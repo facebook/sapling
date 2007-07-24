@@ -292,9 +292,10 @@ def offset_type(offset, type):
 class revlogoldio(object):
     def __init__(self):
         self.chunkcache = None
+        self.size = struct.calcsize(indexformatv0)
 
     def parseindex(self, fp, st, inline):
-        s = struct.calcsize(indexformatv0)
+        s = self.size
         index = []
         nodemap =  {nullid: nullrev}
         n = off = 0
@@ -304,8 +305,11 @@ class revlogoldio(object):
             cur = data[off:off + s]
             off += s
             e = struct.unpack(indexformatv0, cur)
-            index.append(e)
-            nodemap[e[-1]] = n
+            # transform to revlogv1 format
+            e2 = (offset_type(e[0], 0), e[1], -1, e[2], e[3],
+                  nodemap[e[4]], nodemap[e[5]], e[6])
+            index.append(e2)
+            nodemap[e[6]] = n
             n += 1
 
         return index, nodemap
@@ -313,6 +317,7 @@ class revlogoldio(object):
 class revlogio(object):
     def __init__(self):
         self.chunkcache = None
+        self.size = struct.calcsize(indexformatng)
 
     def parseindex(self, fp, st, inline):
         if (lazyparser.safe_to_use and not inline and
@@ -327,7 +332,7 @@ class revlogio(object):
             index[0] = e
             return index, nodemap
 
-        s = struct.calcsize(indexformatng)
+        s = self.size
         index = []
         nodemap =  {nullid: nullrev}
         n = off = 0
@@ -442,10 +447,8 @@ class revlog(object):
         self.nodemap = {nullid: nullrev}
         self.index = []
         self._io = revlogio()
-        self.indexformat = indexformatng
         if self.version == REVLOGV0:
             self._io = revlogoldio()
-            self.indexformat = indexformatv0
         if i:
             self.index, self.nodemap = self._io.parseindex(f, st, self._inline())
 
@@ -484,22 +487,16 @@ class revlog(object):
         if node == nullid: return (nullid, nullid)
         r = self.rev(node)
         d = self.index[r][-3:-1]
-        if self.version == REVLOGV0:
-            return d
         return (self.node(d[0]), self.node(d[1]))
     def parentrevs(self, rev):
         if rev == nullrev:
             return (nullrev, nullrev)
         d = self.index[rev][-3:-1]
-        if self.version == REVLOGV0:
-            return (self.rev(d[0]), self.rev(d[1]))
         return d
     def start(self, rev):
         if rev == nullrev:
             return 0
-        if self.version != REVLOGV0:
-            return getoffset(self.index[rev][0])
-        return self.index[rev][0]
+        return getoffset(self.index[rev][0])
 
     def end(self, rev): return self.start(rev) + self.length(rev)
 
@@ -507,9 +504,7 @@ class revlog(object):
         """return the length of the uncompressed text for a given revision"""
         if rev == nullrev:
             return 0
-        l = -1
-        if self.version != REVLOGV0:
-            l = self.index[rev][2]
+        l = self.index[rev][2]
         if l >= 0:
             return l
 
@@ -844,7 +839,7 @@ class revlog(object):
         start, length = self.start(rev), self.length(rev)
         inline = self._inline()
         if inline:
-            start += (rev + 1) * struct.calcsize(self.indexformat)
+            start += (rev + 1) * self._io.size
         end = start + length
         def loadcache(df):
             cache_length = max(cachelen, length) # 4k
@@ -948,7 +943,7 @@ class revlog(object):
 
         tr.add(self.datafile, dataoff)
         df = self.opener(self.datafile, 'w')
-        calc = struct.calcsize(self.indexformat)
+        calc = self._io.size
         for r in xrange(self.count()):
             start = self.start(r) + (r + 1) * calc
             length = self.length(r)
@@ -961,14 +956,14 @@ class revlog(object):
         self.version &= ~(REVLOGNGINLINEDATA)
         if self.count():
             x = self.index[0]
-            e = struct.pack(self.indexformat, *x)[4:]
+            e = struct.pack(indexformatng, *x)[4:]
             l = struct.pack(versionformat, self.version)
             fp.write(l)
             fp.write(e)
 
         for i in xrange(1, self.count()):
             x = self.index[i]
-            e = struct.pack(self.indexformat, *x)
+            e = struct.pack(indexformatng, *x)
             fp.write(e)
 
         # if we don't call rename, the temp file will never replace the
@@ -1031,15 +1026,17 @@ class revlog(object):
         if t >= 0:
             offset = self.end(t)
 
-        if self.version == REVLOGV0:
-            e = (offset, l, base, link, p1, p2, node)
-        else:
-            e = (offset_type(offset, 0), l, len(text),
-                 base, link, self.rev(p1), self.rev(p2), node)
+        e = (offset_type(offset, 0), l, len(text),
+             base, link, self.rev(p1), self.rev(p2), node)
 
         self.index.append(e)
         self.nodemap[node] = n
-        entry = struct.pack(self.indexformat, *e)
+
+        if self.version == REVLOGV0:
+            e = (offset, l, base, link, p1, p2, node)
+            entry = struct.pack(indexformatv0, *e)
+        else:
+            entry = struct.pack(indexformatng, *e)
 
         if not self._inline():
             transaction.add(self.datafile, offset)
@@ -1194,23 +1191,25 @@ class revlog(object):
                     raise RevlogError(_("consistency error adding group"))
                 textlen = len(text)
             else:
-                if self.version == REVLOGV0:
-                    e = (end, len(cdelta), base, link, p1, p2, node)
-                else:
-                    e = (offset_type(end, 0), len(cdelta), textlen, base,
-                         link, self.rev(p1), self.rev(p2), node)
+                e = (offset_type(end, 0), len(cdelta), textlen, base,
+                     link, self.rev(p1), self.rev(p2), node)
                 self.index.append(e)
                 self.nodemap[node] = r
                 if self._inline():
-                    ifh.write(struct.pack(self.indexformat, *e))
+                    ifh.write(struct.pack(indexformatng, *e))
                     ifh.write(cdelta)
                     self.checkinlinesize(transaction, ifh)
                     if not self._inline():
                         dfh = self.opener(self.datafile, "a")
                         ifh = self.opener(self.indexfile, "a")
                 else:
+                    if self.version == REVLOGV0:
+                        e = (end, len(cdelta), base, link, p1, p2, node)
+                        entry = struct.pack(indexformatv0, *e)
+                    else:
+                        entry = struct.pack(indexformatng, *e)
                     dfh.write(cdelta)
-                    ifh.write(struct.pack(self.indexformat, *e))
+                    ifh.write(entry)
 
             t, r, chain, prev = r, r + 1, node, node
             base = self.base(t)
@@ -1240,9 +1239,9 @@ class revlog(object):
         if not self._inline():
             df = self.opener(self.datafile, "a")
             df.truncate(end)
-            end = rev * struct.calcsize(self.indexformat)
+            end = rev * self._io.size
         else:
-            end += rev * struct.calcsize(self.indexformat)
+            end += rev * self._io.size
 
         indexf = self.opener(self.indexfile, "a")
         indexf.truncate(end)
@@ -1274,7 +1273,7 @@ class revlog(object):
             f = self.opener(self.indexfile)
             f.seek(0, 2)
             actual = f.tell()
-            s = struct.calcsize(self.indexformat)
+            s = self._io.size
             i = actual / s
             di = actual - (i * s)
             if self._inline():
