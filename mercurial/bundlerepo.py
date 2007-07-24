@@ -58,13 +58,10 @@ class bundlerevlog(revlog.revlog):
             if not prev:
                 prev = p1
             # start, size, base is not used, link, p1, p2, delta ref
-            if self.version == revlog.REVLOGV0:
-                e = (start, size, None, link, p1, p2, node)
-            else:
-                e = (revlog.offset_type(start, 0), size, -1, None, link,
-                     self.rev(p1), self.rev(p2), node)
+            e = (revlog.offset_type(start, 0), size, -1, None, link,
+                 self.rev(p1), self.rev(p2), node)
             self.basemap[n] = prev
-            self.index.append(e)
+            self.index.insert(-1, e)
             self.nodemap[node] = n
             prev = node
             n += 1

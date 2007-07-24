@@ -235,6 +235,8 @@ class lazyindex(object):
         self.p.index[pos] = item
     def __delitem__(self, pos):
         del self.p.index[pos]
+    def insert(self, pos, e):
+        self.p.index.insert(pos, e)
     def append(self, e):
         self.p.index.append(e)
 
@@ -451,6 +453,8 @@ class revlog(object):
             self._io = revlogoldio()
         if i:
             self.index, self.nodemap = self._io.parseindex(f, st, self._inline())
+        # add the magic null revision at -1
+        self.index.append((0, 0, 0, -1, -1, -1, -1, nullid))
 
     def _loadindex(self, start, end):
         """load a block of indexes all at once from the lazy parser"""
@@ -472,38 +476,28 @@ class revlog(object):
 
     def _inline(self): return self.version & REVLOGNGINLINEDATA
 
-    def tip(self): return self.node(len(self.index) - 1)
-    def count(self): return len(self.index)
+    def tip(self): return self.node(len(self.index) - 2)
+    def count(self): return len(self.index) - 1
     def node(self, rev):
-        return rev == nullrev and nullid or self.index[rev][7]
+        return self.index[rev][7]
     def rev(self, node):
         try:
             return self.nodemap[node]
         except KeyError:
             raise LookupError(_('%s: no node %s') % (self.indexfile, hex(node)))
     def linkrev(self, node):
-        return (node == nullid) and nullrev or self.index[self.rev(node)][4]
+        return self.index[self.rev(node)][4]
     def parents(self, node):
-        if node == nullid: return (nullid, nullid)
-        r = self.rev(node)
-        d = self.index[r][5:7]
+        d = self.index[self.rev(node)][5:7]
         return (self.node(d[0]), self.node(d[1]))
     def parentrevs(self, rev):
-        if rev == nullrev:
-            return (nullrev, nullrev)
-        d = self.index[rev][5:7]
-        return d
+        return self.index[rev][5:7]
     def start(self, rev):
-        if rev == nullrev:
-            return 0
         return getoffset(self.index[rev][0])
-
     def end(self, rev): return self.start(rev) + self.length(rev)
 
     def size(self, rev):
         """return the length of the uncompressed text for a given revision"""
-        if rev == nullrev:
-            return 0
         l = self.index[rev][2]
         if l >= 0:
             return l
@@ -532,15 +526,9 @@ class revlog(object):
         """
 
     def length(self, rev):
-        if rev == nullrev:
-            return 0
-        else:
-            return self.index[rev][1]
+        return self.index[rev][1]
     def base(self, rev):
-        if (rev == nullrev):
-            return nullrev
-        else:
-            return self.index[rev][3]
+        return self.index[rev][3]
 
     def reachable(self, node, stop=None):
         """return a hash of all nodes ancestral to a given node, including
@@ -1029,7 +1017,7 @@ class revlog(object):
         e = (offset_type(offset, 0), l, len(text),
              base, link, self.rev(p1), self.rev(p2), node)
 
-        self.index.append(e)
+        self.index.insert(-1, e)
         self.nodemap[node] = n
 
         if self.version == REVLOGV0:
@@ -1049,7 +1037,7 @@ class revlog(object):
             ifh.seek(0, 2)
             transaction.add(self.indexfile, ifh.tell(), self.count() - 1)
 
-        if len(self.index) == 1 and self.version != REVLOGV0:
+        if self.count() == 1 and self.version != REVLOGV0:
             l = struct.pack(versionformat, self.version)
             ifh.write(l)
             entry = entry[4:]
@@ -1193,7 +1181,7 @@ class revlog(object):
             else:
                 e = (offset_type(end, 0), len(cdelta), textlen, base,
                      link, self.rev(p1), self.rev(p2), node)
-                self.index.append(e)
+                self.index.insert(-1, e)
                 self.nodemap[node] = r
                 if self._inline():
                     ifh.write(struct.pack(indexformatng, *e))
@@ -1252,7 +1240,7 @@ class revlog(object):
         for x in xrange(rev, self.count()):
             del self.nodemap[self.node(x)]
 
-        del self.index[rev:]
+        del self.index[rev:-1]
 
     def checksize(self):
         expected = 0
