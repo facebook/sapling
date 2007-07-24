@@ -292,6 +292,110 @@ def gettype(q):
 def offset_type(offset, type):
     return long(long(offset) << 16 | type)
 
+class revlogoldio(object):
+    def __init__(self):
+        self.chunkcache = None
+
+    def parseindex(self, fp, st, inline):
+        s = struct.calcsize(indexformatv0)
+        index = []
+        nodemap =  {nullid: nullrev}
+        n = 0
+        leftover = None
+        while True:
+            if st:
+                data = fp.read(65536)
+            else:
+                # hack for httprangereader, it doesn't do partial reads well
+                data = fp.read()
+            if not data:
+                break
+            if leftover:
+                data = leftover + data
+                leftover = None
+            off = 0
+            l = len(data)
+            while off < l:
+                if l - off < s:
+                    leftover = data[off:]
+                    break
+                cur = data[off:off + s]
+                off += s
+                e = struct.unpack(indexformatv0, cur)
+                index.append(e)
+                nodemap[e[-1]] = n
+                n += 1
+            if not st:
+                break
+
+        return index, nodemap
+
+class revlogio(object):
+    def __init__(self):
+        self.chunkcache = None
+
+    def parseindex(self, fp, st, inline):
+        if (lazyparser.safe_to_use and not inline and
+            st and st.st_size > 10000):
+            # big index, let's parse it on demand
+            parser = lazyparser(fp, st.st_size, indexformatng, ngshaoffset)
+            index = lazyindex(parser)
+            nodemap = lazymap(parser)
+            e = list(index[0])
+            type = gettype(e[0])
+            e[0] = offset_type(0, type)
+            index[0] = e
+            return index, nodemap
+
+        s = struct.calcsize(indexformatng)
+        index = []
+        nodemap =  {nullid: nullrev}
+        n = 0
+        leftover = None
+        while True:
+            if st:
+                data = fp.read(65536)
+            else:
+                # hack for httprangereader, it doesn't do partial reads well
+                data = fp.read()
+            if not data:
+                break
+            if n == 0 and inline:
+                # cache the first chunk
+                self.chunkcache = (0, data)
+            if leftover:
+                data = leftover + data
+                leftover = None
+            off = 0
+            l = len(data)
+            while off < l:
+                if l - off < s:
+                    leftover = data[off:]
+                    break
+                cur = data[off:off + s]
+                off += s
+                e = struct.unpack(indexformatng, cur)
+                index.append(e)
+                nodemap[e[-1]] = n
+                n += 1
+                if inline:
+                    if e[1] < 0:
+                        break
+                    off += e[1]
+                    if off > l:
+                        # some things don't seek well, just read it
+                        fp.read(off - l)
+                        break
+            if not st:
+                break
+
+        e = list(index[0])
+        type = gettype(e[0])
+        e[0] = offset_type(0, type)
+        index[0] = e
+
+        return index, nodemap
+
 class revlog(object):
     """
     the underlying revision storage object
@@ -330,7 +434,6 @@ class revlog(object):
 
         self.indexstat = None
         self.cache = None
-        self.chunkcache = None
         self.defversion = REVLOG_DEFAULT_VERSION
         if hasattr(opener, "defversion"):
             self.defversion = opener.defversion
@@ -380,78 +483,13 @@ class revlog(object):
         self.version = v
         self.nodemap = {nullid: nullrev}
         self.index = []
+        self._io = revlogio()
         self.indexformat = indexformatng
         if self.version == REVLOGV0:
+            self._io = revlogoldio()
             self.indexformat = indexformatv0
         if i:
-            self._parseindex(f, st)
-
-    def _parseindex(self, fp, st):
-        shaoffset = ngshaoffset
-        if self.version == REVLOGV0:
-            shaoffset = v0shaoffset
-
-        if (lazyparser.safe_to_use and not self._inline() and
-            st and st.st_size > 10000):
-            # big index, let's parse it on demand
-            parser = lazyparser(fp, st.st_size, self.indexformat, shaoffset)
-            self.index = lazyindex(parser)
-            self.nodemap = lazymap(parser)
-            if self.version != REVLOGV0:
-                e = list(self.index[0])
-                type = gettype(e[0])
-                e[0] = offset_type(0, type)
-                self.index[0] = e
-            return
-
-        s = struct.calcsize(self.indexformat)
-        self.index = []
-        self.nodemap =  {nullid: nullrev}
-        inline = self._inline()
-        n = 0
-        leftover = None
-        while True:
-            if st:
-                data = fp.read(65536)
-            else:
-                # hack for httprangereader, it doesn't do partial reads well
-                data = fp.read()
-            if not data:
-                break
-            if n == 0 and self._inline():
-                # cache the first chunk
-                self.chunkcache = (0, data)
-            if leftover:
-                data = leftover + data
-                leftover = None
-            off = 0
-            l = len(data)
-            while off < l:
-                if l - off < s:
-                    leftover = data[off:]
-                    break
-                cur = data[off:off + s]
-                off += s
-                e = struct.unpack(self.indexformat, cur)
-                self.index.append(e)
-                self.nodemap[e[-1]] = n
-                n += 1
-                if inline:
-                    if e[1] < 0:
-                        break
-                    off += e[1]
-                    if off > l:
-                        # some things don't seek well, just read it
-                        fp.read(off - l)
-                        break
-            if not st:
-                break
-
-        if self.version != REVLOGV0:
-            e = list(self.index[0])
-            type = gettype(e[0])
-            e[0] = offset_type(0, type)
-            self.index[0] = e
+            self.index, self.nodemap = self._io.parseindex(f, st, self._inline())
 
     def _loadindex(self, start, end):
         """load a block of indexes all at once from the lazy parser"""
@@ -858,13 +896,13 @@ class revlog(object):
                 else:
                     df = self.opener(self.datafile)
             df.seek(start)
-            self.chunkcache = (start, df.read(cache_length))
+            self._io.chunkcache = (start, df.read(cache_length))
 
-        if not self.chunkcache:
+        if not self._io.chunkcache:
             loadcache(df)
 
-        cache_start = self.chunkcache[0]
-        cache_end = cache_start + len(self.chunkcache[1])
+        cache_start = self._io.chunkcache[0]
+        cache_end = cache_start + len(self._io.chunkcache[1])
         if start >= cache_start and end <= cache_end:
             # it is cached
             offset = start - cache_start
@@ -877,7 +915,7 @@ class revlog(object):
         #    df.seek(start)
         #    return df.read(length)
         #assert s == checkchunk()
-        return decompress(self.chunkcache[1][offset:offset + length])
+        return decompress(self._io.chunkcache[1][offset:offset + length])
 
     def delta(self, node):
         """return or calculate a delta between a node and its predecessor"""
@@ -980,7 +1018,7 @@ class revlog(object):
         fp.rename()
 
         tr.replace(self.indexfile, trindex * calc)
-        self.chunkcache = None
+        self._io.chunkcache = None
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
         """add a revision to the log
@@ -1253,7 +1291,7 @@ class revlog(object):
 
         # then reset internal state in memory to forget those revisions
         self.cache = None
-        self.chunkcache = None
+        self._io.chunkcache = None
         for x in xrange(rev, self.count()):
             del self.nodemap[self.node(x)]
 
