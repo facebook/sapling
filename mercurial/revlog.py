@@ -733,6 +733,17 @@ class revlog(object):
         if stop is specified, it will consider all the revs from stop
         as if they had no children
         """
+        if start is None and stop is None:
+            count = self.count()
+            if not count:
+                return [nullid]
+            ishead = [1] * (count + 1)
+            index = self.index
+            for r in xrange(count):
+                e = index[r]
+                ishead[e[5]] = ishead[e[6]] = 0
+            return [self.node(r) for r in xrange(count) if ishead[r]]
+
         if start is None:
             start = nullid
         if stop is None:
