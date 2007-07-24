@@ -184,9 +184,9 @@ class lazyparser(object):
             data = self.dataf.read(end - start)
             findend = end - start
             while True:
-                # we're searching backwards, so weh have to make sure
+                # we're searching backwards, so we have to make sure
                 # we don't find a changeset where this node is a parent
-                off = data.rfind(node, 0, findend)
+                off = data.find(node, 0, findend)
                 findend = off
                 if off >= 0:
                     i = off / self.s
