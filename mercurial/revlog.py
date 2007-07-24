@@ -307,7 +307,6 @@ def offset_type(offset, type):
 
 class revlogoldio(object):
     def __init__(self):
-        self.chunkcache = None
         self.size = struct.calcsize(indexformatv0)
 
     def parseindex(self, fp, st, inline):
@@ -328,11 +327,10 @@ class revlogoldio(object):
             nodemap[e[6]] = n
             n += 1
 
-        return index, nodemap
+        return index, nodemap, None
 
 class revlogio(object):
     def __init__(self):
-        self.chunkcache = None
         self.size = struct.calcsize(indexformatng)
 
     def parseindex(self, fp, st, inline):
@@ -346,9 +344,10 @@ class revlogio(object):
             type = gettype(e[0])
             e[0] = offset_type(0, type)
             index[0] = e
-            return index, nodemap
+            return index, nodemap, None
 
         s = self.size
+        cache = None
         index = []
         nodemap =  {nullid: nullrev}
         n = off = 0
@@ -356,7 +355,7 @@ class revlogio(object):
         data = fp.read()
         l = len(data)
         if inline:
-            self.chunkcache = (0, data)
+            cache = (0, data)
         while off + s <= l:
             e = struct.unpack(indexformatng, data[off:off + s])
             index.append(e)
@@ -373,7 +372,7 @@ class revlogio(object):
         e[0] = offset_type(0, type)
         index[0] = e
 
-        return index, nodemap
+        return index, nodemap, cache
 
 class revlog(object):
     """
@@ -413,6 +412,7 @@ class revlog(object):
 
         self.indexstat = None
         self.cache = None
+        self._chunkcache = None
         self.defversion = REVLOG_DEFAULT_VERSION
         if hasattr(opener, "defversion"):
             self.defversion = opener.defversion
@@ -467,7 +467,8 @@ class revlog(object):
         if self.version == REVLOGV0:
             self._io = revlogoldio()
         if i:
-            self.index, self.nodemap = self._io.parseindex(f, st, self._inline)
+            d = self._io.parseindex(f, st, self._inline)
+            self.index, self.nodemap, self._chunkcache = d
         # add the magic null revision at -1
         self.index.append((0, 0, 0, -1, -1, -1, -1, nullid))
 
@@ -855,13 +856,13 @@ class revlog(object):
                 else:
                     df = self.opener(self.datafile)
             df.seek(start)
-            self._io.chunkcache = (start, df.read(cache_length))
+            self._chunkcache = (start, df.read(cache_length))
 
-        if not self._io.chunkcache:
+        if not self._chunkcache:
             loadcache(df)
 
-        cache_start = self._io.chunkcache[0]
-        cache_end = cache_start + len(self._io.chunkcache[1])
+        cache_start = self._chunkcache[0]
+        cache_end = cache_start + len(self._chunkcache[1])
         if start >= cache_start and end <= cache_end:
             # it is cached
             offset = start - cache_start
@@ -869,7 +870,7 @@ class revlog(object):
             loadcache(df)
             offset = 0
 
-        return decompress(self._io.chunkcache[1][offset:offset + length])
+        return decompress(self._chunkcache[1][offset:offset + length])
 
     def delta(self, node):
         """return or calculate a delta between a node and its predecessor"""
@@ -975,7 +976,7 @@ class revlog(object):
         fp.rename()
 
         tr.replace(self.indexfile, trindex * calc)
-        self._io.chunkcache = None
+        self._chunkcache = None
 
     def addrevision(self, text, transaction, link, p1, p2, d=None):
         """add a revision to the log
@@ -1233,7 +1234,7 @@ class revlog(object):
 
         # then reset internal state in memory to forget those revisions
         self.cache = None
-        self._io.chunkcache = None
+        self._chunkcache = None
         for x in xrange(rev, self.count()):
             del self.nodemap[self.node(x)]
 
