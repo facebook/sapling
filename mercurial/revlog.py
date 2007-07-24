@@ -260,7 +260,7 @@ class lazymap(object):
                 ret = self.p.index[i]
             if isinstance(ret, str):
                 ret = struct.unpack(indexformatng, ret)
-            yield ret[-1]
+            yield ret[7]
     def __getitem__(self, key):
         try:
             return self.p.map[key]
@@ -344,7 +344,7 @@ class revlogio(object):
         while off + s <= l:
             e = struct.unpack(indexformatng, data[off:off + s])
             index.append(e)
-            nodemap[e[-1]] = n
+            nodemap[e[7]] = n
             n += 1
             off += s
             if inline:
@@ -475,23 +475,23 @@ class revlog(object):
     def tip(self): return self.node(len(self.index) - 1)
     def count(self): return len(self.index)
     def node(self, rev):
-        return rev == nullrev and nullid or self.index[rev][-1]
+        return rev == nullrev and nullid or self.index[rev][7]
     def rev(self, node):
         try:
             return self.nodemap[node]
         except KeyError:
             raise LookupError(_('%s: no node %s') % (self.indexfile, hex(node)))
     def linkrev(self, node):
-        return (node == nullid) and nullrev or self.index[self.rev(node)][-4]
+        return (node == nullid) and nullrev or self.index[self.rev(node)][4]
     def parents(self, node):
         if node == nullid: return (nullid, nullid)
         r = self.rev(node)
-        d = self.index[r][-3:-1]
+        d = self.index[r][5:7]
         return (self.node(d[0]), self.node(d[1]))
     def parentrevs(self, rev):
         if rev == nullrev:
             return (nullrev, nullrev)
-        d = self.index[rev][-3:-1]
+        d = self.index[rev][5:7]
         return d
     def start(self, rev):
         if rev == nullrev:
@@ -540,7 +540,7 @@ class revlog(object):
         if (rev == nullrev):
             return nullrev
         else:
-            return self.index[rev][-5]
+            return self.index[rev][3]
 
     def reachable(self, node, stop=None):
         """return a hash of all nodes ancestral to a given node, including
@@ -1229,7 +1229,7 @@ class revlog(object):
         # does not actually belong to an older changeset.
         # The minlink parameter defines the oldest revision
         # we're allowed to strip away.
-        while minlink > self.index[rev][-4]:
+        while minlink > self.index[rev][4]:
             rev += 1
             if rev >= self.count():
                 return
