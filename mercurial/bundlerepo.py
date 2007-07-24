@@ -104,8 +104,8 @@ class bundlerevlog(revlog.revlog):
         rev = self.rev(iter_node)
         # reconstruct the revision if it is from a changegroup
         while self.bundle(rev):
-            if self.cache and self.cache[0] == iter_node:
-                text = self.cache[2]
+            if self._cache and self._cache[0] == iter_node:
+                text = self._cache[2]
                 break
             chain.append(rev)
             iter_node = self.bundlebase(rev)
@@ -122,7 +122,7 @@ class bundlerevlog(revlog.revlog):
             raise revlog.RevlogError(_("integrity check failed on %s:%d")
                                      % (self.datafile, self.rev(node)))
 
-        self.cache = (node, self.rev(node), text)
+        self._cache = (node, self.rev(node), text)
         return text
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):

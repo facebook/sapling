@@ -409,9 +409,8 @@ class revlog(object):
         self.indexfile = indexfile
         self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
-
         self.indexstat = None
-        self.cache = None
+        self._cache = None
         self._chunkcache = None
         self.defversion = REVLOG_DEFAULT_VERSION
         if hasattr(opener, "defversion"):
@@ -891,8 +890,8 @@ class revlog(object):
         """return an uncompressed revision of a given"""
         if node == nullid:
             return ""
-        if self.cache and self.cache[0] == node:
-            return self.cache[2]
+        if self._cache and self._cache[0] == node:
+            return self._cache[2]
 
         # look up what we need to read
         text = None
@@ -906,9 +905,9 @@ class revlog(object):
             df = self.opener(self.datafile)
 
         # do we have useful data cached?
-        if self.cache and self.cache[1] >= base and self.cache[1] < rev:
-            base = self.cache[1]
-            text = self.cache[2]
+        if self._cache and self._cache[1] >= base and self._cache[1] < rev:
+            base = self._cache[1]
+            text = self._cache[2]
             self._loadindex(base, rev + 1)
         else:
             self._loadindex(base, rev + 1)
@@ -925,7 +924,7 @@ class revlog(object):
             raise RevlogError(_("integrity check failed on %s:%d")
                               % (self.datafile, rev))
 
-        self.cache = (node, rev, text)
+        self._cache = (node, rev, text)
         return text
 
     def checkinlinesize(self, tr, fp=None):
@@ -1047,7 +1046,7 @@ class revlog(object):
             ifh.write(data[1])
             self.checkinlinesize(transaction, ifh)
 
-        self.cache = (node, curr, text)
+        self._cache = (node, curr, text)
         return node
 
     def ancestor(self, a, b):
@@ -1233,7 +1232,7 @@ class revlog(object):
         indexf.truncate(end)
 
         # then reset internal state in memory to forget those revisions
-        self.cache = None
+        self._cache = None
         self._chunkcache = None
         for x in xrange(rev, self.count()):
             del self.nodemap[self.node(x)]
