@@ -360,19 +360,26 @@ class revlogio(object):
         n = off = 0
         # if we're not using lazymap, always read the whole index
         data = fp.read()
-        l = len(data)
+        l = len(data) - s
+        unpack = struct.unpack
+        append = index.append
         if inline:
             cache = (0, data)
-        while off + s <= l:
-            e = struct.unpack(indexformatng, data[off:off + s])
-            index.append(e)
-            nodemap[e[7]] = n
-            n += 1
-            off += s
-            if inline:
+            while off <= l:
+                e = unpack(indexformatng, data[off:off + s])
+                nodemap[e[7]] = n
+                append(e)
+                n += 1
                 if e[1] < 0:
                     break
-                off += e[1]
+                off += e[1] + s
+        else:
+            while off <= l:
+                e = unpack(indexformatng, data[off:off + s])
+                nodemap[e[7]] = n
+                append(e)
+                n += 1
+                off += s
 
         e = list(index[0])
         type = gettype(e[0])
