@@ -12,8 +12,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import *
 from i18n import _
-import changegroup, util, os, struct, bz2, tempfile
-
+import changegroup, util, os, struct, bz2, tempfile, mdiff
 import localrepo, changelog, manifest, filelog, revlog
 
 class bundlerevlog(revlog.revlog):
@@ -91,7 +90,7 @@ class bundlerevlog(revlog.revlog):
         elif not self.bundle(rev1) and not self.bundle(rev2):
             return revlog.revlog.revdiff(self, rev1, rev2)
 
-        return self.diff(self.revision(self.node(rev1)),
+        return mdiff.textdiff(self.revision(self.node(rev1)),
                          self.revision(self.node(rev2)))
 
     def revision(self, node):
@@ -115,7 +114,7 @@ class bundlerevlog(revlog.revlog):
 
         while chain:
             delta = self.chunk(chain.pop())
-            text = self.patches(text, [delta])
+            text = mdiff.patches(text, [delta])
 
         p1, p2 = self.parents(node)
         if node != revlog.hash(text, p1, p2):

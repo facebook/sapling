@@ -830,14 +830,6 @@ class revlog(object):
         p1, p2 = self.parents(node)
         return hash(text, p1, p2) != node
 
-    def diff(self, a, b):
-        """return a delta between two revisions"""
-        return mdiff.textdiff(a, b)
-
-    def patches(self, t, pl):
-        """apply a list of patches to a string"""
-        return mdiff.patches(t, pl)
-
     def chunk(self, rev, df=None):
         start, length = self.start(rev), self.length(rev)
         if self._inline:
@@ -884,8 +876,8 @@ class revlog(object):
         if b1 == b2 and rev1 + 1 == rev2:
             return self.chunk(rev2)
         else:
-            return self.diff(self.revision(self.node(rev1)),
-                             self.revision(self.node(rev2)))
+            return mdiff.textdiff(self.revision(self.node(rev1)),
+                                  self.revision(self.node(rev2)))
 
     def revision(self, node):
         """return an uncompressed revision of a given"""
@@ -914,12 +906,8 @@ class revlog(object):
             self._loadindex(base, rev + 1)
             text = self.chunk(base, df=df)
 
-        bins = []
-        for r in xrange(base + 1, rev + 1):
-            bins.append(self.chunk(r, df=df))
-
-        text = self.patches(text, bins)
-
+        bins = [self.chunk(r, df) for r in xrange(base + 1, rev + 1)]
+        text = mdiff.patches(text, bins)
         p1, p2 = self.parents(node)
         if node != hash(text, p1, p2):
             raise RevlogError(_("integrity check failed on %s:%d")
@@ -998,7 +986,7 @@ class revlog(object):
         if curr:
             if not d:
                 ptext = self.revision(self.node(prev))
-                d = self.diff(ptext, text)
+                d = mdiff.textdiff(ptext, text)
             data = compress(d)
             l = len(data[1]) + len(data[0])
             dist = l + offset - self.start(base)
@@ -1150,7 +1138,7 @@ class revlog(object):
                     dfh.flush()
                 ifh.flush()
                 text = self.revision(chain)
-                text = self.patches(text, [delta])
+                text = mdiff.patches(text, [delta])
                 chk = self._addrevision(text, transaction, link, p1, p2, None,
                                         ifh, dfh)
                 if not dfh and not self._inline:
