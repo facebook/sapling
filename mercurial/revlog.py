@@ -88,11 +88,9 @@ class lazyparser(object):
     safe_to_use = os.name != 'nt' or (not util.is_win_9x() and
                                       hasattr(util, 'win32api'))
 
-    def __init__(self, dataf, size, indexformat, shaoffset):
+    def __init__(self, dataf, size):
         self.dataf = dataf
-        self.format = indexformat
-        self.s = struct.calcsize(indexformat)
-        self.indexformat = indexformat
+        self.s = struct.calcsize(indexformatng)
         self.datasize = size
         self.l = size/self.s
         self.index = [None] * self.l
@@ -100,7 +98,6 @@ class lazyparser(object):
         self.allmap = 0
         self.all = 0
         self.mapfind_count = 0
-        self.shaoffset = shaoffset
 
     def loadmap(self):
         """
@@ -120,7 +117,7 @@ class lazyparser(object):
             data = self.dataf.read(blocksize)
             off = 0
             for x in xrange(256):
-                n = data[off + self.shaoffset:off + self.shaoffset + 20]
+                n = data[off + ngshaoffset:off + ngshaoffset + 20]
                 self.map[n] = count
                 count += 1
                 if count >= self.l:
@@ -148,7 +145,7 @@ class lazyparser(object):
             if self.index[i + x] == None:
                 b = data[off : off + self.s]
                 self.index[i + x] = b
-                n = b[self.shaoffset:self.shaoffset + 20]
+                n = b[ngshaoffset:ngshaoffset + 20]
                 self.map[n] = i + x
             off += self.s
 
@@ -187,7 +184,7 @@ class lazyparser(object):
                 if off >= 0:
                     i = off / self.s
                     off = i * self.s
-                    n = data[off + self.shaoffset:off + self.shaoffset + 20]
+                    n = data[off + ngshaoffset:off + ngshaoffset + 20]
                     if n == node:
                         self.map[n] = i + start / self.s
                         return node
@@ -232,7 +229,7 @@ class lazyindex(object):
     def __getitem__(self, pos):
         ret = self.p.index[pos] or self.load(pos)
         if isinstance(ret, str):
-            ret = struct.unpack(self.p.indexformat, ret)
+            ret = struct.unpack(indexformatng, ret)
         return ret
     def __setitem__(self, pos, item):
         self.p.index[pos] = item
@@ -262,7 +259,7 @@ class lazymap(object):
                 self.p.loadindex(i)
                 ret = self.p.index[i]
             if isinstance(ret, str):
-                ret = struct.unpack(self.p.indexformat, ret)
+                ret = struct.unpack(indexformatng, ret)
             yield ret[-1]
     def __getitem__(self, key):
         try:
@@ -321,7 +318,7 @@ class revlogio(object):
         if (lazyparser.safe_to_use and not inline and
             st and st.st_size > 1000000):
             # big index, let's parse it on demand
-            parser = lazyparser(fp, st.st_size, indexformatng, ngshaoffset)
+            parser = lazyparser(fp, st.st_size)
             index = lazyindex(parser)
             nodemap = lazymap(parser)
             e = list(index[0])
