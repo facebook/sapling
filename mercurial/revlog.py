@@ -460,13 +460,14 @@ class revlog(object):
             raise RevlogError(_("index %s unknown format %d")
                               % (self.indexfile, fmt))
         self.version = v
+        self._inline = v & REVLOGNGINLINEDATA
         self.nodemap = {nullid: nullrev}
         self.index = []
         self._io = revlogio()
         if self.version == REVLOGV0:
             self._io = revlogoldio()
         if i:
-            self.index, self.nodemap = self._io.parseindex(f, st, self._inline())
+            self.index, self.nodemap = self._io.parseindex(f, st, self._inline)
         # add the magic null revision at -1
         self.index.append((0, 0, 0, -1, -1, -1, -1, nullid))
 
@@ -488,8 +489,6 @@ class revlog(object):
             self.nodemap.p.loadmap()
             self.nodemap = self.nodemap.p.map
 
-    def _inline(self):
-        return self.version & REVLOGNGINLINEDATA
     def tip(self):
         return self.node(len(self.index) - 2)
     def count(self):
@@ -844,7 +843,7 @@ class revlog(object):
 
     def chunk(self, rev, df=None, cachelen=4096):
         start, length = self.start(rev), self.length(rev)
-        inline = self._inline()
+        inline = self._inline
         if inline:
             start += (rev + 1) * self._io.size
         end = start + length
@@ -899,7 +898,7 @@ class revlog(object):
         rev = self.rev(node)
         base = self.base(rev)
 
-        if self._inline():
+        if self._inline:
             # we probably have the whole chunk cached
             df = None
         else:
@@ -929,7 +928,7 @@ class revlog(object):
         return text
 
     def checkinlinesize(self, tr, fp=None):
-        if not self._inline():
+        if not self._inline:
             return
         if not fp:
             fp = self.opener(self.indexfile, 'r')
@@ -958,6 +957,7 @@ class revlog(object):
         df.close()
         fp = self.opener(self.indexfile, 'w', atomictemp=True)
         self.version &= ~(REVLOGNGINLINEDATA)
+        self._inline = False
         if self.count():
             x = self.index[0]
             e = struct.pack(indexformatng, *x)[4:]
@@ -987,7 +987,7 @@ class revlog(object):
         d - an optional precomputed delta
         """
         dfh = None
-        if not self._inline():
+        if not self._inline:
             dfh = self.opener(self.datafile, "a")
         ifh = self.opener(self.indexfile, "a+")
         return self._addrevision(text, transaction, link, p1, p2, d, ifh, dfh)
@@ -1030,7 +1030,7 @@ class revlog(object):
             if not curr:
                 entry = struct.pack(versionformat, self.version) + entry[4:]
 
-        if not self._inline():
+        if not self._inline:
             transaction.add(self.datafile, offset)
             transaction.add(self.indexfile, curr * len(entry))
             if data[0]:
@@ -1118,7 +1118,7 @@ class revlog(object):
         ifh = self.opener(self.indexfile, "a+")
         ifh.seek(0, 2)
         transaction.add(self.indexfile, ifh.tell(), self.count())
-        if self._inline():
+        if self._inline:
             dfh = None
         else:
             transaction.add(self.datafile, end)
@@ -1167,7 +1167,7 @@ class revlog(object):
                 text = self.patches(text, [delta])
                 chk = self._addrevision(text, transaction, link, p1, p2, None,
                                         ifh, dfh)
-                if not dfh and not self._inline():
+                if not dfh and not self._inline:
                     # addrevision switched from inline to conventional
                     # reopen the index
                     dfh = self.opener(self.datafile, "a")
@@ -1180,11 +1180,11 @@ class revlog(object):
                      link, self.rev(p1), self.rev(p2), node)
                 self.index.insert(-1, e)
                 self.nodemap[node] = r
-                if self._inline():
+                if self._inline:
                     ifh.write(struct.pack(indexformatng, *e))
                     ifh.write(cdelta)
                     self.checkinlinesize(transaction, ifh)
-                    if not self._inline():
+                    if not self._inline:
                         dfh = self.opener(self.datafile, "a")
                         ifh = self.opener(self.indexfile, "a")
                 else:
@@ -1221,7 +1221,7 @@ class revlog(object):
 
         # first truncate the files on disk
         end = self.start(rev)
-        if not self._inline():
+        if not self._inline:
             df = self.opener(self.datafile, "a")
             df.truncate(end)
             end = rev * self._io.size
@@ -1261,7 +1261,7 @@ class revlog(object):
             s = self._io.size
             i = actual / s
             di = actual - (i * s)
-            if self._inline():
+            if self._inline:
                 databytes = 0
                 for r in xrange(self.count()):
                     databytes += self.length(r)
