@@ -236,18 +236,16 @@ class lazyindex(object):
         self.p.loadindex(pos)
         return self.p.index[pos]
     def __getitem__(self, pos):
-        ret = self.p.index[pos] or self.load(pos)
-        if isinstance(ret, str):
-            ret = struct.unpack(indexformatng, ret)
-        return ret
+        return struct.unpack(indexformatng,
+                             self.p.index[pos] or self.load(pos))
     def __setitem__(self, pos, item):
-        self.p.index[pos] = item
+        self.p.index[pos] = struct.pack(indexformatng, *item)
     def __delitem__(self, pos):
         del self.p.index[pos]
     def insert(self, pos, e):
-        self.p.index.insert(pos, e)
+        self.p.index.insert(pos, struct.pack(indexformatng, *e))
     def append(self, e):
-        self.p.index.append(e)
+        self.p.index.append(struct.pack(indexformatng, *e))
 
 class lazymap(object):
     """a lazy version of the node map"""
