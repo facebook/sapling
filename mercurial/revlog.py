@@ -333,44 +333,22 @@ class revlogio(object):
         s = struct.calcsize(indexformatng)
         index = []
         nodemap =  {nullid: nullrev}
-        n = 0
-        leftover = None
-        while True:
-            if st:
-                data = fp.read(65536)
-            else:
-                # hack for httprangereader, it doesn't do partial reads well
-                data = fp.read()
-            if not data:
-                break
-            if n == 0 and inline:
-                # cache the first chunk
-                self.chunkcache = (0, data)
-            if leftover:
-                data = leftover + data
-                leftover = None
-            off = 0
-            l = len(data)
-            while off < l:
-                if l - off < s:
-                    leftover = data[off:]
+        n = off = 0
+        # if we're not using lazymap, always read the whole index
+        data = fp.read()
+        l = len(data)
+        if inline:
+            self.chunkcache = (0, data)
+        while off + s <= l:
+            e = struct.unpack(indexformatng, data[off:off + s])
+            index.append(e)
+            nodemap[e[-1]] = n
+            n += 1
+            off += s
+            if inline:
+                if e[1] < 0:
                     break
-                cur = data[off:off + s]
-                off += s
-                e = struct.unpack(indexformatng, cur)
-                index.append(e)
-                nodemap[e[-1]] = n
-                n += 1
-                if inline:
-                    if e[1] < 0:
-                        break
-                    off += e[1]
-                    if off > l:
-                        # some things don't seek well, just read it
-                        fp.read(off - l)
-                        break
-            if not st:
-                break
+                off += e[1]
 
         e = list(index[0])
         type = gettype(e[0])
