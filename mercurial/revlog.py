@@ -309,7 +309,7 @@ class revlogoldio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatv0)
 
-    def parseindex(self, fp, st, inline):
+    def parseindex(self, fp, inline):
         s = self.size
         index = []
         nodemap =  {nullid: nullrev}
@@ -333,11 +333,15 @@ class revlogio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatng)
 
-    def parseindex(self, fp, st, inline):
-        if (lazyparser.safe_to_use and not inline and
-            st and st.st_size > 1000000):
+    def parseindex(self, fp, inline):
+        try:
+            size = util.fstat(fp).st_size
+        except AttributeError:
+            size = 0
+
+        if lazyparser.safe_to_use and not inline and size > 1000000:
             # big index, let's parse it on demand
-            parser = lazyparser(fp, st.st_size)
+            parser = lazyparser(fp, size)
             index = lazyindex(parser)
             nodemap = lazymap(parser)
             e = list(index[0])
@@ -409,18 +413,18 @@ class revlog(object):
         self.indexfile = indexfile
         self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
-        self.indexstat = None
         self._cache = None
         self._chunkcache = None
-        self.defversion = REVLOG_DEFAULT_VERSION
-        if hasattr(opener, "defversion"):
-            self.defversion = opener.defversion
-            if self.defversion & REVLOGNG:
-                self.defversion |= REVLOGNGINLINEDATA
-        self._load()
+        self.nodemap = {nullid: nullrev}
+        self.index = []
 
-    def _load(self):
-        v = self.defversion
+        v = REVLOG_DEFAULT_VERSION
+        if hasattr(opener, "defversion"):
+            v = opener.defversion
+            if v & REVLOGNG:
+                v |= REVLOGNGINLINEDATA
+
+        i = ""
         try:
             f = self.opener(self.indexfile)
             i = f.read(4)
@@ -430,44 +434,28 @@ class revlog(object):
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
-            i = ""
-        else:
-            try:
-                st = util.fstat(f)
-            except AttributeError, inst:
-                st = None
-            else:
-                oldst = self.indexstat
-                if (oldst and st.st_dev == oldst.st_dev
-                    and st.st_ino == oldst.st_ino
-                    and st.st_mtime == oldst.st_mtime
-                    and st.st_ctime == oldst.st_ctime
-                    and st.st_size == oldst.st_size):
-                    return
-                self.indexstat = st
-        flags = v & ~0xFFFF
-        fmt = v & 0xFFFF
-        if fmt == REVLOGV0:
-            if flags:
-                raise RevlogError(_("index %s unknown flags %#04x for format v0")
-                                  % (self.indexfile, flags >> 16))
-        elif fmt == REVLOGNG:
-            if flags & ~REVLOGNGINLINEDATA:
-                raise RevlogError(_("index %s unknown flags %#04x for revlogng")
-                                  % (self.indexfile, flags >> 16))
-        else:
-            raise RevlogError(_("index %s unknown format %d")
-                              % (self.indexfile, fmt))
+
         self.version = v
         self._inline = v & REVLOGNGINLINEDATA
-        self.nodemap = {nullid: nullrev}
-        self.index = []
+        flags = v & ~0xFFFF
+        fmt = v & 0xFFFF
+        if fmt == REVLOGV0 and flags:
+            raise RevlogError(_("index %s unknown flags %#04x for format v0")
+                              % (self.indexfile, flags >> 16))
+        elif fmt == REVLOGNG and flags & ~REVLOGNGINLINEDATA:
+            raise RevlogError(_("index %s unknown flags %#04x for revlogng")
+                              % (self.indexfile, flags >> 16))
+        elif fmt > REVLOGNG:
+            raise RevlogError(_("index %s unknown format %d")
+                              % (self.indexfile, fmt))
+
         self._io = revlogio()
         if self.version == REVLOGV0:
             self._io = revlogoldio()
         if i:
-            d = self._io.parseindex(f, st, self._inline)
+            d = self._io.parseindex(f, self._inline)
             self.index, self.nodemap, self._chunkcache = d
+
         # add the magic null revision at -1
         self.index.append((0, 0, 0, -1, -1, -1, -1, nullid))
 
