@@ -1029,8 +1029,8 @@ class revlog(object):
             dfh.flush()
             ifh.write(entry)
         else:
-            ifh.seek(0, 2)
-            transaction.add(self.indexfile, ifh.tell(), prev)
+            offset += curr * self._io.size
+            transaction.add(self.indexfile, offset, prev)
             ifh.write(entry)
             ifh.write(data[0])
             ifh.write(data[1])
@@ -1106,11 +1106,12 @@ class revlog(object):
             end = self.end(t)
 
         ifh = self.opener(self.indexfile, "a+")
-        ifh.seek(0, 2)
-        transaction.add(self.indexfile, ifh.tell(), self.count())
+        isize = r * self._io.size
         if self._inline:
+            transaction.add(self.indexfile, end + isize, r)
             dfh = None
         else:
+            transaction.add(self.indexfile, isize, r)
             transaction.add(self.datafile, end)
             dfh = self.opener(self.datafile, "a")
 
