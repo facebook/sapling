@@ -300,33 +300,16 @@ class revlogoldio(object):
         s = struct.calcsize(indexformatv0)
         index = []
         nodemap =  {nullid: nullrev}
-        n = 0
-        leftover = None
-        while True:
-            if st:
-                data = fp.read(65536)
-            else:
-                # hack for httprangereader, it doesn't do partial reads well
-                data = fp.read()
-            if not data:
-                break
-            if leftover:
-                data = leftover + data
-                leftover = None
-            off = 0
-            l = len(data)
-            while off < l:
-                if l - off < s:
-                    leftover = data[off:]
-                    break
-                cur = data[off:off + s]
-                off += s
-                e = struct.unpack(indexformatv0, cur)
-                index.append(e)
-                nodemap[e[-1]] = n
-                n += 1
-            if not st:
-                break
+        n = off = 0
+        data = fp.read()
+        l = len(data)
+        while off + s <= l:
+            cur = data[off:off + s]
+            off += s
+            e = struct.unpack(indexformatv0, cur)
+            index.append(e)
+            nodemap[e[-1]] = n
+            n += 1
 
         return index, nodemap
 
