@@ -378,32 +378,32 @@ class revlog(object):
             raise RevlogError(_("index %s unknown format %d")
                               % (self.indexfile, fmt))
         self.version = v
-        if v == REVLOGV0:
+        self.nodemap = {nullid: nullrev}
+        self.index = []
+        self.indexformat = indexformatng
+        if self.version == REVLOGV0:
             self.indexformat = indexformatv0
-            shaoffset = v0shaoffset
-        else:
-            self.indexformat = indexformatng
-            shaoffset = ngshaoffset
-
         if i:
-            if (lazyparser.safe_to_use and not self._inline() and
-                st and st.st_size > 10000):
-                # big index, let's parse it on demand
-                parser = lazyparser(f, st.st_size, self.indexformat, shaoffset)
-                self.index = lazyindex(parser)
-                self.nodemap = lazymap(parser)
-            else:
-                self._parseindex(f, st)
+            self._parseindex(f, st)
+
+    def _parseindex(self, fp, st):
+        shaoffset = ngshaoffset
+        if self.version == REVLOGV0:
+            shaoffset = v0shaoffset
+
+        if (lazyparser.safe_to_use and not self._inline() and
+            st and st.st_size > 10000):
+            # big index, let's parse it on demand
+            parser = lazyparser(fp, st.st_size, self.indexformat, shaoffset)
+            self.index = lazyindex(parser)
+            self.nodemap = lazymap(parser)
             if self.version != REVLOGV0:
                 e = list(self.index[0])
                 type = gettype(e[0])
                 e[0] = offset_type(0, type)
                 self.index[0] = e
-        else:
-            self.nodemap = {nullid: nullrev}
-            self.index = []
+            return
 
-    def _parseindex(self, fp, st):
         s = struct.calcsize(self.indexformat)
         self.index = []
         self.nodemap =  {nullid: nullrev}
@@ -447,6 +447,11 @@ class revlog(object):
             if not st:
                 break
 
+        if self.version != REVLOGV0:
+            e = list(self.index[0])
+            type = gettype(e[0])
+            e[0] = offset_type(0, type)
+            self.index[0] = e
 
     def _loadindex(self, start, end):
         """load a block of indexes all at once from the lazy parser"""
