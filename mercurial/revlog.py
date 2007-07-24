@@ -42,23 +42,30 @@ def hash(text, p1, p2):
 
 def compress(text):
     """ generate a possibly-compressed representation of text """
-    if not text: return ("", text)
+    if not text:
+        return ("", text)
     if len(text) < 44:
-        if text[0] == '\0': return ("", text)
+        if text[0] == '\0':
+            return ("", text)
         return ('u', text)
     bin = zlib.compress(text)
     if len(bin) > len(text):
-        if text[0] == '\0': return ("", text)
+        if text[0] == '\0':
+            return ("", text)
         return ('u', text)
     return ("", bin)
 
 def decompress(bin):
     """ decompress the given input """
-    if not bin: return bin
+    if not bin:
+        return bin
     t = bin[0]
-    if t == '\0': return bin
-    if t == 'x': return zlib.decompress(bin)
-    if t == 'u': return bin[1:]
+    if t == '\0':
+        return bin
+    if t == 'x':
+        return zlib.decompress(bin)
+    if t == 'u':
+        return bin[1:]
     raise RevlogError(_("unknown compression type %r") % t)
 
 indexformatv0 = ">4l20s20s20s"
@@ -106,7 +113,8 @@ class lazyparser(object):
         which is fairly slow.  loadmap can load up just the node map,
         which takes much less time.
         """
-        if self.allmap: return
+        if self.allmap:
+            return
         end = self.datasize
         self.allmap = 1
         cur = 0
@@ -126,7 +134,8 @@ class lazyparser(object):
             cur += blocksize
 
     def loadblock(self, blockstart, blocksize, data=None):
-        if self.all: return
+        if self.all:
+            return
         if data is None:
             self.dataf.seek(blockstart)
             if blockstart + blocksize > self.datasize:
@@ -151,7 +160,8 @@ class lazyparser(object):
 
     def findnode(self, node):
         """search backwards through the index file for a specific node"""
-        if self.allmap: return None
+        if self.allmap:
+            return None
 
         # hg log will cause many many searches for the manifest
         # nodes.  After we get called a few times, just load the whole
@@ -194,7 +204,8 @@ class lazyparser(object):
         return None
 
     def loadindex(self, i=None, end=None):
-        if self.all: return
+        if self.all:
+            return
         all = False
         if i == None:
             blockstart = 0
@@ -213,7 +224,8 @@ class lazyparser(object):
         while blockstart < end:
             self.loadblock(blockstart, blocksize)
             blockstart += blocksize
-        if all: self.all = True
+        if all:
+            self.all = True
 
 class lazyindex(object):
     """a lazy version of the index array"""
@@ -277,8 +289,10 @@ class lazymap(object):
     def __delitem__(self, key):
         del self.p.map[key]
 
-class RevlogError(Exception): pass
-class LookupError(RevlogError): pass
+class RevlogError(Exception):
+    pass
+class LookupError(RevlogError):
+    pass
 
 def getoffset(q):
     if q & 0xFFFF:
@@ -474,17 +488,20 @@ class revlog(object):
             self.nodemap.p.loadmap()
             self.nodemap = self.nodemap.p.map
 
-    def _inline(self): return self.version & REVLOGNGINLINEDATA
+    def _inline(self):
+        return self.version & REVLOGNGINLINEDATA
+    def tip(self):
+        return self.node(len(self.index) - 2)
+    def count(self):
+        return len(self.index) - 1
 
-    def tip(self): return self.node(len(self.index) - 2)
-    def count(self): return len(self.index) - 1
-    def node(self, rev):
-        return self.index[rev][7]
     def rev(self, node):
         try:
             return self.nodemap[node]
         except KeyError:
             raise LookupError(_('%s: no node %s') % (self.indexfile, hex(node)))
+    def node(self, rev):
+        return self.index[rev][7]
     def linkrev(self, node):
         return self.index[self.rev(node)][4]
     def parents(self, node):
@@ -494,7 +511,12 @@ class revlog(object):
         return self.index[rev][5:7]
     def start(self, rev):
         return getoffset(self.index[rev][0])
-    def end(self, rev): return self.start(rev) + self.length(rev)
+    def end(self, rev):
+        return self.start(rev) + self.length(rev)
+    def length(self, rev):
+        return self.index[rev][1]
+    def base(self, rev):
+        return self.index[rev][3]
 
     def size(self, rev):
         """return the length of the uncompressed text for a given revision"""
@@ -524,11 +546,6 @@ class revlog(object):
             l = mdiff.patchedsize(l, self.chunk(x))
         return l
         """
-
-    def length(self, rev):
-        return self.index[rev][1]
-    def base(self, rev):
-        return self.index[rev][3]
 
     def reachable(self, node, stop=None):
         """return a hash of all nodes ancestral to a given node, including
@@ -764,9 +781,12 @@ class revlog(object):
         try:
             # str(rev)
             rev = int(id)
-            if str(rev) != id: raise ValueError
-            if rev < 0: rev = self.count() + rev
-            if rev < 0 or rev >= self.count(): raise ValueError
+            if str(rev) != id:
+                raise ValueError
+            if rev < 0:
+                rev = self.count() + rev
+            if rev < 0 or rev >= self.count():
+                raise ValueError
             return self.node(rev)
         except (ValueError, OverflowError):
             pass
@@ -800,7 +820,6 @@ class revlog(object):
             - revision number or str(revision number)
             - nodeid or subset of hex nodeid
         """
-
         n = self._match(id)
         if n is not None:
             return n
@@ -851,11 +870,6 @@ class revlog(object):
             loadcache(df)
             offset = 0
 
-        #def checkchunk():
-        #    df = self.opener(self.datafile)
-        #    df.seek(start)
-        #    return df.read(length)
-        #assert s == checkchunk()
         return decompress(self._io.chunkcache[1][offset:offset + length])
 
     def delta(self, node):
@@ -875,8 +889,10 @@ class revlog(object):
 
     def revision(self, node):
         """return an uncompressed revision of a given"""
-        if node == nullid: return ""
-        if self.cache and self.cache[0] == node: return self.cache[2]
+        if node == nullid:
+            return ""
+        if self.cache and self.cache[0] == node:
+            return self.cache[2]
 
         # look up what we need to read
         text = None
@@ -978,9 +994,12 @@ class revlog(object):
         return self._addrevision(text, transaction, link, p1, p2, d, ifh, dfh)
 
     def _addrevision(self, text, transaction, link, p1, p2, d, ifh, dfh):
-        if text is None: text = ""
-        if p1 is None: p1 = self.tip()
-        if p2 is None: p2 = nullid
+        if text is None:
+            text = ""
+        if p1 is None:
+            p1 = self.tip()
+        if p2 is None:
+            p2 = nullid
 
         node = hash(text, p1, p2)
 
