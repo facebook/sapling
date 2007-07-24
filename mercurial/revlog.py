@@ -329,6 +329,11 @@ class revlogoldio(object):
 
         return index, nodemap, None
 
+    def packentry(self, entry, node, version):
+        e2 = (getoffset(entry[0]), entry[1], entry[3], entry[4],
+              node(entry[5]), node(entry[6]), entry[7])
+        return struct.pack(indexformatv0, *e2)
+
 class revlogio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatng)
@@ -377,6 +382,12 @@ class revlogio(object):
         index[0] = e
 
         return index, nodemap, cache
+
+    def packentry(self, entry, node, version):
+        p = struct.pack(indexformatng, *entry)
+        if not entry[3] and not getoffset(entry[0]) and entry[5] == nullrev:
+            p = struct.pack(versionformat, version) + p[4:]
+        return p
 
 class revlog(object):
     """
@@ -946,16 +957,8 @@ class revlog(object):
         fp = self.opener(self.indexfile, 'w', atomictemp=True)
         self.version &= ~(REVLOGNGINLINEDATA)
         self._inline = False
-        if self.count():
-            x = self.index[0]
-            e = struct.pack(indexformatng, *x)[4:]
-            l = struct.pack(versionformat, self.version)
-            fp.write(l)
-            fp.write(e)
-
-        for i in xrange(1, self.count()):
-            x = self.index[i]
-            e = struct.pack(indexformatng, *x)
+        for i in xrange(self.count()):
+            e = self._io.packentry(self.index[i], self.node, self.version)
             fp.write(e)
 
         # if we don't call rename, the temp file will never replace the
@@ -1010,14 +1013,7 @@ class revlog(object):
         self.index.insert(-1, e)
         self.nodemap[node] = curr
 
-        if self.version == REVLOGV0:
-            e = (offset, l, base, link, p1, p2, node)
-            entry = struct.pack(indexformatv0, *e)
-        else:
-            entry = struct.pack(indexformatng, *e)
-            if not curr:
-                entry = struct.pack(versionformat, self.version) + entry[4:]
-
+        entry = self._io.packentry(e, self.node, self.version)
         if not self._inline:
             transaction.add(self.datafile, offset)
             transaction.add(self.indexfile, curr * len(entry))
@@ -1168,19 +1164,15 @@ class revlog(object):
                      link, self.rev(p1), self.rev(p2), node)
                 self.index.insert(-1, e)
                 self.nodemap[node] = r
+                entry = self._io.packentry(e, self.node, self.version)
                 if self._inline:
-                    ifh.write(struct.pack(indexformatng, *e))
+                    ifh.write(entry)
                     ifh.write(cdelta)
                     self.checkinlinesize(transaction, ifh)
                     if not self._inline:
                         dfh = self.opener(self.datafile, "a")
                         ifh = self.opener(self.indexfile, "a")
                 else:
-                    if self.version == REVLOGV0:
-                        e = (end, len(cdelta), base, link, p1, p2, node)
-                        entry = struct.pack(indexformatv0, *e)
-                    else:
-                        entry = struct.pack(indexformatng, *e)
                     dfh.write(cdelta)
                     ifh.write(entry)
 
