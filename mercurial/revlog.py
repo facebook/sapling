@@ -15,16 +15,29 @@ from i18n import _
 import binascii, changegroup, errno, ancestor, mdiff, os
 import sha, struct, util, zlib
 
-# revlog version strings
+# revlog flags
 REVLOGV0 = 0
 REVLOGNG = 1
-
-# revlog flags
 REVLOGNGINLINEDATA = (1 << 16)
 REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
-
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
+
+class RevlogError(Exception):
+    pass
+class LookupError(RevlogError):
+    pass
+
+def getoffset(q):
+    if q & 0xFFFF:
+        raise RevlogError(_('incompatible revision flag %x') % q)
+    return int(q >> 16)
+
+def gettype(q):
+    return int(q & 0xFFFF)
+
+def offset_type(offset, type):
+    return long(long(offset) << 16 | type)
 
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
@@ -67,22 +80,6 @@ def decompress(bin):
     if t == 'u':
         return bin[1:]
     raise RevlogError(_("unknown compression type %r") % t)
-
-indexformatv0 = ">4l20s20s20s"
-v0shaoffset = 56
-# index ng:
-# 6 bytes offset
-# 2 bytes flags
-# 4 bytes compressed length
-# 4 bytes uncompressed length
-# 4 bytes: base rev
-# 4 bytes link rev
-# 4 bytes parent 1 rev
-# 4 bytes parent 2 rev
-# 32 bytes: nodeid
-indexformatng = ">Qiiiiii20s12x"
-ngshaoffset = 32
-versionformat = ">I"
 
 class lazyparser(object):
     """
@@ -289,21 +286,8 @@ class lazymap(object):
     def __delitem__(self, key):
         del self.p.map[key]
 
-class RevlogError(Exception):
-    pass
-class LookupError(RevlogError):
-    pass
-
-def getoffset(q):
-    if q & 0xFFFF:
-        raise RevlogError(_('incompatible revision flag %x') % q)
-    return int(q >> 16)
-
-def gettype(q):
-    return int(q & 0xFFFF)
-
-def offset_type(offset, type):
-    return long(long(offset) << 16 | type)
+indexformatv0 = ">4l20s20s20s"
+v0shaoffset = 56
 
 class revlogoldio(object):
     def __init__(self):
@@ -333,6 +317,20 @@ class revlogoldio(object):
         e2 = (getoffset(entry[0]), entry[1], entry[3], entry[4],
               node(entry[5]), node(entry[6]), entry[7])
         return struct.pack(indexformatv0, *e2)
+
+# index ng:
+# 6 bytes offset
+# 2 bytes flags
+# 4 bytes compressed length
+# 4 bytes uncompressed length
+# 4 bytes: base rev
+# 4 bytes link rev
+# 4 bytes parent 1 rev
+# 4 bytes parent 2 rev
+# 32 bytes: nodeid
+indexformatng = ">Qiiiiii20s12x"
+ngshaoffset = 32
+versionformat = ">I"
 
 class revlogio(object):
     def __init__(self):
@@ -1253,5 +1251,3 @@ class revlog(object):
             di = 0
 
         return (dd, di)
-
-
