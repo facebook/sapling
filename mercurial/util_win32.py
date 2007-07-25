@@ -209,7 +209,7 @@ class posixfile_nt(object):
 
     def __init__(self, name, mode='rb'):
         access = 0
-        if 'r' in mode:
+        if 'r' in mode or '+' in mode:
             access |= win32file.GENERIC_READ
         if 'w' in mode or 'a' in mode or '+' in mode:
             access |= win32file.GENERIC_WRITE
