@@ -306,16 +306,16 @@ class dirstate(object):
                 bs += 1
         return ret
 
-    def _supported(self, f, st, verbose=False):
-        if stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode):
+    def _supported(self, f, mode, verbose=False):
+        if stat.S_ISREG(mode) or stat.S_ISLNK(mode):
             return True
         if verbose:
             kind = 'unknown'
-            if stat.S_ISCHR(st.st_mode): kind = _('character device')
-            elif stat.S_ISBLK(st.st_mode): kind = _('block device')
-            elif stat.S_ISFIFO(st.st_mode): kind = _('fifo')
-            elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
-            elif stat.S_ISDIR(st.st_mode): kind = _('directory')
+            if stat.S_ISCHR(mode): kind = _('character device')
+            elif stat.S_ISBLK(mode): kind = _('block device')
+            elif stat.S_ISFIFO(mode): kind = _('fifo')
+            elif stat.S_ISSOCK(mode): kind = _('socket')
+            elif stat.S_ISDIR(mode): kind = _('directory')
             self._ui.warn(_('%s: unsupported file type (type is %s)\n')
                           % (self.pathto(f), kind))
         return False
@@ -363,59 +363,73 @@ class dirstate(object):
         common_prefix_len = len(self._root)
         if not self._root.endswith(os.sep):
             common_prefix_len += 1
+
+        normpath = util.normpath
+        listdir = os.listdir
+        lstat = os.lstat
+        bisect_left = bisect.bisect_left
+        isdir = os.path.isdir
+        pconvert = util.pconvert
+        join = os.path.join
+        s_isdir = stat.S_ISDIR
+        supported = self._supported
+        _join = self._join
+        known = {'.hg': 1}
+
         # recursion free walker, faster than os.walk.
         def findfiles(s):
             work = [s]
+            wadd = work.append
+            found = []
+            add = found.append
             if directories:
-                yield 'd', util.normpath(s[common_prefix_len:]), os.lstat(s)
+                add((normpath(s[common_prefix_len:]), 'd', lstat(s)))
             while work:
                 top = work.pop()
-                names = os.listdir(top)
+                names = listdir(top)
                 names.sort()
                 # nd is the top of the repository dir tree
-                nd = util.normpath(top[common_prefix_len:])
+                nd = normpath(top[common_prefix_len:])
                 if nd == '.':
                     nd = ''
                 else:
                     # do not recurse into a repo contained in this
                     # one. use bisect to find .hg directory so speed
                     # is good on big directory.
-                    hg = bisect.bisect_left(names, '.hg')
+                    hg = bisect_left(names, '.hg')
                     if hg < len(names) and names[hg] == '.hg':
-                        if os.path.isdir(os.path.join(top, '.hg')):
+                        if isdir(join(top, '.hg')):
                             continue
                 for f in names:
-                    np = util.pconvert(os.path.join(nd, f))
-                    if seen(np):
+                    np = pconvert(join(nd, f))
+                    if np in known:
                         continue
-                    p = os.path.join(top, f)
+                    known[np] = 1
+                    p = join(top, f)
                     # don't trip over symlinks
-                    st = os.lstat(p)
-                    if stat.S_ISDIR(st.st_mode):
+                    st = lstat(p)
+                    if s_isdir(st.st_mode):
                         if not ignore(np):
-                            work.append(p)
+                            wadd(p)
                             if directories:
-                                yield 'd', np, st
-                        if imatch(np) and np in dc:
-                            yield 'm', np, st
+                                add((np, 'd', st))
+                        if np in dc and match(np):
+                            add((np, 'm', st))
                     elif imatch(np):
-                        if self._supported(np, st):
-                            yield 'f', np, st
+                        if supported(np, st.st_mode):
+                            add((np, 'f', st))
                         elif np in dc:
-                            yield 'm', np, st
-
-        known = {'.hg': 1}
-        def seen(fn):
-            if fn in known: return True
-            known[fn] = 1
+                            add((np, 'm', st))
+            found.sort()
+            return found
 
         # step one, find all files that match our criteria
         files.sort()
         for ff in files:
-            nf = util.normpath(ff)
-            f = self._join(ff)
+            nf = normpath(ff)
+            f = _join(ff)
             try:
-                st = os.lstat(f)
+                st = lstat(f)
             except OSError, inst:
                 found = False
                 for fn in dc:
@@ -429,15 +443,15 @@ class dirstate(object):
                     elif badmatch and badmatch(ff) and imatch(nf):
                         yield 'b', ff, None
                 continue
-            if stat.S_ISDIR(st.st_mode):
-                cmp1 = (lambda x, y: cmp(x[1], y[1]))
-                sorted_ = [ x for x in findfiles(f) ]
-                sorted_.sort(cmp1)
-                for e in sorted_:
-                    yield e
+            if s_isdir(st.st_mode):
+                for f, src, st in findfiles(f):
+                    yield src, f, st
             else:
-                if not seen(nf) and match(nf):
-                    if self._supported(ff, st, verbose=True):
+                if nf in known:
+                    continue
+                known[nf] = 1
+                if match(nf):
+                    if supported(ff, st.st_mode, verbose=True):
                         yield 'f', nf, st
                     elif ff in dc:
                         yield 'm', nf, st
@@ -447,57 +461,73 @@ class dirstate(object):
         ks = dc.keys()
         ks.sort()
         for k in ks:
-            if not seen(k) and imatch(k):
+            if k in known:
+                continue
+            known[k] = 1
+            if imatch(k):
                 yield 'm', k, None
 
     def status(self, files, match, list_ignored, list_clean):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
+        _join = self._join
+        lstat = os.lstat
+        cmap = self._copymap
+        dmap = self._map
+        ladd = lookup.append
+        madd = modified.append
+        aadd = added.append
+        uadd = unknown.append
+        iadd = ignored.append
+        radd = removed.append
+        dadd = deleted.append
+        cadd = clean.append
+
         for src, fn, st in self.statwalk(files, match, ignored=list_ignored):
-            try:
-                type_, mode, size, time = self._map[fn]
-            except KeyError:
+            if fn in dmap:
+                type_, mode, size, time = dmap[fn]
+            else:
                 if list_ignored and self._ignore(fn):
-                    ignored.append(fn)
+                    iadd(fn)
                 else:
-                    unknown.append(fn)
+                    uadd(fn)
                 continue
             if src == 'm':
                 nonexistent = True
                 if not st:
                     try:
-                        st = os.lstat(self._join(fn))
+                        st = lstat(_join(fn))
                     except OSError, inst:
                         if inst.errno != errno.ENOENT:
                             raise
                         st = None
                     # We need to re-check that it is a valid file
-                    if st and self._supported(fn, st):
+                    if st and self._supported(fn, st.st_mode):
                         nonexistent = False
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
                 if nonexistent and type_ in "nm":
-                    deleted.append(fn)
+                    dadd(fn)
                     continue
             # check the common case first
             if type_ == 'n':
                 if not st:
-                    st = os.lstat(self._join(fn))
+                    st = lstat(_join(fn))
                 if (size >= 0 and (size != st.st_size
                                    or (mode ^ st.st_mode) & 0100)
                     or fn in self._copymap):
-                    modified.append(fn)
+                    madd(fn)
                 elif time != int(st.st_mtime):
-                    lookup.append(fn)
+                    ladd(fn)
                 elif list_clean:
-                    clean.append(fn)
+                    cadd(fn)
             elif type_ == 'm':
-                modified.append(fn)
+                madd(fn)
             elif type_ == 'a':
-                added.append(fn)
+                aadd(fn)
             elif type_ == 'r':
-                removed.append(fn)
+                radd(fn)
 
         return (lookup, modified, added, removed, deleted, unknown, ignored,
                 clean)
