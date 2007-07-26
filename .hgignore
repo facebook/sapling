@@ -4,6 +4,7 @@ syntax: glob
 *.orig
 *.rej
 *~
+*.mergebackup
 *.o
 *.so
 *.pyc
