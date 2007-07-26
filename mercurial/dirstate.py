@@ -363,35 +363,46 @@ class dirstate(object):
         common_prefix_len = len(self._root)
         if not self._root.endswith(os.sep):
             common_prefix_len += 1
+
         # recursion free walker, faster than os.walk.
+        normpath = util.normpath
+        listdir = os.listdir
+        lstat = os.lstat
+        bisect_left = bisect.bisect_left
+        isdir = os.path.isdir
+        pconvert = util.pconvert
+        join = os.path.join
+        s_isdir = stat.S_ISDIR
+        supported = self._supported
+
         def findfiles(s):
             work = [s]
             if directories:
-                yield 'd', util.normpath(s[common_prefix_len:]), os.lstat(s)
+                yield 'd', normpath(s[common_prefix_len:]), os.lstat(s)
             while work:
                 top = work.pop()
-                names = os.listdir(top)
+                names = listdir(top)
                 names.sort()
                 # nd is the top of the repository dir tree
-                nd = util.normpath(top[common_prefix_len:])
+                nd = normpath(top[common_prefix_len:])
                 if nd == '.':
                     nd = ''
                 else:
                     # do not recurse into a repo contained in this
                     # one. use bisect to find .hg directory so speed
                     # is good on big directory.
-                    hg = bisect.bisect_left(names, '.hg')
+                    hg = bisect_left(names, '.hg')
                     if hg < len(names) and names[hg] == '.hg':
-                        if os.path.isdir(os.path.join(top, '.hg')):
+                        if isdir(join(top, '.hg')):
                             continue
                 for f in names:
-                    np = util.pconvert(os.path.join(nd, f))
+                    np = pconvert(os.path.join(nd, f))
                     if seen(np):
                         continue
-                    p = os.path.join(top, f)
+                    p = join(top, f)
                     # don't trip over symlinks
-                    st = os.lstat(p)
-                    if stat.S_ISDIR(st.st_mode):
+                    st = lstat(p)
+                    if s_isdir(st.st_mode):
                         if not ignore(np):
                             work.append(p)
                             if directories:
@@ -399,7 +410,7 @@ class dirstate(object):
                         if imatch(np) and np in dc:
                             yield 'm', np, st
                     elif imatch(np):
-                        if self._supported(np, st):
+                        if supported(np, st):
                             yield 'f', np, st
                         elif np in dc:
                             yield 'm', np, st
@@ -412,10 +423,10 @@ class dirstate(object):
         # step one, find all files that match our criteria
         files.sort()
         for ff in files:
-            nf = util.normpath(ff)
+            nf = normpath(ff)
             f = self._join(ff)
             try:
-                st = os.lstat(f)
+                st = lstat(f)
             except OSError, inst:
                 found = False
                 for fn in dc:
@@ -429,7 +440,7 @@ class dirstate(object):
                     elif badmatch and badmatch(ff) and imatch(nf):
                         yield 'b', ff, None
                 continue
-            if stat.S_ISDIR(st.st_mode):
+            if s_isdir(st.st_mode):
                 cmp1 = (lambda x, y: cmp(x[1], y[1]))
                 sorted_ = [ x for x in findfiles(f) ]
                 sorted_.sort(cmp1)
@@ -437,7 +448,7 @@ class dirstate(object):
                     yield e
             else:
                 if not seen(nf) and match(nf):
-                    if self._supported(ff, st, verbose=True):
+                    if supported(ff, st, verbose=True):
                         yield 'f', nf, st
                     elif ff in dc:
                         yield 'm', nf, st
