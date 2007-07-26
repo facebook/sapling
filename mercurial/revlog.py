@@ -885,13 +885,11 @@ class revlog(object):
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
-        b1 = self.base(rev1)
-        b2 = self.base(rev2)
-        if b1 == b2 and rev1 + 1 == rev2:
+        if rev1 + 1 == rev2 and self.base(rev1) == self.base(rev2):
             return self.chunk(rev2)
-        else:
-            return mdiff.textdiff(self.revision(self.node(rev1)),
-                                  self.revision(self.node(rev2)))
+
+        return mdiff.textdiff(self.revision(self.node(rev1)),
+                              self.revision(self.node(rev2)))
 
     def revision(self, node):
         """return an uncompressed revision of a given"""
