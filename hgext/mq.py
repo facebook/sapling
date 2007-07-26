@@ -2144,8 +2144,9 @@ cmdtable = {
         (diff,
          [('g', 'git', None, _('use git extended diff format')),
           ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
-         _('hg qdiff [-I] [-X] [-g] [FILE]...')),
+          ('X', 'exclude', [], _('exclude names matching the given patterns')),
+          ('U', 'unified', 3, _('number of lines of context to show'))],
+         _('hg qdiff [-I] [-X] [-U NUM] [-g] [FILE]...')),
     "qdelete|qremove|qrm":
         (delete,
          [('k', 'keep', None, _('keep patch file')),
