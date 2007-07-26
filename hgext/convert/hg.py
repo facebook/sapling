@@ -1,18 +1,26 @@
 # hg backend for convert extension
 
+# Note for hg->hg conversion: Old versions of Mercurial didn't trim
+# the whitespace from the ends of commit messages, but new versions
+# do.  Changesets created by those older versions, then converted, may
+# thus have different hashes for changesets that are otherwise
+# identical.
+
+
 import os, time
-from mercurial import hg
+from mercurial.node import *
+from mercurial import hg, revlog, util
 
-from common import NoRepo, converter_sink
+from common import NoRepo, commit, converter_source, converter_sink
 
-class convert_mercurial(converter_sink):
+class mercurial_sink(converter_sink):
     def __init__(self, ui, path):
         self.path = path
         self.ui = ui
         try:
             self.repo = hg.repository(self.ui, path)
         except:
-            raise NoRepo("could open hg repo %s" % path)
+            raise NoRepo("could not open hg repo %s as sink" % path)
 
     def revmapfile(self):
         return os.path.join(self.path, ".hg", "shamap")
@@ -95,3 +103,57 @@ class convert_mercurial(converter_sink):
             self.repo.rawcommit([".hgtags"], "update tags", "convert-repo",
                                 date, self.repo.changelog.tip(), hg.nullid)
             return hg.hex(self.repo.changelog.tip())
+
+class mercurial_source(converter_source):
+    def __init__(self, ui, path, rev=None):
+        converter_source.__init__(self, ui, path, rev)
+        self.repo = hg.repository(self.ui, path)
+        self.lastrev = None
+        self.lastctx = None
+
+    def changectx(self, rev):
+        if self.lastrev != rev:
+            self.lastctx = self.repo.changectx(rev)
+            self.lastrev = rev
+        return self.lastctx
+
+    def getheads(self):
+        return [hex(node) for node in self.repo.heads()]
+
+    def getfile(self, name, rev):
+        try:
+            return self.changectx(rev).filectx(name).data()
+        except revlog.LookupError, err:
+            raise IOError(err)
+
+    def getmode(self, name, rev):
+        m = self.changectx(rev).manifest()
+        return (m.execf(name) and 'x' or '') + (m.linkf(name) and 'l' or '')
+
+    def getchanges(self, rev):
+        ctx = self.changectx(rev)
+        m, a, r = self.repo.status(ctx.parents()[0].node(), ctx.node())[:3]
+        changes = [(name, rev) for name in m + a + r]
+        changes.sort()
+        return changes
+
+    def getcopies(self, ctx):
+        added = self.repo.status(ctx.parents()[0].node(), ctx.node())[1]
+        copies = {}
+        for name in added:
+            try:
+                copies[name] = ctx.filectx(name).renamed()[0]
+            except TypeError:
+                pass
+        return copies
+        
+    def getcommit(self, rev):
+        ctx = self.changectx(rev)
+        parents = [hex(p.node()) for p in ctx.parents() if p.node() != nullid]
+        return commit(author=ctx.user(), date=util.datestr(ctx.date()),
+                      desc=ctx.description(), parents=parents,
+                      branch=ctx.branch(), copies=self.getcopies(ctx))
+
+    def gettags(self):
+        tags = [t for t in self.repo.tagslist() if t[0] != 'tip']
+        return dict([(name, hex(node)) for name, node in tags])

@@ -8,7 +8,7 @@
 from common import NoRepo, converter_source, converter_sink
 from cvs import convert_cvs
 from git import convert_git
-from hg import convert_mercurial
+from hg import mercurial_source, mercurial_sink
 from subversion import convert_svn
 
 import os, shutil
@@ -16,7 +16,8 @@ from mercurial import hg, ui, util, commands
 
 commands.norepo += " convert"
 
-converters = [convert_cvs, convert_git, convert_svn, convert_mercurial]
+converters = [convert_cvs, convert_git, convert_svn, mercurial_source,
+              mercurial_sink]
 
 def convertsource(ui, path, **opts):
     for c in converters:
