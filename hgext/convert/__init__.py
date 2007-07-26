@@ -193,7 +193,7 @@ class convert(object):
         c = self.commitcache[rev]
         files = self.source.getchanges(rev)
 
-        do_copies = (hasattr(c, 'copies') and hasattr(self.dest, 'copyfile'))
+        do_copies = hasattr(self.dest, 'copyfile')
 
         for f, v in files:
             try:
