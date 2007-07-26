@@ -28,15 +28,21 @@ from common import NoRepo, commit, converter_source
 
 try:
     from svn.core import SubversionException, Pool
+    import svn
+    import svn.client
     import svn.core
     import svn.ra
     import svn.delta
-    import svn
     import transport
 except ImportError:
     pass
 
 def geturl(path):
+    try:
+        #extract URL from working directory
+        return svn.client.url_from_path(path)
+    except SubversionException:
+        pass
     if os.path.isdir(path):
         return 'file://%s' % os.path.normpath(os.path.abspath(path))
     return path
@@ -92,7 +98,7 @@ class convert_svn(converter_source):
             self.files = {}
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
         except SubversionException, e:
-            raise NoRepo("couldn't open SVN repo %s" % url)
+            raise NoRepo("couldn't open SVN repo %s" % self.url)
 
         try:
             self.get_blacklist()
