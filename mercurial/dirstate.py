@@ -379,8 +379,11 @@ class dirstate(object):
         # recursion free walker, faster than os.walk.
         def findfiles(s):
             work = [s]
+            wadd = work.append
+            found = []
+            add = found.append
             if directories:
-                yield 'd', normpath(s[common_prefix_len:]), lstat(s)
+                add((normpath(s[common_prefix_len:]), 'd', lstat(s)))
             while work:
                 top = work.pop()
                 names = listdir(top)
@@ -407,16 +410,18 @@ class dirstate(object):
                     st = lstat(p)
                     if s_isdir(st.st_mode):
                         if not ignore(np):
-                            work.append(p)
+                            wadd(p)
                             if directories:
-                                yield 'd', np, st
+                                add((np, 'd', st))
                         if np in dc and match(np):
-                            yield 'm', np, st
+                            add((np, 'm', st))
                     elif imatch(np):
                         if supported(np, st.st_mode):
-                            yield 'f', np, st
+                            add((np, 'f', st))
                         elif np in dc:
-                            yield 'm', np, st
+                            add((np, 'm', st))
+            found.sort()
+            return found
 
         # step one, find all files that match our criteria
         files.sort()
@@ -439,11 +444,8 @@ class dirstate(object):
                         yield 'b', ff, None
                 continue
             if s_isdir(st.st_mode):
-                cmp1 = (lambda x, y: cmp(x[1], y[1]))
-                sorted_ = [ x for x in findfiles(f) ]
-                sorted_.sort(cmp1)
-                for e in sorted_:
-                    yield e
+                for f, src, st in findfiles(f):
+                    yield src, f, st
             else:
                 if nf in known:
                     continue
