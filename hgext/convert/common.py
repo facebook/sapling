@@ -81,7 +81,7 @@ class converter_sink(object):
         """Return a list of this repository's heads"""
         raise NotImplementedError()
 
-    def mapfile(self):
+    def revmapfile(self):
         """Path to a file that will contain lines
         source_rev_id sink_rev_id
         mapping equivalent revision identifiers for each system."""

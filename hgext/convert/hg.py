@@ -14,7 +14,7 @@ class convert_mercurial(converter_sink):
         except:
             raise NoRepo("could open hg repo %s" % path)
 
-    def mapfile(self):
+    def revmapfile(self):
         return os.path.join(self.path, ".hg", "shamap")
 
     def authorfile(self):

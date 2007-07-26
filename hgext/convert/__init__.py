@@ -41,25 +41,25 @@ def convertsink(ui, path):
     raise util.Abort('%s: unknown repository type' % path)
 
 class convert(object):
-    def __init__(self, ui, source, dest, mapfile, opts):
+    def __init__(self, ui, source, dest, revmapfile, opts):
 
         self.source = source
         self.dest = dest
         self.ui = ui
         self.opts = opts
         self.commitcache = {}
-        self.mapfile = mapfile
-        self.mapfilefd = None
+        self.revmapfile = revmapfile
+        self.revmapfilefd = None
         self.authors = {}
         self.authorfile = None
 
         self.map = {}
         try:
-            origmapfile = open(self.mapfile, 'r')
-            for l in origmapfile:
+            origrevmapfile = open(self.revmapfile, 'r')
+            for l in origrevmapfile:
                 sv, dv = l[:-1].split()
                 self.map[sv] = dv
-            origmapfile.close()
+            origrevmapfile.close()
         except IOError:
             pass
 
@@ -151,14 +151,14 @@ class convert(object):
         return s
 
     def mapentry(self, src, dst):
-        if self.mapfilefd is None:
+        if self.revmapfilefd is None:
             try:
-                self.mapfilefd = open(self.mapfile, "a")
+                self.revmapfilefd = open(self.revmapfile, "a")
             except IOError, (errno, strerror):
-                raise util.Abort("Could not open map file %s: %s, %s\n" % (self.mapfile, errno, strerror))
+                raise util.Abort("Could not open map file %s: %s, %s\n" % (self.revmapfile, errno, strerror))
         self.map[src] = dst
-        self.mapfilefd.write("%s %s\n" % (src, dst))
-        self.mapfilefd.flush()
+        self.revmapfilefd.write("%s %s\n" % (src, dst))
+        self.revmapfilefd.flush()
 
     def writeauthormap(self):
         authorfile = self.authorfile
@@ -256,10 +256,10 @@ class convert(object):
             self.cleanup()
 
     def cleanup(self):
-       if self.mapfilefd:
-           self.mapfilefd.close()
+       if self.revmapfilefd:
+           self.revmapfilefd.close()
 
-def _convert(ui, src, dest=None, mapfile=None, **opts):
+def _convert(ui, src, dest=None, revmapfile=None, **opts):
     """Convert a foreign SCM repository to a Mercurial one.
 
     Accepted source formats:
@@ -278,8 +278,8 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
     basename of the source with '-hg' appended.  If the destination
     repository doesn't exist, it will be created.
 
-    If <mapfile> isn't given, it will be put in a default location
-    (<dest>/.hg/shamap by default).  The <mapfile> is a simple text
+    If <revmapfile> isn't given, it will be put in a default location
+    (<dest>/.hg/shamap by default).  The <revmapfile> is a simple text
     file that maps each source commit ID to the destination ID for
     that revision, like so:
     <source ID> <destination ID>
@@ -334,13 +334,13 @@ def _convert(ui, src, dest=None, mapfile=None, **opts):
             shutil.rmtree(dest, True)
         raise
 
-    if not mapfile:
+    if not revmapfile:
         try:
-            mapfile = destc.mapfile()
+            revmapfile = destc.revmapfile()
         except:
-            mapfile = os.path.join(destc, "map")
+            revmapfile = os.path.join(destc, "map")
 
-    c = convert(ui, srcc, destc, mapfile, opts)
+    c = convert(ui, srcc, destc, revmapfile, opts)
     c.convert()
 
 cmdtable = {
