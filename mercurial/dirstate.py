@@ -471,20 +471,33 @@ class dirstate(object):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
+        _join = self._join
+        lstat = os.lstat
+        cmap = self._copymap
+        dmap = self._map
+        ladd = lookup.append
+        madd = modified.append
+        aadd = added.append
+        uadd = unknown.append
+        iadd = ignored.append
+        radd = removed.append
+        dadd = deleted.append
+        cadd = clean.append
+
         for src, fn, st in self.statwalk(files, match, ignored=list_ignored):
-            try:
-                type_, mode, size, time = self._map[fn]
-            except KeyError:
+            if fn in dmap:
+                type_, mode, size, time = dmap[fn]
+            else:
                 if list_ignored and self._ignore(fn):
-                    ignored.append(fn)
+                    iadd(fn)
                 else:
-                    unknown.append(fn)
+                    uadd(fn)
                 continue
             if src == 'm':
                 nonexistent = True
                 if not st:
                     try:
-                        st = os.lstat(self._join(fn))
+                        st = lstat(_join(fn))
                     except OSError, inst:
                         if inst.errno != errno.ENOENT:
                             raise
@@ -495,26 +508,26 @@ class dirstate(object):
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
                 if nonexistent and type_ in "nm":
-                    deleted.append(fn)
+                    dadd(fn)
                     continue
             # check the common case first
             if type_ == 'n':
                 if not st:
-                    st = os.lstat(self._join(fn))
+                    st = lstat(_join(fn))
                 if (size >= 0 and (size != st.st_size
                                    or (mode ^ st.st_mode) & 0100)
                     or fn in self._copymap):
-                    modified.append(fn)
+                    madd(fn)
                 elif time != int(st.st_mtime):
-                    lookup.append(fn)
+                    ladd(fn)
                 elif list_clean:
-                    clean.append(fn)
+                    cadd(fn)
             elif type_ == 'm':
-                modified.append(fn)
+                madd(fn)
             elif type_ == 'a':
-                added.append(fn)
+                aadd(fn)
             elif type_ == 'r':
-                removed.append(fn)
+                radd(fn)
 
         return (lookup, modified, added, removed, deleted, unknown, ignored,
                 clean)
