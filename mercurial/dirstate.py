@@ -306,16 +306,16 @@ class dirstate(object):
                 bs += 1
         return ret
 
-    def _supported(self, f, st, verbose=False):
-        if stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode):
+    def _supported(self, f, mode, verbose=False):
+        if stat.S_ISREG(mode) or stat.S_ISLNK(mode):
             return True
         if verbose:
             kind = 'unknown'
-            if stat.S_ISCHR(st.st_mode): kind = _('character device')
-            elif stat.S_ISBLK(st.st_mode): kind = _('block device')
-            elif stat.S_ISFIFO(st.st_mode): kind = _('fifo')
-            elif stat.S_ISSOCK(st.st_mode): kind = _('socket')
-            elif stat.S_ISDIR(st.st_mode): kind = _('directory')
+            if stat.S_ISCHR(mode): kind = _('character device')
+            elif stat.S_ISBLK(mode): kind = _('block device')
+            elif stat.S_ISFIFO(mode): kind = _('fifo')
+            elif stat.S_ISSOCK(mode): kind = _('socket')
+            elif stat.S_ISDIR(mode): kind = _('directory')
             self._ui.warn(_('%s: unsupported file type (type is %s)\n')
                           % (self.pathto(f), kind))
         return False
@@ -364,7 +364,6 @@ class dirstate(object):
         if not self._root.endswith(os.sep):
             common_prefix_len += 1
 
-        # recursion free walker, faster than os.walk.
         normpath = util.normpath
         listdir = os.listdir
         lstat = os.lstat
@@ -374,11 +373,14 @@ class dirstate(object):
         join = os.path.join
         s_isdir = stat.S_ISDIR
         supported = self._supported
+        _join = self._join
+        known = {'.hg': 1}
 
+        # recursion free walker, faster than os.walk.
         def findfiles(s):
             work = [s]
             if directories:
-                yield 'd', normpath(s[common_prefix_len:]), os.lstat(s)
+                yield 'd', normpath(s[common_prefix_len:]), lstat(s)
             while work:
                 top = work.pop()
                 names = listdir(top)
@@ -396,9 +398,10 @@ class dirstate(object):
                         if isdir(join(top, '.hg')):
                             continue
                 for f in names:
-                    np = pconvert(os.path.join(nd, f))
-                    if seen(np):
+                    np = pconvert(join(nd, f))
+                    if np in known:
                         continue
+                    known[np] = 1
                     p = join(top, f)
                     # don't trip over symlinks
                     st = lstat(p)
@@ -407,24 +410,19 @@ class dirstate(object):
                             work.append(p)
                             if directories:
                                 yield 'd', np, st
-                        if imatch(np) and np in dc:
+                        if np in dc and match(np):
                             yield 'm', np, st
                     elif imatch(np):
-                        if supported(np, st):
+                        if supported(np, st.st_mode):
                             yield 'f', np, st
                         elif np in dc:
                             yield 'm', np, st
-
-        known = {'.hg': 1}
-        def seen(fn):
-            if fn in known: return True
-            known[fn] = 1
 
         # step one, find all files that match our criteria
         files.sort()
         for ff in files:
             nf = normpath(ff)
-            f = self._join(ff)
+            f = _join(ff)
             try:
                 st = lstat(f)
             except OSError, inst:
@@ -447,8 +445,11 @@ class dirstate(object):
                 for e in sorted_:
                     yield e
             else:
-                if not seen(nf) and match(nf):
-                    if supported(ff, st, verbose=True):
+                if nf in known:
+                    continue
+                known[nf] = 1
+                if match(nf):
+                    if supported(ff, st.st_mode, verbose=True):
                         yield 'f', nf, st
                     elif ff in dc:
                         yield 'm', nf, st
@@ -458,7 +459,10 @@ class dirstate(object):
         ks = dc.keys()
         ks.sort()
         for k in ks:
-            if not seen(k) and imatch(k):
+            if k in known:
+                continue
+            known[k] = 1
+            if imatch(k):
                 yield 'm', k, None
 
     def status(self, files, match, list_ignored, list_clean):
@@ -484,7 +488,7 @@ class dirstate(object):
                             raise
                         st = None
                     # We need to re-check that it is a valid file
-                    if st and self._supported(fn, st):
+                    if st and self._supported(fn, st.st_mode):
                         nonexistent = False
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
