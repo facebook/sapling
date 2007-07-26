@@ -789,14 +789,17 @@ class localrepository(repo.repository):
                 text = self.ui.edit("\n".join(edittext), user)
                 os.chdir(olddir)
 
-            lines = [line.rstrip() for line in text.rstrip().splitlines()]
-            while lines and not lines[0]:
-                del lines[0]
-            if not lines:
-                return None
-            text = '\n'.join(lines)
             if branchname:
                 extra["branch"] = branchname
+
+            if use_dirstate:
+                lines = [line.rstrip() for line in text.rstrip().splitlines()]
+                while lines and not lines[0]:
+                    del lines[0]
+                if not lines:
+                    return None
+                text = '\n'.join(lines)
+
             n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
                                    user, date, extra)
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
