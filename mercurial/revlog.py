@@ -15,6 +15,12 @@ from i18n import _
 import binascii, changegroup, errno, ancestor, mdiff, os
 import sha, struct, util, zlib
 
+_pack = struct.pack
+_unpack = struct.unpack
+_compress = zlib.compress
+_decompress = zlib.decompress
+_sha = sha.new
+
 # revlog flags
 REVLOGV0 = 0
 REVLOGNG = 1
@@ -46,7 +52,7 @@ def hash(text, p1, p2):
     """
     l = [p1, p2]
     l.sort()
-    s = sha.new(l[0])
+    s = _sha(l[0])
     s.update(l[1])
     s.update(text)
     return s.digest()
@@ -59,7 +65,7 @@ def compress(text):
         if text[0] == '\0':
             return ("", text)
         return ('u', text)
-    bin = zlib.compress(text)
+    bin = _compress(text)
     if len(bin) > len(text):
         if text[0] == '\0':
             return ("", text)
@@ -74,7 +80,7 @@ def decompress(bin):
     if t == '\0':
         return bin
     if t == 'x':
-        return zlib.decompress(bin)
+        return _decompress(bin)
     if t == 'u':
         return bin[1:]
     raise RevlogError(_("unknown compression type %r") % t)
@@ -234,16 +240,15 @@ class lazyindex(object):
         self.p.loadindex(pos)
         return self.p.index[pos]
     def __getitem__(self, pos):
-        return struct.unpack(indexformatng,
-                             self.p.index[pos] or self.load(pos))
+        return _unpack(indexformatng, self.p.index[pos] or self.load(pos))
     def __setitem__(self, pos, item):
-        self.p.index[pos] = struct.pack(indexformatng, *item)
+        self.p.index[pos] = _pack(indexformatng, *item)
     def __delitem__(self, pos):
         del self.p.index[pos]
     def insert(self, pos, e):
-        self.p.index.insert(pos, struct.pack(indexformatng, *e))
+        self.p.index.insert(pos, _pack(indexformatng, *e))
     def append(self, e):
-        self.p.index.append(struct.pack(indexformatng, *e))
+        self.p.index.append(_pack(indexformatng, *e))
 
 class lazymap(object):
     """a lazy version of the node map"""
@@ -266,7 +271,7 @@ class lazymap(object):
                 self.p.loadindex(i)
                 ret = self.p.index[i]
             if isinstance(ret, str):
-                ret = struct.unpack(indexformatng, ret)
+                ret = _unpack(indexformatng, ret)
             yield ret[7]
     def __getitem__(self, key):
         try:
@@ -299,7 +304,7 @@ class revlogoldio(object):
         while off + s <= l:
             cur = data[off:off + s]
             off += s
-            e = struct.unpack(indexformatv0, cur)
+            e = _unpack(indexformatv0, cur)
             # transform to revlogv1 format
             e2 = (offset_type(e[0], 0), e[1], -1, e[2], e[3],
                   nodemap[e[4]], nodemap[e[5]], e[6])
@@ -312,7 +317,7 @@ class revlogoldio(object):
     def packentry(self, entry, node, version):
         e2 = (getoffset(entry[0]), entry[1], entry[3], entry[4],
               node(entry[5]), node(entry[6]), entry[7])
-        return struct.pack(indexformatv0, *e2)
+        return _pack(indexformatv0, *e2)
 
 # index ng:
 # 6 bytes offset
@@ -357,12 +362,11 @@ class revlogio(object):
         # if we're not using lazymap, always read the whole index
         data = fp.read()
         l = len(data) - s
-        unpack = struct.unpack
         append = index.append
         if inline:
             cache = (0, data)
             while off <= l:
-                e = unpack(indexformatng, data[off:off + s])
+                e = _unpack(indexformatng, data[off:off + s])
                 nodemap[e[7]] = n
                 append(e)
                 n += 1
@@ -371,7 +375,7 @@ class revlogio(object):
                 off += e[1] + s
         else:
             while off <= l:
-                e = unpack(indexformatng, data[off:off + s])
+                e = _unpack(indexformatng, data[off:off + s])
                 nodemap[e[7]] = n
                 append(e)
                 n += 1
@@ -385,9 +389,9 @@ class revlogio(object):
         return index, nodemap, cache
 
     def packentry(self, entry, node, version):
-        p = struct.pack(indexformatng, *entry)
+        p = _pack(indexformatng, *entry)
         if not entry[3] and not getoffset(entry[0]) and entry[5] == nullrev:
-            p = struct.pack(versionformat, version) + p[4:]
+            p = _pack(versionformat, version) + p[4:]
         return p
 
 class revlog(object):
