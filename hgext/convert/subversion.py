@@ -36,6 +36,11 @@ try:
 except ImportError:
     pass
 
+def geturl(path):
+    if os.path.isdir(path):
+        return 'file://%s' % os.path.normpath(os.path.abspath(path))
+    return path
+
 class CompatibilityException(Exception): pass
 
 class changedpath(object):
@@ -74,10 +79,10 @@ class convert_svn(converter_source):
                 url = url[:at]
         except ValueError, e:
             pass
-        self.url = url
+        self.url = geturl(url)
         self.encoding = 'UTF-8' # Subversion is always nominal UTF-8
         try:
-            self.transport = transport.SvnRaTransport(url=url)
+            self.transport = transport.SvnRaTransport(url=self.url)
             self.ra = self.transport.ra
             self.ctx = self.transport.client
             self.base = svn.ra.get_repos_root(self.ra)
