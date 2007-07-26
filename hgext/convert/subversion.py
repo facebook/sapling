@@ -39,8 +39,7 @@ except ImportError:
 
 def geturl(path):
     try:
-        #extract URL from working directory
-        return svn.client.url_from_path(path)
+        return svn.client.url_from_path(svn.core.svn_path_canonicalize(path))
     except SubversionException:
         pass
     if os.path.isdir(path):
