@@ -22,11 +22,9 @@ converters = [convert_cvs, convert_git, convert_svn, mercurial_source,
 
 def convertsource(ui, path, **opts):
     for c in converters:
-        if not hasattr(c, 'getcommit'):
-            continue
         try:
-            return c(ui, path, **opts)
-        except NoRepo:
+            return c.getcommit and c(ui, path, **opts)
+        except (AttributeError, NoRepo):
             pass
     raise util.Abort('%s: unknown repository type' % path)
 
@@ -34,11 +32,9 @@ def convertsink(ui, path):
     if not os.path.isdir(path):
         raise util.Abort("%s: not a directory" % path)
     for c in converters:
-        if not hasattr(c, 'putcommit'):
-            continue
         try:
-            return c(ui, path)
-        except NoRepo:
+            return c.putcommit and c(ui, path)
+        except (AttributeError, NoRepo):
             pass
     raise util.Abort('%s: unknown repository type' % path)
 
