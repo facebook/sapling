@@ -509,7 +509,7 @@ class revlog(object):
     def parentrevs(self, rev):
         return self.index[rev][5:7]
     def start(self, rev):
-        return getoffset(self.index[rev][0])
+        return int(self.index[rev][0] >> 16)
     def end(self, rev):
         return self.start(rev) + self.length(rev)
     def length(self, rev):
@@ -845,12 +845,7 @@ class revlog(object):
         return hash(text, p1, p2) != node
 
     def chunk(self, rev, df=None):
-        start, length = self.start(rev), self.length(rev)
-        if self._inline:
-            start += (rev + 1) * self._io.size
-        end = start + length
         def loadcache(df):
-            cache_length = max(65536, length)
             if not df:
                 if self._inline:
                     df = self.opener(self.indexfile)
@@ -859,21 +854,29 @@ class revlog(object):
             df.seek(start)
             self._chunkcache = (start, df.read(cache_length))
 
-        if not self._chunkcache:
-            loadcache(df)
+        start, length = self.start(rev), self.length(rev)
+        if self._inline:
+            start += (rev + 1) * self._io.size
+        end = start + length
 
-        cache_start = self._chunkcache[0]
-        cache_end = cache_start + len(self._chunkcache[1])
-        if start >= cache_start and end <= cache_end:
-            # it is cached
-            offset = start - cache_start
-        else:
+        offset = 0
+        if not self._chunkcache:
+            cache_length = max(65536, length)
             loadcache(df)
-            offset = 0
+        else:
+            cache_start = self._chunkcache[0]
+            cache_length = len(self._chunkcache[1])
+            cache_end = cache_start + cache_length
+            if start >= cache_start and end <= cache_end:
+                # it is cached
+                offset = start - cache_start
+            else:
+                cache_length = max(65536, length)
+                loadcache(df)
 
         # avoid copying large chunks
         c = self._chunkcache[1]
-        if len(c) > length:
+        if cache_length != length:
             c = c[offset:offset + length]
 
         return decompress(c)
