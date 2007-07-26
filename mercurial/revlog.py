@@ -29,8 +29,6 @@ class LookupError(RevlogError):
     pass
 
 def getoffset(q):
-    if q & 0xFFFF:
-        raise RevlogError(_('incompatible revision flag %x') % q)
     return int(q >> 16)
 
 def gettype(q):
@@ -906,6 +904,10 @@ class revlog(object):
         text = None
         rev = self.rev(node)
         base = self.base(rev)
+
+        # check rev flags
+        if self.index[rev][0] & 0xFFFF:
+            raise RevlogError(_('incompatible revision flag %x') % q)
 
         if self._inline:
             # we probably have the whole chunk cached
