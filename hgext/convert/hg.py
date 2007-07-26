@@ -41,7 +41,7 @@ class mercurial_sink(converter_sink):
 
     def getheads(self):
         h = self.repo.changelog.heads()
-        return [ hg.hex(x) for x in h ]
+        return [ hex(x) for x in h ]
 
     def putfile(self, f, e, data):
         self.repo.wwrite(f, data, e)
@@ -85,7 +85,7 @@ class mercurial_sink(converter_sink):
             p1 = p2
             p2 = parents.pop(0)
             a = self.repo.rawcommit(files, text, commit.author, commit.date,
-                                    hg.bin(p1), hg.bin(p2), extra=extra)
+                                    bin(p1), bin(p2), extra=extra)
             self.repo.dirstate.invalidate()
             text = "(octopus merge fixup)\n"
             p2 = hg.hex(self.repo.changelog.tip())
@@ -116,8 +116,8 @@ class mercurial_sink(converter_sink):
             if not oldlines: self.repo.add([".hgtags"])
             date = "%s 0" % int(time.mktime(time.gmtime()))
             self.repo.rawcommit([".hgtags"], "update tags", "convert-repo",
-                                date, self.repo.changelog.tip(), hg.nullid)
-            return hg.hex(self.repo.changelog.tip())
+                                date, self.repo.changelog.tip(), nullid)
+            return hex(self.repo.changelog.tip())
 
 class mercurial_source(converter_source):
     def __init__(self, ui, path, rev=None):
