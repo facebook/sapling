@@ -59,7 +59,10 @@ class mercurial_sink(converter_sink):
             pass
 
     def putcommit(self, files, parents, commit):
-        seen = {}
+        if not files:
+            return hex(self.repo.changelog.tip())
+
+        seen = {hex(nullid): 1}
         pl = []
         for p in parents:
             if p not in seen:
