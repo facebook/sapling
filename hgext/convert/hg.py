@@ -8,8 +8,9 @@
 
 
 import os, time
+from mercurial.i18n import _
 from mercurial.node import *
-from mercurial import hg, revlog, util
+from mercurial import hg, lock, revlog, util
 
 from common import NoRepo, commit, converter_source, converter_sink
 
@@ -21,6 +22,16 @@ class mercurial_sink(converter_sink):
             self.repo = hg.repository(self.ui, path)
         except:
             raise NoRepo("could not open hg repo %s as sink" % path)
+        self.lock = None
+        self.wlock = None
+
+    def before(self):
+        self.lock = self.repo.lock()
+        self.wlock = self.repo.wlock()
+
+    def after(self):
+        self.lock = None
+        self.wlock = None
 
     def revmapfile(self):
         return os.path.join(self.path, ".hg", "shamap")
@@ -72,6 +83,7 @@ class mercurial_sink(converter_sink):
             p2 = parents.pop(0)
             a = self.repo.rawcommit(files, text, commit.author, commit.date,
                                     hg.bin(p1), hg.bin(p2), extra=extra)
+            self.repo.dirstate.invalidate()
             text = "(octopus merge fixup)\n"
             p2 = hg.hex(self.repo.changelog.tip())
 

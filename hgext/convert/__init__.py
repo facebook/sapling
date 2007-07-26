@@ -217,6 +217,7 @@ class convert(object):
 
     def convert(self):
         try:
+            self.dest.before()
             self.source.setrevmap(self.map)
             self.ui.status("scanning source...\n")
             heads = self.source.getheads()
@@ -257,8 +258,9 @@ class convert(object):
             self.cleanup()
 
     def cleanup(self):
-       if self.revmapfilefd:
-           self.revmapfilefd.close()
+        self.dest.after()
+        if self.revmapfilefd:
+            self.revmapfilefd.close()
 
 def _convert(ui, src, dest=None, revmapfile=None, **opts):
     """Convert a foreign SCM repository to a Mercurial one.
