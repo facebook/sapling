@@ -3,16 +3,20 @@
 class NoRepo(Exception): pass
 
 class commit(object):
-    def __init__(self, **parts):
+    def __init__(self, author, date, desc, parents, branch=None, rev=None,
+                 copies={}):
         self.rev = None
         self.branch = None
-
-        for x in "author date desc parents".split():
-            if not x in parts:
-                raise util.Abort("commit missing field %s" % x)
-        self.__dict__.update(parts)
-        if not self.desc or self.desc.isspace():
+        self.author = author
+        self.date = date
+        if desc and not desc.isspace():
+            self.desc = desc
+        else:
             self.desc = '*** empty log message ***'
+        self.parents = parents
+        self.branch = branch
+        self.rev = rev
+        self.copies = copies
 
 class converter_source(object):
     """Conversion source interface"""
@@ -81,7 +85,7 @@ class converter_sink(object):
         """Return a list of this repository's heads"""
         raise NotImplementedError()
 
-    def mapfile(self):
+    def revmapfile(self):
         """Path to a file that will contain lines
         source_rev_id sink_rev_id
         mapping equivalent revision identifiers for each system."""
