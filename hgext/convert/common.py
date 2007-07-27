@@ -9,10 +9,7 @@ class commit(object):
         self.branch = None
         self.author = author
         self.date = date
-        if desc and not desc.isspace():
-            self.desc = desc
-        else:
-            self.desc = '*** empty log message ***'
+        self.desc = desc
         self.parents = parents
         self.branch = branch
         self.rev = rev
