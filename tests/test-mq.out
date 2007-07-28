@@ -360,6 +360,16 @@ new file mode 100644
 @@ -0,0 +1,1 @@
 +bar
 3 barney (foo)
+% create a git patch
+diff --git a/alexander b/alexander
+% create a git binary patch
+8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
+diff --git a/bucephalus b/bucephalus
+% check binary patches can be popped and pushed
+Now at: addalexander
+applying addbucephalus
+Now at: addbucephalus
+8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
 % strip again
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 merging foo

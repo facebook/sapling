@@ -338,6 +338,33 @@ hg qrefresh --git
 cat .hg/patches/bar
 hg log -vC --template '{rev} {file_copies%filecopy}\n' -r .
 
+echo % create a git patch
+echo a > alexander
+hg add alexander
+hg qnew -f --git addalexander
+cat .hg/patches/addalexander | grep diff
+
+echo % create a git binary patch
+cat > writebin.py <<EOF
+import sys
+path = sys.argv[1]
+open(path, 'wb').write('BIN\x00ARY')
+EOF
+python writebin.py bucephalus
+
+python "$TESTDIR/md5sum.py" bucephalus
+hg add bucephalus
+hg qnew -f --git addbucephalus
+cat .hg/patches/addbucephalus | grep diff
+
+echo % check binary patches can be popped and pushed
+hg qpop
+! test -f bucephalus || echo % bucephalus should not be there
+hg qpush
+test -f bucephalus || echo % bucephalus should be there
+python "$TESTDIR/md5sum.py" bucephalus
+
+
 echo '% strip again'
 cd ..
 hg init strip
