@@ -635,7 +635,7 @@ class queue:
             r = self.qrepo()
             if r: r.add([patch])
             if commitfiles:
-                self.refresh(repo, short=True)
+                self.refresh(repo, short=True, git=opts.get('git'))
             self.removeundo(repo)
         finally:
             del wlock
@@ -2183,6 +2183,7 @@ cmdtable = {
         (new,
          [('e', 'edit', None, _('edit commit message')),
           ('f', 'force', None, _('import uncommitted changes into patch')),
+          ('g', 'git', None, _('use git extended diff format')),
           ('I', 'include', [], _('include names matching the given patterns')),
           ('X', 'exclude', [], _('exclude names matching the given patterns')),
           ] + commands.commitopts,
