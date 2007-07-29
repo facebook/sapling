@@ -17,5 +17,5 @@ echo a >> a
 hg ci -d'4 0' -me
 
 cd ..
-hg convert a
+hg convert a 2>&1 | grep -v 'subversion python bindings could not be loaded'
 hg --cwd a-hg pull ../a
