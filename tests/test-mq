@@ -342,7 +342,7 @@ echo % create a git patch
 echo a > alexander
 hg add alexander
 hg qnew -f --git addalexander
-cat .hg/patches/addalexander | grep diff
+grep diff .hg/patches/addalexander
 
 echo % create a git binary patch
 cat > writebin.py <<EOF
@@ -355,11 +355,11 @@ python writebin.py bucephalus
 python "$TESTDIR/md5sum.py" bucephalus
 hg add bucephalus
 hg qnew -f --git addbucephalus
-cat .hg/patches/addbucephalus | grep diff
+grep diff .hg/patches/addbucephalus
 
 echo % check binary patches can be popped and pushed
 hg qpop
-! test -f bucephalus || echo % bucephalus should not be there
+test -f bucephalus && echo % bucephalus should not be there
 hg qpush
 test -f bucephalus || echo % bucephalus should be there
 python "$TESTDIR/md5sum.py" bucephalus
