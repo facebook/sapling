@@ -24,7 +24,11 @@ def find(name):
         raise KeyError(name)
 
 def load(ui, name, path):
-    if name in _extensions:
+    if name.startswith('hgext.'):
+        shortname = name[6:]
+    else:
+        shortname = name
+    if shortname in _extensions:
         return
     if path:
         # the module will be loaded in sys.modules
@@ -49,7 +53,7 @@ def load(ui, name, path):
             mod = importh("hgext.%s" % name)
         except ImportError:
             mod = importh(name)
-    _extensions[name] = mod
+    _extensions[shortname] = mod
 
     uisetup = getattr(mod, 'uisetup', None)
     if uisetup:
