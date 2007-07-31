@@ -142,7 +142,7 @@ GP_PATCH  = 1 << 0  # we have to run patch
 GP_FILTER = 1 << 1  # there's some copy/rename operation
 GP_BINARY = 1 << 2  # there's a binary patch
 
-def readgitpatch(fp, firstline):
+def readgitpatch(fp, firstline=None):
     """extract git-style metadata about patches from <patchname>"""
     class gitpatch:
         "op is one of ADD, DELETE, RENAME, MODIFY or COPY"
@@ -156,7 +156,8 @@ def readgitpatch(fp, firstline):
             self.binary = False
 
     def reader(fp, firstline):
-        yield firstline
+        if firstline is not None:
+            yield firstline
         for line in fp:
             yield line
 
@@ -278,10 +279,13 @@ def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
                          util.explain_exit(code)[0])
     return fuzz
 
-def internalpatch(patchname, ui, strip, cwd, files):
-    """use builtin patch to apply <patchname> to the working directory.
+def internalpatch(patchobj, ui, strip, cwd, files={}):
+    """use builtin patch to apply <patchobj> to the working directory.
     returns whether patch was applied with fuzz factor."""
-    fp = file(patchname, 'rb')
+    try:
+        fp = file(patchobj, 'rb')
+    except TypeError:
+        fp = patchobj
     if cwd:
         curdir = os.getcwd()
         os.chdir(cwd)
