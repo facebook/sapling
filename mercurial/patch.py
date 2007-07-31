@@ -1057,7 +1057,7 @@ def updatedir(ui, repo, patches):
 
     return files
 
-def b85diff(fp, to, tn):
+def b85diff(to, tn):
     '''print base85-encoded binary diff'''
     def gitindex(text):
         if not text:
@@ -1244,7 +1244,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             header.insert(0, 'diff --git a/%s b/%s\n' % (a, b))
         if dodiff:
             if dodiff == 'binary':
-                text = b85diff(fp, to, tn)
+                text = b85diff(to, tn)
             else:
                 text = mdiff.unidiff(to, date1,
                                     # ctx2 date may be dynamic
