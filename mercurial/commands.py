@@ -8,7 +8,7 @@
 import demandimport; demandimport.enable()
 from node import *
 from i18n import _
-import bisect, os, re, sys, urllib, stat
+import os, re, sys, urllib
 import ui, hg, util, revlog, bundlerepo, extensions
 import difflib, patch, time, help, mdiff, tempfile
 import errno, version, socket
@@ -428,46 +428,10 @@ def commit(ui, repo, *pats, **opts):
     If no commit message is specified, the editor configured in your hgrc
     or in the EDITOR environment variable is started to enter a message.
     """
-    message = cmdutil.logmessage(opts)
-
-    if opts['addremove']:
-        cmdutil.addremove(repo, pats, opts)
-    fns, match, anypats = cmdutil.matchpats(repo, pats, opts)
-    if pats:
-        status = repo.status(files=fns, match=match)
-        modified, added, removed, deleted, unknown = status[:5]
-        files = modified + added + removed
-        slist = None
-        for f in fns:
-            if f == '.':
-                continue
-            if f not in files:
-                rf = repo.wjoin(f)
-                try:
-                    mode = os.lstat(rf)[stat.ST_MODE]
-                except OSError:
-                    raise util.Abort(_("file %s not found!") % rf)
-                if stat.S_ISDIR(mode):
-                    name = f + '/'
-                    if slist is None:
-                        slist = list(files)
-                        slist.sort()
-                    i = bisect.bisect(slist, name)
-                    if i >= len(slist) or not slist[i].startswith(name):
-                        raise util.Abort(_("no match under directory %s!")
-                                         % rf)
-                elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
-                    raise util.Abort(_("can't commit %s: "
-                                       "unsupported file type!") % rf)
-                elif f not in repo.dirstate:
-                    raise util.Abort(_("file %s not tracked!") % rf)
-    else:
-        files = []
-    try:
-        repo.commit(files, message, opts['user'], opts['date'], match,
-                    force_editor=opts.get('force_editor'))
-    except ValueError, inst:
-        raise util.Abort(str(inst))
+    def commitfunc(ui, repo, files, message, match, opts):
+        return repo.commit(files, message, opts['user'], opts['date'], match,
+                           force_editor=opts.get('force_editor'))
+    cmdutil.commit(ui, repo, commitfunc, pats, opts)
 
 def docopy(ui, repo, pats, opts):
     # called with the repo lock held

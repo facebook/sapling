@@ -8,6 +8,7 @@
 from node import *
 from i18n import _
 import os, sys, atexit, signal, pdb, traceback, socket, errno, shlex
+import bisect, stat
 import mdiff, bdiff, util, templater, patch, commands, hg, lock, time
 import fancyopts, revlog, version, extensions, hook
 
@@ -1275,3 +1276,45 @@ def walkchangerevs(ui, repo, pats, change, opts):
             for rev in nrevs:
                 yield 'iter', rev, None
     return iterate(), matchfn
+
+def commit(ui, repo, commitfunc, pats, opts):
+    '''commit the specified files or all outstanding changes'''
+    message = logmessage(opts)
+
+    if opts['addremove']:
+        addremove(repo, pats, opts)
+    fns, match, anypats = matchpats(repo, pats, opts)
+    if pats:
+        status = repo.status(files=fns, match=match)
+        modified, added, removed, deleted, unknown = status[:5]
+        files = modified + added + removed
+        slist = None
+        for f in fns:
+            if f == '.':
+                continue
+            if f not in files:
+                rf = repo.wjoin(f)
+                try:
+                    mode = os.lstat(rf)[stat.ST_MODE]
+                except OSError:
+                    raise util.Abort(_("file %s not found!") % rf)
+                if stat.S_ISDIR(mode):
+                    name = f + '/'
+                    if slist is None:
+                        slist = list(files)
+                        slist.sort()
+                    i = bisect.bisect(slist, name)
+                    if i >= len(slist) or not slist[i].startswith(name):
+                        raise util.Abort(_("no match under directory %s!")
+                                         % rf)
+                elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
+                    raise util.Abort(_("can't commit %s: "
+                                       "unsupported file type!") % rf)
+                elif f not in repo.dirstate:
+                    raise util.Abort(_("file %s not tracked!") % rf)
+    else:
+        files = []
+    try:
+        return commitfunc(ui, repo, files, message, match, opts)
+    except ValueError, inst:
+        raise util.Abort(str(inst))
