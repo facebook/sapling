@@ -24,6 +24,8 @@ def updateconfig(source, dest, sections=None):
             dest.set(section, name, value)
 
 class ui(object):
+    _isatty = None
+
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True, traceback=False, report_untrusted=True,
                  parentui=None):
@@ -61,6 +63,11 @@ class ui(object):
 
     def __getattr__(self, key):
         return getattr(self.parentui, key)
+
+    def isatty(self):
+        if ui._isatty is None:
+            ui._isatty = os.isatty(sys.stdin.fileno())
+        return ui._isatty
 
     def updateopts(self, verbose=False, debug=False, quiet=False,
                    interactive=True, traceback=False, config=[]):
@@ -204,7 +211,9 @@ class ui(object):
             if name is None or name in ('quiet', 'verbose', 'debug'):
                 self.verbosity_constraints()
             if name is None or name == 'interactive':
-                self.interactive = self.configbool("ui", "interactive", True)
+                self.interactive = self.configbool("ui", "interactive", None)
+                if self.interactive is None:
+                    self.interactive = self.isatty()
             if name is None or name == 'report_untrusted':
                 self.report_untrusted = (
                     self.configbool("ui", "report_untrusted", True))
@@ -382,17 +391,29 @@ class ui(object):
         try: sys.stderr.flush()
         except: pass
 
-    def readline(self):
-        return sys.stdin.readline()[:-1]
+    def readline(self, prompt=''):
+        if self.isatty():
+            try:
+                # magically add command line editing support, where
+                # available
+                import readline
+                # force demandimport to really load the module
+                readline.read_history_file
+            except ImportError:
+                pass
+        return raw_input(prompt)
+
     def prompt(self, msg, pat=None, default="y"):
         if not self.interactive: return default
-        while 1:
-            self.write(msg, " ")
-            r = self.readline()
+        try:
+            r = self.readline(msg + ' ')
             if not pat or re.match(pat, r):
                 return r
             else:
                 self.write(_("unrecognized response\n"))
+        except EOFError:
+            raise util.Abort(_('response expected'))
+
     def getpass(self, prompt=None, default=None):
         if not self.interactive: return default
         return getpass.getpass(prompt or _('password: '))
