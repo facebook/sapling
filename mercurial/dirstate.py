@@ -191,13 +191,14 @@ class dirstate(object):
             raise util.Abort(_("'\\n' and '\\r' disallowed in filenames"))
         # shadows
         if f in self._dirs:
-            raise util.Abort(_('directory named %r already in dirstate') % f)
+            raise util.Abort(_('directory %r already in dirstate') % f)
         for c in strutil.rfindall(f, '/'):
             d = f[:c]
             if d in self._dirs:
                 break
             if d in self._map:
-                raise util.Abort(_('file named %r already in dirstate') % d)
+                raise util.Abort(_('file %r in dirstate clashes with %r') %
+                                 (d, f))
         self._incpath(f)
 
     def normal(self, f):
