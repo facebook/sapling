@@ -46,8 +46,6 @@ def geturl(path):
         return 'file://%s' % os.path.normpath(os.path.abspath(path))
     return path
 
-class CompatibilityException(Exception): pass
-
 class changedpath(object):
     def __init__(self, p):
         self.copyfrom_path = p.copyfrom_path
@@ -626,52 +624,9 @@ class convert_svn(converter_source):
         return data, mode
 
     def _find_children(self, path, revnum):
-        path = path.strip("/")
-
-        def _find_children_fallback(path, revnum):
-            # SWIG python bindings for getdir are broken up to at least 1.4.3
-            pool = Pool()
-            optrev = svn.core.svn_opt_revision_t()
-            optrev.kind = svn.core.svn_opt_revision_number
-            optrev.value.number = revnum
-            rpath = '/'.join([self.base, path]).strip('/')
-            return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev, True, self.ctx, pool).keys()]
-
-        if hasattr(self, '_find_children_fallback'):
-            return _find_children_fallback(path, revnum)
-
-        self.reparent("/" + path)
         pool = Pool()
-
-        children = []
-        def find_children_inner(children, path, revnum = revnum):
-            if hasattr(svn.ra, 'get_dir2'): # Since SVN 1.4
-                fields = 0xffffffff # Binding does not provide SVN_DIRENT_ALL
-                getdir = svn.ra.get_dir2(self.ra, path, revnum, fields, pool)
-            else:
-                getdir = svn.ra.get_dir(self.ra, path, revnum, pool)
-            if type(getdir) == dict:
-                # python binding for getdir is broken up to at least 1.4.3
-                raise CompatibilityException()
-            dirents = getdir[0]
-            if type(dirents) == int:
-                # got here once due to infinite recursion bug
-                return
-            c = dirents.keys()
-            c.sort()
-            for child in c:
-                dirent = dirents[child]
-                if dirent.kind == svn.core.svn_node_dir:
-                    find_children_inner(children, (path + "/" + child).strip("/"))
-                else:
-                    children.append((path + "/" + child).strip("/"))
-
-        try:
-            find_children_inner(children, "")
-        except CompatibilityException:
-            self._find_children_fallback = True
-            self.reparent(self.module)
-            return _find_children_fallback(path, revnum)
-
-        self.reparent(self.module)
-        return [path + "/" + c for c in children]
+        optrev = svn.core.svn_opt_revision_t()
+        optrev.kind = svn.core.svn_opt_revision_number
+        optrev.value.number = revnum
+        rpath = '/'.join([self.base, path.strip('/')]).strip('/')
+        return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev, True, self.ctx, pool).keys()]
