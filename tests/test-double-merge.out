@@ -1,0 +1,20 @@
+resolving manifests
+ overwrite None partial False
+ ancestor 310fd17130da local 2092631ce82b+ remote 7731dad1c2b9
+ foo: versions differ -> m
+ foo: remote copied to bar -> m
+copying foo to bar
+merging foo and bar
+my foo@2092631ce82b+ other bar@7731dad1c2b9 ancestor foo@310fd17130da
+merging foo
+my foo@2092631ce82b+ other foo@7731dad1c2b9 ancestor foo@310fd17130da
+0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+-- foo --
+line 0
+line 1
+line 2-1
+-- bar --
+line 0
+line 1
+line 2-2
