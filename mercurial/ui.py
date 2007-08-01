@@ -66,7 +66,7 @@ class ui(object):
 
     def isatty(self):
         if ui._isatty is None:
-            ui._isatty = os.isatty(sys.stdin.fileno())
+            ui._isatty = sys.stdin.isatty()
         return ui._isatty
 
     def updateopts(self, verbose=False, debug=False, quiet=False,
