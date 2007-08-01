@@ -24,6 +24,7 @@ class mercurial_sink(converter_sink):
             raise NoRepo("could not open hg repo %s as sink" % path)
         self.lock = None
         self.wlock = None
+        self.branchnames = ui.configbool('convert', 'hg.usebranchnames', True)
 
     def before(self):
         self.lock = self.repo.lock()
@@ -76,7 +77,7 @@ class mercurial_sink(converter_sink):
 
         text = commit.desc
         extra = {}
-        if commit.branch:
+        if self.branchnames and commit.branch:
             extra['branch'] = commit.branch
         if commit.rev:
             extra['convert_revision'] = commit.rev
