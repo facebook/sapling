@@ -1,5 +1,5 @@
 % help
-hg record [FILE]...
+hg record [OPTION]... [FILE]...
 
 interactively select changes to commit
 

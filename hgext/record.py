@@ -371,11 +371,12 @@ def record(ui, repo, *pats, **opts):
     return cmdutil.commit(ui, repo, recordfunc, pats, opts)
 
 cmdtable = {
-    'record':
-    (record, [('A', 'addremove', None,
-               _('mark new/missing files as added/removed before committing')),
-              ('d', 'date', '', _('record datecode as commit date')),
-              ('u', 'user', '', _('record user as commiter')),
-              ] + commands.walkopts + commands.commitopts,
-     _('hg record [FILE]...')),
-    }
+    "record":
+        (record,
+         [('A', 'addremove', None,
+           _('mark new/missing files as added/removed before committing')),
+          ('d', 'date', '', _('record datecode as commit date')),
+          ('u', 'user', '', _('record user as commiter')),
+         ] + commands.walkopts + commands.commitopts,
+         _('hg record [OPTION]... [FILE]...')),
+}
