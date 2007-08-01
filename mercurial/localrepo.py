@@ -651,11 +651,11 @@ class localrepository(repo.repository):
         if p1 is None:
             p1, p2 = self.dirstate.parents()
         return self.commit(files=files, text=text, user=user, date=date,
-                           p1=p1, p2=p2, extra=extra)
+                           p1=p1, p2=p2, extra=extra, empty_ok=True)
 
     def commit(self, files=None, text="", user=None, date=None,
                match=util.always, force=False, force_editor=False,
-               p1=None, p2=None, extra={}):
+               p1=None, p2=None, extra={}, empty_ok=False):
         wlock = lock = tr = None
         try:
             commit = []
@@ -768,7 +768,7 @@ class localrepository(repo.repository):
             new.sort()
 
             user = user or self.ui.username()
-            if not text or force_editor:
+            if (not empty_ok and not text) or force_editor:
                 edittext = []
                 if text:
                     edittext.append(text)
