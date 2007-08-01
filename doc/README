@@ -18,4 +18,6 @@ To display:
 
 To create the html page (without stylesheets):
 
- asciidoc -b html hg.1.txt
+ asciidoc -b html4 hg.1.txt
+
+(older asciidoc may want html instead of html4 above)
