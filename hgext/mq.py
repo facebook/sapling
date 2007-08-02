@@ -455,7 +455,7 @@ class queue:
                     repo.dirstate.invalidate()
                 raise
         finally:
-            del lock, wlock, tr
+            del tr, lock, wlock
 
     def _apply(self, repo, series, list=False, update_status=True,
                strict=False, patchdir=None, merge=None, all_files={}):

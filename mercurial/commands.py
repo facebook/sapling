@@ -1623,7 +1623,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             finally:
                 os.unlink(tmpname)
     finally:
-        del wlock, lock
+        del lock, wlock
 
 def incoming(ui, repo, source="default", **opts):
     """show new changesets found in source

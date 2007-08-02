@@ -544,7 +544,7 @@ class localrepository(repo.repository):
             else:
                 self.ui.warn(_("no rollback information available\n"))
         finally:
-            del wlock, lock
+            del lock, wlock
 
     def invalidate(self):
         for a in "changelog manifest".split():
@@ -820,7 +820,7 @@ class localrepository(repo.repository):
             self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
             return n
         finally:
-            del lock, wlock, tr
+            del tr, lock, wlock
 
     def walk(self, node=None, files=[], match=util.always, badmatch=None):
         '''
