@@ -92,16 +92,18 @@ class Imerge(object):
 
         if not os.path.isdir(self.path):
             os.mkdir(self.path)
-        fd = self.opener('status', 'wb')
+        statusfile = self.opener('status', 'wb')
 
         out = [hex(n.node()) for n in self.parents]
         out.append(str(len(self.conflicts)))
-        for f in sorted(self.conflicts):
-            out.append(f)
-            out.extend(self.conflicts[f])
+        conflicts = self.conflicts.items()
+        conflicts.sort()
+        for fw, fd_fo in conflicts:
+            out.append(fw)
+            out.extend(fd_fo)
         out.extend(self.resolved)
 
-        fd.write('\0'.join(out))
+        statusfile.write('\0'.join(out))
 
     def remaining(self):
         return [f for f in self.conflicts if f not in self.resolved]
@@ -164,7 +166,8 @@ class Imerge(object):
             if fn not in self.conflicts:
                 raise util.Abort('%s is not in the merge set' % fn)
             resolved[fn] = True
-        self.resolved = sorted(resolved)
+        self.resolved = resolved.keys()
+        self.resolved.sort()
         self.save()
         return 0
 
@@ -174,7 +177,8 @@ class Imerge(object):
             if fn not in resolved:
                 raise util.Abort('%s is not resolved' % fn)
             del resolved[fn]
-        self.resolved = sorted(resolved)
+        self.resolved = resolved.keys()
+        self.resolved.sort()
         self.save()
         return 0
 
@@ -264,7 +268,8 @@ def dispatch(im, args, opts):
     if not cmd:
         raise cmdutil.UnknownCommand('imerge ' + c)
     if len(cmd) > 1:
-        raise cmdutil.AmbiguousCommand('imerge ' + c, sorted(cmd))
+        cmd.sort()
+        raise cmdutil.AmbiguousCommand('imerge ' + c, cmd)
     cmd = cmd[0]
 
     func = subcmdtable[cmd]
