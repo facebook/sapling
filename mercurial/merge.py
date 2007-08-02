@@ -9,10 +9,11 @@ from node import *
 from i18n import _
 import errno, util, os, tempfile, context
 
-def filemerge(repo, fw, fo, wctx, mctx):
+def filemerge(repo, fw, fd, fo, wctx, mctx):
     """perform a 3-way merge in the working directory
 
-    fw = filename in the working directory
+    fw = original filename in the working directory
+    fd = destination filename in the working directory
     fo = filename in other parent
     wctx, mctx = working and merge changecontexts
     """
@@ -27,15 +28,16 @@ def filemerge(repo, fw, fo, wctx, mctx):
         return name
 
     fcm = wctx.filectx(fw)
+    fcmdata = wctx.filectx(fd).data()
     fco = mctx.filectx(fo)
 
-    if not fco.cmp(fcm.data()): # files identical?
+    if not fco.cmp(fcmdata): # files identical?
         return None
 
     fca = fcm.ancestor(fco)
     if not fca:
         fca = repo.filectx(fw, fileid=nullrev)
-    a = repo.wjoin(fw)
+    a = repo.wjoin(fd)
     b = temp("base", fca)
     c = temp("other", fco)
 
@@ -49,11 +51,11 @@ def filemerge(repo, fw, fo, wctx, mctx):
     cmd = (os.environ.get("HGMERGE") or repo.ui.config("ui", "merge")
            or "hgmerge")
     r = util.system('%s "%s" "%s" "%s"' % (cmd, a, b, c), cwd=repo.root,
-                    environ={'HG_FILE': fw,
+                    environ={'HG_FILE': fd,
                              'HG_MY_NODE': str(wctx.parents()[0]),
                              'HG_OTHER_NODE': str(mctx)})
     if r:
-        repo.ui.warn(_("merging %s failed!\n") % fw)
+        repo.ui.warn(_("merging %s failed!\n") % fd)
 
     os.unlink(b)
     os.unlink(c)
@@ -380,6 +382,15 @@ def applyupdates(repo, action, wctx, mctx):
 
     updated, merged, removed, unresolved = 0, 0, 0, 0
     action.sort()
+    # prescan for copy/renames
+    for a in action:
+        f, m = a[:2]
+        if m == 'm': # merge
+            f2, fd, flags, move = a[2:]
+            if f != fd:
+                repo.ui.debug(_("copying %s to %s\n") % (f, fd))
+                repo.wwrite(fd, repo.wread(f), flags)
+
     for a in action:
         f, m = a[:2]
         if f and f[0] == "/":
@@ -396,7 +407,7 @@ def applyupdates(repo, action, wctx, mctx):
             removed += 1
         elif m == "m": # merge
             f2, fd, flags, move = a[2:]
-            r = filemerge(repo, f, f2, wctx, mctx)
+            r = filemerge(repo, f, fd, f2, wctx, mctx)
             if r > 0:
                 unresolved += 1
             else:
@@ -404,12 +415,9 @@ def applyupdates(repo, action, wctx, mctx):
                     updated += 1
                 else:
                     merged += 1
-            if f != fd:
-                repo.ui.debug(_("copying %s to %s\n") % (f, fd))
-                repo.wwrite(fd, repo.wread(f), flags)
-                if move:
-                    repo.ui.debug(_("removing %s\n") % f)
-                    os.unlink(repo.wjoin(f))
+            if f != fd and move:
+                repo.ui.debug(_("removing %s\n") % f)
+                os.unlink(repo.wjoin(f))
             util.set_exec(repo.wjoin(fd), "x" in flags)
         elif m == "g": # get
             flags = a[2]
