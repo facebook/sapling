@@ -27,8 +27,8 @@ class mercurial_sink(converter_sink):
         self.branchnames = ui.configbool('convert', 'hg.usebranchnames', True)
 
     def before(self):
-        self.lock = self.repo.lock()
         self.wlock = self.repo.wlock()
+        self.lock = self.repo.lock()
 
     def after(self):
         self.lock = None
