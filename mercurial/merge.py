@@ -415,10 +415,10 @@ def applyupdates(repo, action, wctx, mctx):
                     updated += 1
                 else:
                     merged += 1
-            if f != fd and move:
+            util.set_exec(repo.wjoin(fd), "x" in flags)
+            if f != fd and move and util.lexists(repo.wjoin(f)):
                 repo.ui.debug(_("removing %s\n") % f)
                 os.unlink(repo.wjoin(f))
-            util.set_exec(repo.wjoin(fd), "x" in flags)
         elif m == "g": # get
             flags = a[2]
             repo.ui.note(_("getting %s\n") % f)
