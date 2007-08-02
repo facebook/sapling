@@ -45,7 +45,8 @@ class ImergeStateFile(object):
         if self.im.repo.dirstate.parents()[0] != p1:
             hg.clean(self.im.repo, self.im.parents[0].node())
         self.im.start(p2)
-        tf.extractall(self.im.repo.root)
+        for tarinfo in tf:
+            tf.extract(tarinfo, self.im.repo.root)
         self.im.load()
 
 class Imerge(object):
