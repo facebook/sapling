@@ -15,7 +15,7 @@ hg ci -m 'cp foo bar; change both' -d "1000000 0"
 # in another branch, change foo in a way that doesn't conflict with
 # the other changes
 hg up -qC 0
-echo line 0 >| foo
+echo line 0 > foo
 hg cat foo >> foo
 hg ci -m 'change foo' -d "1000000 0"
 
