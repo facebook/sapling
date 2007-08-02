@@ -67,7 +67,7 @@ class Imerge(object):
     def load(self):
         # status format. \0-delimited file, fields are
         # p1, p2, conflict count, conflict filenames, resolved filenames
-        # conflict filenames are pairs of localname, remotename
+        # conflict filenames are tuples of localname, remoteorig, remotenew
 
         statusfile = self.opener('status')
 
@@ -81,10 +81,10 @@ class Imerge(object):
             raise util.Abort('merge parent %s not in repository' % short(p))
 
         status = status[2:]
-        conflicts = int(status.pop(0)) * 2
+        conflicts = int(status.pop(0)) * 3
         self.resolved = status[conflicts:]
-        for i in xrange(0, conflicts, 2):
-            self.conflicts[status[i]] = status[i+1]
+        for i in xrange(0, conflicts, 3):
+            self.conflicts[status[i]] = (status[i+1], status[i+2])
 
     def save(self):
         lock = self.repo.lock()
@@ -97,7 +97,7 @@ class Imerge(object):
         out.append(str(len(self.conflicts)))
         for f in sorted(self.conflicts):
             out.append(f)
-            out.append(self.conflicts[f])
+            out.extend(self.conflicts[f])
         out.extend(self.resolved)
 
         fd.write('\0'.join(out))
@@ -108,14 +108,14 @@ class Imerge(object):
     def filemerge(self, fn):
         wlock = self.repo.wlock()
 
-        fo = self.conflicts[fn]
-        return merge.filemerge(self.repo, fn, fo, self.parents[0],
+        (fd, fo) = self.conflicts[fn]
+        return merge.filemerge(self.repo, fn, fd, fo, self.parents[0],
                                self.parents[1])
 
     def start(self, rev=None):
         _filemerge = merge.filemerge
-        def filemerge(repo, fw, fo, wctx, mctx):
-            self.conflicts[fw] = fo
+        def filemerge(repo, fw, fd, fo, wctx, mctx):
+            self.conflicts[fw] = (fd, fo)
 
         merge.filemerge = filemerge
         commands.merge(self.ui, self.repo, rev=rev)
@@ -145,11 +145,11 @@ class Imerge(object):
         if remaining:
             self.ui.write('remaining:\n')
             for fn in remaining:
-                fo = self.conflicts[fn]
+                (fd, fo) = self.conflicts[fn]
                 if fn == fo:
                     self.ui.write('  %s\n' % (fn,))
                 else:
-                    self.ui.write('  %s (%s)\n' % (fn, fo))
+                    self.ui.write('  %s (%s)\n' % (fn, fd))
         else:
             self.ui.write('all conflicts resolved\n')
 
