@@ -20,7 +20,7 @@ class AmbiguousCommand(Exception):
 class ParseError(Exception):
     """Exception raised on errors in parsing the command line."""
 
-def runcatch(ui, args, argv0=None):
+def runcatch(ui, args):
     def catchterm(*args):
         raise util.SignalInterrupt
 
@@ -34,7 +34,7 @@ def runcatch(ui, args, argv0=None):
             if '--debugger' in args:
                 pdb.set_trace()
             try:
-                return dispatch(ui, args, argv0=argv0)
+                return dispatch(ui, args)
             finally:
                 ui.flush()
         except:
@@ -276,10 +276,7 @@ def earlygetopt(aliases, args):
             pos += 1
     return values
 
-def dispatch(ui, args, argv0=None):
-    # remember how to call 'hg' before changing the working dir
-    util.set_hgexecutable(argv0)
-
+def dispatch(ui, args):
     # read --config before doing anything else
     # (e.g. to change trust settings for reading .hg/hgrc)
     config = earlygetopt(['--config'], args)
