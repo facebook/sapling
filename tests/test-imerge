@@ -12,7 +12,8 @@ echo foo > foo
 echo bar > bar
 hg ci -Am0 -d '0 0'
 
-echo foo >> foo
+hg mv foo foo2
+echo foo >> foo2
 hg ci -m1 -d '1 0'
 
 hg up -C 0
@@ -23,14 +24,17 @@ hg ci -m2 -d '2 0'
 echo % start imerge
 hg imerge
 
-cat foo
+cat foo2
 cat bar
 
 echo % status
 hg imerge st
 
+echo % next
+hg imerge next
+
 echo % merge next
-hg imerge
+hg --traceback imerge
 
 echo % unresolve
 hg imerge unres foo
@@ -39,13 +43,13 @@ echo % merge foo
 hg imerge merge foo
 
 echo % save
-echo foo > foo
+echo foo > foo2
 hg imerge save ../savedmerge
 
 echo % load
 hg up -C 0
 hg imerge --traceback load ../savedmerge
-cat foo
+cat foo2
 
 hg ci -m'merged' -d '3 0'
 hg tip -v

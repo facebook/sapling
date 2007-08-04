@@ -23,8 +23,9 @@ class ImergeStateFile(object):
         tf.add(st, os.path.join('.hg', 'imerge', 'status'))
 
         for f in self.im.resolved:
-            abssrc = self.im.repo.wjoin(f)
-            tf.add(abssrc, f)
+            (fd, fo) = self.im.conflicts[f]
+            abssrc = self.im.repo.wjoin(fd)
+            tf.add(abssrc, fd)
 
         tf.close()
 
@@ -39,12 +40,10 @@ class ImergeStateFile(object):
             raise InvalidStateFileException('no status file')
 
         tf.extract(statusfile, self.im.repo.root)
-        self.im.load()
-        p1 = self.im.parents[0].node()
-        p2 = self.im.parents[1].node()
-        if self.im.repo.dirstate.parents()[0] != p1:
-            hg.clean(self.im.repo, self.im.parents[0].node())
-        self.im.start(p2)
+        p1, p2 = self.im.load()
+        if self.im.repo.dirstate.parents()[0] != p1.node():
+            hg.clean(self.im.repo, p1.node())
+        self.im.start(p2.node())
         tf.extractall(self.im.repo.root)
         self.im.load()
 
@@ -56,13 +55,12 @@ class Imerge(object):
         self.path = repo.join('imerge')
         self.opener = util.opener(self.path)
 
-        self.parents = [self.repo.changectx(n)
-                        for n in self.repo.dirstate.parents()]
+        self.wctx = self.repo.workingctx()
         self.conflicts = {}
         self.resolved = []
 
     def merging(self):
-        return self.parents[1].node() != nullid
+        return len(self.wctx.parents()) > 1
 
     def load(self):
         # status format. \0-delimited file, fields are
@@ -76,7 +74,7 @@ class Imerge(object):
             raise util.Abort('invalid imerge status file')
 
         try:
-            self.parents = [self.repo.changectx(n) for n in status[:2]]
+            parents = [self.repo.changectx(n) for n in status[:2]]
         except LookupError:
             raise util.Abort('merge parent %s not in repository' % short(p))
 
@@ -86,6 +84,8 @@ class Imerge(object):
         for i in xrange(0, conflicts, 3):
             self.conflicts[status[i]] = (status[i+1], status[i+2])
 
+        return parents
+
     def save(self):
         lock = self.repo.lock()
 
@@ -93,7 +93,7 @@ class Imerge(object):
             os.mkdir(self.path)
         fd = self.opener('status', 'wb')
 
-        out = [hex(n.node()) for n in self.parents]
+        out = [hex(n.node()) for n in self.wctx.parents()]
         out.append(str(len(self.conflicts)))
         for f in sorted(self.conflicts):
             out.append(f)
@@ -109,8 +109,8 @@ class Imerge(object):
         wlock = self.repo.wlock()
 
         (fd, fo) = self.conflicts[fn]
-        return merge.filemerge(self.repo, fn, fd, fo, self.parents[0],
-                               self.parents[1])
+        p2 = self.wctx.parents()[1]
+        return merge.filemerge(self.repo, fn, fd, fo, self.wctx, p2)
 
     def start(self, rev=None):
         _filemerge = merge.filemerge
@@ -121,21 +121,21 @@ class Imerge(object):
         commands.merge(self.ui, self.repo, rev=rev)
         merge.filemerge = _filemerge
 
-        self.parents = [self.repo.changectx(n)
-                        for n in self.repo.dirstate.parents()]
+        self.wctx = self.repo.workingctx()
         self.save()
 
     def resume(self):
         self.load()
 
         dp = self.repo.dirstate.parents()
-        if self.parents[0].node() != dp[0] or self.parents[1].node() != dp[1]:
+        p1, p2 = self.wctx.parents()
+        if p1.node() != dp[0] or p2.node() != dp[1]:
             raise util.Abort('imerge state does not match working directory')
 
     def status(self):
+        p1, p2 = self.wctx.parents()
         self.ui.write('merging %s and %s\n' % \
-                      (short(self.parents[0].node()),
-                       short(self.parents[1].node())))
+                      (short(p1.node()), short(p2.node())))
 
         if self.resolved:
             self.ui.write('resolved:\n')
