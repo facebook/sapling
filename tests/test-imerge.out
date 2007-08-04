@@ -4,17 +4,14 @@ adding foo
 % start imerge
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
-merging e6da46716401 and 30d266f502e7
-remaining:
-  foo (foo2)
+U foo
 foo
 bar
 bar
 bar
-% status
+% status -v
 merging e6da46716401 and 30d266f502e7
-remaining:
-  foo (foo2)
+U foo (foo2)
 % next
 foo
 % merge next
@@ -30,9 +27,7 @@ all conflicts resolved
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
-merging e6da46716401 and 30d266f502e7
-resolved:
-  foo
+R foo
 all conflicts resolved
 foo
 changeset:   3:fa9a6defdcaf

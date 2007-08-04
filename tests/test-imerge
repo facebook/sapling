@@ -27,8 +27,8 @@ hg imerge
 cat foo2
 cat bar
 
-echo % status
-hg imerge st
+echo % status -v
+hg -v imerge st
 
 echo % next
 hg imerge next

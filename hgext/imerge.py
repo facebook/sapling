@@ -7,7 +7,7 @@ imerge - interactive merge
 
 from mercurial.i18n import _
 from mercurial.node import *
-from mercurial import commands, cmdutil, hg, merge, util
+from mercurial import commands, cmdutil, fancyopts, hg, merge, util
 import os, tarfile
 
 class InvalidStateFileException(Exception): pass
@@ -135,27 +135,6 @@ class Imerge(object):
         if p1.node() != dp[0] or p2.node() != dp[1]:
             raise util.Abort('imerge state does not match working directory')
 
-    def status(self):
-        p1, p2 = self.wctx.parents()
-        self.ui.write('merging %s and %s\n' % \
-                      (short(p1.node()), short(p2.node())))
-
-        if self.resolved:
-            self.ui.write('resolved:\n')
-            for fn in self.resolved:
-                self.ui.write('  %s\n' % fn)
-        remaining = [f for f in self.conflicts if f not in self.resolved]
-        if remaining:
-            self.ui.write('remaining:\n')
-            for fn in remaining:
-                (fd, fo) = self.conflicts[fn]
-                if fn == fo:
-                    self.ui.write('  %s\n' % (fn,))
-                else:
-                    self.ui.write('  %s (%s)\n' % (fn, fd))
-        else:
-            self.ui.write('all conflicts resolved\n')
-
     def next(self):
         remaining = self.remaining()
         return remaining and remaining[0]
@@ -202,7 +181,7 @@ def load(im, source):
 
     rc = im.unpickle(source)
     if not rc:
-        im.status()
+        status(im)
     return rc
 
 def merge_(im, filename=None):
@@ -236,8 +215,39 @@ def resolve(im, *files):
 def save(im, dest):
     return im.pickle(dest)
 
-def status(im):
-    im.status()
+def status(im, **opts):
+    if not opts.get('resolved') and not opts.get('unresolved'):
+        opts['resolved'] = True
+        opts['unresolved'] = True
+
+    if im.ui.verbose:
+        p1, p2 = [short(p.node()) for p in im.wctx.parents()]
+        im.ui.note(_('merging %s and %s\n') % (p1, p2))
+
+    conflicts = im.conflicts.keys()
+    conflicts.sort()
+    remaining = dict.fromkeys(im.remaining())
+    st = []
+    for fn in conflicts:
+        if opts.get('no_status'):
+            mode = ''
+        elif fn in remaining:
+            mode = 'U '
+        else:
+            mode = 'R '
+        if ((opts.get('resolved') and fn not in remaining)
+            or (opts.get('unresolved') and fn in remaining)):
+            st.append((mode, fn))
+    st.sort()
+    for (mode, fn) in st:
+        if im.ui.verbose:
+            fo, fd = im.conflicts[fn]
+            if fd != fn:
+                fn = '%s (%s)' % (fn, fd)
+        im.ui.write('%s%s\n' % (mode, fn))
+    if opts.get('unresolved') and not remaining:
+        im.ui.write(_('all conflicts resolved\n'))
+
     return 0
 
 def unresolve(im, *files):
@@ -246,13 +256,16 @@ def unresolve(im, *files):
     return im.unresolve(files)
 
 subcmdtable = {
-    'load': load,
-    'merge': merge_,
-    'next': next,
-    'resolve': resolve,
-    'save': save,
-    'status': status,
-    'unresolve': unresolve
+    'load': (load, []),
+    'merge': (merge_, []),
+    'next': (next, []),
+    'resolve': (resolve, []),
+    'save': (save, []),
+    'status': (status,
+               [('n', 'no-status', None, _('hide status prefix')),
+                ('', 'resolved', None, _('only show resolved conflicts')),
+                ('', 'unresolved', None, _('only show unresolved conflicts'))]),
+    'unresolve': (unresolve, [])
 }
 
 def dispatch(im, args, opts):
@@ -263,7 +276,7 @@ def dispatch(im, args, opts):
                 candidates.append(choice)
         return candidates
 
-    c, args = args[0], args[1:]
+    c, args = args[0], list(args[1:])
     cmd = complete(c, subcmdtable.keys())
     if not cmd:
         raise cmdutil.UnknownCommand('imerge ' + c)
@@ -272,11 +285,15 @@ def dispatch(im, args, opts):
         raise cmdutil.AmbiguousCommand('imerge ' + c, cmd)
     cmd = cmd[0]
 
-    func = subcmdtable[cmd]
+    func, optlist = subcmdtable[cmd]
+    opts = {}
     try:
-        return func(im, *args)
+        args = fancyopts.fancyopts(args, optlist, opts)
+        return func(im, *args, **opts)
+    except fancyopts.getopt.GetoptError, inst:
+        raise cmdutil.ParseError('imerge', '%s: %s' % (cmd, inst))
     except TypeError:
-        raise cmdutil.ParseError('imerge', '%s: invalid arguments' % cmd)
+        raise cmdutil.ParseError('imerge', _('%s: invalid arguments') % cmd)
 
 def imerge(ui, repo, *args, **opts):
     '''interactive merge
