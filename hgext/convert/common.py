@@ -5,8 +5,6 @@ class NoRepo(Exception): pass
 class commit(object):
     def __init__(self, author, date, desc, parents, branch=None, rev=None,
                  copies={}):
-        self.rev = None
-        self.branch = None
         self.author = author
         self.date = date
         self.desc = desc
