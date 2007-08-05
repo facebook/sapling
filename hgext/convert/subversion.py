@@ -46,6 +46,12 @@ def geturl(path):
         return 'file://%s' % os.path.normpath(os.path.abspath(path))
     return path
 
+def optrev(number):
+    optrev = svn.core.svn_opt_revision_t()
+    optrev.kind = svn.core.svn_opt_revision_number
+    optrev.value.number = number
+    return optrev
+
 class changedpath(object):
     def __init__(self, p):
         self.copyfrom_path = p.copyfrom_path
@@ -124,15 +130,13 @@ class convert_svn(converter_source):
 
     def getheads(self):
         # detect standard /branches, /tags, /trunk layout
-        optrev = svn.core.svn_opt_revision_t()
-        optrev.kind = svn.core.svn_opt_revision_number
-        optrev.value.number = self.last_changed
+        rev = optrev(self.last_changed)
         rpath = self.url.strip('/')
         cfgtrunk = self.ui.config('convert', 'svn.trunk')
         cfgbranches = self.ui.config('convert', 'svn.branches')
         trunk = (cfgtrunk or 'trunk').strip('/')
         branches = (cfgbranches or 'branches').strip('/')
-        if self.exists(trunk, optrev) and self.exists(branches, optrev):
+        if self.exists(trunk, rev) and self.exists(branches, rev):
             self.ui.note('found trunk at %r and branches at %r\n' %
                          (trunk, branches))
             oldmodule = self.module
@@ -140,7 +144,7 @@ class convert_svn(converter_source):
             lt = self.latest(self.module, self.last_changed)
             self.head = self.revid(lt)
             self.heads = [self.head]
-            branchnames = svn.client.ls(rpath + '/' + branches, optrev, False,
+            branchnames = svn.client.ls(rpath + '/' + branches, rev, False,
                                         self.ctx)
             for branch in branchnames.keys():
                 if oldmodule:
@@ -626,8 +630,5 @@ class convert_svn(converter_source):
     def _find_children(self, path, revnum):
         path = path.strip('/')
         pool = Pool()
-        optrev = svn.core.svn_opt_revision_t()
-        optrev.kind = svn.core.svn_opt_revision_number
-        optrev.value.number = revnum
         rpath = '/'.join([self.base, path]).strip('/')
-        return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev, True, self.ctx, pool).keys()]
+        return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool).keys()]
