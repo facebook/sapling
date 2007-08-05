@@ -202,9 +202,9 @@ def readgitpatch(fp, firstline=None):
                 gp.op = 'DELETE'
             elif line.startswith('new file mode '):
                 gp.op = 'ADD'
-                gp.mode = int(line.rstrip()[-3:], 8)
+                gp.mode = int(line.rstrip()[-6:], 8)
             elif line.startswith('new mode '):
-                gp.mode = int(line.rstrip()[-3:], 8)
+                gp.mode = int(line.rstrip()[-6:], 8)
             elif line.startswith('GIT binary patch'):
                 dopatch |= GP_BINARY
                 gp.binary = True
@@ -1048,12 +1048,15 @@ def updatedir(ui, repo, patches):
         ctype, gp = patches[f]
         if gp and gp.mode:
             x = gp.mode & 0100 != 0
+            l = gp.mode & 020000 != 0
             dst = os.path.join(repo.root, gp.path)
             # patch won't create empty files
             if ctype == 'ADD' and not os.path.exists(dst):
                 repo.wwrite(gp.path, '', x and 'x' or '')
             else:
-                util.set_exec(dst, x)
+                util.set_link(dst, l)
+                if not l:
+                    util.set_exec(dst, x)
     cmdutil.addremove(repo, cfiles)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
@@ -1145,11 +1148,15 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     if node2:
         ctx2 = context.changectx(repo, node2)
         execf2 = ctx2.manifest().execf
+        linkf2 = ctx2.manifest().linkf
     else:
         ctx2 = context.workingctx(repo)
         execf2 = util.execfunc(repo.root, None)
+        linkf2 = util.linkfunc(repo.root, None)
         if execf2 is None:
-            execf2 = ctx2.parents()[0].manifest().copy().execf
+            mc = ctx2.parents()[0].manifest().copy()
+            execf2 = mc.execf
+            linkf2 = mc.linkf
 
     # returns False if there was no rename between ctx1 and ctx2
     # returns None if the file was created between ctx1 and ctx2
@@ -1206,8 +1213,8 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         if f not in removed:
             tn = getfilectx(f, ctx2).data()
         if opts.git:
-            def gitmode(x):
-                return x and '100755' or '100644'
+            def gitmode(x, l):
+                return l and '120000' or (x and '100755' or '100644')
             def addmodehdr(header, omode, nmode):
                 if omode != nmode:
                     header.append('old mode %s\n' % omode)
@@ -1215,10 +1222,10 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
             a, b = f, f
             if f in added:
-                mode = gitmode(execf2(f))
+                mode = gitmode(execf2(f), linkf2(f))
                 if f in copied:
                     a = copied[f]
-                    omode = gitmode(man1.execf(a))
+                    omode = gitmode(man1.execf(a), man1.linkf(a))
                     addmodehdr(header, omode, mode)
                     if a in removed and a not in gone:
                         op = 'rename'
@@ -1236,11 +1243,11 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                 if f in srcs:
                     dodiff = False
                 else:
-                    mode = gitmode(man1.execf(f))
+                    mode = gitmode(man1.execf(f), man1.linkf(f))
                     header.append('deleted file mode %s\n' % mode)
             else:
-                omode = gitmode(man1.execf(f))
-                nmode = gitmode(execf2(f))
+                omode = gitmode(man1.execf(f), man1.linkf(f))
+                nmode = gitmode(execf2(f), linkf2(f))
                 addmodehdr(header, omode, nmode)
                 if util.binary(to) or util.binary(tn):
                     dodiff = 'binary'
