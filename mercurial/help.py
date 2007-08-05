@@ -38,9 +38,9 @@ helptable = {
     'environment|env|Environment Variables':
     r'''
 HG::
-    Path to the 'hg' executable, automatically passed when running hooks
-    or external tools. Falls back to 'hg' if unset and the value can't be
-    autodetected, e.g. when Mercurial is run as a Python module.
+    Path to the 'hg' executable, automatically passed when running hooks,
+    extensions or external tools. If unset or empty, an executable named
+    'hg' (with com/exe/bat/cmd extension on Windows) is searched.
 
 HGEDITOR::
     This is the name of the editor to use when committing. Defaults to the
