@@ -359,7 +359,6 @@ class convert_svn(converter_source):
                 self.reparent(self.module)
 
         for path, ent in paths:
-            self.ui.write("path %s\n" % path)
             entrypath = get_entry_from_path(path, module=self.module)
             entry = entrypath.decode(self.encoding)
 
