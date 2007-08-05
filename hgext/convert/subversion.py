@@ -583,8 +583,6 @@ class convert_svn(converter_source):
                      (self.module, from_revnum, to_revnum))
 
         try:
-            discover_changed_paths = True
-            strict_node_history = False
             for entry in self.get_log([self.module], from_revnum, to_revnum):
                 orig_paths, revnum, author, date, message = entry
                 if self.is_blacklisted(revnum):
