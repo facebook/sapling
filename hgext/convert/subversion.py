@@ -624,9 +624,10 @@ class convert_svn(converter_source):
         return data, mode
 
     def _find_children(self, path, revnum):
+        path = path.strip('/')
         pool = Pool()
         optrev = svn.core.svn_opt_revision_t()
         optrev.kind = svn.core.svn_opt_revision_number
         optrev.value.number = revnum
-        rpath = '/'.join([self.base, path.strip('/')]).strip('/')
+        rpath = '/'.join([self.base, path]).strip('/')
         return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev, True, self.ctx, pool).keys()]
