@@ -151,7 +151,7 @@ class mercurial_source(converter_source):
         m, a, r = self.repo.status(ctx.parents()[0].node(), ctx.node())[:3]
         changes = [(name, rev) for name in m + a + r]
         changes.sort()
-        return changes
+        return (changes, self.getcopies(ctx))
 
     def getcopies(self, ctx):
         added = self.repo.status(ctx.parents()[0].node(), ctx.node())[1]
@@ -168,7 +168,7 @@ class mercurial_source(converter_source):
         parents = [hex(p.node()) for p in ctx.parents() if p.node() != nullid]
         return commit(author=ctx.user(), date=util.datestr(ctx.date()),
                       desc=ctx.description(), parents=parents,
-                      branch=ctx.branch(), copies=self.getcopies(ctx))
+                      branch=ctx.branch())
 
     def gettags(self):
         tags = [t for t in self.repo.tagslist() if t[0] != 'tip']

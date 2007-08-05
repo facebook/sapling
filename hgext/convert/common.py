@@ -3,15 +3,13 @@
 class NoRepo(Exception): pass
 
 class commit(object):
-    def __init__(self, author, date, desc, parents, branch=None, rev=None,
-                 copies={}):
+    def __init__(self, author, date, desc, parents, branch=None, rev=None):
         self.author = author
         self.date = date
         self.desc = desc
         self.parents = parents
         self.branch = branch
         self.rev = rev
-        self.copies = copies
 
 class converter_source(object):
     """Conversion source interface"""
@@ -42,10 +40,12 @@ class converter_source(object):
         raise NotImplementedError()
 
     def getchanges(self, version):
-        """Return sorted list of (filename, id) tuples for all files changed in rev.
+        """Returns a tuple of (files, copies)
+        Files is a sorted list of (filename, id) tuples for all files changed
+        in version, where id is the source revision id of the file.
 
-        id just tells us which revision to return in getfile(), e.g. in
-        git it's an object hash."""
+        copies is a dictionary of dest: source
+        """
         raise NotImplementedError()
 
     def getcommit(self, version):

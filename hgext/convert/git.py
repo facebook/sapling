@@ -48,7 +48,7 @@ class convert_git(converter_source):
             s = (m[1] == "120000")
             self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
             changes.append((f, h))
-        return changes
+        return (changes, {})
 
     def getcommit(self, version):
         c = self.catfile(version, "commit") # read the commit hash

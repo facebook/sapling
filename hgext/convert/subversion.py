@@ -98,7 +98,7 @@ class convert_svn(converter_source):
             self.module = self.url[len(self.base):]
             self.modulemap = {} # revision, module
             self.commits = {}
-            self.files = {}
+            self.paths = {}
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
         except SubversionException, e:
             raise NoRepo("couldn't open SVN repo %s" % self.url)
@@ -173,12 +173,14 @@ class convert_svn(converter_source):
 
     def getchanges(self, rev):
         self.modecache = {}
-        files = self.files[rev]
-        cl = files
-        cl.sort()
+        (paths, parents) = self.paths[rev]
+        files, copies = self.expandpaths(rev, paths, parents)
+        files.sort()
+        files = zip(files, [rev] * len(files))
+
         # caller caches the result, so free it here to release memory
-        del self.files[rev]
-        return cl
+        del self.paths[rev]
+        return (files, copies)
 
     def getcommit(self, rev):
         if rev not in self.commits:
@@ -350,8 +352,14 @@ class convert_svn(converter_source):
         copies = {}
         revnum = self.revnum(rev)
 
+        if revnum in self.modulemap:
+            new_module = self.modulemap[revnum]
+            if new_module != self.module:
+                self.module = new_module
+                self.reparent(self.module)
+
         for path, ent in paths:
-            # self.ui.write("path %s\n" % path)
+            self.ui.write("path %s\n" % path)
             entrypath = get_entry_from_path(path, module=self.module)
             entry = entrypath.decode(self.encoding)
 
@@ -554,12 +562,7 @@ class convert_svn(converter_source):
                     continue
                 paths.append((path, ent))
 
-            entries, copies = self.expandpaths(rev, paths, parents)
-            # a list of (filename, id) where id lets us retrieve the file.
-            # eg in git, id is the object hash. for svn it'll be the
-            self.files[rev] = zip(entries, [rev] * len(entries))
-            if not entries:
-                return
+            self.paths[rev] = (paths, parents)
 
             # Example SVN datetime. Includes microseconds.
             # ISO-8601 conformant
@@ -579,7 +582,6 @@ class convert_svn(converter_source):
                           date=util.datestr(date),
                           desc=log,
                           parents=parents,
-                          copies=copies,
                           branch=branch,
                           rev=rev.encode('utf-8'))
 

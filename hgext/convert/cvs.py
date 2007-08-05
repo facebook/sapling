@@ -250,7 +250,7 @@ class convert_cvs(converter_source):
         files = self.files[rev]
         cl = files.items()
         cl.sort()
-        return cl
+        return (cl, {})
 
     def getcommit(self, rev):
         return self.changeset[rev]

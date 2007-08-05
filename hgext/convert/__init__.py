@@ -193,7 +193,8 @@ class convert(object):
         do_copies = hasattr(self.dest, 'copyfile')
         filenames = []
 
-        for f, v in self.source.getchanges(rev):
+        files, copies = self.source.getchanges(rev)
+        for f, v in files:
             newf = self.mapfile(f)
             if not newf:
                 continue
@@ -206,8 +207,8 @@ class convert(object):
                 e = self.source.getmode(f, v)
                 self.dest.putfile(newf, e, data)
                 if do_copies:
-                    if f in commit.copies:
-                        copyf = self.mapfile(commit.copies[f])
+                    if f in copies:
+                        copyf = self.mapfile(copies[f])
                         if copyf:
                             # Merely marks that a copy happened.
                             self.dest.copyfile(copyf, newf)
