@@ -377,20 +377,22 @@ class convert_svn(converter_source):
 
             orig_paths = orig_paths.items()
             orig_paths.sort()
+            
+            # check whether this revision is the start of a branch
+            path, ent = orig_paths and orig_paths[0] or (None, None)
+            if ent and path == self.module:
+                if ent.copyfrom_path:
+                    # ent.copyfrom_rev may not be the actual last revision
+                    prev = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
+                    self.modulemap[prev] = ent.copyfrom_path
+                    parents = [self.revid(prev, ent.copyfrom_path)]
+                    self.ui.note('found parent of branch %s at %d: %s\n' % \
+                                     (self.module, prev, ent.copyfrom_path))
+                else:
+                    self.ui.debug("No copyfrom path, don't know what to do.\n")
+
             for path, ent in orig_paths:
                 # self.ui.write("path %s\n" % path)
-                if path == self.module: # Follow branching back in history
-                    if ent:
-                        if ent.copyfrom_path:
-                            # ent.copyfrom_rev may not be the actual last revision
-                            prev = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
-                            self.modulemap[prev] = ent.copyfrom_path
-                            parents = [self.revid(prev, ent.copyfrom_path)]
-                            self.ui.note('found parent of branch %s at %d: %s\n' % \
-                                         (self.module, prev, ent.copyfrom_path))
-                        else:
-                            self.ui.debug("No copyfrom path, don't know what to do.\n")
-                            # Maybe it was added and there is no more history.
                 entrypath = get_entry_from_path(path, module=self.module)
                 # self.ui.write("entrypath %s\n" % entrypath)
                 if entrypath is None:
