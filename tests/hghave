@@ -5,12 +5,38 @@ if all features are there, non-zero otherwise.
 import optparse
 import os
 import sys
+import tempfile
 
 def has_symlink():
     return hasattr(os, "symlink")
 
+def has_fifo():
+    return hasattr(os, "mkfifo")
+
+def has_executablebit():
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
+    try:
+        s = os.lstat(path).st_mode
+        os.chmod(path, s | 0100)
+        return (os.lstat(path).st_mode & 0100 != 0)
+    finally:
+        os.remove(path)
+
+def has_eol_in_paths():
+    try:
+        fd, path = tempfile.mkstemp(suffix='\n\r')
+        os.close(fd)
+        os.remove(path)
+        return True
+    except:
+        return False
+
 checks = {
     "symlink": (has_symlink, "symbolic links"),
+    "fifo": (has_fifo, "named pipes"),
+    "execbit": (has_executablebit, "executable bit"),
+    "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
 }
 
 def list_features():

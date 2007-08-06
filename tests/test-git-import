@@ -44,8 +44,12 @@ copy from new
 copy to copyx
 EOF
 
-test -f copy -a ! -x copy || echo failed
-test -x copyx || echo failed
+if "$TESTDIR/hghave" -q execbit; then
+    test -f copy -a ! -x copy || echo failed
+    test -x copyx || echo failed
+else
+    test -f copy || echo failed
+fi
 cat copy
 hg cat copy
 

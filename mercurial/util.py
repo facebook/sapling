@@ -1312,7 +1312,7 @@ class opener(object):
                 raise OSError(err.errno, _('could not symlink to %r: %s') %
                               (src, err.strerror), linkname)
         else:
-            f = self(self, dst, "w")
+            f = self(dst, "w")
             f.write(src)
             f.close()
 
