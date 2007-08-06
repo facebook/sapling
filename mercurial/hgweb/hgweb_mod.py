@@ -488,7 +488,7 @@ class hgweb(object):
                     continue
 
                 yield {"parity": parity.next(),
-                       "path": os.path.join(abspath, f),
+                       "path": "%s%s" % (abspath, f),
                        "basename": f[:-1]}
 
         yield self.t("manifest",
