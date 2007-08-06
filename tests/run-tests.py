@@ -227,6 +227,8 @@ def run(cmd):
             ret = proc.wait()
             if ret == 0:
                 ret = signal.SIGTERM << 8
+            output += ("\n### Abort: timeout after %d seconds.\n"
+                       % options.timeout)
     return ret, splitnewlines(output)
 
 def run_one(test):
