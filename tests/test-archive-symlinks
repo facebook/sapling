@@ -1,5 +1,7 @@
 #!/bin/sh
 
+"$TESTDIR/hghave" symlink || exit 80
+
 origdir=`pwd`
 
 cat >> readlink.py <<EOF
