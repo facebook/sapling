@@ -24,7 +24,7 @@ from mercurial import util
 
 from cStringIO import StringIO
 
-from common import NoRepo, commit, converter_source
+from common import NoRepo, commit, converter_source, encodeargs
 
 try:
     from svn.core import SubversionException, Pool
@@ -57,6 +57,30 @@ class changedpath(object):
         self.copyfrom_path = p.copyfrom_path
         self.copyfrom_rev = p.copyfrom_rev
         self.action = p.action
+
+def get_log_child(fp, url, paths, start, end, limit=0, discover_changed_paths=True,
+                    strict_node_history=False):
+    protocol = -1
+    def receiver(orig_paths, revnum, author, date, message, pool):
+        if orig_paths is not None:
+            for k, v in orig_paths.iteritems():
+                orig_paths[k] = changedpath(v)
+        pickle.dump((orig_paths, revnum, author, date, message),
+                                fp, protocol)
+        
+    try:
+        # Use an ra of our own so that our parent can consume
+        # our results without confusing the server.
+        t = transport.SvnRaTransport(url=url)
+        svn.ra.get_log(t.ra, paths, start, end, limit,
+                       discover_changed_paths,
+                       strict_node_history,
+                       receiver)
+    except SubversionException, (_, num):
+        pickle.dump(num, fp, protocol)
+    else:
+        pickle.dump(None, fp, protocol)
+    fp.close()
 
 # SVN conversion code stolen from bzr-svn and tailor
 class convert_svn(converter_source):
@@ -196,34 +220,6 @@ class convert_svn(converter_source):
 
     def get_log(self, paths, start, end, limit=0, discover_changed_paths=True,
                 strict_node_history=False):
-        '''wrapper for svn.ra.get_log.
-        on a large repository, svn.ra.get_log pins huge amounts of
-        memory that cannot be recovered.  work around it by forking
-        and writing results over a pipe.'''
-
-        def child(fp):
-            protocol = -1
-            def receiver(orig_paths, revnum, author, date, message, pool):
-                if orig_paths is not None:
-                    for k, v in orig_paths.iteritems():
-                        orig_paths[k] = changedpath(v)
-                pickle.dump((orig_paths, revnum, author, date, message),
-                            fp, protocol)
-
-            try:
-                # Use an ra of our own so that our parent can consume
-                # our results without confusing the server.
-                t = transport.SvnRaTransport(url=self.url)
-                svn.ra.get_log(t.ra, paths, start, end, limit,
-                               discover_changed_paths,
-                               strict_node_history,
-                               receiver)
-            except SubversionException, (_, num):
-                self.ui.print_exc()
-                pickle.dump(num, fp, protocol)
-            else:
-                pickle.dump(None, fp, protocol)
-            fp.close()
 
         def parent(fp):
             while True:
@@ -235,20 +231,19 @@ class convert_svn(converter_source):
                         break
                     raise SubversionException("child raised exception", entry)
                 yield entry
+            
+        args = [self.url, paths, start, end, limit, discover_changed_paths,
+                strict_node_history]
+        arg = encodeargs(args)
+        hgexe = util.hgexecutable()
+        cmd = '"%s "debug-svn-log""' % util.shellquote(hgexe)
+        stdin, stdout = os.popen2(cmd, 'b')
+        
+        stdin.write(arg)
+        stdin.close()
 
-        rfd, wfd = os.pipe()
-        pid = os.fork()
-        if pid:
-            os.close(wfd)
-            for p in parent(os.fdopen(rfd, 'rb')):
-                yield p
-            ret = os.waitpid(pid, 0)[1]
-            if ret:
-                raise util.Abort(_('get_log %s') % util.explain_exit(ret))
-        else:
-            os.close(rfd)
-            child(os.fdopen(wfd, 'wb'))
-            os._exit(0)
+        for p in parent(stdout):
+            yield p
 
     def gettags(self):
         tags = {}
