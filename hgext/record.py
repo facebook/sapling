@@ -327,8 +327,8 @@ def record(ui, repo, *pats, **opts):
         try:
             os.mkdir(backupdir)
         except OSError, err:
-            if err.errno == errno.EEXIST:
-                pass
+            if err.errno != errno.EEXIST:
+                raise
         try:
             for f in newfiles:
                 if f not in modified:
