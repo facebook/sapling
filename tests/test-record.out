@@ -381,3 +381,23 @@ diff -r c1c639d8b268 -r 80b74bbc7808 plain
 +10
 +11
 
+adding subdir/a
+diff --git a/subdir/a b/subdir/a
+1 hunks, 1 lines changed
+record changes to 'subdir/a'? [y]es [n]o @@ -1,1 +1,2 @@ a
+ a
++a
+record this change to 'subdir/a'? [y]es [n]o 
+changeset:   18:33ff5c4fb017
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:16 1970 +0000
+summary:     subdir-change
+
+diff -r aecf2b2ea83c -r 33ff5c4fb017 subdir/a
+--- a/subdir/a	Thu Jan 01 00:00:16 1970 +0000
++++ b/subdir/a	Thu Jan 01 00:00:16 1970 +0000
+@@ -1,1 +1,2 @@ a
+ a
++a
+

@@ -363,7 +363,7 @@ def record(ui, repo, *pats, **opts):
             try:
                 for realname, tmpname in backups.iteritems():
                     ui.debug('restoring %r to %r\n' % (tmpname, realname))
-                    util.copyfile(tmpname, realname)
+                    util.copyfile(tmpname, repo.wjoin(realname))
                     os.unlink(tmpname)
                 os.rmdir(backupdir)
             except OSError:

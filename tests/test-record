@@ -202,3 +202,15 @@ y
 y
 EOF
 echo; hg tip -p
+
+mkdir subdir
+cd subdir
+echo a > a
+hg ci -d '16 0' -Amsubdir
+
+echo a >> a
+hg record -d '16 0' -m subdir-change a <<EOF
+y
+y
+EOF
+echo; hg tip -p
