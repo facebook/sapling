@@ -134,7 +134,10 @@ class mercurial_source(converter_source):
         return self.lastctx
 
     def getheads(self):
-        return [hex(node) for node in self.repo.heads()]
+        if self.rev:
+            return [hex(self.repo.changectx(self.rev).node())]
+        else:
+            return [hex(node) for node in self.repo.heads()]
 
     def getfile(self, name, rev):
         try:
