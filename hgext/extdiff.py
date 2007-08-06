@@ -113,12 +113,34 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         return 0
 
     tmproot = tempfile.mkdtemp(prefix='extdiff.')
+    dir2root = ''
     try:
+        # Always make a copy of node1
         dir1 = snapshot_node(ui, repo, modified + removed, node1, tmproot)
+        changes = len(modified) + len(removed) + len(added)
+
+        # If node2 in not the wc or there is >1 change, copy it
         if node2:
             dir2 = snapshot_node(ui, repo, modified + added, node2, tmproot)
-        else:
+        elif changes > 1:
             dir2 = snapshot_wdir(ui, repo, modified + added, tmproot)
+        else:
+            # This lets the diff tool open the changed file directly
+            dir2 = ''
+            dir2root = repo.root
+
+        # If only one change, diff the files instead of the directories
+        if changes == 1 :
+            if len(modified):
+                dir1 = os.path.join(dir1, util.localpath(modified[0]))
+                dir2 = os.path.join(dir2root, dir2, util.localpath(modified[0]))  
+            elif len(removed) :
+                dir1 = os.path.join(dir1, util.localpath(removed[0]))
+                dir2 = os.devnull
+            else:
+                dir1 = os.devnull
+                dir2 = os.path.join(dir2root, dir2, util.localpath(added[0]))  
+    
         cmdline = ('%s %s %s %s' %
                    (util.shellquote(diffcmd), ' '.join(diffopts),
                     util.shellquote(dir1), util.shellquote(dir2)))
