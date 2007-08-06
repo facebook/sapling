@@ -250,8 +250,14 @@ class dirstate(object):
         except KeyError:
             self._ui.warn(_("not in dirstate: %s!\n") % f)
 
+    def clear(self):
+        self._map = {}
+        self._copymap = {}
+        self._pl = [nullid, nullid]
+        self._dirty = True
+
     def rebuild(self, parent, files):
-        self.invalidate()
+        self.clear()
         for f in files:
             if files.execf(f):
                 self._map[f] = ('n', 0777, -1, 0)

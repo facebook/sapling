@@ -144,6 +144,43 @@ def zgenerator(f):
         raise IOError(None, _('connection ended unexpectedly'))
     yield zd.flush()
 
+_safe = ('abcdefghijklmnopqrstuvwxyz'
+         'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+         '0123456789' '_.-/')
+_safeset = None
+_hex = None
+def quotepath(path):
+    '''quote the path part of a URL
+
+    This is similar to urllib.quote, but it also tries to avoid
+    quoting things twice (inspired by wget):
+
+    >>> quotepath('abc def')
+    'abc%20def'
+    >>> quotepath('abc%20def')
+    'abc%20def'
+    >>> quotepath('abc%20 def')
+    'abc%20%20def'
+    >>> quotepath('abc def%20')
+    'abc%20def%20'
+    >>> quotepath('abc def%2')
+    'abc%20def%252'
+    >>> quotepath('abc def%')
+    'abc%20def%25'
+    '''
+    global _safeset, _hex
+    if _safeset is None:
+        _safeset = util.set(_safe)
+        _hex = util.set('abcdefABCDEF0123456789')
+    l = list(path)
+    for i in xrange(len(l)):
+        c = l[i]
+        if c == '%' and i + 2 < len(l) and (l[i+1] in _hex and l[i+2] in _hex):
+            pass
+        elif c not in _safeset:
+            l[i] = '%%%02X' % ord(c)
+    return ''.join(l)
+
 class httprepository(remoterepository):
     def __init__(self, ui, path):
         self.path = path
@@ -153,13 +190,16 @@ class httprepository(remoterepository):
         if query or frag:
             raise util.Abort(_('unsupported URL component: "%s"') %
                              (query or frag))
-        if not urlpath: urlpath = '/'
+        if not urlpath:
+            urlpath = '/'
+        urlpath = quotepath(urlpath)
         host, port, user, passwd = netlocsplit(netloc)
 
         # urllib cannot handle URLs with embedded user or passwd
         self._url = urlparse.urlunsplit((scheme, netlocunsplit(host, port),
                                          urlpath, '', ''))
         self.ui = ui
+        self.ui.debug(_('using %s\n') % self._url)
 
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
         # XXX proxyauthinfo = None
