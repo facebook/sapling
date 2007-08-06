@@ -63,9 +63,8 @@ def snapshot_node(ui, repo, files, node, tmproot):
     dirname = '%s.%s' % (dirname, short(node))
     base = os.path.join(tmproot, dirname)
     os.mkdir(base)
-    if not ui.quiet:
-        ui.write_err(_('making snapshot of %d files from rev %s\n') %
-                     (len(files), short(node)))
+    ui.note(_('making snapshot of %d files from rev %s\n') %
+                 (len(files), short(node)))
     for fn in files:
         if not fn in mf:
             # skipping new file after a merge ?
@@ -90,9 +89,8 @@ def snapshot_wdir(ui, repo, files, tmproot):
         dirname = "root"
     base = os.path.join(tmproot, dirname)
     os.mkdir(base)
-    if not ui.quiet:
-        ui.write_err(_('making snapshot of %d files from working dir\n') %
-                     (len(files)))
+    ui.note(_('making snapshot of %d files from working dir\n') %
+                 (len(files)))
     for fn in files:
         wfn = util.pconvert(fn)
         ui.note('  %s\n' % wfn)
