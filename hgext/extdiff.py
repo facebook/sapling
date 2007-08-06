@@ -53,57 +53,60 @@ from mercurial.node import *
 from mercurial import cmdutil, util
 import os, shutil, tempfile
 
+
+def snapshot_node(ui, repo, files, node, tmproot):
+    '''snapshot files as of some revision'''
+    mf = repo.changectx(node).manifest()
+    dirname = os.path.basename(repo.root)
+    if dirname == "":
+        dirname = "root"
+    dirname = '%s.%s' % (dirname, short(node))
+    base = os.path.join(tmproot, dirname)
+    os.mkdir(base)
+    if not ui.quiet:
+        ui.write_err(_('making snapshot of %d files from rev %s\n') %
+                     (len(files), short(node)))
+    for fn in files:
+        if not fn in mf:
+            # skipping new file after a merge ?
+            continue
+        wfn = util.pconvert(fn)
+        ui.note('  %s\n' % wfn)
+        dest = os.path.join(base, wfn)
+        destdir = os.path.dirname(dest)
+        if not os.path.isdir(destdir):
+            os.makedirs(destdir)
+        data = repo.wwritedata(wfn, repo.file(wfn).read(mf[wfn]))
+        open(dest, 'wb').write(data)
+    return dirname
+
+
+def snapshot_wdir(ui, repo, files, tmproot):
+    '''snapshot files from working directory.
+    if not using snapshot, -I/-X does not work and recursive diff
+    in tools like kdiff3 and meld displays too many files.'''
+    dirname = os.path.basename(repo.root)
+    if dirname == "":
+        dirname = "root"
+    base = os.path.join(tmproot, dirname)
+    os.mkdir(base)
+    if not ui.quiet:
+        ui.write_err(_('making snapshot of %d files from working dir\n') %
+                     (len(files)))
+    for fn in files:
+        wfn = util.pconvert(fn)
+        ui.note('  %s\n' % wfn)
+        dest = os.path.join(base, wfn)
+        destdir = os.path.dirname(dest)
+        if not os.path.isdir(destdir):
+            os.makedirs(destdir)
+        fp = open(dest, 'wb')
+        for chunk in util.filechunkiter(repo.wopener(wfn)):
+            fp.write(chunk)
+    return dirname
+    
+
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
-    def snapshot_node(files, node):
-        '''snapshot files as of some revision'''
-        mf = repo.changectx(node).manifest()
-        dirname = os.path.basename(repo.root)
-        if dirname == "":
-            dirname = "root"
-        dirname = '%s.%s' % (dirname, short(node))
-        base = os.path.join(tmproot, dirname)
-        os.mkdir(base)
-        if not ui.quiet:
-            ui.write_err(_('making snapshot of %d files from rev %s\n') %
-                         (len(files), short(node)))
-        for fn in files:
-            if not fn in mf:
-                # skipping new file after a merge ?
-                continue
-            wfn = util.pconvert(fn)
-            ui.note('  %s\n' % wfn)
-            dest = os.path.join(base, wfn)
-            destdir = os.path.dirname(dest)
-            if not os.path.isdir(destdir):
-                os.makedirs(destdir)
-            data = repo.wwritedata(wfn, repo.file(wfn).read(mf[wfn]))
-            open(dest, 'wb').write(data)
-        return dirname
-
-    def snapshot_wdir(files):
-        '''snapshot files from working directory.
-        if not using snapshot, -I/-X does not work and recursive diff
-        in tools like kdiff3 and meld displays too many files.'''
-        dirname = os.path.basename(repo.root)
-        if dirname == "":
-            dirname = "root"
-        base = os.path.join(tmproot, dirname)
-        os.mkdir(base)
-        if not ui.quiet:
-            ui.write_err(_('making snapshot of %d files from working dir\n') %
-                         (len(files)))
-        for fn in files:
-            wfn = util.pconvert(fn)
-            ui.note('  %s\n' % wfn)
-            dest = os.path.join(base, wfn)
-            destdir = os.path.dirname(dest)
-            if not os.path.isdir(destdir):
-                os.makedirs(destdir)
-            fp = open(dest, 'wb')
-            for chunk in util.filechunkiter(repo.wopener(wfn)):
-                fp.write(chunk)
-        return dirname
-
     node1, node2 = cmdutil.revpair(repo, opts['rev'])
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     modified, added, removed, deleted, unknown = repo.status(
@@ -113,11 +116,11 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
 
     tmproot = tempfile.mkdtemp(prefix='extdiff.')
     try:
-        dir1 = snapshot_node(modified + removed, node1)
+        dir1 = snapshot_node(ui, repo, modified + removed, node1, tmproot)
         if node2:
-            dir2 = snapshot_node(modified + added, node2)
+            dir2 = snapshot_node(ui, repo, modified + added, node2, tmproot)
         else:
-            dir2 = snapshot_wdir(modified + added)
+            dir2 = snapshot_wdir(ui, repo, modified + added, tmproot)
         cmdline = ('%s %s %s %s' %
                    (util.shellquote(diffcmd), ' '.join(diffopts),
                     util.shellquote(dir1), util.shellquote(dir2)))
