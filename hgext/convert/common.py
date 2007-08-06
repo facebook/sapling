@@ -1,4 +1,19 @@
 # common code for the convert extension
+import base64
+import cPickle as pickle
+
+def encodeargs(args):
+    def encodearg(s):
+        lines = base64.encodestring(s)
+        lines = [l.splitlines()[0] for l in lines]
+        return ''.join(lines)
+    
+    s = pickle.dumps(args)
+    return encodearg(s)
+
+def decodeargs(s):
+    s = base64.decodestring(s)
+    return pickle.loads(s)
 
 class NoRepo(Exception): pass
 
@@ -118,3 +133,4 @@ class converter_sink(object):
         """Put tags into sink.
         tags: {tagname: sink_rev_id, ...}"""
         raise NotImplementedError()
+
