@@ -1308,7 +1308,7 @@ class opener(object):
         if self._can_symlink:
             os.symlink(src, linkname)
         else:
-            f = self(self, dst, "w")
+            f = self(dst, "w")
             f.write(src)
             f.close()
 
