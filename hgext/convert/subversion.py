@@ -78,7 +78,7 @@ class convert_svn(converter_source):
             try:
                 latest = int(rev)
             except ValueError:
-                raise util.Abort('svn: revision %s is not an integer' % rev)
+                raise NoRepo('svn: revision %s is not an integer' % rev)
         try:
             # Support file://path@rev syntax. Useful e.g. to convert
             # deleted branches.
