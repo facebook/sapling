@@ -339,7 +339,10 @@ class filemapper(object):
         if not inc or exc:
             return None
         newpre, pre, suf = self.lookup(name, self.rename)
+        print 'XXX', (newpre, pre, suf)
         if newpre:
+            if newpre == '.':
+                return suf
             if suf:
                 return newpre + '/' + suf
             return newpre
