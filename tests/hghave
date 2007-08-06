@@ -9,8 +9,12 @@ import sys
 def has_symlink():
     return hasattr(os, "symlink")
 
+def has_fifo():
+    return hasattr(os, "mkfifo")
+
 checks = {
     "symlink": (has_symlink, "symbolic links"),
+    "fifo": (has_fifo, "named pipes"),
 }
 
 def list_features():
