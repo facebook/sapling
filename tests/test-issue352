@@ -1,6 +1,8 @@
 #!/bin/sh
 # http://www.selenic.com/mercurial/bts/issue352
 
+"$TESTDIR/hghave" eol-in-paths || exit 80
+
 hg init foo
 cd foo
 
