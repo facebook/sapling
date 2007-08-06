@@ -2024,7 +2024,7 @@ def postincoming(ui, repo, modheads, optupdate):
     if modheads == 0:
         return
     if optupdate:
-        if modheads == 1:
+        if modheads <= 1:
             return hg.update(repo, None)
         else:
             ui.status(_("not updating, since new heads added\n"))
