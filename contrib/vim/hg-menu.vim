@@ -9,7 +9,7 @@
 "         Usage: These command and gui menu displays useful hg functions
 " Configuration: Your hg executable must be in your path.
 " =============================================================================
- 
+
 " Section: Init {{{1
 if exists("loaded_hg_menu")
   finish

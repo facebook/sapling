@@ -137,17 +137,17 @@ decode/encode::
     **.txt = tempfile: unix2dos -n INFILE OUTFILE
 
 defaults::
-  Use the [defaults] section to define command defaults, i.e. the 
+  Use the [defaults] section to define command defaults, i.e. the
   default options/arguments to pass to the specified commands.
-  
+
   The following example makes 'hg log' run in verbose mode, and
   'hg status' show only the modified files, by default.
-  
+
     [defaults]
     log = -v
     status = -m
-  
-  The actual commands, instead of their aliases, must be used when 
+
+  The actual commands, instead of their aliases, must be used when
   defining command defaults. The command defaults will also be
   applied to the aliases of the commands defined.
 

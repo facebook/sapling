@@ -28,7 +28,7 @@ from mercurial.i18n import _
 
 class CantReprocessAndShowBase(Exception):
     pass
-    
+
 
 def warn(message):
     sys.stdout.flush()
@@ -50,7 +50,7 @@ def intersect(ra, rb):
     """
     assert ra[0] <= ra[1]
     assert rb[0] <= rb[1]
-    
+
     sa = max(ra[0], rb[0])
     sb = min(ra[1], rb[1])
     if sa < sb:
@@ -69,7 +69,7 @@ def compare_range(a, astart, aend, b, bstart, bend):
             return False
     else:
         return True
-        
+
 
 
 
@@ -149,15 +149,15 @@ class Merge3Text(object):
                 yield end_marker + newline
             else:
                 raise ValueError(what)
-        
-        
+
+
 
 
 
     def merge_annotated(self):
         """Return merge with conflicts, showing origin of lines.
 
-        Most useful for debugging merge.        
+        Most useful for debugging merge.
         """
         for t in self.merge_regions():
             what = t[0]
@@ -180,8 +180,8 @@ class Merge3Text(object):
                 yield '>>>>\n'
             else:
                 raise ValueError(what)
-        
-        
+
+
 
 
 
@@ -249,15 +249,15 @@ class Merge3Text(object):
 
         # section a[0:ia] has been disposed of, etc
         iz = ia = ib = 0
-        
+
         for zmatch, zend, amatch, aend, bmatch, bend in self.find_sync_regions():
             #print 'match base [%d:%d]' % (zmatch, zend)
-            
+
             matchlen = zend - zmatch
             assert matchlen >= 0
             assert matchlen == (aend - amatch)
             assert matchlen == (bend - bmatch)
-            
+
             len_a = amatch - ia
             len_b = bmatch - ib
             len_base = zmatch - iz
@@ -294,22 +294,22 @@ class Merge3Text(object):
             # if the same part of the base was deleted on both sides
             # that's OK, we can just skip it.
 
-                
+
             if matchlen > 0:
                 assert ia == amatch
                 assert ib == bmatch
                 assert iz == zmatch
-                
+
                 yield 'unchanged', zmatch, zend
                 iz = zend
                 ia = aend
                 ib = bend
-    
+
 
     def reprocess_merge_regions(self, merge_regions):
         """Where there are conflict regions, remove the agreed lines.
 
-        Lines where both A and B have made the same changes are 
+        Lines where both A and B have made the same changes are
         eliminated.
         """
         for region in merge_regions:
@@ -342,7 +342,7 @@ class Merge3Text(object):
         if next_a < region_ia or next_b < region_ib:
             return 'conflict', None, None, next_a, region_ia, next_b, region_ib
     mismatch_region = staticmethod(mismatch_region)
-            
+
 
     def find_sync_regions(self):
         """Return a list of sync regions, where both descendents match the base.
@@ -397,7 +397,7 @@ class Merge3Text(object):
                 ia += 1
             else:
                 ib += 1
-            
+
         intbase = len(self.base)
         abase = len(self.a)
         bbase = len(self.b)
@@ -429,7 +429,7 @@ class Merge3Text(object):
                 del am[0]
             else:
                 del bm[0]
-                
+
         return unc
 
 
@@ -511,9 +511,9 @@ options = [('L', 'label', [], _('labels to use on conflict markers')),
 usage = _('''simplemerge [OPTS] LOCAL BASE OTHER
 
     Simple three-way file merge utility with a minimal feature set.
-    
+
     Apply to LOCAL the changes necessary to go from BASE to OTHER.
-    
+
     By default, LOCAL is overwritten with the results of this operation.
 ''')
 

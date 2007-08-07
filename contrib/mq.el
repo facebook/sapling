@@ -131,7 +131,7 @@ May return nil, meaning \"use the default\"."
     (let ((line (buffer-substring bol (point))))
       (when (> (length line) 0)
 	line))))
-  
+
 (defun mq-push (&optional patch)
   "Push patches until PATCH is reached.
 If PATCH is nil, push at most one patch."
@@ -166,7 +166,7 @@ If PATCH is nil, push at most one patch."
       (if ok
 	  (message "Pushing... %s" last-line)
 	(error "Pushing... %s" last-line)))))
-  
+
 (defun mq-push-all ()
   "Push patches until all are applied."
   (interactive)
@@ -195,7 +195,7 @@ If PATCH is nil, pop at most one patch."
       (if ok
 	  (message "Popping... %s" last-line)
 	(error "Popping... %s" last-line)))))
-  
+
 (defun mq-pop-all ()
   "Push patches until none are applied."
   (interactive)
@@ -255,7 +255,7 @@ This would become the active patch if popped to."
   (let ((buf mq-prev-buffer))
     (kill-buffer nil)
     (switch-to-buffer buf)))
-  
+
 (defun mq-edit-kill ()
   "Kill the edit currently being prepared."
   (interactive)
@@ -316,7 +316,7 @@ Key bindings
   (set-buffer-modified-p nil)
   (setq buffer-undo-list nil)
   (run-hooks 'text-mode-hook 'mq-edit-mode-hook))
-  
+
 (defun mq-refresh-edit ()
   "Refresh the topmost applied patch, editing the patch description."
   (interactive)

@@ -249,7 +249,7 @@ enum cmdline {
     hg_serve,
 };
 
-    
+
 /*
  * attempt to verify that a directory is really a hg repo, by testing
  * for the existence of a subdirectory.
@@ -342,13 +342,13 @@ static void serve_data(int argc, char **argv)
 
 	if (cmd != hg_init) {
 	    int valid;
-	    
+
 	    valid = validate_repo(repo_root, "data");
 
 	    if (valid == -1) {
 		goto badargs;
 	    }
-	    
+
 	    if (valid == 0) {
 		valid = validate_repo(repo_root, "store");
 
@@ -356,7 +356,7 @@ static void serve_data(int argc, char **argv)
 		    goto badargs;
 		}
 	    }
-	    
+
 	    if (valid == 0) {
 		perror(repo);
 		exit(EX_DATAERR);
@@ -385,7 +385,7 @@ static void serve_data(int argc, char **argv)
 	nargv[i++] = repo;
 	break;
     }
-    
+
     nargv[i] = NULL;
 
     if (debug) {

@@ -124,7 +124,7 @@ class localrepository(repo.repository):
             fp.write('%s %s\n' % (hex(node), munge and munge(name) or name))
             fp.close()
             self.hook('tag', node=hex(node), tag=name, local=local)
-            
+
         prevtags = ''
         if local:
             try:
