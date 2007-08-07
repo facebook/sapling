@@ -15,7 +15,7 @@ import os, shlex, shutil, sys
 from mercurial import hg, ui, util, commands
 from mercurial.i18n import _
 
-commands.norepo += " convert debug-svn-log"
+commands.norepo += " convert debugsvnlog"
 
 converters = [convert_cvs, convert_git, convert_svn, mercurial_source,
               mercurial_sink]
@@ -450,9 +450,9 @@ cmdtable = {
           ('r', 'rev', '', 'import up to target revision REV'),
           ('', 'datesort', None, 'try to sort changesets by date')],
          'hg convert [OPTION]... SOURCE [DEST [MAPFILE]]'),
-    "debug-svn-log":
+    "debugsvnlog":
         (debugsvnlog,
          [],
-         'hg debug-svn-log'),
+         'hg debugsvnlog'),
 }
 

@@ -236,7 +236,7 @@ class convert_svn(converter_source):
                 strict_node_history]
         arg = encodeargs(args)
         hgexe = util.hgexecutable()
-        cmd = '"%s "debug-svn-log""' % util.shellquote(hgexe)
+        cmd = '"%s "debugsvnlog""' % util.shellquote(hgexe)
         stdin, stdout = os.popen2(cmd, 'b')
         
         stdin.write(arg)
