@@ -15,6 +15,7 @@
 
 import locale
 import os
+import sys
 import cPickle as pickle
 from mercurial import util
 
@@ -24,7 +25,7 @@ from mercurial import util
 
 from cStringIO import StringIO
 
-from common import NoRepo, commit, converter_source, encodeargs
+from common import NoRepo, commit, converter_source, encodeargs, decodeargs
 
 try:
     from svn.core import SubversionException, Pool
@@ -81,6 +82,15 @@ def get_log_child(fp, url, paths, start, end, limit=0, discover_changed_paths=Tr
     else:
         pickle.dump(None, fp, protocol)
     fp.close()
+
+def debugsvnlog(ui, **opts):
+    """Fetch SVN log in a subprocess and channel them back to parent to
+    avoid memory collection issues.
+    """
+    util.set_binary(sys.stdin)
+    util.set_binary(sys.stdout)
+    args = decodeargs(sys.stdin.read())
+    get_log_child(sys.stdout, *args)
 
 # SVN conversion code stolen from bzr-svn and tailor
 class convert_svn(converter_source):

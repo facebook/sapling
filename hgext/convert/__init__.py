@@ -5,13 +5,13 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from common import NoRepo, converter_source, converter_sink, decodeargs
+from common import NoRepo, converter_source, converter_sink
 from cvs import convert_cvs
 from git import convert_git
 from hg import mercurial_source, mercurial_sink
-from subversion import convert_svn
+from subversion import convert_svn, debugsvnlog
 
-import os, shlex, shutil, sys
+import os, shlex, shutil
 from mercurial import hg, ui, util, commands
 from mercurial.i18n import _
 
@@ -433,14 +433,6 @@ def _convert(ui, src, dest=None, revmapfile=None, **opts):
                 opts)
     c.convert()
 
-def debugsvnlog(ui, **opts):
-    """Fetch SVN log in a subprocess and channel them back to parent to
-    avoid memory collection issues.
-    """
-    util.set_binary(sys.stdin)
-    util.set_binary(sys.stdout)
-    args = decodeargs(sys.stdin.read())
-    subversion.get_log_child(sys.stdout, *args)
 
 cmdtable = {
     "convert":
