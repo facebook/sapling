@@ -108,11 +108,6 @@ class convert_svn(converter_source):
         self.lastrevs = {}
 
         latest = None
-        if rev:
-            try:
-                latest = int(rev)
-            except ValueError:
-                raise NoRepo('svn: revision %s is not an integer' % rev)
         try:
             # Support file://path@rev syntax. Useful e.g. to convert
             # deleted branches.
@@ -136,6 +131,12 @@ class convert_svn(converter_source):
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
         except SubversionException, e:
             raise NoRepo("couldn't open SVN repo %s" % self.url)
+
+        if rev:
+            try:
+                latest = int(rev)
+            except ValueError:
+                raise util.Abort('svn: revision %s is not an integer' % rev)
 
         try:
             self.get_blacklist()
