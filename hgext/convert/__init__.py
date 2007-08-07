@@ -326,7 +326,7 @@ class filemapper(object):
             except KeyError, err:
                 pass
         return '', name, ''
-        
+
     def __call__(self, name):
         if self.include:
             inc = self.lookup(name, self.include)[0]

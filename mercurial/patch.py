@@ -321,7 +321,7 @@ class patchfile:
                         os.mkdir(d)
             self.lines = []
             self.exists = False
-            
+
         self.hash = {}
         self.dirty = 0
         self.offset = 0
@@ -350,7 +350,7 @@ class patchfile:
             vala = abs(a - linenum)
             valb = abs(b - linenum)
             return cmp(vala, valb)
-            
+
         try:
             cand = self.hash[l]
         except:
@@ -706,7 +706,7 @@ class hunk:
 
     def old(self, fuzz=0, toponly=False):
         return self.fuzzit(self.a, fuzz, toponly)
-        
+
     def newctrl(self):
         res = []
         for x in self.hunk:
@@ -842,7 +842,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
     """reads a patch from fp and tries to apply it.  The dict 'changed' is
        filled in with all of the filenames changed by the patch.  Returns 0
        for a clean patch, -1 if any rejects were found and 1 if there was
-       any fuzz.""" 
+       any fuzz."""
 
     def scangitpatch(fp, firstline, cwd=None):
         '''git patches can modify a file, then copy that file to

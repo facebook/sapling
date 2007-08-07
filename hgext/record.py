@@ -71,7 +71,7 @@ class header(object):
         for h in self.header:
             if h.startswith('index '):
                 return True
-        
+
     def pretty(self, fp):
         for h in self.header:
             if h.startswith('index '):
@@ -213,7 +213,7 @@ def parsepatch(fp):
             'range': {'context': addcontext,
                       'hunk': addhunk},
             }
-             
+
     p = parser()
 
     state = 'context'
@@ -311,7 +311,7 @@ def record(ui, repo, *pats, **opts):
         for h in chunks:
             try: contenders.update(dict.fromkeys(h.files()))
             except AttributeError: pass
-            
+
         newfiles = [f for f in files if f in contenders]
 
         if not newfiles:

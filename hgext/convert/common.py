@@ -7,7 +7,7 @@ def encodeargs(args):
         lines = base64.encodestring(s)
         lines = [l.splitlines()[0] for l in lines]
         return ''.join(lines)
-    
+
     s = pickle.dumps(args)
     return encodearg(s)
 

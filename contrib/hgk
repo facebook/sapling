@@ -32,7 +32,7 @@ proc ::tk::MouseWheel {wFired X Y D {shifted 0}} {
     # if we are outside the app, try and scroll the focus widget
     if {![winfo exists $w]} { catch {set w [focus]} }
     if {[winfo exists $w]} {
-        
+
         if {[bind $w $evt] ne ""} {
             # Awkward ... this widget has a MouseWheel binding, but to
             # trigger successfully in it, we must give it focus.
@@ -70,7 +70,7 @@ proc ::tk::MouseWheel {wFired X Y D {shifted 0}} {
 bind all <MouseWheel> [list ::tk::MouseWheel %W %X %Y %D 0]
 
 # end of win32 section
-} 
+}
 
 
 proc gitdir {} {

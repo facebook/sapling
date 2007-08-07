@@ -340,7 +340,7 @@ def imerge(ui, repo, *args, **opts):
         rev = opts.get('rev')
         if rev and args:
             raise util.Abort('please specify just one revision')
-        
+
         if len(args) == 2 and args[0] == 'load':
             pass
         else:

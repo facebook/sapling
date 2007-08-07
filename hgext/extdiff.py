@@ -64,7 +64,7 @@ def snapshot_node(ui, repo, files, node, tmproot):
     base = os.path.join(tmproot, dirname)
     os.mkdir(base)
     ui.note(_('making snapshot of %d files from rev %s\n') %
-                 (len(files), short(node)))
+            (len(files), short(node)))
     for fn in files:
         if not fn in mf:
             # skipping new file after a merge ?
@@ -90,7 +90,7 @@ def snapshot_wdir(ui, repo, files, tmproot):
     base = os.path.join(tmproot, dirname)
     os.mkdir(base)
     ui.note(_('making snapshot of %d files from working dir\n') %
-                 (len(files)))
+            (len(files)))
     for fn in files:
         wfn = util.pconvert(fn)
         ui.note('  %s\n' % wfn)
@@ -102,7 +102,7 @@ def snapshot_wdir(ui, repo, files, tmproot):
         for chunk in util.filechunkiter(repo.wopener(wfn)):
             fp.write(chunk)
     return dirname
-    
+
 
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     node1, node2 = cmdutil.revpair(repo, opts['rev'])
@@ -133,14 +133,14 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         if changes == 1 :
             if len(modified):
                 dir1 = os.path.join(dir1, util.localpath(modified[0]))
-                dir2 = os.path.join(dir2root, dir2, util.localpath(modified[0]))  
+                dir2 = os.path.join(dir2root, dir2, util.localpath(modified[0]))
             elif len(removed) :
                 dir1 = os.path.join(dir1, util.localpath(removed[0]))
                 dir2 = os.devnull
             else:
                 dir1 = os.devnull
-                dir2 = os.path.join(dir2root, dir2, util.localpath(added[0]))  
-    
+                dir2 = os.path.join(dir2root, dir2, util.localpath(added[0]))
+
         cmdline = ('%s %s %s %s' %
                    (util.shellquote(diffcmd), ' '.join(diffopts),
                     util.shellquote(dir1), util.shellquote(dir2)))

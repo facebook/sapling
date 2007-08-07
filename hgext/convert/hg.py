@@ -165,7 +165,7 @@ class mercurial_source(converter_source):
             except TypeError:
                 pass
         return copies
-        
+
     def getcommit(self, rev):
         ctx = self.changectx(rev)
         parents = [hex(p.node()) for p in ctx.parents() if p.node() != nullid]

@@ -67,8 +67,8 @@ def get_log_child(fp, url, paths, start, end, limit=0, discover_changed_paths=Tr
             for k, v in orig_paths.iteritems():
                 orig_paths[k] = changedpath(v)
         pickle.dump((orig_paths, revnum, author, date, message),
-                                fp, protocol)
-        
+                    fp, protocol)
+
     try:
         # Use an ra of our own so that our parent can consume
         # our results without confusing the server.
@@ -240,14 +240,14 @@ class convert_svn(converter_source):
                         break
                     raise SubversionException("child raised exception", entry)
                 yield entry
-            
+
         args = [self.url, paths, start, end, limit, discover_changed_paths,
                 strict_node_history]
         arg = encodeargs(args)
         hgexe = util.hgexecutable()
         cmd = '"%s "debugsvnlog""' % util.shellquote(hgexe)
         stdin, stdout = os.popen2(cmd, 'b')
-        
+
         stdin.write(arg)
         stdin.close()
 
@@ -540,7 +540,7 @@ class convert_svn(converter_source):
             parents = []
             orig_paths = orig_paths.items()
             orig_paths.sort()
-            
+
             # check whether this revision is the start of a branch
             path, ent = orig_paths and orig_paths[0] or (None, None)
             if ent and path == self.module:
