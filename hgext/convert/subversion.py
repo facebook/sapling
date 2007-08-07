@@ -77,7 +77,7 @@ def get_log_child(fp, url, paths, start, end, limit=0, discover_changed_paths=Tr
                        discover_changed_paths,
                        strict_node_history,
                        receiver)
-    except SubversionException, (_, num):
+    except SubversionException, (inst, num):
         pickle.dump(num, fp, protocol)
     else:
         pickle.dump(None, fp, protocol)
@@ -190,8 +190,7 @@ class convert_svn(converter_source):
                 self.ui.note('found branch %s at %d\n' % (branch, brevnum))
                 self.heads.append(brev)
         elif cfgtrunk or cfgbranches:
-            raise util.Abort(_('trunk/branch layout expected, '
-                               'but not found'))
+            raise util.Abort('trunk/branch layout expected, but not found')
         else:
             self.ui.note('working with one branch\n')
             self.heads = [self.head]
@@ -269,7 +268,7 @@ class convert_svn(converter_source):
                     rev = ent.copyfrom_rev
                     tag = path.split('/', 2)[2]
                     tags[tag] = self.revid(rev, module=source)
-        except SubversionException, (_, num):
+        except SubversionException, (inst, num):
             self.ui.note('no tags found at revision %d\n' % start)
         return tags
 
@@ -607,7 +606,7 @@ class convert_svn(converter_source):
                     self.ui.debug('revision %d has no entries\n' % revnum)
                     continue
                 parselogentry(orig_paths, revnum, author, date, message)
-        except SubversionException, (_, num):
+        except SubversionException, (inst, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self,
                     revision="Revision number %d" % to_revnum)
