@@ -303,7 +303,6 @@ class convert_svn(converter_source):
         except SubversionException:
             dirent = None
         if not dirent:
-            print self.base, path
             raise util.Abort('%s not found up to revision %d' % (path, stop))
 
         return dirent.created_rev
