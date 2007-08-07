@@ -35,7 +35,7 @@ C:\hg\hg-release.
 
 In a shell, build a standalone copy of the hg.exe program:
 
-  python setup.py build -c mingw32 
+  python setup.py build -c mingw32
   python setup.py py2exe -b 1
 
 Note: the previously suggested combined command of "python setup.py build -c

@@ -322,7 +322,7 @@ def run_one(test):
     elif diffret:
         ret = diffret
 
-    if ret != 0 and not skipped: 
+    if ret != 0 and not skipped:
         # Save errors to a file for diagnosis
         f = open(err, "wb")
         for line in out:
