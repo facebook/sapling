@@ -172,12 +172,28 @@ def create_server(ui, repo):
             return open(opt, 'w')
         return default
 
-    address = repo.ui.config("web", "address", "")
-    port = int(repo.ui.config("web", "port", 8000))
-    use_ipv6 = repo.ui.configbool("web", "ipv6")
-    webdir_conf = repo.ui.config("web", "webdir_conf")
-    accesslog = openlog(repo.ui.config("web", "accesslog", "-"), sys.stdout)
-    errorlog = openlog(repo.ui.config("web", "errorlog", "-"), sys.stderr)
+    def create_getconfig(section, *uis): # uis are least significant to most
+        def getconfig(var, default=None):
+            val = default
+            for u in uis:
+                val = u.config(section, var, val)
+            return val
+        def getconfigbool(var, default=None):
+            val = default
+            for u in uis:
+                val = u.configbool(section, var, val)
+        return (getconfig, getconfigbool)
+
+    if repo is None:
+        getconfig, getconfigbool = create_getconfig("web", ui)
+    else:
+        getconfig, getconfigbool = create_getconfig("web", ui, repo.ui)
+    address = getconfig("address", "")
+    port = int(getconfig("port", 8000))
+    use_ipv6 = getconfigbool("ipv6")
+    webdir_conf = getconfig("webdir_conf")
+    accesslog = openlog(getconfig("accesslog", "-"), sys.stdout)
+    errorlog = openlog(getconfig("errorlog", "-"), sys.stderr)
 
     if use_threads:
         try:
