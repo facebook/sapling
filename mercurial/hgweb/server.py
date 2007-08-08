@@ -203,29 +203,17 @@ def create_server(ui, repo):
             return open(opt, 'w')
         return default
 
-    def create_getconfig(section, *uis): # uis are least significant to most
-        def getconfig(var, default=None):
-            val = default
-            for u in uis:
-                val = u.config(section, var, val)
-            return val
-        def getconfigbool(var, default=None):
-            val = default
-            for u in uis:
-                val = u.configbool(section, var, val)
-        return (getconfig, getconfigbool)
-
     if repo is None:
-        getconfig, getconfigbool = create_getconfig("web", ui)
+        myui = ui
     else:
-        getconfig, getconfigbool = create_getconfig("web", ui, repo.ui)
-    address = getconfig("address", "")
-    port = int(getconfig("port", 8000))
-    use_ipv6 = getconfigbool("ipv6")
-    webdir_conf = getconfig("webdir_conf")
-    ssl_cert = getconfig("certificate")
-    accesslog = openlog(getconfig("accesslog", "-"), sys.stdout)
-    errorlog = openlog(getconfig("errorlog", "-"), sys.stderr)
+        myui = repo.ui
+    address = myui.config("web", "address", "")
+    port = int(myui.config("web", "port", 8000))
+    use_ipv6 = myui.configbool("web", "ipv6")
+    webdir_conf = myui.config("web", "webdir_conf")
+    ssl_cert = myui.config("web", "certificate")
+    accesslog = openlog(myui.config("web", "accesslog", "-"), sys.stdout)
+    errorlog = openlog(myui.config("web", "errorlog", "-"), sys.stderr)
 
     if use_threads:
         try:
