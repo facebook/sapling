@@ -2131,10 +2131,8 @@ cmdtable = {
           ('U', 'noupdate', None, _('do not update the new working directories')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
-          ('e', 'ssh', '', _('specify ssh command to use')),
           ('p', 'patches', '', _('location of source patch repo')),
-          ('', 'remotecmd', '',
-           _('specify hg command to run on the remote side'))],
+         ] + commands.remoteopts,
          _('hg qclone [OPTION]... SOURCE [DEST]')),
     "qcommit|qci":
         (commit,
@@ -2143,8 +2141,7 @@ cmdtable = {
     "^qdiff":
         (diff,
          [('g', 'git', None, _('use git extended diff format')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + commands.walkopts,
          _('hg qdiff [-I] [-X] [-g] [FILE]...')),
     "qdelete|qremove|qrm":
         (delete,
@@ -2184,9 +2181,7 @@ cmdtable = {
          [('e', 'edit', None, _('edit commit message')),
           ('f', 'force', None, _('import uncommitted changes into patch')),
           ('g', 'git', None, _('use git extended diff format')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ] + commands.commitopts,
+          ] + commands.walkopts + commands.commitopts,
          _('hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]...')),
     "qnext": (next, [] + seriesopts, _('hg qnext [-s]')),
     "qprev": (prev, [] + seriesopts, _('hg qprev [-s]')),
@@ -2209,9 +2204,7 @@ cmdtable = {
          [('e', 'edit', None, _('edit commit message')),
           ('g', 'git', None, _('use git extended diff format')),
           ('s', 'short', None, _('refresh only files already in the patch')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ] + commands.commitopts,
+          ] + commands.walkopts + commands.commitopts,
          _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...')),
     'qrename|qmv':
         (rename, [], _('hg qrename PATCH1 [PATCH2]')),

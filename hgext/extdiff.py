@@ -50,7 +50,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import *
-from mercurial import cmdutil, util
+from mercurial import cmdutil, util, commands
 import os, shutil, tempfile
 
 
@@ -181,8 +181,7 @@ cmdtable = {
      [('p', 'program', '', _('comparison program to run')),
       ('o', 'option', [], _('pass option to comparison program')),
       ('r', 'rev', [], _('revision')),
-      ('I', 'include', [], _('include names matching the given patterns')),
-      ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+     ] + commands.walkopts,
      _('hg extdiff [OPT]... [FILE]...')),
     }
 

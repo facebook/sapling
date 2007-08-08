@@ -375,8 +375,6 @@ cmdtable = {
         (record,
          [('A', 'addremove', None,
            _('mark new/missing files as added/removed before committing')),
-          ('d', 'date', '', _('record datecode as commit date')),
-          ('u', 'user', '', _('record user as commiter')),
-         ] + commands.walkopts + commands.commitopts,
+         ] + commands.walkopts + commands.commitopts + commands.commitopts2,
          _('hg record [OPTION]... [FILE]...')),
 }

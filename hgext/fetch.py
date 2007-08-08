@@ -86,13 +86,8 @@ def fetch(ui, repo, source='default', **opts):
 cmdtable = {
     'fetch':
         (fetch,
-        [('e', 'ssh', '', _('specify ssh command to use')),
-         ('m', 'message', '', _('use <text> as commit message')),
-         ('l', 'logfile', '', _('read the commit message from <file>')),
-         ('d', 'date', '', _('record datecode as commit date')),
-         ('u', 'user', '', _('record user as commiter')),
-         ('r', 'rev', [], _('a specific revision you would like to pull')),
+        [('r', 'rev', [], _('a specific revision you would like to pull')),
          ('f', 'force-editor', None, _('edit commit message')),
-         ('', 'remotecmd', '', _('hg command to run on the remote side'))],
+        ] + commands.commitopts + commands.commitopts2 + commands.remoteopts,
         _('hg fetch [SOURCE]')),
 }

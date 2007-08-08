@@ -2751,6 +2751,11 @@ commitopts = [
     ('l', 'logfile', '', _('read commit message from <file>')),
 ]
 
+commitopts2 = [
+    ('d', 'date', '', _('record datecode as commit date')),
+    ('u', 'user', '', _('record user as committer')),
+]
+
 table = {
     "^add": (add, walkopts + dryrunopts, _('hg add [OPTION]... [FILE]...')),
     "addremove":
@@ -2784,11 +2789,9 @@ table = {
         (backout,
          [('', 'merge', None,
            _('merge with old dirstate parent after backout')),
-          ('d', 'date', '', _('record datecode as commit date')),
           ('', 'parent', '', _('parent to choose when backing out merge')),
-          ('u', 'user', '', _('record user as committer')),
           ('r', 'rev', '', _('revision to backout')),
-         ] + walkopts + commitopts,
+         ] + walkopts + commitopts + commitopts2,
          _('hg backout [OPTION]... [-r] REV')),
     "branch":
         (branch,
@@ -2830,9 +2833,7 @@ table = {
         (commit,
          [('A', 'addremove', None,
            _('mark new/missing files as added/removed before committing')),
-          ('d', 'date', '', _('record datecode as commit date')),
-          ('u', 'user', '', _('record user as commiter')),
-         ] + walkopts + commitopts,
+         ] + walkopts + commitopts + commitopts2,
          _('hg commit [OPTION]... [FILE]...')),
     "copy|cp":
         (copy,
@@ -3022,10 +3023,8 @@ table = {
     "debugrawcommit|rawcommit":
         (rawcommit,
          [('p', 'parent', [], _('parent')),
-          ('d', 'date', '', _('date code')),
-          ('u', 'user', '', _('user')),
           ('F', 'files', '', _('file list'))
-          ] + commitopts,
+          ] + commitopts + commitopts2,
          _('hg debugrawcommit [OPTION]... [FILE]...')),
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":
@@ -3095,11 +3094,11 @@ table = {
         (tag,
          [('f', 'force', None, _('replace existing tag')),
           ('l', 'local', None, _('make the tag local')),
-          ('m', 'message', '', _('message for tag commit log entry')),
-          ('d', 'date', '', _('record datecode as commit date')),
-          ('u', 'user', '', _('record user as commiter')),
           ('r', 'rev', '', _('revision to tag')),
-          ('', 'remove', None, _('remove a tag'))],
+          ('', 'remove', None, _('remove a tag')),
+          # -l/--local is already there, commitopts cannot be used
+          ('m', 'message', '', _('use <text> as commit message')),
+         ] + commitopts2,
          _('hg tag [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME')),
     "tags": (tags, [], _('hg tags')),
     "tip":

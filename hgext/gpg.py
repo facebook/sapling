@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, tempfile, binascii
-from mercurial import util
+from mercurial import util, commands
 from mercurial import node as hgnode
 from mercurial.i18n import _
 
@@ -269,10 +269,9 @@ cmdtable = {
          [('l', 'local', None, _('make the signature local')),
           ('f', 'force', None, _('sign even if the sigfile is modified')),
           ('', 'no-commit', None, _('do not commit the sigfile after signing')),
+          ('k', 'key', '', _('the key id to sign with')),
           ('m', 'message', '', _('commit message')),
-          ('d', 'date', '', _('date code')),
-          ('u', 'user', '', _('user')),
-          ('k', 'key', '', _('the key id to sign with'))],
+         ] + commands.commitopts2,
          _('hg sign [OPTION]... [REVISION]...')),
     "sigcheck": (check, [], _('hg sigcheck REVISION')),
     "sigs": (sigs, [], _('hg sigs')),

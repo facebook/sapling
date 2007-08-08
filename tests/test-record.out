@@ -6,12 +6,12 @@ interactively select changes to commit
 options:
 
  -A --addremove  mark new/missing files as added/removed before committing
- -d --date       record datecode as commit date
- -u --user       record user as commiter
  -I --include    include names matching the given patterns
  -X --exclude    exclude names matching the given patterns
  -m --message    use <text> as commit message
  -l --logfile    read commit message from <file>
+ -d --date       record datecode as commit date
+ -u --user       record user as committer
 
 use "hg -v help record" to show global options
 % select no files
