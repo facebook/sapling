@@ -50,60 +50,61 @@
 
 from mercurial.i18n import _
 from mercurial.node import *
-from mercurial import cmdutil, util
+from mercurial import cmdutil, util, commands
 import os, shutil, tempfile
 
+
+def snapshot_node(ui, repo, files, node, tmproot):
+    '''snapshot files as of some revision'''
+    mf = repo.changectx(node).manifest()
+    dirname = os.path.basename(repo.root)
+    if dirname == "":
+        dirname = "root"
+    dirname = '%s.%s' % (dirname, short(node))
+    base = os.path.join(tmproot, dirname)
+    os.mkdir(base)
+    ui.note(_('making snapshot of %d files from rev %s\n') %
+            (len(files), short(node)))
+    for fn in files:
+        if not fn in mf:
+            # skipping new file after a merge ?
+            continue
+        wfn = util.pconvert(fn)
+        ui.note('  %s\n' % wfn)
+        dest = os.path.join(base, wfn)
+        destdir = os.path.dirname(dest)
+        if not os.path.isdir(destdir):
+            os.makedirs(destdir)
+        data = repo.wwritedata(wfn, repo.file(wfn).read(mf[wfn]))
+        open(dest, 'wb').write(data)
+    return dirname
+
+
+def snapshot_wdir(ui, repo, files, tmproot):
+    '''snapshot files from working directory.
+    if not using snapshot, -I/-X does not work and recursive diff
+    in tools like kdiff3 and meld displays too many files.'''
+    dirname = os.path.basename(repo.root)
+    if dirname == "":
+        dirname = "root"
+    base = os.path.join(tmproot, dirname)
+    os.mkdir(base)
+    ui.note(_('making snapshot of %d files from working dir\n') %
+            (len(files)))
+    for fn in files:
+        wfn = util.pconvert(fn)
+        ui.note('  %s\n' % wfn)
+        dest = os.path.join(base, wfn)
+        destdir = os.path.dirname(dest)
+        if not os.path.isdir(destdir):
+            os.makedirs(destdir)
+        fp = open(dest, 'wb')
+        for chunk in util.filechunkiter(repo.wopener(wfn)):
+            fp.write(chunk)
+    return dirname
+
+
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
-    def snapshot_node(files, node):
-        '''snapshot files as of some revision'''
-        mf = repo.changectx(node).manifest()
-        dirname = os.path.basename(repo.root)
-        if dirname == "":
-            dirname = "root"
-        dirname = '%s.%s' % (dirname, short(node))
-        base = os.path.join(tmproot, dirname)
-        os.mkdir(base)
-        if not ui.quiet:
-            ui.write_err(_('making snapshot of %d files from rev %s\n') %
-                         (len(files), short(node)))
-        for fn in files:
-            if not fn in mf:
-                # skipping new file after a merge ?
-                continue
-            wfn = util.pconvert(fn)
-            ui.note('  %s\n' % wfn)
-            dest = os.path.join(base, wfn)
-            destdir = os.path.dirname(dest)
-            if not os.path.isdir(destdir):
-                os.makedirs(destdir)
-            data = repo.wwritedata(wfn, repo.file(wfn).read(mf[wfn]))
-            open(dest, 'wb').write(data)
-        return dirname
-
-    def snapshot_wdir(files):
-        '''snapshot files from working directory.
-        if not using snapshot, -I/-X does not work and recursive diff
-        in tools like kdiff3 and meld displays too many files.'''
-        dirname = os.path.basename(repo.root)
-        if dirname == "":
-            dirname = "root"
-        base = os.path.join(tmproot, dirname)
-        os.mkdir(base)
-        if not ui.quiet:
-            ui.write_err(_('making snapshot of %d files from working dir\n') %
-                         (len(files)))
-        for fn in files:
-            wfn = util.pconvert(fn)
-            ui.note('  %s\n' % wfn)
-            dest = os.path.join(base, wfn)
-            destdir = os.path.dirname(dest)
-            if not os.path.isdir(destdir):
-                os.makedirs(destdir)
-            fp = open(dest, 'wb')
-            for chunk in util.filechunkiter(repo.wopener(wfn)):
-                fp.write(chunk)
-        return dirname
-
     node1, node2 = cmdutil.revpair(repo, opts['rev'])
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     modified, added, removed, deleted, unknown = repo.status(
@@ -112,12 +113,34 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         return 0
 
     tmproot = tempfile.mkdtemp(prefix='extdiff.')
+    dir2root = ''
     try:
-        dir1 = snapshot_node(modified + removed, node1)
+        # Always make a copy of node1
+        dir1 = snapshot_node(ui, repo, modified + removed, node1, tmproot)
+        changes = len(modified) + len(removed) + len(added)
+
+        # If node2 in not the wc or there is >1 change, copy it
         if node2:
-            dir2 = snapshot_node(modified + added, node2)
+            dir2 = snapshot_node(ui, repo, modified + added, node2, tmproot)
+        elif changes > 1:
+            dir2 = snapshot_wdir(ui, repo, modified + added, tmproot)
         else:
-            dir2 = snapshot_wdir(modified + added)
+            # This lets the diff tool open the changed file directly
+            dir2 = ''
+            dir2root = repo.root
+
+        # If only one change, diff the files instead of the directories
+        if changes == 1 :
+            if len(modified):
+                dir1 = os.path.join(dir1, util.localpath(modified[0]))
+                dir2 = os.path.join(dir2root, dir2, util.localpath(modified[0]))
+            elif len(removed) :
+                dir1 = os.path.join(dir1, util.localpath(removed[0]))
+                dir2 = os.devnull
+            else:
+                dir1 = os.devnull
+                dir2 = os.path.join(dir2root, dir2, util.localpath(added[0]))
+
         cmdline = ('%s %s %s %s' %
                    (util.shellquote(diffcmd), ' '.join(diffopts),
                     util.shellquote(dir1), util.shellquote(dir2)))
@@ -158,8 +181,7 @@ cmdtable = {
      [('p', 'program', '', _('comparison program to run')),
       ('o', 'option', [], _('pass option to comparison program')),
       ('r', 'rev', [], _('revision')),
-      ('I', 'include', [], _('include names matching the given patterns')),
-      ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+     ] + commands.walkopts,
      _('hg extdiff [OPT]... [FILE]...')),
     }
 

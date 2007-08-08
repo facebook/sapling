@@ -3,6 +3,8 @@ changeset 3:107ce1ee2b43 backs out changeset 1:25a1420a55f8
 merging with changeset 2:e6c3abc120e7
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+transaction abort!
+rollback completed
 abort: invalid date: 'should fail' 
 transaction abort!
 rollback completed
@@ -10,8 +12,6 @@ abort: date exceeds 32 bits: 100000000000000000
 transaction abort!
 rollback completed
 abort: impossible time zone offset: 1400000
-transaction abort!
-rollback completed
 Sun Jan 15 13:30:00 2006 +0500
 Sun Jan 15 13:30:00 2006 -0800
 Sat Jul 15 13:30:00 2006 +0500

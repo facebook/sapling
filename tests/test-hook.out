@@ -60,9 +60,9 @@ precommit hook: HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198
 pretxncommit hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
 5:fad284daf8c0
 pretxncommit.forbid hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
-abort: pretxncommit.forbid1 hook exited with status 1
 transaction abort!
 rollback completed
+abort: pretxncommit.forbid1 hook exited with status 1
 4:8ea2ef7ad3e8
 precommit hook: HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
 precommit.forbid hook: HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
@@ -86,9 +86,9 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-abort: pretxnchangegroup.forbid1 hook exited with status 1
 transaction abort!
 rollback completed
+abort: pretxnchangegroup.forbid1 hook exited with status 1
 3:4c52fb2e4022
 preoutgoing hook: HG_SOURCE=pull 
 outgoing hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_SOURCE=pull 

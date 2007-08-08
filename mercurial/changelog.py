@@ -58,7 +58,6 @@ class appender:
     def read(self, count=-1):
         '''only trick here is reads that span real file and data'''
         ret = ""
-        old_offset = self.offset
         if self.offset < self.size:
             s = self.fp.read(count)
             ret = s
@@ -131,7 +130,10 @@ class changelog(revlog):
         return extra
 
     def encode_extra(self, d):
-        items = [_string_escape(":".join(t)) for t in d.iteritems()]
+        # keys must be sorted to produce a deterministic changelog entry
+        keys = d.keys()
+        keys.sort()
+        items = [_string_escape('%s:%s' % (k, d[k])) for k in keys]
         return "\0".join(items)
 
     def extract(self, text):

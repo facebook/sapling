@@ -63,7 +63,7 @@ def fromlocal(s):
     Convert a string from the local character encoding to UTF-8
 
     We attempt to decode strings using the encoding mode set by
-    HG_ENCODINGMODE, which defaults to 'strict'. In this mode, unknown
+    HGENCODINGMODE, which defaults to 'strict'. In this mode, unknown
     characters will cause an error message. Other modes include
     'replace', which replaces unknown characters with a special
     Unicode character, and 'ignore', which drops the character.
@@ -619,7 +619,7 @@ def rename(src, dst):
     """forcibly rename a file"""
     try:
         os.rename(src, dst)
-    except OSError, err:
+    except OSError, err: # FIXME: check err (EEXIST ?)
         # on windows, rename to existing file is not allowed, so we
         # must delete destination first. but if file is open, unlink
         # schedules it for delete but does not delete it. rename
@@ -1306,7 +1306,11 @@ class opener(object):
             os.makedirs(dirname)
 
         if self._can_symlink:
-            os.symlink(src, linkname)
+            try:
+                os.symlink(src, linkname)
+            except OSError, err:
+                raise OSError(err.errno, _('could not symlink to %r: %s') %
+                              (src, err.strerror), linkname)
         else:
             f = self(dst, "w")
             f.write(src)

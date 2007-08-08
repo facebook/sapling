@@ -100,6 +100,17 @@ added 1 changesets with 2 changes to 2 files
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 summary:     second change
+% plain diff in email, [PATCH] subject, message body with subject
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying patch from stdin
+email patch
+
+next line
 % hg import in a subdirectory
 requesting all changes
 adding changesets

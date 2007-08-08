@@ -60,6 +60,18 @@ class changectx(object):
         else:
             raise AttributeError, name
 
+    def __contains__(self, key):
+        return key in self._manifest
+
+    def __getitem__(self, key):
+        return self.filectx(key)
+
+    def __iter__(self):
+        a = self._manifest.keys()
+        a.sort()
+        for f in a:
+            return f
+
     def changeset(self): return self._changeset
     def manifest(self): return self._manifest
 
@@ -184,7 +196,7 @@ class filectx(object):
     def __eq__(self, other):
         try:
             return (self._path == other._path
-                    and self._changeid == other._changeid)
+                    and self._fileid == other._fileid)
         except AttributeError:
             return False
 
@@ -240,13 +252,31 @@ class filectx(object):
         return [filectx(self._repo, self._path, fileid=x,
                         filelog=self._filelog) for x in c]
 
-    def annotate(self, follow=False):
+    def annotate(self, follow=False, linenumber=None):
         '''returns a list of tuples of (ctx, line) for each line
         in the file, where ctx is the filectx of the node where
-        that line was last changed'''
+        that line was last changed.
+        This returns tuples of ((ctx, linenumber), line) for each line,
+        if "linenumber" parameter is NOT "None".
+        In such tuples, linenumber means one at the first appearance
+        in the managed file.
+        To reduce annotation cost,
+        this returns fixed value(False is used) as linenumber,
+        if "linenumber" parameter is "False".'''
 
-        def decorate(text, rev):
+        def decorate_compat(text, rev):
             return ([rev] * len(text.splitlines()), text)
+
+        def without_linenumber(text, rev):
+            return ([(rev, False)] * len(text.splitlines()), text)
+
+        def with_linenumber(text, rev):
+            size = len(text.splitlines())
+            return ([(rev, i) for i in xrange(1, size + 1)], text)
+
+        decorate = (((linenumber is None) and decorate_compat) or
+                    (linenumber and with_linenumber) or
+                    without_linenumber)
 
         def pair(parent, child):
             for a1, a2, b1, b2 in bdiff.blocks(parent[1], child[1]):

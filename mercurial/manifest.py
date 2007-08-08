@@ -23,10 +23,6 @@ class manifestdict(dict):
     def linkf(self, f):
         "test for symlink in manifest flags"
         return "l" in self.flags(f)
-    def rawset(self, f, entry):
-        self[f] = bin(entry[:40])
-        fl = entry[40:-1]
-        if fl: self._flags[f] = fl
     def set(self, f, execf=False, linkf=False):
         if linkf: self._flags[f] = "l"
         elif execf: self._flags[f] = "x"
@@ -40,16 +36,19 @@ class manifest(revlog):
         self.listcache = None
         revlog.__init__(self, opener, "00manifest.i")
 
-    def parselines(self, lines):
-        for l in lines.splitlines(1):
-            yield l.split('\0')
+    def parse(self, lines):
+        mfdict = manifestdict()
+        for l in lines.splitlines():
+            f, n = l.split('\0')
+            if len(n) > 40:
+                mfdict._flags[f] = n[40:]
+                mfdict[f] = bin(n[:40])
+            else:
+                mfdict[f] = bin(n)
+        return mfdict
 
     def readdelta(self, node):
-        delta = mdiff.patchtext(self.delta(node))
-        deltamap = manifestdict()
-        for f, n in self.parselines(delta):
-            deltamap.rawset(f, n)
-        return deltamap
+        return self.parse(mdiff.patchtext(self.delta(node)))
 
     def read(self, node):
         if node == nullid: return manifestdict() # don't upset local cache
@@ -57,9 +56,7 @@ class manifest(revlog):
             return self.mapcache[1]
         text = self.revision(node)
         self.listcache = array.array('c', text)
-        mapping = manifestdict()
-        for f, n in self.parselines(text):
-            mapping.rawset(f, n)
+        mapping = self.parse(text)
         self.mapcache = (node, mapping)
         return mapping
 

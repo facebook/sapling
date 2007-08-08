@@ -64,7 +64,7 @@ def revnavgen(pos, pagelen, limit, nodefunc):
 
 class hgweb(object):
     def __init__(self, repo, name=None):
-        if type(repo) == type(""):
+        if isinstance(repo, str):
             self.repo = hg.repository(ui.ui(report_untrusted=False), repo)
         else:
             self.repo = repo
@@ -787,9 +787,17 @@ class hgweb(object):
             style = req.form['style'][0]
         mapfile = style_map(self.templatepath, style)
 
+        proto = req.env.get('wsgi.url_scheme')
+        if proto == 'https':
+            proto = 'https'
+            default_port = "443"
+        else:
+            proto = 'http'
+            default_port = "80"
+
         port = req.env["SERVER_PORT"]
-        port = port != "80" and (":" + port) or ""
-        urlbase = 'http://%s%s' % (req.env['SERVER_NAME'], port)
+        port = port != default_port and (":" + port) or ""
+        urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
         staticurl = self.config("web", "staticurl") or req.url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
@@ -1063,7 +1071,7 @@ class hgweb(object):
         # replayed
         ssl_req = self.configbool('web', 'push_ssl', True)
         if ssl_req:
-            if not req.env.get('HTTPS'):
+            if req.env.get('wsgi.url_scheme') != 'https':
                 bail(_('ssl required\n'))
                 return
             proto = 'https'
@@ -1160,7 +1168,7 @@ class hgweb(object):
                     req.write('%d\n' % ret)
                     req.write(val)
                 finally:
-                    lock.release()
+                    del lock
             except (OSError, IOError), inst:
                 req.write('0\n')
                 filename = getattr(inst, 'filename', '')

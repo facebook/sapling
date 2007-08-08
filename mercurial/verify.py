@@ -10,14 +10,19 @@ from i18n import _
 import revlog, mdiff
 
 def verify(repo):
+    lock = repo.lock()
+    try:
+        return _verify(repo)
+    finally:
+        del lock
+
+def _verify(repo):
     filelinkrevs = {}
     filenodes = {}
     changesets = revisions = files = 0
     errors = [0]
     warnings = [0]
     neededmanifests = {}
-
-    lock = repo.lock()
 
     def err(msg):
         repo.ui.warn(msg + "\n")

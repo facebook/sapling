@@ -129,9 +129,9 @@ acl: acl.allow enabled, 0 entries for user fred
 acl: acl.deny not enabled
 acl: user fred not allowed on foo/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset ef1ea85a6374
-abort: acl: access denied for changeset ef1ea85a6374
 transaction abort!
 rollback completed
+abort: acl: access denied for changeset ef1ea85a6374
 no rollback information available
 0:6675d58eff77
 
@@ -170,9 +170,9 @@ acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: user fred not allowed on quux/file.py
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
-abort: acl: access denied for changeset 911600dab2ae
 transaction abort!
 rollback completed
+abort: acl: access denied for changeset 911600dab2ae
 no rollback information available
 0:6675d58eff77
 
@@ -210,9 +210,9 @@ acl: acl.allow enabled, 0 entries for user barney
 acl: acl.deny enabled, 0 entries for user barney
 acl: user barney not allowed on foo/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset ef1ea85a6374
-abort: acl: access denied for changeset ef1ea85a6374
 transaction abort!
 rollback completed
+abort: acl: access denied for changeset ef1ea85a6374
 no rollback information available
 0:6675d58eff77
 
@@ -253,9 +253,9 @@ acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: user fred not allowed on quux/file.py
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
-abort: acl: access denied for changeset 911600dab2ae
 transaction abort!
 rollback completed
+abort: acl: access denied for changeset 911600dab2ae
 no rollback information available
 0:6675d58eff77
 
@@ -296,9 +296,9 @@ acl: acl.deny enabled, 2 entries for user fred
 acl: allowing changeset ef1ea85a6374
 acl: user fred denied on foo/Bar/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset f9cafe1212c8
-abort: acl: access denied for changeset f9cafe1212c8
 transaction abort!
 rollback completed
+abort: acl: access denied for changeset f9cafe1212c8
 no rollback information available
 0:6675d58eff77
 
@@ -338,9 +338,9 @@ acl: acl.allow enabled, 0 entries for user barney
 acl: acl.deny enabled, 0 entries for user barney
 acl: user barney not allowed on foo/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset ef1ea85a6374
-abort: acl: access denied for changeset ef1ea85a6374
 transaction abort!
 rollback completed
+abort: acl: access denied for changeset ef1ea85a6374
 no rollback information available
 0:6675d58eff77
 
@@ -427,9 +427,9 @@ acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: user wilma not allowed on quux/file.py
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
-abort: acl: access denied for changeset 911600dab2ae
 transaction abort!
 rollback completed
+abort: acl: access denied for changeset 911600dab2ae
 no rollback information available
 0:6675d58eff77
 
@@ -471,9 +471,9 @@ adding quux/file.py revisions
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 error: pretxnchangegroup.acl hook failed: unable to open ../acl.config: No such file or directory
-abort: unable to open ../acl.config: No such file or directory
 transaction abort!
 rollback completed
+abort: unable to open ../acl.config: No such file or directory
 no rollback information available
 0:6675d58eff77
 
@@ -524,9 +524,9 @@ acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: user betty not allowed on quux/file.py
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
-abort: acl: access denied for changeset 911600dab2ae
 transaction abort!
 rollback completed
+abort: acl: access denied for changeset 911600dab2ae
 no rollback information available
 0:6675d58eff77
 

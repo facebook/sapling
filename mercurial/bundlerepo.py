@@ -12,8 +12,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import *
 from i18n import _
-import changegroup, util, os, struct, bz2, tempfile
-
+import changegroup, util, os, struct, bz2, tempfile, mdiff
 import localrepo, changelog, manifest, filelog, revlog
 
 class bundlerevlog(revlog.revlog):
@@ -58,13 +57,10 @@ class bundlerevlog(revlog.revlog):
             if not prev:
                 prev = p1
             # start, size, base is not used, link, p1, p2, delta ref
-            if self.version == revlog.REVLOGV0:
-                e = (start, size, None, link, p1, p2, node)
-            else:
-                e = (self.offset_type(start, 0), size, -1, None, link,
-                     self.rev(p1), self.rev(p2), node)
+            e = (revlog.offset_type(start, 0), size, -1, None, link,
+                 self.rev(p1), self.rev(p2), node)
             self.basemap[n] = prev
-            self.index.append(e)
+            self.index.insert(-1, e)
             self.nodemap[node] = n
             prev = node
             n += 1
@@ -80,7 +76,7 @@ class bundlerevlog(revlog.revlog):
         # not against rev - 1
         # XXX: could use some caching
         if not self.bundle(rev):
-            return revlog.revlog.chunk(self, rev, df, cachelen)
+            return revlog.revlog.chunk(self, rev, df)
         self.bundlefile.seek(self.start(rev))
         return self.bundlefile.read(self.length(rev))
 
@@ -94,7 +90,7 @@ class bundlerevlog(revlog.revlog):
         elif not self.bundle(rev1) and not self.bundle(rev2):
             return revlog.revlog.revdiff(self, rev1, rev2)
 
-        return self.diff(self.revision(self.node(rev1)),
+        return mdiff.textdiff(self.revision(self.node(rev1)),
                          self.revision(self.node(rev2)))
 
     def revision(self, node):
@@ -107,8 +103,8 @@ class bundlerevlog(revlog.revlog):
         rev = self.rev(iter_node)
         # reconstruct the revision if it is from a changegroup
         while self.bundle(rev):
-            if self.cache and self.cache[0] == iter_node:
-                text = self.cache[2]
+            if self._cache and self._cache[0] == iter_node:
+                text = self._cache[2]
                 break
             chain.append(rev)
             iter_node = self.bundlebase(rev)
@@ -118,14 +114,14 @@ class bundlerevlog(revlog.revlog):
 
         while chain:
             delta = self.chunk(chain.pop())
-            text = self.patches(text, [delta])
+            text = mdiff.patches(text, [delta])
 
         p1, p2 = self.parents(node)
         if node != revlog.hash(text, p1, p2):
             raise revlog.RevlogError(_("integrity check failed on %s:%d")
                                      % (self.datafile, self.rev(node)))
 
-        self.cache = (node, self.rev(node), text)
+        self._cache = (node, self.rev(node), text)
         return text
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):

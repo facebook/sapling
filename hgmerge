@@ -96,6 +96,20 @@ ask_if_merged() {
     done
 }
 
+# Check if conflict markers are present and ask if the merge was successful
+conflicts_or_success() {
+    while egrep '^(<<<<<<< .*|=======|>>>>>>> .*)$' "$LOCAL" >/dev/null; do
+        echo "$LOCAL contains conflict markers."
+        echo "Keep this version? [y/n]"
+        read answer
+        case "$answer" in
+            y*|Y*) success;;
+            n*|N*) failure;;
+        esac
+    done
+    success
+}
+
 # Clean up when interrupted
 trap "failure" 1 2 3 6 15 # HUP INT QUIT ABRT TERM
 
@@ -123,20 +137,20 @@ if [ -n "$FILEMERGE" ]; then
     # filemerge prefers the right by default
     $FILEMERGE -left "$OTHER" -right "$LOCAL" -ancestor "$BASE" -merge "$LOCAL"
     [ $? -ne 0 ] && echo "FileMerge failed to launch" && failure
-    $TEST "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
+    $TEST "$LOCAL" -nt "$CHGTEST" && conflicts_or_success || ask_if_merged
 fi
 
 if [ -n "$DISPLAY" ]; then
     # try using kdiff3, which is fairly nice
     if [ -n "$KDIFF3" ]; then
         $KDIFF3 --auto "$BASE" "$BACKUP" "$OTHER" -o "$LOCAL" || failure
-        success
+        conflicts_or_success
     fi
 
     # try using tkdiff, which is a bit less sophisticated
     if [ -n "$TKDIFF" ]; then
         $TKDIFF "$BACKUP" "$OTHER" -a "$BASE" -o "$LOCAL" || failure
-        success
+        conflicts_or_success
     fi
 
     if [ -n "$MELD" ]; then
@@ -147,7 +161,7 @@ if [ -n "$DISPLAY" ]; then
         # use the file with conflicts
         $MELD "$LOCAL.tmp.$RAND" "$LOCAL" "$OTHER" || failure
         # Also it doesn't return good error code
-        $TEST "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
+        $TEST "$LOCAL" -nt "$CHGTEST" && conflicts_or_success || ask_if_merged
     fi
 fi
 
@@ -158,7 +172,7 @@ if [ -n "$MERGE" -o -n "$DIFF3" ]; then
     $EDITOR "$LOCAL" || failure
     # Some editors do not return meaningful error codes
     # Do not take any chances
-    $TEST "$LOCAL" -nt "$CHGTEST" && success || ask_if_merged
+    $TEST "$LOCAL" -nt "$CHGTEST" && conflicts_or_success || ask_if_merged
 fi
 
 # attempt to manually merge with diff and patch

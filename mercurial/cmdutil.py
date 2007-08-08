@@ -8,6 +8,7 @@
 from node import *
 from i18n import _
 import os, sys, atexit, signal, pdb, traceback, socket, errno, shlex
+import bisect, stat
 import mdiff, bdiff, util, templater, patch, commands, hg, lock, time
 import fancyopts, revlog, version, extensions, hook
 
@@ -625,8 +626,7 @@ def findrenames(repo, added=None, removed=None, threshold=0.5):
         if bestname:
             yield bestname, a, bestscore
 
-def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
-              similarity=None):
+def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     if dry_run is None:
         dry_run = opts.get('dry_run')
     if similarity is None:
@@ -635,19 +635,19 @@ def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
     mapping = {}
     for src, abs, rel, exact in walk(repo, pats, opts):
         target = repo.wjoin(abs)
-        if src == 'f' and repo.dirstate.state(abs) == '?':
+        if src == 'f' and abs not in repo.dirstate:
             add.append(abs)
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        if repo.dirstate.state(abs) != 'r' and not util.lexists(target):
+        if repo.dirstate[abs] != 'r' and not util.lexists(target):
             remove.append(abs)
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
     if not dry_run:
-        repo.add(add, wlock=wlock)
-        repo.remove(remove, wlock=wlock)
+        repo.add(add)
+        repo.remove(remove)
     if similarity > 0:
         for old, new, score in findrenames(repo, add, remove, similarity):
             oldrel, oldexact = mapping[old]
@@ -657,7 +657,7 @@ def addremove(repo, pats=[], opts={}, wlock=None, dry_run=None,
                                  '(%d%% similar)\n') %
                                (oldrel, newrel, score * 100))
             if not dry_run:
-                repo.copy(old, new, wlock=wlock)
+                repo.copy(old, new)
 
 def service(opts, parentfn=None, initfn=None, runfn=None):
     '''Run a command as a service.'''
@@ -1273,3 +1273,45 @@ def walkchangerevs(ui, repo, pats, change, opts):
             for rev in nrevs:
                 yield 'iter', rev, None
     return iterate(), matchfn
+
+def commit(ui, repo, commitfunc, pats, opts):
+    '''commit the specified files or all outstanding changes'''
+    message = logmessage(opts)
+
+    if opts['addremove']:
+        addremove(repo, pats, opts)
+    fns, match, anypats = matchpats(repo, pats, opts)
+    if pats:
+        status = repo.status(files=fns, match=match)
+        modified, added, removed, deleted, unknown = status[:5]
+        files = modified + added + removed
+        slist = None
+        for f in fns:
+            if f == '.':
+                continue
+            if f not in files:
+                rf = repo.wjoin(f)
+                try:
+                    mode = os.lstat(rf)[stat.ST_MODE]
+                except OSError:
+                    raise util.Abort(_("file %s not found!") % rf)
+                if stat.S_ISDIR(mode):
+                    name = f + '/'
+                    if slist is None:
+                        slist = list(files)
+                        slist.sort()
+                    i = bisect.bisect(slist, name)
+                    if i >= len(slist) or not slist[i].startswith(name):
+                        raise util.Abort(_("no match under directory %s!")
+                                         % rf)
+                elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
+                    raise util.Abort(_("can't commit %s: "
+                                       "unsupported file type!") % rf)
+                elif f not in repo.dirstate:
+                    raise util.Abort(_("file %s not tracked!") % rf)
+    else:
+        files = []
+    try:
+        return commitfunc(ui, repo, files, message, match, opts)
+    except ValueError, inst:
+        raise util.Abort(str(inst))
