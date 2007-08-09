@@ -30,6 +30,7 @@ def load(ui, name, path):
         shortname = name
     if shortname in _extensions:
         return
+    _extensions[shortname] = None
     if path:
         # the module will be loaded in sys.modules
         # choose an unique name so that it doesn't
