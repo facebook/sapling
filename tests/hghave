@@ -8,6 +8,8 @@ import os
 import sys
 import tempfile
 
+tempprefix = 'hg-hghave-'
+
 def has_symlink():
     return hasattr(os, "symlink")
 
@@ -15,7 +17,7 @@ def has_fifo():
     return hasattr(os, "mkfifo")
 
 def has_executablebit():
-    fd, path = tempfile.mkstemp()
+    fd, path = tempfile.mkstemp(prefix=tempprefix)
     os.close(fd)
     try:
         s = os.lstat(path).st_mode
@@ -26,7 +28,7 @@ def has_executablebit():
 
 def has_eol_in_paths():
     try:
-        fd, path = tempfile.mkstemp(suffix='\n\r')
+        fd, path = tempfile.mkstemp(prefix=tempprefix, suffix='\n\r')
         os.close(fd)
         os.remove(path)
         return True
