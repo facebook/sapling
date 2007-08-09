@@ -1,5 +1,5 @@
 % unbundle
-pulling from C:\dev\mercurial\hg\hg-local-stable\tests/test-no-symlinks.bundle
+pulling from C:\dev\mercurial\hg\hg-local-stable\tests/test-no-symlinks.hg
 requesting all changes
 adding changesets
 adding manifests
@@ -13,7 +13,7 @@ d/b
 a
 d/b
 % bundle
-pulling from ../symlinks.bundle
+pulling from ../symlinks.hg
 requesting all changes
 adding changesets
 adding manifests
