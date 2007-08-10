@@ -1870,7 +1870,7 @@ def log(ui, repo, *pats, **opts):
             if displayer.flush(rev):
                 count += 1
 
-def manifest(ui, repo, rev=None):
+def manifest(ui, repo, node=None, rev=None):
     """output the current or given revision of the project manifest
 
     Print a list of version controlled files for the given revision.
@@ -1884,7 +1884,13 @@ def manifest(ui, repo, rev=None):
     file revision hashes.
     """
 
-    m = repo.changectx(rev).manifest()
+    if rev and node:
+        raise util.Abort(_("please specify just one revision"))
+
+    if not node:
+        node = rev
+
+    m = repo.changectx(node).manifest()
     files = m.keys()
     files.sort()
 
@@ -1911,7 +1917,6 @@ def merge(ui, repo, node=None, force=None, rev=None):
 
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
-
     if not node:
         node = rev
 
@@ -2979,7 +2984,8 @@ table = {
           ('', 'template', '', _('display with template')),
          ] + walkopts,
          _('hg log [OPTION]... [FILE]')),
-    "manifest": (manifest, [], _('hg manifest [REV]')),
+    "manifest": (manifest, [('r', 'rev', '', _('revision to display'))],
+                 _('hg manifest [-r REV]')),
     "^merge":
         (merge,
          [('f', 'force', None, _('force a merge with outstanding changes')),
