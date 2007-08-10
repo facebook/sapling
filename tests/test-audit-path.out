@@ -1,0 +1,8 @@
+% should fail
+abort: path contains illegal component: .hg/00changelog.i
+adding a/a
+% should fail
+abort: path 'b/b' traverses symbolic link 'b'
+% should succeed
+% should still fail - maybe
+abort: path 'b/b' traverses symbolic link 'b'

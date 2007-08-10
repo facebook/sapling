@@ -69,7 +69,8 @@ class localrepository(repo.repository):
             self.encodefn = lambda x: x
             self.decodefn = lambda x: x
             self.spath = self.path
-        self.sopener = util.encodedopener(util.opener(self.spath), self.encodefn)
+        self.sopener = util.encodedopener(util.opener(self.spath),
+                                          self.encodefn)
 
         self.ui = ui.ui(parentui=parentui)
         try:

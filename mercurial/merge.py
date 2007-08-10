@@ -391,13 +391,15 @@ def applyupdates(repo, action, wctx, mctx):
                 repo.ui.debug(_("copying %s to %s\n") % (f, fd))
                 repo.wwrite(fd, repo.wread(f), flags)
 
+    audit_path = util.path_auditor(repo.root)
+
     for a in action:
         f, m = a[:2]
         if f and f[0] == "/":
             continue
         if m == "r": # remove
             repo.ui.note(_("removing %s\n") % f)
-            util.audit_path(f)
+            audit_path(f)
             try:
                 util.unlink(repo.wjoin(f))
             except OSError, inst:
