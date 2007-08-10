@@ -403,11 +403,11 @@ class ui(object):
                 pass
         return raw_input(prompt)
 
-    def prompt(self, msg, pat=None, default="y"):
+    def prompt(self, msg, pat=None, default="y", matchflags=0):
         if not self.interactive: return default
         try:
             r = self.readline(msg + ' ')
-            if not pat or re.match(pat, r):
+            if not pat or re.match(pat, r, matchflags):
                 return r
             else:
                 self.write(_("unrecognized response\n"))

@@ -3,6 +3,26 @@ hg record [OPTION]... [FILE]...
 
 interactively select changes to commit
 
+    If a list of files is omitted, all changes reported by "hg status"
+    will be candidates for recording.
+
+    You will be prompted for whether to record changes to each
+    modified file, and for files with multiple changes, for each
+    change to use.  For each query, the following responses are
+    possible:
+
+    y - record this change
+    n - skip this change
+
+    s - skip remaining changes to this file
+    f - record remaining changes to this file
+
+    d - done, skip remaining changes and files
+    a - record all changes to all remaining files
+    q - quit, recording no changes
+
+    ? - display help
+
 options:
 
  -A --addremove  mark new/missing files as added/removed before committing
@@ -17,7 +37,7 @@ use "hg -v help record" to show global options
 % select no files
 diff --git a/empty-rw b/empty-rw
 new file mode 100644
-record changes to 'empty-rw'? [y]es [n]o no changes to record
+record changes to 'empty-rw'? [Ynsfdaq?]  no changes to record
 
 changeset:   -1:000000000000
 tag:         tip
@@ -28,7 +48,7 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 % select files but no hunks
 diff --git a/empty-rw b/empty-rw
 new file mode 100644
-record changes to 'empty-rw'? [y]es [n]o transaction abort!
+record changes to 'empty-rw'? [Ynsfdaq?]  transaction abort!
 rollback completed
 
 changeset:   -1:000000000000
@@ -40,7 +60,7 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 % record empty file
 diff --git a/empty-rw b/empty-rw
 new file mode 100644
-record changes to 'empty-rw'? [y]es [n]o 
+record changes to 'empty-rw'? [Ynsfdaq?]  
 changeset:   0:c0708cf4e46e
 tag:         tip
 user:        test
@@ -52,7 +72,7 @@ summary:     empty
 diff --git a/empty-rw b/empty-rename
 rename from empty-rw
 rename to empty-rename
-record changes to 'empty-rw' and 'empty-rename'? [y]es [n]o 
+record changes to 'empty-rw' and 'empty-rename'? [Ynsfdaq?]  
 changeset:   1:df251d174da3
 tag:         tip
 user:        test
@@ -64,7 +84,7 @@ summary:     rename
 diff --git a/empty-rename b/empty-copy
 copy from empty-rename
 copy to empty-copy
-record changes to 'empty-rename' and 'empty-copy'? [y]es [n]o 
+record changes to 'empty-rename' and 'empty-copy'? [Ynsfdaq?]  
 changeset:   2:b63ea3939f8d
 tag:         tip
 user:        test
@@ -75,7 +95,7 @@ summary:     copy
 % delete empty file
 diff --git a/empty-copy b/empty-copy
 deleted file mode 100644
-record changes to 'empty-copy'? [y]es [n]o 
+record changes to 'empty-copy'? [Ynsfdaq?]  
 changeset:   3:a2546574bce9
 tag:         tip
 user:        test
@@ -87,7 +107,7 @@ summary:     delete
 diff --git a/tip.bundle b/tip.bundle
 new file mode 100644
 this is a binary file
-record changes to 'tip.bundle'? [y]es [n]o 
+record changes to 'tip.bundle'? [Ynsfdaq?]  
 changeset:   4:9e998a545a8b
 tag:         tip
 user:        test
@@ -100,7 +120,7 @@ Binary file tip.bundle has changed
 % change binary file
 diff --git a/tip.bundle b/tip.bundle
 this modifies a binary file (all or nothing)
-record changes to 'tip.bundle'? [y]es [n]o 
+record changes to 'tip.bundle'? [Ynsfdaq?]  
 changeset:   5:93d05561507d
 tag:         tip
 user:        test
@@ -115,7 +135,7 @@ diff --git a/tip.bundle b/top.bundle
 rename from tip.bundle
 rename to top.bundle
 this modifies a binary file (all or nothing)
-record changes to 'tip.bundle' and 'top.bundle'? [y]es [n]o 
+record changes to 'tip.bundle' and 'top.bundle'? [Ynsfdaq?]  
 changeset:   6:699cc1bea9aa
 tag:         tip
 user:        test
@@ -130,7 +150,7 @@ Binary file top.bundle has changed
 % add plain file
 diff --git a/plain b/plain
 new file mode 100644
-record changes to 'plain'? [y]es [n]o 
+record changes to 'plain'? [Ynsfdaq?]  
 changeset:   7:118ed744216b
 tag:         tip
 user:        test
@@ -155,46 +175,46 @@ diff -r 699cc1bea9aa -r 118ed744216b plain
 % modify end of plain file
 diff --git a/plain b/plain
 1 hunks, 1 lines changed
-record changes to 'plain'? [y]es [n]o @@ -8,3 +8,4 @@ 8
+record changes to 'plain'? [Ynsfdaq?]  @@ -8,3 +8,4 @@ 8
  8
  9
  10
 +11
-record this change to 'plain'? [y]es [n]o % modify end of plain file, no EOL
+record this change to 'plain'? [Ynsfdaq?]  % modify end of plain file, no EOL
 diff --git a/plain b/plain
 1 hunks, 1 lines changed
-record changes to 'plain'? [y]es [n]o @@ -9,3 +9,4 @@ 9
+record changes to 'plain'? [Ynsfdaq?]  @@ -9,3 +9,4 @@ 9
  9
  10
  11
 +cf81a2760718a74d44c0c2eecb72f659e63a69c5
 \ No newline at end of file
-record this change to 'plain'? [y]es [n]o % modify end of plain file, add EOL
+record this change to 'plain'? [Ynsfdaq?]  % modify end of plain file, add EOL
 diff --git a/plain b/plain
 1 hunks, 2 lines changed
-record changes to 'plain'? [y]es [n]o @@ -9,4 +9,4 @@ 9
+record changes to 'plain'? [Ynsfdaq?]  @@ -9,4 +9,4 @@ 9
  9
  10
  11
 -cf81a2760718a74d44c0c2eecb72f659e63a69c5
 \ No newline at end of file
 +cf81a2760718a74d44c0c2eecb72f659e63a69c5
-record this change to 'plain'? [y]es [n]o % modify beginning, trim end, record both
+record this change to 'plain'? [Ynsfdaq?]  % modify beginning, trim end, record both
 diff --git a/plain b/plain
 2 hunks, 4 lines changed
-record changes to 'plain'? [y]es [n]o @@ -1,4 +1,4 @@ 1
+record changes to 'plain'? [Ynsfdaq?]  @@ -1,4 +1,4 @@ 1
 -1
 +2
  2
  3
  4
-record this change to 'plain'? [y]es [n]o @@ -8,5 +8,3 @@ 8
+record this change to 'plain'? [Ynsfdaq?]  @@ -8,5 +8,3 @@ 8
  8
  9
  10
 -11
 -cf81a2760718a74d44c0c2eecb72f659e63a69c5
-record this change to 'plain'? [y]es [n]o 
+record this change to 'plain'? [Ynsfdaq?]  
 changeset:   11:d09ab1967dab
 tag:         tip
 user:        test
@@ -221,7 +241,7 @@ diff -r e2ecd9b0b78d -r d09ab1967dab plain
 % record end
 diff --git a/plain b/plain
 2 hunks, 5 lines changed
-record changes to 'plain'? [y]es [n]o @@ -1,9 +1,6 @@ 2
+record changes to 'plain'? [Ynsfdaq?]  @@ -1,9 +1,6 @@ 2
 -2
 -2
 -3
@@ -231,7 +251,7 @@ record changes to 'plain'? [y]es [n]o @@ -1,9 +1,6 @@ 2
  7
  8
  9
-record this change to 'plain'? [y]es [n]o @@ -4,7 +1,7 @@
+record this change to 'plain'? [Ynsfdaq?]  @@ -4,7 +1,7 @@
  4
  5
  6
@@ -240,7 +260,7 @@ record this change to 'plain'? [y]es [n]o @@ -4,7 +1,7 @@
  9
 -10
 +10.new
-record this change to 'plain'? [y]es [n]o 
+record this change to 'plain'? [Ynsfdaq?]  
 changeset:   12:44516c9708ae
 tag:         tip
 user:        test
@@ -260,14 +280,14 @@ diff -r d09ab1967dab -r 44516c9708ae plain
 % record beginning
 diff --git a/plain b/plain
 1 hunks, 3 lines changed
-record changes to 'plain'? [y]es [n]o @@ -1,6 +1,3 @@ 2
+record changes to 'plain'? [Ynsfdaq?]  @@ -1,6 +1,3 @@ 2
 -2
 -2
 -3
  4
  5
  6
-record this change to 'plain'? [y]es [n]o 
+record this change to 'plain'? [Ynsfdaq?]  
 changeset:   13:3ebbace64a8d
 tag:         tip
 user:        test
@@ -289,7 +309,7 @@ diff -r 44516c9708ae -r 3ebbace64a8d plain
 % record end
 diff --git a/plain b/plain
 2 hunks, 4 lines changed
-record changes to 'plain'? [y]es [n]o @@ -1,6 +1,9 @@ 4
+record changes to 'plain'? [Ynsfdaq?]  @@ -1,6 +1,9 @@ 4
 +1
 +2
 +3
@@ -299,7 +319,7 @@ record changes to 'plain'? [y]es [n]o @@ -1,6 +1,9 @@ 4
  7
  8
  9
-record this change to 'plain'? [y]es [n]o @@ -1,7 +4,6 @@
+record this change to 'plain'? [Ynsfdaq?]  @@ -1,7 +4,6 @@
  4
  5
  6
@@ -307,17 +327,17 @@ record this change to 'plain'? [y]es [n]o @@ -1,7 +4,6 @@
  8
  9
 -10.new
-record this change to 'plain'? [y]es [n]o % add to beginning, middle, end
+record this change to 'plain'? [Ynsfdaq?]  % add to beginning, middle, end
 % record beginning, middle
 diff --git a/plain b/plain
 3 hunks, 7 lines changed
-record changes to 'plain'? [y]es [n]o @@ -1,2 +1,5 @@ 4
+record changes to 'plain'? [Ynsfdaq?]  @@ -1,2 +1,5 @@ 4
 +1
 +2
 +3
  4
  5
-record this change to 'plain'? [y]es [n]o @@ -1,6 +4,8 @@
+record this change to 'plain'? [Ynsfdaq?]  @@ -1,6 +4,8 @@
  4
  5
 +5.new
@@ -326,14 +346,14 @@ record this change to 'plain'? [y]es [n]o @@ -1,6 +4,8 @@
  7
  8
  9
-record this change to 'plain'? [y]es [n]o @@ -3,4 +8,6 @@
+record this change to 'plain'? [Ynsfdaq?]  @@ -3,4 +8,6 @@
  6
  7
  8
  9
 +10
 +11
-record this change to 'plain'? [y]es [n]o 
+record this change to 'plain'? [Ynsfdaq?]  
 changeset:   15:c1c639d8b268
 tag:         tip
 user:        test
@@ -358,13 +378,13 @@ diff -r efc0dad7bd9f -r c1c639d8b268 plain
 % record end
 diff --git a/plain b/plain
 1 hunks, 2 lines changed
-record changes to 'plain'? [y]es [n]o @@ -9,3 +9,5 @@ 7
+record changes to 'plain'? [Ynsfdaq?]  @@ -9,3 +9,5 @@ 7
  7
  8
  9
 +10
 +11
-record this change to 'plain'? [y]es [n]o 
+record this change to 'plain'? [Ynsfdaq?]  
 changeset:   16:80b74bbc7808
 tag:         tip
 user:        test
@@ -384,10 +404,10 @@ diff -r c1c639d8b268 -r 80b74bbc7808 plain
 adding subdir/a
 diff --git a/subdir/a b/subdir/a
 1 hunks, 1 lines changed
-record changes to 'subdir/a'? [y]es [n]o @@ -1,1 +1,2 @@ a
+record changes to 'subdir/a'? [Ynsfdaq?]  @@ -1,1 +1,2 @@ a
  a
 +a
-record this change to 'subdir/a'? [y]es [n]o 
+record this change to 'subdir/a'? [Ynsfdaq?]  
 changeset:   18:33ff5c4fb017
 tag:         tip
 user:        test
@@ -397,6 +417,72 @@ summary:     subdir-change
 diff -r aecf2b2ea83c -r 33ff5c4fb017 subdir/a
 --- a/subdir/a	Thu Jan 01 00:00:16 1970 +0000
 +++ b/subdir/a	Thu Jan 01 00:00:16 1970 +0000
+@@ -1,1 +1,2 @@ a
+ a
++a
+
+% help, quit
+diff --git a/subdir/f1 b/subdir/f1
+1 hunks, 1 lines changed
+record changes to 'subdir/f1'? [Ynsfdaq?]  y - record this change
+n - skip this change
+s - skip remaining changes to this file
+f - record remaining changes to this file
+d - done, skip remaining changes and files
+a - record all changes to all remaining files
+q - quit, recording no changes
+? - display help
+record changes to 'subdir/f1'? [Ynsfdaq?]  abort: user quit
+% skip
+diff --git a/subdir/f1 b/subdir/f1
+1 hunks, 1 lines changed
+record changes to 'subdir/f1'? [Ynsfdaq?]  diff --git a/subdir/f2 b/subdir/f2
+1 hunks, 1 lines changed
+record changes to 'subdir/f2'? [Ynsfdaq?]  abort: response expected
+% no
+diff --git a/subdir/f1 b/subdir/f1
+1 hunks, 1 lines changed
+record changes to 'subdir/f1'? [Ynsfdaq?]  diff --git a/subdir/f2 b/subdir/f2
+1 hunks, 1 lines changed
+record changes to 'subdir/f2'? [Ynsfdaq?]  abort: response expected
+% f, quit
+diff --git a/subdir/f1 b/subdir/f1
+1 hunks, 1 lines changed
+record changes to 'subdir/f1'? [Ynsfdaq?]  diff --git a/subdir/f2 b/subdir/f2
+1 hunks, 1 lines changed
+record changes to 'subdir/f2'? [Ynsfdaq?]  abort: user quit
+% s, all
+diff --git a/subdir/f1 b/subdir/f1
+1 hunks, 1 lines changed
+record changes to 'subdir/f1'? [Ynsfdaq?]  diff --git a/subdir/f2 b/subdir/f2
+1 hunks, 1 lines changed
+record changes to 'subdir/f2'? [Ynsfdaq?]  
+changeset:   20:094183e04b7c
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:18 1970 +0000
+summary:     x
+
+diff -r f9e855cd9374 -r 094183e04b7c subdir/f2
+--- a/subdir/f2	Thu Jan 01 00:00:17 1970 +0000
++++ b/subdir/f2	Thu Jan 01 00:00:18 1970 +0000
+@@ -1,1 +1,2 @@ b
+ b
++b
+
+% f
+diff --git a/subdir/f1 b/subdir/f1
+1 hunks, 1 lines changed
+record changes to 'subdir/f1'? [Ynsfdaq?]  
+changeset:   21:38164785b0ef
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:19 1970 +0000
+summary:     y
+
+diff -r 094183e04b7c -r 38164785b0ef subdir/f1
+--- a/subdir/f1	Thu Jan 01 00:00:18 1970 +0000
++++ b/subdir/f1	Thu Jan 01 00:00:19 1970 +0000
 @@ -1,1 +1,2 @@ a
  a
 +a

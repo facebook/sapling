@@ -238,44 +238,59 @@ def filterpatch(ui, chunks):
             else:
                 consumed.append(chunks.pop())
         return consumed
-    resp = None
+    resp_all = [None]
+    resp_file = [None]
     applied = {}
+    def prompt(query):
+        if resp_all[0] is not None:
+            return resp_all[0]
+        if resp_file[0] is not None:
+            return resp_file[0]
+        while True:
+            r = (ui.prompt(query + _(' [Ynsfdaq?] '), '[Ynsfdaq?]?$',
+                           matchflags=re.I) or 'y').lower()
+            if r == '?':
+                c = record.__doc__.find('y - record this change')
+                for l in record.__doc__[c:].splitlines():
+                    if l: ui.write(_(l.strip()), '\n')
+                continue
+            elif r == 's':
+                r = resp_file[0] = 'n'
+            elif r == 'f':
+                r = resp_file[0] = 'y'
+            elif r == 'd':
+                r = resp_all[0] = 'n'
+            elif r == 'a':
+                r = resp_all[0] = 'y'
+            elif r == 'q':
+                raise util.Abort(_('user quit'))
+            return r
     while chunks:
         chunk = chunks.pop()
         if isinstance(chunk, header):
+            resp_file = [None]
             fixoffset = 0
             hdr = ''.join(chunk.header)
             if hdr in seen:
                 consumefile()
                 continue
             seen[hdr] = True
-            if not resp:
+            if resp_all[0] is None:
                 chunk.pretty(ui)
-            r = resp or ui.prompt(_('record changes to %s? [y]es [n]o') %
-                                  _(' and ').join(map(repr, chunk.files())),
-                                  '(?:|[yYnNqQaA])$') or 'y'
-            if r in 'aA':
-                r = 'y'
-                resp = 'y'
-            if r in 'qQ':
-                raise util.Abort(_('user quit'))
-            if r in 'yY':
+            r = prompt(_('record changes to %s?') %
+                       _(' and ').join(map(repr, chunk.files())))
+            if r == 'y':
                 applied[chunk.filename()] = [chunk]
                 if chunk.allhunks():
                     applied[chunk.filename()] += consumefile()
             else:
                 consumefile()
         else:
-            if not resp:
+            if resp_file[0] is None and resp_all[0] is None:
                 chunk.pretty(ui)
-            r = resp or ui.prompt(_('record this change to %r? [y]es [n]o') %
-                                  chunk.filename(), '(?:|[yYnNqQaA])$') or 'y'
-            if r in 'aA':
-                r = 'y'
-                resp = 'y'
-            if r in 'qQ':
-                raise util.Abort(_('user quit'))
-            if r in 'yY':
+            r = prompt(_('record this change to %r?') %
+                       chunk.filename())
+            if r == 'y':
                 if fixoffset:
                     chunk = copy.copy(chunk)
                     chunk.toline += fixoffset
@@ -286,7 +301,27 @@ def filterpatch(ui, chunks):
                                  if h[0].special() or len(h) > 1], [])
 
 def record(ui, repo, *pats, **opts):
-    '''interactively select changes to commit'''
+    '''interactively select changes to commit
+
+    If a list of files is omitted, all changes reported by "hg status"
+    will be candidates for recording.
+
+    You will be prompted for whether to record changes to each
+    modified file, and for files with multiple changes, for each
+    change to use.  For each query, the following responses are
+    possible:
+
+    y - record this change
+    n - skip this change
+
+    s - skip remaining changes to this file
+    f - record remaining changes to this file
+
+    d - done, skip remaining changes and files
+    a - record all changes to all remaining files
+    q - quit, recording no changes
+
+    ? - display help'''
 
     if not ui.interactive:
         raise util.Abort(_('running non-interactively, use commit instead'))

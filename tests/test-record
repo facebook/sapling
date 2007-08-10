@@ -214,3 +214,53 @@ y
 y
 EOF
 echo; hg tip -p
+
+echo a > f1
+echo b > f2
+hg add f1 f2
+
+hg ci -mz -d '17 0'
+
+echo a >> f1
+echo b >> f2
+
+echo % help, quit
+
+hg record <<EOF
+?
+q
+EOF
+
+echo % skip
+
+hg record <<EOF
+s
+EOF
+
+echo % no
+
+hg record <<EOF
+n
+EOF
+
+echo % f, quit
+
+hg record <<EOF
+f
+q
+EOF
+
+echo % s, all
+
+hg record -d '18 0' -mx <<EOF
+s
+a
+EOF
+echo; hg tip -p
+
+echo % f
+
+hg record -d '19 0' -my <<EOF
+f
+EOF
+echo; hg tip -p
