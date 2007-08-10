@@ -810,9 +810,9 @@ class queue:
             del wlock
 
     def pop(self, repo, patch=None, force=False, update=True, all=False):
-        def getfile(f, rev):
+        def getfile(f, rev, flags):
             t = repo.file(f).read(rev)
-            repo.wfile(f, "w").write(t)
+            repo.wwrite(f, t, flags)
 
         wlock = repo.wlock()
         try:
@@ -870,10 +870,9 @@ class queue:
                 if d:
                     raise util.Abort("deletions found between repo revs")
                 for f in m:
-                    getfile(f, mmap[f])
+                    getfile(f, mmap[f], mmap.flags(f))
                 for f in r:
-                    getfile(f, mmap[f])
-                    util.set_exec(repo.wjoin(f), mmap.execf(f))
+                    getfile(f, mmap[f], mmap.flags(f))
                 for f in m + r:
                     repo.dirstate.normal(f)
                 for f in a:
