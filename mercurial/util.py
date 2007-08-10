@@ -698,7 +698,8 @@ class path_auditor(object):
     def __call__(self, path):
         if path in self.audited:
             return
-        parts = os.path.normcase(path).split(os.sep)
+        normpath = os.path.normcase(path)
+        parts = normpath.split(os.sep)
         if (os.path.splitdrive(path)[0] or parts[0] in ('.hg', '')
             or os.pardir in parts):
             raise Abort(_("path contains illegal component: %s") % path)
@@ -713,12 +714,13 @@ class path_auditor(object):
                 if stat.S_ISLNK(st.st_mode):
                     raise Abort(_('path %r traverses symbolic link %r') %
                                 (path, prefix))
-                if os.path.exists(os.path.join(curpath, '.hg')):
+                elif (stat.S_ISDIR(st.st_mode) and
+                      os.path.isdir(os.path.join(curpath, '.hg'))):
                     raise Abort(_('path %r is inside repo %r') %
                                 (path, prefix))
             self.audited[prefix] = True
-        for c in strutil.rfindall(path, os.sep):
-            check(path[:c])
+        for c in strutil.rfindall(normpath, os.sep):
+            check(normpath[:c])
         self.audited[path] = True
 
 def _makelock_file(info, pathname):
