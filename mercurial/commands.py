@@ -759,20 +759,21 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 
 def debugstate(ui, repo):
     """show the contents of the current dirstate"""
-    dc = repo.dirstate._map
-    k = dc.keys()
+    k = repo.dirstate._map.items()
     k.sort()
-    for file_ in k:
-        if dc[file_][3] == -1:
+    for file_, ent in k:
+        if ent[3] == -1:
             # Pad or slice to locale representation
             locale_len = len(time.strftime("%x %X", time.localtime(0)))
             timestr = 'unset'
             timestr = timestr[:locale_len] + ' '*(locale_len - len(timestr))
         else:
-            timestr = time.strftime("%x %X", time.localtime(dc[file_][3]))
-        ui.write("%c %3o %10d %s %s\n"
-                 % (dc[file_][0], dc[file_][1] & 0777, dc[file_][2],
-                    timestr, file_))
+            timestr = time.strftime("%x %X", time.localtime(ent[3]))
+        if ent[1] & 020000:
+            mode = 'lnk'
+        else:
+            mode = '%3o' % (ent[1] & 0777)
+        ui.write("%c %s %10d %s %s\n" % (ent[0], mode, ent[2], timestr, file_))
     for f in repo.dirstate.copies():
         ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
 
