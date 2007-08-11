@@ -82,7 +82,7 @@ if __name__ == '__main__':
         if not negate and not check():
             error('hghave: missing feature: ' + desc)
         elif negate and check():
-            error('hghave: unexpected feature: ' + desc)
+            error('hghave: system supports %s' % desc)
 
     if failures != 0:
         sys.exit(1)
