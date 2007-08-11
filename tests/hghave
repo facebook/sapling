@@ -73,7 +73,7 @@ if __name__ == '__main__':
         negate = feature.startswith('no-')
         if negate:
             feature = feature[3:]
-        
+
         if feature not in checks:
             error('hghave: unknown feature: ' + feature)
             continue

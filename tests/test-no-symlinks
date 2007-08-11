@@ -18,7 +18,7 @@
 echo % unbundle
 hg init t
 cd t
-hg pull "$TESTDIR/test-no-symlinks.hg"
+hg pull -q "$TESTDIR/test-no-symlinks.hg"
 hg update
 
 cat a.lnk && echo
