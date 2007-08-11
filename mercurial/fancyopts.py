@@ -9,7 +9,10 @@ def fancyopts(args, options, state):
     for s, l, d, c in options:
         pl = l.replace('-', '_')
         map['-'+s] = map['--'+l] = pl
-        state[pl] = d
+        if isinstance(d, list):
+            state[pl] = d[:]
+        else:
+            state[pl] = d
         dt[pl] = type(d)
         if (d is not None and d is not True and d is not False and
             not callable(d)):
