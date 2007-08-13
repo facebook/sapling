@@ -708,7 +708,9 @@ class path_auditor(object):
             try:
                 st = os.lstat(curpath)
             except OSError, err:
-                if err.errno != errno.ENOENT:
+                # EINVAL can be raised as invalid path syntax under win32.
+                # They must be ignored for patterns can be checked too.
+                if err.errno not in (errno.ENOENT, errno.EINVAL):
                     raise
             else:
                 if stat.S_ISLNK(st.st_mode):
