@@ -36,7 +36,7 @@ class ImergeStateFile(object):
         tf = tarfile.open(source, 'r')
         contents = tf.getnames()
         # tarfile normalizes path separators to '/'
-        statusfile = '/'.join(['.hg', 'imerge', 'status'])
+        statusfile = '.hg/imerge/status'
         if statusfile not in contents:
             raise InvalidStateFileException('no status file')
 
