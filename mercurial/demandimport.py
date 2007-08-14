@@ -108,7 +108,18 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
                 setattr(mod, x, _demandmod(x, mod.__dict__, locals))
         return mod
 
-ignore = ['_hashlib', '_xmlplus', 'fcntl', 'win32com.gen_py', 'pwd', 'grp']
+ignore = [
+    '_hashlib',
+    '_xmlplus',
+    'fcntl',
+    'win32com.gen_py',
+    # imported by tarfile, not available under Windows
+    'pwd',
+    'grp',
+    # imported by profile, itself imported by hotshot.stats,
+    # not available under Windows
+    'resource',
+    ]
 
 def enable():
     "enable global demand-loading of modules"
