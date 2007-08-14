@@ -1,0 +1,12 @@
+#!/bin/sh
+
+echo % test --time
+hg --time help 2>&1 | grep -q Time || echo --time failed
+
+echo % test --profile
+hg --profile help 2>&1 | grep -q ncalls || echo --profile failed
+
+echo % test --lsprof
+if "$TESTDIR/hghave" -q lsprof; then
+    hg --lsprof help 2>&1 | grep -q CallCount || echo --lsprof failed
+fi
