@@ -56,8 +56,8 @@ class bundlerevlog(revlog.revlog):
 
             if not prev:
                 prev = p1
-            # start, size, base is not used, link, p1, p2, delta ref
-            e = (revlog.offset_type(start, 0), size, -1, None, link,
+            # start, size, full unc. size, base (unused), link, p1, p2, node
+            e = (revlog.offset_type(start, 0), size, -1, -1, link,
                  self.rev(p1), self.rev(p2), node)
             self.basemap[n] = prev
             self.index.insert(-1, e)
