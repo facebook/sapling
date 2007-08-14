@@ -81,7 +81,7 @@ class bisect(object):
         # Not sure about this
         #self.ui.write("Going back to tip\n")
         #self.repo.update(self.repo.changelog.tip())
-        return 1
+        return 0
 
     def num_ancestors(self, head=None, stop=None):
         """
