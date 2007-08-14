@@ -35,6 +35,13 @@ def has_eol_in_paths():
     except:
         return False
 
+def has_hotshot():
+    try:
+        import hotshot
+        return True
+    except ImportError:
+        return False
+
 def has_lsprof():
     try:
         import _lsprof
@@ -46,6 +53,7 @@ checks = {
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),
     "fifo": (has_fifo, "named pipes"),
+    "hotshot": (has_hotshot, "python hotshot module"),
     "lsprof": (has_lsprof, "python lsprof module"),
     "symlink": (has_symlink, "symbolic links"),
 }
