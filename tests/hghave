@@ -37,7 +37,9 @@ def has_eol_in_paths():
 
 def has_hotshot():
     try:
-        import hotshot
+        # hotshot.stats tests hotshot and many problematic dependencies
+        # like profile.
+        import hotshot.stats
         return True
     except ImportError:
         return False
