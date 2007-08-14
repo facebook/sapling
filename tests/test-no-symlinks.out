@@ -1,11 +1,4 @@
 % unbundle
-pulling from C:\dev\mercurial\hg\hg-local-stable\tests/test-no-symlinks.bundle
-requesting all changes
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 4 changes to 4 files
-(run 'hg update' to get a working copy)
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
 d/b
@@ -13,7 +6,7 @@ d/b
 a
 d/b
 % bundle
-pulling from ../symlinks.bundle
+pulling from ../symlinks.hg
 requesting all changes
 adding changesets
 adding manifests

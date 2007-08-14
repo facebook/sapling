@@ -12,13 +12,13 @@
 # ln -s a a.lnk
 # ln -s d/b d/b.lnk
 # hg ci -Am t
-# hg bundle --base null ../test-no-symlinks.bundle
+# hg bundle --base null ../test-no-symlinks.hg
 
 # Extract a symlink on a platform not supporting them
 echo % unbundle
 hg init t
 cd t
-hg pull "$TESTDIR/test-no-symlinks.bundle"
+hg pull -q "$TESTDIR/test-no-symlinks.hg"
 hg update
 
 cat a.lnk && echo
@@ -34,12 +34,12 @@ cat b2.lnk && echo
 
 # Bundle and extract again
 echo % bundle
-hg bundle --base null ../symlinks.bundle
+hg bundle --base null ../symlinks.hg
 cd ..
 
 hg init t2
 cd t2
-hg pull ../symlinks.bundle
+hg pull ../symlinks.hg
 hg update
 
 cat a.lnk && echo

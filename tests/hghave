@@ -8,6 +8,8 @@ import os
 import sys
 import tempfile
 
+tempprefix = 'hg-hghave-'
+
 def has_symlink():
     return hasattr(os, "symlink")
 
@@ -15,7 +17,7 @@ def has_fifo():
     return hasattr(os, "mkfifo")
 
 def has_executablebit():
-    fd, path = tempfile.mkstemp()
+    fd, path = tempfile.mkstemp(prefix=tempprefix)
     os.close(fd)
     try:
         s = os.lstat(path).st_mode
@@ -26,18 +28,26 @@ def has_executablebit():
 
 def has_eol_in_paths():
     try:
-        fd, path = tempfile.mkstemp(suffix='\n\r')
+        fd, path = tempfile.mkstemp(prefix=tempprefix, suffix='\n\r')
         os.close(fd)
         os.remove(path)
         return True
     except:
         return False
 
+def has_lsprof():
+    try:
+        import _lsprof
+        return True
+    except ImportError:
+        return False
+
 checks = {
-    "symlink": (has_symlink, "symbolic links"),
-    "fifo": (has_fifo, "named pipes"),
-    "execbit": (has_executablebit, "executable bit"),
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
+    "execbit": (has_executablebit, "executable bit"),
+    "fifo": (has_fifo, "named pipes"),
+    "lsprof": (has_lsprof, "python lsprof module"),
+    "symlink": (has_symlink, "symbolic links"),
 }
 
 def list_features():
@@ -71,7 +81,7 @@ if __name__ == '__main__':
         negate = feature.startswith('no-')
         if negate:
             feature = feature[3:]
-        
+
         if feature not in checks:
             error('hghave: unknown feature: ' + feature)
             continue
@@ -80,7 +90,7 @@ if __name__ == '__main__':
         if not negate and not check():
             error('hghave: missing feature: ' + desc)
         elif negate and check():
-            error('hghave: unexpected feature: ' + desc)
+            error('hghave: system supports %s' % desc)
 
     if failures != 0:
         sys.exit(1)

@@ -5,7 +5,6 @@ u = ui.ui()
 
 repo = hg.repository(u, 'test1', create=1)
 os.chdir('test1')
-repo = hg.repository(u, '.') # FIXME: can't lock repo without doing this
 
 # create 'foo' with fixed time stamp
 f = file('foo', 'w')

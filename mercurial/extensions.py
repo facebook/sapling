@@ -24,6 +24,7 @@ def find(name):
 def load(ui, name, path):
     if name in _extensions:
         return
+    _extensions[name] = None
     if path:
         # the module will be loaded in sys.modules
         # choose an unique name so that it doesn't
