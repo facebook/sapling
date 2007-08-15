@@ -153,7 +153,7 @@ class convert_cvs(converter_source):
                 sck.send("\n".join(["BEGIN AUTH REQUEST", root, user, passw,
                                     "END AUTH REQUEST", ""]))
                 if sck.recv(128) != "I LOVE YOU\n":
-                    raise NoRepo("CVS pserver authentication failed")
+                    raise util.Abort("CVS pserver authentication failed")
 
                 self.writep = self.readp = sck.makefile('r+')
 
