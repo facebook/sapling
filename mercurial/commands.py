@@ -1204,9 +1204,9 @@ def grep(ui, repo, pattern, *pats, **opts):
             for fn in fns:
                 if fn in skip:
                     continue
-                fstate.setdefault(fn, {})
                 try:
                     grepbody(fn, rev, getfile(fn).read(mf[fn]))
+                    fstate.setdefault(fn, [])
                     if follow:
                         copied = getfile(fn).renamed(mf[fn])
                         if copied:
