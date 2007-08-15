@@ -169,7 +169,14 @@ fi
 if [ -n "$MERGE" -o -n "$DIFF3" ]; then
     echo "conflicts detected in $LOCAL"
     cp "$BACKUP" "$CHGTEST"
-    $EDITOR "$LOCAL" || failure
+    case "$EDITOR" in
+        "emacs")
+            $EDITOR "$LOCAL" --eval '(condition-case nil (smerge-mode 1) (error nil))' || failure
+            ;;
+        *)
+            $EDITOR "$LOCAL" || failure
+            ;;
+    esac
     # Some editors do not return meaningful error codes
     # Do not take any chances
     $TEST "$LOCAL" -nt "$CHGTEST" && conflicts_or_success || ask_if_merged
