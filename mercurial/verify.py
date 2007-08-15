@@ -7,7 +7,7 @@
 
 from node import *
 from i18n import _
-import revlog, mdiff
+import revlog
 
 def verify(repo):
     lock = repo.lock()

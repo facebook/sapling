@@ -9,7 +9,7 @@ from node import *
 from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context, weakref
-import re, lock, transaction, tempfile, stat, mdiff, errno, ui
+import re, lock, transaction, tempfile, stat, errno, ui
 import os, revlog, time, util, extensions, hook
 
 class localrepository(repo.repository):
@@ -1615,12 +1615,9 @@ class localrepository(repo.repository):
                 if r == next_rev[0]:
                     # If the last rev we looked at was the one just previous,
                     # we only need to see a diff.
-                    delta = mdiff.patchtext(mnfst.delta(mnfstnode))
+                    deltamf = mnfst.readdelta(mnfstnode)
                     # For each line in the delta
-                    for dline in delta.splitlines():
-                        # get the filename and filenode for that line
-                        f, fnode = dline.split('\0')
-                        fnode = bin(fnode[:40])
+                    for f, fnode in deltamf.items():
                         f = changedfiles.get(f, None)
                         # And if the file is in the list of files we care
                         # about.
