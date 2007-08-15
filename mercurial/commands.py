@@ -9,7 +9,7 @@ import demandimport; demandimport.enable()
 from node import *
 from i18n import _
 import os, re, sys, urllib
-import ui, hg, util, revlog, bundlerepo, extensions
+import hg, util, revlog, bundlerepo, extensions
 import difflib, patch, time, help, mdiff, tempfile
 import errno, version, socket
 import archival, changegroup, cmdutil, hgweb.server, sshserver
@@ -662,7 +662,7 @@ def debugcomplete(ui, cmd='', **opts):
         options = []
         otables = [globalopts]
         if cmd:
-            aliases, entry = cmdutil.findcmd(ui, cmd)
+            aliases, entry = cmdutil.findcmd(ui, cmd, table)
             otables.append(entry[1])
         for t in otables:
             for o in t:
@@ -672,7 +672,7 @@ def debugcomplete(ui, cmd='', **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    clist = cmdutil.findpossible(ui, cmd).keys()
+    clist = cmdutil.findpossible(ui, cmd, table).keys()
     clist.sort()
     ui.write("%s\n" % "\n".join(clist))
 
@@ -1307,7 +1307,7 @@ def help_(ui, name=None, with_version=False):
         if with_version:
             version_(ui)
             ui.write('\n')
-        aliases, i = cmdutil.findcmd(ui, name)
+        aliases, i = cmdutil.findcmd(ui, name, table)
         # synopsis
         ui.write("%s\n\n" % i[2])
 
@@ -3134,14 +3134,3 @@ extensions.commandtable = table
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall")
 optionalrepo = ("paths serve showconfig")
-
-def dispatch(args):
-    try:
-        u = ui.ui(traceback='--traceback' in args)
-    except util.Abort, inst:
-        sys.stderr.write(_("abort: %s\n") % inst)
-        return -1
-    return cmdutil.runcatch(u, args)
-
-def run():
-    sys.exit(dispatch(sys.argv[1:]))
