@@ -164,6 +164,7 @@ def _verify(repo):
             if flr not in filelinkrevs.get(f, []):
                 err(_("%s:%s points to unexpected changeset %d")
                         % (f, short(n), flr))
+                err(_("expecting one of %s" % filelinkrevs.get(f, [])))
             else:
                 filelinkrevs[f].remove(flr)
 
