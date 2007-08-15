@@ -194,6 +194,12 @@ class convert(object):
         filenames = []
 
         files, copies = self.source.getchanges(rev)
+        parents = [self.map[r] for r in commit.parents]
+        if commit.parents:
+            pbranch = self.commitcache[commit.parents[0]].branch
+        else:
+            pbranch = None
+        self.dest.setbranch(commit.branch, pbranch, parents)
         for f, v in files:
             newf = self.mapfile(f)
             if not newf:
@@ -213,7 +219,6 @@ class convert(object):
                             # Merely marks that a copy happened.
                             self.dest.copyfile(copyf, newf)
 
-        parents = [self.map[r] for r in commit.parents]
         newnode = self.dest.putcommit(filenames, parents, commit)
         self.mapentry(rev, newnode)
 

@@ -18,13 +18,15 @@ class mercurial_sink(converter_sink):
     def __init__(self, ui, path):
         self.path = path
         self.ui = ui
+        self.branchnames = ui.configbool('convert', 'hg.usebranchnames', True)
+        self.clonebranches = ui.configbool('convert', 'hg.clonebranches', False)
+        self.lastbranch = None
         try:
             self.repo = hg.repository(self.ui, path)
         except:
             raise NoRepo("could not open hg repo %s as sink" % path)
         self.lock = None
         self.wlock = None
-        self.branchnames = ui.configbool('convert', 'hg.usebranchnames', True)
 
     def before(self):
         self.wlock = self.repo.wlock()
@@ -58,6 +60,30 @@ class mercurial_sink(converter_sink):
             #self.repo.remove([f])
         except:
             pass
+
+    def setbranch(self, branch, pbranch, parents):
+        if (not self.clonebranches) or (branch == self.lastbranch):
+            return
+
+        self.lastbranch = branch
+        self.after()
+        if not branch:
+            branch = 'default'
+        if not pbranch:
+            pbranch = 'default'
+
+        branchpath = os.path.join(self.path, branch)
+        try:
+            self.repo = hg.repository(self.ui, branchpath)
+        except:
+            if not parents:
+                self.repo = hg.repository(self.ui, branchpath, create=True)
+            else:
+                self.ui.note(_('cloning branch %s to %s\n') % (pbranch, branch))
+                hg.clone(self.ui, os.path.join(self.path, pbranch),
+                         branchpath, rev=parents, update=False,
+                         stream=True)
+                self.repo = hg.repository(self.ui, branchpath)
 
     def putcommit(self, files, parents, commit):
         if not files:
