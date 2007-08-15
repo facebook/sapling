@@ -916,8 +916,6 @@ class queue:
             if line.startswith('diff --git'):
                 self.diffopts().git = True
                 break
-        patchf.seek(0)
-        patchf.truncate()
 
         msg = opts.get('msg', '').rstrip()
         if msg:
@@ -932,6 +930,10 @@ class queue:
                         ci += 1
                     del comments[ci]
             comments.append(msg)
+
+        patchf.seek(0)
+        patchf.truncate()
+
         if comments:
             comments = "\n".join(comments) + '\n\n'
             patchf.write(comments)
