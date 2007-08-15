@@ -459,15 +459,6 @@ def setremoteconfig(ui, opts):
     if opts.get('remotecmd'):
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
 
-def parseurl(url, revs):
-    '''parse url#branch, returning url, branch + revs'''
-
-    if '#' not in url:
-        return url, (revs or None)
-
-    url, rev = url.split('#', 1)
-    return url, revs + [rev]
-
 def revpair(repo, revs):
     '''return pair of nodes, given list of revisions. second item can
     be None, meaning use working dir.'''

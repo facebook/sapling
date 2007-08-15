@@ -10,13 +10,22 @@ from node import *
 from repo import *
 from i18n import _
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
-import errno, lock, os, shutil, util, cmdutil, extensions
+import errno, lock, os, shutil, util, extensions
 import merge as _merge
 import verify as _verify
 
 def _local(path):
     return (os.path.isfile(util.drop_scheme('file', path)) and
             bundlerepo or localrepo)
+
+def parseurl(url, revs):
+    '''parse url#branch, returning url, branch + revs'''
+
+    if '#' not in url:
+        return url, (revs or None)
+
+    url, rev = url.split('#', 1)
+    return url, revs + [rev]
 
 schemes = {
     'bundle': bundlerepo,
@@ -95,7 +104,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     """
 
     origsource = source
-    source, rev = cmdutil.parseurl(ui.expandpath(source), rev)
+    source, rev = parseurl(ui.expandpath(source), rev)
 
     if isinstance(source, str):
         src_repo = repository(ui, source)
