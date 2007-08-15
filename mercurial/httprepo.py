@@ -9,7 +9,7 @@
 from node import *
 from remoterepo import *
 from i18n import _
-import hg, os, urllib, urllib2, urlparse, zlib, util, httplib
+import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
 import errno, keepalive, tempfile, socket, changegroup
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
@@ -277,7 +277,7 @@ class httprepository(remoterepository):
         if self.caps is None:
             try:
                 self.caps = self.do_read('capabilities').split()
-            except hg.RepoError:
+            except repo.RepoError:
                 self.caps = ()
             self.ui.debug(_('capabilities: %s\n') %
                           (' '.join(self.caps or ['none'])))
@@ -329,7 +329,7 @@ class httprepository(remoterepository):
                 proto.startswith('text/plain') or
                 proto.startswith('application/hg-changegroup')):
             self.ui.debug(_("Requested URL: '%s'\n") % cu)
-            raise hg.RepoError(_("'%s' does not appear to be an hg repository")
+            raise repo.RepoError(_("'%s' does not appear to be an hg repository")
                                % self._url)
 
         if proto.startswith('application/mercurial-'):
@@ -337,10 +337,10 @@ class httprepository(remoterepository):
                 version = proto.split('-', 1)[1]
                 version_info = tuple([int(n) for n in version.split('.')])
             except ValueError:
-                raise hg.RepoError(_("'%s' sent a broken Content-type "
+                raise repo.RepoError(_("'%s' sent a broken Content-type "
                                      "header (%s)") % (self._url, proto))
             if version_info > (0, 1):
-                raise hg.RepoError(_("'%s' uses newer protocol %s") %
+                raise repo.RepoError(_("'%s' uses newer protocol %s") %
                                    (self._url, version))
 
         return resp
@@ -358,7 +358,7 @@ class httprepository(remoterepository):
         success, data = d[:-1].split(' ', 1)
         if int(success):
             return bin(data)
-        raise hg.RepoError(data)
+        raise repo.RepoError(data)
 
     def heads(self):
         d = self.do_read("heads")
