@@ -62,7 +62,7 @@ cd issue685
 echo octarine > color
 hg ci -Amcolor
 hg rename color colour
-Hg ci -Am rename
+hg ci -Am rename
 hg grep octarine
 # Used to crash here
 hg grep -r 1 octarine
