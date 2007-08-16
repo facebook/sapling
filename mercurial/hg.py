@@ -205,6 +205,9 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             else:
                 raise util.Abort(_("clone from remote to remote not supported"))
 
+        if dir_cleanup:
+            dir_cleanup.close()
+
         if dest_repo.local():
             fp = dest_repo.opener("hgrc", "w", text=True)
             fp.write("[paths]\n")
@@ -217,8 +220,6 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 except:
                     checkout = dest_repo.changelog.tip()
                 _update(dest_repo, checkout)
-        if dir_cleanup:
-            dir_cleanup.close()
 
         return src_repo, dest_repo
     finally:
