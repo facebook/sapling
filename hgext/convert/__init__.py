@@ -219,7 +219,10 @@ class convert(object):
                             # Merely marks that a copy happened.
                             self.dest.copyfile(copyf, newf)
 
-        newnode = self.dest.putcommit(filenames, parents, commit)
+        if not filenames and self.mapfile.active():
+            newnode = parents[0]
+        else:
+            newnode = self.dest.putcommit(filenames, parents, commit)
         self.mapentry(rev, newnode)
 
     def convert(self):
@@ -351,6 +354,9 @@ class filemapper(object):
                 return newpre + '/' + suf
             return newpre
         return name
+
+    def active(self):
+        return bool(self.include or self.exclude or self.rename)
 
 def _convert(ui, src, dest=None, revmapfile=None, **opts):
     """Convert a foreign SCM repository to a Mercurial one.

@@ -86,10 +86,7 @@ class mercurial_sink(converter_sink):
                 self.repo = hg.repository(self.ui, branchpath)
 
     def putcommit(self, files, parents, commit):
-        if not files:
-            return hex(self.repo.changelog.tip())
-
-        seen = {hex(nullid): 1}
+        seen = {}
         pl = []
         for p in parents:
             if p not in seen:
