@@ -3129,8 +3129,6 @@ table = {
     "version": (version_, [], _('hg version')),
 }
 
-extensions.commandtable = table
-
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall")
 optionalrepo = ("paths serve showconfig")

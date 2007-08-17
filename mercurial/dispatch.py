@@ -238,6 +238,7 @@ def _earlygetopt(aliases, args):
             pos += 1
     return values
 
+_loaded = {}
 def _dispatch(ui, args):
     # read --config before doing anything else
     # (e.g. to change trust settings for reading .hg/hgrc)
@@ -269,6 +270,16 @@ def _dispatch(ui, args):
         lui.readconfig(os.path.join(path, ".hg", "hgrc"))
 
     extensions.loadall(lui)
+    for name, module in extensions.extensions():
+        if name in _loaded:
+            continue
+        cmdtable = getattr(module, 'cmdtable', {})
+        overrides = [cmd for cmd in cmdtable if cmd in commands.table]
+        if overrides:
+            ui.warn(_("extension '%s' overrides commands: %s\n")
+                    % (name, " ".join(overrides)))
+        commands.table.update(cmdtable)
+        _loaded[name] = 1
     # check for fallback encoding
     fallback = lui.config('ui', 'fallbackencoding')
     if fallback:

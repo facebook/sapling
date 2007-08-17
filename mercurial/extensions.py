@@ -10,8 +10,13 @@ import util, sys
 from i18n import _
 
 _extensions = {}
-commandtable = {}
-setuphooks = []
+_order = []
+
+def extensions():
+    for name in _order:
+        module = _extensions[name]
+        if module:
+            yield name, module
 
 def find(name):
     '''return module with given extension name'''
@@ -55,19 +60,11 @@ def load(ui, name, path):
         except ImportError:
             mod = importh(name)
     _extensions[shortname] = mod
+    _order.append(shortname)
 
     uisetup = getattr(mod, 'uisetup', None)
     if uisetup:
         uisetup(ui)
-    reposetup = getattr(mod, 'reposetup', None)
-    if reposetup:
-        setuphooks.append(reposetup)
-    cmdtable = getattr(mod, 'cmdtable', {})
-    overrides = [cmd for cmd in cmdtable if cmd in commandtable]
-    if overrides:
-        ui.warn(_("extension '%s' overrides commands: %s\n")
-                % (name, " ".join(overrides)))
-    commandtable.update(cmdtable)
 
 def loadall(ui):
     result = ui.configitems("extensions")
