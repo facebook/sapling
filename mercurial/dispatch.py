@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+import demandimport; demandimport.enable()
 from node import *
 from i18n import _
 import os, sys, atexit, signal, pdb, traceback, socket, errno, shlex, time
