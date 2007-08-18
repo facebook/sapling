@@ -49,21 +49,21 @@ tipnode=`hg id -ir tip`
 
 echo 'should work with tag/branch/node/rev'
 for r in tip default $tipnode 6; do
-    lookup $r^
+    lookup "$r^"
 done
 echo
 
 echo 'some random lookups'
-lookup 6^^ 6^^^ 6^^^^ 6^^^^^ 6^^^^^^ 6^1 6^2 6^^2 6^1^2 6^^3
-lookup 6~ 6~1 6~2 6~3 6~4 6~5 6~42 6~1^2 6~1^2~2
+lookup "6^^" "6^^^" "6^^^^" "6^^^^^" "6^^^^^^" "6^1" "6^2" "6^^2" "6^1^2" "6^^3"
+lookup "6~" "6~1" "6~2" "6~3" "6~4" "6~5" "6~42" "6~1^2" "6~1^2~2"
 echo
 
 echo 'with a tag "6^" pointing to rev 1'
 hg tag -l -r 1 6^
-lookup 6^ 6^1 6~1 6^^
+lookup "6^" "6^1" "6~1" "6^^"
 echo
 
 echo 'with a tag "foo^bar" pointing to rev 2'
-hg tag -l -r 2 foo^bar
-lookup foo^bar foo^bar^
+hg tag -l -r 2 "foo^bar"
+lookup "foo^bar" "foo^bar^"
 
