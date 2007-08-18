@@ -25,6 +25,9 @@ You can use pattern matching of your normal shell, e.g.:
 command="cd repos && hg-ssh user/thomas/* projects/{mercurial,foo}"
 """
 
+# enable importing on demand to reduce startup time
+from mercurial import demandimport; demandimport.enable()
+
 from mercurial import dispatch
 
 import sys, os

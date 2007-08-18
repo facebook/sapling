@@ -6,7 +6,6 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial import demandimport; demandimport.enable()
 import os, mimetools, cStringIO
 from mercurial.i18n import gettext as _
 from mercurial import ui, hg, util, templater

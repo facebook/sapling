@@ -2,6 +2,9 @@
 #
 # An example CGI script to export multiple hgweb repos, edit as necessary
 
+# enable importing on demand to reduce startup time
+from mercurial import demandimport; demandimport.enable()
+
 # send python tracebacks to the browser if an error occurs:
 import cgitb
 cgitb.enable()

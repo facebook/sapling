@@ -14,8 +14,6 @@ from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
 
 import mercurial.version
-import mercurial.demandimport
-mercurial.demandimport.enable = lambda: None
 
 extra = {}
 
