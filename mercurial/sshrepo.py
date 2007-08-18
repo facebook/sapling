@@ -175,6 +175,7 @@ class sshrepository(remoterepository):
     def unbundle(self, cg, heads, source):
         d = self.call("unbundle", heads=' '.join(map(hex, heads)))
         if d:
+            # remote may send "unsynced changes"
             self.raise_(hg.RepoError(_("push refused: %s") % d))
 
         while 1:
@@ -188,14 +189,15 @@ class sshrepository(remoterepository):
         self.pipeo.flush()
 
         self.readerr()
-        d = self.pipei.readline()
-        if d != '\n':
-            return 1
-
         l = int(self.pipei.readline())
         r = self.pipei.read(l)
-        if not r:
-            return 1
+        if r:
+            # remote may send "unsynced changes"
+            self.raise_(hg.RepoError(_("push failed: %s") % r))
+
+        self.readerr()
+        l = int(self.pipei.readline())
+        r = self.pipei.read(l)
         return int(r)
 
     def addchangegroup(self, cg, source, url):
