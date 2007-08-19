@@ -81,10 +81,9 @@ class convert(object):
             n = visit.pop(0)
             if n in known or n in self.map: continue
             known[n] = 1
-            self.commitcache[n] = self.source.getcommit(n)
-            cp = self.commitcache[n].parents
+            commit = self.cachecommit(n)
             parents[n] = []
-            for p in cp:
+            for p in commit.parents:
                 parents[n].append(p)
                 visit.append(p)
 
@@ -188,6 +187,12 @@ class convert(object):
                     % (authorfile, line))
         afile.close()
 
+    def cachecommit(self, rev):
+        commit = self.source.getcommit(rev)
+        commit.author = self.authors.get(commit.author, commit.author)
+        self.commitcache[rev] = commit
+        return commit
+
     def copy(self, rev):
         commit = self.commitcache[rev]
         do_copies = hasattr(self.dest, 'copyfile')
@@ -243,9 +248,6 @@ class convert(object):
                 desc = self.commitcache[c].desc
                 if "\n" in desc:
                     desc = desc.splitlines()[0]
-                author = self.commitcache[c].author
-                author = self.authors.get(author, author)
-                self.commitcache[c].author = author
                 self.ui.status("%d %s\n" % (num, desc))
                 self.copy(c)
 
