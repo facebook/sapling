@@ -477,6 +477,15 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
         try:
             pat = '(?:%s)' % '|'.join([regex(k, p, tail) for (k, p) in pats])
             return re.compile(pat).match
+        except OverflowError:
+            # We're using a Python with a tiny regex engine and we
+            # made it explode, so we'll divide the pattern list in two
+            # until it works
+            l = len(pats)
+            if l < 2:
+                raise
+            a, b = matchfn(pats[:l/2], tail), matchfn(pats[l/2:], tail)
+            return lambda s: a(s) or b(s)
         except re.error:
             for k, p in pats:
                 try:
