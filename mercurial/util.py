@@ -692,7 +692,8 @@ class path_auditor(object):
     - inside a nested repository'''
 
     def __init__(self, root):
-        self.audited = {}
+        self.audited = set()
+        self.auditeddir = set()
         self.root = root
 
     def __call__(self, path):
@@ -720,10 +721,19 @@ class path_auditor(object):
                       os.path.isdir(os.path.join(curpath, '.hg'))):
                     raise Abort(_('path %r is inside repo %r') %
                                 (path, prefix))
-            self.audited[prefix] = True
+
+        prefixes = []
         for c in strutil.rfindall(normpath, os.sep):
-            check(normpath[:c])
-        self.audited[path] = True
+            prefix = normpath[:c]
+            if prefix in self.auditeddir:
+                break
+            check(prefix)
+            prefixes.append(prefix)
+
+        self.audited.add(path)
+        # only add prefixes to the cache after checking everything: we don't
+        # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
+        self.auditeddir.update(prefixes)
 
 def _makelock_file(info, pathname):
     ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
