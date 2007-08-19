@@ -201,7 +201,10 @@ class convert(object):
         files, copies = self.source.getchanges(rev)
         parents = [self.map[r] for r in commit.parents]
         if commit.parents:
-            pbranch = self.commitcache[commit.parents[0]].branch
+            prev = commit.parents[0]
+            if prev not in self.commitcache:
+                self.cachecommit(prev)
+            pbranch = self.commitcache[prev].branch
         else:
             pbranch = None
         self.dest.setbranch(commit.branch, pbranch, parents)
