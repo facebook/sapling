@@ -1567,8 +1567,10 @@ def import_(ui, repo, patch1, *patches, **opts):
                 data = patch.extract(ui, sys.stdin)
             else:
                 ui.status(_("applying %s\n") % p)
-                data = patch.extract(ui, file(pf, 'rb'))
-
+                if os.path.exists(pf):
+                    data = patch.extract(ui, file(pf, 'rb'))
+                else:
+                    data = patch.extract(ui, urllib.urlopen(pf))
             tmpname, message, user, date, branch, nodeid, p1, p2 = data
 
             if tmpname is None:
