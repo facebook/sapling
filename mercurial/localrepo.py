@@ -997,6 +997,8 @@ class localrepository(repo.repository):
                                    "supported currently\n") % f)
                 elif self.dirstate[f] in 'amn':
                     self.ui.warn(_("%s already tracked!\n") % f)
+                elif self.dirstate[f] == 'r':
+                    self.dirstate.normaldirty(f)
                 else:
                     self.dirstate.add(f)
         finally:
