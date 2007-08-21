@@ -995,7 +995,7 @@ class localrepository(repo.repository):
                 if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                     self.ui.warn(_("%s not added: only files and symlinks "
                                    "supported currently\n") % f)
-                elif self.dirstate[f] in 'an':
+                elif self.dirstate[f] in 'amn':
                     self.ui.warn(_("%s already tracked!\n") % f)
                 else:
                     self.dirstate.add(f)
