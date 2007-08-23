@@ -151,6 +151,8 @@ class localrepository(repo.repository):
             except revlog.LookupError:
                 pass
             fp = self.wfile('.hgtags', 'wb')
+            if prevtags:
+                fp.write(prevtags)
 
         # committed tags are stored in UTF-8
         writetag(fp, name, util.fromlocal, prevtags)
