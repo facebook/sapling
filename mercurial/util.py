@@ -793,12 +793,16 @@ def checkexec(path):
 
     Requires a directory (like /foo/.hg)
     """
-    fh, fn = tempfile.mkstemp("", "", path)
-    os.close(fh)
-    m = os.stat(fn).st_mode
-    os.chmod(fn, m ^ 0111)
-    r = (os.stat(fn).st_mode != m)
-    os.unlink(fn)
+    try:
+        fh, fn = tempfile.mkstemp("", "", path)
+        os.close(fh)
+        m = os.stat(fn).st_mode
+        os.chmod(fn, m ^ 0111)
+        r = (os.stat(fn).st_mode != m)
+        os.unlink(fn)
+    except (IOError,OSError):
+        # we don't care, the user probably won't be able to commit anyway
+        return False
     return r
 
 def execfunc(path, fallback):
