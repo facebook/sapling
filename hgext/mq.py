@@ -926,17 +926,24 @@ class queue:
                     break
 
             msg = opts.get('msg', '').rstrip()
+            if msg and comments:
+                # Remove existing message, keeping the rest of the comments
+                # fields.
+                # If comments contains 'subject: ', message will prepend
+                # the field and a blank line.
+                if message:
+                    subj = 'subject: ' + message[0].lower()
+                    for i in xrange(len(comments)):
+                        if subj == comments[i].lower():
+                            del comments[i]
+                            message = message[2:]
+                            break
+                ci = 0
+                for mi in xrange(len(message)):
+                    while message[mi] != comments[ci]:
+                        ci += 1
+                    del comments[ci]
             if msg:
-                if comments:
-                    # Remove existing message.
-                    ci = 0
-                    subj = None
-                    for mi in xrange(len(message)):
-                        if comments[ci].lower().startswith('subject: '):
-                            subj = comments[ci][9:]
-                        while message[mi] != comments[ci] and message[mi] != subj:
-                            ci += 1
-                        del comments[ci]
                 comments.append(msg)
 
             patchf.seek(0)
