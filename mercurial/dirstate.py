@@ -202,18 +202,24 @@ class dirstate(object):
         self._incpath(f)
 
     def normal(self, f):
-        'mark a file normal'
+        'mark a file normal and clean'
         self._dirty = True
         s = os.lstat(self._join(f))
         self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime)
         if self._copymap.has_key(f):
             del self._copymap[f]
 
-    def normaldirty(self, f):
+    def normallookup(self, f):
         'mark a file normal, but possibly dirty'
         self._dirty = True
-        s = os.lstat(self._join(f))
-        self._map[f] = ('n', s.st_mode, -1, -1)
+        self._map[f] = ('n', 0, -1, -1)
+        if f in self._copymap:
+            del self._copymap[f]
+
+    def normaldirty(self, f):
+        'mark a file normal, but dirty'
+        self._dirty = True
+        self._map[f] = ('n', 0, -2, -1)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -523,6 +529,7 @@ class dirstate(object):
                     st = lstat(_join(fn))
                 if (size >= 0 and (size != st.st_size
                                    or (mode ^ st.st_mode) & 0100)
+                    or size == -2
                     or fn in self._copymap):
                     madd(fn)
                 elif time != int(st.st_mtime):

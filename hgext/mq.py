@@ -1050,7 +1050,7 @@ class queue:
                 for f in m:
                     repo.dirstate.normal(f)
                 for f in mm:
-                    repo.dirstate.normaldirty(f)
+                    repo.dirstate.normallookup(f)
                 for f in forget:
                     repo.dirstate.forget(f)
 

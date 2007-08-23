@@ -543,7 +543,7 @@ def recordupdates(repo, action, branchmerge):
                 # of that file some time in the past. Thus our
                 # merge will appear as a normal local file
                 # modification.
-                repo.dirstate.normaldirty(fd)
+                repo.dirstate.normallookup(fd)
                 if move:
                     repo.dirstate.forget(f)
         elif m == "d": # directory rename

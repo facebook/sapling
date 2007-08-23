@@ -998,7 +998,7 @@ class localrepository(repo.repository):
                 elif self.dirstate[f] in 'amn':
                     self.ui.warn(_("%s already tracked!\n") % f)
                 elif self.dirstate[f] == 'r':
-                    self.dirstate.normaldirty(f)
+                    self.dirstate.normallookup(f)
                 else:
                     self.dirstate.add(f)
         finally:
