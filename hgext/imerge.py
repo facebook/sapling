@@ -109,19 +109,30 @@ class Imerge(object):
     def remaining(self):
         return [f for f in self.conflicts if f not in self.resolved]
 
-    def filemerge(self, fn):
+    def filemerge(self, fn, interactive=True):
         wlock = self.repo.wlock()
 
         (fd, fo) = self.conflicts[fn]
         p1, p2 = self.wctx.parents()
+
+        # this could be greatly improved
+        realmerge = os.environ.get('HGMERGE')
+        if not interactive:
+            os.environ['HGMERGE'] = 'merge'
+
         # The filemerge ancestor algorithm does not work if self.wctx
         # already has two parents (in normal merge it doesn't yet). But
         # this is very dirty.
         self.wctx._parents.pop()
         try:
+            # TODO: we should probably revert the file if merge fails
             return merge.filemerge(self.repo, fn, fd, fo, self.wctx, p2)
         finally:
             self.wctx._parents.append(p2)
+            if realmerge:
+                os.environ['HGMERGE'] = realmerge
+            elif not interactive:
+                del os.environ['HGMERGE']
 
     def start(self, rev=None):
         _filemerge = merge.filemerge
@@ -192,19 +203,32 @@ def load(im, source):
         status(im)
     return rc
 
-def merge_(im, filename=None):
+def merge_(im, filename=None, auto=False):
+    success = True
+    if auto and not filename:
+        for fn in im.remaining():
+            rc = im.filemerge(fn, interactive=False)
+            if rc:
+                success = False
+            else:
+                im.resolve([fn])
+        if success:
+            im.ui.write('all conflicts resolved\n')
+        else:
+            status(im)
+        return 0
+
     if not filename:
         filename = im.next()
         if not filename:
             im.ui.write('all conflicts resolved\n')
             return 0
 
-    rc = im.filemerge(filename)
+    rc = im.filemerge(filename, interactive=not auto)
     if not rc:
         im.resolve([filename])
         if not im.next():
             im.ui.write('all conflicts resolved\n')
-            return 0
     return rc
 
 def next(im):
@@ -265,14 +289,17 @@ def unresolve(im, *files):
 
 subcmdtable = {
     'load': (load, []),
-    'merge': (merge_, []),
+    'merge':
+        (merge_,
+         [('a', 'auto', None, _('automatically resolve if possible'))]),
     'next': (next, []),
     'resolve': (resolve, []),
     'save': (save, []),
-    'status': (status,
-               [('n', 'no-status', None, _('hide status prefix')),
-                ('', 'resolved', None, _('only show resolved conflicts')),
-                ('', 'unresolved', None, _('only show unresolved conflicts'))]),
+    'status':
+        (status,
+         [('n', 'no-status', None, _('hide status prefix')),
+          ('', 'resolved', None, _('only show resolved conflicts')),
+          ('', 'unresolved', None, _('only show unresolved conflicts'))]),
     'unresolve': (unresolve, [])
 }
 
@@ -359,7 +386,10 @@ def imerge(ui, repo, *args, **opts):
             if args:
                 rev = args[0]
             im.start(rev=rev)
-            args = ['status']
+            if opts.get('auto'):
+                args = ['merge', '--auto']
+            else:
+                args = ['status']
 
     if not args:
         args = ['merge']
@@ -369,5 +399,7 @@ def imerge(ui, repo, *args, **opts):
 cmdtable = {
     '^imerge':
     (imerge,
-     [('r', 'rev', '', _('revision to merge'))], 'hg imerge [command]')
+     [('r', 'rev', '', _('revision to merge')),
+      ('a', 'auto', None, _('automatically merge where possible'))],
+      'hg imerge [command]')
 }
