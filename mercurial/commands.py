@@ -1928,10 +1928,13 @@ def merge(ui, repo, node=None, force=None, rev=None):
             raise util.Abort(_('repo has %d heads - '
                                'please merge with an explicit rev') %
                              len(heads))
-        if len(heads) == 1:
-            raise util.Abort(_('there is nothing to merge - '
-                               'use "hg update" instead'))
         parent = repo.dirstate.parents()[0]
+        if len(heads) == 1:
+            msg = _('there is nothing to merge')
+            if parent != repo.lookup(repo.workingctx().branch()):
+                msg = _('%s - use "hg update" instead' % msg)
+            raise util.Abort(msg)
+
         if parent not in heads:
             raise util.Abort(_('working dir not at a head rev - '
                                'use "hg update" or merge with an explicit rev'))

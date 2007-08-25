@@ -54,6 +54,10 @@ cat foo2
 hg ci -m'merged' -d '3 0'
 hg tip -v
 
+echo % nothing to merge -- tip
+hg imerge
+
+hg up 0
 echo % nothing to merge
 hg imerge
 

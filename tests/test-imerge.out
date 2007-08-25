@@ -41,5 +41,8 @@ description:
 merged
 
 
+% nothing to merge -- tip
+abort: there is nothing to merge
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 % nothing to merge
 abort: there is nothing to merge - use "hg update" instead
