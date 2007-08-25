@@ -7,7 +7,7 @@ imerge - interactive merge
 
 from mercurial.i18n import _
 from mercurial.node import *
-from mercurial import commands, cmdutil, fancyopts, hg, merge, util
+from mercurial import commands, cmdutil, dispatch, fancyopts, hg, merge, util
 import os, tarfile
 
 class InvalidStateFileException(Exception): pass
@@ -109,12 +109,30 @@ class Imerge(object):
     def remaining(self):
         return [f for f in self.conflicts if f not in self.resolved]
 
-    def filemerge(self, fn):
+    def filemerge(self, fn, interactive=True):
         wlock = self.repo.wlock()
 
         (fd, fo) = self.conflicts[fn]
-        p2 = self.wctx.parents()[1]
-        return merge.filemerge(self.repo, fn, fd, fo, self.wctx, p2)
+        p1, p2 = self.wctx.parents()
+
+        # this could be greatly improved
+        realmerge = os.environ.get('HGMERGE')
+        if not interactive:
+            os.environ['HGMERGE'] = 'merge'
+
+        # The filemerge ancestor algorithm does not work if self.wctx
+        # already has two parents (in normal merge it doesn't yet). But
+        # this is very dirty.
+        self.wctx._parents.pop()
+        try:
+            # TODO: we should probably revert the file if merge fails
+            return merge.filemerge(self.repo, fn, fd, fo, self.wctx, p2)
+        finally:
+            self.wctx._parents.append(p2)
+            if realmerge:
+                os.environ['HGMERGE'] = realmerge
+            elif not interactive:
+                del os.environ['HGMERGE']
 
     def start(self, rev=None):
         _filemerge = merge.filemerge
@@ -185,19 +203,32 @@ def load(im, source):
         status(im)
     return rc
 
-def merge_(im, filename=None):
+def merge_(im, filename=None, auto=False):
+    success = True
+    if auto and not filename:
+        for fn in im.remaining():
+            rc = im.filemerge(fn, interactive=False)
+            if rc:
+                success = False
+            else:
+                im.resolve([fn])
+        if success:
+            im.ui.write('all conflicts resolved\n')
+        else:
+            status(im)
+        return 0
+
     if not filename:
         filename = im.next()
         if not filename:
             im.ui.write('all conflicts resolved\n')
             return 0
 
-    rc = im.filemerge(filename)
+    rc = im.filemerge(filename, interactive=not auto)
     if not rc:
         im.resolve([filename])
         if not im.next():
             im.ui.write('all conflicts resolved\n')
-            return 0
     return rc
 
 def next(im):
@@ -258,18 +289,21 @@ def unresolve(im, *files):
 
 subcmdtable = {
     'load': (load, []),
-    'merge': (merge_, []),
+    'merge':
+        (merge_,
+         [('a', 'auto', None, _('automatically resolve if possible'))]),
     'next': (next, []),
     'resolve': (resolve, []),
     'save': (save, []),
-    'status': (status,
-               [('n', 'no-status', None, _('hide status prefix')),
-                ('', 'resolved', None, _('only show resolved conflicts')),
-                ('', 'unresolved', None, _('only show unresolved conflicts'))]),
+    'status':
+        (status,
+         [('n', 'no-status', None, _('hide status prefix')),
+          ('', 'resolved', None, _('only show resolved conflicts')),
+          ('', 'unresolved', None, _('only show unresolved conflicts'))]),
     'unresolve': (unresolve, [])
 }
 
-def dispatch(im, args, opts):
+def dispatch_(im, args, opts):
     def complete(s, choices):
         candidates = []
         for choice in choices:
@@ -292,9 +326,9 @@ def dispatch(im, args, opts):
         args = fancyopts.fancyopts(args, optlist, opts)
         return func(im, *args, **opts)
     except fancyopts.getopt.GetoptError, inst:
-        raise cmdutil.ParseError('imerge', '%s: %s' % (cmd, inst))
+        raise dispatch.ParseError('imerge', '%s: %s' % (cmd, inst))
     except TypeError:
-        raise cmdutil.ParseError('imerge', _('%s: invalid arguments') % cmd)
+        raise dispatch.ParseError('imerge', _('%s: invalid arguments') % cmd)
 
 def imerge(ui, repo, *args, **opts):
     '''interactive merge
@@ -317,6 +351,10 @@ def imerge(ui, repo, *args, **opts):
 
     status:
       show the current state of the merge
+      options:
+        -n --no-status:  do not print the status prefix
+           --resolved:   only print resolved conflicts
+           --unresolved: only print unresolved conflicts
     next:
       show the next unresolved file merge
     merge [<file>]:
@@ -348,15 +386,20 @@ def imerge(ui, repo, *args, **opts):
             if args:
                 rev = args[0]
             im.start(rev=rev)
-            args = ['status']
+            if opts.get('auto'):
+                args = ['merge', '--auto']
+            else:
+                args = ['status']
 
     if not args:
         args = ['merge']
 
-    return dispatch(im, args, opts)
+    return dispatch_(im, args, opts)
 
 cmdtable = {
     '^imerge':
     (imerge,
-     [('r', 'rev', '', _('revision to merge'))], 'hg imerge [command]')
+     [('r', 'rev', '', _('revision to merge')),
+      ('a', 'auto', None, _('automatically merge where possible'))],
+      'hg imerge [command]')
 }
