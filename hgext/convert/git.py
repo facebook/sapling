@@ -1,6 +1,7 @@
 # git support for the convert extension
 
 import os
+from mercurial import util
 
 from common import NoRepo, commit, converter_source
 
@@ -46,7 +47,8 @@ class convert_git(converter_source):
 
     def catfile(self, rev, type):
         if rev == "0" * 40: raise IOError()
-        fh = self.gitcmd("git-cat-file %s %s 2>/dev/null" % (type, rev))
+        fh = self.gitcmd("git-cat-file %s %s 2>%s" % (type, rev,
+                                                      util.nulldev))
         return fh.read()
 
     def getfile(self, name, rev):
@@ -105,7 +107,8 @@ class convert_git(converter_source):
 
     def gettags(self):
         tags = {}
-        fh = self.gitcmd('git-ls-remote --tags "%s" 2>/dev/null' % self.path)
+        fh = self.gitcmd('git-ls-remote --tags "%s" 2>%s' % (self.path,
+                                                             util.nulldev))
         prefix = 'refs/tags/'
         for line in fh:
             line = line.strip()
