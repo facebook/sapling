@@ -51,9 +51,16 @@ def has_lsprof():
     except ImportError:
         return False
 
+def has_git():
+    fh = os.popen('git --version 2>&1')
+    s = fh.read()
+    ret = fh.close()
+    return ret is None and s.startswith('git version')
+
 checks = {
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),
+    "git": (has_git, "git command line client"),
     "fifo": (has_fifo, "named pipes"),
     "hotshot": (has_hotshot, "python hotshot module"),
     "lsprof": (has_lsprof, "python lsprof module"),
