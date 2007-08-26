@@ -14,8 +14,23 @@ def recode(s):
             return s.decode("utf-8", "replace").encode("utf-8")
 
 class convert_git(converter_source):
-    def gitcmd(self, s):
-        return os.popen('GIT_DIR=%s %s' % (self.path, s))
+    # Windows does not support GIT_DIR= construct while other systems
+    # cannot remove environment variable. Just assume none have
+    # both issues.
+    if hasattr(os, 'unsetenv'):
+        def gitcmd(self, s):
+            prevgitdir = os.environ.get('GIT_DIR')
+            os.environ['GIT_DIR'] = self.path
+            try:
+                return os.popen(s)
+            finally:
+                if prevgitdir is None:
+                    del os.environ['GIT_DIR']
+                else:
+                    os.environ['GIT_DIR'] = prevgitdir
+    else:
+        def gitcmd(self, s):
+            return os.popen('GIT_DIR=%s %s' % (self.path, s))
     
     def __init__(self, ui, path):
         if os.path.isdir(path + "/.git"):
