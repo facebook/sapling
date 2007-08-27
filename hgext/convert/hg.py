@@ -20,6 +20,7 @@ class mercurial_sink(converter_sink):
         self.ui = ui
         self.branchnames = ui.configbool('convert', 'hg.usebranchnames', True)
         self.clonebranches = ui.configbool('convert', 'hg.clonebranches', False)
+        self.tagsbranch = ui.config('convert', 'hg.tagsbranch', 'default')
         self.lastbranch = None
         try:
             self.repo = hg.repository(self.ui, path)
@@ -139,8 +140,15 @@ class mercurial_sink(converter_sink):
             f.close()
             if not oldlines: self.repo.add([".hgtags"])
             date = "%s 0" % int(time.mktime(time.gmtime()))
+            extra = {}
+            if self.tagsbranch != 'default':
+                extra['branch'] = self.tagsbranch
+            try:
+                tagparent = self.repo.changectx(self.tagsbranch).node()
+            except hg.RepoError, inst:
+                tagparent = nullid
             self.repo.rawcommit([".hgtags"], "update tags", "convert-repo",
-                                date, self.repo.changelog.tip(), nullid)
+                                date, tagparent, nullid)
             return hex(self.repo.changelog.tip())
 
 class mercurial_source(converter_source):
