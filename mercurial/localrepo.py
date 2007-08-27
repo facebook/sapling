@@ -718,7 +718,7 @@ class localrepository(repo.repository):
                 new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
                 new_exec = is_exec(f)
                 new_link = is_link(f)
-                if not changed or changed[-1] != f:
+                if (not changed or changed[-1] != f) and m2.get(f) != new[f]:
                     # mention the file in the changelog if some flag changed,
                     # even if there was no content change.
                     old_exec = m1.execf(f)
