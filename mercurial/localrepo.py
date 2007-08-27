@@ -612,7 +612,9 @@ class localrepository(repo.repository):
             elif fp1 != nullid: # copied on local side, reversed
                 meta["copyrev"] = hex(manifest2.get(cp))
                 fp2 = fp1
-            else: # directory rename
+            elif cp in manifest2: # directory rename on local side
+                meta["copyrev"] = hex(manifest2[cp])
+            else: # directory rename on remote side
                 meta["copyrev"] = hex(manifest1.get(cp, nullid))
             self.ui.debug(_(" %s: copy %s:%s\n") %
                           (fn, cp, meta["copyrev"]))

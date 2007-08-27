@@ -24,9 +24,11 @@ hg merge --debug 1
 echo a/* b/*
 hg st -C
 hg ci -m "3 merge 2+1" -d "0 0"
+hg debugrename b/c
 
 hg co -C 1
 hg merge --debug 2
 echo a/* b/*
 hg st -C
 hg ci -m "4 merge 1+2" -d "0 0"
+hg debugrename b/c
