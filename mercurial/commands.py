@@ -1645,11 +1645,7 @@ def incoming(ui, repo, source="default", **opts):
     other = hg.repository(ui, source)
     ui.status(_('comparing with %s\n') % source)
     if revs:
-        if 'lookup' in other.capabilities:
-            revs = [other.lookup(rev) for rev in revs]
-        else:
-            error = _("Other repository doesn't support revision lookup, so a rev cannot be specified.")
-            raise util.Abort(error)
+        revs = [other.lookup(rev) for rev in revs]
     incoming = repo.findincoming(other, heads=revs, force=opts["force"])
     if not incoming:
         try:
@@ -1667,8 +1663,6 @@ def incoming(ui, repo, source="default", **opts):
             if revs is None:
                 cg = other.changegroup(incoming, "incoming")
             else:
-                if 'changegroupsubset' not in other.capabilities:
-                    raise util.Abort(_("Partial incoming cannot be done because other repository doesn't support changegroupsubset."))
                 cg = other.changegroupsubset(incoming, revs, 'incoming')
             bundletype = other.local() and "HG10BZ" or "HG10UN"
             fname = cleanup = changegroup.writebundle(cg, fname, bundletype)
@@ -2078,10 +2072,11 @@ def pull(ui, repo, source="default", **opts):
     other = hg.repository(ui, source)
     ui.status(_('pulling from %s\n') % (source))
     if revs:
-        if 'lookup' in other.capabilities:
+        try:
             revs = [other.lookup(rev) for rev in revs]
-        else:
-            error = _("Other repository doesn't support revision lookup, so a rev cannot be specified.")
+        except repo.NoCapability:
+            error = _("Other repository doesn't support revision lookup, "
+                      "so a rev cannot be specified.")
             raise util.Abort(error)
 
     modheads = repo.pull(other, heads=revs, force=opts['force'])
