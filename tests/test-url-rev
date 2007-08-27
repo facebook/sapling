@@ -12,7 +12,10 @@ cd ..
 
 echo '% clone repo#foo'
 hg clone 'repo#foo' clone
+echo '% heads'
 hg --cwd clone heads
+echo '% parents'
+hg --cwd clone parents
 sed -e 's/default.*#/default = #/' clone/.hg/hgrc
 echo
 

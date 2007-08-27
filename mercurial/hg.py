@@ -225,10 +225,11 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dest_lock.release()
 
         if update:
-            try:
-                checkout = dest_repo.lookup("default")
-            except:
-                checkout = dest_repo.changelog.tip()
+            if not checkout:
+                try:
+                    checkout = dest_repo.lookup("default")
+                except:
+                    checkout = dest_repo.changelog.tip()
             _update(dest_repo, checkout)
 
     return src_repo, dest_repo
