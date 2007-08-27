@@ -539,12 +539,9 @@ class convert_svn(converter_source):
                 return
 
             parents = []
-            orig_paths = orig_paths.items()
-            orig_paths.sort()
-
             # check whether this revision is the start of a branch
-            path, ent = orig_paths and orig_paths[0] or (None, None)
-            if ent and path == self.module:
+            if self.module in orig_paths:
+                ent = orig_paths[self.module]
                 if ent.copyfrom_path:
                     # ent.copyfrom_rev may not be the actual last revision
                     prev = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
@@ -557,6 +554,8 @@ class convert_svn(converter_source):
 
             self.modulemap[revnum] = self.module # track backwards in time
 
+            orig_paths = orig_paths.items()
+            orig_paths.sort()
             paths = []
             # filter out unrelated paths
             for path, ent in orig_paths:
