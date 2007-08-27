@@ -1312,7 +1312,7 @@ class localrepository(repo.repository):
             mylock = True
 
         try:
-            fetch = self.findincoming(remote, force=force)
+            fetch = self.findincoming(remote, heads=heads, force=force)
             if fetch == [nullid]:
                 self.ui.status(_("requesting all changes\n"))
 
