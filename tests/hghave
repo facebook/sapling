@@ -5,10 +5,21 @@ prefixed with "no-", the absence of feature is tested.
 """
 import optparse
 import os
+import re
 import sys
 import tempfile
 
 tempprefix = 'hg-hghave-'
+
+def matchoutput(cmd, regexp):
+    """Return True if cmd executes successfully and its output
+    is matched by the supplied regular expression.
+    """
+    r = re.compile(regexp)
+    fh = os.popen(cmd)
+    s = fh.read()
+    ret = fh.close()
+    return ret is None and r.search(s)
 
 def has_symlink():
     return hasattr(os, "symlink")
@@ -52,10 +63,18 @@ def has_lsprof():
         return False
 
 def has_git():
-    fh = os.popen('git --version 2>&1')
-    s = fh.read()
-    ret = fh.close()
-    return ret is None and s.startswith('git version')
+    return matchoutput('git --version 2>&1', r'^git version')
+
+def has_svn():
+    return matchoutput('svn --version 2>&1', r'^svn, version') and \
+        matchoutput('svnadmin --version 2>&1', r'^svnadmin, version')
+
+def has_svn_bindings():
+    try:
+        import svn.core
+        return True
+    except ImportError:
+        return False
 
 checks = {
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
@@ -64,6 +83,8 @@ checks = {
     "fifo": (has_fifo, "named pipes"),
     "hotshot": (has_hotshot, "python hotshot module"),
     "lsprof": (has_lsprof, "python lsprof module"),
+    "svn": (has_svn, "subversion client and admin tools"),
+    "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
 }
 

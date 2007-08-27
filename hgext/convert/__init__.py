@@ -397,6 +397,23 @@ def _convert(ui, src, dest=None, revmapfile=None, **opts):
     that use unix logins to identify authors (eg: CVS). One line per author
     mapping and the line format is:
     srcauthor=whatever string you want
+
+    The filemap is a file that allows filtering and remapping of files
+    and directories.  Comment lines start with '#'.  Each line can
+    contain one of the following directives:
+
+      include path/to/file
+
+      exclude path/to/file
+
+      rename from/file to/file
+    
+    The 'include' directive causes a file, or all files under a
+    directory, to be included in the destination repository.  The
+    'exclude' directive causes files or directories to be omitted.
+    The 'rename' directive renames a file or directory.  To rename
+    from a subdirectory into the root of the repository, use '.' as
+    the path to rename to.
     """
 
     util._encoding = 'UTF-8'

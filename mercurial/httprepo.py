@@ -276,9 +276,9 @@ class httprepository(remoterepository):
     def get_caps(self):
         if self.caps is None:
             try:
-                self.caps = self.do_read('capabilities').split()
+                self.caps = util.set(self.do_read('capabilities').split())
             except repo.RepoError:
-                self.caps = ()
+                self.caps = util.set()
             self.ui.debug(_('capabilities: %s\n') %
                           (' '.join(self.caps or ['none'])))
         return self.caps
@@ -354,6 +354,7 @@ class httprepository(remoterepository):
             fp.close()
 
     def lookup(self, key):
+        self.requirecap('lookup', _('look up remote revision'))
         d = self.do_cmd("lookup", key = key).read()
         success, data = d[:-1].split(' ', 1)
         if int(success):
@@ -391,6 +392,7 @@ class httprepository(remoterepository):
         return util.chunkbuffer(zgenerator(f))
 
     def changegroupsubset(self, bases, heads, source):
+        self.requirecap('changegroupsubset', _('look up remote changes'))
         baselst = " ".join([hex(n) for n in bases])
         headlst = " ".join([hex(n) for n in heads])
         f = self.do_cmd("changegroupsubset", bases=baselst, heads=headlst)

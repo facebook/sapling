@@ -71,11 +71,11 @@ class sshrepository(remoterepository):
         else:
             self.raise_(repo.RepoError(_("no suitable response from remote hg")))
 
-        self.capabilities = ()
+        self.capabilities = util.set()
         lines.reverse()
         for l in lines:
             if l.startswith("capabilities:"):
-                self.capabilities = l[:-1].split(":")[1].split()
+                self.capabilities.update(l[:-1].split(":")[1].split())
                 break
 
     def readerr(self):
@@ -131,6 +131,7 @@ class sshrepository(remoterepository):
         self.call("unlock")
 
     def lookup(self, key):
+        self.requirecap('lookup', _('look up remote revision'))
         d = self.call("lookup", key=key)
         success, data = d[:-1].split(" ", 1)
         if int(success):
@@ -168,6 +169,7 @@ class sshrepository(remoterepository):
         return self.do_cmd("changegroup", roots=n)
 
     def changegroupsubset(self, bases, heads, kind):
+        self.requirecap('changegroupsubset', _('look up remote changes'))
         bases = " ".join(map(hex, bases))
         heads = " ".join(map(hex, heads))
         return self.do_cmd("changegroupsubset", bases=bases, heads=heads)
