@@ -193,18 +193,19 @@ class bundlerepository(localrepo.localrepository):
         else:
             raise util.Abort(_("%s: unknown bundle compression type")
                              % bundlename)
-        self.changelog = bundlechangelog(self.sopener, self.bundlefile)
-        self.manifest = bundlemanifest(self.sopener, self.bundlefile,
-                                       self.changelog.rev)
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
-        while 1:
-            f = changegroup.getchunk(self.bundlefile)
-            if not f:
-                break
-            self.bundlefilespos[f] = self.bundlefile.tell()
-            for c in changegroup.chunkiter(self.bundlefile):
-                pass
+
+    def __getattr__(self, name):
+        if name == 'changelog':
+            self.changelog = bundlechangelog(self.sopener, self.bundlefile)
+            return self.changelog
+        if name == 'manifest':
+            self.manifest = bundlemanifest(self.sopener, self.bundlefile,
+                                           self.changelog.rev)
+            self.filestart = self.bundlefile.tell()
+            return self.manifest
+        return localrepo.localrepository.__getattr__(self, name)
 
     def url(self):
         return self._url
@@ -213,6 +214,17 @@ class bundlerepository(localrepo.localrepository):
         return -1
 
     def file(self, f):
+        if not self.bundlefilespos:
+            self.manifest
+            self.bundlefile.seek(self.filestart)
+            while 1:
+                chunk = changegroup.getchunk(self.bundlefile)
+                if not chunk:
+                    break
+                self.bundlefilespos[chunk] = self.bundlefile.tell()
+                for c in changegroup.chunkiter(self.bundlefile):
+                    pass
+
         if f[0] == '/':
             f = f[1:]
         if f in self.bundlefilespos:
