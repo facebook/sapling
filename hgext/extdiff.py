@@ -80,13 +80,18 @@ def snapshot_wdir(ui, repo, files, tmproot):
     '''snapshot files from working directory.
     if not using snapshot, -I/-X does not work and recursive diff
     in tools like kdiff3 and meld displays too many files.'''
-    dirname = os.path.basename(repo.root)
+    repo_root = repo.root
+
+    dirname = os.path.basename(repo_root)
     if dirname == "":
         dirname = "root"
     base = os.path.join(tmproot, dirname)
     os.mkdir(base)
     ui.note(_('making snapshot of %d files from working dir\n') %
             (len(files)))
+
+    fns_and_mtime = []
+
     for fn in files:
         wfn = util.pconvert(fn)
         ui.note('  %s\n' % wfn)
@@ -94,13 +99,27 @@ def snapshot_wdir(ui, repo, files, tmproot):
         destdir = os.path.dirname(dest)
         if not os.path.isdir(destdir):
             os.makedirs(destdir)
+
         fp = open(dest, 'wb')
         for chunk in util.filechunkiter(repo.wopener(wfn)):
             fp.write(chunk)
-    return dirname
+        fp.close()
+
+        fns_and_mtime.append((dest, os.path.join(repo_root, fn),
+            os.path.getmtime(dest)))
+
+
+    return dirname, fns_and_mtime
 
 
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
+    '''Do the actuall diff:
+
+    - copy to a temp structure if diffing 2 internal revisions
+    - copy to a temp structure if diffing working revision with
+      another one and more than 1 file is changed
+    - just invoke the diff for a single file in the working dir
+    '''
     node1, node2 = cmdutil.revpair(repo, opts['rev'])
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
     modified, added, removed, deleted, unknown = repo.status(
@@ -115,11 +134,17 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         dir1 = snapshot_node(ui, repo, modified + removed, node1, tmproot)
         changes = len(modified) + len(removed) + len(added)
 
+        fns_and_mtime = []
+
         # If node2 in not the wc or there is >1 change, copy it
         if node2:
             dir2 = snapshot_node(ui, repo, modified + added, node2, tmproot)
         elif changes > 1:
-            dir2 = snapshot_wdir(ui, repo, modified + added, tmproot)
+            #we only actually need to get the files to copy back to the working
+            #dir in this case (because the other cases are: diffing 2 revisions
+            #or single file -- in which case the file is already directly passed
+            #to the diff tool).
+            dir2, fns_and_mtime = snapshot_wdir(ui, repo, modified + added, tmproot)
         else:
             # This lets the diff tool open the changed file directly
             dir2 = ''
@@ -142,6 +167,13 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
                     util.shellquote(dir1), util.shellquote(dir2)))
         ui.debug('running %r in %s\n' % (cmdline, tmproot))
         util.system(cmdline, cwd=tmproot)
+
+        for copy_fn, working_fn, mtime in fns_and_mtime:
+            if os.path.getmtime(copy_fn) != mtime:
+                ui.debug('File changed while diffing. '
+                         'Overwriting: %s (src: %s)\n' % (working_fn, copy_fn))
+                util.copyfile(copy_fn, working_fn)
+
         return 1
     finally:
         ui.note(_('cleaning up temp directory\n'))
