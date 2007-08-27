@@ -51,3 +51,33 @@ hg -q pull
 hg heads
 echo
 
+echo '% pull should not have updated'
+hg parents -q
+echo '% going back to the default branch'
+hg up -C 0
+hg parents
+echo '% no new revs, no update'
+hg pull -qu
+hg parents -q
+echo '% rollback'
+hg rollback
+hg up -C 0
+hg parents -q
+echo '% pull -u takes us back to branch foo'
+hg pull -qu
+hg parents
+
+echo '% rollback'
+hg rollback
+hg up -C 0
+echo '% parents'
+hg parents -q
+echo '% heads'
+hg heads -q
+echo '% pull -u -r otherrev url#rev updates to rev'
+hg pull -qur default default
+echo '% parents'
+hg parents
+echo '% heads'
+hg heads
+

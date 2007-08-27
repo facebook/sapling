@@ -2021,12 +2021,12 @@ def paths(ui, repo, search=None):
         for name, path in ui.configitems("paths"):
             ui.write("%s = %s\n" % (name, path))
 
-def postincoming(ui, repo, modheads, optupdate):
+def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
         return
     if optupdate:
-        if modheads <= 1:
-            return hg.update(repo, None)
+        if modheads <= 1 or checkout:
+            return hg.update(repo, checkout)
         else:
             ui.status(_("not updating, since new heads added\n"))
     if modheads > 1:
@@ -2089,7 +2089,7 @@ def pull(ui, repo, source="default", **opts):
             raise util.Abort(error)
 
     modheads = repo.pull(other, heads=revs, force=opts['force'])
-    return postincoming(ui, repo, modheads, opts['update'])
+    return postincoming(ui, repo, modheads, opts['update'], checkout)
 
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
@@ -2661,7 +2661,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         gen = changegroup.readbundle(f, fname)
         modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
 
-    return postincoming(ui, repo, modheads, opts['update'])
+    return postincoming(ui, repo, modheads, opts['update'], None)
 
 def update(ui, repo, node=None, rev=None, clean=False, date=None):
     """update working directory
