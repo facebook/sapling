@@ -152,7 +152,13 @@ def install_hg():
     os.chdir(TESTDIR)
 
     os.environ["PATH"] = "%s%s%s" % (BINDIR, os.pathsep, os.environ["PATH"])
-    os.environ["PYTHONPATH"] = PYTHONDIR
+
+    pythonpath = os.environ.get("PYTHONPATH")
+    if pythonpath:
+        pythonpath = PYTHONDIR + os.pathsep + pythonpath
+    else:
+        pythonpath = PYTHONDIR
+    os.environ["PYTHONPATH"] = pythonpath
 
     use_correct_python()
 
