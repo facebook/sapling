@@ -462,10 +462,10 @@ def parseurl(url, revs):
     '''parse url#branch, returning url, branch + revs'''
 
     if '#' not in url:
-        return url, (revs or None)
+        return url, (revs or None), None
 
     url, rev = url.split('#', 1)
-    return url, revs + [rev]
+    return url, revs + [rev], rev
 
 def revpair(repo, revs):
     '''return pair of nodes, given list of revisions. second item can

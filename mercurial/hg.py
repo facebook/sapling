@@ -99,7 +99,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     """
 
     origsource = source
-    source, rev = cmdutil.parseurl(ui.expandpath(source), rev)
+    source, rev, checkout = cmdutil.parseurl(ui.expandpath(source), rev)
 
     if isinstance(source, str):
         src_repo = repository(ui, source)

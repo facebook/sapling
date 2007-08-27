@@ -1,0 +1,50 @@
+#!/bin/sh
+# test basic functionality of url#rev syntax
+
+hg init repo
+cd repo
+echo a > a
+hg ci -qAm 'add a' -d '0 0'
+hg branch foo
+echo >> a
+hg ci -m 'change a' -d '0 0'
+cd ..
+
+echo '% clone repo#foo'
+hg clone 'repo#foo' clone
+hg --cwd clone heads
+sed -e 's/default.*#/default = #/' clone/.hg/hgrc
+echo
+
+echo '% changing original repo'
+cd repo
+echo >> a
+hg ci -m 'new head of branch foo' -d '0 0'
+hg up -qC default
+echo bar > bar
+hg ci -qAm 'add bar' -d '0 0'
+hg log
+echo
+
+echo '% outgoing'
+hg -q outgoing '../clone#foo'
+echo
+
+echo '% push'
+hg -q push '../clone#foo'
+hg --cwd ../clone heads
+cd ..
+echo
+
+echo '% rolling back'
+cd clone
+hg rollback
+
+echo '% incoming'
+hg -q incoming
+
+echo '% pull'
+hg -q pull
+hg heads
+echo
+

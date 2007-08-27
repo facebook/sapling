@@ -324,7 +324,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                         visit.append(p)
     else:
         cmdutil.setremoteconfig(ui, opts)
-        dest, revs = cmdutil.parseurl(
+        dest, revs, checkout = cmdutil.parseurl(
             ui.expandpath(dest or 'default-push', dest or 'default'), revs)
         other = hg.repository(ui, dest)
         o = repo.findoutgoing(other, force=opts['force'])
@@ -1491,7 +1491,7 @@ def identify(ui, repo, source=None,
     output = []
 
     if source:
-        source, revs = cmdutil.parseurl(ui.expandpath(source), [])
+        source, revs, checkout = cmdutil.parseurl(ui.expandpath(source), [])
         srepo = hg.repository(ui, source)
         if not rev and revs:
             rev = revs[0]
@@ -1649,7 +1649,8 @@ def incoming(ui, repo, source="default", **opts):
 
     See pull for valid source format details.
     """
-    source, revs = cmdutil.parseurl(ui.expandpath(source), opts['rev'])
+    source, revs, checkout = cmdutil.parseurl(ui.expandpath(source),
+                                              opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
@@ -1952,7 +1953,7 @@ def outgoing(ui, repo, dest=None, **opts):
 
     See pull for valid destination format details.
     """
-    dest, revs = cmdutil.parseurl(
+    dest, revs, checkout = cmdutil.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
     if revs:
@@ -2074,7 +2075,8 @@ def pull(ui, repo, source="default", **opts):
       Alternatively specify "ssh -C" as your ssh command in your hgrc or
       with the --ssh command line option.
     """
-    source, revs = cmdutil.parseurl(ui.expandpath(source), opts['rev'])
+    source, revs, checkout = cmdutil.parseurl(ui.expandpath(source),
+                                              opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
@@ -2119,7 +2121,7 @@ def push(ui, repo, dest=None, **opts):
     Pushing to http:// and https:// URLs is only possible, if this
     feature is explicitly enabled on the remote Mercurial server.
     """
-    dest, revs = cmdutil.parseurl(
+    dest, revs, checkout = cmdutil.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
 
