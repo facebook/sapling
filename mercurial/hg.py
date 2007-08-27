@@ -141,7 +141,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     abspath = origsource
     copy = False
     if src_repo.local() and islocal(dest):
-        abspath = os.path.abspath(origsource)
+        abspath = os.path.abspath(util.drop_scheme('file', origsource))
         copy = not pull and not rev
 
     src_lock, dest_lock = None, None
