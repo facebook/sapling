@@ -13,7 +13,7 @@ import re, lock, transaction, tempfile, stat, errno, ui
 import os, revlog, time, util, extensions, hook
 
 class localrepository(repo.repository):
-    capabilities = ('lookup', 'changegroupsubset')
+    capabilities = util.set(('lookup', 'changegroupsubset'))
     supported = ('revlogv1', 'store')
 
     def __init__(self, parentui, path=None, create=0):

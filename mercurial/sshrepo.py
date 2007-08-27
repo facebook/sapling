@@ -71,11 +71,11 @@ class sshrepository(remoterepository):
         else:
             self.raise_(repo.RepoError(_("no suitable response from remote hg")))
 
-        self.capabilities = ()
+        self.capabilities = util.set()
         lines.reverse()
         for l in lines:
             if l.startswith("capabilities:"):
-                self.capabilities = l[:-1].split(":")[1].split()
+                self.capabilities.update(l[:-1].split(":")[1].split())
                 break
 
     def readerr(self):

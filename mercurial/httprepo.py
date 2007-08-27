@@ -276,9 +276,9 @@ class httprepository(remoterepository):
     def get_caps(self):
         if self.caps is None:
             try:
-                self.caps = self.do_read('capabilities').split()
+                self.caps = util.set(self.do_read('capabilities').split())
             except repo.RepoError:
-                self.caps = ()
+                self.caps = util.set()
             self.ui.debug(_('capabilities: %s\n') %
                           (' '.join(self.caps or ['none'])))
         return self.caps
