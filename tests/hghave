@@ -65,6 +65,10 @@ def has_lsprof():
 def has_git():
     return matchoutput('git --version 2>&1', r'^git version')
 
+def has_svn():
+    return matchoutput('svn --version 2>&1', r'^svn, version') and \
+        matchoutput('svnadmin --version 2>&1', r'^svnadmin, version')
+
 checks = {
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),
@@ -72,6 +76,7 @@ checks = {
     "fifo": (has_fifo, "named pipes"),
     "hotshot": (has_hotshot, "python hotshot module"),
     "lsprof": (has_lsprof, "python lsprof module"),
+    "svn": (has_svn, "subversion client and admin tools"),
     "symlink": (has_symlink, "symbolic links"),
 }
 
