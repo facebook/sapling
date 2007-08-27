@@ -626,7 +626,7 @@ class localrepository(repo.repository):
                 fp2 = nullid
 
         # is the file unmodified from the parent? report existing entry
-        if fp2 == nullid and not fl.cmp(fp1, t):
+        if fp2 == nullid and not fl.cmp(fp1, t) and not meta:
             return fp1
 
         changelist.append(fn)
