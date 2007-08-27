@@ -69,6 +69,13 @@ def has_svn():
     return matchoutput('svn --version 2>&1', r'^svn, version') and \
         matchoutput('svnadmin --version 2>&1', r'^svnadmin, version')
 
+def has_svn_bindings():
+    try:
+        import svn.core
+        return True
+    except ImportError:
+        return False
+
 checks = {
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),
@@ -77,6 +84,7 @@ checks = {
     "hotshot": (has_hotshot, "python hotshot module"),
     "lsprof": (has_lsprof, "python lsprof module"),
     "svn": (has_svn, "subversion client and admin tools"),
+    "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
 }
 
