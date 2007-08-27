@@ -335,7 +335,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                         visit.append(p)
     else:
         cmdutil.setremoteconfig(ui, opts)
-        dest, revs = hg.parseurl(
+        dest, revs, checkout = hg.parseurl(
             ui.expandpath(dest or 'default-push', dest or 'default'), revs)
         other = hg.repository(ui, dest)
         o = repo.findoutgoing(other, force=opts['force'])
@@ -1474,7 +1474,7 @@ def identify(ui, repo, source=None,
     output = []
 
     if source:
-        source, revs = hg.parseurl(ui.expandpath(source), [])
+        source, revs, checkout = hg.parseurl(ui.expandpath(source), [])
         srepo = hg.repository(ui, source)
         if not rev and revs:
             rev = revs[0]
@@ -1639,7 +1639,7 @@ def incoming(ui, repo, source="default", **opts):
 
     See pull for valid source format details.
     """
-    source, revs = hg.parseurl(ui.expandpath(source), opts['rev'])
+    source, revs, checkout = hg.parseurl(ui.expandpath(source), opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
@@ -1950,7 +1950,7 @@ def outgoing(ui, repo, dest=None, **opts):
 
     See pull for valid destination format details.
     """
-    dest, revs = hg.parseurl(
+    dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
     if revs:
@@ -2018,12 +2018,12 @@ def paths(ui, repo, search=None):
         for name, path in ui.configitems("paths"):
             ui.write("%s = %s\n" % (name, path))
 
-def postincoming(ui, repo, modheads, optupdate):
+def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
         return
     if optupdate:
-        if modheads <= 1:
-            return hg.update(repo, None)
+        if modheads <= 1 or checkout:
+            return hg.update(repo, checkout)
         else:
             ui.status(_("not updating, since new heads added\n"))
     if modheads > 1:
@@ -2072,7 +2072,7 @@ def pull(ui, repo, source="default", **opts):
       Alternatively specify "ssh -C" as your ssh command in your hgrc or
       with the --ssh command line option.
     """
-    source, revs = hg.parseurl(ui.expandpath(source), opts['rev'])
+    source, revs, checkout = hg.parseurl(ui.expandpath(source), opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
@@ -2085,7 +2085,7 @@ def pull(ui, repo, source="default", **opts):
             raise util.Abort(error)
 
     modheads = repo.pull(other, heads=revs, force=opts['force'])
-    return postincoming(ui, repo, modheads, opts['update'])
+    return postincoming(ui, repo, modheads, opts['update'], checkout)
 
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
@@ -2117,7 +2117,7 @@ def push(ui, repo, dest=None, **opts):
     Pushing to http:// and https:// URLs is only possible, if this
     feature is explicitly enabled on the remote Mercurial server.
     """
-    dest, revs = hg.parseurl(
+    dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
 
@@ -2663,7 +2663,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         gen = changegroup.readbundle(f, fname)
         modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
 
-    return postincoming(ui, repo, modheads, opts['update'])
+    return postincoming(ui, repo, modheads, opts['update'], None)
 
 def update(ui, repo, node=None, rev=None, clean=False, date=None):
     """update working directory

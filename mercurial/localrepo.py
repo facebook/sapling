@@ -1352,7 +1352,7 @@ class localrepository(repo.repository):
     def pull(self, remote, heads=None, force=False):
         lock = self.lock()
         try:
-            fetch = self.findincoming(remote, force=force)
+            fetch = self.findincoming(remote, heads=heads, force=force)
             if fetch == [nullid]:
                 self.ui.status(_("requesting all changes\n"))
 

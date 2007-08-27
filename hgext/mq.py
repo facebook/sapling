@@ -1516,13 +1516,18 @@ def clone(ui, source, dest=None, **opts):
     The patch directory must be a nested mercurial repository, as
     would be created by qinit -c.
     '''
+    def patchdir(repo):
+        url = repo.url()
+        if url.endswith('/'):
+            url = url[:-1]
+        return url + '/.hg/patches'
     cmdutil.setremoteconfig(ui, opts)
     if dest is None:
         dest = hg.defaultdest(source)
     sr = hg.repository(ui, ui.expandpath(source))
-    patchdir = opts['patches'] or (sr.url() + '/.hg/patches')
+    patchespath = opts['patches'] or patchdir(sr)
     try:
-        pr = hg.repository(ui, patchdir)
+        pr = hg.repository(ui, patchespath)
     except hg.RepoError:
         raise util.Abort(_('versioned patch repository not found'
                            ' (see qinit -c)'))
@@ -1543,10 +1548,8 @@ def clone(ui, source, dest=None, **opts):
                       update=False,
                       stream=opts['uncompressed'])
     ui.note(_('cloning patch repo\n'))
-    spr, dpr = hg.clone(ui, opts['patches'] or (sr.url() + '/.hg/patches'),
-                        dr.url() + '/.hg/patches',
-                        pull=opts['pull'],
-                        update=not opts['noupdate'],
+    spr, dpr = hg.clone(ui, opts['patches'] or patchdir(sr), patchdir(dr),
+                        pull=opts['pull'], update=not opts['noupdate'],
                         stream=opts['uncompressed'])
     if dr.local():
         if qbase:

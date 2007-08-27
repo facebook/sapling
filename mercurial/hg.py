@@ -22,10 +22,10 @@ def parseurl(url, revs):
     '''parse url#branch, returning url, branch + revs'''
 
     if '#' not in url:
-        return url, (revs or None)
+        return url, (revs or None), None
 
     url, rev = url.split('#', 1)
-    return url, revs + [rev]
+    return url, revs + [rev], rev
 
 schemes = {
     'bundle': bundlerepo,
@@ -106,7 +106,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     """
 
     origsource = source
-    source, rev = parseurl(ui.expandpath(source), rev)
+    source, rev, checkout = parseurl(ui.expandpath(source), rev)
 
     if isinstance(source, str):
         src_repo = repository(ui, source)
@@ -149,7 +149,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         abspath = origsource
         copy = False
         if src_repo.local() and islocal(dest):
-            abspath = os.path.abspath(origsource)
+            abspath = os.path.abspath(util.drop_scheme('file', origsource))
             copy = not pull and not rev
 
         if copy:
@@ -226,10 +226,11 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             fp.close()
 
             if update:
-                try:
-                    checkout = dest_repo.lookup("default")
-                except:
-                    checkout = dest_repo.changelog.tip()
+                if not checkout:
+                    try:
+                        checkout = dest_repo.lookup("default")
+                    except:
+                        checkout = dest_repo.changelog.tip()
                 _update(dest_repo, checkout)
 
         return src_repo, dest_repo
