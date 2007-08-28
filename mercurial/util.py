@@ -1704,11 +1704,9 @@ def walkrepos(path):
             raise err
 
     for root, dirs, files in os.walk(path, onerror=errhandler):
-        for d in dirs:
-            if d == '.hg':
-                yield root
-                dirs[:] = []
-                break
+        if '.hg' in dirs:
+            dirs[:] = [] # don't descend further
+            yield root # found a repository
 
 _rcpath = None
 
