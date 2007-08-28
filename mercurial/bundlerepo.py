@@ -199,12 +199,20 @@ class bundlerepository(localrepo.localrepository):
     def __getattr__(self, name):
         if name == 'changelog':
             self.changelog = bundlechangelog(self.sopener, self.bundlefile)
+            self.manstart = self.bundlefile.tell()
             return self.changelog
         if name == 'manifest':
+            self.bundlefile.seek(self.manstart)
             self.manifest = bundlemanifest(self.sopener, self.bundlefile,
                                            self.changelog.rev)
             self.filestart = self.bundlefile.tell()
             return self.manifest
+        if name == 'manstart':
+            self.changelog
+            return self.manstart
+        if name == 'filestart':
+            self.manifest
+            return self.filestart
         return localrepo.localrepository.__getattr__(self, name)
 
     def url(self):
@@ -215,7 +223,6 @@ class bundlerepository(localrepo.localrepository):
 
     def file(self, f):
         if not self.bundlefilespos:
-            self.manifest
             self.bundlefile.seek(self.filestart)
             while 1:
                 chunk = changegroup.getchunk(self.bundlefile)
