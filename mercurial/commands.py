@@ -2330,6 +2330,14 @@ def revert(ui, repo, *pats, **opts):
         changes = repo.status(match=names.has_key)[:5]
         modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
 
+        # if f is a rename, also revert the source
+        cwd = repo.getcwd()
+        for f in added:
+            src = repo.dirstate.copied(f)
+            if src and src not in names and repo.dirstate[src] == 'r':
+                removed[src] = None
+                names[src] = (repo.pathto(src, cwd), True)
+
         revert = ([], _('reverting %s\n'))
         add = ([], _('adding %s\n'))
         remove = ([], _('removing %s\n'))
