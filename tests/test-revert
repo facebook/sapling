@@ -94,4 +94,9 @@ hg add newdir/newfile
 hg revert b newdir
 echo foobar > b/b
 hg revert .
-true
+
+echo % reverting a rename target should revert the source
+hg mv a newa
+hg revert newa
+hg st a newa
+
