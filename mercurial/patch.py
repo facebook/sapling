@@ -1161,9 +1161,10 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     # returns False if there was no rename between ctx1 and ctx2
     # returns None if the file was created between ctx1 and ctx2
     # returns the (file, node) present in ctx1 that was renamed to f in ctx2
-    def renamed(f):
-        startrev = ctx1.rev()
-        c = ctx2
+    # This will only really work if c1 is the Nth 1st parent of c2.
+    def renamed(c1, c2, man, f):
+        startrev = c1.rev()
+        c = c2
         crev = c.rev()
         if crev is None:
             crev = repo.changelog.count()
@@ -1179,7 +1180,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             crev = c.parents()[0].rev()
             # try to reuse
             c = getctx(crev)
-        if f not in man1:
+        if f not in man:
             return None
         if f == orig:
             return False
@@ -1193,11 +1194,27 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
     if opts.git:
         copied = {}
-        for f in added:
-            src = renamed(f)
+        c1, c2 = ctx1, ctx2
+        files = added
+        man = man1
+        if node2 and ctx1.rev() >= ctx2.rev():
+            # renamed() starts at c2 and walks back in history until c1.
+            # Since ctx1.rev() >= ctx2.rev(), invert ctx2 and ctx1 to
+            # detect (inverted) copies.
+            c1, c2 = ctx2, ctx1
+            files = removed
+            man = ctx2.manifest()
+        for f in files:
+            src = renamed(c1, c2, man, f)
             if src:
                 copied[f] = src
-        srcs = [x[1] for x in copied.items()]
+        if ctx1 == c2:
+            # invert the copied dict
+            copied = dict([(v, k) for (k, v) in copied.iteritems()])
+        # If we've renamed file foo to bar (copied['bar'] = 'foo'),
+        # avoid showing a diff for foo if we're going to show
+        # the rename to bar.
+        srcs = [x[1] for x in copied.iteritems() if x[0] in added]
 
     all = modified + added + removed
     all.sort()
