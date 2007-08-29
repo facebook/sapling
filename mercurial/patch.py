@@ -1169,8 +1169,9 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         if crev is None:
             crev = repo.changelog.count()
         orig = f
+        files = (f,)
         while crev > startrev:
-            if f in c.files():
+            if f in files:
                 try:
                     src = getfilectx(f, c).renamed()
                 except revlog.LookupError:
@@ -1180,6 +1181,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             crev = c.parents()[0].rev()
             # try to reuse
             c = getctx(crev)
+            files = c.files()
         if f not in man:
             return None
         if f == orig:
