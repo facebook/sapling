@@ -1448,7 +1448,7 @@ def makedate():
         tz = time.timezone
     return time.mktime(lt), tz
 
-def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True):
+def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True, timezone_format=" %+03d%02d"):
     """represent a (unixtime, offset) tuple as a localized time.
     unixtime is seconds since the epoch, and offset is the time zone's
     number of seconds away from UTC. if timezone is false, do not
@@ -1456,7 +1456,7 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True):
     t, tz = date or makedate()
     s = time.strftime(format, time.gmtime(float(t) - tz))
     if timezone:
-        s += " %+03d%02d" % (-tz / 3600, ((-tz % 3600) / 60))
+        s += timezone_format % (-tz / 3600, ((-tz % 3600) / 60))
     return s
 
 def strdate(string, format, defaults):

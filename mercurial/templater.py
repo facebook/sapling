@@ -270,6 +270,7 @@ common_filters = {
     "permissions": permissions,
     "person": person,
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
+    "rfc3339date": lambda x: util.datestr(x, "%Y-%m-%dT%H:%M:%S", True, "%+03d:%02d"),
     "short": lambda x: x[:12],
     "shortdate": shortdate,
     "stringify": stringify,

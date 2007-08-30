@@ -206,7 +206,7 @@ class hgweb(object):
                                           opts=diffopts), f, tn)
 
     def changelog(self, ctx, shortlog=False):
-        def changelist(**map):
+        def changelist(limit=0,**map):
             cl = self.repo.changelog
             l = [] # build a list in forward order for efficiency
             for i in xrange(start, end):
@@ -226,6 +226,9 @@ class hgweb(object):
                              "tags": self.nodetagsdict(n),
                              "branches": self.nodebranchdict(ctx)})
 
+            if limit > 0:
+                l = l[:limit]
+
             for e in l:
                 yield e
 
@@ -243,7 +246,9 @@ class hgweb(object):
         yield self.t(shortlog and 'shortlog' or 'changelog',
                      changenav=changenav,
                      node=hex(cl.tip()),
-                     rev=pos, changesets=count, entries=changelist,
+                     rev=pos, changesets=count,
+                     entries=lambda **x: changelist(limit=0,**x),
+                     latestentry=lambda **x: changelist(limit=1,**x),
                      archives=self.archivelist("tip"))
 
     def search(self, query):
@@ -344,7 +349,7 @@ class hgweb(object):
         pos = end - 1
         parity = paritygen(self.stripecount, offset=start-end)
 
-        def entries(**map):
+        def entries(limit=0, **map):
             l = []
 
             for i in xrange(start, end):
@@ -362,13 +367,17 @@ class hgweb(object):
                              "child": self.siblings(fctx.children()),
                              "desc": ctx.description()})
 
+            if limit > 0:
+                l = l[:limit]
+
             for e in l:
                 yield e
 
         nodefunc = lambda x: fctx.filectx(fileid=x)
         nav = revnavgen(pos, pagelen, count, nodefunc)
         yield self.t("filelog", file=f, node=hex(fctx.node()), nav=nav,
-                     entries=entries)
+                     entries=lambda **x: entries(limit=0, **x),
+                     latestentry=lambda **x: entries(limit=1, **x))
 
     def filerevision(self, fctx):
         f = fctx.path()
@@ -508,10 +517,14 @@ class hgweb(object):
         i.reverse()
         parity = paritygen(self.stripecount)
 
-        def entries(notip=False, **map):
+        def entries(notip=False,limit=0, **map):
+            count = 0
             for k, n in i:
                 if notip and k == "tip":
                     continue
+                if limit > 0 and count >= limit:
+                    continue
+                count = count + 1
                 yield {"parity": parity.next(),
                        "tag": k,
                        "date": self.repo.changectx(n).date(),
@@ -519,8 +532,9 @@ class hgweb(object):
 
         yield self.t("tags",
                      node=hex(self.repo.changelog.tip()),
-                     entries=lambda **x: entries(False, **x),
-                     entriesnotip=lambda **x: entries(True, **x))
+                     entries=lambda **x: entries(False,0, **x),
+                     entriesnotip=lambda **x: entries(True,0, **x),
+                     latestentry=lambda **x: entries(True,1, **x))
 
     def summary(self):
         i = self.repo.tagslist()
