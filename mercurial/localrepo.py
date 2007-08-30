@@ -18,7 +18,6 @@ class localrepository(repo.repository):
 
     def __init__(self, parentui, path=None, create=0):
         repo.repository.__init__(self)
-        self.path = path
         self.root = os.path.realpath(path)
         self.path = os.path.join(self.root, ".hg")
         self.origroot = path
