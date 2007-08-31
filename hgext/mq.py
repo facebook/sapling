@@ -1490,6 +1490,11 @@ def clone(ui, source, dest=None, **opts):
     Source patch repository is looked for in <src>/.hg/patches by
     default.  Use -p <url> to change.
     '''
+    def patchdir(repo):
+        url = repo.url()
+        if url.endswith('/'):
+            url = url[:-1]
+        return url + '/.hg/patches'
     cmdutil.setremoteconfig(ui, opts)
     if dest is None:
         dest = hg.defaultdest(source)
@@ -1511,10 +1516,8 @@ def clone(ui, source, dest=None, **opts):
                       update=False,
                       stream=opts['uncompressed'])
     ui.note(_('cloning patch repo\n'))
-    spr, dpr = hg.clone(ui, opts['patches'] or (sr.url() + '/.hg/patches'),
-                        dr.url() + '/.hg/patches',
-                        pull=opts['pull'],
-                        update=not opts['noupdate'],
+    spr, dpr = hg.clone(ui, opts['patches'] or patchdir(sr), patchdir(dr),
+                        pull=opts['pull'], update=not opts['noupdate'],
                         stream=opts['uncompressed'])
     if dr.local():
         if qbase:

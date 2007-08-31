@@ -612,7 +612,9 @@ class localrepository(repo.repository):
             elif fp1 != nullid: # copied on local side, reversed
                 meta["copyrev"] = hex(manifest2.get(cp))
                 fp2 = fp1
-            else: # directory rename
+            elif cp in manifest2: # directory rename on local side
+                meta["copyrev"] = hex(manifest2[cp])
+            else: # directory rename on remote side
                 meta["copyrev"] = hex(manifest1.get(cp, nullid))
             self.ui.debug(_(" %s: copy %s:%s\n") %
                           (fn, cp, meta["copyrev"]))
@@ -626,7 +628,7 @@ class localrepository(repo.repository):
                 fp2 = nullid
 
         # is the file unmodified from the parent? report existing entry
-        if fp2 == nullid and not fl.cmp(fp1, t):
+        if fp2 == nullid and not fl.cmp(fp1, t) and not meta:
             return fp1
 
         changelist.append(fn)
@@ -718,7 +720,7 @@ class localrepository(repo.repository):
                 new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
                 new_exec = is_exec(f)
                 new_link = is_link(f)
-                if not changed or changed[-1] != f:
+                if (not changed or changed[-1] != f) and m2.get(f) != new[f]:
                     # mention the file in the changelog if some flag changed,
                     # even if there was no content change.
                     old_exec = m1.execf(f)
@@ -1312,7 +1314,7 @@ class localrepository(repo.repository):
             mylock = True
 
         try:
-            fetch = self.findincoming(remote, force=force)
+            fetch = self.findincoming(remote, heads=heads, force=force)
             if fetch == [nullid]:
                 self.ui.status(_("requesting all changes\n"))
 

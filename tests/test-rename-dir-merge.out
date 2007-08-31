@@ -29,6 +29,7 @@ A b/c
 R a/a
 R a/b
 R a/c
+b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 resolving manifests
  overwrite None partial False
@@ -40,3 +41,4 @@ getting a/c to b/c
 a/* b/a b/b b/c
 A b/c
   a/c
+b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88

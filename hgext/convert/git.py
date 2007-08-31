@@ -1,6 +1,7 @@
 # git support for the convert extension
 
 import os
+from mercurial import util
 
 from common import NoRepo, commit, converter_source
 
@@ -14,6 +15,24 @@ def recode(s):
             return s.decode("utf-8", "replace").encode("utf-8")
 
 class convert_git(converter_source):
+    # Windows does not support GIT_DIR= construct while other systems
+    # cannot remove environment variable. Just assume none have
+    # both issues.
+    if hasattr(os, 'unsetenv'):
+        def gitcmd(self, s):
+            prevgitdir = os.environ.get('GIT_DIR')
+            os.environ['GIT_DIR'] = self.path
+            try:
+                return os.popen(s)
+            finally:
+                if prevgitdir is None:
+                    del os.environ['GIT_DIR']
+                else:
+                    os.environ['GIT_DIR'] = prevgitdir
+    else:
+        def gitcmd(self, s):
+            return os.popen('GIT_DIR=%s %s' % (self.path, s))
+    
     def __init__(self, ui, path):
         if os.path.isdir(path + "/.git"):
             path += "/.git"
@@ -23,13 +42,13 @@ class convert_git(converter_source):
             raise NoRepo("couldn't open GIT repo %s" % path)
 
     def getheads(self):
-        fh = os.popen("GIT_DIR=%s git-rev-parse --verify HEAD" % self.path)
+        fh = self.gitcmd("git-rev-parse --verify HEAD")
         return [fh.read()[:-1]]
 
     def catfile(self, rev, type):
         if rev == "0" * 40: raise IOError()
-        fh = os.popen("GIT_DIR=%s git-cat-file %s %s 2>/dev/null"
-                      % (self.path, type, rev))
+        fh = self.gitcmd("git-cat-file %s %s 2>%s" % (type, rev,
+                                                      util.nulldev))
         return fh.read()
 
     def getfile(self, name, rev):
@@ -40,8 +59,7 @@ class convert_git(converter_source):
 
     def getchanges(self, version):
         self.modecache = {}
-        fh = os.popen("GIT_DIR=%s git-diff-tree --root -m -r %s"
-                      % (self.path, version))
+        fh = self.gitcmd("git-diff-tree --root -m -r %s" % version)
         changes = []
         for l in fh:
             if "\t" not in l: continue
@@ -89,7 +107,8 @@ class convert_git(converter_source):
 
     def gettags(self):
         tags = {}
-        fh = os.popen('git-ls-remote --tags "%s" 2>/dev/null' % self.path)
+        fh = self.gitcmd('git-ls-remote --tags "%s" 2>%s' % (self.path,
+                                                             util.nulldev))
         prefix = 'refs/tags/'
         for line in fh:
             line = line.strip()
