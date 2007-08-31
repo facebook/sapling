@@ -314,7 +314,7 @@ class convert_svn(converter_source):
         out, e.g. 'I copied trunk into a subdirectory of itself instead
         of making a branch'. The converted repository is significantly
         smaller if we ignore such revisions."""
-        self.blacklist = set()
+        self.blacklist = util.set()
         blacklist = self.blacklist
         for line in file("blacklist.txt", "r"):
             if not line.startswith("#"):
