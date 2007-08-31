@@ -482,10 +482,12 @@ class hgweb(object):
                 if not fnode:
                     continue
 
+                fctx = ctx.filectx(full)
                 yield {"file": full,
                        "parity": parity.next(),
                        "basename": f,
-                       "size": ctx.filectx(full).size(),
+                       "date": fctx.changectx().date(),
+                       "size": fctx.size(),
                        "permissions": mf.flags(full)}
 
         def dirlist(**map):
