@@ -18,7 +18,7 @@ cd t
 echo a > a
 cd ..
 
-svnpath=`pwd | tr '\\' /`
+svnpath=`pwd | fix_path`
 # SVN wants all paths to start with a slash. Unfortunately,
 # Windows ones don't. Handle that.
 expr $svnpath : "\/" > /dev/null
