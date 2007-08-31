@@ -7,12 +7,12 @@ echo "convert=" >> $HGRCPATH
 
 mkdir git-repo
 cd git-repo
-git init
+git init-db >/dev/null 2>/dev/null
 echo a > a
 git add a
-git commit -m t1 > /dev/null || echo "git commit error"
+git commit -m t1 >/dev/null 2>/dev/null || echo "git commit error"
 echo b >> a
-git commit -a -m t2 > /dev/null || echo "git commit error"
+git commit -a -m t2 >/dev/null || echo "git commit error"
 cd ..
 
 hg convert git-repo
