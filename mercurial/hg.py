@@ -176,6 +176,10 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dest_path = os.path.realpath(os.path.join(dest, ".hg"))
             os.mkdir(dest_path)
             if src_repo.spath != src_repo.path:
+                # XXX racy
+                dummy_changelog = os.path.join(dest_path, "00changelog.i")
+                # copy the dummy changelog
+                force_copy(src_repo.join("00changelog.i"), dummy_changelog)
                 dest_store = os.path.join(dest_path, "store")
                 os.mkdir(dest_store)
             else:
