@@ -50,7 +50,7 @@ class mercurial_sink(converter_sink):
     def putfile(self, f, e, data):
         self.repo.wwrite(f, data, e)
         if f not in self.repo.dirstate:
-            self.repo.dirstate.add(f)
+            self.repo.dirstate.normallookup(f)
 
     def copyfile(self, source, dest):
         self.repo.copy(source, dest)
@@ -111,7 +111,7 @@ class mercurial_sink(converter_sink):
             p2 = parents.pop(0)
             a = self.repo.rawcommit(files, text, commit.author, commit.date,
                                     bin(p1), bin(p2), extra=extra)
-            self.repo.dirstate.invalidate()
+            self.repo.dirstate.clear()
             text = "(octopus merge fixup)\n"
             p2 = hg.hex(self.repo.changelog.tip())
 

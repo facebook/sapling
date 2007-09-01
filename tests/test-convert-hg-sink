@@ -1,0 +1,27 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "hgext.convert=" >> $HGRCPATH
+
+hg init orig
+cd orig
+echo foo > foo
+echo bar > bar
+hg ci -qAm 'add foo and bar' -d '0 0'
+
+hg rm foo
+hg ci -m 'remove foo' -d '0 0'
+
+mkdir foo
+echo file > foo/file
+hg ci -qAm 'add foo/file' -d '0 0'
+
+hg tag -d '0 0' some-tag
+
+hg log
+cd ..
+
+hg convert orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
+cd new
+hg out ../orig
+true
