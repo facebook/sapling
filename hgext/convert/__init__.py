@@ -38,7 +38,7 @@ def convertsink(ui, path):
             pass
     raise util.Abort('%s: unknown repository type' % path)
 
-class convert(object):
+class converter(object):
     def __init__(self, ui, source, dest, revmapfile, filemapper, opts):
 
         self.source = source
@@ -363,7 +363,7 @@ class filemapper(object):
     def active(self):
         return bool(self.include or self.exclude or self.rename)
 
-def _convert(ui, src, dest=None, revmapfile=None, **opts):
+def convert(ui, src, dest=None, revmapfile=None, **opts):
     """Convert a foreign SCM repository to a Mercurial one.
 
     Accepted source formats:
@@ -462,14 +462,14 @@ def _convert(ui, src, dest=None, revmapfile=None, **opts):
             revmapfile = os.path.join(destc, "map")
 
 
-    c = convert(ui, srcc, destc, revmapfile, filemapper(ui, opts['filemap']),
-                opts)
+    c = converter(ui, srcc, destc, revmapfile, filemapper(ui, opts['filemap']),
+                  opts)
     c.convert()
 
 
 cmdtable = {
     "convert":
-        (_convert,
+        (convert,
          [('A', 'authors', '', 'username mapping filename'),
           ('', 'filemap', '', 'remap file names using contents of file'),
           ('r', 'rev', '', 'import up to target revision REV'),
