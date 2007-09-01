@@ -32,8 +32,10 @@ class mercurial_sink(converter_sink):
     def before(self):
         self.wlock = self.repo.wlock()
         self.lock = self.repo.lock()
+        self.repo.dirstate.clear()
 
     def after(self):
+        self.repo.dirstate.invalidate()
         self.lock = None
         self.wlock = None
 

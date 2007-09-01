@@ -24,4 +24,30 @@ cd ..
 hg convert orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
 cd new
 hg out ../orig
-true
+
+echo '% dirstate should be empty:'
+hg debugstate
+hg parents -q
+
+hg up -C
+hg copy bar baz
+echo '% put something in the dirstate:'
+hg debugstate > debugstate
+grep baz debugstate
+
+echo '% add a new revision in the original repo'
+cd ../orig
+echo baz > baz
+hg ci -qAm 'add baz'
+
+cd ..
+hg convert orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
+cd new
+hg out ../orig
+echo '% dirstate should be the same (no output below):'
+hg debugstate > new-debugstate
+diff debugstate new-debugstate
+
+echo '% no copies'
+hg up -C
+hg debugrename baz
