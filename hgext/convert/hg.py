@@ -187,12 +187,11 @@ class mercurial_source(converter_source):
         m, a, r = self.repo.status(ctx.parents()[0].node(), ctx.node())[:3]
         changes = [(name, rev) for name in m + a + r]
         changes.sort()
-        return (changes, self.getcopies(ctx))
+        return (changes, self.getcopies(ctx, m + a))
 
-    def getcopies(self, ctx):
-        added = self.repo.status(ctx.parents()[0].node(), ctx.node())[1]
+    def getcopies(self, ctx, files):
         copies = {}
-        for name in added:
+        for name in files:
             try:
                 copies[name] = ctx.filectx(name).renamed()[0]
             except TypeError:
