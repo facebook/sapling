@@ -3755,4 +3755,6 @@ set patchnum 0
 setcoords
 makewindow
 readrefs
+set hgroot [exec $env(HG) root]
+wm title . "hgk $hgroot"
 getcommits $revtreeargs
