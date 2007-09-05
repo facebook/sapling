@@ -21,13 +21,13 @@ filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
-fileline = '<div class="parity#parity#"><span class="lineno">#linenumber#</span>#line|escape#</div>'
+fileline = '<div class="parity#parity#"><a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#</div>'
 filelogentry = filelogentry.tmpl
-annotateline = '<tr class="parity#parity#"><td class="annotate"><a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#author|obfuscate#@#rev#</a></td><td><pre>#line|escape#</pre></td></tr>'
-difflineplus = '<span class="plusline">#line|escape#</span>'
-difflineminus = '<span class="minusline">#line|escape#</span>'
-difflineat = '<span class="atline">#line|escape#</span>'
-diffline = '#line|escape#'
+annotateline = '<tr class="parity#parity#"><td class="annotate"><a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#author|obfuscate#@#rev#</a></td><td><a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a></td><td><pre>#line|escape#</pre></td></tr>'
+difflineplus = '<span class="plusline"><a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#</span>'
+difflineminus = '<span class="minusline"><a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#</span>'
+difflineat = '<span class="atline"><a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#</span>'
+diffline = '<a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#'
 changelogparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td></tr>'
 changesetparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td></tr>'
 filerevparent = '<tr><td class="metatag">parent:</td><td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{rename%filerename}{node|short}</a></td></tr>'

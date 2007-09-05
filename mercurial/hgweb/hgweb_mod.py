@@ -12,7 +12,7 @@ from mercurial.node import *
 from mercurial.i18n import gettext as _
 from mercurial import mdiff, ui, hg, util, archival, streamclone, patch
 from mercurial import revlog, templater
-from common import get_mtime, staticfile, style_map, paritygen
+from common import get_mtime, staticfile, style_map, paritygen, countgen
 
 def _up(p):
     if p[0] != "/":
@@ -170,16 +170,25 @@ class hgweb(object):
                          file=f,
                          filenode=hex(fn or nullid))
 
+        blockcount = countgen()
         def prettyprintlines(diff):
-            for l in diff.splitlines(1):
-                if l.startswith('+'):
-                    yield self.t("difflineplus", line=l)
-                elif l.startswith('-'):
-                    yield self.t("difflineminus", line=l)
-                elif l.startswith('@'):
-                    yield self.t("difflineat", line=l)
+            blockno = blockcount.next()
+            for lineno, l in enumerate(diff.splitlines(1)):
+                if blockno == 0:
+                    lineno = lineno + 1
                 else:
-                    yield self.t("diffline", line=l)
+                    lineno = "%d.%d" % (blockno, lineno + 1)
+                type = "diffline"
+                if l.startswith('+'):
+                    type = "difflineplus"
+                elif l.startswith('-'):
+                    type = "difflineminus"
+                elif l.startswith('@'):
+                    type = "difflineat"
+                yield self.t(type,
+                             line=l,
+                             lineid="l%s" % lineno,
+                             linenumber="% 8s" % lineno)
 
         r = self.repo
         c1 = r.changectx(node1)
@@ -398,9 +407,10 @@ class hgweb(object):
         mt = mt or 'text/plain'
 
         def lines():
-            for l, t in enumerate(text.splitlines(1)):
+            for lineno, t in enumerate(text.splitlines(1)):
                 yield {"line": t,
-                       "linenumber": "% 6d" % (l + 1),
+                       "lineid": "l%d" % (lineno + 1),
+                       "linenumber": "% 6d" % (lineno + 1),
                        "parity": parity.next()}
 
         yield self.t("filerevision",
@@ -427,7 +437,7 @@ class hgweb(object):
 
         def annotate(**map):
             last = None
-            for f, l in fctx.annotate(follow=True):
+            for lineno, (f, l) in enumerate(fctx.annotate(follow=True)):
                 fnode = f.filenode()
                 name = self.repo.ui.shortuser(f.user())
 
@@ -439,7 +449,9 @@ class hgweb(object):
                        "rev": f.rev(),
                        "author": name,
                        "file": f.path(),
-                       "line": l}
+                       "line": l,
+                       "lineid": "l%d" % (lineno + 1),
+                       "linenumber": "% 6d" % (lineno + 1)}
 
         yield self.t("fileannotate",
                      file=f,
