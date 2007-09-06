@@ -277,7 +277,7 @@ def filterpatch(ui, chunks):
             seen[hdr] = True
             if resp_all[0] is None:
                 chunk.pretty(ui)
-            r = prompt(_('record changes to %s?') %
+            r = prompt(_('examine changes to %s?') %
                        _(' and ').join(map(repr, chunk.files())))
             if r == 'y':
                 applied[chunk.filename()] = [chunk]
