@@ -224,9 +224,8 @@ def patchbomb(ui, repo, *revs, **opts):
                 pass
             os.rmdir(tmpdir)
 
-    really_sending = not (opts['test'] or opts['mbox'])
-
-    if really_sending:
+    if not (opts['test'] or opts['mbox']):
+        # really sending
         mail.validateconfig(ui)
 
     if not (revs or opts.get('rev') or opts.get('outgoing')):
@@ -361,8 +360,6 @@ def patchbomb(ui, repo, *revs, **opts):
 
     ui.write('\n')
 
-    if really_sending:
-        mailer = mail.connect(ui)
     parent = None
 
     sender_addr = email.Utils.parseaddr(sender)[1]
@@ -411,7 +408,7 @@ def patchbomb(ui, repo, *revs, **opts):
             ui.status('Sending ', m['Subject'], ' ...\n')
             # Exim does not remove the Bcc field
             del m['Bcc']
-            mailer.sendmail(sender, to + bcc + cc, m.as_string(0))
+            mail.sendmail(ui, sender, to + bcc + cc, m.as_string(0))
 
 cmdtable = {
     "email":

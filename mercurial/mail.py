@@ -67,7 +67,13 @@ def connect(ui):
     return _sendmail(ui, method)
 
 def sendmail(ui, sender, recipients, msg):
-    return connect(ui).sendmail(sender, recipients, msg)
+    try:
+        return connect(ui).sendmail(sender, recipients, msg)
+    except smtplib.SMTPRecipientsRefused, inst:
+        recipients = [r[1] for r in inst.recipients.values()]
+        raise util.Abort('\n' + '\n'.join(recipients))
+    except smtplib.SMTPException, inst:
+        raise util.Abort(inst)
 
 def validateconfig(ui):
     '''determine if we have enough config data to try sending email.'''
