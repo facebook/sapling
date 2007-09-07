@@ -83,7 +83,8 @@ class hgwebdir(object):
             else:
                 yield config('web', 'motd', '')
 
-        parentui = self.parentui or ui.ui(report_untrusted=False)
+        parentui = self.parentui or ui.ui(report_untrusted=False,
+                                          interactive=False)
 
         def config(section, name, default=None, untrusted=True):
             return parentui.config(section, name, default, untrusted)
