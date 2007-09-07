@@ -75,6 +75,8 @@ class converter_source(object):
         if not encoding:
             encoding = self.encoding or 'utf-8'
 
+        if isinstance(s, unicode):
+            return s.encode("utf-8")
         try:
             return s.decode(encoding).encode("utf-8")
         except:

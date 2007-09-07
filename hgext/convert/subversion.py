@@ -278,7 +278,8 @@ class convert_svn(converter_source):
     def revid(self, revnum, module=None):
         if not module:
             module = self.module
-        return (u"svn:%s%s@%s" % (self.uuid, module, revnum)).decode(self.encoding)
+        return u"svn:%s%s@%s" % (self.uuid, module.decode(self.encoding),
+                                 revnum)
 
     def revnum(self, rev):
         return int(rev.split('@')[-1])
