@@ -174,17 +174,17 @@ def uisetup(ui):
             '''use closure to save diff command to use'''
             def mydiff(ui, repo, *pats, **opts):
                 return dodiff(ui, repo, path, diffopts, pats, opts)
-            mydiff.__doc__ = '''use %(path)r to diff repository (or selected files)
+            mydiff.__doc__ = '''use %(path)s to diff repository (or selected files)
 
             Show differences between revisions for the specified
-            files, using the %(path)r program.
+            files, using the %(path)s program.
 
             When two revision arguments are given, then changes are
             shown between those revisions. If only one revision is
             specified then that revision is compared to the working
             directory, and, when no revisions are specified, the
             working directory files are compared to its parent.''' % {
-                'path': path,
+                'path': util.uirepr(path),
                 }
             return mydiff
         cmdtable[cmd] = (save(cmd, path, diffopts),

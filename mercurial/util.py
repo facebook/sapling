@@ -1628,3 +1628,7 @@ def drop_scheme(scheme, path):
         if path.startswith('//'):
             path = path[2:]
     return path
+
+def uirepr(s):
+    # Avoid double backslash in Windows path repr()
+    return repr(s).replace('\\\\', '\\')
