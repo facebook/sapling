@@ -1025,9 +1025,8 @@ class queue:
                 copies = {}
                 for dst in a:
                     src = repo.dirstate.copied(dst)
-                    if src is None:
-                        continue
-                    copies.setdefault(src, []).append(dst)
+                    if src is not None:
+                        copies.setdefault(src, []).append(dst)
                     repo.dirstate.add(dst)
                 # remember the copies between patchparent and tip
                 # this may be slow, so don't do it if we're not tracking copies

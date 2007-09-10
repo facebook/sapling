@@ -338,6 +338,19 @@ hg qrefresh --git
 cat .hg/patches/bar
 hg log -vC --template '{rev} {file_copies%filecopy}\n' -r .
 
+echo % refresh omitting an added file
+hg qnew baz
+echo newfile > newfile
+hg add newfile
+hg qrefresh
+hg st -A newfile
+hg qrefresh -X newfile
+hg st -A newfile
+hg revert newfile
+rm newfile
+hg qpop
+hg qdel baz
+
 echo % create a git patch
 echo a > alexander
 hg add alexander

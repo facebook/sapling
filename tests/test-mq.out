@@ -360,6 +360,10 @@ new file mode 100644
 @@ -0,0 +1,1 @@
 +bar
 3 barney (foo)
+% refresh omitting an added file
+C newfile
+A newfile
+Now at: bar
 % create a git patch
 diff --git a/alexander b/alexander
 % create a git binary patch
