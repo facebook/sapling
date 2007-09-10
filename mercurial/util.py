@@ -953,6 +953,12 @@ if os.name == 'nt':
             _quotere = re.compile(r'(\\*)("|\\$)')
         return '"%s"' % _quotere.sub(r'\1\1\\\2', s)
 
+    def quotecommand(cmd):
+        """Build a command string suitable for os.popen* calls."""
+        # The extra quotes are needed because popen* runs the command
+        # through the current COMSPEC. cmd.exe suppress enclosing quotes.
+        return '"' + cmd + '"'
+
     def explain_exit(code):
         return _("exited with status %d") % code, code
 
@@ -1105,6 +1111,9 @@ else:
             return '"%s"' % s
         else:
             return "'%s'" % s.replace("'", "'\\''")
+
+    def quotecommand(cmd):
+        return cmd
 
     def testpid(pid):
         '''return False if pid dead, True if running or not sure'''

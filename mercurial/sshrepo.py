@@ -35,7 +35,7 @@ class sshrepository(remoterepository):
             cmd = cmd % (sshcmd, args, remotecmd, self.path)
 
             ui.note('running %s\n' % cmd)
-            res = os.system(cmd)
+            res = util.system(cmd)
             if res != 0:
                 self.raise_(hg.RepoError(_("could not create remote repo")))
 
@@ -51,6 +51,7 @@ class sshrepository(remoterepository):
         cmd = '%s %s "%s -R %s serve --stdio"'
         cmd = cmd % (sshcmd, args, remotecmd, self.path)
 
+        cmd = util.quotecommand(cmd)
         ui.note('running %s\n' % cmd)
         self.pipeo, self.pipei, self.pipee = os.popen3(cmd, 'b')
 
