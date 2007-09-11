@@ -113,6 +113,14 @@ def darcs_changes_summary(darcs_repo, chash):
 		summary_nodes = filter(lambda n: n.nodeName == "summary" and n.nodeType == n.ELEMENT_NODE, patch_node.childNodes)
 		for summary_node in summary_nodes:
 			change_nodes = filter(lambda n: n.nodeType == n.ELEMENT_NODE, summary_node.childNodes)
+			if len(change_nodes) == 0:
+				name = filter(lambda n: n.nodeName == "name", patch_node.childNodes)
+				if not name:
+					error("Darcs patch has an empty summary node and no name: " + patch_node.toxml())
+				name = name[0].childNodes[0].data.strip()
+				(tag, sub_count) = re.subn('^TAG ', '', name, 1)
+				if sub_count != 1:
+					error("Darcs patch has an empty summary node but doesn't look like a tag: " + patch_node.toxml());
 			for change_node in change_nodes:
 				change = change_node.nodeName
 				if change == 'modify_file':
@@ -162,7 +170,14 @@ def hg_tip( hg_repo ):
 def hg_rename( hg_repo, from_file, to_file ):
 	cmd("hg rename --after \"%s\" \"%s\"" % (from_file, to_file), hg_repo);
 	
-def hg_handle_change( hg_repo, change, arg ):
+def hg_tag ( hg_repo, text, author, date ):
+	old_tip = hg_tip(hg_repo)
+	res = cmd("hg tag -u \"%s\" -d \"%s 0\" \"%s\""	 % (author, date, text), hg_repo)
+	new_tip = hg_tip(hg_repo)
+	if not new_tip == old_tip + 1:
+		error("Mercurial tag did not work as expected: " + res)
+
+def hg_handle_change( hg_repo, author, date, change, arg ):
 	"""Processes a change event as output by darcs_changes_summary. These
 	consist of file move/rename/add/delete commands."""
 	if change == 'modify_file':
@@ -177,6 +192,8 @@ def hg_handle_change( hg_repo, change, arg ):
 		pass
 	elif change == 'move':
 		hg_rename(hg_repo, arg[0], arg[1])
+	elif change == 'tag':
+		hg_tag(hg_repo, arg, author, date)
 	else:
 		error('Unknown change type ' + change + ': ' + arg)
 
@@ -226,7 +243,7 @@ if __name__ == "__main__":
 			epoch = int(mktime(strptime(date, '%Y%m%d%H%M%S')))
 			darcs_pull(hg_repo, darcs_repo, chash)
 			for change, arg in darcs_changes_summary(darcs_repo, chash):
-				hg_handle_change(hg_repo, change, arg)
+				hg_handle_change(hg_repo, author, epoch, change, arg)
 			hg_commit(hg_repo, text, author, epoch)
 		change_number += 1
 	print "Darcs repository (_darcs) was not deleted. You can keep or remove it."
