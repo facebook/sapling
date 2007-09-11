@@ -15,6 +15,7 @@ import os, sys
 import tempfile
 import xml.dom.minidom as xml_dom
 from time import strptime, mktime
+import re
 
 DARCS_REPO = None
 HG_REPO    = None
@@ -93,6 +94,10 @@ def darcs_tip(darcs_repo):
 def darcs_pull(hg_repo, darcs_repo, chash):
 	old_tip = darcs_tip(darcs_repo)
 	res     = cmd("darcs pull \"%s\" --all --match=\"hash %s\"" % (darcs_repo, chash), hg_repo)
+	if re.search('^We have conflicts in the following files:$', res, re.MULTILINE):
+		print "Trying to revert files to work around conflict..."
+		rev_res = cmd ("darcs revert --all", hg_repo)
+		print rev_res
 	print res
 	new_tip = darcs_tip(darcs_repo)
 	if not new_tip != old_tip + 1:
