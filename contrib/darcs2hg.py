@@ -98,6 +98,33 @@ def darcs_pull(hg_repo, darcs_repo, chash):
 	if not new_tip != old_tip + 1:
 		error("Darcs pull did not work as expected: " + res)
 
+def darcs_changes_summary(darcs_repo, chash):
+	"""Gets the changes from the darcs summary. This returns the chronological
+	list of changes as (change_type, args). Eg. ('add_file', 'foo.txt') or
+	('move', ['foo.txt','bar.txt'])."""
+	change = cmd("darcs changes --summary --xml-output --match=\"hash %s\"" % (chash), darcs_repo)
+	doc = xml_dom.parseString(change)
+	for patch_node in doc.childNodes[0].childNodes:
+		summary_nodes = filter(lambda n: n.nodeName == "summary" and n.nodeType == n.ELEMENT_NODE, patch_node.childNodes)
+		for summary_node in summary_nodes:
+			change_nodes = filter(lambda n: n.nodeType == n.ELEMENT_NODE, summary_node.childNodes)
+			for change_node in change_nodes:
+				change = change_node.nodeName
+				if change == 'modify_file':
+					yield change, change_node.childNodes[0].data.strip()
+				elif change == 'add_file':
+					yield change, change_node.childNodes[0].data.strip()
+				elif change == 'remove_file':
+					yield change, change_node.childNodes[0].data.strip()
+				elif change == 'add_directory':
+					yield change, change_node.childNodes[0].data.strip()
+				elif change == 'remove_directory':
+					yield change, change_node.childNodes[0].data.strip()
+				elif change == 'move':
+					yield change, (change_node.getAttribute('from'), change_node.getAttribute('to'))
+				else:
+					error('Problem parsing summary xml: Unexpected element: ' + change_node.toxml())
+
 # ------------------------------------------------------------------------------
 #
 # Mercurial interface
@@ -126,6 +153,27 @@ def hg_tip( hg_repo ):
 	tip = cmd("hg tip", hg_repo, silent=True)
 	tip = tip.split("\n")[0].split(":")[1].strip()
 	return int(tip)
+
+def hg_rename( hg_repo, from_file, to_file ):
+	cmd("hg rename --after \"%s\" \"%s\"" % (from_file, to_file), hg_repo);
+	
+def hg_handle_change( hg_repo, change, arg ):
+	"""Processes a change event as output by darcs_changes_summary. These
+	consist of file move/rename/add/delete commands."""
+	if change == 'modify_file':
+		pass
+	elif change == 'add_file':
+		pass
+	elif change =='remove_file':
+		pass
+	elif change == 'add_directory':
+		pass
+	elif change == 'remove_directory':
+		pass
+	elif change == 'move':
+		hg_rename(hg_repo, arg[0], arg[1])
+	else:
+		error('Unknown change type ' + change + ': ' + arg)
 
 # ------------------------------------------------------------------------------
 #
@@ -167,11 +215,13 @@ if __name__ == "__main__":
 			print "(skipping)"
 		else:
 			text = summary + "\n" + description
-			darcs_pull(hg_repo, darcs_repo, chash)
 			# The commit hash has a date like 20021020201112
 			# --------------------------------YYYYMMDDHHMMSS
 			date = chash.split("-")[0]
 			epoch = int(mktime(strptime(date, '%Y%m%d%H%M%S')))
+			darcs_pull(hg_repo, darcs_repo, chash)
+			for change, arg in darcs_changes_summary(darcs_repo, chash):
+				hg_handle_change(hg_repo, change, arg)
 			hg_commit(hg_repo, text, author, epoch)
 		change_number += 1
 	print "Darcs repository (_darcs) was not deleted. You can keep or remove it."
