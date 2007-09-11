@@ -62,6 +62,14 @@ SPECIFYING SINGLE REVISIONS
     The reserved name "tip" is a special tag that always identifies
     the most recent revision.
 
+    The reserved name "null" indicates the null revision. This is the
+    revision of an empty repository, and the parent of revision 0.
+
+    The reserved name "." indicates the working directory parent. If
+    no working directory is checked out, it is equivalent to null.
+    If an uncommitted merge is in progress, "." is the revision of
+    the first parent.
+
 SPECIFYING MULTIPLE REVISIONS
 -----------------------------
 
