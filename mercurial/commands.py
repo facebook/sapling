@@ -1985,16 +1985,30 @@ def parents(ui, repo, file_=None, **opts):
     revision or the argument to --rev if given) is printed.
     """
     rev = opts.get('rev')
+    if rev:
+        ctx = repo.changectx(rev)
+    else:
+        ctx = repo.workingctx()
+
     if file_:
         files, match, anypats = cmdutil.matchpats(repo, (file_,), opts)
         if anypats or len(files) != 1:
             raise util.Abort(_('can only specify an explicit file name'))
-        ctx = repo.filectx(files[0], changeid=rev)
-    elif rev:
-        ctx = repo.changectx(rev)
+        file_ = files[0]
+        filenodes = []
+        for cp in ctx.parents():
+            if not cp:
+                continue
+            try:
+                filenodes.append(cp.filenode(file_))
+            except revlog.LookupError:
+                pass
+        if not filenodes:
+            raise util.Abort(_("'%s' not found in manifest!") % file_)
+        fl = repo.file(file_)
+        p = [repo.lookup(fl.linkrev(fn)) for fn in filenodes]
     else:
-        ctx = repo.workingctx()
-    p = [cp.node() for cp in ctx.parents()]
+        p = [cp.node() for cp in ctx.parents()]
 
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in p:
