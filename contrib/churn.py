@@ -22,20 +22,16 @@ def get_tty_width():
         except ValueError:
             pass
     try:
-        import termios, fcntl, struct
-        buf = 'abcd'
+        import termios, array, fcntl
         for dev in (sys.stdout, sys.stdin):
             try:
-                if buf != 'abcd':
-                    break
                 fd = dev.fileno()
                 if not os.isatty(fd):
                     continue
-                buf = fcntl.ioctl(fd, termios.TIOCGWINSZ, buf)
+                arri = fcntl.ioctl(fd, termios.TIOCGWINSZ, '\0' * 8)
+                return array.array('h', arri)[1]
             except ValueError:
                 pass
-        if buf != 'abcd':
-           return struct.unpack('hh', buf)[1]
     except ImportError:
         pass
     return 80
