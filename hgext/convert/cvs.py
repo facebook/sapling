@@ -40,9 +40,10 @@ class convert_cvs(converter_source):
                 try:
                     # date
                     util.parsedate(self.rev, ['%Y/%m/%d %H:%M:%S'])
-                    cmd = "%s -d '1970/01/01 00:00:01' -d '%s'" % (cmd, self.rev)
+                    cmd = '%s -d "1970/01/01 00:00:01" -d "%s"' % (cmd, self.rev)
                 except util.Abort:
                     raise util.Abort('revision %s is not a patchset number or date' % self.rev)
+        cmd += " 2>&1"
 
         d = os.getcwd()
         try:
@@ -166,7 +167,8 @@ class convert_cvs(converter_source):
             if root.startswith(":ext:"):
                 root = root[5:]
             m = re.match(r'(?:([^@:/]+)@)?([^:/]+):?(.*)', root)
-            if not m:
+            # Do not take Windows path "c:\foo\bar" for a connection strings
+            if os.path.isdir(root) or not m:
                 conntype = "local"
             else:
                 conntype = "rsh"
@@ -180,7 +182,10 @@ class convert_cvs(converter_source):
                 else:
                     cmd = [rsh, host] + cmd
 
-            self.writep, self.readp = os.popen2(cmd)
+            # popen2 does not support argument lists under Windows
+            cmd = [util.shellquote(arg) for arg in cmd]
+            cmd = util.quotecommand(' '.join(cmd))
+            self.writep, self.readp = os.popen2(cmd, 'b')
 
         self.realroot = root
 
@@ -206,7 +211,7 @@ class convert_cvs(converter_source):
             raise IOError
 
         args = ("-N -P -kk -r %s --" % rev).split()
-        args.append(os.path.join(self.cvsrepo, name))
+        args.append(self.cvsrepo + '/' + name)
         for x in args:
             self.writep.write("Argument %s\n" % x)
         self.writep.write("Directory .\n%s\nco\n" % self.realroot)
