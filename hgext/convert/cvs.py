@@ -193,7 +193,7 @@ class convert_cvs(converter_source):
             raise IOError
 
         args = ("-N -P -kk -r %s --" % rev).split()
-        args.append(os.path.join(self.cvsrepo, name))
+        args.append(self.cvsrepo + '/' + name)
         for x in args:
             self.writep.write("Argument %s\n" % x)
         self.writep.write("Directory .\n%s\nco\n" % self.realroot)
