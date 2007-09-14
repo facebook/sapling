@@ -11,7 +11,7 @@ import tempfile
 
 tempprefix = 'hg-hghave-'
 
-def matchoutput(cmd, regexp):
+def matchoutput(cmd, regexp, ignorestatus=False):
     """Return True if cmd executes successfully and its output
     is matched by the supplied regular expression.
     """
@@ -19,13 +19,19 @@ def matchoutput(cmd, regexp):
     fh = os.popen(cmd)
     s = fh.read()
     ret = fh.close()
-    return ret is None and r.search(s)
+    return (ignorestatus or ret is None) and r.search(s)
 
 def has_symlink():
     return hasattr(os, "symlink")
 
 def has_fifo():
     return hasattr(os, "mkfifo")
+
+def has_cvs():
+    return matchoutput('cvs --version 2>&1', r'Concurrent Versions System')
+
+def has_cvsps():
+    return matchoutput('cvsps -h -q 2>&1', r'cvsps version', True)
 
 def has_executablebit():
     fd, path = tempfile.mkstemp(prefix=tempprefix)
@@ -66,6 +72,8 @@ def has_git():
     return matchoutput('git --version 2>&1', r'^git version')
 
 checks = {
+    "cvs": (has_cvs, "cvs client"),
+    "cvsps": (has_cvsps, "cvsps utility"),
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),
     "git": (has_git, "git command line client"),
