@@ -34,7 +34,7 @@ class convert_cvs(converter_source):
             os.chdir(self.path)
             id = None
             state = 0
-            for l in os.popen("cvsps -A -u --cvs-direct -q"):
+            for l in os.popen("cvsps -A -u --cvs-direct -q 2>&1"):
                 if state == 0: # header
                     if l.startswith("PatchSet"):
                         id = l[9:-2]
