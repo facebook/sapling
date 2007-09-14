@@ -149,7 +149,8 @@ class convert_cvs(converter_source):
             if root.startswith(":ext:"):
                 root = root[5:]
             m = re.match(r'(?:([^@:/]+)@)?([^:/]+):?(.*)', root)
-            if not m:
+            # Do not take Windows path "c:\foo\bar" for a connection strings
+            if os.path.isdir(root) or not m:
                 conntype = "local"
             else:
                 conntype = "rsh"
