@@ -1,0 +1,43 @@
+% create cvs repository
+% create source directory
+% import source directory
+N src/a
+N src/b/c
+
+No conflicts created by this import
+
+% checkout source directory
+U src/a
+U src/b/c
+% convert fresh repo
+connecting to cvsrepo
+initializing destination src-hg repository
+scanning source...
+sorting...
+converting...
+1 Initial revision
+0 import
+updating tags
+a
+c
+% commit new file revisions
+Checking in a;
+src/a,v  <--  a
+new revision: 1.2; previous revision: 1.1
+done
+Checking in b/c;
+src/b/c,v  <--  c
+new revision: 1.2; previous revision: 1.1
+done
+% convert again
+connecting to cvsrepo
+destination src-hg is a Mercurial repository
+scanning source...
+sorting...
+converting...
+0 ci1
+updating tags
+a
+a
+c
+c

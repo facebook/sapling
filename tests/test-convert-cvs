@@ -1,0 +1,50 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" cvs cvsps || exit 80
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
+
+echo % create cvs repository
+mkdir cvsrepo
+cd cvsrepo
+export CVSROOT=`pwd`
+cd ..
+
+cvs -q -d "$CVSROOT" init
+
+echo % create source directory
+mkdir src-temp
+cd src-temp
+echo a > a
+mkdir b
+cd b
+echo c > c
+cd ..
+
+echo % import source directory
+cvs -q import -m import src INITIAL start
+cd ..
+
+echo % checkout source directory
+cvs -q checkout src
+
+echo % convert fresh repo
+hg convert src src-hg | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
+cat src-hg/a
+cat src-hg/b/c
+
+echo % commit new file revisions
+cd src
+echo a >> a
+echo c >> b/c
+cvs -q commit -mci1 . | sed -e 's:.*src/\(.*\),v:src/\1,v:g'
+cd ..
+
+echo % convert again
+hg convert src src-hg | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
+cat src-hg/a
+cat src-hg/b/c
+
+
+
