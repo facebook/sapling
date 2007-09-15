@@ -863,42 +863,40 @@ def debuginstall(ui):
 
     # patch
     ui.status(_("Checking patch...\n"))
-    patcher = ui.config('ui', 'patch')
-    patcher = ((patcher and util.find_exe(patcher)) or
-               util.find_exe('gpatch') or
-               util.find_exe('patch'))
-    if not patcher:
-        ui.write(_(" Can't find patch or gpatch in PATH\n"))
-        ui.write(_(" (specify a patch utility in your .hgrc file)\n"))
-        problems += 1
+    patchproblems = 0
+    a = "1\n2\n3\n4\n"
+    b = "1\n2\n3\ninsert\n4\n"
+    fa = writetemp(a)
+    d = mdiff.unidiff(a, None, b, None, os.path.basename(fa))
+    fd = writetemp(d)
+
+    files = {}
+    try:
+        patch.patch(fd, ui, cwd=os.path.dirname(fa), files=files)
+    except util.Abort, e:
+        ui.write(_(" patch call failed:\n"))
+        ui.write(" " + str(e) + "\n")
+        patchproblems += 1
     else:
-        # actually attempt a patch here
-        a = "1\n2\n3\n4\n"
-        b = "1\n2\n3\ninsert\n4\n"
-        fa = writetemp(a)
-        d = mdiff.unidiff(a, None, b, None, os.path.basename(fa))
-        fd = writetemp(d)
+        if list(files) != [os.path.basename(fa)]:
+            ui.write(_(" unexpected patch output!\n"))
+            patchproblems += 1
+        a = file(fa).read()
+        if a != b:
+            ui.write(_(" patch test failed!\n"))
+            patchproblems += 1
 
-        files = {}
-        try:
-            patch.patch(fd, ui, cwd=os.path.dirname(fa), files=files)
-        except util.Abort, e:
-            ui.write(_(" patch call failed:\n"))
-            ui.write(" " + str(e) + "\n")
-            problems += 1
+    if patchproblems:
+        if ui.config('ui', 'patch'):
+            ui.write(_(" (Current patch tool may be incompatible with patch,"
+                       " or misconfigured. Please check your .hgrc file)\n"))
         else:
-            if list(files) != [os.path.basename(fa)]:
-                ui.write(_(" unexpected patch output!"))
-                ui.write(_(" (you may have an incompatible version of patch)\n"))
-                problems += 1
-            a = file(fa).read()
-            if a != b:
-                ui.write(_(" patch test failed!"))
-                ui.write(_(" (you may have an incompatible version of patch)\n"))
-                problems += 1
+            ui.write(_(" Internal patcher failure, please report this error" 
+                       " to http://www.selenic.com/mercurial/bts\n"))
+    problems += patchproblems
 
-        os.unlink(fa)
-        os.unlink(fd)
+    os.unlink(fa)
+    os.unlink(fd)
 
     # merge helper
     ui.status(_("Checking merge helper...\n"))
