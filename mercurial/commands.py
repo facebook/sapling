@@ -803,7 +803,10 @@ def debugindex(ui, file_):
              " nodeid       p1           p2\n")
     for i in xrange(r.count()):
         node = r.node(i)
-        pp = r.parents(node)
+        try:
+            pp = r.parents(node)
+        except:
+            pp = [nullid, nullid]
         ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
                 i, r.start(i), r.length(i), r.base(i), r.linkrev(node),
             short(node), short(pp[0]), short(pp[1])))
