@@ -912,7 +912,8 @@ class revlog(object):
 
         # check rev flags
         if self.index[rev][0] & 0xFFFF:
-            raise RevlogError(_('incompatible revision flag %x') % q)
+            raise RevlogError(_('incompatible revision flag %x') %
+                              (self.index[rev][0] & 0xFFFF))
 
         if self._inline:
             # we probably have the whole chunk cached
@@ -1236,7 +1237,7 @@ class revlog(object):
     def checksize(self):
         expected = 0
         if self.count():
-            expected = self.end(self.count() - 1)
+            expected = max(0, self.end(self.count() - 1))
 
         try:
             f = self.opener(self.datafile)
@@ -1253,12 +1254,12 @@ class revlog(object):
             f.seek(0, 2)
             actual = f.tell()
             s = self._io.size
-            i = actual / s
+            i = max(0, actual / s)
             di = actual - (i * s)
             if self._inline:
                 databytes = 0
                 for r in xrange(self.count()):
-                    databytes += self.length(r)
+                    databytes += max(0, self.length(r))
                 dd = 0
                 di = actual - self.count() * s - databytes
         except IOError, inst:
