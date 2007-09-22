@@ -49,4 +49,18 @@ echo '[hooks]' >> .hg/hgrc
 echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
 http_proxy= hg pull
 
+echo '% test with "/" URI (issue 747)'
+cd ..
+hg init
+echo a > a
+hg add a
+hg ci -ma
+
+http_proxy= hg clone static-http://localhost:20059/ local2
+
+cd local2
+hg verify
+cat a
+hg paths
+
 kill $!
