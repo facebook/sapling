@@ -304,9 +304,11 @@ For subcommands see "hg bisect help\"
         ui.warn(_("bisect: Too many arguments\n"))
         return help_()
     try:
-        return bisectcmdtable[cmd][0](*args)
-    finally:
+        ret = bisectcmdtable[cmd][0](*args)
         b.write()
+        return ret
+    except:
+        raise
 
 cmdtable = {
     "bisect": (bisect_run, [], _("hg bisect [help|init|reset|next|good|bad]")),
