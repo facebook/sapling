@@ -37,10 +37,9 @@ class bisect(object):
         self.ui = ui
         self.goodrevs = []
         self.badrev = None
-        self.good_dirty = 0
-        self.bad_dirty = 0
         self.good_path = "good"
         self.bad_path = "bad"
+        self.is_reset = False
 
         if os.path.exists(os.path.join(self.path, self.good_path)):
             self.goodrevs = self.opener(self.good_path).read().splitlines()
@@ -51,8 +50,10 @@ class bisect(object):
                 self.badrev = hg.bin(r.pop(0))
 
     def write(self):
-        if not os.path.isdir(self.path):
+        if self.is_reset:
             return
+        if not os.path.isdir(self.path):
+            os.mkdir(self.path)
         f = self.opener(self.good_path, "w")
         f.write("\n".join([hg.hex(r) for r in  self.goodrevs]))
         if len(self.goodrevs) > 0:
@@ -81,6 +82,7 @@ class bisect(object):
         # Not sure about this
         #self.ui.write("Going back to tip\n")
         #self.repo.update(self.repo.changelog.tip())
+        self.is_reset = True
         return 0
 
     def num_ancestors(self, head=None, stop=None):
