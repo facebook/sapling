@@ -1005,15 +1005,15 @@ class localrepository(repo.repository):
                 self.dirstate.update([f], "r")
 
     def undelete(self, list, wlock=None):
-        p = self.dirstate.parents()[0]
-        mn = self.changelog.read(p)[0]
-        m = self.manifest.read(mn)
+        manifests = [self.manifest.read(self.changelog.read(p)[0])
+                     for p in self.dirstate.parents() if p != nullid]
         if not wlock:
             wlock = self.wlock()
         for f in list:
             if self.dirstate.state(f) not in  "r":
                 self.ui.warn("%s not removed!\n" % f)
             else:
+                m = f in manifests[0] and manifests[0] or manifests[1]
                 t = self.file(f).read(m[f])
                 self.wwrite(f, t, m.flags(f))
                 self.dirstate.update([f], "n")
