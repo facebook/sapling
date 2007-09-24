@@ -1489,6 +1489,10 @@ def identify(ui, repo, source=None,
     name for non-default branches.
     """
 
+    if not repo and not source:
+        raise util.Abort(_("There is no Mercurial repository here "
+                           "(.hg not found)"))
+
     hexfunc = ui.debugflag and hex or short
     default = not (num or id or branch or tags)
     output = []
@@ -3155,7 +3159,7 @@ table = {
 
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall")
-optionalrepo = ("paths serve showconfig")
+optionalrepo = ("identify paths serve showconfig")
 
 def dispatch(args):
     try:
