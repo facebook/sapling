@@ -175,16 +175,27 @@ class dirstate(object):
         return self._copymap
 
     def _incpath(self, path):
-        for c in strutil.findall(path, '/'):
-            pc = path[:c]
-            self._dirs.setdefault(pc, 0)
-            self._dirs[pc] += 1
+        c = path.rfind('/')
+        if c >= 0:
+            dirs = self._dirs
+            base = path[:c]
+            if base not in dirs:
+                self._incpath(base)
+                dirs[base] = 1
+            else:
+                dirs[base] += 1
 
     def _decpath(self, path):
-        for c in strutil.findall(path, '/'):
-            pc = path[:c]
-            self._dirs.setdefault(pc, 0)
-            self._dirs[pc] -= 1
+        if "_dirs" in self.__dict__:
+            c = path.rfind('/')
+            if c >= 0:
+                base = path[:c]
+                dirs = self._dirs
+                if dirs[base] == 1:
+                    del dirs[base]
+                    self._decpath(base)
+                else:
+                    dirs[base] -= 1
 
     def _incpathcheck(self, f):
         if '\r' in f or '\n' in f:
