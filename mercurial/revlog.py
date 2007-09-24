@@ -1038,7 +1038,7 @@ class revlog(object):
             ifh.write(entry)
         else:
             offset += curr * self._io.size
-            transaction.add(self.indexfile, offset, prev)
+            transaction.add(self.indexfile, offset, curr)
             ifh.write(entry)
             ifh.write(data[0])
             ifh.write(data[1])
