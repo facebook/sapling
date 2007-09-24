@@ -3,5 +3,20 @@ initializing destination git-repo-hg repository
 scanning source...
 sorting...
 converting...
-1 t1
-0 t2
+3 t1
+2 t2.1
+1 t2.2
+0 Merge branch other
+changeset:   3:f0873470732d
+tag:         tip
+parent:      1:cb991dbbb06b
+parent:      2:600bef931ca4
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:13 2007 +0000
+files:       a
+description:
+Merge branch other
+
+committer: test <test@example.org>
+
+
