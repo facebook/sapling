@@ -38,10 +38,11 @@ class manifest(revlog):
 
     def parse(self, lines):
         mfdict = manifestdict()
+        fdict = mfdict._flags
         for l in lines.splitlines():
             f, n = l.split('\0')
             if len(n) > 40:
-                mfdict._flags[f] = n[40:]
+                fdict[f] = n[40:]
                 mfdict[f] = bin(n[:40])
             else:
                 mfdict[f] = bin(n)
