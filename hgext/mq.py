@@ -1607,6 +1607,9 @@ def refresh(ui, repo, *pats, **opts):
     q = repo.mq
     message = cmdutil.logmessage(opts)
     if opts['edit']:
+        if not q.applied:
+            ui.write(_("No patches applied\n"))
+            return 1
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
         patch = q.applied[-1].name
