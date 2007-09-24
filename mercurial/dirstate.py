@@ -141,22 +141,20 @@ class dirstate(object):
         dmap = self._map
         copymap = self._copymap
         unpack = struct.unpack
-
-        pos = 40
         e_size = struct.calcsize(_format)
+        pos1 = 40
+        l = len(st)
 
-        while pos < len(st):
-            newpos = pos + e_size
-            e = unpack(_format, st[pos:newpos])
-            l = e[4]
-            pos = newpos
-            newpos = pos + l
-            f = st[pos:newpos]
+        # the inner loop
+        while pos1 < l:
+            pos2 = pos1 + e_size
+            e = unpack(">cllll", st[pos1:pos2]) # a literal here is faster
+            pos1 = pos2 + e[4]
+            f = st[pos2:pos1]
             if '\0' in f:
                 f, c = f.split('\0')
                 copymap[f] = c
-            dmap[f] = e[:4]
-            pos = newpos
+            dmap[f] = e # we hold onto e[4] because making a subtuple is slow
 
     def invalidate(self):
         for a in "_map _copymap _branch _pl _dirs _ignore".split():
@@ -216,21 +214,21 @@ class dirstate(object):
         'mark a file normal and clean'
         self._dirty = True
         s = os.lstat(self._join(f))
-        self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime)
+        self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime, 0)
         if self._copymap.has_key(f):
             del self._copymap[f]
 
     def normallookup(self, f):
         'mark a file normal, but possibly dirty'
         self._dirty = True
-        self._map[f] = ('n', 0, -1, -1)
+        self._map[f] = ('n', 0, -1, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
 
     def normaldirty(self, f):
         'mark a file normal, but dirty'
         self._dirty = True
-        self._map[f] = ('n', 0, -2, -1)
+        self._map[f] = ('n', 0, -2, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -238,14 +236,14 @@ class dirstate(object):
         'mark a file added'
         self._dirty = True
         self._incpathcheck(f)
-        self._map[f] = ('a', 0, -1, -1)
+        self._map[f] = ('a', 0, -1, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
 
     def remove(self, f):
         'mark a file removed'
         self._dirty = True
-        self._map[f] = ('r', 0, 0, 0)
+        self._map[f] = ('r', 0, 0, 0, 0)
         self._decpath(f)
         if f in self._copymap:
             del self._copymap[f]
@@ -254,7 +252,7 @@ class dirstate(object):
         'mark a file merged'
         self._dirty = True
         s = os.lstat(self._join(f))
-        self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime)
+        self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime, 0)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -277,9 +275,9 @@ class dirstate(object):
         self.clear()
         for f in files:
             if files.execf(f):
-                self._map[f] = ('n', 0777, -1, 0)
+                self._map[f] = ('n', 0777, -1, 0, 0)
             else:
-                self._map[f] = ('n', 0666, -1, 0)
+                self._map[f] = ('n', 0666, -1, 0, 0)
         self._pl = (parent, nullid)
         self._dirty = True
 
@@ -287,14 +285,16 @@ class dirstate(object):
         if not self._dirty:
             return
         cs = cStringIO.StringIO()
-        cs.write("".join(self._pl))
+        copymap = self._copymap
+        pack = struct.pack
+        write = cs.write
+        write("".join(self._pl))
         for f, e in self._map.iteritems():
-            c = self.copied(f)
-            if c:
-                f = f + "\0" + c
-            e = struct.pack(_format, e[0], e[1], e[2], e[3], len(f))
-            cs.write(e)
-            cs.write(f)
+            if f in copymap:
+                f = "%s\0%s" % (f, copymap[f])
+            e = pack(_format, e[0], e[1], e[2], e[3], len(f))
+            write(e)
+            write(f)
         st = self._opener("dirstate", "w", atomictemp=True)
         st.write(cs.getvalue())
         st.rename()
@@ -510,7 +510,7 @@ class dirstate(object):
 
         for src, fn, st in self.statwalk(files, match, ignored=list_ignored):
             if fn in dmap:
-                type_, mode, size, time = dmap[fn]
+                type_, mode, size, time, foo = dmap[fn]
             else:
                 if list_ignored and self._ignore(fn):
                     iadd(fn)
