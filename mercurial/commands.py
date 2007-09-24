@@ -623,9 +623,12 @@ def docopy(ui, repo, pats, opts, wlock):
         raise util.Abort(_('no destination specified'))
     dest = pats.pop()
     destdirexists = os.path.isdir(dest)
-    if (len(pats) > 1 or util.patkind(pats[0], None)[0]) and not destdirexists:
-        raise util.Abort(_('with multiple sources, destination must be an '
-                         'existing directory'))
+    if not destdirexists:
+        if len(pats) > 1 or util.patkind(pats[0], None)[0]:
+            raise util.Abort(_('with multiple sources, destination must be an '
+                               'existing directory'))
+        if dest.endswith(os.sep) or os.altsep and dest.endswith(os.altsep):
+            raise util.Abort(_('destination %s is not a directory') % dest)
     if opts['after']:
         tfn = targetpathafterfn
     else:
