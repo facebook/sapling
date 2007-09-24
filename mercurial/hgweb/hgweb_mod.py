@@ -141,7 +141,10 @@ class hgweb(object):
     def nodebranchdict(self, ctx):
         branches = []
         branch = ctx.branch()
-        if self.repo.branchtags()[branch] == ctx.node():
+        # If this is an empty repo, ctx.node() == nullid,
+        # ctx.branch() == 'default', but branchtags() is
+        # an empty dict. Using dict.get avoids a traceback.
+        if self.repo.branchtags().get(branch) == ctx.node():
             branches.append({"name": branch})
         return branches
 
