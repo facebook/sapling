@@ -166,6 +166,9 @@ R d1/d11/a1
 ---
 > d2/b
 3 files updated, 0 files merged, 3 files removed, 0 files unresolved
+# attempt to move one file into a non-existent directory
+abort: destination dx/ is not a directory
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 # attempt to move potentially more than one file into a non-existent
 # directory
 abort: with multiple sources, destination must be an existing directory

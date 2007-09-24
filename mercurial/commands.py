@@ -598,9 +598,12 @@ def docopy(ui, repo, pats, opts):
         raise util.Abort(_('no destination specified'))
     dest = pats.pop()
     destdirexists = os.path.isdir(dest)
-    if (len(pats) > 1 or util.patkind(pats[0], None)[0]) and not destdirexists:
-        raise util.Abort(_('with multiple sources, destination must be an '
-                         'existing directory'))
+    if not destdirexists:
+        if len(pats) > 1 or util.patkind(pats[0], None)[0]:
+            raise util.Abort(_('with multiple sources, destination must be an '
+                               'existing directory'))
+        if dest.endswith(os.sep) or os.altsep and dest.endswith(os.altsep):
+            raise util.Abort(_('destination %s is not a directory') % dest)
     if opts['after']:
         tfn = targetpathafterfn
     else:
@@ -1469,6 +1472,10 @@ def identify(ui, repo, source=None,
     in the working directory, a list of tags for this revision and a branch
     name for non-default branches.
     """
+
+    if not repo and not source:
+        raise util.Abort(_("There is no Mercurial repository here "
+                           "(.hg not found)"))
 
     hexfunc = ui.debugflag and hex or short
     default = not (num or id or branch or tags)
@@ -3153,4 +3160,4 @@ table = {
 
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall")
-optionalrepo = ("paths serve showconfig")
+optionalrepo = ("identify paths serve showconfig")

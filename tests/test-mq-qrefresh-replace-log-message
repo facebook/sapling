@@ -8,6 +8,11 @@ echo "mq=" >> $HGRCPATH
 hg init
 hg qinit
 
+echo =======================
+echo "Should fail if no patches applied"
+hg qrefresh
+hg qrefresh -e
+
 hg qnew -m "First commit message" first-patch
 echo aaaa > file
 hg add file

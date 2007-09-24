@@ -298,8 +298,7 @@ class httprepository(remoterepository):
         cu = "%s%s" % (self._url, qs)
         try:
             if data:
-                self.ui.debug(_("sending %s bytes\n") %
-                              headers.get('content-length', 'X'))
+                self.ui.debug(_("sending %s bytes\n") % len(data))
             resp = urllib2.urlopen(request(cu, data, headers))
         except urllib2.HTTPError, inst:
             if inst.code == 401:

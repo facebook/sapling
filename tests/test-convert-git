@@ -5,15 +5,42 @@
 echo "[extensions]" >> $HGRCPATH
 echo "convert=" >> $HGRCPATH
 
+GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
+GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
+GIT_AUTHOR_DATE="2007-01-01 00:00:00 +0000"; export GIT_AUTHOR_DATE
+GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
+GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
+GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
+
+count=10
+commit()
+{
+    GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
+    GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
+    git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
+    count=`expr $count + 1`
+}
+
 mkdir git-repo
 cd git-repo
 git init-db >/dev/null 2>/dev/null
 echo a > a
 git add a
-git commit -m t1 >/dev/null 2>/dev/null || echo "git commit error"
+commit -m t1
+
 echo b >> a
-git commit -a -m t2 >/dev/null || echo "git commit error"
+commit -a -m t2.1
+
+git checkout -b other HEAD^ >/dev/null 2>/dev/null
+echo c > a
+echo a >> a
+commit -a -m t2.2
+
+git checkout master >/dev/null 2>/dev/null
+git pull --no-commit . other > /dev/null 2>/dev/null
+commit -m 'Merge branch other'
 cd ..
 
-hg convert git-repo
+hg convert --datesort git-repo
 
+hg -R git-repo-hg tip -v
