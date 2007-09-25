@@ -211,9 +211,11 @@ class ui(object):
             if name is None or name in ('quiet', 'verbose', 'debug'):
                 self.verbosity_constraints()
             if name is None or name == 'interactive':
-                self.interactive = self.configbool("ui", "interactive", None)
-                if self.interactive is None:
+                interactive = self.configbool("ui", "interactive", None)
+                if interactive is None and self.interactive:
                     self.interactive = self.isatty()
+                else:
+                    self.interactive = interactive
             if name is None or name == 'report_untrusted':
                 self.report_untrusted = (
                     self.configbool("ui", "report_untrusted", True))
@@ -391,7 +393,7 @@ class ui(object):
         try: sys.stderr.flush()
         except: pass
 
-    def readline(self, prompt=''):
+    def _readline(self, prompt=''):
         if self.isatty():
             try:
                 # magically add command line editing support, where
@@ -406,7 +408,7 @@ class ui(object):
     def prompt(self, msg, pat=None, default="y", matchflags=0):
         if not self.interactive: return default
         try:
-            r = self.readline(msg + ' ')
+            r = self._readline(msg + ' ')
             if not pat or re.match(pat, r, matchflags):
                 return r
             else:
