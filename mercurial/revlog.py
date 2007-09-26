@@ -314,7 +314,7 @@ class revlogoldio(object):
 
         return index, nodemap, None
 
-    def packentry(self, entry, node, version):
+    def packentry(self, entry, node, version, rev):
         e2 = (getoffset(entry[0]), entry[1], entry[3], entry[4],
               node(entry[5]), node(entry[6]), entry[7])
         return _pack(indexformatv0, *e2)
@@ -388,9 +388,9 @@ class revlogio(object):
 
         return index, nodemap, cache
 
-    def packentry(self, entry, node, version):
+    def packentry(self, entry, node, version, rev):
         p = _pack(indexformatng, *entry)
-        if not entry[3] and not getoffset(entry[0]) and entry[5] == nullrev:
+        if rev == 0:
             p = _pack(versionformat, version) + p[4:]
         return p
 
@@ -972,7 +972,7 @@ class revlog(object):
         self.version &= ~(REVLOGNGINLINEDATA)
         self._inline = False
         for i in xrange(self.count()):
-            e = self._io.packentry(self.index[i], self.node, self.version)
+            e = self._io.packentry(self.index[i], self.node, self.version, i)
             fp.write(e)
 
         # if we don't call rename, the temp file will never replace the
@@ -1027,7 +1027,7 @@ class revlog(object):
         self.index.insert(-1, e)
         self.nodemap[node] = curr
 
-        entry = self._io.packentry(e, self.node, self.version)
+        entry = self._io.packentry(e, self.node, self.version, curr)
         if not self._inline:
             transaction.add(self.datafile, offset)
             transaction.add(self.indexfile, curr * len(entry))
@@ -1179,7 +1179,7 @@ class revlog(object):
                      link, self.rev(p1), self.rev(p2), node)
                 self.index.insert(-1, e)
                 self.nodemap[node] = r
-                entry = self._io.packentry(e, self.node, self.version)
+                entry = self._io.packentry(e, self.node, self.version, r)
                 if self._inline:
                     ifh.write(entry)
                     ifh.write(cdelta)
