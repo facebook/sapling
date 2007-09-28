@@ -12,6 +12,7 @@
 #include <Python.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #if defined __hpux || defined __SUNPRO_C || defined _AIX
 # define inline
@@ -97,7 +98,7 @@ int splitlines(const char *a, int len, struct line **lr)
 			l->len = p - b + 1;
 			l->h = h * l->len;
 			l->l = b;
-			l->n = -1;
+			l->n = INT_MAX;
 			l++;
 			b = p + 1;
 			h = 0;
@@ -138,14 +139,14 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 
 	/* clear the hash table */
 	for (i = 0; i <= buckets; i++) {
-		h[i].pos = -1;
+		h[i].pos = INT_MAX;
 		h[i].len = 0;
 	}
 
 	/* add lines to the hash table chains */
 	for (i = bn - 1; i >= 0; i--) {
 		/* find the equivalence class */
-		for (j = b[i].h & buckets; h[j].pos != -1;
+		for (j = b[i].h & buckets; h[j].pos != INT_MAX;
 		     j = (j + 1) & buckets)
 			if (!cmp(b + i, b + h[j].pos))
 				break;
@@ -163,7 +164,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 	/* match items in a to their equivalence class in b */
 	for (i = 0; i < an; i++) {
 		/* find the equivalence class */
-		for (j = a[i].h & buckets; h[j].pos != -1;
+		for (j = a[i].h & buckets; h[j].pos != INT_MAX;
 		     j = (j + 1) & buckets)
 			if (!cmp(a + i, b + h[j].pos))
 				break;
@@ -172,7 +173,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 		if (h[j].len <= t)
 			a[i].n = h[j].pos; /* point to head of match list */
 		else
-			a[i].n = -1; /* too popular */
+			a[i].n = INT_MAX; /* too popular */
 	}
 
 	/* discard hash tables */
@@ -187,11 +188,11 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 
 	for (i = a1; i < a2; i++) {
 		/* skip things before the current block */
-		for (j = a[i].n; j != -1 && j < b1; j = b[j].n)
+		for (j = a[i].n; j < b1; j = b[j].n)
 			;
 
 		/* loop through all lines match a[i] in b */
-		for (; j != -1 && j < b2; j = b[j].n) {
+		for (; j < b2; j = b[j].n) {
 			/* does this extend an earlier match? */
 			if (i > a1 && j > b1 && pos[j - 1].pos == i - 1)
 				k = pos[j - 1].len + 1;
@@ -224,6 +225,7 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 
 	*omi = mi - mb;
 	*omj = mj - mb;
+
 	return mk + mb;
 }
 
