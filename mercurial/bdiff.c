@@ -67,12 +67,13 @@ int splitlines(const char *a, int len, struct line **lr)
 {
 	int g, h, i;
 	const char *p, *b = a;
+	const char * const plast = a + len - 1;
 	struct line *l;
 
 	/* count the lines */
 	i = 1; /* extra line for sentinel */
 	for (p = a; p < a + len; p++)
-		if (*p == '\n' || p == a + len - 1)
+		if (*p == '\n' || p == plast)
 			i++;
 
 	*lr = l = (struct line *)malloc(sizeof(struct line) * i);
@@ -92,7 +93,7 @@ int splitlines(const char *a, int len, struct line **lr)
 			h ^= g >> 24;
 			h ^= g;
 		}
-		if (*p == '\n' || p == a + len - 1) {
+		if (*p == '\n' || p == plast) {
 			l->len = p - b + 1;
 			l->h = h * l->len;
 			l->l = b;
