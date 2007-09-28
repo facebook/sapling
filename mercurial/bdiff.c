@@ -117,16 +117,23 @@ int inline cmp(struct line *a, struct line *b)
 static int equatelines(struct line *a, int an, struct line *b, int bn)
 {
 	int i, j, buckets = 1, t;
+	int scale = 32;
 	struct pos *h;
 
 	/* build a hash table of the next highest power of 2 */
 	while (buckets < bn + 1)
 		buckets *= 2;
 
-	h = (struct pos *)malloc(buckets * sizeof(struct pos));
-	buckets = buckets - 1;
+	/* try to allocate a large hash table to avoid collisions */
+	do {
+		scale /= 2;
+		h = (struct pos *)malloc(scale * buckets * sizeof(struct pos));
+	} while (!h && scale != 1);
+
 	if (!h)
 		return 0;
+
+	buckets = buckets * scale - 1;
 
 	/* clear the hash table */
 	for (i = 0; i <= buckets; i++) {
