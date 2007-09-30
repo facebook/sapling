@@ -1,7 +1,7 @@
 # hg backend for convert extension
 
 import os, time
-from mercurial import hg
+from mercurial import hg, util
 
 from common import NoRepo, converter_sink
 
@@ -33,7 +33,7 @@ class convert_mercurial(converter_sink):
         try:
             util.unlink(self.repo.wjoin(f))
             #self.repo.remove([f])
-        except:
+        except OSError:
             pass
 
     def putcommit(self, files, parents, commit):
