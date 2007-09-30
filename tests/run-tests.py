@@ -134,7 +134,8 @@ def install_hg():
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
 
-    os.chdir("..") # Get back to hg root
+    # Run installer in hg root
+    os.chdir(os.path.join(os.path.dirname(sys.argv[0]), '..'))
     cmd = ('%s setup.py clean --all'
            ' install --force --home="%s" --install-lib="%s"'
            ' --install-scripts="%s" >%s 2>&1'
@@ -152,7 +153,14 @@ def install_hg():
     os.chdir(TESTDIR)
 
     os.environ["PATH"] = "%s%s%s" % (BINDIR, os.pathsep, os.environ["PATH"])
-    os.environ["PYTHONPATH"] = PYTHONDIR
+
+    pydir = os.pathsep.join([PYTHONDIR, TESTDIR])
+    pythonpath = os.environ.get("PYTHONPATH")
+    if pythonpath:
+        pythonpath = pydir + os.pathsep + pythonpath
+    else:
+        pythonpath = pydir
+    os.environ["PYTHONPATH"] = pythonpath
 
     use_correct_python()
 

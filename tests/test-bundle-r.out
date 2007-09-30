@@ -152,9 +152,9 @@ abort: repository default-push not found!
 % 2
 2:d62976ca1e50
 adding changesets
-abort: unknown parent ac69c658229d!
 transaction abort!
 rollback completed
+abort: unknown parent ac69c658229d!
 % 2
 2:d62976ca1e50
 adding changesets

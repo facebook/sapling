@@ -9,9 +9,9 @@ M a
 ? latin-1
 ? latin-1-tag
 ? utf-8
-abort: decoding near ' encoded: é': 'ascii' codec can't decode byte 0xe9 in position 20: ordinal not in range(128)!
 transaction abort!
 rollback completed
+abort: decoding near ' encoded: é': 'ascii' codec can't decode byte 0xe9 in position 20: ordinal not in range(128)!
 % these should work
 marked working directory as branch é
 % ascii

@@ -338,6 +338,46 @@ hg qrefresh --git
 cat .hg/patches/bar
 hg log -vC --template '{rev} {file_copies%filecopy}\n' -r .
 
+echo % refresh omitting an added file
+hg qnew baz
+echo newfile > newfile
+hg add newfile
+hg qrefresh
+hg st -A newfile
+hg qrefresh -X newfile
+hg st -A newfile
+hg revert newfile
+rm newfile
+hg qpop
+hg qdel baz
+
+echo % create a git patch
+echo a > alexander
+hg add alexander
+hg qnew -f --git addalexander
+grep diff .hg/patches/addalexander
+
+echo % create a git binary patch
+cat > writebin.py <<EOF
+import sys
+path = sys.argv[1]
+open(path, 'wb').write('BIN\x00ARY')
+EOF
+python writebin.py bucephalus
+
+python "$TESTDIR/md5sum.py" bucephalus
+hg add bucephalus
+hg qnew -f --git addbucephalus
+grep diff .hg/patches/addbucephalus
+
+echo % check binary patches can be popped and pushed
+hg qpop
+test -f bucephalus && echo % bucephalus should not be there
+hg qpush
+test -f bucephalus || echo % bucephalus should be there
+python "$TESTDIR/md5sum.py" bucephalus
+
+
 echo '% strip again'
 cd ..
 hg init strip
@@ -370,10 +410,17 @@ cd qclonesource
 echo foo > foo
 hg add foo
 hg ci -m 'add foo'
-hg qinit -c
+hg qinit
 hg qnew patch1
 echo bar >> foo
 hg qrefresh -m 'change foo'
+cd ..
+
+# repo with unversioned patch dir
+hg qclone qclonesource failure
+
+cd qclonesource
+hg qinit -c
 hg qci -m checkpoint
 qlog
 cd ..

@@ -6,10 +6,17 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import imp, os
-import commands, hg, util, sys
+import util, sys
 from i18n import _
 
 _extensions = {}
+_order = []
+
+def extensions():
+    for name in _order:
+        module = _extensions[name]
+        if module:
+            yield name, module
 
 def find(name):
     '''return module with given extension name'''
@@ -22,9 +29,13 @@ def find(name):
         raise KeyError(name)
 
 def load(ui, name, path):
-    if name in _extensions:
+    if name.startswith('hgext.'):
+        shortname = name[6:]
+    else:
+        shortname = name
+    if shortname in _extensions:
         return
-    _extensions[name] = None
+    _extensions[shortname] = None
     if path:
         # the module will be loaded in sys.modules
         # choose an unique name so that it doesn't
@@ -48,20 +59,12 @@ def load(ui, name, path):
             mod = importh("hgext.%s" % name)
         except ImportError:
             mod = importh(name)
-    _extensions[name] = mod
+    _extensions[shortname] = mod
+    _order.append(shortname)
 
     uisetup = getattr(mod, 'uisetup', None)
     if uisetup:
         uisetup(ui)
-    reposetup = getattr(mod, 'reposetup', None)
-    if reposetup:
-        hg.repo_setup_hooks.append(reposetup)
-    cmdtable = getattr(mod, 'cmdtable', {})
-    overrides = [cmd for cmd in cmdtable if cmd in commands.table]
-    if overrides:
-        ui.warn(_("extension '%s' overrides commands: %s\n")
-                % (name, " ".join(overrides)))
-    commands.table.update(cmdtable)
 
 def loadall(ui):
     result = ui.configitems("extensions")

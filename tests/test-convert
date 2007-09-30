@@ -1,0 +1,21 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert=" >> $HGRCPATH
+
+hg init a
+cd a
+echo a > a
+hg ci -d'0 0' -Ama
+hg cp a b
+hg ci -d'1 0' -mb
+hg rm a
+hg ci -d'2 0' -mc
+hg mv b a
+hg ci -d'3 0' -md
+echo a >> a
+hg ci -d'4 0' -me
+
+cd ..
+hg convert a 2>&1 | grep -v 'subversion python bindings could not be loaded'
+hg --cwd a-hg pull ../a

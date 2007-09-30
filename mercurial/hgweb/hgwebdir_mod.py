@@ -6,7 +6,6 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial import demandimport; demandimport.enable()
 import os, mimetools, cStringIO
 from mercurial.i18n import gettext as _
 from mercurial import ui, hg, util, templater
@@ -92,8 +91,12 @@ class hgwebdir(object):
         url = req.env['REQUEST_URI'].split('?')[0]
         if not url.endswith('/'):
             url += '/'
+        pathinfo = req.env.get('PATH_INFO', '').strip('/') + '/'
+        base = url[:len(url) - len(pathinfo)]
+        if not base.endswith('/'):
+            base += '/'
 
-        staticurl = config('web', 'staticurl') or url + 'static/'
+        staticurl = config('web', 'staticurl') or base + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
 
@@ -120,7 +123,7 @@ class hgwebdir(object):
                     yield {"type" : i[0], "extension": i[1],
                            "node": nodeid, "url": url}
 
-        def entries(sortcolumn="", descending=False, **map):
+        def entries(sortcolumn="", descending=False, subdir="", **map):
             def sessionvars(**map):
                 fields = []
                 if req.form.has_key('style'):
@@ -136,6 +139,10 @@ class hgwebdir(object):
             rows = []
             parity = paritygen(self.stripecount)
             for name, path in self.repos:
+                if not name.startswith(subdir):
+                    continue
+                name = name[len(subdir):]
+
                 u = ui.ui(parentui=parentui)
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
@@ -188,6 +195,25 @@ class hgwebdir(object):
                     row['parity'] = parity.next()
                     yield row
 
+        def makeindex(req, subdir=""):
+            sortable = ["name", "description", "contact", "lastchange"]
+            sortcolumn, descending = self.repos_sorted
+            if req.form.has_key('sort'):
+                sortcolumn = req.form['sort'][0]
+                descending = sortcolumn.startswith('-')
+                if descending:
+                    sortcolumn = sortcolumn[1:]
+                if sortcolumn not in sortable:
+                    sortcolumn = ""
+
+            sort = [("sort_%s" % column,
+                     "%s%s" % ((not descending and column == sortcolumn)
+                               and "-" or "", column))
+                    for column in sortable]
+            req.write(tmpl("index", entries=entries, subdir=subdir,
+                           sortcolumn=sortcolumn, descending=descending,
+                           **dict(sort)))
+
         try:
             virtual = req.env.get("PATH_INFO", "").strip('/')
             if virtual.startswith('static/'):
@@ -196,25 +222,32 @@ class hgwebdir(object):
                 req.write(staticfile(static, fname, req) or
                           tmpl('error', error='%r not found' % fname))
             elif virtual:
+                repos = dict(self.repos)
                 while virtual:
-                    real = dict(self.repos).get(virtual)
+                    real = repos.get(virtual)
                     if real:
-                        break
+                        req.env['REPO_NAME'] = virtual
+                        try:
+                            repo = hg.repository(parentui, real)
+                            hgweb(repo).run_wsgi(req)
+                        except IOError, inst:
+                            req.write(tmpl("error", error=inst.strerror))
+                        except hg.RepoError, inst:
+                            req.write(tmpl("error", error=str(inst)))
+                        return
+
+                    # browse subdirectories
+                    subdir = virtual + '/'
+                    if [r for r in repos if r.startswith(subdir)]:
+                        makeindex(req, subdir)
+                        return
+
                     up = virtual.rfind('/')
                     if up < 0:
                         break
                     virtual = virtual[:up]
-                if real:
-                    req.env['REPO_NAME'] = virtual
-                    try:
-                        repo = hg.repository(parentui, real)
-                        hgweb(repo).run_wsgi(req)
-                    except IOError, inst:
-                        req.write(tmpl("error", error=inst.strerror))
-                    except hg.RepoError, inst:
-                        req.write(tmpl("error", error=str(inst)))
-                else:
-                    req.write(tmpl("notfound", repo=virtual))
+
+                req.write(tmpl("notfound", repo=virtual))
             else:
                 if req.form.has_key('static'):
                     static = os.path.join(templater.templatepath(), "static")
@@ -222,22 +255,6 @@ class hgwebdir(object):
                     req.write(staticfile(static, fname, req)
                               or tmpl("error", error="%r not found" % fname))
                 else:
-                    sortable = ["name", "description", "contact", "lastchange"]
-                    sortcolumn, descending = self.repos_sorted
-                    if req.form.has_key('sort'):
-                        sortcolumn = req.form['sort'][0]
-                        descending = sortcolumn.startswith('-')
-                        if descending:
-                            sortcolumn = sortcolumn[1:]
-                        if sortcolumn not in sortable:
-                            sortcolumn = ""
-
-                    sort = [("sort_%s" % column,
-                             "%s%s" % ((not descending and column == sortcolumn)
-                                       and "-" or "", column))
-                            for column in sortable]
-                    req.write(tmpl("index", entries=entries,
-                                   sortcolumn=sortcolumn, descending=descending,
-                                   **dict(sort)))
+                    makeindex(req)
         finally:
             tmpl = None

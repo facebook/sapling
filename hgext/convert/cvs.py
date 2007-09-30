@@ -6,9 +6,9 @@ from mercurial import util
 from common import NoRepo, commit, converter_source
 
 class convert_cvs(converter_source):
-    def __init__(self, ui, path):
-        self.path = path
-        self.ui = ui
+    def __init__(self, ui, path, rev=None):
+        super(convert_cvs, self).__init__(ui, path, rev=rev)
+
         cvs = os.path.join(path, "CVS")
         if not os.path.exists(cvs):
             raise NoRepo("couldn't open CVS repo %s" % path)
@@ -29,15 +29,33 @@ class convert_cvs(converter_source):
         if self.changeset:
             return
 
+        maxrev = 0
+        cmd = 'cvsps -A -u --cvs-direct -q'
+        if self.rev:
+            # TODO: handle tags
+            try:
+                # patchset number?
+                maxrev = int(self.rev)
+            except ValueError:
+                try:
+                    # date
+                    util.parsedate(self.rev, ['%Y/%m/%d %H:%M:%S'])
+                    cmd = '%s -d "1970/01/01 00:00:01" -d "%s"' % (cmd, self.rev)
+                except util.Abort:
+                    raise util.Abort('revision %s is not a patchset number or date' % self.rev)
+        cmd += " 2>&1"
+
         d = os.getcwd()
         try:
             os.chdir(self.path)
             id = None
             state = 0
-            for l in os.popen("cvsps -A -u --cvs-direct -q 2>&1"):
+            for l in os.popen(cmd):
                 if state == 0: # header
                     if l.startswith("PatchSet"):
                         id = l[9:-2]
+                        if maxrev and int(id) > maxrev:
+                            state = 3
                     elif l.startswith("Date"):
                         date = util.parsedate(l[6:-1], ["%Y/%m/%d %H:%M:%S"])
                         date = util.datestr(date)
@@ -62,8 +80,6 @@ class convert_cvs(converter_source):
                     if l == "Members: \n":
                         files = {}
                         log = self.recode(log[:-1])
-                        if log.isspace():
-                            log = "*** empty log message ***\n"
                         state = 2
                     else:
                         log += l
@@ -85,6 +101,8 @@ class convert_cvs(converter_source):
                         rev = l[colon+1:-2]
                         rev = rev.split("->")[1]
                         files[file] = rev
+                elif state == 3:
+                    continue
 
             self.heads = self.lastbranch.values()
         finally:
@@ -136,7 +154,7 @@ class convert_cvs(converter_source):
                 sck.send("\n".join(["BEGIN AUTH REQUEST", root, user, passw,
                                     "END AUTH REQUEST", ""]))
                 if sck.recv(128) != "I LOVE YOU\n":
-                    raise NoRepo("CVS pserver authentication failed")
+                    raise util.Abort("CVS pserver authentication failed")
 
                 self.writep = self.readp = sck.makefile('r+')
 
@@ -241,10 +259,7 @@ class convert_cvs(converter_source):
         files = self.files[rev]
         cl = files.items()
         cl.sort()
-        return cl
-
-    def recode(self, text):
-        return text.decode(self.encoding, "replace").encode("utf-8")
+        return (cl, {})
 
     def getcommit(self, rev):
         return self.changeset[rev]

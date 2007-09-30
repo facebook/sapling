@@ -10,7 +10,7 @@ from node import *
 from repo import *
 from i18n import _
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
-import errno, lock, os, shutil, util, cmdutil
+import errno, lock, os, shutil, util, extensions
 import merge as _merge
 import verify as _verify
 
@@ -18,16 +18,23 @@ def _local(path):
     return (os.path.isfile(util.drop_scheme('file', path)) and
             bundlerepo or localrepo)
 
+def parseurl(url, revs):
+    '''parse url#branch, returning url, branch + revs'''
+
+    if '#' not in url:
+        return url, (revs or None), None
+
+    url, rev = url.split('#', 1)
+    return url, revs + [rev], rev
+
 schemes = {
     'bundle': bundlerepo,
     'file': _local,
-    'hg': httprepo,
     'http': httprepo,
     'https': httprepo,
-    'old-http': statichttprepo,
     'ssh': sshrepo,
     'static-http': statichttprepo,
-    }
+}
 
 def _lookup(path):
     scheme = 'file'
@@ -50,14 +57,14 @@ def islocal(repo):
             return False
     return repo.local()
 
-repo_setup_hooks = []
-
 def repository(ui, path='', create=False):
     """return a repository object for the specified path"""
     repo = _lookup(path).instance(ui, path, create)
     ui = getattr(repo, "ui", ui)
-    for hook in repo_setup_hooks:
-        hook(ui, repo)
+    for name, module in extensions.extensions():
+        hook = getattr(module, 'reposetup', None)
+        if hook:
+            hook(ui, repo)
     return repo
 
 def defaultdest(source):
@@ -99,7 +106,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     """
 
     origsource = source
-    source, rev, checkout = cmdutil.parseurl(ui.expandpath(source), rev)
+    source, rev, checkout = parseurl(ui.expandpath(source), rev)
 
     if isinstance(source, str):
         src_repo = repository(ui, source)
@@ -134,109 +141,105 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
-    dir_cleanup = None
-    if islocal(dest):
-        dir_cleanup = DirCleanup(dest)
+    src_lock = dest_lock = dir_cleanup = None
+    try:
+        if islocal(dest):
+            dir_cleanup = DirCleanup(dest)
 
-    abspath = origsource
-    copy = False
-    if src_repo.local() and islocal(dest):
-        abspath = os.path.abspath(util.drop_scheme('file', origsource))
-        copy = not pull and not rev
+        abspath = origsource
+        copy = False
+        if src_repo.local() and islocal(dest):
+            abspath = os.path.abspath(util.drop_scheme('file', origsource))
+            copy = not pull and not rev
 
-    src_lock, dest_lock = None, None
-    if copy:
-        try:
-            # we use a lock here because if we race with commit, we
-            # can end up with extra data in the cloned revlogs that's
-            # not pointed to by changesets, thus causing verify to
-            # fail
-            src_lock = src_repo.lock()
-        except lock.LockException:
-            copy = False
-
-    if copy:
-        def force_copy(src, dst):
+        if copy:
             try:
-                util.copyfiles(src, dst)
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    raise
+                # we use a lock here because if we race with commit, we
+                # can end up with extra data in the cloned revlogs that's
+                # not pointed to by changesets, thus causing verify to
+                # fail
+                src_lock = src_repo.lock()
+            except lock.LockException:
+                copy = False
 
-        src_store = os.path.realpath(src_repo.spath)
-        if not os.path.exists(dest):
-            os.mkdir(dest)
-        dest_path = os.path.realpath(os.path.join(dest, ".hg"))
-        os.mkdir(dest_path)
-        if src_repo.spath != src_repo.path:
-            # XXX racy
-            dummy_changelog = os.path.join(dest_path, "00changelog.i")
-            # copy the dummy changelog
-            force_copy(src_repo.join("00changelog.i"), dummy_changelog)
-            dest_store = os.path.join(dest_path, "store")
-            os.mkdir(dest_store)
+        if copy:
+            def force_copy(src, dst):
+                try:
+                    util.copyfiles(src, dst)
+                except OSError, inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
+
+            src_store = os.path.realpath(src_repo.spath)
+            if not os.path.exists(dest):
+                os.mkdir(dest)
+            dest_path = os.path.realpath(os.path.join(dest, ".hg"))
+            os.mkdir(dest_path)
+            if src_repo.spath != src_repo.path:
+                # XXX racy
+                dummy_changelog = os.path.join(dest_path, "00changelog.i")
+                # copy the dummy changelog
+                force_copy(src_repo.join("00changelog.i"), dummy_changelog)
+                dest_store = os.path.join(dest_path, "store")
+                os.mkdir(dest_store)
+            else:
+                dest_store = dest_path
+            # copy the requires file
+            force_copy(src_repo.join("requires"),
+                       os.path.join(dest_path, "requires"))
+            # we lock here to avoid premature writing to the target
+            dest_lock = lock.lock(os.path.join(dest_store, "lock"))
+
+            files = ("data",
+                     "00manifest.d", "00manifest.i",
+                     "00changelog.d", "00changelog.i")
+            for f in files:
+                src = os.path.join(src_store, f)
+                dst = os.path.join(dest_store, f)
+                force_copy(src, dst)
+
+            # we need to re-init the repo after manually copying the data
+            # into it
+            dest_repo = repository(ui, dest)
+
         else:
-            dest_store = dest_path
-        # copy the requires file
-        force_copy(src_repo.join("requires"),
-                   os.path.join(dest_path, "requires"))
-        # we lock here to avoid premature writing to the target
-        dest_lock = lock.lock(os.path.join(dest_store, "lock"))
+            dest_repo = repository(ui, dest, create=True)
 
-        files = ("data",
-                 "00manifest.d", "00manifest.i",
-                 "00changelog.d", "00changelog.i")
-        for f in files:
-            src = os.path.join(src_store, f)
-            dst = os.path.join(dest_store, f)
-            force_copy(src, dst)
+            revs = None
+            if rev:
+                if 'lookup' not in src_repo.capabilities:
+                    raise util.Abort(_("src repository does not support revision "
+                                       "lookup and so doesn't support clone by "
+                                       "revision"))
+                revs = [src_repo.lookup(r) for r in rev]
 
-        # we need to re-init the repo after manually copying the data
-        # into it
-        dest_repo = repository(ui, dest)
+            if dest_repo.local():
+                dest_repo.clone(src_repo, heads=revs, stream=stream)
+            elif src_repo.local():
+                src_repo.push(dest_repo, revs=revs)
+            else:
+                raise util.Abort(_("clone from remote to remote not supported"))
 
-    else:
-        dest_repo = repository(ui, dest, create=True)
-
-        revs = None
-        if rev:
-            if 'lookup' not in src_repo.capabilities:
-                raise util.Abort(_("src repository does not support revision "
-                                   "lookup and so doesn't support clone by "
-                                   "revision"))
-            revs = [src_repo.lookup(r) for r in rev]
+        if dir_cleanup:
+            dir_cleanup.close()
 
         if dest_repo.local():
-            dest_repo.clone(src_repo, heads=revs, stream=stream)
-        elif src_repo.local():
-            src_repo.push(dest_repo, revs=revs)
-        else:
-            raise util.Abort(_("clone from remote to remote not supported"))
+            fp = dest_repo.opener("hgrc", "w", text=True)
+            fp.write("[paths]\n")
+            fp.write("default = %s\n" % abspath)
+            fp.close()
 
-    if src_lock:
-        src_lock.release()
+            if update:
+                if not checkout:
+                    try:
+                        checkout = dest_repo.lookup("default")
+                    except:
+                        checkout = dest_repo.changelog.tip()
+                _update(dest_repo, checkout)
 
-    if dir_cleanup:
-        dir_cleanup.close()
-
-    if dest_repo.local():
-        fp = dest_repo.opener("hgrc", "w", text=True)
-        fp.write("[paths]\n")
-        fp.write("default = %s\n" % abspath)
-        fp.close()
-
-        if dest_lock:
-            dest_lock.release()
-
-        if update:
-            if not checkout:
-                try:
-                    checkout = dest_repo.lookup("default")
-                except:
-                    checkout = dest_repo.changelog.tip()
-            _update(dest_repo, checkout)
-
-    return src_repo, dest_repo
+        return src_repo, dest_repo
+    finally:
+        del src_lock, dest_lock, dir_cleanup
 
 def _showstats(repo, stats):
     stats = ((stats[0], _("updated")),
@@ -251,7 +254,7 @@ def _update(repo, node): return update(repo, node)
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
     pl = repo.parents()
-    stats = _merge.update(repo, node, False, False, None, None)
+    stats = _merge.update(repo, node, False, False, None)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("There are unresolved merges with"
@@ -265,15 +268,15 @@ def update(repo, node):
                        % (pl[0].rev(), repo.changectx(node).rev()))
     return stats[3]
 
-def clean(repo, node, wlock=None, show_stats=True):
+def clean(repo, node, show_stats=True):
     """forcibly switch the working directory to node, clobbering changes"""
-    stats = _merge.update(repo, node, False, True, None, wlock)
+    stats = _merge.update(repo, node, False, True, None)
     if show_stats: _showstats(repo, stats)
     return stats[3]
 
-def merge(repo, node, force=None, remind=True, wlock=None):
+def merge(repo, node, force=None, remind=True):
     """branch merge with node, resolving changes"""
-    stats = _merge.update(repo, node, True, force, False, wlock)
+    stats = _merge.update(repo, node, True, force, False)
     _showstats(repo, stats)
     if stats[3]:
         pl = repo.parents()
@@ -286,9 +289,9 @@ def merge(repo, node, force=None, remind=True, wlock=None):
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
     return stats[3]
 
-def revert(repo, node, choose, wlock):
+def revert(repo, node, choose):
     """revert changes to revision in node without updating dirstate"""
-    return _merge.update(repo, node, False, True, choose, wlock)[3]
+    return _merge.update(repo, node, False, True, choose)[3]
 
 def verify(repo):
     """verify the consistency of a repository"""

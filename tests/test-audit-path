@@ -1,0 +1,23 @@
+#!/bin/sh
+
+hg init
+
+echo % should fail
+hg add .hg/00changelog.i
+
+mkdir a
+echo a > a/a
+hg ci -Ama
+ln -s a b
+echo b > a/b
+
+echo % should fail
+hg add b/b
+
+echo % should succeed
+hg add b
+
+echo % should still fail - maybe
+hg add b/b
+
+exit 0

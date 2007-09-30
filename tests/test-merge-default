@@ -34,6 +34,10 @@ echo % should succeed - 2 heads
 hg merge
 hg commit -mm2
 
+echo % should fail because at tip
+hg merge
+
+hg up 0
 echo % should fail because 1 head
 hg merge
 

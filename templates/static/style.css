@@ -1,5 +1,6 @@
 a { text-decoration:none; }
 .age { white-space:nowrap; }
+.date { white-space:nowrap; }
 .indexlinks { white-space:nowrap; }
 .parity0 { background-color: #dddddd; }
 .parity1 { background-color: #eeeeee; }

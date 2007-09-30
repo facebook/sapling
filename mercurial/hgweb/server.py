@@ -37,6 +37,9 @@ class _error_logger(object):
             self.handler.log_error("HG error:  %s", msg)
 
 class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
+
+    url_scheme = 'http'
+
     def __init__(self, *args, **kargs):
         self.protocol_version = 'HTTP/1.1'
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kargs)
@@ -53,13 +56,16 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
                                               self.log_date_time_string(),
                                               format % args))
 
+    def do_write(self):
+        try:
+            self.do_hgweb()
+        except socket.error, inst:
+            if inst[0] != errno.EPIPE:
+                raise
+
     def do_POST(self):
         try:
-            try:
-                self.do_hgweb()
-            except socket.error, inst:
-                if inst[0] != errno.EPIPE:
-                    raise
+            self.do_write()
         except StandardError, inst:
             self._start_response("500 Internal Server Error", [])
             self._write("Internal Server Error")
@@ -101,7 +107,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
                 env[hkey] = hval
         env['SERVER_PROTOCOL'] = self.request_version
         env['wsgi.version'] = (1, 0)
-        env['wsgi.url_scheme'] = 'http'
+        env['wsgi.url_scheme'] = self.url_scheme
         env['wsgi.input'] = self.rfile
         env['wsgi.errors'] = _error_logger(self)
         env['wsgi.multithread'] = isinstance(self.server,
@@ -164,6 +170,31 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write(data)
         self.wfile.flush()
 
+class _shgwebhandler(_hgwebhandler):
+
+    url_scheme = 'https'
+
+    def setup(self):
+        self.connection = self.request
+        self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
+        self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
+
+    def do_write(self):
+        from OpenSSL.SSL import SysCallError
+        try:
+            super(_shgwebhandler, self).do_write()
+        except SysCallError, inst:
+            if inst.args[0] != errno.EPIPE:
+                raise
+
+    def handle_one_request(self):
+        from OpenSSL.SSL import SysCallError, ZeroReturnError
+        try:
+            super(_shgwebhandler, self).handle_one_request()
+        except (SysCallError, ZeroReturnError):
+            self.close_connection = True
+            pass
+
 def create_server(ui, repo):
     use_threads = True
 
@@ -180,6 +211,7 @@ def create_server(ui, repo):
     port = int(myui.config("web", "port", 8000))
     use_ipv6 = myui.configbool("web", "ipv6")
     webdir_conf = myui.config("web", "webdir_conf")
+    ssl_cert = myui.config("web", "certificate")
     accesslog = openlog(myui.config("web", "accesslog", "-"), sys.stdout)
     errorlog = openlog(myui.config("web", "errorlog", "-"), sys.stderr)
 
@@ -226,6 +258,19 @@ def create_server(ui, repo):
 
             self.addr, self.port = addr, port
 
+            if ssl_cert:
+                try:
+                    from OpenSSL import SSL
+                    ctx = SSL.Context(SSL.SSLv23_METHOD)
+                except ImportError:
+                    raise util.Abort("SSL support is unavailable")
+                ctx.use_privatekey_file(ssl_cert)
+                ctx.use_certificate_file(ssl_cert)
+                sock = socket.socket(self.address_family, self.socket_type)
+                self.socket = SSL.Connection(ctx, sock)
+                self.server_bind()
+                self.server_activate()
+
     class IPv6HTTPServer(MercurialHTTPServer):
         address_family = getattr(socket, 'AF_INET6', None)
 
@@ -234,10 +279,15 @@ def create_server(ui, repo):
                 raise hg.RepoError(_('IPv6 not available on this system'))
             super(IPv6HTTPServer, self).__init__(*args, **kwargs)
 
+    if ssl_cert:
+        handler = _shgwebhandler
+    else:
+        handler = _hgwebhandler
+
     try:
         if use_ipv6:
-            return IPv6HTTPServer((address, port), _hgwebhandler)
+            return IPv6HTTPServer((address, port), handler)
         else:
-            return MercurialHTTPServer((address, port), _hgwebhandler)
+            return MercurialHTTPServer((address, port), handler)
     except socket.error, inst:
         raise util.Abort(_('cannot start server: %s') % inst.args[1])

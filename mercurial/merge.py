@@ -448,13 +448,15 @@ def applyupdates(repo, action, wctx, mctx):
                 repo.ui.debug(_("copying %s to %s\n") % (f, fd))
                 repo.wwrite(fd, repo.wread(f), flags)
 
+    audit_path = util.path_auditor(repo.root)
+
     for a in action:
         f, m = a[:2]
         if f and f[0] == "/":
             continue
         if m == "r": # remove
             repo.ui.note(_("removing %s\n") % f)
-            util.audit_path(f)
+            audit_path(f)
             try:
                 util.unlink(repo.wjoin(f))
             except OSError, inst:
@@ -512,25 +514,25 @@ def recordupdates(repo, action, branchmerge):
         f, m = a[:2]
         if m == "r": # remove
             if branchmerge:
-                repo.dirstate.update([f], 'r')
+                repo.dirstate.remove(f)
             else:
-                repo.dirstate.forget([f])
+                repo.dirstate.forget(f)
         elif m == "f": # forget
-            repo.dirstate.forget([f])
+            repo.dirstate.forget(f)
         elif m in "ge": # get or exec change
             if branchmerge:
-                repo.dirstate.update([f], 'n', st_mtime=-1)
+                repo.dirstate.normaldirty(f)
             else:
-                repo.dirstate.update([f], 'n')
+                repo.dirstate.normal(f)
         elif m == "m": # merge
             f2, fd, flag, move = a[2:]
             if branchmerge:
                 # We've done a branch merge, mark this file as merged
                 # so that we properly record the merger later
-                repo.dirstate.update([fd], 'm')
+                repo.dirstate.merge(fd)
                 if f != f2: # copy/rename
                     if move:
-                        repo.dirstate.update([f], 'r')
+                        repo.dirstate.remove(f)
                     if f != fd:
                         repo.dirstate.copy(f, fd)
                     else:
@@ -541,95 +543,94 @@ def recordupdates(repo, action, branchmerge):
                 # of that file some time in the past. Thus our
                 # merge will appear as a normal local file
                 # modification.
-                repo.dirstate.update([fd], 'n', st_size=-1, st_mtime=-1)
+                repo.dirstate.normallookup(fd)
                 if move:
-                    repo.dirstate.forget([f])
+                    repo.dirstate.forget(f)
         elif m == "d": # directory rename
             f2, fd, flag = a[2:]
             if not f2 and f not in repo.dirstate:
                 # untracked file moved
                 continue
             if branchmerge:
-                repo.dirstate.update([fd], 'a')
+                repo.dirstate.add(fd)
                 if f:
-                    repo.dirstate.update([f], 'r')
+                    repo.dirstate.remove(f)
                     repo.dirstate.copy(f, fd)
                 if f2:
                     repo.dirstate.copy(f2, fd)
             else:
-                repo.dirstate.update([fd], 'n')
+                repo.dirstate.normal(fd)
                 if f:
-                    repo.dirstate.forget([f])
+                    repo.dirstate.forget(f)
 
-def update(repo, node, branchmerge, force, partial, wlock):
+def update(repo, node, branchmerge, force, partial):
     """
     Perform a merge between the working directory and the given node
 
     branchmerge = whether to merge between branches
     force = whether to force branch merging or file overwriting
     partial = a function to filter file lists (dirstate not updated)
-    wlock = working dir lock, if already held
     """
 
-    if not wlock:
-        wlock = repo.wlock()
+    wlock = repo.wlock()
+    try:
+        wc = repo.workingctx()
+        if node is None:
+            # tip of current branch
+            try:
+                node = repo.branchtags()[wc.branch()]
+            except KeyError:
+                raise util.Abort(_("branch %s not found") % wc.branch())
+        overwrite = force and not branchmerge
+        forcemerge = force and branchmerge
+        pl = wc.parents()
+        p1, p2 = pl[0], repo.changectx(node)
+        pa = p1.ancestor(p2)
+        fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
+        fastforward = False
 
-    wc = repo.workingctx()
-    if node is None:
-        # tip of current branch
-        try:
-            node = repo.branchtags()[wc.branch()]
-        except KeyError:
-            raise util.Abort(_("branch %s not found") % wc.branch())
-    overwrite = force and not branchmerge
-    forcemerge = force and branchmerge
-    pl = wc.parents()
-    p1, p2 = pl[0], repo.changectx(node)
-    pa = p1.ancestor(p2)
-    fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
-    fastforward = False
+        ### check phase
+        if not overwrite and len(pl) > 1:
+            raise util.Abort(_("outstanding uncommitted merges"))
+        if pa == p1 or pa == p2: # is there a linear path from p1 to p2?
+            if branchmerge:
+                if p1.branch() != p2.branch() and pa != p2:
+                    fastforward = True
+                else:
+                    raise util.Abort(_("there is nothing to merge, just use "
+                                       "'hg update' or look at 'hg heads'"))
+        elif not (overwrite or branchmerge):
+            raise util.Abort(_("update spans branches, use 'hg merge' "
+                               "or 'hg update -C' to lose changes"))
+        if branchmerge and not forcemerge:
+            if wc.files():
+                raise util.Abort(_("outstanding uncommitted changes"))
 
-    ### check phase
-    if not overwrite and len(pl) > 1:
-        raise util.Abort(_("outstanding uncommitted merges"))
-    if pa == p1 or pa == p2: # is there a linear path from p1 to p2?
-        if branchmerge:
-            if p1.branch() != p2.branch() and pa != p2:
-                fastforward = True
-            else:
-                raise util.Abort(_("there is nothing to merge, just use "
-                                   "'hg update' or look at 'hg heads'"))
-    elif not (overwrite or branchmerge):
-        raise util.Abort(_("update spans branches, use 'hg merge' "
-                           "or 'hg update -C' to lose changes"))
-    if branchmerge and not forcemerge:
-        if wc.files():
-            raise util.Abort(_("outstanding uncommitted changes"))
+        ### calculate phase
+        action = []
+        if not force:
+            checkunknown(wc, p2)
+        if not util.checkfolding(repo.path):
+            checkcollision(p2)
+        if not branchmerge:
+            action += forgetremoved(wc, p2)
+        action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
 
-    ### calculate phase
-    action = []
-    if not force:
-        checkunknown(wc, p2)
-    if not util.checkfolding(repo.path):
-        checkcollision(p2)
-    if not branchmerge:
-        action += forgetremoved(wc, p2)
-    action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
+        ### apply phase
+        if not branchmerge: # just jump to the new rev
+            fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
+        if not partial:
+            repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
-    ### apply phase
-    if not branchmerge: # just jump to the new rev
-        fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
-    if not partial:
-        repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
+        stats = applyupdates(repo, action, wc, p2)
 
-    stats = applyupdates(repo, action, wc, p2)
+        if not partial:
+            recordupdates(repo, action, branchmerge)
+            repo.dirstate.setparents(fp1, fp2)
+            if not branchmerge and not fastforward:
+                repo.dirstate.setbranch(p2.branch())
+            repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
 
-    if not partial:
-        recordupdates(repo, action, branchmerge)
-        repo.dirstate.setparents(fp1, fp2)
-        if not branchmerge and not fastforward:
-            repo.dirstate.setbranch(p2.branch())
-        repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
-
-    return stats
-
+        return stats
+    finally:
+        del wlock

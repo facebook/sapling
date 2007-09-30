@@ -1,0 +1,10 @@
+% basic
+% unknown
+*** [alias] unknown: command bargle is unknown
+% ambiguous
+*** [alias] ambiguous: command s is ambiguous
+% recursive
+*** [alias] recursive: circular dependency on recursive
+adding foo
+% with opts
+C foo

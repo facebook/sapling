@@ -10,8 +10,8 @@ No conflicts created by this import
 U src/a
 U src/b/c
 % convert fresh repo
-connecting to cvsrepo
 initializing destination src-hg repository
+connecting to cvsrepo
 scanning source...
 sorting...
 converting...
@@ -21,17 +21,13 @@ updating tags
 a
 c
 % commit new file revisions
-Checking in a;
 src/a,v  <--  a
 new revision: 1.2; previous revision: 1.1
-done
-Checking in b/c;
-src/b/c,v  <--  c
+src/b/c,v  <--  b/c
 new revision: 1.2; previous revision: 1.1
-done
 % convert again
-connecting to cvsrepo
 destination src-hg is a Mercurial repository
+connecting to cvsrepo
 scanning source...
 sorting...
 converting...

@@ -85,9 +85,3 @@ def ignore(root, files, warn):
                 util.matcher(root, inc=patlist, src=f))
 
     return ignorefunc
-
-
-    '''default match function used by dirstate and
-    localrepository.  this honours the repository .hgignore file
-    and any other files specified in the [ui] section of .hgrc.'''
-

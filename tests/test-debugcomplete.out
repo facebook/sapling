@@ -110,6 +110,7 @@ rawcommit
 % Show the options for the "serve" command
 --accesslog
 --address
+--certificate
 --config
 --cwd
 --daemon

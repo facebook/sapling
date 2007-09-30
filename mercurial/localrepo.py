@@ -8,19 +8,16 @@
 from node import *
 from i18n import _
 import repo, changegroup
-import changelog, dirstate, filelog, manifest, context
-import re, lock, transaction, tempfile, stat, mdiff, errno, ui
+import changelog, dirstate, filelog, manifest, context, weakref
+import re, lock, transaction, tempfile, stat, errno, ui
 import os, revlog, time, util, extensions, hook
 
 class localrepository(repo.repository):
-    capabilities = ('lookup', 'changegroupsubset')
+    capabilities = util.set(('lookup', 'changegroupsubset'))
     supported = ('revlogv1', 'store')
 
-    def __del__(self):
-        self.transhandle = None
     def __init__(self, parentui, path=None, create=0):
         repo.repository.__init__(self)
-        self.path = path
         self.root = os.path.realpath(path)
         self.path = os.path.join(self.root, ".hg")
         self.origroot = path
@@ -71,7 +68,8 @@ class localrepository(repo.repository):
             self.encodefn = lambda x: x
             self.decodefn = lambda x: x
             self.spath = self.path
-        self.sopener = util.encodedopener(util.opener(self.spath), self.encodefn)
+        self.sopener = util.encodedopener(util.opener(self.spath),
+                                          self.encodefn)
 
         self.ui = ui.ui(parentui=parentui)
         try:
@@ -84,7 +82,7 @@ class localrepository(repo.repository):
         self.branchcache = None
         self.nodetagscache = None
         self.filterpats = {}
-        self.transhandle = None
+        self._transref = self._lockref = self._wlockref = None
 
     def __getattr__(self, name):
         if name == 'changelog':
@@ -109,7 +107,8 @@ class localrepository(repo.repository):
 
     tag_disallowed = ':\r\n'
 
-    def _tag(self, name, node, message, local, user, date, parent=None):
+    def _tag(self, name, node, message, local, user, date, parent=None,
+             extra={}):
         use_dirstate = parent is None
 
         for c in self.tag_disallowed:
@@ -157,10 +156,11 @@ class localrepository(repo.repository):
         # committed tags are stored in UTF-8
         writetag(fp, name, util.fromlocal, prevtags)
 
-        if use_dirstate and self.dirstate.state('.hgtags') == '?':
+        if use_dirstate and '.hgtags' not in self.dirstate:
             self.add(['.hgtags'])
 
-        tagnode = self.commit(['.hgtags'], message, user, date, p1=parent)
+        tagnode = self.commit(['.hgtags'], message, user, date, p1=parent,
+                              extra=extra)
 
         self.hook('tag', node=hex(node), tag=name, local=local)
 
@@ -396,6 +396,11 @@ class localrepository(repo.repository):
         n = self.changelog._partialmatch(key)
         if n:
             return n
+        try:
+            if len(key) == 20:
+                key = hex(key)
+        except:
+            pass
         raise repo.RepoError(_("unknown revision '%s'") % key)
 
     def dev(self):
@@ -495,9 +500,8 @@ class localrepository(repo.repository):
         return self._filter("decode", filename, data)
 
     def transaction(self):
-        tr = self.transhandle
-        if tr != None and tr.running():
-            return tr.nest()
+        if self._transref and self._transref():
+            return self._transref().nest()
 
         # save dirstate for rollback
         try:
@@ -511,33 +515,38 @@ class localrepository(repo.repository):
         tr = transaction.transaction(self.ui.warn, self.sopener,
                                        self.sjoin("journal"),
                                        aftertrans(renames))
-        self.transhandle = tr
+        self._transref = weakref.ref(tr)
         return tr
 
     def recover(self):
         l = self.lock()
-        if os.path.exists(self.sjoin("journal")):
-            self.ui.status(_("rolling back interrupted transaction\n"))
-            transaction.rollback(self.sopener, self.sjoin("journal"))
-            self.invalidate()
-            return True
-        else:
-            self.ui.warn(_("no interrupted transaction available\n"))
-            return False
+        try:
+            if os.path.exists(self.sjoin("journal")):
+                self.ui.status(_("rolling back interrupted transaction\n"))
+                transaction.rollback(self.sopener, self.sjoin("journal"))
+                self.invalidate()
+                return True
+            else:
+                self.ui.warn(_("no interrupted transaction available\n"))
+                return False
+        finally:
+            del l
 
-    def rollback(self, wlock=None, lock=None):
-        if not wlock:
+    def rollback(self):
+        wlock = lock = None
+        try:
             wlock = self.wlock()
-        if not lock:
             lock = self.lock()
-        if os.path.exists(self.sjoin("undo")):
-            self.ui.status(_("rolling back last transaction\n"))
-            transaction.rollback(self.sopener, self.sjoin("undo"))
-            util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-            self.invalidate()
-            self.dirstate.invalidate()
-        else:
-            self.ui.warn(_("no rollback information available\n"))
+            if os.path.exists(self.sjoin("undo")):
+                self.ui.status(_("rolling back last transaction\n"))
+                transaction.rollback(self.sopener, self.sjoin("undo"))
+                util.rename(self.join("undo.dirstate"), self.join("dirstate"))
+                self.invalidate()
+                self.dirstate.invalidate()
+            else:
+                self.ui.warn(_("no rollback information available\n"))
+        finally:
+            del lock, wlock
 
     def invalidate(self):
         for a in "changelog manifest".split():
@@ -546,8 +555,7 @@ class localrepository(repo.repository):
         self.tagscache = None
         self.nodetagscache = None
 
-    def do_lock(self, lockname, wait, releasefn=None, acquirefn=None,
-                desc=None):
+    def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
             l = lock.lock(lockname, 0, releasefn, desc=desc)
         except lock.LockHeld, inst:
@@ -562,17 +570,26 @@ class localrepository(repo.repository):
             acquirefn()
         return l
 
-    def lock(self, wait=1):
-        return self.do_lock(self.sjoin("lock"), wait,
-                            acquirefn=self.invalidate,
-                            desc=_('repository %s') % self.origroot)
+    def lock(self, wait=True):
+        if self._lockref and self._lockref():
+            return self._lockref()
 
-    def wlock(self, wait=1):
-        return self.do_lock(self.join("wlock"), wait, self.dirstate.write,
-                            self.dirstate.invalidate,
-                            desc=_('working directory of %s') % self.origroot)
+        l = self._lock(self.sjoin("lock"), wait, None, self.invalidate,
+                       _('repository %s') % self.origroot)
+        self._lockref = weakref.ref(l)
+        return l
 
-    def filecommit(self, fn, manifest1, manifest2, linkrev, transaction, changelist):
+    def wlock(self, wait=True):
+        if self._wlockref and self._wlockref():
+            return self._wlockref()
+
+        l = self._lock(self.join("wlock"), wait, self.dirstate.write,
+                       self.dirstate.invalidate, _('working directory of %s') %
+                       self.origroot)
+        self._wlockref = weakref.ref(l)
+        return l
+
+    def filecommit(self, fn, manifest1, manifest2, linkrev, tr, changelist):
         """
         commit an individual file as part of a larger transaction
         """
@@ -632,173 +649,183 @@ class localrepository(repo.repository):
             return fp1
 
         changelist.append(fn)
-        return fl.add(t, meta, transaction, linkrev, fp1, fp2)
+        return fl.add(t, meta, tr, linkrev, fp1, fp2)
 
-    def rawcommit(self, files, text, user, date, p1=None, p2=None, wlock=None, extra={}):
+    def rawcommit(self, files, text, user, date, p1=None, p2=None, extra={}):
         if p1 is None:
             p1, p2 = self.dirstate.parents()
         return self.commit(files=files, text=text, user=user, date=date,
-                           p1=p1, p2=p2, wlock=wlock, extra=extra)
+                           p1=p1, p2=p2, extra=extra, empty_ok=True)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False, lock=None, wlock=None,
-               force_editor=False, p1=None, p2=None, extra={}):
+               match=util.always, force=False, force_editor=False,
+               p1=None, p2=None, extra={}, empty_ok=False):
+        wlock = lock = tr = None
+        try:
+            commit = []
+            remove = []
+            changed = []
+            use_dirstate = (p1 is None) # not rawcommit
+            extra = extra.copy()
 
-        commit = []
-        remove = []
-        changed = []
-        use_dirstate = (p1 is None) # not rawcommit
-        extra = extra.copy()
-
-        if use_dirstate:
-            if files:
-                for f in files:
-                    s = self.dirstate.state(f)
-                    if s in 'nmai':
-                        commit.append(f)
-                    elif s == 'r':
-                        remove.append(f)
-                    else:
-                        self.ui.warn(_("%s not tracked!\n") % f)
-            else:
-                changes = self.status(match=match)[:5]
-                modified, added, removed, deleted, unknown = changes
-                commit = modified + added
-                remove = removed
-        else:
-            commit = files
-
-        if use_dirstate:
-            p1, p2 = self.dirstate.parents()
-            update_dirstate = True
-        else:
-            p1, p2 = p1, p2 or nullid
-            update_dirstate = (self.dirstate.parents()[0] == p1)
-
-        c1 = self.changelog.read(p1)
-        c2 = self.changelog.read(p2)
-        m1 = self.manifest.read(c1[0]).copy()
-        m2 = self.manifest.read(c2[0])
-
-        if use_dirstate:
-            branchname = self.workingctx().branch()
-            try:
-                branchname = branchname.decode('UTF-8').encode('UTF-8')
-            except UnicodeDecodeError:
-                raise util.Abort(_('branch name not in UTF-8!'))
-        else:
-            branchname = ""
-
-        if use_dirstate:
-            oldname = c1[5].get("branch") # stored in UTF-8
-            if (not commit and not remove and not force and p2 == nullid
-                and branchname == oldname):
-                self.ui.status(_("nothing changed\n"))
-                return None
-
-        xp1 = hex(p1)
-        if p2 == nullid: xp2 = ''
-        else: xp2 = hex(p2)
-
-        self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
-
-        if not wlock:
-            wlock = self.wlock()
-        if not lock:
-            lock = self.lock()
-        tr = self.transaction()
-
-        # check in files
-        new = {}
-        linkrev = self.changelog.count()
-        commit.sort()
-        is_exec = util.execfunc(self.root, m1.execf)
-        is_link = util.linkfunc(self.root, m1.linkf)
-        for f in commit:
-            self.ui.note(f + "\n")
-            try:
-                new[f] = self.filecommit(f, m1, m2, linkrev, tr, changed)
-                new_exec = is_exec(f)
-                new_link = is_link(f)
-                if (not changed or changed[-1] != f) and m2.get(f) != new[f]:
-                    # mention the file in the changelog if some flag changed,
-                    # even if there was no content change.
-                    old_exec = m1.execf(f)
-                    old_link = m1.linkf(f)
-                    if old_exec != new_exec or old_link != new_link:
-                        changed.append(f)
-                m1.set(f, new_exec, new_link)
-            except (OSError, IOError):
-                if use_dirstate:
-                    self.ui.warn(_("trouble committing %s!\n") % f)
-                    raise
-                else:
-                    remove.append(f)
-
-        # update manifest
-        m1.update(new)
-        remove.sort()
-        removed = []
-
-        for f in remove:
-            if f in m1:
-                del m1[f]
-                removed.append(f)
-            elif f in m2:
-                removed.append(f)
-        mn = self.manifest.add(m1, tr, linkrev, c1[0], c2[0], (new, removed))
-
-        # add changeset
-        new = new.keys()
-        new.sort()
-
-        user = user or self.ui.username()
-        if not text or force_editor:
-            edittext = []
-            if text:
-                edittext.append(text)
-            edittext.append("")
-            edittext.append("HG: user: %s" % user)
-            if p2 != nullid:
-                edittext.append("HG: branch merge")
-            if branchname:
-                edittext.append("HG: branch %s" % util.tolocal(branchname))
-            edittext.extend(["HG: changed %s" % f for f in changed])
-            edittext.extend(["HG: removed %s" % f for f in removed])
-            if not changed and not remove:
-                edittext.append("HG: no files changed")
-            edittext.append("")
-            # run editor in the repository root
-            olddir = os.getcwd()
-            os.chdir(self.root)
-            text = self.ui.edit("\n".join(edittext), user)
-            os.chdir(olddir)
-
-        lines = [line.rstrip() for line in text.rstrip().splitlines()]
-        while lines and not lines[0]:
-            del lines[0]
-        if not lines:
-            return None
-        text = '\n'.join(lines)
-        if branchname:
-            extra["branch"] = branchname
-        n = self.changelog.add(mn, changed + removed, text, tr, p1, p2,
-                               user, date, extra)
-        self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
-                  parent2=xp2)
-        tr.close()
-
-        if self.branchcache and "branch" in extra:
-            self.branchcache[util.tolocal(extra["branch"])] = n
-
-        if use_dirstate or update_dirstate:
-            self.dirstate.setparents(n)
             if use_dirstate:
-                self.dirstate.update(new, "n")
-                self.dirstate.forget(removed)
+                if files:
+                    for f in files:
+                        s = self.dirstate[f]
+                        if s in 'nma':
+                            commit.append(f)
+                        elif s == 'r':
+                            remove.append(f)
+                        else:
+                            self.ui.warn(_("%s not tracked!\n") % f)
+                else:
+                    changes = self.status(match=match)[:5]
+                    modified, added, removed, deleted, unknown = changes
+                    commit = modified + added
+                    remove = removed
+            else:
+                commit = files
 
-        self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
-        return n
+            if use_dirstate:
+                p1, p2 = self.dirstate.parents()
+                update_dirstate = True
+            else:
+                p1, p2 = p1, p2 or nullid
+                update_dirstate = (self.dirstate.parents()[0] == p1)
+
+            c1 = self.changelog.read(p1)
+            c2 = self.changelog.read(p2)
+            m1 = self.manifest.read(c1[0]).copy()
+            m2 = self.manifest.read(c2[0])
+
+            if use_dirstate:
+                branchname = self.workingctx().branch()
+                try:
+                    branchname = branchname.decode('UTF-8').encode('UTF-8')
+                except UnicodeDecodeError:
+                    raise util.Abort(_('branch name not in UTF-8!'))
+            else:
+                branchname = ""
+
+            if use_dirstate:
+                oldname = c1[5].get("branch") # stored in UTF-8
+                if (not commit and not remove and not force and p2 == nullid
+                    and branchname == oldname):
+                    self.ui.status(_("nothing changed\n"))
+                    return None
+
+            xp1 = hex(p1)
+            if p2 == nullid: xp2 = ''
+            else: xp2 = hex(p2)
+
+            self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
+
+            wlock = self.wlock()
+            lock = self.lock()
+            tr = self.transaction()
+            trp = weakref.proxy(tr)
+
+            # check in files
+            new = {}
+            linkrev = self.changelog.count()
+            commit.sort()
+            is_exec = util.execfunc(self.root, m1.execf)
+            is_link = util.linkfunc(self.root, m1.linkf)
+            for f in commit:
+                self.ui.note(f + "\n")
+                try:
+                    new[f] = self.filecommit(f, m1, m2, linkrev, trp, changed)
+                    new_exec = is_exec(f)
+                    new_link = is_link(f)
+                    if ((not changed or changed[-1] != f) and
+                        m2.get(f) != new[f]):
+                        # mention the file in the changelog if some
+                        # flag changed, even if there was no content
+                        # change.
+                        old_exec = m1.execf(f)
+                        old_link = m1.linkf(f)
+                        if old_exec != new_exec or old_link != new_link:
+                            changed.append(f)
+                    m1.set(f, new_exec, new_link)
+                except (OSError, IOError):
+                    if use_dirstate:
+                        self.ui.warn(_("trouble committing %s!\n") % f)
+                        raise
+                    else:
+                        remove.append(f)
+
+            # update manifest
+            m1.update(new)
+            remove.sort()
+            removed = []
+
+            for f in remove:
+                if f in m1:
+                    del m1[f]
+                    removed.append(f)
+                elif f in m2:
+                    removed.append(f)
+            mn = self.manifest.add(m1, trp, linkrev, c1[0], c2[0],
+                                   (new, removed))
+
+            # add changeset
+            new = new.keys()
+            new.sort()
+
+            user = user or self.ui.username()
+            if (not empty_ok and not text) or force_editor:
+                edittext = []
+                if text:
+                    edittext.append(text)
+                edittext.append("")
+                edittext.append("HG: user: %s" % user)
+                if p2 != nullid:
+                    edittext.append("HG: branch merge")
+                if branchname:
+                    edittext.append("HG: branch %s" % util.tolocal(branchname))
+                edittext.extend(["HG: changed %s" % f for f in changed])
+                edittext.extend(["HG: removed %s" % f for f in removed])
+                if not changed and not remove:
+                    edittext.append("HG: no files changed")
+                edittext.append("")
+                # run editor in the repository root
+                olddir = os.getcwd()
+                os.chdir(self.root)
+                text = self.ui.edit("\n".join(edittext), user)
+                os.chdir(olddir)
+
+            if branchname:
+                extra["branch"] = branchname
+
+            if use_dirstate:
+                lines = [line.rstrip() for line in text.rstrip().splitlines()]
+                while lines and not lines[0]:
+                    del lines[0]
+                if not lines:
+                    return None
+                text = '\n'.join(lines)
+
+            n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
+                                   user, date, extra)
+            self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
+                      parent2=xp2)
+            tr.close()
+
+            if self.branchcache and "branch" in extra:
+                self.branchcache[util.tolocal(extra["branch"])] = n
+
+            if use_dirstate or update_dirstate:
+                self.dirstate.setparents(n)
+                if use_dirstate:
+                    for f in new:
+                        self.dirstate.normal(f)
+                    for f in removed:
+                        self.dirstate.forget(f)
+
+            self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
+            return n
+        finally:
+            del tr, lock, wlock
 
     def walk(self, node=None, files=[], match=util.always, badmatch=None):
         '''
@@ -843,7 +870,7 @@ class localrepository(repo.repository):
                 yield src, fn
 
     def status(self, node1=None, node2=None, files=[], match=util.always,
-                wlock=None, list_ignored=False, list_clean=False):
+               list_ignored=False, list_clean=False):
         """return status of files between two nodes or node and working directory
 
         If node1 is None, use the first dirstate parent instead.
@@ -875,8 +902,6 @@ class localrepository(repo.repository):
             # all the revisions in parent->child order.
             mf1 = mfmatches(node1)
 
-        mywlock = False
-
         # are we comparing the working directory?
         if not node2:
             (lookup, modified, added, removed, deleted, unknown,
@@ -886,24 +911,30 @@ class localrepository(repo.repository):
             # are we comparing working dir against its parent?
             if compareworking:
                 if lookup:
+                    fixup = []
                     # do a full compare of any files that might have changed
-                    mnode = self.changelog.read(self.dirstate.parents()[0])[0]
-                    getnode = lambda fn: (self.manifest.find(mnode, fn)[0] or
-                                          nullid)
+                    ctx = self.changectx()
                     for f in lookup:
-                        if fcmp(f, getnode):
+                        if f not in ctx or ctx[f].cmp(self.wread(f)):
                             modified.append(f)
                         else:
+                            fixup.append(f)
                             if list_clean:
                                 clean.append(f)
-                            if not wlock and not mywlock:
-                                mywlock = True
-                                try:
-                                    wlock = self.wlock(wait=0)
-                                except lock.LockException:
-                                    pass
+
+                    # update dirstate for files that are actually clean
+                    if fixup:
+                        wlock = None
+                        try:
+                            try:
+                                wlock = self.wlock(False)
+                            except lock.LockException:
+                                pass
                             if wlock:
-                                self.dirstate.update([f], "n")
+                                for f in fixup:
+                                    self.dirstate.normal(f)
+                        finally:
+                            del wlock
             else:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
@@ -918,8 +949,6 @@ class localrepository(repo.repository):
                     if f in mf2:
                         del mf2[f]
 
-            if mywlock and wlock:
-                wlock.release()
         else:
             # we are comparing two revisions
             mf2 = mfmatches(node2)
@@ -952,85 +981,100 @@ class localrepository(repo.repository):
             l.sort()
         return (modified, added, removed, deleted, unknown, ignored, clean)
 
-    def add(self, list, wlock=None):
-        if not wlock:
-            wlock = self.wlock()
-        for f in list:
-            p = self.wjoin(f)
-            try:
-                st = os.lstat(p)
-            except:
-                self.ui.warn(_("%s does not exist!\n") % f)
-                continue
-            if st.st_size > 10000000:
-                self.ui.warn(_("%s: files over 10MB may cause memory and"
-                               " performance problems\n"
-                               "(use 'hg revert %s' to unadd the file)\n")
-                               % (f, f))
-            if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
-                self.ui.warn(_("%s not added: only files and symlinks "
-                               "supported currently\n") % f)
-            elif self.dirstate.state(f) in 'an':
-                self.ui.warn(_("%s already tracked!\n") % f)
-            else:
-                self.dirstate.update([f], "a")
-
-    def forget(self, list, wlock=None):
-        if not wlock:
-            wlock = self.wlock()
-        for f in list:
-            if self.dirstate.state(f) not in 'ai':
-                self.ui.warn(_("%s not added!\n") % f)
-            else:
-                self.dirstate.forget([f])
-
-    def remove(self, list, unlink=False, wlock=None):
-        if unlink:
+    def add(self, list):
+        wlock = self.wlock()
+        try:
             for f in list:
+                p = self.wjoin(f)
                 try:
-                    util.unlink(self.wjoin(f))
-                except OSError, inst:
-                    if inst.errno != errno.ENOENT:
-                        raise
-        if not wlock:
-            wlock = self.wlock()
-        for f in list:
-            if unlink and os.path.exists(self.wjoin(f)):
-                self.ui.warn(_("%s still exists!\n") % f)
-            elif self.dirstate.state(f) == 'a':
-                self.dirstate.forget([f])
-            elif f not in self.dirstate:
-                self.ui.warn(_("%s not tracked!\n") % f)
-            else:
-                self.dirstate.update([f], "r")
+                    st = os.lstat(p)
+                except:
+                    self.ui.warn(_("%s does not exist!\n") % f)
+                    continue
+                if st.st_size > 10000000:
+                    self.ui.warn(_("%s: files over 10MB may cause memory and"
+                                   " performance problems\n"
+                                   "(use 'hg revert %s' to unadd the file)\n")
+                                   % (f, f))
+                if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
+                    self.ui.warn(_("%s not added: only files and symlinks "
+                                   "supported currently\n") % f)
+                elif self.dirstate[f] in 'amn':
+                    self.ui.warn(_("%s already tracked!\n") % f)
+                elif self.dirstate[f] == 'r':
+                    self.dirstate.normallookup(f)
+                else:
+                    self.dirstate.add(f)
+        finally:
+            del wlock
 
-    def undelete(self, list, wlock=None):
-        manifests = [self.manifest.read(self.changelog.read(p)[0])
-                     for p in self.dirstate.parents() if p != nullid]
-        if not wlock:
-            wlock = self.wlock()
-        for f in list:
-            if self.dirstate.state(f) not in  "r":
-                self.ui.warn("%s not removed!\n" % f)
-            else:
-                m = f in manifests[0] and manifests[0] or manifests[1]
-                t = self.file(f).read(m[f])
-                self.wwrite(f, t, m.flags(f))
-                self.dirstate.update([f], "n")
+    def forget(self, list):
+        wlock = self.wlock()
+        try:
+            for f in list:
+                if self.dirstate[f] != 'a':
+                    self.ui.warn(_("%s not added!\n") % f)
+                else:
+                    self.dirstate.forget(f)
+        finally:
+            del wlock
 
-    def copy(self, source, dest, wlock=None):
-        p = self.wjoin(dest)
-        if not (os.path.exists(p) or os.path.islink(p)):
-            self.ui.warn(_("%s does not exist!\n") % dest)
-        elif not (os.path.isfile(p) or os.path.islink(p)):
-            self.ui.warn(_("copy failed: %s is not a file or a "
-                           "symbolic link\n") % dest)
-        else:
-            if not wlock:
+    def remove(self, list, unlink=False):
+        wlock = None
+        try:
+            if unlink:
+                for f in list:
+                    try:
+                        util.unlink(self.wjoin(f))
+                    except OSError, inst:
+                        if inst.errno != errno.ENOENT:
+                            raise
+            wlock = self.wlock()
+            for f in list:
+                if unlink and os.path.exists(self.wjoin(f)):
+                    self.ui.warn(_("%s still exists!\n") % f)
+                elif self.dirstate[f] == 'a':
+                    self.dirstate.forget(f)
+                elif f not in self.dirstate:
+                    self.ui.warn(_("%s not tracked!\n") % f)
+                else:
+                    self.dirstate.remove(f)
+        finally:
+            del wlock
+
+    def undelete(self, list):
+        wlock = None
+        try:
+            manifests = [self.manifest.read(self.changelog.read(p)[0])
+                         for p in self.dirstate.parents() if p != nullid]
+            wlock = self.wlock()
+            for f in list:
+                if self.dirstate[f] != 'r':
+                    self.ui.warn("%s not removed!\n" % f)
+                else:
+                    m = f in manifests[0] and manifests[0] or manifests[1]
+                    t = self.file(f).read(m[f])
+                    self.wwrite(f, t, m.flags(f))
+                    self.dirstate.normal(f)
+        finally:
+            del wlock
+
+    def copy(self, source, dest):
+        wlock = None
+        try:
+            p = self.wjoin(dest)
+            if not (os.path.exists(p) or os.path.islink(p)):
+                self.ui.warn(_("%s does not exist!\n") % dest)
+            elif not (os.path.isfile(p) or os.path.islink(p)):
+                self.ui.warn(_("copy failed: %s is not a file or a "
+                               "symbolic link\n") % dest)
+            else:
                 wlock = self.wlock()
-            if self.dirstate.state(dest) == '?':
-                self.dirstate.update([dest], "a")
-            self.dirstate.copy(source, dest)
+                if dest not in self.dirstate:
+                    self.dirstate.add(dest)
+                self.dirstate.copy(source, dest)
+        finally:
+            del wlock
 
     def heads(self, start=None):
         heads = self.changelog.heads(start)
@@ -1307,12 +1351,8 @@ class localrepository(repo.repository):
         else:
             return subset
 
-    def pull(self, remote, heads=None, force=False, lock=None):
-        mylock = False
-        if not lock:
-            lock = self.lock()
-            mylock = True
-
+    def pull(self, remote, heads=None, force=False):
+        lock = self.lock()
         try:
             fetch = self.findincoming(remote, heads=heads, force=force)
             if fetch == [nullid]:
@@ -1330,8 +1370,7 @@ class localrepository(repo.repository):
                 cg = remote.changegroupsubset(fetch, heads, 'pull')
             return self.addchangegroup(cg, 'pull', remote.url())
         finally:
-            if mylock:
-                lock.release()
+            del lock
 
     def push(self, remote, force=False, revs=None):
         # there are two ways to push to remote repo:
@@ -1404,12 +1443,14 @@ class localrepository(repo.repository):
 
     def push_addchangegroup(self, remote, force, revs):
         lock = remote.lock()
-
-        ret = self.prepush(remote, force, revs)
-        if ret[0] is not None:
-            cg, remote_heads = ret
-            return remote.addchangegroup(cg, 'push', self.url())
-        return ret[1]
+        try:
+            ret = self.prepush(remote, force, revs)
+            if ret[0] is not None:
+                cg, remote_heads = ret
+                return remote.addchangegroup(cg, 'push', self.url())
+            return ret[1]
+        finally:
+            del lock
 
     def push_unbundle(self, remote, force, revs):
         # local repo finds heads on server, finds out what revs it
@@ -1580,12 +1621,9 @@ class localrepository(repo.repository):
                 if r == next_rev[0]:
                     # If the last rev we looked at was the one just previous,
                     # we only need to see a diff.
-                    delta = mdiff.patchtext(mnfst.delta(mnfstnode))
+                    deltamf = mnfst.readdelta(mnfstnode)
                     # For each line in the delta
-                    for dline in delta.splitlines():
-                        # get the filename and filenode for that line
-                        f, fnode = dline.split('\0')
-                        fnode = bin(fnode[:40])
+                    for f, fnode in deltamf.items():
                         f = changedfiles.get(f, None)
                         # And if the file is in the list of files we care
                         # about.
@@ -1793,65 +1831,68 @@ class localrepository(repo.repository):
 
         changesets = files = revisions = 0
 
-        tr = self.transaction()
-
         # write changelog data to temp files so concurrent readers will not see
         # inconsistent view
         cl = self.changelog
         cl.delayupdate()
         oldheads = len(cl.heads())
 
-        # pull off the changeset group
-        self.ui.status(_("adding changesets\n"))
-        cor = cl.count() - 1
-        chunkiter = changegroup.chunkiter(source)
-        if cl.addgroup(chunkiter, csmap, tr, 1) is None:
-            raise util.Abort(_("received changelog group is empty"))
-        cnr = cl.count() - 1
-        changesets = cnr - cor
-
-        # pull off the manifest group
-        self.ui.status(_("adding manifests\n"))
-        chunkiter = changegroup.chunkiter(source)
-        # no need to check for empty manifest group here:
-        # if the result of the merge of 1 and 2 is the same in 3 and 4,
-        # no new manifest will be created and the manifest group will
-        # be empty during the pull
-        self.manifest.addgroup(chunkiter, revmap, tr)
-
-        # process the files
-        self.ui.status(_("adding file changes\n"))
-        while 1:
-            f = changegroup.getchunk(source)
-            if not f:
-                break
-            self.ui.debug(_("adding %s revisions\n") % f)
-            fl = self.file(f)
-            o = fl.count()
+        tr = self.transaction()
+        try:
+            trp = weakref.proxy(tr)
+            # pull off the changeset group
+            self.ui.status(_("adding changesets\n"))
+            cor = cl.count() - 1
             chunkiter = changegroup.chunkiter(source)
-            if fl.addgroup(chunkiter, revmap, tr) is None:
-                raise util.Abort(_("received file revlog group is empty"))
-            revisions += fl.count() - o
-            files += 1
+            if cl.addgroup(chunkiter, csmap, trp, 1) is None:
+                raise util.Abort(_("received changelog group is empty"))
+            cnr = cl.count() - 1
+            changesets = cnr - cor
 
-        # make changelog see real files again
-        cl.finalize(tr)
+            # pull off the manifest group
+            self.ui.status(_("adding manifests\n"))
+            chunkiter = changegroup.chunkiter(source)
+            # no need to check for empty manifest group here:
+            # if the result of the merge of 1 and 2 is the same in 3 and 4,
+            # no new manifest will be created and the manifest group will
+            # be empty during the pull
+            self.manifest.addgroup(chunkiter, revmap, trp)
 
-        newheads = len(self.changelog.heads())
-        heads = ""
-        if oldheads and newheads != oldheads:
-            heads = _(" (%+d heads)") % (newheads - oldheads)
+            # process the files
+            self.ui.status(_("adding file changes\n"))
+            while 1:
+                f = changegroup.getchunk(source)
+                if not f:
+                    break
+                self.ui.debug(_("adding %s revisions\n") % f)
+                fl = self.file(f)
+                o = fl.count()
+                chunkiter = changegroup.chunkiter(source)
+                if fl.addgroup(chunkiter, revmap, trp) is None:
+                    raise util.Abort(_("received file revlog group is empty"))
+                revisions += fl.count() - o
+                files += 1
 
-        self.ui.status(_("added %d changesets"
-                         " with %d changes to %d files%s\n")
-                         % (changesets, revisions, files, heads))
+            # make changelog see real files again
+            cl.finalize(trp)
 
-        if changesets > 0:
-            self.hook('pretxnchangegroup', throw=True,
-                      node=hex(self.changelog.node(cor+1)), source=srctype,
-                      url=url)
+            newheads = len(self.changelog.heads())
+            heads = ""
+            if oldheads and newheads != oldheads:
+                heads = _(" (%+d heads)") % (newheads - oldheads)
 
-        tr.close()
+            self.ui.status(_("added %d changesets"
+                             " with %d changes to %d files%s\n")
+                             % (changesets, revisions, files, heads))
+
+            if changesets > 0:
+                self.hook('pretxnchangegroup', throw=True,
+                          node=hex(self.changelog.node(cor+1)), source=srctype,
+                          url=url)
+
+            tr.close()
+        finally:
+            del tr
 
         if changesets > 0:
             self.hook("changegroup", node=hex(self.changelog.node(cor+1)),

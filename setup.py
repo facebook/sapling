@@ -2,8 +2,8 @@
 #
 # This is the mercurial setup script.
 #
-# './setup.py install', or
-# './setup.py --help' for more options
+# 'python setup.py install', or
+# 'python setup.py --help' for more options
 
 import sys
 if not hasattr(sys, 'version_info') or sys.version_info < (2, 3, 0, 'final'):
@@ -14,8 +14,6 @@ from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
 
 import mercurial.version
-import mercurial.demandimport
-mercurial.demandimport.enable = lambda: None
 
 extra = {}
 
@@ -64,7 +62,8 @@ setup(name='mercurial',
       packages=['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert'],
       ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
                    Extension('mercurial.bdiff', ['mercurial/bdiff.c']),
-                   Extension('mercurial.base85', ['mercurial/base85.c'])],
+                   Extension('mercurial.base85', ['mercurial/base85.c']),
+                   Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'])],
       data_files=[(os.path.join('mercurial', root),
                    [os.path.join(root, file_) for file_ in files])
                   for root, dirs, files in os.walk('templates')],

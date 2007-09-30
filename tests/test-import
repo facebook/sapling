@@ -93,6 +93,24 @@ python mkmsg.py | hg --cwd b import -
 hg --cwd b tip | grep second
 rm -r b
 
+# subject: duplicate detection, removal of [PATCH]
+cat > mkmsg2.py <<EOF
+import email.Message, sys
+msg = email.Message.Message()
+msg.set_payload('email patch\n\nnext line\n' + open('tip.patch').read())
+msg['Subject'] = '[PATCH] email patch'
+msg['From'] = 'email patcher'
+sys.stdout.write(msg.as_string())
+EOF
+
+echo '% plain diff in email, [PATCH] subject, message body with subject'
+hg clone -r0 a b
+hg --cwd a diff -r0:1 > tip.patch
+python mkmsg2.py | hg --cwd b import -
+hg --cwd b tip --template '{desc}\n'
+rm -r b
+
+
 # bug non regression test
 # importing a patch in a subdirectory failed at the commit stage
 echo line 2 >> a/d1/d2/a

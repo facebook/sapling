@@ -323,10 +323,10 @@ class queue:
         patch.diff(repo, node1, node2, fns, match=matchfn,
                    fp=fp, changes=changes, opts=self.diffopts())
 
-    def mergeone(self, repo, mergeq, head, patch, rev, wlock):
+    def mergeone(self, repo, mergeq, head, patch, rev):
         # first try just applying the patch
         (err, n) = self.apply(repo, [ patch ], update_status=False,
-                              strict=True, merge=rev, wlock=wlock)
+                              strict=True, merge=rev)
 
         if err == 0:
             return (err, n)
@@ -337,15 +337,14 @@ class queue:
         self.ui.warn("patch didn't work out, merging %s\n" % patch)
 
         # apply failed, strip away that rev and merge.
-        hg.clean(repo, head, wlock=wlock)
-        self.strip(repo, n, update=False, backup='strip', wlock=wlock)
+        hg.clean(repo, head)
+        self.strip(repo, n, update=False, backup='strip')
 
         ctx = repo.changectx(rev)
-        ret = hg.merge(repo, rev, wlock=wlock)
+        ret = hg.merge(repo, rev)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
-        n = repo.commit(None, ctx.description(), ctx.user(),
-                        force=1, wlock=wlock)
+        n = repo.commit(None, ctx.description(), ctx.user(), force=1)
         if n == None:
             raise util.Abort(_("repo commit failed"))
         try:
@@ -381,7 +380,7 @@ class queue:
                 return pp[1]
         return pp[0]
 
-    def mergepatch(self, repo, mergeq, series, wlock):
+    def mergepatch(self, repo, mergeq, series):
         if len(self.applied) == 0:
             # each of the patches merged in will have two parents.  This
             # can confuse the qrefresh, qdiff, and strip code because it
@@ -390,8 +389,7 @@ class queue:
             # the first patch in the queue is never a merge patch
             #
             pname = ".hg.patches.merge.marker"
-            n = repo.commit(None, '[mq]: merge marker', user=None, force=1,
-                            wlock=wlock)
+            n = repo.commit(None, '[mq]: merge marker', user=None, force=1)
             self.removeundo(repo)
             self.applied.append(statusentry(revlog.hex(n), pname))
             self.applied_dirty = 1
@@ -412,7 +410,7 @@ class queue:
                 self.ui.warn("patch %s is not applied\n" % patch)
                 return (1, None)
             rev = revlog.bin(info[1])
-            (err, head) = self.mergeone(repo, mergeq, head, patch, rev, wlock)
+            (err, head) = self.mergeone(repo, mergeq, head, patch, rev)
             if head:
                 self.applied.append(statusentry(revlog.hex(head), patch))
                 self.applied_dirty = 1
@@ -437,30 +435,30 @@ class queue:
         return (True, files, fuzz)
 
     def apply(self, repo, series, list=False, update_status=True,
-              strict=False, patchdir=None, merge=None, wlock=None,
-              all_files={}):
-        if not wlock:
-            wlock = repo.wlock()
-        lock = repo.lock()
-        tr = repo.transaction()
+              strict=False, patchdir=None, merge=None, all_files={}):
+        wlock = lock = tr = None
         try:
-            ret = self._apply(tr, repo, series, list, update_status,
-                              strict, patchdir, merge, wlock,
-                              lock=lock, all_files=all_files)
-            tr.close()
-            self.save_dirty()
-            return ret
-        except:
+            wlock = repo.wlock()
+            lock = repo.lock()
+            tr = repo.transaction()
             try:
-                tr.abort()
-            finally:
-                repo.invalidate()
-                repo.dirstate.invalidate()
-            raise
+                ret = self._apply(repo, series, list, update_status,
+                                  strict, patchdir, merge, all_files=all_files)
+                tr.close()
+                self.save_dirty()
+                return ret
+            except:
+                try:
+                    tr.abort()
+                finally:
+                    repo.invalidate()
+                    repo.dirstate.invalidate()
+                raise
+        finally:
+            del tr, lock, wlock
 
-    def _apply(self, tr, repo, series, list=False, update_status=True,
-               strict=False, patchdir=None, merge=None, wlock=None,
-               lock=None, all_files={}):
+    def _apply(self, repo, series, list=False, update_status=True,
+               strict=False, patchdir=None, merge=None, all_files={}):
         # TODO unify with commands.py
         if not patchdir:
             patchdir = self.path
@@ -497,17 +495,18 @@ class queue:
                 removed = []
                 merged = []
                 for f in files:
-                    if os.path.exists(repo.dirstate.wjoin(f)):
+                    if os.path.exists(repo.wjoin(f)):
                         merged.append(f)
                     else:
                         removed.append(f)
-                repo.dirstate.update(repo.dirstate.filterfiles(removed), 'r')
-                repo.dirstate.update(repo.dirstate.filterfiles(merged), 'm')
+                for f in removed:
+                    repo.dirstate.remove(f)
+                for f in merged:
+                    repo.dirstate.merge(f)
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
-            files = patch.updatedir(self.ui, repo, files, wlock=wlock)
-            n = repo.commit(files, message, user, date, force=1, lock=lock,
-                            wlock=wlock)
+            files = patch.updatedir(self.ui, repo, files)
+            n = repo.commit(files, message, user, date, force=1)
 
             if n == None:
                 raise util.Abort(_("repo commit failed"))
@@ -614,44 +613,49 @@ class queue:
         commitfiles = m + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
-        insert = self.full_series_end()
-        if msg:
-            n = repo.commit(commitfiles, msg, force=True, wlock=wlock)
-        else:
-            n = repo.commit(commitfiles,
-                            "[mq]: %s" % patch, force=True, wlock=wlock)
-        if n == None:
-            raise util.Abort(_("repo commit failed"))
-        self.full_series[insert:insert] = [patch]
-        self.applied.append(statusentry(revlog.hex(n), patch))
-        self.parse_series()
-        self.series_dirty = 1
-        self.applied_dirty = 1
-        p = self.opener(patch, "w")
-        if msg:
-            msg = msg + "\n"
-            p.write(msg)
-        p.close()
-        wlock = None
-        r = self.qrepo()
-        if r: r.add([patch])
-        if commitfiles:
-            self.refresh(repo, short=True)
-        self.removeundo(repo)
+        try:
+            insert = self.full_series_end()
+            if msg:
+                n = repo.commit(commitfiles, msg, force=True)
+            else:
+                n = repo.commit(commitfiles, "[mq]: %s" % patch, force=True)
+            if n == None:
+                raise util.Abort(_("repo commit failed"))
+            self.full_series[insert:insert] = [patch]
+            self.applied.append(statusentry(revlog.hex(n), patch))
+            self.parse_series()
+            self.series_dirty = 1
+            self.applied_dirty = 1
+            p = self.opener(patch, "w")
+            if msg:
+                msg = msg + "\n"
+                p.write(msg)
+            p.close()
+            wlock = None
+            r = self.qrepo()
+            if r: r.add([patch])
+            if commitfiles:
+                self.refresh(repo, short=True, git=opts.get('git'))
+            self.removeundo(repo)
+        finally:
+            del wlock
 
-    def strip(self, repo, rev, update=True, backup="all", wlock=None):
-        if not wlock:
+    def strip(self, repo, rev, update=True, backup="all"):
+        wlock = lock = None
+        try:
             wlock = repo.wlock()
-        lock = repo.lock()
+            lock = repo.lock()
 
-        if update:
-            self.check_localchanges(repo, refresh=False)
-            urev = self.qparents(repo, rev)
-            hg.clean(repo, urev, wlock=wlock)
-            repo.dirstate.write()
+            if update:
+                self.check_localchanges(repo, refresh=False)
+                urev = self.qparents(repo, rev)
+                hg.clean(repo, urev)
+                repo.dirstate.write()
 
-        self.removeundo(repo)
-        repair.strip(self.ui, repo, rev, backup)
+            self.removeundo(repo)
+            repair.strip(self.ui, repo, rev, backup)
+        finally:
+            del lock, wlock
 
     def isapplied(self, patch):
         """returns (index, rev, patch)"""
@@ -735,157 +739,160 @@ class queue:
         raise util.Abort(_("patch %s not in series") % patch)
 
     def push(self, repo, patch=None, force=False, list=False,
-             mergeq=None, wlock=None):
-        if not wlock:
-            wlock = repo.wlock()
-        patch = self.lookup(patch)
-        # Suppose our series file is: A B C and the current 'top' patch is B.
-        # qpush C should be performed (moving forward)
-        # qpush B is a NOP (no change)
-        # qpush A is an error (can't go backwards with qpush)
-        if patch:
-            info = self.isapplied(patch)
-            if info:
-                if info[0] < len(self.applied) - 1:
-                    raise util.Abort(_("cannot push to a previous patch: %s") %
-                                     patch)
-                if info[0] < len(self.series) - 1:
-                    self.ui.warn(_('qpush: %s is already at the top\n') % patch)
-                else:
-                    self.ui.warn(_('all patches are currently applied\n'))
-                return
-
-        # Following the above example, starting at 'top' of B:
-        #  qpush should be performed (pushes C), but a subsequent qpush without
-        #  an argument is an error (nothing to apply). This allows a loop
-        #  of "...while hg qpush..." to work as it detects an error when done
-        if self.series_end() == len(self.series):
-            self.ui.warn(_('patch series already fully applied\n'))
-            return 1
-        if not force:
-            self.check_localchanges(repo)
-
-        self.applied_dirty = 1;
-        start = self.series_end()
-        if start > 0:
-            self.check_toppatch(repo)
-        if not patch:
-            patch = self.series[start]
-            end = start + 1
-        else:
-            end = self.series.index(patch, start) + 1
-        s = self.series[start:end]
-        all_files = {}
+             mergeq=None):
+        wlock = repo.wlock()
         try:
-            if mergeq:
-                ret = self.mergepatch(repo, mergeq, s, wlock)
-            else:
-                ret = self.apply(repo, s, list, wlock=wlock,
-                                 all_files=all_files)
-        except:
-            self.ui.warn(_('cleaning up working directory...'))
-            node = repo.dirstate.parents()[0]
-            hg.revert(repo, node, None, wlock)
-            unknown = repo.status(wlock=wlock)[4]
-            # only remove unknown files that we know we touched or
-            # created while patching
-            for f in unknown:
-                if f in all_files:
-                    util.unlink(repo.wjoin(f))
-            self.ui.warn(_('done\n'))
-            raise
-        top = self.applied[-1].name
-        if ret[0]:
-            self.ui.write("Errors during apply, please fix and refresh %s\n" %
-                          top)
-        else:
-            self.ui.write("Now at: %s\n" % top)
-        return ret[0]
+            patch = self.lookup(patch)
+            # Suppose our series file is: A B C and the current 'top'
+            # patch is B. qpush C should be performed (moving forward)
+            # qpush B is a NOP (no change) qpush A is an error (can't
+            # go backwards with qpush)
+            if patch:
+                info = self.isapplied(patch)
+                if info:
+                    if info[0] < len(self.applied) - 1:
+                        raise util.Abort(
+                            _("cannot push to a previous patch: %s") % patch)
+                    if info[0] < len(self.series) - 1:
+                        self.ui.warn(
+                            _('qpush: %s is already at the top\n') % patch)
+                    else:
+                        self.ui.warn(_('all patches are currently applied\n'))
+                    return
 
-    def pop(self, repo, patch=None, force=False, update=True, all=False,
-            wlock=None):
-        def getfile(f, rev):
+            # Following the above example, starting at 'top' of B:
+            # qpush should be performed (pushes C), but a subsequent
+            # qpush without an argument is an error (nothing to
+            # apply). This allows a loop of "...while hg qpush..." to
+            # work as it detects an error when done
+            if self.series_end() == len(self.series):
+                self.ui.warn(_('patch series already fully applied\n'))
+                return 1
+            if not force:
+                self.check_localchanges(repo)
+
+            self.applied_dirty = 1;
+            start = self.series_end()
+            if start > 0:
+                self.check_toppatch(repo)
+            if not patch:
+                patch = self.series[start]
+                end = start + 1
+            else:
+                end = self.series.index(patch, start) + 1
+            s = self.series[start:end]
+            all_files = {}
+            try:
+                if mergeq:
+                    ret = self.mergepatch(repo, mergeq, s)
+                else:
+                    ret = self.apply(repo, s, list, all_files=all_files)
+            except:
+                self.ui.warn(_('cleaning up working directory...'))
+                node = repo.dirstate.parents()[0]
+                hg.revert(repo, node, None)
+                unknown = repo.status()[4]
+                # only remove unknown files that we know we touched or
+                # created while patching
+                for f in unknown:
+                    if f in all_files:
+                        util.unlink(repo.wjoin(f))
+                self.ui.warn(_('done\n'))
+                raise
+            top = self.applied[-1].name
+            if ret[0]:
+                self.ui.write(
+                    "Errors during apply, please fix and refresh %s\n" % top)
+            else:
+                self.ui.write("Now at: %s\n" % top)
+            return ret[0]
+        finally:
+            del wlock
+
+    def pop(self, repo, patch=None, force=False, update=True, all=False):
+        def getfile(f, rev, flags):
             t = repo.file(f).read(rev)
-            repo.wfile(f, "w").write(t)
+            repo.wwrite(f, t, flags)
 
-        if not wlock:
-            wlock = repo.wlock()
-        if patch:
-            # index, rev, patch
-            info = self.isapplied(patch)
-            if not info:
-                patch = self.lookup(patch)
-            info = self.isapplied(patch)
-            if not info:
-                raise util.Abort(_("patch %s is not applied") % patch)
+        wlock = repo.wlock()
+        try:
+            if patch:
+                # index, rev, patch
+                info = self.isapplied(patch)
+                if not info:
+                    patch = self.lookup(patch)
+                info = self.isapplied(patch)
+                if not info:
+                    raise util.Abort(_("patch %s is not applied") % patch)
 
-        if len(self.applied) == 0:
-            # Allow qpop -a to work repeatedly,
-            # but not qpop without an argument
-            self.ui.warn(_("no patches applied\n"))
-            return not all
+            if len(self.applied) == 0:
+                # Allow qpop -a to work repeatedly,
+                # but not qpop without an argument
+                self.ui.warn(_("no patches applied\n"))
+                return not all
 
-        if not update:
-            parents = repo.dirstate.parents()
-            rr = [ revlog.bin(x.rev) for x in self.applied ]
-            for p in parents:
-                if p in rr:
-                    self.ui.warn("qpop: forcing dirstate update\n")
-                    update = True
+            if not update:
+                parents = repo.dirstate.parents()
+                rr = [ revlog.bin(x.rev) for x in self.applied ]
+                for p in parents:
+                    if p in rr:
+                        self.ui.warn("qpop: forcing dirstate update\n")
+                        update = True
 
-        if not force and update:
-            self.check_localchanges(repo)
+            if not force and update:
+                self.check_localchanges(repo)
 
-        self.applied_dirty = 1;
-        end = len(self.applied)
-        if not patch:
-            if all:
-                popi = 0
+            self.applied_dirty = 1;
+            end = len(self.applied)
+            if not patch:
+                if all:
+                    popi = 0
+                else:
+                    popi = len(self.applied) - 1
             else:
-                popi = len(self.applied) - 1
-        else:
-            popi = info[0] + 1
-            if popi >= end:
-                self.ui.warn("qpop: %s is already at the top\n" % patch)
-                return
-        info = [ popi ] + [self.applied[popi].rev, self.applied[popi].name]
+                popi = info[0] + 1
+                if popi >= end:
+                    self.ui.warn("qpop: %s is already at the top\n" % patch)
+                    return
+            info = [ popi ] + [self.applied[popi].rev, self.applied[popi].name]
 
-        start = info[0]
-        rev = revlog.bin(info[1])
+            start = info[0]
+            rev = revlog.bin(info[1])
 
-        # we know there are no local changes, so we can make a simplified
-        # form of hg.update.
-        if update:
-            top = self.check_toppatch(repo)
-            qp = self.qparents(repo, rev)
-            changes = repo.changelog.read(qp)
-            mmap = repo.manifest.read(changes[0])
-            m, a, r, d, u = repo.status(qp, top)[:5]
-            if d:
-                raise util.Abort("deletions found between repo revs")
-            for f in m:
-                getfile(f, mmap[f])
-            for f in r:
-                getfile(f, mmap[f])
-                util.set_exec(repo.wjoin(f), mmap.execf(f))
-            repo.dirstate.update(m + r, 'n')
-            for f in a:
-                try:
-                    os.unlink(repo.wjoin(f))
-                except OSError, e:
-                    if e.errno != errno.ENOENT:
-                        raise
-                try: os.removedirs(os.path.dirname(repo.wjoin(f)))
-                except: pass
-            if a:
-                repo.dirstate.forget(a)
-            repo.dirstate.setparents(qp, revlog.nullid)
-        self.strip(repo, rev, update=False, backup='strip', wlock=wlock)
-        del self.applied[start:end]
-        if len(self.applied):
-            self.ui.write("Now at: %s\n" % self.applied[-1].name)
-        else:
-            self.ui.write("Patch queue now empty\n")
+            # we know there are no local changes, so we can make a simplified
+            # form of hg.update.
+            if update:
+                top = self.check_toppatch(repo)
+                qp = self.qparents(repo, rev)
+                changes = repo.changelog.read(qp)
+                mmap = repo.manifest.read(changes[0])
+                m, a, r, d, u = repo.status(qp, top)[:5]
+                if d:
+                    raise util.Abort("deletions found between repo revs")
+                for f in m:
+                    getfile(f, mmap[f], mmap.flags(f))
+                for f in r:
+                    getfile(f, mmap[f], mmap.flags(f))
+                for f in m + r:
+                    repo.dirstate.normal(f)
+                for f in a:
+                    try:
+                        os.unlink(repo.wjoin(f))
+                    except OSError, e:
+                        if e.errno != errno.ENOENT:
+                            raise
+                    try: os.removedirs(os.path.dirname(repo.wjoin(f)))
+                    except: pass
+                    repo.dirstate.forget(f)
+                repo.dirstate.setparents(qp, revlog.nullid)
+            self.strip(repo, rev, update=False, backup='strip')
+            del self.applied[start:end]
+            if len(self.applied):
+                self.ui.write("Now at: %s\n" % self.applied[-1].name)
+            else:
+                self.ui.write("Patch queue now empty\n")
+        finally:
+            del wlock
 
     def diff(self, repo, pats, opts):
         top = self.check_toppatch(repo)
@@ -902,177 +909,192 @@ class queue:
             self.ui.write("No patches applied\n")
             return 1
         wlock = repo.wlock()
-        self.check_toppatch(repo)
-        (top, patchfn) = (self.applied[-1].rev, self.applied[-1].name)
-        top = revlog.bin(top)
-        cparents = repo.changelog.parents(top)
-        patchparent = self.qparents(repo, top)
-        message, comments, user, date, patchfound = self.readheaders(patchfn)
+        try:
+            self.check_toppatch(repo)
+            (top, patchfn) = (self.applied[-1].rev, self.applied[-1].name)
+            top = revlog.bin(top)
+            cparents = repo.changelog.parents(top)
+            patchparent = self.qparents(repo, top)
+            message, comments, user, date, patchfound = self.readheaders(patchfn)
 
-        patchf = self.opener(patchfn, 'r+')
+            patchf = self.opener(patchfn, 'r+')
 
-        # if the patch was a git patch, refresh it as a git patch
-        for line in patchf:
-            if line.startswith('diff --git'):
-                self.diffopts().git = True
-                break
+            # if the patch was a git patch, refresh it as a git patch
+            for line in patchf:
+                if line.startswith('diff --git'):
+                    self.diffopts().git = True
+                    break
 
-        msg = opts.get('msg', '').rstrip()
-        if msg:
-            if comments:
-                # Remove existing message.
+            msg = opts.get('msg', '').rstrip()
+            if msg and comments:
+                # Remove existing message, keeping the rest of the comments
+                # fields.
+                # If comments contains 'subject: ', message will prepend
+                # the field and a blank line.
+                if message:
+                    subj = 'subject: ' + message[0].lower()
+                    for i in xrange(len(comments)):
+                        if subj == comments[i].lower():
+                            del comments[i]
+                            message = message[2:]
+                            break
                 ci = 0
-                subj = None
                 for mi in xrange(len(message)):
-                    if comments[ci].lower().startswith('subject: '):
-                        subj = comments[ci][9:]
-                    while message[mi] != comments[ci] and message[mi] != subj:
+                    while message[mi] != comments[ci]:
                         ci += 1
                     del comments[ci]
-            comments.append(msg)
+            if msg:
+                comments.append(msg)
 
-        patchf.seek(0)
-        patchf.truncate()
+            patchf.seek(0)
+            patchf.truncate()
 
-        if comments:
-            comments = "\n".join(comments) + '\n\n'
-            patchf.write(comments)
+            if comments:
+                comments = "\n".join(comments) + '\n\n'
+                patchf.write(comments)
 
-        if opts.get('git'):
-            self.diffopts().git = True
-        fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
-        tip = repo.changelog.tip()
-        if top == tip:
-            # if the top of our patch queue is also the tip, there is an
-            # optimization here.  We update the dirstate in place and strip
-            # off the tip commit.  Then just commit the current directory
-            # tree.  We can also send repo.commit the list of files
-            # changed to speed up the diff
-            #
-            # in short mode, we only diff the files included in the
-            # patch already
-            #
-            # this should really read:
-            #   mm, dd, aa, aa2, uu = repo.status(tip, patchparent)[:5]
-            # but we do it backwards to take advantage of manifest/chlog
-            # caching against the next repo.status call
-            #
-            mm, aa, dd, aa2, uu = repo.status(patchparent, tip)[:5]
-            changes = repo.changelog.read(tip)
-            man = repo.manifest.read(changes[0])
-            aaa = aa[:]
-            if opts.get('short'):
-                filelist = mm + aa + dd
-                match = dict.fromkeys(filelist).__contains__
-            else:
-                filelist = None
-                match = util.always
-            m, a, r, d, u = repo.status(files=filelist, match=match)[:5]
-
-            # we might end up with files that were added between tip and
-            # the dirstate parent, but then changed in the local dirstate.
-            # in this case, we want them to only show up in the added section
-            for x in m:
-                if x not in aa:
-                    mm.append(x)
-            # we might end up with files added by the local dirstate that
-            # were deleted by the patch.  In this case, they should only
-            # show up in the changed section.
-            for x in a:
-                if x in dd:
-                    del dd[dd.index(x)]
-                    mm.append(x)
+            if opts.get('git'):
+                self.diffopts().git = True
+            fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
+            tip = repo.changelog.tip()
+            if top == tip:
+                # if the top of our patch queue is also the tip, there is an
+                # optimization here.  We update the dirstate in place and strip
+                # off the tip commit.  Then just commit the current directory
+                # tree.  We can also send repo.commit the list of files
+                # changed to speed up the diff
+                #
+                # in short mode, we only diff the files included in the
+                # patch already
+                #
+                # this should really read:
+                #   mm, dd, aa, aa2, uu = repo.status(tip, patchparent)[:5]
+                # but we do it backwards to take advantage of manifest/chlog
+                # caching against the next repo.status call
+                #
+                mm, aa, dd, aa2, uu = repo.status(patchparent, tip)[:5]
+                changes = repo.changelog.read(tip)
+                man = repo.manifest.read(changes[0])
+                aaa = aa[:]
+                if opts.get('short'):
+                    filelist = mm + aa + dd
+                    match = dict.fromkeys(filelist).__contains__
                 else:
-                    aa.append(x)
-            # make sure any files deleted in the local dirstate
-            # are not in the add or change column of the patch
-            forget = []
-            for x in d + r:
-                if x in aa:
-                    del aa[aa.index(x)]
-                    forget.append(x)
-                    continue
-                elif x in mm:
-                    del mm[mm.index(x)]
-                dd.append(x)
+                    filelist = None
+                    match = util.always
+                m, a, r, d, u = repo.status(files=filelist, match=match)[:5]
 
-            m = util.unique(mm)
-            r = util.unique(dd)
-            a = util.unique(aa)
-            c = [filter(matchfn, l) for l in (m, a, r, [], u)]
-            filelist = util.unique(c[0] + c[1] + c[2])
-            patch.diff(repo, patchparent, files=filelist, match=matchfn,
-                       fp=patchf, changes=c, opts=self.diffopts())
-            patchf.close()
+                # we might end up with files that were added between
+                # tip and the dirstate parent, but then changed in the
+                # local dirstate. in this case, we want them to only
+                # show up in the added section
+                for x in m:
+                    if x not in aa:
+                        mm.append(x)
+                # we might end up with files added by the local dirstate that
+                # were deleted by the patch.  In this case, they should only
+                # show up in the changed section.
+                for x in a:
+                    if x in dd:
+                        del dd[dd.index(x)]
+                        mm.append(x)
+                    else:
+                        aa.append(x)
+                # make sure any files deleted in the local dirstate
+                # are not in the add or change column of the patch
+                forget = []
+                for x in d + r:
+                    if x in aa:
+                        del aa[aa.index(x)]
+                        forget.append(x)
+                        continue
+                    elif x in mm:
+                        del mm[mm.index(x)]
+                    dd.append(x)
 
-            repo.dirstate.setparents(*cparents)
-            copies = {}
-            for dst in a:
-                src = repo.dirstate.copied(dst)
-                if src is None:
-                    continue
-                copies.setdefault(src, []).append(dst)
-            repo.dirstate.update(a, 'a')
-            # remember the copies between patchparent and tip
-            # this may be slow, so don't do it if we're not tracking copies
-            if self.diffopts().git:
-                for dst in aaa:
-                    f = repo.file(dst)
-                    src = f.renamed(man[dst])
-                    if src:
-                        copies[src[0]] = copies.get(dst, [])
-                        if dst in a:
-                            copies[src[0]].append(dst)
-                    # we can't copy a file created by the patch itself
-                    if dst in copies:
-                        del copies[dst]
-            for src, dsts in copies.iteritems():
-                for dst in dsts:
-                    repo.dirstate.copy(src, dst)
-            repo.dirstate.update(r, 'r')
-            # if the patch excludes a modified file, mark that file with mtime=0
-            # so status can see it.
-            mm = []
-            for i in xrange(len(m)-1, -1, -1):
-                if not matchfn(m[i]):
-                    mm.append(m[i])
-                    del m[i]
-            repo.dirstate.update(m, 'n')
-            repo.dirstate.update(mm, 'n', st_mtime=-1, st_size=-1)
-            repo.dirstate.forget(forget)
+                m = util.unique(mm)
+                r = util.unique(dd)
+                a = util.unique(aa)
+                c = [filter(matchfn, l) for l in (m, a, r, [], u)]
+                filelist = util.unique(c[0] + c[1] + c[2])
+                patch.diff(repo, patchparent, files=filelist, match=matchfn,
+                           fp=patchf, changes=c, opts=self.diffopts())
+                patchf.close()
 
-            if not msg:
-                if not message:
-                    message = "[mq]: %s\n" % patchfn
+                repo.dirstate.setparents(*cparents)
+                copies = {}
+                for dst in a:
+                    src = repo.dirstate.copied(dst)
+                    if src is not None:
+                        copies.setdefault(src, []).append(dst)
+                    repo.dirstate.add(dst)
+                # remember the copies between patchparent and tip
+                # this may be slow, so don't do it if we're not tracking copies
+                if self.diffopts().git:
+                    for dst in aaa:
+                        f = repo.file(dst)
+                        src = f.renamed(man[dst])
+                        if src:
+                            copies[src[0]] = copies.get(dst, [])
+                            if dst in a:
+                                copies[src[0]].append(dst)
+                        # we can't copy a file created by the patch itself
+                        if dst in copies:
+                            del copies[dst]
+                for src, dsts in copies.iteritems():
+                    for dst in dsts:
+                        repo.dirstate.copy(src, dst)
+                for f in r:
+                    repo.dirstate.remove(f)
+                # if the patch excludes a modified file, mark that
+                # file with mtime=0 so status can see it.
+                mm = []
+                for i in xrange(len(m)-1, -1, -1):
+                    if not matchfn(m[i]):
+                        mm.append(m[i])
+                        del m[i]
+                for f in m:
+                    repo.dirstate.normal(f)
+                for f in mm:
+                    repo.dirstate.normallookup(f)
+                for f in forget:
+                    repo.dirstate.forget(f)
+
+                if not msg:
+                    if not message:
+                        message = "[mq]: %s\n" % patchfn
+                    else:
+                        message = "\n".join(message)
                 else:
-                    message = "\n".join(message)
-            else:
-                message = msg
+                    message = msg
 
-            self.strip(repo, top, update=False, backup='strip', wlock=wlock)
-            n = repo.commit(filelist, message, changes[1], match=matchfn,
-                            force=1, wlock=wlock)
-            self.applied[-1] = statusentry(revlog.hex(n), patchfn)
-            self.applied_dirty = 1
-            self.removeundo(repo)
-        else:
-            self.printdiff(repo, patchparent, fp=patchf)
-            patchf.close()
-            added = repo.status()[1]
-            for a in added:
-                f = repo.wjoin(a)
-                try:
-                    os.unlink(f)
-                except OSError, e:
-                    if e.errno != errno.ENOENT:
-                        raise
-                try: os.removedirs(os.path.dirname(f))
-                except: pass
-            # forget the file copies in the dirstate
-            # push should readd the files later on
-            repo.dirstate.forget(added)
-            self.pop(repo, force=True, wlock=wlock)
-            self.push(repo, force=True, wlock=wlock)
+                self.strip(repo, top, update=False,
+                           backup='strip')
+                n = repo.commit(filelist, message, changes[1], match=matchfn,
+                                force=1)
+                self.applied[-1] = statusentry(revlog.hex(n), patchfn)
+                self.applied_dirty = 1
+                self.removeundo(repo)
+            else:
+                self.printdiff(repo, patchparent, fp=patchf)
+                patchf.close()
+                added = repo.status()[1]
+                for a in added:
+                    f = repo.wjoin(a)
+                    try:
+                        os.unlink(f)
+                    except OSError, e:
+                        if e.errno != errno.ENOENT:
+                            raise
+                    try: os.removedirs(os.path.dirname(f))
+                    except: pass
+                    # forget the file copies in the dirstate
+                    # push should readd the files later on
+                    repo.dirstate.forget(a)
+                self.pop(repo, force=True)
+                self.push(repo, force=True)
+        finally:
+            del wlock
 
     def init(self, repo, create=False):
         if not create and os.path.isdir(self.path):
@@ -1489,6 +1511,9 @@ def clone(ui, source, dest=None, **opts):
 
     Source patch repository is looked for in <src>/.hg/patches by
     default.  Use -p <url> to change.
+
+    The patch directory must be a nested mercurial repository, as
+    would be created by qinit -c.
     '''
     def patchdir(repo):
         url = repo.url()
@@ -1499,6 +1524,12 @@ def clone(ui, source, dest=None, **opts):
     if dest is None:
         dest = hg.defaultdest(source)
     sr = hg.repository(ui, ui.expandpath(source))
+    patchespath = opts['patches'] or patchdir(sr)
+    try:
+        pr = hg.repository(ui, patchespath)
+    except hg.RepoError:
+        raise util.Abort(_('versioned patch repository not found'
+                           ' (see qinit -c)'))
     qbase, destrev = None, None
     if sr.local():
         if sr.mq.applied:
@@ -1865,10 +1896,13 @@ def rename(ui, repo, patch, name=None, **opts):
     r = q.qrepo()
     if r:
         wlock = r.wlock()
-        if r.dirstate.state(name) == 'r':
-            r.undelete([name], wlock)
-        r.copy(patch, name, wlock)
-        r.remove([patch], False, wlock)
+        try:
+            if r.dirstate[name] == 'r':
+                r.undelete([name])
+            r.copy(patch, name)
+            r.remove([patch], False)
+        finally:
+            del wlock
 
     q.save_dirty()
 
@@ -2110,10 +2144,8 @@ cmdtable = {
           ('U', 'noupdate', None, _('do not update the new working directories')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
-          ('e', 'ssh', '', _('specify ssh command to use')),
           ('p', 'patches', '', _('location of source patch repo')),
-          ('', 'remotecmd', '',
-           _('specify hg command to run on the remote side'))],
+         ] + commands.remoteopts,
          _('hg qclone [OPTION]... SOURCE [DEST]')),
     "qcommit|qci":
         (commit,
@@ -2122,8 +2154,7 @@ cmdtable = {
     "^qdiff":
         (diff,
          [('g', 'git', None, _('use git extended diff format')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns'))],
+         ] + commands.walkopts,
          _('hg qdiff [-I] [-X] [-g] [FILE]...')),
     "qdelete|qremove|qrm":
         (delete,
@@ -2162,9 +2193,8 @@ cmdtable = {
         (new,
          [('e', 'edit', None, _('edit commit message')),
           ('f', 'force', None, _('import uncommitted changes into patch')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ] + commands.commitopts,
+          ('g', 'git', None, _('use git extended diff format')),
+          ] + commands.walkopts + commands.commitopts,
          _('hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]...')),
     "qnext": (next, [] + seriesopts, _('hg qnext [-s]')),
     "qprev": (prev, [] + seriesopts, _('hg qprev [-s]')),
@@ -2187,9 +2217,7 @@ cmdtable = {
          [('e', 'edit', None, _('edit commit message')),
           ('g', 'git', None, _('use git extended diff format')),
           ('s', 'short', None, _('refresh only files already in the patch')),
-          ('I', 'include', [], _('include names matching the given patterns')),
-          ('X', 'exclude', [], _('exclude names matching the given patterns')),
-          ] + commands.commitopts,
+          ] + commands.walkopts + commands.commitopts,
          _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...')),
     'qrename|qmv':
         (rename, [], _('hg qrename PATCH1 [PATCH2]')),

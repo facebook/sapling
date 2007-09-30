@@ -1,0 +1,9 @@
+default = 'changelog'
+feedupdated = '<updated>#date|rfc3339date#</updated>'
+header = header.tmpl
+changelog = changelog.tmpl
+changelogentry = changelogentry.tmpl
+filelog = filelog.tmpl
+filelogentry = filelogentry.tmpl
+tags = tags.tmpl
+tagentry = tagentry.tmpl

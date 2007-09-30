@@ -71,6 +71,17 @@ def has_lsprof():
 def has_git():
     return matchoutput('git --version 2>&1', r'^git version')
 
+def has_svn():
+    return matchoutput('svn --version 2>&1', r'^svn, version') and \
+        matchoutput('svnadmin --version 2>&1', r'^svnadmin, version')
+
+def has_svn_bindings():
+    try:
+        import svn.core
+        return True
+    except ImportError:
+        return False
+
 checks = {
     "cvs": (has_cvs, "cvs client"),
     "cvsps": (has_cvsps, "cvsps utility"),
@@ -80,6 +91,8 @@ checks = {
     "fifo": (has_fifo, "named pipes"),
     "hotshot": (has_hotshot, "python hotshot module"),
     "lsprof": (has_lsprof, "python lsprof module"),
+    "svn": (has_svn, "subversion client and admin tools"),
+    "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
 }
 

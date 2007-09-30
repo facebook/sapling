@@ -75,10 +75,4 @@ class statichttprepository(localrepo.localrepository):
 def instance(ui, path, create):
     if create:
         raise util.Abort(_('cannot create new static-http repository'))
-    if path.startswith('old-http:'):
-        ui.warn(_("old-http:// syntax is deprecated, "
-                  "please use static-http:// instead\n"))
-        path = path[4:]
-    else:
-        path = path[7:]
-    return statichttprepository(ui, path)
+    return statichttprepository(ui, path[7:])

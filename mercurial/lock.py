@@ -29,14 +29,13 @@ class lock(object):
     # old-style lock: symlink to pid
     # new-style lock: symlink to hostname:pid
 
+    _host = None
+
     def __init__(self, file, timeout=-1, releasefn=None, desc=None):
         self.f = file
         self.held = 0
         self.timeout = timeout
         self.releasefn = releasefn
-        self.id = None
-        self.host = None
-        self.pid = None
         self.desc = desc
         self.lock()
 
@@ -59,13 +58,12 @@ class lock(object):
                                inst.locker)
 
     def trylock(self):
-        if self.id is None:
-            self.host = socket.gethostname()
-            self.pid = os.getpid()
-            self.id = '%s:%s' % (self.host, self.pid)
+        if lock._host is None:
+            lock._host = socket.gethostname()
+        lockname = '%s:%s' % (lock._host, os.getpid())
         while not self.held:
             try:
-                util.makelock(self.id, self.f)
+                util.makelock(lockname, self.f)
                 self.held = 1
             except (OSError, IOError), why:
                 if why.errno == errno.EEXIST:
@@ -93,7 +91,7 @@ class lock(object):
             host, pid = locker.split(":", 1)
         except ValueError:
             return locker
-        if host != self.host:
+        if host != lock._host:
             return locker
         try:
             pid = int(pid)

@@ -262,7 +262,8 @@ M a
 Patch queue now empty
 applying foo
 applying bar
-1 out of 1 hunk ignored -- saving rejects to file foo.rej
+file foo already exists
+1 out of 1 hunk FAILED -- saving rejects to file foo.rej
 patch failed, unable to continue (try -v)
 patch failed, rejects left in working dir
 Errors during apply, please fix and refresh bar
@@ -359,6 +360,20 @@ new file mode 100644
 @@ -0,0 +1,1 @@
 +bar
 3 barney (foo)
+% refresh omitting an added file
+C newfile
+A newfile
+Now at: bar
+% create a git patch
+diff --git a/alexander b/alexander
+% create a git binary patch
+8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
+diff --git a/bucephalus b/bucephalus
+% check binary patches can be popped and pushed
+Now at: addalexander
+applying addbucephalus
+Now at: addbucephalus
+8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
 % strip again
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 merging foo
@@ -409,6 +424,8 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add foo
 
 % qclone
+abort: versioned patch repository not found (see qinit -c)
+adding .hg/patches/patch1
 main repo:
     rev 1: change foo
     rev 0: add foo

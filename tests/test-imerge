@@ -1,0 +1,64 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "imerge=" >> $HGRCPATH
+HGMERGE=true
+export HGMERGE
+
+hg init base
+cd base
+
+echo foo > foo
+echo bar > bar
+hg ci -Am0 -d '0 0'
+
+hg mv foo foo2
+echo foo >> foo2
+hg ci -m1 -d '1 0'
+
+hg up -C 0
+echo bar >> foo
+echo bar >> bar
+hg ci -m2 -d '2 0'
+
+echo % start imerge
+hg imerge
+
+cat foo2
+cat bar
+
+echo % status -v
+hg -v imerge st
+
+echo % next
+hg imerge next
+
+echo % merge next
+hg --traceback imerge
+
+echo % unresolve
+hg imerge unres foo
+
+echo % merge foo
+hg imerge merge foo
+
+echo % save
+echo foo > foo2
+hg imerge save ../savedmerge
+
+echo % load
+hg up -C 0
+hg imerge --traceback load ../savedmerge
+cat foo2
+
+hg ci -m'merged' -d '3 0'
+hg tip -v
+
+echo % nothing to merge -- tip
+hg imerge
+
+hg up 0
+echo % nothing to merge
+hg imerge
+
+exit 0
