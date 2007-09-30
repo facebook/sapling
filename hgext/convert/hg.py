@@ -61,7 +61,7 @@ class mercurial_sink(converter_sink):
         try:
             util.unlink(self.repo.wjoin(f))
             #self.repo.remove([f])
-        except:
+        except OSError:
             pass
 
     def setbranch(self, branch, pbranch, parents):
