@@ -14,7 +14,7 @@ platform-specific details from the core.
 
 from i18n import _
 import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile
-import os, threading, time, calendar, ConfigParser, locale, glob
+import os, stat, threading, time, calendar, ConfigParser, locale, glob
 
 try:
     set = set
@@ -1047,7 +1047,7 @@ else:
 
     def set_exec(f, mode):
         s = os.lstat(f).st_mode
-        if (s & 0100 != 0) == mode:
+        if stat.S_ISLNK(s) or (s & 0100 != 0) == mode:
             return
         if mode:
             # Turn on +x for every +r bit when making a file executable
