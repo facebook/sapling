@@ -399,6 +399,7 @@ proc makewindow {} {
     global entries sha1entry sha1string sha1but
     global maincursor textcursor curtextcursor
     global rowctxmenu gaudydiff mergemax
+    global hgvdiff
 
     menu .bar
     .bar add cascade -label "File" -menu .bar.file
@@ -602,6 +603,12 @@ proc makewindow {} {
     $rowctxmenu add command -label "Make patch" -command mkpatch
     $rowctxmenu add command -label "Create tag" -command mktag
     $rowctxmenu add command -label "Write commit to file" -command writecommit
+    if { $hgvdiff ne "" } {
+	$rowctxmenu add command -label "Visual diff with parent" \
+	    -command {vdiff 1}
+	$rowctxmenu add command -label "Visual diff with selected" \
+	    -command {vdiff 0}
+    }
 }
 
 # when we make a key binding for the toplevel, make sure
@@ -3373,7 +3380,7 @@ proc mstime {} {
 }
 
 proc rowmenu {x y id} {
-    global rowctxmenu idline selectedline rowmenuid
+    global rowctxmenu idline selectedline rowmenuid hgvdiff
 
     if {![info exists selectedline] || $idline($id) eq $selectedline} {
 	set state disabled
@@ -3383,6 +3390,9 @@ proc rowmenu {x y id} {
     $rowctxmenu entryconfigure 0 -state $state
     $rowctxmenu entryconfigure 1 -state $state
     $rowctxmenu entryconfigure 2 -state $state
+    if { $hgvdiff ne "" } {
+	$rowctxmenu entryconfigure 6 -state $state
+    }
     set rowmenuid $id
     tk_popup $rowctxmenu $x $y
 }
@@ -3695,6 +3705,26 @@ proc rereadrefs {} {
     }
 }
 
+proc vdiff {withparent} {
+    global env rowmenuid selectedline lineid
+
+    if {![info exists rowmenuid]} return
+    set curid $rowmenuid
+
+    if {$withparent} {
+	set parents [exec $env(HG) --config ui.report_untrusted=false parents --rev $curid --template "{node}\n"]
+	set firstparent [lindex [split $parents "\n"] 0]
+	set otherid $firstparent
+    } else {
+	if {![info exists selectedline]} return
+	set otherid $lineid($selectedline)
+    }
+    set range "$otherid:$curid"
+    if {[catch {exec $env(HG) --config ui.report_untrusted=false vdiff -r $range} err]} {
+        # Ignore errors, this is just visualization
+    }
+}
+
 proc showtag {tag isnew} {
     global ctext cflist tagcontents tagids linknum
 
@@ -3774,6 +3804,9 @@ set stopped 0
 set redisplaying 0
 set stuffsaved 0
 set patchnum 0
+
+array set config [getconfig]
+set hgvdiff $config(vdiff)
 setcoords
 makewindow
 readrefs
