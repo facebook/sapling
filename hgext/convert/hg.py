@@ -156,7 +156,10 @@ class mercurial_sink(converter_sink):
 class mercurial_source(converter_source):
     def __init__(self, ui, path, rev=None):
         converter_source.__init__(self, ui, path, rev)
-        self.repo = hg.repository(self.ui, path)
+        try:
+            self.repo = hg.repository(self.ui, path)
+        except:
+            raise NoRepo("could not open hg repo %s as source" % path)
         self.lastrev = None
         self.lastctx = None
 
