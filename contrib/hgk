@@ -73,6 +73,15 @@ bind all <MouseWheel> [list ::tk::MouseWheel %W %X %Y %D 0]
 }
 
 
+# Unify right mouse button handling.
+# See "mouse buttons on macintosh" thread on comp.lang.tcl
+if {[tk windowingsystem] eq "aqua"} {
+    event add <<B3>> <Control-ButtonPress-1>
+    event add <<B3>> <Button-2>
+} else {
+    event add <<B3>> <Button-3>
+}
+
 proc gitdir {} {
     global env
     if {[info exists env(GIT_DIR)]} {
@@ -937,7 +946,7 @@ proc drawcommitline {level} {
     set date [lindex $commitinfo($id) 2]
     set linehtag($lineno) [$canv create text $xt $y1 -anchor w \
 			       -text $headline -font $mainfont ]
-    $canv bind $linehtag($lineno) <Button-3> "rowmenu %X %Y $id"
+    $canv bind $linehtag($lineno) <<B3>> "rowmenu %X %Y $id"
     set linentag($lineno) [$canv2 create text 3 $y1 -anchor w \
 			       -text $name -font $namefont]
     set linedtag($lineno) [$canv3 create text 3 $y1 -anchor w \
