@@ -235,6 +235,7 @@ class converter(object):
 
     def convert(self):
         try:
+            self.source.before()
             self.dest.before()
             self.source.setrevmap(self.map)
             self.ui.status("scanning source...\n")
@@ -273,7 +274,10 @@ class converter(object):
             self.cleanup()
 
     def cleanup(self):
-        self.dest.after()
+        try:
+            self.dest.after()
+        finally:
+            self.source.after()
         if self.revmapfilefd:
             self.revmapfilefd.close()
 
