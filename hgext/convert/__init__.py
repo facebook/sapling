@@ -7,6 +7,7 @@
 
 from common import NoRepo, converter_source, converter_sink
 from cvs import convert_cvs
+from darcs import darcs_source
 from git import convert_git
 from hg import mercurial_source, mercurial_sink
 from subversion import convert_svn, debugsvnlog
@@ -18,7 +19,7 @@ from mercurial.i18n import _
 commands.norepo += " convert debugsvnlog"
 
 converters = [convert_cvs, convert_git, convert_svn, mercurial_source,
-              mercurial_sink]
+              mercurial_sink, darcs_source]
 
 def convertsource(ui, path, **opts):
     for c in converters:
@@ -235,6 +236,7 @@ class converter(object):
 
     def convert(self):
         try:
+            self.source.before()
             self.dest.before()
             self.source.setrevmap(self.map)
             self.ui.status("scanning source...\n")
@@ -273,7 +275,10 @@ class converter(object):
             self.cleanup()
 
     def cleanup(self):
-        self.dest.after()
+        try:
+            self.dest.after()
+        finally:
+            self.source.after()
         if self.revmapfilefd:
             self.revmapfilefd.close()
 
@@ -367,9 +372,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     """Convert a foreign SCM repository to a Mercurial one.
 
     Accepted source formats:
-    - GIT
     - CVS
-    - SVN
+    - Darcs
+    - git
+    - Subversion
 
     Accepted destination formats:
     - Mercurial

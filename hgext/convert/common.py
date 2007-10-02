@@ -38,6 +38,12 @@ class converter_source(object):
 
         self.encoding = 'utf-8'
 
+    def before(self):
+        pass
+
+    def after(self):
+        pass
+
     def setrevmap(self, revmap):
         """set the map of already-converted revisions"""
         pass

@@ -1468,7 +1468,7 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True, timezone_fo
         s += timezone_format % (-tz / 3600, ((-tz % 3600) / 60))
     return s
 
-def strdate(string, format, defaults):
+def strdate(string, format, defaults=[]):
     """parse a localized time string and return a (unixtime, offset) tuple.
     if the string cannot be parsed, ValueError is raised."""
     def timezone(string):

@@ -3,12 +3,15 @@
 # vim: tw=80 ts=4 sw=4 noet
 # -----------------------------------------------------------------------------
 # Project   : Basic Darcs to Mercurial conversion script
+#
+# *** DEPRECATED. Use the convert extension instead. This script will
+# *** be removed soon.
+#
 # -----------------------------------------------------------------------------
 # Authors   : Sebastien Pierre                           <sebastien@xprima.com>
 #             TK Soh                                      <teekaysoh@gmail.com>
 # -----------------------------------------------------------------------------
 # Creation  : 24-May-2006
-# Last mod  : 05-Jun-2006
 # -----------------------------------------------------------------------------
 
 import os, sys
@@ -217,6 +220,7 @@ if __name__ == "__main__":
 	else:
 		print USAGE
 		sys.exit(-1)
+	print 'This command is deprecated.  Use the convert extension instead.'
 	# Initializes the target repo
 	if not os.path.isdir(darcs_repo + "/_darcs"):
 		print "No darcs directory found at: " + darcs_repo
