@@ -59,9 +59,9 @@ class mercurial_sink(converter_sink):
 
     def delfile(self, f):
         try:
-            os.unlink(self.repo.wjoin(f))
+            util.unlink(self.repo.wjoin(f))
             #self.repo.remove([f])
-        except:
+        except OSError:
             pass
 
     def setbranch(self, branch, pbranch, parents):
@@ -156,7 +156,10 @@ class mercurial_sink(converter_sink):
 class mercurial_source(converter_source):
     def __init__(self, ui, path, rev=None):
         converter_source.__init__(self, ui, path, rev)
-        self.repo = hg.repository(self.ui, path)
+        try:
+            self.repo = hg.repository(self.ui, path)
+        except:
+            raise NoRepo("could not open hg repo %s as source" % path)
         self.lastrev = None
         self.lastctx = None
 

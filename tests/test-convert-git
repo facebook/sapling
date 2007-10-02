@@ -25,16 +25,26 @@ mkdir git-repo
 cd git-repo
 git init-db >/dev/null 2>/dev/null
 echo a > a
-git add a
-commit -m t1
+mkdir d
+echo b > d/b
+git add a d
+commit -a -m t1
+
+# Remove the directory, then try to replace it with a file
+# (issue 754)
+git rm -r d
+commit -m t2
+echo d > d
+git add d
+commit -m t3
 
 echo b >> a
-commit -a -m t2.1
+commit -a -m t4.1
 
 git checkout -b other HEAD^ >/dev/null 2>/dev/null
 echo c > a
 echo a >> a
-commit -a -m t2.2
+commit -a -m t4.2
 
 git checkout master >/dev/null 2>/dev/null
 git pull --no-commit . other > /dev/null 2>/dev/null
