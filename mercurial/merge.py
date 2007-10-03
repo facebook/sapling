@@ -53,7 +53,10 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
     r = util.system('%s "%s" "%s" "%s"' % (cmd, a, b, c), cwd=repo.root,
                     environ={'HG_FILE': fd,
                              'HG_MY_NODE': str(wctx.parents()[0]),
-                             'HG_OTHER_NODE': str(mctx)})
+                             'HG_OTHER_NODE': str(mctx),
+                             'HG_MY_ISLINK': fcm.islink(),
+                             'HG_OTHER_ISLINK': fco.islink(),
+                             'HG_BASE_ISLINK': fca.islink(),})
     if r:
         repo.ui.warn(_("merging %s failed!\n") % fd)
 
