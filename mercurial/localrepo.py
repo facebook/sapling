@@ -1720,7 +1720,8 @@ class localrepository(repo.repository):
                 # If any filenodes are left, generate the group for them,
                 # otherwise don't bother.
                 if len(msng_filenode_lst) > 0:
-                    yield changegroup.genchunk(fname)
+                    yield changegroup.chunkheader(len(fname))
+                    yield fname
                     # Sort the filenodes by their revision #
                     msng_filenode_lst.sort(cmp_by_rev_func(filerevlog))
                     # Create a group generator and only pass in a changenode
@@ -1796,7 +1797,8 @@ class localrepository(repo.repository):
                 nodeiter = gennodelst(filerevlog)
                 nodeiter = list(nodeiter)
                 if nodeiter:
-                    yield changegroup.genchunk(fname)
+                    yield changegroup.chunkheader(len(fname))
+                    yield fname
                     lookup = lookuprevlink_func(filerevlog)
                     for chnk in filerevlog.group(nodeiter, lookup):
                         yield chnk

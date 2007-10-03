@@ -33,10 +33,9 @@ def chunkiter(source):
             break
         yield c
 
-def genchunk(data):
-    """build a changegroup chunk"""
-    header = struct.pack(">l", len(data)+ 4)
-    return "%s%s" % (header, data)
+def chunkheader(length):
+    """build a changegroup chunk header"""
+    return struct.pack(">l", length + 4)
 
 def closechunk():
     return struct.pack(">l", 0)
@@ -86,7 +85,12 @@ def writebundle(cg, filename, bundletype):
             empty = True
             for chunk in chunkiter(cg):
                 empty = False
-                fh.write(z.compress(genchunk(chunk)))
+                fh.write(z.compress(chunkheader(len(chunk))))
+                pos = 0
+                while pos < len(chunk):
+                    next = pos + 2**20
+                    fh.write(z.compress(chunk[pos:next]))
+                    pos = next
             fh.write(z.compress(closechunk()))
         fh.write(z.flush())
         cleanup = None

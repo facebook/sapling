@@ -1094,7 +1094,9 @@ class revlog(object):
                 meta += mdiff.trivialdiffheader(len(d))
             else:
                 d = self.revdiff(a, b)
-            yield changegroup.genchunk("%s%s" % (meta, d))
+            yield changegroup.chunkheader(len(meta) + len(d))
+            yield meta
+            yield d
 
         yield changegroup.closechunk()
 
