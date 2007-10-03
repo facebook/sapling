@@ -58,7 +58,7 @@ class darcs_source(converter_source):
 
     def after(self):
         self.ui.debug('cleaning up %s\n' % self.tmppath)
-        #shutil.rmtree(self.tmppath, ignore_errors=True)
+        shutil.rmtree(self.tmppath, ignore_errors=True)
 
     def _run(self, cmd, *args, **kwargs):
         cmdline = 'darcs %s --repodir=%r %s </dev/null' % (
@@ -74,8 +74,8 @@ class darcs_source(converter_source):
     def checkexit(self, status, output=''):
         if status:
             if output:
-                ui.warn(_('darcs error:\n'))
-                ui.warn(output)
+                self.ui.warn(_('darcs error:\n'))
+                self.ui.warn(output)
             msg = util.explain_exit(status)[0]
             raise util.Abort(_('darcs %s') % msg)
         

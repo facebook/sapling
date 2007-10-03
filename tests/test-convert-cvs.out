@@ -21,10 +21,8 @@ updating tags
 a
 c
 % commit new file revisions
-src/a,v  <--  a
-new revision: 1.2; previous revision: 1.1
-src/b/c,v  <--  b/c
-new revision: 1.2; previous revision: 1.1
+checking in src/a,v
+checking in src/b/c,v
 % convert again
 destination src-hg is a Mercurial repository
 connecting to cvsrepo
