@@ -32,7 +32,7 @@ commit -a -m t1
 
 # Remove the directory, then try to replace it with a file
 # (issue 754)
-git rm -r d
+git rm -f d/b
 commit -m t2
 echo d > d
 git add d
