@@ -122,3 +122,21 @@ class convert_git(converter_source):
             tags[tag] = node
 
         return tags
+
+    def getchangedfiles(self, version, i):
+        changes = []
+        if i is None:
+            fh = self.gitcmd("git-diff-tree --root -m -r %s" % version)
+            for l in fh:
+                if "\t" not in l:
+                    continue
+                m, f = l[:-1].split("\t")
+                changes.append(f)
+            fh.close()
+        else:
+            fh = self.gitcmd("git-diff-tree --name-only --root -r %s %s^%s --"
+                             % (version, version, i+1))
+            changes = [f.rstrip('\n') for f in fh]
+            fh.close()
+
+        return changes
