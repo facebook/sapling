@@ -1,19 +1,19 @@
 adding a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % expect ssl error
-pushing to http://localhost:23451/
+pushing to http://localhost/
 searching for changes
 ssl required
 % expect authorization error
-pushing to http://localhost:23451/
+pushing to http://localhost/
 searching for changes
 push not authorized
 % expect authorization error: must have authorized user
-pushing to http://localhost:23451/
+pushing to http://localhost/
 searching for changes
 push not authorized
 % expect success
-pushing to http://localhost:23451/
+pushing to http://localhost/
 searching for changes
 adding changesets
 adding manifests
