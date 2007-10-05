@@ -10,7 +10,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import *
 from i18n import _
 import struct, os, time, bisect, stat, strutil, util, re, errno, ignore
-import cStringIO
+import cStringIO, osutil
 
 _unknown = ('?', 0, 0, 0)
 _format = ">cllll"
@@ -389,7 +389,7 @@ class dirstate(object):
             common_prefix_len += 1
 
         normpath = util.normpath
-        listdir = os.listdir
+        listdir = osutil.listdir
         lstat = os.lstat
         bisect_left = bisect.bisect_left
         isdir = os.path.isdir
@@ -410,8 +410,7 @@ class dirstate(object):
                 add((normpath(s[common_prefix_len:]), 'd', lstat(s)))
             while work:
                 top = work.pop()
-                names = listdir(top)
-                names.sort()
+                entries = listdir(top, stat=True)
                 # nd is the top of the repository dir tree
                 nd = normpath(top[common_prefix_len:])
                 if nd == '.':
@@ -420,19 +419,19 @@ class dirstate(object):
                     # do not recurse into a repo contained in this
                     # one. use bisect to find .hg directory so speed
                     # is good on big directory.
+                    names = [e[0] for e in entries]
                     hg = bisect_left(names, '.hg')
                     if hg < len(names) and names[hg] == '.hg':
                         if isdir(join(top, '.hg')):
                             continue
-                for f in names:
+                for f, kind, st in entries:
                     np = pconvert(join(nd, f))
                     if np in known:
                         continue
                     known[np] = 1
                     p = join(top, f)
                     # don't trip over symlinks
-                    st = lstat(p)
-                    if s_isdir(st.st_mode):
+                    if kind == stat.S_IFDIR:
                         if not ignore(np):
                             wadd(p)
                             if directories:

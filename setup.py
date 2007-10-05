@@ -52,6 +52,19 @@ class install_package_data(install_data):
 mercurial.version.remember_version(version)
 cmdclass = {'install_data': install_package_data}
 
+ext_modules=[
+    Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
+    Extension('mercurial.bdiff', ['mercurial/bdiff.c']),
+    Extension('mercurial.base85', ['mercurial/base85.c']),
+    Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'])
+    ]
+
+try:
+    import posix
+    ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
+except ImportError:
+    pass
+
 setup(name='mercurial',
       version=mercurial.version.get_version(),
       author='Matt Mackall',
@@ -60,10 +73,7 @@ setup(name='mercurial',
       description='Scalable distributed SCM',
       license='GNU GPL',
       packages=['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert'],
-      ext_modules=[Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
-                   Extension('mercurial.bdiff', ['mercurial/bdiff.c']),
-                   Extension('mercurial.base85', ['mercurial/base85.c']),
-                   Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'])],
+      ext_modules=ext_modules,
       data_files=[(os.path.join('mercurial', root),
                    [os.path.join(root, file_) for file_ in files])
                   for root, dirs, files in os.walk('templates')],

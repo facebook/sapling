@@ -14,7 +14,7 @@ platform-specific details from the core.
 
 from i18n import _
 import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile, strutil
-import os, stat, threading, time, calendar, ConfigParser, locale, glob
+import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
 
 try:
     set = set
@@ -676,7 +676,7 @@ def copyfiles(src, dst, hardlink=None):
 
     if os.path.isdir(src):
         os.mkdir(dst)
-        for name in os.listdir(src):
+        for name, kind in osutil.listdir(src):
             srcname = os.path.join(src, name)
             dstname = os.path.join(dst, name)
             copyfiles(srcname, dstname, hardlink)
@@ -1060,7 +1060,8 @@ else:
         rcs = [os.path.join(path, 'hgrc')]
         rcdir = os.path.join(path, 'hgrc.d')
         try:
-            rcs.extend([os.path.join(rcdir, f) for f in os.listdir(rcdir)
+            rcs.extend([os.path.join(rcdir, f)
+                        for f, kind in osutil.listdir(rcdir)
                         if f.endswith(".rc")])
         except OSError:
             pass
@@ -1653,7 +1654,7 @@ def rcpath():
             for p in os.environ['HGRCPATH'].split(os.pathsep):
                 if not p: continue
                 if os.path.isdir(p):
-                    for f in os.listdir(p):
+                    for f, kind in osutil.listdir(p):
                         if f.endswith('.rc'):
                             _rcpath.append(os.path.join(p, f))
                 else:
