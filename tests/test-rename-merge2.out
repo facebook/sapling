@@ -4,6 +4,12 @@ test L:up a   R:nc a b W:       - 1  get local a to b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local e300d1c794ec+ remote 735846fee2d7
+  searching for copies back to rev 1
+  unmatched files in other:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a *
+  checking for directory renames
  rev: versions differ -> m
  a: remote copied to b -> m
 copying a to b
@@ -25,6 +31,12 @@ test L:nc a b R:up a   W:       - 2  get rem change to a and b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ac809aeed39a+ remote f4db7e329e71
+  searching for copies back to rev 1
+  unmatched files in local:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a *
+  checking for directory renames
  a: remote is newer -> g
  b: local copied to a -> m
  rev: versions differ -> m
@@ -47,6 +59,12 @@ test L:up a   R:nm a b W:       - 3  get local a change to b, remove a
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local e300d1c794ec+ remote e03727d2d66b
+  searching for copies back to rev 1
+  unmatched files in other:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a *
+  checking for directory renames
  rev: versions differ -> m
  a: remote moved to b -> m
 copying a to b
@@ -68,6 +86,12 @@ test L:nm a b R:up a   W:       - 4  get remote change to b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ecf3cb2a4219+ remote f4db7e329e71
+  searching for copies back to rev 1
+  unmatched files in local:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a *
+  checking for directory renames
  b: local moved to a -> m
  rev: versions differ -> m
 merging b and a
@@ -87,6 +111,12 @@ test L:       R:nc a b W:       - 5  get b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local 94b33a1b7f2d+ remote 735846fee2d7
+  searching for copies back to rev 1
+  unmatched files in other:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a 
+  checking for directory renames
  rev: versions differ -> m
  b: remote created -> g
 getting b
@@ -105,6 +135,12 @@ test L:nc a b R:       W:       - 6  nothing
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ac809aeed39a+ remote 97c705ade336
+  searching for copies back to rev 1
+  unmatched files in local:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a 
+  checking for directory renames
  rev: versions differ -> m
 merging rev
 my rev@ac809aeed39a+ other rev@97c705ade336 ancestor rev@924404dff337
@@ -121,6 +157,12 @@ test L:       R:nm a b W:       - 7  get b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local 94b33a1b7f2d+ remote e03727d2d66b
+  searching for copies back to rev 1
+  unmatched files in other:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a 
+  checking for directory renames
  a: other deleted -> r
  rev: versions differ -> m
  b: remote created -> g
@@ -140,6 +182,12 @@ test L:nm a b R:       W:       - 8  nothing
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ecf3cb2a4219+ remote 97c705ade336
+  searching for copies back to rev 1
+  unmatched files in local:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a 
+  checking for directory renames
  rev: versions differ -> m
 merging rev
 my rev@ecf3cb2a4219+ other rev@97c705ade336 ancestor rev@924404dff337
@@ -155,6 +203,7 @@ test L:um a b R:um a b W:       - 9  do merge with ancestor in a
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ec03c2ca8642+ remote 79cc6877a3b7
+  searching for copies back to rev 1
  b: versions differ -> m
  rev: versions differ -> m
 merging b
@@ -173,6 +222,15 @@ test L:nm a b R:nm a c W:       - 11 get c, keep b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ecf3cb2a4219+ remote e6abcc1a30c2
+  searching for copies back to rev 1
+  unmatched files in local:
+   b
+  unmatched files in other:
+   c
+  all copies found (* = to merge, ! = divergent):
+   c -> a 
+   b -> a 
+  checking for directory renames
  a: divergent renames -> dr
  rev: versions differ -> m
  c: remote created -> g
@@ -195,6 +253,7 @@ test L:nc a b R:up b   W:       - 12 merge b no ancestor
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ac809aeed39a+ remote af30c7647fc7
+  searching for copies back to rev 1
  b: versions differ -> m
  rev: versions differ -> m
 merging b
@@ -214,6 +273,7 @@ test L:up b   R:nm a b W:       - 13 merge b no ancestor
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local 59318016310c+ remote e03727d2d66b
+  searching for copies back to rev 1
  a: other deleted -> r
  b: versions differ -> m
  rev: versions differ -> m
@@ -234,6 +294,7 @@ test L:nc a b R:up a b W:       - 14 merge b no ancestor
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ac809aeed39a+ remote 8dbce441892a
+  searching for copies back to rev 1
  a: remote is newer -> g
  b: versions differ -> m
  rev: versions differ -> m
@@ -255,6 +316,7 @@ test L:up b   R:nm a b W:       - 15 merge b no ancestor, remove a
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local 59318016310c+ remote e03727d2d66b
+  searching for copies back to rev 1
  a: other deleted -> r
  b: versions differ -> m
  rev: versions differ -> m
@@ -275,6 +337,7 @@ test L:nc a b R:up a b W:       - 16 get a, merge b no ancestor
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ac809aeed39a+ remote 8dbce441892a
+  searching for copies back to rev 1
  a: remote is newer -> g
  b: versions differ -> m
  rev: versions differ -> m
@@ -296,6 +359,7 @@ test L:up a b R:nc a b W:       - 17 keep a, merge b no ancestor
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local 0b76e65c8289+ remote 735846fee2d7
+  searching for copies back to rev 1
  b: versions differ -> m
  rev: versions differ -> m
 merging b
@@ -315,6 +379,7 @@ test L:nm a b R:up a b W:       - 18 merge b no ancestor
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ecf3cb2a4219+ remote 8dbce441892a
+  searching for copies back to rev 1
  b: versions differ -> m
  rev: versions differ -> m
  a: prompt recreating -> g
@@ -336,6 +401,7 @@ test L:up a b R:nm a b W:       - 19 merge b no ancestor, prompt remove a
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local 0b76e65c8289+ remote e03727d2d66b
+  searching for copies back to rev 1
  b: versions differ -> m
  rev: versions differ -> m
 merging b
@@ -355,6 +421,12 @@ test L:up a   R:um a b W:       - 20 merge a and b to b, remove a
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local e300d1c794ec+ remote 79cc6877a3b7
+  searching for copies back to rev 1
+  unmatched files in other:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a *
+  checking for directory renames
  rev: versions differ -> m
  a: remote moved to b -> m
 copying a to b
@@ -376,6 +448,12 @@ test L:um a b R:up a   W:       - 21 merge a and b to b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ec03c2ca8642+ remote f4db7e329e71
+  searching for copies back to rev 1
+  unmatched files in local:
+   b
+  all copies found (* = to merge, ! = divergent):
+   b -> a *
+  checking for directory renames
  b: local moved to a -> m
  rev: versions differ -> m
 merging b and a
@@ -395,6 +473,14 @@ test L:nm a b R:up a c W:       - 23 get c, keep b
 resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local ecf3cb2a4219+ remote 2b958612230f
+  searching for copies back to rev 1
+  unmatched files in local:
+   b
+  unmatched files in other:
+   c
+  all copies found (* = to merge, ! = divergent):
+   b -> a *
+  checking for directory renames
  b: local moved to a -> m
  rev: versions differ -> m
  c: remote created -> g
