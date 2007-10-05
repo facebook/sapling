@@ -266,6 +266,14 @@ def revlist(ui, repo, *revs, **opts):
     copy = [x for x in revs]
     revtree(copy, repo, full, opts['max_count'], opts['parents'])
 
+def config(ui, repo, **opts):
+    """print extension options"""
+    def writeopt(name, value):
+        ui.write('k=%s\nv=%s\n' % (name, value)) 
+
+    writeopt('vdiff', ui.config('hgk', 'vdiff', ''))
+    
+
 def view(ui, repo, *etc, **opts):
     "start interactive history viewer"
     os.chdir(repo.root)
@@ -292,6 +300,8 @@ cmdtable = {
         (catfile,
          [('s', 'stdin', None, 'stdin')],
          'hg debug-cat-file [OPTION]... TYPE FILE'),
+    "debug-config":
+        (config, [], 'hg debug-config'),
     "debug-merge-base":
         (base, [], 'hg debug-merge-base node node'),
     "debug-rev-parse":

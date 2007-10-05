@@ -3720,6 +3720,19 @@ proc doquit {} {
     destroy .
 }
 
+proc getconfig {} {
+    global env
+
+    set lines [exec $env(HG) debug-config]
+    regsub -all "\r\n" $lines "\n" config
+    set config {}
+    foreach line [split $lines "\n"] {
+	regsub "^(k|v)=" $line "" line
+	lappend config $line
+    }
+    return $config
+}
+
 # defaults...
 set datemode 0
 set boldnames 0
