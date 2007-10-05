@@ -177,6 +177,7 @@ class mercurial_source(converter_source):
             raise NoRepo("could not open hg repo %s as source" % path)
         self.lastrev = None
         self.lastctx = None
+        self._changescache = None
 
     def changectx(self, rev):
         if self.lastrev != rev:
@@ -202,7 +203,10 @@ class mercurial_source(converter_source):
 
     def getchanges(self, rev):
         ctx = self.changectx(rev)
-        m, a, r = self.repo.status(ctx.parents()[0].node(), ctx.node())[:3]
+        if self._changescache and self._changescache[0] == rev:
+            m, a, r = self._changescache[1]
+        else:
+            m, a, r = self.repo.status(ctx.parents()[0].node(), ctx.node())[:3]
         changes = [(name, rev) for name in m + a + r]
         changes.sort()
         return (changes, self.getcopies(ctx, m + a))
@@ -226,3 +230,14 @@ class mercurial_source(converter_source):
     def gettags(self):
         tags = [t for t in self.repo.tagslist() if t[0] != 'tip']
         return dict([(name, hex(node)) for name, node in tags])
+
+    def getchangedfiles(self, rev, i):
+        ctx = self.changectx(rev)
+        i = i or 0
+        changes = self.repo.status(ctx.parents()[i].node(), ctx.node())[:3]
+
+        if i == 0:
+            self._changescache = (rev, changes)
+
+        return changes[0] + changes[1] + changes[2]
+
