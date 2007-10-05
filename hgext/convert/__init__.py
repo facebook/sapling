@@ -11,6 +11,7 @@ from darcs import darcs_source
 from git import convert_git
 from hg import mercurial_source, mercurial_sink
 from subversion import convert_svn, debugsvnlog
+import filemap
 
 import os, shutil
 from mercurial import hg, ui, util, commands
@@ -377,6 +378,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         if created:
             shutil.rmtree(dest, True)
         raise
+
+    fmap = opts.get('filemap')
+    if fmap:
+        srcc = filemap.filemap_source(ui, srcc, fmap)
 
     if not revmapfile:
         try:

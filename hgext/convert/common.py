@@ -96,6 +96,19 @@ class converter_source(object):
             except:
                 return s.decode(encoding, "replace").encode("utf-8")
 
+    def getchangedfiles(self, rev, i):
+        """Return the files changed by rev compared to parent[i].
+    
+        i is an index selecting one of the parents of rev.  The return
+        value should be the list of files that are different in rev and
+        this parent.
+
+        If rev has no parents, i is None.
+    
+        This function is only needed to support --filemap
+        """
+        raise NotImplementedError()
+
 class converter_sink(object):
     """Conversion sink (target) interface"""
 

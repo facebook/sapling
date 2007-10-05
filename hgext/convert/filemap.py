@@ -1,4 +1,5 @@
 # Copyright 2007 Bryan O'Sullivan <bos@serpentine.com>
+# Copyright 2007 Alexis S. L. Carvalho <alexis@cecm.usp.br>
 #
 # This software may be used and distributed according to the terms of
 # the GNU General Public License, incorporated herein by reference.
@@ -6,6 +7,7 @@
 import shlex
 from mercurial.i18n import _
 from mercurial import util
+from common import SKIPREV
 
 def rpairs(name):
     e = len(name)
@@ -92,3 +94,237 @@ class filemapper(object):
 
     def active(self):
         return bool(self.include or self.exclude or self.rename)
+
+# This class does two additional things compared to a regular source:
+#
+# - Filter and rename files.  This is mostly wrapped by the filemapper
+#   class above. We hide the original filename in the revision that is
+#   returned by getchanges to be able to find things later in getfile
+#   and getmode.
+#
+# - Return only revisions that matter for the files we're interested in.
+#   This involves rewriting the parents of the original revision to
+#   create a graph that is restricted to those revisions.
+#
+#   This set of revisions includes not only revisions that directly
+#   touch files we're interested in, but also merges that merge two
+#   or more interesting revisions.
+
+class filemap_source(object):
+    def __init__(self, ui, baseconverter, filemap):
+        self.ui = ui
+        self.base = baseconverter
+        self.filemapper = filemapper(ui, filemap)
+        self.commits = {}
+        # if a revision rev has parent p in the original revision graph, then
+        # rev will have parent self.parentmap[p] in the restricted graph.
+        self.parentmap = {}
+        # self.wantedancestors[rev] is the set of all ancestors of rev that
+        # are in the restricted graph.
+        self.wantedancestors = {}
+        self.convertedorder = None
+        self._rebuilt = False
+        self.origparents = {}
+
+    def setrevmap(self, revmap, order):
+        # rebuild our state to make things restartable
+        #
+        # To avoid calling getcommit for every revision that has already
+        # been converted, we rebuild only the parentmap, delaying the
+        # rebuild of wantedancestors until we need it (i.e. until a
+        # merge).
+        #
+        # We assume the order argument lists the revisions in
+        # topological order, so that we can infer which revisions were
+        # wanted by previous runs.
+        self._rebuilt = not revmap
+        seen = {SKIPREV: SKIPREV}
+        dummyset = util.set()
+        converted = []
+        for rev in order:
+            mapped = revmap[rev]
+            wanted = mapped not in seen
+            if wanted:
+                seen[mapped] = rev
+                self.parentmap[rev] = rev
+            else:
+                self.parentmap[rev] = seen[mapped]
+            self.wantedancestors[rev] = dummyset
+            arg = seen[mapped]
+            if arg == SKIPREV:
+                arg = None
+            converted.append((rev, wanted, arg))
+        self.convertedorder = converted
+        return self.base.setrevmap(revmap, order)
+
+    def rebuild(self):
+        if self._rebuilt:
+            return True
+        self._rebuilt = True
+        pmap = self.parentmap.copy()
+        self.parentmap.clear()
+        self.wantedancestors.clear()
+        for rev, wanted, arg in self.convertedorder:
+            parents = self.origparents.get(rev)
+            if parents is None:
+                parents = self.base.getcommit(rev).parents
+            if wanted:
+                self.mark_wanted(rev, parents)
+            else:
+                self.mark_not_wanted(rev, arg)
+
+        assert pmap == self.parentmap
+        return True
+
+    def getheads(self):
+        return self.base.getheads()
+
+    def getcommit(self, rev):
+        # We want to save a reference to the commit objects to be able
+        # to rewrite their parents later on.
+        self.commits[rev] = self.base.getcommit(rev)
+        return self.commits[rev]
+
+    def wanted(self, rev, i):
+        # Return True if we're directly interested in rev.
+        #
+        # i is an index selecting one of the parents of rev (if rev
+        # has no parents, i is None).  getchangedfiles will give us
+        # the list of files that are different in rev and in the parent
+        # indicated by i.  If we're interested in any of these files,
+        # we're interested in rev.
+        try:
+            files = self.base.getchangedfiles(rev, i)
+        except NotImplementedError:
+            raise util.Abort(_("source repository doesn't support --filemap"))
+        for f in files:
+            if self.filemapper(f):
+                return True
+        return False
+
+    def mark_not_wanted(self, rev, p):
+        # Mark rev as not interesting and update data structures.
+
+        if p is None:
+            # A root revision. Use SKIPREV to indicate that it doesn't
+            # map to any revision in the restricted graph.  Put SKIPREV
+            # in the set of wanted ancestors to simplify code elsewhere
+            self.parentmap[rev] = SKIPREV
+            self.wantedancestors[rev] = util.set((SKIPREV,))
+            return
+
+        # Reuse the data from our parent.
+        self.parentmap[rev] = self.parentmap[p]
+        self.wantedancestors[rev] = self.wantedancestors[p]
+
+    def mark_wanted(self, rev, parents):
+        # Mark rev ss wanted and update data structures.
+
+        # rev will be in the restricted graph, so children of rev in
+        # the original graph should still have rev as a parent in the
+        # restricted graph.
+        self.parentmap[rev] = rev
+
+        # The set of wanted ancestors of rev is the union of the sets
+        # of wanted ancestors of its parents. Plus rev itself.
+        wrev = util.set()
+        for p in parents:
+            wrev.update(self.wantedancestors[p])
+        wrev.add(rev)
+        self.wantedancestors[rev] = wrev
+
+    def getchanges(self, rev):
+        parents = self.commits[rev].parents
+        if len(parents) > 1:
+            self.rebuild()
+
+        # To decide whether we're interested in rev we:
+        #
+        # - calculate what parents rev will have if it turns out we're
+        #   interested in it.  If it's going to have more than 1 parent,
+        #   we're interested in it.
+        #
+        # - otherwise, we'll compare it with the single parent we found.
+        #   If any of the files we're interested in is different in the
+        #   the two revisions, we're interested in rev.
+
+        # A parent p is interesting if its mapped version (self.parentmap[p]):
+        # - is not SKIPREV
+        # - is still not in the list of parents (we don't want duplicates)
+        # - is not an ancestor of the mapped versions of the other parents
+        mparents = []
+        wp = None
+        for i, p1 in enumerate(parents):
+            mp1 = self.parentmap[p1]
+            if mp1 == SKIPREV or mp1 in mparents:
+                continue
+            for p2 in parents:
+                if p1 == p2 or mp1 == self.parentmap[p2]:
+                    continue
+                if mp1 in self.wantedancestors[p2]:
+                    break
+            else:
+                mparents.append(mp1)
+                wp = i
+
+        if wp is None and parents:
+            wp = 0
+
+        self.origparents[rev] = parents
+
+        if len(mparents) < 2 and not self.wanted(rev, wp):
+            # We don't want this revision.
+            # Update our state and tell the convert process to map this
+            # revision to the same revision its parent as mapped to.
+            p = None
+            if parents:
+                p = parents[wp]
+            self.mark_not_wanted(rev, p)
+            self.convertedorder.append((rev, False, p))
+            return self.parentmap[rev]
+
+        # We want this revision.
+        # Rewrite the parents of the commit object
+        self.commits[rev].parents = mparents
+        self.mark_wanted(rev, parents)
+        self.convertedorder.append((rev, True, None))
+
+        # Get the real changes and do the filtering/mapping.
+        # To be able to get the files later on in getfile and getmode,
+        # we hide the original filename in the rev part of the return
+        # value.
+        changes, copies = self.base.getchanges(rev)
+        newnames = {}
+        files = []
+        for f, r in changes:
+            newf = self.filemapper(f)
+            if newf:
+                files.append((newf, (f, r)))
+                newnames[f] = newf
+
+        ncopies = {}
+        for c in copies:
+            newc = self.filemapper(c)
+            if newc:
+                newsource = self.filemapper(copies[c])
+                if newsource:
+                    ncopies[newc] = newsource
+
+        return files, ncopies
+
+    def getfile(self, name, rev):
+        realname, realrev = rev
+        return self.base.getfile(realname, realrev)
+
+    def getmode(self, name, rev):
+        realname, realrev = rev
+        return self.base.getmode(realname, realrev)
+
+    def gettags(self):
+        return self.base.gettags()
+
+    def before(self):
+        pass
+
+    def after(self):
+        pass
