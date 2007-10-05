@@ -4,6 +4,12 @@ adding 2
 resolving manifests
  overwrite None partial False
  ancestor 81f4b099af3d local c64f439569a9+ remote 2f8037f47a5c
+  searching for copies back to rev 1
+  unmatched files in other:
+   1a
+  all copies found (* = to merge, ! = divergent):
+   1a -> 1 
+  checking for directory renames
  1: other deleted -> r
  1a: remote created -> g
 removing 1
@@ -15,6 +21,12 @@ getting 1a
 resolving manifests
  overwrite None partial False
  ancestor c64f439569a9 local ac7575e3c052+ remote 746e9549ea96
+  searching for copies back to rev 1
+  unmatched files in local:
+   1a
+  all copies found (* = to merge, ! = divergent):
+   1a -> 1 *
+  checking for directory renames
  1a: local moved to 1 -> m
 merging 1a and 1
 my 1a@ac7575e3c052+ other 1@746e9549ea96 ancestor 1@81f4b099af3d
@@ -24,6 +36,12 @@ my 1a@ac7575e3c052+ other 1@746e9549ea96 ancestor 1@81f4b099af3d
 resolving manifests
  overwrite None partial False
  ancestor c64f439569a9 local 746e9549ea96+ remote ac7575e3c052
+  searching for copies back to rev 1
+  unmatched files in other:
+   1a
+  all copies found (* = to merge, ! = divergent):
+   1a -> 1 *
+  checking for directory renames
  1: remote moved to 1a -> m
 copying 1 to 1a
 merging 1 and 1a

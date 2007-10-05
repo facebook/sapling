@@ -17,6 +17,9 @@ summary:     1
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
+  searching for copies back to rev 1
+  unmatched files in other:
+   b
  a: versions differ -> m
  b: remote created -> g
 merging a
@@ -50,6 +53,9 @@ summary:     1
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
+  searching for copies back to rev 1
+  unmatched files in other:
+   b
  a: versions differ -> m
  b: remote created -> g
 merging a
@@ -100,6 +106,7 @@ failed
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 802f095af299+ remote 030602aee63d
+  searching for copies back to rev 1
  a: versions differ -> m
  b: versions differ -> m
 merging a

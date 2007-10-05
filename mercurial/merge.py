@@ -188,8 +188,17 @@ def findcopies(repo, m1, m2, ma, limit):
     if not m1 or not m2 or not ma:
         return {}, {}
 
+    repo.ui.debug(_("  searching for copies back to rev %d\n") % limit)
+
     u1 = nonoverlap(m1, m2, ma)
     u2 = nonoverlap(m2, m1, ma)
+
+    if u1:
+        repo.ui.debug(_("  unmatched files in local:\n   %s\n")
+                      % "\n   ".join(u1))
+    if u2:
+        repo.ui.debug(_("  unmatched files in other:\n   %s\n")
+                      % "\n   ".join(u2))
 
     for f in u1:
         checkcopies(ctx(f, m1[f]), m2, ma)
@@ -204,8 +213,18 @@ def findcopies(repo, m1, m2, ma, limit):
             fo.remove(f)
             d2[f] = (of, fo)
 
+    if fullcopy:
+        repo.ui.debug(_("  all copies found (* = to merge, ! = divergent):\n"))
+        for f in fullcopy:
+            note = ""
+            if f in copy: note += "*"
+            if f in diverge: note += "!"
+            repo.ui.debug(_("   %s -> %s %s\n") % (f, fullcopy[f], note))
+
     if not fullcopy or not repo.ui.configbool("merge", "followdirs", True):
         return copy, diverge
+
+    repo.ui.debug(_("  checking for directory renames\n"))
 
     # generate a directory move map
     d1, d2 = dirs(m1), dirs(m2)
@@ -241,6 +260,9 @@ def findcopies(repo, m1, m2, ma, limit):
     if not dirmove:
         return copy, diverge
 
+    for d in dirmove:
+        repo.ui.debug(_("  dir %s -> %s\n") % (d, dirmove[d]))
+
     # check unaccounted nonoverlapping files against directory moves
     for f in u1 + u2:
         if f not in fullcopy:
@@ -248,6 +270,7 @@ def findcopies(repo, m1, m2, ma, limit):
                 if f.startswith(d):
                     # new file added in a directory that was moved, move it
                     copy[f] = dirmove[d] + f[len(d):]
+                    repo.ui.debug(_("  file %s -> %s\n") % (f, copy[f]))
                     break
 
     return copy, diverge
