@@ -167,3 +167,13 @@ class converter_sink(object):
         pbranch: branch name of parent commit
         parents: destination revisions of parent"""
         pass
+
+    def setfilemapmode(self, active):
+        """Tell the destination that we're using a filemap
+
+        Some converter_sources (svn in particular) can claim that a file
+        was changed in a revision, even if there was no change.  This method
+        tells the destination that we're using a filemap and that it should
+        filter empty revisions.
+        """
+        pass

@@ -28,6 +28,7 @@ class mercurial_sink(converter_sink):
             raise NoRepo("could not open hg repo %s as sink" % path)
         self.lock = None
         self.wlock = None
+        self.filemapmode = False
 
     def before(self):
         self.wlock = self.repo.wlock()
@@ -96,6 +97,10 @@ class mercurial_sink(converter_sink):
                 pl.append(p)
                 seen[p] = 1
         parents = pl
+        nparents = len(parents)
+        if self.filemapmode and nparents == 1:
+            m1node = self.repo.changelog.read(bin(parents[0]))[0]
+            parent = parents[0]
 
         if len(parents) < 2: parents.append("0" * 40)
         if len(parents) < 2: parents.append("0" * 40)
@@ -117,6 +122,13 @@ class mercurial_sink(converter_sink):
             text = "(octopus merge fixup)\n"
             p2 = hg.hex(self.repo.changelog.tip())
 
+        if self.filemapmode and nparents == 1:
+            man = self.repo.manifest
+            mnode = self.repo.changelog.read(bin(p2))[0]
+            if not man.cmp(m1node, man.revision(mnode)):
+                self.repo.rollback()
+                self.repo.dirstate.clear()
+                return parent
         return p2
 
     def puttags(self, tags):
@@ -152,6 +164,9 @@ class mercurial_sink(converter_sink):
             self.repo.rawcommit([".hgtags"], "update tags", "convert-repo",
                                 date, tagparent, nullid)
             return hex(self.repo.changelog.tip())
+
+    def setfilemapmode(self, active):
+        self.filemapmode = active
 
 class mercurial_source(converter_source):
     def __init__(self, ui, path, rev=None):

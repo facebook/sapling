@@ -382,6 +382,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     fmap = opts.get('filemap')
     if fmap:
         srcc = filemap.filemap_source(ui, srcc, fmap)
+        destc.setfilemapmode(True)
 
     if not revmapfile:
         try:
