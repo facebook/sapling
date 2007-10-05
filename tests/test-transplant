@@ -56,12 +56,12 @@ cd ../pullback
 hg transplant -s ../remote -a -b tip
 
 echo '% remote transplant with pull'
-hg -R ../t serve -p 20062 -d --pid-file=../t.pid
+hg -R ../t serve -p $HGPORT -d --pid-file=../t.pid
 cat ../t.pid >> $DAEMON_PIDS
 
 hg clone -r 0 ../t ../rp
 cd ../rp
-hg transplant -s http://localhost:20062/ 2 4
+hg transplant -s http://localhost:$HGPORT/ 2 4
 hg log --template '{rev} {parents} {desc}\n'
 
 echo '% transplant --continue'
