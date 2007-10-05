@@ -44,8 +44,11 @@ class converter_source(object):
     def after(self):
         pass
 
-    def setrevmap(self, revmap):
-        """set the map of already-converted revisions"""
+    def setrevmap(self, revmap, order):
+        """set the map of already-converted revisions
+        
+        order is a list with the keys from revmap in the order they
+        appear in the revision map file."""
         pass
 
     def getheads(self):

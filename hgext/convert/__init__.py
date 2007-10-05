@@ -53,11 +53,14 @@ class converter(object):
         self.authorfile = None
         self.mapfile = filemapper
 
+        self.maporder = []
         self.map = {}
         try:
             origrevmapfile = open(self.revmapfile, 'r')
             for l in origrevmapfile:
                 sv, dv = l[:-1].split()
+                if sv not in self.map:
+                    self.maporder.append(sv)
                 self.map[sv] = dv
             origrevmapfile.close()
         except IOError:
@@ -238,7 +241,7 @@ class converter(object):
         try:
             self.source.before()
             self.dest.before()
-            self.source.setrevmap(self.map)
+            self.source.setrevmap(self.map, self.maporder)
             self.ui.status("scanning source...\n")
             heads = self.source.getheads()
             parents = self.walktree(heads)
