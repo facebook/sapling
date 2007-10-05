@@ -47,6 +47,8 @@ parser.add_option("-s", "--cover_stdlib", action="store_true",
     help="print a test coverage report inc. standard libraries")
 parser.add_option("-t", "--timeout", type="int",
     help="kill errant tests after TIMEOUT seconds")
+parser.add_option("--tmpdir", type="string",
+    help="run tests in the given temporary directory")
 parser.add_option("-v", "--verbose", action="store_true",
     help="output verbose messages")
 parser.add_option("--with-hg", type="string",
@@ -394,7 +396,7 @@ os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
 os.environ['TZ'] = 'GMT'
 
 TESTDIR = os.environ["TESTDIR"] = os.getcwd()
-HGTMP   = os.environ["HGTMP"]   = tempfile.mkdtemp("", "hgtests.")
+HGTMP = os.environ['HGTMP'] = tempfile.mkdtemp('', 'hgtests.', options.tmpdir)
 DAEMON_PIDS = None
 HGRCPATH = None
 
