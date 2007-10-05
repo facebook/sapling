@@ -266,3 +266,9 @@ class convert_cvs(converter_source):
 
     def gettags(self):
         return self.tags
+
+    def getchangedfiles(self, rev, i):
+        files = self.files[rev].keys()
+        files.sort()
+        return files
+
