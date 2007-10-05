@@ -27,14 +27,20 @@ required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 parser = optparse.OptionParser("%prog [options] [tests]")
 parser.add_option("-C", "--annotate", action="store_true",
     help="output files annotated with coverage")
+parser.add_option("--child", type="int",
+    help="run as child process, summary to given fd")
 parser.add_option("-c", "--cover", action="store_true",
     help="print a test coverage report")
 parser.add_option("-f", "--first", action="store_true",
     help="exit on the first test failure")
 parser.add_option("-i", "--interactive", action="store_true",
     help="prompt to accept changed output")
+parser.add_option("-j", "--jobs", type="int",
+    help="number of jobs to run in parallel")
 parser.add_option("-R", "--restart", action="store_true",
     help="restart at last error")
+parser.add_option("-p", "--port", type="int",
+    help="port on which servers should listen")
 parser.add_option("-r", "--retest", action="store_true",
     help="retest failed tests")
 parser.add_option("-s", "--cover_stdlib", action="store_true",
@@ -43,12 +49,21 @@ parser.add_option("-t", "--timeout", type="int",
     help="kill errant tests after TIMEOUT seconds")
 parser.add_option("-v", "--verbose", action="store_true",
     help="output verbose messages")
+parser.add_option("--with-hg", type="string",
+    help="test existing install at given location")
 
-parser.set_defaults(timeout=180)
+parser.set_defaults(jobs=1, port=20059, timeout=180)
 (options, args) = parser.parse_args()
 verbose = options.verbose
 coverage = options.cover or options.cover_stdlib or options.annotate
 python = sys.executable
+
+if options.jobs < 1:
+    print >> sys.stderr, 'ERROR: -j/--jobs must be positive'
+    sys.exit(1)
+if options.interactive and options.jobs > 1:
+    print >> sys.stderr, 'ERROR: cannot mix -interactive and --jobs > 1'
+    sys.exit(1)
 
 def vlog(*msg):
     if verbose:
@@ -368,10 +383,10 @@ def run_one(test):
         return None
     return ret == 0
 
+if not options.child:
+    os.umask(022)
 
-os.umask(022)
-
-check_required_tools()
+    check_required_tools()
 
 # Reset some environment variables to well-known values so that
 # the tests produce repeatable output.
@@ -380,28 +395,83 @@ os.environ['TZ'] = 'GMT'
 
 TESTDIR = os.environ["TESTDIR"] = os.getcwd()
 HGTMP   = os.environ["HGTMP"]   = tempfile.mkdtemp("", "hgtests.")
-DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
-HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
+DAEMON_PIDS = None
+HGRCPATH = None
 
 os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
 os.environ["HGMERGE"]  = ('python "%s" -L my -L other'
-                          % os.path.join(TESTDIR, os.path.pardir, 'contrib',
-                                         'simplemerge'))
+                          % os.path.join(TESTDIR, os.path.pardir,
+                                         'contrib', 'simplemerge'))
 os.environ["HGUSER"]   = "test"
 os.environ["HGENCODING"] = "ascii"
 os.environ["HGENCODINGMODE"] = "strict"
+os.environ["HGPORT"] = str(options.port)
+os.environ["HGPORT1"] = str(options.port + 1)
+os.environ["HGPORT2"] = str(options.port + 2)
 
-vlog("# Using TESTDIR", TESTDIR)
-vlog("# Using HGTMP", HGTMP)
-
-INST = os.path.join(HGTMP, "install")
+if options.with_hg:
+    INST = options.with_hg
+else:
+    INST = os.path.join(HGTMP, "install")
 BINDIR = os.path.join(INST, "bin")
 PYTHONDIR = os.path.join(INST, "lib", "python")
 COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
-try:
-    try:
+def run_children(tests):
+    if not options.with_hg:
         install_hg()
+
+    optcopy = dict(options.__dict__)
+    optcopy['jobs'] = 1
+    optcopy['with_hg'] = INST
+    opts = []
+    for opt, value in optcopy.iteritems():
+        name = '--' + opt.replace('_', '-')
+        if value is True:
+            opts.append(name)
+        elif value is not None:
+            opts.append(name + '=' + str(value))
+
+    tests.reverse()
+    jobs = [[] for j in xrange(options.jobs)]
+    while tests:
+        for j in xrange(options.jobs):
+            if not tests: break
+            jobs[j].append(tests.pop())
+    fps = {}
+    for j in xrange(len(jobs)):
+        job = jobs[j]
+        if not job:
+            continue
+        rfd, wfd = os.pipe()
+        childopts = ['--child=%d' % wfd, '--port=%d' % (options.port + j * 3)]
+        cmdline = [python, sys.argv[0]] + opts + childopts + job
+        vlog(' '.join(cmdline))
+        fps[os.spawnvp(os.P_NOWAIT, cmdline[0], cmdline)] = os.fdopen(rfd, 'r')
+        os.close(wfd)
+    failures = 0
+    tested, skipped, failed = 0, 0, 0
+    while fps:
+        pid, status = os.wait()
+        fp = fps.pop(pid)
+        test, skip, fail = map(int, fp.read().splitlines())
+        tested += test
+        skipped += skip
+        failed += fail
+        vlog('pid %d exited, status %d' % (pid, status))
+        failures |= status
+    print "\n# Ran %d tests, %d skipped, %d failed." % (
+        tested, skipped, failed)
+    sys.exit(failures != 0)
+
+def run_tests(tests):
+    global DAEMON_PIDS, HGRCPATH
+    DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
+    HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
+
+    try:
+        if not options.with_hg:
+            install_hg()
 
         if options.timeout > 0:
             try:
@@ -415,18 +485,6 @@ try:
         tested = 0
         failed = 0
         skipped = 0
-
-        if len(args) == 0:
-            args = os.listdir(".")
-            args.sort()
-
-
-        tests = []
-        for test in args:
-            if (test.startswith("test-") and '~' not in test and
-                ('.' not in test or test.endswith('.py') or
-                 test.endswith('.bat'))):
-                tests.append(test)
 
         if options.restart:
             orig = list(tests)
@@ -458,15 +516,41 @@ try:
                     break
             tested += 1
 
-        print "\n# Ran %d tests, %d skipped, %d failed." % (tested, skipped,
-                                                            failed)
+        if options.child:
+            fp = os.fdopen(options.child, 'w')
+            fp.write('%d\n%d\n%d\n' % (tested, skipped, failed))
+            fp.close()
+        else:
+            print "\n# Ran %d tests, %d skipped, %d failed." % (
+                tested, skipped, failed)
+
         if coverage:
             output_coverage()
     except KeyboardInterrupt:
         failed = True
         print "\ninterrupted!"
+
+    if failed:
+        sys.exit(1)
+
+if len(args) == 0:
+    args = os.listdir(".")
+    args.sort()
+
+tests = []
+for test in args:
+    if (test.startswith("test-") and '~' not in test and
+        ('.' not in test or test.endswith('.py') or
+         test.endswith('.bat'))):
+        tests.append(test)
+
+vlog("# Using TESTDIR", TESTDIR)
+vlog("# Using HGTMP", HGTMP)
+
+try:
+    if len(tests) > 1 and options.jobs > 1:
+        run_children(tests)
+    else:
+        run_tests(tests)
 finally:
     cleanup_exit()
-
-if failed:
-    sys.exit(1)

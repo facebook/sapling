@@ -1,4 +1,4 @@
 % Without -v
 access log created - .hg/hgrc respected
 % With -v
-listening at http://localhost:20064/
+listening at http://localhost/
