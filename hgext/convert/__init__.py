@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from common import NoRepo, converter_source, converter_sink
+from common import NoRepo, SKIPREV, converter_source, converter_sink
 from cvs import convert_cvs
 from darcs import darcs_source
 from git import convert_git
@@ -202,7 +202,15 @@ class converter(object):
         do_copies = hasattr(self.dest, 'copyfile')
         filenames = []
 
-        files, copies = self.source.getchanges(rev)
+        changes = self.source.getchanges(rev)
+        if isinstance(changes, basestring):
+            if changes == SKIPREV:
+                dest = SKIPREV
+            else:
+                dest = self.map[changes]
+            self.mapentry(rev, dest)
+            return
+        files, copies = changes
         parents = [self.map[r] for r in commit.parents]
         if commit.parents:
             prev = commit.parents[0]
@@ -263,7 +271,7 @@ class converter(object):
             ctags = {}
             for k in tags:
                 v = tags[k]
-                if v in self.map:
+                if self.map.get(v, SKIPREV) != SKIPREV:
                     ctags[k] = self.map[v]
 
             if c and ctags:
