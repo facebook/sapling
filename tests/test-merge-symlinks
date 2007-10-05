@@ -1,0 +1,28 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" symlink || exit 80
+
+cat > echo.py <<EOF
+#!/usr/bin/env python
+import os
+for k in ('HG_MY_ISLINK', 'HG_OTHER_ISLINK', 'HG_BASE_ISLINK'):
+    print k, os.environ[k]
+EOF
+chmod +x echo.py
+
+# Create 2 heads containing the same file, once as
+# a file, once as a link.
+echo % create heads
+hg init t
+cd t
+echo a > a
+hg ci -qAm t0
+echo l > l
+hg ci -qAm t1
+hg up -C 0
+ln -s a l
+hg ci -qAm t2
+
+# Merge them and display *_ISLINK vars
+echo % merge heads
+HGMERGE=../echo.py hg merge
