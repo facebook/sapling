@@ -94,20 +94,29 @@ class changectx(object):
         c = self._repo.changelog.children(self._node)
         return [changectx(self._repo, x) for x in c]
 
-    def filenode(self, path):
+    def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
             try:
-                return self._manifest[path]
+                return self._manifest[path], self._manifest.flags(path)
             except KeyError:
                 raise revlog.LookupError(_("'%s' not found in manifest") % path)
         if '_manifestdelta' in self.__dict__ or path in self.files():
             if path in self._manifestdelta:
-                return self._manifestdelta[path]
+                return self._manifestdelta[path], self._manifestdelta.flags(path)
         node, flag = self._repo.manifest.find(self._changeset[0], path)
         if not node:
             raise revlog.LookupError(_("'%s' not found in manifest") % path)
 
-        return node
+        return node, flag
+
+    def filenode(self, path):
+        return self._fileinfo(path)[0]
+
+    def fileflags(self, path):
+        try:
+            return self._fileinfo(path)[1]
+        except revlog.LookupError:
+            return ''
 
     def filectx(self, path, fileid=None, filelog=None):
         """get a file context from this changeset"""
@@ -211,6 +220,9 @@ class filectx(object):
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
+    def fileflags(self): return self._changectx.fileflags(self._path)
+    def isexec(self): return 'x' in self.fileflags()
+    def islink(self): return 'l' in self.fileflags()
     def filelog(self): return self._filelog
 
     def rev(self):
@@ -461,6 +473,26 @@ class workingctx(changectx):
 
     def children(self):
         return []
+
+    def fileflags(self, path):
+        if '_manifest' in self.__dict__:
+            try:
+                return self._manifest.flags(path)
+            except KeyError:
+                return ''
+        
+        pnode = self._parents[0].changeset()[0]
+        node, flag = self._repo.manifest.find(pnode, path)
+        is_link = util.linkfunc(self._repo.root, lambda: 'l' in flag)
+        is_exec = util.execfunc(self._repo.root, lambda: 'x' in flag)
+        try:
+            return (is_link(path) and 'l' or '') + (is_exec(path) and 'e' or '')
+        except OSError:
+            pass
+
+        if not node or path in self.deleted() or path in self.removed():
+            return ''
+        return flag
 
     def filectx(self, path, filelog=None):
         """get a file context from the working directory"""
