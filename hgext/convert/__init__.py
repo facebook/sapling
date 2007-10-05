@@ -40,7 +40,7 @@ def convertsink(ui, path):
     raise util.Abort('%s: unknown repository type' % path)
 
 class converter(object):
-    def __init__(self, ui, source, dest, revmapfile, filemapper, opts):
+    def __init__(self, ui, source, dest, revmapfile, opts):
 
         self.source = source
         self.dest = dest
@@ -51,7 +51,6 @@ class converter(object):
         self.revmapfilefd = None
         self.authors = {}
         self.authorfile = None
-        self.mapfile = filemapper
 
         self.maporder = []
         self.map = {}
@@ -221,28 +220,21 @@ class converter(object):
             pbranch = None
         self.dest.setbranch(commit.branch, pbranch, parents)
         for f, v in files:
-            newf = self.mapfile(f)
-            if not newf:
-                continue
-            filenames.append(newf)
+            filenames.append(f)
             try:
                 data = self.source.getfile(f, v)
             except IOError, inst:
-                self.dest.delfile(newf)
+                self.dest.delfile(f)
             else:
                 e = self.source.getmode(f, v)
-                self.dest.putfile(newf, e, data)
+                self.dest.putfile(f, e, data)
                 if do_copies:
                     if f in copies:
-                        copyf = self.mapfile(copies[f])
-                        if copyf:
-                            # Merely marks that a copy happened.
-                            self.dest.copyfile(copyf, newf)
+                        copyf = copies[f]
+                        # Merely marks that a copy happened.
+                        self.dest.copyfile(copyf, f)
 
-        if not filenames and self.mapfile.active():
-            newnode = parents[0]
-        else:
-            newnode = self.dest.putcommit(filenames, parents, commit)
+        newnode = self.dest.putcommit(filenames, parents, commit)
         self.mapentry(rev, newnode)
 
     def convert(self):
@@ -478,9 +470,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         except:
             revmapfile = os.path.join(destc, "map")
 
-
-    c = converter(ui, srcc, destc, revmapfile, filemapper(ui, opts['filemap']),
-                  opts)
+    c = converter(ui, srcc, destc, revmapfile, opts)
     c.convert()
 
 
