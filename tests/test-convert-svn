@@ -51,3 +51,10 @@ cd ..
 echo % test incremental conversion
 hg convert $svnurl
 
+echo % test filemap
+echo 'include b' > filemap
+hg convert --filemap filemap $svnurl fmap
+echo '[extensions]' >> $HGRCPATH
+echo 'hgext.graphlog =' >> $HGRCPATH
+hg glog -R fmap --template '#rev# #desc|firstline# files: #files#\n'
+

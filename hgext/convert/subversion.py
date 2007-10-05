@@ -146,6 +146,7 @@ class convert_svn(converter_source):
         self.last_changed = self.latest(self.module, latest)
 
         self.head = self.revid(self.last_changed)
+        self._changescache = None
 
     def setrevmap(self, revmap, order):
         lastrevs = {}
@@ -206,6 +207,9 @@ class convert_svn(converter_source):
         return self.modecache[(file, rev)]
 
     def getchanges(self, rev):
+        if self._changescache and self._changescache[0] == rev:
+            return self._changescache[1]
+        self._changescache = None
         self.modecache = {}
         (paths, parents) = self.paths[rev]
         files, copies = self.expandpaths(rev, paths, parents)
@@ -215,6 +219,11 @@ class convert_svn(converter_source):
         # caller caches the result, so free it here to release memory
         del self.paths[rev]
         return (files, copies)
+
+    def getchangedfiles(self, rev, i):
+        changes = self.getchanges(rev)
+        self._changescache = (rev, changes)
+        return [f[0] for f in changes[0]]
 
     def getcommit(self, rev):
         if rev not in self.commits:
