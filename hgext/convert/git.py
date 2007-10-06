@@ -134,7 +134,7 @@ class convert_git(converter_source):
                 changes.append(f)
             fh.close()
         else:
-            fh = self.gitcmd("git-diff-tree --name-only --root -r %s %s^%s --"
+            fh = self.gitcmd('git-diff-tree --name-only --root -r %s "%s^%s" --'
                              % (version, version, i+1))
             changes = [f.rstrip('\n') for f in fh]
             fh.close()
