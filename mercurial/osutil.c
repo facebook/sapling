@@ -9,6 +9,7 @@
 
 #define _ATFILE_SOURCE
 #define _LARGEFILE64_SOURCE
+#include <Python.h>
 #include <alloca.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -16,8 +17,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#include "Python.h"
 
 struct listdir_stat {
     PyObject_HEAD
