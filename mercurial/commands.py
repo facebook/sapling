@@ -1884,8 +1884,8 @@ def manifest(ui, repo, node=None, rev=None):
     The manifest is the list of files being version controlled. If no revision
     is given then the first parent of the working directory is used.
 
-    With -v flag, print file permissions. With --debug flag, print
-    file revision hashes.
+    With -v flag, print file permissions, symlink and executable bits. With 
+    --debug flag, print file revision hashes.
     """
 
     if rev and node:
@@ -1902,7 +1902,9 @@ def manifest(ui, repo, node=None, rev=None):
         if ui.debugflag:
             ui.write("%40s " % hex(m[f]))
         if ui.verbose:
-            ui.write("%3s " % (m.execf(f) and "755" or "644"))
+            type = m.execf(f) and "*" or m.linkf(f) and "@" or " "
+            perm = m.execf(f) and "755" or "644"
+            ui.write("%3s %1s " % (perm, type))
         ui.write("%s\n" % f)
 
 def merge(ui, repo, node=None, force=None, rev=None):
