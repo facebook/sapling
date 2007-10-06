@@ -17,7 +17,7 @@ def decodeargs(s):
 
 class NoRepo(Exception): pass
 
-SKIPREV = 'hg-convert-skipped-revision'
+SKIPREV = 'SKIP'
 
 class commit(object):
     def __init__(self, author, date, desc, parents, branch=None, rev=None):
