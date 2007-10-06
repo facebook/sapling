@@ -8,7 +8,6 @@
 */
 
 #define _ATFILE_SOURCE
-#define _LARGEFILE64_SOURCE
 #include <Python.h>
 #include <alloca.h>
 #include <dirent.h>
@@ -113,7 +112,7 @@ static inline int mode_to_kind(int mode)
 static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     DIR *dir = NULL;
-    struct dirent64 *ent;
+    struct dirent *ent;
     PyObject *list = NULL;
     PyObject *ctor_args = NULL;
     int all_kinds = 1;
@@ -146,7 +145,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
     memcpy(full_path, path, path_len);
     full_path[path_len] = '/';
 
-    while ((ent = readdir64(dir))) {
+    while ((ent = readdir(dir))) {
         PyObject *name = NULL;
         PyObject *py_kind = NULL;
         PyObject *val = NULL;
