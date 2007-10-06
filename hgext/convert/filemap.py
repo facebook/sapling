@@ -125,6 +125,8 @@ class filemap_source(object):
         self.convertedorder = None
         self._rebuilt = False
         self.origparents = {}
+        self.children = {}
+        self.seenchildren = {}
 
     def setrevmap(self, revmap, order):
         # rebuild our state to make things restartable
@@ -161,19 +163,23 @@ class filemap_source(object):
         if self._rebuilt:
             return True
         self._rebuilt = True
-        pmap = self.parentmap.copy()
         self.parentmap.clear()
         self.wantedancestors.clear()
+        self.seenchildren.clear()
         for rev, wanted, arg in self.convertedorder:
-            parents = self.origparents.get(rev)
-            if parents is None:
-                parents = self.base.getcommit(rev).parents
+            if rev not in self.origparents:
+                self.origparents[rev] = self.getcommit(rev).parents
+            if arg is not None:
+                self.children[arg] = self.children.get(arg, 0) + 1
+
+        for rev, wanted, arg in self.convertedorder:
+            parents = self.origparents[rev]
             if wanted:
                 self.mark_wanted(rev, parents)
             else:
                 self.mark_not_wanted(rev, arg)
+            self._discard(arg, *parents)
 
-        assert pmap == self.parentmap
         return True
 
     def getheads(self):
@@ -182,8 +188,22 @@ class filemap_source(object):
     def getcommit(self, rev):
         # We want to save a reference to the commit objects to be able
         # to rewrite their parents later on.
-        self.commits[rev] = self.base.getcommit(rev)
-        return self.commits[rev]
+        c = self.commits[rev] = self.base.getcommit(rev)
+        for p in c.parents:
+            self.children[p] = self.children.get(p, 0) + 1
+        return c
+
+    def _discard(self, *revs):
+        for r in revs:
+            if r is None:
+                continue
+            self.seenchildren[r] = self.seenchildren.get(r, 0) + 1
+            if self.seenchildren[r] == self.children[r]:
+                del self.wantedancestors[r]
+                del self.parentmap[r]
+                del self.seenchildren[r]
+                if self._rebuilt:
+                    del self.children[r]
 
     def wanted(self, rev, i):
         # Return True if we're directly interested in rev.
@@ -281,6 +301,7 @@ class filemap_source(object):
                 p = parents[wp]
             self.mark_not_wanted(rev, p)
             self.convertedorder.append((rev, False, p))
+            self._discard(*parents)
             return self.parentmap[rev]
 
         # We want this revision.
@@ -288,6 +309,7 @@ class filemap_source(object):
         self.commits[rev].parents = mparents
         self.mark_wanted(rev, parents)
         self.convertedorder.append((rev, True, None))
+        self._discard(*parents)
 
         # Get the real changes and do the filtering/mapping.
         # To be able to get the files later on in getfile and getmode,
