@@ -151,7 +151,6 @@ def readgitpatch(fp, firstline=None):
             self.oldpath = None
             self.mode = None
             self.op = 'MODIFY'
-            self.copymod = False
             self.lineno = 0
             self.binary = False
 
@@ -182,7 +181,6 @@ def readgitpatch(fp, firstline=None):
         elif gp:
             if line.startswith('--- '):
                 if gp.op in ('COPY', 'RENAME'):
-                    gp.copymod = True
                     dopatch |= GP_FILTER
                 gitpatches.append(gp)
                 gp = None
@@ -858,7 +856,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
 
         (dopatch, gitpatches) = readgitpatch(fp, firstline)
         for gp in gitpatches:
-            if gp.copymod:
+            if gp.op in ('COPY', 'RENAME'):
                 copyfile(gp.oldpath, gp.path, basedir=cwd)
 
         fp.seek(pos)
@@ -1030,15 +1028,13 @@ def updatedir(ui, repo, patches):
     for f in patches:
         ctype, gp = patches[f]
         if ctype == 'RENAME':
-            copies.append((gp.oldpath, gp.path, gp.copymod))
+            copies.append((gp.oldpath, gp.path))
             removes[gp.oldpath] = 1
         elif ctype == 'COPY':
-            copies.append((gp.oldpath, gp.path, gp.copymod))
+            copies.append((gp.oldpath, gp.path))
         elif ctype == 'DELETE':
             removes[gp.path] = 1
-    for src, dst, after in copies:
-        if not after:
-            copyfile(src, dst, repo.root)
+    for src, dst in copies:
         repo.copy(src, dst)
     removes = removes.keys()
     if removes:

@@ -63,3 +63,6 @@ a874b471193996e7cb034bb301cac7bdaf3e3f46 644 mbinary2
 % filenames with spaces
 applying patch from stdin
 foo
+% copy then modify the original file
+applying patch from stdin
+foo
