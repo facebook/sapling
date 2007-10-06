@@ -88,6 +88,7 @@ class mercurial_sink(converter_sink):
                          branchpath, rev=parents, update=False,
                          stream=True)
                 self.repo = hg.repository(self.ui, branchpath)
+        self.before()
 
     def putcommit(self, files, parents, commit):
         seen = {}
