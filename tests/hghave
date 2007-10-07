@@ -21,17 +21,20 @@ def matchoutput(cmd, regexp, ignorestatus=False):
     ret = fh.close()
     return (ignorestatus or ret is None) and r.search(s)
 
-def has_symlink():
-    return hasattr(os, "symlink")
-
-def has_fifo():
-    return hasattr(os, "mkfifo")
-
 def has_cvs():
     return matchoutput('cvs --version 2>&1', r'Concurrent Versions System')
 
 def has_cvsps():
     return matchoutput('cvsps -h -q 2>&1', r'cvsps version', True)
+
+def has_eol_in_paths():
+    try:
+        fd, path = tempfile.mkstemp(prefix=tempprefix, suffix='\n\r')
+        os.close(fd)
+        os.remove(path)
+        return True
+    except:
+        return False
 
 def has_executablebit():
     fd, path = tempfile.mkstemp(prefix=tempprefix)
@@ -43,14 +46,8 @@ def has_executablebit():
     finally:
         os.remove(path)
 
-def has_eol_in_paths():
-    try:
-        fd, path = tempfile.mkstemp(prefix=tempprefix, suffix='\n\r')
-        os.close(fd)
-        os.remove(path)
-        return True
-    except:
-        return False
+def has_fifo():
+    return hasattr(os, "mkfifo")
 
 def has_hotshot():
     try:
@@ -82,13 +79,16 @@ def has_svn_bindings():
     except ImportError:
         return False
 
+def has_symlink():
+    return hasattr(os, "symlink")
+
 checks = {
     "cvs": (has_cvs, "cvs client"),
     "cvsps": (has_cvsps, "cvsps utility"),
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),
-    "git": (has_git, "git command line client"),
     "fifo": (has_fifo, "named pipes"),
+    "git": (has_git, "git command line client"),
     "hotshot": (has_hotshot, "python hotshot module"),
     "lsprof": (has_lsprof, "python lsprof module"),
     "svn": (has_svn, "subversion client and admin tools"),
