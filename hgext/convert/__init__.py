@@ -19,11 +19,11 @@ from mercurial.i18n import _
 
 commands.norepo += " convert debugsvnlog"
 
-converters = [convert_cvs, convert_git, convert_svn, mercurial_source,
-              mercurial_sink, darcs_source]
-
+sink_converters = [mercurial_sink]
+source_converters = [convert_cvs, convert_git, convert_svn,
+                     mercurial_source, darcs_source]
 def convertsource(ui, path, **opts):
-    for c in converters:
+    for c in source_converters:
         try:
             return c.getcommit and c(ui, path, **opts)
         except (AttributeError, NoRepo):
@@ -33,7 +33,7 @@ def convertsource(ui, path, **opts):
 def convertsink(ui, path):
     if not os.path.isdir(path):
         raise util.Abort("%s: not a directory" % path)
-    for c in converters:
+    for c in sink_converters:
         try:
             return c.putcommit and c(ui, path)
         except (AttributeError, NoRepo):
