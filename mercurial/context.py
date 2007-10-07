@@ -426,9 +426,11 @@ class workingctx(changectx):
         """generate a manifest corresponding to the working directory"""
 
         man = self._parents[0].manifest().copy()
-        is_exec = util.execfunc(self._repo.root, man.execf)
-        is_link = util.linkfunc(self._repo.root, man.linkf)
         copied = self._repo.dirstate.copies()
+        is_exec = util.execfunc(self._repo.root,
+                                lambda p: man.execf(copied.get(p,p)))
+        is_link = util.linkfunc(self._repo.root,
+                                lambda p: man.linkf(copied.get(p,p)))
         modified, added, removed, deleted, unknown = self._status[:5]
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
@@ -482,7 +484,8 @@ class workingctx(changectx):
                 return ''
         
         pnode = self._parents[0].changeset()[0]
-        node, flag = self._repo.manifest.find(pnode, path)
+        orig = self._repo.dirstate.copies().get(path, path)
+        node, flag = self._repo.manifest.find(pnode, orig)
         is_link = util.linkfunc(self._repo.root, lambda p: 'l' in flag)
         is_exec = util.execfunc(self._repo.root, lambda p: 'x' in flag)
         try:
