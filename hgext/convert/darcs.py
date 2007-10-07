@@ -61,8 +61,11 @@ class darcs_source(converter_source):
         shutil.rmtree(self.tmppath, ignore_errors=True)
 
     def _run(self, cmd, *args, **kwargs):
-        cmdline = 'darcs %s --repodir=%r %s </dev/null' % (
-            cmd, kwargs.get('repodir', self.path), ' '.join(args))
+        cmdline = ['darcs', cmd, '--repodir', kwargs.get('repodir', self.path)]
+        cmdline += args
+        cmdline = [util.shellquote(arg) for arg in cmdline]
+        cmdline += ['<', util.nulldev]
+        cmdline = util.quotecommand(' '.join(cmdline))
         self.ui.debug(cmdline, '\n')
         return os.popen(cmdline, 'r')
 
