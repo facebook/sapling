@@ -121,9 +121,9 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
     int do_stat;
     char *path;
     int ret;
-    
+
     {
-	static char *kwlist[] = { "path", "stat", NULL };    
+	static char *kwlist[] = { "path", "stat", NULL };
 	PyObject *statobj = NULL;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O:listdir", kwlist,
@@ -132,7 +132,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 
 	do_stat = statobj && PyObject_IsTrue(statobj);
     }
-    
+
     if ((dir = opendir(path)) == NULL) {
 	list = PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
         goto bail;
@@ -187,9 +187,9 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	    py_kind = Py_None;
 	    Py_INCREF(Py_None);
 	}
-		
+
         val = PyTuple_New(do_stat ? 3 : 2);
-	
+
         if (name == NULL || py_kind == NULL || val == NULL) {
             Py_XDECREF(name);
             Py_XDECREF(py_kind);
@@ -208,7 +208,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
         PyList_Append(list, val);
         Py_DECREF(val);
     }
-    
+
     PyList_Sort(list);
 
     if (do_stat || !all_kinds) {
@@ -226,7 +226,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	    int kind;
 
 	    kind = py_kind == Py_None ? -1 : PyInt_AsLong(py_kind);
-	    
+
 	    if (kind != -1 && !do_stat)
 		continue;
 
@@ -240,7 +240,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 		    if (ctor_args == NULL)
 			goto bail;
 		}
-		
+
 		st = (struct listdir_stat *)
 		    PyObject_CallObject((PyObject *) &listdir_stat_type,
 					ctor_args);
