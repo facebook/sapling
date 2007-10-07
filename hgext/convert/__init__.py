@@ -26,8 +26,10 @@ def convertsource(ui, path, **opts):
     for c in source_converters:
         try:
             return c.getcommit and c(ui, path, **opts)
-        except (AttributeError, NoRepo):
+        except AttributeError:
             pass
+        except NoRepo, inst:
+            ui.note(_("convert: %s\n") % inst)
     raise util.Abort('%s: unknown repository type' % path)
 
 def convertsink(ui, path):
@@ -36,8 +38,10 @@ def convertsink(ui, path):
     for c in sink_converters:
         try:
             return c.putcommit and c(ui, path)
-        except (AttributeError, NoRepo):
+        except AttributeError:
             pass
+        except NoRepo, inst:
+            ui.note(_("convert: %s\n") % inst)
     raise util.Abort('%s: unknown repository type' % path)
 
 class converter(object):

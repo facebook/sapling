@@ -100,9 +100,7 @@ class convert_svn(converter_source):
         try:
             SubversionException
         except NameError:
-            msg = 'subversion python bindings could not be loaded\n'
-            ui.warn(msg)
-            raise NoRepo(msg)
+            raise NoRepo('subversion python bindings could not be loaded')
 
         self.encoding = locale.getpreferredencoding()
         self.lastrevs = {}
