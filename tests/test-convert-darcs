@@ -1,0 +1,52 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" darcs || exit 80
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert=" >> $HGRCPATH
+echo 'hgext.graphlog =' >> $HGRCPATH
+
+DARCS_EMAIL='test@example.org'; export DARCS_EMAIL
+
+echo % initialize darcs repo
+mkdir darcs-repo
+cd darcs-repo
+darcs init
+echo a > a
+darcs record -a -l -m p0
+cd ..
+
+echo % branch and update
+darcs get darcs-repo darcs-clone
+cd darcs-clone
+echo c >> a
+echo c > c
+darcs record -a -l -m p1.1
+cd ..
+
+echo % update source
+cd darcs-repo
+echo b >> a
+echo b > b
+darcs record -a -l -m p1.2
+
+echo % merge branch
+darcs pull -a ../darcs-clone
+echo e > a
+darcs record -a -l -m p2
+cd ..
+
+glog()
+{
+    hg glog --template '#rev# "#desc|firstline#" files: #files#\n' "$@"
+}
+
+hg convert darcs-repo darcs-repo-hg
+# The converter does not currently handle patch conflicts very well.
+# When they occur, it reverts *all* changes and moves forward,
+# letting the conflict resolving patch fix collisions.
+# Unfortunately, non-conflicting changes, like the addition of the
+# "c" file in p1.1 patch are reverted too.
+# Just to say that manifest not listing "c" here is a bug.
+glog -R darcs-repo-hg
+hg -R darcs-repo-hg manifest --debug
