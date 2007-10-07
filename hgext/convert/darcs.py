@@ -100,15 +100,15 @@ class darcs_source(converter_source):
                       desc=desc.strip(), parents=self.parents[rev])
 
     def pull(self, rev):
-        output, status = self.run('pull %r --all --match="hash %s"' %
-                                  (self.path, rev),
+        output, status = self.run('pull', self.path, '--all',
+                                  '--match', 'hash %s' % rev,
                                   '--no-test', '--no-posthook',
-                                  '--external-merge=/bin/false',
+                                  '--external-merge', '/bin/false',
                                   repodir=self.tmppath)
         if status:
             if output.find('We have conflicts in') == -1:
                 self.checkexit(status, output)
-            output, status = self.run('revert --all', repodir=self.tmppath)
+            output, status = self.run('revert', '--all', repodir=self.tmppath)
             self.checkexit(status, output)
 
     def getchanges(self, rev):
