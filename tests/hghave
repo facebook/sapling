@@ -27,6 +27,9 @@ def has_cvs():
 def has_cvsps():
     return matchoutput('cvsps -h -q 2>&1', r'cvsps version', True)
 
+def has_darcs():
+    return matchoutput('darcs', 'darcs version', True)
+
 def has_eol_in_paths():
     try:
         fd, path = tempfile.mkstemp(prefix=tempprefix, suffix='\n\r')
@@ -85,6 +88,7 @@ def has_symlink():
 checks = {
     "cvs": (has_cvs, "cvs client"),
     "cvsps": (has_cvsps, "cvsps utility"),
+    "darcs": (has_darcs, "darcs client"),
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),
     "fifo": (has_fifo, "named pipes"),
