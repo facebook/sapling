@@ -3708,7 +3708,7 @@ proc rereadrefs {} {
 }
 
 proc vdiff {withparent} {
-    global env rowmenuid selectedline lineid
+    global env rowmenuid selectedline lineid hgvdiff
 
     if {![info exists rowmenuid]} return
     set curid $rowmenuid
@@ -3722,7 +3722,7 @@ proc vdiff {withparent} {
 	set otherid $lineid($selectedline)
     }
     set range "$otherid:$curid"
-    if {[catch {exec $env(HG) --config ui.report_untrusted=false vdiff -r $range} err]} {
+    if {[catch {exec $env(HG) --config ui.report_untrusted=false $hgvdiff -r $range} err]} {
         # Ignore errors, this is just visualization
     }
 }
