@@ -109,6 +109,65 @@ static inline int mode_to_kind(int mode)
 	return mode;
 }
 
+static PyObject *statfiles(PyObject *list, PyObject *ctor_args, int keep,
+			   char *path, int len, DIR *dir)
+{
+	struct stat buf;
+	struct stat *stp = &buf;
+	int kind;
+	int ret;
+	ssize_t i;
+	ssize_t size = PyList_Size(list);
+#ifdef AT_SYMLINK_NOFOLLOW
+	int dfd = dirfd(dir);
+#endif
+
+	for (i = 0; i < size; i++) {
+		PyObject *elt = PyList_GetItem(list, i);
+		char *name = PyString_AsString(PyTuple_GET_ITEM(elt, 0));
+		PyObject *py_st = NULL;
+		PyObject *py_kind = PyTuple_GET_ITEM(elt, 1);
+
+		kind = py_kind == Py_None ? -1 : PyInt_AsLong(py_kind);
+		if (kind != -1 && !keep)
+			continue;
+
+		strncat(path + len + 1, name, PATH_MAX - len);
+		path[PATH_MAX] = 0;
+
+		if (keep) {
+			py_st = PyObject_CallObject(
+				(PyObject *)&listdir_stat_type, ctor_args);
+			if (!py_st)
+				return PyErr_NoMemory();
+			stp = &((struct listdir_stat *)py_st)->st;
+			PyTuple_SET_ITEM(elt, 2, py_st);
+		}
+
+#ifdef AT_SYMLINK_NOFOLLOW
+		ret = fstatat(dfd, name, stp, AT_SYMLINK_NOFOLLOW);
+#else
+		ret = lstat(path, stp);
+#endif
+		if (ret == -1)
+			return PyErr_SetFromErrnoWithFilename(PyExc_OSError,
+							      path);
+
+		if (kind == -1)
+			kind = mode_to_kind(stp->st_mode);
+
+		if (py_kind == Py_None && kind != -1) {
+			py_kind = PyInt_FromLong(kind);
+			if (!py_kind)
+				return PyErr_NoMemory();
+			Py_XDECREF(Py_None);
+			PyTuple_SET_ITEM(elt, 1, py_kind);
+		}
+	}
+
+	return 0;
+}
+
 static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	static char *kwlist[] = { "path", "stat", NULL };
@@ -116,16 +175,13 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	DIR *dir = NULL;
 	struct dirent *ent;
 	PyObject *list = NULL;
+	PyObject *err = NULL;
 	PyObject *ctor_args = NULL;
 	int all_kinds = 1;
 	char full_path[PATH_MAX + 10];
 	int path_len;
 	int do_stat;
 	char *path;
-	int ret;
-	ssize_t size;
-	ssize_t i;
-	int dfd;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O:listdir", kwlist,
 					 &path, &path_len, &statobj))
@@ -210,70 +266,17 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	}
 
 	PyList_Sort(list);
-	size = PyList_Size(list);
-#ifdef AT_SYMLINK_NOFOLLOW
-	dfd = dirfd(dir);
-#endif
 
-	if (!(do_stat || !all_kinds))
-		goto done;
-
-	for (i = 0; i < size; i++) {
-		PyObject *elt = PyList_GetItem(list, i);
-		char *name = PyString_AsString(PyTuple_GET_ITEM(elt, 0));
-		PyObject *py_st = NULL;
-		PyObject *py_kind = PyTuple_GET_ITEM(elt, 1);
-		struct listdir_stat *st;
-		struct stat buf;
-		struct stat *stp = &buf;
-		int kind;
-
-		kind = py_kind == Py_None ? -1 : PyInt_AsLong(py_kind);
-
-		if (kind != -1 && !do_stat)
-			continue;
-
-		strncat(full_path + path_len + 1, name, PATH_MAX - path_len);
-		full_path[PATH_MAX] = 0;
-
-		if (do_stat) {
-			if (!ctor_args) {
-				ctor_args = PyTuple_New(0);
-				if (!ctor_args)
-					goto bail;
-			}
-
-			py_st = PyObject_CallObject((PyObject *)&listdir_stat_type,
-						    ctor_args);
-			st = (struct listdir_stat *)py_st;
-			if (!st)
-				goto bail;
-			stp = &st->st;
-			PyTuple_SET_ITEM(elt, 2, py_st);
-		}
-
-#ifdef AT_SYMLINK_NOFOLLOW
-		ret = fstatat(dfd, name, stp, AT_SYMLINK_NOFOLLOW);
-#else
-		ret = lstat(full_path, stp);
-#endif
-		if (ret == -1) {
-			list = PyErr_SetFromErrnoWithFilename(PyExc_OSError,
-							      full_path);
+	if (do_stat) {
+		ctor_args = PyTuple_New(0);
+		if (!ctor_args)
 			goto bail;
-		}
-		if (kind == -1)
-			kind = mode_to_kind(stp->st_mode);
-
-		if (py_kind == Py_None && kind != -1) {
-			py_kind = PyInt_FromLong(kind);
-			if (!py_kind)
-				goto bail;
-			Py_XDECREF(Py_None);
-			PyTuple_SET_ITEM(elt, 1, py_kind);
-		}
 	}
 
+	if (do_stat || !all_kinds)
+		if (statfiles(list, ctor_args, do_stat, full_path, path_len,
+			      dir))
+			goto bail;
 	goto done;
 
  bail:
@@ -283,7 +286,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	Py_XDECREF(ctor_args);
 	if (dir)
 		closedir(dir);
-	return list;
+	return err ? err : list;
 }
 
 
