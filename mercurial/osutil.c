@@ -109,6 +109,66 @@ static inline int mode_to_kind(int mode)
 	return mode;
 }
 
+static PyObject *listfiles(PyObject *list, DIR *dir, int stat, int *all)
+{
+	struct dirent *ent;
+	PyObject *name, *py_kind, *val;
+
+	for (ent = readdir(dir); ent; ent = readdir(dir)) {
+		int kind = -1;
+
+		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
+			continue;
+
+#ifdef DT_REG
+		if (!stat)
+			switch (ent->d_type) {
+			case DT_REG: kind = S_IFREG; break;
+			case DT_DIR: kind = S_IFDIR; break;
+			case DT_LNK: kind = S_IFLNK; break;
+			case DT_BLK: kind = S_IFBLK; break;
+			case DT_CHR: kind = S_IFCHR; break;
+			case DT_FIFO: kind = S_IFIFO; break;
+			case DT_SOCK: kind = S_IFSOCK; break;
+			default:
+				*all = 0;
+				break;
+			}
+#else
+		*all = 0;
+#endif
+
+		if (kind != -1)
+			py_kind = PyInt_FromLong(kind);
+		else {
+			py_kind = Py_None;
+			Py_INCREF(Py_None);
+		}
+
+		val = PyTuple_New(stat ? 3 : 2);
+		name = PyString_FromString(ent->d_name);
+
+		if (!name || !py_kind || !val) {
+			Py_XDECREF(name);
+			Py_XDECREF(py_kind);
+			Py_XDECREF(val);
+			return PyErr_NoMemory();
+		}
+
+		PyTuple_SET_ITEM(val, 0, name);
+		PyTuple_SET_ITEM(val, 1, py_kind);
+		if (stat) {
+			PyTuple_SET_ITEM(val, 2, Py_None);
+			Py_INCREF(Py_None);
+		}
+
+		PyList_Append(list, val);
+		Py_DECREF(val);
+	}
+
+	return 0;
+}
+
 static PyObject *statfiles(PyObject *list, PyObject *ctor_args, int keep,
 			   char *path, int len, DIR *dir)
 {
@@ -173,7 +233,6 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	static char *kwlist[] = { "path", "stat", NULL };
 	PyObject *statobj = NULL;
 	DIR *dir = NULL;
-	struct dirent *ent;
 	PyObject *list = NULL;
 	PyObject *err = NULL;
 	PyObject *ctor_args = NULL;
@@ -202,60 +261,9 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	strncpy(full_path, path, PATH_MAX);
 	full_path[path_len] = '/';
 
-	for (ent = readdir(dir); ent; ent = readdir(dir)) {
-		PyObject *name = NULL;
-		PyObject *py_kind = NULL;
-		PyObject *val = NULL;
-		int kind = -1;
-
-		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
-			continue;
-
-#ifdef DT_REG
-		if (!do_stat)
-			switch (ent->d_type) {
-			case DT_REG: kind = S_IFREG; break;
-			case DT_DIR: kind = S_IFDIR; break;
-			case DT_LNK: kind = S_IFLNK; break;
-			case DT_BLK: kind = S_IFBLK; break;
-			case DT_CHR: kind = S_IFCHR; break;
-			case DT_FIFO: kind = S_IFIFO; break;
-			case DT_SOCK: kind = S_IFSOCK; break;
-			default:
-				all_kinds = 0;
-				break;
-			}
-#else
-		all_kinds = 0;
-#endif
-
-		name = PyString_FromString(ent->d_name);
-		if (kind != -1)
-			py_kind = PyInt_FromLong(kind);
-		else {
-			py_kind = Py_None;
-			Py_INCREF(Py_None);
-		}
-
-		val = PyTuple_New(do_stat ? 3 : 2);
-
-		if (!name || !py_kind || !val) {
-			Py_XDECREF(name);
-			Py_XDECREF(py_kind);
-			Py_XDECREF(val);
-			goto bail;
-		}
-
-		PyTuple_SET_ITEM(val, 0, name);
-		PyTuple_SET_ITEM(val, 1, py_kind);
-		if (do_stat) {
-			PyTuple_SET_ITEM(val, 2, Py_None);
-			Py_INCREF(Py_None);
-		}
-
-		PyList_Append(list, val);
-		Py_DECREF(val);
-	}
+	err = listfiles(list, dir, do_stat, &all_kinds);
+	if (err)
+		goto bail;
 
 	PyList_Sort(list);
 
