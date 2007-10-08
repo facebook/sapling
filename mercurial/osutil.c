@@ -223,6 +223,9 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 		char *name = PyString_AsString(PyTuple_GET_ITEM(elt, 0));
 		PyObject *py_st = NULL;
 		PyObject *py_kind = PyTuple_GET_ITEM(elt, 1);
+		struct listdir_stat *st;
+		struct stat buf;
+		struct stat *stp = &buf;
 		int kind;
 
 		kind = py_kind == Py_None ? -1 : PyInt_AsLong(py_kind);
@@ -234,48 +237,33 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 		full_path[PATH_MAX] = 0;
 
 		if (do_stat) {
-			struct listdir_stat *st;
-
 			if (!ctor_args) {
 				ctor_args = PyTuple_New(0);
 				if (!ctor_args)
 					goto bail;
 			}
 
-			st = (struct listdir_stat *)
-				PyObject_CallObject((PyObject *)&listdir_stat_type,
+			py_st = PyObject_CallObject((PyObject *)&listdir_stat_type,
 						    ctor_args);
-
+			st = (struct listdir_stat *)py_st;
 			if (!st)
 				goto bail;
-#ifdef AT_SYMLINK_NOFOLLOW
-			ret = fstatat(dfd, name, &st->st, AT_SYMLINK_NOFOLLOW);
-#else
-			ret = lstat(full_path, &st->st);
-#endif
-			if (ret == -1) {
-				list = PyErr_SetFromErrnoWithFilename(PyExc_OSError,
-									      full_path);
-				goto bail;
-			}
-			if (kind == -1)
-				kind = mode_to_kind(st->st.st_mode);
-			py_st = (PyObject *)st;
-		} else {
-			struct stat buf;
-#ifdef AT_SYMLINK_NOFOLLOW
-			ret = fstatat(dfd, ent->d_name, &buf, AT_SYMLINK_NOFOLLOW);
-#else
-			ret = lstat(full_path, &buf);
-#endif
-			if (ret == -1) {
-				list = PyErr_SetFromErrnoWithFilename(PyExc_OSError,
-									      full_path);
-				goto bail;
-			}
-			if (kind == -1)
-				kind = mode_to_kind(buf.st_mode);
+			stp = &st->st;
+			PyTuple_SET_ITEM(elt, 2, py_st);
 		}
+
+#ifdef AT_SYMLINK_NOFOLLOW
+		ret = fstatat(dfd, name, stp, AT_SYMLINK_NOFOLLOW);
+#else
+		ret = lstat(full_path, stp);
+#endif
+		if (ret == -1) {
+			list = PyErr_SetFromErrnoWithFilename(PyExc_OSError,
+							      full_path);
+			goto bail;
+		}
+		if (kind == -1)
+			kind = mode_to_kind(stp->st_mode);
 
 		if (py_kind == Py_None && kind != -1) {
 			py_kind = PyInt_FromLong(kind);
@@ -283,14 +271,6 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 				goto bail;
 			Py_XDECREF(Py_None);
 			PyTuple_SET_ITEM(elt, 1, py_kind);
-		}
-
-		if (do_stat) {
-			if (!py_st) {
-				py_st = Py_None;
-				Py_INCREF(Py_None);
-			}
-			PyTuple_SET_ITEM(elt, 2, py_st);
 		}
 	}
 
