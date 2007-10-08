@@ -109,10 +109,17 @@ static inline int mode_to_kind(int mode)
 	return mode;
 }
 
-static PyObject *listfiles(PyObject *list, DIR *dir, int stat, int *all)
+static PyObject *listfiles(PyObject *list, DIR *dir,
+			   int keep_stat, int *need_stat)
 {
 	struct dirent *ent;
 	PyObject *name, *py_kind, *val;
+
+#ifdef DT_REG
+	*need_stat = 0;
+#else
+	*need_stat = 1;
+#endif
 
 	for (ent = readdir(dir); ent; ent = readdir(dir)) {
 		int kind = -1;
@@ -121,7 +128,7 @@ static PyObject *listfiles(PyObject *list, DIR *dir, int stat, int *all)
 			continue;
 
 #ifdef DT_REG
-		if (!stat)
+		if (!keep_stat)
 			switch (ent->d_type) {
 			case DT_REG: kind = S_IFREG; break;
 			case DT_DIR: kind = S_IFDIR; break;
@@ -131,11 +138,9 @@ static PyObject *listfiles(PyObject *list, DIR *dir, int stat, int *all)
 			case DT_FIFO: kind = S_IFIFO; break;
 			case DT_SOCK: kind = S_IFSOCK; break;
 			default:
-				*all = 0;
+				*need_stat = 0;
 				break;
 			}
-#else
-		*all = 0;
 #endif
 
 		if (kind != -1)
@@ -145,7 +150,7 @@ static PyObject *listfiles(PyObject *list, DIR *dir, int stat, int *all)
 			Py_INCREF(Py_None);
 		}
 
-		val = PyTuple_New(stat ? 3 : 2);
+		val = PyTuple_New(keep_stat ? 3 : 2);
 		name = PyString_FromString(ent->d_name);
 
 		if (!name || !py_kind || !val) {
@@ -157,7 +162,7 @@ static PyObject *listfiles(PyObject *list, DIR *dir, int stat, int *all)
 
 		PyTuple_SET_ITEM(val, 0, name);
 		PyTuple_SET_ITEM(val, 1, py_kind);
-		if (stat) {
+		if (keep_stat) {
 			PyTuple_SET_ITEM(val, 2, Py_None);
 			Py_INCREF(Py_None);
 		}
@@ -231,53 +236,48 @@ static PyObject *statfiles(PyObject *list, PyObject *ctor_args, int keep,
 static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	static char *kwlist[] = { "path", "stat", NULL };
-	PyObject *statobj = NULL;
 	DIR *dir = NULL;
+	PyObject *statobj = NULL;
 	PyObject *list = NULL;
 	PyObject *err = NULL;
 	PyObject *ctor_args = NULL;
-	int all_kinds = 1;
+	char *path;
 	char full_path[PATH_MAX + 10];
 	int path_len;
-	int do_stat;
-	char *path;
+	int need_stat, keep_stat;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O:listdir", kwlist,
 					 &path, &path_len, &statobj))
 		goto bail;
 
-	do_stat = statobj && PyObject_IsTrue(statobj);
+	keep_stat = statobj && PyObject_IsTrue(statobj);
 
 	dir = opendir(path);
 	if (!dir) {
-		list = PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
+		err = PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
 		goto bail;
 	}
 
 	list = PyList_New(0);
-	if (!list)
+	ctor_args = PyTuple_New(0);
+	if (!list || !ctor_args)
 		goto bail;
 
 	strncpy(full_path, path, PATH_MAX);
 	full_path[path_len] = '/';
 
-	err = listfiles(list, dir, do_stat, &all_kinds);
+	err = listfiles(list, dir, keep_stat, &need_stat);
 	if (err)
 		goto bail;
 
 	PyList_Sort(list);
 
-	if (do_stat) {
-		ctor_args = PyTuple_New(0);
-		if (!ctor_args)
-			goto bail;
-	}
+	if (!keep_stat && !need_stat)
+		goto done;
 
-	if (do_stat || !all_kinds)
-		if (statfiles(list, ctor_args, do_stat, full_path, path_len,
-			      dir))
-			goto bail;
-	goto done;
+	err = statfiles(list, ctor_args, keep_stat, full_path, path_len, dir);
+	if (!err)
+		goto done;
 
  bail:
 	Py_XDECREF(list);
