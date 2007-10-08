@@ -118,7 +118,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	PyObject *list = NULL;
 	PyObject *ctor_args = NULL;
 	int all_kinds = 1;
-	char *full_path;
+	char full_path[PATH_MAX + 10];
 	int path_len;
 	int do_stat;
 	char *path;
@@ -143,8 +143,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (!list)
 		goto bail;
 
-	full_path = alloca(path_len + PATH_MAX + 2);
-	memcpy(full_path, path, path_len);
+	strncpy(full_path, path, PATH_MAX);
 	full_path[path_len] = '/';
 
 	for (ent = readdir(dir); ent; ent = readdir(dir)) {
@@ -229,7 +228,9 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 			if (kind != -1 && !do_stat)
 				continue;
 
-			strcpy(full_path + path_len + 1, name);
+			strncat(full_path + path_len + 1, name,
+				PATH_MAX - path_len);
+			full_path[PATH_MAX] = 0;
 
 			if (do_stat) {
 				struct listdir_stat *st;
