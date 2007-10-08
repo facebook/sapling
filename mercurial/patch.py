@@ -59,6 +59,7 @@ def extract(ui, fileobj):
 
         subject = msg['Subject']
         user = msg['From']
+        gitsendmail = 'git-send-email' in msg.get('X-Mailer', '')
         # should try to parse msg['Date']
         date = None
         nodeid = None
@@ -111,7 +112,7 @@ def extract(ui, fileobj):
                             nodeid = line[10:]
                         elif line.startswith("# Parent "):
                             parents.append(line[10:])
-                    elif line == '---' and 'git-send-email' in msg['X-Mailer']:
+                    elif line == '---' and gitsendmail:
                         ignoretext = True
                     if not line.startswith('# ') and not ignoretext:
                         cfp.write(line)

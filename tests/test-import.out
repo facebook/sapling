@@ -111,6 +111,7 @@ applying patch from stdin
 email patch
 
 next line
+---
 % hg import in a subdirectory
 requesting all changes
 adding changesets

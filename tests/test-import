@@ -94,10 +94,11 @@ hg --cwd b tip | grep second
 rm -r b
 
 # subject: duplicate detection, removal of [PATCH]
+# The '---' tests the gitsendmail handling without proper mail headers
 cat > mkmsg2.py <<EOF
 import email.Message, sys
 msg = email.Message.Message()
-msg.set_payload('email patch\n\nnext line\n' + open('tip.patch').read())
+msg.set_payload('email patch\n\nnext line\n---\n' + open('tip.patch').read())
 msg['Subject'] = '[PATCH] email patch'
 msg['From'] = 'email patcher'
 sys.stdout.write(msg.as_string())
