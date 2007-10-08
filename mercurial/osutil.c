@@ -206,36 +206,28 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 		PyObject *name = NULL;
 		PyObject *py_kind = NULL;
 		PyObject *val = NULL;
-		unsigned char d_type;
 		int kind = -1;
 
 		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
 			continue;
 
 #ifdef DT_REG
-		if (do_stat)
-			d_type = 0;
-		else
-			d_type = ent->d_type;
-#else
-		d_type = 0;
-#endif
-
-		switch (d_type) {
-#ifdef DT_REG
-		case DT_REG: kind = S_IFREG; break;
-		case DT_DIR: kind = S_IFDIR; break;
-		case DT_LNK: kind = S_IFLNK; break;
-		case DT_BLK: kind = S_IFBLK; break;
-		case DT_CHR: kind = S_IFCHR; break;
-		case DT_FIFO: kind = S_IFIFO; break;
-		case DT_SOCK: kind = S_IFSOCK; break;
-#endif
-		default:
-			if (all_kinds)
+		if (!do_stat)
+			switch (ent->d_type) {
+			case DT_REG: kind = S_IFREG; break;
+			case DT_DIR: kind = S_IFDIR; break;
+			case DT_LNK: kind = S_IFLNK; break;
+			case DT_BLK: kind = S_IFBLK; break;
+			case DT_CHR: kind = S_IFCHR; break;
+			case DT_FIFO: kind = S_IFIFO; break;
+			case DT_SOCK: kind = S_IFSOCK; break;
+			default:
 				all_kinds = 0;
-			break;
-		}
+				break;
+			}
+#else
+		all_kinds = 0;
+#endif
 
 		name = PyString_FromString(ent->d_name);
 		if (kind != -1)
