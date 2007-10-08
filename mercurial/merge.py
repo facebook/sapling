@@ -180,7 +180,7 @@ def findcopies(repo, m1, m2, ma, limit):
                 continue
             # named changed on only one side?
             if ca.path() == c.path() or ca.path() == c2.path():
-                if c == ca or c2 == ca: # no merge needed, ignore copy
+                if c == ca and c2 == ca: # no merge needed, ignore copy
                     continue
                 copy[c.path()] = of
 
@@ -280,7 +280,7 @@ def findcopies(repo, m1, m2, ma, limit):
 
 def symmetricdifference(repo, rev1, rev2):
     """symmetric difference of the sets of ancestors of rev1 and rev2
-    
+
     I.e. revisions that are ancestors of rev1 or rev2, but not both.
     """
     # basic idea:
