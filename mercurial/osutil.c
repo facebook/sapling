@@ -17,6 +17,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#if defined(__sun)
+#define dirfd(dir) ((dir)->dd_fd)
+#endif
+
 struct listdir_stat {
 	PyObject_HEAD
 	struct stat st;
