@@ -28,12 +28,12 @@ struct listdir_stat {
         return PyInt_FromLong(((struct listdir_stat *)self)->st.name); \
     }
 
-listdir_slot(st_dev);
-listdir_slot(st_mode);
-listdir_slot(st_nlink);
-listdir_slot(st_size);
-listdir_slot(st_mtime);
-listdir_slot(st_ctime);
+listdir_slot(st_dev)
+listdir_slot(st_mode)
+listdir_slot(st_nlink)
+listdir_slot(st_size)
+listdir_slot(st_mtime)
+listdir_slot(st_ctime)
 
 static struct PyGetSetDef listdir_stat_getsets[] = {
 	{"st_dev", listdir_stat_st_dev, 0, 0, 0},
