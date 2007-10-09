@@ -587,7 +587,7 @@ class queue:
             top = revlog.bin(self.applied[-1].rev)
             pp = repo.dirstate.parents()
             if top not in pp:
-                raise util.Abort(_("queue top not at same revision as working directory"))
+                raise util.Abort(_("working directory revision is not qtip"))
             return top
         return None
     def check_localchanges(self, repo, force=False, refresh=True):
