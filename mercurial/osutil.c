@@ -197,7 +197,7 @@ static PyObject *statfiles(PyObject *list, PyObject *ctor_args, int keep,
 		if (kind != -1 && !keep)
 			continue;
 
-		strncat(path + len + 1, name, PATH_MAX - len);
+		strncpy(path + len + 1, name, PATH_MAX - len);
 		path[PATH_MAX] = 0;
 
 		if (keep) {
