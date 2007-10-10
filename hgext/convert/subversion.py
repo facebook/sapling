@@ -128,6 +128,7 @@ class convert_svn(converter_source):
             self.paths = {}
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
         except SubversionException, e:
+            ui.print_exc()
             raise NoRepo("couldn't open SVN repo %s" % self.url)
 
         if rev:

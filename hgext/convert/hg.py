@@ -174,7 +174,11 @@ class mercurial_source(converter_source):
         converter_source.__init__(self, ui, path, rev)
         try:
             self.repo = hg.repository(self.ui, path)
-        except:
+            # try to provoke an exception if this isn't really a hg
+            # repo, but some other bogus compatible-looking url
+            self.repo.heads()
+        except hg.RepoError:
+            ui.print_exc()
             raise NoRepo("could not open hg repo %s as source" % path)
         self.lastrev = None
         self.lastctx = None
