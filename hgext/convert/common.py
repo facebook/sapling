@@ -20,13 +20,15 @@ class NoRepo(Exception): pass
 SKIPREV = 'SKIP'
 
 class commit(object):
-    def __init__(self, author, date, desc, parents, branch=None, rev=None):
+    def __init__(self, author, date, desc, parents, branch=None, rev=None,
+                 extra={}):
         self.author = author
         self.date = date
         self.desc = desc
         self.parents = parents
         self.branch = branch
         self.rev = rev
+        self.extra = extra
 
 class converter_source(object):
     """Conversion source interface"""

@@ -108,7 +108,7 @@ class mercurial_sink(converter_sink):
         p2 = parents.pop(0)
 
         text = commit.desc
-        extra = {}
+        extra = commit.extra.copy()
         if self.branchnames and commit.branch:
             extra['branch'] = commit.branch
         if commit.rev:
@@ -230,7 +230,7 @@ class mercurial_source(converter_source):
         parents = [hex(p.node()) for p in ctx.parents() if p.node() != nullid]
         return commit(author=ctx.user(), date=util.datestr(ctx.date()),
                       desc=ctx.description(), parents=parents,
-                      branch=ctx.branch())
+                      branch=ctx.branch(), extra=ctx.extra())
 
     def gettags(self):
         tags = [t for t in self.repo.tagslist() if t[0] != 'tip']
