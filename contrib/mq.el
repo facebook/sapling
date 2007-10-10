@@ -63,6 +63,9 @@
 (make-variable-buffer-local 'mq-prev-buffer)
 (put 'mq-prev-buffer 'permanent-local t)
 
+(defvar mq-top nil)
+(make-variable-buffer-local 'mq-top)
+(put 'mq-top 'permanent-local t)
 
 ;;; Global keymap.
 
