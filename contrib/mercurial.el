@@ -666,7 +666,11 @@ This is useful across reverts and merges, where a context is likely
 to have moved a little, but not really changed."
   (let ((point-context (hg-position-context (point)))
 	(mark-context (let ((mark (mark-marker)))
-			(and mark (hg-position-context mark)))))
+			(and mark
+			     ;; make sure active mark
+			     (marker-buffer mark)
+			     (marker-position mark)
+			     (hg-position-context mark)))))
     (list point-context mark-context)))
 
 (defun hg-find-context (ctx)
