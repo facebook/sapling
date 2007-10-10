@@ -69,32 +69,36 @@
 
 ;;; Global keymap.
 
-(defvar mq-global-map (make-sparse-keymap))
-(fset 'mq-global-map mq-global-map)
-(global-set-key mq-global-prefix 'mq-global-map)
-(define-key mq-global-map "." 'mq-push)
-(define-key mq-global-map ">" 'mq-push-all)
-(define-key mq-global-map "," 'mq-pop)
-(define-key mq-global-map "<" 'mq-pop-all)
-(define-key mq-global-map "=" 'mq-diff)
-(define-key mq-global-map "r" 'mq-refresh)
-(define-key mq-global-map "e" 'mq-refresh-edit)
-(define-key mq-global-map "i" 'mq-new)
-(define-key mq-global-map "n" 'mq-next)
-(define-key mq-global-map "o" 'mq-signoff)
-(define-key mq-global-map "p" 'mq-previous)
-(define-key mq-global-map "s" 'mq-edit-series)
-(define-key mq-global-map "t" 'mq-top)
+(defvar mq-global-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "." 'mq-push)
+    (define-key map ">" 'mq-push-all)
+    (define-key map "," 'mq-pop)
+    (define-key map "<" 'mq-pop-all)
+    (define-key map "=" 'mq-diff)
+    (define-key map "r" 'mq-refresh)
+    (define-key map "e" 'mq-refresh-edit)
+    (define-key map "i" 'mq-new)
+    (define-key map "n" 'mq-next)
+    (define-key map "o" 'mq-signoff)
+    (define-key map "p" 'mq-previous)
+    (define-key map "s" 'mq-edit-series)
+    (define-key map "t" 'mq-top)
+    map))
+
+(global-set-key mq-global-prefix mq-global-map)
 
 (add-minor-mode 'mq-mode 'mq-mode)
 
 
 ;;; Refresh edit mode keymap.
 
-(defvar mq-edit-mode-map (make-sparse-keymap))
-(define-key mq-edit-mode-map "\C-c\C-c" 'mq-edit-finish)
-(define-key mq-edit-mode-map "\C-c\C-k" 'mq-edit-kill)
-(define-key mq-edit-mode-map "\C-c\C-s" 'mq-signoff)
+(defvar mq-edit-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-c" 'mq-edit-finish)
+    (define-key map "\C-c\C-k" 'mq-edit-kill)
+    (define-key map "\C-c\C-s" 'mq-signoff)
+    map))
 
 
 ;;; Helper functions.
