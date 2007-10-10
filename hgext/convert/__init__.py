@@ -19,27 +19,32 @@ from mercurial.i18n import _
 
 commands.norepo += " convert debugsvnlog"
 
-sink_converters = [mercurial_sink]
-source_converters = [convert_cvs, convert_git, svn_source,
-                     mercurial_source, darcs_source]
-def convertsource(ui, path, **opts):
-    for c in source_converters:
+source_converters = [
+    ('cvs', convert_cvs),
+    ('git', convert_git),
+    ('svn', svn_source),
+    ('hg', mercurial_source),
+    ('darcs', darcs_source),
+    ]
+
+sink_converters = [
+    ('hg', mercurial_sink),
+    ]
+
+def convertsource(ui, path, type, rev):
+    for name, source in source_converters:
         try:
-            return c.getcommit and c(ui, path, **opts)
-        except AttributeError:
-            pass
+            if not type or name == type:
+                return source(ui, path, rev)
         except NoRepo, inst:
             ui.note(_("convert: %s\n") % inst)
     raise util.Abort('%s: unknown repository type' % path)
 
-def convertsink(ui, path):
-    if not os.path.isdir(path):
-        raise util.Abort("%s: not a directory" % path)
-    for c in sink_converters:
+def convertsink(ui, path, type):
+    for name, sink in sink_converters:
         try:
-            return c.putcommit and c(ui, path)
-        except AttributeError:
-            pass
+            if not type or name == type:
+                return sink(ui, path)
         except NoRepo, inst:
             ui.note(_("convert: %s\n") % inst)
     raise util.Abort('%s: unknown repository type' % path)
@@ -350,37 +355,14 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         dest = hg.defaultdest(src) + "-hg"
         ui.status("assuming destination %s\n" % dest)
 
-    # Try to be smart and initalize things when required
-    created = False
-    if os.path.isdir(dest):
-        if len(os.listdir(dest)) > 0:
-            try:
-                hg.repository(ui, dest)
-                ui.status("destination %s is a Mercurial repository\n" % dest)
-            except hg.RepoError:
-                raise util.Abort(
-                    "destination directory %s is not empty.\n"
-                    "Please specify an empty directory to be initialized\n"
-                    "or an already initialized mercurial repository"
-                    % dest)
-        else:
-            ui.status("initializing destination %s repository\n" % dest)
-            hg.repository(ui, dest, create=True)
-            created = True
-    elif os.path.exists(dest):
-        raise util.Abort("destination %s exists and is not a directory" % dest)
-    else:
-        ui.status("initializing destination %s repository\n" % dest)
-        hg.repository(ui, dest, create=True)
-        created = True
-
-    destc = convertsink(ui, dest)
+    destc = convertsink(ui, dest, opts.get('dest_type'))
 
     try:
-        srcc = convertsource(ui, src, rev=opts.get('rev'))
+        srcc = convertsource(ui, src, opts.get('source_type'),
+                             opts.get('rev'))
     except Exception:
-        if created:
-            shutil.rmtree(dest, True)
+        for path in destc.created:
+            shutil.rmtree(path, True)
         raise
 
     fmap = opts.get('filemap')
@@ -402,8 +384,10 @@ cmdtable = {
     "convert":
         (convert,
          [('A', 'authors', '', 'username mapping filename'),
+          ('d', 'dest-type', '', 'destination repository type'),
           ('', 'filemap', '', 'remap file names using contents of file'),
           ('r', 'rev', '', 'import up to target revision REV'),
+          ('s', 'source-type', '', 'source repository type'),
           ('', 'datesort', None, 'try to sort changesets by date')],
          'hg convert [OPTION]... SOURCE [DEST [MAPFILE]]'),
     "debugsvnlog":

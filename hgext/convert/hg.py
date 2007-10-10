@@ -21,10 +21,22 @@ class mercurial_sink(converter_sink):
         self.clonebranches = ui.configbool('convert', 'hg.clonebranches', False)
         self.tagsbranch = ui.config('convert', 'hg.tagsbranch', 'default')
         self.lastbranch = None
-        try:
-            self.repo = hg.repository(self.ui, path)
-        except:
-            raise NoRepo("could not open hg repo %s as sink" % path)
+        if os.path.isdir(path) and len(os.listdir(path)) > 0:
+            try:
+                self.repo = hg.repository(self.ui, path)
+                ui.status(_('destination %s is a Mercurial repository\n') %
+                          path)
+            except hg.RepoError, err:
+                ui.print_exc()
+                raise NoRepo(err.args[0])
+        else:
+            try:
+                ui.status(_('initializing destination %s repository\n') % path)
+                self.repo = hg.repository(self.ui, path, create=True)
+                self.created.append(path)
+            except hg.RepoError, err:
+                ui.print_exc()
+                raise NoRepo("could not create hg repo %s as sink" % path)
         self.lock = None
         self.wlock = None
         self.filemapmode = False

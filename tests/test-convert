@@ -3,6 +3,8 @@
 echo "[extensions]" >> $HGRCPATH
 echo "convert=" >> $HGRCPATH
 
+hg help convert
+
 hg init a
 cd a
 echo a > a
@@ -19,3 +21,17 @@ hg ci -d'4 0' -me
 cd ..
 hg convert a 2>&1 | grep -v 'subversion python bindings could not be loaded'
 hg --cwd a-hg pull ../a
+
+touch bogusfile
+echo % should fail
+hg convert a bogusfile
+
+mkdir bogusdir
+chmod 000 bogusdir
+
+echo % should fail
+hg convert a bogusdir
+
+echo % should succeed
+chmod 700 bogusdir
+hg convert a bogusdir
