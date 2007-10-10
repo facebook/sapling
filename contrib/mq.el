@@ -18,6 +18,7 @@
 ;; C-l').  If not, write to the Free Software Foundation, Inc., 59
 ;; Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
+(eval-when-compile (require 'cl))
 (require 'mercurial)
 
 
@@ -102,7 +103,7 @@ May return nil, meaning \"use the default\"."
 		  (hg-chomp (hg-run0 (or source "qseries"))) "\n")))
     (when force
       (completing-read (format "Patch%s: " (or prompt ""))
-		       (map 'list 'cons patches patches)
+		       (mapcar (lambda (x) (cons x x)) patches)
 		       nil
 		       nil
 		       nil

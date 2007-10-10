@@ -521,7 +521,7 @@ directory names from the file system.  We do not penalise URLs."
 	    (completing-read (format "Revision%s (%s): "
 				     (or prompt "")
 				     (or default "tip"))
-			     (map 'list 'cons revs revs)
+			     (mapcar (lambda (x) (cons x x)) revs)
 			     nil
 			     nil
 			     nil
