@@ -10,7 +10,7 @@ from cvs import convert_cvs
 from darcs import darcs_source
 from git import convert_git
 from hg import mercurial_source, mercurial_sink
-from subversion import convert_svn, debugsvnlog
+from subversion import svn_source, debugsvnlog
 import filemap
 
 import os, shutil
@@ -20,7 +20,7 @@ from mercurial.i18n import _
 commands.norepo += " convert debugsvnlog"
 
 sink_converters = [mercurial_sink]
-source_converters = [convert_cvs, convert_git, convert_svn,
+source_converters = [convert_cvs, convert_git, svn_source,
                      mercurial_source, darcs_source]
 def convertsource(ui, path, **opts):
     for c in source_converters:
