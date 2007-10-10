@@ -117,7 +117,8 @@ class converter_sink(object):
     def __init__(self, ui, path):
         """Initialize conversion sink (or raise NoRepo("message")
         exception if path is not a valid repository)"""
-        raise NotImplementedError()
+        self.path = path
+        self.ui = ui
 
     def getheads(self):
         """Return a list of this repository's heads"""

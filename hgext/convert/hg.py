@@ -16,8 +16,7 @@ from common import NoRepo, commit, converter_source, converter_sink
 
 class mercurial_sink(converter_sink):
     def __init__(self, ui, path):
-        self.path = path
-        self.ui = ui
+        converter_sink.__init__(self, ui, path)
         self.branchnames = ui.configbool('convert', 'hg.usebranchnames', True)
         self.clonebranches = ui.configbool('convert', 'hg.clonebranches', False)
         self.tagsbranch = ui.config('convert', 'hg.tagsbranch', 'default')
