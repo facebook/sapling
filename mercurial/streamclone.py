@@ -63,7 +63,7 @@ def stream_out(repo, fileobj, untrusted=False):
 
     # get consistent snapshot of repo. lock during scan so lock not
     # needed while we stream, and commits can happen.
-    lock = None
+    repolock = None
     try:
         try:
             repolock = repo.lock()
