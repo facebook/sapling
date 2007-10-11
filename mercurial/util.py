@@ -484,7 +484,7 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
             l = len(pats)
             if l < 2:
                 raise
-            a, b = matchfn(pats[:l/2], tail), matchfn(pats[l/2:], tail)
+            a, b = matchfn(pats[:l//2], tail), matchfn(pats[l//2:], tail)
             return lambda s: a(s) or b(s)
         except re.error:
             for k, p in pats:
