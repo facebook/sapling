@@ -1408,7 +1408,7 @@ class chunkbuffer(object):
         Returns less than L bytes if the iterator runs dry."""
         if l > len(self.buf) and self.iter:
             # Clamp to a multiple of self.targetsize
-            targetsize = self.targetsize * ((l // self.targetsize) + 1)
+            targetsize = max(l, self.targetsize)
             collector = cStringIO.StringIO()
             collector.write(self.buf)
             collected = len(self.buf)
@@ -1420,7 +1420,10 @@ class chunkbuffer(object):
             if collected < targetsize:
                 self.iter = False
             self.buf = collector.getvalue()
-        s, self.buf = self.buf[:l], buffer(self.buf, l)
+        if len(self.buf) == l:
+            s, self.buf = self.buf, ''
+        else:
+            s, self.buf = self.buf[:l], buffer(self.buf, l)
         return s
 
 def filechunkiter(f, size=65536, limit=None):
