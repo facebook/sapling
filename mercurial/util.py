@@ -1399,27 +1399,26 @@ class chunkbuffer(object):
     def __init__(self, in_iter):
         """in_iter is the iterator that's iterating over the input chunks.
         targetsize is how big a buffer to try to maintain."""
-        self.in_iter = iter(in_iter)
+        self.iter = iter(in_iter)
         self.buf = ''
         self.targetsize = 2**16
-        self.iterempty = False
 
     def read(self, l):
         """Read L bytes of data from the iterator of chunks of data.
         Returns less than L bytes if the iterator runs dry."""
-        if l > len(self.buf) and not self.iterempty:
+        if l > len(self.buf) and self.iter:
             # Clamp to a multiple of self.targetsize
             targetsize = self.targetsize * ((l // self.targetsize) + 1)
             collector = cStringIO.StringIO()
             collector.write(self.buf)
             collected = len(self.buf)
-            for chunk in self.in_iter:
+            for chunk in self.iter:
                 collector.write(chunk)
                 collected += len(chunk)
                 if collected >= targetsize:
                     break
             if collected < targetsize:
-                self.iterempty = True
+                self.iter = False
             self.buf = collector.getvalue()
         s, self.buf = self.buf[:l], buffer(self.buf, l)
         return s
