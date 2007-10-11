@@ -74,7 +74,7 @@ class appender:
         return ret
 
     def write(self, s):
-        self.data.append(s)
+        self.data.append(str(s))
         self.offset += len(s)
 
 class changelog(revlog):

@@ -903,7 +903,7 @@ class revlog(object):
         if node == nullid:
             return ""
         if self._cache and self._cache[0] == node:
-            return self._cache[2]
+            return str(self._cache[2])
 
         # look up what we need to read
         text = None
@@ -924,7 +924,7 @@ class revlog(object):
         # do we have useful data cached?
         if self._cache and self._cache[1] >= base and self._cache[1] < rev:
             base = self._cache[1]
-            text = self._cache[2]
+            text = str(self._cache[2])
             self._loadindex(base, rev + 1)
         else:
             self._loadindex(base, rev + 1)

@@ -1421,7 +1421,7 @@ class chunkbuffer(object):
                 self.iter = False
             self.buf = collector.getvalue()
         if len(self.buf) == l:
-            s, self.buf = self.buf, ''
+            s, self.buf = str(self.buf), ''
         else:
             s, self.buf = self.buf[:l], buffer(self.buf, l)
         return s
