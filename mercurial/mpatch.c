@@ -311,8 +311,7 @@ static int apply(char *buf, const char *orig, int len, struct flist *l)
 /* recursively generate a patch of all bins between start and end */
 static struct flist *fold(PyObject *bins, int start, int end)
 {
-	int len;
-	ssize_t blen;
+	int len, blen;
 	const char *buffer;
 
 	if (start + 1 == end) {
@@ -338,8 +337,7 @@ patches(PyObject *self, PyObject *args)
 	struct flist *patch;
 	const char *in;
 	char *out;
-	int len, outlen;
-	ssize_t inlen;
+	int len, inlen, outlen;
 
 	if (!PyArg_ParseTuple(args, "OO:mpatch", &text, &bins))
 		return NULL;
