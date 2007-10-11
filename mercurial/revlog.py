@@ -61,12 +61,27 @@ def compress(text):
     """ generate a possibly-compressed representation of text """
     if not text:
         return ("", text)
-    if len(text) < 44:
+    l = len(text)
+    if l < 44:
         if text[0] == '\0':
             return ("", text)
         return ('u', text)
-    bin = _compress(text)
-    if len(bin) > len(text):
+    elif l > 1000000:
+        # zlib makes an internal copy, thus doubling memory usage for
+        # large files, so lets do this in pieces
+        z = zlib.compressobj()
+        p = []
+        pos = 0
+        while pos < l:
+            pos2 = pos + 2**20
+            p.append(z.compress(text[pos:pos2]))
+            pos = pos2
+        p.append(z.flush())
+        if sum(map(len, p)) < l:
+            bin = "".join(p)
+    else:
+        bin = _compress(text)
+    if len(bin) > l:
         if text[0] == '\0':
             return ("", text)
         return ('u', text)
