@@ -106,19 +106,19 @@ int inline cmp(struct line *a, struct line *b)
 
 static int equatelines(struct line *a, int an, struct line *b, int bn)
 {
-	int i, j, buckets = 1, t;
-	int scale = 32;
-	struct pos *h;
+	int i, j, buckets = 1, t, scale;
+	struct pos *h = NULL;
 
 	/* build a hash table of the next highest power of 2 */
 	while (buckets < bn + 1)
 		buckets *= 2;
 
 	/* try to allocate a large hash table to avoid collisions */
-	do {
-		scale /= 2;
+	for (scale = 4; scale; scale /= 2) {
 		h = (struct pos *)malloc(scale * buckets * sizeof(struct pos));
-	} while (!h && scale != 1);
+		if (h)
+			break;
+	}
 
 	if (!h)
 		return 0;
@@ -147,7 +147,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 	}
 
 	/* compute popularity threshold */
-	t = (bn >= 200) ? bn / 100 : bn + 1;
+	t = (bn >= 4000) ? bn / 1000 : bn + 1;
 
 	/* match items in a to their equivalence class in b */
 	for (i = 0; i < an; i++) {
