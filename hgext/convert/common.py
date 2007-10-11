@@ -20,13 +20,15 @@ class NoRepo(Exception): pass
 SKIPREV = 'SKIP'
 
 class commit(object):
-    def __init__(self, author, date, desc, parents, branch=None, rev=None):
+    def __init__(self, author, date, desc, parents, branch=None, rev=None,
+                 extra={}):
         self.author = author
         self.date = date
         self.desc = desc
         self.parents = parents
         self.branch = branch
         self.rev = rev
+        self.extra = extra
 
 class converter_source(object):
     """Conversion source interface"""
@@ -114,8 +116,13 @@ class converter_sink(object):
 
     def __init__(self, ui, path):
         """Initialize conversion sink (or raise NoRepo("message")
-        exception if path is not a valid repository)"""
-        raise NotImplementedError()
+        exception if path is not a valid repository)
+
+        created is a list of paths to remove if a fatal error occurs
+        later"""
+        self.ui = ui
+        self.path = path
+        self.created = []
 
     def getheads(self):
         """Return a list of this repository's heads"""

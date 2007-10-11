@@ -82,6 +82,7 @@ class changectx(object):
     def files(self): return self._changeset[3]
     def description(self): return self._changeset[4]
     def branch(self): return self._changeset[5].get("branch")
+    def extra(self): return self._changeset[5]
     def tags(self): return self._repo.nodetags(self._node)
 
     def parents(self):

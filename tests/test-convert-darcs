@@ -7,6 +7,7 @@ echo "convert=" >> $HGRCPATH
 echo 'hgext.graphlog =' >> $HGRCPATH
 
 DARCS_EMAIL='test@example.org'; export DARCS_EMAIL
+HOME=do_not_use_HOME_darcs; export HOME
 
 echo % initialize darcs repo
 mkdir darcs-repo

@@ -93,9 +93,9 @@ def debugsvnlog(ui, **opts):
     get_log_child(sys.stdout, *args)
 
 # SVN conversion code stolen from bzr-svn and tailor
-class convert_svn(converter_source):
+class svn_source(converter_source):
     def __init__(self, ui, url, rev=None):
-        super(convert_svn, self).__init__(ui, url, rev=rev)
+        super(svn_source, self).__init__(ui, url, rev=rev)
 
         try:
             SubversionException
@@ -128,6 +128,7 @@ class convert_svn(converter_source):
             self.paths = {}
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
         except SubversionException, e:
+            ui.print_exc()
             raise NoRepo("couldn't open SVN repo %s" % self.url)
 
         if rev:

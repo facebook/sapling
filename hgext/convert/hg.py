@@ -16,16 +16,27 @@ from common import NoRepo, commit, converter_source, converter_sink
 
 class mercurial_sink(converter_sink):
     def __init__(self, ui, path):
-        self.path = path
-        self.ui = ui
+        converter_sink.__init__(self, ui, path)
         self.branchnames = ui.configbool('convert', 'hg.usebranchnames', True)
         self.clonebranches = ui.configbool('convert', 'hg.clonebranches', False)
         self.tagsbranch = ui.config('convert', 'hg.tagsbranch', 'default')
         self.lastbranch = None
-        try:
-            self.repo = hg.repository(self.ui, path)
-        except:
-            raise NoRepo("could not open hg repo %s as sink" % path)
+        if os.path.isdir(path) and len(os.listdir(path)) > 0:
+            try:
+                self.repo = hg.repository(self.ui, path)
+                ui.status(_('destination %s is a Mercurial repository\n') %
+                          path)
+            except hg.RepoError, err:
+                ui.print_exc()
+                raise NoRepo(err.args[0])
+        else:
+            try:
+                ui.status(_('initializing destination %s repository\n') % path)
+                self.repo = hg.repository(self.ui, path, create=True)
+                self.created.append(path)
+            except hg.RepoError, err:
+                ui.print_exc()
+                raise NoRepo("could not create hg repo %s as sink" % path)
         self.lock = None
         self.wlock = None
         self.filemapmode = False
@@ -108,7 +119,7 @@ class mercurial_sink(converter_sink):
         p2 = parents.pop(0)
 
         text = commit.desc
-        extra = {}
+        extra = commit.extra.copy()
         if self.branchnames and commit.branch:
             extra['branch'] = commit.branch
         if commit.rev:
@@ -174,7 +185,11 @@ class mercurial_source(converter_source):
         converter_source.__init__(self, ui, path, rev)
         try:
             self.repo = hg.repository(self.ui, path)
-        except:
+            # try to provoke an exception if this isn't really a hg
+            # repo, but some other bogus compatible-looking url
+            self.repo.heads()
+        except hg.RepoError:
+            ui.print_exc()
             raise NoRepo("could not open hg repo %s as source" % path)
         self.lastrev = None
         self.lastctx = None
@@ -226,7 +241,7 @@ class mercurial_source(converter_source):
         parents = [hex(p.node()) for p in ctx.parents() if p.node() != nullid]
         return commit(author=ctx.user(), date=util.datestr(ctx.date()),
                       desc=ctx.description(), parents=parents,
-                      branch=ctx.branch())
+                      branch=ctx.branch(), extra=ctx.extra())
 
     def gettags(self):
         tags = [t for t in self.repo.tagslist() if t[0] != 'tip']
