@@ -62,10 +62,9 @@ def compress(text):
     if not text:
         return ("", text)
     l = len(text)
+    bin = None
     if l < 44:
-        if text[0] == '\0':
-            return ("", text)
-        return ('u', text)
+        pass
     elif l > 1000000:
         # zlib makes an internal copy, thus doubling memory usage for
         # large files, so lets do this in pieces
@@ -81,7 +80,7 @@ def compress(text):
             bin = "".join(p)
     else:
         bin = _compress(text)
-    if len(bin) > l:
+    if bin is None or len(bin) > l:
         if text[0] == '\0':
             return ("", text)
         return ('u', text)
