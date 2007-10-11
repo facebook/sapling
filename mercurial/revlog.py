@@ -1140,7 +1140,8 @@ class revlog(object):
                 #    raise RevlogError(_("already have %s") % hex(node[:4]))
                 chain = node
                 continue
-            delta = chunk[80:]
+            delta = buffer(chunk, 80)
+            del chunk
 
             for p in (p1, p2):
                 if not p in self.nodemap:
@@ -1159,17 +1160,22 @@ class revlog(object):
             # current size.
 
             if chain == prev:
-                tempd = compress(delta)
-                cdelta = tempd[0] + tempd[1]
+                cdelta = compress(delta)
+                cdeltalen = len(cdelta[0]) + len(cdelta[1])
                 textlen = mdiff.patchedsize(textlen, delta)
 
-            if chain != prev or (end - start + len(cdelta)) > textlen * 2:
+            if chain != prev or (end - start + cdeltalen) > textlen * 2:
                 # flush our writes here so we can read it in revision
                 if dfh:
                     dfh.flush()
                 ifh.flush()
                 text = self.revision(chain)
-                text = mdiff.patches(text, [delta])
+                if len(text) == 0:
+                    # skip over trivial delta header
+                    text = buffer(delta, 12)
+                else:
+                    text = mdiff.patches(text, [delta])
+                del delta
                 chk = self._addrevision(text, transaction, link, p1, p2, None,
                                         ifh, dfh)
                 if not dfh and not self._inline:
@@ -1181,20 +1187,22 @@ class revlog(object):
                     raise RevlogError(_("consistency error adding group"))
                 textlen = len(text)
             else:
-                e = (offset_type(end, 0), len(cdelta), textlen, base,
+                e = (offset_type(end, 0), cdeltalen, textlen, base,
                      link, self.rev(p1), self.rev(p2), node)
                 self.index.insert(-1, e)
                 self.nodemap[node] = r
                 entry = self._io.packentry(e, self.node, self.version, r)
                 if self._inline:
                     ifh.write(entry)
-                    ifh.write(cdelta)
+                    ifh.write(cdelta[0])
+                    ifh.write(cdelta[1])
                     self.checkinlinesize(transaction, ifh)
                     if not self._inline:
                         dfh = self.opener(self.datafile, "a")
                         ifh = self.opener(self.indexfile, "a")
                 else:
-                    dfh.write(cdelta)
+                    dfh.write(cdelta[0])
+                    dfh.write(cdelta[1])
                     ifh.write(entry)
 
             t, r, chain, prev = r, r + 1, node, node
