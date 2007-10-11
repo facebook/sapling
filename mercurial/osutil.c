@@ -7,9 +7,7 @@
  the GNU General Public License, incorporated herein by reference.
 */
 
-#define _ATFILE_SOURCE
 #include <Python.h>
-#include <alloca.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <string.h>
@@ -101,18 +99,6 @@ static PyTypeObject listdir_stat_type = {
 	listdir_stat_new,          /* tp_new */
 };
 
-static inline int mode_to_kind(int mode)
-{
-	if (S_ISREG(mode)) return S_IFREG;
-	if (S_ISDIR(mode)) return S_IFDIR;
-	if (S_ISLNK(mode)) return S_IFLNK;
-	if (S_ISBLK(mode)) return S_IFBLK;
-	if (S_ISCHR(mode)) return S_IFCHR;
-	if (S_ISFIFO(mode)) return S_IFIFO;
-	if (S_ISSOCK(mode)) return S_IFSOCK;
-	return mode;
-}
-
 static PyObject *listfiles(PyObject *list, DIR *dir,
 			   int keep_stat, int *need_stat)
 {
@@ -187,9 +173,6 @@ static PyObject *statfiles(PyObject *list, PyObject *ctor_args, int keep,
 	int ret;
 	ssize_t i;
 	ssize_t size = PyList_Size(list);
-#ifdef AT_SYMLINK_NOFOLLOW
-	int dfd = dirfd(dir);
-#endif
 
 	for (i = 0; i < size; i++) {
 		PyObject *elt = PyList_GetItem(list, i);
@@ -213,17 +196,29 @@ static PyObject *statfiles(PyObject *list, PyObject *ctor_args, int keep,
 			PyTuple_SET_ITEM(elt, 2, py_st);
 		}
 
-#ifdef AT_SYMLINK_NOFOLLOW
-		ret = fstatat(dfd, name, stp, AT_SYMLINK_NOFOLLOW);
-#else
 		ret = lstat(path, stp);
-#endif
 		if (ret == -1)
 			return PyErr_SetFromErrnoWithFilename(PyExc_OSError,
 							      path);
 
-		if (kind == -1)
-			kind = mode_to_kind(stp->st_mode);
+		if (kind == -1) {
+			if (S_ISREG(stp->st_mode))
+				kind = S_IFREG;
+			else if (S_ISDIR(stp->st_mode))
+				kind = S_IFDIR;
+			else if (S_ISLNK(stp->st_mode))
+				kind = S_IFLNK;
+			else if (S_ISBLK(stp->st_mode))
+				kind = S_IFBLK;
+			else if (S_ISCHR(stp->st_mode))
+				kind = S_IFCHR;
+			else if (S_ISFIFO(stp->st_mode))
+				kind = S_IFIFO;
+			else if (S_ISSOCK(stp->st_mode))
+				kind = S_IFSOCK;
+			else
+				kind = stp->st_mode;
+		}
 
 		if (py_kind == Py_None && kind != -1) {
 			py_kind = PyInt_FromLong(kind);
