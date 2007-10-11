@@ -55,7 +55,7 @@ static PyObject *mpatch_Error;
 
 struct frag {
 	int start, end, len;
-	char *data;
+	const char *data;
 };
 
 struct flist {
@@ -221,11 +221,11 @@ static struct flist *combine(struct flist *a, struct flist *b)
 }
 
 /* decode a binary patch into a hunk list */
-static struct flist *decode(char *bin, int len)
+static struct flist *decode(const char *bin, int len)
 {
 	struct flist *l;
 	struct frag *lt;
-	char *data = bin + 12, *end = bin + len;
+	const char *data = bin + 12, *end = bin + len;
 	char decode[12]; /* for dealing with alignment issues */
 
 	/* assume worst case size, we won't have many of these lists */
@@ -284,7 +284,7 @@ static int calcsize(int len, struct flist *l)
 	return outlen;
 }
 
-static int apply(char *buf, char *orig, int len, struct flist *l)
+static int apply(char *buf, const char *orig, int len, struct flist *l)
 {
 	struct frag *f = l->head;
 	int last = 0;
@@ -312,13 +312,17 @@ static int apply(char *buf, char *orig, int len, struct flist *l)
 static struct flist *fold(PyObject *bins, int start, int end)
 {
 	int len;
+	ssize_t blen;
+	const char *buffer;
 
 	if (start + 1 == end) {
 		/* trivial case, output a decoded list */
 		PyObject *tmp = PyList_GetItem(bins, start);
 		if (!tmp)
 			return NULL;
-		return decode(PyString_AsString(tmp), PyString_Size(tmp));
+		if (PyObject_AsCharBuffer(tmp, &buffer, &blen))
+			return NULL;
+		return decode(buffer, blen);
 	}
 
 	/* divide and conquer, memory management is elsewhere */
@@ -332,10 +336,12 @@ patches(PyObject *self, PyObject *args)
 {
 	PyObject *text, *bins, *result;
 	struct flist *patch;
-	char *in, *out;
+	const char *in;
+	char *out;
 	int len, outlen;
+	ssize_t inlen;
 
-	if (!PyArg_ParseTuple(args, "SO:mpatch", &text, &bins))
+	if (!PyArg_ParseTuple(args, "OO:mpatch", &text, &bins))
 		return NULL;
 
 	len = PyList_Size(bins);
@@ -345,11 +351,14 @@ patches(PyObject *self, PyObject *args)
 		return text;
 	}
 
+	if (PyObject_AsCharBuffer(text, &in, &inlen))
+		return NULL;
+
 	patch = fold(bins, 0, len);
 	if (!patch)
 		return NULL;
 
-	outlen = calcsize(PyString_Size(text), patch);
+	outlen = calcsize(inlen, patch);
 	if (outlen < 0) {
 		result = NULL;
 		goto cleanup;
@@ -359,9 +368,8 @@ patches(PyObject *self, PyObject *args)
 		result = NULL;
 		goto cleanup;
 	}
-	in = PyString_AsString(text);
 	out = PyString_AsString(result);
-	if (!apply(out, in, PyString_Size(text), patch)) {
+	if (!apply(out, in, inlen, patch)) {
 		Py_DECREF(result);
 		result = NULL;
 	}
