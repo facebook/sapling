@@ -42,3 +42,73 @@ o  1 changeb files: b
 |
 o  0 changea files: b
 
+# now tests that it works with trunk/branches/tags layout
+
+% initial svn import
+Adding         projA/trunk
+Adding         projA/branches
+Adding         projA/tags
+
+Committed revision 4.
+% update svn repository
+Checked out revision 4.
+A         letter.txt
+Adding         letter.txt
+Transmitting file data .
+Committed revision 5.
+Sending        letter.txt
+Transmitting file data .
+Committed revision 6.
+
+Committed revision 7.
+Sending        letter.txt
+Transmitting file data .
+Committed revision 8.
+% convert to hg once
+initializing destination A-hg repository
+scanning source...
+sorting...
+converting...
+3 init projA
+2 hello
+1 world
+0 nice day
+updating tags
+% update svn repository again
+A         letter2.txt
+Sending        letter.txt
+Adding         letter2.txt
+Transmitting file data ..
+Committed revision 9.
+
+Committed revision 10.
+Sending        letter2.txt
+Transmitting file data .
+Committed revision 11.
+% test incremental conversion
+destination A-hg is a Mercurial repository
+scanning source...
+sorting...
+converting...
+1 second letter
+0 work in progress
+updating tags
+o  7 update tags files: .hgtags
+|
+o  6 work in progress files: letter2.txt
+|
+o  5 second letter files: letter.txt letter2.txt
+|
+o  4 update tags files: .hgtags
+|
+o  3 nice day files: letter.txt
+|
+o  2 world files: letter.txt
+|
+o  1 hello files: letter.txt
+|
+o  0 init projA files:
+
+tip
+v0.2
+v0.1

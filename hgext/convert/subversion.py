@@ -8,6 +8,8 @@
 #   Relative path to the trunk (default: "trunk")
 # convert.svn.branches
 #   Relative path to tree of branches (default: "branches")
+# convert.svn.tags
+#   Relative path to tree of tags (default: "tags")
 #
 # Set these in a hgrc, or on the command line as follows:
 #
@@ -170,11 +172,13 @@ class svn_source(converter_source):
         rpath = self.url.strip('/')
         cfgtrunk = self.ui.config('convert', 'svn.trunk')
         cfgbranches = self.ui.config('convert', 'svn.branches')
+        cfgtags = self.ui.config('convert', 'svn.tags')
         trunk = (cfgtrunk or 'trunk').strip('/')
         branches = (cfgbranches or 'branches').strip('/')
-        if self.exists(trunk, rev) and self.exists(branches, rev):
-            self.ui.note('found trunk at %r and branches at %r\n' %
-                         (trunk, branches))
+        tags = (cfgtags or 'tags').strip('/')
+        if self.exists(trunk, rev) and self.exists(branches, rev) and self.exists(tags, rev):
+            self.ui.note('found trunk at %r, branches at %r and tags at %r\n' %
+                         (trunk, branches, tags))
             oldmodule = self.module
             self.module += '/' + trunk
             lt = self.latest(self.module, self.last_changed)
@@ -184,18 +188,25 @@ class svn_source(converter_source):
                                         self.ctx)
             for branch in branchnames.keys():
                 if oldmodule:
-                    module = '/' + oldmodule + '/' + branches + '/' + branch
+                    module = oldmodule + '/' + branches + '/' + branch
                 else:
                     module = '/' + branches + '/' + branch
                 brevnum = self.latest(module, self.last_changed)
                 brev = self.revid(brevnum, module)
                 self.ui.note('found branch %s at %d\n' % (branch, brevnum))
                 self.heads.append(brev)
-        elif cfgtrunk or cfgbranches:
-            raise util.Abort('trunk/branch layout expected, but not found')
+
+            if oldmodule:
+                self.tags = '%s/%s' % (oldmodule, tags) 
+            else:
+                self.tags = '/%s' % tags
+
+        elif cfgtrunk or cfgbranches or cfgtags:
+            raise util.Abort('trunk/branch/tags layout expected, but not found')
         else:
             self.ui.note('working with one branch\n')
             self.heads = [self.head]
+            self.tags  = tags
         return self.heads
 
     def getfile(self, file, rev):
@@ -268,15 +279,15 @@ class svn_source(converter_source):
         tags = {}
         start = self.revnum(self.head)
         try:
-            for entry in self.get_log(['/tags'], 0, start):
+            for entry in self.get_log([self.tags], 0, start):
                 orig_paths, revnum, author, date, message = entry
                 for path in orig_paths:
-                    if not path.startswith('/tags/'):
+                    if not path.startswith(self.tags+'/'):
                         continue
                     ent = orig_paths[path]
                     source = ent.copyfrom_path
                     rev = ent.copyfrom_rev
-                    tag = path.split('/', 2)[2]
+                    tag = path.split('/')[-1]
                     tags[tag] = self.revid(rev, module=source)
         except SubversionException, (inst, num):
             self.ui.note('no tags found at revision %d\n' % start)
