@@ -158,10 +158,11 @@ class svn_source(converter_source):
 
     def exists(self, path, optrev):
         try:
-            return svn.client.ls(self.url.rstrip('/') + '/' + path,
+            svn.client.ls(self.url.rstrip('/') + '/' + path,
                                  optrev, False, self.ctx)
+            return True
         except SubversionException, err:
-            return []
+            return False
 
     def getheads(self):
         # detect standard /branches, /tags, /trunk layout
