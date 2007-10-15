@@ -7,6 +7,7 @@
  the GNU General Public License, incorporated herein by reference.
 */
 
+#define _ATFILE_SOURCE
 #include <Python.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -14,10 +15,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#if defined(__sun)
-#define dirfd(dir) ((dir)->dd_fd)
-#endif
 
 struct listdir_stat {
 	PyObject_HEAD
@@ -165,7 +162,7 @@ static PyObject *listfiles(PyObject *list, DIR *dir,
 }
 
 static PyObject *statfiles(PyObject *list, PyObject *ctor_args, int keep,
-			   char *path, int len, DIR *dir)
+			   char *path, int len, int dfd)
 {
 	struct stat buf;
 	struct stat *stp = &buf;
@@ -196,7 +193,11 @@ static PyObject *statfiles(PyObject *list, PyObject *ctor_args, int keep,
 			PyTuple_SET_ITEM(elt, 2, py_st);
 		}
 
+#ifdef AT_SYMLINK_NOFOLLOW
+		ret = fstatat(dfd, name, stp, AT_SYMLINK_NOFOLLOW);
+#else
 		ret = lstat(path, stp);
+#endif
 		if (ret == -1)
 			return PyErr_SetFromErrnoWithFilename(PyExc_OSError,
 							      path);
@@ -244,6 +245,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	char full_path[PATH_MAX + 10];
 	int path_len;
 	int need_stat, keep_stat;
+	int dfd;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O:listdir", kwlist,
 					 &path, &path_len, &statobj))
@@ -251,7 +253,13 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 
 	keep_stat = statobj && PyObject_IsTrue(statobj);
 
+#ifdef AT_SYMLINK_NOFOLLOW
+	dfd = open(path, O_RDONLY);
+	dir = fdopendir(dfd);
+#else
 	dir = opendir(path);
+	dfd = -1;
+#endif
 	if (!dir) {
 		err = PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
 		goto bail;
@@ -274,7 +282,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (!keep_stat && !need_stat)
 		goto done;
 
-	err = statfiles(list, ctor_args, keep_stat, full_path, path_len, dir);
+	err = statfiles(list, ctor_args, keep_stat, full_path, path_len, dfd);
 	if (!err)
 		goto done;
 
