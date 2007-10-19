@@ -126,12 +126,12 @@ echo % new.patch, b.patch: Guarded. c.patch: Applied. d.patch: Guarded.
 hg qseries -v
 
 qappunappv()
-(
+{
     for command in qapplied "qapplied -v" qunapplied "qunapplied -v"; do
         echo % hg $command
         hg $command
     done
-)
+}
 
 hg qpop -a
 hg qguard -l
