@@ -257,16 +257,22 @@ def run(cmd):
                        % options.timeout)
     return ret, splitnewlines(output)
 
-def run_one(test):
+def run_one(test, skips):
     '''tristate output:
     None -> skipped
     True -> passed
     False -> failed'''
 
+    def skip(msg):
+        if not verbose:
+            skips.append((test, msg))
+            sys.stdout.write('s')
+            sys.stdout.flush()
+        else:
+            print "\nSkipping %s: %s" % (test, msg)
+        return None
+
     vlog("# Test", test)
-    if not verbose:
-        sys.stdout.write('.')
-        sys.stdout.flush()
 
     # create a fresh hgrc
     hgrc = file(HGRCPATH, 'w+')
@@ -299,20 +305,17 @@ def run_one(test):
     elif lctest.endswith('.bat'):
         # do not run batch scripts on non-windows
         if os.name != 'nt':
-            print '\nSkipping %s: batch script' % test
-            return None
+            return skip("batch script")
         # To reliably get the error code from batch files on WinXP,
         # the "cmd /c call" prefix is needed. Grrr
         cmd = 'cmd /c call "%s"' % testpath
     else:
         # do not run shell scripts on windows
         if os.name == 'nt':
-            print '\nSkipping %s: shell script' % test
-            return None
+            return skip("shell script")
         # do not try to run non-executable programs
         if not os.access(testpath, os.X_OK):
-            print '\nSkipping %s: not executable' % test
-            return None
+            return skip("not executable")
         cmd = '"%s"' % testpath
 
     if options.timeout > 0:
@@ -342,11 +345,15 @@ def run_one(test):
         missing = extract_missing_features(out)
         if not missing:
             missing = ['irrelevant']
-        print '\nSkipping %s: %s' % (test, missing[-1])
+        skip(missing[-1])
     elif ret:
         print "\nERROR: %s failed with error code %d" % (test, ret)
     elif diffret:
         ret = diffret
+
+    if not verbose:
+        sys.stdout.write('.')
+        sys.stdout.flush()
 
     if ret != 0 and not skipped:
         # Save errors to a file for diagnosis
@@ -453,16 +460,23 @@ def run_children(tests):
         os.close(wfd)
     failures = 0
     tested, skipped, failed = 0, 0, 0
+    skips = []
     while fps:
         pid, status = os.wait()
         fp = fps.pop(pid)
-        test, skip, fail = map(int, fp.read().splitlines())
+        l = fp.read().splitlines()
+        test, skip, fail = map(int, l[:3])
+        for s in l[3:]:
+            skips.append(s.split(" ", 1))
         tested += test
         skipped += skip
         failed += fail
         vlog('pid %d exited, status %d' % (pid, status))
         failures |= status
-    print "\n# Ran %d tests, %d skipped, %d failed." % (
+    print
+    for s in skips:
+        print "Skipped %s: %s" % (s[0], s[1])
+    print "# Ran %d tests, %d skipped, %d failed." % (
         tested, skipped, failed)
     sys.exit(failures != 0)
 
@@ -498,11 +512,12 @@ def run_tests(tests):
                 print "running all tests"
                 tests = orig
 
+        skips = []
         for test in tests:
             if options.retest and not os.path.exists(test + ".err"):
                 skipped += 1
                 continue
-            ret = run_one(test)
+            ret = run_one(test, skips)
             if ret is None:
                 skipped += 1
             elif not ret:
@@ -521,9 +536,14 @@ def run_tests(tests):
         if options.child:
             fp = os.fdopen(options.child, 'w')
             fp.write('%d\n%d\n%d\n' % (tested, skipped, failed))
+            for s in skips:
+                fp.write("%s %s\n" % s) 
             fp.close()
         else:
-            print "\n# Ran %d tests, %d skipped, %d failed." % (
+            print
+            for s in skips:
+                print "Skipped %s: %s" % s
+            print "# Ran %d tests, %d skipped, %d failed." % (
                 tested, skipped, failed)
 
         if coverage:
