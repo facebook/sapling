@@ -230,6 +230,9 @@ class httprepository(remoterepository):
             # "http_proxy.always" config is for running tests on localhost
             if (not ui.configbool("http_proxy", "always") and
                 host.lower() in no_list):
+                # avoid auto-detection of proxy settings by appending
+                # a ProxyHandler with no proxies defined.
+                handlers.append(urllib2.ProxyHandler({}))
                 ui.debug(_('disabling proxy for %s\n') % host)
             else:
                 proxyurl = urlparse.urlunsplit((
