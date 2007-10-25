@@ -9,7 +9,7 @@
 from i18n import _
 from node import *
 import base85, cmdutil, mdiff, util, context, revlog, diffhelpers
-import cStringIO, email.Parser, os, popen2, re, sha
+import cStringIO, email.Parser, os, popen2, re, sha, errno
 import sys, tempfile, zlib
 
 class PatchError(Exception):
@@ -402,11 +402,13 @@ class patchfile:
             st = None
             try:
                 st = os.lstat(dest)
-                if st.st_nlink > 1:
-                    os.unlink(dest)
-            except: pass
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+            if st and st.st_nlink > 1:
+                os.unlink(dest)
             fp = file(dest, 'wb')
-            if st:
+            if st and st.st_nlink > 1:
                 os.chmod(dest, st.st_mode)
             fp.writelines(self.lines)
             fp.close()
