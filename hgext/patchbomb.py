@@ -141,6 +141,9 @@ def patchbomb(ui, repo, *revs, **opts):
                 ui.write(summary, '\n')
                 ui.write(s, '\n')
             confirm(_('Does the diffstat above look okay'))
+        elif s is None:
+            ui.warn(_('No diffstat information available.\n'))
+            s = ''
         return s
 
     def makepatch(patch, idx, total):
