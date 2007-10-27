@@ -1,5 +1,7 @@
 #!/bin/sh
 
+"$TESTDIR/hghave" execbit || exit 80
+
 hg init
 echo a > a
 hg ci -d'0 0' -Am'not executable'
