@@ -130,9 +130,9 @@ def patchbomb(ui, repo, *revs, **opts):
             if empty_ok: return r
             ui.warn(_('Please enter a valid value.\n'))
 
-    def confirm(s):
+    def confirm(s, denial):
         if not prompt(s, default = 'y', rest = '? ').lower().startswith('y'):
-            raise ValueError
+            raise util.Abort(denial)
 
     def cdiffstat(summary, patchlines):
         s = patch.diffstat(patchlines)
@@ -140,7 +140,8 @@ def patchbomb(ui, repo, *revs, **opts):
             if summary:
                 ui.write(summary, '\n')
                 ui.write(s, '\n')
-            confirm(_('Does the diffstat above look okay'))
+            confirm(_('Does the diffstat above look okay'),
+                    _('diffstat rejected'))
         elif s is None:
             ui.warn(_('No diffstat information available.\n'))
             s = ''
