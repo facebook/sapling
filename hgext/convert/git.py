@@ -3,7 +3,7 @@
 import os
 from mercurial import util
 
-from common import NoRepo, commit, converter_source
+from common import NoRepo, commit, converter_source, checktool
 
 class convert_git(converter_source):
     # Windows does not support GIT_DIR= construct while other systems
@@ -31,6 +31,9 @@ class convert_git(converter_source):
             path += "/.git"
         if not os.path.exists(path + "/objects"):
             raise NoRepo("couldn't open GIT repo %s" % path)
+
+        checktool('git-rev-parse', 'git')
+
         self.path = path
 
     def getheads(self):

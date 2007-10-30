@@ -3,7 +3,7 @@
 import os, locale, re, socket
 from mercurial import util
 
-from common import NoRepo, commit, converter_source
+from common import NoRepo, commit, converter_source, checktool
 
 class convert_cvs(converter_source):
     def __init__(self, ui, path, rev=None):
@@ -12,6 +12,9 @@ class convert_cvs(converter_source):
         cvs = os.path.join(path, "CVS")
         if not os.path.exists(cvs):
             raise NoRepo("couldn't open CVS repo %s" % path)
+
+        for tool in ('cvsps', 'cvs'):
+            checktool(tool)
 
         self.changeset = {}
         self.files = {}
