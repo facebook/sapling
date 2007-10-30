@@ -256,7 +256,7 @@ class httprepository(remoterepository):
         if user:
             ui.debug(_('http auth: user %s, password %s\n') %
                      (user, passwd and '*' * len(passwd) or 'not set'))
-            passmgr.add_password(None, self._url, user, passwd or '')
+            passmgr.add_password(None, host, user, passwd or '')
 
         handlers.extend((urllib2.HTTPBasicAuthHandler(passmgr),
                          httpdigestauthhandler(passmgr)))
