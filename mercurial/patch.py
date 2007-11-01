@@ -1230,6 +1230,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             to = getfilectx(f, ctx1).data()
         if f not in removed:
             tn = getfilectx(f, ctx2).data()
+        a, b = f, f
         if opts.git:
             def gitmode(x, l):
                 return l and '120000' or (x and '100755' or '100644')
@@ -1238,7 +1239,6 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                     header.append('old mode %s\n' % omode)
                     header.append('new mode %s\n' % nmode)
 
-            a, b = f, f
             if f in added:
                 mode = gitmode(execf2(f), linkf2(f))
                 if f in copied:
@@ -1278,7 +1278,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                 text = mdiff.unidiff(to, date1,
                                     # ctx2 date may be dynamic
                                     tn, util.datestr(ctx2.date()),
-                                    f, r, opts=opts)
+                                    a, b, r, opts=opts)
             if text or len(header) > 1:
                 fp.write(''.join(header))
             fp.write(text)

@@ -43,7 +43,7 @@ def __gather(ui, repo, node1, node2):
         to = mmap1 and repo.file(f).read(mmap1[f]) or None
         tn = mmap2 and repo.file(f).read(mmap2[f]) or None
 
-        diff = mdiff.unidiff(to, "", tn, "", f).split("\n")
+        diff = mdiff.unidiff(to, "", tn, "", f, f).split("\n")
 
         for line in diff:
             if not line:

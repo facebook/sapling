@@ -873,7 +873,8 @@ def debuginstall(ui):
     a = "1\n2\n3\n4\n"
     b = "1\n2\n3\ninsert\n4\n"
     fa = writetemp(a)
-    d = mdiff.unidiff(a, None, b, None, os.path.basename(fa))
+    d = mdiff.unidiff(a, None, b, None, os.path.basename(fa),
+        os.path.basename(fa))
     fd = writetemp(d)
 
     files = {}
