@@ -249,7 +249,7 @@ def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
     fuzz = False
     if cwd:
         args.append('-d %s' % util.shellquote(cwd))
-    fp = os.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
+    fp = util.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
                                        util.shellquote(patchname)))
 
     for line in fp:

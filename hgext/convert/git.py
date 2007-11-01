@@ -14,7 +14,7 @@ class convert_git(converter_source):
             prevgitdir = os.environ.get('GIT_DIR')
             os.environ['GIT_DIR'] = self.path
             try:
-                return os.popen(s)
+                return util.popen(s)
             finally:
                 if prevgitdir is None:
                     del os.environ['GIT_DIR']
@@ -22,7 +22,7 @@ class convert_git(converter_source):
                     os.environ['GIT_DIR'] = prevgitdir
     else:
         def gitcmd(self, s):
-            return os.popen('GIT_DIR=%s %s' % (self.path, s))
+            return util.popen('GIT_DIR=%s %s' % (self.path, s))
 
     def __init__(self, ui, path, rev=None):
         super(convert_git, self).__init__(ui, path, rev=rev)
@@ -42,8 +42,7 @@ class convert_git(converter_source):
 
     def catfile(self, rev, type):
         if rev == "0" * 40: raise IOError()
-        fh = self.gitcmd("git-cat-file %s %s 2>%s" % (type, rev,
-                                                      util.nulldev))
+        fh = self.gitcmd("git-cat-file %s %s" % (type, rev))
         return fh.read()
 
     def getfile(self, name, rev):
@@ -108,8 +107,7 @@ class convert_git(converter_source):
 
     def gettags(self):
         tags = {}
-        fh = self.gitcmd('git-ls-remote --tags "%s" 2>%s' % (self.path,
-                                                             util.nulldev))
+        fh = self.gitcmd('git-ls-remote --tags "%s"' % self.path)
         prefix = 'refs/tags/'
         for line in fh:
             line = line.strip()

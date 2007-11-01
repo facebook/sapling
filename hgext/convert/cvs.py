@@ -43,14 +43,13 @@ class convert_cvs(converter_source):
                     cmd = '%s -d "1970/01/01 00:00:01" -d "%s"' % (cmd, self.rev)
                 except util.Abort:
                     raise util.Abort('revision %s is not a patchset number or date' % self.rev)
-        cmd += " 2>&1"
 
         d = os.getcwd()
         try:
             os.chdir(self.path)
             id = None
             state = 0
-            for l in os.popen(cmd):
+            for l in util.popen(cmd):
                 if state == 0: # header
                     if l.startswith("PatchSet"):
                         id = l[9:-2]

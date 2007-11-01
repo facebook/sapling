@@ -65,9 +65,9 @@ class darcs_source(converter_source):
         cmdline += args
         cmdline = [util.shellquote(arg) for arg in cmdline]
         cmdline += ['<', util.nulldev]
-        cmdline = util.quotecommand(' '.join(cmdline))
+        cmdline = ' '.join(cmdline)
         self.ui.debug(cmdline, '\n')
-        return os.popen(cmdline, 'r')
+        return util.popen(cmdline)
 
     def run(self, cmd, *args, **kwargs):
         fp = self._run(cmd, *args, **kwargs)
