@@ -1,6 +1,7 @@
 # common code for the convert extension
 import base64
 import cPickle as pickle
+from mercurial import util
 
 def encodeargs(args):
     def encodearg(s):
@@ -14,6 +15,11 @@ def encodeargs(args):
 def decodeargs(s):
     s = base64.decodestring(s)
     return pickle.loads(s)
+
+def checktool(exe, name=None):
+    name = name or exe
+    if not util.find_exe(exe):
+        raise util.Abort('cannot find required "%s" tool' % name)
 
 class NoRepo(Exception): pass
 

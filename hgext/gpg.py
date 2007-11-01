@@ -249,7 +249,7 @@ def sign(ui, repo, *revs, **opts):
     message = opts['message']
     if not message:
         message = "\n".join([_("Added signature for changeset %s")
-                             % hgnode.hex(n)
+                             % hgnode.short(n)
                              for n in nodes])
     try:
         repo.commit([".hgsigs"], message, opts['user'], opts['date'])
