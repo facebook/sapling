@@ -1011,6 +1011,13 @@ if os.name == 'nt':
         # through the current COMSPEC. cmd.exe suppress enclosing quotes.
         return '"' + cmd + '"'
 
+    def popen(command):
+        # Work around "popen spawned process may not write to stdout
+        # under windows"
+        # http://bugs.python.org/issue1366
+        command += " 2> %s" % nulldev
+        return os.popen(quotecommand(command))
+
     def explain_exit(code):
         return _("exited with status %d") % code, code
 
@@ -1167,6 +1174,9 @@ else:
 
     def quotecommand(cmd):
         return cmd
+
+    def popen(command):
+        return os.popen(command)
 
     def testpid(pid):
         '''return False if pid dead, True if running or not sure'''

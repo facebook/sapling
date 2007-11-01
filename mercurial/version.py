@@ -50,7 +50,7 @@ def remember_version(version=None):
     """Store version information."""
     global remembered_version
     if not version and os.path.isdir(".hg"):
-        f = os.popen("hg identify 2> %s" % util.nulldev)  # use real hg installation
+        f = util.popen("hg identify")  # use real hg installation
         ident = f.read()[:-1]
         if not f.close() and ident:
             ids = ident.split(' ', 1)
