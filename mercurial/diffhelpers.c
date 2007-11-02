@@ -83,6 +83,12 @@ addlines(PyObject *self, PyObject *args)
 				_fix_newline(hunk, a, b);
 				continue;
 			}
+			if (c == '\n') {
+				/* Some patches may be missing the control char
+				 * on empty lines. Supply a leading space. */
+				Py_DECREF(x);
+				x = PyString_FromString(" \n");
+			}
 			PyList_Append(hunk, x);
 			if (c == '+') {
 				l = PyString_FromString(s + 1);
