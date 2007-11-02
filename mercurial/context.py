@@ -70,7 +70,7 @@ class changectx(object):
         a = self._manifest.keys()
         a.sort()
         for f in a:
-            return f
+            yield f
 
     def changeset(self): return self._changeset
     def manifest(self): return self._manifest
