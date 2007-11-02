@@ -299,6 +299,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     """Convert a foreign SCM repository to a Mercurial one.
 
     Accepted source formats:
+    - Mercurial
     - CVS
     - Darcs
     - git
@@ -315,8 +316,8 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     basename of the source with '-hg' appended.  If the destination
     repository doesn't exist, it will be created.
 
-    If <revmapfile> isn't given, it will be put in a default location
-    (<dest>/.hg/shamap by default).  The <revmapfile> is a simple text
+    If <MAPFILE> isn't given, it will be put in a default location
+    (<dest>/.hg/shamap by default).  The <MAPFILE> is a simple text
     file that maps each source commit ID to the destination ID for
     that revision, like so:
     <source ID> <destination ID>
@@ -342,11 +343,12 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
       rename from/file to/file
     
     The 'include' directive causes a file, or all files under a
-    directory, to be included in the destination repository.  The
-    'exclude' directive causes files or directories to be omitted.
-    The 'rename' directive renames a file or directory.  To rename
-    from a subdirectory into the root of the repository, use '.' as
-    the path to rename to.
+    directory, to be included in the destination repository, and the
+    exclussion of all other files and dirs not explicitely included.
+    The 'exclude' directive causes files or directories to be omitted.
+    The 'rename' directive renames a file or directory.  To rename from a
+    subdirectory into the root of the repository, use '.' as the path to
+    rename to.
     """
 
     util._encoding = 'UTF-8'
