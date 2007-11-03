@@ -649,7 +649,7 @@ proc savestuff {w} {
     if {$stuffsaved} return
     if {![winfo viewable .]} return
     catch {
-	set f [open "~/.gitk-new" w]
+	set f [open "~/.hgk-new" w]
 	puts $f [list set mainfont $mainfont]
 	puts $f [list set curidfont $curidfont]
 	puts $f [list set textfont $textfont]
@@ -687,7 +687,7 @@ proc savestuff {w} {
 	puts $f "#"
 	puts $f "set authorcolors {$authorcolors}"
 	close $f
-	file rename -force "~/.gitk-new" "~/.gitk"
+	file rename -force "~/.hgk-new" "~/.hgk"
     }
     set stuffsaved 1
 }
@@ -3847,7 +3847,7 @@ set authorcolors {
     deeppink mediumorchid blue burlywood4 goldenrod slateblue red2 navy dimgrey
 }
 
-catch {source ~/.gitk}
+catch {source ~/.hgk}
 
 if {$curidfont == ""} {  # initialize late based on current mainfont
     set curidfont "$mainfont bold italic underline"
