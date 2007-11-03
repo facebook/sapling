@@ -196,17 +196,17 @@ class hgweb(object):
         for f in modified:
             to = c1.filectx(f).data()
             tn = c2.filectx(f).data()
-            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
+            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f, f,
                                           opts=diffopts), f, tn)
         for f in added:
             to = None
             tn = c2.filectx(f).data()
-            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
+            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f, f,
                                           opts=diffopts), f, tn)
         for f in removed:
             to = c1.filectx(f).data()
             tn = None
-            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f,
+            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f, f,
                                           opts=diffopts), f, tn)
 
     def changelog(self, ctx, shortlog=False):
