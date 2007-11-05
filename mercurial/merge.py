@@ -401,7 +401,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                     act("update permissions", "e", f, m2.flags(f))
             # contents same, check mode bits
             elif m1.flags(f) != m2.flags(f):
-                if overwrite or fmerge(f) != m1.flags(f):
+                # are we clobbering?
+                # is remote's version newer?
+                # or are we going back?
+                if overwrite or fmerge(f) != m1.flags(f) or backwards:
                     act("update permissions", "e", f, m2.flags(f))
         elif f in copied:
             continue
