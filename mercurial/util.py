@@ -720,7 +720,7 @@ class path_auditor(object):
             except OSError, err:
                 # EINVAL can be raised as invalid path syntax under win32.
                 # They must be ignored for patterns can be checked too.
-                if err.errno not in (errno.ENOENT, errno.EINVAL):
+                if err.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EINVAL):
                     raise
             else:
                 if stat.S_ISLNK(st.st_mode):

@@ -50,7 +50,8 @@ class dirstate(object):
         elif name == '_dirs':
             self._dirs = {}
             for f in self._map:
-                self._incpath(f)
+                if self[f] != 'r':
+                    self._incpath(f)
             return self._dirs
         elif name == '_ignore':
             files = [self._join('.hgignore')]
@@ -205,14 +206,25 @@ class dirstate(object):
             d = f[:c]
             if d in self._dirs:
                 break
-            if d in self._map:
+            if d in self._map and self[d] != 'r':
                 raise util.Abort(_('file %r in dirstate clashes with %r') %
                                  (d, f))
         self._incpath(f)
 
+    def _changepath(self, f, newstate):
+        # handle upcoming path changes
+        oldstate = self[f]
+        if oldstate not in "?r" and newstate in "?r":
+            self._decpath(f)
+            return
+        if oldstate in "?r" and newstate not in "?r":
+            self._incpathcheck(f)
+            return
+
     def normal(self, f):
         'mark a file normal and clean'
         self._dirty = True
+        self._changepath(f, 'n')
         s = os.lstat(self._join(f))
         self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime, 0)
         if self._copymap.has_key(f):
@@ -221,6 +233,7 @@ class dirstate(object):
     def normallookup(self, f):
         'mark a file normal, but possibly dirty'
         self._dirty = True
+        self._changepath(f, 'n')
         self._map[f] = ('n', 0, -1, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -228,6 +241,7 @@ class dirstate(object):
     def normaldirty(self, f):
         'mark a file normal, but dirty'
         self._dirty = True
+        self._changepath(f, 'n')
         self._map[f] = ('n', 0, -2, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -235,7 +249,7 @@ class dirstate(object):
     def add(self, f):
         'mark a file added'
         self._dirty = True
-        self._incpathcheck(f)
+        self._changepath(f, 'a')
         self._map[f] = ('a', 0, -1, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -243,8 +257,8 @@ class dirstate(object):
     def remove(self, f):
         'mark a file removed'
         self._dirty = True
+        self._changepath(f, 'r')
         self._map[f] = ('r', 0, 0, 0, 0)
-        self._decpath(f)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -252,6 +266,7 @@ class dirstate(object):
         'mark a file merged'
         self._dirty = True
         s = os.lstat(self._join(f))
+        self._changepath(f, 'm')
         self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -260,13 +275,15 @@ class dirstate(object):
         'forget a file'
         self._dirty = True
         try:
+            self._changepath(f, '?')
             del self._map[f]
-            self._decpath(f)
         except KeyError:
             self._ui.warn(_("not in dirstate: %s!\n") % f)
 
     def clear(self):
         self._map = {}
+        if "_dirs" in self.__dict__:
+            delattr(self, "_dirs");
         self._copymap = {}
         self._pl = [nullid, nullid]
         self._dirty = True
@@ -522,7 +539,7 @@ class dirstate(object):
                     try:
                         st = lstat(_join(fn))
                     except OSError, inst:
-                        if inst.errno != errno.ENOENT:
+                        if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
                             raise
                         st = None
                     # We need to re-check that it is a valid file
