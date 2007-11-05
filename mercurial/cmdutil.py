@@ -266,14 +266,15 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        if repo.dirstate[abs] != 'r' and not util.lexists(target):
+        if repo.dirstate[abs] != 'r' and (not util.lexists(target)
+            or (os.path.isdir(target) and not os.path.islink(target))):
             remove.append(abs)
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
     if not dry_run:
-        repo.add(add)
         repo.remove(remove)
+        repo.add(add)
     if similarity > 0:
         for old, new, score in findrenames(repo, add, remove, similarity):
             oldrel, oldexact = mapping[old]
