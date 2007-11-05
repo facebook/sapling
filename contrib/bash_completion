@@ -305,6 +305,15 @@ _hg_cmd_qpush()
     _hg_ext_mq_patchlist qunapplied
 }
 
+_hg_cmd_qgoto()
+{
+    if [[ "$prev" = @(-n|--name) ]]; then
+	_hg_ext_mq_queues
+	return
+    fi
+    _hg_ext_mq_patchlist qseries
+}
+
 _hg_cmd_qdelete()
 {
     local qcmd=qunapplied
