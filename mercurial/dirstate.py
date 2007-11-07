@@ -185,16 +185,15 @@ class dirstate(object):
                 dirs[base] += 1
 
     def _decpath(self, path):
-        if "_dirs" in self.__dict__:
-            c = path.rfind('/')
-            if c >= 0:
-                base = path[:c]
-                dirs = self._dirs
-                if dirs[base] == 1:
-                    del dirs[base]
-                    self._decpath(base)
-                else:
-                    dirs[base] -= 1
+        c = path.rfind('/')
+        if c >= 0:
+            base = path[:c]
+            dirs = self._dirs
+            if dirs[base] == 1:
+                del dirs[base]
+                self._decpath(base)
+            else:
+                dirs[base] -= 1
 
     def _incpathcheck(self, f):
         if '\r' in f or '\n' in f:
@@ -211,20 +210,29 @@ class dirstate(object):
                                  (d, f))
         self._incpath(f)
 
-    def _changepath(self, f, newstate):
+    def _changepath(self, f, newstate, relaxed=False):
         # handle upcoming path changes
         oldstate = self[f]
         if oldstate not in "?r" and newstate in "?r":
-            self._decpath(f)
+            if "_dirs" in self.__dict__:
+                self._decpath(f)
             return
         if oldstate in "?r" and newstate not in "?r":
+            if relaxed and oldstate == '?':
+                # XXX
+                # in relaxed mode we assume the caller knows
+                # what it is doing, workaround for updating
+                # dir-to-file revisions
+                if "_dirs" in self.__dict__:
+                    self._incpath(f)
+                return
             self._incpathcheck(f)
             return
 
     def normal(self, f):
         'mark a file normal and clean'
         self._dirty = True
-        self._changepath(f, 'n')
+        self._changepath(f, 'n', True)
         s = os.lstat(self._join(f))
         self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime, 0)
         if self._copymap.has_key(f):
@@ -233,7 +241,7 @@ class dirstate(object):
     def normallookup(self, f):
         'mark a file normal, but possibly dirty'
         self._dirty = True
-        self._changepath(f, 'n')
+        self._changepath(f, 'n', True)
         self._map[f] = ('n', 0, -1, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -241,7 +249,7 @@ class dirstate(object):
     def normaldirty(self, f):
         'mark a file normal, but dirty'
         self._dirty = True
-        self._changepath(f, 'n')
+        self._changepath(f, 'n', True)
         self._map[f] = ('n', 0, -2, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -266,7 +274,7 @@ class dirstate(object):
         'mark a file merged'
         self._dirty = True
         s = os.lstat(self._join(f))
-        self._changepath(f, 'm')
+        self._changepath(f, 'm', True)
         self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime, 0)
         if f in self._copymap:
             del self._copymap[f]
