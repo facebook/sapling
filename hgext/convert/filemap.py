@@ -128,7 +128,7 @@ class filemap_source(object):
         self.children = {}
         self.seenchildren = {}
 
-    def setrevmap(self, revmap, order):
+    def setrevmap(self, revmap):
         # rebuild our state to make things restartable
         #
         # To avoid calling getcommit for every revision that has already
@@ -143,7 +143,7 @@ class filemap_source(object):
         seen = {SKIPREV: SKIPREV}
         dummyset = util.set()
         converted = []
-        for rev in order:
+        for rev in revmap.order:
             mapped = revmap[rev]
             wanted = mapped not in seen
             if wanted:
@@ -157,7 +157,7 @@ class filemap_source(object):
                 arg = None
             converted.append((rev, wanted, arg))
         self.convertedorder = converted
-        return self.base.setrevmap(revmap, order)
+        return self.base.setrevmap(revmap)
 
     def rebuild(self):
         if self._rebuilt:

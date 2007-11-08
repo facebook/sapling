@@ -149,7 +149,7 @@ class svn_source(converter_source):
         self.head = self.revid(self.last_changed)
         self._changescache = None
 
-    def setrevmap(self, revmap, order):
+    def setrevmap(self, revmap):
         lastrevs = {}
         for revid in revmap.keys():
             uuid, module, revnum = self.revsplit(revid)

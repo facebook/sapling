@@ -1,5 +1,5 @@
 # common code for the convert extension
-import base64
+import base64, errno
 import cPickle as pickle
 from mercurial import util
 
@@ -54,11 +54,8 @@ class converter_source(object):
     def after(self):
         pass
 
-    def setrevmap(self, revmap, order):
-        """set the map of already-converted revisions
-        
-        order is a list with the keys from revmap in the order they
-        appear in the revision map file."""
+    def setrevmap(self, revmap):
+        """set the map of already-converted revisions"""
         pass
 
     def getheads(self):
@@ -190,3 +187,41 @@ class converter_sink(object):
         filter empty revisions.
         """
         pass
+
+
+class mapfile(dict):
+    def __init__(self, ui, path):
+        super(mapfile, self).__init__()
+        self.ui = ui
+        self.path = path
+        self.fp = None
+        self.order = []
+        self._read()
+
+    def _read(self):
+        try:
+            fp = open(self.path, 'r')
+        except IOError, err:
+            if err.errno != errno.ENOENT:
+                raise
+            return
+        for line in fp:
+            key, value = line[:-1].split(' ', 1)
+            if key not in self:
+                self.order.append(key)
+            super(mapfile, self).__setitem__(key, value)
+        fp.close()
+            
+    def __setitem__(self, key, value):
+        if self.fp is None:
+            try:
+                self.fp = open(self.path, 'a')
+            except IOError, err:
+                raise util.Abort(_('could not open map file %r: %s') %
+                                 (self.path, err.strerror))
+        self.fp.write('%s %s\n' % (key, value))
+        self.fp.flush()
+        super(mapfile, self).__setitem__(key, value)
+
+    def close(self):
+        self.fp.close()
