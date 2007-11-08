@@ -1,7 +1,8 @@
 # common code for the convert extension
-import base64
+import base64, errno
 import cPickle as pickle
 from mercurial import util
+from mercurial.i18n import _
 
 def encodeargs(args):
     def encodearg(s):
@@ -54,11 +55,8 @@ class converter_source(object):
     def after(self):
         pass
 
-    def setrevmap(self, revmap, order):
-        """set the map of already-converted revisions
-        
-        order is a list with the keys from revmap in the order they
-        appear in the revision map file."""
+    def setrevmap(self, revmap):
+        """set the map of already-converted revisions"""
         pass
 
     def getheads(self):
@@ -190,3 +188,105 @@ class converter_sink(object):
         filter empty revisions.
         """
         pass
+
+    def before(self):
+        pass
+
+    def after(self):
+        pass
+
+
+class commandline(object):
+    def __init__(self, ui, command):
+        self.ui = ui
+        self.command = command
+
+    def prerun(self):
+        pass
+
+    def postrun(self):
+        pass
+
+    def _run(self, cmd, *args, **kwargs):
+        cmdline = [self.command, cmd] + list(args)
+        for k, v in kwargs.iteritems():
+            if len(k) == 1:
+                cmdline.append('-' + k)
+            else:
+                cmdline.append('--' + k.replace('_', '-'))
+            try:
+                if len(k) == 1:
+                    cmdline.append('' + v)
+                else:
+                    cmdline[-1] += '=' + v
+            except TypeError:
+                pass
+        cmdline = [util.shellquote(arg) for arg in cmdline]
+        cmdline += ['<', util.nulldev]
+        cmdline = util.quotecommand(' '.join(cmdline))
+        self.ui.debug(cmdline, '\n')
+
+        self.prerun()
+        try:
+            return util.popen(cmdline)
+        finally:
+            self.postrun()
+
+    def run(self, cmd, *args, **kwargs):
+        fp = self._run(cmd, *args, **kwargs)
+        output = fp.read()
+        self.ui.debug(output)
+        return output, fp.close()
+
+    def checkexit(self, status, output=''):
+        if status:
+            if output:
+                self.ui.warn(_('%s error:\n') % self.command)
+                self.ui.warn(output)
+            msg = util.explain_exit(status)[0]
+            raise util.Abort(_('%s %s') % (self.command, msg))
+
+    def run0(self, cmd, *args, **kwargs):
+        output, status = self.run(cmd, *args, **kwargs)
+        self.checkexit(status, output)
+        return output
+
+
+class mapfile(dict):
+    def __init__(self, ui, path):
+        super(mapfile, self).__init__()
+        self.ui = ui
+        self.path = path
+        self.fp = None
+        self.order = []
+        self._read()
+
+    def _read(self):
+        try:
+            fp = open(self.path, 'r')
+        except IOError, err:
+            if err.errno != errno.ENOENT:
+                raise
+            return
+        for line in fp:
+            key, value = line[:-1].split(' ', 1)
+            if key not in self:
+                self.order.append(key)
+            super(mapfile, self).__setitem__(key, value)
+        fp.close()
+            
+    def __setitem__(self, key, value):
+        if self.fp is None:
+            try:
+                self.fp = open(self.path, 'a')
+            except IOError, err:
+                raise util.Abort(_('could not open map file %r: %s') %
+                                 (self.path, err.strerror))
+        self.fp.write('%s %s\n' % (key, value))
+        self.fp.flush()
+        super(mapfile, self).__setitem__(key, value)
+
+    def close(self):
+        if self.fp:
+            self.fp.close()
+            self.fp = None

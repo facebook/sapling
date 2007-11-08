@@ -1,6 +1,6 @@
 # darcs support for the convert extension
 
-from common import NoRepo, commit, converter_source, checktool
+from common import NoRepo, checktool, commandline, commit, converter_source
 from mercurial.i18n import _
 from mercurial import util
 import os, shutil, tempfile
@@ -17,9 +17,10 @@ except ImportError:
             except ImportError: ElementTree = None
 
 
-class darcs_source(converter_source):
+class darcs_source(converter_source, commandline):
     def __init__(self, ui, path, rev=None):
-        super(darcs_source, self).__init__(ui, path, rev=rev)
+        converter_source.__init__(self, ui, path, rev=rev)
+        commandline.__init__(self, ui, 'darcs')
 
         if not os.path.exists(os.path.join(path, '_darcs', 'inventory')):
             raise NoRepo("couldn't open darcs repo %s" % path)
@@ -42,7 +43,8 @@ class darcs_source(converter_source):
         output, status = self.run('init', repodir=self.tmppath)
         self.checkexit(status)
 
-        tree = self.xml('changes', '--xml-output', '--summary')
+        tree = self.xml('changes', xml_output=True, summary=True,
+                        repodir=self.path)
         tagname = None
         child = None
         for elt in tree.findall('patch'):
@@ -62,31 +64,9 @@ class darcs_source(converter_source):
         self.ui.debug('cleaning up %s\n' % self.tmppath)
         shutil.rmtree(self.tmppath, ignore_errors=True)
 
-    def _run(self, cmd, *args, **kwargs):
-        cmdline = ['darcs', cmd, '--repodir', kwargs.get('repodir', self.path)]
-        cmdline += args
-        cmdline = [util.shellquote(arg) for arg in cmdline]
-        cmdline += ['<', util.nulldev]
-        cmdline = ' '.join(cmdline)
-        self.ui.debug(cmdline, '\n')
-        return util.popen(cmdline)
-
-    def run(self, cmd, *args, **kwargs):
-        fp = self._run(cmd, *args, **kwargs)
-        output = fp.read()
-        return output, fp.close()
-
-    def checkexit(self, status, output=''):
-        if status:
-            if output:
-                self.ui.warn(_('darcs error:\n'))
-                self.ui.warn(output)
-            msg = util.explain_exit(status)[0]
-            raise util.Abort(_('darcs %s') % msg)
-        
-    def xml(self, cmd, *opts):
+    def xml(self, cmd, **kwargs):
         etree = ElementTree()
-        fp = self._run(cmd, *opts)
+        fp = self._run(cmd, **kwargs)
         etree.parse(fp)
         self.checkexit(fp.close())
         return etree.getroot()
@@ -102,15 +82,15 @@ class darcs_source(converter_source):
                       desc=desc.strip(), parents=self.parents[rev])
 
     def pull(self, rev):
-        output, status = self.run('pull', self.path, '--all',
-                                  '--match', 'hash %s' % rev,
-                                  '--no-test', '--no-posthook',
-                                  '--external-merge', '/bin/false',
+        output, status = self.run('pull', self.path, all=True,
+                                  match='hash %s' % rev,
+                                  no_test=True, no_posthook=True,
+                                  external_merge='/bin/false',
                                   repodir=self.tmppath)
         if status:
             if output.find('We have conflicts in') == -1:
                 self.checkexit(status, output)
-            output, status = self.run('revert', '--all', repodir=self.tmppath)
+            output, status = self.run('revert', all=True, repodir=self.tmppath)
             self.checkexit(status, output)
 
     def getchanges(self, rev):
