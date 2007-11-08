@@ -188,6 +188,68 @@ class converter_sink(object):
         """
         pass
 
+    def before(self):
+        pass
+
+    def after(self):
+        pass
+
+
+class commandline(object):
+    def __init__(self, ui, command):
+        self.ui = ui
+        self.command = command
+
+    def prerun(self):
+        pass
+
+    def postrun(self):
+        pass
+
+    def _run(self, cmd, *args, **kwargs):
+        cmdline = [self.command, cmd] + list(args)
+        for k, v in kwargs.iteritems():
+            if len(k) == 1:
+                cmdline.append('-' + k)
+            else:
+                cmdline.append('--' + k.replace('_', '-'))
+            try:
+                if len(k) == 1:
+                    cmdline.append('' + v)
+                else:
+                    cmdline[-1] += '=' + v
+            except TypeError:
+                pass
+        cmdline = [util.shellquote(arg) for arg in cmdline]
+        cmdline += ['<', util.nulldev]
+        cmdline = util.quotecommand(' '.join(cmdline))
+        self.ui.debug(cmdline, '\n')
+
+        self.prerun()
+        try:
+            return util.popen(cmdline)
+        finally:
+            self.postrun()
+
+    def run(self, cmd, *args, **kwargs):
+        fp = self._run(cmd, *args, **kwargs)
+        output = fp.read()
+        self.ui.debug(output)
+        return output, fp.close()
+
+    def checkexit(self, status, output=''):
+        if status:
+            if output:
+                self.ui.warn(_('%s error:\n') % self.command)
+                self.ui.warn(output)
+            msg = util.explain_exit(status)[0]
+            raise util.Abort(_('%s %s') % (self.command, msg))
+
+    def run0(self, cmd, *args, **kwargs):
+        output, status = self.run(cmd, *args, **kwargs)
+        self.checkexit(status, output)
+        return output
+
 
 class mapfile(dict):
     def __init__(self, ui, path):
@@ -224,4 +286,6 @@ class mapfile(dict):
         super(mapfile, self).__setitem__(key, value)
 
     def close(self):
-        self.fp.close()
+        if self.fp:
+            self.fp.close()
+            self.fp = None
