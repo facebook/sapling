@@ -10,7 +10,7 @@ from cvs import convert_cvs
 from darcs import darcs_source
 from git import convert_git
 from hg import mercurial_source, mercurial_sink
-from subversion import svn_source, debugsvnlog
+from subversion import debugsvnlog, svn_source, svn_sink
 import filemap
 
 import os, shutil
@@ -29,6 +29,7 @@ source_converters = [
 
 sink_converters = [
     ('hg', mercurial_sink),
+    ('svn', svn_sink),
     ]
 
 def convertsource(ui, path, type, rev):
@@ -283,6 +284,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
     Accepted destination formats:
     - Mercurial
+    - Subversion (history on branches is not preserved)
 
     If no revision is given, all revisions will be converted. Otherwise,
     convert will only import up to the named revision (given in a format

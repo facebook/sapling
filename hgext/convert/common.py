@@ -2,6 +2,7 @@
 import base64, errno
 import cPickle as pickle
 from mercurial import util
+from mercurial.i18n import _
 
 def encodeargs(args):
     def encodearg(s):

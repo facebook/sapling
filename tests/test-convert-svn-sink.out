@@ -1,0 +1,251 @@
+% add
+adding a
+% modify
+1:10307c220ed9
+assuming destination a-hg
+initializing svn repo 'a-hg'
+initializing svn wc 'a-hg-wc'
+scanning source...
+sorting...
+converting...
+1 add a file
+0 modify a file
+At revision 2.
+                2        2 test         .
+                2        2 test         a
+<?xml version="1.0"?>
+<log>
+<logentry
+   revision="2">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="M">/a</path>
+</paths>
+<msg>modify a file</msg>
+</logentry>
+<logentry
+   revision="1">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="A">/a</path>
+</paths>
+<msg>add a file</msg>
+</logentry>
+</log>
+a:
+a
+
+a-hg-wc:
+a
+same
+% rename
+2:6e45a219686e
+assuming destination a-hg
+initializing svn wc 'a-hg-wc'
+scanning source...
+sorting...
+converting...
+0 rename a file
+At revision 3.
+                3        3 test         .
+                3        3 test         b
+<?xml version="1.0"?>
+<log>
+<logentry
+   revision="3">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="D">/a</path>
+<path
+   copyfrom-path="/a"
+   copyfrom-rev="2"
+   action="A">/b</path>
+</paths>
+<msg>rename a file</msg>
+</logentry>
+</log>
+a:
+b
+
+a-hg-wc:
+b
+% copy
+3:d811dc81efbb
+assuming destination a-hg
+initializing svn wc 'a-hg-wc'
+scanning source...
+sorting...
+converting...
+0 copy a file
+At revision 4.
+                4        4 test         .
+                4        3 test         b
+                4        4 test         c
+<?xml version="1.0"?>
+<log>
+<logentry
+   revision="4">
+<author>test</author>
+<date/>
+<paths>
+<path
+   copyfrom-path="/b"
+   copyfrom-rev="3"
+   action="A">/c</path>
+</paths>
+<msg>copy a file</msg>
+</logentry>
+</log>
+a:
+b
+c
+
+a-hg-wc:
+b
+c
+% remove
+4:045e93063aca
+assuming destination a-hg
+initializing svn wc 'a-hg-wc'
+scanning source...
+sorting...
+converting...
+0 remove a file
+At revision 5.
+                5        5 test         .
+                5        4 test         c
+<?xml version="1.0"?>
+<log>
+<logentry
+   revision="5">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="D">/b</path>
+</paths>
+<msg>remove a file</msg>
+</logentry>
+</log>
+a:
+c
+
+a-hg-wc:
+c
+% executable
+5:7eda3f4b5331
+svn: Path 'b' does not exist
+assuming destination a-hg
+initializing svn wc 'a-hg-wc'
+scanning source...
+sorting...
+converting...
+0 make a file executable
+abort: svn exited with status 1
+At revision 5.
+                5        5 test         .
+ M              5        4 test         c
+<?xml version="1.0"?>
+<log>
+<logentry
+   revision="5">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="D">/b</path>
+</paths>
+<msg>remove a file</msg>
+</logentry>
+</log>
+executable
+% branchy history
+adding b
+adding left-1
+adding left-2
+1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+adding right-1
+adding right-2
+3 files updated, 0 files merged, 2 files removed, 0 files unresolved
+warning: conflicts during merge.
+merging b
+merging b failed!
+2 files updated, 0 files merged, 0 files removed, 1 files unresolved
+There are unresolved merges, you can redo the full merge using:
+  hg update -C 2
+  hg merge 4
+assuming destination b-hg
+initializing svn repo 'b-hg'
+initializing svn wc 'b-hg-wc'
+scanning source...
+sorting...
+converting...
+5 base
+4 left-1
+3 left-2
+2 right-1
+1 right-2
+0 merge
+% expect 4 changes
+At revision 4.
+                4        4 test         .
+                4        3 test         b
+                4        2 test         left-1
+                4        3 test         left-2
+                4        4 test         right-1
+                4        4 test         right-2
+<?xml version="1.0"?>
+<log>
+<logentry
+   revision="4">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="A">/right-1</path>
+<path
+   action="A">/right-2</path>
+</paths>
+<msg>merge</msg>
+</logentry>
+<logentry
+   revision="3">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="M">/b</path>
+<path
+   action="A">/left-2</path>
+</paths>
+<msg>left-2</msg>
+</logentry>
+<logentry
+   revision="2">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="M">/b</path>
+<path
+   action="A">/left-1</path>
+</paths>
+<msg>left-1</msg>
+</logentry>
+<logentry
+   revision="1">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="A">/b</path>
+</paths>
+<msg>base</msg>
+</logentry>
+</log>

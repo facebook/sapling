@@ -17,9 +17,13 @@
 
 import locale
 import os
+import re
 import sys
 import cPickle as pickle
-from mercurial import util
+import tempfile
+
+from mercurial import strutil, util
+from mercurial.i18n import _
 
 # Subversion stuff. Works best with very recent Python SVN bindings
 # e.g. SVN 1.5 or backports. Thanks to the bzr folks for enhancing
@@ -28,6 +32,7 @@ from mercurial import util
 from cStringIO import StringIO
 
 from common import NoRepo, commit, converter_source, encodeargs, decodeargs
+from common import commandline, converter_sink, mapfile
 
 try:
     from svn.core import SubversionException, Pool
@@ -664,3 +669,198 @@ class svn_source(converter_source):
         pool = Pool()
         rpath = '/'.join([self.base, path]).strip('/')
         return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool).keys()]
+
+pre_revprop_change = '''#!/bin/sh
+
+REPOS="$1"
+REV="$2"
+USER="$3"
+PROPNAME="$4"
+ACTION="$5"
+
+if [ "$ACTION" = "M" -a "$PROPNAME" = "svn:log" ]; then exit 0; fi
+if [ "$ACTION" = "A" -a "$PROPNAME" = "hg:convert-branch" ]; then exit 0; fi
+if [ "$ACTION" = "A" -a "$PROPNAME" = "hg:convert-rev" ]; then exit 0; fi
+
+echo "Changing prohibited revision property" >&2
+exit 1
+'''
+
+class svn_sink(converter_sink, commandline):
+    commit_re = re.compile(r'Committed revision (\d+).', re.M)
+
+    def prerun(self):
+        if self.wc:
+            os.chdir(self.wc)
+
+    def postrun(self):
+        if self.wc:
+            os.chdir(self.cwd)
+
+    def join(self, name):
+        return os.path.join(self.wc, '.svn', name)
+        
+    def revmapfile(self):
+        return self.join('hg-shamap')
+
+    def authorfile(self):
+        return self.join('hg-authormap')
+
+    def __init__(self, ui, path):
+        converter_sink.__init__(self, ui, path)
+        commandline.__init__(self, ui, 'svn')
+        self.delete = []
+        self.wc = None
+        self.cwd = os.getcwd()
+
+        path = os.path.realpath(path)
+
+        created = False
+        if os.path.isfile(os.path.join(path, '.svn', 'entries')):
+            self.wc = path
+            self.run0('update')
+        else:
+            if os.path.isdir(os.path.dirname(path)):
+                if not os.path.exists(os.path.join(path, 'db', 'fs-type')):
+                    ui.status(_('initializing svn repo %r\n') %
+                              os.path.basename(path))
+                    commandline(ui, 'svnadmin').run0('create', path)
+                    created = path
+                path = 'file://' + path
+            wcpath = os.path.join(os.getcwd(), os.path.basename(path) + '-wc')
+            ui.status(_('initializing svn wc %r\n') % os.path.basename(wcpath))
+            self.run0('checkout', path, wcpath)
+
+            self.wc = wcpath
+        self.opener = util.opener(self.wc)
+        self.wopener = util.opener(self.wc)
+        self.childmap = mapfile(ui, self.join('hg-childmap'))
+
+        if created:
+            hook = os.path.join(created, 'hooks', 'pre-revprop-change')
+            fp = open(hook, 'w')
+            fp.write(pre_revprop_change)
+            fp.close()
+            util.set_exec(hook, True)
+
+    def wjoin(self, *names):
+        return os.path.join(self.wc, *names)
+
+    def putfile(self, filename, flags, data):
+        if 'l' in flags:
+            self.wopener.symlink(data, filename)
+        else:
+            try:
+                if os.path.islink(self.wjoin(filename)):
+                    os.unlink(filename)
+            except OSError:
+                pass
+            self.wopener(filename, 'w').write(data)
+            was_exec = util.is_exec(self.wjoin(filename))
+            util.set_exec(self.wjoin(filename), 'x' in flags)
+            if was_exec:
+                if 'x' not in flags:
+                    self.run0('propdel', 'svn:executable', filename)
+            else:
+                if 'x' in flags:
+                    self.run0('propset', 'svn:executable', '*', filename)
+            
+    def delfile(self, name):
+        self.delete.append(name)
+
+    def copyfile(self, source, dest):
+        # SVN's copy command pukes if the destination file exists, but
+        # our copyfile method expects to record a copy that has
+        # already occurred.  Cross the semantic gap.
+        wdest = self.wjoin(dest)
+        exists = os.path.exists(wdest)
+        if exists:
+            fd, tempname = tempfile.mkstemp(
+                prefix='hg-copy-', dir=os.path.dirname(wdest))
+            os.close(fd)
+            os.unlink(tempname)
+            os.rename(wdest, tempname)
+        try:
+            self.run0('copy', source, dest)
+        finally:
+            if exists:
+                try:
+                    os.unlink(wdest)
+                except OSError:
+                    pass
+                os.rename(tempname, wdest)
+
+    def dirs_of(self, files):
+        dirs = set()
+        for f in files:
+            if os.path.isdir(self.wjoin(f)):
+                dirs.add(f)
+            for i in strutil.rfindall(f, '/'):
+                dirs.add(f[:i])
+        return dirs
+
+    def add_files(self, files):
+        add_dirs = [d for d in self.dirs_of(files)
+                    if not os.path.exists(self.wjoin(d, '.svn', 'entries'))]
+        if add_dirs:
+            self.run('add', non_recursive=True, quiet=True, *add)
+        if files:
+            self.run('add', quiet=True, *files)
+        return files.union(add_dirs)
+        
+    def tidy_dirs(self, names):
+        dirs = list(self.dirs_of(names))
+        dirs.sort(reverse=True)
+        deleted = []
+        for d in dirs:
+            wd = self.wjoin(d)
+            if os.listdir(wd) == '.svn':
+                self.run0('delete', d)
+                deleted.append(d)
+        return deleted
+
+    def addchild(self, parent, child):
+        self.childmap[parent] = child
+
+    def putcommit(self, files, parents, commit):
+        for parent in parents:
+            try:
+                return self.childmap[parent]
+            except KeyError:
+                pass
+        entries = set(self.delete)
+        if self.delete:
+            self.run0('delete', *self.delete)
+            self.delete = []
+        files = util.frozenset(files)
+        entries.update(self.add_files(files.difference(entries)))
+        entries.update(self.tidy_dirs(entries))
+        fd, messagefile = tempfile.mkstemp(prefix='hg-convert-')
+        fp = os.fdopen(fd, 'w')
+        fp.write(commit.desc)
+        fp.close()
+        try:
+            output = self.run0('commit',
+                               username=util.shortuser(commit.author),
+                               file=messagefile,
+                               *list(entries))
+            try:
+                rev = self.commit_re.search(output).group(1)
+            except AttributeError:
+                self.ui.warn(_('unexpected svn output:\n'))
+                self.ui.warn(output)
+                raise util.Abort(_('unable to cope with svn output'))
+            if commit.rev:
+                self.run('propset', 'hg:convert-rev', commit.rev,
+                         revprop=True, revision=rev)
+            if commit.branch and commit.branch != 'default':
+                self.run('propset', 'hg:convert-branch', commit.branch,
+                         revprop=True, revision=rev)
+            for parent in parents:
+                self.addchild(parent, rev)
+            return rev
+        finally:
+            os.unlink(messagefile)
+
+    def puttags(self, tags):
+        self.ui.warn(_('XXX TAGS NOT IMPLEMENTED YET\n'))
