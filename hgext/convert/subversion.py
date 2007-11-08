@@ -151,7 +151,7 @@ class svn_source(converter_source):
 
     def setrevmap(self, revmap):
         lastrevs = {}
-        for revid in revmap.keys():
+        for revid in revmap.iterkeys():
             uuid, module, revnum = self.revsplit(revid)
             lastrevnum = lastrevs.setdefault(module, revnum)
             if revnum > lastrevnum:
