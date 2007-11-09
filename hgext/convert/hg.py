@@ -187,10 +187,11 @@ class mercurial_source(converter_source):
             self.repo = hg.repository(self.ui, path)
             # try to provoke an exception if this isn't really a hg
             # repo, but some other bogus compatible-looking url
-            self.repo.heads()
+            if not self.repo.local():
+                raise hg.RepoError()
         except hg.RepoError:
             ui.print_exc()
-            raise NoRepo("%s does not look like a Mercurial repo" % path)
+            raise NoRepo("%s is not a local Mercurial repo" % path)
         self.lastrev = None
         self.lastctx = None
         self._changescache = None
