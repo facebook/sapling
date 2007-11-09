@@ -101,6 +101,13 @@ hg purge -v --force
 hg revert --all --quiet
 ls
 
+echo '% tracked file in ignored directory (issue621)'
+echo directory >> .hgignore
+hg ci -m 'ignore directory'
+touch untracked_file
+hg purge -p
+hg purge -v
+
 echo % skip excluded files
 touch excluded_file
 hg purge -p -X excluded_file
