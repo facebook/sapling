@@ -3074,7 +3074,7 @@ table = {
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":
         (remove,
-         [('A', 'after', None, _('record remove that has already occurred')),
+         [('A', 'after', None, _('record remove without deleting')),
           ('f', 'force', None, _('remove file even if modified')),
          ] + walkopts,
          _('hg remove [OPTION]... FILE...')),
