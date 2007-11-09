@@ -190,7 +190,7 @@ class mercurial_source(converter_source):
             self.repo.heads()
         except hg.RepoError:
             ui.print_exc()
-            raise NoRepo("could not open hg repo %s as source" % path)
+            raise NoRepo("%s does not look like a Mercurial repo" % path)
         self.lastrev = None
         self.lastctx = None
         self._changescache = None
