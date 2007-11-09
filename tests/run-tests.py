@@ -266,8 +266,6 @@ def run_one(test, skips):
     def skip(msg):
         if not verbose:
             skips.append((test, msg))
-            sys.stdout.write('s')
-            sys.stdout.flush()
         else:
             print "\nSkipping %s: %s" % (test, msg)
         return None
@@ -352,7 +350,7 @@ def run_one(test, skips):
         ret = diffret
 
     if not verbose:
-        sys.stdout.write('.')
+        sys.stdout.write(skipped and 's' or '.')
         sys.stdout.flush()
 
     if ret != 0 and not skipped:
