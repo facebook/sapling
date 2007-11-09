@@ -7,6 +7,13 @@ rewrite_path()
     sed -e 's:\\:/:g' -e 's:[^ ]*/t/::g'
 }
 
+checkundo()
+{
+    if [ -f .hg/store/undo ]; then
+	echo ".hg/store/undo still exists after $1"
+    fi
+}
+
 echo "[extensions]" >> $HGRCPATH
 echo "hgext.mq=" >> $HGRCPATH
 
@@ -25,6 +32,7 @@ hg qrefresh -m "rm a"
 
 # Save the patch queue so we can merge it later
 hg qsave -c -e 2>&1 | rewrite_path
+checkundo qsave
 
 # Update b and commit in an "update" changeset
 hg up -C init
@@ -36,6 +44,7 @@ hg ci -m update
 # The system cannot find the file specified => a
 hg manifest
 hg qpush -a -m 2>&1 | rewrite_path
+checkundo 'qpush -m'
 hg manifest
 
 # ensure status is correct after merge

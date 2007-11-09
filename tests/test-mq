@@ -1,5 +1,12 @@
 #!/bin/sh
 
+checkundo()
+{
+    if [ -f .hg/store/undo ]; then
+	echo ".hg/store/undo still exists after $1"
+    fi
+}
+
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
 
@@ -57,6 +64,7 @@ echo '% qinit; <stuff>; qinit -c'
 hg init e
 cd e
 hg qnew A
+checkundo qnew
 echo foo > foo
 hg add foo
 hg qrefresh
@@ -100,14 +108,17 @@ echo 'working dir diff:'
 hg diff --nodates -q
 # restore things
 hg qrefresh
+checkundo qrefresh
 
 echo % qpop
 
 hg qpop
+checkundo qpop
 
 echo % qpush
 
 hg qpush
+checkundo qpush
 
 cd ..
 
@@ -394,6 +405,7 @@ HGMERGE=true hg merge
 hg ci -m merge -d '0 0'
 hg log
 hg strip 1 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+checkundo strip
 hg log
 cd ..
 

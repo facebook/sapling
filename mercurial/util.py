@@ -15,6 +15,7 @@ platform-specific details from the core.
 from i18n import _
 import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile, strutil
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
+import re, urlparse
 
 try:
     set = set
@@ -1698,3 +1699,33 @@ def drop_scheme(scheme, path):
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')
+
+def hidepassword(url):
+    '''replaces the password in the url string by three asterisks (***)
+    
+    >>> hidepassword('http://www.example.com/some/path#fragment')
+    'http://www.example.com/some/path#fragment'
+    >>> hidepassword('http://me@www.example.com/some/path#fragment')
+    'http://me@www.example.com/some/path#fragment'
+    >>> hidepassword('http://me:simplepw@www.example.com/path#frag')
+    'http://me:***@www.example.com/path#frag'
+    >>> hidepassword('http://me:complex:pw@www.example.com/path#frag')
+    'http://me:***@www.example.com/path#frag'
+    >>> hidepassword('/path/to/repo')
+    '/path/to/repo'
+    >>> hidepassword('relative/path/to/repo')
+    'relative/path/to/repo'
+    >>> hidepassword('c:\\\\path\\\\to\\\\repo')
+    'c:\\\\path\\\\to\\\\repo'
+    >>> hidepassword('c:/path/to/repo')
+    'c:/path/to/repo'
+    >>> hidepassword('bundle://path/to/bundle')
+    'bundle://path/to/bundle'
+    '''
+    url_parts = list(urlparse.urlparse(url))
+    host_with_pw_pattern = re.compile('^([^:]*):([^@]*)@(.*)$')
+    if host_with_pw_pattern.match(url_parts[1]):
+        url_parts[1] = re.sub(host_with_pw_pattern, r'\1:***@\3',
+            url_parts[1])
+    return urlparse.urlunparse(url_parts)
+

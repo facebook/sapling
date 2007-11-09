@@ -256,7 +256,11 @@ class httprepository(remoterepository):
         if user:
             ui.debug(_('http auth: user %s, password %s\n') %
                      (user, passwd and '*' * len(passwd) or 'not set'))
-            passmgr.add_password(None, host, user, passwd or '')
+            netloc = host
+            if port:
+                netloc += ':' + port
+            # Python < 2.4.3 uses only the netloc to search for a password
+            passmgr.add_password(None, (self._url, netloc), user, passwd or '')
 
         handlers.extend((urllib2.HTTPBasicAuthHandler(passmgr),
                          httpdigestauthhandler(passmgr)))

@@ -49,6 +49,9 @@ def dopurge(ui, repo, dirs=None, act=True, ignored=False,
         else:
             ui.write('%s%s' % (name, eol))
 
+    if not force:
+        _check_fs(ui, repo)
+
     directories = []
     files = []
     missing = []
@@ -63,8 +66,6 @@ def dopurge(ui, repo, dirs=None, act=True, ignored=False,
         elif src == 'f' and f not in repo.dirstate:
             files.append(f)
 
-    _check_missing(ui, repo, missing, force)
-
     directories.sort()
 
     for f in files:
@@ -77,7 +78,7 @@ def dopurge(ui, repo, dirs=None, act=True, ignored=False,
             ui.note(_('Removing directory %s\n') % f)
             remove(os.rmdir, f)
 
-def _check_missing(ui, repo, missing, force=False):
+def _check_fs(ui, repo):
     """Abort if there is the chance of having problems with name-mangling fs
 
     In a name mangling filesystem (e.g. a case insensitive one)
@@ -85,34 +86,18 @@ def _check_missing(ui, repo, missing, force=False):
     stored in the dirstate. This already confuses the status and
     add commands, but with purge this may cause data loss.
 
-    To prevent this, _check_missing will abort if there are missing
-    files. The force option will let the user skip the check if he
-    knows it is safe.
+    To prevent this, this function will abort if there are uncommitted
+    changes.
+    """
 
-    Even with the force option this function will check if any of the
-    missing files is still available in the working dir: if so there
-    may be some problem with the underlying filesystem, so it
-    aborts unconditionally."""
-
-    found = [f for f in missing if util.lexists(repo.wjoin(f))]
-
-    if found:
-        if not ui.quiet:
-            ui.warn(_("The following tracked files weren't listed by the "
-                      "filesystem, but could still be found:\n"))
-            for f in found:
-                ui.warn("%s\n" % f)
-            if util.checkfolding(repo.path):
-                ui.warn(_("This is probably due to a case-insensitive "
-                          "filesystem\n"))
-        raise util.Abort(_("purging on name mangling filesystems is not "
-                           "yet fully supported"))
-
-    if missing and not force:
-        raise util.Abort(_("there are missing files in the working dir and "
-                           "purge still has problems with them due to name "
-                           "mangling filesystems. "
-                           "Use --force if you know what you are doing"))
+    # We can't use (files, match) to do a partial walk here - we wouldn't
+    # notice a modified README file if the user ran "hg purge readme"
+    modified, added, removed, deleted = repo.status()[:4]
+    if modified or added or removed or deleted:
+        if not util.checkfolding(repo.path) and not ui.quiet:
+            ui.warn(_("Purging on name mangling filesystems is not "
+                      "fully supported.\n"))
+        raise util.Abort(_("outstanding uncommitted changes"))
 
 
 def purge(ui, repo, *dirs, **opts):
@@ -158,7 +143,7 @@ cmdtable = {
         (purge,
          [('a', 'abort-on-err', None, _('abort if an error occurs')),
           ('',  'all', None, _('purge ignored files too')),
-          ('f', 'force', None, _('purge even when missing files are detected')),
+          ('f', 'force', None, _('purge even when there are uncommitted changes')),
           ('p', 'print', None, _('print the file names instead of deleting them')),
           ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
                                   ' (implies -p)')),

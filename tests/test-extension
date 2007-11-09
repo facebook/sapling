@@ -47,12 +47,13 @@ cd ..
 hg clone a b
 
 hg bar
+echo 'foobar = !' >> $HGRCPATH
 
 echo '% module/__init__.py-style'
-echo '[extensions]' > $HGRCPATH
 echo "barfoo = $barfoopath" >> $HGRCPATH
 cd a
 hg foo
+echo 'barfoo = !' >> $HGRCPATH
 
 cd ..
 cat > empty.py <<EOF
@@ -61,9 +62,9 @@ cat > empty.py <<EOF
 cmdtable = {}
 EOF
 emptypath=`pwd`/empty.py
-echo '[extensions]' > $HGRCPATH
 echo "empty = $emptypath" >> $HGRCPATH
 hg help empty
+echo 'empty = !' >> $HGRCPATH
 
 cat > debugextension.py <<EOF
 '''only debugcommands
@@ -75,7 +76,7 @@ def debugfoobar(ui, repo, *args, **opts):
 cmdtable = {"debugfoobar": (debugfoobar, (), "hg debugfoobar")}
 EOF
 debugpath=`pwd`/debugextension.py
-echo '[extensions]' > $HGRCPATH
 echo "debugextension = $debugpath" >> $HGRCPATH
 hg help debugextension
 hg --debug help debugextension
+echo 'debugextension = !' >> $HGRCPATH

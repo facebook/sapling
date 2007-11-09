@@ -33,12 +33,16 @@ sink_converters = [
     ]
 
 def convertsource(ui, path, type, rev):
+    exceptions = []
     for name, source in source_converters:
         try:
             if not type or name == type:
                 return source(ui, path, rev)
         except NoRepo, inst:
-            ui.note(_("convert: %s\n") % inst)
+            exceptions.append(inst)
+    if not ui.quiet:
+        for inst in exceptions:
+            ui.write(_("%s\n") % inst)
     raise util.Abort('%s: unknown repository type' % path)
 
 def convertsink(ui, path, type):

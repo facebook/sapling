@@ -266,8 +266,6 @@ def run_one(test, skips):
     def skip(msg):
         if not verbose:
             skips.append((test, msg))
-            sys.stdout.write('s')
-            sys.stdout.flush()
         else:
             print "\nSkipping %s: %s" % (test, msg)
         return None
@@ -278,6 +276,11 @@ def run_one(test, skips):
     hgrc = file(HGRCPATH, 'w+')
     hgrc.write('[ui]\n')
     hgrc.write('slash = True\n')
+    hgrc.write('[defaults]\n')
+    hgrc.write('backout = -d "0 0"\n')
+    hgrc.write('commit = -d "0 0"\n')
+    hgrc.write('debugrawcommit = -d "0 0"\n')
+    hgrc.write('tag = -d "0 0"\n')
     hgrc.close()
 
     err = os.path.join(TESTDIR, test+".err")
@@ -352,7 +355,7 @@ def run_one(test, skips):
         ret = diffret
 
     if not verbose:
-        sys.stdout.write('.')
+        sys.stdout.write(skipped and 's' or '.')
         sys.stdout.flush()
 
     if ret != 0 and not skipped:

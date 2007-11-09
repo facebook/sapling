@@ -456,6 +456,7 @@ class queue:
                 raise
         finally:
             del tr, lock, wlock
+            self.removeundo(repo)
 
     def _apply(self, repo, series, list=False, update_status=True,
                strict=False, patchdir=None, merge=None, all_files={}):
@@ -527,7 +528,6 @@ class queue:
                 self.ui.warn("fuzz found when applying patch, stopping\n")
                 err = 1
                 break
-        self.removeundo(repo)
         return (err, n)
 
     def delete(self, repo, patches, opts):
@@ -654,6 +654,9 @@ class queue:
 
             self.removeundo(repo)
             repair.strip(self.ui, repo, rev, backup)
+            # strip may have unbundled a set of backed up revisions after
+            # the actual strip
+            self.removeundo(repo)
         finally:
             del lock, wlock
 

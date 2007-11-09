@@ -1652,7 +1652,7 @@ def incoming(ui, repo, source="default", **opts):
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
-    ui.status(_('comparing with %s\n') % source)
+    ui.status(_('comparing with %s\n') % util.hidepassword(source))
     if revs:
         revs = [other.lookup(rev) for rev in revs]
     incoming = repo.findincoming(other, heads=revs, force=opts["force"])
@@ -1962,7 +1962,7 @@ def outgoing(ui, repo, dest=None, **opts):
         revs = [repo.lookup(rev) for rev in revs]
 
     other = hg.repository(ui, dest)
-    ui.status(_('comparing with %s\n') % dest)
+    ui.status(_('comparing with %s\n') % util.hidepassword(dest))
     o = repo.findoutgoing(other, force=opts['force'])
     if not o:
         ui.status(_("no changes found\n"))
@@ -2095,7 +2095,7 @@ def pull(ui, repo, source="default", **opts):
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
-    ui.status(_('pulling from %s\n') % (source))
+    ui.status(_('pulling from %s\n') % util.hidepassword(source))
     if revs:
         try:
             revs = [other.lookup(rev) for rev in revs]
@@ -2142,7 +2142,7 @@ def push(ui, repo, dest=None, **opts):
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, dest)
-    ui.status('pushing to %s\n' % (dest))
+    ui.status('pushing to %s\n' % util.hidepassword(dest))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
     r = repo.push(other, opts['force'], revs=revs)

@@ -80,10 +80,15 @@ hg rm --after d/d/d
 
 echo % should succeed - shadow removed
 hg add d
+hg ci -md
 
-#echo % update should work
-#
-#hg up -r 0
-#hg up -r 1
+echo % update should work at least with clean workdir
+
+rm -r a b d
+hg up -r 0
+hg st --all
+rm -r a b
+hg up -r 1
+hg st --all
 
 exit 0

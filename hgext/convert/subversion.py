@@ -107,7 +107,7 @@ class svn_source(converter_source):
         try:
             SubversionException
         except NameError:
-            raise NoRepo('subversion python bindings could not be loaded')
+            raise NoRepo('Subversion python bindings could not be loaded')
 
         self.encoding = locale.getpreferredencoding()
         self.lastrevs = {}
@@ -136,7 +136,7 @@ class svn_source(converter_source):
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
         except SubversionException, e:
             ui.print_exc()
-            raise NoRepo("couldn't open SVN repo %s" % self.url)
+            raise NoRepo("%s does not look like a Subversion repo" % self.url)
 
         if rev:
             try:

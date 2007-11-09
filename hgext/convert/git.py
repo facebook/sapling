@@ -30,7 +30,7 @@ class convert_git(converter_source):
         if os.path.isdir(path + "/.git"):
             path += "/.git"
         if not os.path.exists(path + "/objects"):
-            raise NoRepo("couldn't open GIT repo %s" % path)
+            raise NoRepo("%s does not look like a Git repo" % path)
 
         checktool('git-rev-parse', 'git')
 

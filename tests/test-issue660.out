@@ -40,3 +40,10 @@ adding d/d/d
 abort: directory 'd' already in dirstate
 % removing shadow
 % should succeed - shadow removed
+% update should work at least with clean workdir
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+C a
+C b/b
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+C a/a
+C b
