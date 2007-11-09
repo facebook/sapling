@@ -21,11 +21,16 @@ class darcs_source(converter_source):
     def __init__(self, ui, path, rev=None):
         super(darcs_source, self).__init__(ui, path, rev=rev)
 
-        if not os.path.exists(os.path.join(path, '_darcs', 'inventory')):
+        # check for _darcs, ElementTree, _darcs/inventory so that we can
+        # easily skip test-convert-darcs if ElementTree is not around
+        if not os.path.exists(os.path.join(path, '_darcs')):
             raise NoRepo("couldn't open darcs repo %s" % path)
 
         if ElementTree is None:
             raise util.Abort(_("Python ElementTree module is not available"))
+
+        if not os.path.exists(os.path.join(path, '_darcs', 'inventory')):
+            raise NoRepo("couldn't open darcs repo %s" % path)
 
         self.path = os.path.realpath(path)
 
