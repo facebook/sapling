@@ -276,6 +276,11 @@ def run_one(test, skips):
     hgrc = file(HGRCPATH, 'w+')
     hgrc.write('[ui]\n')
     hgrc.write('slash = True\n')
+    hgrc.write('[defaults]\n')
+    hgrc.write('backout = -d "0 0"\n')
+    hgrc.write('commit = -d "0 0"\n')
+    hgrc.write('debugrawcommit = -d "0 0"\n')
+    hgrc.write('tag = -d "0 0"\n')
     hgrc.close()
 
     err = os.path.join(TESTDIR, test+".err")
