@@ -10,5 +10,11 @@
 # enable importing on demand to reduce startup time
 from mercurial import demandimport; demandimport.enable()
 
+import sys
+import mercurial.util
 import mercurial.dispatch
+
+for fp in (sys.stdin, sys.stdout, sys.stderr):
+    mercurial.util.set_binary(fp)
+
 mercurial.dispatch.run()
