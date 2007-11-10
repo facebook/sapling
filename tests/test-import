@@ -57,7 +57,7 @@ rm -r b
 cat > mkmsg.py <<EOF
 import email.Message, sys
 msg = email.Message.Message()
-msg.set_payload('email commit message\n' + open('tip.patch').read())
+msg.set_payload('email commit message\n' + open('tip.patch', 'rb').read())
 msg['Subject'] = 'email patch'
 msg['From'] = 'email patcher'
 sys.stdout.write(msg.as_string())
