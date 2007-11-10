@@ -223,7 +223,7 @@ class commandline(object):
                 pass
         cmdline = [util.shellquote(arg) for arg in cmdline]
         cmdline += ['<', util.nulldev]
-        cmdline = util.quotecommand(' '.join(cmdline))
+        cmdline = ' '.join(cmdline)
         self.ui.debug(cmdline, '\n')
 
         self.prerun()
