@@ -740,6 +740,7 @@ class svn_sink(converter_sink, commandline):
         self.opener = util.opener(self.wc)
         self.wopener = util.opener(self.wc)
         self.childmap = mapfile(ui, self.join('hg-childmap'))
+        self.is_exec = util.checkexec(self.wc) and util.is_exec or None
 
         if created:
             hook = os.path.join(created, 'hooks', 'pre-revprop-change')
@@ -761,7 +762,15 @@ class svn_sink(converter_sink, commandline):
             except OSError:
                 pass
             self.wopener(filename, 'w').write(data)
-            was_exec = util.is_exec(self.wjoin(filename))
+
+            if self.is_exec:
+                was_exec = self.is_exec(self.wjoin(filename))
+            else:
+                # On filesystems not supporting execute-bit, there is no way
+                # to know if it is set but asking subversion. Setting it
+                # systematically is just as expensive and much simpler.
+                was_exec = 'x' not in flags
+
             util.set_exec(self.wjoin(filename), 'x' in flags)
             if was_exec:
                 if 'x' not in flags:
