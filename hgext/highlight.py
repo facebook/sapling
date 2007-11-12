@@ -44,14 +44,14 @@ from pygments.util import ClassNotFound
 from pygments.lexers import guess_lexer_for_filename, TextLexer
 from pygments.formatters import HtmlFormatter
 
-SYNTAX_CSS = '\n<link rel="stylesheet" href="#staticurl#highlight.css" type="text/css" />'
+SYNTAX_CSS = ('\n<link rel="stylesheet" href="#staticurl#highlight.css" '
+              'type="text/css" />')
 
 class StripedHtmlFormatter(HtmlFormatter):
-
     def __init__(self, stripecount, *args, **kwargs):
         super(StripedHtmlFormatter, self).__init__(*args, **kwargs)
         self.stripecount = stripecount
-        
+
     def wrap(self, source, outfile):
         yield 0, "<div class='highlight'>"
         yield 0, "<pre>"
@@ -59,19 +59,15 @@ class StripedHtmlFormatter(HtmlFormatter):
 
         for n, i in source:
             if n == 1:
-                i = "<div class='parity%s'>%s</div>" % \
-                (parity.next(), i)
+                i = "<div class='parity%s'>%s</div>" % (parity.next(), i)
             yield n, i
 
         yield 0, "</pre>"
         yield 0, "</div>"
 
 
-def pygments_format(filename, rawtext,
-                    forcetext=False,
-                    stripecount=1,
+def pygments_format(filename, rawtext, forcetext=False, stripecount=1,
                     style='colorful'):
-
     if not forcetext:
         try:
             lexer = guess_lexer_for_filename(filename, rawtext)
@@ -79,18 +75,15 @@ def pygments_format(filename, rawtext,
             lexer = TextLexer()
     else:
         lexer = TextLexer()
-        
-    formatter = StripedHtmlFormatter(stripecount,
-                                     style=style,
+
+    formatter = StripedHtmlFormatter(stripecount, style=style,
                                      linenos='inline')
 
     return highlight(rawtext, lexer, formatter)
 
 
-"""
-This reimplements hgweb.filerevision to use syntax highlighting
-"""
 def filerevision_pygments(self, fctx):
+    """Reimplement hgweb.filerevision to use syntax highlighting"""
     filename = fctx.path()
 
     rawtext = fctx.data()
@@ -108,7 +101,6 @@ def filerevision_pygments(self, fctx):
         mt = mt or 'text/plain'
         forcetext = False
 
-
     def lines(text):
         for line in text.splitlines(True):
             yield {"line": line}
@@ -120,7 +112,7 @@ def filerevision_pygments(self, fctx):
                                            stripecount=self.stripecount,
                                            style=style))
 
-    # override per-line template   
+    # override per-line template
     self.t.cache['fileline'] = '#line#'
 
     # append a <link ...> to the syntax highlighting css
@@ -129,7 +121,6 @@ def filerevision_pygments(self, fctx):
         new_header =  old_header + SYNTAX_CSS
         self.t.cache['header'] = new_header
 
-    
     yield self.t("filerevision",
                  file=filename,
                  path=hgweb_mod._up(filename), # fixme: make public
@@ -146,6 +137,7 @@ def filerevision_pygments(self, fctx):
                  rename=self.renamelink(fctx.filelog(),
                                         fctx.filenode()),
                  permissions=fctx.manifest().flags(filename))
+
 
 # monkeypatch in the new version
 # should be safer than overriding the method in a derived class
