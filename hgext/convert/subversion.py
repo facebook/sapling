@@ -817,7 +817,8 @@ class svn_sink(converter_sink, commandline):
         add_dirs = [d for d in self.dirs_of(files)
                     if not os.path.exists(self.wjoin(d, '.svn', 'entries'))]
         if add_dirs:
-            self.run('add', non_recursive=True, quiet=True, *add)
+            add_dirs.sort()
+            self.run('add', non_recursive=True, quiet=True, *add_dirs)
         if files:
             self.run('add', quiet=True, *files)
         return files.union(add_dirs)
