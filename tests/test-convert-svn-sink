@@ -8,6 +8,8 @@ echo "convert = " >> $HGRCPATH
 hg init a
 
 echo a > a/a
+mkdir -p a/d1/d2
+echo b > a/d1/d2/b
 echo % add
 hg --cwd a ci -d '0 0' -A -m 'add a file'
 

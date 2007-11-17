@@ -1,7 +1,8 @@
 % add
 adding a
+adding d1/d2/b
 % modify
-1:10307c220ed9
+1:e0e2b8a9156b
 assuming destination a-hg
 initializing svn repo 'a-hg'
 initializing svn wc 'a-hg-wc'
@@ -13,6 +14,9 @@ converting...
 At revision 2.
                 2        2 test         .
                 2        2 test         a
+                2        1 test         d1
+                2        1 test         d1/d2
+                2        1 test         d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -32,18 +36,26 @@ At revision 2.
 <paths>
 <path
    action="A">/a</path>
+<path
+   action="A">/d1</path>
+<path
+   action="A">/d1/d2</path>
+<path
+   action="A">/d1/d2/b</path>
 </paths>
 <msg>add a file</msg>
 </logentry>
 </log>
 a:
 a
+d1
 
 a-hg-wc:
 a
+d1
 same
 % rename
-2:6e45a219686e
+2:7009fc4efb34
 assuming destination a-hg
 initializing svn wc 'a-hg-wc'
 scanning source...
@@ -53,6 +65,9 @@ converting...
 At revision 3.
                 3        3 test         .
                 3        3 test         b
+                3        1 test         d1
+                3        1 test         d1/d2
+                3        1 test         d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -72,11 +87,13 @@ At revision 3.
 </log>
 a:
 b
+d1
 
 a-hg-wc:
 b
+d1
 % copy
-3:d811dc81efbb
+3:56c519973ce6
 assuming destination a-hg
 initializing svn wc 'a-hg-wc'
 scanning source...
@@ -87,6 +104,9 @@ At revision 4.
                 4        4 test         .
                 4        3 test         b
                 4        4 test         c
+                4        1 test         d1
+                4        1 test         d1/d2
+                4        1 test         d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -105,12 +125,14 @@ At revision 4.
 a:
 b
 c
+d1
 
 a-hg-wc:
 b
 c
+d1
 % remove
-4:045e93063aca
+4:ed4dc9a6f585
 assuming destination a-hg
 initializing svn wc 'a-hg-wc'
 scanning source...
@@ -120,6 +142,9 @@ converting...
 At revision 5.
                 5        5 test         .
                 5        4 test         c
+                5        1 test         d1
+                5        1 test         d1/d2
+                5        1 test         d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -135,11 +160,13 @@ At revision 5.
 </log>
 a:
 c
+d1
 
 a-hg-wc:
 c
+d1
 % executable
-5:7eda3f4b5331
+5:f205b3636d77
 svn: Path 'b' does not exist
 assuming destination a-hg
 initializing svn wc 'a-hg-wc'
@@ -151,6 +178,9 @@ abort: svn exited with status 1
 At revision 5.
                 5        5 test         .
  M              5        4 test         c
+                5        1 test         d1
+                5        1 test         d1/d2
+                5        1 test         d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
