@@ -1,6 +1,7 @@
 # CVS conversion code inspired by hg-cvs-import and git-cvsimport
 
 import os, locale, re, socket
+from cStringIO import StringIO
 from mercurial import util
 
 from common import NoRepo, commit, converter_source, checktool
@@ -209,6 +210,20 @@ class convert_cvs(converter_source):
         return self.heads
 
     def _getfile(self, name, rev):
+
+        def chunkedread(fp, count):
+            # file-objects returned by socked.makefile() do not handle
+            # large read() requests very well.
+            chunksize = 65536
+            output = StringIO()
+            while count > 0:
+                data = fp.read(min(count, chunksize))
+                if not data:
+                    raise util.Abort("%d bytes missing from remote file" % count)
+                count -= len(data)
+                output.write(data)
+            return output.getvalue()
+
         if rev.endswith("(DEAD)"):
             raise IOError
 
@@ -227,14 +242,14 @@ class convert_cvs(converter_source):
                 self.readp.readline() # entries
                 mode = self.readp.readline()[:-1]
                 count = int(self.readp.readline()[:-1])
-                data = self.readp.read(count)
+                data = chunkedread(self.readp, count)
             elif line.startswith(" "):
                 data += line[1:]
             elif line.startswith("M "):
                 pass
             elif line.startswith("Mbinary "):
                 count = int(self.readp.readline()[:-1])
-                data = self.readp.read(count)
+                data = chunkedread(self.readp, count)
             else:
                 if line == "ok\n":
                     return (data, "x" in mode and "x" or "")
