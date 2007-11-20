@@ -1629,7 +1629,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 if opts.get('exact'):
                     if hex(n) != nodeid:
                         repo.rollback()
-                        raise util.Abort(_('patch is damaged' +
+                        raise util.Abort(_('patch is damaged'
                                            ' or loses information'))
             finally:
                 os.unlink(tmpname)
@@ -1937,7 +1937,7 @@ def merge(ui, repo, node=None, force=None, rev=None):
         if len(heads) == 1:
             msg = _('there is nothing to merge')
             if parent != repo.lookup(repo.workingctx().branch()):
-                msg = _('%s - use "hg update" instead' % msg)
+                msg = _('%s - use "hg update" instead') % msg
             raise util.Abort(msg)
 
         if parent not in heads:
