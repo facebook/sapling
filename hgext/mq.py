@@ -610,15 +610,14 @@ class queue:
             m, a, r, d = repo.status(files=fns, match=match)[:4]
         else:
             m, a, r, d = self.check_localchanges(repo, force)
+            fns, match, anypats = cmdutil.matchpats(repo, m + a + r)
         commitfiles = m + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
         try:
             insert = self.full_series_end()
-            if msg:
-                n = repo.commit(commitfiles, msg, force=True)
-            else:
-                n = repo.commit(commitfiles, "[mq]: %s" % patch, force=True)
+            commitmsg = msg and msg or ("[mq]: %s" % patch)
+            n = repo.commit(commitfiles, commitmsg, match=match, force=True)
             if n == None:
                 raise util.Abort(_("repo commit failed"))
             self.full_series[insert:insert] = [patch]

@@ -84,6 +84,27 @@ cd ..
 
 cd a
 
+echo a > somefile
+hg add somefile
+
+echo % qnew with uncommitted changes
+
+hg qnew uncommitted.patch
+hg st
+hg qseries
+
+echo '% qnew with uncommitted changes and missing file (issue 803)'
+
+hg qnew issue803.patch someotherfile 2>&1 | \
+    sed -e 's/someotherfile:.*/someotherfile: No such file or directory/'
+hg st
+hg qseries
+hg qpop -f
+hg qdel issue803.patch
+
+hg revert --no-backup somefile
+rm somefile
+
 echo % qnew -m
 
 hg qnew -m 'foo bar' test.patch
