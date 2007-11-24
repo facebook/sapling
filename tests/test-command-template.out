@@ -260,22 +260,22 @@ other 2
 other 3
 desc--debug: line 1
 line 2
+file_adds: second
+file_adds: 
+file_adds: d
 file_adds: 
 file_adds: 
-file_adds: 
-file_adds: 
-file_adds: 
-file_adds: 
-file_adds: 
-file_adds: 
+file_adds: c
+file_adds: b
+file_adds: a
+file_adds--verbose: second
+file_adds--verbose: 
+file_adds--verbose: d
 file_adds--verbose: 
 file_adds--verbose: 
-file_adds--verbose: 
-file_adds--verbose: 
-file_adds--verbose: 
-file_adds--verbose: 
-file_adds--verbose: 
-file_adds--verbose: 
+file_adds--verbose: c
+file_adds--verbose: b
+file_adds--verbose: a
 file_adds--debug: second
 file_adds--debug: 
 file_adds--debug: d
@@ -332,22 +332,22 @@ files--debug: c
 files--debug: 
 files--debug: 
 files--debug: 
-manifest: 
-manifest: 
-manifest: 
-manifest: 
-manifest: 
-manifest: 
-manifest: 
-manifest: 
-manifest--verbose: 
-manifest--verbose: 
-manifest--verbose: 
-manifest--verbose: 
-manifest--verbose: 
-manifest--verbose: 
-manifest--verbose: 
-manifest--verbose: 
+manifest: 7:f2dbc354b94e
+manifest: 6:91015e9dbdd7
+manifest: 5:4dc3def4f9b4
+manifest: 4:90ae8dda64e1
+manifest: 3:cb5a1327723b
+manifest: 2:6e0e82995c35
+manifest: 1:4e8d705b1e53
+manifest: 0:a0c8bcbbb45c
+manifest--verbose: 7:f2dbc354b94e
+manifest--verbose: 6:91015e9dbdd7
+manifest--verbose: 5:4dc3def4f9b4
+manifest--verbose: 4:90ae8dda64e1
+manifest--verbose: 3:cb5a1327723b
+manifest--verbose: 2:6e0e82995c35
+manifest--verbose: 1:4e8d705b1e53
+manifest--verbose: 0:a0c8bcbbb45c
 manifest--debug: 7:f2dbc354b94e5ec0b4f10680ee0cee816101d0bf
 manifest--debug: 6:91015e9dbdd76a6791085d12b0a0ec7fcd22ffbf
 manifest--debug: 5:4dc3def4f9b4c6e8de820f6ee74737f91e96a216
