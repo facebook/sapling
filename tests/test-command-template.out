@@ -308,6 +308,30 @@ file_dels--debug:
 file_dels--debug: 
 file_dels--debug: 
 file_dels--debug: 
+file_mods: 
+file_mods: 
+file_mods: 
+file_mods: 
+file_mods: c
+file_mods: 
+file_mods: 
+file_mods: 
+file_mods--verbose: 
+file_mods--verbose: 
+file_mods--verbose: 
+file_mods--verbose: 
+file_mods--verbose: c
+file_mods--verbose: 
+file_mods--verbose: 
+file_mods--verbose: 
+file_mods--debug: 
+file_mods--debug: 
+file_mods--debug: 
+file_mods--debug: 
+file_mods--debug: c
+file_mods--debug: 
+file_mods--debug: 
+file_mods--debug: 
 files: second
 files: 
 files: d
@@ -324,14 +348,14 @@ files--verbose: c
 files--verbose: c
 files--verbose: b
 files--verbose: a
+files--debug: second
 files--debug: 
-files--debug: 
-files--debug: 
+files--debug: d
 files--debug: 
 files--debug: c
-files--debug: 
-files--debug: 
-files--debug: 
+files--debug: c
+files--debug: b
+files--debug: a
 manifest: 7:f2dbc354b94e
 manifest: 6:91015e9dbdd7
 manifest: 5:4dc3def4f9b4

@@ -578,15 +578,10 @@ class changeset_templater(changeset_printer):
                 files[:] = self.repo.status(
                     log.parents(changenode)[0], changenode)[:3]
             return files
-        # XXX: "files" means "modified files" in debug, "all changed
-        # files" otherwise. This should be fixed and a "file_mods" be
-        # introduced instead.
-        if self.ui.debugflag:
-            def showfiles(**args):
-                return showlist('file', getfiles()[0], **args)
-        else:
-            def showfiles(**args):
-                return showlist('file', changes[3], **args)
+        def showfiles(**args):
+            return showlist('file', changes[3], **args)
+        def showmods(**args):
+            return showlist('file_mod', getfiles()[0], **args)
         def showadds(**args):
             return showlist('file_add', getfiles()[1], **args)
         def showdels(**args):
@@ -604,6 +599,7 @@ class changeset_templater(changeset_printer):
             'desc': changes[4].strip(),
             'file_adds': showadds,
             'file_dels': showdels,
+            'file_mods': showmods,
             'files': showfiles,
             'file_copies': showcopies,
             'manifest': showmanifest,

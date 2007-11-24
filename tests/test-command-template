@@ -89,8 +89,8 @@ hg log --style=changelog > changelog
 cat changelog
 
 echo "# keys work"
-for key in author branches date desc file_adds file_dels files \
-        manifest node parents rev tags; do
+for key in author branches date desc file_adds file_dels file_mods \
+        files manifest node parents rev tags; do
     for mode in '' --verbose --debug; do
         hg log $mode --template "$key$mode: {$key}\n"
     done
