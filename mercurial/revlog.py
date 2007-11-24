@@ -321,7 +321,7 @@ class revlogoldio(object):
             e = _unpack(indexformatv0, cur)
             # transform to revlogv1 format
             e2 = (offset_type(e[0], 0), e[1], -1, e[2], e[3],
-                  nodemap[e[4]], nodemap[e[5]], e[6])
+                  nodemap.get(e[4], nullrev), nodemap.get(e[5], nullrev), e[6])
             index.append(e2)
             nodemap[e[6]] = n
             n += 1
