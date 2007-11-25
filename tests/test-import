@@ -129,3 +129,27 @@ echo "% committer should be 'someoneelse'"
 hg --cwd b tip | grep someoneelse
 echo "% should be empty"
 hg --cwd b status
+
+
+# Test fuzziness (ambiguous patch location, fuzz=2)
+echo % test fuzziness
+hg init fuzzy
+cd fuzzy
+echo line1 > a
+echo line0 >> a
+echo line3 >> a
+hg ci -Am adda
+echo line1 > a
+echo line2 >> a
+echo line0 >> a
+echo line3 >> a
+hg ci -m change a
+hg export tip > tip.patch
+hg up -C 0
+echo line1 > a
+echo line0 >> a
+echo line1 >> a
+echo line0 >> a
+hg ci -m brancha
+hg import -v tip.patch
+cd ..
