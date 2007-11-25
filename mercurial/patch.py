@@ -357,7 +357,7 @@ class patchfile:
 
         if len(cand) > 1:
             # resort our list of potentials forward then back.
-            cand.sort(cmp=sorter)
+            cand.sort(sorter)
         return cand
 
     def hashlines(self):
