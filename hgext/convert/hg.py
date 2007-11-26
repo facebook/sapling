@@ -241,7 +241,7 @@ class mercurial_source(converter_source):
         ctx = self.changectx(rev)
         parents = [hex(p.node()) for p in ctx.parents() if p.node() != nullid]
         return commit(author=ctx.user(), date=util.datestr(ctx.date()),
-                      desc=ctx.description(), parents=parents,
+                      desc=ctx.description(), rev=rev, parents=parents,
                       branch=ctx.branch(), extra=ctx.extra())
 
     def gettags(self):
