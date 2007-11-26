@@ -62,9 +62,14 @@ def _verify(repo):
         repo.ui.status(_("repository uses revlog format %d\n") %
                        (revlogv1 and 1 or 0))
 
+    havecl = havemf = 1
     seen = {}
     repo.ui.status(_("checking changesets\n"))
-    checksize(repo.changelog, "changelog")
+    if repo.changelog.count() == 0 and repo.manifest.count() > 1:
+        havecl = 0
+        err(0, _("empty or missing 00changelog.i"))
+    else:
+        checksize(repo.changelog, "changelog")
 
     for i in xrange(repo.changelog.count()):
         changesets += 1
@@ -96,14 +101,18 @@ def _verify(repo):
 
     seen = {}
     repo.ui.status(_("checking manifests\n"))
-    checkversion(repo.manifest, "manifest")
-    checksize(repo.manifest, "manifest")
+    if repo.changelog.count() > 0 and repo.manifest.count() == 0:
+        havemf = 0
+        err(0, _("empty or missing 00manifest.i"))
+    else:
+        checkversion(repo.manifest, "manifest")
+        checksize(repo.manifest, "manifest")
 
     for i in xrange(repo.manifest.count()):
         n = repo.manifest.node(i)
         l = repo.manifest.linkrev(n)
 
-        if l < 0 or l >= repo.changelog.count():
+        if l < 0 or (havecl and l >= repo.changelog.count()):
             err(None, _("bad link (%d) at manifest revision %d") % (l, i))
 
         if n in neededmanifests:
@@ -132,37 +141,50 @@ def _verify(repo):
 
     repo.ui.status(_("crosschecking files in changesets and manifests\n"))
 
-    nm = neededmanifests.items()
-    nm.sort()
-    for m, c in nm:
-        err(m, _("changeset refers to unknown manifest %s") % short(c))
-    del neededmanifests, nm
+    if havemf > 0:
+        nm = [(c, m) for m, c in neededmanifests.items()]
+        nm.sort()
+        for c, m in nm:
+            err(c, _("changeset refers to unknown manifest %s") % short(m))
+        del neededmanifests, nm
 
-    for f in filenodes:
-        if f not in filelinkrevs:
-            lrs = [repo.manifest.linkrev(n) for n in filenodes[f]]
-            lrs.sort()
-            err(lrs[0], _("in manifest but not in changeset"), f)
+    if havecl:
+        fl = filenodes.keys()
+        fl.sort()
+        for f in fl:
+            if f not in filelinkrevs:
+                lrs = [repo.manifest.linkrev(n) for n in filenodes[f]]
+                lrs.sort()
+                err(lrs[0], _("in manifest but not in changeset"), f)
+        del fl
 
-    for f in filelinkrevs:
-        if f not in filenodes:
-            lr = filelinkrevs[f][0]
-            err(lr, _("in changeset but not in manifest"), f)
+    if havemf:
+        fl = filelinkrevs.keys()
+        fl.sort()
+        for f in fl:
+            if f not in filenodes:
+                lr = filelinkrevs[f][0]
+                err(lr, _("in changeset but not in manifest"), f)
+        del fl
 
     repo.ui.status(_("checking files\n"))
-    ff = filenodes.keys()
+    ff = dict.fromkeys(filenodes.keys() + filelinkrevs.keys()).keys()
     ff.sort()
     for f in ff:
         if f == "/dev/null":
             continue
         files += 1
         if not f:
-            lr = repo.manifest.linkrev(filenodes[f][0])
-            err(lr, _("file without name in manifest %s") % short(ff[n]))
+            lr = filelinkrevs[f][0]
+            err(lr, _("file without name in manifest"))
             continue
         fl = repo.file(f)
         checkversion(fl, f)
         checksize(fl, f)
+
+        if fl.count() == 0:
+            err(filelinkrevs[f][0], _("empty or missing revlog"), f)
+            continue
 
         seen = {}
         nodes = {nullid: 1}
@@ -171,7 +193,7 @@ def _verify(repo):
             n = fl.node(i)
             flr = fl.linkrev(n)
 
-            if flr not in filelinkrevs.get(f, []):
+            if flr < 0 or (havecl and flr not in filelinkrevs.get(f, [])):
                 if flr < 0 or flr >= repo.changelog.count():
                     err(None, _("rev %d point to nonexistent changeset %d")
                         % (i, flr), f)
@@ -182,14 +204,16 @@ def _verify(repo):
                     warn(_(" (expected %s)") % filelinkrevs[f][0])
                 flr = None # can't be trusted
             else:
-                filelinkrevs[f].remove(flr)
+                if havecl:
+                    filelinkrevs[f].remove(flr)
 
             if n in seen:
                 err(flr, _("duplicate revision %d") % i, f)
-            if n not in filenodes[f]:
-                err(flr, _("%s not in manifests") % (short(n)), f)
-            else:
-                del filenodes[f][n]
+            if f in filenodes:
+                if havemf and n not in filenodes[f]:
+                    err(flr, _("%s not in manifests") % (short(n)), f)
+                else:
+                    del filenodes[f][n]
 
             # verify contents
             try:
@@ -230,11 +254,12 @@ def _verify(repo):
                     (short(n), inst), f)
 
         # cross-check
-        fns = [(repo.manifest.linkrev(filenodes[f][n]), n)
-               for n in filenodes[f]]
-        fns.sort()
-        for lr, node in fns:
-            err(lr, _("%s in manifests not found") % short(node), f)
+        if f in filenodes:
+            fns = [(repo.manifest.linkrev(filenodes[f][n]), n)
+                   for n in filenodes[f]]
+            fns.sort()
+            for lr, node in fns:
+                err(lr, _("%s in manifests not found") % short(node), f)
 
     repo.ui.status(_("%d files, %d changesets, %d total revisions\n") %
                    (files, changesets, revisions))
@@ -247,4 +272,3 @@ def _verify(repo):
             repo.ui.warn(_("(first damaged changeset appears to be %d)\n")
                          % firstbad[0])
         return 1
-
