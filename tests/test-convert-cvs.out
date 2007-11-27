@@ -44,7 +44,6 @@ c
 checking in src/a,v
 checking in src/b/c,v
 % convert again
-destination src-hg is a Mercurial repository
 connecting to cvsrepo
 scanning source...
 sorting...
@@ -56,7 +55,6 @@ c
 c
 c
 % convert again with --filemap
-destination src-filemap is a Mercurial repository
 connecting to cvsrepo
 scanning source...
 sorting...

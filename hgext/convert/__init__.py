@@ -332,6 +332,24 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     The 'rename' directive renames a file or directory.  To rename from a
     subdirectory into the root of the repository, use '.' as the path to
     rename to.
+
+    Back end options:
+
+    --config convert.hg.clonebranches=False   (boolean)
+        hg target: XXX not documented
+    --config convert.hg.saverev=True          (boolean)
+        hg source: allow target to preserve source revision ID
+    --config convert.hg.tagsbranch=default    (branch name)
+        hg target: XXX not documented
+    --config convert.hg.usebranchnames=True   (boolean)
+        hg target: preserve branch names
+
+    --config convert.svn.branches=branches    (directory name)
+        svn source: specify the directory containing branches
+    --config convert.svn.tags=tags            (directory name)
+        svn source: specify the directory containing tags
+    --config convert.svn.trunk=trunk          (directory name)
+        svn source: specify the name of the trunk branch
     """
 
     util._encoding = 'UTF-8'

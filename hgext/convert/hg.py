@@ -1,10 +1,16 @@
 # hg backend for convert extension
 
-# Note for hg->hg conversion: Old versions of Mercurial didn't trim
-# the whitespace from the ends of commit messages, but new versions
-# do.  Changesets created by those older versions, then converted, may
-# thus have different hashes for changesets that are otherwise
-# identical.
+# Notes for hg->hg conversion:
+#
+# * Old versions of Mercurial didn't trim the whitespace from the ends
+#   of commit messages, but new versions do.  Changesets created by
+#   those older versions, then converted, may thus have different
+#   hashes for changesets that are otherwise identical.
+#
+# * By default, the source revision is stored in the converted
+#   revision.  This will cause the converted revision to have a
+#   different identity than the source.  To avoid this, use the
+#   following option: "--config convert.hg.saverev=false"
 
 
 import os, time
@@ -181,6 +187,7 @@ class mercurial_sink(converter_sink):
 class mercurial_source(converter_source):
     def __init__(self, ui, path, rev=None):
         converter_source.__init__(self, ui, path, rev)
+        self.saverev = ui.configbool('convert', 'hg.saverev', True)
         try:
             self.repo = hg.repository(self.ui, path)
             # try to provoke an exception if this isn't really a hg
@@ -239,8 +246,12 @@ class mercurial_source(converter_source):
     def getcommit(self, rev):
         ctx = self.changectx(rev)
         parents = [hex(p.node()) for p in ctx.parents() if p.node() != nullid]
+        if self.saverev:
+            crev = rev
+        else:
+            crev = None
         return commit(author=ctx.user(), date=util.datestr(ctx.date()),
-                      desc=ctx.description(), rev=rev, parents=parents,
+                      desc=ctx.description(), rev=crev, parents=parents,
                       branch=ctx.branch(), extra=ctx.extra())
 
     def gettags(self):

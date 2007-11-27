@@ -1,7 +1,11 @@
 #!/bin/sh
 
-echo "[extensions]" >> $HGRCPATH
-echo "hgext.convert=" >> $HGRCPATH
+cat >> $HGRCPATH <<EOF
+[extensions]
+convert=
+[convert]
+hg.saverev=False
+EOF
 
 hg init orig
 cd orig

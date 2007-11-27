@@ -7,7 +7,7 @@
 import shlex
 from mercurial.i18n import _
 from mercurial import util
-from common import SKIPREV
+from common import SKIPREV, converter_source
 
 def rpairs(name):
     e = len(name)
@@ -110,9 +110,9 @@ class filemapper(object):
 #   touch files we're interested in, but also merges that merge two
 #   or more interesting revisions.
 
-class filemap_source(object):
+class filemap_source(converter_source):
     def __init__(self, ui, baseconverter, filemap):
-        self.ui = ui
+        super(filemap_source, self).__init__(ui)
         self.base = baseconverter
         self.filemapper = filemapper(ui, filemap)
         self.commits = {}
@@ -344,9 +344,3 @@ class filemap_source(object):
 
     def gettags(self):
         return self.base.gettags()
-
-    def before(self):
-        pass
-
-    def after(self):
-        pass
