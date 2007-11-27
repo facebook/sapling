@@ -44,17 +44,17 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.protocol_version = 'HTTP/1.1'
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kargs)
 
+    def _log_any(self, fp, format, *args):
+        fp.write("%s - - [%s] %s\n" % (self.client_address[0],
+                                       self.log_date_time_string(),
+                                       format % args))
+        fp.flush()
+
     def log_error(self, format, *args):
-        errorlog = self.server.errorlog
-        errorlog.write("%s - - [%s] %s\n" % (self.client_address[0],
-                                             self.log_date_time_string(),
-                                             format % args))
+        self._log_any(self.server.errorlog, format, *args)
 
     def log_message(self, format, *args):
-        accesslog = self.server.accesslog
-        accesslog.write("%s - - [%s] %s\n" % (self.client_address[0],
-                                              self.log_date_time_string(),
-                                              format % args))
+        self._log_any(self.server.accesslog, format, *args)
 
     def do_write(self):
         try:
