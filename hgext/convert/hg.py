@@ -24,8 +24,6 @@ class mercurial_sink(converter_sink):
         if os.path.isdir(path) and len(os.listdir(path)) > 0:
             try:
                 self.repo = hg.repository(self.ui, path)
-                ui.status(_('destination %s is a Mercurial repository\n') %
-                          path)
             except hg.RepoError, err:
                 ui.print_exc()
                 raise NoRepo(err.args[0])
@@ -195,6 +193,7 @@ class mercurial_source(converter_source):
         self.lastrev = None
         self.lastctx = None
         self._changescache = None
+        self.convertfp = None
 
     def changectx(self, rev):
         if self.lastrev != rev:
@@ -241,7 +240,7 @@ class mercurial_source(converter_source):
         ctx = self.changectx(rev)
         parents = [hex(p.node()) for p in ctx.parents() if p.node() != nullid]
         return commit(author=ctx.user(), date=util.datestr(ctx.date()),
-                      desc=ctx.description(), parents=parents,
+                      desc=ctx.description(), rev=rev, parents=parents,
                       branch=ctx.branch(), extra=ctx.extra())
 
     def gettags(self):
@@ -258,3 +257,9 @@ class mercurial_source(converter_source):
 
         return changes[0] + changes[1] + changes[2]
 
+    def converted(self, rev, destrev):
+        if self.convertfp is None:
+            self.convertfp = open(os.path.join(self.path, '.hg', 'shamap'),
+                                  'a')
+        self.convertfp.write('%s %s\n' % (destrev, rev))
+        self.convertfp.flush()

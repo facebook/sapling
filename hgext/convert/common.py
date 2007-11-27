@@ -115,6 +115,11 @@ class converter_source(object):
         """
         raise NotImplementedError()
 
+    def converted(self, rev, sinkrev):
+        '''Notify the source that a revision has been converted.'''
+        pass
+
+
 class converter_sink(object):
     """Conversion sink (target) interface"""
 

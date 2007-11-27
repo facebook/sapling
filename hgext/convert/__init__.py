@@ -227,6 +227,7 @@ class converter(object):
                         self.dest.copyfile(copyf, f)
 
         newnode = self.dest.putcommit(filenames, parents, commit)
+        self.source.converted(rev, newnode)
         self.map[rev] = newnode
 
     def convert(self):

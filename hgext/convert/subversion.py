@@ -154,6 +154,12 @@ class svn_source(converter_source):
         self.head = self.revid(self.last_changed)
         self._changescache = None
 
+        if os.path.exists(os.path.join(url, '.svn/entries')):
+            self.wc = url
+        else:
+            self.wc = None
+        self.convertfp = None
+
     def setrevmap(self, revmap):
         lastrevs = {}
         for revid in revmap.iterkeys():
@@ -297,6 +303,15 @@ class svn_source(converter_source):
         except SubversionException, (inst, num):
             self.ui.note('no tags found at revision %d\n' % start)
         return tags
+
+    def converted(self, rev, destrev):
+        if not self.wc:
+            return
+        if self.convertfp is None:
+            self.convertfp = open(os.path.join(self.wc, '.svn', 'hg-shamap'),
+                                  'a')
+        self.convertfp.write('%s %d\n' % (destrev, self.revnum(rev)))
+        self.convertfp.flush()
 
     # -- helper functions --
 
@@ -749,6 +764,9 @@ class svn_sink(converter_sink, commandline):
             fp.close()
             util.set_exec(hook, True)
 
+        xport = transport.SvnRaTransport(url=geturl(path))
+        self.uuid = svn.ra.get_uuid(xport.ra)
+
     def wjoin(self, *names):
         return os.path.join(self.wc, *names)
 
@@ -837,10 +855,13 @@ class svn_sink(converter_sink, commandline):
     def addchild(self, parent, child):
         self.childmap[parent] = child
 
+    def revid(self, rev):
+        return u"svn:%s@%s" % (self.uuid, rev)
+        
     def putcommit(self, files, parents, commit):
         for parent in parents:
             try:
-                return self.childmap[parent]
+                return self.revid(self.childmap[parent])
             except KeyError:
                 pass
         entries = set(self.delete)
@@ -873,7 +894,7 @@ class svn_sink(converter_sink, commandline):
                          revprop=True, revision=rev)
             for parent in parents:
                 self.addchild(parent, rev)
-            return rev
+            return self.revid(rev)
         finally:
             os.unlink(messagefile)
 
