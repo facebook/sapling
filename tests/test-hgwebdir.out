@@ -1,0 +1,43 @@
+adding a
+adding b
+adding c
+% should give a 404 - file does not exist
+404 Not Found
+
+
+error: Path not found: bork/
+% should succeed
+200 Script output follows
+
+
+/a/
+/b/
+
+200 Script output follows
+
+a
+200 Script output follows
+
+b
+% should give a 404 - repo is not published
+404 Not Found
+
+
+error: repository c not found
+% should succeed
+200 Script output follows
+
+
+/a/
+/b/
+/c/
+
+200 Script output follows
+
+a
+200 Script output follows
+
+b
+200 Script output follows
+
+c
