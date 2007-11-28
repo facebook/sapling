@@ -14,3 +14,7 @@ for h in headers:
         print "%s: %s" % (h, response.getheader(h))
 print
 sys.stdout.write(response.read())
+
+if 200 <= response.status <= 299:
+    sys.exit(0)
+sys.exit(1)

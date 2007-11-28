@@ -6,13 +6,13 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetypes, re, zlib, mimetools, cStringIO, sys
+import errno, os, mimetypes, re, zlib, mimetools, cStringIO, sys
 import tempfile, urllib, bz2
 from mercurial.node import *
 from mercurial.i18n import gettext as _
 from mercurial import mdiff, ui, hg, util, archival, streamclone, patch
 from mercurial import revlog, templater
-from common import get_mtime, staticfile, style_map, paritygen
+from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen
 
 def _up(p):
     if p[0] != "/":
@@ -478,6 +478,9 @@ class hgweb(object):
                 short = os.path.basename(remain)
                 files[short] = (f, n)
 
+        if not files:
+            raise ErrorResponse(404, 'Path not found: ' + path)
+
         def filelist(**map):
             fl = files.keys()
             fl.sort()
@@ -845,14 +848,20 @@ class hgweb(object):
 
             cmd = req.form['cmd'][0]
 
-            method = getattr(self, 'do_' + cmd, None)
-            if method:
-                try:
-                    method(req)
-                except (hg.RepoError, revlog.RevlogError), inst:
-                    req.write(self.t("error", error=str(inst)))
-            else:
-                req.write(self.t("error", error='No such method: ' + cmd))
+            try:
+                method = getattr(self, 'do_' + cmd)
+                method(req)
+            except revlog.LookupError, err:
+                req.respond(404, self.t(
+                    'error', error='revision not found: %s' % err.name))
+            except (hg.RepoError, revlog.RevlogError), inst:
+                req.respond('500 Internal Server Error',
+                            self.t('error', error=str(inst)))
+            except ErrorResponse, inst:
+                req.respond(inst.code, self.t('error', error=inst.message))
+            except AttributeError:
+                req.respond(400,
+                            self.t('error', error='No such method: ' + cmd))
         finally:
             self.t = None
 
@@ -1038,7 +1047,8 @@ class hgweb(object):
             self.archive(req, req.form['node'][0], type_)
             return
 
-        req.write(self.t("error"))
+        req.respond(400, self.t('error',
+                                error='Unsupported archive type: %s' % type_))
 
     def do_static(self, req):
         fname = req.form['file'][0]
@@ -1047,8 +1057,7 @@ class hgweb(object):
         static = self.config("web", "static",
                              os.path.join(self.templatepath, "static"),
                              untrusted=False)
-        req.write(staticfile(static, fname, req)
-                  or self.t("error", error="%r not found" % fname))
+        req.write(staticfile(static, fname, req))
 
     def do_capabilities(self, req):
         caps = ['lookup', 'changegroupsubset']
@@ -1198,7 +1207,11 @@ class hgweb(object):
                 else:
                     filename = ''
                 error = getattr(inst, 'strerror', 'Unknown error')
-                req.write('%s: %s\n' % (error, filename))
+                if inst.errno == errno.ENOENT:
+                    code = 404
+                else:
+                    code = 500
+                req.respond(code, '%s: %s\n' % (error, filename))
         finally:
             fp.close()
             os.unlink(tempname)

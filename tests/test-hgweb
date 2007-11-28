@@ -7,7 +7,25 @@ echo foo > da/foo
 echo foo > foo
 hg ci -Ambase -d '0 0'
 hg serve -p $HGPORT -d --pid-file=hg.pid
+cat hg.pid >> $DAEMON_PIDS
 echo % manifest
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/?style=raw')
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/da?style=raw')
-kill `cat hg.pid`
+
+echo % plain file
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/foo?style=raw'
+
+echo % should give a 404 - static file that does not exist
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/static/bogus'
+
+echo % should give a 404 - bad revision
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/spam/foo?style=raw'
+
+echo % should give a 400 - bad command
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/foo?cmd=spam&style=raw'
+
+echo % should give a 404 - file does not exist
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/bork?style=raw'
+
+echo % static file
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/static/style-gitweb.css'

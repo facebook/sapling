@@ -9,7 +9,7 @@
 import os, mimetools, cStringIO
 from mercurial.i18n import gettext as _
 from mercurial import ui, hg, util, templater
-from common import get_mtime, staticfile, style_map, paritygen
+from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen
 from hgweb_mod import hgweb
 
 # This is a stopgap
@@ -215,46 +215,47 @@ class hgwebdir(object):
                            **dict(sort)))
 
         try:
-            virtual = req.env.get("PATH_INFO", "").strip('/')
-            if virtual.startswith('static/'):
-                static = os.path.join(templater.templatepath(), 'static')
-                fname = virtual[7:]
-                req.write(staticfile(static, fname, req) or
-                          tmpl('error', error='%r not found' % fname))
-            elif virtual:
-                repos = dict(self.repos)
-                while virtual:
-                    real = repos.get(virtual)
-                    if real:
-                        req.env['REPO_NAME'] = virtual
-                        try:
-                            repo = hg.repository(parentui, real)
-                            hgweb(repo).run_wsgi(req)
-                        except IOError, inst:
-                            req.write(tmpl("error", error=inst.strerror))
-                        except hg.RepoError, inst:
-                            req.write(tmpl("error", error=str(inst)))
-                        return
+            try:
+                virtual = req.env.get("PATH_INFO", "").strip('/')
+                if virtual.startswith('static/'):
+                    static = os.path.join(templater.templatepath(), 'static')
+                    fname = virtual[7:]
+                    req.write(staticfile(static, fname, req))
+                elif virtual:
+                    repos = dict(self.repos)
+                    while virtual:
+                        real = repos.get(virtual)
+                        if real:
+                            req.env['REPO_NAME'] = virtual
+                            try:
+                                repo = hg.repository(parentui, real)
+                                hgweb(repo).run_wsgi(req)
+                                return
+                            except IOError, inst:
+                                raise ErrorResponse(500, inst.strerror)
+                            except hg.RepoError, inst:
+                                raise ErrorResponse(500, str(inst))
 
-                    # browse subdirectories
-                    subdir = virtual + '/'
-                    if [r for r in repos if r.startswith(subdir)]:
-                        makeindex(req, subdir)
-                        return
+                        # browse subdirectories
+                        subdir = virtual + '/'
+                        if [r for r in repos if r.startswith(subdir)]:
+                            makeindex(req, subdir)
+                            return
 
-                    up = virtual.rfind('/')
-                    if up < 0:
-                        break
-                    virtual = virtual[:up]
+                        up = virtual.rfind('/')
+                        if up < 0:
+                            break
+                        virtual = virtual[:up]
 
-                req.write(tmpl("notfound", repo=virtual))
-            else:
-                if req.form.has_key('static'):
-                    static = os.path.join(templater.templatepath(), "static")
-                    fname = req.form['static'][0]
-                    req.write(staticfile(static, fname, req)
-                              or tmpl("error", error="%r not found" % fname))
+                    req.respond(404, tmpl("notfound", repo=virtual))
                 else:
-                    makeindex(req)
+                    if req.form.has_key('static'):
+                        static = os.path.join(templater.templatepath(), "static")
+                        fname = req.form['static'][0]
+                        req.write(staticfile(static, fname, req))
+                    else:
+                        makeindex(req)
+            except ErrorResponse, err:
+                req.respond(err.code, tmpl('error', error=err.message or ''))
         finally:
             tmpl = None

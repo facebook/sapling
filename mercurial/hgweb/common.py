@@ -6,7 +6,17 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetypes
+import errno, mimetypes, os
+
+class ErrorResponse(Exception):
+    def __init__(self, code, message=None):
+        Exception.__init__(self)
+        self.code = code
+        if message is None:
+            from httplib import responses
+            self.message = responses.get(code, 'Error')
+        else:
+            self.message = message
 
 def get_mtime(repo_path):
     store_path = os.path.join(repo_path, ".hg")
@@ -40,9 +50,13 @@ def staticfile(directory, fname, req):
         req.header([('Content-type', ct),
                     ('Content-length', str(os.path.getsize(path)))])
         return file(path, 'rb').read()
-    except (TypeError, OSError):
-        # illegal fname or unreadable file
-        return ""
+    except TypeError:
+        raise ErrorResponse(500, 'illegal file name')
+    except OSError, err:
+        if err.errno == errno.ENOENT:
+            raise ErrorResponse(404)
+        else:
+            raise ErrorResponse(500, err.strerror)
 
 def style_map(templatepath, style):
     """Return path to mapfile for a given style.
