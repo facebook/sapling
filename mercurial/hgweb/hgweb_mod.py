@@ -13,6 +13,7 @@ from mercurial.i18n import gettext as _
 from mercurial import mdiff, ui, hg, util, archival, streamclone, patch
 from mercurial import revlog, templater
 from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen
+from common import statusmsg
 
 def _up(p):
     if p[0] != "/":

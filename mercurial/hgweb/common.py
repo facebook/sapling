@@ -12,11 +12,18 @@ class ErrorResponse(Exception):
     def __init__(self, code, message=None):
         Exception.__init__(self)
         self.code = code
-        if message is None:
-            from httplib import responses
-            self.message = responses.get(code, 'Error')
-        else:
+        if message:
             self.message = message
+        else:
+            self.message = _statusmessage(code)
+
+def _statusmessage(code):
+    from BaseHTTPServer import BaseHTTPRequestHandler
+    responses = BaseHTTPRequestHandler.responses
+    return responses.get(code, ('Error', 'Unknown error'))[0]
+    
+def statusmessage(code):
+    return '%d %s' % (code, _statusmessage(code))
 
 def get_mtime(repo_path):
     store_path = os.path.join(repo_path, ".hg")

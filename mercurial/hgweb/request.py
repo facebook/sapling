@@ -8,7 +8,7 @@
 
 import socket, cgi, errno
 from mercurial.i18n import gettext as _
-from common import ErrorResponse
+from common import ErrorResponse, statusmessage
 
 class wsgiapplication(object):
     def __init__(self, destmaker):
@@ -53,15 +53,10 @@ class _wsgirequest(object):
                 if self.server_write is None:
                     if not self.headers:
                         raise RuntimeError("request.write called before headers sent (%s)." % thing)
-                    code = None
                     if isinstance(status, ErrorResponse):
-                        code = status.code
+                        status = statusmessage(status.code)
                     elif isinstance(status, int):
-                        code = status
-                    if code:
-                        from httplib import responses
-                        status = '%d %s' % (
-                            code, responses.get(code, 'Error'))
+                        status = statusmessage(status)
                     self.server_write = self.start_response(status,
                                                             self.headers)
                     self.start_response = None
