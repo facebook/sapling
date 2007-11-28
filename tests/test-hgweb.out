@@ -56,7 +56,7 @@ powered by<br/>
 
 error: revision not found: spam
 % should give a 400 - bad command
-400 Bad Request
+400
 
 
 error: No such method: spam

@@ -22,7 +22,7 @@ echo % should give a 404 - bad revision
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/spam/foo?style=raw'
 
 echo % should give a 400 - bad command
-"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/foo?cmd=spam&style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/foo?cmd=spam&style=raw' | sed 's/400.*/400/'
 
 echo % should give a 404 - file does not exist
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/bork?style=raw'
