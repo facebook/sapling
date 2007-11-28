@@ -18,4 +18,6 @@ manifest = manifest.tmpl
 manifestdirentry = 'drwxr-xr-x {basename}\n'
 manifestfileentry = '{permissions|permissions} {size} {basename}\n'
 index = index.tmpl
+notfound = notfound.tmpl
+error = error.tmpl
 indexentry = '#url#\n'
