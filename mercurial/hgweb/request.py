@@ -10,15 +10,8 @@ import socket, cgi, errno
 from mercurial.i18n import gettext as _
 from common import ErrorResponse, statusmessage
 
-class wsgiapplication(object):
-    def __init__(self, destmaker):
-        self.destmaker = destmaker
-
-    def __call__(self, wsgienv, start_response):
-        return _wsgirequest(self.destmaker(), wsgienv, start_response)
-
-class _wsgirequest(object):
-    def __init__(self, destination, wsgienv, start_response):
+class wsgirequest(object):
+    def __init__(self, wsgienv, start_response):
         version = wsgienv['wsgi.version']
         if (version < (1, 0)) or (version >= (2, 0)):
             raise RuntimeError("Unknown and unsupported WSGI version %d.%d"
@@ -33,7 +26,6 @@ class _wsgirequest(object):
         self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
         self.start_response = start_response
         self.headers = []
-        destination.run_wsgi(self)
 
     out = property(lambda self: self)
 
@@ -92,3 +84,9 @@ class _wsgirequest(object):
         if length:
             headers.append(('Content-length', str(length)))
         self.header(headers)
+
+def wsgiapplication(app_maker):
+	application = app_maker()
+	def run_wsgi(env, respond):
+		application(env, respond)
+	return run_wsgi

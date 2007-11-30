@@ -22,7 +22,6 @@ cgitb.enable()
 #os.environ["HGENCODING"] = "UTF-8"
 
 from mercurial.hgweb.hgwebdir_mod import hgwebdir
-from mercurial.hgweb.request import wsgiapplication
 import mercurial.hgweb.wsgicgi as wsgicgi
 
 # The config file looks like this.  You can have paths to individual
@@ -44,7 +43,5 @@ import mercurial.hgweb.wsgicgi as wsgicgi
 # Alternatively you can pass a list of ('virtual/path', '/real/path') tuples
 # or use a dictionary with entries like 'virtual/path': '/real/path'
 
-def make_web_app():
-    return hgwebdir("hgweb.config")
-
-wsgicgi.launch(wsgiapplication(make_web_app))
+application = hgwebdir('hgweb.config')
+wsgicgi.launch(application)

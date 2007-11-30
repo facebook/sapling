@@ -13,6 +13,7 @@ from mercurial.i18n import gettext as _
 from mercurial import mdiff, ui, hg, util, archival, streamclone, patch
 from mercurial import revlog, templater
 from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen
+from request import wsgirequest
 
 def _up(p):
     if p[0] != "/":
@@ -671,10 +672,12 @@ class hgweb(object):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
             raise RuntimeError("This function is only intended to be called while running as a CGI script.")
         import mercurial.hgweb.wsgicgi as wsgicgi
-        from request import wsgiapplication
-        def make_web_app():
-            return self
-        wsgicgi.launch(wsgiapplication(make_web_app))
+        wsgicgi.launch(self)
+
+    def __call__(self, env, respond):
+        req = wsgirequest(env, respond)
+        self.run_wsgi(req)
+        return req
 
     def run_wsgi(self, req):
         def header(**map):

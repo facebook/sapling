@@ -22,10 +22,7 @@ cgitb.enable()
 #os.environ["HGENCODING"] = "UTF-8"
 
 from mercurial.hgweb.hgweb_mod import hgweb
-from mercurial.hgweb.request import wsgiapplication
 import mercurial.hgweb.wsgicgi as wsgicgi
 
-def make_web_app():
-    return hgweb("/path/to/repo", "repository name")
-
-wsgicgi.launch(wsgiapplication(make_web_app))
+application = hgweb("/path/to/repo", "repository name")
+wsgicgi.launch(application)
