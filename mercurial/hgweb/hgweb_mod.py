@@ -831,7 +831,8 @@ class hgweb(object):
         if not self.reponame:
             self.reponame = (self.config("web", "name")
                              or req.env.get('REPO_NAME')
-                             or req.url.strip('/') or self.repo.root)
+                             or req.url.strip('/')
+                             or os.path.basename(self.repo.root))
 
         self.t = templater.templater(mapfile, templater.common_filters,
                                      defaults={"url": req.url,
