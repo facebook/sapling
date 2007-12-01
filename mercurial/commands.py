@@ -194,6 +194,11 @@ def backout(ui, repo, node=None, rev=None, **opts):
     if op2 != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
     node = repo.lookup(rev)
+
+    a = repo.changelog.ancestor(op1, node)
+    if a != node:
+        raise util.Abort(_('cannot back out change on a different branch'))
+
     p1, p2 = repo.changelog.parents(node)
     if p1 == nullid:
         raise util.Abort(_('cannot back out a change with no parents'))
@@ -210,6 +215,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
         if opts['parent']:
             raise util.Abort(_('cannot use --parent on non-merge changeset'))
         parent = p1
+
     hg.clean(repo, node, show_stats=False)
     revert_opts = opts.copy()
     revert_opts['date'] = None
