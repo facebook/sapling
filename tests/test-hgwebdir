@@ -39,17 +39,37 @@ echo % should succeed
 echo % should give a 404 - repo is not published
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/c/file/tip/c?style=raw'
 
+cat > paths.conf <<EOF
+[paths]
+t/a=$root/a
+b=$root/b
+EOF
+
+hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
+    -A access-paths.log -E error-paths.log
+cat hg.pid >> $DAEMON_PIDS
+
+echo % should succeed, slashy names
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/a?style=atom' \
+	| sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/a/?style=atom' \
+	| sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/a/file/tip/a?style=raw'
+
 cat > collections.conf <<EOF
 [collections]
 $root=$root
 EOF
 
-hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf collections.conf \
+hg serve -p $HGPORT2 -d --pid-file=hg.pid --webdir-conf collections.conf \
     -A access-collections.log -E error-collections.log
 cat hg.pid >> $DAEMON_PIDS
 
 echo % should succeed
-"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=raw'
-"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/a/file/tip/a?style=raw'
-"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/b/file/tip/b?style=raw'
-"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/c/file/tip/c?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/a/file/tip/a?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/b/file/tip/b?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/c/file/tip/c?style=raw'
