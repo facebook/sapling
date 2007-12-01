@@ -16,6 +16,9 @@ def launch(application):
     util.set_binary(sys.stdout)
 
     environ = dict(os.environ.items())
+    if 'PATH_INFO' not in environ:
+    	environ['PATH_INFO'] = ''
+
     environ['wsgi.input'] = sys.stdin
     environ['wsgi.errors'] = sys.stderr
     environ['wsgi.version'] = (1, 0)
