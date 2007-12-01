@@ -61,13 +61,4 @@ def launch(application):
         headers_set[:] = [status, response_headers]
         return write
 
-    result = application(environ, start_response)
-    try:
-        for data in result:
-            if data:    # don't send headers until body appears
-                write(data)
-        if not headers_sent:
-            write('')   # send headers now if body was empty
-    finally:
-        if hasattr(result,'close'):
-            result.close()
+    application(environ, start_response)
