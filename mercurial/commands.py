@@ -2454,10 +2454,12 @@ def revert(ui, repo, *pats, **opts):
         del wlock
 
 def rollback(ui, repo):
-    """roll back the last transaction in this repository
+    """roll back the last transaction
 
-    Roll back the last transaction in this repository, restoring the
-    project to its state prior to the transaction.
+    This command should be used with care. There is only one level of
+    rollback, and there is no way to undo a rollback. It will also
+    restore the dirstate at the time of the last transaction, losing
+    any dirstate changes since that time.
 
     Transactions are used to encapsulate the effects of all commands
     that create new changesets or propagate existing changesets into a
@@ -2469,11 +2471,6 @@ def rollback(ui, repo):
       pull
       push (with this repository as destination)
       unbundle
-
-    This command should be used with care. There is only one level of
-    rollback, and there is no way to undo a rollback. It will also
-    restore the dirstate at the time of the last transaction, which
-    may lose subsequent dirstate changes.
 
     This command is not intended for use on public repositories. Once
     changes are visible for pull by other users, rolling a transaction
