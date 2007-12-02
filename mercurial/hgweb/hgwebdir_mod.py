@@ -16,7 +16,7 @@ from hgweb_mod import hgweb
 class hgwebdir(object):
     def __init__(self, config, parentui=None):
         def cleannames(items):
-            return [(util.pconvert(name.strip(os.sep)), path)
+            return [(util.pconvert(name).strip('/'), path)
                     for name, path in items]
 
         self.parentui = parentui
