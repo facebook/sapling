@@ -1,0 +1,25 @@
+adding b
+Patch queue now empty
+% push patch with missing target
+applying changeb
+unable to find b or b for patching
+unable to find b or b for patching
+patch failed, unable to continue (try -v)
+patch failed, rejects left in working dir
+Errors during apply, please fix and refresh changeb
+% display added files
+a
+c
+adding b
+Patch queue now empty
+% push git patch with missing target
+applying changeb
+unable to find b or b for patching
+patch failed, unable to continue (try -v)
+b: No such file or directory
+b not tracked!
+patch failed, rejects left in working dir
+Errors during apply, please fix and refresh changeb
+% display added files
+a
+c
