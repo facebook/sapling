@@ -173,8 +173,15 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             src_store = os.path.realpath(src_repo.spath)
             if not os.path.exists(dest):
                 os.mkdir(dest)
-            dest_path = os.path.realpath(os.path.join(dest, ".hg"))
-            os.mkdir(dest_path)
+            try:
+                dest_path = os.path.realpath(os.path.join(dest, ".hg"))
+                os.mkdir(dest_path)
+            except OSError, inst:
+                if inst.errno == errno.EEXIST:
+                    dir_cleanup.close()
+                    raise util.Abort(_("destination '%s' already exists")
+                                     % dest)
+                raise
             if src_repo.spath != src_repo.path:
                 # XXX racy
                 dummy_changelog = os.path.join(dest_path, "00changelog.i")
@@ -203,7 +210,14 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dest_repo = repository(ui, dest)
 
         else:
-            dest_repo = repository(ui, dest, create=True)
+            try:
+                dest_repo = repository(ui, dest, create=True)
+            except OSError, inst:
+                if inst.errno == errno.EEXIST:
+                    dir_cleanup.close()
+                    raise util.Abort(_("destination '%s' already exists")
+                                     % dest)
+                raise
 
             revs = None
             if rev:
