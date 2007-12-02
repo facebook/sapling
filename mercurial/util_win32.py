@@ -16,6 +16,7 @@ import win32api
 from i18n import _
 import errno, os, pywintypes, win32con, win32file, win32process
 import cStringIO, winerror
+import osutil
 from win32com.shell import shell,shellcon
 
 class WinError:
@@ -179,6 +180,20 @@ def testpid(pid):
 
 def system_rcpath_win32():
     '''return default os-specific hgrc search path'''
+    try:
+        value = win32api.RegQueryValue(
+                win32con.HKEY_LOCAL_MACHINE, 'SOFTWARE\\Mercurial')
+        rcpath = []
+        for p in value.split(os.pathsep):
+            if p.lower().endswith('mercurial.ini'):
+                rcpath.append(p)
+            elif os.path.isdir(p):
+                for f, kind in osutil.listdir(p):
+                    if f.endswith('.rc'):
+                        rcpath.append(os.path.join(p, f))
+        return rcpath
+    except pywintypes.error:
+        pass
     proc = win32api.GetCurrentProcess()
     try:
         # This will fail on windows < NT
