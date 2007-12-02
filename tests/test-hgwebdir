@@ -43,7 +43,7 @@ echo % should give a 404 - repo is not published
 
 cat > paths.conf <<EOF
 [paths]
-t/a=$root/a
+t/a/=$root/a
 b=$root/b
 EOF
 
