@@ -175,8 +175,8 @@ list of commands:
  recover      roll back an interrupted transaction
  remove       remove the specified files on the next commit
  rename       rename files; equivalent of copy + remove
- revert       revert files or dirs to their states as of some revision
- rollback     roll back the last transaction in this repository
+ revert       restore individual files or dirs to an earlier state
+ rollback     roll back the last transaction
  root         print the root (top) of the current working dir
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
@@ -227,8 +227,8 @@ list of commands:
  recover      roll back an interrupted transaction
  remove       remove the specified files on the next commit
  rename       rename files; equivalent of copy + remove
- revert       revert files or dirs to their states as of some revision
- rollback     roll back the last transaction in this repository
+ revert       restore individual files or dirs to an earlier state
+ rollback     roll back the last transaction
  root         print the root (top) of the current working dir
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
