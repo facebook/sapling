@@ -1,4 +1,5 @@
 #!/bin/sh
+# This is a rudimentary test of the CGI files as of d74fc8dec2b4.
 
 hg init test
 

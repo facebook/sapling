@@ -1,4 +1,6 @@
 #!/bin/sh
+# Tests some basic hgwebdir functionality. Tests setting up paths and
+# collection, different forms of 404s and the subdirectory support.
 
 mkdir webdir
 cd webdir

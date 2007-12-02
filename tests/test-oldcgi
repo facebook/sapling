@@ -1,4 +1,5 @@
 #!/bin/sh
+# This tests if CGI files from before d0db3462d568 still work.
 
 hg init test
 
