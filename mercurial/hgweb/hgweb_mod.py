@@ -6,14 +6,13 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import errno, os, mimetypes, re, zlib, mimetools, cStringIO, sys
-import tempfile, urllib, bz2
+import os, mimetypes, re, mimetools, cStringIO, sys, urllib, bz2
 from mercurial.node import *
-from mercurial.i18n import gettext as _
-from mercurial import mdiff, ui, hg, util, archival, streamclone, patch
+from mercurial import mdiff, ui, hg, util, archival, patch
 from mercurial import revlog, templater
-from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen
+from common import ErrorResponse, get_mtime, style_map, paritygen
 from request import wsgirequest
+import webcommands
 
 def _up(p):
     if p[0] != "/":
@@ -106,6 +105,190 @@ class hgweb(object):
             self.maxfiles = int(self.config("web", "maxfiles", 10))
             self.allowpull = self.configbool("web", "allowpull", True)
             self.encoding = self.config("web", "encoding", util._encoding)
+
+    def run(self):
+        if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
+            raise RuntimeError("This function is only intended to be called while running as a CGI script.")
+        import mercurial.hgweb.wsgicgi as wsgicgi
+        wsgicgi.launch(self)
+
+    def __call__(self, env, respond):
+        req = wsgirequest(env, respond)
+        self.run_wsgi(req)
+        return req
+
+    def run_wsgi(self, req):
+        def header(**map):
+            header_file = cStringIO.StringIO(
+                ''.join(self.t("header", encoding=self.encoding, **map)))
+            msg = mimetools.Message(header_file, 0)
+            req.header(msg.items())
+            yield header_file.read()
+
+        def rawfileheader(**map):
+            req.header([('Content-type', map['mimetype']),
+                        ('Content-disposition', 'filename=%s' % map['file']),
+                        ('Content-length', str(len(map['raw'])))])
+            yield ''
+
+        def footer(**map):
+            yield self.t("footer", **map)
+
+        def motd(**map):
+            yield self.config("web", "motd", "")
+
+        def expand_form(form):
+            shortcuts = {
+                'cl': [('cmd', ['changelog']), ('rev', None)],
+                'sl': [('cmd', ['shortlog']), ('rev', None)],
+                'cs': [('cmd', ['changeset']), ('node', None)],
+                'f': [('cmd', ['file']), ('filenode', None)],
+                'fl': [('cmd', ['filelog']), ('filenode', None)],
+                'fd': [('cmd', ['filediff']), ('node', None)],
+                'fa': [('cmd', ['annotate']), ('filenode', None)],
+                'mf': [('cmd', ['manifest']), ('manifest', None)],
+                'ca': [('cmd', ['archive']), ('node', None)],
+                'tags': [('cmd', ['tags'])],
+                'tip': [('cmd', ['changeset']), ('node', ['tip'])],
+                'static': [('cmd', ['static']), ('file', None)]
+            }
+
+            for k in shortcuts.iterkeys():
+                if form.has_key(k):
+                    for name, value in shortcuts[k]:
+                        if value is None:
+                            value = form[k]
+                        form[name] = value
+                    del form[k]
+
+        def rewrite_request(req):
+            '''translate new web interface to traditional format'''
+
+            req.url = req.env['SCRIPT_NAME']
+            if not req.url.endswith('/'):
+                req.url += '/'
+            if req.env.has_key('REPO_NAME'):
+                req.url += req.env['REPO_NAME'] + '/'
+            
+            if req.env.get('PATH_INFO'):
+                parts = req.env.get('PATH_INFO').strip('/').split('/')
+                repo_parts = req.env.get('REPO_NAME', '').split('/')
+                if parts[:len(repo_parts)] == repo_parts:
+                    parts = parts[len(repo_parts):]
+                query = '/'.join(parts)
+            else:
+                query = req.env['QUERY_STRING'].split('&', 1)[0]
+                query = query.split(';', 1)[0]
+
+            if req.form.has_key('cmd'):
+                # old style
+                return
+
+            args = query.split('/', 2)
+            if not args or not args[0]:
+                return
+
+            cmd = args.pop(0)
+            style = cmd.rfind('-')
+            if style != -1:
+                req.form['style'] = [cmd[:style]]
+                cmd = cmd[style+1:]
+            # avoid accepting e.g. style parameter as command
+            if hasattr(webcommands, cmd):
+                req.form['cmd'] = [cmd]
+
+            if args and args[0]:
+                node = args.pop(0)
+                req.form['node'] = [node]
+            if args:
+                req.form['file'] = args
+
+            if cmd == 'static':
+                req.form['file'] = req.form['node']
+            elif cmd == 'archive':
+                fn = req.form['node'][0]
+                for type_, spec in self.archive_specs.iteritems():
+                    ext = spec[2]
+                    if fn.endswith(ext):
+                        req.form['node'] = [fn[:-len(ext)]]
+                        req.form['type'] = [type_]
+
+        def sessionvars(**map):
+            fields = []
+            if req.form.has_key('style'):
+                style = req.form['style'][0]
+                if style != self.config('web', 'style', ''):
+                    fields.append(('style', style))
+
+            separator = req.url[-1] == '?' and ';' or '?'
+            for name, value in fields:
+                yield dict(name=name, value=value, separator=separator)
+                separator = ';'
+
+        self.refresh()
+
+        expand_form(req.form)
+        rewrite_request(req)
+
+        style = self.config("web", "style", "")
+        if req.form.has_key('style'):
+            style = req.form['style'][0]
+        mapfile = style_map(self.templatepath, style)
+
+        proto = req.env.get('wsgi.url_scheme')
+        if proto == 'https':
+            proto = 'https'
+            default_port = "443"
+        else:
+            proto = 'http'
+            default_port = "80"
+
+        port = req.env["SERVER_PORT"]
+        port = port != default_port and (":" + port) or ""
+        urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
+        staticurl = self.config("web", "staticurl") or req.url + 'static/'
+        if not staticurl.endswith('/'):
+            staticurl += '/'
+
+        if not self.reponame:
+            self.reponame = (self.config("web", "name")
+                             or req.env.get('REPO_NAME')
+                             or req.url.strip('/') or self.repo.root)
+
+        self.t = templater.templater(mapfile, templater.common_filters,
+                                     defaults={"url": req.url,
+                                               "staticurl": staticurl,
+                                               "urlbase": urlbase,
+                                               "repo": self.reponame,
+                                               "header": header,
+                                               "footer": footer,
+                                               "motd": motd,
+                                               "rawfileheader": rawfileheader,
+                                               "sessionvars": sessionvars
+                                               })
+
+        try:
+            if not req.form.has_key('cmd'):
+                req.form['cmd'] = [self.t.cache['default']]
+
+            cmd = req.form['cmd'][0]
+
+            try:
+                method = getattr(webcommands, cmd)
+                method(self, req)
+            except revlog.LookupError, err:
+                req.respond(404, self.t(
+                    'error', error='revision not found: %s' % err.name))
+            except (hg.RepoError, revlog.RevlogError), inst:
+                req.respond('500 Internal Server Error',
+                            self.t('error', error=str(inst)))
+            except ErrorResponse, inst:
+                req.respond(inst.code, self.t('error', error=inst.message))
+            except AttributeError:
+                req.respond(400,
+                            self.t('error', error='No such method: ' + cmd))
+        finally:
+            self.t = None
 
     def archivelist(self, nodeid):
         allowed = self.configlist("web", "allow_archive")
@@ -668,190 +851,6 @@ class hgweb(object):
         path = path.lstrip('/')
         return util.canonpath(self.repo.root, '', path)
 
-    def run(self):
-        if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
-            raise RuntimeError("This function is only intended to be called while running as a CGI script.")
-        import mercurial.hgweb.wsgicgi as wsgicgi
-        wsgicgi.launch(self)
-
-    def __call__(self, env, respond):
-        req = wsgirequest(env, respond)
-        self.run_wsgi(req)
-        return req
-
-    def run_wsgi(self, req):
-        def header(**map):
-            header_file = cStringIO.StringIO(
-                ''.join(self.t("header", encoding=self.encoding, **map)))
-            msg = mimetools.Message(header_file, 0)
-            req.header(msg.items())
-            yield header_file.read()
-
-        def rawfileheader(**map):
-            req.header([('Content-type', map['mimetype']),
-                        ('Content-disposition', 'filename=%s' % map['file']),
-                        ('Content-length', str(len(map['raw'])))])
-            yield ''
-
-        def footer(**map):
-            yield self.t("footer", **map)
-
-        def motd(**map):
-            yield self.config("web", "motd", "")
-
-        def expand_form(form):
-            shortcuts = {
-                'cl': [('cmd', ['changelog']), ('rev', None)],
-                'sl': [('cmd', ['shortlog']), ('rev', None)],
-                'cs': [('cmd', ['changeset']), ('node', None)],
-                'f': [('cmd', ['file']), ('filenode', None)],
-                'fl': [('cmd', ['filelog']), ('filenode', None)],
-                'fd': [('cmd', ['filediff']), ('node', None)],
-                'fa': [('cmd', ['annotate']), ('filenode', None)],
-                'mf': [('cmd', ['manifest']), ('manifest', None)],
-                'ca': [('cmd', ['archive']), ('node', None)],
-                'tags': [('cmd', ['tags'])],
-                'tip': [('cmd', ['changeset']), ('node', ['tip'])],
-                'static': [('cmd', ['static']), ('file', None)]
-            }
-
-            for k in shortcuts.iterkeys():
-                if form.has_key(k):
-                    for name, value in shortcuts[k]:
-                        if value is None:
-                            value = form[k]
-                        form[name] = value
-                    del form[k]
-
-        def rewrite_request(req):
-            '''translate new web interface to traditional format'''
-
-            req.url = req.env['SCRIPT_NAME']
-            if not req.url.endswith('/'):
-                req.url += '/'
-            if req.env.has_key('REPO_NAME'):
-                req.url += req.env['REPO_NAME'] + '/'
-            
-            if req.env.get('PATH_INFO'):
-                parts = req.env.get('PATH_INFO').strip('/').split('/')
-                repo_parts = req.env.get('REPO_NAME', '').split('/')
-                if parts[:len(repo_parts)] == repo_parts:
-                    parts = parts[len(repo_parts):]
-                query = '/'.join(parts)
-            else:
-                query = req.env['QUERY_STRING'].split('&', 1)[0]
-                query = query.split(';', 1)[0]
-
-            if req.form.has_key('cmd'):
-                # old style
-                return
-
-            args = query.split('/', 2)
-            if not args or not args[0]:
-                return
-
-            cmd = args.pop(0)
-            style = cmd.rfind('-')
-            if style != -1:
-                req.form['style'] = [cmd[:style]]
-                cmd = cmd[style+1:]
-            # avoid accepting e.g. style parameter as command
-            if hasattr(self, 'do_' + cmd):
-                req.form['cmd'] = [cmd]
-
-            if args and args[0]:
-                node = args.pop(0)
-                req.form['node'] = [node]
-            if args:
-                req.form['file'] = args
-
-            if cmd == 'static':
-                req.form['file'] = req.form['node']
-            elif cmd == 'archive':
-                fn = req.form['node'][0]
-                for type_, spec in self.archive_specs.iteritems():
-                    ext = spec[2]
-                    if fn.endswith(ext):
-                        req.form['node'] = [fn[:-len(ext)]]
-                        req.form['type'] = [type_]
-
-        def sessionvars(**map):
-            fields = []
-            if req.form.has_key('style'):
-                style = req.form['style'][0]
-                if style != self.config('web', 'style', ''):
-                    fields.append(('style', style))
-
-            separator = req.url[-1] == '?' and ';' or '?'
-            for name, value in fields:
-                yield dict(name=name, value=value, separator=separator)
-                separator = ';'
-
-        self.refresh()
-
-        expand_form(req.form)
-        rewrite_request(req)
-
-        style = self.config("web", "style", "")
-        if req.form.has_key('style'):
-            style = req.form['style'][0]
-        mapfile = style_map(self.templatepath, style)
-
-        proto = req.env.get('wsgi.url_scheme')
-        if proto == 'https':
-            proto = 'https'
-            default_port = "443"
-        else:
-            proto = 'http'
-            default_port = "80"
-
-        port = req.env["SERVER_PORT"]
-        port = port != default_port and (":" + port) or ""
-        urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
-        staticurl = self.config("web", "staticurl") or req.url + 'static/'
-        if not staticurl.endswith('/'):
-            staticurl += '/'
-
-        if not self.reponame:
-            self.reponame = (self.config("web", "name")
-                             or req.env.get('REPO_NAME')
-                             or req.url.strip('/') or self.repo.root)
-
-        self.t = templater.templater(mapfile, templater.common_filters,
-                                     defaults={"url": req.url,
-                                               "staticurl": staticurl,
-                                               "urlbase": urlbase,
-                                               "repo": self.reponame,
-                                               "header": header,
-                                               "footer": footer,
-                                               "motd": motd,
-                                               "rawfileheader": rawfileheader,
-                                               "sessionvars": sessionvars
-                                               })
-
-        try:
-            if not req.form.has_key('cmd'):
-                req.form['cmd'] = [self.t.cache['default']]
-
-            cmd = req.form['cmd'][0]
-
-            try:
-                method = getattr(self, 'do_' + cmd)
-                method(req)
-            except revlog.LookupError, err:
-                req.respond(404, self.t(
-                    'error', error='revision not found: %s' % err.name))
-            except (hg.RepoError, revlog.RevlogError), inst:
-                req.respond('500 Internal Server Error',
-                            self.t('error', error=str(inst)))
-            except ErrorResponse, inst:
-                req.respond(inst.code, self.t('error', error=inst.message))
-            except AttributeError:
-                req.respond(400,
-                            self.t('error', error='No such method: ' + cmd))
-        finally:
-            self.t = None
-
     def changectx(self, req):
         if req.form.has_key('node'):
             changeid = req.form['node'][0]
@@ -883,181 +882,6 @@ class hgweb(object):
 
         return fctx
 
-    def do_log(self, req):
-        if req.form.has_key('file') and req.form['file'][0]:
-            self.do_filelog(req)
-        else:
-            self.do_changelog(req)
-
-    def do_rev(self, req):
-        self.do_changeset(req)
-
-    def do_file(self, req):
-        path = self.cleanpath(req.form.get('file', [''])[0])
-        if path:
-            try:
-                req.write(self.filerevision(self.filectx(req)))
-                return
-            except revlog.LookupError:
-                pass
-
-        req.write(self.manifest(self.changectx(req), path))
-
-    def do_diff(self, req):
-        self.do_filediff(req)
-
-    def do_changelog(self, req, shortlog = False):
-        if req.form.has_key('node'):
-            ctx = self.changectx(req)
-        else:
-            if req.form.has_key('rev'):
-                hi = req.form['rev'][0]
-            else:
-                hi = self.repo.changelog.count() - 1
-            try:
-                ctx = self.repo.changectx(hi)
-            except hg.RepoError:
-                req.write(self.search(hi)) # XXX redirect to 404 page?
-                return
-
-        req.write(self.changelog(ctx, shortlog = shortlog))
-
-    def do_shortlog(self, req):
-        self.do_changelog(req, shortlog = True)
-
-    def do_changeset(self, req):
-        req.write(self.changeset(self.changectx(req)))
-
-    def do_manifest(self, req):
-        req.write(self.manifest(self.changectx(req),
-                                self.cleanpath(req.form['path'][0])))
-
-    def do_tags(self, req):
-        req.write(self.tags())
-
-    def do_summary(self, req):
-        req.write(self.summary())
-
-    def do_filediff(self, req):
-        req.write(self.filediff(self.filectx(req)))
-
-    def do_annotate(self, req):
-        req.write(self.fileannotate(self.filectx(req)))
-
-    def do_filelog(self, req):
-        req.write(self.filelog(self.filectx(req)))
-
-    def do_lookup(self, req):
-        try:
-            r = hex(self.repo.lookup(req.form['key'][0]))
-            success = 1
-        except Exception,inst:
-            r = str(inst)
-            success = 0
-        resp = "%s %s\n" % (success, r)
-        req.httphdr("application/mercurial-0.1", length=len(resp))
-        req.write(resp)
-
-    def do_heads(self, req):
-        resp = " ".join(map(hex, self.repo.heads())) + "\n"
-        req.httphdr("application/mercurial-0.1", length=len(resp))
-        req.write(resp)
-
-    def do_branches(self, req):
-        nodes = []
-        if req.form.has_key('nodes'):
-            nodes = map(bin, req.form['nodes'][0].split(" "))
-        resp = cStringIO.StringIO()
-        for b in self.repo.branches(nodes):
-            resp.write(" ".join(map(hex, b)) + "\n")
-        resp = resp.getvalue()
-        req.httphdr("application/mercurial-0.1", length=len(resp))
-        req.write(resp)
-
-    def do_between(self, req):
-        if req.form.has_key('pairs'):
-            pairs = [map(bin, p.split("-"))
-                     for p in req.form['pairs'][0].split(" ")]
-        resp = cStringIO.StringIO()
-        for b in self.repo.between(pairs):
-            resp.write(" ".join(map(hex, b)) + "\n")
-        resp = resp.getvalue()
-        req.httphdr("application/mercurial-0.1", length=len(resp))
-        req.write(resp)
-
-    def do_changegroup(self, req):
-        req.httphdr("application/mercurial-0.1")
-        nodes = []
-        if not self.allowpull:
-            return
-
-        if req.form.has_key('roots'):
-            nodes = map(bin, req.form['roots'][0].split(" "))
-
-        z = zlib.compressobj()
-        f = self.repo.changegroup(nodes, 'serve')
-        while 1:
-            chunk = f.read(4096)
-            if not chunk:
-                break
-            req.write(z.compress(chunk))
-
-        req.write(z.flush())
-
-    def do_changegroupsubset(self, req):
-        req.httphdr("application/mercurial-0.1")
-        bases = []
-        heads = []
-        if not self.allowpull:
-            return
-
-        if req.form.has_key('bases'):
-            bases = [bin(x) for x in req.form['bases'][0].split(' ')]
-        if req.form.has_key('heads'):
-            heads = [bin(x) for x in req.form['heads'][0].split(' ')]
-
-        z = zlib.compressobj()
-        f = self.repo.changegroupsubset(bases, heads, 'serve')
-        while 1:
-            chunk = f.read(4096)
-            if not chunk:
-                break
-            req.write(z.compress(chunk))
-
-        req.write(z.flush())
-
-    def do_archive(self, req):
-        type_ = req.form['type'][0]
-        allowed = self.configlist("web", "allow_archive")
-        if (type_ in self.archives and (type_ in allowed or
-            self.configbool("web", "allow" + type_, False))):
-            self.archive(req, req.form['node'][0], type_)
-            return
-
-        req.respond(400, self.t('error',
-                                error='Unsupported archive type: %s' % type_))
-
-    def do_static(self, req):
-        fname = req.form['file'][0]
-        # a repo owner may set web.static in .hg/hgrc to get any file
-        # readable by the user running the CGI script
-        static = self.config("web", "static",
-                             os.path.join(self.templatepath, "static"),
-                             untrusted=False)
-        req.write(staticfile(static, fname, req))
-
-    def do_capabilities(self, req):
-        caps = ['lookup', 'changegroupsubset']
-        if self.configbool('server', 'uncompressed'):
-            caps.append('stream=%d' % self.repo.changelog.version)
-        # XXX: make configurable and/or share code with do_unbundle:
-        unbundleversions = ['HG10GZ', 'HG10BZ', 'HG10UN']
-        if unbundleversions:
-            caps.append('unbundle=%s' % ','.join(unbundleversions))
-        resp = ' '.join(caps)
-        req.httphdr("application/mercurial-0.1", length=len(resp))
-        req.write(resp)
-
     def check_perm(self, req, op, default):
         '''check permission for operation based on user auth.
         return true if op allowed, else false.
@@ -1071,138 +895,3 @@ class hgweb(object):
 
         allow = self.configlist('web', 'allow_' + op)
         return (allow and (allow == ['*'] or user in allow)) or default
-
-    def do_unbundle(self, req):
-        def bail(response, headers={}):
-            length = int(req.env['CONTENT_LENGTH'])
-            for s in util.filechunkiter(req, limit=length):
-                # drain incoming bundle, else client will not see
-                # response when run outside cgi script
-                pass
-            req.httphdr("application/mercurial-0.1", headers=headers)
-            req.write('0\n')
-            req.write(response)
-
-        # require ssl by default, auth info cannot be sniffed and
-        # replayed
-        ssl_req = self.configbool('web', 'push_ssl', True)
-        if ssl_req:
-            if req.env.get('wsgi.url_scheme') != 'https':
-                bail(_('ssl required\n'))
-                return
-            proto = 'https'
-        else:
-            proto = 'http'
-
-        # do not allow push unless explicitly allowed
-        if not self.check_perm(req, 'push', False):
-            bail(_('push not authorized\n'),
-                 headers={'status': '401 Unauthorized'})
-            return
-
-        their_heads = req.form['heads'][0].split(' ')
-
-        def check_heads():
-            heads = map(hex, self.repo.heads())
-            return their_heads == [hex('force')] or their_heads == heads
-
-        # fail early if possible
-        if not check_heads():
-            bail(_('unsynced changes\n'))
-            return
-
-        req.httphdr("application/mercurial-0.1")
-
-        # do not lock repo until all changegroup data is
-        # streamed. save to temporary file.
-
-        fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
-        fp = os.fdopen(fd, 'wb+')
-        try:
-            length = int(req.env['CONTENT_LENGTH'])
-            for s in util.filechunkiter(req, limit=length):
-                fp.write(s)
-
-            try:
-                lock = self.repo.lock()
-                try:
-                    if not check_heads():
-                        req.write('0\n')
-                        req.write(_('unsynced changes\n'))
-                        return
-
-                    fp.seek(0)
-                    header = fp.read(6)
-                    if not header.startswith("HG"):
-                        # old client with uncompressed bundle
-                        def generator(f):
-                            yield header
-                            for chunk in f:
-                                yield chunk
-                    elif not header.startswith("HG10"):
-                        req.write("0\n")
-                        req.write(_("unknown bundle version\n"))
-                        return
-                    elif header == "HG10GZ":
-                        def generator(f):
-                            zd = zlib.decompressobj()
-                            for chunk in f:
-                                yield zd.decompress(chunk)
-                    elif header == "HG10BZ":
-                        def generator(f):
-                            zd = bz2.BZ2Decompressor()
-                            zd.decompress("BZ")
-                            for chunk in f:
-                                yield zd.decompress(chunk)
-                    elif header == "HG10UN":
-                        def generator(f):
-                            for chunk in f:
-                                yield chunk
-                    else:
-                        req.write("0\n")
-                        req.write(_("unknown bundle compression type\n"))
-                        return
-                    gen = generator(util.filechunkiter(fp, 4096))
-
-                    # send addchangegroup output to client
-
-                    old_stdout = sys.stdout
-                    sys.stdout = cStringIO.StringIO()
-
-                    try:
-                        url = 'remote:%s:%s' % (proto,
-                                                req.env.get('REMOTE_HOST', ''))
-                        try:
-                            ret = self.repo.addchangegroup(
-                                        util.chunkbuffer(gen), 'serve', url)
-                        except util.Abort, inst:
-                            sys.stdout.write("abort: %s\n" % inst)
-                            ret = 0
-                    finally:
-                        val = sys.stdout.getvalue()
-                        sys.stdout = old_stdout
-                    req.write('%d\n' % ret)
-                    req.write(val)
-                finally:
-                    del lock
-            except (OSError, IOError), inst:
-                req.write('0\n')
-                filename = getattr(inst, 'filename', '')
-                # Don't send our filesystem layout to the client
-                if filename.startswith(self.repo.root):
-                    filename = filename[len(self.repo.root)+1:]
-                else:
-                    filename = ''
-                error = getattr(inst, 'strerror', 'Unknown error')
-                if inst.errno == errno.ENOENT:
-                    code = 404
-                else:
-                    code = 500
-                req.respond(code, '%s: %s\n' % (error, filename))
-        finally:
-            fp.close()
-            os.unlink(tempname)
-
-    def do_stream_out(self, req):
-        req.httphdr("application/mercurial-0.1")
-        streamclone.stream_out(self.repo, req, untrusted=True)
