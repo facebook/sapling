@@ -24,6 +24,84 @@ b
 
 
 error: repository c not found
+% should succeed, slashy names
+200 Script output follows
+
+
+/b/
+/t/a/
+
+200 Script output follows
+
+
+/t/a/
+
+200 Script output follows
+
+
+/t/a/
+
+200 Script output follows
+
+<?xml version="1.0" encoding="ascii"?>
+<feed xmlns="http://127.0.0.1/2005/Atom">
+ <!-- Changelog -->
+ <id>http://127.0.0.1/t/a/</id>
+ <link rel="self" href="http://127.0.0.1/t/a/atom-log"/>
+ <link rel="alternate" href="http://127.0.0.1/t/a/"/>
+ <title>t/a Changelog</title>
+ <updated>1970-01-01T00:00:01+00:00</updated>
+
+ <entry>
+  <title>a</title>
+  <id>http://127.0.0.1/mercurial/#changeset-8580ff50825a50c8f716709acdf8de0deddcd6ab</id>
+  <link href="http://127.0.0.1/t/a/rev/8580ff50825a50c8f716709acdf8de0deddcd6ab"/>
+  <author>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
+  </author>
+  <updated>1970-01-01T00:00:01+00:00</updated>
+  <published>1970-01-01T00:00:01+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://127.0.0.1/1999/xhtml">
+    <pre xml:space="preserve">a</pre>
+   </div>
+  </content>
+ </entry>
+
+</feed>
+200 Script output follows
+
+<?xml version="1.0" encoding="ascii"?>
+<feed xmlns="http://127.0.0.1/2005/Atom">
+ <!-- Changelog -->
+ <id>http://127.0.0.1/t/a/</id>
+ <link rel="self" href="http://127.0.0.1/t/a/atom-log"/>
+ <link rel="alternate" href="http://127.0.0.1/t/a/"/>
+ <title>t/a Changelog</title>
+ <updated>1970-01-01T00:00:01+00:00</updated>
+
+ <entry>
+  <title>a</title>
+  <id>http://127.0.0.1/mercurial/#changeset-8580ff50825a50c8f716709acdf8de0deddcd6ab</id>
+  <link href="http://127.0.0.1/t/a/rev/8580ff50825a50c8f716709acdf8de0deddcd6ab"/>
+  <author>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
+  </author>
+  <updated>1970-01-01T00:00:01+00:00</updated>
+  <published>1970-01-01T00:00:01+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://127.0.0.1/1999/xhtml">
+    <pre xml:space="preserve">a</pre>
+   </div>
+  </content>
+ </entry>
+
+</feed>
+200 Script output follows
+
+a
 % should succeed
 200 Script output follows
 

@@ -726,37 +726,21 @@ class hgweb(object):
         def rewrite_request(req):
             '''translate new web interface to traditional format'''
 
-            def spliturl(req):
-                def firstitem(query):
-                    return query.split('&', 1)[0].split(';', 1)[0]
-
-                def normurl(url):
-                    inner = '/'.join([x for x in url.split('/') if x])
-                    tl = len(url) > 1 and url.endswith('/') and '/' or ''
-
-                    return '%s%s%s' % (url.startswith('/') and '/' or '',
-                                       inner, tl)
-
-                root = normurl(urllib.unquote(req.env.get('REQUEST_URI', '').split('?', 1)[0]))
-                pi = normurl(req.env.get('PATH_INFO', ''))
-                if pi:
-                    # strip leading /
-                    pi = pi[1:]
-                    if pi:
-                        root = root[:root.rfind(pi)]
-                    if req.env.has_key('REPO_NAME'):
-                        rn = req.env['REPO_NAME'] + '/'
-                        root += rn
-                        query = pi[len(rn):]
-                    else:
-                        query = pi
-                else:
-                    root += '?'
-                    query = firstitem(req.env['QUERY_STRING'])
-
-                return (root, query)
-
-            req.url, query = spliturl(req)
+            req.url = req.env['SCRIPT_NAME']
+            if not req.url.endswith('/'):
+                req.url += '/'
+            if req.env.has_key('REPO_NAME'):
+                req.url += req.env['REPO_NAME'] + '/'
+            
+            if req.env.get('PATH_INFO'):
+                parts = req.env.get('PATH_INFO').strip('/').split('/')
+                repo_parts = req.env.get('REPO_NAME', '').split('/')
+                if parts[:len(repo_parts)] == repo_parts:
+                    parts = parts[len(repo_parts):]
+                query = '/'.join(parts)
+            else:
+                query = req.env['QUERY_STRING'].split('&', 1)[0]
+                query = query.split(';', 1)[0]
 
             if req.form.has_key('cmd'):
                 # old style

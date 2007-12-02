@@ -17,7 +17,7 @@ from request import wsgirequest
 class hgwebdir(object):
     def __init__(self, config, parentui=None):
         def cleannames(items):
-            return [(util.pconvert(name.strip(os.sep)), path)
+            return [(util.pconvert(name).strip('/'), path)
                     for name, path in items]
 
         self.parentui = parentui
@@ -91,15 +91,11 @@ class hgwebdir(object):
         def config(section, name, default=None, untrusted=True):
             return parentui.config(section, name, default, untrusted)
 
-        url = req.env['REQUEST_URI'].split('?')[0]
+        url = req.env.get('SCRIPT_NAME', '')
         if not url.endswith('/'):
             url += '/'
-        pathinfo = req.env.get('PATH_INFO', '').strip('/') + '/'
-        base = url[:len(url) - len(pathinfo)]
-        if not base.endswith('/'):
-            base += '/'
 
-        staticurl = config('web', 'staticurl') or base + 'static/'
+        staticurl = config('web', 'staticurl') or url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
 
@@ -158,8 +154,10 @@ class hgwebdir(object):
                 if u.configbool("web", "hidden", untrusted=True):
                     continue
 
-                url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
-                       .replace("//", "/")) + '/'
+                parts = [req.env['PATH_INFO'], name]
+                if req.env['SCRIPT_NAME']:
+                	parts.insert(0, req.env['SCRIPT_NAME'])
+                url = ('/'.join(parts).replace("//", "/")) + '/'
 
                 # update time with local timezone
                 try:

@@ -1,4 +1,6 @@
 #!/bin/sh
+# Tests if hgweb can run without touching sys.stdin, as is required
+# by the WSGI standard and strictly implemented by mod_wsgi.
 
 mkdir repo
 cd repo

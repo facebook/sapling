@@ -1,4 +1,5 @@
 #!/bin/sh
+# Some tests for hgweb. Tests static files, plain files and different 404's.
 
 hg init test
 cd test

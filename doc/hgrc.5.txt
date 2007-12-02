@@ -17,7 +17,9 @@ FILES
 
 Mercurial reads configuration data from several files, if they exist.
 The names of these files depend on the system on which Mercurial is
-installed.
+installed. Windows registry keys contain PATH-like strings, every
+part must reference a Mercurial.ini file or be a directory where *.rc
+files will be read.
 
 (Unix)    <install-root>/etc/mercurial/hgrc.d/*.rc::
 (Unix)    <install-root>/etc/mercurial/hgrc::
@@ -29,6 +31,8 @@ installed.
 
 (Unix)    /etc/mercurial/hgrc.d/*.rc::
 (Unix)    /etc/mercurial/hgrc::
+(Windows) HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial::
+  or::
 (Windows) C:\Mercurial\Mercurial.ini::
     Per-system configuration files, for the system on which Mercurial
     is running.  Options in these files apply to all Mercurial

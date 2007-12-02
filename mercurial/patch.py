@@ -885,6 +885,19 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
     dopatch = True
     gitworkdone = False
 
+    def getpatchfile(afile, bfile, hunk):
+         try:
+             if sourcefile:
+                 targetfile = patchfile(ui, sourcefile)
+             else:
+                 targetfile = selectfile(afile, bfile, hunk,
+                                         strip, reverse)
+                 targetfile = patchfile(ui, targetfile)
+             return targetfile
+         except PatchError, err:
+             ui.warn(str(err) + '\n')
+             return None
+
     while True:
         newfile = False
         x = lr.readline()
@@ -912,22 +925,20 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
                 continue
             hunknum += 1
             if not current_file:
-                if sourcefile:
-                    current_file = patchfile(ui, sourcefile)
-                else:
-                    current_file = selectfile(afile, bfile, current_hunk,
-                                              strip, reverse)
-                    current_file = patchfile(ui, current_file)
+                current_file = getpatchfile(afile, bfile, current_hunk)
+                if not current_file:
+                    current_file, current_hunk = None, None
+                    rejects += 1
+                    continue
         elif state == BFILE and x.startswith('GIT binary patch'):
             current_hunk = binhunk(changed[bfile[2:]][1])
-            if not current_file:
-                if sourcefile:
-                    current_file = patchfile(ui, sourcefile)
-                else:
-                    current_file = selectfile(afile, bfile, current_hunk,
-                                              strip, reverse)
-                    current_file = patchfile(ui, current_file)
             hunknum += 1
+            if not current_file:
+                current_file = getpatchfile(afile, bfile, current_hunk)
+                if not current_file:
+                    current_file, current_hunk = None, None
+                    rejects += 1
+                    continue
             current_hunk.extract(fp)
         elif x.startswith('diff --git'):
             # check for git diff, scanning the whole patch file if needed

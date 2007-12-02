@@ -1,5 +1,6 @@
 #!/bin/sh
-# This tests if CGI files from before d0db3462d568 still work.
+# This tests if CGI files from after d0db3462d568 but
+# before d74fc8dec2b4 still work.
 
 hg init test
 
@@ -8,14 +9,18 @@ cat >hgweb.cgi <<HGWEB
 #
 # An example CGI script to use hgweb, edit as necessary
 
-import cgitb, os, sys
+import cgitb
 cgitb.enable()
 
-# sys.path.insert(0, "/path/to/python/lib") # if not a system-wide install
-from mercurial import hgweb
+from mercurial import demandimport; demandimport.enable()
+from mercurial.hgweb import hgweb
+from mercurial.hgweb import wsgicgi
+from mercurial.hgweb.request import wsgiapplication
 
-h = hgweb.hgweb("test", "Empty test repository")
-h.run()
+def make_web_app():
+	return hgweb("test", "Empty test repository")
+
+wsgicgi.launch(wsgiapplication(make_web_app))
 HGWEB
 chmod 755 hgweb.cgi
 
@@ -29,33 +34,18 @@ cat >hgwebdir.cgi <<HGWEBDIR
 #
 # An example CGI script to export multiple hgweb repos, edit as necessary
 
-import cgitb, sys
+import cgitb
 cgitb.enable()
 
-# sys.path.insert(0, "/path/to/python/lib") # if not a system-wide install
-from mercurial import hgweb
+from mercurial import demandimport; demandimport.enable()
+from mercurial.hgweb import hgwebdir
+from mercurial.hgweb import wsgicgi
+from mercurial.hgweb.request import wsgiapplication
 
-# The config file looks like this.  You can have paths to individual
-# repos, collections of repos in a directory tree, or both.
-#
-# [paths]
-# virtual/path = /real/path
-# virtual/path = /real/path
-#
-# [collections]
-# /prefix/to/strip/off = /root/of/tree/full/of/repos
-#
-# collections example: say directory tree /foo contains repos /foo/bar,
-# /foo/quux/baz.  Give this config section:
-#   [collections]
-#   /foo = /foo
-# Then repos will list as bar and quux/baz.
+def make_web_app():
+	return hgwebdir("hgweb.config")
 
-# Alternatively you can pass a list of ('virtual/path', '/real/path') tuples
-# or use a dictionary with entries like 'virtual/path': '/real/path'
-
-h = hgweb.hgwebdir("hgweb.config")
-h.run()
+wsgicgi.launch(wsgiapplication(make_web_app))
 HGWEBDIR
 chmod 755 hgwebdir.cgi
 

@@ -1,0 +1,72 @@
+changeset:   0:4cbec7e6f8c4
+tag:         tip
+user:        Testing
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     test
+
+---- HEADERS
+200 Script output follows
+---- DATA
+[('content-type', 'application/atom+xml; charset=ascii')]
+<?xml version="1.0" encoding="ascii"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+ <!-- Changelog -->
+ <id>http://127.0.0.1/</id>
+ <link rel="self" href="http://127.0.0.1/atom-log"/>
+ <link rel="alternate" href="http://127.0.0.1/"/>
+ <title>repo Changelog</title>
+ <updated>1970-01-01T00:00:00+00:00</updated>
+
+ <entry>
+  <title>test</title>
+  <id>http://www.selenic.com/mercurial/#changeset-4cbec7e6f8c42eb52b6b52670e1f7560ae9a101e</id>
+  <link href="http://127.0.0.1/rev/4cbec7e6f8c42eb52b6b52670e1f7560ae9a101e"/>
+  <author>
+   <name>Testing</name>
+   <email>&#84;&#101;&#115;&#116;&#105;&#110;&#103;</email>
+  </author>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <published>1970-01-01T00:00:00+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://www.w3.org/1999/xhtml">
+    <pre xml:space="preserve">test</pre>
+   </div>
+  </content>
+ </entry>
+
+</feed>
+
+---- ERRORS
+
+---- HEADERS
+200 Script output follows
+---- DATA
+[('content-type', 'text/plain; charset=ascii')]
+
+-rw-r--r-- 4 bar
+
+
+
+---- ERRORS
+
+---- HEADERS
+200 Script output follows
+---- DATA
+[('content-type', 'text/plain; charset=ascii')]
+
+/repo/
+
+
+---- ERRORS
+
+---- HEADERS
+200 Script output follows
+---- DATA
+[('content-type', 'text/plain; charset=ascii')]
+
+-rw-r--r-- 4 bar
+
+
+
+---- ERRORS
+
