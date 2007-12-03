@@ -70,47 +70,6 @@ class hgwebdir(object):
         return req
 
     def run_wsgi(self, req):
-        def header(**map):
-            header_file = cStringIO.StringIO(
-                ''.join(tmpl("header", encoding=util._encoding, **map)))
-            msg = mimetools.Message(header_file, 0)
-            req.header(msg.items())
-            yield header_file.read()
-
-        def footer(**map):
-            yield tmpl("footer", **map)
-
-        def motd(**map):
-            if self.motd is not None:
-                yield self.motd
-            else:
-                yield config('web', 'motd', '')
-
-        def config(section, name, default=None, untrusted=True):
-            return self.parentui.config(section, name, default, untrusted)
-
-        url = req.env.get('SCRIPT_NAME', '')
-        if not url.endswith('/'):
-            url += '/'
-
-        staticurl = config('web', 'staticurl') or url + 'static/'
-        if not staticurl.endswith('/'):
-            staticurl += '/'
-
-        style = self.style
-        if style is None:
-            style = config('web', 'style', '')
-        if req.form.has_key('style'):
-            style = req.form['style'][0]
-        if self.stripecount is None:
-            self.stripecount = int(config('web', 'stripes', 1))
-        mapfile = style_map(templater.templatepath(), style)
-        tmpl = templater.templater(mapfile, templater.common_filters,
-                                   defaults={"header": header,
-                                             "footer": footer,
-                                             "motd": motd,
-                                             "url": url,
-                                             "staticurl": staticurl})
 
         try:
             try:
@@ -137,6 +96,7 @@ class hgwebdir(object):
                         # browse subdirectories
                         subdir = virtual + '/'
                         if [r for r in repos if r.startswith(subdir)]:
+                            tmpl = self.templater(req)
                             self.makeindex(req, tmpl, subdir)
                             return
 
@@ -145,6 +105,7 @@ class hgwebdir(object):
                             break
                         virtual = virtual[:up]
 
+                    tmpl = self.templater(req)
                     req.respond(404, tmpl("notfound", repo=virtual))
                 else:
                     if req.form.has_key('static'):
@@ -152,6 +113,7 @@ class hgwebdir(object):
                         fname = req.form['static'][0]
                         req.write(staticfile(static, fname, req))
                     else:
+                        tmpl = self.templater(req)
                         self.makeindex(req, tmpl)
             except ErrorResponse, err:
                 req.respond(err.code, tmpl('error', error=err.message or ''))
@@ -259,3 +221,48 @@ class hgwebdir(object):
         req.write(tmpl("index", entries=entries, subdir=subdir,
                        sortcolumn=sortcolumn, descending=descending,
                        **dict(sort)))
+
+    def templater(self, req):
+
+        def header(**map):
+            header_file = cStringIO.StringIO(
+                ''.join(tmpl("header", encoding=util._encoding, **map)))
+            msg = mimetools.Message(header_file, 0)
+            req.header(msg.items())
+            yield header_file.read()
+
+        def footer(**map):
+            yield tmpl("footer", **map)
+
+        def motd(**map):
+            if self.motd is not None:
+                yield self.motd
+            else:
+                yield config('web', 'motd', '')
+
+        def config(section, name, default=None, untrusted=True):
+            return self.parentui.config(section, name, default, untrusted)
+
+        url = req.env.get('SCRIPT_NAME', '')
+        if not url.endswith('/'):
+            url += '/'
+
+        staticurl = config('web', 'staticurl') or url + 'static/'
+        if not staticurl.endswith('/'):
+            staticurl += '/'
+
+        style = self.style
+        if style is None:
+            style = config('web', 'style', '')
+        if req.form.has_key('style'):
+            style = req.form['style'][0]
+        if self.stripecount is None:
+            self.stripecount = int(config('web', 'stripes', 1))
+        mapfile = style_map(templater.templatepath(), style)
+        tmpl = templater.templater(mapfile, templater.common_filters,
+                                   defaults={"header": header,
+                                             "footer": footer,
+                                             "motd": motd,
+                                             "url": url,
+                                             "staticurl": staticurl})
+        return tmpl
