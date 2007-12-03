@@ -12,7 +12,7 @@ from mercurial import mdiff, ui, hg, util, archival, patch
 from mercurial import revlog, templater
 from common import ErrorResponse, get_mtime, style_map, paritygen
 from request import wsgirequest
-import webcommands
+import webcommands, protocol
 
 shortcuts = {
     'cl': [('cmd', ['changelog']), ('rev', None)],
@@ -177,7 +177,7 @@ class hgweb(object):
                 cmd = cmd[style+1:]
 
             # avoid accepting e.g. style parameter as command
-            if hasattr(webcommands, cmd):
+            if hasattr(webcommands, cmd) or hasattr(protocol, cmd):
                 req.form['cmd'] = [cmd]
 
             if args and args[0]:
@@ -276,7 +276,10 @@ class hgweb(object):
             cmd = req.form['cmd'][0]
 
             try:
-                method = getattr(webcommands, cmd)
+                if hasattr(protocol, cmd):
+                    method = getattr(protocol, cmd)
+                else:
+                    method = getattr(webcommands, cmd)
                 method(self, req)
             except revlog.LookupError, err:
                 req.respond(404, self.t(
