@@ -8,7 +8,7 @@
 from node import *
 from i18n import _
 import os, sys, bisect, stat
-import mdiff, bdiff, util, templater, patch
+import mdiff, bdiff, util, templater, patch, errno
 
 revrangesep = ':'
 
@@ -285,6 +285,204 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
                                (oldrel, newrel, score * 100))
             if not dry_run:
                 repo.copy(old, new)
+
+def copy(ui, repo, pats, opts):
+    # called with the repo lock held
+    #
+    # hgsep => pathname that uses "/" to separate directories
+    # ossep => pathname that uses os.sep to separate directories
+    cwd = repo.getcwd()
+    errors = 0
+    copied = []
+    targets = {}
+
+    # abs: hgsep
+    # rel: ossep
+    # return: hgsep
+    def okaytocopy(abs, rel, exact):
+        reasons = {'?': _('is not managed'),
+                   'r': _('has been marked for remove')}
+        state = repo.dirstate[abs]
+        reason = reasons.get(state)
+        if reason:
+            if exact:
+                ui.warn(_('%s: not copying - file %s\n') % (rel, reason))
+        else:
+            if state == 'a':
+                origsrc = repo.dirstate.copied(abs)
+                if origsrc is not None:
+                    return origsrc
+            return abs
+
+    # origsrc: hgsep
+    # abssrc: hgsep
+    # relsrc: ossep
+    # otarget: ossep
+    def copy(origsrc, abssrc, relsrc, otarget, exact):
+        abstarget = util.canonpath(repo.root, cwd, otarget)
+        reltarget = repo.pathto(abstarget, cwd)
+        prevsrc = targets.get(abstarget)
+        src = repo.wjoin(abssrc)
+        target = repo.wjoin(abstarget)
+        if prevsrc is not None:
+            ui.warn(_('%s: not overwriting - %s collides with %s\n') %
+                    (reltarget, repo.pathto(abssrc, cwd),
+                     repo.pathto(prevsrc, cwd)))
+            return
+        if (not opts['after'] and os.path.exists(target) or
+            opts['after'] and repo.dirstate[abstarget] in 'mn'):
+            if not opts['force']:
+                ui.warn(_('%s: not overwriting - file exists\n') %
+                        reltarget)
+                return
+            if not opts['after'] and not opts.get('dry_run'):
+                os.unlink(target)
+        if opts['after']:
+            if not os.path.exists(target):
+                return
+        else:
+            targetdir = os.path.dirname(target) or '.'
+            if not os.path.isdir(targetdir) and not opts.get('dry_run'):
+                os.makedirs(targetdir)
+            try:
+                restore = repo.dirstate[abstarget] == 'r'
+                if restore and not opts.get('dry_run'):
+                    repo.undelete([abstarget])
+                try:
+                    if not opts.get('dry_run'):
+                        util.copyfile(src, target)
+                    restore = False
+                finally:
+                    if restore:
+                        repo.remove([abstarget])
+            except IOError, inst:
+                if inst.errno == errno.ENOENT:
+                    ui.warn(_('%s: deleted in working copy\n') % relsrc)
+                else:
+                    ui.warn(_('%s: cannot copy - %s\n') %
+                            (relsrc, inst.strerror))
+                    errors += 1
+                    return
+        if ui.verbose or not exact:
+            ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
+        targets[abstarget] = abssrc
+        if abstarget != origsrc:
+            if repo.dirstate[origsrc] == 'a':
+                if not ui.quiet:
+                    ui.warn(_("%s has not been committed yet, so no copy "
+                              "data will be stored for %s.\n")
+                            % (repo.pathto(origsrc, cwd), reltarget))
+                if abstarget not in repo.dirstate and not opts.get('dry_run'):
+                    repo.add([abstarget])
+            elif not opts.get('dry_run'):
+                repo.copy(origsrc, abstarget)
+        copied.append((abssrc, relsrc, exact))
+
+    # pat: ossep
+    # dest ossep
+    # srcs: list of (hgsep, hgsep, ossep, bool)
+    # return: function that takes hgsep and returns ossep
+    def targetpathfn(pat, dest, srcs):
+        if os.path.isdir(pat):
+            abspfx = util.canonpath(repo.root, cwd, pat)
+            abspfx = util.localpath(abspfx)
+            if destdirexists:
+                striplen = len(os.path.split(abspfx)[0])
+            else:
+                striplen = len(abspfx)
+            if striplen:
+                striplen += len(os.sep)
+            res = lambda p: os.path.join(dest, util.localpath(p)[striplen:])
+        elif destdirexists:
+            res = lambda p: os.path.join(dest,
+                                         os.path.basename(util.localpath(p)))
+        else:
+            res = lambda p: dest
+        return res
+
+    # pat: ossep
+    # dest ossep
+    # srcs: list of (hgsep, hgsep, ossep, bool)
+    # return: function that takes hgsep and returns ossep
+    def targetpathafterfn(pat, dest, srcs):
+        if util.patkind(pat, None)[0]:
+            # a mercurial pattern
+            res = lambda p: os.path.join(dest,
+                                         os.path.basename(util.localpath(p)))
+        else:
+            abspfx = util.canonpath(repo.root, cwd, pat)
+            if len(abspfx) < len(srcs[0][0]):
+                # A directory. Either the target path contains the last
+                # component of the source path or it does not.
+                def evalpath(striplen):
+                    score = 0
+                    for s in srcs:
+                        t = os.path.join(dest, util.localpath(s[0])[striplen:])
+                        if os.path.exists(t):
+                            score += 1
+                    return score
+
+                abspfx = util.localpath(abspfx)
+                striplen = len(abspfx)
+                if striplen:
+                    striplen += len(os.sep)
+                if os.path.isdir(os.path.join(dest, os.path.split(abspfx)[1])):
+                    score = evalpath(striplen)
+                    striplen1 = len(os.path.split(abspfx)[0])
+                    if striplen1:
+                        striplen1 += len(os.sep)
+                    if evalpath(striplen1) > score:
+                        striplen = striplen1
+                res = lambda p: os.path.join(dest,
+                                             util.localpath(p)[striplen:])
+            else:
+                # a file
+                if destdirexists:
+                    res = lambda p: os.path.join(dest,
+                                        os.path.basename(util.localpath(p)))
+                else:
+                    res = lambda p: dest
+        return res
+
+
+    pats = util.expand_glob(pats)
+    if not pats:
+        raise util.Abort(_('no source or destination specified'))
+    if len(pats) == 1:
+        raise util.Abort(_('no destination specified'))
+    dest = pats.pop()
+    destdirexists = os.path.isdir(dest)
+    if not destdirexists:
+        if len(pats) > 1 or util.patkind(pats[0], None)[0]:
+            raise util.Abort(_('with multiple sources, destination must be an '
+                               'existing directory'))
+        if dest.endswith(os.sep) or os.altsep and dest.endswith(os.altsep):
+            raise util.Abort(_('destination %s is not a directory') % dest)
+    if opts['after']:
+        tfn = targetpathafterfn
+    else:
+        tfn = targetpathfn
+    copylist = []
+    for pat in pats:
+        srcs = []
+        for tag, abssrc, relsrc, exact in walk(repo, [pat], opts,
+                                               globbed=True):
+            origsrc = okaytocopy(abssrc, relsrc, exact)
+            if origsrc:
+                srcs.append((origsrc, abssrc, relsrc, exact))
+        if not srcs:
+            continue
+        copylist.append((tfn(pat, dest, srcs), srcs))
+    if not copylist:
+        raise util.Abort(_('no files to copy'))
+
+    for targetpath, srcs in copylist:
+        for origsrc, abssrc, relsrc, exact in srcs:
+            copy(origsrc, abssrc, relsrc, targetpath(abssrc), exact)
+
+    if errors:
+        ui.warn(_('(consider using --after)\n'))
+    return errors, copied
 
 def service(opts, parentfn=None, initfn=None, runfn=None):
     '''Run a command as a service.'''
