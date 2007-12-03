@@ -118,81 +118,64 @@ class hgweb(object):
         return req
 
     def run_wsgi(self, req):
-        def header(**map):
-            header_file = cStringIO.StringIO(
-                ''.join(self.t("header", encoding=self.encoding, **map)))
-            msg = mimetools.Message(header_file, 0)
-            req.header(msg.items())
-            yield header_file.read()
 
-        def rawfileheader(**map):
-            req.header([('Content-type', map['mimetype']),
-                        ('Content-disposition', 'filename=%s' % map['file']),
-                        ('Content-length', str(len(map['raw'])))])
-            yield ''
+        self.refresh()
 
-        def footer(**map):
-            yield self.t("footer", **map)
+        # expand form shortcuts
 
-        def motd(**map):
-            yield self.config("web", "motd", "")
+        shortcuts = {
+            'cl': [('cmd', ['changelog']), ('rev', None)],
+            'sl': [('cmd', ['shortlog']), ('rev', None)],
+            'cs': [('cmd', ['changeset']), ('node', None)],
+            'f': [('cmd', ['file']), ('filenode', None)],
+            'fl': [('cmd', ['filelog']), ('filenode', None)],
+            'fd': [('cmd', ['filediff']), ('node', None)],
+            'fa': [('cmd', ['annotate']), ('filenode', None)],
+            'mf': [('cmd', ['manifest']), ('manifest', None)],
+            'ca': [('cmd', ['archive']), ('node', None)],
+            'tags': [('cmd', ['tags'])],
+            'tip': [('cmd', ['changeset']), ('node', ['tip'])],
+            'static': [('cmd', ['static']), ('file', None)]
+        }
 
-        def expand_form(form):
-            shortcuts = {
-                'cl': [('cmd', ['changelog']), ('rev', None)],
-                'sl': [('cmd', ['shortlog']), ('rev', None)],
-                'cs': [('cmd', ['changeset']), ('node', None)],
-                'f': [('cmd', ['file']), ('filenode', None)],
-                'fl': [('cmd', ['filelog']), ('filenode', None)],
-                'fd': [('cmd', ['filediff']), ('node', None)],
-                'fa': [('cmd', ['annotate']), ('filenode', None)],
-                'mf': [('cmd', ['manifest']), ('manifest', None)],
-                'ca': [('cmd', ['archive']), ('node', None)],
-                'tags': [('cmd', ['tags'])],
-                'tip': [('cmd', ['changeset']), ('node', ['tip'])],
-                'static': [('cmd', ['static']), ('file', None)]
-            }
+        for k in shortcuts.iterkeys():
+            if k in req.form:
+                for name, value in shortcuts[k]:
+                    if value is None:
+                        value = req.form[k]
+                    req.form[name] = value
+                del req.form[k]
 
-            for k in shortcuts.iterkeys():
-                if form.has_key(k):
-                    for name, value in shortcuts[k]:
-                        if value is None:
-                            value = form[k]
-                        form[name] = value
-                    del form[k]
+        # work with CGI variables to create coherent structure
+        # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
 
-        def rewrite_request(req):
-            '''translate new web interface to traditional format'''
+        req.url = req.env['SCRIPT_NAME']
+        if not req.url.endswith('/'):
+            req.url += '/'
+        if req.env.has_key('REPO_NAME'):
+            req.url += req.env['REPO_NAME'] + '/'
 
-            req.url = req.env['SCRIPT_NAME']
-            if not req.url.endswith('/'):
-                req.url += '/'
-            if req.env.has_key('REPO_NAME'):
-                req.url += req.env['REPO_NAME'] + '/'
-            
-            if req.env.get('PATH_INFO'):
-                parts = req.env.get('PATH_INFO').strip('/').split('/')
-                repo_parts = req.env.get('REPO_NAME', '').split('/')
-                if parts[:len(repo_parts)] == repo_parts:
-                    parts = parts[len(repo_parts):]
-                query = '/'.join(parts)
-            else:
-                query = req.env['QUERY_STRING'].split('&', 1)[0]
-                query = query.split(';', 1)[0]
+        if req.env.get('PATH_INFO'):
+            parts = req.env.get('PATH_INFO').strip('/').split('/')
+            repo_parts = req.env.get('REPO_NAME', '').split('/')
+            if parts[:len(repo_parts)] == repo_parts:
+                parts = parts[len(repo_parts):]
+            query = '/'.join(parts)
+        else:
+            query = req.env['QUERY_STRING'].split('&', 1)[0]
+            query = query.split(';', 1)[0]
 
-            if req.form.has_key('cmd'):
-                # old style
-                return
+        # translate user-visible url structure to internal structure
 
-            args = query.split('/', 2)
-            if not args or not args[0]:
-                return
+        args = query.split('/', 2)
+        if 'cmd' not in req.form and args and args[0]:
 
             cmd = args.pop(0)
             style = cmd.rfind('-')
             if style != -1:
                 req.form['style'] = [cmd[:style]]
                 cmd = cmd[style+1:]
+
             # avoid accepting e.g. style parameter as command
             if hasattr(webcommands, cmd):
                 req.form['cmd'] = [cmd]
@@ -213,27 +196,8 @@ class hgweb(object):
                         req.form['node'] = [fn[:-len(ext)]]
                         req.form['type'] = [type_]
 
-        def sessionvars(**map):
-            fields = []
-            if req.form.has_key('style'):
-                style = req.form['style'][0]
-                if style != self.config('web', 'style', ''):
-                    fields.append(('style', style))
-
-            separator = req.url[-1] == '?' and ';' or '?'
-            for name, value in fields:
-                yield dict(name=name, value=value, separator=separator)
-                separator = ';'
-
-        self.refresh()
-
-        expand_form(req.form)
-        rewrite_request(req)
-
-        style = self.config("web", "style", "")
-        if req.form.has_key('style'):
-            style = req.form['style'][0]
-        mapfile = style_map(self.templatepath, style)
+        # determine scheme, port and server name
+        # this is needed to create absolute urls
 
         proto = req.env.get('wsgi.url_scheme')
         if proto == 'https':
@@ -249,6 +213,44 @@ class hgweb(object):
         staticurl = self.config("web", "staticurl") or req.url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
+
+        # some functions for the templater
+
+        def header(**map):
+            header_file = cStringIO.StringIO(
+                ''.join(self.t("header", encoding=self.encoding, **map)))
+            msg = mimetools.Message(header_file, 0)
+            req.header(msg.items())
+            yield header_file.read()
+
+        def rawfileheader(**map):
+            req.header([('Content-type', map['mimetype']),
+                        ('Content-disposition', 'filename=%s' % map['file']),
+                        ('Content-length', str(len(map['raw'])))])
+            yield ''
+
+        def footer(**map):
+            yield self.t("footer", **map)
+
+        def motd(**map):
+            yield self.config("web", "motd", "")
+
+        def sessionvars(**map):
+            fields = []
+            if req.form.has_key('style'):
+                style = req.form['style'][0]
+                if style != self.config('web', 'style', ''):
+                    fields.append(('style', style))
+
+            separator = req.url[-1] == '?' and ';' or '?'
+            for name, value in fields:
+                yield dict(name=name, value=value, separator=separator)
+                separator = ';'
+
+        style = self.config("web", "style", "")
+        if req.form.has_key('style'):
+            style = req.form['style'][0]
+        mapfile = style_map(self.templatepath, style)
 
         if not self.reponame:
             self.reponame = (self.config("web", "name")
