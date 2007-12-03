@@ -366,7 +366,11 @@ def copy(ui, repo, pats, opts):
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
-        if abstarget != origsrc:
+        if abstarget == origsrc: # copying back a copy?
+            if repo.dirstate[abstarget] not in 'mn':
+                if not opts.get('dry_run'):
+                    repo.add([abstarget])
+        else:
             if repo.dirstate[origsrc] == 'a':
                 if not ui.quiet:
                     ui.warn(_("%s has not been committed yet, so no copy "
