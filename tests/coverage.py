@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 #             Perforce Defect Tracking Integration Project
 #              <http://www.ravenbrook.com/project/p4dti/>
