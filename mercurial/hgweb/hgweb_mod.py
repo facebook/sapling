@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetypes, re, mimetools, cStringIO, sys, urllib, bz2
+import os, mimetypes, re, mimetools, cStringIO
 from mercurial.node import *
 from mercurial import mdiff, ui, hg, util, archival, patch
 from mercurial import revlog, templater

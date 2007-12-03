@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import cStringIO, zlib, tempfile, errno, os, sys
+import cStringIO, zlib, bz2, tempfile, errno, os, sys
 from mercurial import revlog, util, streamclone
 from mercurial.i18n import gettext as _
 from mercurial.node import *
