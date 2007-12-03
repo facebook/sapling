@@ -196,6 +196,37 @@ class hgweb(object):
                         req.form['node'] = [fn[:-len(ext)]]
                         req.form['type'] = [type_]
 
+        # actually process the request
+
+        self.templater(req)
+        try:
+            if not req.form.has_key('cmd'):
+                req.form['cmd'] = [self.t.cache['default']]
+
+            cmd = req.form['cmd'][0]
+
+            try:
+                if hasattr(protocol, cmd):
+                    method = getattr(protocol, cmd)
+                else:
+                    method = getattr(webcommands, cmd)
+                method(self, req)
+            except revlog.LookupError, err:
+                req.respond(404, self.t(
+                    'error', error='revision not found: %s' % err.name))
+            except (hg.RepoError, revlog.RevlogError), inst:
+                req.respond('500 Internal Server Error',
+                            self.t('error', error=str(inst)))
+            except ErrorResponse, inst:
+                req.respond(inst.code, self.t('error', error=inst.message))
+            except AttributeError:
+                req.respond(400,
+                            self.t('error', error='No such method: ' + cmd))
+        finally:
+            self.t = None
+
+    def templater(self, req):
+
         # determine scheme, port and server name
         # this is needed to create absolute urls
 
@@ -247,6 +278,8 @@ class hgweb(object):
                 yield dict(name=name, value=value, separator=separator)
                 separator = ';'
 
+        # figure out which style to use
+
         style = self.config("web", "style", "")
         if req.form.has_key('style'):
             style = req.form['style'][0]
@@ -256,6 +289,8 @@ class hgweb(object):
             self.reponame = (self.config("web", "name")
                              or req.env.get('REPO_NAME')
                              or req.url.strip('/') or self.repo.root)
+
+        # create the templater
 
         self.t = templater.templater(mapfile, templater.common_filters,
                                      defaults={"url": req.url,
@@ -268,32 +303,6 @@ class hgweb(object):
                                                "rawfileheader": rawfileheader,
                                                "sessionvars": sessionvars
                                                })
-
-        try:
-            if not req.form.has_key('cmd'):
-                req.form['cmd'] = [self.t.cache['default']]
-
-            cmd = req.form['cmd'][0]
-
-            try:
-                if hasattr(protocol, cmd):
-                    method = getattr(protocol, cmd)
-                else:
-                    method = getattr(webcommands, cmd)
-                method(self, req)
-            except revlog.LookupError, err:
-                req.respond(404, self.t(
-                    'error', error='revision not found: %s' % err.name))
-            except (hg.RepoError, revlog.RevlogError), inst:
-                req.respond('500 Internal Server Error',
-                            self.t('error', error=str(inst)))
-            except ErrorResponse, inst:
-                req.respond(inst.code, self.t('error', error=inst.message))
-            except AttributeError:
-                req.respond(400,
-                            self.t('error', error='No such method: ' + cmd))
-        finally:
-            self.t = None
 
     def archivelist(self, nodeid):
         allowed = self.configlist("web", "allow_archive")
