@@ -334,21 +334,27 @@ summary |
 </body>
 </html>
 
-% Internals
+% capabilities
 200 Script output follows
 
-lookup changegroupsubset unbundle=HG10GZ,HG10BZ,HG10UN200 Script output follows
+lookup changegroupsubset unbundle=HG10GZ,HG10BZ,HG10UN% heads
+200 Script output follows
 
 a4f92ed23982be056b9852de5dfe873eaac7f0de
+% lookup
 200 Script output follows
 
 0 'key'
+% branches
 200 Script output follows
 
 a4f92ed23982be056b9852de5dfe873eaac7f0de 2ef0ac749a14e4f57a5a822464a0902c6f7f448f 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000
+% changegroup
 200 Script output follows
 
-xœc`@
+xœc`@    % stream_out
+200 Script output follows
+
 1
 % Static files
 200 Script output follows

@@ -11,7 +11,7 @@ cd test
 mkdir da
 echo foo > da/foo
 echo foo > foo
-hg ci -Ambase
+hg ci -d'0 0' -Ambase
 hg tag 1.0
 hg serve -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
 cat hg.pid >> $DAEMON_PIDS
@@ -33,12 +33,17 @@ echo % Overviews
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/tags/?style=atom' | sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/summary/?style=gitweb' | sed "s/[0-9]* years ago/long ago/"
 
-echo % Internals
+echo % capabilities
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/capabilities'
+echo % heads
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/heads'
+echo % lookup
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/lookup/1'
+echo % branches
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/branches'
+echo % changegroup
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/changegroup'
+echo % stream_out
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/stream_out'
 
 echo % Static files
