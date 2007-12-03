@@ -20,7 +20,8 @@ class hgwebdir(object):
             return [(util.pconvert(name).strip('/'), path)
                     for name, path in items]
 
-        self.parentui = parentui
+        self.parentui = parentui or ui.ui(report_untrusted=False,
+                                          interactive = False)
         self.motd = None
         self.style = None
         self.stripecount = None
@@ -85,11 +86,8 @@ class hgwebdir(object):
             else:
                 yield config('web', 'motd', '')
 
-        parentui = self.parentui or ui.ui(report_untrusted=False,
-                                          interactive=False)
-
         def config(section, name, default=None, untrusted=True):
-            return parentui.config(section, name, default, untrusted)
+            return self.parentui.config(section, name, default, untrusted)
 
         url = req.env.get('SCRIPT_NAME', '')
         if not url.endswith('/'):
@@ -113,6 +111,54 @@ class hgwebdir(object):
                                              "motd": motd,
                                              "url": url,
                                              "staticurl": staticurl})
+
+        try:
+            try:
+                virtual = req.env.get("PATH_INFO", "").strip('/')
+                if virtual.startswith('static/'):
+                    static = os.path.join(templater.templatepath(), 'static')
+                    fname = virtual[7:]
+                    req.write(staticfile(static, fname, req))
+                elif virtual:
+                    repos = dict(self.repos)
+                    while virtual:
+                        real = repos.get(virtual)
+                        if real:
+                            req.env['REPO_NAME'] = virtual
+                            try:
+                                repo = hg.repository(self.parentui, real)
+                                hgweb(repo).run_wsgi(req)
+                                return
+                            except IOError, inst:
+                                raise ErrorResponse(500, inst.strerror)
+                            except hg.RepoError, inst:
+                                raise ErrorResponse(500, str(inst))
+
+                        # browse subdirectories
+                        subdir = virtual + '/'
+                        if [r for r in repos if r.startswith(subdir)]:
+                            self.makeindex(req, tmpl, subdir)
+                            return
+
+                        up = virtual.rfind('/')
+                        if up < 0:
+                            break
+                        virtual = virtual[:up]
+
+                    req.respond(404, tmpl("notfound", repo=virtual))
+                else:
+                    if req.form.has_key('static'):
+                        static = os.path.join(templater.templatepath(), "static")
+                        fname = req.form['static'][0]
+                        req.write(staticfile(static, fname, req))
+                    else:
+                        self.makeindex(req, tmpl)
+            except ErrorResponse, err:
+                req.respond(err.code, tmpl('error', error=err.message or ''))
+        finally:
+            tmpl = None
+
+    def makeindex(self, req, tmpl, subdir=""):
 
         def archivelist(ui, nodeid, url):
             allowed = ui.configlist("web", "allow_archive", untrusted=True)
@@ -142,7 +188,7 @@ class hgwebdir(object):
                     continue
                 name = name[len(subdir):]
 
-                u = ui.ui(parentui=parentui)
+                u = ui.ui(parentui=self.parentui)
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
                 except Exception, e:
@@ -196,67 +242,20 @@ class hgwebdir(object):
                     row['parity'] = parity.next()
                     yield row
 
-        def makeindex(req, subdir=""):
-            sortable = ["name", "description", "contact", "lastchange"]
-            sortcolumn, descending = self.repos_sorted
-            if req.form.has_key('sort'):
-                sortcolumn = req.form['sort'][0]
-                descending = sortcolumn.startswith('-')
-                if descending:
-                    sortcolumn = sortcolumn[1:]
-                if sortcolumn not in sortable:
-                    sortcolumn = ""
+        sortable = ["name", "description", "contact", "lastchange"]
+        sortcolumn, descending = self.repos_sorted
+        if req.form.has_key('sort'):
+            sortcolumn = req.form['sort'][0]
+            descending = sortcolumn.startswith('-')
+            if descending:
+                sortcolumn = sortcolumn[1:]
+            if sortcolumn not in sortable:
+                sortcolumn = ""
 
-            sort = [("sort_%s" % column,
-                     "%s%s" % ((not descending and column == sortcolumn)
-                               and "-" or "", column))
-                    for column in sortable]
-            req.write(tmpl("index", entries=entries, subdir=subdir,
-                           sortcolumn=sortcolumn, descending=descending,
-                           **dict(sort)))
-
-        try:
-            try:
-                virtual = req.env.get("PATH_INFO", "").strip('/')
-                if virtual.startswith('static/'):
-                    static = os.path.join(templater.templatepath(), 'static')
-                    fname = virtual[7:]
-                    req.write(staticfile(static, fname, req))
-                elif virtual:
-                    repos = dict(self.repos)
-                    while virtual:
-                        real = repos.get(virtual)
-                        if real:
-                            req.env['REPO_NAME'] = virtual
-                            try:
-                                repo = hg.repository(parentui, real)
-                                hgweb(repo).run_wsgi(req)
-                                return
-                            except IOError, inst:
-                                raise ErrorResponse(500, inst.strerror)
-                            except hg.RepoError, inst:
-                                raise ErrorResponse(500, str(inst))
-
-                        # browse subdirectories
-                        subdir = virtual + '/'
-                        if [r for r in repos if r.startswith(subdir)]:
-                            makeindex(req, subdir)
-                            return
-
-                        up = virtual.rfind('/')
-                        if up < 0:
-                            break
-                        virtual = virtual[:up]
-
-                    req.respond(404, tmpl("notfound", repo=virtual))
-                else:
-                    if req.form.has_key('static'):
-                        static = os.path.join(templater.templatepath(), "static")
-                        fname = req.form['static'][0]
-                        req.write(staticfile(static, fname, req))
-                    else:
-                        makeindex(req)
-            except ErrorResponse, err:
-                req.respond(err.code, tmpl('error', error=err.message or ''))
-        finally:
-            tmpl = None
+        sort = [("sort_%s" % column,
+                 "%s%s" % ((not descending and column == sortcolumn)
+                            and "-" or "", column))
+                for column in sortable]
+        req.write(tmpl("index", entries=entries, subdir=subdir,
+                       sortcolumn=sortcolumn, descending=descending,
+                       **dict(sort)))

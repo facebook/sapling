@@ -27,7 +27,7 @@ b=$root/b
 EOF
 
 hg serve -p $HGPORT -d --pid-file=hg.pid --webdir-conf paths.conf \
-    -A access-paths.log -E error-paths.log
+    -A access-paths.log -E error-paths-1.log
 cat hg.pid >> $DAEMON_PIDS
 
 echo % should give a 404 - file does not exist
@@ -48,7 +48,7 @@ b=$root/b
 EOF
 
 hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-    -A access-paths.log -E error-paths.log
+    -A access-paths.log -E error-paths-2.log
 cat hg.pid >> $DAEMON_PIDS
 
 echo % should succeed, slashy names
@@ -75,3 +75,10 @@ echo % should succeed
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/a/file/tip/a?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/b/file/tip/b?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/c/file/tip/c?style=raw'
+
+echo % paths errors 1
+cat error-paths-1.log
+echo % paths errors 2
+cat error-paths-2.log
+echo % collections errors
+cat error-collections.log
