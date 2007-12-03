@@ -73,49 +73,58 @@ class hgwebdir(object):
 
         try:
             try:
+
                 virtual = req.env.get("PATH_INFO", "").strip('/')
-                if virtual.startswith('static/'):
+                
+                # a static file
+                if virtual.startswith('static/') or 'static' in req.form:
                     static = os.path.join(templater.templatepath(), 'static')
-                    fname = virtual[7:]
-                    req.write(staticfile(static, fname, req))
-                elif virtual:
-                    repos = dict(self.repos)
-                    while virtual:
-                        real = repos.get(virtual)
-                        if real:
-                            req.env['REPO_NAME'] = virtual
-                            try:
-                                repo = hg.repository(self.parentui, real)
-                                hgweb(repo).run_wsgi(req)
-                                return
-                            except IOError, inst:
-                                raise ErrorResponse(500, inst.strerror)
-                            except hg.RepoError, inst:
-                                raise ErrorResponse(500, str(inst))
-
-                        # browse subdirectories
-                        subdir = virtual + '/'
-                        if [r for r in repos if r.startswith(subdir)]:
-                            tmpl = self.templater(req)
-                            self.makeindex(req, tmpl, subdir)
-                            return
-
-                        up = virtual.rfind('/')
-                        if up < 0:
-                            break
-                        virtual = virtual[:up]
-
-                    tmpl = self.templater(req)
-                    req.respond(404, tmpl("notfound", repo=virtual))
-                else:
-                    if req.form.has_key('static'):
-                        static = os.path.join(templater.templatepath(), "static")
-                        fname = req.form['static'][0]
-                        req.write(staticfile(static, fname, req))
+                    if virtual.startswith('static/'):
+                        fname = virtual[7:]
                     else:
+                        fname = req.form['static'][0]
+                    req.write(staticfile(static, fname, req))
+                    return
+
+                # top-level index
+                elif not virtual:
+                    tmpl = self.templater(req)
+                    self.makeindex(req, tmpl)
+                    return
+
+                # nested indexes and hgwebs
+                repos = dict(self.repos)
+                while virtual:
+                    real = repos.get(virtual)
+                    if real:
+                        req.env['REPO_NAME'] = virtual
+                        try:
+                            repo = hg.repository(self.parentui, real)
+                            hgweb(repo).run_wsgi(req)
+                            return
+                        except IOError, inst:
+                            raise ErrorResponse(500, inst.strerror)
+                        except hg.RepoError, inst:
+                            raise ErrorResponse(500, str(inst))
+
+                    # browse subdirectories
+                    subdir = virtual + '/'
+                    if [r for r in repos if r.startswith(subdir)]:
                         tmpl = self.templater(req)
-                        self.makeindex(req, tmpl)
+                        self.makeindex(req, tmpl, subdir)
+                        return
+
+                    up = virtual.rfind('/')
+                    if up < 0:
+                        break
+                    virtual = virtual[:up]
+
+                # prefixes not found
+                tmpl = self.templater(req)
+                req.respond(404, tmpl("notfound", repo=virtual))
+                
             except ErrorResponse, err:
+                tmpl = self.templater(req)
                 req.respond(err.code, tmpl('error', error=err.message or ''))
         finally:
             tmpl = None
