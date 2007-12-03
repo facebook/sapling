@@ -14,6 +14,21 @@ from common import ErrorResponse, get_mtime, style_map, paritygen
 from request import wsgirequest
 import webcommands
 
+shortcuts = {
+    'cl': [('cmd', ['changelog']), ('rev', None)],
+    'sl': [('cmd', ['shortlog']), ('rev', None)],
+    'cs': [('cmd', ['changeset']), ('node', None)],
+    'f': [('cmd', ['file']), ('filenode', None)],
+    'fl': [('cmd', ['filelog']), ('filenode', None)],
+    'fd': [('cmd', ['filediff']), ('node', None)],
+    'fa': [('cmd', ['annotate']), ('filenode', None)],
+    'mf': [('cmd', ['manifest']), ('manifest', None)],
+    'ca': [('cmd', ['archive']), ('node', None)],
+    'tags': [('cmd', ['tags'])],
+    'tip': [('cmd', ['changeset']), ('node', ['tip'])],
+    'static': [('cmd', ['static']), ('file', None)]
+}
+
 def _up(p):
     if p[0] != "/":
         p = "/" + p
@@ -122,21 +137,6 @@ class hgweb(object):
         self.refresh()
 
         # expand form shortcuts
-
-        shortcuts = {
-            'cl': [('cmd', ['changelog']), ('rev', None)],
-            'sl': [('cmd', ['shortlog']), ('rev', None)],
-            'cs': [('cmd', ['changeset']), ('node', None)],
-            'f': [('cmd', ['file']), ('filenode', None)],
-            'fl': [('cmd', ['filelog']), ('filenode', None)],
-            'fd': [('cmd', ['filediff']), ('node', None)],
-            'fa': [('cmd', ['annotate']), ('filenode', None)],
-            'mf': [('cmd', ['manifest']), ('manifest', None)],
-            'ca': [('cmd', ['archive']), ('node', None)],
-            'tags': [('cmd', ['tags'])],
-            'tip': [('cmd', ['changeset']), ('node', ['tip'])],
-            'static': [('cmd', ['static']), ('file', None)]
-        }
 
         for k in shortcuts.iterkeys():
             if k in req.form:
