@@ -205,7 +205,7 @@ def system_rcpath_win32():
 def user_rcpath_win32():
     '''return os-specific hgrc search path to the user dir'''
     userdir = os.path.expanduser('~')
-    if userdir == '~':
+    if sys.getwindowsversion() != 2 and userdir == '~':
         # We are on win < nt: fetch the APPDATA directory location and use
         # the parent directory as the user home dir.
         appdir = shell.SHGetPathFromIDList(
