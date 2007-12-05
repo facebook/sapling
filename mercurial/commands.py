@@ -430,8 +430,8 @@ def commit(ui, repo, *pats, **opts):
     If a list of files is omitted, all changes reported by "hg status"
     will be committed.
 
-    If no commit message is specified, the editor configured in your hgrc
-    or in the EDITOR environment variable is started to enter a message.
+    If no commit message is specified, the configured editor is started to
+    enter a message.
     """
     def commitfunc(ui, repo, files, message, match, opts):
         return repo.commit(files, message, opts['user'], opts['date'], match,
@@ -748,9 +748,7 @@ def debuginstall(ui):
 
     # editor
     ui.status(_("Checking commit editor...\n"))
-    editor = (os.environ.get("HGEDITOR") or
-              ui.config("ui", "editor") or
-              os.environ.get("EDITOR", "vi"))
+    editor = ui.geteditor()
     cmdpath = util.find_exe(editor) or util.find_exe(editor.split()[0])
     if not cmdpath:
         if editor == 'vi':

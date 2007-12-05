@@ -440,9 +440,7 @@ class ui(object):
             f.write(text)
             f.close()
 
-            editor = (os.environ.get("HGEDITOR") or
-                    self.config("ui", "editor") or
-                    os.environ.get("EDITOR", "vi"))
+            editor = self.geteditor()
 
             util.system("%s \"%s\"" % (editor, name),
                         environ={'HGUSER': user},
@@ -464,3 +462,11 @@ class ui(object):
         if self.traceback:
             traceback.print_exc()
         return self.traceback
+
+    def geteditor(self):
+        '''return editor to use'''
+        return (os.environ.get("HGEDITOR") or
+                self.config("ui", "editor") or
+                os.environ.get("VISUAL") or
+                os.environ.get("EDITOR", "vi"))
+

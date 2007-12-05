@@ -17,8 +17,12 @@ LOCAL="$1"
 BASE="$2"
 OTHER="$3"
 
-if [ -z "$EDITOR" ]; then
-    EDITOR="vi"
+if [ -n "$VISUAL" ]; then
+    EDIT_PROG="$VISUAL"
+elif [ -n "$EDITOR" ]; then
+    EDIT_PROG="$EDITOR"
+else
+    EDIT_PROG="vi"
 fi
 
 # find decent versions of our utilities, insisting on the GNU versions where we
@@ -165,16 +169,16 @@ if [ -n "$DISPLAY" ]; then
     fi
 fi
 
-# Attempt to do a merge with $EDITOR
+# Attempt to do a merge with $EDIT_PROG
 if [ -n "$MERGE" -o -n "$DIFF3" ]; then
     echo "conflicts detected in $LOCAL"
     cp "$BACKUP" "$CHGTEST"
-    case "$EDITOR" in
+    case "$EDIT_PROG" in
         "emacs")
-            $EDITOR "$LOCAL" --eval '(condition-case nil (smerge-mode 1) (error nil))' || failure
+            $EDIT_PROG "$LOCAL" --eval '(condition-case nil (smerge-mode 1) (error nil))' || failure
             ;;
         *)
-            $EDITOR "$LOCAL" || failure
+            $EDIT_PROG "$LOCAL" || failure
             ;;
     esac
     # Some editors do not return meaningful error codes
@@ -195,7 +199,7 @@ if [ -n "$DIFF" -a -n "$PATCH" ]; then
         success
     else
         # If rejects are empty after using the editor, merge was ok
-        $EDITOR "$LOCAL" "$LOCAL.rej" || failure
+        $EDIT_PROG "$LOCAL" "$LOCAL.rej" || failure
         $TEST -s "$LOCAL.rej" || success
     fi
     failure
