@@ -292,7 +292,6 @@ def copy(ui, repo, pats, opts):
     # hgsep => pathname that uses "/" to separate directories
     # ossep => pathname that uses os.sep to separate directories
     cwd = repo.getcwd()
-    errors = 0
     copied = []
     targets = {}
 
@@ -358,8 +357,7 @@ def copy(ui, repo, pats, opts):
                 else:
                     ui.warn(_('%s: cannot copy - %s\n') %
                             (relsrc, inst.strerror))
-                    errors += 1
-                    return
+                    return True # report a failure
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
@@ -473,9 +471,11 @@ def copy(ui, repo, pats, opts):
     if not copylist:
         raise util.Abort(_('no files to copy'))
 
+    errors = 0
     for targetpath, srcs in copylist:
         for abssrc, relsrc, exact in srcs:
-            copyfile(abssrc, relsrc, targetpath(abssrc), exact)
+            if copyfile(abssrc, relsrc, targetpath(abssrc), exact):
+                errors += 1
 
     if errors:
         ui.warn(_('(consider using --after)\n'))
