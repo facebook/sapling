@@ -180,6 +180,17 @@ def testpid(pid):
 
 def system_rcpath_win32():
     '''return default os-specific hgrc search path'''
+    proc = win32api.GetCurrentProcess()
+    try:
+        # This will fail on windows < NT
+        filename = win32process.GetModuleFileNameEx(proc, 0)
+    except:
+        filename = win32api.GetModuleFileName(0)
+    # Use mercurial.ini found in directory with hg.exe
+    progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
+    if os.path.isfile(progrc):
+        return [progrc]
+    # else look for a system rcpath in the registry
     try:
         value = win32api.RegQueryValue(
                 win32con.HKEY_LOCAL_MACHINE, 'SOFTWARE\\Mercurial')
@@ -193,14 +204,7 @@ def system_rcpath_win32():
                         rcpath.append(os.path.join(p, f))
         return rcpath
     except pywintypes.error:
-        pass
-    proc = win32api.GetCurrentProcess()
-    try:
-        # This will fail on windows < NT
-        filename = win32process.GetModuleFileNameEx(proc, 0)
-    except:
-        filename = win32api.GetModuleFileName(0)
-    return [os.path.join(os.path.dirname(filename), 'mercurial.ini')]
+        return []
 
 def user_rcpath_win32():
     '''return os-specific hgrc search path to the user dir'''
