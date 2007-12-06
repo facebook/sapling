@@ -296,29 +296,26 @@ def copy(ui, repo, pats, opts):
     copied = []
     targets = {}
 
-    # abs: hgsep
-    # rel: ossep
-    # return: hgsep
-    def okaytocopy(abs, rel, exact):
-        reasons = {'?': _('is not managed'),
-                   'r': _('has been marked for remove')}
-        state = repo.dirstate[abs]
-        reason = reasons.get(state)
-        if reason:
-            if exact:
-                ui.warn(_('%s: not copying - file %s\n') % (rel, reason))
-        else:
-            if state == 'a':
-                origsrc = repo.dirstate.copied(abs)
-                if origsrc is not None:
-                    return origsrc
-            return abs
+    def walkpat(pat):
+        srcs = []
+        for tag, abs, rel, exact in walk(repo, [pat], opts, globbed=True):
+            state = repo.dirstate[abs]
+            if state in '?r':
+                if exact and state == '?':
+                    ui.warn(_('%s: not copying - file is not managed\n') % rel)
+                if exact and state == 'r':
+                    ui.warn(_('%s: not copying - file has been marked for'
+                              ' remove\n') % rel)
+                continue
+            # abs: hgsep
+            # rel: ossep
+            srcs.append((abs, rel, exact))
+        return srcs
 
-    # origsrc: hgsep
     # abssrc: hgsep
     # relsrc: ossep
     # otarget: ossep
-    def copy(origsrc, abssrc, relsrc, otarget, exact):
+    def copyfile(abssrc, relsrc, otarget, exact):
         abstarget = util.canonpath(repo.root, cwd, otarget)
         reltarget = repo.pathto(abstarget, cwd)
         prevsrc = targets.get(abstarget)
@@ -366,6 +363,7 @@ def copy(ui, repo, pats, opts):
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
+        origsrc = repo.dirstate.copied(abssrc) or abssrc
         if abstarget == origsrc: # copying back a copy?
             if repo.dirstate[abstarget] not in 'mn':
                 if not opts.get('dry_run'):
@@ -468,12 +466,7 @@ def copy(ui, repo, pats, opts):
         tfn = targetpathfn
     copylist = []
     for pat in pats:
-        srcs = []
-        for tag, abssrc, relsrc, exact in walk(repo, [pat], opts,
-                                               globbed=True):
-            origsrc = okaytocopy(abssrc, relsrc, exact)
-            if origsrc:
-                srcs.append((origsrc, abssrc, relsrc, exact))
+        srcs = walkpat(pat)
         if not srcs:
             continue
         copylist.append((tfn(pat, dest, srcs), srcs))
@@ -481,8 +474,8 @@ def copy(ui, repo, pats, opts):
         raise util.Abort(_('no files to copy'))
 
     for targetpath, srcs in copylist:
-        for origsrc, abssrc, relsrc, exact in srcs:
-            copy(origsrc, abssrc, relsrc, targetpath(abssrc), exact)
+        for abssrc, relsrc, exact in srcs:
+            copyfile(abssrc, relsrc, targetpath(abssrc), exact)
 
     if errors:
         ui.warn(_('(consider using --after)\n'))
