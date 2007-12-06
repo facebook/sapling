@@ -610,7 +610,7 @@ class svn_source(converter_source):
             # Example SVN datetime. Includes microseconds.
             # ISO-8601 conformant
             # '2007-01-04T17:35:00.902377Z'
-            date = util.parsedate(date[:18] + " UTC", ["%Y-%m-%dT%H:%M:%S"])
+            date = util.parsedate(date[:19] + " UTC", ["%Y-%m-%dT%H:%M:%S"])
 
             log = message and self.recode(message)
             author = author and self.recode(author) or ''
