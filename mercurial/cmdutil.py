@@ -294,6 +294,8 @@ def copy(ui, repo, pats, opts):
     cwd = repo.getcwd()
     copied = []
     targets = {}
+    after = opts.get("after")
+    dryrun = opts.get("dry_run")
 
     def walkpat(pat):
         srcs = []
@@ -317,35 +319,40 @@ def copy(ui, repo, pats, opts):
     def copyfile(abssrc, relsrc, otarget, exact):
         abstarget = util.canonpath(repo.root, cwd, otarget)
         reltarget = repo.pathto(abstarget, cwd)
-        prevsrc = targets.get(abstarget)
-        src = repo.wjoin(abssrc)
         target = repo.wjoin(abstarget)
+        src = repo.wjoin(abssrc)
+
+        # check for collisions
+        prevsrc = targets.get(abstarget)
         if prevsrc is not None:
             ui.warn(_('%s: not overwriting - %s collides with %s\n') %
                     (reltarget, repo.pathto(abssrc, cwd),
                      repo.pathto(prevsrc, cwd)))
             return
-        if (not opts['after'] and os.path.exists(target) or
-            opts['after'] and repo.dirstate[abstarget] in 'mn'):
+
+        # check for overwrites
+        if (not after and os.path.exists(target) or
+            after and repo.dirstate[abstarget] in 'mn'):
             if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %
                         reltarget)
                 return
-            if not opts['after'] and not opts.get('dry_run'):
+            if not after and not dryrun:
                 os.unlink(target)
-        if opts['after']:
+
+        if after:
             if not os.path.exists(target):
                 return
         else:
             targetdir = os.path.dirname(target) or '.'
-            if not os.path.isdir(targetdir) and not opts.get('dry_run'):
+            if not os.path.isdir(targetdir) and not dryrun:
                 os.makedirs(targetdir)
             try:
                 restore = repo.dirstate[abstarget] == 'r'
-                if restore and not opts.get('dry_run'):
+                if restore and not dryrun:
                     repo.undelete([abstarget])
                 try:
-                    if not opts.get('dry_run'):
+                    if not dryrun:
                         util.copyfile(src, target)
                     restore = False
                 finally:
@@ -358,13 +365,16 @@ def copy(ui, repo, pats, opts):
                     ui.warn(_('%s: cannot copy - %s\n') %
                             (relsrc, inst.strerror))
                     return True # report a failure
+
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
         targets[abstarget] = abssrc
+
+        # fix up dirstate
         origsrc = repo.dirstate.copied(abssrc) or abssrc
         if abstarget == origsrc: # copying back a copy?
             if repo.dirstate[abstarget] not in 'mn':
-                if not opts.get('dry_run'):
+                if not dryrun:
                     repo.add([abstarget])
         else:
             if repo.dirstate[origsrc] == 'a':
@@ -372,9 +382,9 @@ def copy(ui, repo, pats, opts):
                     ui.warn(_("%s has not been committed yet, so no copy "
                               "data will be stored for %s.\n")
                             % (repo.pathto(origsrc, cwd), reltarget))
-                if abstarget not in repo.dirstate and not opts.get('dry_run'):
+                if abstarget not in repo.dirstate and not dryrun:
                     repo.add([abstarget])
-            elif not opts.get('dry_run'):
+            elif not dryrun:
                 repo.copy(origsrc, abstarget)
         copied.append((abssrc, relsrc, exact))
 
@@ -458,10 +468,10 @@ def copy(ui, repo, pats, opts):
                                'existing directory'))
         if dest.endswith(os.sep) or os.altsep and dest.endswith(os.altsep):
             raise util.Abort(_('destination %s is not a directory') % dest)
-    if opts['after']:
+
+    tfn = targetpathfn
+    if after:
         tfn = targetpathafterfn
-    else:
-        tfn = targetpathfn
     copylist = []
     for pat in pats:
         srcs = walkpat(pat)
