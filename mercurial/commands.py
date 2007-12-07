@@ -454,10 +454,9 @@ def copy(ui, repo, *pats, **opts):
     """
     wlock = repo.wlock(False)
     try:
-        errs, copied = cmdutil.copy(ui, repo, pats, opts)
+        return cmdutil.copy(ui, repo, pats, opts)
     finally:
         del wlock
-    return errs
 
 def debugancestor(ui, index, rev1, rev2):
     """find the ancestor revision of two revisions in a given index"""
@@ -2062,15 +2061,7 @@ def rename(ui, repo, *pats, **opts):
     """
     wlock = repo.wlock(False)
     try:
-        errs, copied = cmdutil.copy(ui, repo, pats, opts)
-        names = []
-        for abs, rel, exact in copied:
-            if ui.verbose or not exact:
-                ui.status(_('removing %s\n') % rel)
-            names.append(abs)
-        if not opts.get('dry_run'):
-            repo.remove(names, True)
-        return errs
+        return cmdutil.copy(ui, repo, pats, opts, rename=True)
     finally:
         del wlock
 

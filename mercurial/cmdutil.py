@@ -286,13 +286,12 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             if not dry_run:
                 repo.copy(old, new)
 
-def copy(ui, repo, pats, opts):
+def copy(ui, repo, pats, opts, rename=False):
     # called with the repo lock held
     #
     # hgsep => pathname that uses "/" to separate directories
     # ossep => pathname that uses os.sep to separate directories
     cwd = repo.getcwd()
-    copied = []
     targets = {}
     after = opts.get("after")
     dryrun = opts.get("dry_run")
@@ -359,7 +358,8 @@ def copy(ui, repo, pats, opts):
                     return True # report a failure
 
         if ui.verbose or not exact:
-            ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
+            action = rename and "moving" or "copying"
+            ui.status(_('%s %s to %s\n') % (action, relsrc, reltarget))
 
         targets[abstarget] = abssrc
 
@@ -378,7 +378,9 @@ def copy(ui, repo, pats, opts):
                     repo.add([abstarget])
             elif not dryrun:
                 repo.copy(origsrc, abstarget)
-        copied.append((abssrc, relsrc, exact))
+
+        if rename and not dryrun:
+            repo.remove([abssrc], True)
 
     # pat: ossep
     # dest ossep
@@ -482,7 +484,7 @@ def copy(ui, repo, pats, opts):
     if errors:
         ui.warn(_('(consider using --after)\n'))
 
-    return errors, copied
+    return errors
 
 def service(opts, parentfn=None, initfn=None, runfn=None):
     '''Run a command as a service.'''
