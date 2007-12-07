@@ -82,14 +82,17 @@ def pygments_format(filename, rawtext, forcetext=False, stripecount=1,
     return highlight(rawtext, lexer, formatter)
 
 
-def filerevision_pygments(self, fctx):
+def filerevision_pygments(self, tmpl, fctx):
     """Reimplement hgweb.filerevision to use syntax highlighting"""
-    filename = fctx.path()
+    f = fctx.path()
 
     rawtext = fctx.data()
     text = rawtext
 
-    mt = mimetypes.guess_type(filename)[0]
+    fl = fctx.filelog()
+    n = fctx.filenode()
+
+    mt = mimetypes.guess_type(f)[0]
 
     if util.binary(text):
         mt = mt or 'application/octet-stream'
@@ -107,36 +110,35 @@ def filerevision_pygments(self, fctx):
 
     style = self.config("web", "pygments_style", "colorful")
 
-    text_formatted = lines(pygments_format(filename, text,
+    text_formatted = lines(pygments_format(f, text,
                                            forcetext=forcetext,
                                            stripecount=self.stripecount,
                                            style=style))
 
     # override per-line template
-    self.t.cache['fileline'] = '#line#'
+    tmpl.cache['fileline'] = '#line#'
 
     # append a <link ...> to the syntax highlighting css
-    old_header = ''.join(self.t('header'))
+    old_header = ''.join(tmpl('header'))
     if SYNTAX_CSS not in old_header:
         new_header =  old_header + SYNTAX_CSS
-        self.t.cache['header'] = new_header
+        tmpl.cache['header'] = new_header
 
-    yield self.t("filerevision",
-                 file=filename,
-                 path=hgweb_mod._up(filename), # fixme: make public
-                 text=text_formatted,
-                 raw=rawtext,
-                 mimetype=mt,
-                 rev=fctx.rev(),
-                 node=hex(fctx.node()),
-                 author=fctx.user(),
-                 date=fctx.date(),
-                 desc=fctx.description(),
-                 parent=self.siblings(fctx.parents()),
-                 child=self.siblings(fctx.children()),
-                 rename=self.renamelink(fctx.filelog(),
-                                        fctx.filenode()),
-                 permissions=fctx.manifest().flags(filename))
+    yield tmpl("filerevision",
+               file=f,
+               path=hgweb_mod._up(f), # fixme: make public
+               text=text_formatted,
+               raw=rawtext,
+               mimetype=mt,
+               rev=fctx.rev(),
+               node=hex(fctx.node()),
+               author=fctx.user(),
+               date=fctx.date(),
+               desc=fctx.description(),
+               parent=self.siblings(fctx.parents()),
+               child=self.siblings(fctx.children()),
+               rename=self.renamelink(fl, n),
+               permissions=fctx.manifest().flags(f))
 
 
 # monkeypatch in the new version

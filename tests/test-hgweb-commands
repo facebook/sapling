@@ -1,0 +1,53 @@
+#!/bin/sh
+# An attempt at more fully testing the hgweb web interface.
+# The following things are tested elsewhere and are therefore omitted:
+# - archive, tested in test-archive
+# - unbundle, tested in test-push-http
+# - changegroupsubset, tested in test-pull
+
+echo % Set up the repo
+hg init test
+cd test
+mkdir da
+echo foo > da/foo
+echo foo > foo
+hg ci -d'0 0' -Ambase
+hg tag 1.0
+hg serve -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
+cat hg.pid >> $DAEMON_PIDS
+
+echo % Logs and changes
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/log/?style=atom' | sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/log/1/?style=atom' | sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/log/1/foo/?style=atom' | sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/shortlog/' | sed "s/[0-9]* years/many years/"
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/rev/1/?style=raw'
+
+echo % File-related
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/file/1/foo/?style=raw'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/annotate/1/foo/?style=raw'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/file/1/?style=raw'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/filediff/1/foo/?style=raw'
+
+echo % Overviews
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/tags/?style=atom' | sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/summary/?style=gitweb' | sed "s/[0-9]* years ago/long ago/"
+
+echo % capabilities
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/capabilities'
+echo % heads
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/heads'
+echo % lookup
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/lookup/1'
+echo % branches
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/branches'
+echo % changegroup
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/changegroup'
+echo % stream_out
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/stream_out'
+
+echo % Static files
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/static/style.css'
+
+echo % ERRORS ENCOUNTERED
+cat errors.log
