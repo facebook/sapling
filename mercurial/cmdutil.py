@@ -481,6 +481,7 @@ def copy(ui, repo, pats, opts):
 
     if errors:
         ui.warn(_('(consider using --after)\n'))
+
     return errors, copied
 
 def service(opts, parentfn=None, initfn=None, runfn=None):
