@@ -321,6 +321,7 @@ def copy(ui, repo, pats, opts):
         reltarget = repo.pathto(abstarget, cwd)
         target = repo.wjoin(abstarget)
         src = repo.wjoin(abssrc)
+        state = repo.dirstate[abstarget]
 
         # check for collisions
         prevsrc = targets.get(abstarget)
@@ -331,33 +332,24 @@ def copy(ui, repo, pats, opts):
             return
 
         # check for overwrites
-        if (not after and os.path.exists(target) or
-            after and repo.dirstate[abstarget] in 'mn'):
+        exists = os.path.exists(target)
+        if (not after and exists or after and state in 'mn'):
             if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %
                         reltarget)
                 return
-            if not after and not dryrun:
-                os.unlink(target)
 
         if after:
-            if not os.path.exists(target):
+            if not exists:
                 return
-        else:
-            targetdir = os.path.dirname(target) or '.'
-            if not os.path.isdir(targetdir) and not dryrun:
-                os.makedirs(targetdir)
+        elif not dryrun:
             try:
-                restore = repo.dirstate[abstarget] == 'r'
-                if restore and not dryrun:
-                    repo.undelete([abstarget])
-                try:
-                    if not dryrun:
-                        util.copyfile(src, target)
-                    restore = False
-                finally:
-                    if restore:
-                        repo.remove([abstarget])
+                if exists:
+                    os.unlink(target)
+                targetdir = os.path.dirname(target) or '.'
+                if not os.path.isdir(targetdir):
+                    os.makedirs(targetdir)
+                util.copyfile(src, target)
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
                     ui.warn(_('%s: deleted in working copy\n') % relsrc)
@@ -368,14 +360,14 @@ def copy(ui, repo, pats, opts):
 
         if ui.verbose or not exact:
             ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
+
         targets[abstarget] = abssrc
 
         # fix up dirstate
         origsrc = repo.dirstate.copied(abssrc) or abssrc
         if abstarget == origsrc: # copying back a copy?
-            if repo.dirstate[abstarget] not in 'mn':
-                if not dryrun:
-                    repo.add([abstarget])
+            if state not in 'mn' and not dryrun:
+                repo.dirstate.normallookup(abstarget)
         else:
             if repo.dirstate[origsrc] == 'a':
                 if not ui.quiet:
