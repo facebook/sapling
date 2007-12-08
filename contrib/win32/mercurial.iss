@@ -30,6 +30,7 @@ PrivilegesRequired=none
 [Files]
 Source: contrib\mercurial.el; DestDir: {app}/Contrib
 Source: contrib\vim\*.*; DestDir: {app}/Contrib/Vim
+Source: contrib\zsh_completion; DestDir: {app}/Contrib
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Flags: confirmoverwrite
 Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
