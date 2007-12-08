@@ -34,7 +34,6 @@ Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Fl
 Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
 Source: dist\hg.exe; DestDir: {app}; AfterInstall: Touch('{app}\hg.exe.local')
 Source: dist\library.zip; DestDir: {app}
-Source: dist\patch.exe; DestDir: {app}
 Source: dist\mfc71.dll; DestDir: {app}
 Source: dist\msvcr71.dll; DestDir: {app}
 Source: dist\w9xpopen.exe; DestDir: {app}
