@@ -40,6 +40,11 @@ try:
 except ImportError:
     pass
 
+if os.name in ['nt']:
+    extra['scripts'] = ['hg']
+else:
+    extra['scripts'] = ['hg', 'hgmerge']
+
 # specify version string, otherwise 'hg identify' will be used:
 version = ''
 
@@ -78,7 +83,6 @@ setup(name='mercurial',
                    [os.path.join(root, file_) for file_ in files])
                   for root, dirs, files in os.walk('templates')],
       cmdclass=cmdclass,
-      scripts=['hg', 'hgmerge'],
       options=dict(py2exe=dict(packages=['hgext']),
                    bdist_mpkg=dict(zipdist=True,
                                    license='COPYING',
