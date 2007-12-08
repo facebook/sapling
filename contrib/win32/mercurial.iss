@@ -40,7 +40,6 @@ Source: dist\mfc71.dll; DestDir: {app}
 Source: dist\msvcr71.dll; DestDir: {app}
 Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
-Source: doc\*.txt; DestDir: {app}\Docs
 Source: doc\*.html; DestDir: {app}\Docs
 Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
