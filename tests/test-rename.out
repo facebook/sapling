@@ -29,14 +29,10 @@ A d1/d11/e
 R d2/b
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 # rename directory d1 as d3
-copying d1/a to d3/a
-copying d1/b to d3/b
-copying d1/ba to d3/ba
-copying d1/d11/a1 to d3/d11/a1
-removing d1/a
-removing d1/b
-removing d1/ba
-removing d1/d11/a1
+moving d1/a to d3/a
+moving d1/b to d3/b
+moving d1/ba to d3/ba
+moving d1/d11/a1 to d3/d11/a1
 A d3/a
   d1/a
 A d3/b
@@ -51,14 +47,10 @@ R d1/ba
 R d1/d11/a1
 4 files updated, 0 files merged, 4 files removed, 0 files unresolved
 # rename --after directory d1 as d3
-copying d1/a to d3/a
-copying d1/b to d3/b
-copying d1/ba to d3/ba
-copying d1/d11/a1 to d3/d11/a1
-removing d1/a
-removing d1/b
-removing d1/ba
-removing d1/d11/a1
+moving d1/a to d3/a
+moving d1/b to d3/b
+moving d1/ba to d3/ba
+moving d1/d11/a1 to d3/d11/a1
 A d3/a
   d1/a
 A d3/b
@@ -73,37 +65,29 @@ R d1/ba
 R d1/d11/a1
 4 files updated, 0 files merged, 4 files removed, 0 files unresolved
 # move a directory using a relative path
-copying ../d1/d11/a1 to d3/d11/a1
-removing ../d1/d11/a1
+moving ../d1/d11/a1 to d3/d11/a1
 A d2/d3/d11/a1
   d1/d11/a1
 R d1/d11/a1
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 # move --after a directory using a relative path
-copying ../d1/d11/a1 to d3/d11/a1
-removing ../d1/d11/a1
+moving ../d1/d11/a1 to d3/d11/a1
 A d2/d3/d11/a1
   d1/d11/a1
 R d1/d11/a1
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 # move directory d1/d11 to an existing directory d2 (removes empty d1)
-copying d1/d11/a1 to d2/d11/a1
-removing d1/d11/a1
+moving d1/d11/a1 to d2/d11/a1
 A d2/d11/a1
   d1/d11/a1
 R d1/d11/a1
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 # move directories d1 and d2 to a new directory d3
-copying d1/a to d3/d1/a
-copying d1/b to d3/d1/b
-copying d1/ba to d3/d1/ba
-copying d1/d11/a1 to d3/d1/d11/a1
-copying d2/b to d3/d2/b
-removing d1/a
-removing d1/b
-removing d1/ba
-removing d1/d11/a1
-removing d2/b
+moving d1/a to d3/d1/a
+moving d1/b to d3/d1/b
+moving d1/ba to d3/d1/ba
+moving d1/d11/a1 to d3/d1/d11/a1
+moving d2/b to d3/d2/b
 A d3/d1/a
   d1/a
 A d3/d1/b
@@ -121,16 +105,11 @@ R d1/d11/a1
 R d2/b
 5 files updated, 0 files merged, 5 files removed, 0 files unresolved
 # move --after directories d1 and d2 to a new directory d3
-copying d1/a to d3/d1/a
-copying d1/b to d3/d1/b
-copying d1/ba to d3/d1/ba
-copying d1/d11/a1 to d3/d1/d11/a1
-copying d2/b to d3/d2/b
-removing d1/a
-removing d1/b
-removing d1/ba
-removing d1/d11/a1
-removing d2/b
+moving d1/a to d3/d1/a
+moving d1/b to d3/d1/b
+moving d1/ba to d3/d1/ba
+moving d1/d11/a1 to d3/d1/d11/a1
+moving d2/b to d3/d2/b
 A d3/d1/a
   d1/a
 A d3/d1/b
@@ -150,8 +129,7 @@ R d2/b
 # move everything under directory d1 to existing directory d2, do not
 # overwrite existing files (d2/b)
 d2/b: not overwriting - file exists
-copying d1/d11/a1 to d2/d11/a1
-removing d1/d11/a1
+moving d1/d11/a1 to d2/d11/a1
 A d2/a
   d1/a
 A d2/ba
@@ -173,14 +151,10 @@ abort: destination dx/ is not a directory
 # directory
 abort: with multiple sources, destination must be an existing directory
 # move every file under d1 to d2/d21 (glob)
-copying d1/a to d2/d21/a
-copying d1/b to d2/d21/b
-copying d1/ba to d2/d21/ba
-copying d1/d11/a1 to d2/d21/a1
-removing d1/a
-removing d1/b
-removing d1/ba
-removing d1/d11/a1
+moving d1/a to d2/d21/a
+moving d1/b to d2/d21/b
+moving d1/ba to d2/d21/ba
+moving d1/d11/a1 to d2/d21/a1
 A d2/d21/a
   d1/a
 A d2/d21/a1
@@ -195,10 +169,8 @@ R d1/ba
 R d1/d11/a1
 4 files updated, 0 files merged, 4 files removed, 0 files unresolved
 # move --after some files under d1 to d2/d21 (glob)
-copying d1/a to d2/d21/a
-copying d1/d11/a1 to d2/d21/a1
-removing d1/a
-removing d1/d11/a1
+moving d1/a to d2/d21/a
+moving d1/d11/a1 to d2/d21/a1
 A d2/d21/a
   d1/a
 A d2/d21/a1
@@ -207,10 +179,8 @@ R d1/a
 R d1/d11/a1
 2 files updated, 0 files merged, 2 files removed, 0 files unresolved
 # move every file under d1 starting with an 'a' to d2/d21 (regexp)
-copying d1/a to d2/d21/a
-copying d1/d11/a1 to d2/d21/a1
-removing d1/a
-removing d1/d11/a1
+moving d1/a to d2/d21/a
+moving d1/d11/a1 to d2/d21/a1
 A d2/d21/a
   d1/a
 A d2/d21/a1
@@ -233,9 +203,8 @@ A d1/ca
 R d1/ba
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 # do not copy more than one source file to the same destination file
-copying d1/d11/a1 to d3/d11/a1
+moving d1/d11/a1 to d3/d11/a1
 d3/b: not overwriting - d2/b collides with d1/b
-removing d1/d11/a1
 A d3/a
   d1/a
 A d3/b
@@ -250,14 +219,10 @@ R d1/ba
 R d1/d11/a1
 4 files updated, 0 files merged, 4 files removed, 0 files unresolved
 # move a whole subtree with "hg rename ."
-copying a to ../d3/d1/a
-copying b to ../d3/d1/b
-copying ba to ../d3/d1/ba
-copying d11/a1 to ../d3/d1/d11/a1
-removing a
-removing b
-removing ba
-removing d11/a1
+moving a to ../d3/d1/a
+moving b to ../d3/d1/b
+moving ba to ../d3/d1/ba
+moving d11/a1 to ../d3/d1/d11/a1
 A d3/d1/a
   d1/a
 A d3/d1/b
@@ -272,14 +237,10 @@ R d1/ba
 R d1/d11/a1
 4 files updated, 0 files merged, 4 files removed, 0 files unresolved
 # move a whole subtree with "hg rename --after ."
-copying a to ../d3/a
-copying b to ../d3/b
-copying ba to ../d3/ba
-copying d11/a1 to ../d3/d11/a1
-removing a
-removing b
-removing ba
-removing d11/a1
+moving a to ../d3/a
+moving b to ../d3/b
+moving ba to ../d3/ba
+moving d11/a1 to ../d3/d11/a1
 A d3/a
   d1/a
 A d3/b
@@ -294,14 +255,10 @@ R d1/ba
 R d1/d11/a1
 4 files updated, 0 files merged, 4 files removed, 0 files unresolved
 # move the parent tree with "hg rename .."
-copying ../a to ../../d3/a
-copying ../b to ../../d3/b
-copying ../ba to ../../d3/ba
-copying a1 to ../../d3/d11/a1
-removing ../a
-removing ../b
-removing ../ba
-removing a1
+moving ../a to ../../d3/a
+moving ../b to ../../d3/b
+moving ../ba to ../../d3/ba
+moving a1 to ../../d3/d11/a1
 A d3/a
   d1/a
 A d3/b
@@ -316,12 +273,9 @@ R d1/ba
 R d1/d11/a1
 4 files updated, 0 files merged, 4 files removed, 0 files unresolved
 # skip removed files
-copying d1/a to d3/a
-copying d1/ba to d3/ba
-copying d1/d11/a1 to d3/d11/a1
-removing d1/a
-removing d1/ba
-removing d1/d11/a1
+moving d1/a to d3/a
+moving d1/ba to d3/ba
+moving d1/d11/a1 to d3/d11/a1
 A d3/a
   d1/a
 A d3/ba

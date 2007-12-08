@@ -609,7 +609,10 @@ def update(repo, node, branchmerge, force, partial):
             try:
                 node = repo.branchtags()[wc.branch()]
             except KeyError:
-                raise util.Abort(_("branch %s not found") % wc.branch())
+                if wc.branch() == "default": # no default branch!
+                    node = repo.lookup("tip") # update to tip
+                else:
+                    raise util.Abort(_("branch %s not found") % wc.branch())
         overwrite = force and not branchmerge
         forcemerge = force and branchmerge
         pl = wc.parents()

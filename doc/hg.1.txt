@@ -89,13 +89,15 @@ SPECIFYING MULTIPLE REVISIONS
     A range acts as a closed interval.  This means that a range of 3:5
     gives 3, 4 and 5.  Similarly, a range of 4:2 gives 4, 3, and 2.
 
+dot=.
+
 FILES
 -----
- .hgignore::
+ repo/.hgignore::
     This file contains regular expressions (one per line) that describe file
     names that should be ignored by hg. For details, see hgignore(5).
 
- .hgtags::
+ repo/.hgtags::
     This file contains changeset hash values and text tag names (one of each
     separated by spaces) that correspond to tagged versions of the repository
     contents.

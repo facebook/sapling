@@ -14,7 +14,9 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+M b
 % rename b as c
 A c
 R b
 % rename back c as b
+M b

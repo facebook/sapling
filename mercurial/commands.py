@@ -194,6 +194,11 @@ def backout(ui, repo, node=None, rev=None, **opts):
     if op2 != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
     node = repo.lookup(rev)
+
+    a = repo.changelog.ancestor(op1, node)
+    if a != node:
+        raise util.Abort(_('cannot back out change on a different branch'))
+
     p1, p2 = repo.changelog.parents(node)
     if p1 == nullid:
         raise util.Abort(_('cannot back out a change with no parents'))
@@ -210,6 +215,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
         if opts['parent']:
             raise util.Abort(_('cannot use --parent on non-merge changeset'))
         parent = p1
+
     hg.clean(repo, node, show_stats=False)
     revert_opts = opts.copy()
     revert_opts['date'] = None
@@ -432,204 +438,6 @@ def commit(ui, repo, *pats, **opts):
                            force_editor=opts.get('force_editor'))
     cmdutil.commit(ui, repo, commitfunc, pats, opts)
 
-def docopy(ui, repo, pats, opts):
-    # called with the repo lock held
-    #
-    # hgsep => pathname that uses "/" to separate directories
-    # ossep => pathname that uses os.sep to separate directories
-    cwd = repo.getcwd()
-    errors = 0
-    copied = []
-    targets = {}
-
-    # abs: hgsep
-    # rel: ossep
-    # return: hgsep
-    def okaytocopy(abs, rel, exact):
-        reasons = {'?': _('is not managed'),
-                   'r': _('has been marked for remove')}
-        state = repo.dirstate[abs]
-        reason = reasons.get(state)
-        if reason:
-            if exact:
-                ui.warn(_('%s: not copying - file %s\n') % (rel, reason))
-        else:
-            if state == 'a':
-                origsrc = repo.dirstate.copied(abs)
-                if origsrc is not None:
-                    return origsrc
-            return abs
-
-    # origsrc: hgsep
-    # abssrc: hgsep
-    # relsrc: ossep
-    # otarget: ossep
-    def copy(origsrc, abssrc, relsrc, otarget, exact):
-        abstarget = util.canonpath(repo.root, cwd, otarget)
-        reltarget = repo.pathto(abstarget, cwd)
-        prevsrc = targets.get(abstarget)
-        src = repo.wjoin(abssrc)
-        target = repo.wjoin(abstarget)
-        if prevsrc is not None:
-            ui.warn(_('%s: not overwriting - %s collides with %s\n') %
-                    (reltarget, repo.pathto(abssrc, cwd),
-                     repo.pathto(prevsrc, cwd)))
-            return
-        if (not opts['after'] and os.path.exists(target) or
-            opts['after'] and repo.dirstate[abstarget] in 'mn'):
-            if not opts['force']:
-                ui.warn(_('%s: not overwriting - file exists\n') %
-                        reltarget)
-                return
-            if not opts['after'] and not opts.get('dry_run'):
-                os.unlink(target)
-        if opts['after']:
-            if not os.path.exists(target):
-                return
-        else:
-            targetdir = os.path.dirname(target) or '.'
-            if not os.path.isdir(targetdir) and not opts.get('dry_run'):
-                os.makedirs(targetdir)
-            try:
-                restore = repo.dirstate[abstarget] == 'r'
-                if restore and not opts.get('dry_run'):
-                    repo.undelete([abstarget])
-                try:
-                    if not opts.get('dry_run'):
-                        util.copyfile(src, target)
-                    restore = False
-                finally:
-                    if restore:
-                        repo.remove([abstarget])
-            except IOError, inst:
-                if inst.errno == errno.ENOENT:
-                    ui.warn(_('%s: deleted in working copy\n') % relsrc)
-                else:
-                    ui.warn(_('%s: cannot copy - %s\n') %
-                            (relsrc, inst.strerror))
-                    errors += 1
-                    return
-        if ui.verbose or not exact:
-            ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
-        targets[abstarget] = abssrc
-        if abstarget != origsrc:
-            if repo.dirstate[origsrc] == 'a':
-                if not ui.quiet:
-                    ui.warn(_("%s has not been committed yet, so no copy "
-                              "data will be stored for %s.\n")
-                            % (repo.pathto(origsrc, cwd), reltarget))
-                if abstarget not in repo.dirstate and not opts.get('dry_run'):
-                    repo.add([abstarget])
-            elif not opts.get('dry_run'):
-                repo.copy(origsrc, abstarget)
-        copied.append((abssrc, relsrc, exact))
-
-    # pat: ossep
-    # dest ossep
-    # srcs: list of (hgsep, hgsep, ossep, bool)
-    # return: function that takes hgsep and returns ossep
-    def targetpathfn(pat, dest, srcs):
-        if os.path.isdir(pat):
-            abspfx = util.canonpath(repo.root, cwd, pat)
-            abspfx = util.localpath(abspfx)
-            if destdirexists:
-                striplen = len(os.path.split(abspfx)[0])
-            else:
-                striplen = len(abspfx)
-            if striplen:
-                striplen += len(os.sep)
-            res = lambda p: os.path.join(dest, util.localpath(p)[striplen:])
-        elif destdirexists:
-            res = lambda p: os.path.join(dest,
-                                         os.path.basename(util.localpath(p)))
-        else:
-            res = lambda p: dest
-        return res
-
-    # pat: ossep
-    # dest ossep
-    # srcs: list of (hgsep, hgsep, ossep, bool)
-    # return: function that takes hgsep and returns ossep
-    def targetpathafterfn(pat, dest, srcs):
-        if util.patkind(pat, None)[0]:
-            # a mercurial pattern
-            res = lambda p: os.path.join(dest,
-                                         os.path.basename(util.localpath(p)))
-        else:
-            abspfx = util.canonpath(repo.root, cwd, pat)
-            if len(abspfx) < len(srcs[0][0]):
-                # A directory. Either the target path contains the last
-                # component of the source path or it does not.
-                def evalpath(striplen):
-                    score = 0
-                    for s in srcs:
-                        t = os.path.join(dest, util.localpath(s[0])[striplen:])
-                        if os.path.exists(t):
-                            score += 1
-                    return score
-
-                abspfx = util.localpath(abspfx)
-                striplen = len(abspfx)
-                if striplen:
-                    striplen += len(os.sep)
-                if os.path.isdir(os.path.join(dest, os.path.split(abspfx)[1])):
-                    score = evalpath(striplen)
-                    striplen1 = len(os.path.split(abspfx)[0])
-                    if striplen1:
-                        striplen1 += len(os.sep)
-                    if evalpath(striplen1) > score:
-                        striplen = striplen1
-                res = lambda p: os.path.join(dest,
-                                             util.localpath(p)[striplen:])
-            else:
-                # a file
-                if destdirexists:
-                    res = lambda p: os.path.join(dest,
-                                        os.path.basename(util.localpath(p)))
-                else:
-                    res = lambda p: dest
-        return res
-
-
-    pats = util.expand_glob(pats)
-    if not pats:
-        raise util.Abort(_('no source or destination specified'))
-    if len(pats) == 1:
-        raise util.Abort(_('no destination specified'))
-    dest = pats.pop()
-    destdirexists = os.path.isdir(dest)
-    if not destdirexists:
-        if len(pats) > 1 or util.patkind(pats[0], None)[0]:
-            raise util.Abort(_('with multiple sources, destination must be an '
-                               'existing directory'))
-        if dest.endswith(os.sep) or os.altsep and dest.endswith(os.altsep):
-            raise util.Abort(_('destination %s is not a directory') % dest)
-    if opts['after']:
-        tfn = targetpathafterfn
-    else:
-        tfn = targetpathfn
-    copylist = []
-    for pat in pats:
-        srcs = []
-        for tag, abssrc, relsrc, exact in cmdutil.walk(repo, [pat], opts,
-                                                       globbed=True):
-            origsrc = okaytocopy(abssrc, relsrc, exact)
-            if origsrc:
-                srcs.append((origsrc, abssrc, relsrc, exact))
-        if not srcs:
-            continue
-        copylist.append((tfn(pat, dest, srcs), srcs))
-    if not copylist:
-        raise util.Abort(_('no files to copy'))
-
-    for targetpath, srcs in copylist:
-        for origsrc, abssrc, relsrc, exact in srcs:
-            copy(origsrc, abssrc, relsrc, targetpath(abssrc), exact)
-
-    if errors:
-        ui.warn(_('(consider using --after)\n'))
-    return errors, copied
-
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit
 
@@ -646,10 +454,9 @@ def copy(ui, repo, *pats, **opts):
     """
     wlock = repo.wlock(False)
     try:
-        errs, copied = docopy(ui, repo, pats, opts)
+        return cmdutil.copy(ui, repo, pats, opts)
     finally:
         del wlock
-    return errs
 
 def debugancestor(ui, index, rev1, rev2):
     """find the ancestor revision of two revisions in a given index"""
@@ -2254,20 +2061,15 @@ def rename(ui, repo, *pats, **opts):
     """
     wlock = repo.wlock(False)
     try:
-        errs, copied = docopy(ui, repo, pats, opts)
-        names = []
-        for abs, rel, exact in copied:
-            if ui.verbose or not exact:
-                ui.status(_('removing %s\n') % rel)
-            names.append(abs)
-        if not opts.get('dry_run'):
-            repo.remove(names, True)
-        return errs
+        return cmdutil.copy(ui, repo, pats, opts, rename=True)
     finally:
         del wlock
 
 def revert(ui, repo, *pats, **opts):
-    """revert files or dirs to their states as of some revision
+    """restore individual files or dirs to an earlier state
+
+    (use update -r to check out earlier revisions, revert does not
+    change the working dir parents)
 
     With no revision specified, revert the named files or directories
     to the contents they had in the parent of the working directory.
@@ -2276,12 +2078,9 @@ def revert(ui, repo, *pats, **opts):
     working directory has two parents, you must explicitly specify the
     revision to revert to.
 
-    Modified files are saved with a .orig suffix before reverting.
-    To disable these backups, use --no-backup.
-
     Using the -r option, revert the given files or directories to their
     contents as of a specific revision. This can be helpful to "roll
-    back" some or all of a change that should not have been committed.
+    back" some or all of an earlier  change.
 
     Revert modifies the working directory.  It does not commit any
     changes, or change the parent of the working directory.  If you
@@ -2295,6 +2094,9 @@ def revert(ui, repo, *pats, **opts):
     If names are given, all files matching the names are reverted.
 
     If no arguments are given, no files are reverted.
+
+    Modified files are saved with a .orig suffix before reverting.
+    To disable these backups, use --no-backup.
     """
 
     if opts["date"]:
@@ -2445,10 +2247,12 @@ def revert(ui, repo, *pats, **opts):
         del wlock
 
 def rollback(ui, repo):
-    """roll back the last transaction in this repository
+    """roll back the last transaction
 
-    Roll back the last transaction in this repository, restoring the
-    project to its state prior to the transaction.
+    This command should be used with care. There is only one level of
+    rollback, and there is no way to undo a rollback. It will also
+    restore the dirstate at the time of the last transaction, losing
+    any dirstate changes since that time.
 
     Transactions are used to encapsulate the effects of all commands
     that create new changesets or propagate existing changesets into a
@@ -2460,11 +2264,6 @@ def rollback(ui, repo):
       pull
       push (with this repository as destination)
       unbundle
-
-    This command should be used with care. There is only one level of
-    rollback, and there is no way to undo a rollback. It will also
-    restore the dirstate at the time of the last transaction, which
-    may lose subsequent dirstate changes.
 
     This command is not intended for use on public repositories. Once
     changes are visible for pull by other users, rolling a transaction
@@ -3068,7 +2867,7 @@ table = {
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":
         (remove,
-         [('A', 'after', None, _('record remove that has already occurred')),
+         [('A', 'after', None, _('record remove without deleting')),
           ('f', 'force', None, _('remove file even if modified')),
          ] + walkopts,
          _('hg remove [OPTION]... FILE...')),
@@ -3079,7 +2878,7 @@ table = {
            _('forcibly copy over an existing managed file')),
          ] + walkopts + dryrunopts,
          _('hg rename [OPTION]... SOURCE... DEST')),
-    "^revert":
+    "revert":
         (revert,
          [('a', 'all', None, _('revert all changes when no arguments given')),
           ('d', 'date', '', _('tipmost revision matching date')),

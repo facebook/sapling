@@ -7,9 +7,7 @@ hg init
 mkdir a
 echo foo > a/a
 echo bar > a/b
-
-hg add a
-hg ci -m "0" -d "0 0"
+hg ci -Am "0" -d "0 0"
 
 hg co -C 0
 hg mv a b
@@ -17,6 +15,7 @@ hg ci -m "1 mv a/ b/" -d "0 0"
 
 hg co -C 0
 echo baz > a/c
+echo quux > a/d
 hg add a/c
 hg ci -m "2 add a/c" -d "0 0"
 

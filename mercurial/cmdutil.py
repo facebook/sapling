@@ -8,7 +8,7 @@
 from node import *
 from i18n import _
 import os, sys, bisect, stat
-import mdiff, bdiff, util, templater, patch
+import mdiff, bdiff, util, templater, patch, errno
 
 revrangesep = ':'
 
@@ -285,6 +285,206 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
                                (oldrel, newrel, score * 100))
             if not dry_run:
                 repo.copy(old, new)
+
+def copy(ui, repo, pats, opts, rename=False):
+    # called with the repo lock held
+    #
+    # hgsep => pathname that uses "/" to separate directories
+    # ossep => pathname that uses os.sep to separate directories
+    cwd = repo.getcwd()
+    targets = {}
+    after = opts.get("after")
+    dryrun = opts.get("dry_run")
+
+    def walkpat(pat):
+        srcs = []
+        for tag, abs, rel, exact in walk(repo, [pat], opts, globbed=True):
+            state = repo.dirstate[abs]
+            if state in '?r':
+                if exact and state == '?':
+                    ui.warn(_('%s: not copying - file is not managed\n') % rel)
+                if exact and state == 'r':
+                    ui.warn(_('%s: not copying - file has been marked for'
+                              ' remove\n') % rel)
+                continue
+            # abs: hgsep
+            # rel: ossep
+            srcs.append((abs, rel, exact))
+        return srcs
+
+    # abssrc: hgsep
+    # relsrc: ossep
+    # otarget: ossep
+    def copyfile(abssrc, relsrc, otarget, exact):
+        abstarget = util.canonpath(repo.root, cwd, otarget)
+        reltarget = repo.pathto(abstarget, cwd)
+        target = repo.wjoin(abstarget)
+        src = repo.wjoin(abssrc)
+        state = repo.dirstate[abstarget]
+
+        # check for collisions
+        prevsrc = targets.get(abstarget)
+        if prevsrc is not None:
+            ui.warn(_('%s: not overwriting - %s collides with %s\n') %
+                    (reltarget, repo.pathto(abssrc, cwd),
+                     repo.pathto(prevsrc, cwd)))
+            return
+
+        # check for overwrites
+        exists = os.path.exists(target)
+        if (not after and exists or after and state in 'mn'):
+            if not opts['force']:
+                ui.warn(_('%s: not overwriting - file exists\n') %
+                        reltarget)
+                return
+
+        if after:
+            if not exists:
+                return
+        elif not dryrun:
+            try:
+                if exists:
+                    os.unlink(target)
+                targetdir = os.path.dirname(target) or '.'
+                if not os.path.isdir(targetdir):
+                    os.makedirs(targetdir)
+                util.copyfile(src, target)
+            except IOError, inst:
+                if inst.errno == errno.ENOENT:
+                    ui.warn(_('%s: deleted in working copy\n') % relsrc)
+                else:
+                    ui.warn(_('%s: cannot copy - %s\n') %
+                            (relsrc, inst.strerror))
+                    return True # report a failure
+
+        if ui.verbose or not exact:
+            action = rename and "moving" or "copying"
+            ui.status(_('%s %s to %s\n') % (action, relsrc, reltarget))
+
+        targets[abstarget] = abssrc
+
+        # fix up dirstate
+        origsrc = repo.dirstate.copied(abssrc) or abssrc
+        if abstarget == origsrc: # copying back a copy?
+            if state not in 'mn' and not dryrun:
+                repo.dirstate.normallookup(abstarget)
+        else:
+            if repo.dirstate[origsrc] == 'a':
+                if not ui.quiet:
+                    ui.warn(_("%s has not been committed yet, so no copy "
+                              "data will be stored for %s.\n")
+                            % (repo.pathto(origsrc, cwd), reltarget))
+                if abstarget not in repo.dirstate and not dryrun:
+                    repo.add([abstarget])
+            elif not dryrun:
+                repo.copy(origsrc, abstarget)
+
+        if rename and not dryrun:
+            repo.remove([abssrc], True)
+
+    # pat: ossep
+    # dest ossep
+    # srcs: list of (hgsep, hgsep, ossep, bool)
+    # return: function that takes hgsep and returns ossep
+    def targetpathfn(pat, dest, srcs):
+        if os.path.isdir(pat):
+            abspfx = util.canonpath(repo.root, cwd, pat)
+            abspfx = util.localpath(abspfx)
+            if destdirexists:
+                striplen = len(os.path.split(abspfx)[0])
+            else:
+                striplen = len(abspfx)
+            if striplen:
+                striplen += len(os.sep)
+            res = lambda p: os.path.join(dest, util.localpath(p)[striplen:])
+        elif destdirexists:
+            res = lambda p: os.path.join(dest,
+                                         os.path.basename(util.localpath(p)))
+        else:
+            res = lambda p: dest
+        return res
+
+    # pat: ossep
+    # dest ossep
+    # srcs: list of (hgsep, hgsep, ossep, bool)
+    # return: function that takes hgsep and returns ossep
+    def targetpathafterfn(pat, dest, srcs):
+        if util.patkind(pat, None)[0]:
+            # a mercurial pattern
+            res = lambda p: os.path.join(dest,
+                                         os.path.basename(util.localpath(p)))
+        else:
+            abspfx = util.canonpath(repo.root, cwd, pat)
+            if len(abspfx) < len(srcs[0][0]):
+                # A directory. Either the target path contains the last
+                # component of the source path or it does not.
+                def evalpath(striplen):
+                    score = 0
+                    for s in srcs:
+                        t = os.path.join(dest, util.localpath(s[0])[striplen:])
+                        if os.path.exists(t):
+                            score += 1
+                    return score
+
+                abspfx = util.localpath(abspfx)
+                striplen = len(abspfx)
+                if striplen:
+                    striplen += len(os.sep)
+                if os.path.isdir(os.path.join(dest, os.path.split(abspfx)[1])):
+                    score = evalpath(striplen)
+                    striplen1 = len(os.path.split(abspfx)[0])
+                    if striplen1:
+                        striplen1 += len(os.sep)
+                    if evalpath(striplen1) > score:
+                        striplen = striplen1
+                res = lambda p: os.path.join(dest,
+                                             util.localpath(p)[striplen:])
+            else:
+                # a file
+                if destdirexists:
+                    res = lambda p: os.path.join(dest,
+                                        os.path.basename(util.localpath(p)))
+                else:
+                    res = lambda p: dest
+        return res
+
+
+    pats = util.expand_glob(pats)
+    if not pats:
+        raise util.Abort(_('no source or destination specified'))
+    if len(pats) == 1:
+        raise util.Abort(_('no destination specified'))
+    dest = pats.pop()
+    destdirexists = os.path.isdir(dest)
+    if not destdirexists:
+        if len(pats) > 1 or util.patkind(pats[0], None)[0]:
+            raise util.Abort(_('with multiple sources, destination must be an '
+                               'existing directory'))
+        if dest.endswith(os.sep) or os.altsep and dest.endswith(os.altsep):
+            raise util.Abort(_('destination %s is not a directory') % dest)
+
+    tfn = targetpathfn
+    if after:
+        tfn = targetpathafterfn
+    copylist = []
+    for pat in pats:
+        srcs = walkpat(pat)
+        if not srcs:
+            continue
+        copylist.append((tfn(pat, dest, srcs), srcs))
+    if not copylist:
+        raise util.Abort(_('no files to copy'))
+
+    errors = 0
+    for targetpath, srcs in copylist:
+        for abssrc, relsrc, exact in srcs:
+            if copyfile(abssrc, relsrc, targetpath(abssrc), exact):
+                errors += 1
+
+    if errors:
+        ui.warn(_('(consider using --after)\n'))
+
+    return errors
 
 def service(opts, parentfn=None, initfn=None, runfn=None):
     '''Run a command as a service.'''

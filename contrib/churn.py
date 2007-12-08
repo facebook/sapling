@@ -125,6 +125,7 @@ def gather_stats(ui, repo, amap, revs=None, progress=False):
         ui.note("rev %d: %d lines by %s\n" % (rev, lines, who))
 
         if progress:
+            nr_revs = max(nr_revs, 1)
             if int(100.0*(cur_rev - 1)/nr_revs) < int(100.0*cur_rev/nr_revs):
                 ui.write("%d%%.." % (int(100.0*cur_rev/nr_revs),))
                 sys.stdout.flush()
@@ -144,6 +145,7 @@ def churn(ui, repo, **opts):
         return s[0:l]
 
     def graph(n, maximum, width, char):
+        maximum = max(1, maximum)
         n = int(n * width / float(maximum))
 
         return char * (n)
@@ -178,6 +180,8 @@ def churn(ui, repo, **opts):
     ordered = stats.items()
     ordered.sort(lambda x, y: cmp(y[1], x[1]))
 
+    if not ordered:
+        return
     maximum = ordered[0][1]
 
     width = get_tty_width()
