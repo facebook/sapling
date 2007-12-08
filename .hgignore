@@ -22,8 +22,8 @@ doc/*.[0-9].{x,ht}ml
 MANIFEST
 patches
 mercurial/__version__.py
+Output/Mercurial-*.exe
 .DS_Store
 
 syntax: regexp
 ^\.pc/
-Output/Mercurial-[0-9.]*.exe
