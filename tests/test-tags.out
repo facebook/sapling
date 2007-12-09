@@ -71,3 +71,6 @@ bar                                2:72b852876a42
 % bar should still point to rev 2
 tip                                4:40af5d225513
 bar                                2:72b852876a42
+adding foo
+abort: localtag tag is local
+abort: globaltag tag is global

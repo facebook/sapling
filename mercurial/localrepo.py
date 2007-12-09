@@ -79,6 +79,7 @@ class localrepository(repo.repository):
             pass
 
         self.tagscache = None
+        self._tagstypecache = None
         self.branchcache = None
         self.nodetagscache = None
         self.filterpats = {}
@@ -198,8 +199,9 @@ class localrepository(repo.repository):
             return self.tagscache
 
         globaltags = {}
+        tagtypes = {}
 
-        def readtags(lines, fn):
+        def readtags(lines, fn, tagtype):
             filetags = {}
             count = 0
 
@@ -234,7 +236,9 @@ class localrepository(repo.repository):
             for k, nh in filetags.items():
                 if k not in globaltags:
                     globaltags[k] = nh
+                    tagtypes[k] = tagtype
                     continue
+
                 # we prefer the global tag if:
                 #  it supercedes us OR
                 #  mutual supercedes and it has a higher rank
@@ -246,30 +250,46 @@ class localrepository(repo.repository):
                     an = bn
                 ah.extend([n for n in bh if n not in ah])
                 globaltags[k] = an, ah
+                tagtypes[k] = tagtype
 
         # read the tags file from each head, ending with the tip
         f = None
         for rev, node, fnode in self._hgtagsnodes():
             f = (f and f.filectx(fnode) or
                  self.filectx('.hgtags', fileid=fnode))
-            readtags(f.data().splitlines(), f)
+            readtags(f.data().splitlines(), f, "global")
 
         try:
             data = util.fromlocal(self.opener("localtags").read())
             # localtags are stored in the local character set
             # while the internal tag table is stored in UTF-8
-            readtags(data.splitlines(), "localtags")
+            readtags(data.splitlines(), "localtags", "local")
         except IOError:
             pass
 
         self.tagscache = {}
+        self._tagstypecache = {}
         for k,nh in globaltags.items():
             n = nh[0]
             if n != nullid:
                 self.tagscache[k] = n
+                self._tagstypecache[k] = tagtypes[k]
         self.tagscache['tip'] = self.changelog.tip()
 
         return self.tagscache
+
+    def tagtype(self, tagname):
+        '''
+        return the type of the given tag. result can be:
+
+        'local'  : a local tag
+        'global' : a global tag
+        None     : tag does not exist
+        '''
+
+        self.tags()
+ 
+        return self._tagstypecache.get(tagname)
 
     def _hgtagsnodes(self):
         heads = self.heads()
@@ -553,6 +573,7 @@ class localrepository(repo.repository):
             if hasattr(self, a):
                 self.__delattr__(a)
         self.tagscache = None
+        self._tagstypecache = None
         self.nodetagscache = None
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):

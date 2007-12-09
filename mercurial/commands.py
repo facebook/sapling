@@ -2428,8 +2428,15 @@ def tag(ui, repo, name, rev_=None, **opts):
         rev_ = opts['rev']
     message = opts['message']
     if opts['remove']:
-        if not name in repo.tags():
+        tagtype = repo.tagtype(name)
+
+        if not tagtype:
             raise util.Abort(_('tag %s does not exist') % name)
+        if opts['local'] and tagtype == 'global':
+           raise util.Abort(_('%s tag is global') % name)
+        if not opts['local'] and tagtype == 'local':
+           raise util.Abort(_('%s tag is local') % name)
+
         rev_ = nullid
         if not message:
             message = _('Removed tag %s') % name

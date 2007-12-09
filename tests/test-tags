@@ -126,3 +126,20 @@ hg up -qC 0
 hg tag -m 'retag rev 0' -fr 0 bar  # rev 4 bar -> 0, but bar stays at 2
 echo % bar should still point to rev 2
 hg tags
+
+
+# test that removing global/local tags does not get confused when trying
+# to remove a tag of type X which actually only exists as a type Y
+cd ..
+hg init t5
+cd t5
+echo foo > foo
+hg add
+hg ci -m 'add foo'                 # rev 0
+
+hg tag -r 0 -l localtag
+hg tag --remove localtag
+
+hg tag -r 0 globaltag
+hg tag --remove -l globaltag
+exit 0
