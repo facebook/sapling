@@ -2458,23 +2458,33 @@ def tags(ui, repo):
 
     List the repository tags.
 
-    This lists both regular and local tags.
+    This lists both regular and local tags. When the -v/--verbose switch
+    is used, a third column "local" is printed for local tags.
     """
 
     l = repo.tagslist()
     l.reverse()
     hexfunc = ui.debugflag and hex or short
+    tagtype = ""
+
     for t, n in l:
-        try:
-            hn = hexfunc(n)
-            r = "%5d:%s" % (repo.changelog.rev(n), hexfunc(n))
-        except revlog.LookupError:
-            r = "    ?:%s" % hn
         if ui.quiet:
             ui.write("%s\n" % t)
+            continue
+
+        try:
+            hn = hexfunc(n)
+            r = "%5d:%s" % (repo.changelog.rev(n), hn)
+        except revlog.LookupError:
+            r = "    ?:%s" % hn
         else:
             spaces = " " * (30 - util.locallen(t))
-            ui.write("%s%s %s\n" % (t, spaces, r))
+            if ui.verbose:
+                if repo.tagtype(t) == 'local':
+                    tagtype = " local"
+                else:
+                    tagtype = ""
+            ui.write("%s%s %s%s\n" % (t, spaces, r, tagtype))
 
 def tip(ui, repo, **opts):
     """show the tip revision

@@ -74,3 +74,6 @@ bar                                2:72b852876a42
 adding foo
 abort: localtag tag is local
 abort: globaltag tag is global
+tip                                1:a0b6fe111088
+localtag                           0:bbd179dfa0a7 local
+globaltag                          0:bbd179dfa0a7

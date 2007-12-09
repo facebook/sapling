@@ -142,4 +142,5 @@ hg tag --remove localtag
 
 hg tag -r 0 globaltag
 hg tag --remove -l globaltag
+hg tags -v
 exit 0
