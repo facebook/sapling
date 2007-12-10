@@ -281,7 +281,7 @@ hooks::
     commit to proceed.  Non-zero status will cause the commit to fail.
     Parent changeset IDs are in $HG_PARENT1 and $HG_PARENT2.
   preoutgoing;;
-    Run before computing changes to send from the local repository to
+    Run before collecting changes to send from the local repository to
     another.  Non-zero status will cause failure.  This lets you
     prevent pull over http or ssh.  Also prevents against local pull,
     push (outbound) or bundle commands, but not effective, since you
