@@ -89,8 +89,6 @@ SPECIFYING MULTIPLE REVISIONS
     A range acts as a closed interval.  This means that a range of 3:5
     gives 3, 4 and 5.  Similarly, a range of 4:2 gives 4, 3, and 2.
 
-dot=.
-
 FILES
 -----
  repo/.hgignore::
