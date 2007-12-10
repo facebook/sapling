@@ -115,16 +115,12 @@ def patchbomb(ui, repo, *revs, **opts):
     '''
 
     def prompt(prompt, default = None, rest = ': ', empty_ok = False):
-        try:
-            # readline gives raw_input editing capabilities, but is not
-            # present on windows
-            import readline
-        except ImportError: pass
-
+        if not ui.interactive:
+            return default
         if default: prompt += ' [%s]' % default
         prompt += rest
         while True:
-            r = raw_input(prompt)
+            r = ui.prompt(prompt, default=default)
             if r: return r
             if default is not None: return default
             if empty_ok: return r
