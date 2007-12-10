@@ -280,13 +280,13 @@ def update(repo, node):
         # len(pl)==1, otherwise _merge.update() would have raised util.Abort:
         repo.ui.status(_("  hg update %s\n  hg update %s\n")
                        % (pl[0].rev(), repo.changectx(node).rev()))
-    return stats[3]
+    return stats[3] > 0
 
 def clean(repo, node, show_stats=True):
     """forcibly switch the working directory to node, clobbering changes"""
     stats = _merge.update(repo, node, False, True, None)
     if show_stats: _showstats(repo, stats)
-    return stats[3]
+    return stats[3] > 0
 
 def merge(repo, node, force=None, remind=True):
     """branch merge with node, resolving changes"""
@@ -301,11 +301,11 @@ def merge(repo, node, force=None, remind=True):
                        % (pl[0].rev(), pl[1].rev()))
     elif remind:
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
-    return stats[3]
+    return stats[3] > 0
 
 def revert(repo, node, choose):
     """revert changes to revision in node without updating dirstate"""
-    return _merge.update(repo, node, False, True, choose)[3]
+    return _merge.update(repo, node, False, True, choose)[3] > 0
 
 def verify(repo):
     """verify the consistency of a repository"""
