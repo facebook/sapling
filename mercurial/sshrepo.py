@@ -24,11 +24,10 @@ class sshrepository(remoterepository):
         self.port = m.group(5)
         self.path = m.group(7) or "."
 
-        args = self.user and ("%s@%s" % (self.user, self.host)) or self.host
-        args = self.port and ("%s -p %s") % (args, self.port) or args
-
         sshcmd = self.ui.config("ui", "ssh", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd", "hg")
+
+        args = util.sshargs(sshcmd, self.host, self.user, self.port)
 
         if create:
             cmd = '%s %s "%s init %s"'
