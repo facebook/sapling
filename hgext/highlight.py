@@ -66,8 +66,7 @@ class StripedHtmlFormatter(HtmlFormatter):
         yield 0, "</div>"
 
 
-def pygments_format(filename, rawtext, forcetext=False, stripecount=1,
-                    style='colorful'):
+def pygments_format(filename, rawtext, forcetext, stripecount, style):
     if not forcetext:
         try:
             lexer = guess_lexer_for_filename(filename, rawtext)
@@ -110,10 +109,8 @@ def filerevision_pygments(self, tmpl, fctx):
 
     style = self.config("web", "pygments_style", "colorful")
 
-    text_formatted = lines(pygments_format(f, text,
-                                           forcetext=forcetext,
-                                           stripecount=self.stripecount,
-                                           style=style))
+    text_formatted = lines(pygments_format(f, text, forcetext,
+                                           self.stripecount, style))
 
     # override per-line template
     tmpl.cache['fileline'] = '#line#'
