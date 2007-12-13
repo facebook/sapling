@@ -34,7 +34,7 @@ from mercurial import commands, cmdutil, hg, patch, revlog, util
 from mercurial import repair
 import os, sys, re, errno
 
-commands.norepo += " qclone qversion"
+commands.norepo += " qclone"
 
 # Patch names looks like unix-file names.
 # They must be joinable with queue directory and result in the patch path.
