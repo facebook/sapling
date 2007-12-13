@@ -964,7 +964,7 @@ if os.name == 'nt':
         '''Build argument list for ssh or Plink'''
         pflag = 'plink' in sshcmd.lower() and '-P' or '-p'
         args = user and ("%s@%s" % (user, host)) or host
-        return port and ("%s %s %s") % (args, pflag, port) or args
+        return port and ("%s %s %s" % (args, pflag, port)) or args
 
     def testpid(pid):
         '''return False if pid dead, True if running or not known'''
@@ -1111,7 +1111,7 @@ else:
     def sshargs(sshcmd, host, user, port):
         '''Build argument list for ssh'''
         args = user and ("%s@%s" % (user, host)) or host
-        return port and ("%s -p %s") % (args, port) or args
+        return port and ("%s -p %s" % (args, port)) or args
 
     def is_exec(f):
         """check whether a file is executable"""
