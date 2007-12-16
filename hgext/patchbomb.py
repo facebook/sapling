@@ -228,7 +228,8 @@ def patchbomb(ui, repo, *revs, **opts):
         # really sending
         mail.validateconfig(ui)
 
-    if not (revs or opts.get('rev') or opts.get('outgoing')):
+    if not (revs or opts.get('rev')
+            or opts.get('outgoing') or opts.get('bundle')):
         raise util.Abort(_('specify at least one changeset with -r or -o'))
 
     cmdutil.setremoteconfig(ui, opts)
