@@ -6,18 +6,21 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import util
+import util, re
+
+_commentre = None
 
 def _parselines(fp):
     for line in fp:
-        if not line.endswith('\n'):
-            line += '\n'
-        escape = False
-        for i in xrange(len(line)):
-            if escape: escape = False
-            elif line[i] == '\\': escape = True
-            elif line[i] == '#': break
-        line = line[:i].rstrip()
+        if "#" in line:
+            global _commentre
+            if not _commentre:
+                _commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
+            # remove comments prefixed by an even number of escapes
+            line = _commentre.sub(r'\1', line)
+            # fixup properly escaped comments that survived the above
+            line = line.replace("\\#", "#")
+        line = line.rstrip()
         if line:
             yield line
 

@@ -661,6 +661,7 @@ class localrepository(repo.repository):
                match=util.always, force=False, force_editor=False,
                p1=None, p2=None, extra={}, empty_ok=False):
         wlock = lock = tr = None
+        valid = 0 # don't save the dirstate if this isn't set
         try:
             commit = []
             remove = []
@@ -747,6 +748,9 @@ class localrepository(repo.repository):
                         if old_exec != new_exec or old_link != new_link:
                             changed.append(f)
                     m1.set(f, new_exec, new_link)
+                    if use_dirstate:
+                        self.dirstate.normal(f)
+
                 except (OSError, IOError):
                     if use_dirstate:
                         self.ui.warn(_("trouble committing %s!\n") % f)
@@ -817,14 +821,15 @@ class localrepository(repo.repository):
             if use_dirstate or update_dirstate:
                 self.dirstate.setparents(n)
                 if use_dirstate:
-                    for f in new:
-                        self.dirstate.normal(f)
                     for f in removed:
                         self.dirstate.forget(f)
+            valid = 1 # our dirstate updates are complete
 
             self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
             return n
         finally:
+            if not valid: # don't save our updated dirstate
+                self.dirstate.invalidate()
             del tr, lock, wlock
 
     def walk(self, node=None, files=[], match=util.always, badmatch=None):

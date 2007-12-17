@@ -67,7 +67,7 @@ class _demandmod(object):
             return "<proxied module '%s'>" % self._data[0]
         return "<unloaded module '%s'>" % self._data[0]
     def __call__(self, *args, **kwargs):
-        raise TypeError("'unloaded module' object is not callable")
+        raise TypeError("%s object is not callable" % repr(self))
     def __getattribute__(self, attr):
         if attr in ('_data', '_extend', '_load', '_module'):
             return object.__getattribute__(self, attr)
