@@ -796,12 +796,12 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
     afile = pathstrip(afile_orig, strip)
-    gooda = os.path.exists(afile) and not nulla
+    gooda = not nulla and os.path.exists(afile)
     bfile = pathstrip(bfile_orig, strip)
     if afile == bfile:
         goodb = gooda
     else:
-        goodb = os.path.exists(bfile) and not nullb
+        goodb = not nullb and os.path.exists(bfile)
     createfunc = hunk.createfile
     if reverse:
         createfunc = hunk.rmfile
