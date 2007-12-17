@@ -321,12 +321,7 @@ class patchfile:
         if not self.exists:
             dirname = os.path.dirname(fname)
             if dirname and not os.path.isdir(dirname):
-                dirs = dirname.split(os.path.sep)
-                d = ""
-                for x in dirs:
-                    d = os.path.join(d, x)
-                    if not os.path.isdir(d):
-                        os.mkdir(d)
+                os.makedirs(dirname)
 
         self.hash = {}
         self.dirty = 0
