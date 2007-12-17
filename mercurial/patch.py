@@ -302,14 +302,23 @@ unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
 
 class patchfile:
-    def __init__(self, ui, fname):
+    def __init__(self, ui, fname, missing=False):
         self.fname = fname
         self.ui = ui
-        try:
-            fp = file(fname, 'rb')
-            self.lines = fp.readlines()
-            self.exists = True
-        except IOError:
+        self.lines = []
+        self.exists = False
+        self.missing = missing
+        if not missing:
+            try:
+                fp = file(fname, 'rb')
+                self.lines = fp.readlines()
+                self.exists = True
+            except IOError:
+                pass
+        else:
+            self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
+
+        if not self.exists:
             dirname = os.path.dirname(fname)
             if dirname and not os.path.isdir(dirname):
                 dirs = dirname.split(os.path.sep)
@@ -318,8 +327,6 @@ class patchfile:
                     d = os.path.join(d, x)
                     if not os.path.isdir(d):
                         os.mkdir(d)
-            self.lines = []
-            self.exists = False
 
         self.hash = {}
         self.dirty = 0
@@ -426,6 +433,10 @@ class patchfile:
         self.hunks += 1
         if reverse:
             h.reverse()
+
+        if self.missing:
+            self.rej.append(h)
+            return -1
 
         if self.exists and h.createfile():
             self.ui.warn(_("file %s already exists\n") % self.fname)
@@ -805,22 +816,23 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
     createfunc = hunk.createfile
     if reverse:
         createfunc = hunk.rmfile
-    if not goodb and not gooda and not createfunc():
-        raise PatchError(_("unable to find %s or %s for patching") %
-                         (afile, bfile))
-    if gooda and goodb:
-        fname = bfile
-        if afile in bfile:
+    missing = not goodb and not gooda and not createfunc()
+    fname = None
+    if not missing:
+        if gooda and goodb:
+            fname = (afile in bfile) and afile or bfile
+        elif gooda:
             fname = afile
-    elif gooda:
-        fname = afile
-    elif not nullb:
-        fname = bfile
-        if afile in bfile:
+    
+    if not fname:
+        if not nullb:
+            fname = (afile in bfile) and afile or bfile
+        elif not nulla:
             fname = afile
-    elif not nulla:
-        fname = afile
-    return fname
+        else:
+            raise PatchError(_("undefined source and destination files"))
+        
+    return fname, missing
 
 class linereader:
     # simple class to allow pushing lines back into the input stream
@@ -1009,9 +1021,9 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
                 if sourcefile:
                     current_file = patchfile(ui, sourcefile)
                 else:
-                    current_file = selectfile(afile, bfile, first_hunk,
+                    current_file, missing = selectfile(afile, bfile, first_hunk,
                                             strip, reverse)
-                    current_file = patchfile(ui, current_file)
+                    current_file = patchfile(ui, current_file, missing)
             except PatchError, err:
                 ui.warn(str(err) + '\n')
                 current_file, current_hunk = None, None

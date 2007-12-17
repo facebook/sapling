@@ -41,6 +41,8 @@ hg qpush
 echo % display added files
 cat a
 cat c
+echo % display rejections
+cat b.rej
 cd ..
 
 
@@ -65,5 +67,7 @@ hg st
 echo % display added files
 cat a
 cat c
+echo % display rejections
+cat b.rej
 cd ..
 
