@@ -1008,12 +1008,13 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
         if rejmerge:
             rejmerge(current_file)
         rejects += len(current_file.rej)
+
+    if not rejects and hunknum == 0 and dopatch and not gitworkdone:
+        raise NoHunks
     if updatedir and git:
         updatedir(gitpatches)
     if rejects:
         return -1
-    if hunknum == 0 and dopatch and not gitworkdone:
-        raise NoHunks
     return err
 
 def diffopts(ui, opts={}, untrusted=False):
