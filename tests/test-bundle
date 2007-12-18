@@ -49,6 +49,15 @@ hg -R empty rollback
 echo "====== Pull full.hg into empty again (using --cwd)"
 hg --cwd empty pull ../full.hg
 
+echo "====== Pull full.hg into test (using -R)"
+hg -R test pull full.hg
+echo "====== Pull full.hg into empty (using -R)"
+hg -R empty pull full.hg
+echo "====== Rollback empty"
+hg -R empty rollback
+echo "====== Pull full.hg into empty again (using -R)"
+hg -R empty pull full.hg
+
 echo "====== Log -R full.hg in fresh empty"
 rm -r empty
 hg init empty

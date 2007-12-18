@@ -256,14 +256,25 @@ class bundlerepository(localrepo.localrepository):
 def instance(ui, path, create):
     if create:
         raise util.Abort(_('cannot create new bundle repository'))
+    parentpath = ui.config("bundle", "mainreporoot", "")
+    if parentpath:
+        # Try to make the full path relative so we get a nice, short URL.
+        # In particular, we don't want temp dir names in test outputs.
+        cwd = os.getcwd()
+        if parentpath == cwd:
+            parentpath = ''
+        else:
+            cwd = os.path.join(cwd,'')
+            if parentpath.startswith(cwd):
+                parentpath = parentpath[len(cwd):]
     path = util.drop_scheme('file', path)
     if path.startswith('bundle:'):
         path = util.drop_scheme('bundle', path)
         s = path.split("+", 1)
         if len(s) == 1:
-            repopath, bundlename = "", s[0]
+            repopath, bundlename = parentpath, s[0]
         else:
             repopath, bundlename = s
     else:
-        repopath, bundlename = '', path
+        repopath, bundlename = parentpath, path
     return bundlerepository(ui, repopath, bundlename)

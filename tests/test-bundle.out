@@ -47,6 +47,24 @@ adding manifests
 adding file changes
 added 9 changesets with 7 changes to 4 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
+====== Pull full.hg into test (using -R)
+pulling from full.hg
+searching for changes
+no changes found
+====== Pull full.hg into empty (using -R)
+pulling from full.hg
+searching for changes
+no changes found
+====== Rollback empty
+rolling back last transaction
+====== Pull full.hg into empty again (using -R)
+pulling from full.hg
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 9 changesets with 7 changes to 4 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
 ====== Log -R full.hg in fresh empty
 changeset:   8:836ac62537ab
 tag:         tip
