@@ -234,7 +234,8 @@ def patchbomb(ui, repo, *revs, **opts):
 
     cmdutil.setremoteconfig(ui, opts)
     if opts.get('outgoing') and opts.get('bundle'):
-        raise util.Abort(_("--outgoing mode always on with --bundle; do not re-specify --outgoing"))
+        raise util.Abort(_("--outgoing mode always on with --bundle;"
+                           " do not re-specify --outgoing"))
 
     if opts.get('outgoing') or opts.get('bundle'):
         if len(revs) > 1:
@@ -285,7 +286,8 @@ def patchbomb(ui, repo, *revs, **opts):
         jumbo = []
         msgs = []
 
-        ui.write(_('This patch series consists of %d patches.\n\n') % len(patches))
+        ui.write(_('This patch series consists of %d patches.\n\n')
+                 % len(patches))
 
         for p, i in zip(patches, xrange(len(patches))):
             jumbo.extend(p)
