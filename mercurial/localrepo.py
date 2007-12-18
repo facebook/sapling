@@ -123,7 +123,6 @@ class localrepository(repo.repository):
                 fp.write('\n')
             fp.write('%s %s\n' % (hex(node), munge and munge(name) or name))
             fp.close()
-            self.hook('tag', node=hex(node), tag=name, local=local)
 
         prevtags = ''
         if local:
@@ -136,6 +135,7 @@ class localrepository(repo.repository):
 
             # local tags are stored in the current charset
             writetag(fp, name, None, prevtags)
+            self.hook('tag', node=hex(node), tag=name, local=local)
             return
 
         if use_dirstate:
