@@ -1737,7 +1737,7 @@ class localrepository(repo.repository):
             for fname in changedfiles:
                 filerevlog = self.file(fname)
                 if filerevlog.count() == 0:
-                    raise util.abort(_("empty or missing revlog for %s") % fname)
+                    raise util.Abort(_("empty or missing revlog for %s") % fname)
                 # Toss out the filenodes that the recipient isn't really
                 # missing.
                 if msng_filenode_set.has_key(fname):
@@ -1823,7 +1823,7 @@ class localrepository(repo.repository):
             for fname in changedfiles:
                 filerevlog = self.file(fname)
                 if filerevlog.count() == 0:
-                    raise util.abort(_("empty or missing revlog for %s") % fname)
+                    raise util.Abort(_("empty or missing revlog for %s") % fname)
                 nodeiter = gennodelst(filerevlog)
                 nodeiter = list(nodeiter)
                 if nodeiter:
