@@ -772,12 +772,9 @@ def fstat(fp):
 
 posixfile = file
 
-def is_win_9x():
-    '''return true if run on windows 95, 98 or me.'''
-    try:
-        return sys.getwindowsversion()[3] == 1
-    except AttributeError:
-        return os.name == 'nt' and 'command' in os.environ.get('comspec', '')
+def openhardlinks():
+    '''return true if it is safe to hold open file handles to hardlinks'''
+    return True
 
 getuser_fallback = None
 
@@ -943,6 +940,16 @@ if os.name == 'nt':
 
     sys.stdout = winstdout(sys.stdout)
 
+    def _is_win_9x():
+        '''return true if run on windows 95, 98 or me.'''
+        try:
+            return sys.getwindowsversion()[3] == 1
+        except AttributeError:
+            return 'command' in os.environ.get('comspec', '')
+
+    def openhardlinks():
+        return not _is_win_9x and "win32api" in locals()
+
     def system_rcpath():
         try:
             return system_rcpath_win32()
@@ -1074,7 +1081,7 @@ if os.name == 'nt':
     try:
         # override functions with win32 versions if possible
         from util_win32 import *
-        if not is_win_9x():
+        if not _is_win_9x():
             posixfile = posixfile_nt
     except ImportError:
         pass
