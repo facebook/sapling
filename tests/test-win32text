@@ -1,0 +1,56 @@
+#!/bin/sh
+
+hg init
+echo '[hooks]' >> .hg/hgrc
+echo 'pretxncommit.crlf = python:hgext.win32text.forbidcrlf' >> .hg/hgrc
+echo 'pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf' >> .hg/hgrc
+cat .hg/hgrc
+echo
+
+echo hello > f
+hg add f
+hg ci -m 1 -d'0 0'
+echo
+
+unix2dos f
+hg ci -m 2 -d'0 0'
+hg revert -a
+echo
+
+mkdir d
+echo hello > d/f2
+unix2dos d/f2
+hg add d/f2
+hg ci -m 3 -d'0 0'
+hg revert -a
+rm d/f2
+echo
+
+hg rem f
+hg ci -m 4 -d'0 0'
+echo
+
+printf 'hello\x00\x0D\x0A' > bin
+hg add bin
+hg ci -m 5 -d'0 0'
+hg log -v
+echo
+
+hg clone . dupe
+echo
+for x in a b c d; do echo content > dupe/$x; done
+hg -R dupe add
+unix2dos dupe/b dupe/c dupe/d
+hg -R dupe ci -m a -d'0 0' dupe/a
+hg -R dupe ci -m b/c -d'0 0' dupe/[bc]
+hg -R dupe ci -m d -d'0 0' dupe/d
+hg -R dupe log -v
+echo
+
+hg pull dupe
+echo
+
+hg log -v
+echo
+
+# XXX missing tests for encode/decode hooks

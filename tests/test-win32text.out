@@ -1,0 +1,157 @@
+[hooks]
+pretxncommit.crlf = python:hgext.win32text.forbidcrlf
+pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
+
+
+Attempt to commit or push text file(s) using CRLF line endings
+in b1aa5cde7ff4: f
+transaction abort!
+rollback completed
+abort: pretxncommit.crlf hook failed
+reverting f
+
+Attempt to commit or push text file(s) using CRLF line endings
+in 88b17af74937: d/f2
+transaction abort!
+rollback completed
+abort: pretxncommit.crlf hook failed
+forgetting d/f2
+
+
+changeset:   2:a55cab36df04
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       bin
+description:
+5
+
+
+changeset:   1:c72a7d1d0907
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       f
+description:
+4
+
+
+changeset:   0:fcf06d5c4e1d
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       f
+description:
+1
+
+
+
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+adding dupe/a
+adding dupe/b
+adding dupe/c
+adding dupe/d
+changeset:   5:81c49ee61396
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       d
+description:
+d
+
+
+changeset:   4:02184785bcac
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       b c
+description:
+b/c
+
+
+changeset:   3:36e70ffe2c3d
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       a
+description:
+a
+
+
+changeset:   2:a55cab36df04
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       bin
+description:
+5
+
+
+changeset:   1:c72a7d1d0907
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       f
+description:
+4
+
+
+changeset:   0:fcf06d5c4e1d
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       f
+description:
+1
+
+
+
+pulling from dupe
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 4 changes to 4 files
+Attempt to commit or push text file(s) using CRLF line endings
+in 02184785bcac: b
+in 02184785bcac: c
+in 81c49ee61396: d
+
+To prevent this mistake in your local repository,
+add to Mercurial.ini or .hg/hgrc:
+
+[hooks]
+pretxncommit.crlf = python:hgext.win32text.forbidcrlf
+
+and also consider adding:
+
+[extensions]
+hgext.win32text =
+[encode]
+** = cleverencode:
+[decode]
+** = cleverdecode:
+transaction abort!
+rollback completed
+abort: pretxnchangegroup.crlf hook failed
+
+changeset:   2:a55cab36df04
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       bin
+description:
+5
+
+
+changeset:   1:c72a7d1d0907
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       f
+description:
+4
+
+
+changeset:   0:fcf06d5c4e1d
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       f
+description:
+1
+
+
+
