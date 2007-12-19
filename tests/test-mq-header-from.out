@@ -1,0 +1,200 @@
+==== init
+==== qnew -U
+From: test
+
+0: [mq]: 1.patch - test
+==== qref
+adding 1
+From: test
+
+diff -r ... 1
+--- /dev/null
++++ b/1
+@@ -0,0 +1,1 @@
++1
+0: [mq]: 1.patch - test
+==== qref -u
+From: mary
+
+diff -r ... 1
+--- /dev/null
++++ b/1
+@@ -0,0 +1,1 @@
++1
+0: [mq]: 1.patch - mary
+==== qnew
+adding 2
+diff -r ... 2
+--- /dev/null
++++ b/2
+@@ -0,0 +1,1 @@
++2
+1: [mq]: 2.patch - test
+0: [mq]: 1.patch - mary
+==== qref -u
+From: jane
+
+
+diff -r ... 2
+--- /dev/null
++++ b/2
+@@ -0,0 +1,1 @@
++2
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== qnew -U -m
+From: test
+
+Three
+2: Three - test
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== qref
+adding 3
+From: test
+
+Three
+
+diff -r ... 3
+--- /dev/null
++++ b/3
+@@ -0,0 +1,1 @@
++3
+2: Three - test
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== qref -m
+From: test
+
+Drei
+
+diff -r ... 3
+--- /dev/null
++++ b/3
+@@ -0,0 +1,1 @@
++3
+2: Drei - test
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== qref -u
+From: mary
+
+Drei
+
+diff -r ... 3
+--- /dev/null
++++ b/3
+@@ -0,0 +1,1 @@
++3
+2: Drei - mary
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== qref -u -m
+From: maria
+
+Three (again)
+
+diff -r ... 3
+--- /dev/null
++++ b/3
+@@ -0,0 +1,1 @@
++3
+2: Three (again) - maria
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== qnew -m
+adding 4
+Four
+
+diff -r ... 4
+--- /dev/null
++++ b/4
+@@ -0,0 +1,1 @@
++4
+3: Four - test
+2: Three (again) - maria
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== qref -u
+From: jane
+
+Four
+
+diff -r ... 4
+--- /dev/null
++++ b/4
+@@ -0,0 +1,1 @@
++4
+3: Four - jane
+2: Three (again) - maria
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== qnew with HG header
+Now at: 4.patch
+applying 5.patch
+patch failed, unable to continue (try -v)
+patch 5.patch is empty
+Now at: 5.patch
+# HG changeset patch
+# User johndoe
+4: imported patch 5.patch - johndoe
+3: Four - jane
+2: Three (again) - maria
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== hg qref
+adding 5
+# HG changeset patch
+# User johndoe
+
+diff -r ... 5
+--- /dev/null
++++ b/5
+@@ -0,0 +1,1 @@
++5
+4: [mq]: 5.patch - johndoe
+3: Four - jane
+2: Three (again) - maria
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== hg qref -U
+# HG changeset patch
+# User test
+
+diff -r ... 5
+--- /dev/null
++++ b/5
+@@ -0,0 +1,1 @@
++5
+4: [mq]: 5.patch - test
+3: Four - jane
+2: Three (again) - maria
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== hg qref -u
+# HG changeset patch
+# User johndeere
+
+diff -r ... 5
+--- /dev/null
++++ b/5
+@@ -0,0 +1,1 @@
++5
+4: [mq]: 5.patch - johndeere
+3: Four - jane
+2: Three (again) - maria
+1: [mq]: 2.patch - jane
+0: [mq]: 1.patch - mary
+==== qpop -a / qpush -a
+Patch queue now empty
+applying 1.patch
+applying 2.patch
+applying 3.patch
+applying 4.patch
+applying 5.patch
+Now at: 5.patch
+4: imported patch 5.patch - johndeere
+3: Four - jane
+2: Three (again) - maria
+1: imported patch 2.patch - jane
+0: imported patch 1.patch - mary
