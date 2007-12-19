@@ -66,12 +66,10 @@ class StripedHtmlFormatter(HtmlFormatter):
         yield 0, "</div>"
 
 
-def pygments_format(filename, rawtext, forcetext, encoding,
-                    stripecount, style):
-    etext = util.tolocal(rawtext)
+def pygments_format(filename, text, forcetext, stripecount, style):
     if not forcetext:
         try:
-            lexer = guess_lexer_for_filename(filename, etext,
+            lexer = guess_lexer_for_filename(filename, text,
                                              encoding=util._encoding)
         except ClassNotFound:
             lexer = TextLexer(encoding=util._encoding)
@@ -79,9 +77,9 @@ def pygments_format(filename, rawtext, forcetext, encoding,
         lexer = TextLexer(encoding=util._encoding)
 
     formatter = StripedHtmlFormatter(stripecount, style=style,
-                                     linenos='inline', encoding=encoding)
+                                     linenos='inline', encoding=util._encoding)
 
-    return highlight(etext, lexer, formatter)
+    return highlight(text, lexer, formatter)
 
 
 def filerevision_pygments(self, tmpl, fctx):
@@ -96,6 +94,9 @@ def filerevision_pygments(self, tmpl, fctx):
 
     mt = mimetypes.guess_type(f)[0]
 
+    # we always want hgweb.encoding
+    util._encoding = self.encoding
+
     if util.binary(text):
         mt = mt or 'application/octet-stream'
         text = "(binary:%s)" % mt
@@ -104,6 +105,9 @@ def filerevision_pygments(self, tmpl, fctx):
         forcetext = True
     else:
         mt = mt or 'text/plain'
+
+        # encode to hgweb.encoding for lexers and formatter
+        text = util.tolocal(text)
         forcetext = False
 
     def lines(text):
@@ -112,7 +116,7 @@ def filerevision_pygments(self, tmpl, fctx):
 
     style = self.config("web", "pygments_style", "colorful")
 
-    text_formatted = lines(pygments_format(f, text, forcetext, self.encoding,
+    text_formatted = lines(pygments_format(f, text, forcetext,
                                            self.stripecount, style))
 
     # override per-line template
