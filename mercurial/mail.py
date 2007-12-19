@@ -30,6 +30,8 @@ def _smtp(ui):
         s.ehlo()
     username = ui.config('smtp', 'username')
     password = ui.config('smtp', 'password')
+    if username and not password:
+        password = ui.getpass()
     if username and password:
         ui.note(_('(authenticating to mail server as %s)\n') %
                   (username))
