@@ -124,21 +124,26 @@ decode/encode::
 
   NOTE: the tempfile mechanism is recommended for Windows systems,
   where the standard shell I/O redirection operators often have
-  strange effects.  In particular, if you are doing line ending
-  conversion on Windows using the popular dos2unix and unix2dos
-  programs, you *must* use the tempfile mechanism, as using pipes will
-  corrupt the contents of your files.
+  strange effects and may corrupt the contents of your files.
 
-  Tempfile example:
+  The most common usage is for LF <-> CRLF translation on Windows.
+  For this, use the "smart" convertors which check for binary files:
 
+    [extensions]
+    hgext.win32text =
     [encode]
-    # convert files to unix line ending conventions on checkin
-    **.txt = tempfile: dos2unix -n INFILE OUTFILE
-
+    ** = cleverencode:
     [decode]
-    # convert files to windows line ending conventions when writing
-    # them to the working dir
-    **.txt = tempfile: unix2dos -n INFILE OUTFILE
+    ** = cleverdecode:
+
+  or if you only want to translate certain files:
+
+    [extensions]
+    hgext.win32text =
+    [encode]
+    **.txt = dumbencode:
+    [decode]
+    **.txt = dumbdecode:
 
 defaults::
   Use the [defaults] section to define command defaults, i.e. the
