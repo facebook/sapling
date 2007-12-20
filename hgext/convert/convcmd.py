@@ -145,7 +145,8 @@ class converter(object):
                 if pl:
                     depth[n] = max([depth[p] for p in pl]) + 1
 
-            s = [(depth[n], self.commitcache[n].date, n) for n in s]
+            s = [(depth[n], util.parsedate(self.commitcache[n].date), n)
+                 for n in s]
             s.sort()
             s = [e[2] for e in s]
 

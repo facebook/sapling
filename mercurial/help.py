@@ -43,8 +43,7 @@ HG::
     'hg' (with com/exe/bat/cmd extension on Windows) is searched.
 
 HGEDITOR::
-    This is the name of the editor to use when committing. Defaults to the
-    value of EDITOR.
+    This is the name of the editor to use when committing. See EDITOR.
 
     (deprecated, use .hgrc)
 
@@ -94,9 +93,16 @@ LOGNAME::
     If neither HGUSER nor EMAIL is set, LOGNAME will be used (with
     '@hostname' appended) as the author value for a commit.
 
+VISUAL::
+    This is the name of the editor to use when committing. See EDITOR.
+
 EDITOR::
-    This is the name of the editor used in the hgmerge script. It will be
-    used for commit messages if HGEDITOR isn't set. Defaults to 'vi'.
+    Sometimes Mercurial needs to open a text file in an editor for a user
+    to modify, for example when writing commit messages or when using the
+    hgmerge script. The editor it uses is determined by looking at the
+    environment variables HGEDITOR, VISUAL and EDITOR, in that order. The
+    first non-empty one is chosen. If all of them are empty, the editor
+    defaults to 'vi'.
 
 PYTHONPATH::
     This is used by Python to find imported modules and may need to be set

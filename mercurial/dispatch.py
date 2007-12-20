@@ -331,6 +331,7 @@ def _dispatch(ui, args):
         try:
             repo = hg.repository(ui, path=path)
             ui = repo.ui
+            ui.setconfig("bundle", "mainreporoot", repo.root)
             if not repo.local():
                 raise util.Abort(_("repository '%s' is not local") % path)
         except hg.RepoError:

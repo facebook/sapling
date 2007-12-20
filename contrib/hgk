@@ -3844,7 +3844,7 @@ set maxwidth 16
 
 set colors {green red blue magenta darkgrey brown orange}
 set authorcolors {
-    deeppink mediumorchid blue burlywood4 goldenrod slateblue red2 navy dimgrey
+    black blue deeppink mediumorchid blue burlywood4 goldenrod slateblue red2 navy dimgrey
 }
 
 catch {source ~/.hgk}

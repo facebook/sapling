@@ -112,8 +112,6 @@ class lazyparser(object):
     # lazyparser is not safe to use on windows if win32 extensions not
     # available. it keeps file handle open, which make it not possible
     # to break hardlinks on local cloned repos.
-    safe_to_use = os.name != 'nt' or (not util.is_win_9x() and
-                                      hasattr(util, 'win32api'))
 
     def __init__(self, dataf, size):
         self.dataf = dataf
@@ -362,7 +360,7 @@ class revlogio(object):
         except AttributeError:
             size = 0
 
-        if lazyparser.safe_to_use and not inline and size > 1000000:
+        if util.openhardlinks() and not inline and size > 1000000:
             # big index, let's parse it on demand
             parser = lazyparser(fp, size)
             index = lazyindex(parser)

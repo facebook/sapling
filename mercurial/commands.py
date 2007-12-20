@@ -430,8 +430,8 @@ def commit(ui, repo, *pats, **opts):
     If a list of files is omitted, all changes reported by "hg status"
     will be committed.
 
-    If no commit message is specified, the editor configured in your hgrc
-    or in the EDITOR environment variable is started to enter a message.
+    If no commit message is specified, the configured editor is started to
+    enter a message.
     """
     def commitfunc(ui, repo, files, message, match, opts):
         return repo.commit(files, message, opts['user'], opts['date'], match,
@@ -748,9 +748,7 @@ def debuginstall(ui):
 
     # editor
     ui.status(_("Checking commit editor...\n"))
-    editor = (os.environ.get("HGEDITOR") or
-              ui.config("ui", "editor") or
-              os.environ.get("EDITOR", "vi"))
+    editor = ui.geteditor()
     cmdpath = util.find_exe(editor) or util.find_exe(editor.split()[0])
     if not cmdpath:
         if editor == 'vi':
@@ -2428,8 +2426,15 @@ def tag(ui, repo, name, rev_=None, **opts):
         rev_ = opts['rev']
     message = opts['message']
     if opts['remove']:
-        if not name in repo.tags():
+        tagtype = repo.tagtype(name)
+
+        if not tagtype:
             raise util.Abort(_('tag %s does not exist') % name)
+        if opts['local'] and tagtype == 'global':
+           raise util.Abort(_('%s tag is global') % name)
+        if not opts['local'] and tagtype == 'local':
+           raise util.Abort(_('%s tag is local') % name)
+
         rev_ = nullid
         if not message:
             message = _('Removed tag %s') % name
@@ -2451,23 +2456,33 @@ def tags(ui, repo):
 
     List the repository tags.
 
-    This lists both regular and local tags.
+    This lists both regular and local tags. When the -v/--verbose switch
+    is used, a third column "local" is printed for local tags.
     """
 
     l = repo.tagslist()
     l.reverse()
     hexfunc = ui.debugflag and hex or short
+    tagtype = ""
+
     for t, n in l:
-        try:
-            hn = hexfunc(n)
-            r = "%5d:%s" % (repo.changelog.rev(n), hexfunc(n))
-        except revlog.LookupError:
-            r = "    ?:%s" % hn
         if ui.quiet:
             ui.write("%s\n" % t)
+            continue
+
+        try:
+            hn = hexfunc(n)
+            r = "%5d:%s" % (repo.changelog.rev(n), hn)
+        except revlog.LookupError:
+            r = "    ?:%s" % hn
         else:
             spaces = " " * (30 - util.locallen(t))
-            ui.write("%s%s %s\n" % (t, spaces, r))
+            if ui.verbose:
+                if repo.tagtype(t) == 'local':
+                    tagtype = " local"
+                else:
+                    tagtype = ""
+            ui.write("%s%s %s%s\n" % (t, spaces, r, tagtype))
 
 def tip(ui, repo, **opts):
     """show the tip revision
