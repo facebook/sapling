@@ -15,7 +15,7 @@ platform-specific details from the core.
 from i18n import _
 import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile, strutil
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
-import re, urlparse
+import re, urlparse, imp
 
 try:
     set = set
@@ -553,13 +553,28 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
 
 _hgexecutable = None
 
+def main_is_frozen():
+    """return True if we are a frozen executable.
+
+    The code supports py2exe (most common, Windows only) and tools/freeze
+    (portable, not much used).
+    """
+    return (hasattr(sys, "frozen") or # new py2exe
+            hasattr(sys, "importers") or # old py2exe
+            imp.is_frozen("__main__")) # tools/freeze
+
 def hgexecutable():
     """return location of the 'hg' executable.
 
     Defaults to $HG or 'hg' in the search path.
     """
     if _hgexecutable is None:
-        set_hgexecutable(os.environ.get('HG') or find_exe('hg', 'hg'))
+        if os.environ.has_key('HG'):
+            set_hgexecutable(os.environ.get('HG'))
+        elif main_is_frozen():
+            set_hgexecutable(sys.executable)
+        else:
+            sel_hgexecutable(find_exe('hg', 'hg'))
     return _hgexecutable
 
 def set_hgexecutable(path):
