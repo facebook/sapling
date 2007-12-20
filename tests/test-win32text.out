@@ -18,7 +18,7 @@ abort: pretxncommit.crlf hook failed
 forgetting d/f2
 
 
-changeset:   2:a55cab36df04
+changeset:   2:b67b2dae057a
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -50,7 +50,7 @@ adding dupe/a
 adding dupe/b
 adding dupe/c
 adding dupe/d
-changeset:   5:81c49ee61396
+changeset:   5:6e8a7629ff5b
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -59,7 +59,7 @@ description:
 d
 
 
-changeset:   4:02184785bcac
+changeset:   4:ac30a42ce8bc
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       b c
@@ -67,7 +67,7 @@ description:
 b/c
 
 
-changeset:   3:36e70ffe2c3d
+changeset:   3:a73b85ef1fb7
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       a
@@ -75,7 +75,7 @@ description:
 a
 
 
-changeset:   2:a55cab36df04
+changeset:   2:b67b2dae057a
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       bin
@@ -107,9 +107,9 @@ adding manifests
 adding file changes
 added 3 changesets with 4 changes to 4 files
 Attempt to commit or push text file(s) using CRLF line endings
-in 02184785bcac: b
-in 02184785bcac: c
-in 81c49ee61396: d
+in ac30a42ce8bc: b
+in ac30a42ce8bc: c
+in 6e8a7629ff5b: d
 
 To prevent this mistake in your local repository,
 add to Mercurial.ini or .hg/hgrc:
@@ -129,7 +129,7 @@ transaction abort!
 rollback completed
 abort: pretxnchangegroup.crlf hook failed
 
-changeset:   2:a55cab36df04
+changeset:   2:b67b2dae057a
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
