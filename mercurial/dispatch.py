@@ -133,6 +133,8 @@ def _runcatch(ui, args):
 
     except util.Abort, inst:
         ui.warn(_("abort: %s\n") % inst)
+    except MemoryError:
+        ui.warn(_("abort: out of memory\n"))
     except SystemExit, inst:
         # Commands shouldn't sys.exit directly, but give a return code.
         # Just in case catch this and and pass exit code to caller.

@@ -919,7 +919,15 @@ if os.name == 'nt':
 
         def write(self, s):
             try:
-                return self.fp.write(s)
+                # This is workaround for "Not enough space" error on
+                # writing large size of data to console.
+                limit = 16000
+                l = len(s)
+                start = 0
+                while start < l:
+                    end = start + limit
+                    self.fp.write(s[start:end])
+                    start = end
             except IOError, inst:
                 if inst.errno != 0: raise
                 self.close()
