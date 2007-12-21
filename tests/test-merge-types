@@ -16,7 +16,7 @@ hg merge
 
 echo % symlink is left parent, executable is right
 
-if [ -L a ]; then
+if [ -h a ]; then
     echo a is a symlink
     readlink a
 elif [ -x a ]; then
@@ -28,7 +28,7 @@ hg merge
 
 echo % symlink is right parent, executable is left
 
-if [ -L a ]; then
+if [ -h a ]; then
     echo a is a symlink
     readlink a
 elif [ -x a ]; then
