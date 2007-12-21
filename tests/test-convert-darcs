@@ -13,7 +13,7 @@ HOME=do_not_use_HOME_darcs; export HOME
 mkdir dummy
 mkdir dummy/_darcs
 if hg convert dummy 2>&1 | grep ElementTree > /dev/null; then
-    echo 'hghave: missing feature: elementtree module'
+    echo 'skipped: missing feature: elementtree module'
     exit 80
 fi
 

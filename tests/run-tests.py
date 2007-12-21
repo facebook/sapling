@@ -19,8 +19,9 @@ import sys
 import tempfile
 import time
 
-# hghave reserved exit code to skip test
+# reserved exit code to skip test (used by hghave)
 SKIPPED_STATUS = 80
+SKIPPED_PREFIX = 'skipped: '
 
 required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
@@ -92,10 +93,10 @@ def extract_missing_features(lines):
     '''Extract missing/unknown features log lines as a list'''
     missing = []
     for line in lines:
-        if not line.startswith('hghave: '):
+        if not line.startswith(SKIPPED_PREFIX):
             continue
         line = line.splitlines()[0]
-        missing.append(line[8:])
+        missing.append(line[len(SKIPPED_PREFIX):])
 
     return missing
 

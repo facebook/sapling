@@ -133,14 +133,14 @@ if __name__ == '__main__':
             feature = feature[3:]
 
         if feature not in checks:
-            error('hghave: unknown feature: ' + feature)
+            error('skipped: unknown feature: ' + feature)
             continue
 
         check, desc = checks[feature]
         if not negate and not check():
-            error('hghave: missing feature: ' + desc)
+            error('skipped: missing feature: ' + desc)
         elif negate and check():
-            error('hghave: system supports %s' % desc)
+            error('skipped: system supports %s' % desc)
 
     if failures != 0:
         sys.exit(1)
