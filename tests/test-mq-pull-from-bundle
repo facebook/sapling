@@ -1,11 +1,13 @@
 #!/bin/sh
 
-echo "[extensions]" >> $HGRCPATH
-echo "mq=" >> $HGRCPATH
-echo "[defaults]" >> $HGRCPATH
-echo "log = --template \"{rev}: {desc}\\n\"" >> $HGRCPATH
-echo "heads = --template \"{rev}: {desc}\\n\"" >> $HGRCPATH
-echo "incoming = --template \"{rev}: {desc}\\n\"" >> $HGRCPATH
+cat <<EOF >> $HGRCPATH
+[extensions]
+mq=
+[defaults]
+log = --template "{rev}: {desc}\\n"
+heads = --template "{rev}: {desc}\\n"
+incoming = --template "{rev}: {desc}\\n"
+EOF
 
 echo "====== .hgrc"
 cat $HGRCPATH
