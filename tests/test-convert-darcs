@@ -26,7 +26,7 @@ darcs record -a -l -m p0
 cd ..
 
 echo % branch and update
-darcs get darcs-repo darcs-clone
+darcs get darcs-repo darcs-clone >/dev/null
 cd darcs-clone
 echo c >> a
 echo c > c
@@ -50,7 +50,7 @@ glog()
     hg glog --template '#rev# "#desc|firstline#" files: #files#\n' "$@"
 }
 
-hg convert darcs-repo darcs-repo-hg
+hg convert darcs-repo darcs-repo-hg 2>&1 | grep -v hGetLine | grep -v '^$'
 # The converter does not currently handle patch conflicts very well.
 # When they occur, it reverts *all* changes and moves forward,
 # letting the conflict resolving patch fix collisions.
