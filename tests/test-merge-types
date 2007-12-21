@@ -18,7 +18,7 @@ echo % symlink is left parent, executable is right
 
 if [ -h a ]; then
     echo a is a symlink
-    readlink a
+    $TESTDIR/readlink.py a
 elif [ -x a ]; then
     echo a is executable
 fi
@@ -30,7 +30,7 @@ echo % symlink is right parent, executable is left
 
 if [ -h a ]; then
     echo a is a symlink
-    readlink a
+    $TESTDIR/readlink.py a
 elif [ -x a ]; then
     echo a is executable
 fi

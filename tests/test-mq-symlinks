@@ -3,17 +3,6 @@
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
 
-cat >> readlink.py <<EOF
-import errno, os, sys
-
-for f in sys.argv[1:]:
-    try:
-        print f, '->', os.readlink(f)
-    except OSError, err:
-        if err.errno != errno.EINVAL: raise
-        print f, 'not a symlink'
-EOF
-
 hg init
 hg qinit
 hg qnew base.patch
@@ -21,14 +10,14 @@ echo a > a
 echo b > b
 hg add a b
 hg qrefresh
-python readlink.py a
+$TESTDIR/readlink.py a
 
 hg qnew symlink.patch
 rm a
 ln -s b a
 hg qrefresh --git
-python readlink.py a
+$TESTDIR/readlink.py a
 
 hg qpop
 hg qpush
-python readlink.py a
+$TESTDIR/readlink.py a
