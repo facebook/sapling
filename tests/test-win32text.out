@@ -155,3 +155,25 @@ description:
 
 
 
+hello<NUL><CR><LF>
+some<LF>text<LF>
+rem empty<CR><LF>
+
+[extensions]
+win32text = 
+[decode]
+** = cleverdecode:
+[encode]
+** = cleverencode:
+
+WARNING: f4.bat already has CRLF line endings
+and does not need EOL conversion by the win32text plugin.
+Before your next commit, please reconsider your encode/decode settings in 
+Mercurial.ini or ..../.hg/hgrc.
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+hello<NUL><CR><LF>
+some<CR><LF>text<CR><LF>
+rem empty<CR><LF>
+
+# empty<CR><LF>
+# empty<LF>

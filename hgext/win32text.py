@@ -30,18 +30,17 @@ import re
 # regexp for single LF without CR preceding.
 re_single_lf = re.compile('(^|[^\r])\n', re.MULTILINE)
 
-def dumbdecode(s, cmd):
+def dumbdecode(s, cmd, ui=None, repo=None, filename=None, **kwargs):
     # warn if already has CRLF in repository.
     # it might cause unexpected eol conversion.
     # see issue 302:
     #   http://www.selenic.com/mercurial/bts/issue302
-    if '\r\n' in s:
-        u = ui.ui()
-        u.warn(_('WARNING: file in repository already has CRLF line ending \n'
-                 ' which does not need eol conversion by win32text plugin.\n'
-                 ' Please reconsider encode/decode setting in'
-                 ' mercurial.ini or .hg/hgrc\n'
-                 ' before next commit.\n'))
+    if '\r\n' in s and ui and filename and repo:
+        ui.warn(_('WARNING: %s already has CRLF line endings\n'
+                  'and does not need EOL conversion by the win32text plugin.\n'
+                  'Before your next commit, please reconsider your '
+                  'encode/decode settings in \nMercurial.ini or %s.\n') %
+                (filename, repo.join('hgrc')))
     # replace single LF to CRLF
     return re_single_lf.sub('\\1\r\n', s)
 
@@ -52,9 +51,9 @@ def clevertest(s, cmd):
     if '\0' in s: return False
     return True
 
-def cleverdecode(s, cmd):
+def cleverdecode(s, cmd, **kwargs):
     if clevertest(s, cmd):
-        return dumbdecode(s, cmd)
+        return dumbdecode(s, cmd, **kwargs)
     return s
 
 def cleverencode(s, cmd):

@@ -9,6 +9,11 @@ for path in sys.argv[1:]:
     file(path, 'wb').write(data)
 EOF
 
+cat > print.py <<EOF
+import sys
+print(sys.stdin.read().replace('\n', '<LF>').replace('\r', '<CR>').replace('\0', '<NUL>'))
+EOF
+
 hg init
 echo '[hooks]' >> .hg/hgrc
 echo 'pretxncommit.crlf = python:hgext.win32text.forbidcrlf' >> .hg/hgrc
@@ -62,4 +67,35 @@ echo
 hg log -v
 echo
 
-# XXX missing tests for encode/decode hooks
+rm .hg/hgrc
+(echo some; echo text) > f3
+python -c 'file("f4.bat", "wb").write("rem empty\x0D\x0A")'
+hg add f3 f4.bat
+hg ci -m 6 -d'0 0'
+
+python print.py < bin
+python print.py < f3
+python print.py < f4.bat
+echo
+
+echo '[extensions]' >> .hg/hgrc
+echo 'win32text = ' >> .hg/hgrc
+echo '[decode]' >> .hg/hgrc
+echo '** = cleverdecode:' >> .hg/hgrc
+echo '[encode]' >> .hg/hgrc
+echo '** = cleverencode:' >> .hg/hgrc
+cat .hg/hgrc
+echo
+
+rm f3 f4.bat bin
+hg co 2>&1 | python -c 'import sys, os; sys.stdout.write(sys.stdin.read().replace(os.getcwd(), "...."))'
+python print.py < bin
+python print.py < f3
+python print.py < f4.bat
+echo
+
+python -c 'file("f5.sh", "wb").write("# empty\x0D\x0A")'
+hg add f5.sh
+hg ci -m 7 -d'0 0'
+python print.py < f5.sh
+hg cat f5.sh | python print.py

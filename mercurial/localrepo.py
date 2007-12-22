@@ -10,7 +10,7 @@ from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context, weakref
 import re, lock, transaction, tempfile, stat, errno, ui
-import os, revlog, time, util, extensions, hook
+import os, revlog, time, util, extensions, hook, inspect
 
 class localrepository(repo.repository):
     capabilities = util.set(('lookup', 'changegroupsubset'))
@@ -492,14 +492,18 @@ class localrepository(repo.repository):
                         fn = filterfn
                         break
                 if not fn:
-                    fn = lambda s, c: util.filter(s, c)
+                    fn = lambda s, c, **kwargs: util.filter(s, c)
+                # Wrap old filters not supporting keyword arguments
+                if not inspect.getargspec(fn)[2]:
+                    oldfn = fn
+                    fn = lambda s, c, **kwargs: oldfn(s, c)
                 l.append((mf, fn, cmd))
             self.filterpats[filter] = l
 
         for mf, fn, cmd in self.filterpats[filter]:
             if mf(filename):
                 self.ui.debug(_("filtering %s through %s\n") % (filename, cmd))
-                data = fn(data, cmd)
+                data = fn(data, cmd, ui=self.ui, repo=self, filename=filename)
                 break
 
         return data
