@@ -2,6 +2,7 @@
 
 hg init a
 cd a
+hg diff not found
 echo bar > foo
 hg add foo
 hg ci -m 'add foo' -d '1000000 0'
