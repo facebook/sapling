@@ -26,17 +26,23 @@ def add(ui, repo, *pats, **opts):
     If no names are given, add all files in the repository.
     """
 
+    rejected = None
+    exacts = {}
     names = []
-    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
+    for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
+                                             badmatch=util.always):
         if exact:
             if ui.verbose:
                 ui.status(_('adding %s\n') % rel)
             names.append(abs)
+            exacts[abs] = 1
         elif abs not in repo.dirstate:
             ui.status(_('adding %s\n') % rel)
             names.append(abs)
     if not opts.get('dry_run'):
-        repo.add(names)
+        rejected = repo.add(names)
+        rejected = [p for p in rejected if p in exacts]
+    return rejected and 1 or 0
 
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files

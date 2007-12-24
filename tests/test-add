@@ -11,7 +11,7 @@ hg st
 echo b > b
 hg add -n b
 hg st
-hg add b
+hg add b || echo "failed to add b"
 hg st
 echo % should fail
 hg add b
@@ -40,3 +40,9 @@ hg st
 echo a > a
 hg add a
 hg st
+
+hg add c && echo "unexpected addition of missing file"
+echo c > c
+hg add d c && echo "unexpected addition of missing file"
+hg st
+

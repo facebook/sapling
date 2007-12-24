@@ -1010,12 +1010,14 @@ class localrepository(repo.repository):
     def add(self, list):
         wlock = self.wlock()
         try:
+            rejected = []
             for f in list:
                 p = self.wjoin(f)
                 try:
                     st = os.lstat(p)
                 except:
                     self.ui.warn(_("%s does not exist!\n") % f)
+                    rejected.append(f)
                     continue
                 if st.st_size > 10000000:
                     self.ui.warn(_("%s: files over 10MB may cause memory and"
@@ -1025,12 +1027,14 @@ class localrepository(repo.repository):
                 if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                     self.ui.warn(_("%s not added: only files and symlinks "
                                    "supported currently\n") % f)
+                    rejected.append(p)
                 elif self.dirstate[f] in 'amn':
                     self.ui.warn(_("%s already tracked!\n") % f)
                 elif self.dirstate[f] == 'r':
                     self.dirstate.normallookup(f)
                 else:
                     self.dirstate.add(f)
+            return rejected
         finally:
             del wlock
 
