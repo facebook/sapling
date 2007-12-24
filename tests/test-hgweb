@@ -7,7 +7,7 @@ mkdir da
 echo foo > da/foo
 echo foo > foo
 hg ci -Ambase -d '0 0'
-hg serve -p $HGPORT -d --pid-file=hg.pid
+hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log
 cat hg.pid >> $DAEMON_PIDS
 echo % manifest
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/?style=raw')
@@ -27,6 +27,13 @@ echo % should give a 400 - bad command
 
 echo % should give a 404 - file does not exist
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/bork?style=raw'
+
+echo % stop and restart
+kill `cat hg.pid`
+hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log
+cat hg.pid >> $DAEMON_PIDS
+# Test the access/error files are opened in append mode
+python -c "print len(file('access.log').readlines()), 'log lines written'"
 
 echo % static file
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/static/style-gitweb.css'

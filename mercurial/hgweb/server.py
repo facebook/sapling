@@ -197,7 +197,7 @@ def create_server(ui, repo):
 
     def openlog(opt, default):
         if opt and opt != '-':
-            return open(opt, 'w')
+            return open(opt, 'a')
         return default
 
     if repo is None:

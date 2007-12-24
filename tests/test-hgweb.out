@@ -65,6 +65,8 @@ error: No such method: spam
 
 
 error: Path not found: bork/
+% stop and restart
+7 log lines written
 % static file
 200 Script output follows
 
