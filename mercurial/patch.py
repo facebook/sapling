@@ -1351,7 +1351,6 @@ def diffstat(patchlines):
             last = stat.pop()
             stat.insert(0, last)
             stat = ''.join(stat)
-            if stat.startswith('0 files'): raise ValueError
             return stat
         except: raise
     finally:
