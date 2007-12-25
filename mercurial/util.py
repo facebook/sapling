@@ -1132,6 +1132,17 @@ else:
         """check whether a file is executable"""
         return (os.lstat(f).st_mode & 0100 != 0)
 
+    def force_chmod(f, s):
+        try:
+            os.chmod(f, s)
+        except OSError, inst:
+            if inst.errno != errno.EPERM:
+                raise
+            # maybe we don't own the file, try copying it
+            new_f = mktempcopy(f)
+            os.chmod(new_f, s)
+            os.rename(new_f, f)
+
     def set_exec(f, mode):
         s = os.lstat(f).st_mode
         if stat.S_ISLNK(s) or (s & 0100 != 0) == mode:
@@ -1139,9 +1150,9 @@ else:
         if mode:
             # Turn on +x for every +r bit when making a file executable
             # and obey umask.
-            os.chmod(f, s | (s & 0444) >> 2 & ~_umask)
+            force_chmod(f, s | (s & 0444) >> 2 & ~_umask)
         else:
-            os.chmod(f, s & 0666)
+            force_chmod(f, s & 0666)
 
     def set_link(f, mode):
         """make a file a symbolic link/regular file
