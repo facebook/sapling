@@ -24,6 +24,8 @@ patches
 mercurial/__version__.py
 Output/Mercurial-*.exe
 .DS_Store
+tags
+cscope.*
 
 syntax: regexp
 ^\.pc/
