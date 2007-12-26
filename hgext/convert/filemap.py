@@ -10,6 +10,7 @@ from mercurial import util
 from common import SKIPREV, converter_source
 
 def rpairs(name):
+    yield '.', name
     e = len(name)
     while e != -1:
         yield name[:e], name[e+1:]
