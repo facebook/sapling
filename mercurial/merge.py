@@ -70,8 +70,9 @@ def checkunknown(wctx, mctx):
     for f in wctx.unknown():
         if f in man:
             if mctx.filectx(f).cmp(wctx.filectx(f).data()):
-                raise util.Abort(_("untracked local file '%s' differs"
-                                   " from remote version") % f)
+                raise util.Abort(_("untracked file in working directory differs"
+                                   " from file in requested revision: '%s'")
+                                 % f)
 
 def checkcollision(mctx):
     "check for case folding collisions in the destination context"
@@ -422,8 +423,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         elif f in ma:
             if n != ma[f] and not overwrite:
                 if repo.ui.prompt(
-                    (_(" local changed %s which remote deleted\n") % f) +
-                    _("(k)eep or (d)elete?"), _("[kd]"), _("k")) == _("d"):
+                    _(" local changed %s which remote deleted\n"
+                      "use (c)hanged version or (d)elete?") % f,
+                    _("[cd]"), _("c")) == _("d"):
                     act("prompt delete", "r", f)
             else:
                 act("other deleted", "r", f)
@@ -455,8 +457,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 act("recreating", "g", f, m2.flags(f))
             elif n != ma[f]:
                 if repo.ui.prompt(
-                    (_("remote changed %s which local deleted\n") % f) +
-                    _("(k)eep or (d)elete?"), _("[kd]"), _("k")) == _("k"):
+                    _("remote changed %s which local deleted\n"
+                      "use (c)hanged version or leave (d)eleted?") % f,
+                    _("[cd]"), _("c")) == _("c"):
                     act("prompt recreating", "g", f, m2.flags(f))
         else:
             act("remote created", "g", f, m2.flags(f))
