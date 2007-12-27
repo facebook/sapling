@@ -164,11 +164,10 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
         if copy:
             def force_copy(src, dst):
-                try:
-                    util.copyfiles(src, dst)
-                except OSError, inst:
-                    if inst.errno != errno.ENOENT:
-                        raise
+                if not os.path.exists(src):
+                    # Tolerate empty source repository and optional files
+                    return
+                util.copyfiles(src, dst)
 
             src_store = os.path.realpath(src_repo.spath)
             if not os.path.exists(dest):
