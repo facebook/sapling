@@ -195,6 +195,65 @@ At revision 5.
 </logentry>
 </log>
 executable
+% executable in new directory
+adding d1/a
+assuming destination a-hg
+initializing svn repo 'a-hg'
+initializing svn wc 'a-hg-wc'
+scanning source...
+sorting...
+converting...
+0 add executable file in new directory
+At revision 1.
+                1        1 test         .
+                1        1 test         d1
+                1        1 test         d1/a
+<?xml version="1.0"?>
+<log>
+<logentry
+   revision="1">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="A">/d1</path>
+<path
+   action="A">/d1/a</path>
+</paths>
+<msg>add executable file in new directory</msg>
+</logentry>
+</log>
+executable
+% copy to new directory
+assuming destination a-hg
+initializing svn wc 'a-hg-wc'
+scanning source...
+sorting...
+converting...
+0 copy file to new directory
+At revision 2.
+                2        2 test         .
+                2        1 test         d1
+                2        1 test         d1/a
+                2        2 test         d2
+                2        2 test         d2/a
+<?xml version="1.0"?>
+<log>
+<logentry
+   revision="2">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="A">/d2</path>
+<path
+   copyfrom-path="/d1/a"
+   copyfrom-rev="1"
+   action="A">/d2/a</path>
+</paths>
+<msg>copy file to new directory</msg>
+</logentry>
+</log>
 % branchy history
 adding b
 adding left-1

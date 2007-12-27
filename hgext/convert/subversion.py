@@ -725,6 +725,9 @@ class svn_sink(converter_sink, commandline):
         converter_sink.__init__(self, ui, path)
         commandline.__init__(self, ui, 'svn')
         self.delete = []
+        self.setexec = []
+        self.delexec = []
+        self.copies = []
         self.wc = None
         self.cwd = os.getcwd()
 
@@ -792,15 +795,18 @@ class svn_sink(converter_sink, commandline):
             util.set_exec(self.wjoin(filename), 'x' in flags)
             if was_exec:
                 if 'x' not in flags:
-                    self.run0('propdel', 'svn:executable', filename)
+                    self.delexec.append(filename)
             else:
                 if 'x' in flags:
-                    self.run0('propset', 'svn:executable', '*', filename)
-            
+                    self.setexec.append(filename)
+
     def delfile(self, name):
         self.delete.append(name)
 
     def copyfile(self, source, dest):
+        self.copies.append([source, dest])
+
+    def _copyfile(self, source, dest):
         # SVN's copy command pukes if the destination file exists, but
         # our copyfile method expects to record a copy that has
         # already occurred.  Cross the semantic gap.
@@ -831,15 +837,18 @@ class svn_sink(converter_sink, commandline):
                 dirs.add(f[:i])
         return dirs
 
-    def add_files(self, files):
+    def add_dirs(self, files):
         add_dirs = [d for d in self.dirs_of(files)
                     if not os.path.exists(self.wjoin(d, '.svn', 'entries'))]
         if add_dirs:
             add_dirs.sort()
             self.run('add', non_recursive=True, quiet=True, *add_dirs)
+        return add_dirs
+
+    def add_files(self, files):
         if files:
             self.run('add', quiet=True, *files)
-        return files.union(add_dirs)
+        return files
         
     def tidy_dirs(self, names):
         dirs = list(self.dirs_of(names))
@@ -857,7 +866,7 @@ class svn_sink(converter_sink, commandline):
 
     def revid(self, rev):
         return u"svn:%s@%s" % (self.uuid, rev)
-        
+
     def putcommit(self, files, parents, commit):
         for parent in parents:
             try:
@@ -865,12 +874,24 @@ class svn_sink(converter_sink, commandline):
             except KeyError:
                 pass
         entries = set(self.delete)
+        files = util.frozenset(files)
+        entries.update(self.add_dirs(files.difference(entries)))
+        if self.copies:
+            for s, d in self.copies:
+                self._copyfile(s, d)
+            self.copies = []
         if self.delete:
             self.run0('delete', *self.delete)
             self.delete = []
-        files = util.frozenset(files)
         entries.update(self.add_files(files.difference(entries)))
         entries.update(self.tidy_dirs(entries))
+        if self.delexec:
+            self.run0('propdel', 'svn:executable', *self.delexec)
+            self.delexec = []
+        if self.setexec:
+            self.run0('propset', 'svn:executable', '*', *self.setexec)
+            self.setexec = []
+
         fd, messagefile = tempfile.mkstemp(prefix='hg-convert-')
         fp = os.fdopen(fd, 'w')
         fp.write(commit.desc)

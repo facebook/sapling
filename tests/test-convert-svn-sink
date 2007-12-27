@@ -59,6 +59,29 @@ hg convert -d svn a
 (cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=1 | sed 's,<date>.*,<date/>,')
 test -x a-hg-wc/c && echo executable || echo not executable
 
+echo % executable in new directory
+
+rm -rf a a-hg a-hg-wc
+hg init a
+
+mkdir a/d1
+echo a > a/d1/a
+chmod +x a/d1/a
+hg --cwd a ci -d '0 0' -A -m 'add executable file in new directory'
+
+hg convert -d svn a
+(cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=1 | sed 's,<date>.*,<date/>,')
+test -x a-hg-wc/d1/a && echo executable || echo not executable
+
+echo % copy to new directory
+
+mkdir a/d2
+hg --cwd a cp d1/a d2/a
+hg --cwd a ci -d '1 0' -A -m 'copy file to new directory'
+
+hg convert -d svn a
+(cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=1 | sed 's,<date>.*,<date/>,')
+
 echo % branchy history
 
 hg init b
