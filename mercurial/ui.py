@@ -407,14 +407,15 @@ class ui(object):
 
     def prompt(self, msg, pat=None, default="y", matchflags=0):
         if not self.interactive: return default
-        try:
-            r = self._readline(msg + ' ')
-            if not pat or re.match(pat, r, matchflags):
-                return r
-            else:
-                self.write(_("unrecognized response\n"))
-        except EOFError:
-            raise util.Abort(_('response expected'))
+        while True:
+            try:
+                r = self._readline(msg + ' ')
+                if not pat or re.match(pat, r, matchflags):
+                    return r
+                else:
+                    self.write(_("unrecognized response\n"))
+            except EOFError:
+                raise util.Abort(_('response expected'))
 
     def getpass(self, prompt=None, default=None):
         if not self.interactive: return default
