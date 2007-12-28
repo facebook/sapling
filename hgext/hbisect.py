@@ -132,10 +132,15 @@ the problem-free state "bad" and the problematic state "good."
         state['skip'].append(node)
 
     # save state
-    f = repo.opener("bisect.state", "w")
-    for kind in state:
-        for node in state[kind]:
-            f.write("%s %s\n" % (kind, hg.hex(node)))
+    f = repo.opener("bisect.state", "w", atomictemp=True)
+    wlock = repo.wlock()
+    try:
+        for kind in state:
+            for node in state[kind]:
+                f.write("%s %s\n" % (kind, hg.hex(node)))
+        f.rename()
+    finally:
+        del wlock
 
     if not state['good'] or not state['bad']:
         return
