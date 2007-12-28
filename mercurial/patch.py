@@ -1082,16 +1082,17 @@ def updatedir(ui, repo, patches):
     for f in patches:
         ctype, gp = patches[f]
         if gp and gp.mode:
-            x = gp.mode & 0100 != 0
-            l = gp.mode & 020000 != 0
+            flags = ''
+            if gp.mode & 0100:
+                flags = 'x'
+            elif gp.mode & 020000:
+                flags = 'l'
             dst = os.path.join(repo.root, gp.path)
             # patch won't create empty files
             if ctype == 'ADD' and not os.path.exists(dst):
-                repo.wwrite(gp.path, '', x and 'x' or '')
+                repo.wwrite(gp.path, '', flags)
             else:
-                util.set_link(dst, l)
-                if not l:
-                    util.set_exec(dst, x)
+                util.set_flags(dst, flags)
     cmdutil.addremove(repo, cfiles)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
