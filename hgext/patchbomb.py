@@ -216,7 +216,7 @@ def patchbomb(ui, repo, *revs, **opts):
         tmpfn = os.path.join(tmpdir, 'bundle')
         try:
             commands.bundle(ui, repo, tmpfn, dest, **opts)
-            return open(tmpfn).read()
+            return open(tmpfn, 'rb').read()
         finally:
             try:
                 os.unlink(tmpfn)
@@ -260,6 +260,15 @@ def patchbomb(ui, repo, *revs, **opts):
 
     def genmsgid(id):
         return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
+
+    def getdescription(body, sender):
+        if opts['desc']:
+            body = open(opts['desc']).read()
+        else:
+            ui.write(_('\nWrite the introductory message for the '
+                       'patch series.\n\n'))
+            body = ui.edit(body, sender)
+        return body
 
     def getexportmsgs():
         patches = []
@@ -306,13 +315,7 @@ def patchbomb(ui, repo, *revs, **opts):
                 d = cdiffstat(_('Final summary:\n'), jumbo)
                 if d: body = '\n' + d
 
-            if opts['desc']:
-                body = open(opts['desc']).read()
-            else:
-                ui.write(_('\nWrite the introductory message for the '
-                           'patch series.\n\n'))
-                body = ui.edit(body, sender)
-
+            body = getdescription(body, sender)
             msg = email.MIMEText.MIMEText(body)
             msg['Subject'] = subj
 
@@ -322,9 +325,8 @@ def patchbomb(ui, repo, *revs, **opts):
     def getbundlemsgs(bundle):
         subj = (opts['subject']
                 or prompt('Subject:', default='A bundle for your repository'))
-        ui.write(_('\nWrite the introductory message for the bundle.\n\n'))
-        body = ui.edit('', sender)
 
+        body = getdescription('', sender)
         msg = email.MIMEMultipart.MIMEMultipart()
         if body:
             msg.attach(email.MIMEText.MIMEText(body, 'plain'))
