@@ -168,10 +168,10 @@ class bisect(object):
             self.autonext()
 
 def bisect_run(ui, repo, cmd=None, *args):
-    """Dichotomic search in the DAG of changesets
+    """Subdivision search of changesets
 
-This extension helps to find changesets which cause problems.
-To use, mark the earliest changeset you know introduces the problem
+This extension helps to find changesets which introduce problems.
+To use, mark the earliest changeset you know exhibits the problem
 as bad, then mark the latest changeset which is free from the problem
 as good. Bisect will update your working directory to a revision for
 testing. Once you have performed tests, mark the working directory
