@@ -7,8 +7,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from mercurial.i18n import _
-from mercurial import hg, util, commands, cmdutil
-import os, sys, array
+from mercurial import hg, util, cmdutil
+import os, array
 
 class bisect(object):
     """dichotomic search in the DAG of changesets"""
