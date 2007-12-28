@@ -66,57 +66,47 @@ class bisect(object):
         self.is_reset = True
         return 0
 
-    def candidates(self):
-        """
-        returns (anc, n_child) where anc is the set of the ancestors of head
-        and n_child is a dictionary with the following mapping:
-        node -> number of ancestors (self included)
-
-        ancestors of goodnodes are used as lower limit.
-        """
+    def bisect(self):
         cl = self.repo.changelog
         clparents = cl.parentrevs
         bad = self.badnode
         badrev = cl.rev(bad)
 
-        # add goodrevs and all ancestors to stop
-        stop = dict.fromkeys([cl.rev(n) for n in self.goodnodes])
-        for rev in xrange(cl.count(), -1, -1):
-            if rev in stop:
-                for prev in clparents(rev):
-                    stop[prev] = None
-
-        if badrev in stop:
-            raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
-                             % (badrev, hg.short(bad)))
-
-        # build a dict of node -> {ancestors}
-        ancestors = {}
-        count = {}
-        for rev in xrange(badrev + 1):
-            if not rev in stop:
-                ancestors[rev] = {rev: 1}
-                for p in clparents(rev):
-                    if not p in stop:
-                        # add parent ancestors to our ancestors
-                        ancestors[rev].update(ancestors[p])
-                count[rev] = len(ancestors[rev])
-
-        if badrev not in ancestors[badrev]:
-            raise util.Abort(_("Could not find the first bad revision"))
-
-        return ancestors[badrev], count
-
-    def next(self):
-        if not self.badnode:
+        if not bad:
             raise util.Abort(_("You should give at least one bad revision"))
         if not self.goodnodes:
             self.ui.warn(_("No good revision given\n"))
             self.ui.warn(_("Marking the first revision as good\n"))
-        ancestors, count = self.candidates()
+
+        # build ancestors array
+        ancestors = [{}] * (cl.count() + 1) # an extra for [-1]
+
+        # clear goodnodes from array
+        for good in self.goodnodes:
+            ancestors[cl.rev(good)] = None
+        for rev in xrange(cl.count(), -1, -1):
+            if ancestors[rev] is None:
+                for prev in clparents(rev):
+                    ancestors[prev] = None
+
+        if ancestors[badrev] is None:
+            raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
+                             % (badrev, hg.short(bad)))
+
+        # accumulate ancestor lists
+        for rev in xrange(badrev + 1):
+            if ancestors[rev] == {}:
+                ancestors[rev] = {rev: 1}
+                for p in clparents(rev):
+                    if ancestors[p]:
+                        # add parent ancestors to our ancestors
+                        ancestors[rev].update(ancestors[p])
+
+        if badrev not in ancestors[badrev]:
+            raise util.Abort(_("Could not find the first bad revision"))
 
         # have we narrowed it down to one entry?
-        tot = len(ancestors)
+        tot = len(ancestors[badrev])
         if tot == 1:
             self.ui.write(_("The first bad revision is:\n"))
             displayer = cmdutil.show_changeset(self.ui, self.repo, {})
@@ -126,15 +116,15 @@ class bisect(object):
         # find the best node to test
         best_rev = None
         best_len = -1
-        for n in ancestors:
-            a = count[n] # number of ancestors
+        for n in ancestors[badrev]:
+            a = len(ancestors[n]) # number of ancestors
             b = tot - a # number of non-ancestors
             value = min(a, b) # how good is this test?
             if value > best_len:
                 best_len = value
                 best_rev = n
         assert best_rev is not None
-        best_node = self.repo.changelog.node(best_rev)
+        best_node = cl.node(best_rev)
 
         # compute the approximate number of remaining tests
         nb_tests = 0
@@ -150,7 +140,7 @@ class bisect(object):
 
     def autonext(self):
         """find and update to the next revision to test"""
-        node = self.next()
+        node = self.bisect()
         if node is not None:
             cmdutil.bail_if_changed(self.repo)
             return hg.clean(self.repo, node)
