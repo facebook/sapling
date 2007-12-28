@@ -236,13 +236,7 @@ def binary(s):
 
 def unique(g):
     """return the uniq elements of iterable g"""
-    seen = {}
-    l = []
-    for f in g:
-        if f not in seen:
-            seen[f] = 1
-            l.append(f)
-    return l
+    return dict.fromkeys(g).keys()
 
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""
