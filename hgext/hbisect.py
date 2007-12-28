@@ -181,25 +181,19 @@ class bisect(object):
         if rev is not None:
             return hg.clean(self.repo, rev)
 
-    def good(self, rev):
-        self.goodrevs.append(rev)
-
     def autogood(self, rev=None):
         """mark revision as good and update to the next revision to test"""
         check_clean(self.ui, self.repo)
         rev = lookup_rev(self.ui, self.repo, rev)
-        self.good(rev)
+        self.goodrevs.append(rev)
         if self.badrev:
             return self.autonext()
-
-    def bad(self, rev):
-        self.badrev = rev
 
     def autobad(self, rev=None):
         """mark revision as bad and update to the next revision to test"""
         check_clean(self.ui, self.repo)
         rev = lookup_rev(self.ui, self.repo, rev)
-        self.bad(rev)
+        self.badrev = rev
         if self.goodrevs:
             self.autonext()
 
