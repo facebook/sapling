@@ -52,12 +52,6 @@ class bisect(object):
         bad = self.badnode
         badrev = cl.rev(bad)
 
-        if not bad:
-            raise util.Abort(_("You should give at least one bad revision"))
-        if not self.goodnodes:
-            self.ui.warn(_("No good revision given\n"))
-            self.ui.warn(_("Marking the first revision as good\n"))
-
         # build ancestors array
         ancestors = [[]] * (cl.count() + 1) # an extra for [-1]
 
@@ -98,10 +92,7 @@ class bisect(object):
         # have we narrowed it down to one entry?
         tot = len(ancestors[badrev])
         if tot == 1:
-            self.ui.write(_("The first bad revision is:\n"))
-            displayer = cmdutil.show_changeset(self.ui, self.repo, {})
-            displayer.show(changenode=self.badnode)
-            return None
+            return (self.badnode, 0)
 
         # find the best node to test
         best_rev = None
@@ -119,23 +110,26 @@ class bisect(object):
         assert best_rev is not None
         best_node = cl.node(best_rev)
 
-        # compute the approximate number of remaining tests
-        nb_tests = 0
-        q, r = divmod(tot, 2)
-        while q:
-            nb_tests += 1
-            q, r = divmod(q, 2)
-
-        self.ui.write(_("Testing changeset %s:%s "
-                        "(%s changesets remaining, ~%s tests)\n")
-                      % (best_rev, hg.short(best_node), tot, nb_tests))
-        return best_node
+        return (best_node, tot)
 
     def next(self):
         """find and update to the next revision to test"""
         if self.goodnodes and self.badnode:
-            node = self.bisect()
-            if node is not None:
+            node, changesets = self.bisect()
+
+            if changesets == 0:
+                self.ui.write(_("The first bad revision is:\n"))
+                displayer = cmdutil.show_changeset(self.ui, self.repo, {})
+                displayer.show(changenode=node)
+            elif node is not None:
+                # compute the approximate number of remaining tests
+                tests, size = 0, 2
+                while size <= changesets:
+                    tests, size = tests + 1, size * 2
+                rev = self.repo.changelog.rev(node)
+                self.ui.write(_("Testing changeset %s:%s "
+                                "(%s changesets remaining, ~%s tests)\n")
+                              % (rev, hg.short(node), changesets, tests))
                 cmdutil.bail_if_changed(self.repo)
                 return hg.clean(self.repo, node)
 
@@ -155,7 +149,7 @@ class bisect(object):
         """mark revision as bad and update to the next revision to test"""
         self.badnode = self.repo.lookup(rev or '.')
         self.write()
-        self.next()
+        return self.next()
 
 def bisect_run(ui, repo, cmd=None, *args):
     """Subdivision search of changesets
