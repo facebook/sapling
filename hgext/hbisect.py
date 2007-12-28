@@ -90,35 +90,22 @@ class bisect(object):
             raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
                              % (badrev, hg.short(bad)))
 
-        # build a dict of node -> [number of children, {}]
-        n_child = {badrev: [0, {}]}
+        # build a dict of node -> {ancestors}
+        ancestors = {}
+        count = {}
         for rev in xrange(badrev + 1):
-            if rev not in n_child:
-                n_child[rev] = [0, {}]
-            # increment count of each parent
-            for p in clparents(rev):
-                if p != hg.nullrev:
-                    n_child[p][0] += 1
-
-        for rev in xrange(badrev + 1):
-            for p in clparents(rev):
-                if p != hg.nullrev:
-                    n_child[p][0] -= 1
-                    if not rev in stop:
-                        n_child[rev][1].update(n_child[p][1])
-                    if n_child[p][0] == 0:
-                        n_child[p] = len(n_child[p][1])
             if not rev in stop:
-                n_child[rev][1][rev] = 1
-            if n_child[rev][0] == 0:
-                if rev == badrev:
-                    anc = n_child[rev][1]
-                n_child[rev] = len(n_child[rev][1])
+                ancestors[rev] = {rev: 1}
+                for p in clparents(rev):
+                    if not p in stop:
+                        # add parent ancestors to our ancestors
+                        ancestors[rev].update(ancestors[p])
+                count[rev] = len(ancestors[rev])
 
-        if badrev not in anc:
+        if badrev not in ancestors[badrev]:
             raise util.Abort(_("Could not find the first bad revision"))
 
-        return anc, n_child
+        return ancestors[badrev], count
 
     def next(self):
         if not self.badnode:
@@ -126,7 +113,7 @@ class bisect(object):
         if not self.goodnodes:
             self.ui.warn(_("No good revision given\n"))
             self.ui.warn(_("Marking the first revision as good\n"))
-        ancestors, n_child = self.candidates()
+        ancestors, count = self.candidates()
 
         # have we narrowed it down to one entry?
         tot = len(ancestors)
@@ -140,8 +127,8 @@ class bisect(object):
         best_rev = None
         best_len = -1
         for n in ancestors:
-            a = n_child[n] # number of children
-            b = tot - a # number of ancestors
+            a = count[n] # number of ancestors
+            b = tot - a # number of non-ancestors
             value = min(a, b) # how good is this test?
             if value > best_len:
                 best_len = value
