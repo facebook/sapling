@@ -247,8 +247,8 @@ def filterpatch(ui, chunks):
         if resp_file[0] is not None:
             return resp_file[0]
         while True:
-            r = (ui.prompt(query + _(' [Ynsfdaq?] '), '[Ynsfdaq?]?$',
-                           matchflags=re.I) or 'y').lower()
+            r = (ui.prompt(query + _(' [Ynsfdaq?] '), '(?i)[Ynsfdaq?]?$')
+                 or 'y').lower()
             if r == '?':
                 c = record.__doc__.find('y - record this change')
                 for l in record.__doc__[c:].splitlines():

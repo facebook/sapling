@@ -410,14 +410,18 @@ class ui(object):
             line = line[:-1]
         return line
 
-    def prompt(self, msg, pat=None, default="y", matchflags=0):
+    def prompt(self, msg, pat=None, default="y"):
+        """Prompt user with msg, read response, and ensure it matches pat
+
+        If not interactive -- the default is returned
+        """
         if not self.interactive: return default
         while True:
             try:
                 r = self._readline(msg + ' ')
                 if not r:
                     return default
-                if not pat or re.match(pat, r, matchflags):
+                if not pat or re.match(pat, r):
                     return r
                 else:
                     self.write(_("unrecognized response\n"))
