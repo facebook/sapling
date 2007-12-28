@@ -20,6 +20,8 @@ if [ -h a ]; then
     $TESTDIR/readlink.py a
 elif [ -x a ]; then
     echo a is executable
+else
+    echo "a has no flags (default for conflicts)"
 fi
 
 hg update -C 1
@@ -32,7 +34,6 @@ if [ -h a ]; then
     $TESTDIR/readlink.py a
 elif [ -x a ]; then
     echo a is executable
+else
+    echo "a has no flags (default for conflicts)"
 fi
-
-echo "skipped: test is for a known, unfixed bug"
-exit 80

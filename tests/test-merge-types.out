@@ -1,1 +1,22 @@
-### This test is for a known, unfixed bug ###
+adding a
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+resolving manifests
+ overwrite None partial False
+ ancestor c334dc3be0da local 521a1e40188f+ remote 3574f3e69b1c
+  searching for copies back to rev 1
+ a: update permissions -> e
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% symlink is local parent, executable is other
+a has no flags (default for conflicts)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+resolving manifests
+ overwrite None partial False
+ ancestor c334dc3be0da local 3574f3e69b1c+ remote 521a1e40188f
+  searching for copies back to rev 1
+ a: remote is newer -> g
+getting a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% symlink is other parent, executable is local
+a has no flags (default for conflicts)
