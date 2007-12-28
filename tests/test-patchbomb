@@ -1,20 +1,46 @@
 #!/bin/sh
 
+fixheaders()
+{
+    sed -e 's/\(Message-Id:.*@\).*/\1/'  \
+        -e 's/\(In-Reply-To:.*@\).*/\1/' \
+        -e 's/===.*/===/'
+}
+
 echo "[extensions]" >> $HGRCPATH
 echo "patchbomb=" >> $HGRCPATH
 
-hg init
+hg init t
+cd t
 echo a > a
 hg commit -Ama -d '1 0'
 
 hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar tip | \
-  sed -e 's/\(Message-Id:.*@\).*/\1/'
+  fixheaders
 
 echo b > b
 hg commit -Amb -d '2 0'
 
 hg email --date '1970-1-1 0:2' -n -f quux -t foo -c bar -s test 0:tip | \
-  sed -e 's/\(Message-Id:.*@\).*/\1/' | \
-  sed -e 's/\(In-Reply-To:.*@\).*/\1/'
+  fixheaders
 
 hg email -m test.mbox -f quux -t foo -c bar -s test 0:tip
+
+cd ..
+
+hg clone -q t t2
+cd t2
+echo c > c
+hg commit -Amc -d '3 0'
+
+cat > description <<EOF
+a multiline
+
+description
+EOF
+
+echo % test bundle and description
+hg email --date '1970-1-1 0:3' -n -f quux -t foo \
+    -c bar -s test -r tip -b --desc description | \
+    fixheaders
+
