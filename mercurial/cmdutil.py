@@ -64,6 +64,8 @@ def findcmd(ui, cmd, table):
     raise UnknownCommand(cmd)
 
 def bail_if_changed(repo):
+    if repo.dirstate.parents()[1] != nullid:
+        raise util.Abort(_('outstanding uncommitted merge'))
     modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:
         raise util.Abort(_("outstanding uncommitted changes"))

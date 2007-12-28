@@ -196,11 +196,9 @@ def backout(ui, repo, node=None, rev=None, **opts):
         raise util.Abort(_("please specify a revision to backout"))
 
     cmdutil.bail_if_changed(repo)
-    op1, op2 = repo.dirstate.parents()
-    if op2 != nullid:
-        raise util.Abort(_('outstanding uncommitted merge'))
     node = repo.lookup(rev)
 
+    op1, op2 = repo.dirstate.parents()
     a = repo.changelog.ancestor(op1, node)
     if a != node:
         raise util.Abort(_('cannot back out change on a different branch'))
