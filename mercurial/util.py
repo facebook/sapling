@@ -985,12 +985,6 @@ if os.name == 'nt':
         '''return False if pid dead, True if running or not known'''
         return True
 
-    def set_exec(f, mode):
-        pass
-
-    def set_link(f, mode):
-        pass
-
     def set_flags(f, flags):
         pass
 
@@ -1134,48 +1128,6 @@ else:
     def is_exec(f):
         """check whether a file is executable"""
         return (os.lstat(f).st_mode & 0100 != 0)
-
-    def force_chmod(f, s):
-        try:
-            os.chmod(f, s)
-        except OSError, inst:
-            if inst.errno != errno.EPERM:
-                raise
-            # maybe we don't own the file, try copying it
-            new_f = mktempcopy(f)
-            os.chmod(new_f, s)
-            os.rename(new_f, f)
-
-    def set_exec(f, mode):
-        s = os.lstat(f).st_mode
-        if stat.S_ISLNK(s) or (s & 0100 != 0) == mode:
-            return
-        if mode:
-            # Turn on +x for every +r bit when making a file executable
-            # and obey umask.
-            force_chmod(f, s | (s & 0444) >> 2 & ~_umask)
-        else:
-            force_chmod(f, s & 0666)
-
-    def set_link(f, mode):
-        """make a file a symbolic link/regular file
-
-        if a file is changed to a link, its contents become the link data
-        if a link is changed to a file, its link data become its contents
-        """
-
-        m = os.path.islink(f)
-        if m == bool(mode):
-            return
-
-        if mode: # switch file to link
-            data = file(f).read()
-            os.unlink(f)
-            os.symlink(data, f)
-        else:
-            data = os.readlink(f)
-            os.unlink(f)
-            file(f, "w").write(data)
 
     def set_flags(f, flags):
         s = os.lstat(f).st_mode
