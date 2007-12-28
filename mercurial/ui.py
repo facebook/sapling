@@ -415,6 +415,8 @@ class ui(object):
         while True:
             try:
                 r = self._readline(msg + ' ')
+                if not r:
+                    return default
                 if not pat or re.match(pat, r, matchflags):
                     return r
                 else:
