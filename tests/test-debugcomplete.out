@@ -62,6 +62,7 @@ debugcomplete
 debugconfig
 debugdata
 debugdate
+debugfsinfo
 debugindex
 debugindexdot
 debuginstall

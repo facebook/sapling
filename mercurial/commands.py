@@ -489,6 +489,14 @@ def debugcomplete(ui, cmd='', **opts):
     clist.sort()
     ui.write("%s\n" % "\n".join(clist))
 
+def debugfsinfo(ui, path = "."):
+    file('.debugfsinfo', 'w').write('')
+    ui.write('exec: %s\n' % (util.checkexec(path) and 'yes' or 'no'))
+    ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
+    ui.write('case-sensitive: %s\n' % (util.checkfolding('.debugfsinfo')
+                                and 'yes' or 'no'))
+    os.unlink('.debugfsinfo')
+
 def debugrebuildstate(ui, repo, rev=""):
     """rebuild the dirstate as it would look like for the given revision"""
     if rev == "":
@@ -2717,6 +2725,7 @@ table = {
          [('e', 'extended', None, _('try extended date formats'))],
          _('debugdate [-e] DATE [RANGE]')),
     "debugdata": (debugdata, [], _('debugdata FILE REV')),
+    "debugfsinfo": (debugfsinfo, [], _('debugfsinfo [PATH]')),
     "debugindex": (debugindex, [], _('debugindex FILE')),
     "debugindexdot": (debugindexdot, [], _('debugindexdot FILE')),
     "debugrename":
@@ -2981,5 +2990,5 @@ table = {
 }
 
 norepo = ("clone init version help debugancestor debugcomplete debugdata"
-          " debugindex debugindexdot debugdate debuginstall")
+          " debugindex debugindexdot debugdate debuginstall debugfsinfo")
 optionalrepo = ("identify paths serve showconfig")
