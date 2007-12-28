@@ -10,13 +10,6 @@ from mercurial.i18n import _
 from mercurial import hg, util, commands, cmdutil
 import os, sys, sets
 
-def check_clean(ui, repo):
-    merged = (nullid in repo.dirstate.parents())
-    modified, added, removed, deleted, unknown = repo.status()[:5]
-    if modified or added or removed or merged:
-        ui.warn("Repository is not clean, please commit or revert\n")
-        sys.exit(1)
-
 class bisect(object):
     """dichotomic search in the DAG of changesets"""
     def __init__(self, ui, repo):
@@ -56,7 +49,6 @@ class bisect(object):
         if os.path.isdir(self.path):
             raise util.Abort(_("bisect directory already exists\n"))
         os.mkdir(self.path)
-        check_clean(self.ui, self.repo)
         return 0
 
     def reset(self):
@@ -166,8 +158,8 @@ class bisect(object):
     def autonext(self):
         """find and update to the next revision to test"""
         rev = self.next()
-        check_clean(self.ui, self.repo)
         if rev is not None:
+            cmdutil.bail_if_changed(self.repo)
             return hg.clean(self.repo, rev)
 
     def autogood(self, rev=None):
