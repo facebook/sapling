@@ -1,6 +1,9 @@
 % commit date test
 transaction abort!
 rollback completed
+abort: commit message cannot be left blank
+transaction abort!
+rollback completed
 abort: impossible time zone offset: 4444444
 transaction abort!
 rollback completed
