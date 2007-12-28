@@ -50,7 +50,7 @@ diff --git a/empty-rw b/empty-rw
 new file mode 100644
 examine changes to 'empty-rw'? [Ynsfdaq?]  transaction abort!
 rollback completed
-abort: commit message cannot be left blank
+abort: empty commit message
 
 changeset:   -1:000000000000
 tag:         tip

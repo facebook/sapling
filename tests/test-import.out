@@ -22,7 +22,7 @@ added 1 changesets with 2 changes to 2 files
 applying ../tip.patch
 transaction abort!
 rollback completed
-abort: commit message cannot be left blank
+abort: empty commit message
 % import of plain diff should be ok with message
 requesting all changes
 adding changesets
@@ -92,7 +92,7 @@ added 1 changesets with 2 changes to 2 files
 applying patch from stdin
 transaction abort!
 rollback completed
-abort: commit message cannot be left blank
+abort: empty commit message
 % hg export in email, should use patch header
 requesting all changes
 adding changesets

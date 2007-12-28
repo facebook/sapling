@@ -799,13 +799,14 @@ class localrepository(repo.repository):
                 if text:
                     edittext.append(text)
                 edittext.append("")
-                edittext.append(_("HG: Please write and save a commit message"))
+                edittext.append(_("HG: Enter commit message."
+                                  "  Lines beginning with 'HG:' are removed."))
                 edittext.append("HG: --")
                 edittext.append("HG: user: %s" % user)
                 if p2 != nullid:
                     edittext.append("HG: branch merge")
                 if branchname:
-                    edittext.append("HG: branch %s" % util.tolocal(branchname))
+                    edittext.append("HG: branch '%s'" % util.tolocal(branchname))
                 edittext.extend(["HG: changed %s" % f for f in changed])
                 edittext.extend(["HG: removed %s" % f for f in removed])
                 if not changed and not remove:
@@ -825,7 +826,7 @@ class localrepository(repo.repository):
                 while lines and not lines[0]:
                     del lines[0]
                 if not lines:
-                    raise util.Abort(_("commit message cannot be left blank"))
+                    raise util.Abort(_("empty commit message"))
                 text = '\n'.join(lines)
 
             n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
