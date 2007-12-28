@@ -848,18 +848,23 @@ def checkexec(path):
 
     Requires a directory (like /foo/.hg)
     """
+
+    # VFAT on some Linux versions can flip mode but it doesn't persist
+    # a FS remount. Frequently we can detect it if files are created
+    # with exec bit on.
+
     try:
         EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
         fh, fn = tempfile.mkstemp("", "", path)
-        os.close(fh)
-        m = os.stat(fn).st_mode
-        # VFAT on Linux can flip mode but it doesn't persist a FS remount.
-        # frequently we can detect it if files are created with exec bit on.
-        new_file_has_exec = m & EXECFLAGS
-        os.chmod(fn, m ^ EXECFLAGS)
-        exec_flags_cannot_flip = (os.stat(fn).st_mode == m)
-        os.unlink(fn)
-    except (IOError,OSError):
+        try:
+            os.close(fh)
+            m = os.stat(fn).st_mode & 0777
+            new_file_has_exec = m & EXECFLAGS
+            os.chmod(fn, m ^ EXECFLAGS)
+            exec_flags_cannot_flip = (os.stat(fn).st_mode == m)
+        finally:
+            os.unlink(fn)
+    except (IOError, OSError):
         # we don't care, the user probably won't be able to commit anyway
         return False
     return not (new_file_has_exec or exec_flags_cannot_flip)
