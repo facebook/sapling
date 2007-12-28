@@ -16,6 +16,7 @@ class bisect(object):
         self.repo = repo
         self.ui = ui
         self.goodnodes = []
+        self.skipnodes = []
         self.badnode = None
 
         p = self.repo.join("bisect.state")
@@ -25,6 +26,8 @@ class bisect(object):
                 node = self.repo.lookup(node)
                 if type == "good":
                     self.goodnodes.append(node)
+                elif type == "skip":
+                    self.skipnodes.append(node)
                 elif type == "bad":
                     self.badnode = node
 
@@ -32,6 +35,8 @@ class bisect(object):
         f = self.repo.opener("bisect.state", "w")
         for n in self.goodnodes:
             f.write("good %s\n" % hg.hex(n))
+        for n in self.skipnodes:
+            f.write("skip %s\n" % hg.hex(n))
         if self.badnode:
             f.write("bad %s\n" % hg.hex(self.badnode))
 
@@ -101,7 +106,10 @@ class bisect(object):
         # find the best node to test
         best_rev = None
         best_len = -1
+        skip = dict.fromkeys([cl.rev(s) for s in self.skipnodes])
         for n in ancestors[badrev]:
+            if n in skip:
+                continue
             a = len(ancestors[n]) # number of ancestors
             b = tot - a # number of non-ancestors
             value = min(a, b) # how good is this test?
@@ -125,24 +133,29 @@ class bisect(object):
 
     def next(self):
         """find and update to the next revision to test"""
-        node = self.bisect()
-        if node is not None:
-            cmdutil.bail_if_changed(self.repo)
-            return hg.clean(self.repo, node)
+        if self.goodnodes and self.badnode:
+            node = self.bisect()
+            if node is not None:
+                cmdutil.bail_if_changed(self.repo)
+                return hg.clean(self.repo, node)
 
     def good(self, rev=None):
         """mark revision as good and update to the next revision to test"""
         self.goodnodes.append(self.repo.lookup(rev or '.'))
         self.write()
-        if self.badnode:
-            return self.next()
+        return self.next()
+
+    def skip(self, rev=None):
+        """mark revision as skipped and update to the next revision to test"""
+        self.skipnodes.append(self.repo.lookup(rev or '.'))
+        self.write()
+        return self.next()
 
     def bad(self, rev=None):
         """mark revision as bad and update to the next revision to test"""
         self.badnode = self.repo.lookup(rev or '.')
         self.write()
-        if self.goodnodes:
-            self.next()
+        self.next()
 
 def bisect_run(ui, repo, cmd=None, *args):
     """Subdivision search of changesets
@@ -183,6 +196,7 @@ For subcommands see "hg bisect help\"
         "init": (b.init, 0, _("hg bisect init")),
         "bad": (b.bad, 1, _("hg bisect bad [<rev>]")),
         "good": (b.good, 1, _("hg bisect good [<rev>]")),
+        "skip": (b.skip, 1, _("hg bisect skip [<rev>]")),
         "next": (b.next, 0, _("hg bisect next")),
         "help": (help_, 1, _("hg bisect help [<subcommand>]")),
     }
