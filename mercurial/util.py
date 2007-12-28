@@ -1313,7 +1313,7 @@ def mktempcopy(name, emptyok=False):
     # what we want.  If the original file already exists, just copy
     # its mode.  Otherwise, manually obey umask.
     try:
-        st_mode = os.lstat(name).st_mode
+        st_mode = os.lstat(name).st_mode & 0777
     except OSError, inst:
         if inst.errno != errno.ENOENT:
             raise
