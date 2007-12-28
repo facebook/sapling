@@ -82,25 +82,20 @@ class bisect(object):
                 continue
             stop.update(cl.reachable(g))
 
-        def num_children(a):
-            """
-            returns a dictionary with the following mapping
-            node -> [number of children, empty set]
-            """
-            d = {a: [0, {}]}
-            for i in xrange(cl.rev(a)+1):
-                n = cl.node(i)
-                if n not in d:
-                    d[n] = [0, {}]
-                parents = [p for p in cl.parents(n) if p != hg.nullid]
-                for p in parents:
-                    d[p][0] += 1
-            return d
-
         if head in stop:
             raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
                              % (cl.rev(head), hg.short(head)))
-        n_child = num_children(head)
+
+        # build a dict of node -> [number of children, {}]
+        n_child = {head: [0, {}]}
+        for i in xrange(cl.rev(head)+1):
+            n = cl.node(i)
+            if n not in d:
+                n_child[n] = [0, {}]
+            parents = [p for p in cl.parents(n) if p != hg.nullid]
+            for p in parents:
+                n_child[p][0] += 1
+
         for i in xrange(cl.rev(head)+1):
             n = cl.node(i)
             parents = [p for p in cl.parents(n) if p != hg.nullid]
