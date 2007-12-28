@@ -356,13 +356,23 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         if not f2:
             f2 = f
             fa = f
-        a, b, c = ma.execf(fa), m1.execf(f), m2.execf(f2)
-        if ((a^b) | (a^c)) ^ a:
-            return 'x'
-        a, b, c = ma.linkf(fa), m1.linkf(f), m2.linkf(f2)
-        if ((a^b) | (a^c)) ^ a:
-            return 'l'
-        return ''
+        a, m, n = ma.flags(fa), m1.flags(f), m2.flags(f2)
+        if m == n: # flags agree
+            return m # unchanged
+        if m and n: # flags are set but don't agree
+            if not a: # both differ from parent
+                r = repo.ui.prompt(
+                    _(" conflicting flags for %s\n"
+                      "(n)one, e(x)ec or sym(l)ink?") % f, "[nxl]", "n")
+                return r != "n" and r or ''
+            if m == a:
+                return n # changed from m to n
+            return m # changed from n to m
+        if m and m != a: # changed from a to m
+            return m
+        if n and n != a: # changed from a to n
+            return n
+        return '' # flag was cleared
 
     def act(msg, m, f, *args):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
@@ -386,31 +396,31 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         if partial and not partial(f):
             continue
         if f in m2:
+            if overwrite or backwards:
+                rflags = m2.flags(f)
+            else:
+                rflags = fmerge(f)
             # are files different?
             if n != m2[f]:
                 a = ma.get(f, nullid)
                 # are we clobbering?
                 if overwrite:
-                    act("clobbering", "g", f, m2.flags(f))
+                    act("clobbering", "g", f, rflags)
                 # or are we going back in time and clean?
                 elif backwards and not n[20:]:
-                    act("reverting", "g", f, m2.flags(f))
+                    act("reverting", "g", f, rflags)
                 # are both different from the ancestor?
                 elif n != a and m2[f] != a:
-                    act("versions differ", "m", f, f, f, fmerge(f), False)
+                    act("versions differ", "m", f, f, f, rflags, False)
                 # is remote's version newer?
                 elif m2[f] != a:
-                    act("remote is newer", "g", f, fmerge(f))
+                    act("remote is newer", "g", f, rflags)
                 # local is newer, not overwrite, check mode bits
-                elif fmerge(f) != m1.flags(f):
-                    act("update permissions", "e", f, m2.flags(f))
+                elif m1.flags(f) != rflags:
+                    act("update permissions", "e", f, rflags)
             # contents same, check mode bits
-            elif m1.flags(f) != m2.flags(f):
-                # are we clobbering?
-                # is remote's version newer?
-                # or are we going back?
-                if overwrite or fmerge(f) != m1.flags(f) or backwards:
-                    act("update permissions", "e", f, m2.flags(f))
+            elif m1.flags(f) != rflags:
+                act("update permissions", "e", f, rflags)
         elif f in copied:
             continue
         elif f in copy:
