@@ -167,36 +167,6 @@ class bisect(object):
         if self.goodnodes:
             self.autonext()
 
-# should we put it in the class ?
-def test(ui, repo, rev):
-    """test the bisection code"""
-    b = bisect(ui, repo)
-    node = repo.lookup(rev)
-    ui.write("testing with rev %s\n" % hg.hex(node))
-    anc = b.ancestors()
-    while len(anc) > 1:
-        if not node in anc:
-            ui.warn("failure while bisecting\n")
-            sys.exit(1)
-        ui.write("it worked :)\n")
-        new_node = b.next()
-        ui.write("choosing if good or bad\n")
-        if node in b.ancestors(head=new_node):
-            b.bad(new_node)
-            ui.write("it is bad\n")
-        else:
-            b.good(new_node)
-            ui.write("it is good\n")
-        anc = b.ancestors()
-        #repo.update(new_node, force=True)
-    for v in anc:
-        if v != node:
-            ui.warn("fail to found cset! :(\n")
-            return 1
-    ui.write("Found bad cset: %s\n" % hg.hex(b.badnode))
-    ui.write("Everything is ok :)\n")
-    return 0
-
 def bisect_run(ui, repo, cmd=None, *args):
     """Dichotomic search in the DAG of changesets
 
