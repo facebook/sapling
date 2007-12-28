@@ -8,7 +8,7 @@
 
 from mercurial.i18n import _
 from mercurial import hg, util, commands, cmdutil
-import os, sys
+import os, sys, array
 
 class bisect(object):
     """dichotomic search in the DAG of changesets"""
@@ -104,13 +104,13 @@ class bisect(object):
                         a = dict.fromkeys(a2)
                         a.update(dict.fromkeys(a1))
                         a[rev] = None
-                        ancestors[rev] = a.keys()
+                        ancestors[rev] = array.array("l", a.keys())
                     else:
-                        ancestors[rev] = a1 + [rev]
+                        ancestors[rev] = a1 + array.array("l", [rev])
                 elif a2:
-                    ancestors[rev] = a2 + [rev]
+                    ancestors[rev] = a2 + array.array("l", [rev])
                 else:
-                    ancestors[rev] = [rev]
+                    ancestors[rev] = array.array("l", [rev])
 
         if badrev not in ancestors[badrev]:
             raise util.Abort(_("Could not find the first bad revision"))
