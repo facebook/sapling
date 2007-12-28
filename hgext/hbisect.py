@@ -10,8 +10,6 @@ from mercurial.i18n import _
 from mercurial import hg, util, commands, cmdutil
 import os, sys, sets
 
-versionstr = "0.0.3"
-
 def check_clean(ui, repo):
     merged = (nullid in repo.dirstate.parents())
     modified, added, removed, deleted, unknown = repo.status()[:5]
