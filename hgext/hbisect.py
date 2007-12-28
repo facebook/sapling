@@ -151,7 +151,8 @@ class bisect(object):
         self.write()
         return self.next()
 
-def bisect_run(ui, repo, cmd=None, *args):
+def bisect_run(ui, repo, node=None, extra=None,
+               reset=None, good=None, bad=None, skip=None):
     """Subdivision search of changesets
 
 This extension helps to find changesets which introduce problems.
@@ -166,48 +167,37 @@ Note: bisect expects bad revisions to be descendants of good revisions.
 If you are looking for the point at which a problem was fixed, then make
 the problem-free state "bad" and the problematic state "good."
 
-For subcommands see "hg bisect help\"
     """
-    def help_(cmd=None, *args):
-        """show help for a given bisect subcommand or all subcommands"""
-        cmdtable = bisectcmdtable
-        if cmd:
-            doc = cmdtable[cmd][0].__doc__
-            synopsis = cmdtable[cmd][2]
-            ui.write(synopsis + "\n")
-            ui.write("\n" + doc + "\n")
-            return
-        ui.write(_("list of subcommands for the bisect extension\n\n"))
-        cmds = cmdtable.keys()
-        cmds.sort()
-        m = max([len(c) for c in cmds])
-        for cmd in cmds:
-            doc = cmdtable[cmd][0].__doc__.splitlines(0)[0].rstrip()
-            ui.write(" %-*s   %s\n" % (m, cmd, doc))
+    # backward compatibility
+    if node in "good bad reset init".split():
+        ui.warn(_("(use of 'hg bisect <cmd>' is deprecated)\n"))
+        cmd, node, extra = node, extra, None
+        if cmd == "good":
+            good = True
+        elif cmd == "bad":
+            bad = True
+        else:
+            reset = True
+    elif extra or good + bad + skip + reset > 1:
+        raise util.Abort("Incompatible arguments")
 
     b = bisect(ui, repo)
-    bisectcmdtable = {
-        "init": (b.init, 0, _("hg bisect init")),
-        "bad": (b.bad, 1, _("hg bisect bad [<rev>]")),
-        "good": (b.good, 1, _("hg bisect good [<rev>]")),
-        "skip": (b.skip, 1, _("hg bisect skip [<rev>]")),
-        "next": (b.next, 0, _("hg bisect next")),
-        "help": (help_, 1, _("hg bisect help [<subcommand>]")),
-    }
-
-    if cmd == "reset":
-        cmd = "init"
-
-    if not bisectcmdtable.has_key(cmd):
-        ui.warn(_("bisect: Unknown sub-command\n"))
-        return help_()
-    if len(args) > bisectcmdtable[cmd][1]:
-        ui.warn(_("bisect: Too many arguments\n"))
-        return help_()
-    ret = bisectcmdtable[cmd][0](*args)
-    return ret
+    if good:
+        return b.good(node)
+    elif bad:
+        return b.bad(node)
+    elif skip:
+        return b.skip(node)
+    elif reset:
+        return b.init()
+    else:
+        return b.next()
 
 cmdtable = {
-    "bisect": (bisect_run, [], _("hg bisect [help|init|reset|next|good|bad]")),
-    #"bisect-test": (test, [], "hg bisect-test rev"),
+    "bisect": (bisect_run,
+               [('r', 'reset', False, _('reset bisect state')),
+                ('g', 'good', False, _('mark changeset good')),
+                ('b', 'bad', False, _('mark changeset bad')),
+                ('s', 'skip', False, _('skip testing changeset'))],
+               _("hg bisect [-gbsr] [REV]"))
 }

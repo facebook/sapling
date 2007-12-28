@@ -26,11 +26,11 @@ echo % hg up -C
 hg up -C
 
 echo % bisect test
-hg bisect init
-hg bisect bad
-hg bisect good 1
-hg bisect good
-hg bisect good
-hg bisect good
-hg bisect bad
-hg bisect good
+hg bisect -r
+hg bisect -b
+hg bisect -g 1
+hg bisect -g
+hg bisect -g
+hg bisect -g
+hg bisect -b
+hg bisect -g
