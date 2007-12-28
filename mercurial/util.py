@@ -991,6 +991,9 @@ if os.name == 'nt':
     def set_link(f, mode):
         pass
 
+    def set_flags(f, flags):
+        pass
+
     def set_binary(fd):
         msvcrt.setmode(fd.fileno(), os.O_BINARY)
 
@@ -1173,6 +1176,34 @@ else:
             data = os.readlink(f)
             os.unlink(f)
             file(f, "w").write(data)
+
+    def set_flags(f, flags):
+        s = os.lstat(f).st_mode
+        x = "x" in flags
+        l = "l" in flags
+        if l:
+            if not stat.S_ISLNK(s):
+                # switch file to link
+                data = file(f).read()
+                os.unlink(f)
+                os.symlink(data, f)
+            # no chmod needed at this point
+            return
+        if stat.S_ISLNK(s):
+            # switch link to file
+            data = os.readlink(f)
+            os.unlink(f)
+            file(f, "w").write(data)
+            s = 0666 & ~_umask # avoid restatting for chmod
+
+        sx = s & 0100
+        if x and not sx:
+            # Turn on +x for every +r bit when making a file executable
+            # and obey umask.
+            os.chmod(f, s | (s & 0444) >> 2 & ~_umask)
+        elif not x and sx:
+            # Turn off all +x bits
+            os.chmod(f, s & 0666)
 
     def set_binary(fd):
         pass
