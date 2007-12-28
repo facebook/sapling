@@ -220,7 +220,7 @@ def patchbomb(ui, repo, *revs, **opts):
         tmpfn = os.path.join(tmpdir, 'bundle')
         try:
             commands.bundle(ui, repo, tmpfn, dest, **opts)
-            return open(tmpfn).read()
+            return open(tmpfn, 'rb').read()
         finally:
             try:
                 os.unlink(tmpfn)
