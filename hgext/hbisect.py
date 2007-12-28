@@ -79,7 +79,7 @@ class bisect(object):
             self.ui.warn(_("Marking the first revision as good\n"))
 
         # build ancestors array
-        ancestors = [{}] * (cl.count() + 1) # an extra for [-1]
+        ancestors = [[]] * (cl.count() + 1) # an extra for [-1]
 
         # clear goodnodes from array
         for good in self.goodnodes:
@@ -95,12 +95,22 @@ class bisect(object):
 
         # accumulate ancestor lists
         for rev in xrange(badrev + 1):
-            if ancestors[rev] == {}:
-                ancestors[rev] = {rev: 1}
-                for p in clparents(rev):
-                    if ancestors[p]:
-                        # add parent ancestors to our ancestors
-                        ancestors[rev].update(ancestors[p])
+            if ancestors[rev] == []:
+                p1, p2 = clparents(rev)
+                a1, a2 = ancestors[p1], ancestors[p2]
+                if a1:
+                    if a2:
+                        # merge ancestor lists
+                        a = dict.fromkeys(a2)
+                        a.update(dict.fromkeys(a1))
+                        a[rev] = None
+                        ancestors[rev] = a.keys()
+                    else:
+                        ancestors[rev] = a1 + [rev]
+                elif a2:
+                    ancestors[rev] = a2 + [rev]
+                else:
+                    ancestors[rev] = [rev]
 
         if badrev not in ancestors[badrev]:
             raise util.Abort(_("Could not find the first bad revision"))
