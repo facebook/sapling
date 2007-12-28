@@ -16,15 +16,12 @@ def _string_escape(text):
     >>> s
     'ab\\ncd\\\\\\\\n\\x00ab\\rcd\\\\\\n'
     >>> res = _string_escape(s)
-    >>> s == _string_unescape(res)
+    >>> s == res.decode('string_escape')
     True
     """
     # subset of the string_escape codec
     text = text.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r')
     return text.replace('\0', '\\0')
-
-def _string_unescape(text):
-    return text.decode('string_escape')
 
 class appender:
     '''the changelog index must be update last on disk, so we use this class
@@ -123,10 +120,9 @@ class changelog(revlog):
     def decode_extra(self, text):
         extra = {}
         for l in text.split('\0'):
-            if not l:
-                continue
-            k, v = _string_unescape(l).split(':', 1)
-            extra[k] = v
+            if l:
+                k, v = text.decode('string_escape').split(':', 1)
+                extra[k] = v
         return extra
 
     def encode_extra(self, d):
