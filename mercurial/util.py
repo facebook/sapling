@@ -81,18 +81,6 @@ def locallen(s):
     """Find the length in characters of a local string"""
     return len(s.decode(_encoding, "replace"))
 
-def localsub(s, a, b=None):
-    try:
-        u = s.decode(_encoding, _encodingmode)
-        if b is not None:
-            u = u[a:b]
-        else:
-            u = u[:a]
-        return u.encode(_encoding, _encodingmode)
-    except UnicodeDecodeError, inst:
-        sub = s[max(0, inst.start-10), inst.start+10]
-        raise Abort(_("decoding near '%s': %s!") % (sub, inst))
-
 # used by parsedate
 defaultdateformats = (
     '%Y-%m-%d %H:%M:%S',
