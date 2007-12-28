@@ -14,57 +14,32 @@ class bisect(object):
     """dichotomic search in the DAG of changesets"""
     def __init__(self, ui, repo):
         self.repo = repo
-        self.path = repo.join("bisect")
-        self.opener = util.opener(self.path)
         self.ui = ui
         self.goodnodes = []
         self.badnode = None
-        self.good_path = "good"
-        self.bad_path = "bad"
-        self.is_reset = False
 
-        if os.path.exists(os.path.join(self.path, self.good_path)):
-            self.goodnodes = self.opener(self.good_path).read().splitlines()
-            self.goodnodes = [hg.bin(x) for x in self.goodnodes]
-        if os.path.exists(os.path.join(self.path, self.bad_path)):
-            r = self.opener(self.bad_path).read().splitlines()
-            if r:
-                self.badnode = hg.bin(r.pop(0))
+        p = self.repo.join("bisect.state")
+        if os.path.exists(p):
+            for l in self.repo.opener("bisect.state"):
+                type, node = l[:-1].split()
+                node = self.repo.lookup(node)
+                if type == "good":
+                    self.goodnodes.append(node)
+                elif type == "bad":
+                    self.badnode = node
 
     def write(self):
-        if self.is_reset:
-            return
-        if not os.path.isdir(self.path):
-            os.mkdir(self.path)
-        f = self.opener(self.good_path, "w")
-        f.write("\n".join([hg.hex(r) for r in  self.goodnodes]))
-        if len(self.goodnodes) > 0:
-            f.write("\n")
-        f = self.opener(self.bad_path, "w")
+        f = self.repo.opener("bisect.state", "w")
+        for n in self.goodnodes:
+            f.write("good %s\n" % hg.hex(n))
         if self.badnode:
-            f.write(hg.hex(self.badnode) + "\n")
+            f.write("bad %s\n" % hg.hex(self.badnode))
 
     def init(self):
         """start a new bisection"""
-        if os.path.isdir(self.path):
-            raise util.Abort(_("bisect directory already exists\n"))
-        os.mkdir(self.path)
-        return 0
-
-    def reset(self):
-        """finish a bisection"""
-        if os.path.isdir(self.path):
-            sl = [os.path.join(self.path, p)
-                  for p in [self.bad_path, self.good_path]]
-            for s in sl:
-                if os.path.exists(s):
-                    os.unlink(s)
-            os.rmdir(self.path)
-        # Not sure about this
-        #self.ui.write("Going back to tip\n")
-        #self.repo.update(self.repo.changelog.tip())
-        self.is_reset = True
-        return 0
+        p = self.repo.join("bisect.state")
+        if os.path.exists(p):
+            os.unlink(p)
 
     def bisect(self):
         cl = self.repo.changelog
@@ -158,12 +133,14 @@ class bisect(object):
     def good(self, rev=None):
         """mark revision as good and update to the next revision to test"""
         self.goodnodes.append(self.repo.lookup(rev or '.'))
+        self.write()
         if self.badnode:
             return self.next()
 
     def bad(self, rev=None):
         """mark revision as bad and update to the next revision to test"""
         self.badnode = self.repo.lookup(rev or '.')
+        self.write()
         if self.goodnodes:
             self.next()
 
@@ -207,9 +184,11 @@ For subcommands see "hg bisect help\"
         "bad": (b.bad, 1, _("hg bisect bad [<rev>]")),
         "good": (b.good, 1, _("hg bisect good [<rev>]")),
         "next": (b.next, 0, _("hg bisect next")),
-        "reset": (b.reset, 0, _("hg bisect reset")),
         "help": (help_, 1, _("hg bisect help [<subcommand>]")),
     }
+
+    if cmd == "reset":
+        cmd = "init"
 
     if not bisectcmdtable.has_key(cmd):
         ui.warn(_("bisect: Unknown sub-command\n"))
@@ -218,7 +197,6 @@ For subcommands see "hg bisect help\"
         ui.warn(_("bisect: Too many arguments\n"))
         return help_()
     ret = bisectcmdtable[cmd][0](*args)
-    b.write()
     return ret
 
 cmdtable = {
