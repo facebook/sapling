@@ -136,7 +136,7 @@ class changelog(revlog):
         items = [_string_escape('%s:%s' % (k, d[k])) for k in keys]
         return "\0".join(items)
 
-    def extract(self, text):
+    def read(self, node):
         """
         format used:
         nodeid\n        : manifest node in ascii
@@ -149,6 +149,7 @@ class changelog(revlog):
 
         changelog v0 doesn't use extra
         """
+        text = self.revision(node)
         if not text:
             return (nullid, "", (0, 0), [], "", {'branch': 'default'})
         last = text.index("\n\n")
@@ -174,9 +175,6 @@ class changelog(revlog):
             extra['branch'] = 'default'
         files = l[3:]
         return (manifest, user, (time, timezone), files, desc, extra)
-
-    def read(self, node):
-        return self.extract(self.revision(node))
 
     def add(self, manifest, list, desc, transaction, p1=None, p2=None,
                   user=None, date=None, extra={}):
