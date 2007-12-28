@@ -85,26 +85,6 @@ class bisect(object):
         self.is_reset = True
         return 0
 
-    def num_ancestors(self, head=None, stop=None):
-        """
-        returns a dict with the mapping:
-        node -> number of ancestors (self included)
-        for all nodes who are ancestor of head and
-        not in stop.
-        """
-        if head is None:
-            head = self.badrev
-        return self.__ancestors_and_nb_ancestors(head, stop)[1]
-
-    def ancestors(self, head=None, stop=None):
-        """
-        returns the set of the ancestors of head (self included)
-        who are not in stop.
-        """
-        if head is None:
-            head = self.badrev
-        return self.__ancestors_and_nb_ancestors(head, stop)[0]
-
     def __ancestors_and_nb_ancestors(self, head, stop=None):
         """
         if stop is None then ancestors of goodrevs are used as
