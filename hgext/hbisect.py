@@ -66,7 +66,7 @@ class bisect(object):
         self.is_reset = True
         return 0
 
-    def __ancestors_and_nb_ancestors(self, head):
+    def candidates(self):
         """
         returns (anc, n_child) where anc is the set of the ancestors of head
         and n_child is a dictionary with the following mapping:
@@ -76,39 +76,41 @@ class bisect(object):
         """
         cl = self.repo.changelog
         stop = {}
+        bad = self.badrev
         for i in xrange(len(self.goodrevs)-1, -1, -1):
             g = self.goodrevs[i]
             if g in stop:
                 continue
             stop.update(cl.reachable(g))
 
-        if head in stop:
+        if bad in stop:
             raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
-                             % (cl.rev(head), hg.short(head)))
+                             % (cl.rev(bad), hg.short(bad)))
 
         # build a dict of node -> [number of children, {}]
-        n_child = {head: [0, {}]}
-        for i in xrange(cl.rev(head)+1):
+        n_child = {bad: [0, {}]}
+        for i in xrange(cl.rev(bad)+1):
             n = cl.node(i)
-            if n not in d:
+            if n not in n_child:
                 n_child[n] = [0, {}]
-            parents = [p for p in cl.parents(n) if p != hg.nullid]
-            for p in parents:
-                n_child[p][0] += 1
+            # increment count of each parent
+            for p in cl.parents(n):
+                if p != hg.nullid:
+                    n_child[p][0] += 1
 
-        for i in xrange(cl.rev(head)+1):
+        for i in xrange(cl.rev(bad)+1):
             n = cl.node(i)
-            parents = [p for p in cl.parents(n) if p != hg.nullid]
-            for p in parents:
-                n_child[p][0] -= 1
-                if not n in stop:
-                    n_child[n][1].update(n_child[p][1])
-                if n_child[p][0] == 0:
-                    n_child[p] = len(n_child[p][1])
+            for p in cl.parents(n):
+                if p != hg.nullid:
+                    n_child[p][0] -= 1
+                    if not n in stop:
+                        n_child[n][1].update(n_child[p][1])
+                    if n_child[p][0] == 0:
+                        n_child[p] = len(n_child[p][1])
             if not n in stop:
                 n_child[n][1][n] = 1
             if n_child[n][0] == 0:
-                if n == head:
+                if n == bad:
                     anc = n_child[n][1]
                 n_child[n] = len(n_child[n][1])
         return anc, n_child
@@ -119,8 +121,9 @@ class bisect(object):
         if not self.goodrevs:
             self.ui.warn(_("No good revision given\n"))
             self.ui.warn(_("Marking the first revision as good\n"))
-        ancestors, num_ancestors = self.__ancestors_and_nb_ancestors(
-                                    self.badrev)
+        ancestors, n_child = self.candidates()
+
+        # have we narrowed it down to one entry?
         tot = len(ancestors)
         if tot == 1:
             if self.badrev not in ancestors:
@@ -129,20 +132,26 @@ class bisect(object):
             displayer = cmdutil.show_changeset(self.ui, self.repo, {})
             displayer.show(changenode=self.badrev)
             return None
+
+        # find the best node to test
         best_rev = None
         best_len = -1
         for n in ancestors:
-            l = num_ancestors[n]
-            l = min(l, tot - l)
-            if l > best_len:
-                best_len = l
+            a = n_child[n] # number of children
+            b = tot - a # number of ancestors
+            value = min(a, b) # how good is this test?
+            if value > best_len:
+                best_len = value
                 best_rev = n
         assert best_rev is not None
+
+        # compute the approximate number of remaining tests
         nb_tests = 0
         q, r = divmod(tot, 2)
         while q:
             nb_tests += 1
             q, r = divmod(q, 2)
+
         msg = _("Testing changeset %s:%s (%s changesets remaining, "
                 "~%s tests)\n") % (self.repo.changelog.rev(best_rev),
                                    hg.short(best_rev), tot, nb_tests)
