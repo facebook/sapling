@@ -17,19 +17,19 @@ class bisect(object):
         self.path = repo.join("bisect")
         self.opener = util.opener(self.path)
         self.ui = ui
-        self.goodrevs = []
-        self.badrev = None
+        self.goodnodes = []
+        self.badnode = None
         self.good_path = "good"
         self.bad_path = "bad"
         self.is_reset = False
 
         if os.path.exists(os.path.join(self.path, self.good_path)):
-            self.goodrevs = self.opener(self.good_path).read().splitlines()
-            self.goodrevs = [hg.bin(x) for x in self.goodrevs]
+            self.goodnodes = self.opener(self.good_path).read().splitlines()
+            self.goodnodes = [hg.bin(x) for x in self.goodnodes]
         if os.path.exists(os.path.join(self.path, self.bad_path)):
             r = self.opener(self.bad_path).read().splitlines()
             if r:
-                self.badrev = hg.bin(r.pop(0))
+                self.badnode = hg.bin(r.pop(0))
 
     def write(self):
         if self.is_reset:
@@ -37,12 +37,12 @@ class bisect(object):
         if not os.path.isdir(self.path):
             os.mkdir(self.path)
         f = self.opener(self.good_path, "w")
-        f.write("\n".join([hg.hex(r) for r in  self.goodrevs]))
-        if len(self.goodrevs) > 0:
+        f.write("\n".join([hg.hex(r) for r in  self.goodnodes]))
+        if len(self.goodnodes) > 0:
             f.write("\n")
         f = self.opener(self.bad_path, "w")
-        if self.badrev:
-            f.write(hg.hex(self.badrev) + "\n")
+        if self.badnode:
+            f.write(hg.hex(self.badnode) + "\n")
 
     def init(self):
         """start a new bisection"""
@@ -72,13 +72,13 @@ class bisect(object):
         and n_child is a dictionary with the following mapping:
         node -> number of ancestors (self included)
 
-        ancestors of goodrevs are used as lower limit.
+        ancestors of goodnodes are used as lower limit.
         """
         cl = self.repo.changelog
         stop = {}
-        bad = self.badrev
-        for i in xrange(len(self.goodrevs)-1, -1, -1):
-            g = self.goodrevs[i]
+        bad = self.badnode
+        for i in xrange(len(self.goodnodes)-1, -1, -1):
+            g = self.goodnodes[i]
             if g in stop:
                 continue
             stop.update(cl.reachable(g))
@@ -116,9 +116,9 @@ class bisect(object):
         return anc, n_child
 
     def next(self):
-        if not self.badrev:
+        if not self.badnode:
             raise util.Abort(_("You should give at least one bad revision"))
-        if not self.goodrevs:
+        if not self.goodnodes:
             self.ui.warn(_("No good revision given\n"))
             self.ui.warn(_("Marking the first revision as good\n"))
         ancestors, n_child = self.candidates()
@@ -126,15 +126,15 @@ class bisect(object):
         # have we narrowed it down to one entry?
         tot = len(ancestors)
         if tot == 1:
-            if self.badrev not in ancestors:
+            if self.badnode not in ancestors:
                 raise util.Abort(_("Could not find the first bad revision"))
             self.ui.write(_("The first bad revision is:\n"))
             displayer = cmdutil.show_changeset(self.ui, self.repo, {})
-            displayer.show(changenode=self.badrev)
+            displayer.show(changenode=self.badnode)
             return None
 
         # find the best node to test
-        best_rev = None
+        best_node = None
         best_len = -1
         for n in ancestors:
             a = n_child[n] # number of children
@@ -142,8 +142,8 @@ class bisect(object):
             value = min(a, b) # how good is this test?
             if value > best_len:
                 best_len = value
-                best_rev = n
-        assert best_rev is not None
+                best_node = n
+        assert best_node is not None
 
         # compute the approximate number of remaining tests
         nb_tests = 0
@@ -153,57 +153,57 @@ class bisect(object):
             q, r = divmod(q, 2)
 
         msg = _("Testing changeset %s:%s (%s changesets remaining, "
-                "~%s tests)\n") % (self.repo.changelog.rev(best_rev),
-                                   hg.short(best_rev), tot, nb_tests)
+                "~%s tests)\n") % (self.repo.changelog.rev(best_node),
+                                   hg.short(best_node), tot, nb_tests)
         self.ui.write(msg)
-        return best_rev
+        return best_node
 
     def autonext(self):
         """find and update to the next revision to test"""
-        rev = self.next()
-        if rev is not None:
+        node = self.next()
+        if node is not None:
             cmdutil.bail_if_changed(self.repo)
-            return hg.clean(self.repo, rev)
+            return hg.clean(self.repo, node)
 
     def autogood(self, rev=None):
         """mark revision as good and update to the next revision to test"""
-        self.goodrevs.append(self.repo.lookup(rev or '.'))
-        if self.badrev:
+        self.goodnodes.append(self.repo.lookup(rev or '.'))
+        if self.badnode:
             return self.autonext()
 
     def autobad(self, rev=None):
         """mark revision as bad and update to the next revision to test"""
-        self.badrev = self.repo.lookup(rev or '.')
-        if self.goodrevs:
+        self.badnode = self.repo.lookup(rev or '.')
+        if self.goodnodes:
             self.autonext()
 
 # should we put it in the class ?
 def test(ui, repo, rev):
     """test the bisection code"""
     b = bisect(ui, repo)
-    rev = repo.lookup(rev)
-    ui.write("testing with rev %s\n" % hg.hex(rev))
+    node = repo.lookup(rev)
+    ui.write("testing with rev %s\n" % hg.hex(node))
     anc = b.ancestors()
     while len(anc) > 1:
-        if not rev in anc:
+        if not node in anc:
             ui.warn("failure while bisecting\n")
             sys.exit(1)
         ui.write("it worked :)\n")
-        new_rev = b.next()
+        new_node = b.next()
         ui.write("choosing if good or bad\n")
-        if rev in b.ancestors(head=new_rev):
-            b.bad(new_rev)
+        if node in b.ancestors(head=new_node):
+            b.bad(new_node)
             ui.write("it is bad\n")
         else:
-            b.good(new_rev)
+            b.good(new_node)
             ui.write("it is good\n")
         anc = b.ancestors()
-        #repo.update(new_rev, force=True)
+        #repo.update(new_node, force=True)
     for v in anc:
-        if v != rev:
+        if v != node:
             ui.warn("fail to found cset! :(\n")
             return 1
-    ui.write("Found bad cset: %s\n" % hg.hex(b.badrev))
+    ui.write("Found bad cset: %s\n" % hg.hex(b.badnode))
     ui.write("Everything is ok :)\n")
     return 0
 
