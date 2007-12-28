@@ -75,44 +75,49 @@ class bisect(object):
         ancestors of goodnodes are used as lower limit.
         """
         cl = self.repo.changelog
-        stop = {}
+        clparents = cl.parentrevs
         bad = self.badnode
-        for i in xrange(len(self.goodnodes)-1, -1, -1):
-            g = self.goodnodes[i]
-            if g in stop:
-                continue
-            stop.update(cl.reachable(g))
+        badrev = cl.rev(bad)
 
-        if bad in stop:
+        # add goodrevs and all ancestors to stop
+        stop = dict.fromkeys([cl.rev(n) for n in self.goodnodes])
+        for rev in xrange(cl.count(), -1, -1):
+            if rev in stop:
+                for prev in clparents(rev):
+                    stop[prev] = None
+
+        if badrev in stop:
             raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
-                             % (cl.rev(bad), hg.short(bad)))
+                             % (badrev, hg.short(bad)))
 
         # build a dict of node -> [number of children, {}]
-        n_child = {bad: [0, {}]}
-        for i in xrange(cl.rev(bad)+1):
-            n = cl.node(i)
-            if n not in n_child:
-                n_child[n] = [0, {}]
+        n_child = {badrev: [0, {}]}
+        for rev in xrange(badrev + 1):
+            if rev not in n_child:
+                n_child[rev] = [0, {}]
             # increment count of each parent
-            for p in cl.parents(n):
-                if p != hg.nullid:
+            for p in clparents(rev):
+                if p != hg.nullrev:
                     n_child[p][0] += 1
 
-        for i in xrange(cl.rev(bad)+1):
-            n = cl.node(i)
-            for p in cl.parents(n):
-                if p != hg.nullid:
+        for rev in xrange(badrev + 1):
+            for p in clparents(rev):
+                if p != hg.nullrev:
                     n_child[p][0] -= 1
-                    if not n in stop:
-                        n_child[n][1].update(n_child[p][1])
+                    if not rev in stop:
+                        n_child[rev][1].update(n_child[p][1])
                     if n_child[p][0] == 0:
                         n_child[p] = len(n_child[p][1])
-            if not n in stop:
-                n_child[n][1][n] = 1
-            if n_child[n][0] == 0:
-                if n == bad:
-                    anc = n_child[n][1]
-                n_child[n] = len(n_child[n][1])
+            if not rev in stop:
+                n_child[rev][1][rev] = 1
+            if n_child[rev][0] == 0:
+                if rev == badrev:
+                    anc = n_child[rev][1]
+                n_child[rev] = len(n_child[rev][1])
+
+        if badrev not in anc:
+            raise util.Abort(_("Could not find the first bad revision"))
+
         return anc, n_child
 
     def next(self):
@@ -126,15 +131,13 @@ class bisect(object):
         # have we narrowed it down to one entry?
         tot = len(ancestors)
         if tot == 1:
-            if self.badnode not in ancestors:
-                raise util.Abort(_("Could not find the first bad revision"))
             self.ui.write(_("The first bad revision is:\n"))
             displayer = cmdutil.show_changeset(self.ui, self.repo, {})
             displayer.show(changenode=self.badnode)
             return None
 
         # find the best node to test
-        best_node = None
+        best_rev = None
         best_len = -1
         for n in ancestors:
             a = n_child[n] # number of children
@@ -142,8 +145,9 @@ class bisect(object):
             value = min(a, b) # how good is this test?
             if value > best_len:
                 best_len = value
-                best_node = n
-        assert best_node is not None
+                best_rev = n
+        assert best_rev is not None
+        best_node = self.repo.changelog.node(best_rev)
 
         # compute the approximate number of remaining tests
         nb_tests = 0
@@ -152,10 +156,9 @@ class bisect(object):
             nb_tests += 1
             q, r = divmod(q, 2)
 
-        msg = _("Testing changeset %s:%s (%s changesets remaining, "
-                "~%s tests)\n") % (self.repo.changelog.rev(best_node),
-                                   hg.short(best_node), tot, nb_tests)
-        self.ui.write(msg)
+        self.ui.write(_("Testing changeset %s:%s "
+                        "(%s changesets remaining, ~%s tests)\n")
+                      % (best_rev, hg.short(best_node), tot, nb_tests))
         return best_node
 
     def autonext(self):
