@@ -15,30 +15,22 @@ class bisect(object):
     def __init__(self, ui, repo):
         self.repo = repo
         self.ui = ui
-        self.goodnodes = []
-        self.skipnodes = []
-        self.badnode = None
+        self.state = {'good': [], 'bad': [], 'skip': []}
 
         p = self.repo.join("bisect.state")
         if os.path.exists(p):
             for l in self.repo.opener("bisect.state"):
-                type, node = l[:-1].split()
+                kind, node = l[:-1].split()
                 node = self.repo.lookup(node)
-                if type == "good":
-                    self.goodnodes.append(node)
-                elif type == "skip":
-                    self.skipnodes.append(node)
-                elif type == "bad":
-                    self.badnode = node
+                if kind not in self.state:
+                    raise util.Abort(_("unknown bisect kind %s") % kind)
+                self.state[kind].append(node)
 
     def write(self):
         f = self.repo.opener("bisect.state", "w")
-        for n in self.goodnodes:
-            f.write("good %s\n" % hg.hex(n))
-        for n in self.skipnodes:
-            f.write("skip %s\n" % hg.hex(n))
-        if self.badnode:
-            f.write("bad %s\n" % hg.hex(self.badnode))
+        for kind in self.state:
+            for node in self.state[kind]:
+                f.write("%s %s\n" % (kind, hg.hex(node)))
 
     def init(self):
         """start a new bisection"""
@@ -49,15 +41,16 @@ class bisect(object):
     def bisect(self):
         cl = self.repo.changelog
         clparents = cl.parentrevs
-        bad = self.badnode
-        badrev = cl.rev(bad)
+        # only the earliest bad revision matters
+        badrev = min([cl.rev(n) for n in self.state['bad']])
+        bad = cl.node(badrev)
 
         # build ancestors array
         ancestors = [[]] * (cl.count() + 1) # an extra for [-1]
 
-        # clear goodnodes from array
-        for good in self.goodnodes:
-            ancestors[cl.rev(good)] = None
+        # clear good revs from array
+        for node in self.state['good']:
+            ancestors[cl.rev(node)] = None
         for rev in xrange(cl.count(), -1, -1):
             if ancestors[rev] is None:
                 for prev in clparents(rev):
@@ -92,12 +85,12 @@ class bisect(object):
         # have we narrowed it down to one entry?
         tot = len(ancestors[badrev])
         if tot == 1:
-            return (self.badnode, 0)
+            return (bad, 0)
 
         # find the best node to test
         best_rev = None
         best_len = -1
-        skip = dict.fromkeys([cl.rev(s) for s in self.skipnodes])
+        skip = dict.fromkeys([cl.rev(n) for n in self.state['skip']])
         for n in ancestors[badrev]:
             if n in skip:
                 continue
@@ -114,7 +107,7 @@ class bisect(object):
 
     def next(self):
         """find and update to the next revision to test"""
-        if self.goodnodes and self.badnode:
+        if self.state['good'] and self.state['bad']:
             node, changesets = self.bisect()
 
             if changesets == 0:
@@ -135,19 +128,19 @@ class bisect(object):
 
     def good(self, rev=None):
         """mark revision as good and update to the next revision to test"""
-        self.goodnodes.append(self.repo.lookup(rev or '.'))
+        self.state['good'].append(self.repo.lookup(rev or '.'))
         self.write()
         return self.next()
 
     def skip(self, rev=None):
         """mark revision as skipped and update to the next revision to test"""
-        self.skipnodes.append(self.repo.lookup(rev or '.'))
+        self.state['skip'].append(self.repo.lookup(rev or '.'))
         self.write()
         return self.next()
 
     def bad(self, rev=None):
         """mark revision as bad and update to the next revision to test"""
-        self.badnode = self.repo.lookup(rev or '.')
+        self.state['bad'].append(self.repo.lookup(rev or '.'))
         self.write()
         return self.next()
 
