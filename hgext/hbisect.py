@@ -12,19 +12,10 @@ import os, sys, sets
 
 versionstr = "0.0.3"
 
-def lookup_rev(ui, repo, rev=None):
-    """returns rev or the checked-out revision if rev is None"""
-    if not rev is None:
-        return repo.lookup(rev)
-    parents = [p for p in repo.dirstate.parents() if p != hg.nullid]
-    if len(parents) != 1:
-        raise util.Abort(_("unexpected number of parents, "
-                           "please commit or revert"))
-    return parents.pop()
-
 def check_clean(ui, repo):
+    merged = (nullid in repo.dirstate.parents())
     modified, added, removed, deleted, unknown = repo.status()[:5]
-    if modified or added or removed:
+    if modified or added or removed or merged:
         ui.warn("Repository is not clean, please commit or revert\n")
         sys.exit(1)
 
@@ -183,15 +174,13 @@ class bisect(object):
 
     def autogood(self, rev=None):
         """mark revision as good and update to the next revision to test"""
-        rev = lookup_rev(self.ui, self.repo, rev)
-        self.goodrevs.append(rev)
+        self.goodrevs.append(self.repo.lookup(rev or '.'))
         if self.badrev:
             return self.autonext()
 
     def autobad(self, rev=None):
         """mark revision as bad and update to the next revision to test"""
-        rev = lookup_rev(self.ui, self.repo, rev)
-        self.badrev = rev
+        self.badrev = self.repo.lookup(rev or '.')
         if self.goodrevs:
             self.autonext()
 
