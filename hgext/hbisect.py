@@ -148,24 +148,24 @@ class bisect(object):
                       % (best_rev, hg.short(best_node), tot, nb_tests))
         return best_node
 
-    def autonext(self):
+    def next(self):
         """find and update to the next revision to test"""
         node = self.bisect()
         if node is not None:
             cmdutil.bail_if_changed(self.repo)
             return hg.clean(self.repo, node)
 
-    def autogood(self, rev=None):
+    def good(self, rev=None):
         """mark revision as good and update to the next revision to test"""
         self.goodnodes.append(self.repo.lookup(rev or '.'))
         if self.badnode:
-            return self.autonext()
+            return self.next()
 
-    def autobad(self, rev=None):
+    def bad(self, rev=None):
         """mark revision as bad and update to the next revision to test"""
         self.badnode = self.repo.lookup(rev or '.')
         if self.goodnodes:
-            self.autonext()
+            self.next()
 
 def bisect_run(ui, repo, cmd=None, *args):
     """Subdivision search of changesets
@@ -204,9 +204,9 @@ For subcommands see "hg bisect help\"
     b = bisect(ui, repo)
     bisectcmdtable = {
         "init": (b.init, 0, _("hg bisect init")),
-        "bad": (b.autobad, 1, _("hg bisect bad [<rev>]")),
-        "good": (b.autogood, 1, _("hg bisect good [<rev>]")),
-        "next": (b.autonext, 0, _("hg bisect next")),
+        "bad": (b.bad, 1, _("hg bisect bad [<rev>]")),
+        "good": (b.good, 1, _("hg bisect good [<rev>]")),
+        "next": (b.next, 0, _("hg bisect next")),
         "reset": (b.reset, 0, _("hg bisect reset")),
         "help": (help_, 1, _("hg bisect help [<subcommand>]")),
     }
