@@ -8,7 +8,7 @@
 
 from mercurial.i18n import _
 from mercurial import hg, util, commands, cmdutil
-import os, sys, sets
+import os, sys
 
 class bisect(object):
     """dichotomic search in the DAG of changesets"""
@@ -66,7 +66,7 @@ class bisect(object):
         self.is_reset = True
         return 0
 
-    def __ancestors_and_nb_ancestors(self, head, stop=None):
+    def __ancestors_and_nb_ancestors(self, head):
         """
         returns (anc, n_child) where anc is the set of the ancestors of head
         and n_child is a dictionary with the following mapping:
@@ -75,23 +75,23 @@ class bisect(object):
         ancestors of goodrevs are used as lower limit.
         """
         cl = self.repo.changelog
-        if not stop:
-            stop = sets.Set([])
-            for i in xrange(len(self.goodrevs)-1, -1, -1):
-                g = self.goodrevs[i]
-                if g in stop:
-                    continue
-                stop.update(cl.reachable(g))
+        stop = {}
+        for i in xrange(len(self.goodrevs)-1, -1, -1):
+            g = self.goodrevs[i]
+            if g in stop:
+                continue
+            stop.update(cl.reachable(g))
+
         def num_children(a):
             """
-            returns a dictionnary with the following mapping
+            returns a dictionary with the following mapping
             node -> [number of children, empty set]
             """
-            d = {a: [0, sets.Set([])]}
+            d = {a: [0, {}]}
             for i in xrange(cl.rev(a)+1):
                 n = cl.node(i)
-                if not d.has_key(n):
-                    d[n] = [0, sets.Set([])]
+                if n not in d:
+                    d[n] = [0, {}]
                 parents = [p for p in cl.parents(n) if p != hg.nullid]
                 for p in parents:
                     d[p][0] += 1
@@ -107,11 +107,11 @@ class bisect(object):
             for p in parents:
                 n_child[p][0] -= 1
                 if not n in stop:
-                    n_child[n][1].union_update(n_child[p][1])
+                    n_child[n][1].update(n_child[p][1])
                 if n_child[p][0] == 0:
                     n_child[p] = len(n_child[p][1])
             if not n in stop:
-                n_child[n][1].add(n)
+                n_child[n][1][n] = 1
             if n_child[n][0] == 0:
                 if n == head:
                     anc = n_child[n][1]
@@ -128,7 +128,7 @@ class bisect(object):
                                     self.badrev)
         tot = len(ancestors)
         if tot == 1:
-            if ancestors.pop() != self.badrev:
+            if self.badrev not in ancestors:
                 raise util.Abort(_("Could not find the first bad revision"))
             self.ui.write(_("The first bad revision is:\n"))
             displayer = cmdutil.show_changeset(self.ui, self.repo, {})
