@@ -68,12 +68,11 @@ class bisect(object):
 
     def __ancestors_and_nb_ancestors(self, head, stop=None):
         """
-        if stop is None then ancestors of goodrevs are used as
-        lower limit.
-
         returns (anc, n_child) where anc is the set of the ancestors of head
         and n_child is a dictionary with the following mapping:
         node -> number of ancestors (self included)
+
+        ancestors of goodrevs are used as lower limit.
         """
         cl = self.repo.changelog
         if not stop:
