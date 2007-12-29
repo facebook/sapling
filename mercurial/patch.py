@@ -818,7 +818,7 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
             fname = (afile in bfile) and afile or bfile
         elif gooda:
             fname = afile
-    
+
     if not fname:
         if not nullb:
             fname = (afile in bfile) and afile or bfile
@@ -826,7 +826,7 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
             fname = afile
         else:
             raise PatchError(_("undefined source and destination files"))
-        
+
     return fname, missing
 
 class linereader:
@@ -1029,7 +1029,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
             for gp in gitpatches:
                 if gp.op in ('COPY', 'RENAME'):
                     copyfile(gp.oldpath, gp.path)
-                changed[gp.path] = (gp.op, gp)                
+                changed[gp.path] = (gp.op, gp)
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
 

@@ -773,10 +773,10 @@ class changeset_templater(changeset_printer):
         def showcopies(**args):
             c = [{'name': x[0], 'source': x[1]} for x in copies]
             return showlist('file_copy', c, plural='file_copies', **args)
-        
+
         files = []
         def getfiles():
-            if not files: 
+            if not files:
                 files[:] = self.repo.status(
                     log.parents(changenode)[0], changenode)[:3]
             return files

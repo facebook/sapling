@@ -57,7 +57,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
       exclude path/to/file
 
       rename from/file to/file
-    
+
     The 'include' directive causes a file, or all files under a
     directory, to be included in the destination repository, and the
     exclusion of all other files and dirs not explicitely included.

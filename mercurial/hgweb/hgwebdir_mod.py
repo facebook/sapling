@@ -75,7 +75,7 @@ class hgwebdir(object):
             try:
 
                 virtual = req.env.get("PATH_INFO", "").strip('/')
-                
+
                 # a static file
                 if virtual.startswith('static/') or 'static' in req.form:
                     static = os.path.join(templater.templatepath(), 'static')
@@ -122,7 +122,7 @@ class hgwebdir(object):
                 # prefixes not found
                 tmpl = self.templater(req)
                 req.respond(404, tmpl("notfound", repo=virtual))
-                
+
             except ErrorResponse, err:
                 tmpl = self.templater(req)
                 req.respond(err.code, tmpl('error', error=err.message or ''))
@@ -173,7 +173,7 @@ class hgwebdir(object):
 
                 parts = [req.env['PATH_INFO'], name]
                 if req.env['SCRIPT_NAME']:
-                	parts.insert(0, req.env['SCRIPT_NAME'])
+                    parts.insert(0, req.env['SCRIPT_NAME'])
                 url = ('/'.join(parts).replace("//", "/")) + '/'
 
                 # update time with local timezone

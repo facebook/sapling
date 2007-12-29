@@ -483,7 +483,7 @@ class workingctx(changectx):
                 return self._manifest.flags(path)
             except KeyError:
                 return ''
-        
+
         pnode = self._parents[0].changeset()[0]
         orig = self._repo.dirstate.copies().get(path, path)
         node, flag = self._repo.manifest.find(pnode, orig)

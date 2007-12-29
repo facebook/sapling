@@ -208,7 +208,7 @@ class svn_source(converter_source):
                 self.heads.append(brev)
 
             if oldmodule:
-                self.tags = '%s/%s' % (oldmodule, tags) 
+                self.tags = '%s/%s' % (oldmodule, tags)
             else:
                 self.tags = '/%s' % tags
 
@@ -714,7 +714,7 @@ class svn_sink(converter_sink, commandline):
 
     def join(self, name):
         return os.path.join(self.wc, '.svn', name)
-        
+
     def revmapfile(self):
         return self.join('hg-shamap')
 
@@ -750,7 +750,7 @@ class svn_sink(converter_sink, commandline):
                 if not path.startswith('/'):
                     path = '/' + path
                 path = 'file://' + path
-            
+
             ui.status(_('initializing svn wc %r\n') % os.path.basename(wcpath))
             self.run0('checkout', path, wcpath)
 
@@ -849,7 +849,7 @@ class svn_sink(converter_sink, commandline):
         if files:
             self.run('add', quiet=True, *files)
         return files
-        
+
     def tidy_dirs(self, names):
         dirs = list(self.dirs_of(names))
         dirs.sort(reverse=True)

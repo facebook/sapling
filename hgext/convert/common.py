@@ -104,13 +104,13 @@ class converter_source(object):
 
     def getchangedfiles(self, rev, i):
         """Return the files changed by rev compared to parent[i].
-    
+
         i is an index selecting one of the parents of rev.  The return
         value should be the list of files that are different in rev and
         this parent.
 
         If rev has no parents, i is None.
-    
+
         This function is only needed to support --filemap
         """
         raise NotImplementedError()
@@ -279,7 +279,7 @@ class mapfile(dict):
                 self.order.append(key)
             super(mapfile, self).__setitem__(key, value)
         fp.close()
-            
+
     def __setitem__(self, key, value):
         if self.fp is None:
             try:

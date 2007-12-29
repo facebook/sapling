@@ -1709,7 +1709,7 @@ def uirepr(s):
 
 def hidepassword(url):
     '''replaces the password in the url string by three asterisks (***)
-    
+
     >>> hidepassword('http://www.example.com/some/path#fragment')
     'http://www.example.com/some/path#fragment'
     >>> hidepassword('http://me@www.example.com/some/path#fragment')

@@ -288,7 +288,7 @@ class localrepository(repo.repository):
         '''
 
         self.tags()
- 
+
         return self._tagstypecache.get(tagname)
 
     def _hgtagsnodes(self):

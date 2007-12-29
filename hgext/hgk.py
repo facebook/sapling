@@ -13,7 +13,7 @@
 # querying of information, and an extension to mercurial named hgk.py,
 # which provides hooks for hgk to get information. hgk can be found in
 # the contrib directory, and hgk.py can be found in the hgext
-# directory.  
+# directory.
 #
 # To load the hgext.py extension, add it to your .hgrc file (you have
 # to use your global $HOME/.hgrc file, not one in a repository). You
@@ -309,10 +309,10 @@ def revlist(ui, repo, *revs, **opts):
 def config(ui, repo, **opts):
     """print extension options"""
     def writeopt(name, value):
-        ui.write('k=%s\nv=%s\n' % (name, value)) 
+        ui.write('k=%s\nv=%s\n' % (name, value))
 
     writeopt('vdiff', ui.config('hgk', 'vdiff', ''))
-    
+
 
 def view(ui, repo, *etc, **opts):
     "start interactive history viewer"

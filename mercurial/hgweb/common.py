@@ -21,7 +21,7 @@ def _statusmessage(code):
     from BaseHTTPServer import BaseHTTPRequestHandler
     responses = BaseHTTPRequestHandler.responses
     return responses.get(code, ('Error', 'Unknown error'))[0]
-    
+
 def statusmessage(code):
     return '%d %s' % (code, _statusmessage(code))
 

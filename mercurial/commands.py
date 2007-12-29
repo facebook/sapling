@@ -717,7 +717,7 @@ def debuginstall(ui):
             ui.write(_(" (Current patch tool may be incompatible with patch,"
                        " or misconfigured. Please check your .hgrc file)\n"))
         else:
-            ui.write(_(" Internal patcher failure, please report this error" 
+            ui.write(_(" Internal patcher failure, please report this error"
                        " to http://www.selenic.com/mercurial/bts\n"))
     problems += patchproblems
 
@@ -1702,7 +1702,7 @@ def manifest(ui, repo, node=None, rev=None):
     The manifest is the list of files being version controlled. If no revision
     is given then the first parent of the working directory is used.
 
-    With -v flag, print file permissions, symlink and executable bits. With 
+    With -v flag, print file permissions, symlink and executable bits. With
     --debug flag, print file revision hashes.
     """
 

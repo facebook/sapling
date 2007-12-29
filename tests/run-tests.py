@@ -541,7 +541,7 @@ def run_tests(tests):
             fp = os.fdopen(options.child, 'w')
             fp.write('%d\n%d\n%d\n' % (tested, skipped, failed))
             for s in skips:
-                fp.write("%s %s\n" % s) 
+                fp.write("%s %s\n" % s)
             fp.close()
         else:
             print

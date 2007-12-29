@@ -58,7 +58,7 @@ class wsgirequest(object):
                 except socket.error, inst:
                     if inst[0] != errno.ECONNRESET:
                         raise
-        
+
     def write(self, *things):
         self.respond('200 Script output follows', *things)
 
@@ -86,7 +86,7 @@ class wsgirequest(object):
         self.header(headers)
 
 def wsgiapplication(app_maker):
-	application = app_maker()
-	def run_wsgi(env, respond):
-		application(env, respond)
-	return run_wsgi
+    application = app_maker()
+    def run_wsgi(env, respond):
+        application(env, respond)
+    return run_wsgi
