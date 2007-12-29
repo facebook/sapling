@@ -881,7 +881,8 @@ def debugrename(ui, repo, file1, *pats, **opts):
     ctx = repo.changectx(opts.get('rev', 'tip'))
     for src, abs, rel, exact in cmdutil.walk(repo, (file1,) + pats, opts,
                                              ctx.node()):
-        m = ctx.filectx(abs).renamed()
+        fctx = ctx.filectx(abs)
+        m = fctx.filelog().renamed(fctx.filenode())
         if m:
             ui.write(_("%s renamed from %s:%s\n") % (rel, m[0], hex(m[1])))
         else:
@@ -1701,8 +1702,7 @@ def log(ui, repo, *pats, **opts):
         endrev = repo.changelog.count()
     rcache = {}
     ncache = {}
-    dcache = []
-    def getrenamed(fn, rev, man):
+    def getrenamed(fn, rev):
         '''looks up all renames for a file (up to endrev) the first
         time the file is given. It indexes on the changerev and only
         parses the manifest if linkrev != changerev.
@@ -1722,13 +1722,14 @@ def log(ui, repo, *pats, **opts):
                     break
         if rev in rcache[fn]:
             return rcache[fn][rev]
-        mr = repo.manifest.rev(man)
-        if repo.manifest.parentrevs(mr) != (mr - 1, nullrev):
-            return ncache[fn].get(repo.manifest.find(man, fn)[0])
-        if not dcache or dcache[0] != man:
-            dcache[:] = [man, repo.manifest.readdelta(man)]
-        if fn in dcache[1]:
-            return ncache[fn].get(dcache[1][fn])
+
+        # If linkrev != rev (i.e. rev not found in rcache) fallback to
+        # filectx logic.
+
+        try:
+            return repo.changectx(rev).filectx(fn).renamed()
+        except revlog.LookupError:
+            pass
         return None
 
     df = False
@@ -1765,9 +1766,8 @@ def log(ui, repo, *pats, **opts):
 
             copies = []
             if opts.get('copies') and rev:
-                mf = get(rev)[0]
                 for fn in get(rev)[3]:
-                    rename = getrenamed(fn, rev, mf)
+                    rename = getrenamed(fn, rev)
                     if rename:
                         copies.append((fn, rename[0]))
             displayer.show(rev, changenode, copies=copies)

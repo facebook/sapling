@@ -167,31 +167,29 @@ c
 d1
 % executable
 5:f205b3636d77
-svn: Path 'b' does not exist
 assuming destination a-hg
 initializing svn wc 'a-hg-wc'
 scanning source...
 sorting...
 converting...
 0 make a file executable
-abort: svn exited with status 1
-At revision 5.
-                5        5 test         .
- M              5        4 test         c
-                5        1 test         d1
-                5        1 test         d1/d2
-                5        1 test         d1/d2/b
+At revision 6.
+                6        6 test         .
+                6        6 test         c
+                6        1 test         d1
+                6        1 test         d1/d2
+                6        1 test         d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
-   revision="5">
+   revision="6">
 <author>test</author>
 <date/>
 <paths>
 <path
-   action="D">/b</path>
+   action="M">/c</path>
 </paths>
-<msg>remove a file</msg>
+<msg>make a file executable</msg>
 </logentry>
 </log>
 executable

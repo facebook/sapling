@@ -235,6 +235,7 @@ class filectx(object):
             return self._changectx.rev() 
         return self._filelog.linkrev(self._filenode)
 
+    def linkrev(self): return self._filelog.linkrev(self._filenode)
     def node(self): return self._changectx.node()
     def user(self): return self._changectx.user()
     def date(self): return self._changectx.date()
@@ -245,11 +246,35 @@ class filectx(object):
     def changectx(self): return self._changectx
 
     def data(self): return self._filelog.read(self._filenode)
-    def renamed(self): return self._filelog.renamed(self._filenode)
     def path(self): return self._path
     def size(self): return self._filelog.size(self._filerev)
 
     def cmp(self, text): return self._filelog.cmp(self._filenode, text)
+
+    def renamed(self):
+        """check if file was actually renamed in this changeset revision
+
+        If rename logged in file revision, we report copy for changeset only
+        if file revisions linkrev points back to the changeset in question
+        or both changeset parents contain different file revisions.
+        """
+
+        renamed = self._filelog.renamed(self._filenode)
+        if not renamed:
+            return renamed
+
+        if self.rev() == self.linkrev():
+            return renamed
+
+        name = self.path()
+        fnode = self._filenode
+        for p in self._changectx.parents():
+            try:
+                if fnode == p.filenode(name):
+                    return None
+            except revlog.LookupError:
+                pass
+        return renamed
 
     def parents(self):
         p = self._path
@@ -322,7 +347,7 @@ class filectx(object):
             return [getctx(p, n) for p, n in pl if n != nullrev]
 
         # use linkrev to find the first changeset where self appeared
-        if self.rev() != self._filelog.linkrev(self._filenode):
+        if self.rev() != self.linkrev():
             base = self.filectx(self.filerev())
         else:
             base = self

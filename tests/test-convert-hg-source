@@ -29,6 +29,9 @@ hg up -C 1
 hg merge 2
 hg ci -m 'merge remote copy' -d '4 0'
 
+chmod +x baz
+hg ci -m 'mark baz executable' -d '5 0'
+
 cd ..
 hg convert --datesort orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
 cd new
