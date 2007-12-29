@@ -45,7 +45,7 @@ resolving manifests
  1: remote moved to 1a -> m
 copying 1 to 1a
 merging 1 and 1a
-my 1@746e9549ea96+ other 1a@2f8037f47a5c ancestor 1@81f4b099af3d
+my 1@746e9549ea96+ other 1a@ac7575e3c052 ancestor 1@81f4b099af3d
 removing 1
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
