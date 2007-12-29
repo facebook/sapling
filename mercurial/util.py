@@ -843,7 +843,7 @@ def checkexec(path):
             m = os.stat(fn).st_mode & 0777
             new_file_has_exec = m & EXECFLAGS
             os.chmod(fn, m ^ EXECFLAGS)
-            exec_flags_cannot_flip = (os.stat(fn).st_mode == m)
+            exec_flags_cannot_flip = ((os.stat(fn).st_mode & 0777) == m)
         finally:
             os.unlink(fn)
     except (IOError, OSError):
