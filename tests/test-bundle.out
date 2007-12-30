@@ -8,6 +8,7 @@ checking files
 4 files, 9 changesets, 7 total revisions
 ====== Bundle test to full.hg
 searching for changes
+9 changesets found
 ====== Unbundle full.hg in test
 adding changesets
 adding manifests
@@ -245,6 +246,8 @@ summary:     0.3m
 ====== Outgoing -R does-not-exist.hg vs partial2 in partial
 abort: No such file or directory: ../does-not-exist.hg
 ====== Unbundle incremental bundles into fresh empty in one go
+1 changesets found
+1 changesets found
 adding changesets
 adding manifests
 adding file changes
@@ -257,6 +260,7 @@ added 1 changesets with 1 changes to 1 files
 ====== test for 540d1059c802
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 searching for changes
+1 changesets found
 comparing with ../bundle.hg
 searching for changes
 changeset:   2:ed1b79f46b9a
