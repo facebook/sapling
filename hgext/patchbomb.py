@@ -117,13 +117,17 @@ def patchbomb(ui, repo, *revs, **opts):
     def prompt(prompt, default = None, rest = ': ', empty_ok = False):
         if not ui.interactive:
             return default
-        if default: prompt += ' [%s]' % default
+        if default:
+            prompt += ' [%s]' % default
         prompt += rest
         while True:
             r = ui.prompt(prompt, default=default)
-            if r: return r
-            if default is not None: return default
-            if empty_ok: return r
+            if r:
+                return r
+            if default is not None:
+                return default
+            if empty_ok:
+                return r
             ui.warn(_('Please enter a valid value.\n'))
 
     def confirm(s, denial):
@@ -149,27 +153,33 @@ def patchbomb(ui, repo, *revs, **opts):
         body = ''
         for line in patch:
             if line.startswith('#'):
-                if line.startswith('# Node ID'): node = line.split()[-1]
+                if line.startswith('# Node ID'):
+                    node = line.split()[-1]
                 continue
             if (line.startswith('diff -r')
                 or line.startswith('diff --git')):
                 break
             desc.append(line)
-        if not node: raise ValueError
+        if not node:
+            raise ValueError
 
         #body = ('\n'.join(desc[1:]).strip() or
         #        'Patch subject is complete summary.')
         #body += '\n\n\n'
 
         if opts['plain']:
-            while patch and patch[0].startswith('# '): patch.pop(0)
-            if patch: patch.pop(0)
-            while patch and not patch[0].strip(): patch.pop(0)
+            while patch and patch[0].startswith('# '):
+                patch.pop(0)
+            if patch:
+                patch.pop(0)
+            while patch and not patch[0].strip():
+                patch.pop(0)
         if opts['diffstat']:
             body += cdiffstat('\n'.join(desc), patch) + '\n\n'
         if opts['attach']:
             msg = email.MIMEMultipart.MIMEMultipart()
-            if body: msg.attach(email.MIMEText.MIMEText(body, 'plain'))
+            if body:
+                msg.attach(email.MIMEText.MIMEText(body, 'plain'))
             p = email.MIMEText.MIMEText('\n'.join(patch), 'x-patch')
             binnode = bin(node)
             # if node is mq patch, it will have patch file name as tag
@@ -315,7 +325,8 @@ def patchbomb(ui, repo, *revs, **opts):
             body = ''
             if opts['diffstat']:
                 d = cdiffstat(_('Final summary:\n'), jumbo)
-                if d: body = '\n' + d
+                if d:
+                    body = '\n' + d
 
             body = getdescription(body, sender)
             msg = email.MIMEText.MIMEText(body)
@@ -383,8 +394,10 @@ def patchbomb(ui, repo, *revs, **opts):
         start_time = (start_time[0] + 1, start_time[1])
         m['From'] = sender
         m['To'] = ', '.join(to)
-        if cc: m['Cc']  = ', '.join(cc)
-        if bcc: m['Bcc'] = ', '.join(bcc)
+        if cc:
+            m['Cc']  = ', '.join(cc)
+        if bcc:
+            m['Bcc'] = ', '.join(bcc)
         if opts['test']:
             ui.status('Displaying ', m['Subject'], ' ...\n')
             ui.flush()
