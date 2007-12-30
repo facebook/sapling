@@ -7,11 +7,11 @@ r   0          0 bar
 % status
 A baz
 R bar
-C foo
+= foo
 % state dump
 n 666         -1 bar
 n 666         -1 foo
 % status
 ! bar
 ? baz
-C foo
+= foo

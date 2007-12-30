@@ -369,7 +369,7 @@ new file mode 100644
 +bar
 3 barney (foo)
 % refresh omitting an added file
-C newfile
+= newfile
 A newfile
 Now at: bar
 % create a git patch

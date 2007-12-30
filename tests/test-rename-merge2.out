@@ -22,7 +22,7 @@ my rev@e300d1c794ec+ other rev@735846fee2d7 ancestor rev@924404dff337
 --------------
 M b
   a
-C a
+= a
 --------------
 
 --------------
@@ -126,7 +126,7 @@ my rev@94b33a1b7f2d+ other rev@735846fee2d7 ancestor rev@924404dff337
 (branch merge, don't forget to commit)
 --------------
 M b
-C a
+= a
 --------------
 
 --------------
@@ -147,8 +147,8 @@ my rev@ac809aeed39a+ other rev@97c705ade336 ancestor rev@924404dff337
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
-C a
-C b
+= a
+= b
 --------------
 
 --------------
@@ -194,7 +194,7 @@ my rev@ecf3cb2a4219+ other rev@97c705ade336 ancestor rev@924404dff337
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 --------------
-C b
+= b
 --------------
 
 --------------
@@ -244,7 +244,7 @@ my rev@ecf3cb2a4219+ other rev@e6abcc1a30c2 ancestor rev@924404dff337
 (branch merge, don't forget to commit)
 --------------
 M c
-C b
+= b
 --------------
 
 --------------
@@ -264,7 +264,7 @@ my rev@ac809aeed39a+ other rev@af30c7647fc7 ancestor rev@924404dff337
 (branch merge, don't forget to commit)
 --------------
 M b
-C a
+= a
 --------------
 
 --------------
@@ -370,7 +370,7 @@ my rev@0b76e65c8289+ other rev@735846fee2d7 ancestor rev@924404dff337
 (branch merge, don't forget to commit)
 --------------
 M b
-C a
+= a
 --------------
 
 --------------
@@ -412,7 +412,7 @@ my rev@0b76e65c8289+ other rev@e03727d2d66b ancestor rev@924404dff337
 (branch merge, don't forget to commit)
 --------------
 M b
-C a
+= a
 --------------
 
 --------------

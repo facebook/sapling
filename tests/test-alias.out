@@ -7,4 +7,4 @@
 *** [alias] recursive: circular dependency on recursive
 adding foo
 % with opts
-C foo
+= foo

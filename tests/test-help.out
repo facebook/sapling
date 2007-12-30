@@ -227,7 +227,7 @@ show changed files in the working directory
     M = modified
     A = added
     R = removed
-    C = clean
+    = = clean
     ! = deleted, but still tracked
     ? = not tracked
     I = ignored (not shown by default)

@@ -16,4 +16,4 @@ summary:     add foo
 % bar should be gone; other unknown/ignored files should still be around
 ? untracked-file
 I .hgignore
-C foo
+= foo
