@@ -156,8 +156,7 @@ def patchbomb(ui, repo, *revs, **opts):
                 if line.startswith('# Node ID'):
                     node = line.split()[-1]
                 continue
-            if (line.startswith('diff -r')
-                or line.startswith('diff --git')):
+            if line.startswith('diff -r') or line.startswith('diff --git'):
                 break
             desc.append(line)
         if not node:
@@ -189,7 +188,7 @@ def patchbomb(ui, repo, *revs, **opts):
                 patchname = patchname[0]
             elif total > 1:
                 patchname = cmdutil.make_filename(repo, '%b-%n.patch',
-                                                   binnode, idx, total)
+                                                  binnode, idx, total)
             else:
                 patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
             p['Content-Disposition'] = 'inline; filename=' + patchname
@@ -316,11 +315,10 @@ def patchbomb(ui, repo, *revs, **opts):
             tlen = len(str(len(patches)))
 
             subj = '[PATCH %0*d of %d] %s' % (
-                tlen, 0,
-                len(patches),
+                tlen, 0, len(patches),
                 opts['subject'] or
-                prompt('Subject:', rest = ' [PATCH %0*d of %d] ' % (tlen, 0,
-                    len(patches))))
+                prompt('Subject:',
+                       rest=' [PATCH %0*d of %d] ' % (tlen, 0, len(patches))))
 
             body = ''
             if opts['diffstat']:
