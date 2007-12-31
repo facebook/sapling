@@ -162,9 +162,10 @@ def patchbomb(ui, repo, *revs, **opts):
         if not node:
             raise ValueError
 
-        #body = ('\n'.join(desc[1:]).strip() or
-        #        'Patch subject is complete summary.')
-        #body += '\n\n\n'
+        if opts['attach']:
+             body = ('\n'.join(desc[1:]).strip() or
+                   'Patch subject is complete summary.')
+             body += '\n\n\n'
 
         if opts.get('plain'):
             while patch and patch[0].startswith('# '):
@@ -175,7 +176,7 @@ def patchbomb(ui, repo, *revs, **opts):
                 patch.pop(0)
         if opts.get('diffstat'):
             body += cdiffstat('\n'.join(desc), patch) + '\n\n'
-        if opts.get('attach'):
+        if opts.get('attach') or opts.get('inline'):
             msg = email.MIMEMultipart.MIMEMultipart()
             if body:
                 msg.attach(email.MIMEText.MIMEText(body, 'plain'))
@@ -191,7 +192,10 @@ def patchbomb(ui, repo, *revs, **opts):
                                                   binnode, idx, total)
             else:
                 patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
-            p['Content-Disposition'] = 'inline; filename=' + patchname
+            disposition = 'inline'
+            if opts['attach']:
+                disposition = 'attachment'
+            p['Content-Disposition'] = disposition + '; filename=' + patchname
             msg.attach(p)
         else:
             body += '\n'.join(patch)
@@ -430,7 +434,8 @@ def patchbomb(ui, repo, *revs, **opts):
 cmdtable = {
     "email":
         (patchbomb,
-         [('a', 'attach', None, _('send patches as inline attachments')),
+         [('a', 'attach', None, _('send patches as attachments')),
+          ('i', 'inline', None, _('send patches as inline attachments')),
           ('', 'bcc', [], _('email addresses of blind copy recipients')),
           ('c', 'cc', [], _('email addresses of copy recipients')),
           ('d', 'diffstat', None, _('add diffstat output to messages')),
