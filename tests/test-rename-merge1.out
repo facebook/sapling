@@ -32,7 +32,7 @@ M b
   a
 M b2
 R a
-= c2
+C c2
 blahblah
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0      67      0       1 dc51707dfc98 000000000000 000000000000

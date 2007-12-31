@@ -12,7 +12,7 @@ A bar
 bar has not been committed yet, so no copy data will be stored for foo.
 A foo
 # dry-run; should show that foo is clean
-= foo
+C foo
 # should show copy
 A bar
   foo
@@ -41,7 +41,7 @@ bar renamed from foo:dd12c926cf165e3eb4cf87b084955cb617221c17
 A baz
   bar
 # foo was clean:
-= foo
+C foo
 # but it's considered modified after a copy --after --force
 M foo
   bar

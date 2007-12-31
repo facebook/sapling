@@ -2363,7 +2363,7 @@ def status(ui, repo, *pats, **opts):
     M = modified
     A = added
     R = removed
-    = = clean
+    C = clean
     ! = deleted, but still tracked
     ? = not tracked
     I = ignored (not shown by default)
@@ -2388,7 +2388,7 @@ def status(ui, repo, *pats, **opts):
                    ('unknown', '?', unknown),
                    ('ignored', 'I', ignored))
 
-    explicit_changetypes = changetypes + (('clean', '=', clean),)
+    explicit_changetypes = changetypes + (('clean', 'C', clean),)
 
     end = opts['print0'] and '\0' or '\n'
 

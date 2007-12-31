@@ -7,7 +7,7 @@ adding file2
 (branch merge, don't forget to commit)
 status:
 M file2
-= file1
+C file1
 file1:
 1
 changed
@@ -23,7 +23,7 @@ use (c)hanged version or leave (d)eleted? 0 files updated, 0 files merged, 0 fil
 (branch merge, don't forget to commit)
 status:
 file2: No such file or directory
-= file1
+C file1
 file1:
 1
 changed
@@ -57,7 +57,7 @@ use (c)hanged version or leave (d)eleted? abort: response expected
 failed
 status:
 file2: No such file or directory
-= file1
+C file1
 file1:
 1
 changed

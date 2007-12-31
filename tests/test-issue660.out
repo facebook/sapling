@@ -32,8 +32,8 @@ A b
 R a
 R b/b
 % commit
-= a/a
-= b
+C a/a
+C b
 % long directory replaced with file
 adding d/d/d
 % should fail - would corrupt dirstate
@@ -42,8 +42,8 @@ abort: directory 'd' already in dirstate
 % should succeed - shadow removed
 % update should work at least with clean workdir
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-= a
-= b/b
+C a
+C b/b
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-= a/a
-= b
+C a/a
+C b

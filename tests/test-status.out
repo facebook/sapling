@@ -116,5 +116,5 @@ R removed
 ! deleted
 ? unknown
 I ignored
-= .hgignore
-= modified
+C .hgignore
+C modified
