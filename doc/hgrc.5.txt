@@ -524,7 +524,7 @@ web::
     Example: "http://hgserver/repos/"
   contact;;
     Name or email address of the person in charge of the repository.
-    Default is "unknown".
+    Defaults to ui.username or $EMAIL or "unknown" if unset or empty.
   deny_push;;
     Whether to deny pushing to the repository.  If empty or not set,
     push is not denied.  If the special value "*", all remote users

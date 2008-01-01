@@ -97,3 +97,12 @@ def paritygen(stripecount, offset=0):
             parity = 1 - parity
             count = 0
 
+def get_contact(config):
+    """Return repo contact information or empty string.
+
+    web.contact is the primary source, but if that is not set, try
+    ui.username or $EMAIL as a fallback to display something useful.
+    """
+    return (config("web", "contact") or
+            config("ui", "username") or
+            os.environ.get("EMAIL") or "")

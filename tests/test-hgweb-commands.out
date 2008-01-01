@@ -301,7 +301,7 @@ summary |
 <div class="title">&nbsp;</div>
 <table cellspacing="0">
 <tr><td>description</td><td>unknown</td></tr>
-<tr><td>owner</td><td>unknown</td></tr>
+<tr><td>owner</td><td>Foo Bar &lt;foo.bar@example.com&gt;</td></tr>
 <tr><td>last change</td><td>Thu, 01 Jan 1970 00:00:00 +0000</td></tr>
 </table>
 

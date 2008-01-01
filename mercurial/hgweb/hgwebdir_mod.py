@@ -9,7 +9,8 @@
 import os, mimetools, cStringIO
 from mercurial.i18n import gettext as _
 from mercurial import ui, hg, util, templater
-from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen
+from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen, \
+                   get_contact
 from hgweb_mod import hgweb
 from request import wsgirequest
 
@@ -182,9 +183,7 @@ class hgwebdir(object):
                 except OSError:
                     continue
 
-                contact = (get("ui", "username") or # preferred
-                           get("web", "contact") or # deprecated
-                           get("web", "author", "")) # also
+                contact = get_contact(get)
                 description = get("web", "description", "")
                 name = get("web", "name", name)
                 row = dict(contact=contact or "unknown",

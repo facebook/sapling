@@ -405,6 +405,7 @@ if not options.child:
 # the tests produce repeatable output.
 os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
 os.environ['TZ'] = 'GMT'
+os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
 
 TESTDIR = os.environ["TESTDIR"] = os.getcwd()
 HGTMP = os.environ['HGTMP'] = tempfile.mkdtemp('', 'hgtests.', options.tmpdir)

@@ -10,7 +10,7 @@ import os, mimetypes, re, mimetools, cStringIO
 from mercurial.node import *
 from mercurial import mdiff, ui, hg, util, archival, patch
 from mercurial import revlog, templater
-from common import ErrorResponse, get_mtime, style_map, paritygen
+from common import ErrorResponse, get_mtime, style_map, paritygen, get_contact
 from request import wsgirequest
 import webcommands, protocol
 
@@ -808,9 +808,7 @@ class hgweb(object):
 
         yield tmpl("summary",
                    desc=self.config("web", "description", "unknown"),
-                   owner=(self.config("ui", "username") or # preferred
-                          self.config("web", "contact") or # deprecated
-                          self.config("web", "author", "unknown")), # also
+                   owner=get_contact(self.config) or "unknown",
                    lastchange=cl.read(cl.tip())[2],
                    tags=tagentries,
                    branches=branches,
