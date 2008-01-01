@@ -77,7 +77,7 @@ def _bisect(changelog, state):
     return (best_node, tot)
 
 def bisect(ui, repo, rev=None, extra=None,
-               reset=None, good=None, bad=None, skip=None):
+               reset=None, good=None, bad=None, skip=None, noupdate=None):
     """Subdivision search of changesets
 
 This extension helps to find changesets which introduce problems.
@@ -160,14 +160,16 @@ the problem-free state "bad" and the problematic state "good."
         ui.write(_("Testing changeset %s:%s "
                    "(%s changesets remaining, ~%s tests)\n")
                  % (rev, hg.short(node), changesets, tests))
-        cmdutil.bail_if_changed(repo)
-        return hg.clean(repo, node)
+        if not noupdate:
+            cmdutil.bail_if_changed(repo)
+            return hg.clean(repo, node)
 
 cmdtable = {
     "bisect": (bisect,
                [('r', 'reset', False, _('reset bisect state')),
                 ('g', 'good', False, _('mark changeset good')),
                 ('b', 'bad', False, _('mark changeset bad')),
-                ('s', 'skip', False, _('skip testing changeset'))],
+                ('s', 'skip', False, _('skip testing changeset')),
+                ('U', 'noupdate', False, _('do not update to target'))],
                _("hg bisect [-gbsr] [REV]"))
 }
