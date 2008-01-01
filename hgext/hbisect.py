@@ -53,6 +53,7 @@ def _bisect(changelog, state):
     tot = len(candidates)
     if tot == 1:
         return (bad, 0)
+    perfect = tot / 2
 
     # find the best node to test
     best_rev = None
@@ -84,6 +85,8 @@ def _bisect(changelog, state):
             if value > best_len:
                 best_len = value
                 best_rev = rev
+                if value == perfect: # found a perfect candidate? quit early
+                    break
 
     assert best_rev is not None
     best_node = changelog.node(best_rev)
