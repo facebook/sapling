@@ -15,6 +15,7 @@ def _bisect(changelog, state):
     # only the earliest bad revision matters
     badrev = min([changelog.rev(n) for n in state['bad']])
     bad = changelog.node(badrev)
+    skip = dict.fromkeys([changelog.rev(n) for n in state['skip']])
 
     # build ancestors array
     ancestors = [[]] * (changelog.count() + 1) # an extra for [-1]
@@ -48,10 +49,17 @@ def _bisect(changelog, state):
                         visit.append(prev)
 
     candidates.sort()
+    # have we narrowed it down to one entry?
+    tot = len(candidates)
+    if tot == 1:
+        return (bad, 0)
 
-    # accumulate ancestor lists
+    # find the best node to test
+    best_rev = None
+    best_len = -1
     for rev in candidates:
         l = ancestors[rev]
+        ancestors[rev] = None
         if l != None:
             if not l:
                 a = [rev]
@@ -68,31 +76,15 @@ def _bisect(changelog, state):
                     ancestors[c].append(a)
                 else:
                     ancestors[c] = [a]
-            ancestors[rev] = len(a)
+            if n in skip:
+                continue
+            a = len(a) # number of ancestors
+            b = tot - a # number of non-ancestors
+            value = min(a, b) # how good is this test?
+            if value > best_len:
+                best_len = value
+                best_rev = rev
 
-    del children
-
-    if badrev not in candidates:
-        raise util.Abort(_("Could not find the first bad revision"))
-
-    # have we narrowed it down to one entry?
-    tot = len(candidates)
-    if tot == 1:
-        return (bad, 0)
-
-    # find the best node to test
-    best_rev = None
-    best_len = -1
-    skip = dict.fromkeys([changelog.rev(n) for n in state['skip']])
-    for n in candidates:
-        if n in skip:
-            continue
-        a = ancestors[n] # number of ancestors
-        b = tot - a # number of non-ancestors
-        value = min(a, b) # how good is this test?
-        if value > best_len:
-            best_len = value
-            best_rev = n
     assert best_rev is not None
     best_node = changelog.node(best_rev)
 
