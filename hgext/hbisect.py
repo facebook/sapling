@@ -31,18 +31,19 @@ def _bisect(changelog, state):
         raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
                          % (badrev, hg.short(bad)))
 
-    # build children array
-    children = [[]] * (badrev + 1) # an extra for [-1]
-    for rev in xrange(badrev, -1, -1):
+    # build children dict
+    children = {}
+    visit = [badrev]
+    while visit:
+        rev = visit.pop(0)
         if ancestors[rev] == []:
             for prev in clparents(rev):
-                if prev == -1:
-                    continue
-                l = children[prev]
-                if l:
-                    l.append(rev)
-                else:
-                    children[prev] = [rev]
+                if prev != -1:
+                    if prev in children:
+                        children[prev].append(rev)
+                    else:
+                        children[prev] = [rev]
+                        visit.append(prev)
 
     # accumulate ancestor lists
     for rev in xrange(badrev + 1):
@@ -58,7 +59,7 @@ def _bisect(changelog, state):
                     a.update(dict.fromkeys(s))
                 a[rev] = None
                 a = a.keys()
-            for c in children[rev]:
+            for c in children.get(rev, []):
                 if ancestors[c]:
                     ancestors[c].append(a)
                 else:
