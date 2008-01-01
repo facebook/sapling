@@ -258,7 +258,7 @@ class svn_source(converter_source):
             self.module = module
             self.reparent(module)
             stop = self.lastrevs.get(module, 0)
-            self._fetch_revisions(from_revnum=revnum, to_revnum=stop)
+            self._fetch_revisions(revnum, stop)
         commit = self.commits[rev]
         # caller caches the result, so free it here to release memory
         del self.commits[rev]
@@ -571,7 +571,10 @@ class svn_source(converter_source):
 
         return (entries, copies)
 
-    def _fetch_revisions(self, from_revnum = 0, to_revnum = 347):
+    def _fetch_revisions(self, from_revnum, to_revnum):
+        if from_revnum < to_revnum:
+            from_revnum, to_revnum = to_revnum, from_revnum
+
         self.child_cset = None
         def parselogentry(orig_paths, revnum, author, date, message):
             self.ui.debug("parsing revision %d (%d changes)\n" %
@@ -585,9 +588,9 @@ class svn_source(converter_source):
 
             rev = self.revid(revnum)
             # branch log might return entries for a parent we already have
-            if (rev in self.commits or
-                (revnum < self.lastrevs.get(self.module, 0))):
-                return
+
+            if (rev in self.commits or revnum < to_revnum):
+                return None
 
             parents = []
             # check whether this revision is the start of a branch
@@ -642,20 +645,36 @@ class svn_source(converter_source):
             if self.child_cset and not self.child_cset.parents:
                 self.child_cset.parents = [rev]
             self.child_cset = cset
+            return cset
 
         self.ui.note('fetching revision log for "%s" from %d to %d\n' %
                      (self.module, from_revnum, to_revnum))
 
         try:
+            firstcset = None
             for entry in self.get_log([self.module], from_revnum, to_revnum):
-                orig_paths, revnum, author, date, message = entry
+                paths, revnum, author, date, message = entry
                 if self.is_blacklisted(revnum):
                     self.ui.note('skipping blacklisted revision %d\n' % revnum)
                     continue
-                if orig_paths is None:
+                if paths is None:
                     self.ui.debug('revision %d has no entries\n' % revnum)
                     continue
-                parselogentry(orig_paths, revnum, author, date, message)
+                cset = parselogentry(paths, revnum, author, date, message)
+                if cset:
+                    firstcset = cset
+
+            if firstcset and not firstcset.parents:
+                # The first revision of the sequence (the last fetched one)
+                # has invalid parents if not a branch root. Find the parent
+                # revision now, if any.
+                try:
+                    firstrevnum = self.revnum(firstcset.rev)
+                    if firstrevnum > 1:
+                        latest = self.latest(self.module, firstrevnum - 1)
+                        firstcset.parents.append(self.revid(latest))
+                except util.Abort:
+                    pass
         except SubversionException, (inst, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self,
