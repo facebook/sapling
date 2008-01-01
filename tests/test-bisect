@@ -27,6 +27,8 @@ hg bisect -r
 hg bisect -b
 hg bisect -g 1
 hg bisect -g
+echo skip
+hg bisect -s
 hg bisect -g
 hg bisect -g
 hg bisect -b
@@ -37,7 +39,18 @@ hg bisect -r
 hg bisect -b null
 hg bisect -g tip
 hg bisect -g
+echo skip
+hg bisect -s
 hg bisect -g
 hg bisect -g
 hg bisect -b
 hg bisect -g
+
+hg bisect -r
+hg bisect -g tip
+hg bisect -b tip || echo error
+
+hg bisect -r
+hg bisect -g null
+hg bisect -bU tip
+hg id

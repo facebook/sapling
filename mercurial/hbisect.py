@@ -30,7 +30,7 @@ def bisect(changelog, state):
                     ancestors[prev] = None
 
         if ancestors[badrev] is None:
-            return None, None
+            return badrev, None
         return badrev, ancestors
 
     good = 0
@@ -38,10 +38,10 @@ def bisect(changelog, state):
     if not ancestors: # looking for bad to good transition?
         good = 1
         badrev, ancestors = buildancestors(state['good'], state['bad'])
+    bad = changelog.node(badrev)
     if not ancestors: # now we're confused
         raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
                          % (badrev, hg.short(bad)))
-    bad = changelog.node(badrev)
 
     # build children dict
     children = {}
