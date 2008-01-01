@@ -4,6 +4,7 @@ addremove
 annotate
 archive
 backout
+bisect
 branch
 branches
 bundle

@@ -147,6 +147,7 @@ list of commands:
  annotate     show changeset information per file line
  archive      create unversioned archive of a repository revision
  backout      reverse effect of earlier changeset
+ bisect       subdivision search of changesets
  branch       set or show the current branch name
  branches     list repository named branches
  bundle       create a changegroup file
@@ -199,6 +200,7 @@ list of commands:
  annotate     show changeset information per file line
  archive      create unversioned archive of a repository revision
  backout      reverse effect of earlier changeset
+ bisect       subdivision search of changesets
  branch       set or show the current branch name
  branches     list repository named branches
  bundle       create a changegroup file

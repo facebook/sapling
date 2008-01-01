@@ -2,9 +2,6 @@
 
 set -e
 
-echo "[extensions]" >> $HGRCPATH
-echo "hbisect=" >> $HGRCPATH
-
 echo % init
 hg init
 

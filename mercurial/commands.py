@@ -11,7 +11,7 @@ import os, re, sys, urllib
 import hg, util, revlog, bundlerepo, extensions
 import difflib, patch, time, help, mdiff, tempfile
 import errno, version, socket
-import archival, changegroup, cmdutil, hgweb.server, sshserver
+import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
 
 # Commands start here, listed alphabetically
 
@@ -245,6 +245,95 @@ def backout(ui, repo, node=None, rev=None, **opts):
                         'do not forget to merge\n'))
             ui.status(_('(use "backout --merge" '
                         'if you want to auto-merge)\n'))
+
+def bisect(ui, repo, rev=None, extra=None,
+               reset=None, good=None, bad=None, skip=None, noupdate=None):
+    """subdivision search of changesets
+
+    This command helps to find changesets which introduce problems.
+    To use, mark the earliest changeset you know exhibits the problem
+    as bad, then mark the latest changeset which is free from the
+    problem as good. Bisect will update your working directory to a
+    revision for testing. Once you have performed tests, mark the
+    working directory as bad or good and bisect will either update to
+    another candidate changeset or announce that it has found the bad
+    revision.
+
+    Note: bisect expects bad revisions to be descendants of good
+    revisions. If you are looking for the point at which a problem was
+    fixed, then make the problem-free state \"bad\" and the
+    problematic state \"good.\"
+    """
+    # backward compatibility
+    if rev in "good bad reset init".split():
+        ui.warn(_("(use of 'hg bisect <cmd>' is deprecated)\n"))
+        cmd, rev, extra = rev, extra, None
+        if cmd == "good":
+            good = True
+        elif cmd == "bad":
+            bad = True
+        else:
+            reset = True
+    elif extra or good + bad + skip + reset > 1:
+        raise util.Abort("Incompatible arguments")
+
+    if reset:
+        p = repo.join("bisect.state")
+        if os.path.exists(p):
+            os.unlink(p)
+        return
+
+    # load state
+    state = {'good': [], 'bad': [], 'skip': []}
+    if os.path.exists(repo.join("bisect.state")):
+        for l in repo.opener("bisect.state"):
+            kind, node = l[:-1].split()
+            node = repo.lookup(node)
+            if kind not in state:
+                raise util.Abort(_("unknown bisect kind %s") % kind)
+            state[kind].append(node)
+
+    # update state
+    node = repo.lookup(rev or '.')
+    if good:
+        state['good'].append(node)
+    elif bad:
+        state['bad'].append(node)
+    elif skip:
+        state['skip'].append(node)
+
+    # save state
+    f = repo.opener("bisect.state", "w", atomictemp=True)
+    wlock = repo.wlock()
+    try:
+        for kind in state:
+            for node in state[kind]:
+                f.write("%s %s\n" % (kind, hg.hex(node)))
+        f.rename()
+    finally:
+        del wlock
+
+    if not state['good'] or not state['bad']:
+        return
+
+    # actually bisect
+    node, changesets = hbisect.bisect(repo.changelog, state)
+    if changesets == 0:
+        ui.write(_("The first bad revision is:\n"))
+        displayer = cmdutil.show_changeset(ui, repo, {})
+        displayer.show(changenode=node)
+    elif node is not None:
+        # compute the approximate number of remaining tests
+        tests, size = 0, 2
+        while size <= changesets:
+            tests, size = tests + 1, size * 2
+        rev = repo.changelog.rev(node)
+        ui.write(_("Testing changeset %s:%s "
+                   "(%s changesets remaining, ~%s tests)\n")
+                 % (rev, hg.short(node), changesets, tests))
+        if not noupdate:
+            cmdutil.bail_if_changed(repo)
+            return hg.clean(repo, node)
 
 def branch(ui, repo, label=None, **opts):
     """set or show the current branch name
@@ -2658,6 +2747,13 @@ table = {
           ('r', 'rev', '', _('revision to backout')),
          ] + walkopts + commitopts + commitopts2,
          _('hg backout [OPTION]... [-r] REV')),
+    "bisect": (bisect,
+               [('r', 'reset', False, _('reset bisect state')),
+                ('g', 'good', False, _('mark changeset good')),
+                ('b', 'bad', False, _('mark changeset bad')),
+                ('s', 'skip', False, _('skip testing changeset')),
+                ('U', 'noupdate', False, _('do not update to target'))],
+               _("hg bisect [-gbsr] [REV]")),
     "branch":
         (branch,
          [('f', 'force', None,
