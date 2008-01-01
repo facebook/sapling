@@ -34,9 +34,11 @@ def _bisect(changelog, state):
     # build children dict
     children = {}
     visit = [badrev]
+    candidates = []
     while visit:
         rev = visit.pop(0)
         if ancestors[rev] == []:
+            candidates.append(rev)
             for prev in clparents(rev):
                 if prev != -1:
                     if prev in children:
@@ -45,8 +47,10 @@ def _bisect(changelog, state):
                         children[prev] = [rev]
                         visit.append(prev)
 
+    candidates.sort()
+
     # accumulate ancestor lists
-    for rev in xrange(badrev + 1):
+    for rev in candidates:
         l = ancestors[rev]
         if l != None:
             if not l:
@@ -66,7 +70,6 @@ def _bisect(changelog, state):
                     ancestors[c] = [a]
             ancestors[rev] = len(a)
 
-    candidates = a # ancestors of badrev, last rev visited
     del children
 
     if badrev not in candidates:
