@@ -84,9 +84,7 @@ def _bisect(changelog, state):
 
         for c in children.get(rev, []):
             if ancestors[c]:
-                s = dict.fromkeys(ancestors[c])
-                s.update(dict.fromkeys(a))
-                ancestors[c] = s.keys()
+                ancestors[c] = dict.fromkeys(ancestors[c] + a).keys()
             else:
                 ancestors[c] = a + [c]
 
