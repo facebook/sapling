@@ -2799,32 +2799,41 @@ table = {
            _('forcibly copy over an existing managed file')),
          ] + walkopts + dryrunopts,
          _('hg copy [OPTION]... [SOURCE]... DEST')),
-    "debugancestor": (debugancestor, [], _('debugancestor INDEX REV1 REV2')),
+    "debugancestor": (debugancestor, [], _('hg debugancestor INDEX REV1 REV2')),
+    "debugcheckstate": (debugcheckstate, [], _('hg debugcheckstate')),
     "debugcomplete":
         (debugcomplete,
          [('o', 'options', None, _('show the command options'))],
-         _('debugcomplete [-o] CMD')),
-    "debuginstall": (debuginstall, [], _('debuginstall')),
-    "debugrebuildstate":
-        (debugrebuildstate,
-         [('r', 'rev', '', _('revision to rebuild to'))],
-         _('debugrebuildstate [-r REV] [REV]')),
-    "debugcheckstate": (debugcheckstate, [], _('debugcheckstate')),
-    "debugsetparents": (debugsetparents, [], _('debugsetparents REV1 [REV2]')),
-    "debugstate": (debugstate, [], _('debugstate')),
+         _('hg debugcomplete [-o] CMD')),
     "debugdate":
         (debugdate,
          [('e', 'extended', None, _('try extended date formats'))],
-         _('debugdate [-e] DATE [RANGE]')),
-    "debugdata": (debugdata, [], _('debugdata FILE REV')),
-    "debugfsinfo": (debugfsinfo, [], _('debugfsinfo [PATH]')),
-    "debugindex": (debugindex, [], _('debugindex FILE')),
-    "debugindexdot": (debugindexdot, [], _('debugindexdot FILE')),
+         _('hg debugdate [-e] DATE [RANGE]')),
+    "debugdata": (debugdata, [], _('hg debugdata FILE REV')),
+    "debugfsinfo": (debugfsinfo, [], _('hg debugfsinfo [PATH]')),
+    "debugindex": (debugindex, [], _('hg debugindex FILE')),
+    "debugindexdot": (debugindexdot, [], _('hg debugindexdot FILE')),
+    "debuginstall": (debuginstall, [], _('hg debuginstall')),
+    "debugrawcommit|rawcommit":
+        (rawcommit,
+         [('p', 'parent', [], _('parent')),
+          ('F', 'files', '', _('file list'))
+          ] + commitopts + commitopts2,
+         _('hg debugrawcommit [OPTION]... [FILE]...')),
+    "debugrebuildstate":
+        (debugrebuildstate,
+         [('r', 'rev', '', _('revision to rebuild to'))],
+         _('hg debugrebuildstate [-r REV] [REV]')),
     "debugrename":
         (debugrename,
          [('r', 'rev', '', _('revision to debug'))],
-         _('debugrename [-r REV] FILE')),
-    "debugwalk": (debugwalk, walkopts, _('debugwalk [OPTION]... [FILE]...')),
+         _('hg debugrename [-r REV] FILE')),
+    "debugsetparents":
+        (debugsetparents,
+         [],
+         _('hg debugsetparents REV1 [REV2]')),
+    "debugstate": (debugstate, [], _('hg debugstate')),
+    "debugwalk": (debugwalk, walkopts, _('hg debugwalk [OPTION]... [FILE]...')),
     "^diff":
         (diff,
          [('r', 'rev', [], _('revision')),
@@ -2983,12 +2992,6 @@ table = {
           ('r', 'rev', [], _('a specific revision you would like to push')),
          ] + remoteopts,
          _('hg push [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]')),
-    "debugrawcommit|rawcommit":
-        (rawcommit,
-         [('p', 'parent', [], _('parent')),
-          ('F', 'files', '', _('file list'))
-          ] + commitopts + commitopts2,
-         _('hg debugrawcommit [OPTION]... [FILE]...')),
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":
         (remove,
@@ -3013,10 +3016,6 @@ table = {
          _('hg revert [OPTION]... [-r REV] [NAME]...')),
     "rollback": (rollback, [], _('hg rollback')),
     "root": (root, [], _('hg root')),
-    "showconfig|debugconfig":
-        (showconfig,
-         [('u', 'untrusted', None, _('show untrusted configuration options'))],
-         _('showconfig [-u] [NAME]...')),
     "^serve":
         (serve,
          [('A', 'accesslog', '', _('name of access log file to write to')),
@@ -3036,6 +3035,10 @@ table = {
           ('6', 'ipv6', None, _('use IPv6 in addition to IPv4')),
           ('', 'certificate', '', _('SSL certificate file'))],
          _('hg serve [OPTION]...')),
+    "showconfig|debugconfig":
+        (showconfig,
+         [('u', 'untrusted', None, _('show untrusted configuration options'))],
+         _('hg showconfig [-u] [NAME]...')),
     "^status|st":
         (status,
          [('A', 'all', None, _('show status of all files')),
