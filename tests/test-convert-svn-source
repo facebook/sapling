@@ -58,6 +58,9 @@ echo '[extensions]' >> $HGRCPATH
 echo 'hgext.graphlog =' >> $HGRCPATH
 hg glog -R fmap --template '#rev# #desc|firstline# files: #files#\n'
 
+echo % test stop revision
+hg convert --rev 1 $svnurl stoprev
+
 ########################################
 
 echo "# now tests that it works with trunk/branches/tags layout"

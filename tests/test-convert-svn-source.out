@@ -41,6 +41,12 @@ o  1 changeb files: b
 |
 o  0 changea files: b
 
+% test stop revision
+initializing destination stoprev repository
+scanning source...
+sorting...
+converting...
+0 init
 # now tests that it works with trunk/branches/tags layout
 
 % initial svn import
