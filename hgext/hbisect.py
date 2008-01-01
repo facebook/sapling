@@ -64,39 +64,31 @@ def _bisect(changelog, state):
             for c in children.get(rev, []):
                 poison[c] = True # poison children
             continue
-        l = ancestors[rev]
+
+        a = ancestors[rev] or [rev]
         ancestors[rev] = None
-        if l != None:
-            if not l:
-                a = [rev]
-            elif len(l) == 1:
-                a = l[0] + [rev]
-            else:
-                a = {}
-                for s in l:
-                    a.update(dict.fromkeys(s))
-                a[rev] = None
-                a = a.keys()
 
-            x = len(a) # number of ancestors
-            y = tot - x # number of non-ancestors
-            value = min(x, y) # how good is this test?
-            if value > best_len and rev not in skip:
-                best_len = value
-                best_rev = rev
-                if value == perfect: # found a perfect candidate? quit early
-                    break
+        x = len(a) # number of ancestors
+        y = tot - x # number of non-ancestors
+        value = min(x, y) # how good is this test?
+        if value > best_len and rev not in skip:
+            best_len = value
+            best_rev = rev
+            if value == perfect: # found a perfect candidate? quit early
+                break
 
-            if y < perfect: # all downhill from here?
-                for c in children.get(rev, []):
-                    poison[c] = True # poison children
-                continue
-
+        if y < perfect: # all downhill from here?
             for c in children.get(rev, []):
-                if ancestors[c]:
-                    ancestors[c].append(a)
-                else:
-                    ancestors[c] = [a]
+                poison[c] = True # poison children
+            continue
+
+        for c in children.get(rev, []):
+            if ancestors[c]:
+                s = dict.fromkeys(ancestors[c])
+                s.update(dict.fromkeys(a))
+                ancestors[c] = s.keys()
+            else:
+                ancestors[c] = a + [c]
 
     assert best_rev is not None
     best_node = changelog.node(best_rev)
