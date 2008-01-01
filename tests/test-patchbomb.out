@@ -110,6 +110,7 @@ Writing [PATCH 2 of 2] b ...
 adding c
 % test bundle and description
 searching for changes
+1 changesets found
 
 Displaying test ...
 Content-Type: multipart/mixed; boundary="===

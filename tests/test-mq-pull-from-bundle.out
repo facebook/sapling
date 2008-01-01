@@ -15,6 +15,7 @@ incoming = --template "{rev}: {desc}\n"
 ====== Setup main
 adding one
 ====== Bundle main
+2 changesets found
 ====== Incoming to fresh repo
 >> hg -R fresh incoming main.hg
 comparing with main.hg
@@ -28,6 +29,7 @@ comparing with bundle:fresh+main.hg
 adding two
 Patch queue now empty
 ====== Bundle queue
+1 changesets found
 ====== Clone base
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 ====== Incoming queue bundle

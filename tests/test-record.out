@@ -105,6 +105,7 @@ summary:     delete
 
 
 % add binary file
+1 changesets found
 diff --git a/tip.bundle b/tip.bundle
 new file mode 100644
 this is a binary file
@@ -119,6 +120,7 @@ diff -r a2546574bce9 -r 9e998a545a8b tip.bundle
 Binary file tip.bundle has changed
 
 % change binary file
+1 changesets found
 diff --git a/tip.bundle b/tip.bundle
 this modifies a binary file (all or nothing)
 examine changes to 'tip.bundle'? [Ynsfdaq?]  
@@ -132,6 +134,7 @@ diff -r 9e998a545a8b -r 93d05561507d tip.bundle
 Binary file tip.bundle has changed
 
 % rename and change binary file
+1 changesets found
 diff --git a/tip.bundle b/top.bundle
 rename from tip.bundle
 rename to top.bundle
