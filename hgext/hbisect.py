@@ -8,7 +8,7 @@
 
 from mercurial.i18n import _
 from mercurial import hg, util, cmdutil
-import os, array
+import os
 
 def _bisect(changelog, state):
     clparents = changelog.parentrevs
@@ -31,30 +31,48 @@ def _bisect(changelog, state):
         raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
                          % (badrev, hg.short(bad)))
 
+    # build children array
+    children = [[]] * (badrev + 1) # an extra for [-1]
+    for rev in xrange(badrev, -1, -1):
+        if ancestors[rev] == []:
+            for prev in clparents(rev):
+                if prev == -1:
+                    continue
+                l = children[prev]
+                if l:
+                    l.append(rev)
+                else:
+                    children[prev] = [rev]
+
     # accumulate ancestor lists
     for rev in xrange(badrev + 1):
-        if ancestors[rev] == []:
-            p1, p2 = clparents(rev)
-            a1, a2 = ancestors[p1], ancestors[p2]
-            if a1:
-                if a2:
-                    # merge ancestor lists
-                    a = dict.fromkeys(a2)
-                    a.update(dict.fromkeys(a1))
-                    a[rev] = None
-                    ancestors[rev] = array.array("l", a.keys())
-                else:
-                    ancestors[rev] = a1 + array.array("l", [rev])
-            elif a2:
-                ancestors[rev] = a2 + array.array("l", [rev])
+        l = ancestors[rev]
+        if l != None:
+            if not l:
+                a = [rev]
+            elif len(l) == 1:
+                a = l[0] + [rev]
             else:
-                ancestors[rev] = array.array("l", [rev])
+                a = {}
+                for s in l:
+                    a.update(dict.fromkeys(s))
+                a[rev] = None
+                a = a.keys()
+            for c in children[rev]:
+                if ancestors[c]:
+                    ancestors[c].append(a)
+                else:
+                    ancestors[c] = [a]
+            ancestors[rev] = len(a)
 
-    if badrev not in ancestors[badrev]:
+    candidates = a # ancestors of badrev, last rev visited
+    del children
+
+    if badrev not in candidates:
         raise util.Abort(_("Could not find the first bad revision"))
 
     # have we narrowed it down to one entry?
-    tot = len(ancestors[badrev])
+    tot = len(candidates)
     if tot == 1:
         return (bad, 0)
 
@@ -62,10 +80,10 @@ def _bisect(changelog, state):
     best_rev = None
     best_len = -1
     skip = dict.fromkeys([changelog.rev(n) for n in state['skip']])
-    for n in ancestors[badrev]:
+    for n in candidates:
         if n in skip:
             continue
-        a = len(ancestors[n]) # number of ancestors
+        a = ancestors[n] # number of ancestors
         b = tot - a # number of non-ancestors
         value = min(a, b) # how good is this test?
         if value > best_len:
