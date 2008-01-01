@@ -12,25 +12,36 @@ import hg, util
 
 def bisect(changelog, state):
     clparents = changelog.parentrevs
-    # only the earliest bad revision matters
-    badrev = min([changelog.rev(n) for n in state['bad']])
-    bad = changelog.node(badrev)
     skip = dict.fromkeys([changelog.rev(n) for n in state['skip']])
 
-    # build ancestors array
-    ancestors = [[]] * (changelog.count() + 1) # an extra for [-1]
+    def buildancestors(bad, good):
+        # only the earliest bad revision matters
+        badrev = min([changelog.rev(n) for n in bad])
+        goodrevs = [changelog.rev(n) for n in good]
+        # build ancestors array
+        ancestors = [[]] * (changelog.count() + 1) # an extra for [-1]
 
-    # clear good revs from array
-    for node in state['good']:
-        ancestors[changelog.rev(node)] = None
-    for rev in xrange(changelog.count(), -1, -1):
-        if ancestors[rev] is None:
-            for prev in clparents(rev):
-                ancestors[prev] = None
+        # clear good revs from array
+        for node in goodrevs:
+            ancestors[node] = None
+        for rev in xrange(changelog.count(), -1, -1):
+            if ancestors[rev] is None:
+                for prev in clparents(rev):
+                    ancestors[prev] = None
 
-    if ancestors[badrev] is None:
+        if ancestors[badrev] is None:
+            return None, None
+        return badrev, ancestors
+
+    good = 0
+    badrev, ancestors = buildancestors(state['bad'], state['good'])
+    if not ancestors: # looking for bad to good transition?
+        good = 1
+        badrev, ancestors = buildancestors(state['good'], state['bad'])
+    if not ancestors: # now we're confused
         raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
                          % (badrev, hg.short(bad)))
+    bad = changelog.node(badrev)
 
     # build children dict
     children = {}
@@ -52,7 +63,7 @@ def bisect(changelog, state):
     # have we narrowed it down to one entry?
     tot = len(candidates)
     if tot == 1:
-        return (bad, 0)
+        return (bad, 0, good)
     perfect = tot / 2
 
     # find the best node to test
@@ -91,4 +102,4 @@ def bisect(changelog, state):
     assert best_rev is not None
     best_node = changelog.node(best_rev)
 
-    return (best_node, tot)
+    return (best_node, tot, good)

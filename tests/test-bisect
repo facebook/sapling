@@ -31,3 +31,13 @@ hg bisect -g
 hg bisect -g
 hg bisect -b
 hg bisect -g
+
+echo % bisect reverse test
+hg bisect -r
+hg bisect -b null
+hg bisect -g tip
+hg bisect -g
+hg bisect -g
+hg bisect -g
+hg bisect -b
+hg bisect -g

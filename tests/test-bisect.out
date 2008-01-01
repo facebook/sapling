@@ -214,3 +214,20 @@ user:        test
 date:        Thu Jan 01 00:00:29 1970 +0000
 summary:     msg 29
 
+% bisect reverse test
+Testing changeset 15:e7fa0811edb0 (32 changesets remaining, ~5 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 7:03750880c6b5 (16 changesets remaining, ~4 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 3:b53bea5e2fcb (8 changesets remaining, ~3 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 1:5cd978ea5149 (4 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 2:db07c04beaca (2 changesets remaining, ~1 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+The first good revision is:
+changeset:   2:db07c04beaca
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     msg 2
+

@@ -258,11 +258,6 @@ def bisect(ui, repo, rev=None, extra=None,
     working directory as bad or good and bisect will either update to
     another candidate changeset or announce that it has found the bad
     revision.
-
-    Note: bisect expects bad revisions to be descendants of good
-    revisions. If you are looking for the point at which a problem was
-    fixed, then make the problem-free state \"bad\" and the
-    problematic state \"good.\"
     """
     # backward compatibility
     if rev in "good bad reset init".split():
@@ -317,9 +312,9 @@ def bisect(ui, repo, rev=None, extra=None,
         return
 
     # actually bisect
-    node, changesets = hbisect.bisect(repo.changelog, state)
+    node, changesets, good = hbisect.bisect(repo.changelog, state)
     if changesets == 0:
-        ui.write(_("The first bad revision is:\n"))
+        ui.write(_("The first %s revision is:\n") % (good and "good" or "bad"))
         displayer = cmdutil.show_changeset(ui, repo, {})
         displayer.show(changenode=node)
     elif node is not None:
