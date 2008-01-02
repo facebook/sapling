@@ -604,6 +604,7 @@ class queue:
         msg = opts.get('msg')
         force = opts.get('force')
         user = opts.get('user')
+        date = opts.get('date')
         if os.path.exists(self.join(patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
         if opts.get('include') or opts.get('exclude') or pats:
@@ -618,7 +619,7 @@ class queue:
         try:
             insert = self.full_series_end()
             commitmsg = msg and msg or ("[mq]: %s" % patch)
-            n = repo.commit(commitfiles, commitmsg, user, match=match, force=True)
+            n = repo.commit(commitfiles, commitmsg, user, date, match=match, force=True)
             if n == None:
                 raise util.Abort(_("repo commit failed"))
             self.full_series[insert:insert] = [patch]
@@ -627,8 +628,15 @@ class queue:
             self.series_dirty = 1
             self.applied_dirty = 1
             p = self.opener(patch, "w")
-            if user:
-                p.write("From: " + user + "\n\n")
+            if date:
+                p.write("# HG changeset patch\n")
+                if user:
+                    p.write("# User " + user + "\n")
+                p.write("# Date " + date + "\n")
+                p.write("\n")
+            elif user:
+                p.write("From: " + user + "\n")
+                p.write("\n")
             if msg:
                 msg = msg + "\n"
                 p.write(msg)
@@ -949,20 +957,32 @@ class queue:
                         ci += 1
                     del comments[ci]
 
-            newuser = opts.get('user')
-            if newuser:
-                # Update all references to a user in the patch header.
-                # If none found, add "From: " header.
-                needfrom = True
-                for prefix in ['# User ', 'From: ']:
+            def setheaderfield(comments, prefixes, new):
+                # Update all references to a field in the patch header.
+                # If none found, add it email style.
+                res = False
+                for prefix in prefixes:
                     for i in xrange(len(comments)):
                         if comments[i].startswith(prefix):
-                            comments[i] = prefix + newuser
-                            needfrom = False
+                            comments[i] = prefix + new
+                            res = True
                             break
-                if needfrom:
-                    comments = ['From: ' + newuser, ''] + comments
+                return res
+
+            newuser = opts.get('user')
+            if newuser:
+                if not setheaderfield(comments, ['From: ', '# User '], newuser):
+                    try:
+                        patchheaderat = comments.index('# HG changeset patch')
+                        comments.insert(patchheaderat + 1,'# User ' + newuser)
+                    except ValueError:
+                        comments = ['From: ' + newuser, ''] + comments
                 user = newuser
+
+            newdate = opts.get('date')
+            if newdate:
+                if setheaderfield(comments, ['# Date '], newdate):
+                    date = newdate
 
             if msg:
                 comments.append(msg)
@@ -1094,7 +1114,7 @@ class queue:
 
                 self.strip(repo, top, update=False,
                            backup='strip')
-                n = repo.commit(filelist, message, user, match=matchfn,
+                n = repo.commit(filelist, message, user, date, match=matchfn,
                                 force=1)
                 self.applied[-1] = statusentry(revlog.hex(n), patchfn)
                 self.applied_dirty = 1
@@ -1632,6 +1652,7 @@ def setupheaderopts(ui, opts):
         if not opts[opt] and opts['current' + opt]:
             opts[opt] = val
     do('user', ui.username())
+    do('date', "%d %d" % util.makedate())
 
 def new(ui, repo, patch, *args, **opts):
     """create a new patch
@@ -2170,7 +2191,9 @@ seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
 headeropts = [
     ('U', 'currentuser', None, _('add "From: <current user>" to patch')),
-    ('u', 'user', '', _('add "From: <given user>" to patch'))]
+    ('u', 'user', '', _('add "From: <given user>" to patch')),
+    ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
+    ('d', 'date', '', _('add "Date: <given date>" to patch'))]
 
 cmdtable = {
     "qapplied": (applied, [] + seriesopts, _('hg qapplied [-s] [PATCH]')),
