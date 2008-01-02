@@ -704,6 +704,27 @@ exit 1
 class svn_sink(converter_sink, commandline):
     commit_re = re.compile(r'Committed revision (\d+).', re.M)
 
+    # iterates sublist of given list for concatenated length is within limit
+    def limit_arglist(self, files):
+        if os.name != 'nt':
+            yield files
+            return
+        # When I tested on WinXP, limit = 2500 is NG, 2400 is OK
+        limit = 2000
+        bytes = 0
+        fl = []
+        for fn in files:
+            b = len(fn) + 1
+            if bytes + b < limit:
+                fl.append(fn)
+                bytes += b
+            else:
+                yield fl
+                fl = []
+                bytes = 0
+        if fl:
+            yield fl
+
     def prerun(self):
         if self.wc:
             os.chdir(self.wc)
@@ -842,12 +863,14 @@ class svn_sink(converter_sink, commandline):
                     if not os.path.exists(self.wjoin(d, '.svn', 'entries'))]
         if add_dirs:
             add_dirs.sort()
-            self.run('add', non_recursive=True, quiet=True, *add_dirs)
+            for fl in self.limit_arglist(add_dirs):
+                self.run('add', non_recursive=True, quiet=True, *fl)
         return add_dirs
 
     def add_files(self, files):
         if files:
-            self.run('add', quiet=True, *files)
+            for fl in self.limit_arglist(files):
+                self.run('add', quiet=True, *fl)
         return files
 
     def tidy_dirs(self, names):
@@ -881,15 +904,18 @@ class svn_sink(converter_sink, commandline):
                 self._copyfile(s, d)
             self.copies = []
         if self.delete:
-            self.run0('delete', *self.delete)
+            for fl in self.limit_arglist(self.delete):
+                self.run0('delete', *fl)
             self.delete = []
         entries.update(self.add_files(files.difference(entries)))
         entries.update(self.tidy_dirs(entries))
         if self.delexec:
-            self.run0('propdel', 'svn:executable', *self.delexec)
+            for fl in self.limit_arglist(self.delexec):
+                self.run0('propdel', 'svn:executable', *fl)
             self.delexec = []
         if self.setexec:
-            self.run0('propset', 'svn:executable', '*', *self.setexec)
+            for fl in self.limit_arglist(self.setexec):
+                self.run0('propset', 'svn:executable', '*', *fl)
             self.setexec = []
 
         fd, messagefile = tempfile.mkstemp(prefix='hg-convert-')
@@ -900,8 +926,7 @@ class svn_sink(converter_sink, commandline):
             output = self.run0('commit',
                                username=util.shortuser(commit.author),
                                file=messagefile,
-                               encoding='utf-8',
-                               *list(entries))
+                               encoding='utf-8')
             try:
                 rev = self.commit_re.search(output).group(1)
             except AttributeError:
