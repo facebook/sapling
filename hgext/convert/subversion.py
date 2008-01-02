@@ -900,6 +900,7 @@ class svn_sink(converter_sink, commandline):
             output = self.run0('commit',
                                username=util.shortuser(commit.author),
                                file=messagefile,
+                               encoding='utf-8',
                                *list(entries))
             try:
                 rev = self.commit_re.search(output).group(1)
