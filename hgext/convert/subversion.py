@@ -51,7 +51,10 @@ def geturl(path):
     except SubversionException:
         pass
     if os.path.isdir(path):
-        return 'file://%s' % os.path.normpath(os.path.abspath(path))
+        path = os.path.normpath(os.path.abspath(path))
+        if os.name == 'nt':
+            path = '/' + path.replace('\\', '/')
+        return 'file://%s' % path
     return path
 
 def optrev(number):
