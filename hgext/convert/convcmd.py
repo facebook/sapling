@@ -248,6 +248,10 @@ class converter(object):
                 desc = self.commitcache[c].desc
                 if "\n" in desc:
                     desc = desc.splitlines()[0]
+                # convert log message to local encoding without using
+                # tolocal() because util._encoding conver() use it as
+                # 'utf-8'
+                desc = desc.decode('utf-8').encode(orig_encoding, 'replace')
                 self.ui.status("%d %s\n" % (num, desc))
                 self.copy(c)
 
@@ -276,7 +280,11 @@ class converter(object):
             self.source.after()
         self.map.close()
 
+orig_encoding = 'ascii'
+
 def convert(ui, src, dest=None, revmapfile=None, **opts):
+    global orig_encoding
+    orig_encoding = util._encoding
     util._encoding = 'UTF-8'
 
     if not dest:
