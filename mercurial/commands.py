@@ -1214,7 +1214,11 @@ def help_(ui, name=None, with_version=False):
             ui.write('\n')
         aliases, i = cmdutil.findcmd(ui, name, table)
         # synopsis
-        ui.write("%s\n\n" % i[2])
+        ui.write("%s\n" % i[2])
+
+        # aliases
+        if not ui.quiet and len(aliases) > 1:
+            ui.write(_("\naliases: %s\n") % ', '.join(aliases[1:]))
 
         # description
         doc = i[0].__doc__
@@ -1222,13 +1226,9 @@ def help_(ui, name=None, with_version=False):
             doc = _("(No help text available)")
         if ui.quiet:
             doc = doc.splitlines(0)[0]
-        ui.write("%s\n" % doc.rstrip())
+        ui.write("\n%s\n" % doc.rstrip())
 
         if not ui.quiet:
-            # aliases
-            if len(aliases) > 1:
-                ui.write(_("\naliases: %s\n") % ', '.join(aliases[1:]))
-
             # options
             if i[1]:
                 option_lists.append((_("options:\n"), i[1]))

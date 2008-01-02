@@ -211,6 +211,8 @@ options:
 use "hg -v help diff" to show global options
 hg status [OPTION]... [FILE]...
 
+aliases: st
+
 show changed files in the working directory
 
     Show status of files in the repository.  If names are given, only
@@ -234,8 +236,6 @@ show changed files in the working directory
     ? = not tracked
     I = ignored (not shown by default)
       = the previous added file was copied from here
-
-aliases: st
 
 options:
 
