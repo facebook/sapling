@@ -121,7 +121,7 @@ class changelog(revlog):
         extra = {}
         for l in text.split('\0'):
             if l:
-                k, v = text.decode('string_escape').split(':', 1)
+                k, v = l.decode('string_escape').split(':', 1)
                 extra[k] = v
         return extra
 
