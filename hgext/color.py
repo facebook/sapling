@@ -123,7 +123,7 @@ def colorstatus(statusfunc, ui, repo, *pats, **opts):
 _status_abbreviations = { 'M': 'modified',
                           'A': 'added',
                           'R': 'removed',
-                          'D': 'deleted',
+                          '!': 'deleted',
                           '?': 'unknown',
                           'I': 'ignored',
                           'C': 'clean',
