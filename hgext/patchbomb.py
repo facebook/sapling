@@ -166,16 +166,16 @@ def patchbomb(ui, repo, *revs, **opts):
         #        'Patch subject is complete summary.')
         #body += '\n\n\n'
 
-        if opts['plain']:
+        if opts.get('plain'):
             while patch and patch[0].startswith('# '):
                 patch.pop(0)
             if patch:
                 patch.pop(0)
             while patch and not patch[0].strip():
                 patch.pop(0)
-        if opts['diffstat']:
+        if opts.get('diffstat'):
             body += cdiffstat('\n'.join(desc), patch) + '\n\n'
-        if opts['attach']:
+        if opts.get('attach'):
             msg = email.MIMEMultipart.MIMEMultipart()
             if body:
                 msg.attach(email.MIMEText.MIMEText(body, 'plain'))
@@ -199,7 +199,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
         subj = desc[0].strip().rstrip('. ')
         if total == 1:
-            subj = '[PATCH] ' + (opts['subject'] or subj)
+            subj = '[PATCH] ' + (opts.get('subject') or subj)
         else:
             tlen = len(str(total))
             subj = '[PATCH %0*d of %d] %s' % (tlen, idx, total, subj)
@@ -233,7 +233,7 @@ def patchbomb(ui, repo, *revs, **opts):
                 pass
             os.rmdir(tmpdir)
 
-    if not (opts['test'] or opts['mbox']):
+    if not (opts.get('test') or opts.get('mbox')):
         # really sending
         mail.validateconfig(ui)
 
@@ -264,7 +264,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     # start
     if opts.get('date'):
-        start_time = util.parsedate(opts['date'])
+        start_time = util.parsedate(opts.get('date'))
     else:
         start_time = util.makedate()
 
@@ -272,8 +272,8 @@ def patchbomb(ui, repo, *revs, **opts):
         return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
 
     def getdescription(body, sender):
-        if opts['desc']:
-            body = open(opts['desc']).read()
+        if opts.get('desc'):
+            body = open(opts.get('desc')).read()
         else:
             ui.write(_('\nWrite the introductory message for the '
                        'patch series.\n\n'))
@@ -316,12 +316,12 @@ def patchbomb(ui, repo, *revs, **opts):
 
             subj = '[PATCH %0*d of %d] %s' % (
                 tlen, 0, len(patches),
-                opts['subject'] or
+                opts.get('subject') or
                 prompt('Subject:',
                        rest=' [PATCH %0*d of %d] ' % (tlen, 0, len(patches))))
 
             body = ''
-            if opts['diffstat']:
+            if opts.get('diffstat'):
                 d = cdiffstat(_('Final summary:\n'), jumbo)
                 if d:
                     body = '\n' + d
@@ -334,7 +334,7 @@ def patchbomb(ui, repo, *revs, **opts):
         return msgs
 
     def getbundlemsgs(bundle):
-        subj = (opts['subject']
+        subj = (opts.get('subject')
                 or prompt('Subject:', default='A bundle for your repository'))
 
         body = getdescription('', sender)
@@ -350,7 +350,7 @@ def patchbomb(ui, repo, *revs, **opts):
         msg['Subject'] = subj
         return [msg]
 
-    sender = (opts['from'] or ui.config('email', 'from') or
+    sender = (opts.get('from') or ui.config('email', 'from') or
               ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
 
@@ -360,15 +360,15 @@ def patchbomb(ui, repo, *revs, **opts):
         msgs = getexportmsgs()
 
     def getaddrs(opt, prpt, default = None):
-        addrs = opts[opt] or (ui.config('email', opt) or
-                              ui.config('patchbomb', opt) or
-                              prompt(prpt, default = default)).split(',')
+        addrs = opts.get(opt) or (ui.config('email', opt) or
+                                  ui.config('patchbomb', opt) or
+                                  prompt(prpt, default = default)).split(',')
         return [a.strip() for a in addrs if a.strip()]
 
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
 
-    bcc = opts['bcc'] or (ui.config('email', 'bcc') or
+    bcc = opts.get('bcc') or (ui.config('email', 'bcc') or
                           ui.config('patchbomb', 'bcc') or '').split(',')
     bcc = [a.strip() for a in bcc if a.strip()]
 
@@ -396,7 +396,7 @@ def patchbomb(ui, repo, *revs, **opts):
             m['Cc']  = ', '.join(cc)
         if bcc:
             m['Bcc'] = ', '.join(bcc)
-        if opts['test']:
+        if opts.get('test'):
             ui.status('Displaying ', m['Subject'], ' ...\n')
             ui.flush()
             if 'PAGER' in os.environ:
@@ -411,9 +411,10 @@ def patchbomb(ui, repo, *revs, **opts):
                     raise
             if fp is not ui:
                 fp.close()
-        elif opts['mbox']:
+        elif opts.get('mbox'):
             ui.status('Writing ', m['Subject'], ' ...\n')
-            fp = open(opts['mbox'], m.has_key('In-Reply-To') and 'ab+' or 'wb+')
+            fp = open(opts.get('mbox'),
+                      m.has_key('In-Reply-To') and 'ab+' or 'wb+')
             date = util.datestr(date=start_time,
                                 format='%a %b %d %H:%M:%S %Y', timezone=False)
             fp.write('From %s %s\n' % (sender_addr, date))
