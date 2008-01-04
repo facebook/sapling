@@ -1707,7 +1707,7 @@ def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')
 
-def hidepassword(url, user=True, password=True):
+def hidepassword(url):
     '''hide user credential in a url string'''
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
     netloc = re.sub('([^:]*):([^@]*)@(.*)', r'\1:***@\3', netloc)
