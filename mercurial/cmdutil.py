@@ -495,6 +495,15 @@ def service(opts, parentfn=None, initfn=None, runfn=None):
         rfd, wfd = os.pipe()
         args = sys.argv[:]
         args.append('--daemon-pipefds=%d,%d' % (rfd, wfd))
+        # Don't pass --cwd to the child process, because we've already
+        # changed directory.
+        for i in xrange(1,len(args)):
+            if args[i].startswith('--cwd='):
+                del args[i]
+                break
+            elif args[i].startswith('--cwd'):
+                del args[i:i+2]
+                break
         pid = os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
                          args[0], args)
         os.close(wfd)
