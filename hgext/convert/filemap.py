@@ -128,6 +128,12 @@ class filemap_source(object):
         self.children = {}
         self.seenchildren = {}
 
+    def before(self):
+        self.base.before()
+
+    def after(self):
+        self.base.after()
+
     def setrevmap(self, revmap, order):
         # rebuild our state to make things restartable
         #
