@@ -43,7 +43,8 @@ def fetch(ui, repo, source='default', **opts):
         if not err:
             mod, add, rem = repo.status()[:3]
             message = (cmdutil.logmessage(opts) or
-                       (_('Automated merge with %s') % other.url()))
+                       (_('Automated merge with %s') %
+                        util.removeauth(other.url())))
             n = repo.commit(mod + add + rem, message,
                             opts['user'], opts['date'],
                             force_editor=opts.get('force_editor'))
@@ -54,7 +55,8 @@ def fetch(ui, repo, source='default', **opts):
         cmdutil.setremoteconfig(ui, opts)
 
         other = hg.repository(ui, ui.expandpath(source))
-        ui.status(_('pulling from %s\n') % ui.expandpath(source))
+        ui.status(_('pulling from %s\n') %
+                  util.hidepassword(ui.expandpath(source)))
         revs = None
         if opts['rev'] and not other.local():
             raise util.Abort(_("fetch -r doesn't work for remote repositories yet"))

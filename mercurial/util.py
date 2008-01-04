@@ -1707,32 +1707,14 @@ def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')
 
-def hidepassword(url):
-    '''replaces the password in the url string by three asterisks (***)
+def hidepassword(url, user=True, password=True):
+    '''hide user credential in a url string'''
+    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+    netloc = re.sub('([^:]*):([^@]*)@(.*)', r'\1:***@\3', netloc)
+    return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
 
-    >>> hidepassword('http://www.example.com/some/path#fragment')
-    'http://www.example.com/some/path#fragment'
-    >>> hidepassword('http://me@www.example.com/some/path#fragment')
-    'http://me@www.example.com/some/path#fragment'
-    >>> hidepassword('http://me:simplepw@www.example.com/path#frag')
-    'http://me:***@www.example.com/path#frag'
-    >>> hidepassword('http://me:complex:pw@www.example.com/path#frag')
-    'http://me:***@www.example.com/path#frag'
-    >>> hidepassword('/path/to/repo')
-    '/path/to/repo'
-    >>> hidepassword('relative/path/to/repo')
-    'relative/path/to/repo'
-    >>> hidepassword('c:\\\\path\\\\to\\\\repo')
-    'c:\\\\path\\\\to\\\\repo'
-    >>> hidepassword('c:/path/to/repo')
-    'c:/path/to/repo'
-    >>> hidepassword('bundle://path/to/bundle')
-    'bundle://path/to/bundle'
-    '''
-    url_parts = list(urlparse.urlparse(url))
-    host_with_pw_pattern = re.compile('^([^:]*):([^@]*)@(.*)$')
-    if host_with_pw_pattern.match(url_parts[1]):
-        url_parts[1] = re.sub(host_with_pw_pattern, r'\1:***@\3',
-            url_parts[1])
-    return urlparse.urlunparse(url_parts)
-
+def removeauth(url):
+    '''remove all authentication information from a url string'''
+    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+    netloc = netloc[netloc.find('@')+1:]
+    return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))

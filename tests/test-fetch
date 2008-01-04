@@ -20,5 +20,20 @@ hg --cwd b parents -q
 
 echo c > c/c
 hg --cwd c commit -d '3 0' -Amc
+
+hg clone c d
+hg clone c e
+
 hg --cwd c fetch -d '4 0' -m 'automated merge' ../a
 ls c
+
+hg --cwd a serve -a localhost -p $HGPORT -d --pid-file=hg.pid
+cat a/hg.pid >> "$DAEMON_PIDS"
+
+echo '% fetch over http, no auth'
+hg --cwd d fetch -d '5 0' http://localhost:$HGPORT/
+hg --cwd d tip --template '{desc}\n'
+
+echo '% fetch over http with auth (should be hidden in desc)'
+hg --cwd e fetch -d '5 0' http://user:password@localhost:$HGPORT/
+hg --cwd e tip --template '{desc}\n'
