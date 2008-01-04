@@ -46,11 +46,13 @@ class mercurial_sink(converter_sink):
         self.filemapmode = False
 
     def before(self):
+        self.ui.debug(_('run hg sink pre-conversion action\n'))
         self.wlock = self.repo.wlock()
         self.lock = self.repo.lock()
         self.repo.dirstate.clear()
 
     def after(self):
+        self.ui.debug(_('run hg sink post-conversion action\n'))
         self.repo.dirstate.invalidate()
         self.lock = None
         self.wlock = None
@@ -274,3 +276,9 @@ class mercurial_source(converter_source):
                                   'a')
         self.convertfp.write('%s %s\n' % (destrev, rev))
         self.convertfp.flush()
+
+    def before(self):
+        self.ui.debug(_('run hg source pre-conversion action\n'))
+
+    def after(self):
+        self.ui.debug(_('run hg source post-conversion action\n'))

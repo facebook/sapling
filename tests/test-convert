@@ -39,3 +39,8 @@ hg convert a bogusdir
 echo % should succeed
 chmod 700 bogusdir
 hg convert a bogusdir
+
+echo % test pre and post conversion actions
+echo 'include b' > filemap
+hg convert --debug --filemap filemap a partialb | \
+    grep 'run hg'

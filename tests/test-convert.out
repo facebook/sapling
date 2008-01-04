@@ -112,3 +112,8 @@ converting...
 2 c
 1 d
 0 e
+% test pre and post conversion actions
+run hg source pre-conversion action
+run hg sink pre-conversion action
+run hg sink post-conversion action
+run hg source post-conversion action
