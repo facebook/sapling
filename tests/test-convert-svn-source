@@ -26,7 +26,7 @@ if [ $? -ne 0 ]; then
     svnpath='/'$svnpath
 fi
 
-svnurl=file://$svnpath/svn-repo/trunk
+svnurl=file://$svnpath/svn-repo/trunk/test
 svn import -m init t $svnurl | fix_path
 
 echo % update svn repository
@@ -60,6 +60,10 @@ hg glog -R fmap --template '#rev# #desc|firstline# files: #files#\n'
 
 echo % test stop revision
 hg convert --rev 1 $svnurl stoprev
+# Check convert_revision extra-records.
+# This is also the only place testing more than one extra field
+# in a revision.
+hg --cwd stoprev tip --debug | grep extra | sed 's/=.*/=/'
 
 ########################################
 
