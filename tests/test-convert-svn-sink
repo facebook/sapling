@@ -2,6 +2,25 @@
 
 "$TESTDIR/hghave" svn svn-bindings || exit 80
 
+fixpath()
+{
+    tr '\\' /
+}
+
+svnupanddisplay()
+{
+    (
+       cd $1; 
+       svn up;
+       svn st -v | fixpath
+       limit=''
+       if [ $2 -gt 0 ]; then
+           limit="--limit=$2"
+       fi
+       svn log --xml -v $limit | fixpath | sed 's,<date>.*,<date/>,'
+    ) 
+}
+
 echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
 
@@ -19,7 +38,7 @@ hg --cwd a ci -d '1 0' -m 'modify a file'
 hg --cwd a tip -q
 
 hg convert -d svn a
-(cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=2 | sed 's,<date>.*,<date/>,')
+svnupanddisplay a-hg-wc 2
 ls a a-hg-wc
 cmp a/a a-hg-wc/a && echo same || echo different
 
@@ -29,7 +48,7 @@ hg --cwd a ci -d '2 0' -m 'rename a file'
 hg --cwd a tip -q
 
 hg convert -d svn a
-(cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=1 | sed 's,<date>.*,<date/>,')
+svnupanddisplay a-hg-wc 1
 ls a a-hg-wc
 
 hg --cwd a cp b c
@@ -38,7 +57,7 @@ hg --cwd a ci -d '3 0' -m 'copy a file'
 hg --cwd a tip -q
 
 hg convert -d svn a
-(cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=1 | sed 's,<date>.*,<date/>,')
+svnupanddisplay a-hg-wc 1
 ls a a-hg-wc
 
 hg --cwd a rm b
@@ -47,7 +66,7 @@ hg --cwd a ci -d '4 0' -m 'remove a file'
 hg --cwd a tip -q
 
 hg convert -d svn a
-(cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=1 | sed 's,<date>.*,<date/>,')
+svnupanddisplay a-hg-wc 1
 ls a a-hg-wc
 
 chmod +x a/c
@@ -56,7 +75,7 @@ hg --cwd a ci -d '5 0' -m 'make a file executable'
 hg --cwd a tip -q
 
 hg convert -d svn a
-(cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=1 | sed 's,<date>.*,<date/>,')
+svnupanddisplay a-hg-wc 1
 test -x a-hg-wc/c && echo executable || echo not executable
 
 echo % executable in new directory
@@ -70,7 +89,7 @@ chmod +x a/d1/a
 hg --cwd a ci -d '0 0' -A -m 'add executable file in new directory'
 
 hg convert -d svn a
-(cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=1 | sed 's,<date>.*,<date/>,')
+svnupanddisplay a-hg-wc 1
 test -x a-hg-wc/d1/a && echo executable || echo not executable
 
 echo % copy to new directory
@@ -80,7 +99,7 @@ hg --cwd a cp d1/a d2/a
 hg --cwd a ci -d '1 0' -A -m 'copy file to new directory'
 
 hg convert -d svn a
-(cd a-hg-wc; svn up; svn st -v; svn log --xml -v --limit=1 | sed 's,<date>.*,<date/>,')
+svnupanddisplay a-hg-wc 1
 
 echo % branchy history
 
@@ -113,4 +132,4 @@ hg --cwd b ci -d '5 0' -m 'merge'
 
 hg convert -d svn b
 echo % expect 4 changes
-(cd b-hg-wc; svn up; svn st -v; svn log --xml -v | sed 's,<date>.*,<date/>,')
+svnupanddisplay b-hg-wc 0
