@@ -67,6 +67,13 @@ if options.interactive and options.jobs > 1:
     print >> sys.stderr, 'ERROR: cannot mix -interactive and --jobs > 1'
     sys.exit(1)
 
+def rename(src, dst):
+    """Like os.rename(), trade atomicity and opened files friendliness
+    for existing destination support.
+    """
+    shutil.copy(src, dst)
+    os.remove(src)
+
 def vlog(*msg):
     if verbose:
         for m in msg:
@@ -528,7 +535,7 @@ def run_tests(tests):
                     print "Accept this change? [n] ",
                     answer = sys.stdin.readline().strip()
                     if answer.lower() in "y yes".split():
-                        os.rename(test + ".err", test + ".out")
+                        rename(test + ".err", test + ".out")
                         tested += 1
                         continue
                 failed += 1
