@@ -181,46 +181,48 @@ class svn_source(converter_source):
             return False
 
     def getheads(self):
-        # detect standard /branches, /tags, /trunk layout
+
+        def getcfgpath(name, rev):
+            cfgpath = self.ui.config('convert', 'svn.' + name)
+            path = (cfgpath or name).strip('/')
+            if not self.exists(path, rev):
+                if cfgpath:
+                    raise util.Abort(_('expected %s to be at %r, but not found')
+                                 % (name, path))
+                return None
+            self.ui.note(_('found %s at %r\n') % (name, path))
+            return path
+
         rev = optrev(self.last_changed)
-        rpath = self.url.strip('/')
-        cfgtrunk = self.ui.config('convert', 'svn.trunk')
-        cfgbranches = self.ui.config('convert', 'svn.branches')
-        cfgtags = self.ui.config('convert', 'svn.tags')
-        trunk = (cfgtrunk or 'trunk').strip('/')
-        branches = (cfgbranches or 'branches').strip('/')
-        tags = (cfgtags or 'tags').strip('/')
-        if self.exists(trunk, rev) and self.exists(branches, rev) and self.exists(tags, rev):
-            self.ui.note('found trunk at %r, branches at %r and tags at %r\n' %
-                         (trunk, branches, tags))
-            oldmodule = self.module
+        oldmodule = ''
+        trunk = getcfgpath('trunk', rev)
+        tags = getcfgpath('tags', rev)
+        branches = getcfgpath('branches', rev)
+
+        # If the project has a trunk or branches, we will extract heads
+        # from them. We keep the project root otherwise.
+        if trunk:
+            oldmodule = self.module or ''
             self.module += '/' + trunk
             lt = self.latest(self.module, self.last_changed)
             self.head = self.revid(lt)
-            self.heads = [self.head]
+
+        # First head in the list is the module's head
+        self.heads = [self.head]
+        self.tags = '%s/%s' % (oldmodule , (tags or 'tags'))
+
+        # Check if branches bring a few more heads to the list
+        if branches:
+            rpath = self.url.strip('/')
             branchnames = svn.client.ls(rpath + '/' + branches, rev, False,
                                         self.ctx)
             for branch in branchnames.keys():
-                if oldmodule:
-                    module = oldmodule + '/' + branches + '/' + branch
-                else:
-                    module = '/' + branches + '/' + branch
+                module = '%s/%s/%s' % (oldmodule, branches, branch)
                 brevnum = self.latest(module, self.last_changed)
                 brev = self.revid(brevnum, module)
                 self.ui.note('found branch %s at %d\n' % (branch, brevnum))
                 self.heads.append(brev)
 
-            if oldmodule:
-                self.tags = '%s/%s' % (oldmodule, tags)
-            else:
-                self.tags = '/%s' % tags
-
-        elif cfgtrunk or cfgbranches or cfgtags:
-            raise util.Abort('trunk/branch/tags layout expected, but not found')
-        else:
-            self.ui.note('working with one branch\n')
-            self.heads = [self.head]
-            self.tags  = tags
         return self.heads
 
     def getfile(self, file, rev):
