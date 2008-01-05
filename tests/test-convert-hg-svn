@@ -10,7 +10,7 @@ fix_path()
 echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
 
-svnpath=`pwd`/svn-repo
+svnpath=`pwd | fix_path`/svn-repo
 svnadmin create $svnpath
 
 cat > $svnpath/hooks/pre-revprop-change <<'EOF'
@@ -31,7 +31,14 @@ exit 1
 EOF
 chmod +x $svnpath/hooks/pre-revprop-change
 
-svnurl=file://$svnpath
+# SVN wants all paths to start with a slash. Unfortunately,
+# Windows ones don't. Handle that.
+svnurl=$svnpath
+expr $svnurl : "\/" > /dev/null
+if [ $? -ne 0 ]; then
+    svnurl='/'$svnurl
+fi
+svnurl=file://$svnurl
 svn co $svnurl $svnpath-wc
 
 cd $svnpath-wc
