@@ -723,8 +723,8 @@ class svn_sink(converter_sink, commandline):
                 bytes += b
             else:
                 yield fl
-                fl = []
-                bytes = 0
+                fl = [fn]
+                bytes = b
         if fl:
             yield fl
 
