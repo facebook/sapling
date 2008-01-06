@@ -281,7 +281,7 @@ class filectx(object):
         fl = self._filelog
         pl = [(p, n, fl) for n in self._filelog.parents(self._filenode)]
 
-        r = self.renamed()
+        r = self._filelog.renamed(self._filenode)
         if r:
             pl[0] = (r[0], r[1], None)
 
