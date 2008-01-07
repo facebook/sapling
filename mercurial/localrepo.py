@@ -525,9 +525,11 @@ class localrepository(repo.repository):
         except IOError:
             ds = ""
         self.opener("journal.dirstate", "w").write(ds)
+        self.opener("journal.branch", "w").write(self.dirstate.branch())
 
         renames = [(self.sjoin("journal"), self.sjoin("undo")),
-                   (self.join("journal.dirstate"), self.join("undo.dirstate"))]
+                   (self.join("journal.dirstate"), self.join("undo.dirstate")),
+                   (self.join("journal.branch"), self.join("undo.branch"))]
         tr = transaction.transaction(self.ui.warn, self.sopener,
                                        self.sjoin("journal"),
                                        aftertrans(renames))
@@ -557,6 +559,8 @@ class localrepository(repo.repository):
                 self.ui.status(_("rolling back last transaction\n"))
                 transaction.rollback(self.sopener, self.sjoin("undo"))
                 util.rename(self.join("undo.dirstate"), self.join("dirstate"))
+                branch = self.opener("undo.branch").read()
+                self.dirstate.setbranch(branch)
                 self.invalidate()
                 self.dirstate.invalidate()
             else:
