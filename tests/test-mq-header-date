@@ -103,8 +103,7 @@ hg qnew 5.patch
 hg qpop
 echo "# HG changeset patch" >>.hg/patches/5.patch
 echo "# Date 10 0" >>.hg/patches/5.patch
-# Drop patch specific error line
-hg qpush 2>&1 | grep -v garbage
+hg qpush 2>&1 | grep 'Now at'
 catlogd 5
 
 echo ==== hg qref

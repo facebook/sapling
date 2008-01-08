@@ -83,8 +83,7 @@ hg qnew 5.patch
 hg qpop
 echo "# HG changeset patch" >>.hg/patches/5.patch
 echo "# User johndoe" >>.hg/patches/5.patch
-# Drop patch specific error line
-hg qpush 2>&1 | grep -v garbage
+hg qpush 2>&1 | grep 'Now at'
 catlog 5
 
 echo ==== hg qref

@@ -129,9 +129,6 @@ diff -r ... 4
 Now at: 3.patch
 ==== qnew with HG header
 Now at: 3.patch
-applying 5.patch
-patch failed, unable to continue (try -v)
-patch 5.patch is empty
 Now at: 5.patch
 # HG changeset patch
 # Date 10 0

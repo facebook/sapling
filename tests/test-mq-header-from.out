@@ -131,9 +131,6 @@ diff -r ... 4
 0: [mq]: 1.patch - mary
 ==== qnew with HG header
 Now at: 4.patch
-applying 5.patch
-patch failed, unable to continue (try -v)
-patch 5.patch is empty
 Now at: 5.patch
 # HG changeset patch
 # User johndoe
