@@ -272,14 +272,14 @@ drwxr-xr-x da
 
 <title>test: Summary</title>
 <link rel="alternate" type="application/atom+xml"
-   href="/atom-log" title="Atom feed for test">
+   href="/atom-log" title="Atom feed for test"/>
 <link rel="alternate" type="application/rss+xml"
-   href="/rss-log" title="RSS feed for test">
+   href="/rss-log" title="RSS feed for test"/>
 </head>
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial"><div style="float:right;">Mercurial</div></a><a href="/summary?style=gitweb">test</a> / summary
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / summary
 
 <form action="/log">
 <input type="hidden" name="style" value="gitweb" />
@@ -319,7 +319,7 @@ summary |
 
 <div><a class="title" href="#">branches</a></div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>long ago</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></td><td>default</td><td class="link"><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">manifest</a></td></tr>
+<tr class="parity0"><td class="age"><i>long ago</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td><td>default</td><td class="link"><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">manifest</a></td></tr>
 <tr class="light">
   <td colspan="4"><a class="list"  href="#">...</a></td>
 </tr>
