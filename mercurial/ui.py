@@ -204,7 +204,8 @@ class ui(object):
                     pathsitems = items
                 for n, path in pathsitems:
                     if path and "://" not in path and not os.path.isabs(path):
-                        cdata.set("paths", n, os.path.join(root, path))
+                        cdata.set("paths", n,
+                                  os.path.normpath(os.path.join(root, path)))
 
         # update verbosity/interactive/report_untrusted settings
         if section is None or section == 'ui':

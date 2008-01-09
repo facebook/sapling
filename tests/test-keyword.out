@@ -293,7 +293,7 @@ adding file changes
 added 1 changesets with 3 changes to 3 files
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % incoming
-comparing with test-keyword/Test-a/../Test
+comparing with test-keyword/Test
 searching for changes
 changeset:   1:0729690beff6
 tag:         tip
