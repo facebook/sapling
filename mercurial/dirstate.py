@@ -87,7 +87,7 @@ class dirstate(object):
             cwd = self.getcwd()
         path = util.pathto(self._root, cwd, f)
         if self._slash:
-            return path.replace(os.sep, '/')
+            return util.normpath(path)
         return path
 
     def __getitem__(self, key):

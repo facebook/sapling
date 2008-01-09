@@ -53,7 +53,7 @@ def geturl(path):
     if os.path.isdir(path):
         path = os.path.normpath(os.path.abspath(path))
         if os.name == 'nt':
-            path = '/' + path.replace('\\', '/')
+            path = '/' + util.normpath(path)
         return 'file://%s' % path
     return path
 
@@ -751,7 +751,7 @@ class svn_sink(converter_sink, commandline):
                               os.path.basename(path))
                     commandline(ui, 'svnadmin').run0('create', path)
                     created = path
-                path = path.replace('\\', '/')
+                path = util.normpath(path)
                 if not path.startswith('/'):
                     path = '/' + path
                 path = 'file://' + path
