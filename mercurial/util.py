@@ -341,7 +341,7 @@ def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
     if root == os.sep:
         rootsep = os.sep
-    elif root.endswith(os.sep):
+    elif endswithsep(root):
         rootsep = root
     else:
         rootsep = root + os.sep
@@ -881,6 +881,10 @@ os.umask(_umask)
 def needbinarypatch():
     """return True if patches should be applied in binary mode by default."""
     return os.name == 'nt'
+
+def endswithsep(path):
+    '''Check path ends with os.sep or os.altsep.'''
+    return path.endswith(os.sep) or os.altsep and path.endswith(os.altsep)
 
 # Platform specific variants
 if os.name == 'nt':

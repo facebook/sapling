@@ -74,7 +74,7 @@ class dirstate(object):
         if cwd == self._root: return ''
         # self._root ends with a path separator if self._root is '/' or 'C:\'
         rootsep = self._root
-        if not rootsep.endswith(os.sep):
+        if not util.endswithsep(rootsep):
             rootsep += os.sep
         if cwd.startswith(rootsep):
             return cwd[len(rootsep):]
@@ -410,7 +410,7 @@ class dirstate(object):
 
         # self._root may end with a path separator when self._root == '/'
         common_prefix_len = len(self._root)
-        if not self._root.endswith(os.sep):
+        if not util.endswithsep(self._root):
             common_prefix_len += 1
 
         normpath = util.normpath
