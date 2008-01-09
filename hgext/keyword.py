@@ -404,7 +404,8 @@ def reposetup(ui, repo):
         returns True if keyword expansion not needed.'''
         nokwcommands = ('add', 'addremove', 'bundle', 'clone', 'copy',
                         'export', 'grep', 'identify', 'incoming', 'init',
-                        'outgoing', 'push', 'remove', 'rename', 'rollback',
+                        'log', 'outgoing', 'push', 'remove', 'rename',
+                        'rollback', 'tip',
                         'convert')
         args = fancyopts.fancyopts(sys.argv[1:], commands.globalopts, {})
         if args:
