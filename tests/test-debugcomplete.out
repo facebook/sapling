@@ -129,6 +129,7 @@ rawcommit
 --noninteractive
 --pid-file
 --port
+--prefix
 --profile
 --quiet
 --repository
