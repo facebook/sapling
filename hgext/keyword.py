@@ -107,7 +107,7 @@ class kwtemplater(object):
         self.ui = ui
         self.repo = repo
         self.matcher = util.matcher(repo.root, inc=inc, exc=exc)[1]
-        self.node = None
+        self.commitnode = None
         self.path = ''
 
         kwmaps = self.ui.configitems('keywordmaps')
@@ -124,18 +124,20 @@ class kwtemplater(object):
                                               False, '', False)
 
     def substitute(self, node, data, subfunc):
-        '''Obtains node if missing, and calls given substitution function.'''
-        if not self.node:
+        '''Obtains file's changenode if commit node not given,
+        and calls given substitution function.'''
+        if self.commitnode:
+            fnode = self.commitnode
+        else:
             c = context.filectx(self.repo, self.path, fileid=node)
-            self.node = c.node()
+            fnode = c.node()
 
         def kwsub(mobj):
             '''Substitutes keyword using corresponding template.'''
             kw = mobj.group(1)
             self.ct.use_template(self.templates[kw])
             self.ui.pushbuffer()
-            self.ct.show(changenode=self.node,
-                         root=self.repo.root, file=self.path)
+            self.ct.show(changenode=fnode, root=self.repo.root, file=self.path)
             return '$%s: %s $' % (kw, templater.firstline(self.ui.popbuffer()))
 
         return subfunc(kwsub, data)
@@ -228,16 +230,16 @@ def _overwrite(ui, repo, node=None, expand=True, files=None):
     '''Overwrites selected files expanding/shrinking keywords.'''
     ctx = repo.changectx(node)
     mf = ctx.manifest()
-    if files is None:
-        notify = ui.debug # commit
+    if node is not None:   # commit
+        _kwtemplater.commitnode = node
         files = [f for f in ctx.files() if mf.has_key(f)]
-    else:
-        notify = ui.note  # kwexpand/kwshrink
+        notify = ui.debug
+    else:                  # kwexpand/kwshrink
+        notify = ui.note
     candidates = [f for f in files if _iskwfile(f, mf.linkf)]
     if candidates:
         candidates.sort()
         action = expand and 'expanding' or 'shrinking'
-        _kwtemplater.node = node or ctx.node()
         for f in candidates:
             fp = repo.file(f, kwmatch=True)
             data, kwfound = fp.kwctread(mf[f], expand)
