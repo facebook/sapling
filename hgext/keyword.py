@@ -328,8 +328,7 @@ def demo(ui, repo, *args, **opts):
     ui.note('\nhg -R "%s" branch "%s"\n' % (tmpdir, branchname))
     # silence branch command if not verbose
     quiet = ui.quiet
-    verbose = ui.verbose
-    ui.quiet = not verbose
+    ui.quiet = not ui.verbose
     commands.branch(ui, repo, branchname)
     ui.quiet = quiet
     for name, cmd in ui.configitems('hooks'):
@@ -363,10 +362,9 @@ def files(ui, repo, *pats, **opts):
     '''
     status = _status(ui, repo, *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
+    files = modified + added + clean
     if opts.get('untracked'):
-        files = modified + added + unknown + clean
-    else:
-        files = modified + added + clean
+        files += unknown
     files.sort()
     kwfiles = [f for f in files if _iskwfile(f, repo._link)]
     cwd = pats and repo.getcwd() or ''
