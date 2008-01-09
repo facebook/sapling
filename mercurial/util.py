@@ -713,14 +713,15 @@ class path_auditor(object):
                       os.path.isdir(os.path.join(curpath, '.hg'))):
                     raise Abort(_('path %r is inside repo %r') %
                                 (path, prefix))
-
+        parts.pop()
         prefixes = []
-        for c in strutil.rfindall(normpath, os.sep):
-            prefix = normpath[:c]
+        for n in range(len(parts)):
+            prefix = os.sep.join(parts)
             if prefix in self.auditeddir:
                 break
             check(prefix)
             prefixes.append(prefix)
+            parts.pop()
 
         self.audited.add(path)
         # only add prefixes to the cache after checking everything: we don't
