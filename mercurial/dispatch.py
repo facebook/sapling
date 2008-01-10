@@ -275,6 +275,15 @@ def _dispatch(ui, args):
     for name, module in extensions.extensions():
         if name in _loaded:
             continue
+
+        # setup extensions
+        # TODO this should be generalized to scheme, where extensions can
+        #      redepend on other extensions.  then we should toposort them, and
+        #      do initialization in correct order
+        extsetup = getattr(module, 'extsetup', None)
+        if extsetup:
+            extsetup()
+
         cmdtable = getattr(module, 'cmdtable', {})
         overrides = [cmd for cmd in cmdtable if cmd in commands.table]
         if overrides:
