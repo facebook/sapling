@@ -358,10 +358,29 @@ def record(ui, repo, *pats, **opts):
 
     ? - display help'''
 
+    def record_commiter(ui, repo, pats, opts):
+        commands.commit(ui, repo, *pats, **opts)
+
+    dorecord(ui, repo, record_commiter, *pats, **opts)
+
+
+def dorecord(ui, repo, committer, *pats, **opts):
     if not ui.interactive:
         raise util.Abort(_('running non-interactively, use commit instead'))
 
     def recordfunc(ui, repo, files, message, match, opts):
+        """This is generic record driver.
+
+        It's job is to interactively filter local changes, and accordingly
+        prepare working dir into a state, where the job can be delegated to
+        non-interactive commit command such as 'commit' or 'qrefresh'.
+
+        After the actual job is done by non-interactive command, working dir
+        state is restored to original.
+
+        In the end we'll record intresting changes, and everything else will be
+        left in place, so the user can continue his work.
+        """
         if files:
             changes = None
         else:
@@ -374,6 +393,7 @@ def record(ui, repo, *pats, **opts):
                    match=match, changes=changes, opts=diffopts, fp=fp)
         fp.seek(0)
 
+        # 1. filter patch, so we have intending-to apply subset of it
         chunks = filterpatch(ui, parsepatch(fp))
         del fp
 
@@ -392,6 +412,7 @@ def record(ui, repo, *pats, **opts):
             changes = repo.status(files=newfiles, match=match)[:5]
         modified = dict.fromkeys(changes[0])
 
+        # 2. backup changed files, so we can restore them in the end
         backups = {}
         backupdir = repo.join('record-backups')
         try:
@@ -400,6 +421,7 @@ def record(ui, repo, *pats, **opts):
             if err.errno != errno.EEXIST:
                 raise
         try:
+            # backup continues
             for f in newfiles:
                 if f not in modified:
                     continue
@@ -417,19 +439,32 @@ def record(ui, repo, *pats, **opts):
             dopatch = fp.tell()
             fp.seek(0)
 
+            # 3a. apply filtered patch to clean repo  (clean)
             if backups:
                 hg.revert(repo, repo.dirstate.parents()[0], backups.has_key)
 
+            # 3b. (apply)
             if dopatch:
                 ui.debug('applying patch\n')
                 ui.debug(fp.getvalue())
                 patch.internalpatch(fp, ui, 1, repo.root)
             del fp
 
-            repo.commit(newfiles, message, opts['user'], opts['date'], match,
-                        force_editor=opts.get('force_editor'))
+            # 4. We prepared working directory according to filtered patch.
+            #    Now is the time to delegate the job to commit/qrefresh or the like!
+
+            # it is important to first chdir to repo root -- we'll call a
+            # highlevel command with list of pathnames relative to repo root
+            cwd = os.getcwd()
+            os.chdir(repo.root)
+            try:
+                committer(ui, repo, newfiles, opts)
+            finally:
+                os.chdir(cwd)
+
             return 0
         finally:
+            # 5. finally restore backed-up files
             try:
                 for realname, tmpname in backups.iteritems():
                     ui.debug('restoring %r to %r\n' % (tmpname, realname))
