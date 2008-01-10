@@ -15,9 +15,17 @@ import copy, cStringIO, errno, operator, os, re, shutil, tempfile
 lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
 
 def scanpatch(fp):
+    """like patch.iterhunks, but yield different events
+
+    - ('file',    [header_lines + fromfile + tofile])
+    - ('context', [context_lines])
+    - ('hunk',    [hunk_lines])
+    - ('range',   (-start,len, +start,len, diffp))
+    """
     lr = patch.linereader(fp)
 
     def scanwhile(first, p):
+        """scan lr while predicate holds"""
         lines = [first]
         while True:
             line = lr.readline()
@@ -58,6 +66,10 @@ def scanpatch(fp):
                 raise patch.PatchError('unknown patch content: %r' % line)
 
 class header(object):
+    """patch header
+    
+    XXX shoudn't we move this to mercurial/patch.py ? 
+    """
     diff_re = re.compile('diff --git a/(.*) b/(.*)$')
     allhunks_re = re.compile('(?:index|new file|deleted file) ')
     pretty_re = re.compile('(?:new file|deleted file) ')
@@ -115,11 +127,16 @@ class header(object):
                 return True
 
 def countchanges(hunk):
+    """hunk -> (n+,n-)"""
     add = len([h for h in hunk if h[0] == '+'])
     rem = len([h for h in hunk if h[0] == '-'])
     return add, rem
 
 class hunk(object):
+    """patch hunk
+    
+    XXX shouldn't we merge this with patch.hunk ?
+    """
     maxcontext = 3
 
     def __init__(self, header, fromline, toline, proc, before, hunk, after):
@@ -154,7 +171,9 @@ class hunk(object):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
 def parsepatch(fp):
+    """patch -> [] of hunks """
     class parser(object):
+        """patch parsing state machine"""
         def __init__(self):
             self.fromline = 0
             self.toline = 0
@@ -227,10 +246,14 @@ def parsepatch(fp):
     return p.finished()
 
 def filterpatch(ui, chunks):
+    """Interactively filter patch chunks into applied-only chunks"""
     chunks = list(chunks)
     chunks.reverse()
     seen = {}
     def consumefile():
+        """fetch next portion from chunks until a 'header' is seen
+        NB: header == new-file mark
+        """
         consumed = []
         while chunks:
             if isinstance(chunks[-1], header):
@@ -238,10 +261,20 @@ def filterpatch(ui, chunks):
             else:
                 consumed.append(chunks.pop())
         return consumed
-    resp_all = [None]
-    resp_file = [None]
-    applied = {}
+
+    resp_all = [None]   # this two are changed from inside prompt,
+    resp_file = [None]  # so can't be usual variables
+    applied = {}        # 'filename' -> [] of chunks
     def prompt(query):
+        """prompt query, and process base inputs
+        
+        - y/n for the rest of file
+        - y/n for the rest
+        - ? (help)
+        - q (quit)
+
+        else, input is returned to the caller.
+        """
         if resp_all[0] is not None:
             return resp_all[0]
         if resp_file[0] is not None:
@@ -268,6 +301,7 @@ def filterpatch(ui, chunks):
     while chunks:
         chunk = chunks.pop()
         if isinstance(chunk, header):
+            # new-file mark
             resp_file = [None]
             fixoffset = 0
             hdr = ''.join(chunk.header)
@@ -286,6 +320,7 @@ def filterpatch(ui, chunks):
             else:
                 consumefile()
         else:
+            # new hunk
             if resp_file[0] is None and resp_all[0] is None:
                 chunk.pretty(ui)
             r = prompt(_('record this change to %r?') %
