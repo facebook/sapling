@@ -5,10 +5,10 @@
 # This software may be used and distributed according to the terms of
 # the GNU General Public License, incorporated herein by reference.
 
-'''interactive change selection during commit'''
+'''interactive change selection during commit or qrefresh'''
 
 from mercurial.i18n import _
-from mercurial import cmdutil, commands, cmdutil, hg, mdiff, patch, revlog
+from mercurial import cmdutil, commands, cmdutil, extensions, hg, mdiff, patch, revlog
 from mercurial import util
 import copy, cStringIO, errno, operator, os, re, shutil, tempfile
 
@@ -358,10 +358,27 @@ def record(ui, repo, *pats, **opts):
 
     ? - display help'''
 
-    def record_commiter(ui, repo, pats, opts):
+    def record_committer(ui, repo, pats, opts):
         commands.commit(ui, repo, *pats, **opts)
 
-    dorecord(ui, repo, record_commiter, *pats, **opts)
+    dorecord(ui, repo, record_committer, *pats, **opts)
+
+
+def qrecord(ui, repo, *pats, **opts):
+    '''interactively select changes for qrefresh
+
+    see 'hg help record' for more information and usage
+    '''
+
+    try:
+        mq = extensions.find('mq')
+    except KeyError:
+        raise util.Abort(_("'mq' extension not loaded"))
+
+    def qrecord_committer(ui, repo, pats, opts):
+        mq.refresh(ui, repo, *pats, **opts)
+
+    dorecord(ui, repo, qrecord_committer, *pats, **opts)
 
 
 def dorecord(ui, repo, committer, *pats, **opts):
@@ -478,8 +495,29 @@ def dorecord(ui, repo, committer, *pats, **opts):
 cmdtable = {
     "record":
         (record,
-         [('A', 'addremove', None,
-           _('mark new/missing files as added/removed before committing')),
-         ] + commands.walkopts + commands.commitopts + commands.commitopts2,
+
+         # add commit options
+         commands.table['^commit|ci'][1],
+
          _('hg record [OPTION]... [FILE]...')),
 }
+
+
+def extsetup():
+    try:
+        mq = extensions.find('mq')
+    except KeyError:
+        return
+
+    qcmdtable = {
+    "qrecord":
+        (qrecord,
+
+         # add qrefresh options
+         mq.cmdtable['^qrefresh'][1],
+
+         _('hg qrecord [OPTION]... [FILE]...')),
+    }
+
+    cmdtable.update(qcmdtable)
+
