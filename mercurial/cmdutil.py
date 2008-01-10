@@ -1117,8 +1117,11 @@ def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''
     message = logmessage(opts)
 
-    if opts['addremove']:
+    # extract addremove carefully -- this function can be called from a command
+    # that doesn't support addremove
+    if opts.get('addremove'):
         addremove(repo, pats, opts)
+
     fns, match, anypats = matchpats(repo, pats, opts)
     if pats:
         status = repo.status(files=fns, match=match)
