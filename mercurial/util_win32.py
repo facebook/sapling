@@ -285,6 +285,10 @@ class posixfile_nt(object):
         except pywintypes.error, err:
             raise WinIOError(err)
 
+    def writelines(self, sequence):
+        for s in sequence:
+            self.write(s)
+
     def seek(self, pos, whence=0):
         try:
             win32file.SetFilePointer(self.handle, int(pos), whence)
