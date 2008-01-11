@@ -8,7 +8,7 @@
 
 import os, mimetypes, re, mimetools, cStringIO
 from mercurial.node import *
-from mercurial import mdiff, ui, hg, util, archival, patch
+from mercurial import mdiff, ui, hg, util, archival, patch, hook
 from mercurial import revlog, templater
 from common import ErrorResponse, get_mtime, style_map, paritygen, get_contact
 from request import wsgirequest
@@ -85,6 +85,7 @@ class hgweb(object):
         else:
             self.repo = repo
 
+        hook.redirect(True)
         self.mtime = -1
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
