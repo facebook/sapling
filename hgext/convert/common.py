@@ -1,5 +1,6 @@
 # common code for the convert extension
 import base64, errno
+import os
 import cPickle as pickle
 from mercurial import util
 from mercurial.i18n import _
@@ -212,7 +213,7 @@ class commandline(object):
     def postrun(self):
         pass
 
-    def _run(self, cmd, *args, **kwargs):
+    def _cmdline(self, cmd, *args, **kwargs):
         cmdline = [self.command, cmd] + list(args)
         for k, v in kwargs.iteritems():
             if len(k) == 1:
@@ -230,7 +231,10 @@ class commandline(object):
         cmdline += ['<', util.nulldev]
         cmdline = ' '.join(cmdline)
         self.ui.debug(cmdline, '\n')
+        return cmdline
 
+    def _run(self, cmd, *args, **kwargs):
+        cmdline = self._cmdline(cmd, *args, **kwargs)
         self.prerun()
         try:
             return util.popen(cmdline)
@@ -256,6 +260,47 @@ class commandline(object):
         self.checkexit(status, output)
         return output
 
+    def getargmax(self):
+        if '_argmax' in self.__dict__:
+            return self._argmax
+
+        # POSIX requires at least 4096 bytes for ARG_MAX
+        self._argmax = 4096
+        try:
+            self._argmax = os.sysconf("SC_ARG_MAX")
+        except:
+            pass
+
+        # Windows shells impose their own limits on command line length,
+        # down to 2047 bytes for cmd.exe under Windows NT/2k and 2500 bytes
+        # for older 4nt.exe. See http://support.microsoft.com/kb/830473 for
+        # details about cmd.exe limitations.
+
+        # Since ARG_MAX is for command line _and_ environment, lower our limit
+        # (and make happy Windows shells while doing this).
+
+        self._argmax = self._argmax/2 - 1
+        return self._argmax
+
+    def limit_arglist(self, arglist, cmd, *args, **kwargs):
+        limit = self.getargmax() - len(self._cmdline(cmd, *args, **kwargs))
+        bytes = 0
+        fl = []
+        for fn in arglist:
+            b = len(fn) + 3
+            if bytes + b < limit or len(fl) == 0:
+                fl.append(fn)
+                bytes += b
+            else:
+                yield fl
+                fl = [fn]
+                bytes = b
+        if fl:
+            yield fl
+
+    def xargs(self, arglist, cmd, *args, **kwargs):
+        for l in self.limit_arglist(arglist, cmd, *args, **kwargs):
+            self.run0(cmd, *(list(args) + l), **kwargs)
 
 class mapfile(dict):
     def __init__(self, ui, path):
