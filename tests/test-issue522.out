@@ -11,7 +11,7 @@ resolving manifests
 getting foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
-n   0         -2 unset             foo
+n   0         -2 unset               foo
 M foo
 c6fc755d7e68f49f880599da29f15add41f42f5a 644   foo
    rev    offset  length   base linkrev nodeid       p1           p2
