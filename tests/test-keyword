@@ -79,6 +79,19 @@ hg update
 echo % cat
 cat sym a b
 
+echo % check whether expansion is filewise
+echo '$Id$' > c
+echo 'tests for different changenodes' >> c
+echo % commit c
+hg commit -A -mcndiff -d '1 0' -u 'User Name <user@example.com>'
+echo % force expansion
+hg -v kwexpand
+echo % compare changenodes in a c
+cat a c
+echo % rollback and remove c
+hg rollback
+rm c
+
 echo % copy
 hg cp a c
 
