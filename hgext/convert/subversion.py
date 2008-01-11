@@ -415,7 +415,9 @@ class svn_source(converter_source):
                 if ent.copyfrom_path:
                     copyfrom_path = get_entry_from_path(ent.copyfrom_path)
                     if copyfrom_path:
-                        self.ui.debug("Copied to %s from %s@%s\n" % (entry, copyfrom_path, ent.copyfrom_rev))
+                        self.ui.debug("Copied to %s from %s@%s\n" %
+                                      (entrypath, copyfrom_path,
+                                       ent.copyfrom_rev))
                         # It's probably important for hg that the source
                         # exists in the revision's parent, not just the
                         # ent.copyfrom_rev
