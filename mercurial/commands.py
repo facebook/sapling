@@ -294,6 +294,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
     If no destination repository is specified the destination is assumed
     to have all the nodes specified by one or more --base parameters.
+    To create a bundle containing all changesets, use --base null.
 
     The bundle file can then be transferred using conventional means and
     applied to another repository with the unbundle or pull command.
