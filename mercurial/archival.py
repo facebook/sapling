@@ -15,7 +15,7 @@ def tidyprefix(dest, prefix, suffixes):
     safe for consumers.'''
 
     if prefix:
-        prefix = prefix.replace('\\', '/')
+        prefix = util.normpath(prefix)
     else:
         if not isinstance(dest, str):
             raise ValueError('dest must be string if no prefix')

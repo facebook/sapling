@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import util
+import util, os, sys
 
 def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     '''call python hook. hook is callable object, looked up as
@@ -79,8 +79,18 @@ def _exthook(ui, repo, name, cmd, args, throw):
         ui.warn(_('warning: %s hook %s\n') % (name, desc))
     return r
 
+_redirect = False
+def redirect(state):
+    _redirect = state
+
 def hook(ui, repo, name, throw=False, **args):
     r = False
+
+    if _redirect:
+        # temporarily redirect stdout to stderr
+        oldstdout = os.dup(sys.stdout.fileno())
+        os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
+
     hooks = [(hname, cmd) for hname, cmd in ui.configitems("hooks")
              if hname.split(".", 1)[0] == name and cmd]
     hooks.sort()
@@ -94,3 +104,6 @@ def hook(ui, repo, name, throw=False, **args):
             r = _exthook(ui, repo, hname, cmd, args, throw) or r
     return r
 
+    if _redirect:
+        os.dup2(oldstdout, sys.stdout.fileno())
+        os.close(oldstdout)

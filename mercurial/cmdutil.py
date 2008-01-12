@@ -462,7 +462,7 @@ def copy(ui, repo, pats, opts, rename=False):
         if len(pats) > 1 or util.patkind(pats[0], None)[0]:
             raise util.Abort(_('with multiple sources, destination must be an '
                                'existing directory'))
-        if dest.endswith(os.sep) or os.altsep and dest.endswith(os.altsep):
+        if util.endswithsep(dest):
             raise util.Abort(_('destination %s is not a directory') % dest)
 
     tfn = targetpathfn
@@ -902,7 +902,7 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
 
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
-    df = util.matchdate(date + " to " + date)
+    df = util.matchdate(date)
     get = util.cachefunc(lambda r: repo.changectx(r).changeset())
     changeiter, matchfn = walkchangerevs(ui, repo, [], get, {'rev':None})
     results = {}

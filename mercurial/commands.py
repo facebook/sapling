@@ -2393,7 +2393,7 @@ def serve(ui, repo, **opts):
         s.serve_forever()
 
     parentui = ui.parentui or ui
-    optlist = ("name templates style address port ipv6"
+    optlist = ("name templates style address port prefix ipv6"
                " accesslog errorlog webdir_conf certificate")
     for o in optlist.split():
         if opts[o]:
@@ -3024,6 +3024,7 @@ table = {
           ('E', 'errorlog', '', _('name of error log file to write to')),
           ('p', 'port', 0, _('port to use (default: 8000)')),
           ('a', 'address', '', _('address to use')),
+          ('', 'prefix', '', _('prefix path to serve from (default: server root)')),
           ('n', 'name', '',
            _('name to show in web pages (default: working dir)')),
           ('', 'webdir-conf', '', _('name of the webdir config file'

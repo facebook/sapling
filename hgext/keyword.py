@@ -1,6 +1,6 @@
 # keyword.py - $Keyword$ expansion for Mercurial
 #
-# Copyright 2007 Christian Ebert <blacktrash@gmx.net>
+# Copyright 2007, 2008 Christian Ebert <blacktrash@gmx.net>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -150,9 +150,8 @@ class kwtemplater(object):
 
     def process(self, node, data, expand):
         '''Returns a tuple: data, count.
-        Count is number of keywords/keyword substitutions, indicates
-        to caller whether to act on file containing data.
-        Keywords in data are expanded, if templater was initialized.'''
+        Count is number of keywords/keyword substitutions,
+        telling caller whether to act on file containing data.'''
         if util.binary(data):
             return data, None
         if expand:
@@ -175,8 +174,7 @@ class kwfilelog(filelog.filelog):
         _kwtemplater.path = path
 
     def kwctread(self, node, expand):
-        '''Reads expanding and counting keywords
-        (only called from kwtemplater.overwrite).'''
+        '''Reads expanding and counting keywords, called from _overwrite.'''
         data = super(kwfilelog, self).read(node)
         return _kwtemplater.process(node, data, expand)
 

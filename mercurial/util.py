@@ -328,7 +328,7 @@ def pathto(root, n1, n2):
         if os.path.splitdrive(root)[0] != os.path.splitdrive(n1)[0]:
             return os.path.join(root, localpath(n2))
         n2 = '/'.join((pconvert(root), n2))
-    a, b = n1.split(os.sep), n2.split('/')
+    a, b = splitpath(n1), n2.split('/')
     a.reverse()
     b.reverse()
     while a and b and a[-1] == b[-1]:
@@ -341,7 +341,7 @@ def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
     if root == os.sep:
         rootsep = os.sep
-    elif root.endswith(os.sep):
+    elif endswithsep(root):
         rootsep = root
     else:
         rootsep = root + os.sep
@@ -692,7 +692,7 @@ class path_auditor(object):
         if path in self.audited:
             return
         normpath = os.path.normcase(path)
-        parts = normpath.split(os.sep)
+        parts = splitpath(normpath)
         if (os.path.splitdrive(path)[0] or parts[0] in ('.hg', '')
             or os.pardir in parts):
             raise Abort(_("path contains illegal component: %s") % path)
@@ -713,14 +713,15 @@ class path_auditor(object):
                       os.path.isdir(os.path.join(curpath, '.hg'))):
                     raise Abort(_('path %r is inside repo %r') %
                                 (path, prefix))
-
+        parts.pop()
         prefixes = []
-        for c in strutil.rfindall(normpath, os.sep):
-            prefix = normpath[:c]
+        for n in range(len(parts)):
+            prefix = os.sep.join(parts)
             if prefix in self.auditeddir:
                 break
             check(prefix)
             prefixes.append(prefix)
+            parts.pop()
 
         self.audited.add(path)
         # only add prefixes to the cache after checking everything: we don't
@@ -882,6 +883,18 @@ def needbinarypatch():
     """return True if patches should be applied in binary mode by default."""
     return os.name == 'nt'
 
+def endswithsep(path):
+    '''Check path ends with os.sep or os.altsep.'''
+    return path.endswith(os.sep) or os.altsep and path.endswith(os.altsep)
+
+def splitpath(path):
+    '''Split path by os.sep.
+    Note that this function does not use os.altsep because this is
+    an alternative of simple "xxx.split(os.sep)".
+    It is recommended to use os.path.normpath() before using this
+    function if need.'''
+    return path.split(os.sep)
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
@@ -979,7 +992,7 @@ if os.name == 'nt':
         msvcrt.setmode(fd.fileno(), os.O_BINARY)
 
     def pconvert(path):
-        return path.replace("\\", "/")
+        return '/'.join(splitpath(path))
 
     def localpath(path):
         return path.replace('/', '\\')

@@ -173,8 +173,8 @@ echo % incoming
 # remove path to temp dir
 hg incoming | sed -e 's/^\(comparing with \).*\(test-keyword.*\)/\1\2/'
 
-sed -i.bak -e 's/Id.*/& rejecttest/' a
-rm a.bak
+sed -e 's/Id.*/& rejecttest/' a > a.new
+mv a.new a
 echo % commit rejecttest
 hg --debug commit -m'rejects?' -d '3 0' -u 'User Name <user@example.com>'
 echo % export

@@ -227,6 +227,9 @@ class posixfile_nt(object):
     # but does not work at all. wrap win32 file api instead.
 
     def __init__(self, name, mode='rb'):
+        self.closed = False
+        self.name = name
+        self.mode = mode
         access = 0
         if 'r' in mode or '+' in mode:
             access |= win32file.GENERIC_READ
@@ -250,9 +253,6 @@ class posixfile_nt(object):
                                                0)
         except pywintypes.error, err:
             raise WinIOError(err, name)
-        self.closed = False
-        self.name = name
-        self.mode = mode
 
     def __iter__(self):
         for line in self.read().splitlines(True):

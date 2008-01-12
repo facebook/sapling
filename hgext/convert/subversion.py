@@ -53,7 +53,7 @@ def geturl(path):
     if os.path.isdir(path):
         path = os.path.normpath(os.path.abspath(path))
         if os.name == 'nt':
-            path = '/' + path.replace('\\', '/')
+            path = '/' + util.normpath(path)
         return 'file://%s' % path
     return path
 
@@ -415,7 +415,9 @@ class svn_source(converter_source):
                 if ent.copyfrom_path:
                     copyfrom_path = get_entry_from_path(ent.copyfrom_path)
                     if copyfrom_path:
-                        self.ui.debug("Copied to %s from %s@%s\n" % (entry, copyfrom_path, ent.copyfrom_rev))
+                        self.ui.debug("Copied to %s from %s@%s\n" %
+                                      (entrypath, copyfrom_path,
+                                       ent.copyfrom_rev))
                         # It's probably important for hg that the source
                         # exists in the revision's parent, not just the
                         # ent.copyfrom_rev
@@ -707,27 +709,6 @@ exit 1
 class svn_sink(converter_sink, commandline):
     commit_re = re.compile(r'Committed revision (\d+).', re.M)
 
-    # iterates sublist of given list for concatenated length is within limit
-    def limit_arglist(self, files):
-        if os.name != 'nt':
-            yield files
-            return
-        # When I tested on WinXP, limit = 2500 is NG, 2400 is OK
-        limit = 2000
-        bytes = 0
-        fl = []
-        for fn in files:
-            b = len(fn) + 1
-            if bytes + b < limit:
-                fl.append(fn)
-                bytes += b
-            else:
-                yield fl
-                fl = [fn]
-                bytes = b
-        if fl:
-            yield fl
-
     def prerun(self):
         if self.wc:
             os.chdir(self.wc)
@@ -770,7 +751,7 @@ class svn_sink(converter_sink, commandline):
                               os.path.basename(path))
                     commandline(ui, 'svnadmin').run0('create', path)
                     created = path
-                path = path.replace('\\', '/')
+                path = util.normpath(path)
                 if not path.startswith('/'):
                     path = '/' + path
                 path = 'file://' + path
@@ -866,14 +847,12 @@ class svn_sink(converter_sink, commandline):
                     if not os.path.exists(self.wjoin(d, '.svn', 'entries'))]
         if add_dirs:
             add_dirs.sort()
-            for fl in self.limit_arglist(add_dirs):
-                self.run('add', non_recursive=True, quiet=True, *fl)
+            self.xargs(add_dirs, 'add', non_recursive=True, quiet=True)
         return add_dirs
 
     def add_files(self, files):
         if files:
-            for fl in self.limit_arglist(files):
-                self.run('add', quiet=True, *fl)
+            self.xargs(files, 'add', quiet=True)
         return files
 
     def tidy_dirs(self, names):
@@ -907,18 +886,15 @@ class svn_sink(converter_sink, commandline):
                 self._copyfile(s, d)
             self.copies = []
         if self.delete:
-            for fl in self.limit_arglist(self.delete):
-                self.run0('delete', *fl)
+            self.xargs(self.delete, 'delete')
             self.delete = []
         entries.update(self.add_files(files.difference(entries)))
         entries.update(self.tidy_dirs(entries))
         if self.delexec:
-            for fl in self.limit_arglist(self.delexec):
-                self.run0('propdel', 'svn:executable', *fl)
+            self.xargs(self.delexec, 'propdel', 'svn:executable')
             self.delexec = []
         if self.setexec:
-            for fl in self.limit_arglist(self.setexec):
-                self.run0('propset', 'svn:executable', '*', *fl)
+            self.xargs(self.setexec, 'propset', 'svn:executable', '*')
             self.setexec = []
 
         fd, messagefile = tempfile.mkstemp(prefix='hg-convert-')

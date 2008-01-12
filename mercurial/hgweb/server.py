@@ -76,7 +76,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.do_POST()
 
     def do_hgweb(self):
-        path_info, query = _splitURI(self.path)
+        path, query = _splitURI(self.path)
 
         env = {}
         env['GATEWAY_INTERFACE'] = 'CGI/1.1'
@@ -84,8 +84,8 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         env['SERVER_NAME'] = self.server.server_name
         env['SERVER_PORT'] = str(self.server.server_port)
         env['REQUEST_URI'] = self.path
-        env['SCRIPT_NAME'] = ''
-        env['PATH_INFO'] = path_info
+        env['SCRIPT_NAME'] = self.server.prefix
+        env['PATH_INFO'] = path[len(self.server.prefix):]
         env['REMOTE_HOST'] = self.client_address[0]
         env['REMOTE_ADDR'] = self.client_address[0]
         if query:
@@ -206,6 +206,7 @@ def create_server(ui, repo):
         myui = repo.ui
     address = myui.config("web", "address", "")
     port = int(myui.config("web", "port", 8000))
+    prefix = myui.config("web", "prefix", "").rstrip("/")
     use_ipv6 = myui.configbool("web", "ipv6")
     webdir_conf = myui.config("web", "webdir_conf")
     ssl_cert = myui.config("web", "certificate")
@@ -254,6 +255,7 @@ def create_server(ui, repo):
                 addr = socket.gethostname()
 
             self.addr, self.port = addr, port
+            self.prefix = prefix
 
             if ssl_cert:
                 try:

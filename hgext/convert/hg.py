@@ -180,7 +180,7 @@ class mercurial_sink(converter_sink):
             except hg.RepoError, inst:
                 tagparent = nullid
             self.repo.rawcommit([".hgtags"], "update tags", "convert-repo",
-                                date, tagparent, nullid)
+                                date, tagparent, nullid, extra=extra)
             return hex(self.repo.changelog.tip())
 
     def setfilemapmode(self, active):
