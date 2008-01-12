@@ -767,7 +767,7 @@ class binhunk:
 
 def parsefilename(str):
     # --- filename \t|space stuff
-    s = str[4:]
+    s = str[4:].rstrip('\r\n')
     i = s.find('\t')
     if i < 0:
         i = s.find(' ')
