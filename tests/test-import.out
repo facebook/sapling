@@ -132,3 +132,48 @@ applying tip.patch
 patching file a
 Hunk #1 succeeded at 1 with fuzz 2 (offset -2 lines).
 a
+adding a
+adding b1
+adding c1
+adding d
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -0,0 +1,1 @@
++a
+diff --git a/b1 b/b2
+rename from b1
+rename to b2
+--- a/b1
++++ b/b2
+@@ -0,0 +1,1 @@
++b
+diff --git a/c1 b/c1
+--- a/c1
++++ b/c1
+@@ -0,0 +1,1 @@
++c
+diff --git a/c1 b/c2
+copy from c1
+copy to c2
+--- a/c1
++++ b/c2
+@@ -0,0 +1,1 @@
++c
+diff --git a/d b/d
+--- a/d
++++ b/d
+@@ -1,1 +0,0 @@
+-d
+4 files updated, 0 files merged, 2 files removed, 0 files unresolved
+applying empty.diff
+% a file
+a
+% b1 file
+% b2 file
+b
+% c1 file
+c
+% c2 file
+c
+% d file
