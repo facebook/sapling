@@ -505,7 +505,7 @@ class patchfile:
         return -1
 
 class hunk:
-    def __init__(self, desc, num, lr, context):
+    def __init__(self, desc, num, lr, context, gitpatch=None):
         self.number = num
         self.desc = desc
         self.hunk = [ desc ]
@@ -515,6 +515,7 @@ class hunk:
             self.read_context_hunk(lr)
         else:
             self.read_unified_hunk(lr)
+        self.gitpatch = gitpatch
 
     def read_unified_hunk(self, lr):
         m = unidesc.match(self.desc)
@@ -669,10 +670,12 @@ class hunk:
         return len(self.a) == self.lena and len(self.b) == self.lenb
 
     def createfile(self):
-        return self.starta == 0 and self.lena == 0
+        create = self.gitpatch is None or self.gitpatch.op == 'ADD'
+        return self.starta == 0 and self.lena == 0 and create
 
     def rmfile(self):
-        return self.startb == 0 and self.lenb == 0
+        remove = self.gitpatch is None or self.gitpatch.op == 'DELETE'
+        return self.startb == 0 and self.lenb == 0 and remove
 
     def fuzzit(self, l, fuzz, toponly):
         # this removes context lines from the top and bottom of list 'l'.  It
@@ -773,7 +776,7 @@ class binhunk:
 
 def parsefilename(str):
     # --- filename \t|space stuff
-    s = str[4:]
+    s = str[4:].rstrip('\r\n')
     i = s.find('\t')
     if i < 0:
         i = s.find(' ')
@@ -905,7 +908,8 @@ def iterhunks(ui, fp, sourcefile=None):
             try:
                 if context == None and x.startswith('***************'):
                     context = True
-                current_hunk = hunk(x, hunknum + 1, lr, context)
+                gpatch = changed.get(bfile[2:], (None, None))[1]
+                current_hunk = hunk(x, hunknum + 1, lr, context, gpatch)
             except PatchError, err:
                 ui.debug(err)
                 current_hunk = None
