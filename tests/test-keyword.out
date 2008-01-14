@@ -103,7 +103,7 @@ b
 sym
 transaction abort!
 rollback completed
-abort: edit failed: false exited with status 1
+abort: empty commit message
 % status
 A a
 A b
@@ -207,7 +207,7 @@ a
 % interrupted commit should not change state
 transaction abort!
 rollback completed
-abort: edit failed: false exited with status 1
+abort: empty commit message
 % status
 M a
 ? log

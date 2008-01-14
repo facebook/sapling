@@ -44,7 +44,7 @@ hg status
 
 echo % default keyword expansion including commit hook
 echo % interrupted commit should not change state or run commit hook
-HGEDITOR=false hg --debug commit
+hg --debug commit
 echo % status
 hg status
 
@@ -131,7 +131,7 @@ secondline
 EOF
 
 echo % interrupted commit should not change state
-HGEDITOR=false hg commit
+hg commit
 echo % status
 hg status
 
@@ -207,7 +207,7 @@ echo % kwshrink a inside directory x
 hg --verbose kwshrink a
 echo % cat a
 cat a
-cd - > /dev/null 2>&1
+cd ..
 
 echo % kwexpand nonexistent
 hg kwexpand nonexistent
