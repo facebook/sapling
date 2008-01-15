@@ -69,12 +69,16 @@ the risk of inadvertedly storing expanded keywords in the change history.
 To force expansion after enabling it, or a configuration change, run
 "hg kwexpand".
 
+Also, when committing with the record extension or using mq's qrecord, be aware
+that keywords cannot be updated. Again, run "hg kwexpand" on the files in
+question to update keyword expansions after all changes have been checked in.
+
 Expansions spanning more than one line and incremental expansions,
 like CVS' $Log$, are not supported. A keyword template map
 "Log = {desc}" expands to the first line of the changeset description.
 '''
 
-from mercurial import commands, cmdutil, context, fancyopts, filelog
+from mercurial import commands, cmdutil, context, dispatch, filelog
 from mercurial import patch, localrepo, revlog, templater, util
 from mercurial.node import *
 from mercurial.i18n import _
@@ -85,6 +89,13 @@ commands.optionalrepo += ' kwdemo'
 def utcdate(date):
     '''Returns hgdate in cvs-like UTC format.'''
     return time.strftime('%Y/%m/%d %H:%M:%S', time.gmtime(date[0]))
+
+def _kwrestrict(cmd):
+    '''Returns True if cmd should trigger restricted expansion.
+    Keywords will only expanded when writing to working dir.
+    Crucial for mq as expanded keywords should not make it into patches.'''
+    return cmd in ('qimport', 'qnew', 'qpush', 'qrefresh', 'record', 'qrecord')
+
 
 _kwtemplater = None
 
@@ -103,10 +114,11 @@ class kwtemplater(object):
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
     }
 
-    def __init__(self, ui, repo, inc, exc):
+    def __init__(self, ui, repo, inc, exc, hgcmd):
         self.ui = ui
         self.repo = repo
         self.matcher = util.matcher(repo.root, inc=inc, exc=exc)[1]
+        self.hgcmd = hgcmd
         self.commitnode = None
         self.path = ''
 
@@ -144,7 +156,7 @@ class kwtemplater(object):
 
     def expand(self, node, data):
         '''Returns data with keywords expanded.'''
-        if util.binary(data):
+        if util.binary(data) or _kwrestrict(self.hgcmd):
             return data
         return self.substitute(node, data, self.re_kw.sub)
 
@@ -395,20 +407,16 @@ def reposetup(ui, repo):
     This is done for local repos only, and only if there are
     files configured at all for keyword substitution.'''
 
-    def kwbailout():
-        '''Obtains command via simplified cmdline parsing,
-        returns True if keyword expansion not needed.'''
-        nokwcommands = ('add', 'addremove', 'bundle', 'clone', 'copy',
-                        'export', 'grep', 'identify', 'incoming', 'init',
-                        'log', 'outgoing', 'push', 'remove', 'rename',
-                        'rollback', 'tip',
-                        'convert')
-        args = fancyopts.fancyopts(sys.argv[1:], commands.globalopts, {})
-        if args:
-            aliases, i = cmdutil.findcmd(ui, args[0], commands.table)
-            return aliases[0] in nokwcommands
+    if not repo.local():
+        return
 
-    if not repo.local() or kwbailout():
+    nokwcommands = ('add', 'addremove', 'bundle', 'clone', 'copy',
+                    'export', 'grep', 'identify', 'incoming', 'init',
+                    'log', 'outgoing', 'push', 'remove', 'rename',
+                    'rollback', 'tip',
+                    'convert')
+    hgcmd, func, args, opts, cmdopts = dispatch._parse(ui, sys.argv[1:])
+    if hgcmd in nokwcommands:
         return
 
     inc, exc = [], ['.hgtags']
@@ -421,7 +429,7 @@ def reposetup(ui, repo):
         return
 
     global _kwtemplater
-    _kwtemplater = kwtemplater(ui, repo, inc, exc)
+    _kwtemplater = kwtemplater(ui, repo, inc, exc, hgcmd)
 
     class kwrepo(repo.__class__):
         def file(self, f, kwmatch=False):
@@ -430,6 +438,12 @@ def reposetup(ui, repo):
             if kwmatch or _kwtemplater.matcher(f):
                 return kwfilelog(self.sopener, f)
             return filelog.filelog(self.sopener, f)
+
+        def wread(self, filename):
+            data = super(kwrepo, self).wread(filename)
+            if _kwrestrict(hgcmd) and _kwtemplater.matcher(filename):
+                return _kwtemplater.shrink(data)
+            return data
 
         def commit(self, files=None, text='', user=None, date=None,
                    match=util.always, force=False, force_editor=False,
