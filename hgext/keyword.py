@@ -94,7 +94,8 @@ def _kwrestrict(cmd):
     '''Returns True if cmd should trigger restricted expansion.
     Keywords will only expanded when writing to working dir.
     Crucial for mq as expanded keywords should not make it into patches.'''
-    return cmd in ('qimport', 'qnew', 'qpush', 'qrefresh', 'record', 'qrecord')
+    return cmd in ('diff1', 
+                   'qimport', 'qnew', 'qpush', 'qrefresh', 'record', 'qrecord')
 
 
 _kwtemplater = None
@@ -418,6 +419,15 @@ def reposetup(ui, repo):
     hgcmd, func, args, opts, cmdopts = dispatch._parse(ui, sys.argv[1:])
     if hgcmd in nokwcommands:
         return
+
+    if hgcmd == 'diff':
+        # only expand if comparing against working dir
+        node1, node2 = cmdutil.revpair(repo, cmdopts.get('rev'))
+        if node2 is not None:
+            return
+        # shrink if rev is not current node
+        if node1 is not None and node1 != repo.changectx().node():
+            hgcmd = 'diff1'
 
     inc, exc = [], ['.hgtags']
     for pat, opt in ui.configitems('keyword'):
