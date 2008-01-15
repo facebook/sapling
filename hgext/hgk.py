@@ -121,6 +121,7 @@ def catcommit(repo, n, prefix, ctx=None):
     print "author %s %s %s" % (ctx.user(), int(date[0]), date[1])
     print "committer %s %s %s" % (committer, int(date[0]), date[1])
     print "revision %d" % ctx.rev()
+    print "branch %s" % ctx.branch()
     print ""
     if prefix != "":
         print "%s%s" % (prefix, description.replace('\n', nlprefix).strip())
