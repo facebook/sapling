@@ -179,7 +179,7 @@ class convert_cvs(converter_source):
 
         if conntype != "pserver":
             if conntype == "rsh":
-                rsh = os.environ.get("CVS_RSH" or "rsh")
+                rsh = os.environ.get("CVS_RSH") or "ssh"
                 if user:
                     cmd = [rsh, '-l', user, host] + cmd
                 else:
