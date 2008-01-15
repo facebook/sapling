@@ -274,6 +274,7 @@ proc parsecommit {id contents listed olds} {
     set comname {}
     set comdate {}
     set rev {}
+    set branch {}
     if {![info exists nchildren($id)]} {
 	set children($id) {}
 	set nchildren($id) 0
@@ -310,6 +311,8 @@ proc parsecommit {id contents listed olds} {
 		    set comname [join [lrange $line 1 [expr {$x - 1}]]]
 		} elseif {$tag == "revision"} {
 		    set rev [lindex $line 1]
+        } elseif {$tag == "branch"} {
+		    set branch [join [lrange $line 1 end]]
 		}
 	    }
 	} else {
@@ -334,7 +337,7 @@ proc parsecommit {id contents listed olds} {
 	set comdate [clock format $comdate -format "%Y-%m-%d %H:%M:%S"]
     }
     set commitinfo($id) [list $headline $auname $audate \
-			     $comname $comdate $comment $rev]
+			     $comname $comdate $comment $rev $branch]
 }
 
 proc readrefs {} {
@@ -2286,6 +2289,9 @@ proc selectline {l isnew} {
     $ctext mark gravity fmark.0 left
     set info $commitinfo($id)
     $ctext insert end "Revision: [lindex $info 6]\n"
+    if {[llength [lindex $info 7]] > 0} {
+        $ctext insert end "Branch: [lindex $info 7]\n"
+    }
     $ctext insert end "Author: [lindex $info 1]  [lindex $info 2]\n"
     $ctext insert end "Committer: [lindex $info 3]  [lindex $info 4]\n"
     if {[info exists idtags($id)]} {
