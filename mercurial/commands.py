@@ -670,11 +670,11 @@ def debugstate(ui, repo):
     for file_, ent in k:
         if ent[3] == -1:
             # Pad or slice to locale representation
-            locale_len = len(time.strftime("%x %X", time.localtime(0)))
+            locale_len = len(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(0)))
             timestr = 'unset'
             timestr = timestr[:locale_len] + ' '*(locale_len - len(timestr))
         else:
-            timestr = time.strftime("%x %X", time.localtime(ent[3]))
+            timestr = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ent[3]))
         if ent[1] & 020000:
             mode = 'lnk'
         else:

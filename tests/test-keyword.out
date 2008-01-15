@@ -146,6 +146,20 @@ expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
 do not process $Id:
 xxx $
 ignore $Id$
+% check whether expansion is filewise
+% commit c
+adding c
+% force expansion
+overwriting a expanding keywords
+overwriting c expanding keywords
+% compare changenodes in a c
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+$Id: c,v ba4426d1938e 1970/01/01 00:00:01 user $
+tests for different changenodes
+% rollback and remove c
+rolling back last transaction
 % copy
 % kwfiles added
 a

@@ -228,8 +228,8 @@ resolving manifests
   unmatched files in other:
    c
   all copies found (* = to merge, ! = divergent):
-   c -> a 
-   b -> a 
+   c -> a !
+   b -> a !
   checking for directory renames
  a: divergent renames -> dr
  rev: versions differ -> m

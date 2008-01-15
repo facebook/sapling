@@ -34,7 +34,7 @@ no changes found
 % dirstate should be empty:
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % put something in the dirstate:
-a   0         -1 unset             baz
+a   0         -1 unset               baz
 copy: bar -> baz
 % add a new revision in the original repo
 scanning source...

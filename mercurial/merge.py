@@ -210,20 +210,22 @@ def findcopies(repo, m1, m2, ma, limit):
     for f in u2:
         checkcopies(ctx(f, m2[f]), m1, ma)
 
-    d2 = {}
+    diverge2 = {}
     for of, fl in diverge.items():
-        for f in fl:
-            fo = list(fl)
-            fo.remove(f)
-            d2[f] = (of, fo)
+        if len(fl) == 1:
+            del diverge[of] # not actually divergent
+        else:
+            diverge2.update(dict.fromkeys(fl)) # reverse map for below
 
     if fullcopy:
         repo.ui.debug(_("  all copies found (* = to merge, ! = divergent):\n"))
         for f in fullcopy:
             note = ""
             if f in copy: note += "*"
-            if f in diverge: note += "!"
+            if f in diverge2: note += "!"
             repo.ui.debug(_("   %s -> %s %s\n") % (f, fullcopy[f], note))
+
+    del diverge2
 
     if not fullcopy or not repo.ui.configbool("merge", "followdirs", True):
         return copy, diverge

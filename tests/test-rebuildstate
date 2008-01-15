@@ -12,13 +12,13 @@ hg add baz
 hg rm bar
 
 echo '% state dump'
-hg debugstate | cut -b 1-16,35- | sort
+hg debugstate | cut -b 1-16,37- | sort
 echo '% status'
 hg st -A
 
 hg debugrebuildstate
 echo '% state dump'
-hg debugstate | cut -b 1-16,35- | sort
+hg debugstate | cut -b 1-16,37- | sort
 echo '% status'
 hg st -A
 

@@ -11,9 +11,9 @@ resolving manifests
    b
    b2
   all copies found (* = to merge, ! = divergent):
-   c2 -> a2 
+   c2 -> a2 !
    b -> a *
-   b2 -> a2 
+   b2 -> a2 !
   checking for directory renames
  a2: divergent renames -> dr
  a: remote moved to b -> m
