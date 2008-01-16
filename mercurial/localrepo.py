@@ -519,6 +519,10 @@ class localrepository(repo.repository):
         if self._transref and self._transref():
             return self._transref().nest()
 
+        # abort here if the journal already exists
+        if os.path.exists(self.sjoin("journal")):
+            raise repo.RepoError(_("journal already exists - run hg recover"))
+
         # save dirstate for rollback
         try:
             ds = self.opener("dirstate").read()
