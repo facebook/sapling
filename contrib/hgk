@@ -343,11 +343,24 @@ proc parsecommit {id contents listed olds} {
 proc readrefs {} {
     global tagids idtags headids idheads tagcontents env curid
 
-    set curid [exec $env(HG) --config ui.report_untrusted=false id]
+    set status [catch {exec $env(HG) --config ui.report_untrusted=false id} curid]
+    if { $status != 0 } {
+        puts $::errorInfo
+        if { ![string equal $::errorCode NONE] } {
+            exit 2
+        }
+    }
     regexp -- {[[:xdigit:]]+} $curid curid
 
-    set tags [exec $env(HG) --config ui.report_untrusted=false tags]
+    set status [catch {exec $env(HG) --config ui.report_untrusted=false tags} tags]
+    if { $status != 0 } {
+        puts $::errorInfo
+        if { ![string equal $::errorCode NONE] } {
+            exit 2
+        }
+    }
     regsub -all "\r\n" $tags "\n" tags
+
     set lines [split $tags "\n"]
     foreach f $lines {
 	regexp {(\S+)$} $f full
