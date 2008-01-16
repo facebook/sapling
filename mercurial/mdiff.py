@@ -30,7 +30,7 @@ class diffopts(object):
     defaults = {
         'context': 3,
         'text': False,
-        'showfunc': True,
+        'showfunc': False,
         'git': False,
         'nodates': False,
         'ignorews': False,

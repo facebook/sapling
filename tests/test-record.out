@@ -179,7 +179,7 @@ diff -r 699cc1bea9aa -r 118ed744216b plain
 % modify end of plain file
 diff --git a/plain b/plain
 1 hunks, 1 lines changed
-examine changes to 'plain'? [Ynsfdaq?]  @@ -8,3 +8,4 @@ 8
+examine changes to 'plain'? [Ynsfdaq?]  @@ -8,3 +8,4 @@
  8
  9
  10
@@ -187,7 +187,7 @@ examine changes to 'plain'? [Ynsfdaq?]  @@ -8,3 +8,4 @@ 8
 record this change to 'plain'? [Ynsfdaq?]  % modify end of plain file, no EOL
 diff --git a/plain b/plain
 1 hunks, 1 lines changed
-examine changes to 'plain'? [Ynsfdaq?]  @@ -9,3 +9,4 @@ 9
+examine changes to 'plain'? [Ynsfdaq?]  @@ -9,3 +9,4 @@
  9
  10
  11
@@ -196,7 +196,7 @@ examine changes to 'plain'? [Ynsfdaq?]  @@ -9,3 +9,4 @@ 9
 record this change to 'plain'? [Ynsfdaq?]  % modify end of plain file, add EOL
 diff --git a/plain b/plain
 1 hunks, 2 lines changed
-examine changes to 'plain'? [Ynsfdaq?]  @@ -9,4 +9,4 @@ 9
+examine changes to 'plain'? [Ynsfdaq?]  @@ -9,4 +9,4 @@
  9
  10
  11
@@ -206,13 +206,13 @@ examine changes to 'plain'? [Ynsfdaq?]  @@ -9,4 +9,4 @@ 9
 record this change to 'plain'? [Ynsfdaq?]  % modify beginning, trim end, record both
 diff --git a/plain b/plain
 2 hunks, 4 lines changed
-examine changes to 'plain'? [Ynsfdaq?]  @@ -1,4 +1,4 @@ 1
+examine changes to 'plain'? [Ynsfdaq?]  @@ -1,4 +1,4 @@
 -1
 +2
  2
  3
  4
-record this change to 'plain'? [Ynsfdaq?]  @@ -8,5 +8,3 @@ 8
+record this change to 'plain'? [Ynsfdaq?]  @@ -8,5 +8,3 @@
  8
  9
  10
@@ -228,13 +228,13 @@ summary:     begin-and-end
 diff -r e2ecd9b0b78d -r d09ab1967dab plain
 --- a/plain	Thu Jan 01 00:00:10 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:10 1970 +0000
-@@ -1,4 +1,4 @@ 1
+@@ -1,4 +1,4 @@
 -1
 +2
  2
  3
  4
-@@ -8,5 +8,3 @@ 8
+@@ -8,5 +8,3 @@
  8
  9
  10
@@ -245,7 +245,7 @@ diff -r e2ecd9b0b78d -r d09ab1967dab plain
 % record end
 diff --git a/plain b/plain
 2 hunks, 5 lines changed
-examine changes to 'plain'? [Ynsfdaq?]  @@ -1,9 +1,6 @@ 2
+examine changes to 'plain'? [Ynsfdaq?]  @@ -1,9 +1,6 @@
 -2
 -2
 -3
@@ -274,7 +274,7 @@ summary:     end-only
 diff -r d09ab1967dab -r 44516c9708ae plain
 --- a/plain	Thu Jan 01 00:00:10 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:11 1970 +0000
-@@ -7,4 +7,4 @@ 7
+@@ -7,4 +7,4 @@
  7
  8
  9
@@ -284,7 +284,7 @@ diff -r d09ab1967dab -r 44516c9708ae plain
 % record beginning
 diff --git a/plain b/plain
 1 hunks, 3 lines changed
-examine changes to 'plain'? [Ynsfdaq?]  @@ -1,6 +1,3 @@ 2
+examine changes to 'plain'? [Ynsfdaq?]  @@ -1,6 +1,3 @@
 -2
 -2
 -3
@@ -301,7 +301,7 @@ summary:     begin-only
 diff -r 44516c9708ae -r 3ebbace64a8d plain
 --- a/plain	Thu Jan 01 00:00:11 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:12 1970 +0000
-@@ -1,6 +1,3 @@ 2
+@@ -1,6 +1,3 @@
 -2
 -2
 -3
@@ -313,7 +313,7 @@ diff -r 44516c9708ae -r 3ebbace64a8d plain
 % record end
 diff --git a/plain b/plain
 2 hunks, 4 lines changed
-examine changes to 'plain'? [Ynsfdaq?]  @@ -1,6 +1,9 @@ 4
+examine changes to 'plain'? [Ynsfdaq?]  @@ -1,6 +1,9 @@
 +1
 +2
 +3
@@ -335,7 +335,7 @@ record this change to 'plain'? [Ynsfdaq?]  % add to beginning, middle, end
 % record beginning, middle
 diff --git a/plain b/plain
 3 hunks, 7 lines changed
-examine changes to 'plain'? [Ynsfdaq?]  @@ -1,2 +1,5 @@ 4
+examine changes to 'plain'? [Ynsfdaq?]  @@ -1,2 +1,5 @@
 +1
 +2
 +3
@@ -367,7 +367,7 @@ summary:     middle-only
 diff -r efc0dad7bd9f -r c1c639d8b268 plain
 --- a/plain	Thu Jan 01 00:00:13 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:14 1970 +0000
-@@ -1,5 +1,10 @@ 4
+@@ -1,5 +1,10 @@
 +1
 +2
 +3
@@ -382,7 +382,7 @@ diff -r efc0dad7bd9f -r c1c639d8b268 plain
 % record end
 diff --git a/plain b/plain
 1 hunks, 2 lines changed
-examine changes to 'plain'? [Ynsfdaq?]  @@ -9,3 +9,5 @@ 7
+examine changes to 'plain'? [Ynsfdaq?]  @@ -9,3 +9,5 @@
  7
  8
  9
@@ -398,7 +398,7 @@ summary:     end-only
 diff -r c1c639d8b268 -r 80b74bbc7808 plain
 --- a/plain	Thu Jan 01 00:00:14 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:15 1970 +0000
-@@ -9,3 +9,5 @@ 7
+@@ -9,3 +9,5 @@
  7
  8
  9
@@ -408,7 +408,7 @@ diff -r c1c639d8b268 -r 80b74bbc7808 plain
 adding subdir/a
 diff --git a/subdir/a b/subdir/a
 1 hunks, 1 lines changed
-examine changes to 'subdir/a'? [Ynsfdaq?]  @@ -1,1 +1,2 @@ a
+examine changes to 'subdir/a'? [Ynsfdaq?]  @@ -1,1 +1,2 @@
  a
 +a
 record this change to 'subdir/a'? [Ynsfdaq?]  
@@ -421,7 +421,7 @@ summary:     subdir-change
 diff -r aecf2b2ea83c -r 33ff5c4fb017 subdir/a
 --- a/subdir/a	Thu Jan 01 00:00:16 1970 +0000
 +++ b/subdir/a	Thu Jan 01 00:00:16 1970 +0000
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 
@@ -470,7 +470,7 @@ summary:     x
 diff -r f9e855cd9374 -r 094183e04b7c subdir/f2
 --- a/subdir/f2	Thu Jan 01 00:00:17 1970 +0000
 +++ b/subdir/f2	Thu Jan 01 00:00:18 1970 +0000
-@@ -1,1 +1,2 @@ b
+@@ -1,1 +1,2 @@
  b
 +b
 
@@ -487,7 +487,7 @@ summary:     y
 diff -r 094183e04b7c -r 38164785b0ef subdir/f1
 --- a/subdir/f1	Thu Jan 01 00:00:18 1970 +0000
 +++ b/subdir/f1	Thu Jan 01 00:00:19 1970 +0000
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 

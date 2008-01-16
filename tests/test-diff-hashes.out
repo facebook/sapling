@@ -3,7 +3,7 @@ not: No such file or directory
 quiet:
 --- a/foo	Mon Jan 12 13:46:40 1970 +0000
 +++ b/foo	Mon Jan 12 13:46:41 1970 +0000
-@@ -1,1 +1,1 @@ bar
+@@ -1,1 +1,1 @@
 -bar
 +foobar
 
@@ -11,7 +11,7 @@ normal:
 diff -r 74de3f1392e2 -r b8b5f023a6ad foo
 --- a/foo	Mon Jan 12 13:46:40 1970 +0000
 +++ b/foo	Mon Jan 12 13:46:41 1970 +0000
-@@ -1,1 +1,1 @@ bar
+@@ -1,1 +1,1 @@
 -bar
 +foobar
 
@@ -19,7 +19,7 @@ verbose:
 diff -r 74de3f1392e2 -r b8b5f023a6ad foo
 --- a/foo	Mon Jan 12 13:46:40 1970 +0000
 +++ b/foo	Mon Jan 12 13:46:41 1970 +0000
-@@ -1,1 +1,1 @@ bar
+@@ -1,1 +1,1 @@
 -bar
 +foobar
 
@@ -27,7 +27,7 @@ debug:
 diff -r 74de3f1392e2d67856fb155963441f2610494e1a -r b8b5f023a6ad77fc378bd95cf3fa00cd1414d107 foo
 --- a/foo	Mon Jan 12 13:46:40 1970 +0000
 +++ b/foo	Mon Jan 12 13:46:41 1970 +0000
-@@ -1,1 +1,1 @@ bar
+@@ -1,1 +1,1 @@
 -bar
 +foobar
 

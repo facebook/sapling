@@ -34,7 +34,7 @@ abort: outstanding uncommitted changes
 diff -r c1dd73cbf59f b
 --- a/b
 +++ b/b
-@@ -1,1 +1,1 @@ This is file b1
+@@ -1,1 +1,1 @@
 -This is file b1
 +This is file b22
 M b
@@ -49,7 +49,7 @@ merging b
 diff -r c1dd73cbf59f b
 --- a/b
 +++ b/b
-@@ -1,1 +1,1 @@ This is file b1
+@@ -1,1 +1,1 @@
 -This is file b1
 +This is file b33
 M b

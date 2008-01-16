@@ -7,13 +7,13 @@ adding base
 diff -r 67e992f2c4f3 base
 --- a/base
 +++ b/base
-@@ -1,1 +1,1 @@ base
+@@ -1,1 +1,1 @@
 -base
 +patched
 % qdiff dirname
 diff -r 67e992f2c4f3 base
 --- a/base
 +++ b/base
-@@ -1,1 +1,1 @@ base
+@@ -1,1 +1,1 @@
 -base
 +patched

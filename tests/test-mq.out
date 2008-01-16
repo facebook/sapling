@@ -99,7 +99,7 @@ foo bar
 diff -r  xa
 --- a/a
 +++ b/a
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 % empty qrefresh
@@ -110,7 +110,7 @@ foo bar
 working dir diff:
 --- a/a
 +++ b/a
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 % qpop
@@ -249,7 +249,7 @@ foo
 diff -r cb9a9f314b8b a
 --- a/a
 +++ b/a
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 diff -r cb9a9f314b8b b/f

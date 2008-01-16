@@ -17,6 +17,6 @@ commit failed
 diff -r c1fab96507ef a
 --- a/a
 +++ b/a
-@@ -1,1 +1,1 @@ foo
+@@ -1,1 +1,1 @@
 -foo
 +barber
