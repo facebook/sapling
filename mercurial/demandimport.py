@@ -77,7 +77,7 @@ class _demandmod(object):
         self._load()
         setattr(self._module, attr, val)
 
-def _demandimport(name, globals=None, locals=None, fromlist=None):
+def _demandimport(name, globals=None, locals=None, fromlist=None, level=None):
     if not locals or name in ignore or fromlist == ('*',):
         # these cases we can't really delay
         return _origimport(name, globals, locals, fromlist)
@@ -95,6 +95,9 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
                 return locals[base]
         return _demandmod(name, globals, locals)
     else:
+        if level is not None:
+            # from . import b,c,d or from .a import b,c,d
+            return _origimport(name, globals, locals, fromlist, level)
         # from a import b,c,d
         mod = _origimport(name, globals, locals)
         # recurse down the module chain
