@@ -139,6 +139,19 @@ def get_log(url, paths, start, end, limit=0, discover_changed_paths=True,
     return logstream(stdout)
 
 # SVN conversion code stolen from bzr-svn and tailor
+#
+# Subversion looks like a versioned filesystem, branches structures
+# are defined by conventions and not enforced by the tool. First,
+# we define the potential branches (modules) as "trunk" and "branches"
+# children directories. Revisions are then identified by their
+# module and revision number (and a repository identifier).
+#
+# The revision graph is really a tree (or a forest). By default, a
+# revision parent is the previous revision in the same module. If the
+# module directory is copied/moved from another module then the
+# revision is the module root and its parent the source revision in
+# the parent module. A revision has at most one parent.
+#
 class svn_source(converter_source):
     def __init__(self, ui, url, rev=None):
         super(svn_source, self).__init__(ui, url, rev=rev)
