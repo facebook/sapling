@@ -89,6 +89,9 @@ def get_log_child(fp, url, paths, start, end, limit=0, discover_changed_paths=Tr
                        receiver)
     except SubversionException, (inst, num):
         pickle.dump(num, fp, protocol)
+    except IOError:
+        # Caller may interrupt the iteration
+        pickle.dump(None, fp, protocol)
     else:
         pickle.dump(None, fp, protocol)
     fp.close()
@@ -101,6 +104,39 @@ def debugsvnlog(ui, **opts):
     util.set_binary(sys.stdout)
     args = decodeargs(sys.stdin.read())
     get_log_child(sys.stdout, *args)
+
+class logstream:
+    """Interruptible revision log iterator."""
+    def __init__(self, stdout):
+        self._stdout = stdout
+
+    def __iter__(self):
+        while True:
+            entry = pickle.load(self._stdout)
+            try:
+                orig_paths, revnum, author, date, message = entry
+            except:
+                if entry is None:
+                    break
+                raise SubversionException("child raised exception", entry)
+            yield entry
+
+    def close(self):
+        if self._stdout:
+            self._stdout.close()
+            self._stdout = None
+
+def get_log(url, paths, start, end, limit=0, discover_changed_paths=True,
+                strict_node_history=False):
+    args = [url, paths, start, end, limit, discover_changed_paths,
+            strict_node_history]
+    arg = encodeargs(args)
+    hgexe = util.hgexecutable()
+    cmd = '%s debugsvnlog' % util.shellquote(hgexe)
+    stdin, stdout = os.popen2(cmd, 'b')
+    stdin.write(arg)
+    stdin.close()
+    return logstream(stdout)
 
 # SVN conversion code stolen from bzr-svn and tailor
 class svn_source(converter_source):
@@ -263,38 +299,11 @@ class svn_source(converter_source):
         del self.commits[rev]
         return commit
 
-    def get_log(self, paths, start, end, limit=0, discover_changed_paths=True,
-                strict_node_history=False):
-
-        def parent(fp):
-            while True:
-                entry = pickle.load(fp)
-                try:
-                    orig_paths, revnum, author, date, message = entry
-                except:
-                    if entry is None:
-                        break
-                    raise SubversionException("child raised exception", entry)
-                yield entry
-
-        args = [self.url, paths, start, end, limit, discover_changed_paths,
-                strict_node_history]
-        arg = encodeargs(args)
-        hgexe = util.hgexecutable()
-        cmd = '%s debugsvnlog' % util.shellquote(hgexe)
-        stdin, stdout = os.popen2(cmd, 'b')
-
-        stdin.write(arg)
-        stdin.close()
-
-        for p in parent(stdout):
-            yield p
-
     def gettags(self):
         tags = {}
         start = self.revnum(self.head)
         try:
-            for entry in self.get_log([self.tags], 0, start):
+            for entry in get_log(self.url, [self.tags], 0, start):
                 orig_paths, revnum, author, date, message = entry
                 for path in orig_paths:
                     if not path.startswith(self.tags+'/'):
@@ -641,23 +650,25 @@ class svn_source(converter_source):
 
         try:
             firstcset = None
-            branched = False
-            for entry in self.get_log([self.module], from_revnum, to_revnum):
-                if branched:
-                    # The iterator must be exhausted for the child process
-                    # to terminate cleanly.
-                    continue
-                paths, revnum, author, date, message = entry
-                if self.is_blacklisted(revnum):
-                    self.ui.note('skipping blacklisted revision %d\n' % revnum)
-                    continue
-                if paths is None:
-                    self.ui.debug('revision %d has no entries\n' % revnum)
-                    continue
-                cset, branched = parselogentry(paths, revnum, author, 
-                                               date, message)
-                if cset:
-                    firstcset = cset
+            stream = get_log(self.url, [self.module], from_revnum, to_revnum)
+            try:
+                for entry in stream:
+                    paths, revnum, author, date, message = entry
+                    if self.is_blacklisted(revnum):
+                        self.ui.note('skipping blacklisted revision %d\n' 
+                                     % revnum)
+                        continue
+                    if paths is None:
+                        self.ui.debug('revision %d has no entries\n' % revnum)
+                        continue
+                    cset, branched = parselogentry(paths, revnum, author, 
+                                                   date, message)
+                    if cset:
+                        firstcset = cset
+                    if branched:
+                        break
+            finally:
+                stream.close()
 
             if firstcset and not firstcset.parents:
                 # The first revision of the sequence (the last fetched one)
