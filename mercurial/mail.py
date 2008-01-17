@@ -38,39 +38,43 @@ def _smtp(ui):
         s.login(username, password)
     return s
 
-class _sendmail(object):
+def _sendmail(ui, sender, recipients, msg):
     '''send mail using sendmail.'''
-
-    def __init__(self, ui, program):
-        self.ui = ui
-        self.program = program
-
-    def sendmail(self, sender, recipients, msg):
-        cmdline = '%s -f %s %s' % (
-            self.program, templater.email(sender),
-            ' '.join(map(templater.email, recipients)))
-        self.ui.note(_('sending mail: %s\n') % cmdline)
-        fp = os.popen(cmdline, 'w')
-        fp.write(msg)
-        ret = fp.close()
-        if ret:
-            raise util.Abort('%s %s' % (
-                os.path.basename(self.program.split(None, 1)[0]),
-                util.explain_exit(ret)[0]))
+    program = ui.config('email', 'method')
+    cmdline = '%s -f %s %s' % (program, templater.email(sender),
+                               ' '.join(map(templater.email, recipients)))
+    ui.note(_('sending mail: %s\n') % cmdline)
+    fp = os.popen(cmdline, 'w')
+    fp.write(msg)
+    ret = fp.close()
+    if ret:
+        raise util.Abort('%s %s' % (
+            os.path.basename(program.split(None, 1)[0]),
+            util.explain_exit(ret)[0]))
 
 def connect(ui):
-    '''make a mail connection. object returned has one method, sendmail.
+    '''make a mail connection. return a function to send mail.
     call as sendmail(sender, list-of-recipients, msg).'''
 
-    method = ui.config('email', 'method', 'smtp')
-    if method == 'smtp':
-        return _smtp(ui)
+    func =  _sendmail
+    if ui.config('email', 'method', 'smtp') == 'smtp':
+        func = _smtp(ui)
 
-    return _sendmail(ui, method)
+    def send(ui, sender, recipients, msg):
+        try:
+            return func.sendmail(sender, recipients, msg)
+        except smtplib.SMTPRecipientsRefused, inst:
+            recipients = [r[1] for r in inst.recipients.values()]
+            raise util.Abort('\n' + '\n'.join(recipients))
+        except smtplib.SMTPException, inst:
+            raise util.Abort(inst)
+
+    return send
 
 def sendmail(ui, sender, recipients, msg):
     try:
-        return connect(ui).sendmail(sender, recipients, msg)
+        send = connect(ui)
+        return send(sender, recipients, msg)
     except smtplib.SMTPRecipientsRefused, inst:
         recipients = [r[1] for r in inst.recipients.values()]
         raise util.Abort('\n' + '\n'.join(recipients))
