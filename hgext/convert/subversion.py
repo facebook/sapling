@@ -292,7 +292,15 @@ class svn_source(converter_source):
             uuid, module, revnum = self.revsplit(rev)
             self.module = module
             self.reparent(module)
+            # We assume that:
+            # - requests for revisions after "stop" come from the
+            # revision graph backward traversal. Cache all of them
+            # down to stop, they will be used eventually.
+            # - requests for revisions before "stop" come to get
+            # isolated branches parents. Just fetch what is needed.
             stop = self.lastrevs.get(module, 0)
+            if revnum < stop:
+                stop = revnum + 1
             self._fetch_revisions(revnum, stop)
         commit = self.commits[rev]
         # caller caches the result, so free it here to release memory
