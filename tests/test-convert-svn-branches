@@ -1,0 +1,89 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" svn svn-bindings || exit 80
+
+fix_path()
+{
+    tr '\\' /
+}
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
+echo "hgext.graphlog =" >> $HGRCPATH
+
+svnadmin create svn-repo
+
+svnpath=`pwd | fix_path`
+# SVN wants all paths to start with a slash. Unfortunately,
+# Windows ones don't. Handle that.
+expr $svnpath : "\/" > /dev/null
+if [ $? -ne 0 ]; then
+    svnpath='/'$svnpath
+fi
+
+echo % initial svn import
+mkdir projA
+cd projA
+mkdir trunk
+mkdir branches
+mkdir tags
+cd ..
+
+svnurl=file://$svnpath/svn-repo/projA
+svn import -m "init projA" projA $svnurl | fix_path
+
+echo % update svn repository
+svn co $svnurl A | fix_path
+cd A
+echo hello > trunk/letter.txt
+echo hey > trunk/letter2.txt
+echo ho > trunk/letter3.txt
+svn add trunk/letter.txt trunk/letter2.txt trunk/letter3.txt
+svn ci -m hello
+
+echo % branch to old letters
+svn copy trunk branches/old
+svn rm branches/old/letter3.txt
+svn ci -m "branch trunk, remove letter3"
+svn up
+
+echo % update trunk
+echo "what can I say ?" >> trunk/letter.txt
+svn ci -m "change letter"
+
+echo % update old branch
+echo "what's up ?" >> branches/old/letter2.txt
+svn ci -m "change letter2"
+
+echo % create a cross-branch revision
+svn move -m "move letter2" trunk/letter2.txt \
+    branches/old/letter3.txt
+echo "I am fine" >> branches/old/letter3.txt
+svn ci -m "move and update letter3.txt"
+
+echo % update old branch again
+echo "bye" >> branches/old/letter2.txt
+svn ci -m "change letter2 again"
+
+echo % update trunk again
+echo "how are you ?" >> trunk/letter.txt
+svn ci -m "last change to letter"
+cd ..
+
+echo % convert trunk and branches
+hg convert --datesort $svnurl A-hg
+
+echo % branch again from a converted revision
+cd A
+svn copy -r 1 $svnurl/trunk branches/old2
+svn ci -m "branch trunk@1 into old2"
+cd ..
+
+echo % convert again
+hg convert --datesort $svnurl A-hg
+
+cd A-hg
+hg glog --template '#rev# #desc|firstline# files: #files#\n'
+hg branches | sed 's/:.*/:/'
+hg tags -q
+cd ..

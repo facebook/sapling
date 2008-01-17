@@ -1,0 +1,101 @@
+% initial svn import
+Adding         projA/trunk
+Adding         projA/branches
+Adding         projA/tags
+
+Committed revision 1.
+% update svn repository
+A    A/trunk
+A    A/branches
+A    A/tags
+Checked out revision 1.
+A         trunk/letter.txt
+A         trunk/letter2.txt
+A         trunk/letter3.txt
+Adding         trunk/letter.txt
+Adding         trunk/letter2.txt
+Adding         trunk/letter3.txt
+Transmitting file data ...
+Committed revision 2.
+% branch to old letters
+A         branches/old
+D         branches/old/letter3.txt
+Adding         branches/old
+Adding         branches/old/letter.txt
+Adding         branches/old/letter2.txt
+Deleting       branches/old/letter3.txt
+
+Committed revision 3.
+At revision 3.
+% update trunk
+Sending        trunk/letter.txt
+Transmitting file data .
+Committed revision 4.
+% update old branch
+Sending        branches/old/letter2.txt
+Transmitting file data .
+Committed revision 5.
+% create a cross-branch revision
+A         branches/old/letter3.txt
+D         trunk/letter2.txt
+Adding         branches/old/letter3.txt
+Deleting       trunk/letter2.txt
+Transmitting file data .
+Committed revision 6.
+% update old branch again
+Sending        branches/old/letter2.txt
+Transmitting file data .
+Committed revision 7.
+% update trunk again
+Sending        trunk/letter.txt
+Transmitting file data .
+Committed revision 8.
+% convert trunk and branches
+initializing destination A-hg repository
+scanning source...
+sorting...
+converting...
+8 init projA
+7 hello
+6 branch trunk, remove letter3
+5 change letter
+4 change letter2
+3 move and update letter3.txt
+2 move and update letter3.txt
+1 change letter2 again
+0 last change to letter
+% branch again from a converted revision
+Checked out revision 1.
+A         branches/old2
+Adding         branches/old2
+
+Committed revision 9.
+% convert again
+scanning source...
+sorting...
+converting...
+0 branch trunk@1 into old2
+o  9 branch trunk@1 into old2 files:
+|
+| o  8 last change to letter files: letter.txt
+| |
+| | o  7 change letter2 again files: letter2.txt
+| | |
+| o |  6 move and update letter3.txt files: letter2.txt
+| | |
+| | o  5 move and update letter3.txt files: letter3.txt
+| | |
+| | o  4 change letter2 files: letter2.txt
+| | |
+| o |  3 change letter files: letter.txt
+| | |
++---o  2 branch trunk, remove letter3 files: letter.txt letter.txt letter2.txt letter2.txt
+| |
+| o  1 hello files: letter.txt letter2.txt letter3.txt
+|/
+o  0 init projA files:
+
+old2                           9:
+default                        8:
+old                            7:
+tip
