@@ -508,6 +508,9 @@ class svn_source(converter_source):
 
                 # If the directory just had a prop change,
                 # then we shouldn't need to look for its children.
+                if ent.action == 'M':
+                    continue
+
                 # Also this could create duplicate entries. Not sure
                 # whether this will matter. Maybe should make entries a set.
                 # print "Changed directory", revnum, path, ent.action, ent.copyfrom_path, ent.copyfrom_rev
