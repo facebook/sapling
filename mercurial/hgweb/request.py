@@ -27,8 +27,6 @@ class wsgirequest(object):
         self.start_response = start_response
         self.headers = []
 
-    out = property(lambda self: self)
-
     def __iter__(self):
         return iter([])
 

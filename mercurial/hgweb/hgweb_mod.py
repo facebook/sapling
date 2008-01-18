@@ -854,7 +854,7 @@ class hgweb(object):
         if encoding:
             headers.append(('Content-encoding', encoding))
         req.header(headers)
-        archival.archive(self.repo, req.out, cnode, artype, prefix=name)
+        archival.archive(self.repo, req, cnode, artype, prefix=name)
 
     # add tags to things
     # tags -> list of changesets corresponding to tags
