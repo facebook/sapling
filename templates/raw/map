@@ -8,7 +8,6 @@ diffline = '#line#'
 changesetparent = '# Parent #node#'
 changesetchild = '# Child #node#'
 filenodelink = ''
-filerevision = '#rawfileheader##raw#'
 fileline = '#line#'
 diffblock = '#lines#'
 filediff = filediff.tmpl

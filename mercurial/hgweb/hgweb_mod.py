@@ -206,12 +206,17 @@ class hgweb(object):
                 method = getattr(protocol, cmd)
                 method(self, req)
             else:
+
                 tmpl = self.templater(req)
                 if cmd == '':
                     req.form['cmd'] = [tmpl.cache['default']]
                     cmd = req.form['cmd'][0]
-                method = getattr(webcommands, cmd)
-                method(self, req, tmpl)
+
+                if cmd == 'file' and 'raw' in req.form['style']:
+                    webcommands.rawfile(self, req, tmpl)
+                else:
+                    getattr(webcommands, cmd)(self, req, tmpl)
+
                 del tmpl
 
         except revlog.LookupError, err:
@@ -254,12 +259,6 @@ class hgweb(object):
             req.header(msg.items())
             yield header_file.read()
 
-        def rawfileheader(**map):
-            req.header([('Content-type', map['mimetype']),
-                        ('Content-disposition', 'filename=%s' % map['file']),
-                        ('Content-length', str(len(map['raw'])))])
-            yield ''
-
         def footer(**map):
             yield tmpl("footer", **map)
 
@@ -300,7 +299,6 @@ class hgweb(object):
                                              "header": header,
                                              "footer": footer,
                                              "motd": motd,
-                                             "rawfileheader": rawfileheader,
                                              "sessionvars": sessionvars
                                             })
         return tmpl

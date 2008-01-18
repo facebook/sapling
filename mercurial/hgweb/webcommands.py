@@ -5,8 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os
-from mercurial import revlog
+import os, mimetypes
+from mercurial import revlog, util
 from common import staticfile
 
 def log(web, req, tmpl):
@@ -14,6 +14,27 @@ def log(web, req, tmpl):
         filelog(web, req, tmpl)
     else:
         changelog(web, req, tmpl)
+
+def rawfile(web, req, tmpl):
+    path = web.cleanpath(req.form.get('file', [''])[0])
+    if not path:
+        req.write(web.manifest(tmpl, web.changectx(req), path))
+        return
+
+    try:
+        fctx = web.filectx(req)
+    except revlog.LookupError:
+        req.write(web.manifest(tmpl, web.changectx(req), path))
+        return
+
+    path = fctx.path()
+    text = fctx.data()
+    mt = mimetypes.guess_type(path)[0]
+    if util.binary(text):
+        mt = mt or 'application/octet-stream'
+
+    req.httphdr(mt, path, len(text))
+    req.write(text)
 
 def file(web, req, tmpl):
     path = web.cleanpath(req.form.get('file', [''])[0])
