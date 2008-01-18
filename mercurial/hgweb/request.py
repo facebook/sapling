@@ -84,7 +84,9 @@ class wsgirequest(object):
         self.header(headers)
 
 def wsgiapplication(app_maker):
+    '''For compatibility with old CGI scripts. A plain hgweb() or hgwebdir()
+    can and should now be used as a WSGI application.'''
     application = app_maker()
     def run_wsgi(env, respond):
-        application(env, respond)
+        return application(env, respond)
     return run_wsgi
