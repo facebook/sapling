@@ -71,7 +71,11 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
 def _exthook(ui, repo, name, cmd, args, throw):
     ui.note(_("running hook %s: %s\n") % (name, cmd))
     env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()])
-    r = util.system(cmd, environ=env, cwd=repo.root)
+    if repo:
+        cwd = repo.root
+    else:
+        cwd = os.getcwd()
+    r = util.system(cmd, environ=env, cwd=cwd)
     if r:
         desc, r = util.explain_exit(r)
         if throw:
