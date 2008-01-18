@@ -36,6 +36,10 @@ the risk of inadvertedly storing expanded keywords in the change history.
 To force expansion after enabling it, or a configuration change, run
 "hg kwexpand".
 
+Also, when committing with the record extension or using mq's qrecord, be aware
+that keywords cannot be updated. Again, run "hg kwexpand" on the files in
+question to update keyword expansions after all changes have been checked in.
+
 Expansions spanning more than one line and incremental expansions,
 like CVS' $Log$, are not supported. A keyword template map
 "Log = {desc}" expands to the first line of the changeset description.
@@ -184,7 +188,7 @@ c
 diff -r f782df5f9602 c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 @@ -0,0 +1,3 @@
-+expand $Id: c,v 0ba462c0f077 1970/01/01 00:00:01 user $
++expand $Id$
 +do not process $Id:
 +xxx $
 % rollback
