@@ -38,7 +38,6 @@ def fancyopts(args, options, state):
         if isinstance(default, list):
             state[name] = default[:]
         elif callable(default):
-            print "whoa", name, default
             state[name] = None
         else:
             state[name] = default

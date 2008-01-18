@@ -1372,7 +1372,8 @@ def diffstat(patchlines):
     try:
         p = popen2.Popen3('diffstat -p1 -w79 2>/dev/null > ' + name)
         try:
-            for line in patchlines: print >> p.tochild, line
+            for line in patchlines:
+                p.tochild.write(line + "\n")
             p.tochild.close()
             if p.wait(): return
             fp = os.fdopen(fd, 'r')
