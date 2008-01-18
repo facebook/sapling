@@ -24,7 +24,7 @@ class wsgirequest(object):
         self.run_once = wsgienv['wsgi.run_once']
         self.env = wsgienv
         self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
-        self.start_response = start_response
+        self._start_response = start_response
         self.headers = []
 
     def __iter__(self):
@@ -33,24 +33,31 @@ class wsgirequest(object):
     def read(self, count=-1):
         return self.inp.read(count)
 
+    def start_response(self, status):
+        if self._start_response is not None:
+            if not self.headers:
+                raise RuntimeError("request.write called before headers sent" +
+                	               " (%s)." % thing)
+
+            if isinstance(status, ErrorResponse):
+                status = statusmessage(status.code)
+            elif isinstance(status, int):
+                status = statusmessage(status)
+
+            self.server_write = self._start_response(status, self.headers)
+            self._start_response = None
+            self.headers = []
+
     def respond(self, status, *things):
+        if not things:
+            self.start_response(status)
         for thing in things:
             if hasattr(thing, "__iter__"):
                 for part in thing:
                     self.respond(status, part)
             else:
                 thing = str(thing)
-                if self.server_write is None:
-                    if not self.headers:
-                        raise RuntimeError("request.write called before headers sent (%s)." % thing)
-                    if isinstance(status, ErrorResponse):
-                        status = statusmessage(status.code)
-                    elif isinstance(status, int):
-                        status = statusmessage(status)
-                    self.server_write = self.start_response(status,
-                                                            self.headers)
-                    self.start_response = None
-                    self.headers = []
+                self.start_response(status)
                 try:
                     self.server_write(thing)
                 except socket.error, inst:
