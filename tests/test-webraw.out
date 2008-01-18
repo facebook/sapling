@@ -1,7 +1,7 @@
 200 Script output follows
 content-type: text/plain
 content-length: 157
-content-disposition: filename=sometext.txt
+content-disposition: attachment; filename=sometext.txt
 
 This is just some random text
 that will go inside the file and take a few lines.
