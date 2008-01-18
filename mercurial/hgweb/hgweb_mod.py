@@ -446,13 +446,13 @@ class hgweb(object):
 
         changenav = revnavgen(pos, maxchanges, count, self.repo.changectx)
 
-        yield tmpl(shortlog and 'shortlog' or 'changelog',
-                   changenav=changenav,
-                   node=hex(cl.tip()),
-                   rev=pos, changesets=count,
-                   entries=lambda **x: changelist(limit=0,**x),
-                   latestentry=lambda **x: changelist(limit=1,**x),
-                   archives=self.archivelist("tip"))
+        return tmpl(shortlog and 'shortlog' or 'changelog',
+                    changenav=changenav,
+                    node=hex(cl.tip()),
+                    rev=pos, changesets=count,
+                    entries=lambda **x: changelist(limit=0,**x),
+                    latestentry=lambda **x: changelist(limit=1,**x),
+                    archives=self.archivelist("tip"))
 
     def search(self, tmpl, query):
 
@@ -505,11 +505,11 @@ class hgweb(object):
         cl = self.repo.changelog
         parity = paritygen(self.stripecount)
 
-        yield tmpl('search',
-                   query=query,
-                   node=hex(cl.tip()),
-                   entries=changelist,
-                   archives=self.archivelist("tip"))
+        return tmpl('search',
+                    query=query,
+                    node=hex(cl.tip()),
+                    entries=changelist,
+                    archives=self.archivelist("tip"))
 
     def changeset(self, tmpl, ctx):
         n = ctx.node()
@@ -526,20 +526,20 @@ class hgweb(object):
         def diff(**map):
             yield self.diff(tmpl, p1, n, None)
 
-        yield tmpl('changeset',
-                   diff=diff,
-                   rev=ctx.rev(),
-                   node=hex(n),
-                   parent=self.siblings(parents),
-                   child=self.siblings(ctx.children()),
-                   changesettag=self.showtag("changesettag",n),
-                   author=ctx.user(),
-                   desc=ctx.description(),
-                   date=ctx.date(),
-                   files=files,
-                   archives=self.archivelist(hex(n)),
-                   tags=self.nodetagsdict(n),
-                   branches=self.nodebranchdict(ctx))
+        return tmpl('changeset',
+                    diff=diff,
+                    rev=ctx.rev(),
+                    node=hex(n),
+                    parent=self.siblings(parents),
+                    child=self.siblings(ctx.children()),
+                    changesettag=self.showtag("changesettag",n),
+                    author=ctx.user(),
+                    desc=ctx.description(),
+                    date=ctx.date(),
+                    files=files,
+                    archives=self.archivelist(hex(n)),
+                    tags=self.nodetagsdict(n),
+                    branches=self.nodebranchdict(ctx))
 
     def filelog(self, tmpl, fctx):
         f = fctx.path()
@@ -578,9 +578,9 @@ class hgweb(object):
 
         nodefunc = lambda x: fctx.filectx(fileid=x)
         nav = revnavgen(pos, pagelen, count, nodefunc)
-        yield tmpl("filelog", file=f, node=hex(fctx.node()), nav=nav,
-                   entries=lambda **x: entries(limit=0, **x),
-                   latestentry=lambda **x: entries(limit=1, **x))
+        return tmpl("filelog", file=f, node=hex(fctx.node()), nav=nav,
+                    entries=lambda **x: entries(limit=0, **x),
+                    latestentry=lambda **x: entries(limit=1, **x))
 
     def filerevision(self, tmpl, fctx):
         f = fctx.path()
@@ -602,21 +602,21 @@ class hgweb(object):
                        "linenumber": "% 6d" % (l + 1),
                        "parity": parity.next()}
 
-        yield tmpl("filerevision",
-                   file=f,
-                   path=_up(f),
-                   text=lines(),
-                   raw=rawtext,
-                   mimetype=mt,
-                   rev=fctx.rev(),
-                   node=hex(fctx.node()),
-                   author=fctx.user(),
-                   date=fctx.date(),
-                   desc=fctx.description(),
-                   parent=self.siblings(fctx.parents()),
-                   child=self.siblings(fctx.children()),
-                   rename=self.renamelink(fl, n),
-                   permissions=fctx.manifest().flags(f))
+        return tmpl("filerevision",
+                    file=f,
+                    path=_up(f),
+                    text=lines(),
+                    raw=rawtext,
+                    mimetype=mt,
+                    rev=fctx.rev(),
+                    node=hex(fctx.node()),
+                    author=fctx.user(),
+                    date=fctx.date(),
+                    desc=fctx.description(),
+                    parent=self.siblings(fctx.parents()),
+                    child=self.siblings(fctx.children()),
+                    rename=self.renamelink(fl, n),
+                    permissions=fctx.manifest().flags(f))
 
     def fileannotate(self, tmpl, fctx):
         f = fctx.path()
@@ -640,19 +640,19 @@ class hgweb(object):
                        "file": f.path(),
                        "line": l}
 
-        yield tmpl("fileannotate",
-                   file=f,
-                   annotate=annotate,
-                   path=_up(f),
-                   rev=fctx.rev(),
-                   node=hex(fctx.node()),
-                   author=fctx.user(),
-                   date=fctx.date(),
-                   desc=fctx.description(),
-                   rename=self.renamelink(fl, n),
-                   parent=self.siblings(fctx.parents()),
-                   child=self.siblings(fctx.children()),
-                   permissions=fctx.manifest().flags(f))
+        return tmpl("fileannotate",
+                    file=f,
+                    annotate=annotate,
+                    path=_up(f),
+                    rev=fctx.rev(),
+                    node=hex(fctx.node()),
+                    author=fctx.user(),
+                    date=fctx.date(),
+                    desc=fctx.description(),
+                    rename=self.renamelink(fl, n),
+                    parent=self.siblings(fctx.parents()),
+                    child=self.siblings(fctx.children()),
+                    permissions=fctx.manifest().flags(f))
 
     def manifest(self, tmpl, ctx, path):
         mf = ctx.manifest()
@@ -708,17 +708,17 @@ class hgweb(object):
                        "path": "%s%s" % (abspath, f),
                        "basename": f[:-1]}
 
-        yield tmpl("manifest",
-                   rev=ctx.rev(),
-                   node=hex(node),
-                   path=abspath,
-                   up=_up(abspath),
-                   upparity=parity.next(),
-                   fentries=filelist,
-                   dentries=dirlist,
-                   archives=self.archivelist(hex(node)),
-                   tags=self.nodetagsdict(node),
-                   branches=self.nodebranchdict(ctx))
+        return tmpl("manifest",
+                    rev=ctx.rev(),
+                    node=hex(node),
+                    path=abspath,
+                    up=_up(abspath),
+                    upparity=parity.next(),
+                    fentries=filelist,
+                    dentries=dirlist,
+                    archives=self.archivelist(hex(node)),
+                    tags=self.nodetagsdict(node),
+                    branches=self.nodebranchdict(ctx))
 
     def tags(self, tmpl):
         i = self.repo.tagslist()
@@ -738,11 +738,11 @@ class hgweb(object):
                        "date": self.repo.changectx(n).date(),
                        "node": hex(n)}
 
-        yield tmpl("tags",
-                   node=hex(self.repo.changelog.tip()),
-                   entries=lambda **x: entries(False,0, **x),
-                   entriesnotip=lambda **x: entries(True,0, **x),
-                   latestentry=lambda **x: entries(True,1, **x))
+        return tmpl("tags",
+                    node=hex(self.repo.changelog.tip()),
+                    entries=lambda **x: entries(False,0, **x),
+                    entriesnotip=lambda **x: entries(True,0, **x),
+                    latestentry=lambda **x: entries(True,1, **x))
 
     def summary(self, tmpl):
         i = self.repo.tagslist()
@@ -807,15 +807,15 @@ class hgweb(object):
         start = max(0, count - self.maxchanges)
         end = min(count, start + self.maxchanges)
 
-        yield tmpl("summary",
-                   desc=self.config("web", "description", "unknown"),
-                   owner=get_contact(self.config) or "unknown",
-                   lastchange=cl.read(cl.tip())[2],
-                   tags=tagentries,
-                   branches=branches,
-                   shortlog=changelist,
-                   node=hex(cl.tip()),
-                   archives=self.archivelist("tip"))
+        return tmpl("summary",
+                    desc=self.config("web", "description", "unknown"),
+                    owner=get_contact(self.config) or "unknown",
+                    lastchange=cl.read(cl.tip())[2],
+                    tags=tagentries,
+                    branches=branches,
+                    shortlog=changelist,
+                    node=hex(cl.tip()),
+                    archives=self.archivelist("tip"))
 
     def filediff(self, tmpl, fctx):
         n = fctx.node()
@@ -826,13 +826,13 @@ class hgweb(object):
         def diff(**map):
             yield self.diff(tmpl, p1, n, [path])
 
-        yield tmpl("filediff",
-                   file=path,
-                   node=hex(n),
-                   rev=fctx.rev(),
-                   parent=self.siblings(parents),
-                   child=self.siblings(fctx.children()),
-                   diff=diff)
+        return tmpl("filediff",
+                    file=path,
+                    node=hex(n),
+                    rev=fctx.rev(),
+                    parent=self.siblings(parents),
+                    child=self.siblings(fctx.children()),
+                    diff=diff)
 
     archive_specs = {
         'bz2': ('application/x-tar', 'tbz2', '.tar.bz2', None),
