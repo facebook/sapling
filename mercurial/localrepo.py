@@ -1852,7 +1852,7 @@ class localrepository(repo.repository):
 
         return util.chunkbuffer(gengroup())
 
-    def addchangegroup(self, source, srctype, url):
+    def addchangegroup(self, source, srctype, url, emptyok=False):
         """add changegroup to repo.
 
         return values:
@@ -1888,7 +1888,7 @@ class localrepository(repo.repository):
             self.ui.status(_("adding changesets\n"))
             cor = cl.count() - 1
             chunkiter = changegroup.chunkiter(source)
-            if cl.addgroup(chunkiter, csmap, trp, 1) is None:
+            if cl.addgroup(chunkiter, csmap, trp, 1) is None and not emptyok:
                 raise util.Abort(_("received changelog group is empty"))
             cnr = cl.count() - 1
             changesets = cnr - cor
