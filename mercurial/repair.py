@@ -9,58 +9,58 @@
 import changegroup, os
 from node import *
 
+def _limitheads(cl, stoprev):
+    """return the list of all revs >= stoprev that have no children"""
+    seen = {}
+    heads = []
+
+    for r in xrange(cl.count() - 1, stoprev - 1, -1):
+        if r not in seen:
+            heads.append(r)
+        for p in cl.parentrevs(r):
+            seen[p] = 1
+    return heads
+
+def _bundle(repo, bases, heads, node, suffix):
+    """create a bundle with the specified revisions as a backup"""
+    cg = repo.changegroupsubset(bases, heads, 'strip')
+    backupdir = repo.join("strip-backup")
+    if not os.path.isdir(backupdir):
+        os.mkdir(backupdir)
+    name = os.path.join(backupdir, "%s-%s" % (short(node), suffix))
+    repo.ui.warn("saving bundle to %s\n" % name)
+    return changegroup.writebundle(cg, name, "HG10BZ")
+
+def _collectfilenodes(repo, striprev):
+    """find out the first node that should be stripped from each filelog"""
+    mm = repo.changectx(striprev).manifest()
+    filenodes = {}
+
+    for x in xrange(striprev, repo.changelog.count()):
+        for name in repo.changectx(x).files():
+            if name in filenodes:
+                continue
+            filenodes[name] = mm.get(name)
+
+    return filenodes
+
+def _stripall(repo, striprev, filenodes):
+    """strip the requested nodes from the filelogs"""
+    # we go in two steps here so the strip loop happens in a
+    # sensible order.  When stripping many files, this helps keep
+    # our disk access patterns under control.
+
+    files = filenodes.keys()
+    files.sort()
+    for name in files:
+        f = repo.file(name)
+        fnode = filenodes[name]
+        frev = 0
+        if fnode is not None and fnode in f.nodemap:
+            frev = f.rev(fnode)
+        f.strip(frev, striprev)
+
 def strip(ui, repo, node, backup="all"):
-    def limitheads(cl, stoprev):
-        """return the list of all revs >= stoprev that have no children"""
-        seen = {}
-        heads = []
-
-        for r in xrange(cl.count() - 1, stoprev - 1, -1):
-            if r not in seen:
-                heads.append(r)
-            for p in cl.parentrevs(r):
-                seen[p] = 1
-        return heads
-
-    def bundle(repo, bases, heads, node, suffix):
-        """create a bundle with the specified revisions as a backup"""
-        cg = repo.changegroupsubset(bases, heads, 'strip')
-        backupdir = repo.join("strip-backup")
-        if not os.path.isdir(backupdir):
-            os.mkdir(backupdir)
-        name = os.path.join(backupdir, "%s-%s" % (short(node), suffix))
-        repo.ui.warn("saving bundle to %s\n" % name)
-        return changegroup.writebundle(cg, name, "HG10BZ")
-
-    def collectfilenodes(repo, striprev):
-        """find out the first node that should be stripped from each filelog"""
-        mm = repo.changectx(striprev).manifest()
-        filenodes = {}
-
-        for x in xrange(striprev, repo.changelog.count()):
-            for name in repo.changectx(x).files():
-                if name in filenodes:
-                    continue
-                filenodes[name] = mm.get(name)
-
-        return filenodes
-
-    def stripall(repo, striprev, filenodes):
-        """strip the requested nodes from the filelogs"""
-        # we go in two steps here so the strip loop happens in a
-        # sensible order.  When stripping many files, this helps keep
-        # our disk access patterns under control.
-
-        files = filenodes.keys()
-        files.sort()
-        for name in files:
-            f = repo.file(name)
-            fnode = filenodes[name]
-            frev = 0
-            if fnode is not None and fnode in f.nodemap:
-                frev = f.rev(fnode)
-            f.strip(frev, striprev)
-
     cl = repo.changelog
     # TODO delete the undo files, and handle undo of merge sets
     pp = cl.parents(node)
@@ -72,7 +72,7 @@ def strip(ui, repo, node, backup="all"):
     saveheads = []
     savebases = {}
 
-    heads = [cl.node(r) for r in limitheads(cl, striprev)]
+    heads = [cl.node(r) for r in _limitheads(cl, striprev)]
     seen = {}
 
     # search through all the heads, finding those where the revision
@@ -104,12 +104,12 @@ def strip(ui, repo, node, backup="all"):
 
     # create a changegroup for all the branches we need to keep
     if backup == "all":
-        bundle(repo, [node], cl.heads(), node, 'backup')
+        _bundle(repo, [node], cl.heads(), node, 'backup')
     if saveheads:
-        chgrpfile = bundle(repo, savebases.keys(), saveheads, node, 'temp')
+        chgrpfile = _bundle(repo, savebases.keys(), saveheads, node, 'temp')
 
-    filenodes = collectfilenodes(repo, striprev)
-    stripall(repo, striprev, filenodes)
+    filenodes = _collectfilenodes(repo, striprev)
+    _stripall(repo, striprev, filenodes)
 
     change = cl.read(node)
     cl.strip(striprev, striprev)
