@@ -39,34 +39,34 @@ def strip(ui, repo, node, backup="all"):
         ui.warn("saving bundle to %s\n" % name)
         return changegroup.writebundle(cg, name, "HG10BZ")
 
-    def stripall(striprev):
-        mm = repo.changectx(node).manifest()
-        seen = {}
+    def collectfilenodes(repo, striprev):
+        """find out the first node that should be stripped from each filelog"""
+        mm = repo.changectx(striprev).manifest()
+        filenodes = {}
 
         for x in xrange(striprev, repo.changelog.count()):
-            for f in repo.changectx(x).files():
-                if f in seen:
+            for name in repo.changectx(x).files():
+                if name in filenodes:
                     continue
-                seen[f] = 1
-                if f in mm:
-                    filerev = mm[f]
-                else:
-                    filerev = 0
-                seen[f] = filerev
+                filenodes[name] = mm.get(name)
+
+        return filenodes
+
+    def stripall(repo, striprev, filenodes):
+        """strip the requested nodes from the filelogs"""
         # we go in two steps here so the strip loop happens in a
         # sensible order.  When stripping many files, this helps keep
         # our disk access patterns under control.
-        seen_list = seen.keys()
-        seen_list.sort()
-        for f in seen_list:
-            ff = repo.file(f)
-            filerev = seen[f]
-            if filerev != 0:
-                if filerev in ff.nodemap:
-                    filerev = ff.rev(filerev)
-                else:
-                    filerev = 0
-            ff.strip(filerev, striprev)
+
+        files = filenodes.keys()
+        files.sort()
+        for name in files:
+            f = repo.file(name)
+            fnode = filenodes[name]
+            frev = 0
+            if fnode is not None and fnode in f.nodemap:
+                frev = f.rev(fnode)
+            f.strip(frev, striprev)
 
     cl = repo.changelog
     # TODO delete the undo files, and handle undo of merge sets
@@ -115,7 +115,8 @@ def strip(ui, repo, node, backup="all"):
     if saveheads:
         chgrpfile = bundle(repo, savebases.keys(), saveheads, node, 'temp')
 
-    stripall(striprev)
+    filenodes = collectfilenodes(repo, striprev)
+    stripall(repo, striprev, filenodes)
 
     change = cl.read(node)
     cl.strip(striprev, striprev)
