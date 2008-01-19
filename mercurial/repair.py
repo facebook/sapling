@@ -31,18 +31,19 @@ def _bundle(repo, bases, heads, node, suffix, extranodes=None):
     repo.ui.warn("saving bundle to %s\n" % name)
     return changegroup.writebundle(cg, name, "HG10BZ")
 
-def _collectfilenodes(repo, striprev):
-    """find out the first node that should be stripped from each filelog"""
-    mm = repo.changectx(striprev).manifest()
-    filenodes = {}
+def _collectfiles(repo, striprev):
+    """find out the filelogs affected by the strip"""
+    files = {}
 
     for x in xrange(striprev, repo.changelog.count()):
         for name in repo.changectx(x).files():
-            if name in filenodes:
+            if name in files:
                 continue
-            filenodes[name] = mm.get(name)
+            files[name] = 1
 
-    return filenodes
+    files = files.keys()
+    files.sort()
+    return files
 
 def _collectextranodes(repo, files, link):
     """return the nodes that have to be saved before the strip"""
@@ -79,22 +80,6 @@ def _collectextranodes(repo, files, link):
             extranodes[fname] = extra
 
     return extranodes
-
-def _stripall(repo, striprev, filenodes):
-    """strip the requested nodes from the filelogs"""
-    # we go in two steps here so the strip loop happens in a
-    # sensible order.  When stripping many files, this helps keep
-    # our disk access patterns under control.
-
-    files = filenodes.keys()
-    files.sort()
-    for name in files:
-        f = repo.file(name)
-        fnode = filenodes[name]
-        frev = 0
-        if fnode is not None and fnode in f.nodemap:
-            frev = f.rev(fnode)
-        f.strip(frev, striprev)
 
 def strip(ui, repo, node, backup="all"):
     cl = repo.changelog
@@ -138,9 +123,9 @@ def strip(ui, repo, node, backup="all"):
                 if cl.rev(x) > striprev:
                     savebases[x] = 1
 
-    filenodes = _collectfilenodes(repo, striprev)
+    files = _collectfiles(repo, striprev)
 
-    extranodes = _collectextranodes(repo, filenodes, striprev)
+    extranodes = _collectextranodes(repo, files, striprev)
 
     # create a changegroup for all the branches we need to keep
     if backup == "all":
@@ -149,11 +134,12 @@ def strip(ui, repo, node, backup="all"):
         chgrpfile = _bundle(repo, savebases.keys(), saveheads, node, 'temp',
                             extranodes)
 
-    _stripall(repo, striprev, filenodes)
+    cl.strip(striprev)
+    repo.manifest.strip(striprev)
+    for name in files:
+        f = repo.file(name)
+        f.strip(striprev)
 
-    change = cl.read(node)
-    cl.strip(striprev, striprev)
-    repo.manifest.strip(repo.manifest.rev(change[0]), striprev)
     if saveheads or extranodes:
         ui.status("adding branch\n")
         f = open(chgrpfile, "rb")

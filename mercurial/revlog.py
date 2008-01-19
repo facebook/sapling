@@ -1237,7 +1237,20 @@ class revlog(object):
 
         return node
 
-    def strip(self, rev, minlink):
+    def strip(self, minlink):
+        """truncate the revlog on the first revision with a linkrev >= minlink
+
+        This function is called when we're stripping revision minlink and
+        its descendants from the repository.
+
+        We have to remove all revisions with linkrev >= minlink, because
+        the equivalent changelog revisions will be renumbered after the
+        strip.
+
+        So we truncate the revlog on the first of these revisions, and
+        trust that the caller has saved the revisions that shouldn't be
+        removed and that it'll readd them after this truncation.
+        """
         if self.count() == 0:
             return
 
