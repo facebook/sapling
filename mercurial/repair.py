@@ -10,25 +10,17 @@ import changegroup, os
 from node import *
 
 def strip(ui, repo, node, backup="all"):
-    def limitheads(cl, stop):
-        """return the list of all nodes that have no children"""
-        p = {}
-        h = []
-        stoprev = 0
-        if stop in cl.nodemap:
-            stoprev = cl.rev(stop)
+    def limitheads(cl, stoprev):
+        """return the list of all revs >= stoprev that have no children"""
+        seen = {}
+        heads = []
 
-        for r in xrange(cl.count() - 1, -1, -1):
-            n = cl.node(r)
-            if n not in p:
-                h.append(n)
-            if n == stop:
-                break
-            if r < stoprev:
-                break
-            for pn in cl.parents(n):
-                p[pn] = 1
-        return h
+        for r in xrange(cl.count() - 1, stoprev - 1, -1):
+            if r not in seen:
+                heads.append(r)
+            for p in cl.parentrevs(r):
+                seen[p] = 1
+        return heads
 
     def bundle(repo, bases, heads, node, suffix):
         """create a bundle with the specified revisions as a backup"""
@@ -80,7 +72,7 @@ def strip(ui, repo, node, backup="all"):
     saveheads = []
     savebases = {}
 
-    heads = limitheads(cl, node)
+    heads = [cl.node(r) for r in limitheads(cl, striprev)]
     seen = {}
 
     # search through all the heads, finding those where the revision
