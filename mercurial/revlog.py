@@ -1238,20 +1238,17 @@ class revlog(object):
         return node
 
     def strip(self, rev, minlink):
-        if self.count() == 0 or rev >= self.count():
+        if self.count() == 0:
             return
 
         if isinstance(self.index, lazyindex):
             self._loadindexmap()
 
-        # When stripping away a revision, we need to make sure it
-        # does not actually belong to an older changeset.
-        # The minlink parameter defines the oldest revision
-        # we're allowed to strip away.
-        while minlink > self.index[rev][4]:
-            rev += 1
-            if rev >= self.count():
-                return
+        for rev in xrange(0, self.count()):
+            if self.index[rev][4] >= minlink:
+                break
+        else:
+            return
 
         # first truncate the files on disk
         end = self.start(rev)

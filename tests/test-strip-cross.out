@@ -1,0 +1,87 @@
+crossed/.hg/store/00manifest.i
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0     112      0       0 6f105cbb914d 000000000000 000000000000
+     1       112     123      0       1 8f3d04e263e5 000000000000 000000000000
+     2       235     122      0       2 f0ef8726ac4f 000000000000 000000000000
+
+crossed/.hg/store/data/012.i
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       0 b8e02f643373 000000000000 000000000000
+     1         3       3      1       1 5d9299349fc0 000000000000 000000000000
+     2         6       3      2       2 2661d26c6496 000000000000 000000000000
+
+crossed/.hg/store/data/021.i
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       0 b8e02f643373 000000000000 000000000000
+     1         3       3      1       2 5d9299349fc0 000000000000 000000000000
+     2         6       3      2       1 2661d26c6496 000000000000 000000000000
+
+crossed/.hg/store/data/102.i
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       1 b8e02f643373 000000000000 000000000000
+     1         3       3      1       0 5d9299349fc0 000000000000 000000000000
+     2         6       3      2       2 2661d26c6496 000000000000 000000000000
+
+crossed/.hg/store/data/120.i
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       1 b8e02f643373 000000000000 000000000000
+     1         3       3      1       2 5d9299349fc0 000000000000 000000000000
+     2         6       3      2       0 2661d26c6496 000000000000 000000000000
+
+crossed/.hg/store/data/201.i
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       2 b8e02f643373 000000000000 000000000000
+     1         3       3      1       0 5d9299349fc0 000000000000 000000000000
+     2         6       3      2       1 2661d26c6496 000000000000 000000000000
+
+crossed/.hg/store/data/210.i
+   rev    offset  length   base linkrev nodeid       p1           p2
+     0         0       3      0       2 b8e02f643373 000000000000 000000000000
+     1         3       3      1       1 5d9299349fc0 000000000000 000000000000
+     2         6       3      2       0 2661d26c6496 000000000000 000000000000
+
+% Trying to strip revision 0
+saving bundle to strip-backup/cbb8c2f0a2e3-backup
+saving bundle to strip-backup/cbb8c2f0a2e3-temp
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 12 changes to 6 files (+1 heads)
+% Verifying
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+6 files, 2 changesets, 12 total revisions
+
+% Trying to strip revision 1
+saving bundle to strip-backup/124ecc0cbec9-backup
+saving bundle to strip-backup/124ecc0cbec9-temp
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 10 changes to 6 files (+1 heads)
+% Verifying
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+6 files, 2 changesets, 12 total revisions
+
+% Trying to strip revision 2
+saving bundle to strip-backup/f6439b304a1a-backup
+saving bundle to strip-backup/f6439b304a1a-temp
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 0 changesets with 6 changes to 4 files
+% Verifying
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+6 files, 2 changesets, 12 total revisions
+

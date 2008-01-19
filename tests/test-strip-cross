@@ -1,0 +1,61 @@
+#!/bin/sh
+
+# test stripping of filelogs where the linkrev doesn't always increase
+
+echo '[extensions]' >> $HGRCPATH
+echo 'hgext.mq =' >> $HGRCPATH
+
+hg init orig
+cd orig
+
+hidefilename()
+{
+    sed -e 's/saving bundle to .*strip-backup/saving bundle to strip-backup/'
+}
+
+commit()
+{
+    hg up -qC null
+    count=1
+    for i in "$@"; do
+	for f in $i; do
+	    echo $count > $f
+	done
+	count=`expr $count + 1`
+    done
+    hg commit -qAm "$*"
+}
+
+# 2 1 0 2 0 1 2
+commit '201 210'
+
+commit '102 120' '210'
+
+commit '021'
+
+commit '201' '021 120'
+
+commit '012 021' '102 201' '120 210'
+
+commit '102 120' '012 210' '021 201'
+
+commit '201 210' '021 120' '012 102'
+
+cd ..
+hg clone -q -U -r -1 -r -2 -r -3 orig crossed
+
+for i in crossed/.hg/store/{00manifest.i,data/*.i}; do
+    echo $i
+    hg debugindex $i
+    echo
+done
+
+for i in 0 1 2; do
+    hg clone -q -U --pull crossed $i
+    echo "% Trying to strip revision $i"
+    hg --cwd $i strip $i 2>&1 | hidefilename
+    echo "% Verifying"
+    hg --cwd $i verify
+    echo
+done
+

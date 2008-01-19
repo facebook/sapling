@@ -21,9 +21,9 @@ def _limitheads(cl, stoprev):
             seen[p] = 1
     return heads
 
-def _bundle(repo, bases, heads, node, suffix):
+def _bundle(repo, bases, heads, node, suffix, extranodes=None):
     """create a bundle with the specified revisions as a backup"""
-    cg = repo.changegroupsubset(bases, heads, 'strip')
+    cg = repo.changegroupsubset(bases, heads, 'strip', extranodes)
     backupdir = repo.join("strip-backup")
     if not os.path.isdir(backupdir):
         os.mkdir(backupdir)
@@ -43,6 +43,42 @@ def _collectfilenodes(repo, striprev):
             filenodes[name] = mm.get(name)
 
     return filenodes
+
+def _collectextranodes(repo, files, link):
+    """return the nodes that have to be saved before the strip"""
+    def collectone(revlog):
+        extra = []
+        startrev = count = revlog.count()
+        # find the truncation point of the revlog
+        for i in xrange(0, count):
+            node = revlog.node(i)
+            lrev = revlog.linkrev(node)
+            if lrev >= link:
+                startrev = i + 1
+                break
+
+        # see if any revision after that point has a linkrev less than link
+        # (we have to manually save these guys)
+        for i in xrange(startrev, count):
+            node = revlog.node(i)
+            lrev = revlog.linkrev(node)
+            if lrev < link:
+                extra.append((node, cl.node(lrev)))
+
+        return extra
+
+    extranodes = {}
+    cl = repo.changelog
+    extra = collectone(repo.manifest)
+    if extra:
+        extranodes[1] = extra
+    for fname in files:
+        f = repo.file(fname)
+        extra = collectone(f)
+        if extra:
+            extranodes[fname] = extra
+
+    return extranodes
 
 def _stripall(repo, striprev, filenodes):
     """strip the requested nodes from the filelogs"""
@@ -102,23 +138,27 @@ def strip(ui, repo, node, backup="all"):
                 if cl.rev(x) > striprev:
                     savebases[x] = 1
 
+    filenodes = _collectfilenodes(repo, striprev)
+
+    extranodes = _collectextranodes(repo, filenodes, striprev)
+
     # create a changegroup for all the branches we need to keep
     if backup == "all":
         _bundle(repo, [node], cl.heads(), node, 'backup')
-    if saveheads:
-        chgrpfile = _bundle(repo, savebases.keys(), saveheads, node, 'temp')
+    if saveheads or extranodes:
+        chgrpfile = _bundle(repo, savebases.keys(), saveheads, node, 'temp',
+                            extranodes)
 
-    filenodes = _collectfilenodes(repo, striprev)
     _stripall(repo, striprev, filenodes)
 
     change = cl.read(node)
     cl.strip(striprev, striprev)
     repo.manifest.strip(repo.manifest.rev(change[0]), striprev)
-    if saveheads:
+    if saveheads or extranodes:
         ui.status("adding branch\n")
         f = open(chgrpfile, "rb")
         gen = changegroup.readbundle(f, chgrpfile)
-        repo.addchangegroup(gen, 'strip', 'bundle:' + chgrpfile)
+        repo.addchangegroup(gen, 'strip', 'bundle:' + chgrpfile, True)
         f.close()
         if backup != "strip":
             os.unlink(chgrpfile)
