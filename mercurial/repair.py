@@ -6,7 +6,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import changegroup, revlog, os
+import changegroup, os
+from node import *
 
 def strip(ui, repo, rev, backup="all"):
     def limitheads(chlog, stop):
@@ -34,7 +35,7 @@ def strip(ui, repo, rev, backup="all"):
         backupdir = repo.join("strip-backup")
         if not os.path.isdir(backupdir):
             os.mkdir(backupdir)
-        name = os.path.join(backupdir, "%s-%s" % (revlog.short(rev), suffix))
+        name = os.path.join(backupdir, "%s-%s" % (short(rev), suffix))
         ui.warn("saving bundle to %s\n" % name)
         return changegroup.writebundle(cg, name, "HG10BZ")
 
@@ -90,11 +91,11 @@ def strip(ui, repo, rev, backup="all"):
         while True:
             seen[n] = 1
             pp = chlog.parents(n)
-            if pp[1] != revlog.nullid:
+            if pp[1] != nullid:
                 for p in pp:
                     if chlog.rev(p) > revnum and p not in seen:
                         heads.append(p)
-            if pp[0] == revlog.nullid:
+            if pp[0] == nullid:
                 break
             if chlog.rev(pp[0]) < revnum:
                 break
