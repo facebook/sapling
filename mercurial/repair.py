@@ -9,7 +9,7 @@
 import changegroup, os
 from node import *
 
-def strip(ui, repo, rev, backup="all"):
+def strip(ui, repo, node, backup="all"):
     def limitheads(chlog, stop):
         """return the list of all nodes that have no children"""
         p = {}
@@ -30,20 +30,20 @@ def strip(ui, repo, rev, backup="all"):
                 p[pn] = 1
         return h
 
-    def bundle(repo, bases, heads, rev, suffix):
+    def bundle(repo, bases, heads, node, suffix):
         cg = repo.changegroupsubset(bases, heads, 'strip')
         backupdir = repo.join("strip-backup")
         if not os.path.isdir(backupdir):
             os.mkdir(backupdir)
-        name = os.path.join(backupdir, "%s-%s" % (short(rev), suffix))
+        name = os.path.join(backupdir, "%s-%s" % (short(node), suffix))
         ui.warn("saving bundle to %s\n" % name)
         return changegroup.writebundle(cg, name, "HG10BZ")
 
-    def stripall(revnum):
-        mm = repo.changectx(rev).manifest()
+    def stripall(striprev):
+        mm = repo.changectx(node).manifest()
         seen = {}
 
-        for x in xrange(revnum, repo.changelog.count()):
+        for x in xrange(striprev, repo.changelog.count()):
             for f in repo.changectx(x).files():
                 if f in seen:
                     continue
@@ -66,12 +66,12 @@ def strip(ui, repo, rev, backup="all"):
                     filerev = ff.rev(filerev)
                 else:
                     filerev = 0
-            ff.strip(filerev, revnum)
+            ff.strip(filerev, striprev)
 
     chlog = repo.changelog
     # TODO delete the undo files, and handle undo of merge sets
-    pp = chlog.parents(rev)
-    revnum = chlog.rev(rev)
+    pp = chlog.parents(node)
+    striprev = chlog.rev(node)
 
     # save is a list of all the branches we are truncating away
     # that we actually want to keep.  changegroup will be used
@@ -79,7 +79,7 @@ def strip(ui, repo, rev, backup="all"):
     saveheads = []
     savebases = {}
 
-    heads = limitheads(chlog, rev)
+    heads = limitheads(chlog, node)
     seen = {}
 
     # search through all the heads, finding those where the revision
@@ -93,33 +93,33 @@ def strip(ui, repo, rev, backup="all"):
             pp = chlog.parents(n)
             if pp[1] != nullid:
                 for p in pp:
-                    if chlog.rev(p) > revnum and p not in seen:
+                    if chlog.rev(p) > striprev and p not in seen:
                         heads.append(p)
             if pp[0] == nullid:
                 break
-            if chlog.rev(pp[0]) < revnum:
+            if chlog.rev(pp[0]) < striprev:
                 break
             n = pp[0]
-            if n == rev:
+            if n == node:
                 break
-        r = chlog.reachable(h, rev)
-        if rev not in r:
+        r = chlog.reachable(h, node)
+        if node not in r:
             saveheads.append(h)
             for x in r:
-                if chlog.rev(x) > revnum:
+                if chlog.rev(x) > striprev:
                     savebases[x] = 1
 
     # create a changegroup for all the branches we need to keep
     if backup == "all":
-        bundle(repo, [rev], chlog.heads(), rev, 'backup')
+        bundle(repo, [node], chlog.heads(), node, 'backup')
     if saveheads:
-        chgrpfile = bundle(repo, savebases.keys(), saveheads, rev, 'temp')
+        chgrpfile = bundle(repo, savebases.keys(), saveheads, node, 'temp')
 
-    stripall(revnum)
+    stripall(striprev)
 
-    change = chlog.read(rev)
-    chlog.strip(revnum, revnum)
-    repo.manifest.strip(repo.manifest.rev(change[0]), revnum)
+    change = chlog.read(node)
+    chlog.strip(striprev, striprev)
+    repo.manifest.strip(repo.manifest.rev(change[0]), striprev)
     if saveheads:
         ui.status("adding branch\n")
         f = open(chgrpfile, "rb")
