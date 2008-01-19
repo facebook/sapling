@@ -162,8 +162,31 @@ do not process $Id:
 xxx $
 $Id: c,v ba4426d1938e 1970/01/01 00:00:01 user $
 tests for different changenodes
-% rollback and remove c
-rolling back last transaction
+% qimport
+% keywords should not be expanded in patch
+# HG changeset patch
+# User User Name <user@example.com>
+# Date 1 0
+# Node ID ba4426d1938ec9673e03ab274d88c44e24618f7f
+# Parent  f782df5f9602483b4e51c31a12315f353bba380c
+cndiff
+
+diff -r f782df5f9602 -r ba4426d1938e c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:01 1970 +0000
+@@ -0,0 +1,2 @@
++$Id$
++tests for different changenodes
+% qpop
+Patch queue now empty
+% qgoto - should imply qpush
+applying mqtest.diff
+Now at: mqtest.diff
+% cat
+$Id: c,v ba4426d1938e 1970/01/01 00:00:01 user $
+tests for different changenodes
+% qpop and move on
+Patch queue now empty
 % copy
 % kwfiles added
 a

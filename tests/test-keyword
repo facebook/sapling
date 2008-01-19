@@ -3,6 +3,7 @@
 cat <<EOF >> $HGRCPATH
 [extensions]
 hgext.keyword =
+hgext.mq =
 [keyword]
 * =
 b = ignore
@@ -88,9 +89,19 @@ echo % force expansion
 hg -v kwexpand
 echo % compare changenodes in a c
 cat a c
-echo % rollback and remove c
-hg rollback
-rm c
+
+echo % qimport
+hg qimport -r tip -n mqtest.diff
+echo % keywords should not be expanded in patch
+cat .hg/patches/mqtest.diff
+echo % qpop
+hg qpop
+echo % qgoto - should imply qpush
+hg qgoto mqtest.diff
+echo % cat
+cat c
+echo % qpop and move on
+hg qpop
 
 echo % copy
 hg cp a c
