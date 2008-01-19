@@ -439,7 +439,12 @@ class svn_source(converter_source):
                     fromrev = froment.copyfrom_rev
                     self.ui.debug("Info: %s %s %s %s\n" % (frompath, froment, ent, entrypath))
 
-                fromkind = svn.ra.check_path(self.ra, entrypath, fromrev)
+                # We can avoid the reparent calls if the module has not changed
+                # but it probably does not worth the pain.
+                self.reparent('')
+                fromkind = svn.ra.check_path(self.ra, entrypath.strip('/'), fromrev)
+                self.reparent(self.module)
+                
                 if fromkind == svn.core.svn_node_file:   # a deleted file
                     entries.append(self.recode(entry))
                 elif fromkind == svn.core.svn_node_dir:
