@@ -31,12 +31,13 @@ def strip(ui, repo, node, backup="all"):
         return h
 
     def bundle(repo, bases, heads, node, suffix):
+        """create a bundle with the specified revisions as a backup"""
         cg = repo.changegroupsubset(bases, heads, 'strip')
         backupdir = repo.join("strip-backup")
         if not os.path.isdir(backupdir):
             os.mkdir(backupdir)
         name = os.path.join(backupdir, "%s-%s" % (short(node), suffix))
-        ui.warn("saving bundle to %s\n" % name)
+        repo.ui.warn("saving bundle to %s\n" % name)
         return changegroup.writebundle(cg, name, "HG10BZ")
 
     def collectfilenodes(repo, striprev):
