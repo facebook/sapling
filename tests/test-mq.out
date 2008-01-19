@@ -310,7 +310,6 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-(run 'hg update' to get a working copy)
 Patch queue now empty
 applying bar
 Now at: bar
@@ -344,7 +343,6 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-(run 'hg update' to get a working copy)
 Patch queue now empty
 applying bar
 Now at: bar
@@ -419,7 +417,6 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-(run 'hg update' to get a working copy)
 changeset:   1:20cbbe65cff7
 tag:         tip
 user:        test

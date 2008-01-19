@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import changegroup, revlog, os, commands
+import changegroup, revlog, os
 
 def strip(ui, repo, rev, backup="all"):
     def limitheads(chlog, stop):
@@ -121,7 +121,10 @@ def strip(ui, repo, rev, backup="all"):
     repo.manifest.strip(repo.manifest.rev(change[0]), revnum)
     if saveheads:
         ui.status("adding branch\n")
-        commands.unbundle(ui, repo, "file:%s" % chgrpfile, update=False)
+        f = open(chgrpfile, "rb")
+        gen = changegroup.readbundle(f, chgrpfile)
+        repo.addchangegroup(gen, 'strip', 'bundle:' + chgrpfile)
+        f.close()
         if backup != "strip":
             os.unlink(chgrpfile)
 
