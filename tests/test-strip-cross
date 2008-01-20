@@ -44,7 +44,7 @@ commit '201 210' '021 120' '012 102'
 cd ..
 hg clone -q -U -r -1 -r -2 -r -3 orig crossed
 
-for i in crossed/.hg/store/{00manifest.i,data/*.i}; do
+for i in crossed/.hg/store/00manifest.i crossed/.hg/store/data/*.i; do
     echo $i
     hg debugindex $i
     echo
