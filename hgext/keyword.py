@@ -243,7 +243,7 @@ def _overwrite(ui, repo, node=None, expand=True, files=None):
     mf = ctx.manifest()
     if node is not None:   # commit
         _kwtemplater.commitnode = node
-        files = [f for f in ctx.files() if mf.has_key(f)]
+        files = [f for f in ctx.files() if f in mf]
         notify = ui.debug
     else:                  # kwexpand/kwshrink
         notify = ui.note

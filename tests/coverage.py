@@ -186,9 +186,9 @@ class StatementFindingAstVisitor(compiler.visitor.ASTVisitor):
                 return 0
             # If this line is excluded, or suite_spots maps this line to
             # another line that is exlcuded, then we're excluded.
-            elif self.excluded.has_key(lineno) or \
-                 self.suite_spots.has_key(lineno) and \
-                 self.excluded.has_key(self.suite_spots[lineno][1]):
+            elif lineno in self.excluded or \
+                 lineno in self.suite_spots and \
+                 self.suite_spots[lineno][1] in self.excluded:
                 return 0
             # Otherwise, this is an executable line.
             else:
@@ -217,8 +217,8 @@ class StatementFindingAstVisitor(compiler.visitor.ASTVisitor):
         lastprev = self.getLastLine(prevsuite)
         firstelse = self.getFirstLine(suite)
         for l in range(lastprev+1, firstelse):
-            if self.suite_spots.has_key(l):
-                self.doSuite(None, suite, exclude=self.excluded.has_key(l))
+            if l in self.suite_spots:
+                self.doSuite(None, suite, l in exclude=self.excluded)
                 break
         else:
             self.doSuite(None, suite)
@@ -353,9 +353,9 @@ class coverage:
         long_opts = optmap.values()
         options, args = getopt.getopt(argv, short_opts, long_opts)
         for o, a in options:
-            if optmap.has_key(o):
+            if o in optmap:
                 settings[optmap[o]] = 1
-            elif optmap.has_key(o + ':'):
+            elif o + ':' in optmap:
                 settings[optmap[o + ':']] = a
             elif o[2:] in long_opts:
                 settings[o[2:]] = 1
@@ -512,14 +512,14 @@ class coverage:
 
     def merge_data(self, new_data):
         for file_name, file_data in new_data.items():
-            if self.cexecuted.has_key(file_name):
+            if file_name in self.cexecuted:
                 self.merge_file_data(self.cexecuted[file_name], file_data)
             else:
                 self.cexecuted[file_name] = file_data
 
     def merge_file_data(self, cache_data, new_data):
         for line_number in new_data.keys():
-            if not cache_data.has_key(line_number):
+            if not line_number in cache_data:
                 cache_data[line_number] = new_data[line_number]
 
     # canonical_filename(filename).  Return a canonical filename for the
@@ -527,7 +527,7 @@ class coverage:
     # normalized case).  See [GDR 2001-12-04b, 3.3].
 
     def canonical_filename(self, filename):
-        if not self.canonical_filename_cache.has_key(filename):
+        if not filename in self.canonical_filename_cache:
             f = filename
             if os.path.isabs(f) and not os.path.exists(f):
                 f = os.path.basename(f)
@@ -550,7 +550,7 @@ class coverage:
                 # Can't do anything useful with exec'd strings, so skip them.
                 continue
             f = self.canonical_filename(filename)
-            if not self.cexecuted.has_key(f):
+            if not f in self.cexecuted:
                 self.cexecuted[f] = {}
             self.cexecuted[f][lineno] = 1
         self.c = {}
@@ -575,7 +575,7 @@ class coverage:
     # statements that cross lines.
 
     def analyze_morf(self, morf):
-        if self.analysis_cache.has_key(morf):
+        if morf in self.analysis_cache:
             return self.analysis_cache[morf]
         filename = self.morf_filename(morf)
         ext = os.path.splitext(filename)[1]
@@ -752,13 +752,13 @@ class coverage:
     def analysis2(self, morf):
         filename, statements, excluded, line_map = self.analyze_morf(morf)
         self.canonicalize_filenames()
-        if not self.cexecuted.has_key(filename):
+        if not filename in self.cexecuted:
             self.cexecuted[filename] = {}
         missing = []
         for line in statements:
             lines = line_map.get(line, [line, line])
             for l in range(lines[0], lines[1]+1):
-                if self.cexecuted[filename].has_key(l):
+                if l in self.cexecuted[filename]:
                     break
             else:
                 missing.append(line)

@@ -114,11 +114,11 @@ def gather_stats(ui, repo, amap, revs=None, progress=False):
         who, lines = __gather(ui, repo, node1, node2)
 
         # remap the owner if possible
-        if amap.has_key(who):
+        if who in amap:
             ui.note("using '%s' alias for '%s'\n" % (amap[who], who))
             who = amap[who]
 
-        if not stats.has_key(who):
+        if not who in stats:
             stats[who] = 0
         stats[who] += lines
 

@@ -10,7 +10,7 @@ from mercurial import revlog, util
 from common import staticfile
 
 def log(web, req, tmpl):
-    if req.form.has_key('file') and req.form['file'][0]:
+    if 'file' in req.form and req.form['file'][0]:
         filelog(web, req, tmpl)
     else:
         changelog(web, req, tmpl)
@@ -48,10 +48,10 @@ def file(web, req, tmpl):
     req.write(web.manifest(tmpl, web.changectx(req), path))
 
 def changelog(web, req, tmpl, shortlog = False):
-    if req.form.has_key('node'):
+    if 'node' in req.form:
         ctx = web.changectx(req)
     else:
-        if req.form.has_key('rev'):
+        if 'rev' in req.form:
             hi = req.form['rev'][0]
         else:
             hi = web.repo.changelog.count() - 1

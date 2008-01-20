@@ -58,7 +58,7 @@ class filelog(revlog):
         if self.parents(node)[0] != nullid:
             return False
         m = self._readmeta(node)
-        if m and m.has_key("copy"):
+        if m and "copy" in m:
             return (m["copy"], bin(m["copyrev"]))
         return False
 

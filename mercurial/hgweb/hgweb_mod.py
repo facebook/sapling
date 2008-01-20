@@ -153,7 +153,7 @@ class hgweb(object):
         req.url = req.env['SCRIPT_NAME']
         if not req.url.endswith('/'):
             req.url += '/'
-        if req.env.has_key('REPO_NAME'):
+        if 'REPO_NAME' in req.env:
             req.url += req.env['REPO_NAME'] + '/'
 
         if req.env.get('PATH_INFO'):
@@ -267,7 +267,7 @@ class hgweb(object):
 
         def sessionvars(**map):
             fields = []
-            if req.form.has_key('style'):
+            if 'style' in req.form:
                 style = req.form['style'][0]
                 if style != self.config('web', 'style', ''):
                     fields.append(('style', style))
@@ -280,7 +280,7 @@ class hgweb(object):
         # figure out which style to use
 
         style = self.config("web", "style", "")
-        if req.form.has_key('style'):
+        if 'style' in req.form:
             style = req.form['style'][0]
         mapfile = style_map(self.templatepath, style)
 
@@ -863,9 +863,9 @@ class hgweb(object):
         return util.canonpath(self.repo.root, '', path)
 
     def changectx(self, req):
-        if req.form.has_key('node'):
+        if 'node' in req.form:
             changeid = req.form['node'][0]
-        elif req.form.has_key('manifest'):
+        elif 'manifest' in req.form:
             changeid = req.form['manifest'][0]
         else:
             changeid = self.repo.changelog.count() - 1
@@ -881,7 +881,7 @@ class hgweb(object):
 
     def filectx(self, req):
         path = self.cleanpath(req.form['file'][0])
-        if req.form.has_key('node'):
+        if 'node' in req.form:
             changeid = req.form['node'][0]
         else:
             changeid = req.form['filenode'][0]

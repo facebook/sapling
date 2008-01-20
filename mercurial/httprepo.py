@@ -247,7 +247,7 @@ class httprepository(remoterepository):
         # will take precedence if found, so drop them
         for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
             try:
-                if os.environ.has_key(env):
+                if env in os.environ:
                     del os.environ[env]
             except OSError:
                 pass

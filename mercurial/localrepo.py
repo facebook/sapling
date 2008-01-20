@@ -998,7 +998,7 @@ class localrepository(repo.repository):
             mf2keys.sort()
             getnode = lambda fn: mf1.get(fn, nullid)
             for fn in mf2keys:
-                if mf1.has_key(fn):
+                if fn in mf1:
                     if (mf1.flags(fn) != mf2.flags(fn) or
                         (mf1[fn] != mf2[fn] and
                          (mf2[fn] != "" or fcmp(fn, getnode)))):
@@ -1779,7 +1779,7 @@ class localrepository(repo.repository):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 # Toss out the filenodes that the recipient isn't really
                 # missing.
-                if msng_filenode_set.has_key(fname):
+                if fname in msng_filenode_set:
                     prune_filenodes(fname, filerevlog)
                     msng_filenode_lst = msng_filenode_set[fname].keys()
                 else:
@@ -1798,7 +1798,7 @@ class localrepository(repo.repository):
                                              lookup_filenode_link_func(fname))
                     for chnk in group:
                         yield chnk
-                if msng_filenode_set.has_key(fname):
+                if fname in msng_filenode_set:
                     # Don't need this anymore, toss it to free memory.
                     del msng_filenode_set[fname]
             # Signal that no more groups are left.

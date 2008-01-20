@@ -143,7 +143,7 @@ class hgwebdir(object):
         def entries(sortcolumn="", descending=False, subdir="", **map):
             def sessionvars(**map):
                 fields = []
-                if req.form.has_key('style'):
+                if 'style' in req.form:
                     style = req.form['style'][0]
                     if style != get('web', 'style', ''):
                         fields.append(('style', style))
@@ -214,7 +214,7 @@ class hgwebdir(object):
 
         sortable = ["name", "description", "contact", "lastchange"]
         sortcolumn, descending = self.repos_sorted
-        if req.form.has_key('sort'):
+        if 'sort' in req.form:
             sortcolumn = req.form['sort'][0]
             descending = sortcolumn.startswith('-')
             if descending:
@@ -262,7 +262,7 @@ class hgwebdir(object):
         style = self.style
         if style is None:
             style = config('web', 'style', '')
-        if req.form.has_key('style'):
+        if 'style' in req.form:
             style = req.form['style'][0]
         if self.stripecount is None:
             self.stripecount = int(config('web', 'stripes', 1))

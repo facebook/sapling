@@ -418,8 +418,7 @@ def patchbomb(ui, repo, *revs, **opts):
                 fp.close()
         elif opts.get('mbox'):
             ui.status('Writing ', m['Subject'], ' ...\n')
-            fp = open(opts.get('mbox'),
-                      m.has_key('In-Reply-To') and 'ab+' or 'wb+')
+            fp = open(opts.get('mbox'), 'In-Reply-To' in m and 'ab+' or 'wb+')
             date = util.datestr(date=start_time,
                                 format='%a %b %d %H:%M:%S %Y', timezone=False)
             fp.write('From %s %s\n' % (sender_addr, date))

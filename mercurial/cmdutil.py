@@ -50,7 +50,7 @@ def findcmd(ui, cmd, table):
     """Return (aliases, command table entry) for command string."""
     choice = findpossible(ui, cmd, table)
 
-    if choice.has_key(cmd):
+    if cmd in choice:
         return choice[cmd]
 
     if len(choice) > 1:
