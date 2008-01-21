@@ -65,3 +65,25 @@ hg convert --filemap filemap src src-filemap | sed -e 's/connecting to.*cvsrepo/
 cat src-hg/b/c
 hg -R src-filemap log --template '#rev# #desc# files: #files#\n'
 
+echo % commit branch
+cd src
+cvs -q update -r1.1 b/c
+cvs -q tag -b branch
+cvs -q update -r branch
+echo d >> b/c
+cvs -q commit -mci2 . | grep '<--' |\
+    sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
+cd ..
+
+echo % convert again
+hg convert src src-hg | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
+cat src-hg/a
+cat src-hg/b/c
+
+echo % convert again with --filemap
+hg convert --filemap filemap src src-filemap | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
+cat src-hg/b/c
+hg -R src-filemap log --template '#rev# #desc# files: #files#\n'
+
+echo "graphlog = " >> $HGRCPATH
+hg -R src-hg glog --template '#rev# (#branches#) #desc# files: #files#\n'
