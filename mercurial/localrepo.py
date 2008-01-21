@@ -661,6 +661,8 @@ class localrepository(repo.repository):
                match=util.always, force=False, force_editor=False,
                p1=None, p2=None, extra={}, empty_ok=False):
         wlock = lock = tr = None
+        if files:
+            files = util.unique(files)
         try:
             commit = []
             remove = []
